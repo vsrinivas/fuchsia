@@ -11,6 +11,7 @@ use fidl_fuchsia_auth_account::{
     AccountManagerMarker, AccountManagerProxy, LocalAccountId, Status,
 };
 use futures::prelude::*;
+use futures::future::join;
 
 /// Calls provision_new_account on the supplied account_manager, returning an error on any
 /// non-OK responses, or the account ID on success.
@@ -45,8 +46,10 @@ async fn provision_account_from_dev_auth_provider(
         }
     };
 
-    let (serve_result, provision_result) = await!(serve_fn
-        .join(account_manager.provision_from_auth_provider(acp_client_end, "dev_auth_provider")));
+    let (serve_result, provision_result) = await!(join(
+        serve_fn,
+        account_manager.provision_from_auth_provider(acp_client_end, "dev_auth_provider"),
+    ));
     serve_result?;
     match provision_result? {
         (Status::Ok, Some(new_account_id)) => Ok(*new_account_id),

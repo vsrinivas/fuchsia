@@ -6,8 +6,7 @@ use {Poll, Stream};
 
 use io::AsyncRead;
 
-/// Combinator created by the top-level `lines` method which is a stream over
-/// the lines of text on an I/O object.
+/// Future for the [`lines`] function.
 #[derive(Debug)]
 pub struct Lines<A> {
     io: A,
@@ -45,7 +44,7 @@ impl<A> Stream for Lines<A>
     type Item = String;
     type Error = io::Error;
 
-    fn poll(&mut self, waker: &Waker) -> Poll<Option<String>, io::Error> {
+    fn poll(&mut self, cx: &mut Context<'_>) -> Poll<Option<String>, io::Error> {
         let n = ready!(self.io.read_line(&mut self.line));
         if n == 0 && self.line.len() == 0 {
             return Ok(None.into())

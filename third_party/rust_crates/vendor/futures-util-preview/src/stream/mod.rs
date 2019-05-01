@@ -4,11 +4,13 @@
 //! including the `StreamExt` trait which adds methods to `Stream` types.
 
 use core::pin::Pin;
-use either::Either;
 use futures_core::future::Future;
-use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::stream::{FusedStream, Stream, TryStream};
+use futures_core::task::{Context, Poll};
 use futures_sink::Sink;
+#[cfg(feature = "alloc")]
+use alloc::boxed::Box;
+use crate::future::Either;
 
 mod iter;
 pub use self::iter::{iter, Iter};
@@ -27,6 +29,9 @@ pub use self::concat::Concat;
 
 mod empty;
 pub use self::empty::{empty, Empty};
+
+mod enumerate;
+pub use self::enumerate::Enumerate;
 
 mod filter;
 pub use self::filter::Filter;
@@ -74,7 +79,7 @@ mod poll_fn;
 pub use self::poll_fn::{poll_fn, PollFn};
 
 mod select;
-pub use self::select::Select;
+pub use self::select::{select, Select};
 
 mod skip;
 pub use self::skip::Skip;
@@ -97,53 +102,53 @@ pub use self::unfold::{unfold, Unfold};
 mod zip;
 pub use self::zip::Zip;
 
-#[cfg(feature = "std")]
-use std;
+#[cfg(feature = "alloc")]
+mod chunks;
+#[cfg(feature = "alloc")]
+pub use self::chunks::Chunks;
 
-#[cfg(feature = "std")]
-mod buffer_unordered;
-#[cfg(feature = "std")]
-pub use self::buffer_unordered::BufferUnordered;
+cfg_target_has_atomic! {
+    #[cfg(feature = "alloc")]
+    mod buffer_unordered;
+    #[cfg(feature = "alloc")]
+    pub use self::buffer_unordered::BufferUnordered;
 
-#[cfg(feature = "std")]
-mod buffered;
-#[cfg(feature = "std")]
-pub use self::buffered::Buffered;
+    #[cfg(feature = "alloc")]
+    mod buffered;
+    #[cfg(feature = "alloc")]
+    pub use self::buffered::Buffered;
+
+    #[cfg(feature = "alloc")]
+    mod for_each_concurrent;
+    #[cfg(feature = "alloc")]
+    pub use self::for_each_concurrent::ForEachConcurrent;
+
+    #[cfg(feature = "alloc")]
+    mod futures_ordered;
+    #[cfg(feature = "alloc")]
+    pub use self::futures_ordered::FuturesOrdered;
+
+    #[cfg(feature = "alloc")]
+    pub mod futures_unordered;
+    #[cfg(feature = "alloc")]
+    #[doc(inline)]
+    pub use self::futures_unordered::FuturesUnordered;
+
+    #[cfg(feature = "alloc")]
+    mod split;
+    #[cfg(feature = "alloc")]
+    pub use self::split::{SplitStream, SplitSink, ReuniteError};
+
+    #[cfg(feature = "alloc")]
+    mod select_all;
+    #[cfg(feature = "alloc")]
+    pub use self::select_all::{select_all, SelectAll};
+}
 
 #[cfg(feature = "std")]
 mod catch_unwind;
 #[cfg(feature = "std")]
 pub use self::catch_unwind::CatchUnwind;
-
-#[cfg(feature = "std")]
-mod chunks;
-#[cfg(feature = "std")]
-pub use self::chunks::Chunks;
-
-#[cfg(feature = "std")]
-mod for_each_concurrent;
-#[cfg(feature = "std")]
-pub use self::for_each_concurrent::ForEachConcurrent;
-
-#[cfg(feature = "std")]
-mod futures_ordered;
-#[cfg(feature = "std")]
-pub use self::futures_ordered::{futures_ordered, FuturesOrdered};
-
-#[cfg(feature = "std")]
-mod futures_unordered;
-#[cfg(feature = "std")]
-pub use self::futures_unordered::{futures_unordered, FuturesUnordered};
-
-#[cfg(feature = "std")]
-mod split;
-#[cfg(feature = "std")]
-pub use self::split::{SplitStream, SplitSink, ReuniteError};
-
-#[cfg(feature = "std")]
-mod select_all;
-#[cfg(feature = "std")]
-pub use self::select_all::{select_all, SelectAll};
 
 impl<T: ?Sized> StreamExt for T where T: Stream {}
 
@@ -155,7 +160,7 @@ pub trait StreamExt: Stream {
     /// Note that because `next` doesn't take ownership over the stream,
     /// the [`Stream`] type must be [`Unpin`]. If you want to use `next` with a
     /// [`!Unpin`](Unpin) stream, you'll first have to pin the stream. This can
-    /// be done by boxing the stream using [`Box::pinned`] or
+    /// be done by boxing the stream using [`Box::pin`] or
     /// pinning it to the stack using the `pin_mut!` macro from the `pin_utils`
     /// crate.
     ///
@@ -187,7 +192,7 @@ pub trait StreamExt: Stream {
     /// Note that because `into_future` moves the stream, the [`Stream`] type
     /// must be [`Unpin`]. If you want to use `into_future` with a
     /// [`!Unpin`](Unpin) stream, you'll first have to pin the stream. This can
-    /// be done by boxing the stream using [`Box::pinned`] or
+    /// be done by boxing the stream using [`Box::pin`] or
     /// pinning it to the stack using the `pin_mut!` macro from the `pin_utils`
     /// crate.
     ///
@@ -238,6 +243,51 @@ pub trait StreamExt: Stream {
               Self: Sized
     {
         Map::new(self, f)
+    }
+
+    /// Creates a stream which gives the current iteration count as well as
+    /// the next value.
+    ///
+    /// The stream returned yields pairs `(i, val)`, where `i` is the
+    /// current index of iteration and `val` is the value returned by the
+    /// stream.
+    ///
+    /// `enumerate()` keeps its count as a [`usize`]. If you want to count by a
+    /// different sized integer, the [`zip`](StreamExt::zip) function provides similar
+    /// functionality.
+    ///
+    /// # Overflow Behavior
+    ///
+    /// The method does no guarding against overflows, so enumerating more than
+    /// [`usize::max_value()`] elements either produces the wrong result or panics. If
+    /// debug assertions are enabled, a panic is guaranteed.
+    ///
+    /// # Panics
+    ///
+    /// The returned stream might panic if the to-be-returned index would
+    /// overflow a [`usize`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// #![feature(async_await, await_macro)]
+    /// # futures::executor::block_on(async {
+    /// use futures::stream::{self, StreamExt};
+    ///
+    /// let stream = stream::iter(vec!['a', 'b', 'c']);
+    ///
+    /// let mut stream = stream.enumerate();
+    ///
+    /// assert_eq!(await!(stream.next()), Some((0, 'a')));
+    /// assert_eq!(await!(stream.next()), Some((1, 'b')));
+    /// assert_eq!(await!(stream.next()), Some((2, 'c')));
+    /// assert_eq!(await!(stream.next()), None);
+    /// # });
+    /// ```
+    fn enumerate(self) -> Enumerate<Self>
+        where Self: Sized,
+    {
+        Enumerate::new(self)
     }
 
     /// Filters the values produced by this stream according to the provided
@@ -593,7 +643,7 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt};
@@ -614,7 +664,11 @@ pub trait StreamExt: Stream {
     /// await!(fut);
     /// # })
     /// ```
-    #[cfg(feature = "std")]
+    #[cfg_attr(
+        feature = "cfg-target-has-atomic",
+        cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
+    )]
+    #[cfg(feature = "alloc")]
     fn for_each_concurrent<Fut, F>(
         self,
         limit: impl Into<Option<usize>>,
@@ -687,7 +741,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(futures_api)]
     /// use futures::executor::block_on_stream;
     /// use futures::stream::{self, StreamExt};
     /// use futures::task::Poll;
@@ -791,7 +844,7 @@ pub trait StreamExt: Stream {
     }
 
     /// Wrap the stream in a Box, pinning it.
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn boxed(self) -> Pin<Box<Self>>
         where Self: Sized
     {
@@ -810,7 +863,11 @@ pub trait StreamExt: Stream {
     ///
     /// This method is only available when the `std` feature of this
     /// library is activated, and it is activated by default.
-    #[cfg(feature = "std")]
+    #[cfg_attr(
+        feature = "cfg-target-has-atomic",
+        cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
+    )]
+    #[cfg(feature = "alloc")]
     fn buffered(self, n: usize) -> Buffered<Self>
         where Self::Item: Future,
               Self: Sized
@@ -834,7 +891,7 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt};
@@ -854,7 +911,11 @@ pub trait StreamExt: Stream {
     /// assert_eq!(await!(buffered.next()), None);
     /// # })
     /// ```
-    #[cfg(feature = "std")]
+    #[cfg_attr(
+        feature = "cfg-target-has-atomic",
+        cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
+    )]
+    #[cfg(feature = "alloc")]
     fn buffer_unordered(self, n: usize) -> BufferUnordered<Self>
         where Self::Item: Future,
               Self: Sized
@@ -945,47 +1006,24 @@ pub trait StreamExt: Stream {
     /// # Panics
     ///
     /// This method will panic of `capacity` is zero.
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn chunks(self, capacity: usize) -> Chunks<Self>
         where Self: Sized
     {
         Chunks::new(self, capacity)
     }
 
-    /// This combinator will attempt to pull items from both streams. Each
-    /// stream will be polled in a round-robin fashion, and whenever a stream is
-    /// ready to yield an item that item is yielded.
-    ///
-    /// After one of the two input stream completes, the remaining one will be
-    /// polled exclusively. The returned stream completes when both input
-    /// streams have completed.
-    ///
-    /// Note that this method consumes both streams and returns a wrapped
-    /// version of them.
-    fn select<St>(self, other: St) -> Select<Self, St>
-        where St: Stream<Item = Self::Item>,
-              Self: Sized,
-    {
-        Select::new(self, other)
-    }
-
     /// A future that completes after the given stream has been fully processed
-    /// into the sink, including flushing.
+    /// into the sink and the sink has been flushed and closed.
     ///
     /// This future will drive the stream to keep producing items until it is
-    /// exhausted, sending each item to the sink. It will complete once both the
-    /// stream is exhausted and the sink has received and flushed all items.
-    /// Note that the sink is **not** closed.
-    ///
-    /// On completion, the sink is returned.
-    ///
-    /// Note that this combinator is only usable with `Unpin` sinks.
-    /// Sinks that are not `Unpin` will need to be pinned in order to be used
-    /// with `forward`.
+    /// exhausted, sending each item to the sink. It will complete once the
+    /// stream is exhausted, the sink has received and flushed all items, and
+    /// the sink is closed.
     fn forward<S>(self, sink: S) -> Forward<Self, S>
     where
-        S: Sink + Unpin,
-        Self: Stream<Item = Result<S::SinkItem, S::SinkError>> + Sized,
+        S: Sink<<Self as TryStream>::Ok>,
+        Self: TryStream<Error = S::SinkError> + Sized,
     {
         Forward::new(self, sink)
     }
@@ -999,9 +1037,13 @@ pub trait StreamExt: Stream {
     ///
     /// This method is only available when the `std` feature of this
     /// library is activated, and it is activated by default.
-    #[cfg(feature = "std")]
-    fn split(self) -> (SplitSink<Self>, SplitStream<Self>)
-        where Self: Sink + Sized
+    #[cfg_attr(
+        feature = "cfg-target-has-atomic",
+        cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
+    )]
+    #[cfg(feature = "alloc")]
+    fn split<Item>(self) -> (SplitSink<Self, Item>, SplitStream<Self>)
+        where Self: Sink<Item> + Sized
     {
         split::split(self)
     }
@@ -1046,11 +1088,11 @@ pub trait StreamExt: Stream {
     /// stream types.
     fn poll_next_unpin(
         &mut self,
-        waker: &Waker
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>>
     where Self: Unpin + Sized
     {
-        Pin::new(self).poll_next(waker)
+        Pin::new(self).poll_next(cx)
     }
 
     /// Returns a [`Future`] that resolves when the next item in this stream is
@@ -1073,7 +1115,7 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::{future, select};
     /// use futures::stream::{StreamExt, FuturesUnordered};

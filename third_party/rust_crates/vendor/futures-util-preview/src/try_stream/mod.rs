@@ -6,10 +6,13 @@
 use core::pin::Pin;
 use futures_core::future::TryFuture;
 use futures_core::stream::TryStream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 
 #[cfg(feature = "compat")]
 use crate::compat::Compat;
+
+mod and_then;
+pub use self::and_then::AndThen;
 
 mod err_into;
 pub use self::err_into::ErrInto;
@@ -23,6 +26,9 @@ pub use self::map_ok::MapOk;
 mod map_err;
 pub use self::map_err::MapErr;
 
+mod or_else;
+pub use self::or_else::OrElse;
+
 mod try_next;
 pub use self::try_next::TryNext;
 
@@ -31,6 +37,9 @@ pub use self::try_for_each::TryForEach;
 
 mod try_filter_map;
 pub use self::try_filter_map::TryFilterMap;
+
+mod try_collect;
+pub use self::try_collect::TryCollect;
 
 mod try_concat;
 pub use self::try_concat::TryConcat;
@@ -41,29 +50,26 @@ pub use self::try_fold::TryFold;
 mod try_skip_while;
 pub use self::try_skip_while::TrySkipWhile;
 
-#[cfg(feature = "std")]
-mod try_buffer_unordered;
-#[cfg(feature = "std")]
-pub use self::try_buffer_unordered::TryBufferUnordered;
+cfg_target_has_atomic! {
+    #[cfg(feature = "alloc")]
+    mod try_buffer_unordered;
+    #[cfg(feature = "alloc")]
+    pub use self::try_buffer_unordered::TryBufferUnordered;
 
-#[cfg(feature = "std")]
-mod try_collect;
-#[cfg(feature = "std")]
-pub use self::try_collect::TryCollect;
-
-#[cfg(feature = "std")]
-mod try_for_each_concurrent;
-#[cfg(feature = "std")]
-pub use self::try_for_each_concurrent::TryForEachConcurrent;
-#[cfg(feature = "std")]
-use futures_core::future::Future;
+    #[cfg(feature = "alloc")]
+    mod try_for_each_concurrent;
+    #[cfg(feature = "alloc")]
+    pub use self::try_for_each_concurrent::TryForEachConcurrent;
+    #[cfg(feature = "alloc")]
+    use futures_core::future::Future;
+}
 
 #[cfg(feature = "std")]
 mod into_async_read;
 #[cfg(feature = "std")]
 pub use self::into_async_read::IntoAsyncRead;
 
-impl<S: TryStream> TryStreamExt for S {}
+impl<S: ?Sized + TryStream> TryStreamExt for S {}
 
 /// Adapters specific to `Result`-returning streams
 pub trait TryStreamExt: TryStream {
@@ -73,7 +79,7 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, TryStreamExt};
     ///
@@ -99,7 +105,7 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, TryStreamExt};
     ///
@@ -125,7 +131,7 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, TryStreamExt};
     ///
@@ -143,6 +149,77 @@ pub trait TryStreamExt: TryStream {
         F: FnMut(Self::Error) -> E,
     {
         MapErr::new(self, f)
+    }
+
+    /// Chain on a computation for when a value is ready, passing the successful
+    /// results to the provided closure `f`.
+    ///
+    /// This function can be used to run a unit of work when the next successful
+    /// value on a stream is ready. The closure provided will be yielded a value
+    /// when ready, and the returned future will then be run to completion to
+    /// produce the next value on this stream.
+    ///
+    /// Any errors produced by this stream will not be passed to the closure,
+    /// and will be passed through.
+    ///
+    /// The returned value of the closure must implement the `TryFuture` trait
+    /// and can represent some more work to be done before the composed stream
+    /// is finished.
+    ///
+    /// Note that this function consumes the receiving stream and returns a
+    /// wrapped version of it.
+    ///
+    /// To process the entire stream and return a single future representing
+    /// success or error, use `try_for_each` instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use futures::channel::mpsc;
+    /// use futures::future;
+    /// use futures::stream::TryStreamExt;
+    ///
+    /// let (_tx, rx) = mpsc::channel::<Result<i32, ()>>(1);
+    ///
+    /// let rx = rx.and_then(|result| {
+    ///     future::ok(if result % 2 == 0 {
+    ///         Some(result)
+    ///     } else {
+    ///         None
+    ///     })
+    /// });
+    /// ```
+    fn and_then<Fut, F>(self, f: F) -> AndThen<Self, Fut, F>
+        where F: FnMut(Self::Ok) -> Fut,
+              Fut: TryFuture<Error = Self::Error>,
+              Self: Sized,
+    {
+        AndThen::new(self, f)
+    }
+
+    /// Chain on a computation for when an error happens, passing the
+    /// erroneous result to the provided closure `f`.
+    ///
+    /// This function can be used to run a unit of work and attempt to recover from
+    /// an error if one happens. The closure provided will be yielded an error
+    /// when one appears, and the returned future will then be run to completion
+    /// to produce the next value on this stream.
+    ///
+    /// Any successful values produced by this stream will not be passed to the
+    /// closure, and will be passed through.
+    ///
+    /// The returned value of the closure must implement the [`TryFuture`] trait
+    /// and can represent some more work to be done before the composed stream
+    /// is finished.
+    ///
+    /// Note that this function consumes the receiving stream and returns a
+    /// wrapped version of it.
+    fn or_else<Fut, F>(self, f: F) -> OrElse<Self, Fut, F>
+        where F: FnMut(Self::Error) -> Fut,
+              Fut: TryFuture<Ok = Self::Ok>,
+              Self: Sized,
+    {
+        OrElse::new(self, f)
     }
 
     /// Wraps a [`TryStream`] into a type that implements
@@ -183,7 +260,7 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, TryStreamExt};
     ///
@@ -215,7 +292,7 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, TryStreamExt};
@@ -250,7 +327,7 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, TryStreamExt};
@@ -285,7 +362,7 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt, TryStreamExt};
@@ -312,7 +389,11 @@ pub trait TryStreamExt: TryStream {
     /// assert_eq!(Err(oneshot::Canceled), await!(fut));
     /// # })
     /// ```
-    #[cfg(feature = "std")]
+    #[cfg_attr(
+        feature = "cfg-target-has-atomic",
+        cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
+    )]
+    #[cfg(feature = "alloc")]
     fn try_for_each_concurrent<Fut, F>(
         self,
         limit: impl Into<Option<usize>>,
@@ -334,13 +415,10 @@ pub trait TryStreamExt: TryStream {
     ///
     /// The returned future will be resolved when the stream terminates.
     ///
-    /// This method is only available when the `std` feature of this
-    /// library is activated, and it is activated by default.
-    ///
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
     /// use futures::executor::block_on;
@@ -360,7 +438,6 @@ pub trait TryStreamExt: TryStream {
     /// assert_eq!(output, Err(6));
     /// # })
     /// ```
-    #[cfg(feature = "std")]
     fn try_collect<C: Default + Extend<Self::Ok>>(self) -> TryCollect<Self, C>
         where Self: Sized
     {
@@ -384,7 +461,7 @@ pub trait TryStreamExt: TryStream {
     ///
     /// # Examples
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::executor::block_on;
     /// use futures::future;
@@ -425,7 +502,7 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, TryStreamExt};
@@ -508,7 +585,7 @@ pub trait TryStreamExt: TryStream {
     ///
     /// Results are returned in the order of completion:
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt, TryStreamExt};
@@ -532,7 +609,7 @@ pub trait TryStreamExt: TryStream {
     ///
     /// Errors from the underlying stream itself are propagated:
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
     /// use futures::future;
@@ -548,7 +625,11 @@ pub trait TryStreamExt: TryStream {
     /// assert_eq!(await!(buffered.next()), Some(Err("error in the stream")));
     /// # })
     /// ```
-    #[cfg(feature = "std")]
+    #[cfg_attr(
+        feature = "cfg-target-has-atomic",
+        cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
+    )]
+    #[cfg(feature = "alloc")]
     fn try_buffer_unordered(self, n: usize) -> TryBufferUnordered<Self>
         where Self::Ok: TryFuture<Error = Self::Error>,
               Self: Sized
@@ -560,17 +641,17 @@ pub trait TryStreamExt: TryStream {
     /// stream types.
     fn try_poll_next_unpin(
         &mut self,
-        waker: &Waker
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Self::Ok, Self::Error>>>
     where Self: Unpin,
     {
-        Pin::new(self).try_poll_next(waker)
+        Pin::new(self).try_poll_next(cx)
     }
 
     /// Wraps a [`TryStream`] into a stream compatible with libraries using
     /// futures 0.1 `Stream`. Requires the `compat` feature to be enabled.
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{FutureExt, TryFutureExt};
     /// # let (tx, rx) = futures::channel::oneshot::channel();
     ///
@@ -599,13 +680,13 @@ pub trait TryStreamExt: TryStream {
     ///
     /// Note that because `into_async_read` moves the stream, the [`Stream`] type must be
     /// [`Unpin`]. If you want to use `into_async_read` with a [`!Unpin`](Unpin) stream, you'll
-    /// first have to pin the stream. This can be done by boxing the stream using [`Box::pinned`]
+    /// first have to pin the stream. This can be done by boxing the stream using [`Box::pin`]
     /// or pinning it to the stack using the `pin_mut!` macro from the `pin_utils` crate.
     ///
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::executor::block_on;
     /// use futures::future::lazy;

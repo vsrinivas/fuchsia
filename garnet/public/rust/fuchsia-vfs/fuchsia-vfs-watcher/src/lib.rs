@@ -4,15 +4,14 @@
 
 //! Stream-based Fuchsia VFS directory watcher
 
-#![deny(missing_docs, warnings)]
-#![feature(futures_api)]
+#![deny(missing_docs)]
 
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, assoc_values};
 
 use fdio::fdio_sys;
 use fidl_fuchsia_io::{WATCH_MASK_ALL};
-use futures::{Poll, stream::{FusedStream, Stream}, task::Waker};
+use futures::{Poll, stream::{FusedStream, Stream}, task::Context};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
@@ -112,13 +111,13 @@ impl FusedStream for Watcher {
 impl Stream for Watcher {
     type Item = Result<WatchMessage, io::Error>;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = &mut *self;
         if this.idx >= this.buf.bytes().len() {
             this.reset_buf();
         }
         if this.idx == 0 {
-            match this.ch.recv_from(&mut this.buf, lw) {
+            match this.ch.recv_from(cx, &mut this.buf) {
                 Poll::Ready(Ok(())) => {},
                 Poll::Ready(Err(e)) => return Poll::Ready(Some(Err(e.into()))),
                 Poll::Pending => return Poll::Pending,

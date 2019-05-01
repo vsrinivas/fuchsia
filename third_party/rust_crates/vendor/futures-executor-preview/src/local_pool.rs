@@ -1,14 +1,10 @@
-use crate::{enter, ThreadPool};
+use crate::enter;
 use futures_core::future::{Future, FutureObj, LocalFutureObj};
 use futures_core::stream::{Stream};
-use futures_core::task::{
-    Poll, Waker,
-    Spawn, LocalSpawn, SpawnError,
-};
-use futures_util::task::{WakerRef, waker_ref, ArcWake};
+use futures_core::task::{Context, Poll, Spawn, LocalSpawn, SpawnError};
+use futures_util::task::{waker_ref, ArcWake};
 use futures_util::stream::FuturesUnordered;
 use futures_util::stream::StreamExt;
-use lazy_static::lazy_static;
 use pin_utils::pin_mut;
 use std::cell::{RefCell};
 use std::ops::{Deref, DerefMut};
@@ -54,26 +50,39 @@ thread_local! {
 }
 
 impl ArcWake for ThreadNotify {
-    fn wake(arc_self: &Arc<Self>) {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
         arc_self.thread.unpark();
     }
 }
 
 // Set up and run a basic single-threaded spawner loop, invoking `f` on each
 // turn.
-fn run_executor<T, F: FnMut(&Waker) -> Poll<T>>(mut f: F) -> T {
+fn run_executor<T, F: FnMut(&mut Context<'_>) -> Poll<T>>(mut f: F) -> T {
     let _enter = enter()
         .expect("cannot execute `LocalPool` executor from within \
                  another executor");
 
     CURRENT_THREAD_NOTIFY.with(|thread_notify| {
-        let waker: WakerRef<'_> = waker_ref(thread_notify);
+        let waker = waker_ref(thread_notify);
+        let mut cx = Context::from_waker(&waker);
         loop {
-            if let Poll::Ready(t) = f(&waker) {
+            if let Poll::Ready(t) = f(&mut cx) {
                 return t;
             }
             thread::park();
         }
+    })
+}
+
+fn poll_executor<T, F: FnMut(&mut Context<'_>) -> T>(mut f: F) -> T {
+    let _enter = enter()
+        .expect("cannot execute `LocalPool` executor from within \
+                 another executor");
+
+    CURRENT_THREAD_NOTIFY.with(|thread_notify| {
+        let waker = waker_ref(thread_notify);
+        let mut cx = Context::from_waker(&waker);
+        f(&mut cx)
     })
 }
 
@@ -113,7 +122,7 @@ impl LocalPool {
     /// The function will block the calling thread until *all* tasks in the pool
     /// are complete, including any spawned while running existing tasks.
     pub fn run(&mut self) {
-        run_executor(|waker| self.poll_pool(waker))
+        run_executor(|cx| self.poll_pool(cx))
     }
 
     /// Runs all the tasks in the pool until the given future completes.
@@ -123,7 +132,6 @@ impl LocalPool {
     /// the `LocalPool` by using its spawner handle:
     ///
     /// ```
-    /// #![feature(futures_api)]
     /// use futures::executor::LocalPool;
     /// use futures::future::ready;
     ///
@@ -138,39 +146,111 @@ impl LocalPool {
     /// The function will block the calling thread *only* until the future `f`
     /// completes; there may still be incomplete tasks in the pool, which will
     /// be inert after the call completes, but can continue with further use of
-    /// `run` or `run_until`. While the function is running, however, all tasks
-    /// in the pool will try to make progress.
+    /// one of the pool's run or poll methods. While the function is running,
+    /// however, all tasks in the pool will try to make progress.
     pub fn run_until<F: Future>(&mut self, future: F) -> F::Output {
         pin_mut!(future);
 
-        run_executor(|waker| {
+        run_executor(|cx| {
             {
                 // if our main task is done, so are we
-                let result = future.as_mut().poll(waker);
+                let result = future.as_mut().poll(cx);
                 if let Poll::Ready(output) = result {
                     return Poll::Ready(output);
                 }
             }
 
-            let _ = self.poll_pool(waker);
+            let _ = self.poll_pool(cx);
             Poll::Pending
+        })
+    }
+
+    /// Runs all tasks and returns after completing one future or until no more progress
+    /// can be made. Returns `true` if one future was completed, `false` otherwise.
+    ///
+    /// ```
+    /// use futures::executor::LocalPool;
+    /// use futures::task::LocalSpawnExt;
+    /// use futures::future::{ready, empty};
+    ///
+    /// let mut pool = LocalPool::new();
+    /// let mut spawner = pool.spawner();
+    ///
+    /// spawner.spawn_local(ready(()));
+    /// spawner.spawn_local(ready(()));
+    /// spawner.spawn_local(empty());
+    ///
+    /// // Run the two ready tasks and return true for them.
+    /// pool.try_run_one(); // returns true after completing one of the ready futures
+    /// pool.try_run_one(); // returns true after completing the other ready future
+    ///
+    /// // the remaining task can not be completed
+    /// pool.try_run_one(); // returns false
+    /// ```
+    ///
+    /// This function will not block the calling thread and will return the moment
+    /// that there are no tasks left for which progress can be made or after exactly one
+    /// task was completed; Remaining incomplete tasks in the pool can continue with
+    /// further use of one of the pool's run or poll methods.
+    /// Though only one task will be completed, progress may be made on multiple tasks.
+    pub fn try_run_one(&mut self) -> bool {
+        poll_executor(|ctx| {
+            let ret = self.poll_pool_once(ctx);
+
+            // return if we really have executed a future
+            match ret {
+                Poll::Ready(Some(_)) => true,
+                _ => false
+            }
+        })
+    }
+
+    /// Runs all tasks in the pool and returns if no more progress can be made
+    /// on any task.
+    ///
+    /// ```
+    /// use futures::executor::LocalPool;
+    /// use futures::task::LocalSpawnExt;
+    /// use futures::future::{ready, empty};
+    ///
+    /// let mut pool = LocalPool::new();
+    /// let mut spawner = pool.spawner();
+    ///
+    /// spawner.spawn_local(ready(()));
+    /// spawner.spawn_local(ready(()));
+    /// spawner.spawn_local(empty());
+    ///
+    /// // Runs the two ready task and returns.
+    /// // The empty task remains in the pool.
+    /// pool.run_until_stalled();
+    /// ```
+    ///
+    /// This function will not block the calling thread and will return the moment
+    /// that there are no tasks left for which progress can be made;
+    /// remaining incomplete tasks in the pool can continue with further use of one
+    /// of the pool's run or poll methods. While the function is running, all tasks
+    /// in the pool will try to make progress.
+    pub fn run_until_stalled(&mut self) {
+        poll_executor(|ctx| {
+            loop {
+                let result = self.poll_pool_once(ctx);
+
+                // if there are no more ready futures exit
+                match result {
+                    Poll::Pending | Poll::Ready(None) => return,
+                    _ => continue
+                }
+            }
         })
     }
 
     // Make maximal progress on the entire pool of spawned task, returning `Ready`
     // if the pool is empty and `Pending` if no further progress can be made.
-    fn poll_pool(&mut self, waker: &Waker) -> Poll<()> {
+    fn poll_pool(&mut self, cx: &mut Context<'_>) -> Poll<()> {
         // state for the FuturesUnordered, which will never be used
         loop {
-            // empty the incoming queue of newly-spawned tasks
-            {
-                let mut incoming = self.incoming.borrow_mut();
-                for task in incoming.drain(..) {
-                    self.pool.push(task)
-                }
-            }
+            let ret = self.poll_pool_once(cx);
 
-            let ret = self.pool.poll_next_unpin(waker);
             // we queued up some new tasks; add them and poll again
             if !self.incoming.borrow().is_empty() {
                 continue;
@@ -184,6 +264,20 @@ impl LocalPool {
             }
         }
     }
+
+    // Try make minimal progress on the pool of spawned tasks
+    fn poll_pool_once(&mut self, cx: &mut Context<'_>) -> Poll<Option<()>> {
+        // empty the incoming queue of newly-spawned tasks
+        {
+            let mut incoming = self.incoming.borrow_mut();
+            for task in incoming.drain(..) {
+                self.pool.push(task)
+            }
+        }
+
+        // try to execute the next ready future
+        self.pool.poll_next_unpin(cx)
+    }
 }
 
 impl Default for LocalPool {
@@ -192,30 +286,21 @@ impl Default for LocalPool {
     }
 }
 
-lazy_static! {
-    static ref GLOBAL_POOL: ThreadPool = ThreadPool::builder()
-        .name_prefix("block_on-")
-        .create()
-        .expect("Unable to create global thread-pool");
-}
-
 /// Run a future to completion on the current thread.
 ///
 /// This function will block the caller until the given future has completed.
-/// The default spawner for the future is a thread-local executor.
 ///
 /// Use a [`LocalPool`](LocalPool) if you need finer-grained control over
 /// spawned tasks.
 pub fn block_on<F: Future>(f: F) -> F::Output {
     pin_mut!(f);
-    run_executor(|waker| f.as_mut().poll(waker))
+    run_executor(|cx| f.as_mut().poll(cx))
 }
 
 /// Turn a stream into a blocking iterator.
 ///
 /// When `next` is called on the resulting `BlockingStream`, the caller
 /// will be blocked until the next element of the `Stream` becomes available.
-/// The default spawner for the future is a global `ThreadPool`.
 pub fn block_on_stream<S: Stream + Unpin>(stream: S) -> BlockingStream<S> {
     BlockingStream { stream }
 }

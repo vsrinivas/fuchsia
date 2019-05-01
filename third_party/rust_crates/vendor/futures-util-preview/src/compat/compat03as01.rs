@@ -15,9 +15,11 @@ use futures_core::{
 use futures_sink::Sink as Sink03;
 use crate::task::{ArcWake as ArcWake03, WakerRef};
 use std::{
+    marker::PhantomData,
     mem,
     pin::Pin,
     sync::Arc,
+    task::Context,
 };
 
 /// Converts a futures 0.3 [`TryFuture`](futures_core::future::TryFuture),
@@ -30,6 +32,14 @@ use std::{
 #[must_use = "futures do nothing unless polled"]
 pub struct Compat<T> {
     pub(crate) inner: T,
+}
+
+/// Converts a futures 0.3 Sink object to a futures 0.1-compatible version
+#[derive(Debug)]
+#[must_use = "sinks do nothing unless polled"]
+pub struct CompatSink<T, Item> {
+    inner: T,
+    _phantom: PhantomData<fn(Item)>,
 }
 
 impl<T> Compat<T> {
@@ -45,6 +55,21 @@ impl<T> Compat<T> {
     /// the corresponding futures 0.1 type.
     pub fn new(inner: T) -> Compat<T> {
         Compat { inner }
+    }
+}
+
+impl<T, Item> CompatSink<T, Item> {
+    /// Returns the inner item.
+    pub fn into_inner(self) -> T {
+        self.inner
+    }
+
+    /// Creates a new [`CompatSink`].
+    pub fn new(inner: T) -> Self {
+        CompatSink {
+            inner,
+            _phantom: PhantomData,
+        }
     }
 }
 
@@ -66,7 +91,7 @@ where
     type Error = Fut::Error;
 
     fn poll(&mut self) -> Poll01<Self::Item, Self::Error> {
-        with_context(self, |inner, waker| poll_03_to_01(inner.try_poll(waker)))
+        with_context(self, |inner, cx| poll_03_to_01(inner.try_poll(cx)))
     }
 }
 
@@ -78,7 +103,7 @@ where
     type Error = St::Error;
 
     fn poll(&mut self) -> Poll01<Option<Self::Item>, Self::Error> {
-        with_context(self, |inner, waker| match inner.try_poll_next(waker) {
+        with_context(self, |inner, cx| match inner.try_poll_next(cx) {
             task03::Poll::Ready(None) => Ok(Async01::Ready(None)),
             task03::Poll::Ready(Some(Ok(t))) => Ok(Async01::Ready(Some(t))),
             task03::Poll::Pending => Ok(Async01::NotReady),
@@ -87,19 +112,19 @@ where
     }
 }
 
-impl<T> Sink01 for Compat<T>
+impl<T, Item> Sink01 for CompatSink<T, Item>
 where
-    T: Sink03 + Unpin,
+    T: Sink03<Item> + Unpin,
 {
-    type SinkItem = T::SinkItem;
+    type SinkItem = Item;
     type SinkError = T::SinkError;
 
     fn start_send(
         &mut self,
         item: Self::SinkItem,
     ) -> StartSend01<Self::SinkItem, Self::SinkError> {
-        with_context(self, |mut inner, waker| {
-            match inner.as_mut().poll_ready(waker) {
+        with_sink_context(self, |mut inner, cx| {
+            match inner.as_mut().poll_ready(cx) {
                 task03::Poll::Ready(Ok(())) => {
                     inner.start_send(item).map(|()| AsyncSink01::Ready)
                 }
@@ -110,11 +135,11 @@ where
     }
 
     fn poll_complete(&mut self) -> Poll01<(), Self::SinkError> {
-        with_context(self, |inner, waker| poll_03_to_01(inner.poll_flush(waker)))
+        with_sink_context(self, |inner, cx| poll_03_to_01(inner.poll_flush(cx)))
     }
 
     fn close(&mut self) -> Poll01<(), Self::SinkError> {
-        with_context(self, |inner, waker| poll_03_to_01(inner.poll_close(waker)))
+        with_sink_context(self, |inner, cx| poll_03_to_01(inner.poll_close(cx)))
     }
 }
 
@@ -128,6 +153,7 @@ impl Current {
 
     fn as_waker(&self) -> WakerRef<'_> {
         unsafe fn ptr_to_current<'a>(ptr: *const ()) -> &'a Current {
+            #[allow(clippy::cast_ptr_alignment)]
             &*(ptr as *const Current)
         }
         fn current_to_ptr(current: &Current) -> *const () {
@@ -148,15 +174,15 @@ impl Current {
         }
 
         let ptr = current_to_ptr(self);
-        let vtable = &RawWakerVTable { clone, drop, wake };
+        let vtable = &RawWakerVTable::new(clone, wake, wake, drop);
         unsafe {
-            WakerRef::new(task03::Waker::new_unchecked(RawWaker::new(ptr, vtable)))
+            WakerRef::new(task03::Waker::from_raw(RawWaker::new(ptr, vtable)))
         }
     }
 }
 
 impl ArcWake03 for Current {
-    fn wake(arc_self: &Arc<Self>) {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
         arc_self.0.notify();
     }
 }
@@ -164,11 +190,23 @@ impl ArcWake03 for Current {
 fn with_context<T, R, F>(compat: &mut Compat<T>, f: F) -> R
 where
     T: Unpin,
-    F: FnOnce(Pin<&mut T>, &task03::Waker) -> R,
+    F: FnOnce(Pin<&mut T>, &mut Context<'_>) -> R,
 {
     let current = Current::new();
     let waker = current.as_waker();
-    f(Pin::new(&mut compat.inner), &waker)
+    let mut cx = Context::from_waker(&waker);
+    f(Pin::new(&mut compat.inner), &mut cx)
+}
+
+fn with_sink_context<T, Item, R, F>(compat: &mut CompatSink<T, Item>, f: F) -> R
+where
+    T: Unpin,
+    F: FnOnce(Pin<&mut T>, &mut Context<'_>) -> R,
+{
+    let current = Current::new();
+    let waker = current.as_waker();
+    let mut cx = Context::from_waker(&waker);
+    f(Pin::new(&mut compat.inner), &mut cx)
 }
 
 #[cfg(feature = "io-compat")]
@@ -187,15 +225,16 @@ mod io {
         }
     }
 
-    impl<R: AsyncRead03> std::io::Read for Compat<R> {
+    impl<R: AsyncRead03 + Unpin> std::io::Read for Compat<R> {
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
             let current = Current::new();
             let waker = current.as_waker();
-            poll_03_to_io(self.inner.poll_read(&waker, buf))
+            let mut cx = Context::from_waker(&waker);
+            poll_03_to_io(Pin::new(&mut self.inner).poll_read(&mut cx, buf))
         }
     }
 
-    impl<R: AsyncRead03> AsyncRead01 for Compat<R> {
+    impl<R: AsyncRead03 + Unpin> AsyncRead01 for Compat<R> {
         unsafe fn prepare_uninitialized_buffer(&self, buf: &mut [u8]) -> bool {
             let initializer = self.inner.initializer();
             let does_init = initializer.should_initialize();
@@ -206,25 +245,28 @@ mod io {
         }
     }
 
-    impl<W: AsyncWrite03> std::io::Write for Compat<W> {
+    impl<W: AsyncWrite03 + Unpin> std::io::Write for Compat<W> {
         fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
             let current = Current::new();
             let waker = current.as_waker();
-            poll_03_to_io(self.inner.poll_write(&waker, buf))
+            let mut cx = Context::from_waker(&waker);
+            poll_03_to_io(Pin::new(&mut self.inner).poll_write(&mut cx, buf))
         }
 
         fn flush(&mut self) -> std::io::Result<()> {
             let current = Current::new();
             let waker = current.as_waker();
-            poll_03_to_io(self.inner.poll_flush(&waker))
+            let mut cx = Context::from_waker(&waker);
+            poll_03_to_io(Pin::new(&mut self.inner).poll_flush(&mut cx))
         }
     }
 
-    impl<W: AsyncWrite03> AsyncWrite01 for Compat<W> {
+    impl<W: AsyncWrite03 + Unpin> AsyncWrite01 for Compat<W> {
         fn shutdown(&mut self) -> std::io::Result<Async01<()>> {
             let current = Current::new();
             let waker = current.as_waker();
-            poll_03_to_01(self.inner.poll_close(&waker))
+            let mut cx = Context::from_waker(&waker);
+            poll_03_to_01(Pin::new(&mut self.inner).poll_close(&mut cx))
         }
     }
 }

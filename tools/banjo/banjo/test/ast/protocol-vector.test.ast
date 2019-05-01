@@ -8,21 +8,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.vector"
+                        "banjo.examples.protocol.vector",
                     ),
-                    name: "Vector"
+                    name: "Vector",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Bool",
                         in_params: [
@@ -32,12 +32,12 @@ BanjoAst {
                                     ty: Bool,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -46,17 +46,17 @@ BanjoAst {
                                     ty: Bool,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int8",
                         in_params: [
@@ -66,12 +66,12 @@ BanjoAst {
                                     ty: Int8,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -80,17 +80,17 @@ BanjoAst {
                                     ty: Int8,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int16",
                         in_params: [
@@ -100,12 +100,12 @@ BanjoAst {
                                     ty: Int16,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -114,17 +114,17 @@ BanjoAst {
                                     ty: Int16,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int32",
                         in_params: [
@@ -134,12 +134,12 @@ BanjoAst {
                                     ty: Int32,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -148,17 +148,17 @@ BanjoAst {
                                     ty: Int32,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int64",
                         in_params: [
@@ -168,12 +168,12 @@ BanjoAst {
                                     ty: Int64,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -182,17 +182,17 @@ BanjoAst {
                                     ty: Int64,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint8",
                         in_params: [
@@ -202,12 +202,12 @@ BanjoAst {
                                     ty: UInt8,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -216,17 +216,17 @@ BanjoAst {
                                     ty: UInt8,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint16",
                         in_params: [
@@ -236,12 +236,12 @@ BanjoAst {
                                     ty: UInt16,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -250,17 +250,17 @@ BanjoAst {
                                     ty: UInt16,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint32",
                         in_params: [
@@ -270,12 +270,12 @@ BanjoAst {
                                     ty: UInt32,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -284,17 +284,17 @@ BanjoAst {
                                     ty: UInt32,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint64",
                         in_params: [
@@ -304,12 +304,12 @@ BanjoAst {
                                     ty: UInt64,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -318,17 +318,17 @@ BanjoAst {
                                     ty: UInt64,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float32",
                         in_params: [
@@ -338,12 +338,12 @@ BanjoAst {
                                     ty: Float32,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -352,17 +352,17 @@ BanjoAst {
                                     ty: Float32,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float64",
                         in_params: [
@@ -372,12 +372,12 @@ BanjoAst {
                                     ty: Float64,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -386,17 +386,17 @@ BanjoAst {
                                     ty: Float64,
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Handle",
                         in_params: [
@@ -405,16 +405,16 @@ BanjoAst {
                                 Vector {
                                     ty: Handle {
                                         ty: Handle,
-                                        reference: false
+                                        reference: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -422,34 +422,34 @@ BanjoAst {
                                 Vector {
                                     ty: Handle {
                                         ty: Handle,
-                                        reference: false
+                                        reference: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "1"
-                                        )
+                                            "1",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Constant {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.vector"
+                        "banjo.examples.protocol.vector",
                     ),
-                    name: "vector_size"
+                    name: "vector_size",
                 },
                 ty: UInt32,
                 value: Constant(
-                    "32"
-                )
+                    "32",
+                ),
             },
             Protocol {
                 attributes: Attrs(
@@ -457,21 +457,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.vector"
+                        "banjo.examples.protocol.vector",
                     ),
-                    name: "Vector2"
+                    name: "Vector2",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Bool",
                         in_params: [
@@ -481,12 +481,12 @@ BanjoAst {
                                     ty: Bool,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -495,17 +495,17 @@ BanjoAst {
                                     ty: Bool,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int8",
                         in_params: [
@@ -515,12 +515,12 @@ BanjoAst {
                                     ty: Int8,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -529,17 +529,17 @@ BanjoAst {
                                     ty: Int8,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int16",
                         in_params: [
@@ -549,12 +549,12 @@ BanjoAst {
                                     ty: Int16,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -563,17 +563,17 @@ BanjoAst {
                                     ty: Int16,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int32",
                         in_params: [
@@ -583,12 +583,12 @@ BanjoAst {
                                     ty: Int32,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -597,17 +597,17 @@ BanjoAst {
                                     ty: Int32,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int64",
                         in_params: [
@@ -617,12 +617,12 @@ BanjoAst {
                                     ty: Int64,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -631,17 +631,17 @@ BanjoAst {
                                     ty: Int64,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint8",
                         in_params: [
@@ -651,12 +651,12 @@ BanjoAst {
                                     ty: UInt8,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -665,17 +665,17 @@ BanjoAst {
                                     ty: UInt8,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint16",
                         in_params: [
@@ -685,12 +685,12 @@ BanjoAst {
                                     ty: UInt16,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -699,17 +699,17 @@ BanjoAst {
                                     ty: UInt16,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint32",
                         in_params: [
@@ -719,12 +719,12 @@ BanjoAst {
                                     ty: UInt32,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -733,17 +733,17 @@ BanjoAst {
                                     ty: UInt32,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint64",
                         in_params: [
@@ -753,12 +753,12 @@ BanjoAst {
                                     ty: UInt64,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -767,17 +767,17 @@ BanjoAst {
                                     ty: UInt64,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float32",
                         in_params: [
@@ -787,12 +787,12 @@ BanjoAst {
                                     ty: Float32,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -801,17 +801,17 @@ BanjoAst {
                                     ty: Float32,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float64",
                         in_params: [
@@ -821,12 +821,12 @@ BanjoAst {
                                     ty: Float64,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -835,17 +835,17 @@ BanjoAst {
                                     ty: Float64,
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Handle",
                         in_params: [
@@ -854,16 +854,16 @@ BanjoAst {
                                 Vector {
                                     ty: Handle {
                                         ty: Handle,
-                                        reference: false
+                                        reference: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -871,19 +871,19 @@ BanjoAst {
                                 Vector {
                                     ty: Handle {
                                         ty: Handle,
-                                        reference: false
+                                        reference: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -891,21 +891,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.vector"
+                        "banjo.examples.protocol.vector",
                     ),
-                    name: "VectorOfVectors"
+                    name: "VectorOfVectors",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Bool",
                         in_params: [
@@ -916,19 +916,19 @@ BanjoAst {
                                         ty: Bool,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -938,24 +938,24 @@ BanjoAst {
                                         ty: Bool,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int8",
                         in_params: [
@@ -966,19 +966,19 @@ BanjoAst {
                                         ty: Int8,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -988,24 +988,24 @@ BanjoAst {
                                         ty: Int8,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int16",
                         in_params: [
@@ -1016,19 +1016,19 @@ BanjoAst {
                                         ty: Int16,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1038,24 +1038,24 @@ BanjoAst {
                                         ty: Int16,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int32",
                         in_params: [
@@ -1066,19 +1066,19 @@ BanjoAst {
                                         ty: Int32,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1088,24 +1088,24 @@ BanjoAst {
                                         ty: Int32,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int64",
                         in_params: [
@@ -1116,19 +1116,19 @@ BanjoAst {
                                         ty: Int64,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1138,24 +1138,24 @@ BanjoAst {
                                         ty: Int64,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint8",
                         in_params: [
@@ -1166,19 +1166,19 @@ BanjoAst {
                                         ty: UInt8,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1188,24 +1188,24 @@ BanjoAst {
                                         ty: UInt8,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint16",
                         in_params: [
@@ -1216,19 +1216,19 @@ BanjoAst {
                                         ty: UInt16,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1238,24 +1238,24 @@ BanjoAst {
                                         ty: UInt16,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint32",
                         in_params: [
@@ -1266,19 +1266,19 @@ BanjoAst {
                                         ty: UInt32,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1288,24 +1288,24 @@ BanjoAst {
                                         ty: UInt32,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint64",
                         in_params: [
@@ -1316,19 +1316,19 @@ BanjoAst {
                                         ty: UInt64,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1338,24 +1338,24 @@ BanjoAst {
                                         ty: UInt64,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float32",
                         in_params: [
@@ -1366,19 +1366,19 @@ BanjoAst {
                                         ty: Float32,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1388,24 +1388,24 @@ BanjoAst {
                                         ty: Float32,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float64",
                         in_params: [
@@ -1416,19 +1416,19 @@ BanjoAst {
                                         ty: Float64,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1438,24 +1438,24 @@ BanjoAst {
                                         ty: Float64,
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Handle",
                         in_params: [
@@ -1465,23 +1465,23 @@ BanjoAst {
                                     ty: Vector {
                                         ty: Handle {
                                             ty: Handle,
-                                            reference: false
+                                            reference: false,
                                         },
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1490,27 +1490,27 @@ BanjoAst {
                                     ty: Vector {
                                         ty: Handle {
                                             ty: Handle,
-                                            reference: false
+                                            reference: false,
                                         },
                                         size: Some(
                                             Constant(
-                                                "4"
-                                            )
+                                                "4",
+                                            ),
                                         ),
-                                        nullable: false
+                                        nullable: false,
                                     },
                                     size: Some(
                                         Constant(
-                                            "vector_size"
-                                        )
+                                            "vector_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
-                    }
-                ]
-            }
-        ]
-    }
+                                    nullable: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
 }

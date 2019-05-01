@@ -1,13 +1,10 @@
 use crate::stream::{StreamExt, Fuse};
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// An adapter for merging the output of two streams.
-///
-/// The merged stream produces items from one or both of the underlying
-/// streams as they become available.
+/// Stream for the [`zip`](super::StreamExt::zip) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Zip<St1: Stream, St2: Stream> {
@@ -33,6 +30,41 @@ impl<St1: Stream, St2: Stream> Zip<St1, St2> {
             queued2: None,
         }
     }
+
+    /// Acquires a reference to the underlying streams that this combinator is
+    /// pulling from.
+    pub fn get_ref(&self) -> (&St1, &St2) {
+        (self.stream1.get_ref(), self.stream2.get_ref())
+    }
+
+    /// Acquires a mutable reference to the underlying streams that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_mut(&mut self) -> (&mut St1, &mut St2) {
+        (self.stream1.get_mut(), self.stream2.get_mut())
+    }
+
+    /// Acquires a pinned mutable reference to the underlying streams that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> (Pin<&'a mut St1>, Pin<&'a mut St2>)
+        where St1: Unpin, St2: Unpin,
+    {
+        let Self { stream1, stream2, .. } = Pin::get_mut(self);
+        (Pin::new(stream1.get_mut()), Pin::new(stream2.get_mut()))
+    }
+
+    /// Consumes this combinator, returning the underlying streams.
+    ///
+    /// Note that this may discard intermediate state of this combinator, so
+    /// care should be taken to avoid losing resources when this is called.
+    pub fn into_inner(self) -> (St1, St2) {
+        (self.stream1.into_inner(), self.stream2.into_inner())
+    }
 }
 
 impl<St1, St2> FusedStream for Zip<St1, St2>
@@ -50,16 +82,16 @@ impl<St1, St2> Stream for Zip<St1, St2>
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         if self.queued1.is_none() {
-            match self.as_mut().stream1().poll_next(waker) {
+            match self.as_mut().stream1().poll_next(cx) {
                 Poll::Ready(Some(item1)) => *self.as_mut().queued1() = Some(item1),
                 Poll::Ready(None) | Poll::Pending => {}
             }
         }
-        if self.as_mut().queued2().is_none() {
-            match self.as_mut().stream2().poll_next(waker) {
+        if self.queued2.is_none() {
+            match self.as_mut().stream2().poll_next(cx) {
                 Poll::Ready(Some(item2)) => *self.as_mut().queued2() = Some(item2),
                 Poll::Ready(None) | Poll::Pending => {}
             }

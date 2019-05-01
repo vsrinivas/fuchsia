@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -13,38 +13,35 @@
 [package]
 edition = "2018"
 name = "futures-util-preview"
-version = "0.3.0-alpha.13"
+version = "0.3.0-alpha.15"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "Common utilities and extension traits for the futures-rs library.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
-documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.13/futures_util"
+documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.15/futures_util"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang-nursery/futures-rs"
 
 [lib]
 name = "futures_util"
-[dependencies.either]
-version = "1.4"
-default-features = false
-
 [dependencies.futures-channel-preview]
-version = "=0.3.0-alpha.13"
+version = "=0.3.0-alpha.15"
 default-features = false
 
 [dependencies.futures-core-preview]
-version = "=0.3.0-alpha.13"
+version = "=0.3.0-alpha.15"
 default-features = false
 
 [dependencies.futures-io-preview]
-version = "=0.3.0-alpha.13"
+version = "=0.3.0-alpha.15"
 default-features = false
 
 [dependencies.futures-select-macro-preview]
-version = "=0.3.0-alpha.13"
+version = "=0.3.0-alpha.15"
+optional = true
 default-features = false
 
 [dependencies.futures-sink-preview]
-version = "=0.3.0-alpha.13"
+version = "=0.3.0-alpha.15"
 default-features = false
 
 [dependencies.futures_01]
@@ -52,14 +49,20 @@ version = "0.1.25"
 optional = true
 package = "futures"
 
+[dependencies.memchr]
+version = "2.2"
+optional = true
+
 [dependencies.pin-utils]
 version = "0.1.0-alpha.4"
 
 [dependencies.proc-macro-hack]
 version = "0.5"
+optional = true
 
 [dependencies.proc-macro-nested]
 version = "0.1.2"
+optional = true
 
 [dependencies.rand]
 version = "0.6.4"
@@ -78,10 +81,13 @@ version = "0.1.9"
 optional = true
 
 [features]
+alloc = ["futures-core-preview/alloc", "futures-sink-preview/alloc"]
+async-await = ["std", "futures-select-macro-preview", "proc-macro-hack", "proc-macro-nested", "rand", "rand_core"]
 bench = []
-cfg-target-has-atomic = []
+cfg-target-has-atomic = ["futures-core-preview/cfg-target-has-atomic"]
 compat = ["std", "futures_01"]
-default = ["std", "futures-core-preview/either", "futures-sink-preview/either"]
+default = ["std"]
 io-compat = ["compat", "tokio-io"]
-nightly = []
-std = ["futures-core-preview/std", "futures-io-preview/std", "futures-sink-preview/std", "futures-select-macro-preview/std", "either/use_std", "rand", "rand_core", "slab"]
+never-type = []
+nightly = ["futures-core-preview/nightly", "futures-sink-preview/nightly"]
+std = ["alloc", "futures-core-preview/std", "futures-io-preview/std", "futures-sink-preview/std", "slab", "memchr"]

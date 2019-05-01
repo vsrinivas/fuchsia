@@ -1,10 +1,8 @@
-#![feature(futures_api)]
-
 use futures::channel::oneshot;
 use futures::executor::{block_on, block_on_stream};
-use futures::future::{self, FutureExt, FutureObj};
-use futures::stream::{StreamExt, futures_ordered, FuturesOrdered};
-use futures_test::task::noop_waker_ref;
+use futures::future::{self, join, FutureExt};
+use futures::stream::{StreamExt, FuturesOrdered};
+use futures_test::task::noop_context;
 
 #[test]
 fn works_1() {
@@ -12,10 +10,10 @@ fn works_1() {
     let (b_tx, b_rx) = oneshot::channel::<i32>();
     let (c_tx, c_rx) = oneshot::channel::<i32>();
 
-    let mut stream = futures_ordered(vec![a_rx, b_rx, c_rx]);
+    let mut stream = vec![a_rx, b_rx, c_rx].into_iter().collect::<FuturesOrdered<_>>();
 
     b_tx.send(99).unwrap();
-    assert!(stream.poll_next_unpin(&noop_waker_ref()).is_pending());
+    assert!(stream.poll_next_unpin(&mut noop_context()).is_pending());
 
     a_tx.send(33).unwrap();
     c_tx.send(33).unwrap();
@@ -33,18 +31,18 @@ fn works_2() {
     let (b_tx, b_rx) = oneshot::channel::<i32>();
     let (c_tx, c_rx) = oneshot::channel::<i32>();
 
-    let mut stream = futures_ordered(vec![
-        FutureObj::new(Box::new(a_rx)),
-        FutureObj::new(Box::new(b_rx.join(c_rx).map(|(a, b)| Ok(a? + b?)))),
-    ]);
+    let mut stream = vec![
+        a_rx.boxed(),
+        join(b_rx, c_rx).map(|(a, b)| Ok(a? + b?)).boxed(),
+    ].into_iter().collect::<FuturesOrdered<_>>();
 
-    let lw = &noop_waker_ref();
+    let mut cx = noop_context();
     a_tx.send(33).unwrap();
     b_tx.send(33).unwrap();
-    assert!(stream.poll_next_unpin(lw).is_ready());
-    assert!(stream.poll_next_unpin(lw).is_pending());
+    assert!(stream.poll_next_unpin(&mut cx).is_ready());
+    assert!(stream.poll_next_unpin(&mut cx).is_pending());
     c_tx.send(33).unwrap();
-    assert!(stream.poll_next_unpin(lw).is_ready());
+    assert!(stream.poll_next_unpin(&mut cx).is_ready());
 }
 
 #[test]
@@ -65,20 +63,20 @@ fn queue_never_unblocked() {
     let (b_tx, b_rx) = oneshot::channel::<Box<Any+Send>>();
     let (c_tx, c_rx) = oneshot::channel::<Box<Any+Send>>();
 
-    let mut stream = futures_ordered(vec![
+    let mut stream = vec![
         Box::new(a_rx) as Box<Future<Item = _, Error = _>>,
         Box::new(b_rx.select(c_rx).then(|res| Ok(Box::new(res) as Box<Any+Send>))) as _,
-    ]);
+    ].into_iter().collect::<FuturesOrdered<_>>();
 
-    with_no_spawn_context(|lw| {
+    with_no_spawn_context(|cx| {
         for _ in 0..10 {
-            assert!(stream.poll_next(lw).unwrap().is_pending());
+            assert!(stream.poll_next(cx).unwrap().is_pending());
         }
 
         b_tx.send(Box::new(())).unwrap();
-        assert!(stream.poll_next(lw).unwrap().is_pending());
+        assert!(stream.poll_next(cx).unwrap().is_pending());
         c_tx.send(Box::new(())).unwrap();
-        assert!(stream.poll_next(lw).unwrap().is_pending());
-        assert!(stream.poll_next(lw).unwrap().is_pending());
+        assert!(stream.poll_next(cx).unwrap().is_pending());
+        assert!(stream.poll_next(cx).unwrap().is_pending());
     })
 }*/

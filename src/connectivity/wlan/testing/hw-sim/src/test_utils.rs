@@ -6,7 +6,7 @@ use {
     fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async::{self as fasync, temp::TempStreamExt, TimeoutExt},
     fuchsia_zircon::{self as zx, prelude::*},
-    futures::{channel::mpsc, ready, task::Waker, Future, FutureExt, Poll, StreamExt},
+    futures::{channel::mpsc, ready, task::Context, Future, FutureExt, Poll, StreamExt},
     std::{marker::Unpin, pin::Pin, sync::Arc},
     wlantap_client::Wlantap,
 };
@@ -43,15 +43,15 @@ where
 {
     type Output = Result<(T, EventStream), (E, EventStream)>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
-        match this.main_future.poll_unpin(lw) {
+        match this.main_future.poll_unpin(cx) {
             Poll::Ready(Err(e)) => Poll::Ready(Err((e, this.event_stream.take().unwrap()))),
             Poll::Ready(Ok(item)) => Poll::Ready(Ok((item, this.event_stream.take().unwrap()))),
             Poll::Pending => {
                 let stream = this.event_stream.as_mut().unwrap();
                 loop {
-                    let event = ready!(stream.poll_next_unpin(lw))
+                    let event = ready!(stream.poll_next_unpin(cx))
                         .expect("Unexpected end of the WlantapPhy event stream")
                         .expect("WlantapPhy event stream returned an error");
                     (this.event_handler)(event);

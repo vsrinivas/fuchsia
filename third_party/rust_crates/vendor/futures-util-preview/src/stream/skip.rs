@@ -1,11 +1,10 @@
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// A stream combinator which skips a number of elements before continuing.
-///
-/// This structure is produced by the `Stream::skip` method.
+/// Stream for the [`skip`](super::StreamExt::skip) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Skip<St> {
@@ -41,6 +40,15 @@ impl<St: Stream> Skip<St> {
         &mut self.stream
     }
 
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream()
+    }
+
     /// Consumes this combinator, returning the underlying stream.
     ///
     /// Note that this may discard intermediate state of this combinator, so
@@ -61,27 +69,25 @@ impl<St: Stream> Stream for Skip<St> {
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<St::Item>> {
         while self.remaining > 0 {
-            match ready!(self.as_mut().stream().poll_next(waker)) {
+            match ready!(self.as_mut().stream().poll_next(cx)) {
                 Some(_) => *self.as_mut().remaining() -= 1,
                 None => return Poll::Ready(None),
             }
         }
 
-        self.as_mut().stream().poll_next(waker)
+        self.as_mut().stream().poll_next(cx)
     }
 }
 
-/* TODO
 // Forwarding impl of Sink from the underlying stream
-impl<S> Sink for Skip<S>
-    where S: Sink
+impl<S, Item> Sink<Item> for Skip<S>
+where
+    S: Stream + Sink<Item>,
 {
-    type SinkItem = S::SinkItem;
     type SinkError = S::SinkError;
 
-    delegate_sink!(stream);
+    delegate_sink!(stream, Item);
 }
-*/

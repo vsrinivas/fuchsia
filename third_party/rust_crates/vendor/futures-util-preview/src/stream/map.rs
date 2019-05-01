@@ -1,12 +1,10 @@
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// A stream combinator which will change the type of a stream from one
-/// type to another.
-///
-/// This is produced by the `Stream::map` method.
+/// Stream for the [`map`](super::StreamExt::map) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Map<St, F> {
@@ -42,6 +40,15 @@ impl<St, T, F> Map<St, F>
         &mut self.stream
     }
 
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream()
+    }
+
     /// Consumes this combinator, returning the underlying stream.
     ///
     /// Note that this may discard intermediate state of this combinator, so
@@ -65,21 +72,19 @@ impl<St, F, T> Stream for Map<St, F>
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker
+        cx: &mut Context<'_>,
     ) -> Poll<Option<T>> {
-        let option = ready!(self.as_mut().stream().poll_next(waker));
+        let option = ready!(self.as_mut().stream().poll_next(cx));
         Poll::Ready(option.map(self.as_mut().f()))
     }
 }
 
-/* TODO
 // Forwarding impl of Sink from the underlying stream
-impl<S, F> Sink for Map<S, F>
-    where S: Sink
+impl<S, F, T, Item> Sink<Item> for Map<S, F>
+    where S: Stream + Sink<Item>,
+          F: FnMut(S::Item) -> T,
 {
-    type SinkItem = S::SinkItem;
     type SinkError = S::SinkError;
 
-    delegate_sink!(stream);
+    delegate_sink!(stream, Item);
 }
-*/

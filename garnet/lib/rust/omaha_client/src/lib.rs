@@ -4,7 +4,7 @@
 
 //! This is for Omaha client binaries written in Rust.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 #![recursion_limit = "128"]
 
 pub mod common;

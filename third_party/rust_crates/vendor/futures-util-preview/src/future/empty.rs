@@ -1,11 +1,9 @@
 use core::marker;
 use core::pin::Pin;
 use futures_core::future::{Future, FusedFuture};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 
-/// A future which is never resolved.
-///
-/// This future can be created with the [`empty()`] function.
+/// Future for the [`empty`] function.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct Empty<T> {
@@ -24,7 +22,7 @@ impl<T> FusedFuture for Empty<T> {
 /// # Examples
 ///
 /// ```ignore
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
@@ -40,7 +38,7 @@ pub fn empty<T>() -> Empty<T> {
 impl<T> Future for Empty<T> {
     type Output = T;
 
-    fn poll(self: Pin<&mut Self>, _: &Waker) -> Poll<T> {
+    fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<T> {
         Poll::Pending
     }
 }

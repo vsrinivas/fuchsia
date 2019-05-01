@@ -4,14 +4,11 @@ use core::pin::Pin;
 use core::num::NonZeroUsize;
 use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::TryStream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// A stream combinator which executes a unit closure over each item on a
-/// stream concurrently.
-///
-/// This structure is returned by the
-/// [`TryStreamExt::try_for_each_concurrent`](super::TryStreamExt::try_for_each_concurrent)
+/// Future for the
+/// [`try_for_each_concurrent`](super::TryStreamExt::try_for_each_concurrent)
 /// method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
@@ -61,16 +58,16 @@ impl<St, Fut, F> Future for TryForEachConcurrent<St, Fut, F>
 {
     type Output = Result<(), St::Error>;
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
             let mut made_progress_this_iter = false;
 
             // Try and pull an item from the stream
-            let current_len = self.as_mut().futures().len();
+            let current_len = self.futures.len();
             // Check if we've already created a number of futures greater than `limit`
             if self.limit.map(|limit| limit.get() > current_len).unwrap_or(true) {
                 let poll_res = match self.as_mut().stream().as_pin_mut() {
-                    Some(stream) => stream.try_poll_next(waker),
+                    Some(stream) => stream.try_poll_next(cx),
                     None => Poll::Ready(None),
                 };
 
@@ -99,10 +96,10 @@ impl<St, Fut, F> Future for TryForEachConcurrent<St, Fut, F>
                 }
             }
 
-            match self.as_mut().futures().poll_next_unpin(waker) {
+            match self.as_mut().futures().poll_next_unpin(cx) {
                 Poll::Ready(Some(Ok(()))) => made_progress_this_iter = true,
                 Poll::Ready(None) => {
-                    if self.as_mut().stream().is_none() {
+                    if self.stream.is_none() {
                         return Poll::Ready(Ok(()))
                     }
                 },

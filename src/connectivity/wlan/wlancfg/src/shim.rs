@@ -113,7 +113,7 @@ async fn handle_request(
     }
 }
 
-async fn scan<'a>(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::ScanResult {
+async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::ScanResult {
     let r = await!(
         async move {
             let client = client.get()?;

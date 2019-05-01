@@ -15,97 +15,10 @@
 namespace test {
 namespace name {
 
-class Interface;
-struct Struct;
 struct Union;
 using Table = ::fidl::VectorView<fidl_envelope_t>;
-
-// interface comment #1
-//
-// interface comment #3
-class Interface final {
- public:
-
-  using MethodRequest = ::fidl::AnyZeroArgMessage;
-
-
-  class SyncClient final {
-   public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
-    ~SyncClient() {}
-
-    // method comment #1
-    //
-    // method comment #3
-    zx_status_t Method();
-
-   private:
-    ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
-  class Call final {
-   public:
-
-    // method comment #1
-    //
-    // method comment #3
-    static zx_status_t Method(zx::unowned_channel _client_end);
-
-  };
-
-  // Pure-virtual interface to be implemented by a server.
-  class Interface {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-    using _Outer = Interface;
-    using _Base = ::fidl::CompleterBase;
-
-    using MethodCompleter = ::fidl::Completer<>;
-
-    virtual void Method(MethodCompleter::Sync _completer) = 0;
-
-  };
-
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
-
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<Interface*>(impl), msg, txn);
-  }
-
-};
-
-
-
-// struct comment #1
-//
-// struct comment #3
-struct Struct {
-  static constexpr const fidl_type_t* Type = nullptr;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  // struct member comment #1
-  //
-  // struct member comment #3
-  int32_t Field{};
-};
+struct Struct;
+class Interface;
 
 extern "C" const fidl_type_t test_name_UnionTable;
 
@@ -190,6 +103,93 @@ struct Union {
   };
 };
 
+
+
+// struct comment #1
+//
+// struct comment #3
+struct Struct {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  // struct member comment #1
+  //
+  // struct member comment #3
+  int32_t Field{};
+};
+
+// interface comment #1
+//
+// interface comment #3
+class Interface final {
+ public:
+
+  using MethodRequest = ::fidl::AnyZeroArgMessage;
+
+
+  class SyncClient final {
+   public:
+    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+
+    ~SyncClient() {}
+
+    // method comment #1
+    //
+    // method comment #3
+    zx_status_t Method();
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    // method comment #1
+    //
+    // method comment #3
+    static zx_status_t Method(zx::unowned_channel _client_end);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = Interface;
+    using _Base = ::fidl::CompleterBase;
+
+    using MethodCompleter = ::fidl::Completer<>;
+
+    virtual void Method(MethodCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+};
+
 // const comment #1
 //
 // const comment #3
@@ -201,13 +201,13 @@ constexpr int32_t C = 4;
 namespace fidl {
 
 template <>
+struct IsFidlType<::test::name::Union> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test::name::Union>);
+
+template <>
 struct IsFidlType<::test::name::Struct> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test::name::Struct>);
 static_assert(offsetof(::test::name::Struct, Field) == 0);
 static_assert(sizeof(::test::name::Struct) == ::test::name::Struct::PrimarySize);
-
-template <>
-struct IsFidlType<::test::name::Union> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::Union>);
 
 }  // namespace fidl

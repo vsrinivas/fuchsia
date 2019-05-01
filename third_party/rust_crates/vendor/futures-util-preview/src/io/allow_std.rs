@@ -1,8 +1,7 @@
-use futures_core::task::{Waker, Poll};
-use futures_io::{AsyncRead, AsyncWrite};
+use futures_core::task::{Context, Poll};
+use futures_io::{AsyncRead, AsyncWrite, AsyncSeek, AsyncBufRead};
 use std::{fmt, io};
-use std::string::String;
-use std::vec::Vec;
+use std::pin::Pin;
 
 /// A simple wrapper type which allows types which implement only
 /// implement `std::io::Read` or `std::io::Write`
@@ -16,6 +15,8 @@ use std::vec::Vec;
 /// with care.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct AllowStdIo<T>(T);
+
+impl<T> Unpin for AllowStdIo<T> {}
 
 macro_rules! try_with_interrupt {
     ($e:expr) => {
@@ -73,19 +74,19 @@ impl<T> io::Write for AllowStdIo<T> where T: io::Write {
 }
 
 impl<T> AsyncWrite for AllowStdIo<T> where T: io::Write {
-    fn poll_write(&mut self, _: &Waker, buf: &[u8])
+    fn poll_write(mut self: Pin<&mut Self>, _: &mut Context<'_>, buf: &[u8])
         -> Poll<io::Result<usize>>
     {
-        Poll::Ready(Ok(try_with_interrupt!(io::Write::write(&mut self.0, buf))))
+        Poll::Ready(Ok(try_with_interrupt!(self.0.write(buf))))
     }
 
-    fn poll_flush(&mut self, _: &Waker) -> Poll<io::Result<()>> {
-        try_with_interrupt!(io::Write::flush(self));
+    fn poll_flush(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+        try_with_interrupt!(self.0.flush());
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, waker: &Waker) -> Poll<io::Result<()>> {
-        self.poll_flush(waker)
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        self.poll_flush(cx)
     }
 }
 
@@ -107,9 +108,45 @@ impl<T> io::Read for AllowStdIo<T> where T: io::Read {
 }
 
 impl<T> AsyncRead for AllowStdIo<T> where T: io::Read {
-    fn poll_read(&mut self, _: &Waker, buf: &mut [u8])
+    fn poll_read(mut self: Pin<&mut Self>, _: &mut Context<'_>, buf: &mut [u8])
         -> Poll<io::Result<usize>>
     {
-        Poll::Ready(Ok(try_with_interrupt!(io::Read::read(&mut self.0, buf))))
+        Poll::Ready(Ok(try_with_interrupt!(self.0.read(buf))))
+    }
+}
+
+impl<T> io::Seek for AllowStdIo<T> where T: io::Seek {
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        self.0.seek(pos)
+    }
+}
+
+impl<T> AsyncSeek for AllowStdIo<T> where T: io::Seek {
+    fn poll_seek(mut self: Pin<&mut Self>, _: &mut Context<'_>, pos: io::SeekFrom)
+        -> Poll<io::Result<u64>>
+    {
+        Poll::Ready(Ok(try_with_interrupt!(self.0.seek(pos))))
+    }
+}
+
+impl<T> io::BufRead for AllowStdIo<T> where T: io::BufRead {
+    fn fill_buf(&mut self) -> io::Result<&[u8]> {
+        self.0.fill_buf()
+    }
+    fn consume(&mut self, amt: usize) {
+        self.0.consume(amt)
+    }
+}
+
+impl<T> AsyncBufRead for AllowStdIo<T> where T: io::BufRead {
+    fn poll_fill_buf<'a>(mut self: Pin<&'a mut Self>, _: &mut Context<'_>)
+        -> Poll<io::Result<&'a [u8]>>
+    {
+        let this: *mut Self = &mut *self as *mut _;
+        Poll::Ready(Ok(try_with_interrupt!(unsafe { &mut *this }.0.fill_buf())))
+    }
+
+    fn consume(mut self: Pin<&mut Self>, amt: usize) {
+        self.0.consume(amt)
     }
 }

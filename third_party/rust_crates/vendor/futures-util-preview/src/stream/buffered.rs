@@ -1,18 +1,13 @@
 use crate::stream::{Fuse, FuturesOrdered};
 use futures_core::future::Future;
 use futures_core::stream::Stream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
-use std::fmt;
-use std::pin::Pin;
+use core::fmt;
+use core::pin::Pin;
 
-/// An adaptor for a stream of futures to execute the futures concurrently, if
-/// possible.
-///
-/// This adaptor will buffer up a list of pending futures, and then return their
-/// results in the order that they were pulled out of the original stream. This
-/// is created by the `Stream::buffered` method.
+/// Stream for the [`buffered`](super::StreamExt::buffered) method.
 #[must_use = "streams do nothing unless polled"]
 pub struct Buffered<St: Stream>
 where
@@ -75,14 +70,13 @@ where
         self.stream.get_mut()
     }
 
-    /// Acquires a mutable pinned reference to the underlying stream that this
+    /// Acquires a pinned mutable reference to the underlying stream that this
     /// combinator is pulling from.
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    #[allow(clippy::needless_lifetimes)] // https://github.com/rust-lang/rust/issues/52675
     pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
-        unsafe { Pin::map_unchecked_mut(self, |x| x.get_mut()) }
+        self.stream().get_pin_mut()
     }
 
     /// Consumes this combinator, returning the underlying stream.
@@ -103,19 +97,19 @@ where
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         // Try to spawn off as many futures as possible by filling up
         // our in_progress_queue of futures.
         while self.in_progress_queue.len() < self.max {
-            match self.as_mut().stream().poll_next(waker) {
+            match self.as_mut().stream().poll_next(cx) {
                 Poll::Ready(Some(fut)) => self.as_mut().in_progress_queue().push(fut),
                 Poll::Ready(None) | Poll::Pending => break,
             }
         }
 
         // Attempt to pull the next value from the in_progress_queue
-        let res = Pin::new(self.as_mut().in_progress_queue()).poll_next(waker);
+        let res = Pin::new(self.as_mut().in_progress_queue()).poll_next(cx);
         if let Some(val) = ready!(res) {
             return Poll::Ready(Some(val))
         }
@@ -130,13 +124,12 @@ where
 }
 
 // Forwarding impl of Sink from the underlying stream
-impl<S> Sink for Buffered<S>
+impl<S, Item> Sink<Item> for Buffered<S>
 where
-    S: Stream + Sink,
+    S: Stream + Sink<Item>,
     S::Item: Future,
 {
-    type SinkItem = S::SinkItem;
     type SinkError = S::SinkError;
 
-    delegate_sink!(stream);
+    delegate_sink!(stream, Item);
 }

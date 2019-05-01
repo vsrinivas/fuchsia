@@ -1,13 +1,18 @@
 use futures_01::executor::{
-    Spawn as Spawn01, spawn as spawn01,
-    UnsafeNotify as UnsafeNotify01,
-    Notify as Notify01,
-    NotifyHandle as NotifyHandle01,
+    spawn as spawn01, Notify as Notify01, NotifyHandle as NotifyHandle01,
+    Spawn as Spawn01, UnsafeNotify as UnsafeNotify01,
 };
-use futures_01::{Async as Async01, Future as Future01, Stream as Stream01};
+use futures_01::{
+    Async as Async01, AsyncSink as AsyncSink01, Future as Future01,
+    Sink as Sink01, Stream as Stream01,
+};
 use futures_core::{task as task03, Future as Future03, Stream as Stream03};
 use std::pin::Pin;
-use std::task::Waker;
+use std::task::Context;
+use futures_sink::Sink as Sink03;
+
+#[cfg(feature = "io-compat")]
+pub use io::{AsyncRead01CompatExt, AsyncWrite01CompatExt};
 
 /// Converts a futures 0.1 Future, Stream, AsyncRead, or AsyncWrite
 /// object to a futures 0.3-compatible version,
@@ -28,9 +33,14 @@ impl<T> Compat01As03<T> {
         }
     }
 
-    fn in_notify<R>(&mut self, waker: &Waker, f: impl FnOnce(&mut T) -> R) -> R {
-        let notify = &WakerToHandle(waker);
+    fn in_notify<R>(&mut self, cx: &mut Context<'_>, f: impl FnOnce(&mut T) -> R) -> R {
+        let notify = &WakerToHandle(cx.waker());
         self.inner.poll_fn_notify(notify, 0, f)
+    }
+
+    /// Get a reference to 0.1 Future, Stream, AsyncRead, or AsyncWrite object contained within.
+    pub fn get_ref(&self) -> &T {
+        self.inner.get_ref()
     }
 }
 
@@ -40,7 +50,22 @@ pub trait Future01CompatExt: Future01 {
     /// [`Future<Item = T, Error = E>`](futures::future::Future)
     /// into a futures 0.3
     /// [`Future<Output = Result<T, E>>`](futures_core::future::Future).
-    fn compat(self) -> Compat01As03<Self> where Self: Sized {
+    ///
+    /// ```
+    /// #![feature(async_await, await_macro)]
+    /// # futures::executor::block_on(async {
+    /// # // TODO: These should be all using `futures::compat`, but that runs up against Cargo
+    /// # // feature issues
+    /// use futures_util::compat::Future01CompatExt;
+    ///
+    /// let future = futures_01::future::ok::<u32, ()>(1);
+    /// assert_eq!(await!(future.compat()), Ok(1));
+    /// # });
+    /// ```
+    fn compat(self) -> Compat01As03<Self>
+    where
+        Self: Sized,
+    {
         Compat01As03::new(self)
     }
 }
@@ -52,15 +77,60 @@ pub trait Stream01CompatExt: Stream01 {
     /// [`Stream<Item = T, Error = E>`](futures::stream::Stream)
     /// into a futures 0.3
     /// [`Stream<Item = Result<T, E>>`](futures_core::stream::Stream).
-    fn compat(self) -> Compat01As03<Self> where Self: Sized {
+    ///
+    /// ```
+    /// #![feature(async_await, await_macro)]
+    /// # futures::executor::block_on(async {
+    /// use futures::stream::StreamExt;
+    /// use futures_util::compat::Stream01CompatExt;
+    ///
+    /// let stream = futures_01::stream::once::<u32, ()>(Ok(1));
+    /// let mut stream = stream.compat();
+    /// assert_eq!(await!(stream.next()), Some(Ok(1)));
+    /// assert_eq!(await!(stream.next()), None);
+    /// # });
+    /// ```
+    fn compat(self) -> Compat01As03<Self>
+    where
+        Self: Sized,
+    {
         Compat01As03::new(self)
     }
 }
 impl<St: Stream01> Stream01CompatExt for St {}
 
-fn poll_01_to_03<T, E>(x: Result<Async01<T>, E>)
-    -> task03::Poll<Result<T, E>>
-{
+/// Extension trait for futures 0.1 [`Sink`](futures::sink::Sink)
+pub trait Sink01CompatExt: Sink01 {
+    /// Converts a futures 0.1
+    /// [`Sink<SinkItem = T, SinkError = E>`](futures::sink::Sink)
+    /// into a futures 0.3
+    /// [`Sink<SinkItem = T, SinkError = E>`](futures_sink::sink::Sink).
+    ///
+    /// ```
+    /// #![feature(async_await, await_macro)]
+    /// # futures::executor::block_on(async {
+    /// use futures::{sink::SinkExt, stream::StreamExt};
+    /// use futures_util::compat::{Stream01CompatExt, Sink01CompatExt};
+    ///
+    /// let (tx, rx) = futures_01::unsync::mpsc::channel(1);
+    /// let (mut tx, mut rx) = (tx.sink_compat(), rx.compat());
+    ///
+    /// await!(tx.send(1)).unwrap();
+    /// drop(tx);
+    /// assert_eq!(await!(rx.next()), Some(Ok(1)));
+    /// assert_eq!(await!(rx.next()), None);
+    /// # });
+    /// ```
+    fn sink_compat(self) -> Compat01As03Sink<Self, Self::SinkItem>
+    where
+        Self: Sized,
+    {
+        Compat01As03Sink::new(self)
+    }
+}
+impl<Si: Sink01> Sink01CompatExt for Si {}
+
+fn poll_01_to_03<T, E>(x: Result<Async01<T>, E>) -> task03::Poll<Result<T, E>> {
     match x {
         Ok(Async01::Ready(t)) => task03::Poll::Ready(Ok(t)),
         Ok(Async01::NotReady) => task03::Poll::Pending,
@@ -73,9 +143,9 @@ impl<Fut: Future01> Future03 for Compat01As03<Fut> {
 
     fn poll(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> task03::Poll<Self::Output> {
-        poll_01_to_03(self.in_notify(waker, |f| f.poll()))
+        poll_01_to_03(self.in_notify(cx, Future01::poll))
     }
 }
 
@@ -84,13 +154,159 @@ impl<St: Stream01> Stream03 for Compat01As03<St> {
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> task03::Poll<Option<Self::Item>> {
-        match self.in_notify(waker, |f| f.poll()) {
+        match self.in_notify(cx, Stream01::poll) {
             Ok(Async01::Ready(Some(t))) => task03::Poll::Ready(Some(Ok(t))),
             Ok(Async01::Ready(None)) => task03::Poll::Ready(None),
             Ok(Async01::NotReady) => task03::Poll::Pending,
             Err(e) => task03::Poll::Ready(Some(Err(e))),
+        }
+    }
+}
+
+/// Converts a futures 0.1 Sink object to a futures 0.3-compatible version
+#[derive(Debug)]
+#[must_use = "sinks do nothing unless polled"]
+pub struct Compat01As03Sink<S, SinkItem> {
+    pub(crate) inner: Spawn01<S>,
+    pub(crate) buffer: Option<SinkItem>,
+    pub(crate) close_started: bool,
+}
+
+impl<S, SinkItem> Unpin for Compat01As03Sink<S, SinkItem> {}
+
+impl<S, SinkItem> Compat01As03Sink<S, SinkItem> {
+    /// Wraps a futures 0.1 Sink object in a futures 0.3-compatible wrapper.
+    pub fn new(inner: S) -> Compat01As03Sink<S, SinkItem> {
+        Compat01As03Sink {
+            inner: spawn01(inner),
+            buffer: None,
+            close_started: false
+        }
+    }
+
+    fn in_notify<R>(
+        &mut self,
+        cx: &mut Context<'_>,
+        f: impl FnOnce(&mut S) -> R,
+    ) -> R {
+        let notify = &WakerToHandle(cx.waker());
+        self.inner.poll_fn_notify(notify, 0, f)
+    }
+
+    /// Get a reference to 0.1 Sink object contained within.
+    pub fn get_ref(&self) -> &S {
+        self.inner.get_ref()
+    }
+}
+
+impl<S, SinkItem> Stream03 for Compat01As03Sink<S, SinkItem>
+where
+    S: Stream01,
+{
+    type Item = Result<S::Item, S::Error>;
+
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> task03::Poll<Option<Self::Item>> {
+        match self.in_notify(cx, Stream01::poll) {
+            Ok(Async01::Ready(Some(t))) => task03::Poll::Ready(Some(Ok(t))),
+            Ok(Async01::Ready(None)) => task03::Poll::Ready(None),
+            Ok(Async01::NotReady) => task03::Poll::Pending,
+            Err(e) => task03::Poll::Ready(Some(Err(e))),
+        }
+    }
+}
+
+impl<S, SinkItem> Sink03<SinkItem> for Compat01As03Sink<S, SinkItem>
+where
+    S: Sink01<SinkItem = SinkItem>,
+{
+    type SinkError = S::SinkError;
+
+    fn start_send(
+        mut self: Pin<&mut Self>,
+        item: SinkItem,
+    ) -> Result<(), Self::SinkError> {
+        debug_assert!(self.buffer.is_none());
+        self.buffer = Some(item);
+        Ok(())
+    }
+
+    fn poll_ready(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> task03::Poll<Result<(), Self::SinkError>> {
+        match self.buffer.take() {
+            Some(item) => match self.in_notify(cx, |f| f.start_send(item)) {
+                Ok(AsyncSink01::Ready) => task03::Poll::Ready(Ok(())),
+                Ok(AsyncSink01::NotReady(i)) => {
+                    self.buffer = Some(i);
+                    task03::Poll::Pending
+                }
+                Err(e) => task03::Poll::Ready(Err(e)),
+            },
+            None => task03::Poll::Ready(Ok(())),
+        }
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> task03::Poll<Result<(), Self::SinkError>> {
+        let item = self.buffer.take();
+        match self.in_notify(cx, |f| match item {
+            Some(i) => match f.start_send(i) {
+                Ok(AsyncSink01::Ready) => f.poll_complete().map(|i| (i, None)),
+                Ok(AsyncSink01::NotReady(t)) => {
+                    Ok((Async01::NotReady, Some(t)))
+                }
+                Err(e) => Err(e),
+            },
+            None => f.poll_complete().map(|i| (i, None)),
+        }) {
+            Ok((Async01::Ready(_), _)) => task03::Poll::Ready(Ok(())),
+            Ok((Async01::NotReady, item)) => {
+                self.buffer = item;
+                task03::Poll::Pending
+            }
+            Err(e) => task03::Poll::Ready(Err(e)),
+        }
+    }
+
+    fn poll_close(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> task03::Poll<Result<(), Self::SinkError>> {
+        let item = self.buffer.take();
+        let close_started = self.close_started;
+
+        let result = self.in_notify(cx, |f| {
+            if !close_started {
+                if let Some(item) = item {
+                    if let AsyncSink01::NotReady(item) = f.start_send(item)? {
+                        return Ok((Async01::NotReady, Some(item), false));
+                    }
+                }
+
+                if let Async01::NotReady = f.poll_complete()? {
+                    return Ok((Async01::NotReady, None, false));
+                }
+            }
+
+            Ok((<S as Sink01>::close(f)?, None, true))
+        });
+
+        match result {
+            Ok((Async01::Ready(_), _, _)) => task03::Poll::Ready(Ok(())),
+            Ok((Async01::NotReady, item, close_started)) => {
+                self.buffer = item;
+                self.close_started = close_started;
+                task03::Poll::Pending
+            }
+            Err(e) => task03::Poll::Ready(Err(e)),
         }
     }
 }
@@ -100,8 +316,8 @@ struct NotifyWaker(task03::Waker);
 #[derive(Clone)]
 struct WakerToHandle<'a>(&'a task03::Waker);
 
-impl<'a> From<WakerToHandle<'a>> for NotifyHandle01 {
-    fn from(handle: WakerToHandle<'a>) -> NotifyHandle01 {
+impl From<WakerToHandle<'_>> for NotifyHandle01 {
+    fn from(handle: WakerToHandle<'_>) -> NotifyHandle01 {
         let ptr = Box::new(NotifyWaker(handle.0.clone()));
 
         unsafe { NotifyHandle01::new(Box::into_raw(ptr)) }
@@ -110,7 +326,7 @@ impl<'a> From<WakerToHandle<'a>> for NotifyHandle01 {
 
 impl Notify01 for NotifyWaker {
     fn notify(&self, _: usize) {
-        self.0.wake();
+        self.0.wake_by_ref();
     }
 }
 
@@ -129,12 +345,68 @@ unsafe impl UnsafeNotify01 for NotifyWaker {
 mod io {
     use super::*;
     use futures_io::{
-        AsyncRead as AsyncRead03,
-        AsyncWrite as AsyncWrite03,
-        Initializer,
+        AsyncRead as AsyncRead03, AsyncWrite as AsyncWrite03, Initializer,
     };
     use std::io::Error;
     use tokio_io::{AsyncRead as AsyncRead01, AsyncWrite as AsyncWrite01};
+
+    /// Extension trait for tokio-io [`AsyncRead`](tokio_io::AsyncRead)
+    pub trait AsyncRead01CompatExt: AsyncRead01 {
+        /// Converts a tokio-io [`AsyncRead`](tokio_io::AsyncRead) into a futures-io 0.3
+        /// [`AsyncRead`](futures_io::AsyncRead).
+        ///
+        /// ```
+        /// #![feature(async_await, await_macro, impl_trait_in_bindings)]
+        /// # futures::executor::block_on(async {
+        /// use futures::io::AsyncReadExt;
+        /// use futures_util::compat::AsyncRead01CompatExt;
+        ///
+        /// let input = b"Hello World!";
+        /// let reader: impl tokio_io::AsyncRead = std::io::Cursor::new(input);
+        /// let mut reader: impl futures::io::AsyncRead + Unpin = reader.compat();
+        ///
+        /// let mut output = Vec::with_capacity(12);
+        /// await!(reader.read_to_end(&mut output)).unwrap();
+        /// assert_eq!(output, input);
+        /// # });
+        /// ```
+        fn compat(self) -> Compat01As03<Self>
+        where
+            Self: Sized,
+        {
+            Compat01As03::new(self)
+        }
+    }
+    impl<R: AsyncRead01> AsyncRead01CompatExt for R {}
+
+    /// Extension trait for tokio-io [`AsyncWrite`](tokio_io::AsyncWrite)
+    pub trait AsyncWrite01CompatExt: AsyncWrite01 {
+        /// Converts a tokio-io [`AsyncWrite`](tokio_io::AsyncWrite) into a futures-io 0.3
+        /// [`AsyncWrite`](futures_io::AsyncWrite).
+        ///
+        /// ```
+        /// #![feature(async_await, await_macro, impl_trait_in_bindings)]
+        /// # futures::executor::block_on(async {
+        /// use futures::io::AsyncWriteExt;
+        /// use futures_util::compat::AsyncWrite01CompatExt;
+        ///
+        /// let input = b"Hello World!";
+        /// let mut cursor = std::io::Cursor::new(Vec::with_capacity(12));
+        ///
+        /// let mut writer = (&mut cursor).compat();
+        /// await!(writer.write_all(input)).unwrap();
+        ///
+        /// assert_eq!(cursor.into_inner(), input);
+        /// # });
+        /// ```
+        fn compat(self) -> Compat01As03<Self>
+        where
+            Self: Sized,
+        {
+            Compat01As03::new(self)
+        }
+    }
+    impl<W: AsyncWrite01> AsyncWrite01CompatExt for W {}
 
     impl<R: AsyncRead01> AsyncRead03 for Compat01As03<R> {
         unsafe fn initializer(&self) -> Initializer {
@@ -146,30 +418,30 @@ mod io {
             }
         }
 
-        fn poll_read(&mut self, waker: &task03::Waker, buf: &mut [u8])
+        fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8])
             -> task03::Poll<Result<usize, Error>>
         {
-            poll_01_to_03(self.in_notify(waker, |x| x.poll_read(buf)))
+            poll_01_to_03(self.in_notify(cx, |x| x.poll_read(buf)))
         }
     }
 
     impl<W: AsyncWrite01> AsyncWrite03 for Compat01As03<W> {
-        fn poll_write(&mut self, waker: &task03::Waker, buf: &[u8])
+        fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8])
             -> task03::Poll<Result<usize, Error>>
         {
-            poll_01_to_03(self.in_notify(waker, |x| x.poll_write(buf)))
+            poll_01_to_03(self.in_notify(cx, |x| x.poll_write(buf)))
         }
 
-        fn poll_flush(&mut self, waker: &task03::Waker)
+        fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>)
             -> task03::Poll<Result<(), Error>>
         {
-            poll_01_to_03(self.in_notify(waker, |x| x.poll_flush()))
+            poll_01_to_03(self.in_notify(cx, AsyncWrite01::poll_flush))
         }
 
-        fn poll_close(&mut self, waker: &task03::Waker)
+        fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>)
             -> task03::Poll<Result<(), Error>>
         {
-            poll_01_to_03(self.in_notify(waker, |x| x.shutdown()))
+            poll_01_to_03(self.in_notify(cx, AsyncWrite01::shutdown))
         }
     }
 }

@@ -2,11 +2,9 @@
 
 use core::pin::Pin;
 use futures_core::stream::Stream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 
-/// A stream which adapts a function returning `Poll`.
-///
-/// Created by the `poll_fn` function.
+/// Stream for the [`poll_fn`] function.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct PollFn<F> {
@@ -22,7 +20,6 @@ impl<F> Unpin for PollFn<F> {}
 /// # Examples
 ///
 /// ```
-/// #![feature(futures_api)]
 /// use futures::stream::poll_fn;
 /// use futures::task::Poll;
 ///
@@ -36,18 +33,18 @@ impl<F> Unpin for PollFn<F> {}
 /// ```
 pub fn poll_fn<T, F>(f: F) -> PollFn<F>
 where
-    F: FnMut(&Waker) -> Poll<Option<T>>,
+    F: FnMut(&mut Context<'_>) -> Poll<Option<T>>,
 {
     PollFn { f }
 }
 
 impl<T, F> Stream for PollFn<F>
 where
-    F: FnMut(&Waker) -> Poll<Option<T>>,
+    F: FnMut(&mut Context<'_>) -> Poll<Option<T>>,
 {
     type Item = T;
 
-    fn poll_next(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Option<T>> {
-        (&mut self.f)(waker)
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<T>> {
+        (&mut self.f)(cx)
     }
 }

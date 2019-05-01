@@ -208,10 +208,10 @@
   ],
   "xunion_declarations": [],
   "declaration_order": [
-    "test.name/Interface",
-    "test.name/Struct",
     "test.name/Union",
     "test.name/Table",
+    "test.name/Struct",
+    "test.name/Interface",
     "test.name/C"
   ],
   "declarations": {

@@ -1,11 +1,9 @@
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::Stream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 
-/// A combinator used to temporarily convert a stream into a future.
-///
-/// This future is returned by the `Stream::into_future` method.
+/// Future for the [`into_future`](super::StreamExt::into_future) method.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct StreamFuture<St> {
@@ -18,6 +16,7 @@ impl<St: Stream + Unpin> StreamFuture<St> {
     pub(super) fn new(stream: St) -> StreamFuture<St> {
         StreamFuture { stream: Some(stream) }
     }
+
     /// Acquires a reference to the underlying stream that this combinator is
     /// pulling from.
     ///
@@ -41,6 +40,20 @@ impl<St: Stream + Unpin> StreamFuture<St> {
     /// an element.
     pub fn get_mut(&mut self) -> Option<&mut St> {
         self.stream.as_mut()
+    }
+
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    ///
+    /// This method returns an `Option` to account for the fact that `StreamFuture`'s
+    /// implementation of `Future::poll` consumes the underlying stream during polling
+    /// in order to return it to the caller of `Future::poll` if the stream yielded
+    /// an element.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Option<Pin<&'a mut St>> {
+        Pin::new(&mut Pin::get_mut(self).stream).as_pin_mut()
     }
 
     /// Consumes this combinator, returning the underlying stream.
@@ -68,11 +81,11 @@ impl<St: Stream + Unpin> Future for StreamFuture<St> {
 
     fn poll(
         mut self: Pin<&mut Self>,
-        waker: &Waker
+        cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
         let item = {
             let s = self.stream.as_mut().expect("polling StreamFuture twice");
-            ready!(Pin::new(s).poll_next(waker))
+            ready!(Pin::new(s).poll_next(cx))
         };
         let stream = self.stream.take().unwrap();
         Poll::Ready((item, stream))

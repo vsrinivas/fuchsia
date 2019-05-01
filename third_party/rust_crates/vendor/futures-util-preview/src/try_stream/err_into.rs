@@ -1,10 +1,11 @@
 use core::marker::PhantomData;
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream, TryStream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::unsafe_pinned;
 
-/// Stream for the [`err_into`](super::TryStreamExt::err_into) combinator.
+/// Stream for the [`err_into`](super::TryStreamExt::err_into) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct ErrInto<St, E> {
@@ -19,6 +20,38 @@ impl<St, E> ErrInto<St, E> {
 
     pub(super) fn new(stream: St) -> Self {
         ErrInto { stream, _marker: PhantomData }
+    }
+
+    /// Acquires a reference to the underlying stream that this combinator is
+    /// pulling from.
+    pub fn get_ref(&self) -> &St {
+        &self.stream
+    }
+
+    /// Acquires a mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_mut(&mut self) -> &mut St {
+        &mut self.stream
+    }
+
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream()
+    }
+
+    /// Consumes this combinator, returning the underlying stream.
+    ///
+    /// Note that this may discard intermediate state of this combinator, so
+    /// care should be taken to avoid losing resources when this is called.
+    pub fn into_inner(self) -> St {
+        self.stream
     }
 }
 
@@ -37,9 +70,20 @@ where
 
     fn poll_next(
         self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        self.stream().try_poll_next(waker)
+        self.stream().try_poll_next(cx)
             .map(|res| res.map(|some| some.map_err(Into::into)))
     }
+}
+
+// Forwarding impl of Sink from the underlying stream
+impl<S, E, Item> Sink<Item> for ErrInto<S, E>
+where
+    S: TryStream + Sink<Item>,
+    S::Error: Into<E>,
+{
+    type SinkError = S::SinkError;
+
+    delegate_sink!(stream, Item);
 }

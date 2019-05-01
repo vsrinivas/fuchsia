@@ -6,7 +6,7 @@ use crate::errors::QmuxError;
 use bytes::Buf;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{task::Waker, Future, Poll};
+use futures::{task::{Context, Waker}, Future, Poll};
 use parking_lot::Mutex;
 use slab::Slab;
 use std::collections::HashMap;
@@ -48,10 +48,10 @@ impl Unpin for QmiResponse {}
 
 impl Future for QmiResponse {
     type Output = Result<zx::MessageBuf, QmuxError>;
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
         let transport = this.transport.as_ref().ok_or(QmuxError::PollAfterCompletion)?;
-        transport.poll_recv_msg_response(this.client_id, this.svc_id, this.tx_id, waker)
+        transport.poll_recv_msg_response(this.client_id, this.svc_id, this.tx_id, cx)
     }
 }
 
@@ -180,7 +180,7 @@ impl QmiTransport {
             // any TxId will do
             for (_, message_interest) in message_interest_map.iter() {
                 if let MessageInterest::Waiting(waker) = message_interest {
-                    waker.wake();
+                    waker.wake_by_ref();
                     return;
                 }
             }
@@ -191,14 +191,14 @@ impl QmiTransport {
     /// Poll for the receipt of any response message or an event.
     ///
     /// Returns whether or not the channel is closed.
-    fn recv_all(&self, waker: &Waker) -> Result<bool, QmuxError> {
+    fn recv_all(&self, cx: &mut Context<'_>) -> Result<bool, QmuxError> {
         if let Some(ref transport_channel) = self.transport_channel {
             if transport_channel.is_closed() {
                 return Ok(true);
             }
             loop {
                 let mut buf = zx::MessageBuf::new();
-                match transport_channel.recv_from(&mut buf, waker) {
+                match transport_channel.recv_from(cx, &mut buf) {
                     Poll::Ready(Ok(())) => {}
                     Poll::Ready(Err(zx::Status::PEER_CLOSED)) => return Ok(true),
                     Poll::Ready(Err(e)) => return Err(QmuxError::ClientRead(e)),
@@ -243,9 +243,9 @@ impl QmiTransport {
         client_id: ClientId,
         svc_id: SvcId,
         txid: TxId,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<zx::MessageBuf, QmuxError>> {
-        let is_closed = self.recv_all(waker)?;
+        let is_closed = self.recv_all(cx)?;
         let mut mi = self.message_interests.lock();
         let message_interests: &mut Slab<MessageInterest> =
             mi.get_mut(&(svc_id, client_id)).ok_or(QmuxError::InvalidSvcOrClient)?;
@@ -259,7 +259,7 @@ impl QmiTransport {
         } else {
             // Set the current waker to be notified when a response arrives.
             *message_interests.get_mut(txid.as_raw_id()).expect("Polled unregistered interest") =
-                MessageInterest::Waiting(waker.clone());
+                MessageInterest::Waiting(cx.waker().clone());
             if is_closed {
                 Poll::Ready(Err(QmuxError::ClientRead(zx::Status::PEER_CLOSED)))
             } else {

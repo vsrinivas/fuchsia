@@ -4,7 +4,7 @@
 
 //! A networking stack.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 

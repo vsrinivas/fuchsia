@@ -1,8 +1,8 @@
-#![feature(async_await, futures_api)]
+#![feature(async_await)]
 
-use futures::future::{Future, FutureExt, FutureObj};
+use futures::future::{Future, FutureObj, FutureExt};
 use std::pin::Pin;
-use futures::task::{Waker, Poll};
+use futures::task::{Context, Poll};
 
 #[test]
 fn dropping_does_not_segfault() {
@@ -15,15 +15,15 @@ fn dropping_drops_the_future() {
 
     struct Inc<'a>(&'a mut u32);
 
-    impl<'a> Future for Inc<'a> {
+    impl Future for Inc<'_> {
         type Output = ();
 
-        fn poll(self: Pin<&mut Self>, _: &Waker) -> Poll<()> {
+        fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<()> {
             unimplemented!()
         }
     }
 
-    impl<'a> Drop for Inc<'a> {
+    impl Drop for Inc<'_> {
         fn drop(&mut self) {
             *self.0 += 1;
         }

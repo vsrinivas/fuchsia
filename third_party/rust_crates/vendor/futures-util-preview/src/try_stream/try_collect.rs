@@ -1,14 +1,11 @@
+use core::mem;
+use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::{FusedStream, TryStream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
-use std::mem;
-use std::pin::Pin;
-use std::prelude::v1::*;
 
-/// A future which attempts to collect all of the values of a stream.
-///
-/// This future is created by the `Stream::try_collect` method.
+/// Future for the [`try_collect`](super::TryStreamExt::try_collect) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct TryCollect<St, C> {
@@ -47,10 +44,10 @@ impl<St, C> Future for TryCollect<St, C>
 
     fn poll(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
         loop {
-            match ready!(self.as_mut().stream().try_poll_next(waker)) {
+            match ready!(self.as_mut().stream().try_poll_next(cx)) {
                 Some(Ok(x)) => self.as_mut().items().extend(Some(x)),
                 Some(Err(e)) => return Poll::Ready(Err(e)),
                 None => return Poll::Ready(Ok(self.as_mut().finish())),

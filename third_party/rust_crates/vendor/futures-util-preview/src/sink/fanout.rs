@@ -1,6 +1,6 @@
 use core::fmt::{Debug, Formatter, Result as FmtResult};
 use core::pin::Pin;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use futures_sink::Sink;
 use pin_utils::unsafe_pinned;
 
@@ -8,17 +8,35 @@ use pin_utils::unsafe_pinned;
 ///
 /// Backpressure from any downstream sink propagates up, which means that this sink
 /// can only process items as fast as its _slowest_ downstream sink.
-pub struct Fanout<Si1: Sink, Si2: Sink> {
+pub struct Fanout<Si1, Si2> {
     sink1: Si1,
     sink2: Si2
 }
 
-impl<Si1: Sink, Si2: Sink> Fanout<Si1, Si2> {
+impl<Si1, Si2> Fanout<Si1, Si2> {
     unsafe_pinned!(sink1: Si1);
     unsafe_pinned!(sink2: Si2);
 
     pub(super) fn new(sink1: Si1, sink2: Si2) -> Fanout<Si1, Si2> {
         Fanout { sink1, sink2 }
+    }
+
+    /// Get a shared reference to the inner sinks.
+    pub fn get_ref(&self) -> (&Si1, &Si2) {
+        (&self.sink1, &self.sink2)
+    }
+
+    /// Get a mutable reference to the inner sinks.
+    pub fn get_mut(&mut self) -> (&mut Si1, &mut Si2) {
+        (&mut self.sink1, &mut self.sink2)
+    }
+
+    /// Get a pinned mutable reference to the inner sinks.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> (Pin<&'a mut Si1>, Pin<&'a mut Si2>)
+        where Si1: Unpin, Si2: Unpin,
+    {
+        let Self { sink1, sink2 } = Pin::get_mut(self);
+        (Pin::new(sink1), Pin::new(sink2))
     }
 
     /// Consumes this combinator, returning the underlying sinks.
@@ -30,10 +48,7 @@ impl<Si1: Sink, Si2: Sink> Fanout<Si1, Si2> {
     }
 }
 
-impl<Si1: Sink + Debug, Si2: Sink + Debug> Debug for Fanout<Si1, Si2>
-    where Si1::SinkItem: Debug,
-          Si2::SinkItem: Debug
-{
+impl<Si1: Debug, Si2: Debug> Debug for Fanout<Si1, Si2> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("Fanout")
             .field("sink1", &self.sink1)
@@ -42,27 +57,26 @@ impl<Si1: Sink + Debug, Si2: Sink + Debug> Debug for Fanout<Si1, Si2>
     }
 }
 
-impl<Si1, Si2> Sink for Fanout<Si1, Si2>
-    where Si1: Sink,
-          Si1::SinkItem: Clone,
-          Si2: Sink<SinkItem=Si1::SinkItem, SinkError=Si1::SinkError>
+impl<Si1, Si2, Item> Sink<Item> for Fanout<Si1, Si2>
+    where Si1: Sink<Item>,
+          Item: Clone,
+          Si2: Sink<Item, SinkError=Si1::SinkError>
 {
-    type SinkItem = Si1::SinkItem;
     type SinkError = Si1::SinkError;
 
     fn poll_ready(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<(), Self::SinkError>> {
-        let sink1_ready = self.as_mut().sink1().poll_ready(waker)?.is_ready();
-        let sink2_ready = self.as_mut().sink2().poll_ready(waker)?.is_ready();
+        let sink1_ready = self.as_mut().sink1().poll_ready(cx)?.is_ready();
+        let sink2_ready = self.as_mut().sink2().poll_ready(cx)?.is_ready();
         let ready = sink1_ready && sink2_ready;
         if ready { Poll::Ready(Ok(())) } else { Poll::Pending }
     }
 
     fn start_send(
         mut self: Pin<&mut Self>,
-        item: Self::SinkItem,
+        item: Item,
     ) -> Result<(), Self::SinkError> {
         self.as_mut().sink1().start_send(item.clone())?;
         self.as_mut().sink2().start_send(item)?;
@@ -71,20 +85,20 @@ impl<Si1, Si2> Sink for Fanout<Si1, Si2>
 
     fn poll_flush(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<(), Self::SinkError>> {
-        let sink1_ready = self.as_mut().sink1().poll_flush(waker)?.is_ready();
-        let sink2_ready = self.as_mut().sink2().poll_flush(waker)?.is_ready();
+        let sink1_ready = self.as_mut().sink1().poll_flush(cx)?.is_ready();
+        let sink2_ready = self.as_mut().sink2().poll_flush(cx)?.is_ready();
         let ready = sink1_ready && sink2_ready;
         if ready { Poll::Ready(Ok(())) } else { Poll::Pending }
     }
 
     fn poll_close(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<(), Self::SinkError>> {
-        let sink1_ready = self.as_mut().sink1().poll_close(waker)?.is_ready();
-        let sink2_ready = self.as_mut().sink2().poll_close(waker)?.is_ready();
+        let sink1_ready = self.as_mut().sink1().poll_close(cx)?.is_ready();
+        let sink2_ready = self.as_mut().sink2().poll_close(cx)?.is_ready();
         let ready = sink1_ready && sink2_ready;
         if ready { Poll::Ready(Ok(())) } else { Poll::Pending }
     }
@@ -93,7 +107,7 @@ impl<Si1, Si2> Sink for Fanout<Si1, Si2>
 #[cfg(test)]
 #[cfg(feature = "std")]
 mod tests {
-    use crate::future::FutureExt;
+    use crate::future::join3;
     use crate::sink::SinkExt;
     use crate::stream::{self, StreamExt};
     use futures_executor::block_on;
@@ -112,7 +126,7 @@ mod tests {
 
         let collect_fut1 = rx1.collect::<Vec<_>>();
         let collect_fut2 = rx2.collect::<Vec<_>>();
-        let (_, vec1, vec2) = block_on(fwd.join3(collect_fut1, collect_fut2));
+        let (_, vec1, vec2) = block_on(join3(fwd, collect_fut1, collect_fut2));
 
         let expected = (0..10).collect::<Vec<_>>();
 

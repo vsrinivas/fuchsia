@@ -4,94 +4,94 @@ BanjoAst {
         "banjo.examples.protocol.other.types": [
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types"
+                        "banjo.examples.protocol.other.types",
                     ),
-                    name: "ThisIsAStruct"
+                    name: "ThisIsAStruct",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Str {
                             size: None,
-                            nullable: false
+                            nullable: false,
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "s"
+                            name: "s",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Union {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types"
+                        "banjo.examples.protocol.other.types",
                     ),
-                    name: "ThisIsAUnion"
+                    name: "ThisIsAUnion",
                 },
                 fields: [
                     UnionField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Str {
                             size: None,
-                            nullable: false
+                            nullable: false,
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "s"
-                        }
-                    }
-                ]
+                            name: "s",
+                        },
+                    },
+                ],
             },
             Enum {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types"
+                        "banjo.examples.protocol.other.types",
                     ),
-                    name: "ThisIsAnEnum"
+                    name: "ThisIsAnEnum",
                 },
                 ty: UInt32,
                 variants: [
                     EnumVariant {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "x ",
                         value: Constant(
-                            "23"
-                        )
-                    }
-                ]
+                            "23",
+                        ),
+                    },
+                ],
             },
             Constant {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types"
+                        "banjo.examples.protocol.other.types",
                     ),
-                    name: "strings_size"
+                    name: "strings_size",
                 },
                 ty: UInt32,
                 value: Constant(
-                    "32"
-                )
+                    "32",
+                ),
             },
             Protocol {
                 attributes: Attrs(
@@ -99,21 +99,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types"
+                        "banjo.examples.protocol.other.types",
                     ),
-                    name: "OtherTypes"
+                    name: "OtherTypes",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Struct",
                         in_params: [
@@ -122,13 +122,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAStruct"
+                                        name: "ThisIsAStruct",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -136,18 +136,18 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAStruct"
+                                        name: "ThisIsAStruct",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Union",
                         in_params: [
@@ -156,13 +156,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAUnion"
+                                        name: "ThisIsAUnion",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -170,18 +170,18 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAUnion"
+                                        name: "ThisIsAUnion",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Enum",
                         in_params: [
@@ -190,13 +190,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAnEnum"
+                                        name: "ThisIsAnEnum",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -204,18 +204,18 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAnEnum"
+                                        name: "ThisIsAnEnum",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "String",
                         in_params: [
@@ -223,23 +223,23 @@ BanjoAst {
                                 "s",
                                 Str {
                                     size: None,
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "s",
                                 Str {
                                     size: None,
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "StringSized",
                         in_params: [
@@ -248,12 +248,12 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -261,17 +261,17 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "StringSized2",
                         in_params: [
@@ -280,12 +280,12 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "strings_size"
-                                        )
+                                            "strings_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -293,15 +293,15 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "strings_size"
-                                        )
+                                            "strings_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -309,16 +309,16 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types"
+                        "banjo.examples.protocol.other.types",
                     ),
-                    name: "OtherTypesAsync"
+                    name: "OtherTypesAsync",
                 },
                 methods: [
                     Method {
@@ -326,9 +326,9 @@ BanjoAst {
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Struct",
                         in_params: [
@@ -337,13 +337,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAStruct"
+                                        name: "ThisIsAStruct",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -351,23 +351,23 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAStruct"
+                                        name: "ThisIsAStruct",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Union",
                         in_params: [
@@ -376,13 +376,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAUnion"
+                                        name: "ThisIsAUnion",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -390,23 +390,23 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAUnion"
+                                        name: "ThisIsAUnion",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Enum",
                         in_params: [
@@ -415,13 +415,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAnEnum"
+                                        name: "ThisIsAnEnum",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -429,23 +429,23 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAnEnum"
+                                        name: "ThisIsAnEnum",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "String",
                         in_params: [
@@ -453,28 +453,28 @@ BanjoAst {
                                 "s",
                                 Str {
                                     size: None,
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "s",
                                 Str {
                                     size: None,
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "StringSized",
                         in_params: [
@@ -483,12 +483,12 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -496,22 +496,22 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "StringSized2",
                         in_params: [
@@ -520,12 +520,12 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "strings_size"
-                                        )
+                                            "strings_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -533,15 +533,15 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "strings_size"
-                                        )
+                                            "strings_size",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                    nullable: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -549,21 +549,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types"
+                        "banjo.examples.protocol.other.types",
                     ),
-                    name: "OtherTypesReference"
+                    name: "OtherTypesReference",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Struct",
                         in_params: [
@@ -572,13 +572,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAStruct"
+                                        name: "ThisIsAStruct",
                                     },
-                                    reference: true
-                                }
-                            )
+                                    reference: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -586,18 +586,18 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAStruct"
+                                        name: "ThisIsAStruct",
                                     },
-                                    reference: true
-                                }
-                            )
-                        ]
+                                    reference: true,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Union",
                         in_params: [
@@ -606,13 +606,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAUnion"
+                                        name: "ThisIsAUnion",
                                     },
-                                    reference: true
-                                }
-                            )
+                                    reference: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -620,18 +620,18 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAUnion"
+                                        name: "ThisIsAUnion",
                                     },
-                                    reference: true
-                                }
-                            )
-                        ]
+                                    reference: true,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "String",
                         in_params: [
@@ -639,23 +639,23 @@ BanjoAst {
                                 "s",
                                 Str {
                                     size: None,
-                                    nullable: true
-                                }
-                            )
+                                    nullable: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "s",
                                 Str {
                                     size: None,
-                                    nullable: true
-                                }
-                            )
-                        ]
+                                    nullable: true,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "StringSized",
                         in_params: [
@@ -664,12 +664,12 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     ),
-                                    nullable: true
-                                }
-                            )
+                                    nullable: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -677,17 +677,17 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     ),
-                                    nullable: true
-                                }
-                            )
-                        ]
+                                    nullable: true,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "StringSized2",
                         in_params: [
@@ -696,12 +696,12 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "strings_size"
-                                        )
+                                            "strings_size",
+                                        ),
                                     ),
-                                    nullable: true
-                                }
-                            )
+                                    nullable: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -709,15 +709,15 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "strings_size"
-                                        )
+                                            "strings_size",
+                                        ),
                                     ),
-                                    nullable: true
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                    nullable: true,
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -725,16 +725,16 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types"
+                        "banjo.examples.protocol.other.types",
                     ),
-                    name: "OtherTypesAsyncReference"
+                    name: "OtherTypesAsyncReference",
                 },
                 methods: [
                     Method {
@@ -742,9 +742,9 @@ BanjoAst {
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Struct",
                         in_params: [
@@ -753,13 +753,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAStruct"
+                                        name: "ThisIsAStruct",
                                     },
-                                    reference: true
-                                }
-                            )
+                                    reference: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -767,23 +767,23 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAStruct"
+                                        name: "ThisIsAStruct",
                                     },
-                                    reference: true
-                                }
-                            )
-                        ]
+                                    reference: true,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Union",
                         in_params: [
@@ -792,13 +792,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAUnion"
+                                        name: "ThisIsAUnion",
                                     },
-                                    reference: true
-                                }
-                            )
+                                    reference: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -806,23 +806,23 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "ThisIsAUnion"
+                                        name: "ThisIsAUnion",
                                     },
-                                    reference: true
-                                }
-                            )
-                        ]
+                                    reference: true,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "String",
                         in_params: [
@@ -830,28 +830,28 @@ BanjoAst {
                                 "s",
                                 Str {
                                     size: None,
-                                    nullable: true
-                                }
-                            )
+                                    nullable: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "s",
                                 Str {
                                     size: None,
-                                    nullable: true
-                                }
-                            )
-                        ]
+                                    nullable: true,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "StringSized",
                         in_params: [
@@ -860,12 +860,12 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     ),
-                                    nullable: true
-                                }
-                            )
+                                    nullable: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -873,22 +873,22 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     ),
-                                    nullable: true
-                                }
-                            )
-                        ]
+                                    nullable: true,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "StringSized2",
                         in_params: [
@@ -897,12 +897,12 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "strings_size"
-                                        )
+                                            "strings_size",
+                                        ),
                                     ),
-                                    nullable: true
-                                }
-                            )
+                                    nullable: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -910,15 +910,15 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "strings_size"
-                                        )
+                                            "strings_size",
+                                        ),
                                     ),
-                                    nullable: true
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                    nullable: true,
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -926,21 +926,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.other.types"
+                        "banjo.examples.protocol.other.types",
                     ),
-                    name: "Interface"
+                    name: "Interface",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Value",
                         in_params: [
@@ -949,13 +949,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "OtherTypes"
+                                        name: "OtherTypes",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -963,18 +963,18 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "OtherTypes"
+                                        name: "OtherTypes",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Reference",
                         in_params: [
@@ -983,13 +983,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "OtherTypes"
+                                        name: "OtherTypes",
                                     },
-                                    reference: true
-                                }
-                            )
+                                    reference: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -997,23 +997,23 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "OtherTypes"
+                                        name: "OtherTypes",
                                     },
-                                    reference: true
-                                }
-                            )
-                        ]
+                                    reference: true,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Async",
                         in_params: [
@@ -1022,13 +1022,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "OtherTypes"
+                                        name: "OtherTypes",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1036,23 +1036,23 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "OtherTypes"
+                                        name: "OtherTypes",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "AsyncRefernce",
                         in_params: [
@@ -1061,13 +1061,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "OtherTypes"
+                                        name: "OtherTypes",
                                     },
-                                    reference: true
-                                }
-                            )
+                                    reference: true,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1075,17 +1075,17 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.protocol.other.types"
+                                            "banjo.examples.protocol.other.types",
                                         ),
-                                        name: "OtherTypes"
+                                        name: "OtherTypes",
                                     },
-                                    reference: true
-                                }
-                            )
-                        ]
-                    }
-                ]
-            }
-        ]
-    }
+                                    reference: true,
+                                },
+                            ),
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
 }

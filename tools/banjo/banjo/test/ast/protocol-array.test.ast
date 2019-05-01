@@ -8,21 +8,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.array"
+                        "banjo.examples.protocol.array",
                     ),
-                    name: "Array"
+                    name: "Array",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Bool",
                         in_params: [
@@ -31,10 +31,10 @@ BanjoAst {
                                 Array {
                                     ty: Bool,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -42,15 +42,15 @@ BanjoAst {
                                 Array {
                                     ty: Bool,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int8",
                         in_params: [
@@ -59,10 +59,10 @@ BanjoAst {
                                 Array {
                                     ty: Int8,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -70,15 +70,15 @@ BanjoAst {
                                 Array {
                                     ty: Int8,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int16",
                         in_params: [
@@ -87,10 +87,10 @@ BanjoAst {
                                 Array {
                                     ty: Int16,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -98,15 +98,15 @@ BanjoAst {
                                 Array {
                                     ty: Int16,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int32",
                         in_params: [
@@ -115,10 +115,10 @@ BanjoAst {
                                 Array {
                                     ty: Int32,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -126,15 +126,15 @@ BanjoAst {
                                 Array {
                                     ty: Int32,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int64",
                         in_params: [
@@ -143,10 +143,10 @@ BanjoAst {
                                 Array {
                                     ty: Int64,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -154,15 +154,15 @@ BanjoAst {
                                 Array {
                                     ty: Int64,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint8",
                         in_params: [
@@ -171,10 +171,10 @@ BanjoAst {
                                 Array {
                                     ty: UInt8,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -182,15 +182,15 @@ BanjoAst {
                                 Array {
                                     ty: UInt8,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint16",
                         in_params: [
@@ -199,10 +199,10 @@ BanjoAst {
                                 Array {
                                     ty: UInt16,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -210,15 +210,15 @@ BanjoAst {
                                 Array {
                                     ty: UInt16,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint32",
                         in_params: [
@@ -227,10 +227,10 @@ BanjoAst {
                                 Array {
                                     ty: UInt32,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -238,15 +238,15 @@ BanjoAst {
                                 Array {
                                     ty: UInt32,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint64",
                         in_params: [
@@ -255,10 +255,10 @@ BanjoAst {
                                 Array {
                                     ty: UInt64,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -266,15 +266,15 @@ BanjoAst {
                                 Array {
                                     ty: UInt64,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float32",
                         in_params: [
@@ -283,10 +283,10 @@ BanjoAst {
                                 Array {
                                     ty: Float32,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -294,15 +294,15 @@ BanjoAst {
                                 Array {
                                     ty: Float32,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float64",
                         in_params: [
@@ -311,10 +311,10 @@ BanjoAst {
                                 Array {
                                     ty: Float64,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -322,15 +322,15 @@ BanjoAst {
                                 Array {
                                     ty: Float64,
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Handle",
                         in_params: [
@@ -339,13 +339,13 @@ BanjoAst {
                                 Array {
                                     ty: Handle {
                                         ty: Handle,
-                                        reference: false
+                                        reference: false,
                                     },
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
+                                        "1",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -353,31 +353,31 @@ BanjoAst {
                                 Array {
                                     ty: Handle {
                                         ty: Handle,
-                                        reference: false
+                                        reference: false,
                                     },
                                     size: Constant(
-                                        "1"
-                                    )
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                        "1",
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Constant {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.array"
+                        "banjo.examples.protocol.array",
                     ),
-                    name: "array_size"
+                    name: "array_size",
                 },
                 ty: UInt32,
                 value: Constant(
-                    "32"
-                )
+                    "32",
+                ),
             },
             Protocol {
                 attributes: Attrs(
@@ -385,21 +385,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.array"
+                        "banjo.examples.protocol.array",
                     ),
-                    name: "Array2"
+                    name: "Array2",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Bool",
                         in_params: [
@@ -408,10 +408,10 @@ BanjoAst {
                                 Array {
                                     ty: Bool,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -419,15 +419,15 @@ BanjoAst {
                                 Array {
                                     ty: Bool,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int8",
                         in_params: [
@@ -436,10 +436,10 @@ BanjoAst {
                                 Array {
                                     ty: Int8,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -447,15 +447,15 @@ BanjoAst {
                                 Array {
                                     ty: Int8,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int16",
                         in_params: [
@@ -464,10 +464,10 @@ BanjoAst {
                                 Array {
                                     ty: Int16,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -475,15 +475,15 @@ BanjoAst {
                                 Array {
                                     ty: Int16,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int32",
                         in_params: [
@@ -492,10 +492,10 @@ BanjoAst {
                                 Array {
                                     ty: Int32,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -503,15 +503,15 @@ BanjoAst {
                                 Array {
                                     ty: Int32,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int64",
                         in_params: [
@@ -520,10 +520,10 @@ BanjoAst {
                                 Array {
                                     ty: Int64,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -531,15 +531,15 @@ BanjoAst {
                                 Array {
                                     ty: Int64,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint8",
                         in_params: [
@@ -548,10 +548,10 @@ BanjoAst {
                                 Array {
                                     ty: UInt8,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -559,15 +559,15 @@ BanjoAst {
                                 Array {
                                     ty: UInt8,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint16",
                         in_params: [
@@ -576,10 +576,10 @@ BanjoAst {
                                 Array {
                                     ty: UInt16,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -587,15 +587,15 @@ BanjoAst {
                                 Array {
                                     ty: UInt16,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint32",
                         in_params: [
@@ -604,10 +604,10 @@ BanjoAst {
                                 Array {
                                     ty: UInt32,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -615,15 +615,15 @@ BanjoAst {
                                 Array {
                                     ty: UInt32,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint64",
                         in_params: [
@@ -632,10 +632,10 @@ BanjoAst {
                                 Array {
                                     ty: UInt64,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -643,15 +643,15 @@ BanjoAst {
                                 Array {
                                     ty: UInt64,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float32",
                         in_params: [
@@ -660,10 +660,10 @@ BanjoAst {
                                 Array {
                                     ty: Float32,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -671,15 +671,15 @@ BanjoAst {
                                 Array {
                                     ty: Float32,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float64",
                         in_params: [
@@ -688,10 +688,10 @@ BanjoAst {
                                 Array {
                                     ty: Float64,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -699,15 +699,15 @@ BanjoAst {
                                 Array {
                                     ty: Float64,
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Handle",
                         in_params: [
@@ -716,13 +716,13 @@ BanjoAst {
                                 Array {
                                     ty: Handle {
                                         ty: Handle,
-                                        reference: false
+                                        reference: false,
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -730,16 +730,16 @@ BanjoAst {
                                 Array {
                                     ty: Handle {
                                         ty: Handle,
-                                        reference: false
+                                        reference: false,
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -747,21 +747,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.array"
+                        "banjo.examples.protocol.array",
                     ),
-                    name: "ArrayofArrays"
+                    name: "ArrayofArrays",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Bool",
                         in_params: [
@@ -771,14 +771,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: Bool,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -787,19 +787,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: Bool,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int8",
                         in_params: [
@@ -809,14 +809,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: Int8,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -825,19 +825,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: Int8,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int16",
                         in_params: [
@@ -847,14 +847,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: Int16,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -863,19 +863,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: Int16,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int32",
                         in_params: [
@@ -885,14 +885,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: Int32,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -901,19 +901,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: Int32,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Int64",
                         in_params: [
@@ -923,14 +923,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: Int64,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -939,19 +939,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: Int64,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint8",
                         in_params: [
@@ -961,14 +961,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: UInt8,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -977,19 +977,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: UInt8,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint16",
                         in_params: [
@@ -999,14 +999,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: UInt16,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1015,19 +1015,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: UInt16,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint32",
                         in_params: [
@@ -1037,14 +1037,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: UInt32,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1053,19 +1053,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: UInt32,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Uint64",
                         in_params: [
@@ -1075,14 +1075,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: UInt64,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1091,19 +1091,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: UInt64,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float32",
                         in_params: [
@@ -1113,14 +1113,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: Float32,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1129,19 +1129,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: Float32,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Float64",
                         in_params: [
@@ -1151,14 +1151,14 @@ BanjoAst {
                                     ty: Array {
                                         ty: Float64,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1167,19 +1167,19 @@ BanjoAst {
                                     ty: Array {
                                         ty: Float64,
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Handle",
                         in_params: [
@@ -1189,17 +1189,17 @@ BanjoAst {
                                     ty: Array {
                                         ty: Handle {
                                             ty: Handle,
-                                            reference: false
+                                            reference: false,
                                         },
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
+                                        "array_size",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -1208,21 +1208,21 @@ BanjoAst {
                                     ty: Array {
                                         ty: Handle {
                                             ty: Handle,
-                                            reference: false
+                                            reference: false,
                                         },
                                         size: Constant(
-                                            "4"
-                                        )
+                                            "4",
+                                        ),
                                     },
                                     size: Constant(
-                                        "array_size"
-                                    )
-                                }
-                            )
-                        ]
-                    }
-                ]
-            }
-        ]
-    }
+                                        "array_size",
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
 }

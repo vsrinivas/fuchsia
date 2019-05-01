@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 #![deny(warnings)]
 #![recursion_limit = "128"]
 
@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_wlan_tap as wlantap, fuchsia_async as fasync,
     fuchsia_zircon::prelude::*,
     futures::prelude::*,
+    futures::future::join,
     std::sync::{Arc, Mutex},
     wlan_common::{appendable::Appendable, ie, mac, mgmt_writer},
     wlantap_client::Wlantap,
@@ -205,7 +206,7 @@ fn main() -> Result<(), failure::Error> {
     let beacon_timer = beacon_sender(state.clone(), proxy.clone());
     println!("Hardware simlulator started. Try to scan or connect to \"fakenet\"");
 
-    exec.run_singlethreaded(event_listener.join(beacon_timer));
+    exec.run_singlethreaded(join(event_listener, beacon_timer));
     Ok(())
 }
 

@@ -1,14 +1,13 @@
 //! Asynchronous streams.
 
-use crate::task::{Waker, Poll};
-use core::ops;
+use core::ops::DerefMut;
 use core::pin::Pin;
+use core::task::{Context, Poll};
 
-#[cfg(feature = "either")]
-use either::Either;
-
-mod stream_obj;
-pub use self::stream_obj::{StreamObj,LocalStreamObj,UnsafeStreamObj};
+#[cfg(feature = "alloc")]
+/// An owned dynamically typed [`Stream`] for use in cases where you can't
+/// statically type your result or need to add some indirection.
+pub type BoxStream<'a, T> = Pin<alloc::boxed::Box<dyn Stream<Item = T> + Send + 'a>>;
 
 /// A stream of values produced asynchronously.
 ///
@@ -54,50 +53,33 @@ pub trait Stream {
     /// calls.
     fn poll_next(
         self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>>;
 }
 
-impl<'a, S: ?Sized + Stream + Unpin> Stream for &'a mut S {
+impl<S: ?Sized + Stream + Unpin> Stream for &mut S {
     type Item = S::Item;
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        S::poll_next(Pin::new(&mut **self), waker)
+        S::poll_next(Pin::new(&mut **self), cx)
     }
 }
 
 impl<P> Stream for Pin<P>
 where
-    P: ops::DerefMut + Unpin,
+    P: DerefMut + Unpin,
     P::Target: Stream,
 {
     type Item = <P::Target as Stream>::Item;
 
     fn poll_next(
         self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        Pin::get_mut(self).as_mut().poll_next(waker)
-    }
-}
-
-#[cfg(feature = "either")]
-impl<A, B> Stream for Either<A, B>
-    where A: Stream,
-          B: Stream<Item = A::Item>
-{
-    type Item = A::Item;
-
-    fn poll_next(self: Pin<&mut Self>, waker: &Waker) -> Poll<Option<A::Item>> {
-        unsafe {
-            match Pin::get_unchecked_mut(self) {
-                Either::Left(a) => Pin::new_unchecked(a).poll_next(waker),
-                Either::Right(b) => Pin::new_unchecked(b).poll_next(waker),
-            }
-        }
+        Pin::get_mut(self).as_mut().poll_next(cx)
     }
 }
 
@@ -114,6 +96,22 @@ pub trait FusedStream {
     fn is_terminated(&self) -> bool;
 }
 
+impl<F: ?Sized + FusedStream> FusedStream for &mut F {
+    fn is_terminated(&self) -> bool {
+        <F as FusedStream>::is_terminated(&**self)
+    }
+}
+
+impl<P> FusedStream for Pin<P>
+where
+    P: DerefMut + Unpin,
+    P::Target: FusedStream,
+{
+    fn is_terminated(&self) -> bool {
+        <P::Target as FusedStream>::is_terminated(&**self)
+    }
+}
+
 /// A convenience for streams that return `Result` values that includes
 /// a variety of adapters tailored to such futures.
 pub trait TryStream {
@@ -128,26 +126,26 @@ pub trait TryStream {
     /// This method is a stopgap for a compiler limitation that prevents us from
     /// directly inheriting from the `Stream` trait; in the future it won't be
     /// needed.
-    fn try_poll_next(self: Pin<&mut Self>, waker: &Waker)
+    fn try_poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>)
         -> Poll<Option<Result<Self::Ok, Self::Error>>>;
 }
 
 impl<S, T, E> TryStream for S
-    where S: Stream<Item = Result<T, E>>
+    where S: ?Sized + Stream<Item = Result<T, E>>
 {
     type Ok = T;
     type Error = E;
 
-    fn try_poll_next(self: Pin<&mut Self>, waker: &Waker)
+    fn try_poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>)
         -> Poll<Option<Result<Self::Ok, Self::Error>>>
     {
-        self.poll_next(waker)
+        self.poll_next(cx)
     }
 }
 
-#[cfg(feature = "std")]
-mod if_std {
-    use std::boxed::Box;
+#[cfg(feature = "alloc")]
+mod if_alloc {
+    use alloc::boxed::Box;
     use super::*;
 
     impl<S: ?Sized + Stream + Unpin> Stream for Box<S> {
@@ -155,31 +153,38 @@ mod if_std {
 
         fn poll_next(
             mut self: Pin<&mut Self>,
-            waker: &Waker,
+            cx: &mut Context<'_>,
         ) -> Poll<Option<Self::Item>> {
-            Pin::new(&mut **self).poll_next(waker)
+            Pin::new(&mut **self).poll_next(cx)
         }
     }
 
+    #[cfg(feature = "std")]
     impl<S: Stream> Stream for ::std::panic::AssertUnwindSafe<S> {
         type Item = S::Item;
 
         fn poll_next(
             self: Pin<&mut Self>,
-            waker: &Waker,
+            cx: &mut Context<'_>,
         ) -> Poll<Option<S::Item>> {
-            unsafe { Pin::map_unchecked_mut(self, |x| &mut x.0) }.poll_next(waker)
+            unsafe { Pin::map_unchecked_mut(self, |x| &mut x.0) }.poll_next(cx)
         }
     }
 
-    impl<T: Unpin> Stream for ::std::collections::VecDeque<T> {
+    impl<T: Unpin> Stream for ::alloc::collections::VecDeque<T> {
         type Item = T;
 
         fn poll_next(
             mut self: Pin<&mut Self>,
-            _lw: &Waker,
+            _cx: &mut Context<'_>,
         ) -> Poll<Option<Self::Item>> {
             Poll::Ready(self.pop_front())
+        }
+    }
+
+    impl<S: ?Sized + FusedStream> FusedStream for Box<S> {
+        fn is_terminated(&self) -> bool {
+            <S as FusedStream>::is_terminated(&**self)
         }
     }
 }

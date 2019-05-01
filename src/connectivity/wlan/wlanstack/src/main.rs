@@ -4,7 +4,7 @@
 
 //! System service for wireless networking
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 #![deny(warnings)]
 #![deny(missing_docs)]
 #![recursion_limit = "256"]
@@ -30,6 +30,7 @@ use fuchsia_cobalt::{self, CobaltSender};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect as finspect;
 use futures::prelude::*;
+use futures::future::{try_join, try_join5};
 use log::info;
 use std::sync::Arc;
 use wlan_inspect;
@@ -70,10 +71,11 @@ async fn main() -> Result<(), Error> {
             .map_ok(|x| match x {});
     let (watcher_service, watcher_fut) =
         watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
-    let services_server = serve_fidl(phys, ifaces, watcher_service, inspect_root, cobalt_sender)
-        .try_join(watcher_fut);
+    let serve_fidl_fut = serve_fidl(phys, ifaces, watcher_service, inspect_root, cobalt_sender);
+    let services_server = try_join(serve_fidl_fut, watcher_fut);
 
-    await!(services_server.try_join5(
+    await!(try_join5(
+        services_server,
         phy_server,
         iface_server,
         cobalt_reporter.map(Ok),

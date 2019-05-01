@@ -7,7 +7,7 @@
 use {
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_zircon::{Duration, Signals, Status, Time},
-    futures::{stream::Stream, task::Waker, Poll},
+    futures::{stream::Stream, task::Context, Poll},
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc, sync::Weak},
 };
@@ -317,13 +317,13 @@ impl Drop for MediaStream {
 impl Stream for MediaStream {
     type Item = Result<Vec<u8>>;
 
-    fn poll_next(self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let s = match self.stream.upgrade() {
             None => return Poll::Ready(None),
             Some(s) => s,
         };
         let mut res = Vec::<u8>::new();
-        match s.poll_datagram(&mut res, lw) {
+        match s.poll_datagram(cx, &mut res) {
             Poll::Ready(Ok(_size)) => Poll::Ready(Some(Ok(res))),
             Poll::Ready(Err(e)) => Poll::Ready(Some(Err(Error::PeerRead(e)))),
             Poll::Pending => Poll::Pending,
@@ -514,7 +514,7 @@ mod tests {
     fn setup_peer_for_release(exec: &mut fasync::Executor) -> (Peer, zx::Socket, SimpleResponder) {
         let (peer, signaling) = setup_peer();
         // Send a close from the other side to produce an event we can respond to.
-        signaling.write(&[0x40, 0x08, 0x04]).is_ok();
+        signaling.write(&[0x40, 0x08, 0x04]).expect("signaling write");
         let mut req_stream = peer.take_request_stream();
         let mut req_fut = req_stream.next();
         let complete = exec.run_until_stalled(&mut req_fut);

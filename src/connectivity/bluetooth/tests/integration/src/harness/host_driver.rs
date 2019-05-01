@@ -181,7 +181,7 @@ impl HostDriverHarnessInner {
 
     fn notify_host_state_changed(&mut self) {
         for task in &self.host_state_tasks {
-            task.1.wake();
+            task.1.wake_by_ref();
         }
         self.host_state_tasks.clear()
     }
@@ -298,14 +298,14 @@ impl std::marker::Unpin for HostDriverStateFuture {}
 impl Future for HostDriverStateFuture {
     type Output = Result<AdapterState, Error>;
 
-    fn poll(mut self: Pin<&mut Self>, w: &task::Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
         self.inner.clear_waker();
         if let Some(state) = &self.inner.state.0.read().host_info.state {
             if self.target_host_state.satisfied(state.borrow()) {
                 return Poll::Ready(Ok(clone_host_state(&state.borrow())));
             }
         };
-        self.inner.store_task(w);
+        self.inner.store_task(cx.waker());
         Poll::Pending
     }
 }
@@ -316,12 +316,12 @@ impl std::marker::Unpin for RemoteDeviceStateFuture {}
 impl Future for RemoteDeviceStateFuture {
     type Output = Result<(), Error>;
 
-    fn poll(mut self: Pin<&mut Self>, w: &task::Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
         self.inner.clear_waker();
         if self.look_for_match() {
             Poll::Ready(Ok(()))
         } else {
-            self.inner.store_task(w);
+            self.inner.store_task(cx.waker());
             Poll::Pending
         }
     }

@@ -20,7 +20,7 @@ use {
     },
     futures::{
         stream::{Stream, StreamExt, StreamFuture},
-        task::Waker,
+        task::Context,
         Future, FutureExt, Poll,
     },
     static_assertions::assert_eq_size,
@@ -530,8 +530,8 @@ impl Stream for FileConnection {
     // We are just proxying the FileRequestStream requests.
     type Item = <FileRequestStream as Stream>::Item;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
-        self.requests.poll_next_unpin(lw)
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.requests.poll_next_unpin(cx)
     }
 }
 
@@ -584,8 +584,8 @@ where
 {
     type Output = Option<StreamFuture<FileConnection>>;
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
-        match self.res.poll_unpin(waker) {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match self.res.poll_unpin(cx) {
             Poll::Ready(Ok(buf)) => {
                 // unwrap is "safe" in that it only happens when we are returning Poll::Ready, which
                 // means any subsequent calls to poll can do nasty things (like panic!)

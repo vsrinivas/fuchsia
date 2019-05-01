@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(futures_api, await_macro, async_await)]
+#![feature(await_macro, async_await)]
 
 // Macros used to serialize bonding data FIDL types for persistent storage.
 #[macro_use]
@@ -19,7 +19,7 @@ use {
     fuchsia_bluetooth::util,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn},
-    futures::{FutureExt, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{future::try_join, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
 };
 
 use crate::{
@@ -112,7 +112,7 @@ fn run() -> Result<(), Error> {
         });
     fs.take_and_serve_directory_handle()?;
 
-    executor.run_singlethreaded(fs.collect::<()>().map(Ok).try_join(host_watcher))
+    executor.run_singlethreaded(try_join(fs.collect::<()>().map(Ok), host_watcher))
         .map(|((), ())| ())
 }
 

@@ -222,11 +222,11 @@ impl futures::stream::FusedStream for {{ $interface.Name }}EventStream {
 impl futures::Stream for {{ $interface.Name }}EventStream {
 	type Item = Result<{{ $interface.Name }}Event, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
-			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, lw)?
+			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
 		) {
 			Some(buf) => buf,
 			None => return futures::Poll::Ready(None),
@@ -360,11 +360,11 @@ impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
 impl futures::Stream for {{ $interface.Name }}RequestStream {
 	type Item = Result<{{ $interface.Name }}Request, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
-		if this.inner.poll_shutdown(lw) {
+		if this.inner.poll_shutdown(cx) {
 			this.is_terminated = true;
 			return futures::Poll::Ready(None);
 		}
@@ -372,7 +372,7 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 			panic!("polled {{ $interface.Name }}RequestStream after completion");
 		}
 		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			match this.inner.channel().read(bytes, handles, lw) {
+			match this.inner.channel().read(cx, bytes, handles) {
 				futures::Poll::Ready(Ok(())) => {},
 				futures::Poll::Pending => return futures::Poll::Pending,
 				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {

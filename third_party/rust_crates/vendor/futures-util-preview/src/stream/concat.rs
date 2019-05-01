@@ -3,13 +3,10 @@ use core::pin::Pin;
 use core::default::Default;
 use futures_core::future::Future;
 use futures_core::stream::Stream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// A stream combinator to concatenate the results of a stream into the first
-/// yielded item.
-///
-/// This structure is produced by the `Stream::concat` method.
+/// Future for the [`concat`](super::StreamExt::concat) method.
 #[must_use = "streams do nothing unless polled"]
 pub struct Concat<St: Stream> {
     stream: St,
@@ -53,10 +50,10 @@ where St: Stream,
     type Output = St::Item;
 
     fn poll(
-        mut self: Pin<&mut Self>, waker: &Waker
+        mut self: Pin<&mut Self>, cx: &mut Context<'_>
     ) -> Poll<Self::Output> {
         loop {
-            match self.as_mut().stream().poll_next(waker) {
+            match self.as_mut().stream().poll_next(cx) {
                 Poll::Pending => return Poll::Pending,
                 Poll::Ready(None) => {
                     return Poll::Ready(self.as_mut().accum().take().unwrap_or_default())

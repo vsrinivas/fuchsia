@@ -1,13 +1,13 @@
 use crate::stream::FuturesUnordered;
 use futures_core::future::Future;
 use futures_core::stream::Stream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use pin_utils::unsafe_pinned;
-use std::cmp::{Eq, PartialEq, PartialOrd, Ord, Ordering};
-use std::collections::binary_heap::{BinaryHeap, PeekMut};
-use std::fmt::{self, Debug};
-use std::iter::FromIterator;
-use std::pin::Pin;
+use core::cmp::{Eq, PartialEq, PartialOrd, Ord, Ordering};
+use core::fmt::{self, Debug};
+use core::iter::FromIterator;
+use core::pin::Pin;
+use alloc::collections::binary_heap::{BinaryHeap, PeekMut};
 
 #[must_use = "futures do nothing unless polled"]
 #[derive(Debug)]
@@ -48,9 +48,9 @@ impl<T> Future for OrderWrapper<T>
 
     fn poll(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
-        self.as_mut().data().as_mut().poll(waker)
+        self.as_mut().data().as_mut().poll(cx)
             .map(|output| OrderWrapper { data: output, index: self.index })
     }
 }
@@ -85,8 +85,8 @@ impl<T> Future for OrderWrapper<T>
 /// some of the later futures have already completed.
 ///
 /// Note that you can create a ready-made `FuturesOrdered` via the
-/// `futures_ordered` function in the `stream` module, or you can start with an
-/// empty queue with the `FuturesOrdered::new` constructor.
+/// [`collect`](Iterator::collect) method, or you can start with an empty queue
+/// with the `FuturesOrdered::new` constructor.
 #[must_use = "streams do nothing unless polled"]
 pub struct FuturesOrdered<T: Future> {
     in_progress_queue: FuturesUnordered<OrderWrapper<T>>,
@@ -97,30 +97,11 @@ pub struct FuturesOrdered<T: Future> {
 
 impl<T: Future> Unpin for FuturesOrdered<T> {}
 
-/// Converts a list of futures into a `Stream` of results from the futures.
-///
-/// This function will take a list of futures (e.g. a vector, an iterator,
-/// etc), and return a stream. The stream will yield items as they become
-/// available on the futures internally, in the order that their originating
-/// futures were submitted to the queue. If the futures complete out of order,
-/// items will be stored internally within `FuturesOrdered` until all preceding
-/// items have been yielded.
-///
-/// Note that the returned queue can also be used to dynamically push more
-/// futures into the queue as they become available.
-pub fn futures_ordered<I>(futures: I) -> FuturesOrdered<I::Item>
-where
-    I: IntoIterator,
-    I::Item: Future,
-{
-    futures.into_iter().collect()
-}
-
 impl<Fut: Future> FuturesOrdered<Fut> {
     /// Constructs a new, empty `FuturesOrdered`
     ///
     /// The returned `FuturesOrdered` does not contain any futures and, in this
-    /// state, `FuturesOrdered::poll` will return `Ok(Async::Ready(None))`.
+    /// state, `FuturesOrdered::poll_next` will return `Poll::Ready(None)`.
     pub fn new() -> FuturesOrdered<Fut> {
         FuturesOrdered {
             in_progress_queue: FuturesUnordered::new(),
@@ -171,7 +152,7 @@ impl<Fut: Future> Stream for FuturesOrdered<Fut> {
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker
+        cx: &mut Context<'_>
     ) -> Poll<Option<Self::Item>> {
         let this = &mut *self;
 
@@ -184,7 +165,7 @@ impl<Fut: Future> Stream for FuturesOrdered<Fut> {
         }
 
         loop {
-            match Pin::new(&mut this.in_progress_queue).poll_next(waker) {
+            match Pin::new(&mut this.in_progress_queue).poll_next(cx) {
                 Poll::Ready(Some(output)) => {
                     if output.index == this.next_outgoing_index {
                         this.next_outgoing_index += 1;

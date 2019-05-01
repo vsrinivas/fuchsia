@@ -1,4 +1,4 @@
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 #![recursion_limit = "1024"]
 
 use failure::Error;

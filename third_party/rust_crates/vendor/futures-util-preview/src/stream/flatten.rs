@@ -1,12 +1,10 @@
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::unsafe_pinned;
 
-/// A combinator used to flatten a stream-of-streams into one long stream of
-/// elements.
-///
-/// This combinator is created by the `Stream::flatten` method.
+/// Stream for the [`flatten`](super::StreamExt::flatten) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Flatten<St>
@@ -47,6 +45,15 @@ where St: Stream,
         &mut self.stream
     }
 
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream()
+    }
+
     /// Consumes this combinator, returning the underlying stream.
     ///
     /// Note that this may discard intermediate state of this combinator, so
@@ -70,16 +77,16 @@ impl<St> Stream for Flatten<St>
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         loop {
-            if self.as_mut().next().as_pin_mut().is_none() {
-                match ready!(self.as_mut().stream().poll_next(waker)) {
+            if self.next.is_none() {
+                match ready!(self.as_mut().stream().poll_next(cx)) {
                     Some(e) => self.as_mut().next().set(Some(e)),
                     None => return Poll::Ready(None),
                 }
             }
-            let item = ready!(self.as_mut().next().as_pin_mut().unwrap().poll_next(waker));
+            let item = ready!(self.as_mut().next().as_pin_mut().unwrap().poll_next(cx));
             if item.is_some() {
                 return Poll::Ready(item);
             } else {
@@ -89,14 +96,12 @@ impl<St> Stream for Flatten<St>
     }
 }
 
-/* TODO
 // Forwarding impl of Sink from the underlying stream
-impl<S> Sink for Flatten<S>
-    where S: Sink + Stream
+impl<S, Item> Sink<Item> for Flatten<S>
+    where S: Stream + Sink<Item>,
+          S::Item: Stream,
 {
-    type SinkItem = S::SinkItem;
     type SinkError = S::SinkError;
 
-    delegate_sink!(stream);
+    delegate_sink!(stream, Item);
 }
- */

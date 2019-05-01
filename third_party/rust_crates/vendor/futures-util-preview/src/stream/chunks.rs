@@ -1,21 +1,19 @@
 use crate::stream::Fuse;
 use futures_core::stream::Stream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
-use std::mem;
-use std::pin::Pin;
-use std::prelude::v1::*;
+use core::mem;
+use core::pin::Pin;
+use alloc::vec::Vec;
 
-/// An adaptor that chunks up elements in a vector.
-///
-/// This adaptor will buffer up a list of items in the stream and pass on the
-/// vector used for buffering when a specified capacity has been reached. This
-/// is created by the `Stream::chunks` method.
+/// Stream for the [`chunks`](super::StreamExt::chunks) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Chunks<St: Stream> {
     stream: Fuse<St>,
     items: Vec<St::Item>,
+    cap: usize, // https://github.com/rust-lang-nursery/futures-rs/issues/1475
 }
 
 impl<St: Unpin + Stream> Unpin for Chunks<St> {}
@@ -30,11 +28,12 @@ impl<St: Stream> Chunks<St> where St: Stream {
         Chunks {
             stream: super::Fuse::new(stream),
             items: Vec::with_capacity(capacity),
+            cap: capacity,
         }
     }
 
     fn take(mut self: Pin<&mut Self>) -> Vec<St::Item> {
-        let cap = self.items.capacity();
+        let cap = self.cap;
         mem::replace(self.as_mut().items(), Vec::with_capacity(cap))
     }
 
@@ -53,6 +52,15 @@ impl<St: Stream> Chunks<St> where St: Stream {
         self.stream.get_mut()
     }
 
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream().get_pin_mut()
+    }
+
     /// Consumes this combinator, returning the underlying stream.
     ///
     /// Note that this may discard intermediate state of this combinator, so
@@ -67,17 +75,16 @@ impl<St: Stream> Stream for Chunks<St> {
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        let cap = self.items.capacity();
         loop {
-            match ready!(self.as_mut().stream().poll_next(waker)) {
+            match ready!(self.as_mut().stream().poll_next(cx)) {
                 // Push the item into the buffer and check whether it is full.
                 // If so, replace our buffer with a new and empty one and return
                 // the full one.
                 Some(item) => {
                     self.as_mut().items().push(item);
-                    if self.items.len() >= cap {
+                    if self.items.len() >= self.cap {
                         return Poll::Ready(Some(self.as_mut().take()))
                     }
                 }
@@ -99,14 +106,12 @@ impl<St: Stream> Stream for Chunks<St> {
     }
 }
 
-/* TODO
 // Forwarding impl of Sink from the underlying stream
-impl<S> Sink for Chunks<S>
-    where S: Sink + Stream
+impl<S, Item> Sink<Item> for Chunks<S>
+where
+    S: Stream + Sink<Item>,
 {
-    type SinkItem = S::SinkItem;
     type SinkError = S::SinkError;
 
-    delegate_sink!(stream);
+    delegate_sink!(stream, Item);
 }
-*/

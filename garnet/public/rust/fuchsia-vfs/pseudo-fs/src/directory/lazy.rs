@@ -29,7 +29,7 @@ use {
     futures::{
         future::{FusedFuture, FutureExt},
         stream::{FusedStream, FuturesUnordered, StreamExt, StreamFuture},
-        task::Waker,
+        task::Context,
         Future, Poll, Stream,
     },
     std::{
@@ -220,7 +220,7 @@ impl<T> Unpin for TerminatedStream<T> {}
 impl<T> Stream for TerminatedStream<T> {
     type Item = T;
 
-    fn poll_next(self: Pin<&mut Self>, _: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         Poll::Ready(None)
     }
 }
@@ -630,7 +630,7 @@ where
         }
     }
 
-    fn poll_connections(&mut self, waker: &Waker) {
+    fn poll_connections(&mut self, cx: &mut Context<'_>) {
         // This loop is needed to make sure we do not miss any activations of the futures we are
         // managing.  For example, if a stream was activated and has several outstanding items, if
         // we do not loop, we would only process the first item and then exit the `poll` method.
@@ -644,7 +644,7 @@ where
         // futures sharing this task).  Unfortunately, Stream does not provide an ability to see if
         // there are any items pending.
         loop {
-            match self.connections.poll_next_unpin(waker) {
+            match self.connections.poll_next_unpin(cx) {
                 Poll::Ready(Some((maybe_request, mut connection))) => {
                     if let Some(Ok(request)) = maybe_request {
                         match self.handle_request(request, &mut connection) {
@@ -670,11 +670,11 @@ where
         }
     }
 
-    fn poll_watchers(&mut self, waker: &Waker) {
+    fn poll_watchers(&mut self, cx: &mut Context<'_>) {
         // Similarly to the poll_connections, we need to loop when dealing with a stream.
         if !self.watcher_events.is_terminated() {
             loop {
-                match self.watcher_events.poll_next_unpin(waker) {
+                match self.watcher_events.poll_next_unpin(cx) {
                     Poll::Ready(Some(event)) => {
                         self.handle_watch_event(event);
                     }
@@ -687,10 +687,10 @@ where
             }
         }
 
-        self.watchers.remove_dead(waker);
+        self.watchers.remove_dead(cx);
     }
 
-    fn poll_live_entries(&mut self, waker: &Waker) {
+    fn poll_live_entries(&mut self, cx: &mut Context<'_>) {
         // It would be nice if Vec would provide a method that would give mutable (or better
         // owning) access to all the elements, and would allow to drop those that are unneeded.
         // `drain_filter` does something similar, but it is unstable (rust-lang/rust#43244).
@@ -700,7 +700,7 @@ where
         while i < self.live_entries.len() {
             let entry = &mut self.live_entries[i];
 
-            match entry.poll_unpin(waker) {
+            match entry.poll_unpin(cx) {
                 Poll::Pending => (),
                 Poll::Ready(x) => unreachable(x),
             }
@@ -813,10 +813,10 @@ where
 {
     type Output = Void;
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
-        self.poll_connections(waker);
-        self.poll_watchers(waker);
-        self.poll_live_entries(waker);
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.poll_connections(cx);
+        self.poll_watchers(cx);
+        self.poll_live_entries(cx);
 
         Poll::Pending
     }

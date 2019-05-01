@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(futures_api)]
-
 use {
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_control::{ControlMarker, PairingDelegateMarker},

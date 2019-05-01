@@ -4,70 +4,70 @@ BanjoAst {
         "banjo.examples.example9": [
             Enum {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.example9"
+                        "banjo.examples.example9",
                     ),
-                    name: "EchoMe"
+                    name: "EchoMe",
                 },
                 ty: UInt32,
                 variants: [
                     EnumVariant {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "zero",
                         value: Constant(
-                            "0"
-                        )
+                            "0",
+                        ),
                     },
                     EnumVariant {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "one",
                         value: Constant(
-                            "1"
-                        )
-                    }
-                ]
+                            "1",
+                        ),
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.example9"
+                        "banjo.examples.example9",
                     ),
-                    name: "EchoMore"
+                    name: "EchoMore",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: UInt32,
                         ident: Ident {
                             namespace: None,
-                            name: "first"
+                            name: "first",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: UInt64,
                         ident: Ident {
                             namespace: None,
-                            name: "second"
+                            name: "second",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -75,57 +75,57 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.example9"
+                        "banjo.examples.example9",
                     ),
-                    name: "Echo"
+                    name: "Echo",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Echo32",
                         in_params: [
                             (
                                 "uint32",
-                                UInt32
-                            )
+                                UInt32,
+                            ),
                         ],
                         out_params: [
                             (
                                 "response",
-                                UInt32
-                            )
-                        ]
+                                UInt32,
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Echo64",
                         in_params: [
                             (
                                 "uint64",
-                                UInt64
-                            )
+                                UInt64,
+                            ),
                         ],
                         out_params: [
                             (
                                 "response",
-                                UInt64
-                            )
-                        ]
+                                UInt64,
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "EchoEnum",
                         in_params: [
@@ -134,13 +134,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.example9"
+                                            "banjo.examples.example9",
                                         ),
-                                        name: "EchoMe"
+                                        name: "EchoMe",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -148,18 +148,18 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.example9"
+                                            "banjo.examples.example9",
                                         ),
-                                        name: "EchoMe"
+                                        name: "EchoMe",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "EchoHandle",
                         in_params: [
@@ -167,23 +167,23 @@ BanjoAst {
                                 "req",
                                 Handle {
                                     ty: Handle,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "response",
                                 Handle {
                                     ty: Handle,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "EchoChannel",
                         in_params: [
@@ -191,23 +191,23 @@ BanjoAst {
                                 "req",
                                 Handle {
                                     ty: Channel,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "response",
                                 Handle {
                                     ty: Channel,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "EchoStruct",
                         in_params: [
@@ -216,13 +216,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.example9"
+                                            "banjo.examples.example9",
                                         ),
-                                        name: "EchoMore"
+                                        name: "EchoMore",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -230,40 +230,40 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.example9"
+                                            "banjo.examples.example9",
                                         ),
-                                        name: "EchoMore"
+                                        name: "EchoMore",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Constant {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.example9"
+                        "banjo.examples.example9",
                     ),
-                    name: "favorite_echo"
+                    name: "favorite_echo",
                 },
                 ty: Identifier {
                     id: Ident {
                         namespace: Some(
-                            "banjo.examples.example9"
+                            "banjo.examples.example9",
                         ),
-                        name: "EchoMe"
+                        name: "EchoMe",
                     },
-                    reference: false
+                    reference: false,
                 },
                 value: Constant(
-                    "zero"
-                )
-            }
-        ]
-    }
+                    "zero",
+                ),
+            },
+        ],
+    },
 }

@@ -876,8 +876,6 @@ impl Term {
             }
         }
 
-        use std::ops::Range;
-
         trait Append: PushChar {
             fn append(
                 &mut self, grid: &Grid<Cell>, line: Line, cols: Range<Column>,

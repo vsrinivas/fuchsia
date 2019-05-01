@@ -7,32 +7,6 @@ namespace test {
 namespace name {
 namespace embedded {
 
-extern "C" const fidl_type_t test_name_StructTable;
-const fidl_type_t* Struct::FidlType = &test_name_StructTable;
-
-void Struct::Encode(::overnet::internal::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &Field, _offset + 0);
-}
-
-void Struct::Decode(::overnet::internal::Decoder* _decoder, Struct* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->Field, _offset + 0);
-}
-
-zx_status_t Struct::Clone(Struct* _result) const {
-  zx_status_t _status = ::fidl::Clone(Field, &_result->Field);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const Struct& _lhs, const Struct& _rhs) {
-  if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
-    return false;
-  }
-  return true;
-}
-#endif
 Union::Union() : value_() {}
 
 Union::~Union() {
@@ -224,6 +198,32 @@ bool operator==(const Table& _lhs, const Table& _rhs) {
       return false;
     }
   } else if (_rhs.has_Field()) {
+    return false;
+  }
+  return true;
+}
+#endif
+extern "C" const fidl_type_t test_name_StructTable;
+const fidl_type_t* Struct::FidlType = &test_name_StructTable;
+
+void Struct::Encode(::overnet::internal::Encoder* _encoder, size_t _offset) {
+  ::fidl::Encode(_encoder, &Field, _offset + 0);
+}
+
+void Struct::Decode(::overnet::internal::Decoder* _decoder, Struct* value, size_t _offset) {
+  ::fidl::Decode(_decoder, &value->Field, _offset + 0);
+}
+
+zx_status_t Struct::Clone(Struct* _result) const {
+  zx_status_t _status = ::fidl::Clone(Field, &_result->Field);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+#ifdef FIDL_OPERATOR_EQUALS
+bool operator==(const Struct& _lhs, const Struct& _rhs) {
+  if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
     return false;
   }
   return true;

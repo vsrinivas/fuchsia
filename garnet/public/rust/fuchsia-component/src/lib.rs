@@ -4,7 +4,6 @@
 
 //! Connect to or provide Fuchsia services.
 
-#![feature(futures_api)]
 #![deny(missing_docs)]
 
 #[allow(unused)] // Remove pending fix to rust-lang/rust#53682
@@ -31,7 +30,7 @@ use {
     futures::{
         ready,
         stream::{FuturesUnordered, StreamExt, StreamFuture},
-        task::Waker,
+        task::Context,
         Future, Poll, Stream,
     },
     std::{
@@ -782,8 +781,8 @@ pub mod server {
     impl Future for ClientConnection {
         type Output = Option<(Result<DirectoryRequest, fidl::Error>, ClientConnection)>;
 
-        fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
-            let res_opt = ready!(self.stream().poll_next_unpin(waker));
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            let res_opt = ready!(self.stream().poll_next_unpin(cx));
             Poll::Ready(res_opt.map(|res| {
                 (
                     res,
@@ -1118,10 +1117,10 @@ pub mod server {
     impl<ServiceObjTy: ServiceObjTrait> Stream for ServiceFs<ServiceObjTy> {
         type Item = ServiceObjTy::Output;
 
-        fn poll_next(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Option<Self::Item>> {
+        fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             loop {
                 let (request, mut client_connection) =
-                    match ready!(self.client_connections.poll_next_unpin(waker)) {
+                    match ready!(self.client_connections.poll_next_unpin(cx)) {
                         // a client request
                         Some(Some(x)) => x,
                         // this client_connection has terminated

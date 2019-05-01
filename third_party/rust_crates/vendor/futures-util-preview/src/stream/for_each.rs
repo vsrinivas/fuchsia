@@ -1,13 +1,10 @@
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// A stream combinator which executes a unit closure over each item on a
-/// stream.
-///
-/// This structure is returned by the `Stream::for_each` method.
+/// Future for the [`for_each`](super::StreamExt::for_each) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct ForEach<St, Fut, F> {
@@ -53,14 +50,14 @@ impl<St, Fut, F> Future for ForEach<St, Fut, F>
 {
     type Output = ();
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<()> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
         loop {
             if let Some(future) = self.as_mut().future().as_pin_mut() {
-                ready!(future.poll(waker));
+                ready!(future.poll(cx));
             }
-            self.as_mut().future().as_mut().set(None);
+            self.as_mut().future().set(None);
 
-            match ready!(self.as_mut().stream().poll_next(waker)) {
+            match ready!(self.as_mut().stream().poll_next(cx)) {
                 Some(e) => {
                     let future = (self.as_mut().f())(e);
                     self.as_mut().future().set(Some(future));

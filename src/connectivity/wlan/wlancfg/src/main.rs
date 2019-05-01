@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 #![deny(warnings)]
 #![recursion_limit = "256"]
 
@@ -20,6 +20,7 @@ use fidl_fuchsia_wlan_device_service::DeviceServiceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
+use futures::future::try_join;
 use std::sync::Arc;
 use void::Void;
 
@@ -58,5 +59,5 @@ fn main() -> Result<(), Error> {
         .err_into()
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 
-    executor.run_singlethreaded(fidl_fut.try_join(fut)).map(|_: (Void, Void)| ())
+    executor.run_singlethreaded(try_join(fidl_fut, fut)).map(|_: (Void, Void)| ())
 }

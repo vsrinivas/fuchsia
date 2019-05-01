@@ -4,39 +4,39 @@ BanjoAst {
         "banjo.examples.librarya": [
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.librarya"
+                        "banjo.examples.librarya",
                     ),
-                    name: "Point"
+                    name: "Point",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Float32,
                         ident: Ident {
                             namespace: None,
-                            name: "x"
+                            name: "x",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Float32,
                         ident: Ident {
                             namespace: None,
-                            name: "y"
+                            name: "y",
                         },
-                        val: None
-                    }
-                ]
-            }
+                        val: None,
+                    },
+                ],
+            },
         ],
         "banjo.examples.libraryb": [
             Protocol {
@@ -45,21 +45,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.libraryb"
+                        "banjo.examples.libraryb",
                     ),
-                    name: "View"
+                    name: "View",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "MoveTo",
                         in_params: [
@@ -68,18 +68,18 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.librarya"
+                                            "banjo.examples.librarya",
                                         ),
-                                        name: "Point"
+                                        name: "Point",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
-                        out_params: []
-                    }
-                ]
-            }
-        ]
-    }
+                        out_params: [],
+                    },
+                ],
+            },
+        ],
+    },
 }

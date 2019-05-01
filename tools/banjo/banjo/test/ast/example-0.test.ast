@@ -4,68 +4,68 @@ BanjoAst {
         "banjo.examples.example0": [
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.example0"
+                        "banjo.examples.example0",
                     ),
-                    name: "Foo"
+                    name: "Foo",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.example0"
+                                    "banjo.examples.example0",
                                 ),
-                                name: "Bar"
+                                name: "Bar",
                             },
-                            reference: false
+                            reference: false,
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "b"
+                            name: "b",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.example0"
+                        "banjo.examples.example0",
                     ),
-                    name: "Bar"
+                    name: "Bar",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.example0"
+                                    "banjo.examples.example0",
                                 ),
-                                name: "Foo"
+                                name: "Foo",
                             },
-                            reference: true
+                            reference: true,
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "f"
+                            name: "f",
                         },
-                        val: None
-                    }
-                ]
-            }
-        ]
-    }
+                        val: None,
+                    },
+                ],
+            },
+        ],
+    },
 }

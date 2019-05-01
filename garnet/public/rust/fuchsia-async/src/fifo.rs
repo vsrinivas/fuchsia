@@ -5,7 +5,7 @@
 use {
     crate::RWHandle,
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::{ready, task::Waker, Future, Poll},
+    futures::{ready, task::Context, Future, Poll},
     std::{
         fmt,
         marker::{PhantomData, Unpin},
@@ -38,7 +38,7 @@ where
     /// needing a write on receiving a `zx::Status::SHOULD_WAIT`.
     ///
     /// Returns the number of elements processed.
-    fn write(&self, entries: &[W], lw: &Waker) -> Poll<Result<usize, zx::Status>>;
+    fn write(&self, cx: &mut Context<'_>, entries: &[W]) -> Poll<Result<usize, zx::Status>>;
 }
 
 /// Identifies that the object may be used to read entries from a FIFO.
@@ -60,7 +60,7 @@ where
 
     /// Reads an entry from the fifo and registers this `Fifo` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    fn read(&self, lw: &Waker) -> Poll<Result<Option<R>, zx::Status>>;
+    fn read(&self, cx: &mut Context<'_>) -> Poll<Result<Option<R>, zx::Status>>;
 }
 
 /// An I/O object representing a `Fifo`.
@@ -106,16 +106,16 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     /// automatically handle ensuring a retry once the fifo is writable again.
     ///
     /// Returns `true` if the CLOSED signal has been received.
-    pub fn poll_write(&self, lw: &Waker) -> Poll<Result<bool, zx::Status>> {
-        self.handle.poll_write(lw)
+    pub fn poll_write(&self, cx: &mut Context<'_>) -> Poll<Result<bool, zx::Status>> {
+        self.handle.poll_write(cx)
     }
 
     /// Writes entries to the fifo and registers this `Fifo` as
     /// needing a write on receiving a `zx::Status::SHOULD_WAIT`.
     ///
     /// Returns the number of elements processed.
-    pub fn try_write(&self, entries: &[W], lw: &Waker) -> Poll<Result<usize, zx::Status>> {
-        let clear_closed = ready!(self.poll_write(lw)?);
+    pub fn try_write(&self, cx: &mut Context<'_>, entries: &[W]) -> Poll<Result<usize, zx::Status>> {
+        let clear_closed = ready!(self.poll_write(cx)?);
         let elem_size = ::std::mem::size_of::<W>();
         let elembuf = unsafe {
             ::std::slice::from_raw_parts(entries.as_ptr() as *const u8, elem_size * entries.len())
@@ -123,7 +123,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
         match self.as_ref().write(elem_size, elembuf) {
             Err(e) => {
                 if e == zx::Status::SHOULD_WAIT {
-                    self.handle.need_write(lw, clear_closed)?;
+                    self.handle.need_write(cx, clear_closed)?;
                     Poll::Pending
                 } else {
                     Poll::Ready(Err(e))
@@ -141,14 +141,14 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     /// automatically handle ensuring a retry once the fifo is readable again.
     ///
     /// Returns `true` if the CLOSED signal has been received.
-    pub fn poll_read(&self, lw: &Waker) -> Poll<Result<bool, zx::Status>> {
-        self.handle.poll_read(lw)
+    pub fn poll_read(&self, cx: &mut Context<'_>) -> Poll<Result<bool, zx::Status>> {
+        self.handle.poll_read(cx)
     }
 
     /// Reads an entry from the fifo and registers this `Fifo` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    pub fn try_read(&self, lw: &Waker) -> Poll<Result<Option<R>, zx::Status>> {
-        let clear_closed = ready!(self.handle.poll_read(lw)?);
+    pub fn try_read(&self, cx: &mut Context<'_>) -> Poll<Result<Option<R>, zx::Status>> {
+        let clear_closed = ready!(self.handle.poll_read(cx)?);
         let mut element = unsafe { ::std::mem::uninitialized() };
         let elembuf = unsafe {
             ::std::slice::from_raw_parts_mut(
@@ -162,7 +162,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
                 // Ensure `drop` isn't called on uninitialized memory.
                 ::std::mem::forget(element);
                 if e == zx::Status::SHOULD_WAIT {
-                    self.handle.need_read(lw, clear_closed)?;
+                    self.handle.need_read(cx, clear_closed)?;
                     return Poll::Pending;
                 }
                 if e == zx::Status::PEER_CLOSED {
@@ -179,14 +179,14 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
 }
 
 impl<R: FifoEntry, W: FifoEntry> FifoReadable<R> for Fifo<R, W> {
-    fn read(&self, lw: &Waker) -> Poll<Result<Option<R>, zx::Status>> {
-        self.try_read(lw)
+    fn read(&self, cx: &mut Context<'_>) -> Poll<Result<Option<R>, zx::Status>> {
+        self.try_read(cx)
     }
 }
 
 impl<R: FifoEntry, W: FifoEntry> FifoWritable<W> for Fifo<R, W> {
-    fn write(&self, entries: &[W], lw: &Waker) -> Poll<Result<usize, zx::Status>> {
-        self.try_write(entries, lw)
+    fn write(&self, cx: &mut Context<'_>, entries: &[W]) -> Poll<Result<usize, zx::Status>> {
+        self.try_write(cx, entries)
     }
 }
 
@@ -215,10 +215,10 @@ impl<'a, F: FifoWritable<W>, W: FifoEntry> WriteEntry<'a, F, W> {
 impl<'a, F: FifoWritable<W>, W: FifoEntry> Future for WriteEntry<'a, F, W> {
     type Output = Result<(), zx::Status>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
         while !this.entries.is_empty() {
-            let advance = ready!(this.fifo.write(this.entries, lw)?);
+            let advance = ready!(this.fifo.write(cx, this.entries)?);
             this.entries = &this.entries[advance..];
         }
         Poll::Ready(Ok(()))
@@ -247,8 +247,8 @@ impl<'a, F: FifoReadable<R>, R: FifoEntry> ReadEntry<'a, F, R> {
 impl<'a, F: FifoReadable<R>, R: FifoEntry> Future for ReadEntry<'a, F, R> {
     type Output = Result<Option<R>, zx::Status>;
 
-    fn poll(self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
-        self.fifo.read(lw)
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.fifo.read(cx)
     }
 }
 
@@ -258,6 +258,7 @@ mod tests {
     use crate::{Executor, TimeoutExt, Timer};
     use fuchsia_zircon::prelude::*;
     use futures::prelude::*;
+    use futures::future::try_join;
 
     #[derive(Clone, Debug, PartialEq, Eq)]
     #[repr(C)]
@@ -296,7 +297,7 @@ mod tests {
         // Sends an entry after the timeout has passed
         let sender = Timer::new(10.millis().after_now()).then(|()| tx.write_entries(elements));
 
-        let done = receiver.try_join(sender);
+        let done = try_join(receiver, sender);
         exec.run_singlethreaded(done)
             .expect("failed to run receive future on executor");
     }
@@ -323,7 +324,7 @@ mod tests {
         // Sends an entry after the timeout has passed
         let sender = Timer::new(10.millis().after_now()).then(|()| tx.write_entries(elements));
 
-        let done = receiver.try_join(sender);
+        let done = try_join(receiver, sender);
         let res = exec.run_singlethreaded(done);
         match res {
             Err(zx::Status::OUT_OF_RANGE) => (),
@@ -400,7 +401,7 @@ mod tests {
         // add a timeout to receiver so if test is broken it doesn't take forever
         let receiver = receive_future.on_timeout(300.millis().after_now(), || panic!("timeout"));
 
-        let done = receiver.try_join(sender);
+        let done = try_join(receiver, sender);
 
         exec.run_singlethreaded(done)
             .expect("failed to run receive future on executor");
@@ -439,7 +440,7 @@ mod tests {
         // add a timeout to receiver so if test is broken it doesn't take forever
         let receiver = receive_future.on_timeout(300.millis().after_now(), || panic!("timeout"));
 
-        let done = receiver.try_join(sender);
+        let done = try_join(receiver, sender);
 
         exec.run_singlethreaded(done)
             .expect("failed to run receive future on executor");

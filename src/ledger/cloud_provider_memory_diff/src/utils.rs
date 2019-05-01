@@ -6,7 +6,7 @@ use {
     futures::{
         channel::oneshot,
         future::{self, FusedFuture, Future, FutureExt},
-        task::Waker,
+        task::Context,
         Poll,
     },
     std::{marker::Unpin, mem, pin::Pin},
@@ -19,10 +19,10 @@ where
     F: Future + Unpin,
 {
     type Output = F::Output;
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<F::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<F::Output> {
         match &mut self.0 {
             None => Poll::Pending,
-            Some(fut) => fut.poll_unpin(waker),
+            Some(fut) => fut.poll_unpin(cx),
         }
     }
 }

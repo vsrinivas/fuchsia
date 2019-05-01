@@ -29,7 +29,7 @@ use {
     futures::{
         future::{FusedFuture, FutureExt},
         stream::{FuturesUnordered, StreamExt, StreamFuture},
-        task::Waker,
+        task::Context,
         Future, Poll,
     },
     static_assertions::assert_eq_size,
@@ -434,7 +434,7 @@ impl<'entries> Unpin for Simple<'entries> {}
 impl<'entries> Future for Simple<'entries> {
     type Output = Void;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         // This loop is needed to make sure we do not miss any activations of the futures we are
         // managing.  For example, if a stream was activated and has several outstanding items, if
         // we do not loop, we would only process the first item and then exit the `poll` method.
@@ -448,7 +448,7 @@ impl<'entries> Future for Simple<'entries> {
         // sharing this task) to do work.  Unfortunately, Stream does not provide an ability to see
         // if there are any items pending.
         loop {
-            match self.connections.poll_next_unpin(lw) {
+            match self.connections.poll_next_unpin(cx) {
                 Poll::Ready(Some((maybe_request, mut connection))) => {
                     if let Some(Ok(request)) = maybe_request {
                         match self.handle_request(request, &mut connection) {
@@ -474,7 +474,7 @@ impl<'entries> Future for Simple<'entries> {
         }
 
         for (name, entry) in self.entries.iter_mut() {
-            match entry.poll_unpin(lw) {
+            match entry.poll_unpin(cx) {
                 Poll::Ready(result) => {
                     panic!(
                         "Entry futures in a pseudo directory should never complete.\n\
@@ -487,7 +487,7 @@ impl<'entries> Future for Simple<'entries> {
             }
         }
 
-        self.watchers.remove_dead(lw);
+        self.watchers.remove_dead(cx);
 
         Poll::Pending
     }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crossbeam::queue::MsQueue;
-use futures::{channel::mpsc, lock::Mutex, stream::FusedStream, task::Waker, Poll, Stream};
+use futures::{channel::mpsc, lock::Mutex, stream::FusedStream, task::Context, Poll, Stream};
 use std::{ops::DerefMut, pin::Pin, sync::Arc};
 
 #[derive(Clone)]
@@ -82,8 +82,8 @@ impl<T: Clone> Clone for Receiver<T> {
 
 impl<T: Clone> Stream for Receiver<T> {
     type Item = T;
-    fn poll_next(mut self: Pin<&mut Self>, w: &Waker) -> Poll<Option<Self::Item>> {
-        Stream::poll_next(Pin::new(&mut self.inner), w)
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Stream::poll_next(Pin::new(&mut self.inner), cx)
     }
 }
 

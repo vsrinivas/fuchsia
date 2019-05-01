@@ -13,7 +13,7 @@ use {
     },
     fuchsia_async::Channel,
     fuchsia_zircon::MessageBuf,
-    futures::{task::Waker, Poll},
+    futures::{task::Context, Poll},
     std::iter,
 };
 
@@ -183,8 +183,8 @@ impl Watchers {
     /// Checks if there are any connections in the list of watcher connections that has been
     /// closed.  Removes them and setup up the waker to wake up when any of the live connections is
     /// closed.
-    pub fn remove_dead(&mut self, waker: &Waker) {
-        self.connections.retain(|watcher| !watcher.is_dead(waker));
+    pub fn remove_dead(&mut self, cx: &mut Context<'_>) {
+        self.connections.retain(|watcher| !watcher.is_dead(cx));
     }
 
     /// Returns true if there are any active watcher connections.
@@ -405,7 +405,7 @@ impl WatcherConnection {
 
     /// Checks if the watcher has closed the connection.  And sets the waker to trigger when the
     /// connection is closed if it was still opened during the call.
-    fn is_dead(&self, lw: &Waker) -> bool {
+    fn is_dead(&self, cx: &mut Context<'_>) -> bool {
         let channel = &self.channel;
 
         if channel.is_closed() {
@@ -423,7 +423,7 @@ impl WatcherConnection {
         // We rely on [`Channel::recv_from()`] to invoke [`Channel::poll_read()`], which would call
         // [`RWHandle::poll_read()`] that would set the signal mask to `READABLE | CLOSE`.
         let mut msg = MessageBuf::new();
-        match channel.recv_from(&mut msg, lw) {
+        match channel.recv_from(cx, &mut msg) {
             // We are not expecting any messages.  Returning true would cause this watcher
             // connection to be dropped and closed as a result.
             Poll::Ready(_) => true,

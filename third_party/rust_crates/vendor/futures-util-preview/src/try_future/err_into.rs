@@ -1,10 +1,10 @@
 use core::marker::PhantomData;
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future, TryFuture};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use pin_utils::unsafe_pinned;
 
-/// Future for the [`err_into`](super::TryFutureExt::err_into) combinator.
+/// Future for the [`err_into`](super::TryFutureExt::err_into) method.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct ErrInto<Fut, E> {
@@ -37,9 +37,9 @@ impl<Fut, E> Future for ErrInto<Fut, E>
 
     fn poll(
         self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
-        self.future().try_poll(waker)
+        self.future().try_poll(cx)
             .map(|res| res.map_err(Into::into))
     }
 }

@@ -1,13 +1,14 @@
 //! Definition of the `JoinAll` combinator, waiting for all of a list of futures
 //! to finish.
 
-use std::fmt;
-use std::future::Future;
-use std::iter::FromIterator;
-use std::mem;
-use std::pin::Pin;
-use std::prelude::v1::*;
-use std::task::Poll;
+use core::fmt;
+use core::future::Future;
+use core::iter::FromIterator;
+use core::mem;
+use core::pin::Pin;
+use core::task::{Context, Poll};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 #[derive(Debug)]
 enum ElemState<F>
@@ -55,10 +56,7 @@ fn iter_pin_mut<T>(slice: Pin<&mut [T]>) -> impl Iterator<Item = Pin<&mut T>> {
         .map(|t| unsafe { Pin::new_unchecked(t) })
 }
 
-/// A future which takes a list of futures and resolves with a vector of the
-/// completed values.
-///
-/// This future is created with the `join_all` function.
+/// Future for the [`join_all`] function.
 #[must_use = "futures do nothing unless polled"]
 pub struct JoinAll<F>
 where
@@ -101,7 +99,7 @@ where
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::future::{join_all};
 ///
@@ -118,7 +116,7 @@ where
     I::Item: Future,
 {
     let elems: Box<[_]> = i.into_iter().map(ElemState::Pending).collect();
-    JoinAll { elems: Box::into_pin(elems) }
+    JoinAll { elems: elems.into() }
 }
 
 impl<F> Future for JoinAll<F>
@@ -127,15 +125,12 @@ where
 {
     type Output = Vec<F::Output>;
 
-    fn poll(
-        mut self: Pin<&mut Self>,
-        waker: &::std::task::Waker,
-    ) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut all_done = true;
 
         for mut elem in iter_pin_mut(self.elems.as_mut()) {
             if let Some(pending) = elem.as_mut().pending_pin_mut() {
-                if let Poll::Ready(output) = pending.poll(waker) {
+                if let Poll::Ready(output) = pending.poll(cx) {
                     elem.set(ElemState::Done(Some(output)));
                 } else {
                     all_done = false;

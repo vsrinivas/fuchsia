@@ -11,7 +11,7 @@ use {
     crate::executor::EHandle,
     fuchsia_zircon as zx,
     futures::{
-        task::{AtomicWaker, Waker},
+        task::{AtomicWaker, Context},
         Future, FutureExt, Poll, Stream,
         stream::FusedStream,
     },
@@ -70,11 +70,11 @@ where
 {
     type Output = F::Output;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
-        if let Poll::Ready(item) = self.as_mut().future().poll(lw) {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        if let Poll::Ready(item) = self.as_mut().future().poll(cx) {
             return Poll::Ready(item);
         }
-        if let Poll::Ready(()) = self.as_mut().timer().poll_unpin(lw) {
+        if let Poll::Ready(()) = self.as_mut().timer().poll_unpin(cx) {
             let ot = OnTimeout::on_timeout(self.as_mut())
                 .take()
                 .expect("polled withtimeout after completion");
@@ -114,18 +114,18 @@ impl Timer {
         self.waker_and_bool.1.load(Ordering::SeqCst)
     }
 
-    fn register_task(&self, lw: &Waker) {
-        self.waker_and_bool.0.register(lw);
+    fn register_task(&self, cx: &mut Context<'_>) {
+        self.waker_and_bool.0.register(cx.waker());
     }
 }
 
 impl Future for Timer {
     type Output = ();
-    fn poll(self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if self.did_fire() {
             Poll::Ready(())
         } else {
-            self.register_task(lw);
+            self.register_task(cx);
             Poll::Pending
         }
     }
@@ -164,17 +164,17 @@ impl FusedStream for Interval {
 
 impl Stream for Interval {
     type Item = ();
-    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = &mut *self;
-        match this.timer.poll_unpin(lw) {
+        match this.timer.poll_unpin(cx) {
             Poll::Ready(()) => {
-                this.timer.register_task(lw);
+                this.timer.register_task(cx);
                 this.next += this.duration;
                 this.timer.reset(this.next);
                 Poll::Ready(Some(()))
             }
             Poll::Pending => {
-                this.timer.register_task(lw);
+                this.timer.register_task(cx);
                 Poll::Pending
             }
         }

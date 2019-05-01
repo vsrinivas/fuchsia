@@ -15,7 +15,7 @@
 
 #![deny(warnings)]
 #![deny(missing_docs)]
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 
 mod auth_provider_supplier;
 mod token_manager_factory;

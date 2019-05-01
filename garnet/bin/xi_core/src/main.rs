@@ -4,7 +4,7 @@
 
 //! Main process for Fuchsia builds - uses fidl rather than stdin / stdout
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 
 use {
     failure::{Error, ResultExt},

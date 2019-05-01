@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon::DurationNum;
 use futures::lock::Mutex;
-use futures::{self, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{future::try_join4, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use serde_derive::Deserialize;
 
 mod device_id;
@@ -350,7 +350,8 @@ fn main() -> Result<(), failure::Error> {
         });
     fs.take_and_serve_directory_handle()?;
 
-    let (_success, (), (), ()) = executor.run_singlethreaded(device_name.try_join4(
+    let (_success, (), (), ()) = executor.run_singlethreaded(try_join4(
+        device_name,
         filter_setup,
         ethernet_device,
         fs.collect().map(Ok),

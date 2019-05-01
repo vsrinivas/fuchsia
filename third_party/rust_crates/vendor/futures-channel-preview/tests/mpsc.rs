@@ -1,12 +1,12 @@
-#![feature(futures_api, async_await, await_macro)]
+#![feature(async_await, await_macro)]
 
 use futures::channel::{mpsc, oneshot};
 use futures::executor::{block_on, block_on_stream};
-use futures::future::{FutureExt, poll_fn};
+use futures::future::{join, poll_fn};
 use futures::stream::{Stream, StreamExt};
 use futures::sink::{Sink, SinkExt};
 use futures::task::Poll;
-use futures_test::task::noop_waker_ref;
+use futures_test::task::noop_context;
 use pin_utils::pin_mut;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -29,34 +29,34 @@ fn send_recv() {
 #[test]
 fn send_recv_no_buffer() {
     // Run on a task context
-    block_on(poll_fn(move |lw| {
+    block_on(poll_fn(move |cx| {
         let (tx, rx) = mpsc::channel::<i32>(0);
         pin_mut!(tx, rx);
 
-        assert!(tx.as_mut().poll_flush(lw).is_ready());
-        assert!(tx.as_mut().poll_ready(lw).is_ready());
+        assert!(tx.as_mut().poll_flush(cx).is_ready());
+        assert!(tx.as_mut().poll_ready(cx).is_ready());
 
         // Send first message
         assert!(tx.as_mut().start_send(1).is_ok());
-        assert!(tx.as_mut().poll_ready(lw).is_pending());
+        assert!(tx.as_mut().poll_ready(cx).is_pending());
 
         // poll_ready said Pending, so no room in buffer, therefore new sends
         // should get rejected with is_full.
         assert!(tx.as_mut().start_send(0).unwrap_err().is_full());
-        assert!(tx.as_mut().poll_ready(lw).is_pending());
+        assert!(tx.as_mut().poll_ready(cx).is_pending());
 
         // Take the value
-        assert_eq!(rx.as_mut().poll_next(lw), Poll::Ready(Some(1)));
-        assert!(tx.as_mut().poll_ready(lw).is_ready());
+        assert_eq!(rx.as_mut().poll_next(cx), Poll::Ready(Some(1)));
+        assert!(tx.as_mut().poll_ready(cx).is_ready());
 
         // Send second message
-        assert!(tx.as_mut().poll_ready(lw).is_ready());
+        assert!(tx.as_mut().poll_ready(cx).is_ready());
         assert!(tx.as_mut().start_send(2).is_ok());
-        assert!(tx.as_mut().poll_ready(lw).is_pending());
+        assert!(tx.as_mut().poll_ready(cx).is_pending());
 
         // Take the value
-        assert_eq!(rx.as_mut().poll_next(lw), Poll::Ready(Some(2)));
-        assert!(tx.as_mut().poll_ready(lw).is_ready());
+        assert_eq!(rx.as_mut().poll_next(cx), Poll::Ready(Some(2)));
+        assert!(tx.as_mut().poll_ready(cx).is_ready());
 
         Poll::Ready(())
     }));
@@ -98,10 +98,10 @@ fn send_recv_threads_no_capacity() {
     let mut readyrx = block_on_stream(readyrx);
     let t = thread::spawn(move || {
         let mut readytx = readytx.sink_map_err(|_| panic!());
-        let (send_res_1, send_res_2) = block_on(tx.send(1).join(readytx.send(())));
+        let (send_res_1, send_res_2) = block_on(join(tx.send(1), readytx.send(())));
         send_res_1.unwrap();
         send_res_2.unwrap();
-        block_on(tx.send(2).join(readytx.send(())));
+        block_on(join(tx.send(2), readytx.send(())));
     });
 
     readyrx.next();
@@ -119,11 +119,11 @@ fn recv_close_gets_none() {
     let (mut tx, mut rx) = mpsc::channel::<i32>(10);
 
     // Run on a task context
-    block_on(poll_fn(move |lw| {
+    block_on(poll_fn(move |cx| {
         rx.close();
 
-        assert_eq!(rx.poll_next_unpin(lw), Poll::Ready(None));
-        match tx.poll_ready(lw) {
+        assert_eq!(rx.poll_next_unpin(cx), Poll::Ready(None));
+        match tx.poll_ready(cx) {
             Poll::Pending | Poll::Ready(Ok(_)) => panic!(),
             Poll::Ready(Err(e)) => assert!(e.is_disconnected()),
         };
@@ -139,8 +139,8 @@ fn tx_close_gets_none() {
     let (_, mut rx) = mpsc::channel::<i32>(10);
 
     // Run on a task context
-    block_on(poll_fn(move |lw| {
-        assert_eq!(rx.poll_next_unpin(lw), Poll::Ready(None));
+    block_on(poll_fn(move |cx| {
+        assert_eq!(rx.poll_next_unpin(cx), Poll::Ready(None));
         Poll::Ready(())
     }));
 }
@@ -304,7 +304,7 @@ fn stress_receiver_multi_task_bounded_hard() {
                     } else {
                         // Just poll
                         let n = n.clone();
-                        match rx.poll_next_unpin(noop_waker_ref()) {
+                        match rx.poll_next_unpin(&mut noop_context()) {
                             Poll::Ready(Some(_)) => {
                                 n.fetch_add(1, Ordering::Relaxed);
                             }
@@ -472,8 +472,8 @@ fn try_send_2() {
     let (readytx, readyrx) = oneshot::channel::<()>();
 
     let th = thread::spawn(move || {
-        block_on(poll_fn(|lw| {
-            assert!(tx.poll_ready(lw).is_pending());
+        block_on(poll_fn(|cx| {
+            assert!(tx.poll_ready(cx).is_pending());
             Poll::Ready(())
         }));
 

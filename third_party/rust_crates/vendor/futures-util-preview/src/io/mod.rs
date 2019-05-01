@@ -5,17 +5,11 @@
 //! `AsyncReadExt` and `AsyncWriteExt` traits which add methods
 //! to the `AsyncRead` and `AsyncWrite` types.
 
-use std::vec::Vec;
-
-pub use futures_io::{AsyncRead, AsyncWrite, IoVec};
+pub use futures_io::{
+    AsyncRead, AsyncWrite, AsyncSeek, AsyncBufRead, IoVec, SeekFrom,
+};
 
 #[cfg(feature = "io-compat")] use crate::compat::Compat;
-
-// Temporarily removed until AsyncBufRead is implemented
-// pub use io::lines::{lines, Lines};
-// pub use io::read_until::{read_until, ReadUntil};
-// mod lines;
-// mod read_until;
 
 mod allow_std;
 pub use self::allow_std::AllowStdIo;
@@ -26,17 +20,31 @@ pub use self::copy_into::CopyInto;
 mod flush;
 pub use self::flush::Flush;
 
+// TODO
+// mod lines;
+// pub use self::lines::Lines;
+
 mod read;
 pub use self::read::Read;
 
 mod read_exact;
 pub use self::read_exact::ReadExact;
 
+// TODO
+// mod read_line;
+// pub use self::read_line::ReadLine;
+
 mod read_to_end;
 pub use self::read_to_end::ReadToEnd;
 
+mod read_until;
+pub use self::read_until::ReadUntil;
+
 mod close;
 pub use self::close::Close;
+
+mod seek;
+pub use self::seek::Seek;
 
 mod split;
 pub use self::split::{ReadHalf, WriteHalf};
@@ -61,7 +69,7 @@ pub trait AsyncReadExt: AsyncRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::Cursor;
@@ -79,7 +87,7 @@ pub trait AsyncReadExt: AsyncRead {
         &'a mut self,
         writer: &'a mut W,
     ) -> CopyInto<'a, Self, W>
-        where W: AsyncWrite,
+        where Self: Unpin, W: AsyncWrite + Unpin,
     {
         CopyInto::new(self, writer)
     }
@@ -93,7 +101,7 @@ pub trait AsyncReadExt: AsyncRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::Cursor;
@@ -110,7 +118,9 @@ pub trait AsyncReadExt: AsyncRead {
     /// assert_eq!(output, [1, 2, 3, 4, 0]);
     /// # Ok::<(), Box<std::error::Error>>(()) }).unwrap();
     /// ```
-    fn read<'a>(&'a mut self, buf: &'a mut [u8]) -> Read<'a, Self> {
+    fn read<'a>(&'a mut self, buf: &'a mut [u8]) -> Read<'a, Self>
+        where Self: Unpin,
+    {
         Read::new(self, buf)
     }
 
@@ -125,7 +135,7 @@ pub trait AsyncReadExt: AsyncRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::Cursor;
@@ -142,7 +152,7 @@ pub trait AsyncReadExt: AsyncRead {
     /// ## EOF is hit before `buf` is filled
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::{self, Cursor};
@@ -158,7 +168,9 @@ pub trait AsyncReadExt: AsyncRead {
     fn read_exact<'a>(
         &'a mut self,
         buf: &'a mut [u8],
-    ) -> ReadExact<'a, Self> {
+    ) -> ReadExact<'a, Self>
+        where Self: Unpin,
+    {
         ReadExact::new(self, buf)
     }
 
@@ -167,7 +179,7 @@ pub trait AsyncReadExt: AsyncRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::Cursor;
@@ -183,7 +195,9 @@ pub trait AsyncReadExt: AsyncRead {
     fn read_to_end<'a>(
         &'a mut self,
         buf: &'a mut Vec<u8>,
-    ) -> ReadToEnd<'a, Self> {
+    ) -> ReadToEnd<'a, Self>
+        where Self: Unpin,
+    {
         ReadToEnd::new(self, buf)
     }
 
@@ -195,7 +209,7 @@ pub trait AsyncReadExt: AsyncRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::Cursor;
@@ -232,7 +246,7 @@ pub trait AsyncReadExt: AsyncRead {
     /// Requires the `io-compat` feature to enable.
     #[cfg(feature = "io-compat")]
     fn compat(self) -> Compat<Self>
-        where Self: Sized,
+        where Self: Sized + Unpin,
     {
         Compat::new(self)
     }
@@ -247,7 +261,7 @@ pub trait AsyncWriteExt: AsyncWrite {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::io::{AllowStdIo, AsyncWriteExt};
     /// use std::io::{BufWriter, Cursor};
@@ -265,12 +279,16 @@ pub trait AsyncWriteExt: AsyncWrite {
     /// assert_eq!(output, [1, 2, 3, 4, 0]);
     /// # Ok::<(), Box<std::error::Error>>(()) }).unwrap();
     /// ```
-    fn flush(&mut self) -> Flush<'_, Self> {
+    fn flush(&mut self) -> Flush<'_, Self>
+        where Self: Unpin,
+    {
         Flush::new(self)
     }
 
     /// Creates a future which will entirely close this `AsyncWrite`.
-    fn close(&mut self) -> Close<'_, Self> {
+    fn close(&mut self) -> Close<'_, Self>
+        where Self: Unpin,
+    {
         Close::new(self)
     }
 
@@ -284,7 +302,7 @@ pub trait AsyncWriteExt: AsyncWrite {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncWriteExt;
     /// use std::io::Cursor;
@@ -296,7 +314,9 @@ pub trait AsyncWriteExt: AsyncWrite {
     /// assert_eq!(writer.into_inner(), [1, 2, 3, 4, 0]);
     /// # Ok::<(), Box<std::error::Error>>(()) }).unwrap();
     /// ```
-    fn write_all<'a>(&'a mut self, buf: &'a [u8]) -> WriteAll<'a, Self> {
+    fn write_all<'a>(&'a mut self, buf: &'a [u8]) -> WriteAll<'a, Self>
+        where Self: Unpin,
+    {
         WriteAll::new(self, buf)
     }
 
@@ -305,10 +325,84 @@ pub trait AsyncWriteExt: AsyncWrite {
     /// Requires the `io-compat` feature to enable.
     #[cfg(feature = "io-compat")]
     fn compat_write(self) -> Compat<Self>
-        where Self: Sized,
+        where Self: Sized + Unpin,
     {
         Compat::new(self)
     }
 }
 
 impl<W: AsyncWrite + ?Sized> AsyncWriteExt for W {}
+
+/// An extension trait which adds utility methods to `AsyncSeek` types.
+pub trait AsyncSeekExt: AsyncSeek {
+    /// Creates a future which will seek an IO object, and then yield the
+    /// new position in the object and the object itself.
+    ///
+    /// In the case of an error the buffer and the object will be discarded, with
+    /// the error yielded.
+    fn seek(&mut self, pos: SeekFrom) -> Seek<'_, Self>
+        where Self: Unpin,
+    {
+        Seek::new(self, pos)
+    }
+}
+
+impl<S: AsyncSeek + ?Sized> AsyncSeekExt for S {}
+
+/// An extension trait which adds utility methods to `AsyncBufRead` types.
+pub trait AsyncBufReadExt: AsyncBufRead {
+    /// Creates a future which will read all the bytes associated with this I/O
+    /// object into `buf` until the delimiter `byte` or EOF is reached.
+    /// This method is the async equivalent to [`BufRead::read_until`](std::io::BufRead::read_until).
+    ///
+    /// This function will read bytes from the underlying stream until the
+    /// delimiter or EOF is found. Once found, all bytes up to, and including,
+    /// the delimiter (if found) will be appended to `buf`.
+    ///
+    /// The returned future will resolve to the number of bytes read once the read
+    /// operation is completed.
+    ///
+    /// In the case of an error the buffer and the object will be discarded, with
+    /// the error yielded.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// #![feature(async_await, await_macro)]
+    /// # futures::executor::block_on(async {
+    /// use futures::io::AsyncBufReadExt;
+    /// use std::io::Cursor;
+    ///
+    /// let mut cursor = Cursor::new(b"lorem-ipsum");
+    /// let mut buf = vec![];
+    ///
+    /// // cursor is at 'l'
+    /// let num_bytes = await!(cursor.read_until(b'-', &mut buf))?;
+    /// assert_eq!(num_bytes, 6);
+    /// assert_eq!(buf, b"lorem-");
+    /// buf.clear();
+    ///
+    /// // cursor is at 'i'
+    /// let num_bytes = await!(cursor.read_until(b'-', &mut buf))?;
+    /// assert_eq!(num_bytes, 5);
+    /// assert_eq!(buf, b"ipsum");
+    /// buf.clear();
+    ///
+    /// // cursor is at EOF
+    /// let num_bytes = await!(cursor.read_until(b'-', &mut buf))?;
+    /// assert_eq!(num_bytes, 0);
+    /// assert_eq!(buf, b"");
+    /// # Ok::<(), Box<std::error::Error>>(()) }).unwrap();
+    /// ```
+    fn read_until<'a>(
+        &'a mut self,
+        byte: u8,
+        buf: &'a mut Vec<u8>,
+    ) -> ReadUntil<'a, Self>
+        where Self: Unpin,
+    {
+        ReadUntil::new(self, byte, buf)
+    }
+}
+
+impl<R: AsyncBufRead + ?Sized> AsyncBufReadExt for R {}

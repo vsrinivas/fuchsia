@@ -382,7 +382,9 @@ where
         // When we get here, we know that whatever is left in `b` is not needed
         // so we only take the amount of bytes we actually need from `bytes`,
         // leaving the rest alone for the caller to continue parsing with.
-        Ok(Records { bytes: bytes.take_front(bytes.len() - b.len()).unwrap(), context: c })
+        let bytes_len = bytes.len();
+        let b_len = b.len();
+        Ok(Records { bytes: bytes.take_front(bytes_len - b_len).unwrap(), context: c })
     }
 }
 

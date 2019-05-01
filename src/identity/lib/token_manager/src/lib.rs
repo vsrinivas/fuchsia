@@ -13,7 +13,7 @@
 
 #![deny(warnings)]
 #![deny(missing_docs)]
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{AuthProviderMarker, AuthenticationContextProviderProxy};

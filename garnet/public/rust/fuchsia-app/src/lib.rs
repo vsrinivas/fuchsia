@@ -4,9 +4,6 @@
 
 //! Connect to or provide Fuchsia services.
 
-#![feature(futures_api)]
-
-#![deny(warnings)]
 #![deny(missing_docs)]
 
 #[allow(unused)] // Remove pending fix to rust-lang/rust#53682
@@ -17,7 +14,7 @@ use {
     futures::{
         Future, Poll,
         stream::{FuturesUnordered, StreamExt, StreamFuture},
-        task::Waker,
+        task::Context,
     },
     fidl::endpoints::{RequestStream, ServiceMarker, Proxy},
     fidl_fuchsia_io::{
@@ -592,9 +589,9 @@ pub mod server {
     impl Future for FdioServer {
         type Output = Result<(), Error>;
 
-        fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
             loop {
-                match self.connections.poll_next_unpin(lw) {
+                match self.connections.poll_next_unpin(cx) {
                     Poll::Ready(Some((maybe_request, stream))) => {
                         if let Some(Ok(request)) = maybe_request {
                             match self.handle_request(request) {

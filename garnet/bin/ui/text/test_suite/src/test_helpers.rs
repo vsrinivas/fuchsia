@@ -83,7 +83,7 @@ impl TextFieldWrapper {
 
     /// Inserts text as though the user just typed it, at the caret, replacing any selected text.
     /// Also waits for an on_update state update event before returning.
-    pub async fn simple_insert<'a>(&mut self, contents: &'static str) -> Result<(), Error> {
+    pub async fn simple_insert(&mut self, contents: &'static str) -> Result<(), Error> {
         let rev = self.last_state.revision;
         self.proxy.begin_edit(rev)?;
         self.proxy.replace(&mut self.last_state.selection.range, contents)?;

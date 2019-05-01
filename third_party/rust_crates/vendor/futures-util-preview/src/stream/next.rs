@@ -1,9 +1,9 @@
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 
-/// A future of the next element of a stream.
+/// Future for the [`next`](super::StreamExt::next) method.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct Next<'a, St> {
@@ -29,8 +29,8 @@ impl<St: Stream + Unpin> Future for Next<'_, St> {
 
     fn poll(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
-        Pin::new(&mut *self.stream).poll_next(waker)
+        Pin::new(&mut *self.stream).poll_next(cx)
     }
 }

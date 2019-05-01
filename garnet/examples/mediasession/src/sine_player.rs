@@ -11,7 +11,7 @@
 //! `fx shell run fuchsia-pkg://fuchsia.com/sine_player#meta/sine_player.cmx` to
 //! see how it works.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 #![recursion_limit = "256"]
 
 use byteorder::{ByteOrder, NativeEndian};

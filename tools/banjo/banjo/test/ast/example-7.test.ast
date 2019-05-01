@@ -8,21 +8,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.example7"
+                        "banjo.examples.example7",
                     ),
-                    name: "Hello"
+                    name: "Hello",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Say",
                         in_params: [
@@ -30,22 +30,22 @@ BanjoAst {
                                 "req",
                                 Str {
                                     size: None,
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "response",
                                 Str {
                                     size: None,
-                                    nullable: false
-                                }
-                            )
-                        ]
-                    }
-                ]
-            }
-        ]
-    }
+                                    nullable: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
 }

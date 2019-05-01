@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "futures-select-macro-preview"
-version = "0.3.0-alpha.13"
+version = "0.3.0-alpha.15"
 authors = ["Taylor Cramer <cramertj@google.com>"]
 description = "The `select!` macro for waiting on multiple different `Future`s at once and handling the first one to complete.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
-documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.13/futures_select"
+documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.15/futures_select_macro"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang-nursery/futures-rs"
 

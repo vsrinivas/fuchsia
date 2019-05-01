@@ -4,7 +4,7 @@
 
 //! Rust fuchsia logger library.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 
 #![deny(missing_docs)]
 

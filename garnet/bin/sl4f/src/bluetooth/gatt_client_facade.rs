@@ -371,7 +371,7 @@ impl GattClientFacade {
                         // In the event that we need to short-circuit the stream, wake up all
                         // wakers in the host_requests Slab
                         for waker in &inner.read().host_requests {
-                            waker.1.wake();
+                            waker.1.wake_by_ref();
                         }
                     }
                     CentralEvent::OnPeripheralDisconnected { identifier } => {

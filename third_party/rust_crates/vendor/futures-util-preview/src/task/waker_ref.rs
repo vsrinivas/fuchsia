@@ -1,10 +1,10 @@
 #![allow(clippy::cast_ptr_alignment)] // clippy is too strict here
 
-use super::arc_wake::{ArcWake, clone_arc_raw, wake_arc_raw};
-use std::marker::PhantomData;
-use std::ops::Deref;
-use std::sync::Arc;
-use std::task::{Waker, RawWaker, RawWakerVTable};
+use super::arc_wake::{ArcWake, clone_arc_raw, wake_arc_raw, wake_by_ref_arc_raw};
+use alloc::sync::Arc;
+use core::marker::PhantomData;
+use core::ops::Deref;
+use core::task::{Waker, RawWaker, RawWakerVTable};
 
 /// A [`Waker`](::std::task::Waker) that is only valid for a given lifetime.
 ///
@@ -16,7 +16,7 @@ pub struct WakerRef<'a> {
     _marker: PhantomData<&'a ()>,
 }
 
-impl<'a> WakerRef<'a> {
+impl WakerRef<'_> {
     /// Create a new [`WakerRef`] from a [`Waker`].
     ///
     /// Note: this function is safe, but it is generally only used
@@ -30,7 +30,7 @@ impl<'a> WakerRef<'a> {
     }
 }
 
-impl<'a> Deref for WakerRef<'a> {
+impl Deref for WakerRef<'_> {
     type Target = Waker;
 
     fn deref(&self) -> &Waker {
@@ -53,18 +53,19 @@ where
 {
     // This uses the same mechanism as Arc::into_raw, without needing a reference.
     // This is potentially not stable
-    let ptr = &*wake as &W as *const W as *const();
+    let ptr = &*wake as &W as *const W as *const ();
 
     // Similar to `waker_vtable`, but with a no-op `drop` function.
     // Clones of the resulting `RawWaker` will still be dropped normally.
-    let vtable = &RawWakerVTable {
-        clone: clone_arc_raw::<W>,
-        drop: noop,
-        wake: wake_arc_raw::<W>,
-    };
+    let vtable = &RawWakerVTable::new(
+        clone_arc_raw::<W>,
+        wake_arc_raw::<W>,
+        wake_by_ref_arc_raw::<W>,
+        noop,
+    );
 
     let waker = unsafe {
-        Waker::new_unchecked(RawWaker::new(ptr, vtable))
+        Waker::from_raw(RawWaker::new(ptr, vtable))
     };
     WakerRef::new(waker)
 }

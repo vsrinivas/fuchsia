@@ -2,14 +2,10 @@ use super::chain::Chain;
 use core::fmt;
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use pin_utils::unsafe_pinned;
 
-/// Future for the `flatten` combinator.
-///
-/// This combinator turns a `Future`-of-a-`Future` into a single `Future`.
-///
-/// This is created by the `Future::flatten` method.
+/// Future for the [`flatten`](super::FutureExt::flatten) method.
 #[must_use = "futures do nothing unless polled"]
 pub struct Flatten<Fut>
     where Fut: Future,
@@ -55,7 +51,7 @@ impl<Fut> Future for Flatten<Fut>
 {
     type Output = <Fut::Output as Future>::Output;
 
-    fn poll(self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
-        self.state().poll(waker, |a, ()| a)
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.state().poll(cx, |a, ()| a)
     }
 }

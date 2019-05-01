@@ -3,23 +3,23 @@
 use crate::task::{AtomicWaker};
 use futures_core::future::{Future, FutureObj, LocalFutureObj};
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll, Spawn, LocalSpawn, SpawnError};
-use std::cell::UnsafeCell;
-use std::fmt::{self, Debug};
-use std::iter::FromIterator;
-use std::marker::PhantomData;
-use std::mem;
-use std::pin::Pin;
-use std::ptr;
-use std::sync::atomic::Ordering::SeqCst;
-use std::sync::atomic::{AtomicPtr, AtomicBool};
-use std::sync::{Arc, Weak};
-use std::usize;
+use futures_core::task::{Context, Poll, Spawn, LocalSpawn, SpawnError};
+use core::cell::UnsafeCell;
+use core::fmt::{self, Debug};
+use core::iter::FromIterator;
+use core::marker::PhantomData;
+use core::mem;
+use core::pin::Pin;
+use core::ptr;
+use core::sync::atomic::Ordering::SeqCst;
+use core::sync::atomic::{AtomicPtr, AtomicBool};
+use core::usize;
+use alloc::sync::{Arc, Weak};
 
 mod abort;
 
 mod iter;
-use self::iter::{IterMut, IterPinMut};
+pub use self::iter::{IterMut, IterPinMut};
 
 mod task;
 use self::task::Task;
@@ -51,8 +51,8 @@ const TERMINATED_SENTINEL_LENGTH: usize = usize::max_value();
 /// wake-ups for new futures.
 ///
 /// Note that you can create a ready-made [`FuturesUnordered`] via the
-/// [`futures_unordered`](futures_unordered()) function, or you can start with
-/// an empty set with the [`FuturesUnordered::new`] constructor.
+/// [`collect`](Iterator::collect) method, or you can start with an empty set
+/// with the [`FuturesUnordered::new`] constructor.
 #[must_use = "streams do nothing unless polled"]
 pub struct FuturesUnordered<Fut> {
     ready_to_run_queue: Arc<ReadyToRunQueue<Fut>>,
@@ -64,7 +64,7 @@ unsafe impl<Fut: Send> Send for FuturesUnordered<Fut> {}
 unsafe impl<Fut: Sync> Sync for FuturesUnordered<Fut> {}
 impl<Fut> Unpin for FuturesUnordered<Fut> {}
 
-impl<'a> Spawn for FuturesUnordered<FutureObj<'a, ()>> {
+impl Spawn for FuturesUnordered<FutureObj<'_, ()>> {
     fn spawn_obj(&mut self, future_obj: FutureObj<'static, ()>)
         -> Result<(), SpawnError>
     {
@@ -73,7 +73,7 @@ impl<'a> Spawn for FuturesUnordered<FutureObj<'a, ()>> {
     }
 }
 
-impl<'a> LocalSpawn for FuturesUnordered<LocalFutureObj<'a, ()>> {
+impl LocalSpawn for FuturesUnordered<LocalFutureObj<'_, ()>> {
     fn spawn_local_obj(&mut self, future_obj: LocalFutureObj<'static, ()>)
         -> Result<(), SpawnError>
     {
@@ -195,7 +195,6 @@ impl<Fut> FuturesUnordered<Fut> {
     }
 
     /// Returns an iterator that allows modifying each future in the set.
-    #[allow(clippy::needless_lifetimes)] // https://github.com/rust-lang/rust/issues/52675
     pub fn iter_pin_mut<'a>(self: Pin<&'a mut Self>) -> IterPinMut<'a, Fut> {
         IterPinMut {
             task: self.head_all,
@@ -287,11 +286,11 @@ impl<Fut> FuturesUnordered<Fut> {
 impl<Fut: Future> Stream for FuturesUnordered<Fut> {
     type Item = Fut::Output;
 
-    fn poll_next(mut self: Pin<&mut Self>, waker: &Waker)
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>)
         -> Poll<Option<Self::Item>>
     {
         // Ensure `parent` is correctly set.
-        self.ready_to_run_queue.waker.register(waker);
+        self.ready_to_run_queue.waker.register(cx.waker());
 
         loop {
             // Safety: &mut self guarantees the mutual exclusion `dequeue`
@@ -311,7 +310,7 @@ impl<Fut: Future> Stream for FuturesUnordered<Fut> {
                     // At this point, it may be worth yielding the thread &
                     // spinning a few times... but for now, just yield using the
                     // task system.
-                    waker.wake();
+                    cx.waker().wake_by_ref();
                     return Poll::Pending;
                 }
                 Dequeue::Data(task) => task,
@@ -377,7 +376,7 @@ impl<Fut: Future> Stream for FuturesUnordered<Fut> {
                 task: Option<Arc<Task<Fut>>>,
             }
 
-            impl<'a, Fut> Drop for Bomb<'a, Fut> {
+            impl<Fut> Drop for Bomb<'_, Fut> {
                 fn drop(&mut self) {
                     if let Some(task) = self.task.take() {
                         self.queue.release_task(task);
@@ -403,11 +402,12 @@ impl<Fut: Future> Stream for FuturesUnordered<Fut> {
             // deallocating the task if need be.
             let res = {
                 let waker = Task::waker_ref(bomb.task.as_ref().unwrap());
+                let mut cx = Context::from_waker(&waker);
 
                 // Safety: We won't move the future ever again
                 let future = unsafe { Pin::new_unchecked(future) };
 
-                future.poll(&waker)
+                future.poll(&mut cx)
             };
 
             match res {
@@ -467,25 +467,6 @@ impl<Fut: Future> FromIterator<Fut> for FuturesUnordered<Fut> {
         let acc = FuturesUnordered::new();
         iter.into_iter().fold(acc, |mut acc, item| { acc.push(item); acc })
     }
-}
-
-/// Converts a list of futures into a [`Stream`] of outputs from the futures.
-///
-/// This function will take a list of futures (e.g. a [`Vec`], an [`Iterator`],
-/// etc), and return a stream. The stream will yield items as they become
-/// available on the futures internally, in the order that they become
-/// available. This function is similar to
-/// [`buffer_unordered`](super::StreamExt::buffer_unordered) in that it may
-/// return items in a different order than in the list specified.
-///
-/// Note that the returned set can also be used to dynamically push more
-/// futures into the set as they become available.
-pub fn futures_unordered<I>(futures: I) -> FuturesUnordered<I::Item>
-where
-    I: IntoIterator,
-    I::Item: Future,
-{
-    futures.into_iter().collect()
 }
 
 impl<Fut: Future> FusedStream for FuturesUnordered<Fut> {

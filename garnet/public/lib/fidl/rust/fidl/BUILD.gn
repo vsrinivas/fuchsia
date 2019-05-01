@@ -18,6 +18,7 @@ rustc_library("fidl") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures-test-preview",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:slab",
   ]

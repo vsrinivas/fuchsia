@@ -247,9 +247,9 @@
   "union_declarations": [],
   "xunion_declarations": [],
   "declaration_order": [
+    "test.name/SimpleTable",
     "test.name/OlderSimpleTable",
     "test.name/NewerSimpleTable",
-    "test.name/SimpleTable",
     "test.name/EmptyTable"
   ],
   "declarations": {

@@ -1,14 +1,12 @@
 use core::pin::Pin;
 use futures_core::future::{TryFuture};
-use futures_core::stream::{Stream, TryStream};
-use futures_core::task::{Waker, Poll};
+use futures_core::stream::{Stream, TryStream, FusedStream};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// A combinator that attempts to filter the results of a stream
-/// and simultaneously map them to a different type.
-///
-/// This structure is returned by the
-/// [`try_filter_map`](super::TryStreamExt::try_filter_map) method.
+/// Stream for the [`try_filter_map`](super::TryStreamExt::try_filter_map)
+/// method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct TryFilterMap<St, Fut, F> {
@@ -45,12 +43,31 @@ impl<St, Fut, F> TryFilterMap<St, Fut, F> {
         &mut self.stream
     }
 
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream()
+    }
+
     /// Consumes this combinator, returning the underlying stream.
     ///
     /// Note that this may discard intermediate state of this combinator, so
     /// care should be taken to avoid losing resources when this is called.
     pub fn into_inner(self) -> St {
         self.stream
+    }
+}
+
+impl<St, Fut, F, T> FusedStream for TryFilterMap<St, Fut, F>
+    where St: TryStream + FusedStream,
+          Fut: TryFuture<Ok = Option<T>, Error = St::Error>,
+          F: FnMut(St::Ok) -> Fut,
+{
+    fn is_terminated(&self) -> bool {
+        self.pending.is_none() && self.stream.is_terminated()
     }
 }
 
@@ -63,11 +80,11 @@ impl<St, Fut, F, T> Stream for TryFilterMap<St, Fut, F>
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Result<T, St::Error>>> {
         loop {
             if self.pending.is_none() {
-                let item = match ready!(self.as_mut().stream().try_poll_next(waker)) {
+                let item = match ready!(self.as_mut().stream().try_poll_next(cx)) {
                     Some(Ok(x)) => x,
                     Some(Err(e)) => return Poll::Ready(Some(Err(e))),
                     None => return Poll::Ready(None),
@@ -76,7 +93,7 @@ impl<St, Fut, F, T> Stream for TryFilterMap<St, Fut, F>
                 self.as_mut().pending().set(Some(fut));
             }
 
-            let result = ready!(self.as_mut().pending().as_pin_mut().unwrap().try_poll(waker));
+            let result = ready!(self.as_mut().pending().as_pin_mut().unwrap().try_poll(cx));
             self.as_mut().pending().set(None);
             match result {
                 Ok(Some(x)) => return Poll::Ready(Some(Ok(x))),
@@ -87,3 +104,13 @@ impl<St, Fut, F, T> Stream for TryFilterMap<St, Fut, F>
     }
 }
 
+// Forwarding impl of Sink from the underlying stream
+impl<S, Fut, F, T, Item> Sink<Item> for TryFilterMap<S, Fut, F>
+    where S: TryStream + Sink<Item>,
+          Fut: TryFuture<Ok = Option<T>, Error = S::Error>,
+          F: FnMut(S::Ok) -> Fut,
+{
+    type SinkError = S::SinkError;
+
+    delegate_sink!(stream, Item);
+}

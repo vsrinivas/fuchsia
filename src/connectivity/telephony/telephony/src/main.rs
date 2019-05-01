@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 //! System service for managing cellular modems
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 
 use {
     failure::{Error, Fail, ResultExt},
@@ -18,7 +18,7 @@ use {
     fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon as zx,
-    futures::{future, Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{future::{self, join}, Future, StreamExt, TryFutureExt, TryStreamExt},
     parking_lot::RwLock,
     qmi::connect_transport_device,
     std::fs::File,
@@ -162,6 +162,6 @@ fn main() -> Result<(), Error> {
     });
     fs.take_and_serve_directory_handle()?;
 
-    let ((), ()) = executor.run_singlethreaded(device_watcher.join(fs.collect::<()>()));
+    let ((), ()) = executor.run_singlethreaded(join(device_watcher, fs.collect::<()>()));
     Ok(())
 }

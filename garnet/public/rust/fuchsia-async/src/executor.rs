@@ -19,7 +19,7 @@ use std::marker::Unpin;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, AtomicUsize, AtomicU32, Ordering};
 use std::sync::{Arc, Weak};
-use std::task::Waker;
+use std::task::{Context, Waker};
 use std::{cmp, fmt, mem, thread, u64, usize};
 
 const EMPTY_WAKEUP_ID: u64 = u64::MAX;
@@ -74,7 +74,7 @@ pub trait PacketReceiver: Send + Sync + 'static {
 }
 
 pub(crate) fn need_signal(
-    lw: &Waker,
+    cx: &mut Context<'_>,
     task: &AtomicWaker,
     atomic_signals: &AtomicU32,
     signal: zx::Signals,
@@ -85,7 +85,7 @@ pub(crate) fn need_signal(
 ) -> Result<(), zx::Status> {
     const OBJECT_PEER_CLOSED: zx::Signals = zx::Signals::OBJECT_PEER_CLOSED;
 
-    task.register(lw);
+    task.register(cx.waker());
     let mut clear_signals = signal;
     if clear_closed { clear_signals |= OBJECT_PEER_CLOSED; }
     let old = zx::Signals::from_bits_truncate(
@@ -103,7 +103,7 @@ pub(crate) fn need_signal(
     }
     if was_closed && !clear_closed {
         // We just missed a channel close-- go around again.
-        lw.wake();
+        cx.waker().wake_by_ref();
     }
     Ok(())
 }
@@ -220,6 +220,10 @@ impl Executor {
         }
     }
 
+    fn singlethreaded_main_task_wake(&self) -> Waker {
+        Arc::new(SingleThreadedMainTaskWake(self.inner.clone())).into_waker()
+    }
+
     /// Run a single future to completion on a single thread.
     // Takes `&mut self` to ensure that only one thread-manager is running at a time.
     pub fn run_singlethreaded<F>(&mut self, main_future: F) -> F::Output
@@ -227,9 +231,9 @@ impl Executor {
         F: Future,
     {
         pin_mut!(main_future);
-        let lw = Arc::new(SingleThreadedMainTaskWake(self.inner.clone())).into_waker();
-
-        let mut res = main_future.as_mut().poll(&lw);
+        let waker = self.singlethreaded_main_task_wake();
+        let main_cx = &mut Context::from_waker(&waker);
+        let mut res = main_future.as_mut().poll(main_cx);
 
         loop {
             if let Poll::Ready(res) = res {
@@ -256,15 +260,9 @@ impl Executor {
             if let Some(packet) = packet {
                 match packet.key() {
                     EMPTY_WAKEUP_ID => {
-                        res = main_future.as_mut().poll(&lw);
+                        res = main_future.as_mut().poll(main_cx);
                     }
-                    TASK_READY_WAKEUP_ID => {
-                        // TODO: loop but don't starve
-                        if let Some(task) = self.inner.ready_tasks.try_pop() {
-                            let lw = waker_ref(&task);
-                            task.future.try_poll(&lw);
-                        }
-                    }
+                    TASK_READY_WAKEUP_ID => self.inner.poll_ready_tasks(),
                     receiver_key => {
                         self.inner.deliver_packet(receiver_key as usize, packet);
                     }
@@ -286,9 +284,10 @@ impl Executor {
     where
         F: Future + Unpin,
     {
-        let lw = Arc::new(SingleThreadedMainTaskWake(self.inner.clone())).into_waker();
+        let waker = self.singlethreaded_main_task_wake();
+        let main_cx = &mut Context::from_waker(&waker);
 
-        let mut res = main_future.poll_unpin(&lw);
+        let mut res = main_future.poll_unpin(main_cx);
 
         loop {
             if res.is_ready() {
@@ -303,14 +302,9 @@ impl Executor {
 
             match packet.key() {
                 EMPTY_WAKEUP_ID => {
-                    res = main_future.poll_unpin(&lw);
+                    res = main_future.poll_unpin(main_cx);
                 }
-                TASK_READY_WAKEUP_ID => {
-                    if let Some(task) = self.inner.ready_tasks.try_pop() {
-                        let lw = waker_ref(&task);
-                        task.future.try_poll(&lw);
-                    }
-                }
+                TASK_READY_WAKEUP_ID => self.inner.poll_ready_tasks(),
                 receiver_key => {
                     self.inner.deliver_packet(receiver_key as usize, packet);
                 }
@@ -451,13 +445,7 @@ impl Executor {
             if let Some(packet) = packet {
                 match packet.key() {
                     EMPTY_WAKEUP_ID => {}
-                    TASK_READY_WAKEUP_ID => {
-                        // TODO: loop but don't starve
-                        if let Some(task) = inner.ready_tasks.try_pop() {
-                            let lw = waker_ref(&task);
-                            task.future.try_poll(&lw);
-                        }
-                    }
+                    TASK_READY_WAKEUP_ID => inner.poll_ready_tasks(),
                     receiver_key => {
                         inner.deliver_packet(receiver_key as usize, packet);
                     }
@@ -485,7 +473,7 @@ fn is_defunct_timer(timer: Option<&TimeWaker>) -> bool {
 // so instead we save it for use as the main task wakeup id.
 struct SingleThreadedMainTaskWake(Arc<Inner>);
 impl ArcWake for SingleThreadedMainTaskWake {
-    fn wake(arc_self: &Arc<Self>) {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
         arc_self.0.notify_empty();
     }
 }
@@ -702,6 +690,14 @@ impl PartialEq for TimeWaker {
 }
 
 impl Inner {
+    fn poll_ready_tasks(&self) {
+        // TODO: loop but don't starve
+        if let Some(task) = self.ready_tasks.try_pop() {
+            let w = waker_ref(&task);
+            task.future.try_poll(&mut Context::from_waker(&w));
+        }
+    }
+
     fn spawn(arc_self: &Arc<Self>, future: FutureObj<'static, ()>) {
         let task = Arc::new(Task {
             future: AtomicFuture::new(future),
@@ -763,7 +759,7 @@ struct Task {
 }
 
 impl ArcWake for Task {
-    fn wake(arc_self: &Arc<Self>) {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
         arc_self.executor.ready_tasks.push(arc_self.clone());
         arc_self.executor.notify_task_ready();
     }

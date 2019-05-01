@@ -4,232 +4,232 @@ BanjoAst {
         "banjo.examples.alignment": [
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.alignment"
+                        "banjo.examples.alignment",
                     ),
-                    name: "packing_0"
+                    name: "packing_0",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int16,
                         ident: Ident {
                             namespace: None,
-                            name: "i16_0"
+                            name: "i16_0",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int32,
                         ident: Ident {
                             namespace: None,
-                            name: "i32_0"
+                            name: "i32_0",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int16,
                         ident: Ident {
                             namespace: None,
-                            name: "i16_1"
+                            name: "i16_1",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.alignment"
+                        "banjo.examples.alignment",
                     ),
-                    name: "packing_1"
+                    name: "packing_1",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int16,
                         ident: Ident {
                             namespace: None,
-                            name: "i16_0"
+                            name: "i16_0",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int8,
                         ident: Ident {
                             namespace: None,
-                            name: "i8_0"
+                            name: "i8_0",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int16,
                         ident: Ident {
                             namespace: None,
-                            name: "i16_1"
+                            name: "i16_1",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int8,
                         ident: Ident {
                             namespace: None,
-                            name: "i8_1"
+                            name: "i8_1",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.alignment"
+                        "banjo.examples.alignment",
                     ),
-                    name: "packing_2"
+                    name: "packing_2",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int16,
                         ident: Ident {
                             namespace: None,
-                            name: "i16_0"
+                            name: "i16_0",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int8,
                         ident: Ident {
                             namespace: None,
-                            name: "i8_0"
+                            name: "i8_0",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int8,
                         ident: Ident {
                             namespace: None,
-                            name: "i8_1"
+                            name: "i8_1",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int16,
                         ident: Ident {
                             namespace: None,
-                            name: "i16_1"
+                            name: "i16_1",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.alignment"
+                        "banjo.examples.alignment",
                     ),
-                    name: "packing_3"
+                    name: "packing_3",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int32,
                         ident: Ident {
                             namespace: None,
-                            name: "i32_0"
+                            name: "i32_0",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int64,
                         ident: Ident {
                             namespace: None,
-                            name: "i64_0"
+                            name: "i64_0",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int16,
                         ident: Ident {
                             namespace: None,
-                            name: "i16_0"
+                            name: "i16_0",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int32,
                         ident: Ident {
                             namespace: None,
-                            name: "i32_1"
+                            name: "i32_1",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int16,
                         ident: Ident {
                             namespace: None,
-                            name: "i16_1"
+                            name: "i16_1",
                         },
-                        val: None
-                    }
-                ]
-            }
-        ]
-    }
+                        val: None,
+                    },
+                ],
+            },
+        ],
+    },
 }

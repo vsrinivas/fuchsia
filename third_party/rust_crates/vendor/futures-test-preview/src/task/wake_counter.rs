@@ -1,10 +1,7 @@
-// Taken from https://github.com/rust-lang-nursery/futures-rs/blob/845c71e6c66c1dbffd22cfc7e9f992ec5686373f/futures-test/src/task/wake_counter.rs
-// TODO(cramertj): dedup this code with the one from futures-rs once it's integrated in third_party
-
-use futures::task::ArcWake;
-use futures::task::Waker;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use futures_core::task::{Waker};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use futures_util::task::ArcWake;
 
 /// Number of times the waker was awoken.
 ///
@@ -33,7 +30,7 @@ struct WakerInner {
 }
 
 impl ArcWake for WakerInner {
-    fn wake(arc_self: &Arc<Self>) {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
         let _ = arc_self.count.fetch_add(1, Ordering::SeqCst);
     }
 }
@@ -45,7 +42,6 @@ impl ArcWake for WakerInner {
 /// # Examples
 ///
 /// ```
-/// #![feature(futures_api)]
 /// use futures_test::task::new_count_waker;
 ///
 /// let (waker, count) = new_count_waker();

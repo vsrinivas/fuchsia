@@ -4,39 +4,39 @@ BanjoAst {
         "banjo.examples.librarya": [
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.librarya"
+                        "banjo.examples.librarya",
                     ),
-                    name: "Point"
+                    name: "Point",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Float32,
                         ident: Ident {
                             namespace: None,
-                            name: "x"
+                            name: "x",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Float32,
                         ident: Ident {
                             namespace: None,
-                            name: "y"
+                            name: "y",
                         },
-                        val: None
-                    }
-                ]
-            }
-        ]
-    }
+                        val: None,
+                    },
+                ],
+            },
+        ],
+    },
 }

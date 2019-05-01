@@ -1,13 +1,11 @@
 use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// A stream combinator used to filter the results of a stream and only yield
-/// some values.
-///
-/// This structure is produced by the `Stream::filter` method.
+/// Stream for the [`filter`](super::StreamExt::filter) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Filter<St, Fut, F>
@@ -55,6 +53,15 @@ where St: Stream,
         &mut self.stream
     }
 
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream()
+    }
+
     /// Consumes this combinator, returning the underlying stream.
     ///
     /// Note that this may discard intermediate state of this combinator, so
@@ -89,11 +96,11 @@ impl<St, Fut, F> Stream for Filter<St, Fut, F>
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<St::Item>> {
         loop {
-            if self.as_mut().pending_fut().as_pin_mut().is_none() {
-                let item = match ready!(self.as_mut().stream().poll_next(waker)) {
+            if self.pending_fut.is_none() {
+                let item = match ready!(self.as_mut().stream().poll_next(cx)) {
                     Some(e) => e,
                     None => return Poll::Ready(None),
                 };
@@ -102,7 +109,7 @@ impl<St, Fut, F> Stream for Filter<St, Fut, F>
                 *self.as_mut().pending_item() = Some(item);
             }
 
-            let yield_item = ready!(self.as_mut().pending_fut().as_pin_mut().unwrap().poll(waker));
+            let yield_item = ready!(self.as_mut().pending_fut().as_pin_mut().unwrap().poll(cx));
             self.as_mut().pending_fut().set(None);
             let item = self.as_mut().pending_item().take().unwrap();
 
@@ -113,17 +120,13 @@ impl<St, Fut, F> Stream for Filter<St, Fut, F>
     }
 }
 
-/* TODO
 // Forwarding impl of Sink from the underlying stream
-impl<S, R, P> Sink for Filter<S, R, P>
-    where S: Stream,
-          P: FnMut(&S::Item) -> R,
-          R: Future<Item = bool>,
-          S: Sink,
+impl<S, Fut, F, Item> Sink<Item> for Filter<S, Fut, F>
+    where S: Stream + Sink<Item>,
+          F: FnMut(&S::Item) -> Fut,
+          Fut: Future<Output = bool>,
 {
-    type SinkItem = S::SinkItem;
     type SinkError = S::SinkError;
 
-    delegate_sink!(stream);
+    delegate_sink!(stream, Item);
 }
-*/

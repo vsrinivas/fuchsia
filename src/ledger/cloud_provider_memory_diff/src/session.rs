@@ -91,7 +91,7 @@ impl DeviceSetSession {
 
     /// Runs the device set.
     fn run(self) -> DeviceSetSessionFuture {
-        LocalFutureObj::new(self.handle_requests().map(|_| ()).boxed())
+        LocalFutureObj::new(Box::new(self.handle_requests().map(|_| ())))
     }
 }
 
@@ -220,7 +220,7 @@ impl PageSession {
                         position,
                         proxy,
                     );
-                    let watcher = LocalFutureObj::new(watcher.boxed()).fuse();
+                    let watcher = LocalFutureObj::new(Box::new(watcher)).fuse();
                     self.watcher.replace(watcher);
                     responder.send(Status::Ok)
                 }
@@ -246,7 +246,7 @@ impl PageSession {
     }
 
     fn run(self) -> PageSessionFuture {
-        LocalFutureObj::new(self.handle_requests().map(|_| ()).boxed())
+        LocalFutureObj::new(Box::new(self.handle_requests().map(|_| ())))
     }
 }
 
@@ -305,6 +305,6 @@ impl CloudSession {
     }
 
     pub fn run(self) -> CloudSessionFuture {
-        LocalFutureObj::new(self.handle_requests().map(|_| ()).boxed())
+        LocalFutureObj::new(Box::new(self.handle_requests().map(|_| ())))
     }
 }

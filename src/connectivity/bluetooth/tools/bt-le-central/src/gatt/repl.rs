@@ -73,7 +73,7 @@ pub async fn start_gatt_loop<'a>(proxy: ClientProxy) -> Result<(), Error> {
 /// Because rustyline shares control over output to the screen with other parts of the system, a
 /// `Sink` is passed to the caller to send acknowledgements that a command has been processed and
 /// that rustyline should handle the next line of input.
-fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<SinkItem = (), SinkError = SendError>) {
+fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), SinkError = SendError>) {
     // Editor thread and command processing thread must be synchronized so that output
     // is printed in the correct order.
     let (mut cmd_sender, cmd_receiver) = channel(512);

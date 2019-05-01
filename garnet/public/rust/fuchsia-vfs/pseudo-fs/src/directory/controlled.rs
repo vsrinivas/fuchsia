@@ -21,7 +21,7 @@ use {
         future::{FusedFuture, FutureExt},
         sink::SinkExt,
         stream::{FusedStream, StreamExt},
-        task::Waker,
+        task::Context,
         Future, Poll,
     },
     std::{fmt, marker::Unpin, pin::Pin},
@@ -461,8 +461,8 @@ impl<'entries> Unpin for Controlled<'entries> {}
 impl<'entries> Future for Controlled<'entries> {
     type Output = Void;
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
-        match self.controllable.poll_unpin(waker) {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match self.controllable.poll_unpin(cx) {
             Poll::Pending => (),
             Poll::Ready(x) => unreachable(x),
         };
@@ -472,7 +472,7 @@ impl<'entries> Future for Controlled<'entries> {
                 break;
             }
 
-            match self.controller.poll_next_unpin(waker) {
+            match self.controller.poll_next_unpin(cx) {
                 Poll::Pending => break,
                 Poll::Ready(None) => break,
                 Poll::Ready(Some(command)) => self.handle_command(command),

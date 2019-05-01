@@ -8,6 +8,9 @@
 namespace test {
 namespace name {
 
+class Union;
+class Table;
+class Struct;
 #ifdef __Fuchsia__
 class Interface;
 using InterfacePtr = ::fidl::InterfacePtr<Interface>;
@@ -18,112 +21,6 @@ class Interface_Sync;
 using InterfaceSyncPtr = ::fidl::SynchronousInterfacePtr<Interface>;
 class Interface_SyncProxy;
 #endif // __Fuchsia__
-class Struct;
-class Union;
-class Table;
-#ifdef __Fuchsia__
-
-// interface comment #1
-//
-// interface comment #3
-class Interface {
- public:
-  using Proxy_ = Interface_Proxy;
-  using Stub_ = Interface_Stub;
-  using EventSender_ = Interface_EventSender;
-  using Sync_ = Interface_Sync;
-  virtual ~Interface();
-      
-  // method comment #1
-  //
-  // method comment #3
-  virtual void Method() = 0;
-};
-
-class Interface_EventSender {
- public:
-  virtual ~Interface_EventSender();
-};
-
-class Interface_Sync {
- public:
-  using Proxy_ = Interface_SyncProxy;
-  virtual ~Interface_Sync();
-  virtual zx_status_t Method() = 0;
-};
-
-class Interface_Proxy : public ::fidl::internal::Proxy, public Interface {
- public:
-  explicit Interface_Proxy(::fidl::internal::ProxyController* controller);
-  ~Interface_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::Message message) override;
-  void Method() override;
-
- private:
-  Interface_Proxy(const Interface_Proxy&) = delete;
-  Interface_Proxy& operator=(const Interface_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class Interface_Stub : public ::fidl::internal::Stub, public Interface_EventSender {
- public:
-  typedef class ::test::name::Interface Interface_clazz;
-  explicit Interface_Stub(Interface_clazz* impl);
-  ~Interface_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::Message message,
-                        ::fidl::internal::PendingResponse response) override;
-
- private:
-  Interface_clazz* impl_;
-};
-
-class Interface_SyncProxy : public Interface_Sync {
- public:
-  explicit Interface_SyncProxy(::zx::channel channel);
-  ~Interface_SyncProxy() override;
-  zx_status_t Method() override;
-
-  private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<Interface>;
-};
-#endif // __Fuchsia__
-
-// struct comment #1
-//
-// struct comment #3
-class Struct  {
- public:
-  static const fidl_type_t* FidlType;
-  
-  // struct member comment #1
-  //
-  // struct member comment #3
-  int32_t Field{};
-
-  static inline ::std::unique_ptr<Struct> New() { return ::std::make_unique<Struct>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset);
-  zx_status_t Clone(Struct* result) const;
-};
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const Struct& _lhs, const Struct& _rhs);
-inline bool operator!=(const Struct& _lhs, const Struct& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
-
-inline zx_status_t Clone(const ::test::name::Struct& _value,
-                         ::test::name::Struct* _result) {
-  return _value.Clone(_result);
-}
-
-using StructPtr = ::std::unique_ptr<Struct>;
 
 // union comment #1
 //
@@ -285,6 +182,109 @@ inline bool operator!=(const Table& _lhs, const Table& _rhs) {
 
 using TablePtr = ::std::unique_ptr<Table>;
 
+// struct comment #1
+//
+// struct comment #3
+class Struct  {
+ public:
+  static const fidl_type_t* FidlType;
+  
+  // struct member comment #1
+  //
+  // struct member comment #3
+  int32_t Field{};
+
+  static inline ::std::unique_ptr<Struct> New() { return ::std::make_unique<Struct>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset);
+  zx_status_t Clone(Struct* result) const;
+};
+
+#ifdef FIDL_OPERATOR_EQUALS
+bool operator==(const Struct& _lhs, const Struct& _rhs);
+inline bool operator!=(const Struct& _lhs, const Struct& _rhs) {
+  return !(_lhs == _rhs);
+}
+#endif
+
+inline zx_status_t Clone(const ::test::name::Struct& _value,
+                         ::test::name::Struct* _result) {
+  return _value.Clone(_result);
+}
+
+using StructPtr = ::std::unique_ptr<Struct>;
+#ifdef __Fuchsia__
+
+// interface comment #1
+//
+// interface comment #3
+class Interface {
+ public:
+  using Proxy_ = Interface_Proxy;
+  using Stub_ = Interface_Stub;
+  using EventSender_ = Interface_EventSender;
+  using Sync_ = Interface_Sync;
+  virtual ~Interface();
+      
+  // method comment #1
+  //
+  // method comment #3
+  virtual void Method() = 0;
+};
+
+class Interface_EventSender {
+ public:
+  virtual ~Interface_EventSender();
+};
+
+class Interface_Sync {
+ public:
+  using Proxy_ = Interface_SyncProxy;
+  virtual ~Interface_Sync();
+  virtual zx_status_t Method() = 0;
+};
+
+class Interface_Proxy : public ::fidl::internal::Proxy, public Interface {
+ public:
+  explicit Interface_Proxy(::fidl::internal::ProxyController* controller);
+  ~Interface_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void Method() override;
+
+ private:
+  Interface_Proxy(const Interface_Proxy&) = delete;
+  Interface_Proxy& operator=(const Interface_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class Interface_Stub : public ::fidl::internal::Stub, public Interface_EventSender {
+ public:
+  typedef class ::test::name::Interface Interface_clazz;
+  explicit Interface_Stub(Interface_clazz* impl);
+  ~Interface_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  Interface_clazz* impl_;
+};
+
+class Interface_SyncProxy : public Interface_Sync {
+ public:
+  explicit Interface_SyncProxy(::zx::channel channel);
+  ~Interface_SyncProxy() override;
+  zx_status_t Method() override;
+
+  private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<Interface>;
+};
+#endif // __Fuchsia__
+
 // const comment #1
 //
 // const comment #3
@@ -293,24 +293,6 @@ constexpr int32_t C = 4;
 }  // namespace test
 namespace fidl {
 
-template <>
-struct CodingTraits<::test::name::Struct>
-    : public EncodableCodingTraits<::test::name::Struct, 4> {};
-
-inline zx_status_t Clone(const ::test::name::Struct& value,
-                         ::test::name::Struct* result) {
-  return ::test::name::Clone(value, result);
-}
-
-template<>
-struct Equality<::test::name::Struct> {
-  static inline bool Equals(const ::test::name::Struct& _lhs, const ::test::name::Struct& _rhs) {
-    if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
-      return false;
-    }
-    return true;
-  }
-};
 template <>
 struct CodingTraits<::test::name::Union>
     : public EncodableCodingTraits<::test::name::Union, 8> {};
@@ -355,6 +337,24 @@ struct Equality<::test::name::Table> {
 	return false;
       }
     } else if (_rhs.has_Field()) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::name::Struct>
+    : public EncodableCodingTraits<::test::name::Struct, 4> {};
+
+inline zx_status_t Clone(const ::test::name::Struct& value,
+                         ::test::name::Struct* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::Struct> {
+  static inline bool Equals(const ::test::name::Struct& _lhs, const ::test::name::Struct& _rhs) {
+    if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
       return false;
     }
     return true;

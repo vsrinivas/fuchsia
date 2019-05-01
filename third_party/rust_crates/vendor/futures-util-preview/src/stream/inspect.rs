@@ -1,11 +1,10 @@
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// Do something with the items of a stream, passing it on.
-///
-/// This is created by the `Stream::inspect` method.
+/// Stream for the [`inspect`](super::StreamExt::inspect) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Inspect<St, F> where St: Stream {
@@ -17,7 +16,7 @@ impl<St: Stream + Unpin, F> Unpin for Inspect<St, F> {}
 
 impl<St, F> Inspect<St, F>
     where St: Stream,
-          F: FnMut(&St::Item) -> (),
+          F: FnMut(&St::Item),
 {
     unsafe_pinned!(stream: St);
     unsafe_unpinned!(f: F);
@@ -39,6 +38,15 @@ impl<St, F> Inspect<St, F>
     /// stream which may otherwise confuse this combinator.
     pub fn get_mut(&mut self) -> &mut St {
         &mut self.stream
+    }
+
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream()
     }
 
     /// Consumes this combinator, returning the underlying stream.
@@ -64,9 +72,9 @@ impl<St, F> Stream for Inspect<St, F>
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker
+        cx: &mut Context<'_>,
     ) -> Poll<Option<St::Item>> {
-        let item = ready!(self.as_mut().stream().poll_next(waker));
+        let item = ready!(self.as_mut().stream().poll_next(cx));
         Poll::Ready(item.map(|e| {
             (self.as_mut().f())(&e);
             e
@@ -74,14 +82,12 @@ impl<St, F> Stream for Inspect<St, F>
     }
 }
 
-/* TODO
 // Forwarding impl of Sink from the underlying stream
-impl<S, F> Sink for Inspect<S, F>
-    where S: Sink + Stream
+impl<S, F, Item> Sink<Item> for Inspect<S, F>
+    where S: Stream + Sink<Item>,
+          F: FnMut(&S::Item),
 {
-    type SinkItem = S::SinkItem;
     type SinkError = S::SinkError;
 
-    delegate_sink!(stream);
+    delegate_sink!(stream, Item);
 }
-*/

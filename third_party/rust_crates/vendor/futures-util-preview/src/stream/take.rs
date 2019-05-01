@@ -1,11 +1,10 @@
 use core::pin::Pin;
 use futures_core::stream::Stream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// A stream combinator which returns a maximum number of elements.
-///
-/// This structure is produced by the `Stream::take` method.
+/// Stream for the [`take`](super::StreamExt::take) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Take<St> {
@@ -41,6 +40,15 @@ impl<St: Stream> Take<St> {
         &mut self.stream
     }
 
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream()
+    }
+
     /// Consumes this combinator, returning the underlying stream.
     ///
     /// Note that this may discard intermediate state of this combinator, so
@@ -57,12 +65,12 @@ impl<St> Stream for Take<St>
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker
+        cx: &mut Context<'_>,
     ) -> Poll<Option<St::Item>> {
         if self.remaining == 0 {
             Poll::Ready(None)
         } else {
-            let next = ready!(self.as_mut().stream().poll_next(waker));
+            let next = ready!(self.as_mut().stream().poll_next(cx));
             match next {
                 Some(_) => *self.as_mut().remaining() -= 1,
                 None => *self.as_mut().remaining() = 0,
@@ -72,14 +80,11 @@ impl<St> Stream for Take<St>
     }
 }
 
-/* TODO
 // Forwarding impl of Sink from the underlying stream
-impl<S> Sink for Take<S>
-    where S: Sink + Stream
+impl<S, Item> Sink<Item> for Take<S>
+    where S: Stream + Sink<Item>,
 {
-    type SinkItem = S::SinkItem;
     type SinkError = S::SinkError;
 
-    delegate_sink!(stream);
+    delegate_sink!(stream, Item);
 }
-*/

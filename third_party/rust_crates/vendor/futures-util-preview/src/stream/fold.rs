@@ -1,12 +1,10 @@
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::Stream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// A future used to collect all the results of a stream into one generic type.
-///
-/// This future is returned by the `Stream::fold` method.
+/// Future for the [`fold`](super::StreamExt::fold) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Fold<St, Fut, T, F> {
@@ -51,16 +49,16 @@ impl<St, Fut, T, F> Future for Fold<St, Fut, T, F>
 {
     type Output = T;
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<T> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<T> {
         loop {
             // we're currently processing a future to produce a new accum value
-            if self.as_mut().accum().is_none() {
-                let accum = ready!(self.as_mut().future().as_pin_mut().unwrap().poll(waker));
+            if self.accum.is_none() {
+                let accum = ready!(self.as_mut().future().as_pin_mut().unwrap().poll(cx));
                 *self.as_mut().accum() = Some(accum);
                 self.as_mut().future().set(None);
             }
 
-            let item = ready!(self.as_mut().stream().poll_next(waker));
+            let item = ready!(self.as_mut().stream().poll_next(cx));
             let accum = self.as_mut().accum().take()
                 .expect("Fold polled after completion");
 

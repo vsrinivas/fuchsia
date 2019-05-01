@@ -1,10 +1,8 @@
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 
-/// A future that is immediately ready with a value
-///
-/// Created by the [`ready()`] function.
+/// Future for the [`ready`](ready()) function.
 #[derive(Debug, Clone)]
 #[must_use = "futures do nothing unless polled"]
 pub struct Ready<T>(Option<T>);
@@ -21,7 +19,7 @@ impl<T> Future for Ready<T> {
     type Output = T;
 
     #[inline]
-    fn poll(mut self: Pin<&mut Self>, _waker: &Waker) -> Poll<T> {
+    fn poll(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<T> {
         Poll::Ready(self.0.take().unwrap())
     }
 }
@@ -31,7 +29,7 @@ impl<T> Future for Ready<T> {
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
@@ -48,7 +46,7 @@ pub fn ready<T>(t: T) -> Ready<T> {
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
@@ -65,7 +63,7 @@ pub fn ok<T, E>(t: T) -> Ready<Result<T, E>> {
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///

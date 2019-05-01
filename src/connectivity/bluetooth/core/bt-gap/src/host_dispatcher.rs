@@ -22,7 +22,7 @@ use {
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
-    futures::{task::Waker, Future, FutureExt, Poll, TryFutureExt},
+    futures::{task::{Context, Waker}, Future, FutureExt, Poll, TryFutureExt},
     parking_lot::RwLock,
     slab::Slab,
     std::collections::HashMap,
@@ -171,7 +171,8 @@ impl HostDispatcherState {
             None => match self.host_devices.keys().next() {
                 None => None,
                 Some(id) => {
-                    self.set_active_id(Some(id.clone()));
+                    let id = Some(id.clone());
+                    self.set_active_id(id);
                     self.active_id.clone()
                 }
             },
@@ -192,7 +193,7 @@ impl HostDispatcherState {
     /// first host device or when the init timer expires).
     fn resolve_host_requests(&mut self) {
         for waker in &self.host_requests {
-            waker.1.wake();
+            waker.1.wake_by_ref();
         }
     }
 
@@ -648,11 +649,11 @@ impl Unpin for OnAdaptersFound {}
 impl Future for OnAdaptersFound {
     type Output = fidl::Result<HostDispatcher>;
 
-    fn poll(mut self: ::std::pin::Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: ::std::pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if self.hd.state.read().host_devices.len() == 0 {
             let hd = self.hd.clone();
             if self.waker_key.is_none() {
-                self.waker_key = Some(hd.state.write().host_requests.insert(lw.clone()));
+                self.waker_key = Some(hd.state.write().host_requests.insert(cx.waker().clone()));
             }
             Poll::Pending
         } else {
@@ -682,17 +683,23 @@ async fn try_restore_bonds(
     address: &str,
 ) -> Result<(), Error> {
     // Load bonding data that use this host's `address` as their "local identity address".
-    if let Some(iter) = hd.state.read().stash.list_bonds(address) {
-        let res = await!(host_device.read().restore_bonds(iter.map(clone_bonding_data).collect()));
-        match res {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                fx_log_err!("failed to restore bonding data for host: {}", e);
-                Err(e.into())
-            }
+    let opt_data: Option<Vec<_>> = {
+        let lock = hd.state.read();
+        lock.stash
+            .list_bonds(address)
+            .map(|iter| iter.map(clone_bonding_data).collect())
+    };
+    let data = match opt_data {
+        Some(data) => data,
+        None => return Ok(())
+    };
+    let res = await!(host_device.read().restore_bonds(data));
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            fx_log_err!("failed to restore bonding data for host: {}", e);
+            Err(e.into())
         }
-    } else {
-        Ok(())
     }
 }
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(await_macro, async_await, futures_api)]
+#![feature(await_macro, async_await)]
 
 use {
     futures::{

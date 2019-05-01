@@ -3,12 +3,13 @@ use crate::try_future::{IntoFuture, TryFutureExt};
 use crate::try_stream::IntoStream;
 use futures_core::future::TryFuture;
 use futures_core::stream::{Stream, TryStream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
-use std::pin::Pin;
+use core::pin::Pin;
 
-/// A stream returned by the
-/// [`try_buffer_unordered`](super::TryStreamExt::try_buffer_unordered) method
+/// Stream for the
+/// [`try_buffer_unordered`](super::TryStreamExt::try_buffer_unordered) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct TryBufferUnordered<St>
@@ -53,6 +54,15 @@ impl<St> TryBufferUnordered<St>
         self.stream.get_mut().get_mut()
     }
 
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream().get_pin_mut().get_pin_mut()
+    }
+
     /// Consumes this combinator, returning the underlying stream.
     ///
     /// Note that this may discard intermediate state of this combinator, so
@@ -70,12 +80,12 @@ impl<St> Stream for TryBufferUnordered<St>
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         // First up, try to spawn off as many futures as possible by filling up
         // our slab of futures. Propagate errors from the stream immediately.
         while self.in_progress_queue.len() < self.max {
-            match self.as_mut().stream().poll_next(waker) {
+            match self.as_mut().stream().poll_next(cx) {
                 Poll::Ready(Some(Ok(fut))) => self.as_mut().in_progress_queue().push(fut.into_future()),
                 Poll::Ready(Some(Err(e))) => return Poll::Ready(Some(Err(e))),
                 Poll::Ready(None) | Poll::Pending => break,
@@ -83,7 +93,7 @@ impl<St> Stream for TryBufferUnordered<St>
         }
 
         // Attempt to pull the next value from the in_progress_queue
-        match Pin::new(self.as_mut().in_progress_queue()).poll_next(waker) {
+        match Pin::new(self.as_mut().in_progress_queue()).poll_next(cx) {
             x @ Poll::Pending | x @ Poll::Ready(Some(_)) => return x,
             Poll::Ready(None) => {}
         }
@@ -95,4 +105,14 @@ impl<St> Stream for TryBufferUnordered<St>
             Poll::Pending
         }
     }
+}
+
+// Forwarding impl of Sink from the underlying stream
+impl<S, Item> Sink<Item> for TryBufferUnordered<S>
+    where S: TryStream + Sink<Item>,
+          S::Ok: TryFuture<Error = S::Error>,
+{
+    type SinkError = S::SinkError;
+
+    delegate_sink!(stream, Item);
 }

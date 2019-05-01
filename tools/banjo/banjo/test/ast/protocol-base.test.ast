@@ -8,21 +8,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.base"
+                        "banjo.examples.protocol.base",
                     ),
-                    name: "SynchronousBase"
+                    name: "SynchronousBase",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Status",
                         in_params: [
@@ -31,13 +31,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "status"
+                                        name: "status",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -45,30 +45,30 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "status"
+                                        name: "status",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "status_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "status"
+                                        name: "status",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Time",
                         in_params: [
@@ -77,13 +77,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "time"
+                                        name: "time",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -91,30 +91,30 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "time"
+                                        name: "time",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "time_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "time"
+                                        name: "time",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Duration",
                         in_params: [
@@ -123,13 +123,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "duration"
+                                        name: "duration",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -137,30 +137,30 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "duration"
+                                        name: "duration",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "duration_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "duration"
+                                        name: "duration",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Koid",
                         in_params: [
@@ -169,13 +169,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "koid"
+                                        name: "koid",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -183,30 +183,30 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "koid"
+                                        name: "koid",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "koid_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "koid"
+                                        name: "koid",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Vaddr",
                         in_params: [
@@ -215,13 +215,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "vaddr"
+                                        name: "vaddr",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -229,30 +229,30 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "vaddr"
+                                        name: "vaddr",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "vaddr_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "vaddr"
+                                        name: "vaddr",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Paddr",
                         in_params: [
@@ -261,13 +261,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr"
+                                        name: "paddr",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -275,30 +275,30 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr"
+                                        name: "paddr",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "paddr_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr"
+                                        name: "paddr",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Paddr32",
                         in_params: [
@@ -307,13 +307,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr32"
+                                        name: "paddr32",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -321,30 +321,30 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr32"
+                                        name: "paddr32",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "paddr32_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr32"
+                                        name: "paddr32",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Gpaddr",
                         in_params: [
@@ -353,13 +353,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "gpaddr"
+                                        name: "gpaddr",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -367,30 +367,30 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "gpaddr"
+                                        name: "gpaddr",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "gpaddr_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "gpaddr"
+                                        name: "gpaddr",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Off",
                         in_params: [
@@ -399,13 +399,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "off"
+                                        name: "off",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -413,28 +413,28 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "off"
+                                        name: "off",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "off_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "off"
+                                        name: "off",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -442,16 +442,16 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.base"
+                        "banjo.examples.protocol.base",
                     ),
-                    name: "AsyncBase"
+                    name: "AsyncBase",
                 },
                 methods: [
                     Method {
@@ -459,9 +459,9 @@ BanjoAst {
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Status",
                         in_params: [
@@ -470,13 +470,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "status"
+                                        name: "status",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -484,35 +484,35 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "status"
+                                        name: "status",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "status_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "status"
+                                        name: "status",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Time",
                         in_params: [
@@ -521,13 +521,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "time"
+                                        name: "time",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -535,35 +535,35 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "time"
+                                        name: "time",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "time_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "time"
+                                        name: "time",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Duration",
                         in_params: [
@@ -572,13 +572,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "duration"
+                                        name: "duration",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -586,35 +586,35 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "duration"
+                                        name: "duration",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "duration_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "duration"
+                                        name: "duration",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Koid",
                         in_params: [
@@ -623,13 +623,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "koid"
+                                        name: "koid",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -637,35 +637,35 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "koid"
+                                        name: "koid",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "koid_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "koid"
+                                        name: "koid",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Vaddr",
                         in_params: [
@@ -674,13 +674,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "vaddr"
+                                        name: "vaddr",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -688,35 +688,35 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "vaddr"
+                                        name: "vaddr",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "vaddr_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "vaddr"
+                                        name: "vaddr",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Paddr",
                         in_params: [
@@ -725,13 +725,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr"
+                                        name: "paddr",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -739,35 +739,35 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr"
+                                        name: "paddr",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "paddr_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr"
+                                        name: "paddr",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Paddr32",
                         in_params: [
@@ -776,13 +776,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr32"
+                                        name: "paddr32",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -790,35 +790,35 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr32"
+                                        name: "paddr32",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "paddr32_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "paddr32"
+                                        name: "paddr32",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Gpaddr",
                         in_params: [
@@ -827,13 +827,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "gpaddr"
+                                        name: "gpaddr",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -841,35 +841,35 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "gpaddr"
+                                        name: "gpaddr",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "gpaddr_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "gpaddr"
+                                        name: "gpaddr",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Off",
                         in_params: [
@@ -878,13 +878,13 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "off"
+                                        name: "off",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -892,29 +892,29 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "off"
+                                        name: "off",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "off_2",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "off"
+                                        name: "off",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
-                    }
-                ]
-            }
-        ]
-    }
+                                    reference: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
 }

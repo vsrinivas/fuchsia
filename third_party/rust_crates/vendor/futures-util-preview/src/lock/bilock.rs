@@ -2,18 +2,20 @@
 #![allow(unused)]
 
 use futures_core::future::Future;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll, Waker};
+use core::cell::UnsafeCell;
+use core::fmt;
+use core::mem;
+use core::ops::{Deref, DerefMut};
+use core::pin::Pin;
+use core::sync::atomic::AtomicUsize;
+use core::sync::atomic::Ordering::SeqCst;
+use alloc::boxed::Box;
+use alloc::sync::Arc;
+#[cfg(feature = "std")]
 use std::any::Any;
-use std::boxed::Box;
-use std::cell::UnsafeCell;
+#[cfg(feature = "std")]
 use std::error::Error;
-use std::fmt;
-use std::mem;
-use std::ops::{Deref, DerefMut};
-use std::pin::Pin;
-use std::sync::Arc;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::SeqCst;
 
 /// A type of futures-powered synchronization primitive which is a mutex between
 /// two possible owners.
@@ -73,12 +75,12 @@ impl<T> BiLock<T> {
     ///
     /// This function will acquire the lock in a nonblocking fashion, returning
     /// immediately if the lock is already held. If the lock is successfully
-    /// acquired then `Async::Ready` is returned with a value that represents
+    /// acquired then `Poll::Ready` is returned with a value that represents
     /// the locked value (and can be used to access the protected data). The
     /// lock is unlocked when the returned `BiLockGuard` is dropped.
     ///
     /// If the lock is already held then this function will return
-    /// `Async::Pending`. In this case the current task will also be scheduled
+    /// `Poll::Pending`. In this case the current task will also be scheduled
     /// to receive a notification when the lock would otherwise become
     /// available.
     ///
@@ -86,7 +88,7 @@ impl<T> BiLock<T> {
     ///
     /// This function will panic if called outside the context of a future's
     /// task.
-    pub fn poll_lock(&self, waker: &Waker) -> Poll<BiLockGuard<'_, T>> {
+    pub fn poll_lock(&self, cx: &mut Context<'_>) -> Poll<BiLockGuard<'_, T>> {
         loop {
             match self.arc.state.swap(1, SeqCst) {
                 // Woohoo, we grabbed the lock!
@@ -103,7 +105,7 @@ impl<T> BiLock<T> {
             }
 
             // type ascription for safety's sake!
-            let me: Box<Waker> = Box::new(waker.clone());
+            let me: Box<Waker> = Box::new(cx.waker().clone());
             let me = Box::into_raw(me) as usize;
 
             match self.arc.state.compare_exchange(1, me, SeqCst, SeqCst) {
@@ -210,6 +212,7 @@ impl<T> fmt::Display for ReuniteError<T> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<T: Any> Error for ReuniteError<T> {
     fn description(&self) -> &str {
         "tried to reunite two BiLocks that don't form a pair"
@@ -226,20 +229,20 @@ pub struct BiLockGuard<'a, T> {
     bilock: &'a BiLock<T>,
 }
 
-impl<'a, T> Deref for BiLockGuard<'a, T> {
+impl<T> Deref for BiLockGuard<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         unsafe { &*self.bilock.arc.value.as_ref().unwrap().get() }
     }
 }
 
-impl<'a, T: Unpin> DerefMut for BiLockGuard<'a, T> {
+impl<T: Unpin> DerefMut for BiLockGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { &mut *self.bilock.arc.value.as_ref().unwrap().get() }
     }
 }
 
-impl<'a, T> BiLockGuard<'a, T> {
+impl<T> BiLockGuard<'_, T> {
     /// Get a mutable pinned reference to the locked value.
     pub fn as_pin_mut(&mut self) -> Pin<&mut T> {
         // Safety: we never allow moving a !Unpin value out of a bilock, nor
@@ -248,7 +251,7 @@ impl<'a, T> BiLockGuard<'a, T> {
     }
 }
 
-impl<'a, T> Drop for BiLockGuard<'a, T> {
+impl<T> Drop for BiLockGuard<'_, T> {
     fn drop(&mut self) {
         self.bilock.unlock();
     }
@@ -263,12 +266,12 @@ pub struct BiLockAcquire<'a, T> {
 }
 
 // Pinning is never projected to fields
-impl<'a, T> Unpin for BiLockAcquire<'a, T> {}
+impl<T> Unpin for BiLockAcquire<'_, T> {}
 
 impl<'a, T> Future for BiLockAcquire<'a, T> {
     type Output = BiLockGuard<'a, T>;
 
-    fn poll(self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
-        self.bilock.poll_lock(waker)
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.bilock.poll_lock(cx)
     }
 }

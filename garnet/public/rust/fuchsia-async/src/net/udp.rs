@@ -6,7 +6,7 @@ use {
     crate::net::{set_nonblock, EventedFd},
     futures::{
         future::Future,
-        task::{Poll, Waker},
+        task::{Context, Poll},
         try_ready,
     },
     std::{
@@ -49,13 +49,13 @@ impl UdpSocket {
     pub fn async_recv_from(
         &self,
         buf: &mut [u8],
-        lw: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<io::Result<(usize, SocketAddr)>> {
-        try_ready!(EventedFd::poll_readable(&self.0, lw));
+        try_ready!(EventedFd::poll_readable(&self.0, cx));
         match self.0.as_ref().recv_from(buf) {
             Err(e) => {
                 if e.kind() == io::ErrorKind::WouldBlock {
-                    self.0.need_read(lw);
+                    self.0.need_read(cx);
                     Poll::Pending
                 } else {
                     Poll::Ready(Err(e))
@@ -69,12 +69,12 @@ impl UdpSocket {
         SendTo { socket: self, buf, addr }
     }
 
-    pub fn async_send_to(&self, buf: &[u8], addr: SocketAddr, lw: &Waker) -> Poll<io::Result<()>> {
-        try_ready!(EventedFd::poll_writable(&self.0, lw));
+    pub fn async_send_to(&self, buf: &[u8], addr: SocketAddr, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        try_ready!(EventedFd::poll_writable(&self.0, cx));
         match self.0.as_ref().send_to(buf, addr) {
             Err(e) => {
                 if e.kind() == io::ErrorKind::WouldBlock {
-                    self.0.need_write(lw);
+                    self.0.need_write(cx);
                     Poll::Pending
                 } else {
                     Poll::Ready(Err(e))
@@ -103,9 +103,9 @@ impl<'a> Unpin for RecvFrom<'a> {}
 impl<'a> Future for RecvFrom<'a> {
     type Output = io::Result<(usize, SocketAddr)>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
-        let (received, addr) = try_ready!(this.socket.async_recv_from(this.buf, lw));
+        let (received, addr) = try_ready!(this.socket.async_recv_from(this.buf, cx));
         Poll::Ready(Ok((received, addr)))
     }
 }
@@ -121,8 +121,8 @@ impl<'a> Unpin for SendTo<'a> {}
 impl<'a> Future for SendTo<'a> {
     type Output = io::Result<()>;
 
-    fn poll(self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
-        self.socket.async_send_to(self.buf, self.addr, lw)
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.socket.async_send_to(self.buf, self.addr, cx)
     }
 }
 

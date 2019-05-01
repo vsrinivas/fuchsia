@@ -1,12 +1,10 @@
 use core::fmt;
 use core::marker::PhantomData;
 use core::pin::Pin;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use futures_sink::Sink;
 
-/// A sink that will discard all items given to it.
-///
-/// See the [`drain()`] function for more details.
+/// Sink for the [`drain`] function.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct Drain<T> {
@@ -25,7 +23,7 @@ pub enum DrainError {
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::sink::{self, SinkExt};
 ///
@@ -37,34 +35,33 @@ pub fn drain<T>() -> Drain<T> {
     Drain { marker: PhantomData }
 }
 
-impl<T> Sink for Drain<T> {
-    type SinkItem = T;
+impl<T> Sink<T> for Drain<T> {
     type SinkError = DrainError;
 
     fn poll_ready(
         self: Pin<&mut Self>,
-        _waker: &Waker,
+        _cx: &mut Context<'_>,
     ) -> Poll<Result<(), Self::SinkError>> {
         Poll::Ready(Ok(()))
     }
 
     fn start_send(
         self: Pin<&mut Self>,
-        _item: Self::SinkItem,
+        _item: T,
     ) -> Result<(), Self::SinkError> {
         Ok(())
     }
 
     fn poll_flush(
         self: Pin<&mut Self>,
-        _waker: &Waker,
+        _cx: &mut Context<'_>,
     ) -> Poll<Result<(), Self::SinkError>> {
         Poll::Ready(Ok(()))
     }
 
     fn poll_close(
         self: Pin<&mut Self>,
-        _waker: &Waker,
+        _cx: &mut Context<'_>,
     ) -> Poll<Result<(), Self::SinkError>> {
         Poll::Ready(Ok(()))
     }

@@ -7,7 +7,7 @@ use std::io;
 use std::pin::Pin;
 
 use fuchsia_zircon::{self as zx, AsHandleRef, MessageBuf};
-use futures::{task::Waker, try_ready, Future, Poll};
+use futures::{task::Context, try_ready, Future, Poll};
 
 use crate::RWHandle;
 
@@ -50,15 +50,15 @@ impl Channel {
     /// rather than a single `MessageBuf`.
     pub fn read(
         &self,
+        cx: &mut Context<'_>,
         bytes: &mut Vec<u8>,
         handles: &mut Vec<zx::Handle>,
-        waker: &Waker,
     ) -> Poll<Result<(), zx::Status>> {
-        let clear_closed = try_ready!(self.0.poll_read(waker));
+        let clear_closed = try_ready!(self.0.poll_read(cx));
 
         let res = self.0.get_ref().read_split(bytes, handles);
         if res == Err(zx::Status::SHOULD_WAIT) {
-            self.0.need_read(waker, clear_closed)?;
+            self.0.need_read(cx, clear_closed)?;
             return Poll::Pending;
         }
         Poll::Ready(res)
@@ -66,9 +66,9 @@ impl Channel {
 
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    pub fn recv_from(&self, buf: &mut MessageBuf, waker: &Waker) -> Poll<Result<(), zx::Status>> {
+    pub fn recv_from(&self, cx: &mut Context<'_>, buf: &mut MessageBuf) -> Poll<Result<(), zx::Status>> {
         let (bytes, handles) = buf.split_mut();
-        self.read(bytes, handles, waker)
+        self.read(cx, bytes, handles)
     }
 
     /// Creates a future that receive a message to be written to the buffer
@@ -109,9 +109,9 @@ pub struct RecvMsg<'a> {
 impl<'a> Future for RecvMsg<'a> {
     type Output = Result<(), zx::Status>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
-        this.channel.recv_from(this.buf, lw)
+        this.channel.recv_from(cx, this.buf)
     }
 }
 

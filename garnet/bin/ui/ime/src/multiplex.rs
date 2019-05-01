@@ -182,6 +182,7 @@ fn forward_edit(msg: &mut txt::TextFieldRequest, proxy: &txt::TextFieldProxy) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures::future::join;
 
     async fn setup() -> (txt::TextFieldRequestStream, txt::TextFieldProxy, txt::TextFieldProxy) {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<txt::TextFieldMarker>()
@@ -280,7 +281,7 @@ mod tests {
                     .expect("failed to call PositionOffset");
             assert_eq!(position.id, 321);
         };
-        await!(position_a.join(position_b));
+        await!(join(position_a, position_b));
     }
 
     #[fasync::run_until_stalled(test)]

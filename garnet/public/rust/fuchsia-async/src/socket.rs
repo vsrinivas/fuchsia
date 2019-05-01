@@ -8,7 +8,7 @@ use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
 use futures::{
     future::poll_fn,
     stream::Stream,
-    task::{AtomicWaker, Waker},
+    task::{AtomicWaker, Context},
     try_ready, Poll,
 };
 use std::fmt;
@@ -224,7 +224,7 @@ where
     /// Returns `true` if the CLOSED signal was set.
     fn poll_signal_or_closed(
         &self,
-        lw: &Waker,
+        cx: &mut Context<'_>,
         task: &AtomicWaker,
         signal: zx::Signals,
     ) -> Poll<Result<bool, zx::Status>> {
@@ -234,7 +234,7 @@ where
         if was_closed || was_signal {
             Poll::Ready(Ok(was_closed))
         } else {
-            self.need_signal(lw, task, signal, was_closed)?;
+            self.need_signal(cx, task, signal, was_closed)?;
             Poll::Pending
         }
     }
@@ -247,8 +247,8 @@ where
     /// automatically handle ensuring a retry once the socket is readable again.
     ///
     /// Returns `true` if the CLOSED signal was set.
-    pub fn poll_read_task(&self, lw: &Waker) -> Poll<Result<bool, zx::Status>> {
-        self.poll_signal_or_closed(lw, &self.receiver.read_task, F::READABLE)
+    pub fn poll_read_task(&self, cx: &mut Context<'_>) -> Poll<Result<bool, zx::Status>> {
+        self.poll_signal_or_closed(cx, &self.receiver.read_task, F::READABLE)
     }
 
     /// Test whether this socket is ready to be written to or not.
@@ -259,19 +259,19 @@ where
     /// automatically handle ensuring a retry once the socket is writable again.
     ///
     /// Returns `true` if the CLOSED signal was set.
-    pub fn poll_write_task(&self, lw: &Waker) -> Poll<Result<bool, zx::Status>> {
-        self.poll_signal_or_closed(lw, &self.receiver.write_task, F::WRITABLE)
+    pub fn poll_write_task(&self, cx: &mut Context<'_>) -> Poll<Result<bool, zx::Status>> {
+        self.poll_signal_or_closed(cx, &self.receiver.write_task, F::WRITABLE)
     }
 
     fn need_signal(
         &self,
-        lw: &Waker,
+        cx: &mut Context<'_>,
         task: &AtomicWaker,
         signal: zx::Signals,
         clear_closed: bool,
     ) -> Result<(), zx::Status> {
         crate::executor::need_signal(
-            lw,
+            cx,
             task,
             &self.receiver.signals,
             signal,
@@ -289,8 +289,8 @@ where
     /// the channel was closed due to a false signal, and we should
     /// now reset the CLOSED bit. This value should often be passed in directly
     /// from the output of `poll_read`.
-    pub fn need_read(&self, lw: &Waker, clear_closed: bool) -> Result<(), zx::Status> {
-        self.need_signal(lw, &self.receiver.read_task, F::READABLE, clear_closed)
+    pub fn need_read(&self, cx: &mut Context<'_>, clear_closed: bool) -> Result<(), zx::Status> {
+        self.need_signal(cx, &self.receiver.read_task, F::READABLE, clear_closed)
     }
 
     /// Arranges for the current task to receive a notification when a
@@ -300,8 +300,8 @@ where
     /// the channel was closed due to a false signal, and we should
     /// now reset the CLOSED bit. This value should often be passed in directly
     /// from the output of `poll_write`.
-    pub fn need_write(&self, lw: &Waker, clear_closed: bool) -> Result<(), zx::Status> {
-        self.need_signal(lw, &self.receiver.write_task, F::WRITABLE, clear_closed)
+    pub fn need_write(&self, cx: &mut Context<'_>, clear_closed: bool) -> Result<(), zx::Status> {
+        self.need_signal(cx, &self.receiver.write_task, F::WRITABLE, clear_closed)
     }
 
     fn schedule_packet(&self, signals: Signals) -> Result<(), zx::Status> {
@@ -315,11 +315,11 @@ where
 
     // Private helper for reading without `&mut` self.
     // This is used in the impls of `Read` for `Socket` and `&Socket`.
-    fn read_nomut(&self, buf: &mut [u8], lw: &Waker) -> Poll<Result<usize, zx::Status>> {
-        let clear_closed = try_ready!(self.poll_read_task(lw));
+    fn read_nomut(&self, buf: &mut [u8], cx: &mut Context<'_>) -> Poll<Result<usize, zx::Status>> {
+        let clear_closed = try_ready!(self.poll_read_task(cx));
         let res = self.read(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
-            self.need_read(lw, clear_closed)?;
+            self.need_read(cx, clear_closed)?;
             return Poll::Pending;
         }
         if res == Err(zx::Status::PEER_CLOSED) {
@@ -330,11 +330,11 @@ where
 
     // Private helper for writing without `&mut` self.
     // This is used in the impls of `Write` for `Socket` and `&Socket`.
-    fn write_nomut(&self, buf: &[u8], lw: &Waker) -> Poll<Result<usize, zx::Status>> {
-        let clear_closed = try_ready!(self.poll_write_task(lw));
+    fn write_nomut(&self, buf: &[u8], cx: &mut Context<'_>) -> Poll<Result<usize, zx::Status>> {
+        let clear_closed = try_ready!(self.poll_write_task(cx));
         let res = self.write(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
-            self.need_write(lw, clear_closed)?;
+            self.need_write(cx, clear_closed)?;
             Poll::Pending
         } else {
             Poll::Ready(res)
@@ -346,17 +346,17 @@ where
     /// on the socket.
     pub fn poll_datagram(
         &self,
+        cx: &mut Context<'_>,
         out: &mut Vec<u8>,
-        lw: &Waker,
     ) -> Poll<Result<usize, zx::Status>> {
-        let clear_closed = try_ready!(self.poll_read_task(lw));
+        let clear_closed = try_ready!(self.poll_read_task(cx));
         let avail = self.avail_bytes()?;
         let len = out.len();
         out.resize(len + avail, 0);
         let (_, mut tail) = out.split_at_mut(len);
         match self.read(&mut tail) {
             Err(zx::Status::SHOULD_WAIT) => {
-                self.need_read(lw, clear_closed)?;
+                self.need_read(cx, clear_closed)?;
                 Poll::Pending
             }
             Err(e) => Poll::Ready(Err(e)),
@@ -373,7 +373,7 @@ where
     /// Reads the next datagram that becomes available onto the end of |out|.  Note: Using this
     /// multiple times concurrently is an error and the first one will never complete.
     pub async fn read_datagram<'a>(&'a self, out: &'a mut Vec<u8>) -> Result<usize, zx::Status> {
-        await!(poll_fn(move |lw| self.poll_datagram(out, lw)))
+        await!(poll_fn(move |cx| self.poll_datagram(cx, out)))
     }
 }
 
@@ -393,8 +393,12 @@ where
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &Waker, buf: &mut [u8]) -> Poll<io::Result<usize>> {
-        self.read_nomut(buf, lw).map_err(Into::into)
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<io::Result<usize>> {
+        self.read_nomut(buf, cx).map_err(Into::into)
     }
 }
 
@@ -402,15 +406,19 @@ impl<F: SocketRWFlags> AsyncWrite for GenericSocket<F>
 where
     GenericSocket<F>: SocketHandleRW,
 {
-    fn poll_write(&mut self, lw: &Waker, buf: &[u8]) -> Poll<io::Result<usize>> {
-        self.write_nomut(buf, lw).map_err(Into::into)
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        self.write_nomut(buf, cx).map_err(Into::into)
     }
 
-    fn poll_flush(&mut self, _: &Waker) -> Poll<io::Result<()>> {
+    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &Waker) -> Poll<io::Result<()>> {
+    fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 }
@@ -425,8 +433,12 @@ where
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &Waker, buf: &mut [u8]) -> Poll<io::Result<usize>> {
-        self.read_nomut(buf, lw).map_err(Into::into)
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<io::Result<usize>> {
+        self.read_nomut(buf, cx).map_err(Into::into)
     }
 }
 
@@ -434,15 +446,19 @@ impl<'a, F: SocketRWFlags> AsyncWrite for &'a GenericSocket<F>
 where
     GenericSocket<F>: SocketHandleRW,
 {
-    fn poll_write(&mut self, lw: &Waker, buf: &[u8]) -> Poll<io::Result<usize>> {
-        self.write_nomut(buf, lw).map_err(Into::into)
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        self.write_nomut(buf, cx).map_err(Into::into)
     }
 
-    fn poll_flush(&mut self, _: &Waker) -> Poll<io::Result<()>> {
+    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &Waker) -> Poll<io::Result<()>> {
+    fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 }
@@ -456,9 +472,9 @@ where
 {
     type Item = Result<Vec<u8>, zx::Status>;
 
-    fn poll_next(self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut res = Vec::<u8>::new();
-        match self.poll_datagram(&mut res, lw) {
+        match self.poll_datagram(cx, &mut res) {
             Poll::Ready(Ok(_size)) => Poll::Ready(Some(Ok(res))),
             Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
             Poll::Pending => Poll::Pending,
@@ -472,9 +488,9 @@ where
 {
     type Item = Result<Vec<u8>, zx::Status>;
 
-    fn poll_next(self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut res = Vec::<u8>::new();
-        match self.poll_datagram(&mut res, lw) {
+        match self.poll_datagram(cx, &mut res) {
             Poll::Ready(Ok(_size)) => Poll::Ready(Some(Ok(res))),
             Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
             Poll::Pending => Poll::Pending,
@@ -490,7 +506,7 @@ mod tests {
         Executor, TimeoutExt, Timer,
     };
     use fuchsia_zircon::prelude::*;
-    use futures::future::{FutureExt, TryFutureExt};
+    use futures::future::{try_join, FutureExt, TryFutureExt};
     use futures::stream::StreamExt;
 
     #[test]
@@ -512,7 +528,7 @@ mod tests {
         let sender =
             Timer::new(100.millis().after_now()).then(|()| tx.write_all(bytes)).map_ok(|_tx| ());
 
-        let done = receiver.try_join(sender);
+        let done = try_join(receiver, sender);
         exec.run_singlethreaded(done).unwrap();
     }
 

@@ -1,4 +1,4 @@
-#![feature(async_await, futures_api)]
+#![feature(async_await)]
 
 extern crate futures;
 extern crate futures_util;
@@ -12,7 +12,7 @@ fn select() {
     fn select_and_compare(a: Vec<u32>, b: Vec<u32>, expected: Vec<u32>) {
         let a = stream::iter(a);
         let b = stream::iter(b);
-        let vec = block_on(a.select(b).collect::<Vec<_>>());
+        let vec = block_on(stream::select(a, b).collect::<Vec<_>>());
         assert_eq!(vec, expected);
     }
 

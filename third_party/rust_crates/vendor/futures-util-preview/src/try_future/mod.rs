@@ -9,13 +9,9 @@ use futures_sink::Sink;
 #[cfg(feature = "compat")] use crate::compat::Compat;
 
 /* TODO
-mod join;
 mod select;
-pub use self::join::{Join, Join3, Join4, Join5};
 pub use self::select::Select;
 
-#[cfg(feature = "std")]
-mod join_all;
 #[cfg(feature = "std")]
 mod select_all;
 #[cfg(feature = "std")]
@@ -26,6 +22,17 @@ pub use self::select_all::{SelectAll, SelectAllNext, select_all};
 pub use self::select_ok::{SelectOk, select_ok};
 */
 
+mod try_join;
+pub use self::try_join::{
+    try_join, try_join3, try_join4, try_join5,
+    TryJoin, TryJoin3, TryJoin4, TryJoin5,
+};
+
+#[cfg(feature = "alloc")]
+mod try_join_all;
+#[cfg(feature = "alloc")]
+pub use self::try_join_all::{try_join_all, TryJoinAll};
+
 // Combinators
 mod and_then;
 pub use self::and_then::AndThen;
@@ -35,9 +42,6 @@ pub use self::err_into::ErrInto;
 
 mod flatten_sink;
 pub use self::flatten_sink::FlattenSink;
-
-mod try_join;
-pub use self::try_join::{TryJoin, TryJoin3, TryJoin4, TryJoin5};
 
 mod into_future;
 pub use self::into_future::IntoFuture;
@@ -54,17 +58,11 @@ pub use self::or_else::OrElse;
 mod unwrap_or_else;
 pub use self::unwrap_or_else::UnwrapOrElse;
 
-#[cfg(feature = "std")]
-mod try_join_all;
-
-#[cfg(feature = "std")]
-pub use self::try_join_all::{try_join_all, TryJoinAll};
-
 // Implementation details
 mod try_chain;
 pub(crate) use self::try_chain::{TryChain, TryChainAction};
 
-impl<Fut: TryFuture> TryFutureExt for Fut {}
+impl<Fut: ?Sized + TryFuture> TryFutureExt for Fut {}
 
 /// Adapters specific to [`Result`]-returning futures
 pub trait TryFutureExt: TryFuture {
@@ -81,7 +79,6 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(futures_api)]
     /// use futures::future::{Future, TryFutureExt};
     /// use futures::sink::Sink;
     /// # use futures::channel::mpsc::{self, SendError};
@@ -89,20 +86,20 @@ pub trait TryFutureExt: TryFuture {
     /// # type E = SendError;
     ///
     /// fn make_sink_async() -> impl Future<Output = Result<
-    ///     impl Sink<SinkItem = T, SinkError = E>,
+    ///     impl Sink<T, SinkError = E>,
     ///     E,
     /// >> { // ... }
     /// # let (tx, _rx) = mpsc::unbounded::<i32>();
     /// # futures::future::ready(Ok(tx))
     /// # }
-    /// fn take_sink(sink: impl Sink<SinkItem = T, SinkError = E>) { /* ... */ }
+    /// fn take_sink(sink: impl Sink<T, SinkError = E>) { /* ... */ }
     ///
     /// let fut = make_sink_async();
     /// take_sink(fut.flatten_sink())
     /// ```
-    fn flatten_sink(self) -> FlattenSink<Self, Self::Ok>
+    fn flatten_sink<Item>(self) -> FlattenSink<Self, Self::Ok>
     where
-        Self::Ok: Sink<SinkError = Self::Error>,
+        Self::Ok: Sink<Item, SinkError = Self::Error>,
         Self: Sized,
     {
         FlattenSink::new(self)
@@ -125,7 +122,7 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{self, TryFutureExt};
     ///
     /// # futures::executor::block_on(async {
@@ -139,7 +136,7 @@ pub trait TryFutureExt: TryFuture {
     /// effect:
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{self, TryFutureExt};
     ///
     /// # futures::executor::block_on(async {
@@ -173,7 +170,7 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{self, TryFutureExt};
     ///
     /// # futures::executor::block_on(async {
@@ -187,7 +184,7 @@ pub trait TryFutureExt: TryFuture {
     /// no effect:
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{self, TryFutureExt};
     ///
     /// # futures::executor::block_on(async {
@@ -218,7 +215,7 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{self, TryFutureExt};
     ///
     /// # futures::executor::block_on(async {
@@ -248,7 +245,7 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{self, TryFutureExt};
     ///
     /// # futures::executor::block_on(async {
@@ -262,7 +259,7 @@ pub trait TryFutureExt: TryFuture {
     /// effect:
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{self, TryFutureExt};
     ///
     /// # futures::executor::block_on(async {
@@ -294,7 +291,7 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{self, TryFutureExt};
     ///
     /// # futures::executor::block_on(async {
@@ -308,7 +305,7 @@ pub trait TryFutureExt: TryFuture {
     /// no effect:
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{self, TryFutureExt};
     ///
     /// # futures::executor::block_on(async {
@@ -367,88 +364,6 @@ pub trait TryFutureExt: TryFuture {
     {
         select::new(self, other.into_future())
     }
-
-    /// Joins the result of two futures, waiting for them both to complete.
-    ///
-    /// This function will return a new future which awaits both this and the
-    /// `other` future to complete. The returned future will finish with a tuple
-    /// of both results.
-    ///
-    /// Both futures must have the same error type, and if either finishes with
-    /// an error then the other will be dropped and that error will be
-    /// returned.
-    ///
-    /// Note that this method consumes the future it is called on and returns a
-    /// wrapped version of it.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use futures::future;
-    /// use futures::executor::block_on;
-    ///
-    /// let a = future::ok::<i32, i32>(1);
-    /// let b = future::ok::<i32, i32>(2);
-    /// let pair = a.join(b);
-    ///
-    /// assert_eq!(block_on(pair), Ok((1, 2)));
-    /// # }
-    /// ```
-    ///
-    /// If one or both of the joined `Future`s is errored, the resulting
-    /// `Future` will be errored:
-    ///
-    /// ```
-    /// use futures::executor::block_on;
-    /// use futures::future::{self, FutureExt};
-    ///
-    /// let a = future::ok::<i32, i32>(1);
-    /// let b = future::err::<i32, i32>(2);
-    /// let pair = a.join(b);
-    ///
-    /// assert_eq!(block_on(pair), Err(2));
-    /// # }
-    /// ```
-    fn join<B>(self, other: B) -> Join<Self, B::Future>
-        where B: IntoFuture<Error=Self::Error>,
-              Self: Sized,
-    {
-        let f = join::new(self, other.into_future());
-        assert_future::<(Self::Item, B::Item), Self::Error, _>(f)
-    }
-
-    /// Same as `join`, but with more futures.
-    fn join3<B, C>(self, b: B, c: C) -> Join3<Self, B::Future, C::Future>
-        where B: IntoFuture<Error=Self::Error>,
-              C: IntoFuture<Error=Self::Error>,
-              Self: Sized,
-    {
-        join::new3(self, b.into_future(), c.into_future())
-    }
-
-    /// Same as `join`, but with more futures.
-    fn join4<B, C, D>(self, b: B, c: C, d: D)
-                      -> Join4<Self, B::Future, C::Future, D::Future>
-        where B: IntoFuture<Error=Self::Error>,
-              C: IntoFuture<Error=Self::Error>,
-              D: IntoFuture<Error=Self::Error>,
-              Self: Sized,
-    {
-        join::new4(self, b.into_future(), c.into_future(), d.into_future())
-    }
-
-    /// Same as `join`, but with more futures.
-    fn join5<B, C, D, E>(self, b: B, c: C, d: D, e: E)
-                         -> Join5<Self, B::Future, C::Future, D::Future, E::Future>
-        where B: IntoFuture<Error=Self::Error>,
-              C: IntoFuture<Error=Self::Error>,
-              D: IntoFuture<Error=Self::Error>,
-              E: IntoFuture<Error=Self::Error>,
-              Self: Sized,
-    {
-        join::new5(self, b.into_future(), c.into_future(), d.into_future(),
-                   e.into_future())
-    }
 */
 
     /// Unwraps this future's ouput, producing a future with this future's
@@ -465,7 +380,7 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// use futures::future::{self, TryFutureExt};
     ///
     /// # futures::executor::block_on(async {
@@ -500,7 +415,6 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(futures_api)]
     /// use futures::future::{Future, TryFuture, TryFutureExt};
     ///
     /// # type T = i32;
@@ -516,156 +430,5 @@ pub trait TryFutureExt: TryFuture {
         where Self: Sized,
     {
         IntoFuture::new(self)
-    }
-
-    /// Joins the result of two futures, waiting for them both to complete or
-    /// for one to produce an error.
-    ///
-    /// This function will return a new future which awaits both this and the
-    /// `other` future to complete. If successful, the returned future will
-    /// finish with a tuple of both results. If unsuccesful, it will complete
-    /// with the first error encountered.
-    ///
-    /// Note that this function consumes the receiving future and returns a
-    /// wrapped version of it.
-    ///
-    /// # Examples
-    ///
-    /// When used on multiple futures that return [`Ok`], `try_join` will return
-    /// [`Ok`] of a tuple of the values:
-    ///
-    /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
-    /// # futures::executor::block_on(async {
-    /// use futures::future::{self, TryFutureExt};
-    ///
-    /// let a = future::ready(Ok::<i32, i32>(1));
-    /// let b = future::ready(Ok::<i32, i32>(2));
-    /// let pair = a.try_join(b);
-    ///
-    /// assert_eq!(await!(pair), Ok((1, 2)));
-    /// # });
-    /// ```
-    ///
-    /// If one of the futures resolves to an error, `try_join` will return
-    /// that error:
-    ///
-    /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
-    /// # futures::executor::block_on(async {
-    /// use futures::future::{self, TryFutureExt};
-    ///
-    /// let a = future::ready(Ok::<i32, i32>(1));
-    /// let b = future::ready(Err::<i32, i32>(2));
-    /// let pair = a.try_join(b);
-    ///
-    /// assert_eq!(await!(pair), Err(2));
-    /// # });
-    /// ```
-    fn try_join<Fut2>(self, other: Fut2) -> TryJoin<Self, Fut2>
-    where
-        Fut2: TryFuture<Error = Self::Error>,
-        Self: Sized,
-    {
-        TryJoin::new(self, other)
-    }
-
-    /// Same as [`try_join`](TryFutureExt::try_join), but with more futures.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
-    /// # futures::executor::block_on(async {
-    /// use futures::future::{self, TryFutureExt};
-    ///
-    /// let a = future::ready(Ok::<i32, i32>(1));
-    /// let b = future::ready(Ok::<i32, i32>(2));
-    /// let c = future::ready(Ok::<i32, i32>(3));
-    /// let tuple = a.try_join3(b, c);
-    ///
-    /// assert_eq!(await!(tuple), Ok((1, 2, 3)));
-    /// # });
-    /// ```
-    fn try_join3<Fut2, Fut3>(
-        self,
-        future2: Fut2,
-        future3: Fut3,
-    ) -> TryJoin3<Self, Fut2, Fut3>
-    where
-        Fut2: TryFuture<Error = Self::Error>,
-        Fut3: TryFuture<Error = Self::Error>,
-        Self: Sized,
-    {
-        TryJoin3::new(self, future2, future3)
-    }
-
-    /// Same as [`try_join`](TryFutureExt::try_join), but with more futures.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
-    /// # futures::executor::block_on(async {
-    /// use futures::future::{self, TryFutureExt};
-    ///
-    /// let a = future::ready(Ok::<i32, i32>(1));
-    /// let b = future::ready(Ok::<i32, i32>(2));
-    /// let c = future::ready(Ok::<i32, i32>(3));
-    /// let d = future::ready(Ok::<i32, i32>(4));
-    /// let tuple = a.try_join4(b, c, d);
-    ///
-    /// assert_eq!(await!(tuple), Ok((1, 2, 3, 4)));
-    /// # });
-    /// ```
-    fn try_join4<Fut2, Fut3, Fut4>(
-        self,
-        future2: Fut2,
-        future3: Fut3,
-        future4: Fut4,
-    ) -> TryJoin4<Self, Fut2, Fut3, Fut4>
-    where
-        Fut2: TryFuture<Error = Self::Error>,
-        Fut3: TryFuture<Error = Self::Error>,
-        Fut4: TryFuture<Error = Self::Error>,
-        Self: Sized,
-    {
-        TryJoin4::new(self, future2, future3, future4)
-    }
-
-    /// Same as [`try_join`](TryFutureExt::try_join), but with more futures.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
-    /// # futures::executor::block_on(async {
-    /// use futures::future::{self, TryFutureExt};
-    ///
-    /// let a = future::ready(Ok::<i32, i32>(1));
-    /// let b = future::ready(Ok::<i32, i32>(2));
-    /// let c = future::ready(Ok::<i32, i32>(3));
-    /// let d = future::ready(Ok::<i32, i32>(4));
-    /// let e = future::ready(Ok::<i32, i32>(5));
-    /// let tuple = a.try_join5(b, c, d, e);
-    ///
-    /// assert_eq!(await!(tuple), Ok((1, 2, 3, 4, 5)));
-    /// # });
-    /// ```
-    fn try_join5<Fut2, Fut3, Fut4, Fut5>(
-        self,
-        future2: Fut2,
-        future3: Fut3,
-        future4: Fut4,
-        future5: Fut5,
-    ) -> TryJoin5<Self, Fut2, Fut3, Fut4, Fut5>
-    where
-        Fut2: TryFuture<Error = Self::Error>,
-        Fut3: TryFuture<Error = Self::Error>,
-        Fut4: TryFuture<Error = Self::Error>,
-        Fut5: TryFuture<Error = Self::Error>,
-        Self: Sized,
-    {
-        TryJoin5::new(self, future2, future3, future4, future5)
     }
 }

@@ -60,7 +60,7 @@ pub struct SpawnError {
 
 impl fmt::Debug for SpawnError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("SpanError")
+        f.debug_tuple("SpawnError")
             .field(&"shutdown")
             .finish()
     }
@@ -75,5 +75,55 @@ impl SpawnError {
     /// Check whether spawning failed to the executor being shut down.
     pub fn is_shutdown(&self) -> bool {
         true
+    }
+}
+
+impl<Sp: ?Sized + Spawn> Spawn for &mut Sp {
+    fn spawn_obj(&mut self, future: FutureObj<'static, ()>)
+    -> Result<(), SpawnError> {
+        Sp::spawn_obj(self, future)
+    }
+
+    fn status(&self) -> Result<(), SpawnError> {
+        Sp::status(self)
+    }
+}
+
+impl<Sp: ?Sized + LocalSpawn> LocalSpawn for &mut Sp {
+    fn spawn_local_obj(&mut self, future: LocalFutureObj<'static, ()>)
+    -> Result<(), SpawnError> {
+        Sp::spawn_local_obj(self, future)
+    }
+
+    fn status_local(&self) -> Result<(), SpawnError> {
+        Sp::status_local(self)
+    }
+}
+
+#[cfg(feature = "alloc")]
+mod if_alloc {
+    use alloc::boxed::Box;
+    use super::*;
+
+    impl<Sp: ?Sized + Spawn> Spawn for Box<Sp> {
+        fn spawn_obj(&mut self, future: FutureObj<'static, ()>)
+        -> Result<(), SpawnError> {
+            (**self).spawn_obj(future)
+        }
+
+        fn status(&self) -> Result<(), SpawnError> {
+            (**self).status()
+        }
+    }
+
+    impl<Sp: ?Sized + LocalSpawn> LocalSpawn for Box<Sp> {
+        fn spawn_local_obj(&mut self, future: LocalFutureObj<'static, ()>)
+        -> Result<(), SpawnError> {
+            (**self).spawn_local_obj(future)
+        }
+
+        fn status_local(&self) -> Result<(), SpawnError> {
+            (**self).status_local()
+        }
     }
 }

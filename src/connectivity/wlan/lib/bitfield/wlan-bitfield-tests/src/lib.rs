@@ -166,7 +166,7 @@ mod tests {
              \n    alpha: 0xf,\
              \n    beta: CustomType(255),\
              \n    gamma: CustomBoolType(false),\
-             \n    delta: false\
+             \n    delta: false,\
              \n}",
             string
         );

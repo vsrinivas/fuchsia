@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use crate::executor::{EHandle, PacketReceiver, ReceiverRegistration};
 use fuchsia_zircon::{self as zx, AsHandleRef};
-use futures::task::{AtomicWaker, Waker};
+use futures::task::{AtomicWaker, Context};
 use futures::{Future, Poll};
 
 struct OnSignalsReceiver {
@@ -20,11 +20,11 @@ struct OnSignalsReceiver {
 }
 
 impl OnSignalsReceiver {
-    fn get_signals(&self, lw: &Waker) -> Poll<zx::Signals> {
+    fn get_signals(&self, cx: &mut Context<'_>) -> Poll<zx::Signals> {
         let mut signals = self.maybe_signals.load(Ordering::Relaxed);
         if signals == 0 {
             // No signals were received-- register to receive a wakeup when they arrive.
-            self.task.register(lw);
+            self.task.register(cx.waker());
             // Check again for signals after registering for a wakeup in case signals
             // arrived between registering and the initial load of signals
             signals = self.maybe_signals.load(Ordering::SeqCst);
@@ -87,12 +87,12 @@ impl Unpin for OnSignals {}
 
 impl Future for OnSignals {
     type Output = Result<zx::Signals, zx::Status>;
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let reg = self
             .0
             .as_mut()
             .map_err(|e| mem::replace(e, zx::Status::OK))?;
-        reg.receiver().get_signals(lw).map(Ok)
+        reg.receiver().get_signals(cx).map(Ok)
     }
 }
 

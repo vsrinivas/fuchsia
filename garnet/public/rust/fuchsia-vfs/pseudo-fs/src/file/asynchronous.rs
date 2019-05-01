@@ -45,7 +45,7 @@ use {
     futures::{
         future::{Fuse, FusedFuture, FutureObj},
         stream::{FuturesUnordered, StreamExt, StreamFuture},
-        task::Waker,
+        task::Context,
         Future, FutureExt, Poll,
     },
     std::{marker::Unpin, pin::Pin},
@@ -206,8 +206,8 @@ where
 {
     type Output = ();
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
-        match self.res.poll_unpin(waker) {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match self.res.poll_unpin(cx) {
             Poll::Ready(Ok(())) => {
                 // if the responder fails here we have no recourse.
                 let _ = self.responder.take().unwrap().send(Status::OK.into_raw());
@@ -412,7 +412,7 @@ where
 {
     type Output = Void;
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         // we go through all of our lists of futures, exausting all possible work that can be done
         // immediately. also, according to the docs of FuturesUnordered, we need to call poll_next
         // when new futures are added in order to begin recieving wakeup calls for them, and also to
@@ -429,7 +429,7 @@ where
         let mut might_have_cloned = false;
         loop {
             loop {
-                match self.connection_futures.poll_next_unpin(waker) {
+                match self.connection_futures.poll_next_unpin(cx) {
                     Poll::Ready(Some(Some(conn))) => self.connections.push(conn),
                     Poll::Ready(Some(None)) => (),
                     Poll::Ready(None) | Poll::Pending => break,
@@ -437,7 +437,7 @@ where
             }
 
             loop {
-                match self.connections.poll_next_unpin(waker) {
+                match self.connections.poll_next_unpin(cx) {
                     Poll::Ready(Some((maybe_request, mut connection))) => {
                         if let Some(Ok(request)) = maybe_request {
                             match self.handle_request(request, &mut connection) {
@@ -454,7 +454,7 @@ where
             }
 
             loop {
-                match self.on_write_futures.poll_next_unpin(waker) {
+                match self.on_write_futures.poll_next_unpin(cx) {
                     Poll::Ready(Some(())) => (),
                     Poll::Ready(None) | Poll::Pending => break,
                 }
@@ -490,7 +490,7 @@ mod tests {
         fuchsia_zircon::sys::ZX_OK,
         futures::{
             channel::{mpsc, oneshot},
-            future::{lazy, Shared},
+            future::{join, lazy, Shared},
             FutureExt, SinkExt,
         },
         std::sync::{Arc, Mutex},
@@ -979,7 +979,7 @@ mod tests {
                 let client1 = get_client1(open_sender.clone());
                 let client2 = get_client2(open_sender.clone());
 
-                await!(client1.join(client2));
+                await!(join(client1, client2));
             },
             |run_until_stalled_assert| {
                 let mut run_and_check_read_count = |expected_count, should_complete: bool| {
@@ -1036,8 +1036,8 @@ mod tests {
     {
         type Output = R;
 
-        fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
-            if let Poll::Ready(Ok(())) = self.rx.poll_unpin(waker) {
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            if let Poll::Ready(Ok(())) = self.rx.poll_unpin(cx) {
                 Poll::Ready((self.run.take().unwrap())())
             } else {
                 Poll::Pending

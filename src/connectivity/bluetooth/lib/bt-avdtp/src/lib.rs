@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 
 use {
     fuchsia_async as fasync,
@@ -12,7 +12,7 @@ use {
         future::FusedFuture,
         ready, select,
         stream::Stream,
-        task::{Poll, Waker},
+        task::{Context, Poll, Waker},
         FutureExt,
     },
     parking_lot::Mutex,
@@ -504,8 +504,8 @@ impl Unpin for RequestStream {}
 impl Stream for RequestStream {
     type Item = Result<Request>;
 
-    fn poll_next(self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
-        Poll::Ready(match ready!(self.inner.poll_recv_request(lw)) {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Poll::Ready(match ready!(self.inner.poll_recv_request(cx)) {
             Ok(UnparsedRequest(SignalingHeader { label, signal, .. }, body)) => {
                 match Request::parse(self.inner.clone(), label, signal, &body) {
                     Err(Error::RequestInvalid(code)) => {
@@ -803,12 +803,12 @@ impl Unpin for CommandResponse {}
 
 impl futures::Future for CommandResponse {
     type Output = Result<Vec<u8>>;
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
         let res;
         {
             let client = this.inner.as_ref().ok_or(Error::AlreadyReceived)?;
-            res = client.poll_recv_response(&this.id, lw);
+            res = client.poll_recv_response(&this.id, cx);
         }
 
         if let Poll::Ready(Ok(_)) = res {
@@ -882,15 +882,15 @@ impl PeerInner {
     // Resolves to an unprocessed request (header, body) if one was received.
     // Resolves to an error if there was an error reading from the socket or if the peer
     // disconnected.
-    fn poll_recv_request(&self, lw: &Waker) -> Poll<Result<UnparsedRequest>> {
-        let is_closed = self.recv_all(lw)?;
+    fn poll_recv_request(&self, cx: &mut Context<'_>) -> Poll<Result<UnparsedRequest>> {
+        let is_closed = self.recv_all(cx)?;
 
         let mut lock = self.incoming_requests.lock();
 
         if let Some(request) = lock.queue.pop_front() {
             Poll::Ready(Ok(request))
         } else {
-            lock.listener = RequestListener::Some(lw.clone());
+            lock.listener = RequestListener::Some(cx.waker().clone());
             if is_closed {
                 Poll::Ready(Err(Error::PeerDisconnected))
             } else {
@@ -903,8 +903,8 @@ impl PeerInner {
     // Resolves to the bytes in the response body if one was received.
     // Resolves to an error if there was an error reading from the socket, if the peer
     // disconnected, or if the |label| is not being waited on.
-    fn poll_recv_response(&self, label: &TxLabel, lw: &Waker) -> Poll<Result<Vec<u8>>> {
-        let is_closed = self.recv_all(lw)?;
+    fn poll_recv_response(&self, label: &TxLabel, cx: &mut Context<'_>) -> Poll<Result<Vec<u8>>> {
+        let is_closed = self.recv_all(cx)?;
 
         let mut waiters = self.response_waiters.lock();
         let idx = usize::from(label);
@@ -917,7 +917,7 @@ impl PeerInner {
         } else {
             // Set the waker to be notified when a response shows up.
             *waiters.get_mut(idx).expect("Polled unregistered waiter") =
-                ResponseWaiter::Waiting(lw.clone());
+                ResponseWaiter::Waiting(cx.waker().clone());
 
             if is_closed {
                 Poll::Ready(Err(Error::PeerDisconnected))
@@ -930,10 +930,10 @@ impl PeerInner {
     /// Poll for any packets on the signaling socket
     /// Returns whether the channel was closed, or an Error::PeerRead or Error::PeerWrite
     /// if there was a problem communicating on the socket.
-    fn recv_all(&self, lw: &Waker) -> Result<bool> {
+    fn recv_all(&self, cx: &mut Context<'_>) -> Result<bool> {
         let mut buf = Vec::<u8>::new();
         loop {
-            let packet_size = match self.signaling.poll_datagram(&mut buf, lw) {
+            let packet_size = match self.signaling.poll_datagram(cx, &mut buf) {
                 Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
                     fx_vlog!(tag: "avdtp", 1, "Signaling peer closed");
                     return Ok(true);
@@ -970,7 +970,7 @@ impl PeerInner {
                 buf.clear();
                 lock.queue.push_back(UnparsedRequest::new(header, body));
                 if let RequestListener::Some(ref waker) = lock.listener {
-                    waker.wake();
+                    waker.wake_by_ref();
                 }
             } else {
                 // Should be a response to a command we sent
@@ -1004,7 +1004,7 @@ impl PeerInner {
             let lock = self.response_waiters.lock();
             for (_, response_waiter) in lock.iter() {
                 if let ResponseWaiter::Waiting(waker) = response_waiter {
-                    waker.wake();
+                    waker.wake_by_ref();
                     return;
                 }
             }
@@ -1012,7 +1012,7 @@ impl PeerInner {
         {
             let lock = self.incoming_requests.lock();
             if let RequestListener::Some(waker) = &lock.listener {
-                waker.wake();
+                waker.wake_by_ref();
                 return;
             }
         }

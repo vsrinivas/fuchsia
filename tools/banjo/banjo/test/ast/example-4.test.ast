@@ -4,50 +4,50 @@ BanjoAst {
         "banjo.examples.example4": [
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.example4"
+                        "banjo.examples.example4",
                     ),
-                    name: "Point"
+                    name: "Point",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: UInt64,
                         ident: Ident {
                             namespace: None,
-                            name: "x"
+                            name: "x",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Enum {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.example4"
+                        "banjo.examples.example4",
                     ),
-                    name: "Enum"
+                    name: "Enum",
                 },
                 ty: UInt32,
                 variants: [
                     EnumVariant {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "x ",
                         value: Constant(
-                            "23"
-                        )
-                    }
-                ]
+                            "23",
+                        ),
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -55,33 +55,33 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.example4"
+                        "banjo.examples.example4",
                     ),
-                    name: "Interface"
+                    name: "Interface",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "func",
                         in_params: [
                             (
                                 "x",
-                                Bool
-                            )
+                                Bool,
+                            ),
                         ],
-                        out_params: []
-                    }
-                ]
-            }
-        ]
-    }
+                        out_params: [],
+                    },
+                ],
+            },
+        ],
+    },
 }

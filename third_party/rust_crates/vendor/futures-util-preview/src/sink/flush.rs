@@ -1,18 +1,19 @@
+use core::marker::PhantomData;
 use core::pin::Pin;
 use futures_core::future::Future;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use futures_sink::Sink;
 
-/// Future for the `flush` combinator, which polls the sink until all data
-/// has been flushed.
+/// Future for the [`flush`](super::SinkExt::flush) method.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
-pub struct Flush<'a, Si: Unpin + ?Sized> {
+pub struct Flush<'a, Si: Sink<Item> + Unpin + ?Sized, Item> {
     sink: &'a mut Si,
+    _phantom: PhantomData<fn(Item)>,
 }
 
 // Pin is never projected to a field.
-impl<Si: Unpin + ?Sized> Unpin for Flush<'_, Si> {}
+impl<Si: Sink<Item> + Unpin + ?Sized, Item> Unpin for Flush<'_, Si, Item> {}
 
 /// A future that completes when the sink has finished processing all
 /// pending requests.
@@ -20,19 +21,22 @@ impl<Si: Unpin + ?Sized> Unpin for Flush<'_, Si> {}
 /// The sink itself is returned after flushing is complete; this adapter is
 /// intended to be used when you want to stop sending to the sink until
 /// all current requests are processed.
-impl<'a, Si: Sink + Unpin + ?Sized> Flush<'a, Si> {
+impl<'a, Si: Sink<Item> + Unpin + ?Sized, Item> Flush<'a, Si, Item> {
     pub(super) fn new(sink: &'a mut Si) -> Self {
-        Flush { sink }
+        Flush {
+            sink,
+            _phantom: PhantomData,
+        }
     }
 }
 
-impl<Si: Sink + Unpin + ?Sized> Future for Flush<'_, Si> {
+impl<Si: Sink<Item> + Unpin + ?Sized, Item> Future for Flush<'_, Si, Item> {
     type Output = Result<(), Si::SinkError>;
 
     fn poll(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Self::Output> {
-        Pin::new(&mut self.sink).poll_flush(waker)
+        Pin::new(&mut self.sink).poll_flush(cx)
     }
 }

@@ -1,34 +1,46 @@
 use core::{
+    mem,
     fmt,
     future::Future,
     marker::PhantomData,
     pin::Pin,
-    task::{Waker, Poll},
+    task::{Context, Poll},
 };
 
 /// A custom trait object for polling futures, roughly akin to
 /// `Box<dyn Future<Output = T> + 'a>`.
 ///
-/// This custom trait object was introduced for two reasons:
-/// - Currently it is not possible to take `dyn Trait` by value and
-///   `Box<dyn Trait>` is not available in no_std contexts.
+/// This custom trait object was introduced as currently it is not possible to
+/// take `dyn Trait` by value and `Box<dyn Trait>` is not available in no_std
+/// contexts.
 pub struct LocalFutureObj<'a, T> {
-    ptr: *mut (),
-    poll_fn: unsafe fn(*mut (), &Waker) -> Poll<T>,
-    drop_fn: unsafe fn(*mut ()),
+    future: *mut (dyn Future<Output = T> + 'static),
+    drop_fn: unsafe fn(*mut (dyn Future<Output = T> + 'static)),
     _marker: PhantomData<&'a ()>,
 }
 
-impl<'a, T> Unpin for LocalFutureObj<'a, T> {}
+impl<T> Unpin for LocalFutureObj<'_, T> {}
+
+#[allow(clippy::transmute_ptr_to_ptr)]
+unsafe fn remove_future_lifetime<'a, T>(ptr: *mut (dyn Future<Output = T> + 'a))
+    -> *mut (dyn Future<Output = T> + 'static)
+{
+    mem::transmute(ptr)
+}
+
+unsafe fn remove_drop_lifetime<'a, T>(ptr: unsafe fn (*mut (dyn Future<Output = T> + 'a)))
+    -> unsafe fn(*mut (dyn Future<Output = T> + 'static))
+{
+    mem::transmute(ptr)
+}
 
 impl<'a, T> LocalFutureObj<'a, T> {
     /// Create a `LocalFutureObj` from a custom trait object representation.
     #[inline]
     pub fn new<F: UnsafeFutureObj<'a, T> + 'a>(f: F) -> LocalFutureObj<'a, T> {
         LocalFutureObj {
-            ptr: f.into_raw(),
-            poll_fn: F::poll,
-            drop_fn: F::drop,
+            future: unsafe { remove_future_lifetime(f.into_raw()) },
+            drop_fn: unsafe { remove_drop_lifetime(F::drop) },
             _marker: PhantomData,
         }
     }
@@ -43,7 +55,7 @@ impl<'a, T> LocalFutureObj<'a, T> {
     }
 }
 
-impl<'a, T> fmt::Debug for LocalFutureObj<'a, T> {
+impl<T> fmt::Debug for LocalFutureObj<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("LocalFutureObj")
             .finish()
@@ -57,21 +69,21 @@ impl<'a, T> From<FutureObj<'a, T>> for LocalFutureObj<'a, T> {
     }
 }
 
-impl<'a, T> Future for LocalFutureObj<'a, T> {
+impl<T> Future for LocalFutureObj<'_, T> {
     type Output = T;
 
     #[inline]
-    fn poll(self: Pin<&mut Self>, waker: &Waker) -> Poll<T> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<T> {
         unsafe {
-            ((*self).poll_fn)((*self).ptr, waker)
+            Pin::new_unchecked(&mut *self.future).poll(cx)
         }
     }
 }
 
-impl<'a, T> Drop for LocalFutureObj<'a, T> {
+impl<T> Drop for LocalFutureObj<'_, T> {
     fn drop(&mut self) {
         unsafe {
-            (self.drop_fn)(self.ptr)
+            (self.drop_fn)(self.future)
         }
     }
 }
@@ -79,18 +91,17 @@ impl<'a, T> Drop for LocalFutureObj<'a, T> {
 /// A custom trait object for polling futures, roughly akin to
 /// `Box<dyn Future<Output = T> + Send + 'a>`.
 ///
-/// This custom trait object was introduced for two reasons:
-/// - Currently it is not possible to take `dyn Trait` by value and
-///   `Box<dyn Trait>` is not available in no_std contexts.
-/// - The `Future` trait is currently not object safe: The `Future::poll`
-///   method makes uses the arbitrary self types feature and traits in which
-///   this feature is used are currently not object safe due to current compiler
-///   limitations. (See tracking issue for arbitrary self types for more
-///   information #44874)
+/// This custom trait object was introduced as currently it is not possible to
+/// take `dyn Trait` by value and `Box<dyn Trait>` is not available in no_std
+/// contexts.
+///
+/// You should generally not need to use this type outside of `no_std` or when
+/// implementing `Spawn`, consider using [`BoxFuture`](crate::future::BoxFuture)
+/// instead.
 pub struct FutureObj<'a, T>(LocalFutureObj<'a, T>);
 
-impl<'a, T> Unpin for FutureObj<'a, T> {}
-unsafe impl<'a, T> Send for FutureObj<'a, T> {}
+impl<T> Unpin for FutureObj<'_, T> {}
+unsafe impl<T> Send for FutureObj<'_, T> {}
 
 impl<'a, T> FutureObj<'a, T> {
     /// Create a `FutureObj` from a custom trait object representation.
@@ -100,111 +111,143 @@ impl<'a, T> FutureObj<'a, T> {
     }
 }
 
-impl<'a, T> fmt::Debug for FutureObj<'a, T> {
+impl<T> fmt::Debug for FutureObj<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FutureObj")
             .finish()
     }
 }
 
-impl<'a, T> Future for FutureObj<'a, T> {
+impl<T> Future for FutureObj<'_, T> {
     type Output = T;
 
     #[inline]
-    fn poll(self: Pin<&mut Self>, waker: &Waker) -> Poll<T> {
-        let pinned_field: Pin<&mut LocalFutureObj<'a, T>> = unsafe {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<T> {
+        let pinned_field: Pin<&mut LocalFutureObj<'_, T>> = unsafe {
             Pin::map_unchecked_mut(self, |x| &mut x.0)
         };
-        LocalFutureObj::poll(pinned_field, waker)
+        LocalFutureObj::poll(pinned_field, cx)
     }
 }
 
 /// A custom implementation of a future trait object for `FutureObj`, providing
-/// a hand-rolled vtable.
+/// a vtable with drop support.
 ///
 /// This custom representation is typically used only in `no_std` contexts,
 /// where the default `Box`-based implementation is not available.
 ///
-/// The implementor must guarantee that it is safe to call `poll` repeatedly (in
-/// a non-concurrent fashion) with the result of `into_raw` until `drop` is
-/// called.
+/// # Safety
+///
+/// See the safety notes on individual methods for what guarantees an
+/// implementor must provide.
 pub unsafe trait UnsafeFutureObj<'a, T>: 'a {
-    /// Convert an owned instance into a (conceptually owned) void pointer.
-    fn into_raw(self) -> *mut ();
-
-    /// Poll the future represented by the given void pointer.
+    /// Convert an owned instance into a (conceptually owned) fat pointer.
     ///
     /// # Safety
     ///
-    /// The trait implementor must guarantee that it is safe to repeatedly call
-    /// `poll` with the result of `into_raw` until `drop` is called; such calls
-    /// are not, however, allowed to race with each other or with calls to
-    /// `drop`.
-    unsafe fn poll(ptr: *mut (), waker: &Waker) -> Poll<T>;
+    /// ## Implementor
+    ///
+    /// The trait implementor must guarantee that it is safe to convert the
+    /// provided `*mut (dyn Future<Output = T> + 'a)` into a `Pin<&mut (dyn
+    /// Future<Output = T> + 'a)>` and call methods on it, non-reentrantly,
+    /// until `UnsafeFutureObj::drop` is called with it.
+    fn into_raw(self) -> *mut (dyn Future<Output = T> + 'a);
 
-    /// Drops the future represented by the given void pointer.
+    /// Drops the future represented by the given fat pointer.
     ///
     /// # Safety
+    ///
+    /// ## Implementor
     ///
     /// The trait implementor must guarantee that it is safe to call this
-    /// function once per `into_raw` invocation; that call cannot race with
-    /// other calls to `drop` or `poll`.
-    unsafe fn drop(ptr: *mut ());
+    /// function once per `into_raw` invocation.
+    ///
+    /// ## Caller
+    ///
+    /// The caller must ensure:
+    ///
+    ///  * the pointer passed was obtained from an `into_raw` invocation from
+    ///    this same trait object
+    ///  * the pointer is not currently in use as a `Pin<&mut (dyn Future<Output
+    ///    = T> + 'a)>`
+    ///  * the pointer must not be used again after this function is called
+    unsafe fn drop(ptr: *mut (dyn Future<Output = T> + 'a));
 }
 
 unsafe impl<'a, T, F> UnsafeFutureObj<'a, T> for &'a mut F
 where
     F: Future<Output = T> + Unpin + 'a
 {
-    fn into_raw(self) -> *mut () {
-        self as *mut F as *mut ()
+    fn into_raw(self) -> *mut (dyn Future<Output = T> + 'a) {
+        self as *mut dyn Future<Output = T>
     }
 
-    unsafe fn poll(ptr: *mut (), waker: &Waker) -> Poll<T> {
-        let p: Pin<&mut F> = Pin::new_unchecked(&mut *(ptr as *mut F));
-        F::poll(p, waker)
+    unsafe fn drop(_ptr: *mut (dyn Future<Output = T> + 'a)) {}
+}
+
+unsafe impl<'a, T> UnsafeFutureObj<'a, T> for &'a mut (dyn Future<Output = T> + Unpin + 'a)
+{
+    fn into_raw(self) -> *mut (dyn Future<Output = T> + 'a) {
+        self as *mut dyn Future<Output = T>
     }
 
-    unsafe fn drop(_ptr: *mut ()) {}
+    unsafe fn drop(_ptr: *mut (dyn Future<Output = T> + 'a)) {}
 }
 
 unsafe impl<'a, T, F> UnsafeFutureObj<'a, T> for Pin<&'a mut F>
 where
     F: Future<Output = T> + 'a
 {
-    fn into_raw(mut self) -> *mut () {
-        let mut_ref: &mut F = unsafe { Pin::get_unchecked_mut(Pin::as_mut(&mut self)) };
-        mut_ref as *mut F as *mut ()
+    fn into_raw(self) -> *mut (dyn Future<Output = T> + 'a) {
+        unsafe { self.get_unchecked_mut() as *mut dyn Future<Output = T> }
     }
 
-    unsafe fn poll(ptr: *mut (), waker: &Waker) -> Poll<T> {
-        let future: Pin<&mut F> = Pin::new_unchecked(&mut *(ptr as *mut F));
-        F::poll(future, waker)
-    }
-
-    unsafe fn drop(_ptr: *mut ()) {}
+    unsafe fn drop(_ptr: *mut (dyn Future<Output = T> + 'a)) {}
 }
 
-#[cfg(feature = "std")]
-mod if_std {
+unsafe impl<'a, T> UnsafeFutureObj<'a, T> for Pin<&'a mut (dyn Future<Output = T> + 'a)>
+{
+    fn into_raw(self) -> *mut (dyn Future<Output = T> + 'a) {
+        unsafe { self.get_unchecked_mut() as *mut dyn Future<Output = T> }
+    }
+
+    unsafe fn drop(_ptr: *mut (dyn Future<Output = T> + 'a)) {}
+}
+
+#[cfg(feature = "alloc")]
+mod if_alloc {
     use super::*;
-    use std::mem;
+    use alloc::boxed::Box;
 
     unsafe impl<'a, T, F> UnsafeFutureObj<'a, T> for Box<F>
         where F: Future<Output = T> + 'a
     {
-        fn into_raw(self) -> *mut () {
-            Box::into_raw(self) as *mut ()
+        fn into_raw(self) -> *mut (dyn Future<Output = T> + 'a) {
+            Box::into_raw(self)
         }
 
-        unsafe fn poll(ptr: *mut (), waker: &Waker) -> Poll<T> {
-            let ptr = ptr as *mut F;
-            let pin: Pin<&mut F> = Pin::new_unchecked(&mut *ptr);
-            F::poll(pin, waker)
-        }
-
-        unsafe fn drop(ptr: *mut ()) {
+        unsafe fn drop(ptr: *mut (dyn Future<Output = T> + 'a)) {
             drop(Box::from_raw(ptr as *mut F))
+        }
+    }
+
+    unsafe impl<'a, T: 'a> UnsafeFutureObj<'a, T> for Box<dyn Future<Output = T> + 'a> {
+        fn into_raw(self) -> *mut (dyn Future<Output = T> + 'a) {
+            Box::into_raw(self)
+        }
+
+        unsafe fn drop(ptr: *mut (dyn Future<Output = T> + 'a)) {
+            drop(Box::from_raw(ptr))
+        }
+    }
+
+    unsafe impl<'a, T: 'a> UnsafeFutureObj<'a, T> for Box<dyn Future<Output = T> + Send + 'a> {
+        fn into_raw(self) -> *mut (dyn Future<Output = T> + 'a) {
+            Box::into_raw(self)
+        }
+
+        unsafe fn drop(ptr: *mut (dyn Future<Output = T> + 'a)) {
+            drop(Box::from_raw(ptr))
         }
     }
 
@@ -212,28 +255,38 @@ mod if_std {
     where
         F: Future<Output = T> + 'a
     {
-        fn into_raw(mut self) -> *mut () {
-            let mut_ref: &mut F = unsafe { Pin::get_unchecked_mut(Pin::as_mut(&mut self)) };
-            let ptr = mut_ref as *mut F as *mut ();
-            mem::forget(self); // Don't drop the box
+        fn into_raw(mut self) -> *mut (dyn Future<Output = T> + 'a) {
+            let ptr = unsafe { self.as_mut().get_unchecked_mut() as *mut _ };
+            mem::forget(self);
             ptr
         }
 
-        unsafe fn poll(ptr: *mut (), waker: &Waker) -> Poll<T> {
-            let ptr = ptr as *mut F;
-            let pin: Pin<&mut F> = Pin::new_unchecked(&mut *ptr);
-            F::poll(pin, waker)
-        }
-
-        unsafe fn drop(ptr: *mut ()) {
-            #[allow(clippy::cast_ptr_alignment)]
-            drop(Pin::from(Box::from_raw(ptr as *mut F)));
+        unsafe fn drop(ptr: *mut (dyn Future<Output = T> + 'a)) {
+            drop(Pin::from(Box::from_raw(ptr)))
         }
     }
 
-    impl<'a, F: Future<Output = ()> + Send + 'a> From<Pin<Box<F>>> for FutureObj<'a, ()> {
-        fn from(boxed: Pin<Box<F>>) -> Self {
-            FutureObj::new(boxed)
+    unsafe impl<'a, T: 'a> UnsafeFutureObj<'a, T> for Pin<Box<dyn Future<Output = T> + 'a>> {
+        fn into_raw(mut self) -> *mut (dyn Future<Output = T> + 'a) {
+            let ptr = unsafe { self.as_mut().get_unchecked_mut() as *mut _ };
+            mem::forget(self);
+            ptr
+        }
+
+        unsafe fn drop(ptr: *mut (dyn Future<Output = T> + 'a)) {
+            drop(Pin::from(Box::from_raw(ptr)))
+        }
+    }
+
+    unsafe impl<'a, T: 'a> UnsafeFutureObj<'a, T> for Pin<Box<dyn Future<Output = T> + Send + 'a>> {
+        fn into_raw(mut self) -> *mut (dyn Future<Output = T> + 'a) {
+            let ptr = unsafe { self.as_mut().get_unchecked_mut() as *mut _ };
+            mem::forget(self);
+            ptr
+        }
+
+        unsafe fn drop(ptr: *mut (dyn Future<Output = T> + 'a)) {
+            drop(Pin::from(Box::from_raw(ptr)))
         }
     }
 
@@ -243,14 +296,44 @@ mod if_std {
         }
     }
 
+    impl<'a> From<Box<dyn Future<Output = ()> + Send + 'a>> for FutureObj<'a, ()> {
+        fn from(boxed: Box<dyn Future<Output = ()> + Send + 'a>) -> Self {
+            FutureObj::new(boxed)
+        }
+    }
+
+    impl<'a, F: Future<Output = ()> + Send + 'a> From<Pin<Box<F>>> for FutureObj<'a, ()> {
+        fn from(boxed: Pin<Box<F>>) -> Self {
+            FutureObj::new(boxed)
+        }
+    }
+
+    impl<'a> From<Pin<Box<dyn Future<Output = ()> + Send + 'a>>> for FutureObj<'a, ()> {
+        fn from(boxed: Pin<Box<dyn Future<Output = ()> + Send + 'a>>) -> Self {
+            FutureObj::new(boxed)
+        }
+    }
+
+    impl<'a, F: Future<Output = ()> + 'a> From<Box<F>> for LocalFutureObj<'a, ()> {
+        fn from(boxed: Box<F>) -> Self {
+            LocalFutureObj::new(boxed)
+        }
+    }
+
+    impl<'a> From<Box<dyn Future<Output = ()> + 'a>> for LocalFutureObj<'a, ()> {
+        fn from(boxed: Box<dyn Future<Output = ()> + 'a>) -> Self {
+            LocalFutureObj::new(boxed)
+        }
+    }
+
     impl<'a, F: Future<Output = ()> + 'a> From<Pin<Box<F>>> for LocalFutureObj<'a, ()> {
         fn from(boxed: Pin<Box<F>>) -> Self {
             LocalFutureObj::new(boxed)
         }
     }
 
-    impl<'a, F: Future<Output = ()> + 'a> From<Box<F>> for LocalFutureObj<'a, ()> {
-        fn from(boxed: Box<F>) -> Self {
+    impl<'a> From<Pin<Box<dyn Future<Output = ()> + 'a>>> for LocalFutureObj<'a, ()> {
+        fn from(boxed: Pin<Box<dyn Future<Output = ()> + 'a>>) -> Self {
             LocalFutureObj::new(boxed)
         }
     }

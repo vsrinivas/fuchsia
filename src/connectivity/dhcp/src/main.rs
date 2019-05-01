@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 #![deny(warnings)]
 
 use {
@@ -15,7 +15,7 @@ use {
     fuchsia_async::{net::UdpSocket, Executor, Interval},
     fuchsia_syslog::{self as fx_log, fx_log_info, fx_vlog},
     fuchsia_zircon::{self as zx, DurationNum},
-    futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{future::try_join, Future, StreamExt, TryStreamExt},
     getopts::Options,
     std::{
         env,
@@ -51,7 +51,7 @@ fn main() -> Result<(), Error> {
     let lease_expiration_handler = define_lease_expiration_handler_future(&server);
 
     fx_log_info!(tag: "dhcpd", "starting server");
-    exec.run_singlethreaded(msg_handling_loop.try_join(lease_expiration_handler))
+    exec.run_singlethreaded(try_join(msg_handling_loop, lease_expiration_handler))
         .map_err(|e| e.context("failed to start event loop"))?;
     fx_log_info!(tag: "dhcpd", "server shutting down");
     Ok(())

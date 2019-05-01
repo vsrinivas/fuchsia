@@ -61,8 +61,8 @@ impl<T: ExpectableState> ExpectationFuture<T> {
         }
     }
 
-    fn store_task(&mut self, w: &task::Waker) {
-        let key = self.state.store_task(w);
+    fn store_task(&mut self, cx: &mut task::Context<'_>) {
+        let key = self.state.store_task(cx);
         self.waker_key = Some(key);
     }
 }
@@ -73,13 +73,13 @@ impl<T: ExpectableState> std::marker::Unpin for ExpectationFuture<T> {}
 impl<T: ExpectableState> Future for ExpectationFuture<T> {
     type Output = T::State;
 
-    fn poll(mut self: Pin<&mut Self>, w: &task::Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
         self.clear_waker();
         let state = self.state.read();
         if self.expectation.satisfied(&state) {
             Poll::Ready(state)
         } else {
-            self.store_task(w);
+            self.store_task(cx);
             Poll::Pending
         }
     }
@@ -99,7 +99,7 @@ pub trait ExpectableState: Clone {
     type State: 'static;
 
     /// Register a task as needing waking when state changes
-    fn store_task(&mut self, w: &task::Waker) -> usize;
+    fn store_task(&mut self, cx: &mut task::Context<'_>) -> usize;
 
     /// Remove a task from being tracked. Called by `ExpectationFuture` when
     /// polled.
@@ -180,8 +180,8 @@ impl<S: Clone + 'static, A> ExpectableState for ExpectationHarness<S, A> {
     type State = S;
 
     /// Register a task as needing waking when state changes
-    fn store_task(&mut self, w: &task::Waker) -> usize {
-        self.0.write().tasks.insert(w.clone())
+    fn store_task(&mut self, cx: &mut task::Context<'_>) -> usize {
+        self.0.write().tasks.insert(cx.waker().clone())
     }
 
     /// Remove a task from being tracked
@@ -195,7 +195,7 @@ impl<S: Clone + 'static, A> ExpectableState for ExpectationHarness<S, A> {
     /// Notify all pending tasks that state has changed
     fn notify_state_changed(&self) {
         for task in &self.0.read().tasks {
-            task.1.wake();
+            task.1.wake_by_ref();
         }
         self.0.write().tasks.clear()
     }

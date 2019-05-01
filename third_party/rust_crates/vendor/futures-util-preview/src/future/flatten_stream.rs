@@ -2,12 +2,9 @@ use core::fmt;
 use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 
-/// Future for the `flatten_stream` combinator, flattening a
-/// future-of-a-stream to get just the result of the final stream as a stream.
-///
-/// This is created by the `Future::flatten_stream` method.
+/// Stream for the [`flatten_stream`](super::FutureExt::flatten_stream) method.
 #[must_use = "streams do nothing unless polled"]
 pub struct FlattenStream<Fut: Future> {
     state: State<Fut>
@@ -58,14 +55,14 @@ impl<Fut> Stream for FlattenStream<Fut>
 {
     type Item = <Fut::Output as Stream>::Item;
 
-    fn poll_next(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
             // safety: data is never moved via the resulting &mut reference
             let stream = match &mut unsafe { Pin::get_unchecked_mut(self.as_mut()) }.state {
                 State::Future(f) => {
                     // safety: the future we're re-pinning here will never be moved;
                     // it will just be polled, then dropped in place
-                    match unsafe { Pin::new_unchecked(f) }.poll(waker) {
+                    match unsafe { Pin::new_unchecked(f) }.poll(cx) {
                         Poll::Pending => {
                             // State is not changed, early return.
                             return Poll::Pending
@@ -81,7 +78,7 @@ impl<Fut> Stream for FlattenStream<Fut>
                 State::Stream(s) => {
                     // safety: the stream we're repinning here will never be moved;
                     // it will just be polled, then dropped in place
-                    return unsafe { Pin::new_unchecked(s) }.poll_next(waker);
+                    return unsafe { Pin::new_unchecked(s) }.poll_next(cx);
                 }
             };
 

@@ -11,7 +11,7 @@
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::{join, future};
 ///
@@ -29,14 +29,11 @@ macro_rules! join {
             // is no longer accessible by the end user.
             let mut $fut = $crate::future::maybe_done($fut);
         )*
-        await!($crate::future::poll_fn(move |lw| {
+        await!($crate::future::poll_fn(move |cx| {
             let mut all_done = true;
             $(
-                if $crate::core_reexport::future::Future::poll(
-                    unsafe { $crate::core_reexport::pin::Pin::new_unchecked(&mut $fut) }, lw).is_pending()
-                {
-                    all_done = false;
-                }
+                all_done &= $crate::core_reexport::future::Future::poll(
+                    unsafe { $crate::core_reexport::pin::Pin::new_unchecked(&mut $fut) }, cx).is_ready();
             )*
             if all_done {
                 $crate::core_reexport::task::Poll::Ready(($(
@@ -63,7 +60,7 @@ macro_rules! join {
 /// `Ok` of a tuple of the values:
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::{try_join, future};
 ///
@@ -78,7 +75,7 @@ macro_rules! join {
 /// that error:
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::{try_join, future};
 ///
@@ -97,11 +94,11 @@ macro_rules! try_join {
             let mut $fut = $crate::future::maybe_done($fut);
         )*
 
-        let res: $crate::core_reexport::result::Result<_, _> = await!($crate::future::poll_fn(move |lw| {
+        let res: $crate::core_reexport::result::Result<_, _> = await!($crate::future::poll_fn(move |cx| {
             let mut all_done = true;
             $(
                 if $crate::core_reexport::future::Future::poll(
-                    unsafe { $crate::core_reexport::pin::Pin::new_unchecked(&mut $fut) }, lw).is_pending()
+                    unsafe { $crate::core_reexport::pin::Pin::new_unchecked(&mut $fut) }, cx).is_pending()
                 {
                     all_done = false;
                 } else if unsafe { $crate::core_reexport::pin::Pin::new_unchecked(&mut $fut) }.output_mut().unwrap().is_err() {

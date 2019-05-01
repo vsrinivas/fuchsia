@@ -2,7 +2,7 @@
 
 #[cfg(feature = "bench")]
 mod bench {
-use futures::task::Waker;
+use futures::task::{Context, Waker};
 use futures::executor::LocalPool;
 use futures_util::lock::BiLock;
 use futures_util::lock::BiLockAcquire;
@@ -46,10 +46,10 @@ impl Stream for LockStream {
     type Item = BiLockAcquired<u32>;
     type Error = ();
 
-    fn poll_next(&mut self, waker: &Waker) -> Poll<Option<Self::Item>, Self::Error> {
-        self.lock.poll(waker).map(|a| match a {
-            Async::Ready(a) => Async::Ready(Some(a)),
-            Async::Pending => Async::Pending,
+    fn poll_next(&mut self, cx: &mut Context<'_>) -> Poll<Option<Self::Item>, Self::Error> {
+        self.lock.poll(cx).map(|a| match a {
+            Poll::Ready(a) => Poll::Ready(Some(a)),
+            Poll::Pending => Poll::Pending,
         })
     }
 }
@@ -71,20 +71,20 @@ fn contended(b: &mut Bencher) {
 
         for _ in 0..1000 {
             let x_guard = match x.poll_next(&mut waker) {
-                Ok(Async::Ready(Some(guard))) => guard,
+                Ok(Poll::Ready(Some(guard))) => guard,
                 _ => panic!(),
             };
 
             // Try poll second lock while first lock still holds the lock
             match y.poll_next(&mut waker) {
-                Ok(Async::Pending) => (),
+                Ok(Poll::Pending) => (),
                 _ => panic!(),
             };
 
             x.release_lock(x_guard);
 
             let y_guard = match y.poll_next(&mut waker) {
-                Ok(Async::Ready(Some(guard))) => guard,
+                Ok(Poll::Ready(Some(guard))) => guard,
                 _ => panic!(),
             };
 
@@ -110,14 +110,14 @@ fn lock_unlock(b: &mut Bencher) {
 
         for _ in 0..1000 {
             let x_guard = match x.poll_next(&mut waker) {
-                Ok(Async::Ready(Some(guard))) => guard,
+                Ok(Poll::Ready(Some(guard))) => guard,
                 _ => panic!(),
             };
 
             x.release_lock(x_guard);
 
             let y_guard = match y.poll_next(&mut waker) {
-                Ok(Async::Ready(Some(guard))) => guard,
+                Ok(Poll::Ready(Some(guard))) => guard,
                 _ => panic!(),
             };
 

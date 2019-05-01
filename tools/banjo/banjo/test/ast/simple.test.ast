@@ -4,88 +4,88 @@ BanjoAst {
         "banjo.examples.simple": [
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.simple"
+                        "banjo.examples.simple",
                     ),
-                    name: "Point"
+                    name: "Point",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int32,
                         ident: Ident {
                             namespace: None,
-                            name: "x"
+                            name: "x",
                         },
-                        val: None
+                        val: None,
                     },
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Int32,
                         ident: Ident {
                             namespace: None,
-                            name: "y"
+                            name: "y",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Enum {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.simple"
+                        "banjo.examples.simple",
                     ),
-                    name: "Direction"
+                    name: "Direction",
                 },
                 ty: UInt32,
                 variants: [
                     EnumVariant {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Up",
                         value: Constant(
-                            "0"
-                        )
+                            "0",
+                        ),
                     },
                     EnumVariant {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Down",
                         value: Constant(
-                            "1"
-                        )
+                            "1",
+                        ),
                     },
                     EnumVariant {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Left",
                         value: Constant(
-                            "2"
-                        )
+                            "2",
+                        ),
                     },
                     EnumVariant {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Right",
                         value: Constant(
-                            "3"
-                        )
-                    }
-                ]
+                            "3",
+                        ),
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -93,21 +93,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.simple"
+                        "banjo.examples.simple",
                     ),
-                    name: "Drawing"
+                    name: "Drawing",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Draw",
                         in_params: [
@@ -116,31 +116,31 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.simple"
+                                            "banjo.examples.simple",
                                         ),
-                                        name: "Point"
+                                        name: "Point",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "d",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.simple"
+                                            "banjo.examples.simple",
                                         ),
-                                        name: "Direction"
+                                        name: "Direction",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
-                        out_params: []
+                        out_params: [],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "DrawLots",
                         in_params: [
@@ -148,9 +148,9 @@ BanjoAst {
                                 "commands",
                                 Handle {
                                     ty: Vmo,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -158,30 +158,30 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "status"
+                                        name: "status",
                                     },
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "p",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.simple"
+                                            "banjo.examples.simple",
                                         ),
-                                        name: "Point"
+                                        name: "Point",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "DrawArray",
                         in_params: [
@@ -191,17 +191,17 @@ BanjoAst {
                                     ty: Identifier {
                                         id: Ident {
                                             namespace: Some(
-                                                "banjo.examples.simple"
+                                                "banjo.examples.simple",
                                             ),
-                                            name: "Point"
+                                            name: "Point",
                                         },
-                                        reference: false
+                                        reference: false,
                                     },
                                     size: Constant(
-                                        "4"
-                                    )
-                                }
-                            )
+                                        "4",
+                                    ),
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -209,18 +209,18 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "status"
+                                        name: "status",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Describe",
                         in_params: [
@@ -229,12 +229,12 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "64"
-                                        )
+                                            "64",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
+                                    nullable: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -242,148 +242,148 @@ BanjoAst {
                                 Str {
                                     size: Some(
                                         Constant(
-                                            "128"
-                                        )
+                                            "128",
+                                        ),
                                     ),
-                                    nullable: false
-                                }
-                            )
-                        ]
-                    }
-                ]
-            }
+                                    nullable: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
+            },
         ],
         "zx": [
             Alias(
                 Ident {
                     namespace: None,
-                    name: "status"
+                    name: "status",
                 },
                 Ident {
                     namespace: None,
-                    name: "int32"
-                }
+                    name: "int32",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "time"
+                    name: "time",
                 },
                 Ident {
                     namespace: None,
-                    name: "int64"
-                }
+                    name: "int64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "duration"
+                    name: "duration",
                 },
                 Ident {
                     namespace: None,
-                    name: "int64"
-                }
+                    name: "int64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "clock"
+                    name: "clock",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint32"
-                }
+                    name: "uint32",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "koid"
+                    name: "koid",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint64"
-                }
+                    name: "uint64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "vaddr"
+                    name: "vaddr",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint64"
-                }
+                    name: "uint64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "paddr"
+                    name: "paddr",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint64"
-                }
+                    name: "uint64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "paddr32"
+                    name: "paddr32",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint32"
-                }
+                    name: "uint32",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "gpaddr"
+                    name: "gpaddr",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint64"
-                }
+                    name: "uint64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "off"
+                    name: "off",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint64"
-                }
+                    name: "uint64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "rights"
+                    name: "rights",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint32"
-                }
+                    name: "uint32",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "signals"
+                    name: "signals",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint32"
-                }
+                    name: "uint32",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "vm_option"
+                    name: "vm_option",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint32"
-                }
-            )
-        ]
-    }
+                    name: "uint32",
+                },
+            ),
+        ],
+    },
 }

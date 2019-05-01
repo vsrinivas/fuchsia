@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 
 use failure::{bail, Error};
 use fidl_fuchsia_ui_input as uii;
@@ -345,6 +345,7 @@ fn modifiers_match(current: &HashMap<&'static str, bool>, to_match: &Map<String,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures::future::join;
 
     fn default_state() -> TextFieldState {
         TextFieldState {
@@ -402,6 +403,6 @@ mod tests {
             }
         };
 
-        await!(server.join(client));
+        await!(join(server, client));
     }
 }

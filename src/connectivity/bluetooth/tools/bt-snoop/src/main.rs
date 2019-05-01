@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 #![recursion_limit = "256"]
 
 use {
@@ -15,7 +15,7 @@ use {
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     futures::{
-        future::{ready, FutureExt, Join, Ready},
+        future::{join, ready, Join, Ready},
         select,
         stream::{Fuse, FuturesUnordered, StreamExt, StreamFuture},
     },
@@ -138,7 +138,7 @@ fn register_new_client(
     client_stream: &mut ConcurrentClientRequestFutures,
     client_id: ClientId,
 ) {
-    client_stream.push(ready(client_id).join(stream.into_future()));
+    client_stream.push(join(ready(client_id), stream.into_future()));
     fx_log_info!("New client connection: {}", client_id);
 }
 
@@ -192,7 +192,7 @@ fn handle_client_request(
                 subscribers
                     .register(id, control_handle, host_device)
                     .expect("A client `Start` request should never be processed more than once");
-                client_requests.push(ready(id).join(client_stream.into_future()));
+                client_requests.push(join(ready(id), client_stream.into_future()));
                 fx_vlog!(2, "Client {} subscribed and waiting", id);
             } else {
                 fx_vlog!(2, "Client {} shutting down", id);

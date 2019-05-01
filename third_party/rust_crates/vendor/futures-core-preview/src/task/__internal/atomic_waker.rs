@@ -169,9 +169,8 @@ impl AtomicWaker {
     /// Here is how `register` is used when implementing a flag.
     ///
     /// ```
-    /// #![feature(futures_api)]
     /// use futures::future::Future;
-    /// use futures::task::{Waker, Poll, AtomicWaker};
+    /// use futures::task::{Context, Poll, AtomicWaker};
     /// use std::sync::atomic::AtomicBool;
     /// use std::sync::atomic::Ordering::SeqCst;
     /// use std::pin::Pin;
@@ -184,10 +183,10 @@ impl AtomicWaker {
     /// impl Future for Flag {
     ///     type Output = ();
     ///
-    ///     fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<()> {
+    ///     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
     ///         // Register **before** checking `set` to avoid a race condition
     ///         // that would result in lost notifications.
-    ///         self.waker.register(waker);
+    ///         self.waker.register(cx.waker());
     ///
     ///         if self.set.load(SeqCst) {
     ///             Poll::Ready(())
@@ -241,7 +240,7 @@ impl AtomicWaker {
                 // Currently in the process of waking the task, i.e.,
                 // `wake` is currently being called on the old task handle.
                 // So, we call wake on the new waker
-                waker.wake();
+                waker.wake_by_ref();
             }
             state => {
                 // In this case, a concurrent thread is holding the

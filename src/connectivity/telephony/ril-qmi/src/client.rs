@@ -172,7 +172,7 @@ mod tests {
     use {
         fuchsia_async::{self as fasync, TimeoutExt},
         fuchsia_zircon::{self as zx, DurationNum},
-        futures::{FutureExt, TryFutureExt},
+        futures::{future::join, TryFutureExt},
         parking_lot::Mutex,
         pretty_assertions::assert_eq,
         qmi_protocol::QmiError,
@@ -238,6 +238,6 @@ mod tests {
         let sender = sender
             .on_timeout(1000.millis().after_now(), || panic!("did not receive response in time!"));
 
-        executor.run_singlethreaded(receiver.join(sender));
+        executor.run_singlethreaded(join(receiver, sender));
     }
 }

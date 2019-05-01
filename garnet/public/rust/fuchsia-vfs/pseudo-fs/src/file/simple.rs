@@ -50,7 +50,7 @@ use {
     futures::{
         future::FusedFuture,
         stream::{FuturesUnordered, StreamExt, StreamFuture},
-        task::Waker,
+        task::Context,
         Future, Poll,
     },
     std::{marker::Unpin, pin::Pin},
@@ -428,9 +428,9 @@ where
 {
     type Output = Void;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
-            match self.connections.poll_next_unpin(lw) {
+            match self.connections.poll_next_unpin(cx) {
                 Poll::Ready(Some((maybe_request, mut connection))) => {
                     if let Some(Ok(request)) = maybe_request {
                         match self.handle_request(request, &mut connection) {
@@ -472,7 +472,8 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_zircon::sys::ZX_OK,
         futures::channel::{mpsc, oneshot},
-        futures::{FutureExt, SinkExt},
+        futures::future::join,
+        futures::SinkExt,
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR},
         std::sync::atomic::{AtomicUsize, Ordering},
     };
@@ -1526,7 +1527,7 @@ mod tests {
                 let client1 = get_client1(open_sender.clone());
                 let client2 = get_client2(open_sender.clone());
 
-                await!(client1.join(client2));
+                await!(join(client1, client2));
             },
             |run_until_stalled_assert| {
                 let mut run_and_check_read_count = |expected_count, should_complete: bool| {

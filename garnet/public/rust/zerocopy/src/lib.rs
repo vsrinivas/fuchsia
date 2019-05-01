@@ -18,7 +18,6 @@
 //! Types which implement a subset of these traits can then be converted to/from
 //! byte sequences with little to no runtime overhead.
 
-#![feature(refcell_map_split)]
 #![cfg_attr(not(test), no_std)]
 
 pub use zerocopy_derive::*;

@@ -8,21 +8,21 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.handle"
+                        "banjo.examples.protocol.handle",
                     ),
-                    name: "SynchronousHandle"
+                    name: "SynchronousHandle",
                 },
                 methods: [
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Handle",
                         in_params: [
@@ -30,30 +30,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Handle,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Handle,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Handle,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Process",
                         in_params: [
@@ -61,30 +61,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Process,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Process,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Process,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Thread",
                         in_params: [
@@ -92,30 +92,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Thread,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Thread,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Thread,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Vmo",
                         in_params: [
@@ -123,30 +123,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Vmo,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Vmo,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Vmo,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Channel",
                         in_params: [
@@ -154,30 +154,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Channel,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Channel,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Channel,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Event",
                         in_params: [
@@ -185,30 +185,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Event,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Event,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Event,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Port",
                         in_params: [
@@ -216,30 +216,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Port,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Port,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Port,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Interrupt",
                         in_params: [
@@ -247,30 +247,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Interrupt,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Interrupt,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Interrupt,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "DebugLog",
                         in_params: [
@@ -278,30 +278,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: DebugLog,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: DebugLog,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: DebugLog,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Socket",
                         in_params: [
@@ -309,30 +309,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Socket,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Socket,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Socket,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Resource",
                         in_params: [
@@ -340,30 +340,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Resource,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Resource,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Resource,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "EventPair",
                         in_params: [
@@ -371,30 +371,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: EventPair,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: EventPair,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: EventPair,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Job",
                         in_params: [
@@ -402,30 +402,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Job,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Job,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Job,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Vmar",
                         in_params: [
@@ -433,30 +433,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Vmar,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Vmar,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Vmar,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Fifo",
                         in_params: [
@@ -464,30 +464,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Fifo,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Fifo,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Fifo,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Guest",
                         in_params: [
@@ -495,30 +495,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Guest,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Guest,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Guest,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Timer",
                         in_params: [
@@ -526,30 +526,30 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Timer,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Timer,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Timer,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         name: "Profile",
                         in_params: [
@@ -557,28 +557,28 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Profile,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Profile,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Profile,
-                                    reference: false
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -586,16 +586,16 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
-                        }
-                    ]
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.protocol.handle"
+                        "banjo.examples.protocol.handle",
                     ),
-                    name: "AsyncHandle"
+                    name: "AsyncHandle",
                 },
                 methods: [
                     Method {
@@ -603,9 +603,9 @@ BanjoAst {
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Handle",
                         in_params: [
@@ -613,35 +613,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Handle,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Handle,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Handle,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Process",
                         in_params: [
@@ -649,35 +649,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Process,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Process,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Process,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Thread",
                         in_params: [
@@ -685,35 +685,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Thread,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Thread,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Thread,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Vmo",
                         in_params: [
@@ -721,35 +721,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Vmo,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Vmo,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Vmo,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Channel",
                         in_params: [
@@ -757,35 +757,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Channel,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Channel,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Channel,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Event",
                         in_params: [
@@ -793,35 +793,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Event,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Event,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Event,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Port",
                         in_params: [
@@ -829,35 +829,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Port,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Port,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Port,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Interrupt",
                         in_params: [
@@ -865,35 +865,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Interrupt,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Interrupt,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Interrupt,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "DebugLog",
                         in_params: [
@@ -901,35 +901,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: DebugLog,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: DebugLog,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: DebugLog,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Socket",
                         in_params: [
@@ -937,35 +937,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Socket,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Socket,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Socket,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Resource",
                         in_params: [
@@ -973,35 +973,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Resource,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Resource,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Resource,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "EventPair",
                         in_params: [
@@ -1009,35 +1009,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: EventPair,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: EventPair,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: EventPair,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Job",
                         in_params: [
@@ -1045,35 +1045,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Job,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Job,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Job,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Vmar",
                         in_params: [
@@ -1081,35 +1081,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Vmar,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Vmar,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Vmar,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Fifo",
                         in_params: [
@@ -1117,35 +1117,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Fifo,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Fifo,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Fifo,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Guest",
                         in_params: [
@@ -1153,35 +1153,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Guest,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Guest,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Guest,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Timer",
                         in_params: [
@@ -1189,35 +1189,35 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Timer,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Timer,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Timer,
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
-                                }
-                            ]
+                                    val: None,
+                                },
+                            ],
                         ),
                         name: "Profile",
                         in_params: [
@@ -1225,29 +1225,29 @@ BanjoAst {
                                 "h",
                                 Handle {
                                     ty: Profile,
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "h",
                                 Handle {
                                     ty: Profile,
-                                    reference: false
-                                }
+                                    reference: false,
+                                },
                             ),
                             (
                                 "h2",
                                 Handle {
                                     ty: Profile,
-                                    reference: false
-                                }
-                            )
-                        ]
-                    }
-                ]
-            }
-        ]
-    }
+                                    reference: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
 }

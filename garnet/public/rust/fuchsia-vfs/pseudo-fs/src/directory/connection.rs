@@ -14,7 +14,7 @@ use {
     fuchsia_zircon::Status,
     futures::{
         stream::{Stream, StreamExt, StreamFuture},
-        task::Waker,
+        task::Context,
         Poll,
     },
     std::{default::Default, pin::Pin},
@@ -100,8 +100,8 @@ where
     // We are just proxying the DirectoryRequestStream requests.
     type Item = <DirectoryRequestStream as Stream>::Item;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
-        self.requests.poll_next_unpin(lw)
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.requests.poll_next_unpin(cx)
     }
 }
 

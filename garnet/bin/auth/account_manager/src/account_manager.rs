@@ -421,6 +421,7 @@ mod tests {
     };
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
+    use futures::future::join;
     use lazy_static::lazy_static;
     use std::path::Path;
     use tempfile::TempDir;
@@ -606,7 +607,7 @@ mod tests {
                     Status::Ok
                 );
             };
-            await!(request_fut.join(serve_fut));
+            await!(join(request_fut, serve_fut));
             Ok(())
         });
     }

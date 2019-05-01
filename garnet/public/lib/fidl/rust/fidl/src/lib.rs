@@ -4,7 +4,7 @@
 
 //! Library and runtime for fidl bindings.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 #![deny(missing_docs)]
 #![deny(warnings)]
 
@@ -12,9 +12,6 @@
 pub mod encoding;
 pub mod client;
 pub mod endpoints;
-
-#[cfg(test)]
-mod wake_counter;
 
 mod error;
 pub use self::error::{Error, Result};
@@ -24,7 +21,7 @@ pub use bitflags::bitflags;
 
 use {
     fuchsia_async as fasync,
-    futures::task::{AtomicWaker, Waker},
+    futures::task::{AtomicWaker, Context},
     std::sync::atomic::{self, AtomicBool},
 };
 
@@ -55,11 +52,11 @@ impl ServeInner {
     }
 
     /// Check if the server has been set to shutdown.
-    pub fn poll_shutdown(&self, lw: &Waker) -> bool {
+    pub fn poll_shutdown(&self, cx: &mut Context<'_>) -> bool {
         if self.shutdown.load(atomic::Ordering::Relaxed) {
             return true;
         }
-        self.waker.register(lw);
+        self.waker.register(cx.waker());
         self.shutdown.load(atomic::Ordering::Relaxed)
     }
 }

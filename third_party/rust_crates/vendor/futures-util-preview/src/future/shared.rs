@@ -1,6 +1,6 @@
 use crate::task::{ArcWake, waker_ref};
 use futures_core::future::{FusedFuture, Future};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll, Waker};
 use slab::Slab;
 use std::cell::UnsafeCell;
 use std::fmt;
@@ -9,9 +9,7 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::{Arc, Mutex};
 
-/// A future that is cloneable and can be polled in multiple threads.
-/// Use the [`shared`](crate::FutureExt::shared) combinator method to convert
-/// any future into a `Shared` future.
+/// Future for the [`shared`](super::FutureExt::shared) method.
 #[must_use = "futures do nothing unless polled"]
 pub struct Shared<Fut: Future> {
     inner: Option<Arc<Inner<Fut>>>,
@@ -110,7 +108,7 @@ where
     }
 
     /// Registers the current task to receive a wakeup when `Inner` is awoken.
-    fn set_waker(&mut self, waker: &Waker) {
+    fn set_waker(&mut self, cx: &mut Context<'_>) {
         // Acquire the lock first before checking COMPLETE to ensure there
         // isn't a race.
         let mut wakers_guard = if let Some(inner) = self.inner.as_ref() {
@@ -126,7 +124,7 @@ where
         };
 
         if self.waker_key == NULL_WAKER_KEY {
-            self.waker_key = wakers.insert(Some(waker.clone()));
+            self.waker_key = wakers.insert(Some(cx.waker().clone()));
         } else {
             let waker_slot = &mut wakers[self.waker_key];
             let needs_replacement = if let Some(_old_waker) = waker_slot {
@@ -139,7 +137,7 @@ where
                 true
             };
             if needs_replacement {
-                *waker_slot = Some(waker.clone());
+                *waker_slot = Some(cx.waker().clone());
             }
         }
         debug_assert!(self.waker_key != NULL_WAKER_KEY);
@@ -187,10 +185,10 @@ where
 {
     type Output = Fut::Output;
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
 
-        this.set_waker(waker);
+        this.set_waker(cx);
 
         let inner = if let Some(inner) = this.inner.as_ref() {
             inner
@@ -217,11 +215,11 @@ where
         }
 
         let waker = waker_ref(&inner.notifier);
-        let waker = &waker;
+        let mut cx = Context::from_waker(&waker);
 
         struct Reset<'a>(&'a AtomicUsize);
 
-        impl<'a> Drop for Reset<'a> {
+        impl Drop for Reset<'_> {
             fn drop(&mut self) {
                 use std::thread;
 
@@ -241,7 +239,7 @@ where
                 }
             };
 
-            let poll = future.poll(&waker);
+            let poll = future.poll(&mut cx);
 
             match poll {
                 Poll::Pending => {
@@ -317,7 +315,7 @@ where
 }
 
 impl ArcWake for Notifier {
-    fn wake(arc_self: &Arc<Self>) {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
         arc_self.state.compare_and_swap(POLLING, REPOLL, SeqCst);
 
         let wakers = &mut *arc_self.wakers.lock().unwrap();

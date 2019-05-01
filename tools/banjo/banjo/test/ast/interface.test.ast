@@ -8,16 +8,16 @@ BanjoAst {
                         Attr {
                             key: "Doc",
                             val: Some(
-                                " Types of cookies CookieMaker can prep.\n"
-                            )
-                        }
-                    ]
+                                " Types of cookies CookieMaker can prep.\n",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.interface"
+                        "banjo.examples.interface",
                     ),
-                    name: "CookieKind"
+                    name: "CookieKind",
                 },
                 ty: UInt32,
                 variants: [
@@ -27,15 +27,15 @@ BanjoAst {
                                 Attr {
                                     key: "Doc",
                                     val: Some(
-                                        " Universal favorite.\n"
-                                    )
-                                }
-                            ]
+                                        " Universal favorite.\n",
+                                    ),
+                                },
+                            ],
                         ),
                         name: "Chocolate",
                         value: Constant(
-                            "0"
-                        )
+                            "0",
+                        ),
                     },
                     EnumVariant {
                         attributes: Attrs(
@@ -43,15 +43,15 @@ BanjoAst {
                                 Attr {
                                     key: "Doc",
                                     val: Some(
-                                        " Holiday favorite.\n"
-                                    )
-                                }
-                            ]
+                                        " Holiday favorite.\n",
+                                    ),
+                                },
+                            ],
                         ),
                         name: "Gingerbread",
                         value: Constant(
-                            "1"
-                        )
+                            "1",
+                        ),
                     },
                     EnumVariant {
                         attributes: Attrs(
@@ -59,17 +59,17 @@ BanjoAst {
                                 Attr {
                                     key: "Doc",
                                     val: Some(
-                                        " Test-writer\'s favorite.\n"
-                                    )
-                                }
-                            ]
+                                        " Test-writer\'s favorite.\n",
+                                    ),
+                                },
+                            ],
                         ),
                         name: "Snickerdoodle",
                         value: Constant(
-                            "2"
-                        )
-                    }
-                ]
+                            "2",
+                        ),
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -77,22 +77,22 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-interface"
-                            )
+                                "ddk-interface",
+                            ),
                         },
                         Attr {
                             key: "Doc",
                             val: Some(
-                                " An interface for a device that\'s able to create and deliver cookies!\n"
-                            )
-                        }
-                    ]
+                                " An interface for a device that\'s able to create and deliver cookies!\n",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.interface"
+                        "banjo.examples.interface",
                     ),
-                    name: "CookieMaker"
+                    name: "CookieMaker",
                 },
                 methods: [
                     Method {
@@ -100,15 +100,15 @@ BanjoAst {
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
+                                    val: None,
                                 },
                                 Attr {
                                     key: "Doc",
                                     val: Some(
-                                        " Asynchonously preps a cookie.\n"
-                                    )
-                                }
-                            ]
+                                        " Asynchonously preps a cookie.\n",
+                                    ),
+                                },
+                            ],
                         ),
                         name: "Prep",
                         in_params: [
@@ -117,54 +117,54 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.interface"
+                                            "banjo.examples.interface",
                                         ),
-                                        name: "CookieKind"
+                                        name: "CookieKind",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
                                 "token",
-                                UInt64
-                            )
-                        ]
+                                UInt64,
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
                             [
                                 Attr {
                                     key: "Async",
-                                    val: None
+                                    val: None,
                                 },
                                 Attr {
                                     key: "Doc",
                                     val: Some(
-                                        " Asynchonously bakes a cookie.\n Must only be called after preping finishes.\n"
-                                    )
-                                }
-                            ]
+                                        " Asynchonously bakes a cookie.\n Must only be called after preping finishes.\n",
+                                    ),
+                                },
+                            ],
                         ),
                         name: "Bake",
                         in_params: [
                             (
                                 "token",
-                                UInt64
+                                UInt64,
                             ),
                             (
                                 "time",
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "time"
+                                        name: "time",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
                         out_params: [
                             (
@@ -172,14 +172,14 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "status"
+                                        name: "status",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
                     },
                     Method {
                         attributes: Attrs(
@@ -187,17 +187,17 @@ BanjoAst {
                                 Attr {
                                     key: "Doc",
                                     val: Some(
-                                        " Synchronously deliver a cookie.\n Must be called only after Bake finishes.\n"
-                                    )
-                                }
-                            ]
+                                        " Synchronously deliver a cookie.\n Must be called only after Bake finishes.\n",
+                                    ),
+                                },
+                            ],
                         ),
                         name: "Deliver",
                         in_params: [
                             (
                                 "token",
-                                UInt64
-                            )
+                                UInt64,
+                            ),
                         ],
                         out_params: [
                             (
@@ -205,16 +205,16 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "zx"
+                                            "zx",
                                         ),
-                                        name: "status"
+                                        name: "status",
                                     },
-                                    reference: false
-                                }
-                            )
-                        ]
-                    }
-                ]
+                                    reference: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
             },
             Protocol {
                 attributes: Attrs(
@@ -222,22 +222,22 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "ddk-protocol"
-                            )
+                                "ddk-protocol",
+                            ),
                         },
                         Attr {
                             key: "Doc",
                             val: Some(
-                                " Protocol for a baker who outsources all of it\'s baking duties to others.\n"
-                            )
-                        }
-                    ]
+                                " Protocol for a baker who outsources all of it\'s baking duties to others.\n",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.interface"
+                        "banjo.examples.interface",
                     ),
-                    name: "Baker"
+                    name: "Baker",
                 },
                 methods: [
                     Method {
@@ -246,10 +246,10 @@ BanjoAst {
                                 Attr {
                                     key: "Doc",
                                     val: Some(
-                                        " Registers a cookie maker device which the baker can use.\n"
-                                    )
-                                }
-                            ]
+                                        " Registers a cookie maker device which the baker can use.\n",
+                                    ),
+                                },
+                            ],
                         ),
                         name: "Register",
                         in_params: [
@@ -258,15 +258,15 @@ BanjoAst {
                                 Identifier {
                                     id: Ident {
                                         namespace: Some(
-                                            "banjo.examples.interface"
+                                            "banjo.examples.interface",
                                         ),
-                                        name: "CookieMaker"
+                                        name: "CookieMaker",
                                     },
-                                    reference: false
-                                }
-                            )
+                                    reference: false,
+                                },
+                            ),
                         ],
-                        out_params: []
+                        out_params: [],
                     },
                     Method {
                         attributes: Attrs(
@@ -274,149 +274,149 @@ BanjoAst {
                                 Attr {
                                     key: "Doc",
                                     val: Some(
-                                        " De-registers a cookie maker device when it\'s no longer available.\n"
-                                    )
-                                }
-                            ]
+                                        " De-registers a cookie maker device when it\'s no longer available.\n",
+                                    ),
+                                },
+                            ],
                         ),
                         name: "DeRegister",
                         in_params: [],
-                        out_params: []
-                    }
-                ]
-            }
+                        out_params: [],
+                    },
+                ],
+            },
         ],
         "zx": [
             Alias(
                 Ident {
                     namespace: None,
-                    name: "status"
+                    name: "status",
                 },
                 Ident {
                     namespace: None,
-                    name: "int32"
-                }
+                    name: "int32",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "time"
+                    name: "time",
                 },
                 Ident {
                     namespace: None,
-                    name: "int64"
-                }
+                    name: "int64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "duration"
+                    name: "duration",
                 },
                 Ident {
                     namespace: None,
-                    name: "int64"
-                }
+                    name: "int64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "clock"
+                    name: "clock",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint32"
-                }
+                    name: "uint32",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "koid"
+                    name: "koid",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint64"
-                }
+                    name: "uint64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "vaddr"
+                    name: "vaddr",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint64"
-                }
+                    name: "uint64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "paddr"
+                    name: "paddr",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint64"
-                }
+                    name: "uint64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "paddr32"
+                    name: "paddr32",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint32"
-                }
+                    name: "uint32",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "gpaddr"
+                    name: "gpaddr",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint64"
-                }
+                    name: "uint64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "off"
+                    name: "off",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint64"
-                }
+                    name: "uint64",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "rights"
+                    name: "rights",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint32"
-                }
+                    name: "uint32",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "signals"
+                    name: "signals",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint32"
-                }
+                    name: "uint32",
+                },
             ),
             Alias(
                 Ident {
                     namespace: None,
-                    name: "vm_option"
+                    name: "vm_option",
                 },
                 Ident {
                     namespace: None,
-                    name: "uint32"
-                }
-            )
-        ]
-    }
+                    name: "uint32",
+                },
+            ),
+        ],
+    },
 }

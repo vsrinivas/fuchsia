@@ -1,7 +1,8 @@
 use crate::stream::{StreamExt, Fuse};
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// A `Stream` that implements a `peek` method.
@@ -29,19 +30,51 @@ impl<St: Stream> Peekable<St> {
         }
     }
 
+    /// Acquires a reference to the underlying stream that this combinator is
+    /// pulling from.
+    pub fn get_ref(&self) -> &St {
+        self.stream.get_ref()
+    }
+
+    /// Acquires a mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_mut(&mut self) -> &mut St {
+        self.stream.get_mut()
+    }
+
+    /// Acquires a pinned mutable reference to the underlying stream that this
+    /// combinator is pulling from.
+    ///
+    /// Note that care must be taken to avoid tampering with the state of the
+    /// stream which may otherwise confuse this combinator.
+    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+        self.stream().get_pin_mut()
+    }
+
+    /// Consumes this combinator, returning the underlying stream.
+    ///
+    /// Note that this may discard intermediate state of this combinator, so
+    /// care should be taken to avoid losing resources when this is called.
+    pub fn into_inner(self) -> St {
+        self.stream.into_inner()
+    }
+
     /// Peek retrieves a reference to the next item in the stream.
     ///
     /// This method polls the underlying stream and return either a reference
     /// to the next item if the stream is ready or passes through any errors.
     pub fn peek<'a>(
         mut self: Pin<&'a mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<&'a St::Item>> {
         if self.peeked.is_some() {
             let this: &Self = self.into_ref().get_ref();
             return Poll::Ready(this.peeked.as_ref())
         }
-        match ready!(self.as_mut().stream().poll_next(waker)) {
+        match ready!(self.as_mut().stream().poll_next(cx)) {
             None => Poll::Ready(None),
             Some(item) => {
                 *self.as_mut().peeked() = Some(item);
@@ -63,23 +96,20 @@ impl<S: Stream> Stream for Peekable<S> {
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         if let Some(item) = self.as_mut().peeked().take() {
             return Poll::Ready(Some(item))
         }
-        self.as_mut().stream().poll_next(waker)
+        self.as_mut().stream().poll_next(cx)
     }
 }
 
-/* TODO
 // Forwarding impl of Sink from the underlying stream
-impl<S> Sink for Peekable<S>
-    where S: Sink + Stream
+impl<S, Item> Sink<Item> for Peekable<S>
+    where S: Sink<Item> + Stream
 {
-    type SinkItem = S::SinkItem;
     type SinkError = S::SinkError;
 
-    delegate_sink!(stream);
+    delegate_sink!(stream, Item);
 }
-*/

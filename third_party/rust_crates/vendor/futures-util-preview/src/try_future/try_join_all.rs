@@ -1,13 +1,14 @@
 //! Definition of the `TryJoinAll` combinator, waiting for all of a list of
 //! futures to finish with either success or error.
 
-use std::fmt;
-use std::future::Future;
-use std::iter::FromIterator;
-use std::mem;
-use std::pin::Pin;
-use std::prelude::v1::*;
-use std::task::Poll;
+use core::fmt;
+use core::future::Future;
+use core::iter::FromIterator;
+use core::mem;
+use core::pin::Pin;
+use core::task::{Context, Poll};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 use super::TryFuture;
 
@@ -59,10 +60,7 @@ enum FinalState<E = ()> {
     Error(E)
 }
 
-/// A future which takes a list of futures and resolves with a vector of the
-/// completed values or an error.
-///
-/// This future is created with the `try_join_all` function.
+/// Future for the [`try_join_all`] function.
 #[must_use = "futures do nothing unless polled"]
 pub struct TryJoinAll<F>
 where
@@ -99,7 +97,7 @@ where
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::future::{self, try_join_all};
 ///
@@ -127,7 +125,7 @@ where
 {
     let elems: Box<[_]> = i.into_iter().map(ElemState::Pending).collect();
     TryJoinAll {
-        elems: Box::into_pin(elems),
+        elems: elems.into(),
     }
 }
 
@@ -137,15 +135,12 @@ where
 {
     type Output = Result<Vec<F::Ok>, F::Error>;
 
-    fn poll(
-        mut self: Pin<&mut Self>,
-        waker: &::std::task::Waker,
-    ) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut state = FinalState::AllDone;
 
         for mut elem in iter_pin_mut(self.elems.as_mut()) {
             if let Some(pending) = elem.as_mut().pending_pin_mut() {
-                match pending.try_poll(waker) {
+                match pending.try_poll(cx) {
                     Poll::Pending => state = FinalState::Pending,
                     Poll::Ready(output) => match output {
                         Ok(item) => elem.set(ElemState::Done(Some(item))),

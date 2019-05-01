@@ -12,7 +12,7 @@ use fidl_fuchsia_media::Metadata;
 use fidl_fuchsia_media_sessions::*;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{lock::Mutex, Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{future::try_join, lock::Mutex, Future, FutureExt, StreamExt, TryStreamExt};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
@@ -94,11 +94,10 @@ impl Session {
             }
         }
 
-        fasync::spawn(
-            self.request_forwarder(request_stream)
-                .try_join(self.event_forwarder(control_handle))
-                .map(log_error_discard_result),
-        );
+        fasync::spawn(try_join(
+            self.request_forwarder(request_stream),
+            self.event_forwarder(control_handle),
+        ).map(log_error_discard_result));
         Ok(())
     }
 

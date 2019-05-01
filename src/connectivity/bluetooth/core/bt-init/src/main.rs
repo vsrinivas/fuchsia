@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 
 use {
     failure::{Error, ResultExt},
@@ -15,7 +15,7 @@ use {
     fuchsia_component::{client, fuchsia_single_component_package_url, server},
     fuchsia_async as fasync,
     fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
-    futures::{future, FutureExt, StreamExt, TryFutureExt},
+    futures::{future::{self, try_join}, FutureExt, StreamExt},
 };
 
 mod config;
@@ -60,7 +60,7 @@ fn main() -> Result<(), Error> {
     let io_config_fut = cfg.set_capabilities();
 
     executor
-        .run_singlethreaded(server.try_join(io_config_fut))
+        .run_singlethreaded(try_join(server, io_config_fut))
         .context("bt-init failed to execute future")
         .map_err(|e| e.into())
         .map(|_| ())

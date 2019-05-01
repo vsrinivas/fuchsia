@@ -6,7 +6,11 @@
 use core::pin::Pin;
 use futures_core::future::Future;
 use futures_core::stream::Stream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
+#[cfg(feature = "alloc")]
+use alloc::boxed::Box;
+#[cfg(feature = "alloc")]
+use futures_core::future::BoxFuture;
 
 // re-export for `select!`
 #[doc(hidden)]
@@ -31,6 +35,22 @@ pub use self::poll_fn::{poll_fn, PollFn};
 mod ready;
 pub use self::ready::{ready, ok, err, Ready};
 
+mod join;
+pub use self::join::{join, join3, join4, join5, Join, Join3, Join4, Join5};
+
+#[cfg(feature = "alloc")]
+mod join_all;
+#[cfg(feature = "alloc")]
+pub use self::join_all::{join_all, JoinAll};
+
+mod select;
+pub use self::select::{select, Select};
+
+#[cfg(feature = "alloc")]
+mod select_all;
+#[cfg(feature = "alloc")]
+pub use self::select_all::{select_all, SelectAll};
+
 // Combinators
 mod flatten;
 pub use self::flatten::Flatten;
@@ -44,15 +64,8 @@ pub use self::fuse::Fuse;
 mod into_stream;
 pub use self::into_stream::IntoStream;
 
-mod join;
-pub use self::join::{Join, Join3, Join4, Join5};
-
 mod map;
 pub use self::map::Map;
-
-// Todo
-// mod select;
-// pub use self::select::Select;
 
 mod then;
 pub use self::then::Then;
@@ -63,14 +76,24 @@ pub use self::inspect::Inspect;
 mod unit_error;
 pub use self::unit_error::UnitError;
 
+#[cfg(feature = "never-type")]
+mod never_error;
+#[cfg(feature = "never-type")]
+pub use self::never_error::NeverError;
+
+mod either;
+pub use self::either::Either;
+
 // Implementation details
 mod chain;
 pub(crate) use self::chain::Chain;
 
-#[cfg(feature = "std")]
-mod abortable;
-#[cfg(feature = "std")]
-pub use self::abortable::{abortable, Abortable, AbortHandle, AbortRegistration, Aborted};
+cfg_target_has_atomic! {
+    #[cfg(feature = "alloc")]
+    mod abortable;
+    #[cfg(feature = "alloc")]
+    pub use self::abortable::{abortable, Abortable, AbortHandle, AbortRegistration, Aborted};
+}
 
 #[cfg(feature = "std")]
 mod catch_unwind;
@@ -81,17 +104,6 @@ pub use self::catch_unwind::CatchUnwind;
 mod remote_handle;
 #[cfg(feature = "std")]
 pub use self::remote_handle::{Remote, RemoteHandle};
-
-#[cfg(feature = "std")]
-mod join_all;
-
-#[cfg(feature = "std")]
-pub use self::join_all::{join_all, JoinAll};
-
-// #[cfg(feature = "std")]
-// mod select_all;
-// #[cfg(feature = "std")]
-// pub use self::select_all::{SelectAll, SelectAllNext, select_all};
 
 // #[cfg(feature = "std")]
 // mod select_ok;
@@ -122,7 +134,7 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future::{self, FutureExt};
     ///
@@ -154,7 +166,7 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future::{self, FutureExt};
     ///
@@ -171,185 +183,6 @@ pub trait FutureExt: Future {
         assert_future::<Fut::Output, _>(Then::new(self, f))
     }
 
-    /* TODO
-    /// Waits for either one of two differently-typed futures to complete.
-    ///
-    /// This function will return a new future which awaits for either this or
-    /// the `other` future to complete. The returned future will finish with
-    /// both the value resolved and a future representing the completion of the
-    /// other work.
-    ///
-    /// Note that this function consumes the receiving futures and returns a
-    /// wrapped version of them.
-    ///
-    /// Also note that if both this and the second future have the same
-    /// success/error type you can use the `Either::split` method to
-    /// conveniently extract out the value at the end.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use futures::future::{self, Either};
-    ///
-    /// // A poor-man's join implemented on top of select
-    ///
-    /// fn join<A, B, E>(a: A, b: B) -> Box<Future<Item=(A::Item, B::Item), Error=E>>
-    ///     where A: Future<Error = E> + 'static,
-    ///           B: Future<Error = E> + 'static,
-    ///           E: 'static,
-    /// {
-    ///     Box::new(a.select(b).then(|res| -> Box<Future<Item=_, Error=_>> {
-    ///         match res {
-    ///             Ok(Either::Left((x, b))) => Box::new(b.map(move |y| (x, y))),
-    ///             Ok(Either::Right((y, a))) => Box::new(a.map(move |x| (x, y))),
-    ///             Err(Either::Left((e, _))) => Box::new(future::err(e)),
-    ///             Err(Either::Right((e, _))) => Box::new(future::err(e)),
-    ///         }
-    ///     }))
-    /// }
-    /// ```
-    fn select<B>(self, other: B) -> Select<Self, B::Future>
-        where B: IntoFuture, Self: Sized
-    {
-        select::new(self, other.into_future())
-    }
-    */
-
-    /// Joins the result of two futures, waiting for them both to complete.
-    ///
-    /// This function will return a new future which awaits both this and the
-    /// `other` future to complete. The returned future will finish with a tuple
-    /// of both results.
-    ///
-    /// Note that this function consumes the receiving future and returns a
-    /// wrapped version of it.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
-    /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
-    ///
-    /// let a = future::ready(1);
-    /// let b = future::ready(2);
-    /// let pair = a.join(b);
-    ///
-    /// assert_eq!(await!(pair), (1, 2));
-    /// # });
-    /// ```
-    fn join<Fut2>(self, other: Fut2) -> Join<Self, Fut2>
-    where
-        Fut2: Future,
-        Self: Sized,
-    {
-        let f = Join::new(self, other);
-        assert_future::<(Self::Output, Fut2::Output), _>(f)
-    }
-
-    /// Same as `join`, but with more futures.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
-    /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
-    ///
-    /// let a = future::ready(1);
-    /// let b = future::ready(2);
-    /// let c = future::ready(3);
-    /// let tuple = a.join3(b, c);
-    ///
-    /// assert_eq!(await!(tuple), (1, 2, 3));
-    /// # });
-    /// ```
-    fn join3<Fut2, Fut3>(
-        self,
-        future2: Fut2,
-        future3: Fut3,
-    ) -> Join3<Self, Fut2, Fut3>
-    where
-        Fut2: Future,
-        Fut3: Future,
-        Self: Sized,
-    {
-        Join3::new(self, future2, future3)
-    }
-
-    /// Same as `join`, but with more futures.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
-    /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
-    ///
-    /// let a = future::ready(1);
-    /// let b = future::ready(2);
-    /// let c = future::ready(3);
-    /// let d = future::ready(4);
-    /// let tuple = a.join4(b, c, d);
-    ///
-    /// assert_eq!(await!(tuple), (1, 2, 3, 4));
-    /// # });
-    /// ```
-    fn join4<Fut2, Fut3, Fut4>(
-        self,
-        future2: Fut2,
-        future3: Fut3,
-        future4: Fut4,
-    ) -> Join4<Self, Fut2, Fut3, Fut4>
-    where
-        Fut2: Future,
-        Fut3: Future,
-        Fut3: Future,
-        Fut4: Future,
-        Self: Sized,
-    {
-        Join4::new(self, future2, future3, future4)
-    }
-
-    /// Same as `join`, but with more futures.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
-    /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
-    ///
-    /// let a = future::ready(1);
-    /// let b = future::ready(2);
-    /// let c = future::ready(3);
-    /// let d = future::ready(4);
-    /// let e = future::ready(5);
-    /// let tuple = a.join5(b, c, d, e);
-    ///
-    /// assert_eq!(await!(tuple), (1, 2, 3, 4, 5));
-    /// # });
-    /// ```
-    fn join5<Fut2, Fut3, Fut4, Fut5>(
-        self,
-        future2: Fut2,
-        future3: Fut3,
-        future4: Fut4,
-        future5: Fut5,
-    ) -> Join5<Self, Fut2, Fut3, Fut4, Fut5>
-    where
-        Fut2: Future,
-        Fut3: Future,
-        Fut3: Future,
-        Fut4: Future,
-        Fut5: Future,
-        Self: Sized,
-    {
-        Join5::new(self, future2, future3, future4, future5)
-    }
-
-    /* ToDo: futures-core cannot implement Future for Either anymore because of
-             the orphan rule. Remove? Implement our own `Either`?
     /// Wrap this future in an `Either` future, making it the left-hand variant
     /// of that `Either`.
     ///
@@ -359,16 +192,19 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await, await_macro)]
+    /// # futures::executor::block_on(async {
+    /// use futures::future::{self, FutureExt};
     ///
     /// let x = 6;
     /// let future = if x < 10 {
-    ///     ready(true).left_future()
+    ///     future::ready(true).left_future()
     /// } else {
-    ///     ready(false).right_future()
+    ///     future::ready(false).right_future()
     /// };
     ///
-    /// assert_eq!(true, block_on(future));
+    /// assert_eq!(await!(future), true);
+    /// # });
     /// ```
     fn left_future<B>(self) -> Either<Self, B>
         where B: Future<Output = Self::Output>,
@@ -386,23 +222,26 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// use futures::executor::block_on;
+    /// #![feature(async_await, await_macro)]
+    /// # futures::executor::block_on(async {
+    /// use futures::future::{self, FutureExt};
     ///
     /// let x = 6;
-    /// let future = if x < 10 {
-    ///     ready(true).left_future()
+    /// let future = if x > 10 {
+    ///     future::ready(true).left_future()
     /// } else {
-    ///     ready(false).right_future()
+    ///     future::ready(false).right_future()
     /// };
     ///
-    /// assert_eq!(false, block_on(future));
+    /// assert_eq!(await!(future), false);
+    /// # });
     /// ```
     fn right_future<A>(self) -> Either<A, Self>
         where A: Future<Output = Self::Output>,
               Self: Sized,
     {
         Either::Right(self)
-    }*/
+    }
 
     /// Convert this future into a single element stream.
     ///
@@ -412,7 +251,7 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future::{self, FutureExt};
     /// use futures::stream::StreamExt;
@@ -446,7 +285,7 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future::{self, FutureExt};
     ///
@@ -476,7 +315,7 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future::{self, FutureExt};
     /// use futures::stream::{self, StreamExt};
@@ -529,7 +368,7 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future::{self, FutureExt};
     ///
@@ -566,7 +405,7 @@ pub trait FutureExt: Future {
     // TODO: minimize and open rust-lang/rust ticket, currently errors:
     //       'assertion failed: !value.has_escaping_regions()'
     /// ```ignore
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future::{self, FutureExt, Ready};
     ///
@@ -599,7 +438,7 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro, futures_api)]
+    /// #![feature(async_await, await_macro)]
     /// # futures::executor::block_on(async {
     /// use futures::future::{self, FutureExt};
     ///
@@ -653,25 +492,35 @@ pub trait FutureExt: Future {
     }
 
     /// Wrap the future in a Box, pinning it.
-    #[cfg(feature = "std")]
-    fn boxed(self) -> Pin<Box<Self>>
-        where Self: Sized
+    #[cfg(feature = "alloc")]
+    fn boxed<'a>(self) -> BoxFuture<'a, Self::Output>
+        where Self: Sized + Send + 'a
     {
         Box::pin(self)
     }
 
-    /// Turns a `Future` into a `TryFuture` with `Error = ()`.
+    /// Turns a [`Future<Output = T>`](Future) into a
+    /// [`TryFuture<Ok = T, Error = ()`>](futures_core::future::TryFuture).
     fn unit_error(self) -> UnitError<Self>
         where Self: Sized
     {
         UnitError::new(self)
     }
 
+    #[cfg(feature = "never-type")]
+    /// Turns a [`Future<Output = T>`](Future) into a
+    /// [`TryFuture<Ok = T, Error = !`>](futures_core::future::TryFuture).
+    fn never_error(self) -> NeverError<Self>
+        where Self: Sized
+    {
+        NeverError::new(self)
+    }
+
     /// A convenience for calling `Future::poll` on `Unpin` future types.
-    fn poll_unpin(&mut self, waker: &Waker) -> Poll<Self::Output>
+    fn poll_unpin(&mut self, cx: &mut Context<'_>) -> Poll<Self::Output>
         where Self: Unpin + Sized
     {
-        Pin::new(self).poll(waker)
+        Pin::new(self).poll(cx)
     }
 }
 

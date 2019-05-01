@@ -7,7 +7,7 @@ use void::Void;
 use futures::{
     future::{Future, FutureExt, FutureObj},
     ready,
-    task::{Poll, Waker},
+    task::{Context, Poll},
 };
 use std::{marker::Unpin, pin::Pin};
 
@@ -22,9 +22,9 @@ impl<E> Unpin for StateMachine<E> {}
 impl<E> Future for StateMachine<E> {
     type Output = Result<Void, E>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
-            match ready!(self.cur_state.0.poll_unpin(lw)) {
+            match ready!(self.cur_state.0.poll_unpin(cx)) {
                 Ok(next) => self.cur_state = next,
                 Err(e) => return Poll::Ready(Err(e)),
             }

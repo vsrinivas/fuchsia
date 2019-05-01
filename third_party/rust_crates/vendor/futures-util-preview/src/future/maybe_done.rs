@@ -3,7 +3,7 @@
 use core::mem;
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 
 /// A future that may have completed.
 ///
@@ -27,7 +27,7 @@ impl<Fut: Future + Unpin> Unpin for MaybeDone<Fut> {}
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 /// use pin_utils::pin_mut;
@@ -50,7 +50,6 @@ impl<Fut: Future> MaybeDone<Fut> {
     /// future has been completed and [`take_output`](MaybeDone::take_output)
     /// has not yet been called.
     #[inline]
-    #[allow(clippy::needless_lifetimes)] // https://github.com/rust-lang/rust/issues/52675
     pub fn output_mut<'a>(self: Pin<&'a mut Self>) -> Option<&'a mut Fut::Output> {
         unsafe {
             let this = Pin::get_unchecked_mut(self);
@@ -92,11 +91,11 @@ impl<Fut: Future> FusedFuture for MaybeDone<Fut> {
 impl<Fut: Future> Future for MaybeDone<Fut> {
     type Output = ();
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let res = unsafe {
             match Pin::get_unchecked_mut(self.as_mut()) {
                 MaybeDone::Future(a) => {
-                    if let Poll::Ready(res) = Pin::new_unchecked(a).poll(waker) {
+                    if let Poll::Ready(res) = Pin::new_unchecked(a).poll(cx) {
                         res
                     } else {
                         return Poll::Pending
@@ -106,7 +105,7 @@ impl<Fut: Future> Future for MaybeDone<Fut> {
                 MaybeDone::Gone => panic!("MaybeDone polled after value taken"),
             }
         };
-        Pin::set(&mut self, MaybeDone::Done(res));
+        self.set(MaybeDone::Done(res));
         Poll::Ready(())
     }
 }

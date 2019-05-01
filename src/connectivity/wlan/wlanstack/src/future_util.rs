@@ -4,7 +4,7 @@
 
 use futures::ready;
 use futures::stream::{Fuse, Stream, StreamExt};
-use futures::task::{Poll, Waker};
+use futures::task::{Context, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 use std::marker::Unpin;
 use std::pin::Pin;
@@ -37,16 +37,16 @@ where
 {
     type Item = Result<Vec<T>, E>;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if let Some(e) = self.as_mut().error().take() {
             return Poll::Ready(Some(Err(e)));
         }
-        let mut batch = match ready!(self.as_mut().stream().poll_next(lw)?) {
+        let mut batch = match ready!(self.as_mut().stream().poll_next(cx)?) {
             Some(item) => vec![item],
             None => return Poll::Ready(None),
         };
         loop {
-            match self.as_mut().stream().poll_next(lw) {
+            match self.as_mut().stream().poll_next(cx) {
                 Poll::Ready(Some(Ok(item))) => batch.push(item),
                 Poll::Ready(None) | Poll::Pending => break,
                 Poll::Ready(Some(Err(e))) => {

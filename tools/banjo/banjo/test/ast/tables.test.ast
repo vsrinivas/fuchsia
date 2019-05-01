@@ -4,127 +4,127 @@ BanjoAst {
         "banjo.examples.tables": [
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.tables"
+                        "banjo.examples.tables",
                     ),
-                    name: "A"
+                    name: "A",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.tables"
+                                    "banjo.examples.tables",
                                 ),
-                                name: "B"
+                                name: "B",
                             },
-                            reference: true
+                            reference: true,
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "foo"
+                            name: "foo",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.tables"
+                        "banjo.examples.tables",
                     ),
-                    name: "B"
+                    name: "B",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.tables"
+                                    "banjo.examples.tables",
                                 ),
-                                name: "A"
+                                name: "A",
                             },
-                            reference: true
+                            reference: true,
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "bar"
+                            name: "bar",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.tables"
+                        "banjo.examples.tables",
                     ),
-                    name: "C"
+                    name: "C",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Handle {
                             ty: Handle,
-                            reference: false
+                            reference: false,
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "baz"
+                            name: "baz",
                         },
-                        val: None
-                    }
-                ]
+                        val: None,
+                    },
+                ],
             },
             Struct {
                 attributes: Attrs(
-                    []
+                    [],
                 ),
                 name: Ident {
                     namespace: Some(
-                        "banjo.examples.tables"
+                        "banjo.examples.tables",
                     ),
-                    name: "D"
+                    name: "D",
                 },
                 fields: [
                     StructField {
                         attributes: Attrs(
-                            []
+                            [],
                         ),
                         ty: Identifier {
                             id: Ident {
                                 namespace: Some(
-                                    "banjo.examples.tables"
+                                    "banjo.examples.tables",
                                 ),
-                                name: "C"
+                                name: "C",
                             },
-                            reference: false
+                            reference: false,
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "qux"
+                            name: "qux",
                         },
-                        val: None
-                    }
-                ]
-            }
-        ]
-    }
+                        val: None,
+                    },
+                ],
+            },
+        ],
+    },
 }

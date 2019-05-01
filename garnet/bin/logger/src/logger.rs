@@ -9,7 +9,7 @@ use {
     futures::{
         io::{self, AsyncRead},
         ready,
-        task::{Poll, Waker},
+        task::{Context, Poll},
         Stream,
     },
     libc::{c_char, c_int, uint32_t, uint64_t, uint8_t},
@@ -143,10 +143,10 @@ impl Stream for LoggerStream {
     /// LogMessage data structure.
     type Item = io::Result<(LogMessage, usize)>;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         BUFFER.with(|b| {
             let mut b = b.borrow_mut();
-            let len = ready!(self.socket.poll_read(lw, &mut *b)?);
+            let len = ready!(Pin::new(&mut self.socket).poll_read(cx, &mut *b)?);
             if len == 0 {
                 return Poll::Ready(None);
             }

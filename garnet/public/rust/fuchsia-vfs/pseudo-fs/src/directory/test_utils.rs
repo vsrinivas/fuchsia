@@ -30,7 +30,7 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, NodeMarker, MAX_FILENAME},
     fuchsia_async::Executor,
     futures::channel::mpsc,
-    futures::{future::FutureExt, select, stream::StreamExt, Future},
+    futures::{future::join, select, stream::StreamExt, Future},
     pin_utils::pin_mut,
     std::{io::Write, iter},
     void::unreachable,
@@ -78,7 +78,7 @@ pub fn run_server_client_with_mode<GetClientRes>(
     );
 
     let client = get_client(client_proxy);
-    let future = server.join(client);
+    let future = join(server, client);
 
     // TODO: How to limit the execution time?  run_until_stalled() does not trigger timers, so
     // I can not do this:
@@ -132,7 +132,7 @@ pub fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
     };
 
     let client = get_client(open_requests_tx);
-    let future = server_wrapper.join(client);
+    let future = join(server_wrapper, client);
 
     // As our clients are async generators, we need to pin this future explicitly.
     // All async generators are !Unpin by default.

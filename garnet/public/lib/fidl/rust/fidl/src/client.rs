@@ -16,14 +16,14 @@ use {
     },
     fuchsia_async::{
         self as fasync,
-        temp::{Either, TempFutureExt},
+        temp::TempFutureExt,
     },
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
-        future::{self, AndThen, Future, Ready, TryFutureExt},
+        future::{self, AndThen, Either, Future, FutureExt, Ready, TryFutureExt},
         ready,
         stream::{FusedStream, Stream},
-        task::{Poll, Waker},
+        task::{Context, Poll, Waker},
     },
     parking_lot::Mutex,
     slab::Slab,
@@ -203,12 +203,12 @@ impl Unpin for MessageResponse {}
 
 impl Future for MessageResponse {
     type Output = Result<zx::MessageBuf, Error>;
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
         let res;
         {
             let client = this.client.as_ref().ok_or(Error::PollAfterCompletion)?;
-            res = client.poll_recv_msg_response(this.id, lw);
+            res = client.poll_recv_msg_response(this.id, cx);
         }
 
         // Drop the client reference if the response has been received
@@ -281,9 +281,9 @@ impl FusedStream for EventReceiver {
 impl Stream for EventReceiver {
     type Item = Result<zx::MessageBuf, Error>;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let inner = self.inner.as_ref().expect("polled EventReceiver after `None`");
-        Poll::Ready(match ready!(inner.poll_recv_event(lw)) {
+        Poll::Ready(match ready!(inner.poll_recv_event(cx)) {
             Ok(x) => Some(Ok(x)),
             Err(Error::ClientRead(zx::Status::PEER_CLOSED)) => {
                 self.inner = None;
@@ -360,11 +360,11 @@ impl ClientInner {
         InterestId(self.message_interests.lock().insert(MessageInterest::WillPoll))
     }
 
-    fn poll_recv_event(&self, lw: &Waker) -> Poll<Result<zx::MessageBuf, Error>> {
+    fn poll_recv_event(&self, cx: &mut Context<'_>) -> Poll<Result<zx::MessageBuf, Error>> {
         {
             // Update the EventListener with the latest waker, remove any stale WillPoll state
             let mut lock = self.event_channel.lock();
-            lock.listener = EventListener::Some(lw.clone());
+            lock.listener = EventListener::Some(cx.waker().clone());
         }
 
         let is_closed = self.recv_all()?;
@@ -385,7 +385,7 @@ impl ClientInner {
     fn poll_recv_msg_response(
         &self,
         txid: Txid,
-        lw: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<zx::MessageBuf, Error>> {
         let interest_id = InterestId::from_txid(txid);
         {
@@ -396,7 +396,7 @@ impl ClientInner {
                 .get_mut(interest_id.as_raw_id())
                 .expect("Polled unregistered interest");
             if !message_interest.is_received() {
-                *message_interest = MessageInterest::Waiting(lw.clone());
+                *message_interest = MessageInterest::Waiting(cx.waker().clone());
             }
         }
 
@@ -428,18 +428,22 @@ impl ClientInner {
         // TODO(cramertj) return errors if one has occured _ever_ in recv_all, not just if
         // one happens on this call.
         loop {
-            let waker = match self.get_pending_waker() {
-                Some(v) => v,
-                None => return Ok(false),
-            };
+            let buf = {
+                let waker = match self.get_pending_waker() {
+                    Some(v) => v,
+                    None => return Ok(false),
+                };
+                let cx = &mut Context::from_waker(&waker);
 
-            let mut buf = zx::MessageBuf::new();
-            match self.channel.recv_from(&mut buf, &waker) {
-                Poll::Ready(Ok(())) => {}
-                Poll::Ready(Err(zx::Status::PEER_CLOSED)) => return Ok(true),
-                Poll::Ready(Err(e)) => return Err(Error::ClientRead(e)),
-                Poll::Pending => return Ok(false),
-            }
+                let mut buf = zx::MessageBuf::new();
+                match self.channel.recv_from(cx, &mut buf) {
+                    Poll::Ready(Ok(())) => {}
+                    Poll::Ready(Err(zx::Status::PEER_CLOSED)) => return Ok(true),
+                    Poll::Ready(Err(e)) => return Err(Error::ClientRead(e)),
+                    Poll::Pending => return Ok(false),
+                }
+                buf
+            };
 
             let (header, _) =
                 decode_transaction_header(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
@@ -609,11 +613,11 @@ pub mod sync {
 mod tests {
     use super::*;
     use {
-        crate::wake_counter,
         failure::{Error, ResultExt},
         fuchsia_async::TimeoutExt,
         fuchsia_zircon::DurationNum,
-        futures::{FutureExt, StreamExt},
+        futures::{future::join, FutureExt, StreamExt},
+        futures_test::task::new_count_waker,
         std::{io, thread},
     };
 
@@ -704,7 +708,7 @@ mod tests {
             client.send(&mut SEND_DATA, SEND_ORDINAL).expect("failed to send msg");
         });
 
-        executor.run_singlethreaded(receiver.join(sender));
+        executor.run_singlethreaded(join(receiver, sender));
     }
 
     #[test]
@@ -750,7 +754,7 @@ mod tests {
         let sender = sender
             .on_timeout(300.millis().after_now(), || panic!("did not receive response in time!"));
 
-        executor.run_singlethreaded(receiver.join(sender));
+        executor.run_singlethreaded(join(receiver, sender));
     }
 
     #[test]
@@ -819,7 +823,8 @@ mod tests {
         let mut event_receiver = client.take_event_receiver();
 
         // first poll on a response
-        let (response_waker, response_waker_count) = wake_counter::new_count_waker();
+        let (response_waker, response_waker_count) = new_count_waker();
+        let response_cx = &mut Context::from_waker(&response_waker);
         let mut response_txid = Txid(0);
         let mut response_future = client.send_raw_query(|tx_id, bytes, handles| {
             response_txid = tx_id;
@@ -828,11 +833,12 @@ mod tests {
             encode_transaction(header, bytes, handles);
             Ok(())
         });
-        assert!(response_future.poll_unpin(&response_waker).is_pending());
+        assert!(response_future.poll_unpin(response_cx).is_pending());
 
         // then, poll on an event
-        let (event_waker, event_waker_count) = wake_counter::new_count_waker();
-        assert!(event_receiver.poll_next_unpin(&event_waker).is_pending());
+        let (event_waker, event_waker_count) = new_count_waker();
+        let event_cx = &mut Context::from_waker(&event_waker);
+        assert!(event_receiver.poll_next_unpin(event_cx).is_pending());
 
         // at this point, nothing should have been woken
         assert_eq!(response_waker_count.get(), 0);
@@ -849,7 +855,7 @@ mod tests {
         let last_response_waker_count = response_waker_count.get();
 
         // we'll pretend event_waker was woken, and have that poll out the event
-        assert!(event_receiver.poll_next_unpin(&event_waker).is_ready());
+        assert!(event_receiver.poll_next_unpin(event_cx).is_ready());
 
         // next, simulate a response coming in
         send_transaction(
@@ -876,9 +882,10 @@ mod tests {
         send_transaction(TransactionHeader { tx_id: 0, flags: 0, ordinal: 5 }, &server_end);
 
         // next, poll on a response
-        let (response_waker, _response_waker_count) = wake_counter::new_count_waker();
+        let (response_waker, _response_waker_count) = new_count_waker();
+        let response_cx = &mut Context::from_waker(&response_waker);
         let mut response_future = client.send_query::<u8, u8>(&mut 55, 42);
-        assert!(response_future.poll_unpin(&response_waker).is_pending());
+        assert!(response_future.poll_unpin(response_cx).is_pending());
 
         // then, make sure we can still take the event receiver without panicking
         let mut _event_receiver = client.take_event_receiver();

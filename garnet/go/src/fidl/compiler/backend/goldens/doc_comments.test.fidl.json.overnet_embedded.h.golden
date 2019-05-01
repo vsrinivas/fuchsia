@@ -10,42 +10,9 @@ namespace test {
 namespace name {
 namespace embedded {
 
-class Struct;
 class Union;
 class Table;
-
-// struct comment #1
-//
-// struct comment #3
-class Struct  {
- public:
-  static const fidl_type_t* FidlType;
-  
-  // struct member comment #1
-  //
-  // struct member comment #3
-  int32_t Field{};
-
-  static inline ::std::unique_ptr<Struct> New() { return ::std::make_unique<Struct>(); }
-
-  void Encode(::overnet::internal::Encoder* _encoder, size_t _offset);
-  static void Decode(::overnet::internal::Decoder* _decoder, Struct* value, size_t _offset);
-  zx_status_t Clone(Struct* result) const;
-};
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const Struct& _lhs, const Struct& _rhs);
-inline bool operator!=(const Struct& _lhs, const Struct& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
-
-inline zx_status_t Clone(const ::test::name::embedded::Struct& _value,
-                         ::test::name::embedded::Struct* _result) {
-  return _value.Clone(_result);
-}
-
-using StructPtr = ::std::unique_ptr<Struct>;
+class Struct;
 
 // union comment #1
 //
@@ -205,6 +172,39 @@ inline bool operator!=(const Table& _lhs, const Table& _rhs) {
 
 using TablePtr = ::std::unique_ptr<Table>;
 
+// struct comment #1
+//
+// struct comment #3
+class Struct  {
+ public:
+  static const fidl_type_t* FidlType;
+  
+  // struct member comment #1
+  //
+  // struct member comment #3
+  int32_t Field{};
+
+  static inline ::std::unique_ptr<Struct> New() { return ::std::make_unique<Struct>(); }
+
+  void Encode(::overnet::internal::Encoder* _encoder, size_t _offset);
+  static void Decode(::overnet::internal::Decoder* _decoder, Struct* value, size_t _offset);
+  zx_status_t Clone(Struct* result) const;
+};
+
+#ifdef FIDL_OPERATOR_EQUALS
+bool operator==(const Struct& _lhs, const Struct& _rhs);
+inline bool operator!=(const Struct& _lhs, const Struct& _rhs) {
+  return !(_lhs == _rhs);
+}
+#endif
+
+inline zx_status_t Clone(const ::test::name::embedded::Struct& _value,
+                         ::test::name::embedded::Struct* _result) {
+  return _value.Clone(_result);
+}
+
+using StructPtr = ::std::unique_ptr<Struct>;
+
 // const comment #1
 //
 // const comment #3
@@ -215,33 +215,6 @@ constexpr int32_t C = 4;
 }  // namespace test
 namespace fidl {
 
-template <>
-struct CodingTraits<::test::name::embedded::Struct>
-    : public EncodableCodingTraits<::test::name::embedded::Struct, 4> {};
-
-inline zx_status_t Clone(const ::test::name::embedded::Struct& value,
-                         ::test::name::embedded::Struct* result) {
-  return ::test::name::embedded::Clone(value, result);
-}
-
-template <>
-struct ToEmbeddedTraits<::test::name::Struct> {
-  static ::test::name::embedded::Struct Lift(const ::test::name::Struct& _value) {
-    return ::test::name::embedded::Struct {
-      ToEmbedded(_value.Field),
-    };
-  }
-};
-
-template<>
-struct Equality<::test::name::embedded::Struct> {
-  static inline bool Equals(const ::test::name::embedded::Struct& _lhs, const ::test::name::embedded::Struct& _rhs) {
-    if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
-      return false;
-    }
-    return true;
-  }
-};
 template <>
 struct CodingTraits<::test::name::embedded::Union>
     : public EncodableCodingTraits<::test::name::embedded::Union, 8> {};
@@ -298,6 +271,33 @@ struct Equality<::test::name::embedded::Table> {
 	return false;
       }
     } else if (_rhs.has_Field()) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::name::embedded::Struct>
+    : public EncodableCodingTraits<::test::name::embedded::Struct, 4> {};
+
+inline zx_status_t Clone(const ::test::name::embedded::Struct& value,
+                         ::test::name::embedded::Struct* result) {
+  return ::test::name::embedded::Clone(value, result);
+}
+
+template <>
+struct ToEmbeddedTraits<::test::name::Struct> {
+  static ::test::name::embedded::Struct Lift(const ::test::name::Struct& _value) {
+    return ::test::name::embedded::Struct {
+      ToEmbedded(_value.Field),
+    };
+  }
+};
+
+template<>
+struct Equality<::test::name::embedded::Struct> {
+  static inline bool Equals(const ::test::name::embedded::Struct& _lhs, const ::test::name::embedded::Struct& _rhs) {
+    if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
       return false;
     }
     return true;

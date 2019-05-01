@@ -1,12 +1,10 @@
 //! Built-in executors and related tools.
 
-#![feature(futures_api)]
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 
-#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.13/futures_executor")]
+#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.15/futures_executor")]
 
 #[cfg(feature = "std")]
 mod local_pool;

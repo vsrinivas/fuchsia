@@ -1,46 +1,44 @@
 use core::marker::PhantomData;
 use core::pin::Pin;
 use futures_core::stream::Stream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// Sink for the `Sink::with_flat_map` combinator, chaining a computation that
-/// returns an iterator to run prior to pushing a value into the underlying
-/// sink.
+/// Sink for the [`with_flat_map`](super::SinkExt::with_flat_map) method.
 #[derive(Debug)]
 #[must_use = "sinks do nothing unless polled"]
-pub struct WithFlatMap<Si, U, St, F>
+pub struct WithFlatMap<Si, Item, U, St, F>
 where
-    Si: Sink,
+    Si: Sink<Item>,
     F: FnMut(U) -> St,
-    St: Stream<Item = Result<Si::SinkItem, Si::SinkError>>,
+    St: Stream<Item = Result<Item, Si::SinkError>>,
 {
     sink: Si,
     f: F,
     stream: Option<St>,
-    buffer: Option<Si::SinkItem>,
+    buffer: Option<Item>,
     _marker: PhantomData<fn(U)>,
 }
 
-impl<Si, U, St, F> Unpin for WithFlatMap<Si, U, St, F>
+impl<Si, Item, U, St, F> Unpin for WithFlatMap<Si, Item, U, St, F>
 where
-    Si: Sink + Unpin,
+    Si: Sink<Item> + Unpin,
     F: FnMut(U) -> St,
-    St: Stream<Item = Result<Si::SinkItem, Si::SinkError>> + Unpin,
+    St: Stream<Item = Result<Item, Si::SinkError>> + Unpin,
 {}
 
-impl<Si, U, St, F> WithFlatMap<Si, U, St, F>
+impl<Si, Item, U, St, F> WithFlatMap<Si, Item, U, St, F>
 where
-    Si: Sink,
+    Si: Sink<Item>,
     F: FnMut(U) -> St,
-    St: Stream<Item = Result<Si::SinkItem, Si::SinkError>>,
+    St: Stream<Item = Result<Item, Si::SinkError>>,
 {
     unsafe_pinned!(sink: Si);
     unsafe_unpinned!(f: F);
     unsafe_pinned!(stream: Option<St>);
 
-    pub(super) fn new(sink: Si, f: F) -> WithFlatMap<Si, U, St, F> {
+    pub(super) fn new(sink: Si, f: F) -> Self {
         WithFlatMap {
             sink,
             f,
@@ -61,9 +59,8 @@ where
     }
 
     /// Get a pinned mutable reference to the inner sink.
-    #[allow(clippy::needless_lifetimes)] // https://github.com/rust-lang/rust/issues/52675
     pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut Si> {
-        unsafe { Pin::map_unchecked_mut(self, |x| &mut x.sink) }
+        self.sink()
     }
 
     /// Consumes this combinator, returning the underlying sink.
@@ -76,7 +73,7 @@ where
 
     fn try_empty_stream(
         self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<(), Si::SinkError>> {
         let WithFlatMap { sink, stream, buffer, .. } =
             unsafe { Pin::get_unchecked_mut(self) };
@@ -84,14 +81,14 @@ where
         let mut stream = unsafe { Pin::new_unchecked(stream) };
 
         if buffer.is_some() {
-            try_ready!(sink.as_mut().poll_ready(waker));
+            try_ready!(sink.as_mut().poll_ready(cx));
             let item = buffer.take().unwrap();
             try_ready!(Poll::Ready(sink.as_mut().start_send(item)));
         }
         if let Some(mut some_stream) = stream.as_mut().as_pin_mut() {
-            while let Some(x) = ready!(some_stream.as_mut().poll_next(waker)) {
+            while let Some(x) = ready!(some_stream.as_mut().poll_next(cx)) {
                 let item = try_ready!(Poll::Ready(x));
-                match sink.as_mut().poll_ready(waker)? {
+                match sink.as_mut().poll_ready(cx)? {
                     Poll::Ready(()) => sink.as_mut().start_send(item)?,
                     Poll::Pending => {
                         *buffer = Some(item);
@@ -100,45 +97,44 @@ where
                 };
             }
         }
-        Pin::set(&mut stream, None);
+        stream.set(None);
         Poll::Ready(Ok(()))
     }
 }
 
-impl<S, U, St, F> Stream for WithFlatMap<S, U, St, F>
+impl<S, Item, U, St, F> Stream for WithFlatMap<S, Item, U, St, F>
 where
-    S: Stream + Sink,
+    S: Stream + Sink<Item>,
     F: FnMut(U) -> St,
-    St: Stream<Item = Result<S::SinkItem, S::SinkError>>,
+    St: Stream<Item = Result<Item, S::SinkError>>,
 {
     type Item = S::Item;
     fn poll_next(
         self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<S::Item>> {
-        self.sink().poll_next(waker)
+        self.sink().poll_next(cx)
     }
 }
 
-impl<Si, U, St, F> Sink for WithFlatMap<Si, U, St, F>
+impl<Si, Item, U, St, F> Sink<U> for WithFlatMap<Si, Item, U, St, F>
 where
-    Si: Sink,
+    Si: Sink<Item>,
     F: FnMut(U) -> St,
-    St: Stream<Item = Result<Si::SinkItem, Si::SinkError>>,
+    St: Stream<Item = Result<Item, Si::SinkError>>,
 {
-    type SinkItem = U;
     type SinkError = Si::SinkError;
 
     fn poll_ready(
         self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<(), Self::SinkError>> {
-        self.try_empty_stream(waker)
+        self.try_empty_stream(cx)
     }
 
     fn start_send(
         mut self: Pin<&mut Self>,
-        item: Self::SinkItem,
+        item: U,
     ) -> Result<(), Self::SinkError> {
         assert!(self.stream.is_none());
         let stream = (self.as_mut().f())(item);
@@ -148,22 +144,22 @@ where
 
     fn poll_flush(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<(), Self::SinkError>> {
-        match self.as_mut().try_empty_stream(waker) {
+        match self.as_mut().try_empty_stream(cx) {
             Poll::Pending => Poll::Pending,
-            Poll::Ready(Ok(())) => self.as_mut().sink().poll_flush(waker),
+            Poll::Ready(Ok(())) => self.as_mut().sink().poll_flush(cx),
             Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
         }
     }
 
     fn poll_close(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<(), Self::SinkError>> {
-        match self.as_mut().try_empty_stream(waker) {
+        match self.as_mut().try_empty_stream(cx) {
             Poll::Pending => Poll::Pending,
-            Poll::Ready(Ok(())) => self.as_mut().sink().poll_close(waker),
+            Poll::Ready(Ok(())) => self.as_mut().sink().poll_close(cx),
             Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
         }
     }

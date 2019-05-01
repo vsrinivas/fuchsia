@@ -1,10 +1,8 @@
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 
-/// A future which, when polled, invokes a closure and yields its result.
-///
-/// This is created by the [`lazy()`] function.
+/// Future for the [`lazy`] function.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct Lazy<F> {
@@ -21,7 +19,7 @@ impl<F> Unpin for Lazy<F> {}
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await, await_macro, futures_api)]
+/// #![feature(async_await, await_macro)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
@@ -35,7 +33,7 @@ impl<F> Unpin for Lazy<F> {}
 /// # });
 /// ```
 pub fn lazy<F, R>(f: F) -> Lazy<F>
-    where F: FnOnce(&Waker) -> R,
+    where F: FnOnce(&mut Context<'_>) -> R,
 {
     Lazy { f: Some(f) }
 }
@@ -45,11 +43,11 @@ impl<F> FusedFuture for Lazy<F> {
 }
 
 impl<R, F> Future for Lazy<F>
-    where F: FnOnce(&Waker) -> R,
+    where F: FnOnce(&mut Context<'_>) -> R,
 {
     type Output = R;
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<R> {
-        Poll::Ready((self.f.take().unwrap())(waker))
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<R> {
+        Poll::Ready((self.f.take().unwrap())(cx))
     }
 }

@@ -1,13 +1,10 @@
 use core::pin::Pin;
 use futures_core::future::{Future, TryFuture};
 use futures_core::stream::TryStream;
-use futures_core::task::{Waker, Poll};
+use futures_core::task::{Context, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
-/// A stream combinator which attempts to execute an async closure over each
-/// future in a stream.
-///
-/// This future is returned by the `TryStream::try_for_each` method.
+/// Future for the [`try_for_each`](super::TryStreamExt::try_for_each) method.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct TryForEach<St, Fut, F> {
@@ -43,17 +40,17 @@ impl<St, Fut, F> Future for TryForEach<St, Fut, F>
 {
     type Output = Result<(), St::Error>;
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
             if let Some(future) = self.as_mut().future().as_pin_mut() {
-                try_ready!(future.try_poll(waker));
+                try_ready!(future.try_poll(cx));
             }
-            Pin::set(&mut self.as_mut().future(), None);
+            self.as_mut().future().set(None);
 
-            match ready!(self.as_mut().stream().try_poll_next(waker)) {
+            match ready!(self.as_mut().stream().try_poll_next(cx)) {
                 Some(Ok(e)) => {
                     let future = (self.as_mut().f())(e);
-                    Pin::set(&mut self.as_mut().future(), Some(future));
+                    self.as_mut().future().set(Some(future));
                 }
                 Some(Err(e)) => return Poll::Ready(Err(e)),
                 None => return Poll::Ready(Ok(())),

@@ -1,9 +1,8 @@
-#![feature(futures_api)]
-
 use futures::channel::oneshot::{self, Sender};
 use futures::executor::block_on;
 use futures::future::{Future, FutureExt, poll_fn};
-use futures::task::{Waker, Poll};
+use futures::task::{Context, Poll};
+use futures_test::task::panic_waker_ref;
 use std::pin::Pin;
 use std::sync::mpsc;
 use std::thread;
@@ -12,12 +11,12 @@ use std::thread;
 fn smoke_poll() {
     let (mut tx, rx) = oneshot::channel::<u32>();
     let mut rx = Some(rx);
-    let f = poll_fn(|waker| {
-        assert!(tx.poll_cancel(waker).is_pending());
-        assert!(tx.poll_cancel(waker).is_pending());
+    let f = poll_fn(|cx| {
+        assert!(tx.poll_cancel(cx).is_pending());
+        assert!(tx.poll_cancel(cx).is_pending());
         drop(rx.take());
-        assert!(tx.poll_cancel(waker).is_ready());
-        assert!(tx.poll_cancel(waker).is_ready());
+        assert!(tx.poll_cancel(cx).is_ready());
+        assert!(tx.poll_cancel(cx).is_ready());
         Poll::Ready(())
     });
 
@@ -42,8 +41,8 @@ struct WaitForCancel {
 impl Future for WaitForCancel {
     type Output = ();
 
-    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
-        self.tx.poll_cancel(waker)
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.tx.poll_cancel(cx)
     }
 }
 
@@ -70,15 +69,24 @@ fn cancel_lots() {
 }
 
 #[test]
+fn cancel_after_sender_drop_doesnt_notify() {
+    let (mut tx, rx) = oneshot::channel::<u32>();
+    let mut cx = Context::from_waker(panic_waker_ref());
+    assert_eq!(tx.poll_cancel(&mut cx), Poll::Pending);
+    drop(tx);
+    drop(rx);
+}
+
+#[test]
 fn close() {
     let (mut tx, mut rx) = oneshot::channel::<u32>();
     rx.close();
-    block_on(poll_fn(|waker| {
-        match rx.poll_unpin(waker) {
+    block_on(poll_fn(|cx| {
+        match rx.poll_unpin(cx) {
             Poll::Ready(Err(_)) => {},
             _ => panic!(),
         };
-        assert!(tx.poll_cancel(waker).is_ready());
+        assert!(tx.poll_cancel(cx).is_ready());
         Poll::Ready(())
     }));
 }
@@ -155,7 +163,7 @@ fn cancel_sends() {
 //         type Error = ();
 //
 //         fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-//             Ok(Async::Pending)
+//             Ok(Poll::Pending)
 //         }
 //     }
 //
@@ -217,7 +225,7 @@ fn cancel_sends() {
 //         type Error = ();
 //
 //         fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-//             Ok(Async::Pending)
+//             Ok(Poll::Pending)
 //         }
 //     }
 //

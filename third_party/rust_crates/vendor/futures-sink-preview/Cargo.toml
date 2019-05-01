@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -13,29 +13,26 @@
 [package]
 edition = "2018"
 name = "futures-sink-preview"
-version = "0.3.0-alpha.13"
+version = "0.3.0-alpha.15"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "The asynchronous `Sink` trait for the futures-rs library.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
-documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.13/futures_sink"
+documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.15/futures_sink"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang-nursery/futures-rs"
 
 [lib]
 name = "futures_sink"
-[dependencies.either]
-version = "1.4"
-optional = true
-default-features = false
-
 [dependencies.futures-channel-preview]
-version = "=0.3.0-alpha.13"
+version = "=0.3.0-alpha.15"
 default-features = false
 
 [dependencies.futures-core-preview]
-version = "=0.3.0-alpha.13"
+version = "=0.3.0-alpha.15"
 default-features = false
 
 [features]
+alloc = ["futures-core-preview/alloc"]
 default = ["std"]
-std = ["either/use_std", "futures-core-preview/std", "futures-channel-preview/std"]
+nightly = ["futures-core-preview/nightly"]
+std = ["alloc", "futures-core-preview/std", "futures-channel-preview/std"]

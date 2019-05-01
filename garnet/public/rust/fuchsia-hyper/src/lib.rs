@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(futures_api)]
-
 use hyper_rustls;
 use rustls;
 
@@ -17,7 +15,7 @@ use {
         future::{Future, FutureExt, TryFutureExt},
         io::{self, AsyncReadExt},
         ready,
-        task::{Poll, SpawnExt, Waker},
+        task::{Context, Poll, SpawnExt},
     },
     hyper::{
         client::{
@@ -36,9 +34,9 @@ pub struct HyperTcpConnector(Result<TcpConnector, Option<io::Error>>);
 impl Future for HyperTcpConnector {
     type Output = Result<(Compat<TcpStream>, Connected), io::Error>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let connector = self.0.as_mut().map_err(|x| x.take().unwrap())?;
-        let stream = ready!(connector.poll_unpin(lw)?);
+        let stream = ready!(connector.poll_unpin(cx)?);
         Poll::Ready(Ok((stream.compat(), Connected::new())))
     }
 }

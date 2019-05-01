@@ -216,7 +216,7 @@ mod tests {
             assert!(await!(client.possibly_send(&EVENT_ADDED)).is_ok());
             assert!(await!(client.possibly_send(&EVENT_REMOVED)).is_ok());
         };
-        await!(serve_fut.join(request_fut));
+        await!(join(serve_fut, request_fut));
     }
 
     /// Given two independent clients with different options/filters, send events and check
@@ -297,7 +297,7 @@ mod tests {
             await!(account_event_emitter.publish(&EVENT_ADDED));
             await!(account_event_emitter.publish(&EVENT_REMOVED));
         };
-        await!(serve_fut_1.join3(serve_fut_2, request_fut));
+        await!(join3(serve_fut_1, serve_fut_2, request_fut));
     }
 
     /// Check that that stale clients are cleaned up, once the server is closed
@@ -331,7 +331,7 @@ mod tests {
             }
             account_event_emitter
         };
-        let (_, account_event_emitter) = await!(serve_fut.join(request_fut));
+        let (_, account_event_emitter) = await!(join(serve_fut, request_fut));
 
         // Now the server is dropped, so the new publish should trigger a drop of the client
         await!(account_event_emitter.publish(&EVENT_REMOVED));

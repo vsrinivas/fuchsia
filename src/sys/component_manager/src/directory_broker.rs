@@ -7,7 +7,7 @@ use {
     fuchsia_vfs_pseudo_fs as fvfs,
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
     //fuchsia_zircon::{self as zx, Status},
-    futures::{future::FusedFuture, task::Waker, Future, Poll},
+    futures::{future::FusedFuture, task::Context, Future, Poll},
     std::pin::Pin,
     void::Void,
 };
@@ -68,7 +68,7 @@ impl FusedFuture for DirectoryBroker {
 }
 impl Future for DirectoryBroker {
     type Output = Void;
-    fn poll(self: Pin<&mut Self>, _lw: &Waker) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
         Poll::Pending
     }
 }

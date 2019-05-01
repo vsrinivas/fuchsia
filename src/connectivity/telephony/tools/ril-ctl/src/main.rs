@@ -12,7 +12,7 @@
 //! Ex: ril-ctl -d /dev/class/qmi-usb-transport/000
 //!
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro)]
 
 use {
     crate::commands::{Cmd, ReplControl},

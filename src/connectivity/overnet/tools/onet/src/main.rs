@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
-#![feature(futures_api)]
-
 use {
     clap::{App, SubCommand},
     failure::{Error, ResultExt},
     fidl_fuchsia_overnet::{OvernetMarker, OvernetProxy},
-    fuchsia_async::{self as fasync, temp::TempFutureExt},
+    fuchsia_async as fasync,
     futures::{future::lazy, prelude::*},
 };
 

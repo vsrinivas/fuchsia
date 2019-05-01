@@ -4,18 +4,13 @@ use core::ptr::null;
 #[cfg(feature = "std")]
 use core::cell::UnsafeCell;
 
-unsafe fn noop_clone(_data: *const()) -> RawWaker {
+unsafe fn noop_clone(_data: *const ()) -> RawWaker {
     noop_raw_waker()
 }
 
-unsafe fn noop(_data: *const()) {
-}
+unsafe fn noop(_data: *const ()) {}
 
-const NOOP_WAKER_VTABLE: RawWakerVTable = RawWakerVTable {
-    clone: noop_clone,
-    drop: noop,
-    wake: noop,
-};
+const NOOP_WAKER_VTABLE: RawWakerVTable = RawWakerVTable::new(noop_clone, noop, noop, noop);
 
 fn noop_raw_waker() -> RawWaker {
     RawWaker::new(null(), &NOOP_WAKER_VTABLE)
@@ -28,15 +23,14 @@ fn noop_raw_waker() -> RawWaker {
 /// # Examples
 ///
 /// ```
-/// #![feature(futures_api)]
 /// use futures::task::noop_waker;
-/// let lw = noop_waker();
-/// lw.wake();
+/// let waker = noop_waker();
+/// waker.wake();
 /// ```
 #[inline]
 pub fn noop_waker() -> Waker {
     unsafe {
-        Waker::new_unchecked(noop_raw_waker())
+        Waker::from_raw(noop_raw_waker())
     }
 }
 
@@ -47,10 +41,9 @@ pub fn noop_waker() -> Waker {
 /// # Examples
 ///
 /// ```
-/// #![feature(futures_api)]
 /// use futures::task::noop_waker_ref;
-/// let lw = noop_waker_ref();
-/// lw.wake();
+/// let waker = noop_waker_ref();
+/// waker.wake_by_ref();
 /// ```
 #[inline]
 #[cfg(feature = "std")]
@@ -61,4 +54,3 @@ pub fn noop_waker_ref() -> &'static Waker {
     }
     NOOP_WAKER_INSTANCE.with(|l| unsafe { &*l.get() })
 }
-

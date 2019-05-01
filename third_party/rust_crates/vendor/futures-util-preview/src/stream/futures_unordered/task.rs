@@ -1,7 +1,7 @@
-use std::cell::UnsafeCell;
-use std::sync::{Arc, Weak};
-use std::sync::atomic::{AtomicPtr, AtomicBool};
-use std::sync::atomic::Ordering::SeqCst;
+use core::cell::UnsafeCell;
+use core::sync::atomic::{AtomicPtr, AtomicBool};
+use core::sync::atomic::Ordering::SeqCst;
+use alloc::sync::{Arc, Weak};
 
 use crate::task::{ArcWake, WakerRef, waker_ref};
 use super::ReadyToRunQueue;
@@ -36,7 +36,7 @@ unsafe impl<Fut> Send for Task<Fut> {}
 unsafe impl<Fut> Sync for Task<Fut> {}
 
 impl<Fut> ArcWake for Task<Fut> {
-    fn wake(arc_self: &Arc<Self>) {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
         let inner = match arc_self.ready_to_run_queue.upgrade() {
             Some(inner) => inner,
             None => return,

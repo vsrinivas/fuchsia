@@ -57,7 +57,7 @@ use {
         ops::Deref,
         pin::Pin,
         sync::Arc,
-        task::{Waker, Poll},
+        task::{Context, Poll},
     },
     void::Void,
 };
@@ -704,8 +704,8 @@ impl Drop for OneshotEvent {
 impl Future for OneshotEvent {
     type Output = <oneshot::Receiver<()> as Future>::Output;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
-        match self.oneshot.poll_unpin(lw) {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match self.oneshot.poll_unpin(cx) {
             Poll::Ready(x) => {
                 // Take the event so that we don't try to deregister it later,
                 // as by having sent the message we just received the callbacks
@@ -733,7 +733,7 @@ impl Drop for ListenStream {
 impl Stream for ListenStream {
     type Item = addr::Vsock;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
-        self.stream.poll_next_unpin(lw)
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.stream.poll_next_unpin(cx)
     }
 }
