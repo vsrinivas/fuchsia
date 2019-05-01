@@ -384,6 +384,14 @@ ElfLib::MemoryRegion ElfLib::GetSectionData(size_t section) {
     return {};
   }
 
+  if (header->sh_type == SHT_NULL) {
+    return {};
+  }
+
+  if (address_mode_ == AddressMode::kFile && header->sh_type == SHT_NOBITS) {
+    return {};
+  }
+
   ElfLib::MemoryRegion result;
   result.size = header->sh_size;
 

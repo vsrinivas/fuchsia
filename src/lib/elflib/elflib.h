@@ -184,7 +184,6 @@ class ElfLib {
   DynamicSection dynstr_;
   std::vector<Elf64_Shdr> sections_;
   std::vector<Elf64_Phdr> segments_;
-  std::map<size_t, std::vector<uint8_t>> section_data_;
   std::map<std::string, size_t> section_names_;
 
   std::vector<std::string> warnings_;

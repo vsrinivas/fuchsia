@@ -75,7 +75,7 @@ class TestData {
         .e_ehsize = sizeof(Elf64_Ehdr),
         .e_shentsize = sizeof(Elf64_Shdr),
         .e_phentsize = sizeof(Elf64_Phdr),
-        .e_shnum = 4,
+        .e_shnum = 6,
         .e_phnum = 2,
         .e_shstrndx = 0,
     });
@@ -109,6 +109,18 @@ class TestData {
         .sh_size = sizeof(Elf64_Sym),
         .sh_addr = kAddrPoison,
     });
+    PushData(Elf64_Shdr{
+        .sh_name = 34,
+        .sh_type = SHT_NULL,
+        .sh_size = 0,
+        .sh_addr = kAddrPoison,
+    });
+    PushData(Elf64_Shdr{
+        .sh_name = 40,
+        .sh_type = SHT_NOBITS,
+        .sh_size = 0,
+        .sh_addr = kAddrPoison,
+    });
 
     size_t phnote_hdr = PushData(Elf64_Phdr{
         .p_type = PT_NOTE,
@@ -117,7 +129,7 @@ class TestData {
     DataAt<Elf64_Ehdr>(0)->e_phoff = phnote_hdr;
 
     DataAt<Elf64_Shdr>(shstrtab_hdr)->sh_offset =
-        PushData("\0.shstrtab\0.stuff\0.strtab\0.symtab\0", 34);
+        PushData("\0.shstrtab\0.stuff\0.strtab\0.symtab\0.null\0.nobits\0", 48);
 
     DataAt<Elf64_Shdr>(stuff_hdr)->sh_offset = PushData("This is a test.", 15);
 
@@ -269,6 +281,18 @@ TEST(ElfLib, GetNote) {
   for (size_t i = 0; i < 32; i++) {
     EXPECT_EQ(i % 8, data[i]);
   }
+}
+
+TEST(ElfLib, MissingSections) {
+  TestData t;
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(t.Data(), t.Size());
+
+  ASSERT_NE(elf.get(), nullptr);
+
+  auto got = elf->GetSectionData(".null");
+  EXPECT_EQ(got.ptr, nullptr);
+  got = elf->GetSectionData(".nobits");
+  EXPECT_EQ(got.ptr, nullptr);
 }
 
 TEST(ElfLib, GetIrregularNote) {
