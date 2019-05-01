@@ -34,10 +34,10 @@ implemented by developers to extend the behavior of user experiences:
 After Fuchsia device startup, `basemgr` and `sessionmgr` are processes that
 provide session management, component lifecycle management and state management.
 
-*   [`basemgr`](basemgr.md) is responsible for user authentication and
+*   `basemgr` is responsible for user authentication and
     authorization. It leverages the Base Shell to present UI.
 
-*   [`sessionmgr`](sessionmgr.md) is responsible for the lifecycle of Stories,
+*   `sessionmgr` is responsible for the lifecycle of Stories,
     Modules and Agents, as well as service and state coordination between them.
     It leverages Session and Story Shells to manage the visual composition of
     these components.
