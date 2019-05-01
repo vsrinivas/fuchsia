@@ -10,7 +10,7 @@ resource("test-zbi") {
     "$target_out_dir/test-image.zbi",
   ]
   outputs = [
-    "test/test-image.zbi",
+    "testdata/zbi-bootfs/test-image.zbi",
   ]
   deps = [
     "$zx/system/ulib/zbi-bootfs/test:test-image",

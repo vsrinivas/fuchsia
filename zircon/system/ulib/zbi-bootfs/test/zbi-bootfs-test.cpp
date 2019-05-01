@@ -18,7 +18,7 @@
 #include <unittest/unittest.h>
 #include <zbi-bootfs/zbi-bootfs.h>
 
-#define file_path "boot/test/test-image.zbi"
+#define file_path "boot/testdata/zbi-bootfs/test-image.zbi"
 #define file_name "nand_image"
 
 static bool ZbiInit(void) {
