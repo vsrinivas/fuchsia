@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("bin") {
+  name = "module_resolver_rs"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:maplit",
+  ]
+}
+
+package("module_resolver_rs") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/module_resolver_rs"
+
+  meta = [
+    {
+      path = rebase_path("meta/module_resolver_rs.cmx")
+      dest = "module_resolver_rs.cmx"
+    },
+  ]
+}
+
+package("module_resolver_rs_tests") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "module_resolver_rs_bin_test"
+      environments = basic_envs
+    },
+  ]
+}

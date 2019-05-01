@@ -133,6 +133,7 @@ group("modular_unittests") {
   public_deps = [
     "//peridot/bin/agents/clipboard:clipboard_unittests",
     "//peridot/bin/basemgr:basemgr_unittests",
+    "//peridot/bin/module_resolver_rs:module_resolver_rs_tests",
     "//peridot/bin/sessionctl:sessionctl_unittests",
     "//peridot/bin/sessionmgr/agent_runner:agent_runner_unittests",
     "//peridot/bin/sessionmgr/entity_provider_runner:entity_provider_runner_unittests",
