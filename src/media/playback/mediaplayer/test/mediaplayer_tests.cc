@@ -85,7 +85,7 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
 
   // Creates a view.
   void CreateView() {
-    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     player_->CreateView(std::move(view_token));
     view_holder_token_ = std::move(view_holder_token);
   }

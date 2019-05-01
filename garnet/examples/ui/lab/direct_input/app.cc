@@ -315,7 +315,7 @@ void App::CreateScene(float display_width, float display_height) {
 
   // Create View/ViewHolder. Attach ViewHolder to root node.
   {
-    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
     view_holder_ = std::make_unique<scenic::ViewHolder>(
         session, std::move(view_holder_token), "view_holder");

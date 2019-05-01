@@ -85,7 +85,7 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(
           ->ConnectToEnvironmentService<fuchsia::media::playback::Player>();
 
   // Create the video view.
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   player_->CreateView(std::move(view_token));
 

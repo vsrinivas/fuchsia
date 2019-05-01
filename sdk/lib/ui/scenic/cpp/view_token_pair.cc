@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-
 #include <zircon/assert.h>
 
 namespace scenic {
 
-ViewTokenPair NewViewTokenPair() {
-  ViewTokenPair new_tokens;
-  auto status = zx::eventpair::create(0u, &new_tokens.first.value,
-                                      &new_tokens.second.value);
+ViewTokenPair ViewTokenPair::New() {
+  ViewTokenPair token_pair;
+
+  auto status = zx::eventpair::create(0u, &token_pair.view_token.value,
+                                      &token_pair.view_holder_token.value);
   // Assert even in non-debug builds, because eventpair creation can fail under
   // normal operation.  Failure can occur for example, if the job creation
   // policy governing this process forbids eventpair creation.
@@ -20,7 +20,14 @@ ViewTokenPair NewViewTokenPair() {
   // hit this, it means something is very abnormal.
   ZX_ASSERT(status == ZX_OK);
 
-  return new_tokens;
+  return token_pair;
+}
+
+ViewTokenStdPair NewViewTokenPair() {
+  auto token_pair = ViewTokenPair::New();
+
+  return ViewTokenStdPair(std::move(token_pair.view_token),
+                          std::move(token_pair.view_holder_token));
 }
 
 fuchsia::ui::views::ViewToken ToViewToken(zx::eventpair raw_token) {

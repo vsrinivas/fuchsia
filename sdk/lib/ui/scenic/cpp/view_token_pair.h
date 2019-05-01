@@ -7,16 +7,25 @@
 
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/zx/eventpair.h>
-#include <utility>
 
 namespace scenic {
 
-using ViewTokenPair = std::pair<fuchsia::ui::views::ViewToken,
-                                fuchsia::ui::views::ViewHolderToken>;
+struct ViewTokenPair {
+  // Convenience function which allows clients to easily create a valid
+  // |ViewToken| / |ViewHolderToken| pair for use with |View| / |ViewHolder|
+  // resources.
+  static ViewTokenPair New();
+
+  fuchsia::ui::views::ViewToken view_token;
+  fuchsia::ui::views::ViewHolderToken view_holder_token;
+};
+
+using ViewTokenStdPair = std::pair<fuchsia::ui::views::ViewToken,
+                                   fuchsia::ui::views::ViewHolderToken>;
 
 // Convenience function which allows clients to easily create a |ViewToken| /
 // |ViewHolderToken| pair for use with |View| resources.
-ViewTokenPair NewViewTokenPair();
+ViewTokenStdPair NewViewTokenPair();
 
 // Convenience functions which allow converting from raw eventpair-based tokens
 // easily.

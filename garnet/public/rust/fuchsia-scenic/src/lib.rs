@@ -5,8 +5,9 @@
 #![deny(warnings)]
 
 mod cmd;
+mod view_token_pair;
+pub use self::view_token_pair::*;
 
-use failure::Error;
 use fidl_fuchsia_images::{ImageInfo, MemoryType, PixelFormat, PresentationInfo, Tiling};
 use fidl_fuchsia_ui_gfx::{
     CircleArgs, ColorRgba, EntityNodeArgs, ImageArgs, ImportSpec, MaterialArgs, MemoryArgs,
@@ -20,17 +21,6 @@ use mapped_vmo::Mapping;
 use parking_lot::Mutex;
 use std::ops::Deref;
 use std::sync::Arc;
-
-pub fn new_view_token_pair() -> Result<(ViewToken, ViewHolderToken), Error> {
-    // Failure can occur for example, if the job creation policy governing
-    // this process forbids eventpair creation.
-    //
-    // However, it is unlikely that a well-behaved Scenic client would fail
-    // here; if you hit this, it means something is very abnormal.
-    let (raw_view_token, raw_view_holder_token) = EventPair::create()?;
-
-    Ok((ViewToken { value: raw_view_token }, ViewHolderToken { value: raw_view_holder_token }))
-}
 
 pub struct Session {
     session: SessionProxy,
