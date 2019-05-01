@@ -13,6 +13,7 @@ executable("bin") {
   sources = [
     "discover_test.cc",
     "fixture.h",
+    "formatter_test.cc",
     "location_test.cc",
     "read_test.cc",
     "source_test.cc",
@@ -20,6 +21,8 @@ executable("bin") {
   deps = [
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/inspect/query",
+    "//garnet/public/lib/inspect/query:json_formatter",
+    "//garnet/public/lib/inspect/query:text_formatter",
     "//garnet/public/lib/inspect/testing",
   ]
   public_deps = [

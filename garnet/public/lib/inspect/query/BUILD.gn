@@ -23,7 +23,48 @@ source_set("query") {
     "//garnet/public/lib/inspect:reader",
     "//sdk/lib/vfs/cpp",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/inspect-vmo",
-    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("formatter") {
+  sources = [
+    "formatter.cc",
+    "formatter.h",
+  ]
+
+  public_deps = [
+    ":query",
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
+}
+
+source_set("text_formatter") {
+  sources = [
+    "text_formatter.cc",
+    "text_formatter.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr",
+  ]
+
+  public_deps = [
+    ":formatter",
+  ]
+}
+
+source_set("json_formatter") {
+  sources = [
+    "json_formatter.cc",
+    "json_formatter.h",
+  ]
+
+  configs += [ "//third_party/cobalt:cobalt_config" ]
+
+  public_deps = [
+    ":formatter",
+    "//third_party/cobalt/util/crypto_util",
+    "//third_party/rapidjson",
   ]
 }
