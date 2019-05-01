@@ -70,7 +70,7 @@ fn fuzzy_search_result(res_vec: Vec<String>, cfg: LocateConfig) -> Result<(), Er
 fn fuzzy_search_error(e: FuzzySearchError, cfg: LocateConfig) -> Result<(), Error> {
     if e == FuzzySearchError::MalformedInput {
         return Err(format_err!(
-            "\"{}\" contains unsupported characters. Valid characters are [A-Z a-z 0-9 / _ -].",
+            "\"{}\" contains unsupported characters. Valid characters are [A-Z a-z 0-9 / _ - .].",
             cfg.search_keyword
         ));
     }

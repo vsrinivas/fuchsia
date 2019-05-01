@@ -17,8 +17,10 @@ protocol ComponentIndex {
     ///
     /// The input string must be a single alphanumeric word with optional ‘_’
     /// and ‘-’ characters -- the allowed character set of a component name.
-    /// Additionally, the forward slash ‘/’ is also allowed, to match URI path
-    /// segments. There is no support for globbing.
+    /// Additionally, the forward slash ‘/’ is allowed, to match URI path
+    /// segments. Period '.' is also allowed, to match file extensions.
+    ///
+    /// There is no support for globbing.
     ///
     /// Returns an empty list if there are no matches, or if needle is empty.
     FuzzySearch(string needle) -> (vector<string> uris) error FuzzySearchError;

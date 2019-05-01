@@ -33,9 +33,9 @@ async fn run_fuzzy_search_server(
     Ok(())
 }
 
-/// Needle only accepts a-zA-Z0-9 _ - /
+/// Needle only accepts [A-Z a-z 0-9 / _ - .].
 fn check_needle(needle: &str) -> bool {
-    return needle.chars().all(|c| c.is_alphanumeric() || c == '/' || c == '_' || c == '-');
+    return needle.chars().all(|c| c.is_alphanumeric() || c == '/' || c == '_' || c == '-' || c == '.');
 }
 
 enum IncomingServices {
@@ -98,6 +98,10 @@ mod tests {
         }
         test_parse_forward_slash => {
             needle = "foo/bar",
+            accept = true,
+        }
+        test_parse_period => {
+            needle = "foo.cmx",
             accept = true,
         }
         test_parse_false => {
