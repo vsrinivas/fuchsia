@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
 
 driver_module("msd_img_rgx_mtk") {
   output_name = "libmsd_img_rgx_mtk"
@@ -10,6 +11,10 @@ driver_module("msd_img_rgx_mtk") {
   sources = [
     "mt8167s-gpu.cpp",
   ]
+
+  if (magma_enable_developer_build) {
+    defines = [ "MAGMA_TEST_DRIVER=1" ]
+  }
 
   deps = [
     "//garnet/lib/magma/src/magma_util",

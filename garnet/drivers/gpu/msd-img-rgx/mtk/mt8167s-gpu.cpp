@@ -349,7 +349,11 @@ zx_status_t Mt8167sGpu::Query(uint64_t query_id, fidl_txn_t* transaction)
             result = magma_system_device_->GetDeviceId();
             break;
         case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
+#if MAGMA_TEST_DRIVER
+            result = 1;
+#else
             result = 0;
+#endif
             break;
         default:
             if (!magma_system_device_->Query(query_id, &result))
@@ -394,7 +398,20 @@ zx_status_t Mt8167sGpu::DumpState(uint32_t dump_type)
     return ZX_OK;
 }
 
-zx_status_t Mt8167sGpu::Restart() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Mt8167sGpu::Restart()
+{
+    DLOG("Mt8167sGpu::Restart");
+#if MAGMA_TEST_DRIVER
+    std::lock_guard<std::mutex> lock(magma_mutex_);
+    StopMagma();
+    if (!StartMagma()) {
+        return DRET_MSG(ZX_ERR_INTERNAL, "StartMagma failed\n");
+    }
+    return ZX_OK;
+#else
+    return ZX_ERR_NOT_SUPPORTED;
+#endif
+}
 
 extern "C" zx_status_t mt8167s_gpu_bind(void* ctx, zx_device_t* parent)
 {

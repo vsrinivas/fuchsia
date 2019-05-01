@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/disabled/msd_img_rgx_integration_tests"
+    },
+    "sandbox": {
+        "features": [
+            "vulkan",
+            "system-temp"
+        ]
+    }
+}
