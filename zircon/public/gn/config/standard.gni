@@ -223,26 +223,31 @@ standard_sanitizer_variants = [
       ]
     }
   },
-  {
-    variant = {
-      name = "ubsan"
-      configs = [ "$zx/public/gn/config/instrumentation:ubsan" ]
-      tags = [
-        "instrumented",
-        "useronly",
-      ]
-    }
-  },
-  {
-    variant = {
-      name = "asan-ubsan"
-      bases = [
-        "asan",
-        "ubsan",
-      ]
-    }
-  },
 ]
+if (false) {
+  # TODO(ZX-3986): Add them back when they work.
+  standard_sanitizer_variants += [
+    {
+      variant = {
+        name = "ubsan"
+        configs = [ "$zx/public/gn/config/instrumentation:ubsan" ]
+        tags = [
+          "instrumented",
+          "useronly",
+        ]
+      }
+    },
+    {
+      variant = {
+        name = "asan-ubsan"
+        bases = [
+          "asan",
+          "ubsan",
+        ]
+      }
+    },
+  ]
+}
 standard_variants += standard_sanitizer_variants
 
 # These are additional standard variants that are not likely to

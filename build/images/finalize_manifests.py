@@ -136,7 +136,8 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
 
         # If we're not part of a recursion, discover the binary's context.
         if context is None:
-            binary_variant, variant_file = variant.find_variant(binary.info)
+            binary_variant, variant_file = variant.find_variant(
+                binary.info, binary.entry.target)
             if variant_file is not None:
               # This is a variant that was actually built in a different
               # place than its original name says.  Rewrite everything to

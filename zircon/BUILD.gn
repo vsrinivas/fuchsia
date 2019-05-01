@@ -275,8 +275,8 @@ foreach(cpu, standard_fuchsia_cpus) {
       testonly = true
       deps = [
         ":all-ulib-$cpu",
-        ":all-ulib-asan-$cpu",
         ":driver-deps-$cpu",
+        ":instrumented-ulib-$cpu",
       ]
       metadata = {
         # This prevents build_api_module("legacy-$cpu") from visiting the
@@ -372,15 +372,50 @@ foreach(cpu, standard_fuchsia_cpus) {
     ]
   }
 
-  environment_redirect("all-ulib-asan-$cpu") {
+  environment_redirect("instrumented-ulib-$cpu") {
     testonly = true
     cpu = cpu
     environment_label = "$zx/public/gn/toolchain:user"
-    variant = "asan"
     deps = [
-      "$zx/system/core/devmgr:driver_deps.asan",
-      "$zx/system/ulib",
+      ":instrumented-ulib-redirect",
     ]
+  }
+}
+
+if (toolchain.environment == "user") {
+  instrumented_variants = []
+  foreach(selector, toolchain.variant_selectors) {
+    if (selector.tags + [ "instrumented" ] - [ "instrumented" ] !=
+        selector.tags) {
+      instrumented_variants += [ selector.variant ]
+      instrumented_variants -= [ selector.variant ]
+      instrumented_variants += [ selector.variant ]
+    }
+  }
+  group("instrumented-ulib-redirect") {
+    testonly = true
+    visibility = [ ":*" ]
+    deps = []
+    foreach(variant, instrumented_variants) {
+      deps += [ ":instrumented-ulib-redirect.$variant" ]
+    }
+  }
+  foreach(variant, instrumented_variants) {
+    environment_redirect("instrumented-ulib-redirect.$variant") {
+      testonly = true
+      visibility = [ ":instrumented-ulib-redirect" ]
+      variant = variant
+      deps = [
+        "$zx/system/ulib",
+      ]
+      foreach(dep, toolchain.implicit_deps) {
+        if (dep == "$dep") {
+          deps += [ dep ]
+        } else {
+          deps += dep.add
+        }
+      }
+    }
   }
 }
 
@@ -483,7 +518,6 @@ build_api_module("legacy_images") {
     deps += [ ":legacy-$cpu" ]
   }
 }
-
 
 # This describes all the generated source files in the build.
 #

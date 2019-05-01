@@ -54,7 +54,28 @@ def make_variant(name, info):
     return variant(tc, libprefix, runtime, aux)
 
 
-def find_variant(info, build_dir=os.path.curdir):
+def deduce_aux_variant(info, install_path):
+    if info.interp is not None:
+        deduce_from = 'lib/' + info.interp
+    elif info.soname is not None:
+        deduce_from = install_path
+    else:
+        return None
+    pathelts = deduce_from.split('/')
+    assert pathelts[0] == 'lib', (
+        "Library expected in lib/, not %r: %r for %r" %
+        (deduce_from, info, install_path)
+    )
+    if len(pathelts) == 2:
+        return None
+    assert len(pathelts) == 3, (
+        "Library expected to be lib/variant/libfoo.so, not %r: %r for %r" %
+        (deduce_from, info, install_path)
+    )
+    return make_variant(pathelts[1], info)
+
+
+def find_variant(info, install_path, build_dir=os.path.curdir):
     variant = None
     variant_file = None
     abs_build_dir = os.path.abspath(build_dir)
@@ -105,9 +126,7 @@ def find_variant(info, build_dir=os.path.curdir):
                         variant = make_variant(name, info)
     else:
         # It's from an auxiliary.
-        asan = make_variant('asan', info)
-        if asan.matches(info):
-            variant = asan
+        variant = deduce_aux_variant(info, install_path)
     if variant:
         assert variant.matches(info, True), "%r vs %r" % (variant, info)
         return variant, variant_file
@@ -123,7 +142,7 @@ def test_main(build_dir, filenames):
         info = binary_info(filename)
         print info
         print '  Driver: %r' % is_driver(info)
-        print '  %r' % (find_variant(info, build_dir),)
+        print '  %r' % (find_variant(info, None, build_dir),)
 
 
 # For manual testing.

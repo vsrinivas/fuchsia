@@ -367,3 +367,31 @@ source_set("crt1") {
     ]
   }
 }
+
+# This is just a basic test that program loading and libc startup works.
+# It's "hello world" without the ostentation.
+test("noop") {
+  sources = [
+    "noop-test.cpp",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":noop",
+  ]
+
+  # Generate a variant-suffixed noop test for each instrumented variant.
+  # Those all have their own libprefix so they can coexist in the
+  # filesystem with other variants.  Other variants would need to be
+  # tested in separate filesystem namespaces.
+  # TODO(BLD-448): Test all variants when we have sandboxed packages
+  # and can put each variant in its own package.
+  foreach(selector, toolchain.variant_selectors) {
+    if (selector.tags + [ "instrumented" ] - [ "instrumented" ] !=
+        selector.tags) {
+      deps += [ ":noop.${selector.variant}" ]
+    }
+  }
+}
