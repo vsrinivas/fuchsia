@@ -38,7 +38,7 @@ enabling Fuchsia development using [Bazel][bazel] - this distribution is
 currently used to test versions of the Core SDK before they are published.
 
 
-## What belongs in the Core SDK?
+## What belongs in an SDK?
 
 By default, a piece of code in the Fuchsia tree cannot be added to any SDK:
 participation is a strictly opt-in decision. Additionally, this decision is
@@ -95,17 +95,24 @@ given build system. The presence of extensive metadata in the archive itself
 allows for this kind of processing.
 
 
+## Core SDK and SDK add-ons
+
+The Core SDK is represented by the `//sdk:core` target.
+That SDK is complemented by multiple SDK add-ons:
+- `//sdk:e2e_testing`: an end-to-end testing framework for Fuchsia;
+- `//sdk:modular_testing`: an hermetic testing framework for the app framework;
+- `//sdk:images`: a set of device images suitable for SDK development;
+- `//topaz/public/sdk:fuchsia_dart`: a Dart SDK to build mods and agents.
+Internally these targets are all instances of the `sdk` GN template.
+
+
 ## Recipes
 
 ### Generating an SDK archive
 
 The various targets representing SDKs are always included in the build graph.
-In order to build the contents of an SDK,
-[build one of the following targets][fx-build-target]:
-- `sdk:core`
-- `sdk:images`
-- `topaz/public/sdk:fuchsia_dart`
-- `topaz/public/sdk:topaz`
+In order to build the contents of an SDK, [build][fx-build-target] one of the
+targets above.
 
 Note that this will generate and verify SDK contents, but won't actually build
 an archive with these contents.
