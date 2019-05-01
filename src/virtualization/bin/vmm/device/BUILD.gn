@@ -1,0 +1,353 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("device") {
+  sources = [
+    "block.h",
+    "config.h",
+    "input.h",
+    "phys_mem.cc",
+    "phys_mem.h",
+    "virtio_queue.cc",
+    "virtio_queue.h",
+  ]
+  defines = [ "_ALL_SOURCE=1" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.guest.device",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/virtio",
+  ]
+}
+
+source_set("virtio") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "device_base.h",
+    "stream_base.h",
+  ]
+  public_deps = [
+    ":device",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.guest.device",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+executable("virtio_balloon_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_balloon"
+  sources = [
+    "virtio_balloon.cc",
+  ]
+  deps = [
+    ":virtio",
+  ]
+}
+
+package("virtio_balloon") {
+  binary = "virtio_balloon"
+  deps = [
+    ":virtio_balloon_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_balloon.cmx")
+      dest = "virtio_balloon.cmx"
+    },
+  ]
+}
+
+source_set("block") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "block_dispatcher.cc",
+    "block_dispatcher.h",
+    "qcow.cc",
+    "qcow.h",
+  ]
+  public_deps = [
+    ":device",
+    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/trace",
+  ]
+}
+
+executable("virtio_block_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_block"
+  sources = [
+    "virtio_block.cc",
+  ]
+  deps = [
+    ":block",
+    ":virtio",
+  ]
+}
+
+package("virtio_block") {
+  binary = "virtio_block"
+  deps = [
+    ":virtio_block_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_block.cmx")
+      dest = "virtio_block.cmx"
+    },
+  ]
+}
+
+executable("virtio_console_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_console"
+  sources = [
+    "virtio_console.cc",
+  ]
+  deps = [
+    ":virtio",
+  ]
+}
+
+package("virtio_console") {
+  binary = "virtio_console"
+  deps = [
+    ":virtio_console_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_console.cmx")
+      dest = "virtio_console.cmx"
+    },
+  ]
+}
+
+executable("virtio_input_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_input"
+  sources = [
+    "virtio_input.cc",
+  ]
+  deps = [
+    ":virtio",
+  ]
+}
+
+package("virtio_input") {
+  binary = "virtio_input"
+  deps = [
+    ":virtio_input_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_input.cmx")
+      dest = "virtio_input.cmx"
+    },
+  ]
+}
+
+executable("virtio_gpu_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_gpu"
+  sources = [
+    "gpu_resource.cc",
+    "gpu_resource.h",
+    "gpu_scanout.cc",
+    "gpu_scanout.h",
+    "guest_view.cc",
+    "guest_view.h",
+    "virtio_gpu.cc",
+  ]
+  deps = [
+    ":virtio",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/ui/scenic/cpp",
+  ]
+}
+
+package("virtio_gpu") {
+  binary = "virtio_gpu"
+  deps = [
+    ":virtio_gpu_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_gpu.cmx")
+      dest = "virtio_gpu.cmx"
+    },
+  ]
+}
+
+executable("virtio_net_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_net"
+  sources = [
+    "guest_ethernet.cc",
+    "guest_ethernet.h",
+    "virtio_net.cc",
+  ]
+  deps = [
+    ":virtio",
+    "//garnet/public/lib/async_promise:async_promise",
+    "//sdk/fidl/fuchsia.netstack",
+    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet",
+  ]
+}
+
+package("virtio_net") {
+  binary = "virtio_net"
+  deps = [
+    ":virtio_net_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_net.cmx")
+      dest = "virtio_net.cmx"
+    },
+  ]
+}
+
+executable("virtio_rng_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_rng"
+  sources = [
+    "virtio_rng.cc",
+  ]
+  deps = [
+    ":virtio",
+  ]
+}
+
+package("virtio_rng") {
+  binary = "virtio_rng"
+  deps = [
+    ":virtio_rng_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_rng.cmx")
+      dest = "virtio_rng.cmx"
+    },
+  ]
+}
+
+executable("virtio_wl_bin") {
+  visibility = [ ":*" ]
+
+  output_name = "virtio_wl"
+  sources = [
+    "../bits.h",
+    "virtio_magma.cc",
+    "virtio_magma.h",
+    "virtio_wl.cc",
+    "virtio_wl.h",
+  ]
+  deps = [
+    ":virtio",
+    "//garnet/lib/magma/src/libmagma",
+    "//garnet/lib/magma/src/magma_util",
+  ]
+}
+
+package("virtio_wl") {
+  binary = "virtio_wl"
+  deps = [
+    ":virtio_wl_bin",
+    "//third_party/mesa/src/intel/vulkan:vulkan_intel_linux(//build/toolchain:linux_x64-shared)",
+  ]
+
+  # TODO(MA-520): don't hard-code the driver
+  resources = [
+    {
+      path = rebase_path(
+              "${root_build_dir}/linux_x64-shared/libvulkan_intel_linux.so")
+      dest = "drivers/libvulkan_intel_linux.so"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_wl.cmx")
+      dest = "virtio_wl.cmx"
+    },
+  ]
+}
+
+executable("device_tests") {
+  visibility = [ "//src/virtualization/bin/vmm:*" ]
+  testonly = true
+
+  sources = [
+    "test_with_device.cc",
+    "test_with_device.h",
+    "virtio_balloon_test.cc",
+    "virtio_block_test.cc",
+    "virtio_console_test.cc",
+    "virtio_gpu_test.cc",
+    "virtio_input_test.cc",
+    "virtio_net_test.cc",
+    "virtio_queue_fake.cc",
+    "virtio_queue_fake.h",
+    "virtio_queue_test.cc",
+    "virtio_rng_test.cc",
+    "virtio_wl_unittest.cc",
+  ]
+
+  deps = [
+    ":device",
+    "//sdk/fidl/fuchsia.guest.device",
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/virtio",
+  ]
+
+  defines = [ "_ALL_SOURCE=1" ]
+}
+
+source_set("qcow_test_data") {
+  visibility = [ "//src/virtualization/*" ]
+  sources = [
+    "qcow_test_data.h",
+  ]
+  public_deps = [
+    ":block",
+  ]
+}
+
+executable("device_unittests") {
+  visibility = [ "//src/virtualization/bin/vmm:*" ]
+  testonly = true
+
+  sources = [
+    "qcow_unittest.cc",
+    "volatile_write_block_dispatcher_unittest.cc",
+  ]
+
+  deps = [
+    ":qcow_test_data",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}

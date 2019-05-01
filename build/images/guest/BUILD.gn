@@ -9,8 +9,8 @@ import("//garnet/build/pkgfs.gni")
 guest_packages = [
   "//garnet/bin/appmgr",
   "//garnet/bin/appmgr:appmgr_scheme_config",
-  "//garnet/bin/guest/integration:guest_integration_tests_utils",
-  "//garnet/bin/guest/pkg/zircon_guest:services_config",
+  "//src/virtualization/tests:guest_integration_tests_utils",
+  "//src/virtualization/packages/zircon_guest:services_config",
   "//garnet/bin/run",
   "//garnet/bin/sysmgr",
   "//garnet/bin/trace",

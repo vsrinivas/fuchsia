@@ -1,0 +1,92 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("lib") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "environment_controller_impl.cc",
+    "environment_controller_impl.h",
+    "environment_manager_impl.cc",
+    "environment_manager_impl.h",
+    "guest_component.cc",
+    "guest_component.h",
+    "guest_services.cc",
+    "guest_services.h",
+    "guest_vsock_endpoint.cc",
+    "guest_vsock_endpoint.h",
+    "host_vsock_endpoint.cc",
+    "host_vsock_endpoint.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.guest.vmm",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/bitmap",
+  ]
+}
+
+executable("bin") {
+  output_name = "guest_manager"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+  ]
+}
+
+package("guest_manager") {
+  binary = "guest_manager"
+
+  deps = [
+    ":bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/guest_manager.cmx")
+      dest = "guest_manager.cmx"
+    },
+  ]
+}
+
+executable("guest_manager_unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [
+    "host_vsock_endpoint_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("guest_manager_tests") {
+  deps = [
+    ":guest_manager_unittests",
+  ]
+
+  tests = [
+    {
+      name = "guest_manager_unittests"
+      environments = basic_envs
+    },
+  ]
+}

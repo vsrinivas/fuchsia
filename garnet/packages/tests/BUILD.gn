@@ -642,13 +642,13 @@ group("pkg_url") {
 group("guest") {
   testonly = true
   public_deps = [
-    "//garnet/bin/guest/integration:guest_integration_tests",
-    "//garnet/bin/guest/manager:guest_manager_tests",
-    "//garnet/bin/guest/vmm:vmm_tests",
     "//garnet/bin/vsock_service:vsock_service-tests",
     "//garnet/packages/experimental:debian_guest",
     "//garnet/packages/experimental:zircon_guest",
     "//garnet/public/lib/guest:guest_lib_tests",
+    "//src/virtualization/bin/guest_manager:guest_manager_tests",
+    "//src/virtualization/bin/vmm:vmm_tests",
+    "//src/virtualization/tests:guest_integration_tests",
   ]
 }
 
@@ -1281,7 +1281,7 @@ group("carnelian") {
 group("linux_runner") {
   testonly = true
   public_deps = [
-    "//garnet/bin/guest/pkg/biscotti_guest/linux_runner:linux_runner_tests",
+    "//src/virtualization/packages/biscotti_guest/linux_runner:linux_runner_tests",
   ]
 }
 

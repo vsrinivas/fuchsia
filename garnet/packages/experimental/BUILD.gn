@@ -30,16 +30,16 @@ group("all") {
 group("linux_guest") {
   testonly = true
   public_deps = [
-    "//garnet/bin/guest/pkg/linux_guest",
     "//garnet/packages/prod:guest_runner",
+    "//src/virtualization/packages/linux_guest",
   ]
 }
 
 group("debian_guest") {
   testonly = true
   public_deps = [
-    "//garnet/bin/guest/pkg/debian_guest",
     "//garnet/packages/prod:guest_runner",
+    "//src/virtualization/packages/debian_guest",
   ]
 }
 
@@ -60,7 +60,7 @@ group("sys") {
 group("linux_runner") {
   testonly = true
   public_deps = [
-    "//garnet/bin/guest/pkg/biscotti_guest/linux_runner",
+    "//src/virtualization/packages/biscotti_guest/linux_runner",
   ]
 }
 
@@ -75,8 +75,8 @@ group("kms") {
 group("zircon_guest") {
   testonly = true
   public_deps = [
-    "//garnet/bin/guest/pkg/zircon_guest",
     "//garnet/packages/prod:guest_runner",
+    "//src/virtualization/packages/zircon_guest",
   ]
   metadata = {
     config_package_barrier = []

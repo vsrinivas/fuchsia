@@ -1,19 +1,14 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/bin/guest/pkg/guest_package.gni")
-
-guest_package("biscotti_guest") {
-  cmdline = "console=hvc0 root=/dev/vda rw"
-  linux = "images/${target_cpu}/Image"
-
-  rootfs_name = "rootfs.img"
-  resources = [
-    {
-      path = rebase_path("images/${target_cpu}/disk.img")
-      dest = "${rootfs_name}"
-    },
+# Redirect old users of these dependencies to the new location while
+# guest locations are being updated.
+#
+# TODO(MAC-252): Remove once all BUILD files have been updated.
+group("biscotti_guest") {
+  testonly = true
+  public_deps = [
+    "//src/virtualization/packages/biscotti_guest",
   ]
-  block_devices = [ "/guest/data/${rootfs_name},ro" ]
 }

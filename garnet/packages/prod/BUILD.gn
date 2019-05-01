@@ -422,21 +422,21 @@ group("display_manager") {
 group("guest_runner") {
   testonly = true
   public_deps = [
-    "//garnet/bin/guest/cli:guest",
-    "//garnet/bin/guest/manager:guest_manager",
-    "//garnet/bin/guest/runner:guest_runner",
-    "//garnet/bin/guest/vmm",
-    "//garnet/bin/guest/vmm/device:virtio_balloon",
-    "//garnet/bin/guest/vmm/device:virtio_block",
-    "//garnet/bin/guest/vmm/device:virtio_console",
-    "//garnet/bin/guest/vmm/device:virtio_gpu",
-    "//garnet/bin/guest/vmm/device:virtio_input",
-    "//garnet/bin/guest/vmm/device:virtio_net",
-    "//garnet/bin/guest/vmm/device:virtio_rng",
-    "//garnet/bin/guest/vmm/device:virtio_wl",
     "//garnet/packages/config:network",
     "//garnet/packages/prod:amber",
     "//garnet/packages/prod:runtime",
+    "//src/virtualization/bin/guest:guest",
+    "//src/virtualization/bin/guest_manager:guest_manager",
+    "//src/virtualization/bin/guest_runner:guest_runner",
+    "//src/virtualization/bin/vmm",
+    "//src/virtualization/bin/vmm/device:virtio_balloon",
+    "//src/virtualization/bin/vmm/device:virtio_block",
+    "//src/virtualization/bin/vmm/device:virtio_console",
+    "//src/virtualization/bin/vmm/device:virtio_gpu",
+    "//src/virtualization/bin/vmm/device:virtio_input",
+    "//src/virtualization/bin/vmm/device:virtio_net",
+    "//src/virtualization/bin/vmm/device:virtio_rng",
+    "//src/virtualization/bin/vmm/device:virtio_wl",
   ]
 }
 

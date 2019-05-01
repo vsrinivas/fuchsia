@@ -1,0 +1,37 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//src/virtualization/packages/guest_package.gni")
+
+config_data("services_config") {
+  # This package must be part of the system image (of the guest) so that it
+  # exists before sysmgr comes up.
+  for_pkg = "sysmgr"
+  sources = [
+    "services.config",
+  ]
+}
+
+guest_fvm_blk_label = "//build/images/guest:fvm.blk"
+
+guest_package("zircon_guest") {
+  deps = [
+    "//build/images/guest",
+    guest_fvm_blk_label,
+  ]
+  zircon = "$root_out_dir/guest.zbi"
+
+  cmdline = "console.path=/dev/class/console/virtio-console"
+
+  disk_filename = "filesystem.fvm"
+  fvm = get_label_info(guest_fvm_blk_label, "target_out_dir") + "/fvm.blk"
+  resources = [
+    {
+      path = rebase_path(fvm)
+      dest = "${disk_filename}"
+    },
+  ]
+  block_devices = [ "/guest/data/${disk_filename},ro" ]
+}

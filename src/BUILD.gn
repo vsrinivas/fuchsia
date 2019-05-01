@@ -9,8 +9,8 @@ group("src") {
     "cobalt",
     "connectivity",
     "developer",
-    "identity",
     "graphics",
+    "identity",
     "ledger",
     "lib",
     "media",
@@ -19,6 +19,7 @@ group("src") {
     "speech",
     "sys",
     "testing",
+    "virtualization",
   ]
 }
 

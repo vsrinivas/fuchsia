@@ -23,7 +23,6 @@ group("bin") {
     "fidl_compatibility_test",
     "fonts",
     "glob",
-    "guest",
     "http",
     "insntrace",
     "installer",

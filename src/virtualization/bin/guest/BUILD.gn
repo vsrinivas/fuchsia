@@ -1,0 +1,61 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "guest"
+
+  sources = [
+    "balloon.cc",
+    "balloon.h",
+    "launch.cc",
+    "launch.h",
+    "list.cc",
+    "list.h",
+    "main.cc",
+    "serial.cc",
+    "serial.h",
+    "socat.cc",
+    "socat.h",
+    "vshc.cc",
+    "vshc.h",
+    "vshutil.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
+    "//src/virtualization/packages/biscotti_guest/third_party/protos:vsh_cc_proto",
+    "//third_party/protobuf:protobuf_lite",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/virtio",
+  ]
+
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-hardware-pty:fuchsia-hardware-pty_c",
+  ]
+}
+
+package("guest") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "guest"
+      shell = true
+    },
+    {
+      name = "vsh"
+      shell = true
+      source = "guest"
+    },
+  ]
+}

@@ -39,7 +39,7 @@ source_set("cpp") {
   visibility = [
     ":environment_services",
     "testing/*",
-    "//garnet/bin/guest/*",
+    "//src/virtualization/*",
     "//garnet/bin/media/*",
     "//garnet/bin/ui/set_renderer_params_HACK:*",
     "//garnet/bin/ui/present_view:*",

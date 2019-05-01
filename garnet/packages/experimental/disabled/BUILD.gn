@@ -45,8 +45,8 @@ group("fidl_fuzz") {
 group("biscotti_guest") {
   testonly = true
   public_deps = [
-    "//garnet/bin/guest/pkg/biscotti_guest",
     "//garnet/packages/prod:guest_runner",
+    "//src/virtualization/packages/biscotti_guest",
   ]
 }
 

@@ -1,0 +1,19 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/virtualization/packages/guest_package.gni")
+
+guest_package("biscotti_guest") {
+  cmdline = "console=hvc0 root=/dev/vda rw"
+  linux = "images/${target_cpu}/Image"
+
+  rootfs_name = "rootfs.img"
+  resources = [
+    {
+      path = rebase_path("images/${target_cpu}/disk.img")
+      dest = "${rootfs_name}"
+    },
+  ]
+  block_devices = [ "/guest/data/${rootfs_name},ro" ]
+}

@@ -1,0 +1,228 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("lib") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "bits.h",
+    "controller/virtio_balloon.cc",
+    "controller/virtio_balloon.h",
+    "controller/virtio_block.cc",
+    "controller/virtio_block.h",
+    "controller/virtio_console.cc",
+    "controller/virtio_console.h",
+    "controller/virtio_gpu.cc",
+    "controller/virtio_gpu.h",
+    "controller/virtio_input.cc",
+    "controller/virtio_input.h",
+    "controller/virtio_net.cc",
+    "controller/virtio_net.h",
+    "controller/virtio_rng.cc",
+    "controller/virtio_rng.h",
+    "controller/virtio_wl.cc",
+    "controller/virtio_wl.h",
+    "dev_mem.h",
+    "guest.cc",
+    "guest.h",
+    "guest_config.cc",
+    "guest_config.h",
+    "instance_controller_impl.cc",
+    "instance_controller_impl.h",
+    "io.cc",
+    "io.h",
+    "linux.cc",
+    "linux.h",
+    "pci.cc",
+    "pci.h",
+    "platform_device.h",
+    "sysinfo.h",
+    "vcpu.cc",
+    "vcpu.h",
+    "virtio_device.h",
+    "virtio_net_legacy.cc",
+    "virtio_net_legacy.h",
+    "virtio_pci.cc",
+    "virtio_pci.h",
+    "virtio_queue_waiter.cc",
+    "virtio_queue_waiter.h",
+    "virtio_vsock.cc",
+    "virtio_vsock.h",
+    "zircon.cc",
+    "zircon.h",
+  ]
+
+  if (current_cpu == "arm64") {
+    sources += [
+      "arch/arm64/gic_distributor.cc",
+      "arch/arm64/gic_distributor.h",
+      "arch/arm64/pl011.cc",
+      "arch/arm64/pl011.h",
+      "arch/arm64/pl031.cc",
+      "arch/arm64/pl031.h",
+    ]
+  } else if (current_cpu == "x64") {
+    sources += [
+      "arch/x64/acpi.cc",
+      "arch/x64/acpi.h",
+      "arch/x64/acpi_priv.h",
+      "arch/x64/decode.cc",
+      "arch/x64/decode.h",
+      "arch/x64/e820.cc",
+      "arch/x64/e820.h",
+      "arch/x64/i8250.cc",
+      "arch/x64/i8250.h",
+      "arch/x64/io_apic.cc",
+      "arch/x64/io_apic.h",
+      "arch/x64/io_port.cc",
+      "arch/x64/io_port.h",
+      "arch/x64/page_table.cc",
+      "arch/x64/page_table.h",
+    ]
+
+    include_dirs = [ "//zircon/third_party/lib/acpica/source/include" ]
+  }
+
+  defines = [
+    "_ALL_SOURCE=1",
+    "MAGMA_DEBUG_INTERNAL_USE_ONLY=1",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.guest.device",
+    "//src/virtualization/third_party/fdt",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/libzbi",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//sdk/fidl/fuchsia.guest.vmm",
+    "//src/virtualization/bin/vmm/device",
+    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet_c",
+    "//zircon/public/fidl/fuchsia-sysinfo",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/virtio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("bin") {
+  output_name = "vmm"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  defines = [ "_ALL_SOURCE=1" ]
+}
+
+package("vmm") {
+  binary = "vmm"
+
+  deps = [
+    ":bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("//src/virtualization/bin/vmm/meta/vmm.cmx")
+      dest = "vmm.cmx"
+    },
+  ]
+
+  if (target_cpu == "arm64") {
+    resources = [
+      {
+        path =
+            rebase_path("//src/virtualization/bin/vmm/arch/arm64/dts/board.dtb")
+        dest = "board.dtb"
+      },
+    ]
+  } else if (target_cpu == "x64") {
+    resources = [
+      {
+        path = rebase_path("//src/virtualization/bin/vmm/arch/x64/asl/dsdt.aml")
+        dest = "dsdt.aml"
+      },
+      {
+        path = rebase_path("//src/virtualization/bin/vmm/arch/x64/asl/mcfg.aml")
+        dest = "mcfg.aml"
+      },
+    ]
+  }
+}
+
+executable("vmm_unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [
+    "dev_mem_unittest.cc",
+    "guest_config_unittest.cc",
+    "pci_unittest.cc",
+    "phys_mem_fake.h",
+    "virtio_device_fake.h",
+    "virtio_net_legacy_unittest.cc",
+    "virtio_queue_fake.cc",
+    "virtio_queue_fake.h",
+    "virtio_queue_unittest.cc",
+    "virtio_queue_waiter_unittest.cc",
+    "virtio_vsock_unittest.cc",
+  ]
+
+  if (current_cpu == "x64") {
+    sources += [
+      "arch/x64/decode_unittest.cc",
+      "arch/x64/page_table_unittest.cc",
+    ]
+  }
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("vmm_tests") {
+  deps = [
+    ":vmm_unittests",
+    "//src/virtualization/bin/vmm/device:device_tests",
+    "//src/virtualization/bin/vmm/device:device_unittests",
+  ]
+
+  tests = [
+    {
+      name = "device_tests"
+      environments = [
+        nuc_env,
+        vim2_env,
+      ]
+    },
+    {
+      name = "device_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "vmm_unittests"
+      environments = basic_envs
+    },
+  ]
+}
