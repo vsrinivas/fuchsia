@@ -1,8 +1,7 @@
+#!/bin/sh
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-#!/bin/bash
 
 # This file takes an output file as its first parameter, followed by one or more
 # FIDL schema files in JSON format.  It then generates a header containing a C++
@@ -27,11 +26,11 @@ class ExampleMap {
 EOF
 
 for i in "$@"; do
-  if [[ ! -f "${i}" ]]; then
+  if [ ! -f "${i}" ]; then
      echo "file ${i} not found"
      exit 1
   fi;
-  cat >> "${FILENAME}" << EOF
+  cat >> "${FILENAME}" <<EOF
     {"${i}", R"FIDL($(cat "${i}"))FIDL"},
 EOF
 done
