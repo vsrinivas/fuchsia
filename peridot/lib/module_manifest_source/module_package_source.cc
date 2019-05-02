@@ -20,12 +20,6 @@
 #include "peridot/lib/module_manifest_source/package_util.h"
 
 namespace modular {
-namespace {
-// NOTE: This must match the path specified in
-// //peridot/build/module_manifest.gni
-constexpr char kInitialModulePackagesIndexDir[] =
-    "/system/data/initial_module_packages";
-}  // namespace
 
 using ::fuchsia::maxwell::internal::ModulePackageIndexer;
 
@@ -95,27 +89,6 @@ void ModulePackageSource::Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn,
                                 NewEntryFn new_fn, RemovedEntryFn removed_fn) {
   dispatcher_ = dispatcher;
   new_entry_fn_ = std::move(new_fn);
-
-  IterateDirectory(
-      kInitialModulePackagesIndexDir, [this](fxl::StringView filename) {
-        std::string contents;
-        if (!files::ReadFileToString(
-                fxl::StringPrintf("%s/%s", kInitialModulePackagesIndexDir,
-                                  filename.data()),
-                &contents)) {
-          FXL_LOG(ERROR) << "Could not read module package index: "
-                         << filename.data();
-        }
-        auto module_pkgs = fxl::SplitString(
-            contents, "\n", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-        for (auto module_pkg_view : module_pkgs) {
-          auto module_pkg = module_pkg_view.ToString();
-          // TODO(vardhan): We only index module package with version=0. Do
-          // better.
-          IndexManifest(module_pkg,
-                        GetModuleManifestPathFromPackage(module_pkg, "0"));
-        }
-      });
 
   idle_fn();
 }

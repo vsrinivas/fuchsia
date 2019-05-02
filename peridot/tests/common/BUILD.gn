@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//peridot/build/module_manifest.gni")
 
 group("common") {
   testonly = true
@@ -89,13 +88,6 @@ package("common_active_module") {
       path = "common_active_module.cmx"
       dest = "common_active_module.cmx"
     },
-  ]
-}
-
-initial_module_packages("common_module_index") {
-  packages = [
-    "common_active_module",
-    "common_null_module",
   ]
 }
 

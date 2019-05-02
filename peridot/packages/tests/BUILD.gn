@@ -77,7 +77,6 @@ group("modular_integration_tests") {
     "//peridot/tests:modular_tests",
     "//peridot/tests/clipboard:clipboard_test_module",
     "//peridot/tests/common:common_active_module",
-    "//peridot/tests/common:common_module_index",
     "//peridot/tests/common:common_null_module",
     "//peridot/tests/component_context:component_context_test_module",
     "//peridot/tests/component_context:component_context_test_one_agent",
