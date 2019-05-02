@@ -28,6 +28,8 @@ if (current_toolchain == default_toolchain) {
       # There isn't a GCC toolchain that supports the Windows target directly
       # the way we use it.
       exclude_variant_tags = [ "gcc" ]
+
+      tags = [ "standalone" ]
     }
   }
 } else if (toolchain.environment == "efi") {

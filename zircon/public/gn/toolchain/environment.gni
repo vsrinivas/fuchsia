@@ -296,6 +296,15 @@ declare_args() {
 #     - Optional: A scope imported into the global scope in these toolchains.
 #     This is the place to define `is_...` variables.
 #
+#   * tags
+#     - Optional: A list of strings to appear in ${toolchain.tags}, along
+#     with the `.tags` list from the variant (see $variants).  This has no
+#     effect on which variants are available (see $exclude_variant_tags below).
+#     It can supply additional tags that apply to every variant in this
+#     environment.
+#     - Type: list(string)
+#     - Default: []
+#
 #   * toolchain_args
 #     - Optional: A scope of build argument overrides for these toolchains.
 #     This is just like $toolchain_args passed to toolchain() in bare GN.
@@ -378,6 +387,12 @@ template("environment") {
     raw_selectors = invoker.variant_selectors
   } else {
     raw_selectors = variants + default_variants + standard_variants
+  }
+
+  if (defined(invoker.tags)) {
+    env_tags = invoker.tags
+  } else {
+    env_tags = []
   }
 
   # First expand the plain-string shorthand selectors to full scopes.
@@ -698,7 +713,7 @@ template("environment") {
         forward_variables_from(selector, "*")
         foreach(variant, toolchain_variants) {
           if (variant.name == selector.variant) {
-            tags = variant.tags
+            tags = env_tags + variant.tags
           }
         }
       },
@@ -911,7 +926,7 @@ template("environment") {
           variant_selectors = selectors
 
           # Plumb through the list of tags from this variant.
-          tags = variant.tags
+          tags = env_tags + variant.tags
 
           # Finally, set .variant to the simple name string for the
           # variant.  (This now shadows the template-scope variable
@@ -1002,9 +1017,10 @@ template("standard_environments") {
                                "*",
                                [
                                  "configs",
-                                 "implicit_deps",
                                  "cpu",
+                                 "implicit_deps",
                                  "os",
+                                 "tags",
                                ])
 
         # The invoker can have used `configs -=` to remove some of the
@@ -1021,6 +1037,15 @@ template("standard_environments") {
         # environment.
         if (defined(invoker.implicit_deps)) {
           implicit_deps += invoker.implicit_deps
+        }
+
+        # Likewise for tags.
+        tags = []
+        if (defined(env.tags)) {
+          tags += env.tags
+        }
+        if (defined(invoker.tags)) {
+          tags += invoker.tags
         }
       }
     }

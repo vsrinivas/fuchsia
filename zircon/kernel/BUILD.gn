@@ -21,38 +21,41 @@ if (current_toolchain == default_toolchain) {
       common_configs = configs + standard_fuchsia_configs
       configs = []
       configs = [
-                  ":kernel_config",
+        ":kernel_config",
 
-                  # <stdio.h> has #include <lib/io.h>.
-                  "$zx/kernel/lib/io:headers.config",
+        # <stdio.h> has #include <lib/io.h>.
+        "$zx/kernel/lib/io:headers.config",
 
-                  # <malloc.h> has #include <lib/heap.h>.
-                  "$zx/kernel/lib/heap:headers.config",
+        # <malloc.h> has #include <lib/heap.h>.
+        "$zx/kernel/lib/heap:headers.config",
 
-                  # <kernel/spinlock.h> has #include <lockdep/lock_policy.h>.
-                  "$zx/system/ulib/lockdep:headers.config",
+        # <kernel/spinlock.h> has #include <lockdep/lock_policy.h>.
+        "$zx/system/ulib/lockdep:headers.config",
 
-                  # <kernel/{fair_scheduler,fair_task_state.h> has #include <ffl/fixed.h>.
-                  "$zx/system/ulib/ffl:headers.config",
+        # <kernel/{fair_scheduler,fair_task_state.h> has #include <ffl/fixed.h>.
+        "$zx/system/ulib/ffl:headers.config",
 
-                  # <kernel/thread.h> has #include <vm/kstack.h>.
-                  "vm:headers.config",
+        # <kernel/thread.h> has #include <vm/kstack.h>.
+        "vm:headers.config",
 
-                  # <lib/ktrace.h> has #include <lib/zircon-internal/ktrace.h>.
-                  "$zx/system/ulib/zircon-internal:headers.config",
+        # <lib/ktrace.h> has #include <lib/zircon-internal/ktrace.h>.
+        "$zx/system/ulib/zircon-internal:headers.config",
 
-                  # <lib/ktrace.h> has #include <lib/ktrace/string_ref.h>.
-                  "$zx/kernel/lib/ktrace:config",
+        # <lib/ktrace.h> has #include <lib/ktrace/string_ref.h>.
+        "$zx/kernel/lib/ktrace:config",
 
-                  # <kernel/thread.h> has #include <fbl/macros.h>
-                  "$zx/system/ulib/fbl:headers.config",
+        # <kernel/thread.h> has #include <fbl/macros.h>
+        "$zx/system/ulib/fbl:headers.config",
 
-                  # <dev/iommu.h> has #include <fbl/name.h>
-                  "lib/fbl:headers.config",
+        # <dev/iommu.h> has #include <fbl/name.h>
+        "lib/fbl:headers.config",
 
-                  # <lib/mtrace.h> has #include <lib/user_copy/user_ptr.h>
-                  "lib/user_copy:headers.config",
-                ] + common_configs
+        # <lib/mtrace.h> has #include <lib/user_copy/user_ptr.h>
+        "lib/user_copy:headers.config",
+      ]
+      configs += common_configs
+
+      tags = [ "standalone" ]
     }
   }
 } else if (is_kernel) {

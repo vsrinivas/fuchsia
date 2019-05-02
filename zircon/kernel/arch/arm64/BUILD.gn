@@ -14,6 +14,7 @@ if (current_toolchain == default_toolchain) {
       is_kernel = true
     }
     configs += standard_fuchsia_configs + [ ":physmem_config" ]
+    tags = [ "standalone" ]
   }
 } else {
   # This is the top config for the physmem environment.
