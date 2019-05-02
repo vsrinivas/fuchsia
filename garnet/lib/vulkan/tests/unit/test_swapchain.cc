@@ -139,14 +139,21 @@ class TestSwapchain {
         .ppEnabledExtensionNames = instance_ext.data(),
     };
 
-    if (VK_SUCCESS != vkCreateInstance(&inst_info, nullptr, &vk_instance_))
+    VkResult result;
+    result = vkCreateInstance(&inst_info, nullptr, &vk_instance_);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "vkCreateInstance failed: %d\n", result);
       return;
+    }
 
     uint32_t gpu_count = 1;
     std::vector<VkPhysicalDevice> physical_devices(gpu_count);
-    if (VK_SUCCESS != vkEnumeratePhysicalDevices(vk_instance_, &gpu_count,
-                                                 physical_devices.data()))
+    result = vkEnumeratePhysicalDevices(vk_instance_, &gpu_count,
+                                        physical_devices.data());
+    if (result != VK_SUCCESS && result != VK_INCOMPLETE) {
+      fprintf(stderr, "vkEnumeratePhysicalDevices failed: %d\n", result);
       return;
+    }
 
     float queue_priorities[1] = {0.0};
     VkDeviceQueueCreateInfo queue_create_info = {
@@ -168,9 +175,12 @@ class TestSwapchain {
         .ppEnabledExtensionNames = device_ext.data(),
         .pEnabledFeatures = nullptr};
 
-    if (VK_SUCCESS != vkCreateDevice(physical_devices[0], &device_create_info,
-                                     nullptr, &vk_device_))
+    result = vkCreateDevice(physical_devices[0], &device_create_info, nullptr,
+                            &vk_device_);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "vkCreateDevice failed: %d\n", result);
       return;
+    }
 
     PFN_vkGetDeviceProcAddr get_device_proc_addr =
         reinterpret_cast<PFN_vkGetDeviceProcAddr>(
@@ -217,6 +227,8 @@ class TestSwapchain {
   }
 
   void Surface() {
+    ASSERT_TRUE(init_);
+
     zx::channel endpoint0, endpoint1;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &endpoint0, &endpoint1));
 
@@ -232,6 +244,8 @@ class TestSwapchain {
   }
 
   void CreateSwapchain() {
+    ASSERT_TRUE(init_);
+
     zx::channel endpoint0, endpoint1;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &endpoint0, &endpoint1));
 
