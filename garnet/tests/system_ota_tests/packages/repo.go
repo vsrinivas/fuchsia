@@ -7,6 +7,7 @@ package packages
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -37,6 +38,8 @@ type custom struct {
 // NewRepository parses the repository from the specified directory. It returns
 // an error if the repository does not exist, or it contains malformed metadata.
 func NewRepository(dir string) (*Repository, error) {
+	log.Printf("creating a repository for %q", dir)
+
 	// The repository may have out of date metadata. This updates the repository to
 	// the latest version so TUF won't complain about the data being old.
 	repo, err := repo.New(dir)

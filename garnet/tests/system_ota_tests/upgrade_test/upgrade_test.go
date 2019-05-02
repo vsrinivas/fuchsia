@@ -10,7 +10,6 @@ import (
 	"flag"
 	"log"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"fuchsia.googlesource.com/system_ota_tests/config"
@@ -58,7 +57,7 @@ func TestDowngradeAndUpgrade(t *testing.T) {
 	if c.AmberFilesDir != "" {
 		log.Printf("starting upgrade test")
 
-		repo, err := packages.NewRepository(filepath.Join(c.AmberFilesDir))
+		repo, err := packages.NewRepository(c.AmberFilesDir)
 		if err != nil {
 			t.Fatal(err)
 		}
