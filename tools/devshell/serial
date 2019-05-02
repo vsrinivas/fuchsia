@@ -62,4 +62,4 @@ echo >&2 "SERIAL: Connecting to $DEVICE..."
 echo >&2 "SERIAL: Use CTRL-o to exit"
 echo >&2 "SERIAL: Run: \`export TERM=xterm; /boot/bin/sh\` for improved key bindings"
 
-socat -,sane,raw,echo=0,icanon=0,escape=0x0f "$DEVICE",b115200,clocal=1,cs8,nonblock=1,rawer
+socat -,sane,raw,echo=0,icanon=0,escape=0x0f "file:${DEVICE}",b115200,cs8,clocal=0,cstopb=0,parenb=0,nonblock=1,rawer
