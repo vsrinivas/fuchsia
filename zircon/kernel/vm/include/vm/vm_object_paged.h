@@ -206,7 +206,10 @@ private:
     // members
     const uint32_t options_;
     uint64_t size_ TA_GUARDED(lock_) = 0;
+    // offset in the *parent* where this object starts
     uint64_t parent_offset_ TA_GUARDED(lock_) = 0;
+    // offset in *this object* where it stops referring to its parent
+    uint64_t parent_limit_ TA_GUARDED(lock_) = 0;
     uint32_t pmm_alloc_flags_ TA_GUARDED(lock_) = PMM_ALLOC_FLAG_ANY;
     uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
 

@@ -1523,10 +1523,28 @@ bool vmo_clone_test_4() {
 
     // write to the new part of the original
     size_t val = 99;
-    EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &val, size, sizeof(val)), "writing to original after extending");
+    EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &val, size, sizeof(val)),
+              "writing to original after extending");
+
+    // verify that it is not reflected in the clone
+    EXPECT_EQ(0, cp[(size - PAGE_SIZE) / sizeof(*cp)],
+              "didn't modified newly exposed part of cow clone");
+
+    // write to a page in the original vmo
+    EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &val, size - PAGE_SIZE, sizeof(val)),
+              "writing to original after extending");
 
     // verify that it is reflected in the clone
-    EXPECT_EQ(99, cp[(size - PAGE_SIZE) / sizeof(*cp)], "modified newly exposed part of cow clone");
+    EXPECT_EQ(99, cp[(size - 2 * PAGE_SIZE) / sizeof(*cp)],
+              "modified newly exposed part of cow clone");
+
+    // shrink and enlarge the clone
+    EXPECT_EQ(ZX_OK, zx_vmo_set_size(clone_vmo[0], size - 2 * PAGE_SIZE), "shrunk the clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_set_size(clone_vmo[0], size), "extend the clone");
+
+    // verify that new pages are zero-pages instead of uncovering previously visible parent pages
+    EXPECT_EQ(0, cp[(size - 2 * PAGE_SIZE) / sizeof(*cp)],
+              "didn't modified newly exposed part of cow clone");
 
     // resize the original again, completely extending it beyond he clone
     EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, size + PAGE_SIZE * 2), "extend the vmo");

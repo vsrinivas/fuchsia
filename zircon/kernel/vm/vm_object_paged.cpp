@@ -348,6 +348,9 @@ zx_status_t VmObjectPaged::CreateCowClone(bool resizable, uint64_t offset, uint6
         if (status != ZX_OK) {
             return status;
         }
+        // The child shouldn't be able to see more pages if it grows or
+        // pages which are beyond this VMO's current size.
+        vmo->parent_limit_ = fbl::min(size, size_ - vmo->parent_offset_);
 
         if (copy_name) {
             vmo->name_ = name_;
@@ -470,12 +473,18 @@ vm_page_t* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_
                                                        uint64_t* owner_offset_out) {
     DEBUG_ASSERT(page_list_.GetPage(offset) == nullptr);
 
-    // Search up the clone chain for any committed pages.
+    // Search up the clone chain for any committed pages. cur_offset is the offset
+    // into cur we care about. The loop terminates either when that offset contains
+    // a committed page or when that offset can't reach into the parent.
     vm_page_t* page = nullptr;
     VmObjectPaged* cur = this;
-    uint64_t parent_offset = offset;
-    while (!page && cur->parent_) {
-        bool overflowed = add_overflow(cur->parent_offset_, parent_offset, &parent_offset);
+    uint64_t cur_offset = offset;
+    while (!page && cur_offset < cur->parent_limit_) {
+        // If there's no parent, then parent_limit_ is 0 and we'll never enter the loop
+        DEBUG_ASSERT(cur->parent_);
+
+        uint64_t parent_offset;
+        bool overflowed = add_overflow(cur->parent_offset_, cur_offset, &parent_offset);
         ASSERT(!overflowed);
         if (parent_offset >= cur->parent_->size()) {
             // The offset is off the end of the parent, so cur is the VmObject
@@ -491,14 +500,19 @@ vm_page_t* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_
             // physical VMO, and physical VMOs will always return a page for all valid offsets.
             DEBUG_ASSERT(status == ZX_OK);
             DEBUG_ASSERT(page != nullptr);
+
+            *owner_out = cur->parent_.get();
+            *owner_offset_out = parent_offset;
+            return page;
         } else {
             cur = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+            cur_offset = parent_offset;
             page = cur->page_list_.GetPage(parent_offset);
         }
     }
 
     *owner_out = cur;
-    *owner_offset_out = parent_offset;
+    *owner_offset_out = cur_offset;
 
     return page;
 }
@@ -998,6 +1012,8 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
                 start, end);
             DEBUG_ASSERT(status == ZX_OK);
         }
+
+        parent_limit_ = fbl::min(parent_limit_, s);
 
         page_list_.RemovePages(start, end, &free_list);
     } else if (s > size_) {
