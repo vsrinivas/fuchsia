@@ -211,8 +211,9 @@ impl OutputWorker {
                             // is indicative of possible glitching in the captured audio.
                             let now = zx::Time::get(zx::ClockId::Monotonic);
                             if last_notify > zx::Time::from_nanos(0) {
-                                if now - last_notify > zx::Duration::from_millis(150) {
-                                    fx_log_info!("Output position not updated for 150ms.  Expect glitches.");
+                                let interval = now - last_notify;
+                                if  interval > zx::Duration::from_millis(150) {
+                                    fx_log_info!("Output position not updated for 150ms({:?}).  Expect glitches.", interval.millis());
                                 }
                             }
                             last_notify = now;
@@ -542,8 +543,9 @@ impl InputWorker {
                             // is indicative of possible glitching in the injection.
                             let now = zx::Time::get(zx::ClockId::Monotonic);
                             if last_notify > zx::Time::from_nanos(0) {
-                                if now - last_notify > zx::Duration::from_millis(150) {
-                                    fx_log_info!("Input position not updated for 150ms.  Expect glitches.");
+                                let interval = now - last_notify;
+                                if  interval > zx::Duration::from_millis(150) {
+                                    fx_log_info!("Input position not updated for 150ms({:?}).  Expect glitches.", interval.millis());
                                 }
                             }
                             last_notify = now;
