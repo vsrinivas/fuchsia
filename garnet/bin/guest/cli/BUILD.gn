@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//third_party/protobuf/proto_library.gni")
 
 group("cli") {
   testonly = true
@@ -34,7 +33,7 @@ executable("bin") {
   ]
 
   deps = [
-    ":protos",
+    "//garnet/bin/guest/pkg/biscotti_guest/third_party/protos:vsh_cc_proto",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.guest",
@@ -48,20 +47,6 @@ executable("bin") {
 
   public_deps = [
     "//zircon/public/fidl/fuchsia-hardware-pty:fuchsia-hardware-pty_c",
-  ]
-}
-
-proto_library("protos") {
-  sources = [
-    "../pkg/biscotti_guest/third_party/protos/vsh.proto",
-  ]
-
-  generate_python = false
-  cc_generator_options = "lite"
-
-  import_dirs = [
-    "//garnet/bin/guest/pkg/biscotti_guest/third_party/protos",
-    "//third_party/protobuf/src",
   ]
 }
 

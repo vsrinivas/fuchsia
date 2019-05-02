@@ -4,7 +4,6 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//third_party/protobuf/proto_library.gni")
 
 extras_image = "$target_out_dir/linux/extras.img"
 
@@ -49,7 +48,7 @@ source_set("lib") {
   ]
   public_configs = [ ":linux_runner_net_config" ]
   public_deps = [
-    ":protos",
+    "//garnet/bin/guest/pkg/biscotti_guest/third_party/protos:vm_cc_proto",
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/guest",
@@ -66,30 +65,6 @@ source_set("lib") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace-provider",
-  ]
-}
-
-proto_library("protos") {
-  sources = [
-    "../third_party/protos/common.proto",
-    "../third_party/protos/container_guest.proto",
-    "../third_party/protos/container_host.proto",
-    "../third_party/protos/tremplin.proto",
-    "../third_party/protos/vm_guest.proto",
-    "../third_party/protos/vm_host.proto",
-  ]
-
-  generate_python = false
-  cc_generator_options = "lite"
-  generator_plugin_suffix = ".grpc.pb"
-  generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
-
-  import_dirs = [
-    "//garnet/bin/guest/pkg/biscotti_guest/third_party/protos",
-    "//third_party/protobuf/src",
-  ]
-  deps = [
-    "//third_party/grpc:grpc++",
   ]
 }
 
