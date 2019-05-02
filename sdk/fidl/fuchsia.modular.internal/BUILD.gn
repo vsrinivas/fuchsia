@@ -17,6 +17,5 @@ fidl("fuchsia.modular.internal") {
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
-    "//zircon/public/fidl/fuchsia-io",
   ]
 }
