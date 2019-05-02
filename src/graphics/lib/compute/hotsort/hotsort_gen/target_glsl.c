@@ -4,6 +4,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
 //
 //
@@ -81,22 +83,120 @@ hsg_copyright(FILE * file)
 
 static
 void
-hsg_macros(FILE * file)
+hsg_macros(struct hsg_config const * const config, FILE * file)
 {
   fprintf(file,
-          "// target-specific config      \n"
-          "#include \"hs_config.h\"       \n"
-          "                               \n"
-          "// GLSL preamble               \n"
-          "#include \"hs_glsl_preamble.h\"\n"
-          "                               \n"
-          "// arch/target-specific macros \n"
-          "#include \"hs_glsl_macros.h\"  \n"
-          "                               \n"
-          "//                             \n"
-          "//                             \n"
-          "//                             \n"
+          "// preamble                                     \n"
+          "#version 460                                    \n"
+          "#extension GL_GOOGLE_include_directive : require\n"
+          "                                                \n"
+          "// target-specific config                       \n"
+          "#include \"hs_config.h\"                        \n"
+          "                                                \n"
+          "// arch/target-specific macros                  \n"
+          "#include \"hs_glsl_macros.h\"                   \n"
+          "                                                \n"
+          "//                                              \n"
+          "//                                              \n"
+          "//                                              \n"
           "\n");
+}
+
+//
+//
+//
+
+static
+void
+hsg_target_header_and_module(struct hsg_config const * const config)
+{
+  //
+  // define header
+  //
+  {
+    FILE * file = fopen("hs_target.h","wb");
+
+    hsg_copyright(file);
+
+    fprintf(file,
+            "#pragma once                                              \n"
+            "                                                          \n"
+            "//                                                        \n"
+            "//                                                        \n"
+            "//                                                        \n"
+            "                                                          \n"
+            "#include \"hotsort_vk_target.h\"                          \n"
+            "                                                          \n"
+            "//                                                        \n"
+            "//                                                        \n"
+            "//                                                        \n"
+            "                                                          \n"
+            "#undef  HS_TARGET_NAME                                    \n"
+            "#define HS_TARGET_NAME %s                                 \n"
+            "                                                          \n"
+            "//                                                        \n"
+            "//                                                        \n"
+            "//                                                        \n"
+            "                                                          \n"
+            "extern struct hotsort_vk_target const HS_TARGET_NAME;     \n"
+            "                                                          \n"
+            "//                                                        \n"
+            "//                                                        \n"
+            "//                                                        \n",
+            config->define.lower);
+
+    fclose(file);
+  }
+
+  //
+  // define module
+  //
+  {
+    size_t const module_len  = strlen(config->define.lower) + strlen(".c") + 1;
+    char * const module_name = malloc(module_len);
+
+    sprintf(module_name,"%s.c",config->define.lower);
+
+    FILE * file = fopen(module_name,"wb");
+
+    hsg_copyright(file);
+
+    fprintf(file,
+            "//                                                   \n"
+            "//                                                   \n"
+            "//                                                   \n"
+            "                                                     \n"
+            "#include \"hs_target.h\"                             \n"
+            "#include \"hs_config.h\"                             \n"
+            "                                                     \n"
+            "//                                                   \n"
+            "//                                                   \n"
+            "//                                                   \n"
+            "                                                     \n"
+            "struct hotsort_vk_target const HS_TARGET_NAME =      \n"
+            "{                                                    \n"
+            "  .config = {                                        \n"
+            "#include \"hs_target_config_init.inl\"               \n"
+            "  },                                                 \n"
+            "                                                     \n"
+            "  .modules = {                                       \n"
+            "#include \"hs_modules.inl\"                          \n"
+            "#ifdef HS_DUMP                                       \n"
+            "    0                                                \n"
+            "#endif                                               \n"
+            "  }                                                  \n"
+            "};                                                   \n"
+            "                                                     \n"
+            "#include \"hs_target_modules_init.inl\"              \n"
+            "                                                     \n"
+            "//                                                   \n"
+            "//                                                   \n"
+            "//                                                   \n");
+
+    fclose(file);
+
+    free(module_name);
+  }
 }
 
 //
@@ -145,23 +245,31 @@ hsg_target_glsl(struct hsg_target       * const target,
 
     case HSG_OP_TYPE_TARGET_BEGIN:
       {
+        // create header and module
+        hsg_target_header_and_module(config);
+
         // allocate state
         target->state = malloc(sizeof(*target->state));
 
         // allocate files
-        target->state->header  = fopen("hs_config.h", "wb");
-        target->state->modules = fopen("hs_modules.h","wb");
+        target->state->header  = fopen("hs_config.h",   "wb");
+        target->state->modules = fopen("hs_modules.txt","wb");
 
         hsg_copyright(target->state->header);
-        hsg_copyright(target->state->modules);
 
         // initialize header
         uint32_t const bc_max = msb_idx_u32(pow2_rd_u32(merge->warps));
 
         fprintf(target->state->header,
-                "#ifndef HS_GLSL_ONCE                                            \n"
-                "#define HS_GLSL_ONCE                                            \n"
-                "                                                                \n"
+                "#ifndef %s_GLSL_ONCE \n"
+                "#define %s_GLSL_ONCE \n\n",
+                config->define.upper,config->define.upper);
+
+        fprintf(target->state->header,
+                "#define %s\n\n",
+                config->define.upper);
+
+        fprintf(target->state->header,
                 "#define HS_SLAB_THREADS_LOG2    %u                              \n"
                 "#define HS_SLAB_THREADS         (1 << HS_SLAB_THREADS_LOG2)     \n"
                 "#define HS_SLAB_WIDTH_LOG2      %u                              \n"
@@ -180,8 +288,7 @@ hsg_target_glsl(struct hsg_target       * const target,
                 "#define HS_HM_BLOCK_HEIGHT      %u                              \n"
                 "#define HS_HM_SCALE_MIN         %u                              \n"
                 "#define HS_HM_SCALE_MAX         %u                              \n"
-                "#define HS_EMPTY                                                \n"
-                "                                                                \n",
+                "#define HS_EMPTY                                                \n\n",
                 config->warp.lanes_log2, // FIXME -- this matters for SIMD
                 config->warp.lanes_log2,
                 config->thread.regs,
@@ -196,9 +303,6 @@ hsg_target_glsl(struct hsg_target       * const target,
                 config->merge.half.warps,
                 config->merge.half.lo,
                 config->merge.half.hi);
-
-        if (target->define != NULL)
-          fprintf(target->state->header,"#define %s\n\n",target->define);
 
         fprintf(target->state->header,
                 "#define HS_SLAB_ROWS()    \\\n");
@@ -257,14 +361,13 @@ hsg_target_glsl(struct hsg_target       * const target,
     case HSG_OP_TYPE_FILL_IN_KERNEL_PROTO:
       {
         fprintf(target->state->modules,
-                "#include \"hs_fill_in.len.xxd\"\n,\n"
-                "#include \"hs_fill_in.spv.xxd\"\n,\n");
+                "hs_fill_in\n");
 
-        target->state->source = fopen("hs_fill_in.comp","w+");
+        target->state->source = fopen("comp/hs_fill_in.comp","wb");
 
         hsg_copyright(target->state->source);
 
-        hsg_macros(target->state->source);
+        hsg_macros(config,target->state->source);
 
         fprintf(target->state->source,
                 "HS_FILL_IN_KERNEL_PROTO()\n");
@@ -281,14 +384,13 @@ hsg_target_glsl(struct hsg_target       * const target,
     case HSG_OP_TYPE_FILL_OUT_KERNEL_PROTO:
       {
         fprintf(target->state->modules,
-                "#include \"hs_fill_out.len.xxd\"\n,\n"
-                "#include \"hs_fill_out.spv.xxd\"\n,\n");
+                "hs_fill_out\n");
 
-        target->state->source = fopen("hs_fill_out.comp","w+");
+        target->state->source = fopen("comp/hs_fill_out.comp","wb");
 
         hsg_copyright(target->state->source);
 
-        hsg_macros(target->state->source);
+        hsg_macros(config,target->state->source);
 
         fprintf(target->state->source,
                 "HS_FILL_OUT_KERNEL_PROTO()\n");
@@ -305,14 +407,13 @@ hsg_target_glsl(struct hsg_target       * const target,
     case HSG_OP_TYPE_TRANSPOSE_KERNEL_PROTO:
       {
         fprintf(target->state->modules,
-                "#include \"hs_transpose.len.xxd\"\n,\n"
-                "#include \"hs_transpose.spv.xxd\"\n,\n");
+                "hs_transpose\n");
 
-        target->state->source = fopen("hs_transpose.comp","w+");
+        target->state->source = fopen("comp/hs_transpose.comp","wb");
 
         hsg_copyright(target->state->source);
 
-        hsg_macros(target->state->source);
+        hsg_macros(config,target->state->source);
 
         fprintf(target->state->source,
                 "HS_TRANSPOSE_KERNEL_PROTO()\n");
@@ -344,19 +445,17 @@ hsg_target_glsl(struct hsg_target       * const target,
         uint32_t const msb = msb_idx_u32(bs);
 
         fprintf(target->state->modules,
-                "#include \"hs_bs_%u.len.xxd\"\n,\n"
-                "#include \"hs_bs_%u.spv.xxd\"\n,\n",
-                msb,
+                "hs_bs_%u\n",
                 msb);
 
-        char filename[] = { "hs_bs_XX.comp" };
-        sprintf(filename,"hs_bs_%u.comp",msb);
+        char filename[] = { "comp/hs_bs_XX.comp" };
+        sprintf(filename,"comp/hs_bs_%u.comp",msb);
 
-        target->state->source = fopen(filename,"w+");
+        target->state->source = fopen(filename,"wb");
 
         hsg_copyright(target->state->source);
 
-        hsg_macros(target->state->source);
+        hsg_macros(config,target->state->source);
 
         if (m->warps > 1)
           {
@@ -389,19 +488,17 @@ hsg_target_glsl(struct hsg_target       * const target,
         uint32_t const msb = msb_idx_u32(m->warps);
 
         fprintf(target->state->modules,
-                "#include \"hs_bc_%u.len.xxd\"\n,\n"
-                "#include \"hs_bc_%u.spv.xxd\"\n,\n",
-                msb,
+                "hs_bc_%u\n",
                 msb);
 
-        char filename[] = { "hs_bc_XX.comp" };
-        sprintf(filename,"hs_bc_%u.comp",msb);
+        char filename[] = { "comp/hs_bc_XX.comp" };
+        sprintf(filename,"comp/hs_bc_%u.comp",msb);
 
-        target->state->source = fopen(filename,"w+");
+        target->state->source = fopen(filename,"wb");
 
         hsg_copyright(target->state->source);
 
-        hsg_macros(target->state->source);
+        hsg_macros(config,target->state->source);
 
         if (m->warps > 1)
           {
@@ -430,19 +527,17 @@ hsg_target_glsl(struct hsg_target       * const target,
     case HSG_OP_TYPE_FM_KERNEL_PROTO:
       {
         fprintf(target->state->modules,
-                "#include \"hs_fm_%u_%u.len.xxd\"\n,\n"
-                "#include \"hs_fm_%u_%u.spv.xxd\"\n,\n",
-                ops->a,ops->b,
+                "hs_fm_%u_%u\n",
                 ops->a,ops->b);
 
-        char filename[] = { "hs_fm_X_XX.comp" };
-        sprintf(filename,"hs_fm_%u_%u.comp",ops->a,ops->b);
+        char filename[] = { "comp/hs_fm_X_XX.comp" };
+        sprintf(filename,"comp/hs_fm_%u_%u.comp",ops->a,ops->b);
 
-        target->state->source = fopen(filename,"w+");
+        target->state->source = fopen(filename,"wb");
 
         hsg_copyright(target->state->source);
 
-        hsg_macros(target->state->source);
+        hsg_macros(config,target->state->source);
 
         fprintf(target->state->source,
                 "HS_FM_KERNEL_PROTO(%u,%u)\n",
@@ -464,19 +559,17 @@ hsg_target_glsl(struct hsg_target       * const target,
     case HSG_OP_TYPE_HM_KERNEL_PROTO:
       {
         fprintf(target->state->modules,
-                "#include \"hs_hm_%u.len.xxd\"\n,\n"
-                "#include \"hs_hm_%u.spv.xxd\"\n,\n",
-                ops->a,
+                "hs_hm_%u\n",
                 ops->a);
 
-        char filename[] = { "hs_hm_X.comp" };
-        sprintf(filename,"hs_hm_%u.comp",ops->a);
+        char filename[] = { "comp/hs_hm_X.comp" };
+        sprintf(filename,"comp/hs_hm_%u.comp",ops->a);
 
-        target->state->source = fopen(filename,"w+");
+        target->state->source = fopen(filename,"wb");
 
         hsg_copyright(target->state->source);
 
-        hsg_macros(target->state->source);
+        hsg_macros(config,target->state->source);
 
         fprintf(target->state->source,
                 "HS_HM_KERNEL_PROTO(%u)\n",

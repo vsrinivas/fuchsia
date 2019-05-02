@@ -6,13 +6,21 @@
 //
 //
 
+#include <stdlib.h>
+
+//
+//
+//
+
 #include "transpose.h"
 #include "common/macros.h"
 
 //
 // Rows must be an even number.  This is enforced elsewhere.
 //
-// The transpose requires (cols_log2 * rows/2) row-pair blends.
+// The transpose requires (cols_log2 * rows / 2) row-pair blends.
+//
+// Each pfn_blend() invocation exchanges values between two rows.
 //
 void
 hsg_transpose(uint32_t                   const cols_log2,
@@ -28,8 +36,8 @@ hsg_transpose(uint32_t                   const cols_log2,
               void *                           remap)
 {
   // get mapping array
-  uint32_t * map_curr = ALLOCA_MACRO(rows * sizeof(*map_curr));
-  uint32_t * map_next = ALLOCA_MACRO(rows * sizeof(*map_next));
+  uint32_t * map_curr = malloc(rows * sizeof(*map_curr));
+  uint32_t * map_next = malloc(rows * sizeof(*map_next));
 
   // init the mapping array
   for (uint32_t ii=0; ii<rows; ii++)
@@ -71,6 +79,10 @@ hsg_transpose(uint32_t                   const cols_log2,
   // write out the remapping
   for (uint32_t ii=0; ii<rows; ii++)
     pfn_remap(ii,map_curr[ii] >> cols_log2,remap);
+
+  // free arrays
+  free(map_curr);
+  free(map_next);
 }
 
 //
@@ -92,8 +104,8 @@ hsg_debug_blend(uint32_t const cols_log2,
 {
   fprintf(stdout,"BLEND( %u, %3u, %3u )\n",cols_log2,row_ll,row_ur);
 
-  uint32_t * const ll = ALLOCA_MACRO(cols * sizeof(*b));
-  uint32_t * const ur = ALLOCA_MACRO(cols * sizeof(*b));
+  uint32_t * const ll = malloc(cols * sizeof(*b));
+  uint32_t * const ur = malloc(cols * sizeof(*b));
 
   memcpy(ll,b+row_ll*cols,cols * sizeof(*b));
   memcpy(ur,b+row_ur*cols,cols * sizeof(*b));
@@ -103,6 +115,10 @@ hsg_debug_blend(uint32_t const cols_log2,
 
   for (uint32_t ii=0; ii<cols; ii++)
     b[row_ur*cols+ii] = ((ii >> cols_log2-1) & 1) ? ll[ii^(1<<cols_log2-1)] : ur[ii];
+
+  // free arrays
+  free(ll);
+  free(ur);
 }
 
 static
@@ -140,8 +156,8 @@ main(int argc, char * argv[])
 
   cols = 1 << cols_log2;
 
-  uint32_t * const b = ALLOCA_MACRO(cols * rows * sizeof(*b));
-  uint32_t * const r = ALLOCA_MACRO(       rows * sizeof(*r));
+  uint32_t * const b = malloc(cols * rows * sizeof(*b));
+  uint32_t * const r = malloc(       rows * sizeof(*r));
 
   for (uint32_t rr=0; rr<rows; rr++) {
     r[rr] = rr;
@@ -156,6 +172,10 @@ main(int argc, char * argv[])
                 hsg_debug_remap,r);
 
   hsg_debug_print(rows,b,r);
+
+  // free arrays
+  free(b);
+  free(r);
 
   return EXIT_SUCCESS;
 }

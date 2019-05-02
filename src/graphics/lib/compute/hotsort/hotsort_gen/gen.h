@@ -21,51 +21,54 @@
 // critical knobs for tuning performance.
 //
 
+#define HSG_CONFIG_DEFINE_LEN_SIZE 64
+
 struct hsg_config
 {
   struct {
+    char        lower[HSG_CONFIG_DEFINE_LEN_SIZE];  // symbolic name -- lower-cased
+    char        upper[HSG_CONFIG_DEFINE_LEN_SIZE];  // symbolic name -- upper-cased
+  } define;
 
+  struct {
     struct {
-      uint32_t  warps;
-      uint32_t  lo;
-      uint32_t  hi;
+      uint32_t  warps;                              // the number of warps in the flip merge kernel -- may become obsolete
+      uint32_t  lo;                                 // lo scale factor for flip merge
+      uint32_t  hi;                                 // hi scale factor for flip merge
     } flip;
 
     struct {
-      uint32_t  warps;
-      uint32_t  lo;
-      uint32_t  hi;
+      uint32_t  warps;                              // the number of warps in the half merge kernel -- may become obsolete
+      uint32_t  lo;                                 // lo scale factor for half merge
+      uint32_t  hi;                                 // hi scale factor for half merge
     } half;
-
-    uint32_t    max_log2;
-
   } merge;
 
   struct {
-    uint32_t    warps_min;
-    uint32_t    warps_max;
-    uint32_t    warps_mod;
+    uint32_t    warps_min;                          // min warps for a block that uses smem barriers
+    uint32_t    warps_max;                          // max warps for the entire multiprocessor
+    uint32_t    warps_mod;                          // the number of warps necessary to load balance horizontal merging
 
-    uint32_t    smem_min;
-    uint32_t    smem_quantum;
+    uint32_t    smem_min;                           // minimum amount of shared memory that can be allocated by an arch
+    uint32_t    smem_quantum;                       // smem quantum amount for an arch
 
-    uint32_t    smem_bs;
-    uint32_t    smem_bc;
+    uint32_t    smem_bs;                            // amount of shared memory available to block sorting kernel
+    uint32_t    smem_bc;                            // usually the same as .smem_bs but can be overridden
   } block;
 
   struct {
-    uint32_t    lanes;
-    uint32_t    lanes_log2;
-    uint32_t    skpw_bs;
+    uint32_t    lanes;                              // number of lanes in arch's warp/wave/subgroup
+    uint32_t    lanes_log2;                         // log2 of .lanes
+    uint32_t    skpw_bs;                            // another potential clamp on the amount of shared memory
   } warp;
 
   struct {
-    uint32_t    regs;
-    uint32_t    xtra;
+    uint32_t    regs;                               // number of in-register values per warp lane
+    uint32_t    xtra;                               // explicit "extra" number of registers available for merging
   } thread;
 
   struct {
-    uint32_t    dwords;
+    uint32_t    dwords;                             // number of dwords in a key -- .type will be extended to support key-vals
   } type;
 };
 
@@ -116,36 +119,6 @@ struct hsg_merge
 
   uint32_t         skpw_bc;
 };
-
-//
-//
-//
-
-#if 0
-
-#define HSG_FILE_NAME_SIZE  80
-
-struct hsg_file
-{
-  FILE       * file;
-  char const * prefix;
-  char         name[HSG_FILE_NAME_SIZE];
-};
-
-//
-//
-//
-
-typedef enum hsg_file_type {
-
-  HSG_FILE_TYPE_HEADER,
-  HSG_FILE_TYPE_SOURCE,
-
-  HSG_FILE_TYPE_COUNT
-
-} hsg_file_type;
-
-#endif
 
 //
 //
@@ -247,24 +220,26 @@ typedef enum hsg_op_type {
 
 struct hsg_op
 {
-  hsg_op_type  type;
+  hsg_op_type   type;
 
   union {
 
+    uint32_t    params[3];
+
     struct {
-      int32_t  a;
-      int32_t  b;
-      int32_t  c;
+      uint32_t  a;
+      uint32_t  b;
+      uint32_t  c;
     };
 
     struct {
-      int32_t  n;
-      int32_t  v;
+      uint32_t  n;
+      uint32_t  v;
     };
 
     struct {
-      int32_t  m;
-      int32_t  w;
+      uint32_t  m;
+      uint32_t  w;
     };
 
   };
@@ -282,7 +257,6 @@ extern char const * const hsg_op_type_string[];
 
 struct hsg_target
 {
-  char const              * define;
   struct hsg_target_state * state;
 };
 

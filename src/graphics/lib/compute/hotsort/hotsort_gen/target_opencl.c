@@ -186,8 +186,9 @@ hsg_target_opencl(struct hsg_target       * const target,
                 config->merge.half.lo,
                 config->merge.half.hi);
 
-        if (target->define != NULL)
-          fprintf(target->state->header,"#define %s\n\n",target->define);
+          fprintf(target->state->header,
+                  "#define %s\n\n",
+                  config->define.upper);
 
         fprintf(target->state->header,
                 "#define HS_SLAB_ROWS()    \\\n");

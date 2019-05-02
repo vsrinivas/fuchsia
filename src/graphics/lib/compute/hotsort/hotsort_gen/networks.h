@@ -28,7 +28,10 @@ struct hsg_network
 //
 //
 
+// Sorting networks of size 2 to 64.
 extern struct hsg_network const hsg_networks_sorting[];
+
+// Odd-merge merging networks of size 2 to 64.
 extern struct hsg_network const hsg_networks_merging[];
 
 //

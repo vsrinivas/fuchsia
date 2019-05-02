@@ -185,8 +185,9 @@ hsg_target_cuda(struct hsg_target       * const target,
                 config->merge.half.lo,
                 config->merge.half.hi);
 
-        if (target->define != NULL)
-          fprintf(target->state->header,"#define %s\n\n",target->define);
+        fprintf(target->state->header,
+                "#define %s\n\n",
+                config->define.upper);
 
         fprintf(target->state->header,
                 "#define HS_SLAB_ROWS()    \\\n");
@@ -397,8 +398,6 @@ hsg_target_cuda(struct hsg_target       * const target,
 
     case HSG_OP_TYPE_FM_KERNEL_PREAMBLE:
       {
-        uint32_t const msb = msb_idx_u32(pow2_ru_u32(merge[0].warps));
-
         if (ops->a == ops->b) // equal left and right spans
           {
             fprintf(target->state->source,

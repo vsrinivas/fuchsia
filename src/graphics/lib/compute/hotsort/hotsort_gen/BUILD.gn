@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if (current_toolchain == host_toolchain) {
+  executable("hotsort_gen") {
+    sources = [
+      "gen.h",
+      "networks.h",
+      "transpose.h",
+      "main.c",
+      "networks_merging_64.c",
+      "networks_sorting_64.c",
+      "target_cuda.c",
+      "target_debug.c",
+      "target_glsl.c",
+      "target_opencl.c",
+      "transpose.c"
+    ]
+    include_dirs = [
+      "//src/graphics/lib/compute"
+    ]
+    deps = [
+      "//src/graphics/lib/compute/common"
+    ]
+  }
+}

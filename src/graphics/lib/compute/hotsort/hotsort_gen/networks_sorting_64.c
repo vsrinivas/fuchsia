@@ -10,11 +10,11 @@
 #include "common/macros.h"
 
 //
-//
+// clang-format off
 //
 
 #define S(n)   static struct hsg_op const sn##n[]
-#define X(a,b) { HSG_OP_TYPE_CMP_XCHG, { a, b }}
+#define X(a,b) { .type = HSG_OP_TYPE_CMP_XCHG, .params = { a, b }}
 
 //
 //
@@ -1075,5 +1075,5 @@ struct hsg_network const hsg_networks_sorting[] =
   };
 
 //
-//
+// clang-format on
 //
