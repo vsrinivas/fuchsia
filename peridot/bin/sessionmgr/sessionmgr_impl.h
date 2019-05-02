@@ -235,7 +235,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<MessageQueueManager> message_queue_manager_;
   std::unique_ptr<AgentRunnerStorage> agent_runner_storage_;
   AsyncHolder<AgentRunner> agent_runner_;
-  std::unique_ptr<DeviceMapImpl> device_map_impl_;
   std::string device_name_;
 
   std::unique_ptr<StoryCommandExecutor> story_command_executor_;

@@ -27,7 +27,6 @@
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/component_context_impl.h"
-#include "peridot/bin/sessionmgr/device_map_impl.h"
 #include "peridot/bin/sessionmgr/focus.h"
 #include "peridot/bin/sessionmgr/message_queue/message_queue_manager.h"
 #include "peridot/bin/sessionmgr/presentation_provider.h"
@@ -212,7 +211,6 @@ void SessionmgrImpl::Initialize(
         called = true;
 
         InitializeLedger(std::move(ledger_token_manager));
-        InitializeDeviceMap();
         InitializeMessageQueueManager();
         InitializeMaxwellAndModular(std::move(session_shell_url),
                                     std::move(story_shell_config),
@@ -243,8 +241,8 @@ void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
 void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
   session_id_ = session_id;
 
-  static const auto* const kEnvServices = new std::vector<std::string>{
-      fuchsia::modular::DeviceMap::Name_, fuchsia::modular::Clipboard::Name_};
+  static const auto* const kEnvServices =
+      new std::vector<std::string>{fuchsia::modular::Clipboard::Name_};
   session_environment_ = std::make_unique<Environment>(
       startup_context_->environment(),
       std::string(kSessionEnvironmentLabelPrefix) + session_id_, *kEnvServices,
@@ -367,28 +365,6 @@ void SessionmgrImpl::InitializeLedger(
         Shutdown();
       });
   AtEnd(Reset(&ledger_client_));
-}
-
-void SessionmgrImpl::InitializeDeviceMap() {
-  // fuchsia::modular::DeviceMap service
-  const std::string device_id = LoadDeviceID(session_id_);
-  device_name_ = LoadDeviceName(session_id_);
-  const std::string device_profile = LoadDeviceProfile();
-
-  device_map_impl_ = std::make_unique<DeviceMapImpl>(
-      device_name_, device_id, device_profile, ledger_client_.get(),
-      fuchsia::ledger::PageId());
-  session_environment_->AddService<fuchsia::modular::DeviceMap>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::DeviceMap> request) {
-        if (terminating_) {
-          return;
-        }
-        // device_map_impl_ may be reset before session_environment_.
-        if (device_map_impl_) {
-          device_map_impl_->Connect(std::move(request));
-        }
-      });
-  AtEnd(Reset(&device_map_impl_));
 }
 
 void SessionmgrImpl::InitializeClipboard() {
@@ -635,7 +611,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       startup_context_->ConnectToEnvironmentService<fuchsia::sys::Loader>()));
 
   story_provider_impl_.reset(new StoryProviderImpl(
-      session_environment_.get(), device_map_impl_->current_device_id(),
+      session_environment_.get(), LoadDeviceID(session_id_),
       session_storage_.get(), std::move(story_shell_config),
       std::move(story_shell_factory_ptr), component_context_info,
       std::move(focus_provider_story_provider),
@@ -692,9 +668,9 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   AtEnd(Reset(&puppet_master_impl_));
   AtEnd(Reset(&session_ctl_));
 
-  focus_handler_ = std::make_unique<FocusHandler>(
-      device_map_impl_->current_device_id(), ledger_client_.get(),
-      fuchsia::ledger::PageId());
+  focus_handler_ = std::make_unique<FocusHandler>(LoadDeviceID(session_id_),
+                                                  ledger_client_.get(),
+                                                  fuchsia::ledger::PageId());
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));

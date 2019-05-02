@@ -15,8 +15,6 @@ executable_package("sessionmgr") {
   sources = [
     "argv_injecting_launcher.cc",
     "argv_injecting_launcher.h",
-    "device_map_impl.cc",
-    "device_map_impl.h",
     "sessionmgr.cc",
     "sessionmgr_impl.cc",
     "sessionmgr_impl.h",
