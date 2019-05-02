@@ -16,6 +16,18 @@ namespace testing {
 // Provides access to services that have been added to this object.
 // The object of this class should be kept alive for fake |ComponentContext| to
 // work.
+//
+// This class is thread-hostile.
+//
+//  # Simple usage
+//
+// Instances of this class should be owned and managed on the same thread.
+//
+// # Advanced usage
+//
+// You can use a background thread to service this class provided:
+// async_dispatcher_t for the background thread is stopped or suspended
+// prior to destroying the class object.
 class ComponentContextProvider {
  public:
   explicit ComponentContextProvider(async_dispatcher_t* dispatcher = nullptr);
@@ -69,8 +81,8 @@ class ComponentContextProvider {
     return svc_provider_;
   };
 
-  // Relinquishes the ownership of fake context. This object should be alive for
-  // lifetime of returned context.
+  // Relinquishes the ownership of fake context. This object should be alive
+  // for lifetime of returned context.
   std::unique_ptr<sys::ComponentContext> TakeContext() {
     return std::move(component_context_);
   }

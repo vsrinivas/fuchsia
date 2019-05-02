@@ -11,9 +11,23 @@ namespace vfs {
 
 // A |LazyDir| a base class for directories that dynamically update their
 // contents on each operation.  Clients should derive from this class
-// and implement GetContents and GetFile for their use case.  The base
-// implementation of this class is thread-safe, but it is up to implementers
-// to ensure their implementations are thread safe as well.
+// and implement GetContents and GetFile for their use case.
+//
+// This class is thread-hostile, as are the |Nodes| it manages.
+//
+//  # Simple usage
+//
+// Instances of this class should be owned and managed on the same thread
+// that services their connections.
+//
+// # Advanced usage
+//
+// You can use a background thread to service connections provided: (a) the
+// contents of the directory are configured prior to starting to service
+// connections, (b) all modifications to the directory occur while the
+// async_dispatcher_t for the background thread is stopped or suspended, and
+// (c) async_dispatcher_t for the background thread is stopped or suspended
+// prior to destroying the directory.
 class LazyDir : public vfs::internal::Directory {
  public:
   // Structure storing a single entry in the directory.

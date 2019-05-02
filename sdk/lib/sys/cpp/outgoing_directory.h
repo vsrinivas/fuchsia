@@ -35,7 +35,18 @@ namespace sys {
 //  * objects. This directory contains Inspect API files and interfaces for use
 //    in component inspection.
 //
-// Instances of this class are thread-safe.
+// This class is thread-hostile.
+//
+//  # Simple usage
+//
+// Instances of this class should be owned and managed on the same thread
+// that services their connections.
+//
+// # Advanced usage
+//
+// You can use a background thread to service connections provided:
+// async_dispatcher_t for the background thread is stopped or suspended
+// prior to destroying the class object.
 class OutgoingDirectory final {
  public:
   OutgoingDirectory();

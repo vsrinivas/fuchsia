@@ -17,7 +17,21 @@ namespace vfs {
 // implemented) these directory entries but it cannot create, remove, or rename
 // them.
 //
-// Instances of this class are thread-safe.
+// This class is thread-hostile, as are the |Nodes| it manages.
+//
+//  # Simple usage
+//
+// Instances of this class should be owned and managed on the same thread
+// that services their connections.
+//
+// # Advanced usage
+//
+// You can use a background thread to service connections provided: (a) the
+// contents of the directory are configured prior to starting to service
+// connections, (b) all modifications to the directory occur while the
+// async_dispatcher_t for the background thread is stopped or suspended, and
+// (c) async_dispatcher_t for the background thread is stopped or suspended
+// prior to destroying the directory.
 class PseudoDir : public vfs::internal::Directory {
  public:
   // Creates a directory which is initially empty.

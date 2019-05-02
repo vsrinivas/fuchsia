@@ -18,8 +18,6 @@ namespace vfs {
 //
 // It is not possible for the client to detach the remote directory or
 // to mount a new one in its place.
-//
-// This class is thread-safe.
 class RemoteDir final : public vfs::internal::Directory {
  public:
   // Binds to a remotely hosted directory using the specified

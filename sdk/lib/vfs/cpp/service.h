@@ -11,8 +11,6 @@
 namespace vfs {
 
 // A |Node| which binds a channel to a service implementation when opened.
-//
-// Instances of this class are thread-safe.
 class Service : public vfs::internal::Node {
  public:
   // Handler called to bind the provided channel to an implementation

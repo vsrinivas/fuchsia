@@ -5,11 +5,12 @@
 #ifndef LIB_SYS_CPP_TESTING_SERVICE_DIRECTORY_PROVIDER_H_
 #define LIB_SYS_CPP_TESTING_SERVICE_DIRECTORY_PROVIDER_H_
 
-#include "lib/sys/cpp/service_directory.h"
-
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
+
 #include <memory>
+
+#include "lib/sys/cpp/service_directory.h"
 
 namespace sys {
 namespace testing {
@@ -18,6 +19,18 @@ namespace testing {
 // Provides access to services that have been added to this object.
 // The object of this class should be kept alive for fake |ServiceDirectory| to
 // work.
+//
+// This class is thread-hostile.
+//
+//  # Simple usage
+//
+// Instances of this class should be owned and managed on the same thread.
+//
+// # Advanced usage
+//
+// You can use a background thread to service this class provided:
+// async_dispatcher_t for the background thread is stopped or suspended
+// prior to destroying the class object.
 class ServiceDirectoryProvider {
  public:
   explicit ServiceDirectoryProvider(async_dispatcher_t* dispatcher = nullptr);

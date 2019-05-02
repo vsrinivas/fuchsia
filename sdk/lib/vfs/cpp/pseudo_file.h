@@ -24,7 +24,18 @@ namespace vfs {
 // buffer which the pseudo-file delivers as a whole to the write handler when
 // the file is closed(if there were any writes).  Truncation is also supported.
 //
-// Instances of this class are thread-safe.
+// This class is thread-hostile.
+//
+//  # Simple usage
+//
+// Instances of this class should be owned and managed on the same thread
+// that services their connections.
+//
+// # Advanced usage
+//
+// You can use a background thread to service connections provided:
+// async_dispatcher_t for the background thread is stopped or suspended
+// prior to destroying the file.
 class PseudoFile final : public vfs::internal::File {
  public:
   // Handler called to read from the pseudo-file.

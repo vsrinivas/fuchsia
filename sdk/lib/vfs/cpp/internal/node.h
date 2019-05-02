@@ -29,8 +29,6 @@ class Connection;
 //
 //  * File, which is a subclass for file objects.
 //  * Directory, which is a subclass for directory objects.
-//
-// This class is thread safe.
 class Node {
  public:
   Node();

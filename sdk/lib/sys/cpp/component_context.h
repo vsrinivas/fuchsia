@@ -33,7 +33,17 @@ class ComponentContextProvider;
 // exposing services and other file system objects through its |outgoing()|
 // property.
 //
-// Instances of this class are thread-safe.
+// This class is thread-hostile.
+//
+//  # Simple usage
+//
+// Instances of this class should be owned and managed on the same thread.
+//
+// # Advanced usage
+//
+// You can use a background thread to service this class provided:
+// async_dispatcher_t for the background thread is stopped or suspended
+// prior to destroying the class object.
 //
 // # Example
 //
