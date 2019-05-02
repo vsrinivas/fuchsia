@@ -77,8 +77,9 @@ template("zbi") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "visibility",
+                             "metadata",
                              "testonly",
+                             "visibility",
                            ])
     outputs = [
       output_file,

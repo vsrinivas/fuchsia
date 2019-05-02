@@ -5,15 +5,46 @@
 package simulator
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"fuchsia.googlesource.com/testing/qemu"
 )
 
+func zbiPath(t *testing.T) string {
+	ex, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+		return ""
+	}
+	exPath := filepath.Dir(ex)
+	return filepath.Join(exPath, "../recovery.zbi")
+}
+
 // TestUnpack checks that we can unpack qemu.
-func TestUnpack(t *testing.T) {
-	err := qemu.Unpack()
+func TestBoot(t *testing.T) {
+	distro, err := qemu.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer distro.Delete()
+
+	arch, err := distro.TargetCPU()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := distro.Create(qemu.Params{
+		Arch: arch,
+		ZBI:  zbiPath(t),
+	})
+
+	i.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer i.Kill()
+
+	i.WaitForLogMessage("recovery: started")
 }

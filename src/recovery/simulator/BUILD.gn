@@ -29,5 +29,6 @@ if (is_linux) {
     deps = [
       ":lib",
     ]
+    non_go_deps = [ "//build/images/recovery($target_toolchain)" ]
   }
 }

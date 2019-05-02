@@ -8,6 +8,7 @@ import("//garnet/build/pkgfs.gni")
 
 recovery_packages = [
   "//garnet:build-info",
+  "//garnet/bin/appmgr:appmgr_scheme_config",
   "//garnet/bin/appmgr",
   "//garnet/bin/netcfg:config",
   "//garnet/bin/netcfg",
@@ -46,4 +47,8 @@ assemble_system("recovery") {
   base_packages = recovery_packages
   netboot = true
   devmgr_config = [ "virtcon.disable=true" ]
+
+  metadata = {
+    test_runtime_deps = [ "$root_out_dir/${target_name}.zbi" ]
+  }
 }

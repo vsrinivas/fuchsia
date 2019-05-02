@@ -239,6 +239,20 @@ template("assemble_system") {
   }
 
   zbi(image_name) {
+    metadata = {
+      # We insert a package barrier because the packages inside this ZBI
+      # shouldn't leak to targets that depend on the ZBI. For example,
+      # suppose we store this ZBI inside a package() that is assembled into
+      # another Fuchsia system. We don't want the parent system to incorporate
+      # the packages from the ZBI into its own package list.
+      package_barrier = []
+      config_package_barrier = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, [ "metadata" ])
+      }
+    }
+
     testonly = true
     deps = [
       ":devmgr_config.txt",
