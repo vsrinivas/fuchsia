@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/spawn.h>
@@ -11,13 +9,17 @@
 #include <lib/sys/cpp/testing/fake_launcher.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 
+#include "gtest/gtest.h"
+
 TEST(Run, Daemonize) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   // It is not possible to use the /bin trampoline unless
   // fuchsia.process.Resolver is proxied to the child process.
-  const char* run_d_command_argv[] = {"/pkgfs/packages/run/0/bin/run", "-d",
-                                      "test_program_name", nullptr};
+  const char* run_d_command_argv[] = {
+      "/pkgfs/packages/run/0/bin/run", "-d",
+      "fuchsia-pkg://fuchsia.com/test_program_name#meta/test_program_name.cmx",
+      nullptr};
 
   zx::job job;
   uint32_t flags =
@@ -29,7 +31,7 @@ TEST(Run, Daemonize) {
 
   sys::testing::FakeLauncher test_launcher;
   test_launcher.RegisterComponent(
-      "test_program_name",
+      "fuchsia-pkg://fuchsia.com/test_program_name#meta/test_program_name.cmx",
       [&launcher_create_calls, &received_launch_info, &received_controller](
           fuchsia::sys::LaunchInfo info,
           fidl::InterfaceRequest<fuchsia::sys::ComponentController>
@@ -85,7 +87,9 @@ TEST(Run, Daemonize) {
   // line argument and a null controller.
   EXPECT_EQ(1, launcher_create_calls);
 
-  EXPECT_EQ("test_program_name", received_launch_info.url);
+  EXPECT_EQ(
+      "fuchsia-pkg://fuchsia.com/test_program_name#meta/test_program_name.cmx",
+      received_launch_info.url);
 
   EXPECT_FALSE(received_controller.is_valid());
 }

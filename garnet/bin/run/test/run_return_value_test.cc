@@ -7,15 +7,18 @@
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
 #include "gtest/gtest.h"
 
 static constexpr char kRunPath[] = "/bin/run";
-static constexpr char kExiter[] = "fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter.cmx";
+static constexpr char kExiter[] =
+    "fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter.cmx";
+static constexpr char kExiterShort[] = "run_test_exiter.cmx";
 
-void test_case(const char* value) {
+void test_case(const char* url, const char* value) {
   // Spawn "run run_test_exiter <value>"
   uint32_t flags = FDIO_SPAWN_CLONE_ALL;
-  const char* argv[] = {kRunPath, kExiter, value, NULL};
+  const char* argv[] = {kRunPath, url, value, NULL};
   zx_handle_t process = ZX_HANDLE_INVALID;
   zx_status_t status =
       fdio_spawn(ZX_HANDLE_INVALID, flags, kRunPath, argv, &process);
@@ -34,7 +37,19 @@ void test_case(const char* value) {
   ASSERT_EQ(strtoll(value, NULL, 0), proc_info.return_code);
 }
 
-TEST(RunReturnValueTest, Zero) { test_case("0"); }
-TEST(RunReturnValueTest, OneTwoThree) { test_case("123"); }
-TEST(RunReturnValueTest, Negative) { test_case("-99999"); }
-TEST(RunReturnValueTest, LongValue) { test_case("1152921504606846976"); }
+TEST(RunReturnValueTest, Zero) { test_case(kExiter, "0"); }
+TEST(RunReturnValueTest, OneTwoThree) { test_case(kExiter, "123"); }
+TEST(RunReturnValueTest, Negative) { test_case(kExiter, "-99999"); }
+TEST(RunReturnValueTest, LongValue) {
+  test_case(kExiter, "1152921504606846976");
+}
+TEST(RunReturnValueTest, FuzzySearchZero) { test_case(kExiterShort, "0"); }
+TEST(RunReturnValueTest, FuzzySearchOneTwoThree) {
+  test_case(kExiterShort, "123");
+}
+TEST(RunReturnValueTest, FuzzySearchNegative) {
+  test_case(kExiterShort, "-99999");
+}
+TEST(RunReturnValueTest, FuzzySearchLongValue) {
+  test_case(kExiterShort, "1152921504606846976");
+}
