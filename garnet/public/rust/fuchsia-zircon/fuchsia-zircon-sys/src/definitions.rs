@@ -469,6 +469,12 @@ extern {
         cache_policy: u32
         ) -> zx_status_t;
 
+    pub fn zx_vmo_replace_as_executable(
+        handle: zx_handle_t,
+        vmex: zx_handle_t,
+        out: *mut zx_handle_t
+        ) -> zx_status_t;
+
     pub fn zx_vmar_allocate(
         parent_vmar: zx_handle_t,
         options: zx_vm_option_t,

@@ -122,6 +122,23 @@ impl Vmo {
         ok(status)?;
         unsafe { Ok(Vmo::from(Handle::from_raw(out))) }
     }
+
+    /// Replace a VMO, adding execute rights.
+    ///
+    /// Wraps the
+    /// [zx_vmo_replace_as_executable](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/vmo_replace_as_executable.md)
+    /// syscall.
+    pub fn replace_as_executable(self) -> Result<Vmo, Status> {
+        // TODO(SEC-42): Add resource argument for exec setter.
+        let vmex = Handle::invalid();
+
+        let mut out = 0;
+        let status = unsafe {
+            sys::zx_vmo_replace_as_executable(self.raw_handle(), vmex.raw_handle(), &mut out)
+        };
+        ok(status)?;
+        unsafe { Ok(Vmo::from(Handle::from_raw(out))) }
+    }
 }
 
 bitflags! {
@@ -169,6 +186,7 @@ assoc_values!(VmoOp, [
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Rights;
 
     #[test]
     fn vmo_get_size() {
@@ -267,5 +285,23 @@ mod tests {
         assert_eq!(&read_buffer[0..4], b"four");
         assert!(clone.read(&mut read_buffer, 0).is_ok());
         assert_eq!(&read_buffer[0..5], b"three");
+    }
+
+    // TODO(SEC-42): In the near-ish future zx_vmo_replace_as_executable will be restricted and
+    // will require either the process run in a job with some special policy or have access to a
+    // special resource. We will either need to run the test binary with that capability or delete
+    // this test at that point.
+    #[test]
+    fn vmo_replace_as_executeable() {
+        let vmo = Vmo::create(16).unwrap();
+
+        let info = vmo.as_handle_ref().basic_info().unwrap();
+        let rights = Rights::from_bits(info.rights).unwrap();
+        assert!(!rights.contains(Rights::EXECUTE));
+
+        let exec_vmo = vmo.replace_as_executable().unwrap();
+        let info = exec_vmo.as_handle_ref().basic_info().unwrap();
+        let rights = Rights::from_bits(info.rights).unwrap();
+        assert!(rights.contains(Rights::EXECUTE));
     }
 }
