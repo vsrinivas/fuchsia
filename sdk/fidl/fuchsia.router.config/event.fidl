@@ -4,8 +4,6 @@
 
 library fuchsia.router.config;
 
-using fuchsia.net;
-
 /// Event defines the events the Router Manager will generate based on configuration state changes.
 /// The event contains only the object that has changed; for example, if a new forwarding rule
 /// is added the event only contains that route, not the full routing table.

@@ -4,9 +4,6 @@
 
 library fuchsia.router.config;
 
-using fuchsia.net;
-using zx;
-
 enum ErrorCode {
     INTERNAL = 1;
     NOT_FOUND = 2;

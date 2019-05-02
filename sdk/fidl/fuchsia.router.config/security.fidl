@@ -5,7 +5,6 @@
 library fuchsia.router.config;
 
 using fuchsia.net;
-using zx;
 
 using port = uint16;
 

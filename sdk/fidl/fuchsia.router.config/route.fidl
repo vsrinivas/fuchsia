@@ -5,7 +5,6 @@
 library fuchsia.router.config;
 
 using fuchsia.net;
-using zx;
 
 table RoutingFeatures {
     1: bool rip;

@@ -4,9 +4,6 @@
 
 library fuchsia.router.config;
 
-using fuchsia.net;
-using zx;
-
 /// Device is comprised of a device topology and the device features.
 /// The device topology defines the WAN and LAN interfaces provisioned, indicating
 /// which physical ports are part of an interface, as well as the parameters of the interface.
