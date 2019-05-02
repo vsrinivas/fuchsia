@@ -18,14 +18,6 @@ generate an SDK for a specific build system.
 * Linux: https://chrome-infra-packages.appspot.com/p/fuchsia/sdk/core/linux-amd64/+/latest
 * MacOS: https://chrome-infra-packages.appspot.com/p/fuchsia/sdk/core/mac-amd64/+/latest
 
-## Bazel
-
-The Bazel SDK is a version of the SDK for developers that want to use the
-[Bazel build system](https://bazel.build/).
-
-* Linux: https://chrome-infra-packages.appspot.com/p/fuchsia/sdk/bazel/linux-amd64/+/latest
-* MacOS: https://chrome-infra-packages.appspot.com/p/fuchsia/sdk/bazel/mac-amd64/+/latest
-
 ## Qemu
 
 A distribution of [Qemu](https://www.qemu.org/) that has been tested to work
