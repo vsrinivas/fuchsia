@@ -8,7 +8,9 @@
 #include <limits.h>
 
 // Maximum number of fds per process.
-#define FDIO_MAX_FD 256
+// TODO(ZX-3951): Investigate making the array expand dynamically to avoid
+// having to increase this further.
+#define FDIO_MAX_FD 1024
 
 // fdio_ops_t's read/write are able to do io of
 // at least this size.

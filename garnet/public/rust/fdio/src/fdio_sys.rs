@@ -51,7 +51,7 @@ pub const O_NOREMOTE: raw::c_int = 0x00200000;
 pub const O_ADMIN: raw::c_int = 0x00000004;
 pub const ZX_FS_FLAG_DESCRIBE: raw::c_uint = 0x00800000;
 
-pub const FDIO_MAX_FD: raw::c_uint = 256;
+pub const FDIO_MAX_FD: raw::c_uint = 1024;
 pub const FDIO_CHUNK_SIZE: raw::c_uint = 8192;
 pub const FDIO_IOCTL_MAX_INPUT: raw::c_uint = 1024;
 pub const FDIO_MAX_FILENAME: raw::c_uint = 255;
