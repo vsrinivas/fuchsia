@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+executable("msd_img_rgx_nonhardware_tests_executable") {
+  testonly = true
+  output_name = "msd_img_rgx_nonhardware_tests"
+
+  sources = [
+    "main.cc",
+    "mt8167-test.cc",
+  ]
+
+  deps = [
+    "../../mtk:driver_sources",
+  ]
+
+  public_deps = [
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/ddk",
+  ]
+}
+
+test_package("msd_img_rgx_nonhardware_tests") {
+  deps = [
+    ":msd_img_rgx_nonhardware_tests_executable",
+  ]
+
+  tests = [
+    {
+      name = "msd_img_rgx_nonhardware_tests"
+    },
+  ]
+}

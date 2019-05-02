@@ -934,6 +934,7 @@ group("magma") {
   testonly = true
   public_deps = [
     "//garnet/drivers/gpu/msd-img-rgx/tests/integration:msd_img_rgx_integration_tests",
+    "//garnet/drivers/gpu/msd-img-rgx/tests/unit_tests:msd_img_rgx_nonhardware_tests",
     "//garnet/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
     "//garnet/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
     "//garnet/lib/magma/gnbuild/magma-vsl-gc:nonhardware-tests",

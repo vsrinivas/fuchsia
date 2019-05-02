@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/msd_img_rgx_nonhardware_tests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

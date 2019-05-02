@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "mt8167s-gpu.h"
+
 #include <memory>
 #include <mutex>
 
@@ -27,29 +29,16 @@
 
 #define GPU_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
-enum {
-    // Indices into clocks provided by the board file.
-    kClkSlowMfgIndex = 0,
-    kClkAxiMfgIndex = 1,
-    kClkMfgMmIndex = 2,
-    kClockCount,
-
-    // Indices into mmio buffers provided by the board file.
-    kMfgMmioIndex = 0,
-    kMfgTopMmioIndex = 1,
-    kScpsysMmioIndex = 2,
-    kXoMmioIndex = 3,
-
-    kInfraTopAxiSi1Ctl = 0x1204,
-    kInfraTopAxiProtectEn = 0x1220,
-    kInfraTopAxiProtectSta1 = 0x1228,
-
-    kPwrStatus = 0x60c,
-    kPwrStatus2nd = 0x610,
-};
-
+namespace {
 struct ComponentDescription {
+    static constexpr uint32_t kPowerResetBBit = 0;
+    static constexpr uint32_t kPowerIsoBit = 1;
+    static constexpr uint32_t kPowerOnBit = 2;
+    static constexpr uint32_t kPowerOn2ndBit = 3;
+    static constexpr uint32_t kPowerOnClkDisBit = 4;
+
     zx_status_t PowerOn(ddk::MmioBuffer* power_gpu_buffer);
+    zx_status_t PowerDown(ddk::MmioBuffer* power_gpu_buffer);
     bool IsPoweredOn(ddk::MmioBuffer* power_gpu_buffer, uint32_t bit);
 
     // offset into power_gpu_buffer registers
@@ -62,58 +51,94 @@ struct ComponentDescription {
     uint32_t sram_ack_bits;
 };
 
-class Mt8167sGpu;
+zx_status_t ComponentDescription::PowerOn(ddk::MmioBuffer* power_gpu_buffer)
+{
+    power_gpu_buffer->SetBit<uint32_t>(kPowerOnBit, reg_offset);
+    power_gpu_buffer->SetBit<uint32_t>(kPowerOn2ndBit, reg_offset);
+    zx::time timeout = zx::deadline_after(zx::msec(100)); // Arbitrary timeout
+    while (!IsPoweredOn(power_gpu_buffer, on_bit_offset)) {
+        if (zx::clock::get_monotonic() > timeout) {
+            GPU_ERROR("Timed out powering on component");
+            return ZX_ERR_TIMED_OUT;
+        }
+    }
+    power_gpu_buffer->ClearBit<uint32_t>(kPowerOnClkDisBit, reg_offset);
+    power_gpu_buffer->ClearBit<uint32_t>(kPowerIsoBit, reg_offset);
+    power_gpu_buffer->SetBit<uint32_t>(kPowerResetBBit, reg_offset);
+    if (sram_bits) {
+        power_gpu_buffer->ClearBits32(sram_bits, reg_offset);
+        zx::time timeout = zx::deadline_after(zx::msec(100)); // Arbitrary timeout
+        while (power_gpu_buffer->ReadMasked32(sram_ack_bits, reg_offset)) {
+            if (zx::clock::get_monotonic() > timeout) {
+                GPU_ERROR("Timed out powering on SRAM");
+                return ZX_ERR_TIMED_OUT;
+            }
+        }
+    }
+    return ZX_OK;
+}
 
-using DeviceType = ddk::Device<Mt8167sGpu, ddk::Messageable>;
+zx_status_t ComponentDescription::PowerDown(ddk::MmioBuffer* power_gpu_buffer)
+{
+    if (sram_bits) {
+        power_gpu_buffer->SetBits32(sram_bits, reg_offset);
+        zx::time timeout = zx::deadline_after(zx::msec(100)); // Arbitrary timeout
+        while (power_gpu_buffer->ReadMasked32(sram_ack_bits, reg_offset) != sram_ack_bits) {
+            if (zx::clock::get_monotonic() > timeout) {
+                GPU_ERROR("Timed out powering down SRAM");
+                return ZX_ERR_TIMED_OUT;
+            }
+        }
+    }
 
-class Mt8167sGpu final : public DeviceType,
-                         public ddk::EmptyProtocol<ZX_PROTOCOL_GPU>,
-                         public ImgSysDevice {
-public:
-    Mt8167sGpu(zx_device_t* parent) : DeviceType(parent) {}
+    power_gpu_buffer->SetBit<uint32_t>(kPowerIsoBit, reg_offset);
+    power_gpu_buffer->ClearBit<uint32_t>(kPowerResetBBit, reg_offset);
+    power_gpu_buffer->SetBit<uint32_t>(kPowerOnClkDisBit, reg_offset);
+    power_gpu_buffer->ClearBit<uint32_t>(kPowerOnBit, reg_offset);
+    power_gpu_buffer->ClearBit<uint32_t>(kPowerOn2ndBit, reg_offset);
 
-    ~Mt8167sGpu();
+    zx::time timeout = zx::deadline_after(zx::msec(100)); // Arbitrary timeout
+    while (IsPoweredOn(power_gpu_buffer, on_bit_offset)) {
+        if (zx::clock::get_monotonic() > timeout) {
+            GPU_ERROR("Timed out powering down component");
+            return ZX_ERR_TIMED_OUT;
+        }
+    }
+    return ZX_OK;
+}
 
-    zx_status_t Bind();
-    void DdkRelease();
+bool ComponentDescription::IsPoweredOn(ddk::MmioBuffer* power_gpu_buffer, uint32_t bit)
+{
+    return power_gpu_buffer->GetBit<uint32_t>(bit, kPwrStatus) &&
+           power_gpu_buffer->GetBit<uint32_t>(bit, kPwrStatus2nd);
+}
 
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+static ComponentDescription MfgAsyncComponent()
+{
+    constexpr uint32_t kAsyncPwrStatusBit = 25;
+    constexpr uint32_t kAsyncPwrRegOffset = 0x2c4;
+    return ComponentDescription{kAsyncPwrRegOffset, kAsyncPwrStatusBit, 0, 0};
+}
 
-    zx_status_t Query(uint64_t query_id, fidl_txn_t* transaction);
-    zx_status_t Connect(uint64_t client_id, fidl_txn_t* transaction);
-    zx_status_t DumpState(uint32_t dump_type);
-    zx_status_t Restart();
+static ComponentDescription Mfg2dComponent()
+{
+    constexpr uint32_t k2dPwrStatusBit = 24;
+    constexpr uint32_t k2dPwrRegOffset = 0x2c0;
+    constexpr uint32_t kSramPdMask = 0xf << 8;
+    constexpr uint32_t kSramPdAckMask = 0xf << 12;
+    return ComponentDescription{k2dPwrRegOffset, k2dPwrStatusBit, kSramPdMask, kSramPdAckMask};
+}
 
-    zx_status_t PowerUp() override;
-    zx_status_t PowerDown() override;
-    void* device() override { return parent(); }
+static ComponentDescription MfgComponent()
+{
+    static constexpr uint32_t kMfg3dPwrCon = 0x214;
+    constexpr uint32_t kSramPdMask = 0xf << 8;
+    constexpr uint32_t kSramPdAckMask = 0xf << 12;
+    constexpr uint32_t k3dPwrStatusBit = 24;
+    return ComponentDescription{kMfg3dPwrCon, k3dPwrStatusBit, kSramPdMask, kSramPdAckMask};
+}
 
-private:
-    bool StartMagma() MAGMA_REQUIRES(magma_mutex_);
-    void StopMagma() MAGMA_REQUIRES(magma_mutex_);
-
-    // MFG is Mediatek's name for their graphics subsystem.
-    zx_status_t PowerOnMfgAsync();
-    zx_status_t PowerOnMfg2d();
-    zx_status_t PowerOnMfg();
-
-    void EnableMfgHwApm();
-
-    ddk::ClockProtocolClient clks_[kClockCount];
-    // MFG TOP MMIO - Controls mediatek's gpu-related power- and
-    // clock-management hardware.
-    std::optional<ddk::MmioBuffer> gpu_buffer_;
-    // MFG MMIO (corresponds to the IMG GPU's registers)
-    std::optional<ddk::MmioBuffer> real_gpu_buffer_;
-    std::optional<ddk::MmioBuffer> power_gpu_buffer_; // SCPSYS MMIO
-    std::optional<ddk::MmioBuffer> clock_gpu_buffer_; // XO MMIO
-
-    bool powered_up_ = false;
-
-    std::mutex magma_mutex_;
-    std::unique_ptr<MagmaDriver> magma_driver_ MAGMA_GUARDED(magma_mutex_);
-    std::shared_ptr<MagmaSystemDevice> magma_system_device_ MAGMA_GUARDED(magma_mutex_);
-};
+} // namespace
 
 Mt8167sGpu::~Mt8167sGpu()
 {
@@ -148,47 +173,6 @@ zx_status_t Mt8167sGpu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn)
 {
     return fuchsia_gpu_magma_Device_dispatch(this, txn, msg, &device_fidl_ops);
 }
-
-zx_status_t ComponentDescription::PowerOn(ddk::MmioBuffer* power_gpu_buffer)
-{
-    enum {
-        kPowerResetBBit = 0,
-        kPowerIsoBit = 1,
-        kPowerOnBit = 2,
-        kPowerOn2ndBit = 3,
-        kPowerOnClkDisBit = 4,
-    };
-    power_gpu_buffer->SetBit<uint32_t>(kPowerOnBit, reg_offset);
-    power_gpu_buffer->SetBit<uint32_t>(kPowerOn2ndBit, reg_offset);
-    zx::time timeout = zx::deadline_after(zx::msec(100)); // Arbitrary timeout
-    while (!IsPoweredOn(power_gpu_buffer, on_bit_offset)) {
-        if (zx::clock::get_monotonic() > timeout) {
-            GPU_ERROR("Timed out powering on component");
-            return ZX_ERR_TIMED_OUT;
-        }
-    }
-    power_gpu_buffer->ClearBit<uint32_t>(kPowerOnClkDisBit, reg_offset);
-    power_gpu_buffer->ClearBit<uint32_t>(kPowerIsoBit, reg_offset);
-    power_gpu_buffer->SetBit<uint32_t>(kPowerResetBBit, reg_offset);
-    if (sram_bits) {
-        power_gpu_buffer->ClearBits32(sram_bits, reg_offset);
-        zx::time timeout = zx::deadline_after(zx::msec(100)); // Arbitrary timeout
-        while (power_gpu_buffer->ReadMasked32(sram_ack_bits, reg_offset)) {
-            if (zx::clock::get_monotonic() > timeout) {
-                GPU_ERROR("Timed out powering on SRAM");
-                return ZX_ERR_TIMED_OUT;
-            }
-        }
-    }
-    return ZX_OK;
-}
-
-bool ComponentDescription::IsPoweredOn(ddk::MmioBuffer* power_gpu_buffer, uint32_t bit)
-{
-    return power_gpu_buffer->GetBit<uint32_t>(bit, kPwrStatus) &&
-           power_gpu_buffer->GetBit<uint32_t>(bit, kPwrStatus2nd);
-}
-
 // Power on the asynchronous memory interface between the GPU and the DDR controller.
 zx_status_t Mt8167sGpu::PowerOnMfgAsync()
 {
@@ -199,10 +183,7 @@ zx_status_t Mt8167sGpu::PowerOnMfgAsync()
     clock_gpu_buffer_->ModifyBits<uint32_t>(1, 18, 2, 0x40);
     clks_[kClkSlowMfgIndex].Enable();
     clks_[kClkAxiMfgIndex].Enable();
-    constexpr uint32_t kAsyncPwrStatusBit = 25;
-    constexpr uint32_t kAsyncPwrRegOffset = 0x2c4;
-    ComponentDescription mfg_async = {kAsyncPwrRegOffset, kAsyncPwrStatusBit, 0, 0};
-    return mfg_async.PowerOn(&power_gpu_buffer_.value());
+    return MfgAsyncComponent().PowerOn(&power_gpu_buffer_.value());
 }
 
 // Power on the 2D engine (it's unclear whether this is needed to access the 3D
@@ -210,16 +191,13 @@ zx_status_t Mt8167sGpu::PowerOnMfgAsync()
 zx_status_t Mt8167sGpu::PowerOnMfg2d()
 {
     // Enable access to AXI Bus
-    clock_gpu_buffer_->SetBits32((1 << 7), kInfraTopAxiSi1Ctl);
-    constexpr uint32_t k2dPwrStatusBit = 24;
-    constexpr uint32_t k2dPwrRegOffset = 0x2c0;
+    clock_gpu_buffer_->SetBits32(kInfraTopAxiSi1WayEnMfg2d, kInfraTopAxiSi1Ctl);
 
-    ComponentDescription mfg_2d = {k2dPwrRegOffset, k2dPwrStatusBit, 0xf << 8, 0xf << 12};
-    zx_status_t status = mfg_2d.PowerOn(&power_gpu_buffer_.value());
+    zx_status_t status = Mfg2dComponent().PowerOn(&power_gpu_buffer_.value());
     if (status != ZX_OK)
         return status;
     // Disable AXI protection after it's powered up.
-    clock_gpu_buffer_->ClearBits32((1 << 2) | (1 << 5), kInfraTopAxiProtectEn);
+    clock_gpu_buffer_->ClearBits32(kInfraTopAxiBusProtMaskMfg2d, kInfraTopAxiProtectEn);
     zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
     return ZX_OK;
 }
@@ -228,14 +206,11 @@ zx_status_t Mt8167sGpu::PowerOnMfg2d()
 zx_status_t Mt8167sGpu::PowerOnMfg()
 {
     clks_[kClkMfgMmIndex].Enable();
-    static constexpr uint32_t kMfg3dPwrCon = 0x214;
-    ComponentDescription mfg = {kMfg3dPwrCon, 4, 0xf << 8, 0xf << 12};
-    zx_status_t status = mfg.PowerOn(&power_gpu_buffer_.value());
+    zx_status_t status = MfgComponent().PowerOn(&power_gpu_buffer_.value());
     if (status != ZX_OK)
         return status;
 
-    // Power on MFG (internal to TOP)
-
+    // Enable clocks in MFG (using controls internal to MFG_TOP)
     constexpr uint32_t kMfgCgClr = 0x8;
     constexpr uint32_t kBAxiClr = (1 << 0);
     constexpr uint32_t kBMemClr = (1 << 1);
@@ -243,6 +218,51 @@ zx_status_t Mt8167sGpu::PowerOnMfg()
     constexpr uint32_t kB26MClr = (1 << 3);
     gpu_buffer_->SetBits32(kBAxiClr | kBMemClr | kBG3dClr | kB26MClr, kMfgCgClr);
     EnableMfgHwApm();
+    return ZX_OK;
+}
+
+// Power down the asynchronous memory interface between the GPU and the DDR controller.
+zx_status_t Mt8167sGpu::PowerDownMfgAsync()
+{
+    zx_status_t status = MfgAsyncComponent().PowerDown(&power_gpu_buffer_.value());
+    if (status != ZX_OK) {
+        return status;
+    }
+    clks_[kClkAxiMfgIndex].Disable();
+    clks_[kClkSlowMfgIndex].Disable();
+    return ZX_OK;
+}
+
+// Power down the 2D engine.
+zx_status_t Mt8167sGpu::PowerDownMfg2d()
+{
+    // Enable AXI protection
+    clock_gpu_buffer_->SetBits32(kInfraTopAxiBusProtMaskMfg2d, kInfraTopAxiProtectEn);
+
+    zx_status_t status = Mfg2dComponent().PowerDown(&power_gpu_buffer_.value());
+    if (status != ZX_OK)
+        return status;
+    // Disable access to AXI Bus
+    clock_gpu_buffer_->ClearBits32(kInfraTopAxiSi1WayEnMfg2d, kInfraTopAxiSi1Ctl);
+    return ZX_OK;
+}
+
+// Power down the 3D engine (IMG GPU).
+zx_status_t Mt8167sGpu::PowerDownMfg()
+{
+    // Disable clocks in MFG (using controls internal to MFG_TOP)
+    constexpr uint32_t kMfgCgSet = 0x4;
+    constexpr uint32_t kBAxiClr = (1 << 0);
+    constexpr uint32_t kBMemClr = (1 << 1);
+    constexpr uint32_t kBG3dClr = (1 << 2);
+    constexpr uint32_t kB26MClr = (1 << 3);
+    gpu_buffer_->SetBits32(kBAxiClr | kBMemClr | kBG3dClr | kB26MClr, kMfgCgSet);
+
+    zx_status_t status = MfgComponent().PowerDown(&power_gpu_buffer_.value());
+    if (status != ZX_OK)
+        return status;
+    // Disable MFG clock.
+    clks_[kClkMfgMmIndex].Disable();
     return ZX_OK;
 }
 
@@ -271,9 +291,6 @@ static uint64_t ReadHW64(const ddk::MmioBuffer* buffer, uint32_t offset)
 
 zx_status_t Mt8167sGpu::PowerUp()
 {
-    if (powered_up_)
-        return ZX_OK;
-
     // Power on in order.
     zx_status_t status = PowerOnMfgAsync();
     if (status != ZX_OK) {
@@ -290,15 +307,43 @@ zx_status_t Mt8167sGpu::PowerUp()
         GPU_ERROR("Failed to power on MFG\n");
         return status;
     }
-    zxlogf(INFO, "[mt8167s-gpu] GPU ID: %lx\n", ReadHW64(&real_gpu_buffer_.value(), 0x18));
-    zxlogf(INFO, "[mt8167s-gpu] GPU core revision: %lx\n",
-           ReadHW64(&real_gpu_buffer_.value(), 0x20));
-    powered_up_ = true;
+    if (!logged_gpu_info_) {
+        constexpr uint32_t kRgxCrCoreId = 0x18;
+        constexpr uint32_t kRgxCrCoreRevision = 0x20;
+
+        zxlogf(INFO, "[mt8167s-gpu] GPU ID: %lx\n",
+               ReadHW64(&real_gpu_buffer_.value(), kRgxCrCoreId));
+        zxlogf(INFO, "[mt8167s-gpu] GPU core revision: %lx\n",
+               ReadHW64(&real_gpu_buffer_.value(), kRgxCrCoreRevision));
+        logged_gpu_info_ = true;
+    }
 
     return ZX_OK;
 }
 
-zx_status_t Mt8167sGpu::PowerDown() { return ZX_OK; }
+zx_status_t Mt8167sGpu::PowerDown()
+{
+    DLOG("Mt8167sGpu::PowerDown() start");
+    // Power down in the opposite order they were powered up.
+    zx_status_t status = PowerDownMfg();
+    if (status != ZX_OK) {
+        GPU_ERROR("Failed to power down MFG\n");
+        return status;
+    }
+    status = PowerDownMfg2d();
+    if (status != ZX_OK) {
+        GPU_ERROR("Failed to power down MFG 2D\n");
+        return status;
+    }
+
+    status = PowerDownMfgAsync();
+    if (status != ZX_OK) {
+        GPU_ERROR("Failed to power down MFG ASYNC\n");
+        return status;
+    }
+    DLOG("Mt8167sGpu::PowerDown() done");
+    return ZX_OK;
+}
 
 zx_status_t Mt8167sGpu::Bind()
 {
@@ -338,12 +383,6 @@ zx_status_t Mt8167sGpu::Bind()
     status = pdev.MapMmio(kXoMmioIndex, &clock_gpu_buffer_);
     if (status != ZX_OK) {
         GPU_ERROR("pdev_map_mmio_buffer failed\n");
-        return status;
-    }
-
-    status = PowerUp();
-    if (status != ZX_OK) {
-        GPU_ERROR("PowerUp failed: %d\n", status);
         return status;
     }
 
