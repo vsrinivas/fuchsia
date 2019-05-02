@@ -522,8 +522,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
             GenerateObjectMember("location", NameLocation(value.maybe_used->name));
             if (value.maybe_used->attributes)
                 GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
-            if (value.maybe_used->maybe_default_value)
-                GenerateObjectMember("maybe_default_value", value.maybe_used->maybe_default_value);
+            // TODO(FIDL-609): Support defaults on tables.
             GenerateObjectMember("size", value.maybe_used->typeshape.Size());
             GenerateObjectMember("max_out_of_line", value.maybe_used->typeshape.MaxOutOfLine());
             GenerateObjectMember("alignment", value.maybe_used->typeshape.Alignment());

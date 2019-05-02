@@ -1840,10 +1840,12 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
             if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), member->location(), &type_ctor))
                 return false;
             std::unique_ptr<Constant> maybe_default_value;
-            if (member->maybe_used->maybe_default_value != nullptr) {
-                if (!ConsumeConstant(std::move(member->maybe_used->maybe_default_value),
-                                     member->location(), &maybe_default_value))
-                    return false;
+            if (member->maybe_used->maybe_default_value) {
+                // TODO(FIDL-609): Support defaults on tables.
+                const auto default_value = member->maybe_used->maybe_default_value.get();
+                error_reporter_->ReportError(
+                    default_value->location(),
+                    "Defaults on tables are not yet supported.");
             }
             if (type_ctor->nullability != types::Nullability::kNonnullable) {
                 return Fail(member->location(), "Table members cannot be nullable");

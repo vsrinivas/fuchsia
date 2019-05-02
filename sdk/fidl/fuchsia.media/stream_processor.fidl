@@ -638,30 +638,30 @@ table StreamBufferPartialSettings {
     // than one buffer gets allocated by sysmem.
     3: bool single_buffer_mode;
 
-    // When single_buffer_mode is false:
-    //
-    // The actual packet count will be
-    // max(packet_count_for_server + packet_count_for_client, sysmem_buffers).
-    // The sysmem_buffers is BufferCollectionInfo.buffer_count from sysmem if
-    // using sysmem, or 0 if not using sysmem.
-    //
-    // When single_buffer_mode is true:
-    //
-    // The actual packet count is packet_count_for_server +
-    // packet_count_for_client.
-    //
-    // If not using sysmem, or if using single_buffer_mode, these fields must be
-    // set and consistent with correpsonding fields in StreamBufferConstraints.
-    //
-    // If single_buffer_mode false and using sysmem, these fields can both be
-    // non-set, or can both be set and consistent with correpsonding fields in
-    // StreamBufferConstraints.  If not set, the value used for the fields in
-    // the "max" expression above is 0, so buffer_count.
-    //
-    // TODO(dustingreen): Try to change FIDL generated code to not require has
-    // if the field has a default specified in the FIDL file like these do.
-    4: uint32 packet_count_for_server = 0;
-    5: uint32 packet_count_for_client = 0;
+    /// When single_buffer_mode is false:
+    ///
+    /// The actual packet count will be
+    /// max(packet_count_for_server + packet_count_for_client, sysmem_buffers).
+    /// The sysmem_buffers is BufferCollectionInfo.buffer_count from sysmem if
+    /// using sysmem, or 0 if not using sysmem.
+    ///
+    /// When single_buffer_mode is true:
+    ///
+    /// The actual packet count is packet_count_for_server +
+    /// packet_count_for_client.
+    ///
+    /// If not using sysmem, or if using single_buffer_mode, these fields must be
+    /// set and consistent with correpsonding fields in StreamBufferConstraints.
+    ///
+    /// If single_buffer_mode false and using sysmem, these fields can both be
+    /// non-set, or can both be set and consistent with correpsonding fields in
+    /// StreamBufferConstraints.  If not set, the value used for the fields in
+    /// the "max" expression above is 0, so buffer_count.
+    // TODO(FIDL-609): Default to 0.
+    4: uint32 packet_count_for_server;
+
+    // TODO(FIDL-609): Default to 0.
+    5: uint32 packet_count_for_client;
 
     // The client end of a BufferCollectionToken channel, which the
     // StreamProcessor will use to deliver constraints to sysmem and learn of
@@ -827,20 +827,21 @@ table PacketHeader {
 table Packet {
     1: PacketHeader header;
 
-    // Which buffer this packet refers to.  For single-buffer mode this will
-    // always be 0, but for multi-buffer mode, a given in-flight interval of a
-    // packet can refer to any buffer.  The packet has an associated buffer only
-    // while the packet is in-flight, not while the packet is free.
-    //
-    // The default value makes accidental inappropriate use of index 0 less
-    // likely (will tend to complain in an obvious way if not filled out
-    // instead of a non-obvious data corruption when decoding buffer 0
-    // repeatedly instead of the correct buffers).
-    //
-    // TODO(dustingreen): Try to make FIDL table defaults have meaning, and not
-    // complain about !has when accessing the field.  For now the default
-    // specified here does nothing.
-    2: uint32 buffer_index = 0x80000000;
+    /// Which buffer this packet refers to.  For single-buffer mode this will
+    /// always be 0, but for multi-buffer mode, a given in-flight interval of a
+    /// packet can refer to any buffer.  The packet has an associated buffer only
+    /// while the packet is in-flight, not while the packet is free.
+    ///
+    /// The default value makes accidental inappropriate use of index 0 less
+    /// likely (will tend to complain in an obvious way if not filled out
+    /// instead of a non-obvious data corruption when decoding buffer 0
+    /// repeatedly instead of the correct buffers).
+    ///
+    /// TODO(dustingreen): Try to make FIDL table defaults have meaning, and not
+    /// complain about !has when accessing the field.  For now the default
+    /// specified here does nothing.
+    // TODO(FIDL-609): Default to 0x80000000.
+    2: uint32 buffer_index;
 
     // stream_lifetime_ordinal
     //

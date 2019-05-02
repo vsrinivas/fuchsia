@@ -55,19 +55,22 @@ table ProviderSpec {
     2: uint32 buffer_size_megabytes_hint;
 };
 
-// Provides options for the trace.
+/// Provides options for the trace.
 table TraceOptions {
-    // The trace categories to record, or an empty array for all.
+    /// The trace categories to record, or an empty array for all.
     1: vector<string:100>:100 categories;
 
-    // Suggested size of trace buffer which each provider should receive.
-    2: uint32 buffer_size_megabytes_hint = 4;
+    /// Suggested size of trace buffer which each provider should receive.
+    // TODO(FIDL-609): Default to 4.
+    2: uint32 buffer_size_megabytes_hint;
 
-    // Acknowledge start request after at most |start_timeout_milliseconds|.
-    3: uint64 start_timeout_milliseconds = 5000;
+    /// Acknowledge start request after at most |start_timeout_milliseconds|.
+    // TODO(FIDL-609): Default to 5000.
+    3: uint64 start_timeout_milliseconds;
 
-    4: BufferingMode buffering_mode = ONESHOT;
+    // TODO(FIDL-609), TODO(FIDL-486): Default to BufferingMode.ONESHOT.
+    4: BufferingMode buffering_mode;
 
-    // Overrides for particular providers.
+    /// Overrides for particular providers.
     5: vector<ProviderSpec>:100 provider_specs;
 };

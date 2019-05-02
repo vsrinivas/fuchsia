@@ -29,37 +29,42 @@ enum ColorCorrection {
 /// This table will be used to transfer Settings information between different services to
 /// either modify or get notified about Accessibility Settings.
 table Settings {
-    // When magnification_enabled == true, user can specify an area of the screen to be magnified.
-    // Note that actually magnifying the region requires an addition input (gesture, button, etc.).
-    1: bool magnification_enabled = false;
+    /// When magnification_enabled == true, user can specify an area of the screen to be magnified.
+    /// Note that actually magnifying the region requires an addition input (gesture, button, etc.).
+    // TODO(FIDL-609): Default to false.
+    1: bool magnification_enabled;
 
-    // Degree of magnification for magnified area.
-    2: float32 magnification_zoom_factor = 1.0;
+    /// Degree of magnification for magnified area.
+    // TODO(FIDL-609): Default to 1.0.
+    2: float32 magnification_zoom_factor;
 
-    // When screen_reader_enabled == true, user can specify elements of the UI to be described
-    // audibly.
-    // Note that reading a particular element requires an additional input.
-    3: bool screen_reader_enabled = false;
+    /// When screen_reader_enabled == true, user can specify elements of the UI to be described
+    /// audibly.
+    /// Note that reading a particular element requires an additional input.
+    // TODO(FIDL-609): Default to false.
+    3: bool screen_reader_enabled;
 
-    // When color_inversion_enabled == true, certain colors are inverted across the entire screen.
-    // No additional user input is required for the inversion to take place once enabled.
-    // Colors will continue to be inverted until color_inversion_enabled is set to false.
-    4: bool color_inversion_enabled = false;
+    /// When color_inversion_enabled == true, certain colors are inverted across the entire screen.
+    /// No additional user input is required for the inversion to take place once enabled.
+    /// Colors will continue to be inverted until color_inversion_enabled is set to false.
+    // TODO(FIDL-609): Default to false.
+    4: bool color_inversion_enabled;
 
-    // When color_correction is set to DISABLED, colors are displayed normally.
-    // When color_correction has a different value, colors are modified to correct for the specified
-    // type of color-blindness.
-    // No additional user input is required for correction to take place once enabled.
-    // Correction will continue to occur until color_correction is set to DISABLED.
-    5: ColorCorrection color_correction = DISABLED;
+    /// When color_correction is set to DISABLED, colors are displayed normally.
+    /// When color_correction has a different value, colors are modified to correct for the specified
+    /// type of color-blindness.
+    /// No additional user input is required for correction to take place once enabled.
+    /// Correction will continue to occur until color_correction is set to DISABLED.
+    // TODO(FIDL-609), TODO(FIDL-486): Default to ColorCorrection.DISABLED.
+    5: ColorCorrection color_correction;
 
-    // 3x3 Matrix in row-major form which will be used by the SettingsManager
-    // client for applying Color Correction and Color Inversion. Display
-    // adapter expects a 3x3 row major matrix and A11y manager stores the
-    // matrix in the same format.
-    // Color Adjustment matrix is used to modify onscreen colors for either
-    // of Deuteranomaly, Protanomaly and Tritanomaly or it can be used for
-    // performing Color Inversion.
+    /// 3x3 Matrix in row-major form which will be used by the SettingsManager
+    /// client for applying Color Correction and Color Inversion. Display
+    /// adapter expects a 3x3 row major matrix and A11y manager stores the
+    /// matrix in the same format.
+    /// Color Adjustment matrix is used to modify onscreen colors for either
+    /// of Deuteranomaly, Protanomaly and Tritanomaly or it can be used for
+    /// performing Color Inversion.
     6: array<float32>:9 color_adjustment_matrix;
 };
 

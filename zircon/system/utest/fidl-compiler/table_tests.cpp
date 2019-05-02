@@ -237,8 +237,27 @@ xunion OptionalTableContainer {
     END_TEST;
 }
 
+bool default_not_allowed() {
+    BEGIN_TEST;
+
+    std::vector<std::string> errors;
+    EXPECT_FALSE(Compiles(R"FIDL(
+library fidl.test.tables;
+
+table Foo {
+    1: int64 t = 1;
+};
+
+)FIDL", &errors));
+    ASSERT_EQ(errors.size(), 1u);
+    ASSERT_STR_STR(errors.at(0).c_str(), "Defaults on tables are not yet supported.");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(table_tests)
 RUN_TEST(compiling)
+RUN_TEST(default_not_allowed)
 END_TEST_CASE(table_tests)
