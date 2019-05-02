@@ -253,7 +253,7 @@ static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
         return status;
 
     {
-        Guard<BrwLock, BrwLock::Writer> guard{up->handle_table_lock()};
+        Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table_lock()};
 
         for (size_t ix = 0; ix != num_handles; ++ix) {
             Handle* handle = nullptr;

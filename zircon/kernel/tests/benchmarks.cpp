@@ -15,6 +15,7 @@
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
+#include <ktl/type_traits.h>
 #include <platform.h>
 #include <rand.h>
 #include <stdio.h>
@@ -270,8 +271,9 @@ __NO_INLINE static void bench_mutex() {
     printf("%" PRIu64 " cycles to acquire/release uncontended mutex %u times (%" PRIu64 " cycles per)\n", c, count, c / count);
 }
 
+template<typename LockType>
 __NO_INLINE static void bench_rwlock() {
-    BrwLock rw;
+    LockType rw;
     static const uint count = 128 * 1024 * 1024;
     uint64_t c = arch_cycle_count();
     for (size_t i = 0; i < count; i++) {
@@ -280,7 +282,10 @@ __NO_INLINE static void bench_rwlock() {
     }
     c = arch_cycle_count() - c;
 
-    printf("%" PRIu64 " cycles to acquire/release uncontended brwlock for read %u times (%" PRIu64 " cycles per)\n", c, count, c / count);
+    printf("%" PRIu64
+           " cycles to acquire/release uncontended brwlock(PI: %d) for read %u times (%" PRIu64
+           " cycles per)\n",
+           c, ktl::is_same_v<LockType, BrwLockPi>, count, c / count);
 
     c = arch_cycle_count();
     for (size_t i = 0; i < count; i++) {
@@ -289,7 +294,10 @@ __NO_INLINE static void bench_rwlock() {
     }
     c = arch_cycle_count() - c;
 
-    printf("%" PRIu64 " cycles to acquire/release uncontended brwlock for write %u times (%" PRIu64 " cycles per)\n", c, count, c / count);
+    printf("%" PRIu64
+           " cycles to acquire/release uncontended brwlock(PI: %d) for write %u times (%" PRIu64
+           " cycles per)\n",
+           c, ktl::is_same_v<LockType, BrwLockPi>, count, c / count);
 }
 
 int benchmarks(int, const cmd_args*, uint32_t) {
@@ -308,7 +316,8 @@ int benchmarks(int, const cmd_args*, uint32_t) {
 
     bench_spinlock();
     bench_mutex();
-    bench_rwlock();
+    bench_rwlock<BrwLockPi>();
+    bench_rwlock<BrwLockNoPi>();
 
     return 0;
 }

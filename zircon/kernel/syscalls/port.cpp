@@ -106,7 +106,7 @@ zx_status_t sys_port_cancel(zx_handle_t handle, zx_handle_t source, uint64_t key
         return status;
 
     {
-        Guard<BrwLock, BrwLock::Reader> guard{up->handle_table_lock()};
+        Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table_lock()};
         Handle* watched = up->GetHandleLocked(source);
         if (!watched)
             return ZX_ERR_BAD_HANDLE;

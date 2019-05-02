@@ -86,7 +86,7 @@ class Handle final : public fbl::DoublyLinkedListable<Handle*> {
 public:
     // The handle arena's lock. This is public since it protects
     // other things like |Dispatcher::handle_count_|.
-    LOCK_DEP_SINGLETON_LOCK(ArenaLock, BrwLock);
+    DECLARE_SINGLETON_BRWLOCK_PI(ArenaLock);
 
     // Returns the Dispatcher to which this instance points.
     const fbl::RefPtr<Dispatcher>& dispatcher() const { return dispatcher_; }

@@ -52,6 +52,29 @@ static inline void arch_trace_process_create(uint64_t pid, paddr_t tt_phys) {
     // nothing to do
 }
 
+static inline bool arch_cas_16_acquire(volatile unsigned __int128* dst,
+                                       volatile unsigned __int128* expected,
+                                       unsigned __int128 desired) {
+    int result;
+    do {
+        uint64_t temp_lo;
+        uint64_t temp_hi;
+        __asm__ volatile("ldaxp %[lo], %[hi], %[src]"
+                         : [ lo ] "=r"(temp_lo), [ hi ] "=r"(temp_hi)
+                         : [ src ] "Q"(*dst));
+        unsigned __int128 temp = ((unsigned __int128)(temp_hi)) << 64 | temp_lo;
+        if (temp != *expected) {
+            *expected = temp;
+            return false;
+        }
+        __asm__ volatile("stxp %w[result], %[lo], %[hi], %[dst]"
+                         : [ result ] "=&r"(result), [ dst ] "=Q"(*dst)
+                         : [ lo ] "r"((uint64_t)(desired)), [ hi ] "r"((uint64_t)(desired >> 64))
+                         : "memory");
+    } while (unlikely(result));
+    return true;
+}
+
 __END_CDECLS
 
 #endif // __ASSEMBLER__

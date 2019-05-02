@@ -71,6 +71,18 @@ uint32_t arch_icache_line_size(void);
 // lower level than zircon.
 void arch_trace_process_create(uint64_t pid, paddr_t pt_phys);
 
+static inline bool arch_cas_16_acquire(volatile unsigned __int128* dst,
+                                       volatile unsigned __int128* expected,
+                                       unsigned __int128 desired) {
+    bool result;
+    __asm__ volatile("lock cmpxchg16b %[dest];"
+                     "setz %[result]"
+                     : [ dest ] "+m"(*dst), [ result ] "=q"(result), "+A"(*expected)
+                     : "b"((uint64_t)(desired)), "c"((uint64_t)(desired >> 64))
+                     : "cc", "memory");
+    return result;
+}
+
 __END_CDECLS
 
 #endif // !__ASSEMBLER__

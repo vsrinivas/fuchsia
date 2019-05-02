@@ -23,6 +23,7 @@ static void rand_delay() {
 
 // Use a helper class for running tests so that worker threads and main thread all
 // have easy access to shared state.
+template<typename LockType>
 class BrwLockTest {
 public:
     BrwLockTest() : state_(0), kill_(false) {}
@@ -32,7 +33,7 @@ public:
     static bool RunTest() {
         BEGIN_TEST;
 
-        BrwLockTest test;
+        BrwLockTest<LockType> test;
         thread_t* reader_threads[readers];
         thread_t* writer_threads[writers];
         thread_t* upgrader_threads[upgraders];
@@ -165,7 +166,7 @@ private:
         }
     }
 
-    BrwLock lock_;
+    LockType lock_;
     ktl::atomic<uint32_t> state_;
     ktl::atomic<bool> kill_;
 };
@@ -173,8 +174,12 @@ private:
 UNITTEST_START_TESTCASE(brwlock_tests)
 // The number of threads to use for readers, writers and upgraders was chosen by manual
 // instrumentation of the brwlock to see if all the different code paths were being hit.
-UNITTEST("parallel readers", (BrwLockTest::RunTest<8, 0, 0>))
-UNITTEST("single writer", (BrwLockTest::RunTest<0, 4, 0>))
-UNITTEST("readers and writer", (BrwLockTest::RunTest<4, 2, 0>))
-UNITTEST("upgraders", (BrwLockTest::RunTest<2, 0, 3>))
+UNITTEST("parallel readers(PI)", (BrwLockTest<BrwLockPi>::RunTest<8, 0, 0>))
+UNITTEST("single writer(PI)", (BrwLockTest<BrwLockPi>::RunTest<0, 4, 0>))
+UNITTEST("readers and writer(PI)", (BrwLockTest<BrwLockPi>::RunTest<4, 2, 0>))
+UNITTEST("upgraders(PI)", (BrwLockTest<BrwLockPi>::RunTest<2, 0, 3>))
+UNITTEST("parallel readers(No PI)", (BrwLockTest<BrwLockNoPi>::RunTest<8, 0, 0>))
+UNITTEST("single writer(No PI)", (BrwLockTest<BrwLockNoPi>::RunTest<0, 4, 0>))
+UNITTEST("readers and writer(No PI)", (BrwLockTest<BrwLockNoPi>::RunTest<4, 2, 0>))
+UNITTEST("upgraders(No PI)", (BrwLockTest<BrwLockNoPi>::RunTest<2, 0, 3>))
 UNITTEST_END_TESTCASE(brwlock_tests, "brwlock", "brwlock tests");

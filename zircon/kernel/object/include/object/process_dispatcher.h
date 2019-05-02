@@ -146,7 +146,7 @@ public:
 
         {
             // Scope utilized to reduce lock duration.
-            Guard<BrwLock, BrwLock::Reader> guard{&handle_table_lock_};
+            Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
             Handle* handle = GetHandleLocked(handle_value);
             if (!handle)
                 return ZX_ERR_BAD_HANDLE;
@@ -192,7 +192,7 @@ public:
     // returning the error value.
     template <typename T>
     zx_status_t ForEachHandle(T func) const {
-        Guard<BrwLock, BrwLock::Writer> guard{&handle_table_lock_};
+        Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_lock_};
         for (const auto& handle : handles_) {
             const Dispatcher* dispatcher = handle.dispatcher().get();
             zx_status_t s = func(MapHandleToValue(&handle), handle.rights(),
@@ -205,7 +205,7 @@ public:
     }
 
     // accessors
-    Lock<BrwLock>* handle_table_lock() TA_RET_CAP(handle_table_lock_) {
+    Lock<BrwLockPi>* handle_table_lock() TA_RET_CAP(handle_table_lock_) {
         return &handle_table_lock_;
     }
     FutexContext& futex_context() { return futex_context_; }
@@ -363,7 +363,7 @@ private:
     fbl::RefPtr<VmAspace> aspace_;
 
     // our list of handles
-    mutable DECLARE_BRWLOCK(ProcessDispatcher) handle_table_lock_; // protects |handles_|.
+    mutable DECLARE_BRWLOCK_PI(ProcessDispatcher) handle_table_lock_; // protects |handles_|.
     fbl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
 
     FutexContext futex_context_;

@@ -293,7 +293,7 @@ zx_status_t sys_vmo_replace_as_executable(
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    Guard<BrwLock, BrwLock::Writer> guard{up->handle_table_lock()};
+    Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table_lock()};
     auto source = up->GetHandleLocked(handle);
     if (!source)
         return ZX_ERR_BAD_HANDLE;
