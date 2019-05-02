@@ -1,0 +1,5 @@
+# if jq is available...
+if whence jq > /dev/null; then
+  # find os=fuchsia tests in tests.json and print their package
+  compadd $(jq -r 'map(.test | select(.os == "fuchsia") | .location | split("/")[3]) | unique | .[]' ${fuchsia_dir}/${fuchsia_build_dir}/tests.json)
+fi
