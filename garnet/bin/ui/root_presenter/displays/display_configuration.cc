@@ -41,8 +41,8 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px,
                                    uint32_t height_in_px) {
   {
     std::string pixel_density;
-    if (files::ReadFileToString(
-            "/config/data/display_pixel_density", &pixel_density)) {
+    if (files::ReadFileToString("/config/data/display_pixel_density",
+                                &pixel_density)) {
       auto pixel_density_value = atof(pixel_density.c_str());
       if (pixel_density_value != 0.0) {
         FXL_LOG(INFO) << "Display pixel density applied: "
@@ -70,6 +70,10 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px,
     // Assume the display is a 24in 4K monitor.
     FXL_LOG(INFO) << "RootPresenter: treating display as a 24in 4K monitor.";
     return 7.323761f;
+  } else if (width_in_px == 1920 && height_in_px == 1200) {
+    // Assume the display is a 24in HD monitor.
+    FXL_LOG(INFO) << "RootPresenter: treating display as a 24in monitor.";
+    return 4.16f;
   } else {
     // TODO(SCN-384): Don't lie.
     FXL_LOG(WARNING) << "RootPresenter: unrecognized display.";
@@ -83,8 +87,7 @@ fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
   // of identifying and classifying them.
   {
     std::string display_usage;
-    if (files::ReadFileToString("/config/data/display_usage",
-                                &display_usage)) {
+    if (files::ReadFileToString("/config/data/display_usage", &display_usage)) {
       if (display_usage == "handheld") {
         return fuchsia::ui::policy::DisplayUsage::kHandheld;
       } else if (display_usage == "close") {
@@ -110,6 +113,9 @@ fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
     return fuchsia::ui::policy::DisplayUsage::kClose;
   } else if (width_in_px == 3840 && height_in_px == 2160) {
     // Assume the display is a 24in 4K monitor.
+    return fuchsia::ui::policy::DisplayUsage::kNear;
+  } else if (width_in_px == 1920 && height_in_px == 1200) {
+    // Assume the display is a 24in monitor.
     return fuchsia::ui::policy::DisplayUsage::kNear;
   } else {
     // TODO(SCN-384): Don't lie.

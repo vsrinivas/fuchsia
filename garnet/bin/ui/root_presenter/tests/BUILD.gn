@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":root_presenter_unittests",
+  ]
+}
+
+executable("root_presenter_unittests") {
+  output_name = "root_presenter_unittests"
+
+  testonly = true
+
+  sources = [
+    "display_configuration_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/ui/root_presenter:displays",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//third_party/googletest:gtest_main",
+  ]
+}

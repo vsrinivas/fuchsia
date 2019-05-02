@@ -12,11 +12,6 @@ executable("root_presenter") {
     "display_size_switcher.h",
     "display_usage_switcher.cc",
     "display_usage_switcher.h",
-    "displays/display_configuration.cc",
-    "displays/display_configuration.h",
-    "displays/display_metrics.h",
-    "displays/display_model.cc",
-    "displays/display_model.h",
     "main.cc",
     "perspective_demo_mode.cc",
     "perspective_demo_mode.h",
@@ -28,6 +23,7 @@ executable("root_presenter") {
   ]
 
   deps = [
+    ":displays",
     ":renderer_params",
     "//garnet/bin/ui/input_reader",
     "//garnet/bin/ui/presentation_mode",
@@ -50,6 +46,21 @@ executable("root_presenter") {
   ]
 
   defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+}
+
+source_set("displays") {
+  sources = [
+    "displays/display_configuration.cc",
+    "displays/display_configuration.h",
+    "displays/display_metrics.h",
+    "displays/display_model.cc",
+    "displays/display_model.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//src/lib/fxl",
+  ]
 }
 
 source_set("renderer_params") {

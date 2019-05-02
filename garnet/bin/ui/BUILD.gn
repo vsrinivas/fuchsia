@@ -47,6 +47,7 @@ package("scenic_tests") {
     "input/tests",
     "input_reader/tests",
     "presentation_mode/tests",
+    "root_presenter/tests",
     "//garnet/lib/ui/gfx/tests",
     "//garnet/lib/ui/input/tests",
     "//garnet/lib/ui/scenic/tests",
@@ -95,6 +96,10 @@ package("scenic_tests") {
       environments = basic_envs
     },
     {
+      name = "root_presenter_unittests"
+      environments = basic_envs
+    },
+    {
       name = "scenic_unittests"
       environments = basic_envs
     },
@@ -124,6 +129,10 @@ package("scenic_tests") {
     {
       path = rebase_path("meta/input_unittests.cmx")
       dest = "input_unittests.cmx"
+    },
+    {
+      path = rebase_path("meta/root_presenter_unittests.cmx")
+      dest = "root_presenter_unittests.cmx"
     },
     {
       path = rebase_path("meta/scenic_unittests.cmx")
