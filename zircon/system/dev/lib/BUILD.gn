@@ -1,0 +1,30 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(BLD-353): This is all temporary hacks for integrating with
+# the legacy Fuchsia GN build.  This file should not exist at all.
+
+group("lib") {
+  testonly = true
+  deps = [
+    "aaa-mock-mmio-reg",
+    "amlogic",
+    "broadcom",
+    "fake-bti",
+    "fake_ddk",
+    "focaltech",
+    "hi3660",
+    "mmio",
+    "mock-gpio",
+    "mock-hidbus-ifc",
+    "mock-i2c",
+    "mock-sdio",
+    "msm8x53",
+    "mt8167",
+    "operation",
+    "qcom",
+    "scsi",
+    "usb",
+  ]
+}

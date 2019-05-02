@@ -14,11 +14,8 @@ assert(current_cpu != "")
 group("ulib") {
   testonly = true
   deps = [
-    "$zx/system/dev/audio/lib/simple-audio-stream",
-    "$zx/system/dev/lib/broadcom",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/operation",
-    "$zx/system/dev/lib/usb",
+    "$zx/system/dev/audio/lib",
+    "$zx/system/dev/lib",
     "$zx/system/fidl/fuchsia-net-stack:c",
     "$zx/third_party/ulib",
     "async",
