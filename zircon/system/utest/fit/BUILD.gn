@@ -14,6 +14,7 @@ test("fit") {
     "$zx/system/ulib/fit",
     "$zx/system/ulib/unittest",
   ]
+  configs += [ ":config" ]
   if (is_fuchsia) {
     defines = [ "FIT_NO_STD_FOR_ZIRCON_USERSPACE" ]
     deps += [
@@ -39,5 +40,13 @@ test("fit") {
       "suspended_task_tests.cpp",
       "variant_tests.cpp",
     ]
+  }
+}
+
+# chromium uses this library, and enables the following flag,
+# so these tests should work with this flag enabled
+config("config") {
+  if (!is_gcc) {
+    cflags_cc = [ "-Wshadow" ]
   }
 }
