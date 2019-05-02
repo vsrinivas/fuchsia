@@ -13,9 +13,9 @@ group("bundles") {
 group("tools") {
   testonly = true
   public_deps = [
+    ":testing",
     "//peridot/packages/prod:basemgr_launcher",
     "//peridot/packages/prod:sessionctl",
-    ":testing"
   ]
 }
 
@@ -33,7 +33,7 @@ group("framework") {
 group("testing") {
   testonly = true
   public_deps = [
-    "//peridot/packages/tests:modular_test_harness"
+    "//peridot/packages/tests:modular_test_harness",
   ]
 }
 
@@ -41,6 +41,6 @@ group("testing") {
 group("tests") {
   testonly = true
   public_deps = [
-    "//peridot/packages/tests:modular_test_harness"
+    "//peridot/packages/tests:modular_test_harness",
   ]
 }

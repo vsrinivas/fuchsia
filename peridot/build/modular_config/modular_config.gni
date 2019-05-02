@@ -21,7 +21,7 @@ template("modular_config_validate") {
                            ])
 
     data = invoker.config
-    schema = "//peridot/build/modular_config/modular_config_schema.json"
+    schema = "//sdk/docs/modular_config_schema.json"
   }
 }
 

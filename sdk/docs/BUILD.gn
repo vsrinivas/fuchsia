@@ -38,3 +38,16 @@ sdk_documentation("docs") {
     ]
   }
 }
+
+sdk_documentation("modular_config_schema") {
+  name = "modular_config_schema"
+
+  category = "partner"
+
+  files = [
+    {
+      source = "modular_config_schema.json"
+      dest = "docs/modular/modular_config_schema.json"
+    },
+  ]
+}
