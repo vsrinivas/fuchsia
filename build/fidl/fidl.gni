@@ -84,6 +84,7 @@ template("fidl") {
           additional_public_deps = [
             "//zircon/public/lib/fidl",
             "//zircon/public/lib/fidl-llcpp",
+            "//zircon/public/lib/fit",
           ]
         },
       ]

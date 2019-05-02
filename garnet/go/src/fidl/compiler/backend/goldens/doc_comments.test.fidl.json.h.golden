@@ -231,11 +231,14 @@ class Interface {
   //
   // method comment #3
   virtual void Method() = 0;
+  using OnEventCallback =
+      fit::function<void()>;
 };
 
 class Interface_EventSender {
  public:
   virtual ~Interface_EventSender();
+  virtual void OnEvent() = 0;
 };
 
 class Interface_Sync {
@@ -252,6 +255,7 @@ class Interface_Proxy : public ::fidl::internal::Proxy, public Interface {
 
   zx_status_t Dispatch_(::fidl::Message message) override;
   void Method() override;
+  OnEventCallback OnEvent;
 
  private:
   Interface_Proxy(const Interface_Proxy&) = delete;
@@ -268,6 +272,7 @@ class Interface_Stub : public ::fidl::internal::Stub, public Interface_EventSend
 
   zx_status_t Dispatch_(::fidl::Message message,
                         ::fidl::internal::PendingResponse response) override;
+  void OnEvent() override;
 
  private:
   Interface_clazz* impl_;

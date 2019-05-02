@@ -56,6 +56,89 @@ zx_status_t SwitchingOrdinals::Call::OnlyGeneratedOrdinal(zx::unowned_channel _c
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
+zx_status_t SwitchingOrdinals::SyncClient::HandleEvents(SwitchingOrdinals::EventHandlers handlers) {
+  return SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+}
+
+zx_status_t SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel client_end,
+                                            SwitchingOrdinals::EventHandlers handlers) {
+  zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                            zx::time::infinite(),
+                                            nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  constexpr uint32_t kReadAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (::fidl::internal::ClampedMessageSize<EventOrdinalFifteenResponse>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<EventOrdinalFifteenResponse>();
+    }
+    if (::fidl::internal::ClampedMessageSize<EventOnlyGeneratedOrdinalResponse>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<EventOnlyGeneratedOrdinalResponse>();
+    }
+    return x;
+  })();
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (EventOrdinalFifteenResponse::MaxNumHandles >= x) {
+      x = EventOrdinalFifteenResponse::MaxNumHandles;
+    }
+    if (EventOnlyGeneratedOrdinalResponse::MaxNumHandles >= x) {
+      x = EventOnlyGeneratedOrdinalResponse::MaxNumHandles;
+    }
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  zx_handle_t read_handles[kHandleAllocSize];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  status = client_end->read(ZX_CHANNEL_READ_MAY_DISCARD,
+                            read_bytes, read_handles,
+                            kReadAllocSize, kHandleAllocSize,
+                            &actual_bytes, &actual_handles);
+  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new event,
+    // whose size exceeds the maximum of known events in the current protocol.
+    return handlers.unknown();
+  }
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (actual_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(read_handles, actual_handles);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  auto msg = fidl_msg_t {
+    .bytes = read_bytes,
+    .handles = read_handles,
+    .num_bytes = actual_bytes,
+    .num_handles = actual_handles
+  };
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  switch (hdr->ordinal) {
+    case kSwitchingOrdinals_EventOrdinalFifteen_Ordinal: {
+      auto result = ::fidl::DecodeAs<EventOrdinalFifteenResponse>(&msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      return handlers.event_ordinal_fifteen();
+    }
+    case kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal: {
+      auto result = ::fidl::DecodeAs<EventOnlyGeneratedOrdinalResponse>(&msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      return handlers.event_only_generated_ordinal();
+    }
+    default:
+      zx_handle_close_many(read_handles, actual_handles);
+      return handlers.unknown();
+  }
+}
 
 bool SwitchingOrdinals::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {

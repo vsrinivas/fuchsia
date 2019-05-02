@@ -95,6 +95,7 @@ impl fidl::endpoints::ServiceMarker for InterfaceMarker {
 pub trait InterfaceProxyInterface: Send + Sync {
 	fn method(&self,
 	)-> Result<(), fidl::Error>;
+	type OnEventResponseFut: futures::Future<Output = Result<(), fidl::Error>> + Send;
 }
 
 #[derive(Debug)]
@@ -174,7 +175,8 @@ impl InterfaceProxyInterface for InterfaceProxy {
 	fn method(&self,
 	)-> Result<(), fidl::Error> {
 		self.client.send(&mut (), 1061382220)
-	}}
+	}
+	type OnEventResponseFut = fidl::client::QueryResponseFut<()>;}
 
 pub struct InterfaceEventStream {
 	event_receiver: fidl::client::EventReceiver,
@@ -205,6 +207,13 @@ impl futures::Stream for InterfaceEventStream {
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		futures::Poll::Ready(Some(match tx_header.ordinal {
+			325918733 | 325918733 => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
+				Ok((
+					InterfaceEvent::OnEvent {}
+				))
+			}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
 				service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::NAME,
@@ -216,7 +225,11 @@ impl futures::Stream for InterfaceEventStream {
 #[derive(Debug)]
 pub enum InterfaceEvent {
 	
-	}
+	
+	
+	OnEvent {
+		
+	},}
 
 pub struct InterfaceEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
@@ -227,6 +240,15 @@ impl <'a> InterfaceEventSender<'a> {
 	pub fn new(channel: zx::Unowned<'a, zx::Channel>) -> Self {
 		Self { channel }
 	}
+	pub fn send_on_event(&self) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			InterfaceEncoder::encode_on_event_response(
+				bytes, handles,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	
 }
 
 /// A Stream of incoming requests for Interface
@@ -344,6 +366,17 @@ impl InterfaceEncoder {
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
 		Ok(())
+	}
+	pub fn encode_on_event_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 325918733,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
 	}}
 
 #[derive(Clone)]
@@ -362,6 +395,27 @@ impl ::std::ops::Deref for InterfaceControlHandle {
 impl InterfaceControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
-	}}
+	}
+	pub fn send_on_event(&self) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id: 0,
+			flags: 0,
+			ordinal: 325918733,
+		};
+
+		let mut response = ();
+
+		let mut msg = fidl::encoding::TransactionMessage {
+			header,
+			body: &mut response,
+		};
+
+		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+		})?;
+
+		Ok(())
+	}
+	}
 
 /* beginning of response types */

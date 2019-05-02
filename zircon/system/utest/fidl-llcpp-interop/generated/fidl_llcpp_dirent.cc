@@ -342,6 +342,78 @@ zx_status_t DirEntTestInterface::Call::OneWayDirents(zx::unowned_channel _client
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
+zx_status_t DirEntTestInterface::SyncClient::HandleEvents(DirEntTestInterface::EventHandlers handlers) {
+  return DirEntTestInterface::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+}
+
+zx_status_t DirEntTestInterface::Call::HandleEvents(zx::unowned_channel client_end,
+                                            DirEntTestInterface::EventHandlers handlers) {
+  zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                            zx::time::infinite(),
+                                            nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  constexpr uint32_t kReadAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (::fidl::internal::ClampedMessageSize<OnDirentsResponse>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnDirentsResponse>();
+    }
+    return x;
+  })();
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (OnDirentsResponse::MaxNumHandles >= x) {
+      x = OnDirentsResponse::MaxNumHandles;
+    }
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  std::unique_ptr<uint8_t[]> read_bytes_unique_ptr(new uint8_t[kReadAllocSize]);
+  uint8_t* read_bytes = read_bytes_unique_ptr.get();
+  zx_handle_t read_handles[kHandleAllocSize];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  status = client_end->read(ZX_CHANNEL_READ_MAY_DISCARD,
+                            read_bytes, read_handles,
+                            kReadAllocSize, kHandleAllocSize,
+                            &actual_bytes, &actual_handles);
+  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new event,
+    // whose size exceeds the maximum of known events in the current protocol.
+    return handlers.unknown();
+  }
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (actual_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(read_handles, actual_handles);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  auto msg = fidl_msg_t {
+    .bytes = read_bytes,
+    .handles = read_handles,
+    .num_bytes = actual_bytes,
+    .num_handles = actual_handles
+  };
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  switch (hdr->ordinal) {
+    case kDirEntTestInterface_OnDirents_Ordinal: {
+      auto result = ::fidl::DecodeAs<OnDirentsResponse>(&msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      auto message = result.message.message();
+      return handlers.on_dirents(std::move(message->dirents));
+    }
+    default:
+      zx_handle_close_many(read_handles, actual_handles);
+      return handlers.unknown();
+  }
+}
 
 bool DirEntTestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {

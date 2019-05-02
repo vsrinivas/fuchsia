@@ -36,6 +36,7 @@ func newGenerator() *generator {
 		fragments.SendEventCallerAllocate,
 		fragments.SendEventInPlace,
 		fragments.Struct,
+		fragments.SyncEventHandler,
 		fragments.SyncRequestCFlavor,
 		fragments.SyncRequestCallerAllocate,
 		fragments.SyncRequestInPlace,

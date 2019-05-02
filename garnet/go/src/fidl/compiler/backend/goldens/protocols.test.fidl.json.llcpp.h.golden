@@ -9,6 +9,7 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <zircon/fidl.h>
@@ -226,6 +227,14 @@ class KitchenSink final {
   };
 
 
+  struct EventHandlers {
+    fit::function<zx_status_t(int64_t a, int64_t b)> event_a;
+
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -258,6 +267,11 @@ class KitchenSink final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
    private:
     ::zx::channel channel_;
   };
@@ -292,6 +306,11 @@ class KitchenSink final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -439,6 +458,14 @@ class ChannelProtocol final {
   };
 
 
+  struct EventHandlers {
+    fit::function<zx_status_t(int64_t a, int64_t b)> event_a;
+
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -471,6 +498,11 @@ class ChannelProtocol final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
    private:
     ::zx::channel channel_;
   };
@@ -505,6 +537,11 @@ class ChannelProtocol final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -652,6 +689,14 @@ class SocketControlProtocol final {
   };
 
 
+  struct EventHandlers {
+    fit::function<zx_status_t(int64_t a, int64_t b)> event_a;
+
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -684,6 +729,11 @@ class SocketControlProtocol final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
    private:
     ::zx::channel channel_;
   };
@@ -718,6 +768,11 @@ class SocketControlProtocol final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -865,6 +920,14 @@ class OvernetInternalProtocol final {
   };
 
 
+  struct EventHandlers {
+    fit::function<zx_status_t(int64_t a, int64_t b)> event_a;
+
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -897,6 +960,11 @@ class OvernetInternalProtocol final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
    private:
     ::zx::channel channel_;
   };
@@ -931,6 +999,11 @@ class OvernetInternalProtocol final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -1087,6 +1160,16 @@ class WithAndWithoutRequestResponse final {
     static constexpr uint32_t MaxOutOfLine = 4294967295;
   };
 
+  struct EventHandlers {
+    fit::function<zx_status_t()> on_empty_response;
+
+    fit::function<zx_status_t(::fidl::StringView ret)> on_with_response;
+
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -1130,6 +1213,11 @@ class WithAndWithoutRequestResponse final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<WithRequestWithResponseResponse> WithRequestWithResponse(::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
    private:
     ::zx::channel channel_;
   };
@@ -1175,6 +1263,11 @@ class WithAndWithoutRequestResponse final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<WithRequestWithResponseResponse> WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.

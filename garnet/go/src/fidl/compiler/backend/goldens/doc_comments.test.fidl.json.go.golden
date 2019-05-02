@@ -130,6 +130,8 @@ func (u *Table) ClearField() {
 const (
 	InterfaceMethodOrdinal uint32 = 1061382220
 	InterfaceMethodGenOrdinal uint32 = 1061382220
+	InterfaceOnEventOrdinal uint32 = 325918733
+	InterfaceOnEventGenOrdinal uint32 = 325918733
 )
 
 type InterfaceInterface _bindings.ChannelProxy
@@ -144,6 +146,15 @@ func (p *InterfaceInterface) Method() error {
 	return err
 }
 
+// event comment #1
+//
+// event comment #3
+func (p *InterfaceInterface) ExpectOnEvent() error {
+	var resp_ _bindings.Payload
+	err := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventOrdinal, resp_)
+	return err
+}
+
 
 // interface comment #1
 //
@@ -153,6 +164,9 @@ type Interface interface {
 	//
 	// method comment #3
 	Method() error
+	// event comment #1
+	//
+	// event comment #3
 }
 
 type InterfaceTransitionalBase struct {}
@@ -196,5 +210,9 @@ func (s *InterfaceService) EventProxyFor(key _bindings.BindingKey) (*InterfaceEv
 
 type InterfaceEventProxy _bindings.ChannelProxy
 
+func (p *InterfaceEventProxy) OnEvent() error {
+	var event_ _bindings.Payload
+	return ((*_bindings.ChannelProxy)(p)).Send(InterfaceOnEventOrdinal, event_)
+}
 
 

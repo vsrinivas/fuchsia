@@ -9,6 +9,7 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>
@@ -884,6 +885,19 @@ class Node final {
   };
 
 
+  struct EventHandlers {
+    // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+    //
+    // Indicates the success or failure of the open operation, and optionally describes the
+    // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
+    // (the same as would be returned by |Describe|).
+    fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -1043,6 +1057,11 @@ class Node final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<IoctlResponse> Ioctl(::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
    private:
     ::zx::channel channel_;
   };
@@ -1204,6 +1223,11 @@ class Node final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -1683,6 +1707,19 @@ class File final {
   };
 
 
+  struct EventHandlers {
+    // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+    //
+    // Indicates the success or failure of the open operation, and optionally describes the
+    // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
+    // (the same as would be returned by |Describe|).
+    fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -2021,6 +2058,11 @@ class File final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetBufferResponse> GetBuffer(::fidl::DecodedMessage<GetBufferRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
    private:
     ::zx::channel channel_;
   };
@@ -2361,6 +2403,11 @@ class File final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetBufferResponse> GetBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -2926,6 +2973,19 @@ class Directory final {
   };
 
 
+  struct EventHandlers {
+    // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+    //
+    // Indicates the success or failure of the open operation, and optionally describes the
+    // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
+    // (the same as would be returned by |Describe|).
+    fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -3468,6 +3528,11 @@ class Directory final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<WatchResponse> Watch(::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
    private:
     ::zx::channel channel_;
   };
@@ -4012,6 +4077,11 @@ class Directory final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<WatchResponse> Watch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -4656,6 +4726,19 @@ class DirectoryAdmin final {
   using GetDevicePathRequest = ::fidl::AnyZeroArgMessage;
 
 
+  struct EventHandlers {
+    // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+    //
+    // Indicates the success or failure of the open operation, and optionally describes the
+    // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
+    // (the same as would be returned by |Describe|).
+    fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -5284,6 +5367,11 @@ class DirectoryAdmin final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetDevicePathResponse> GetDevicePath(::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
    private:
     ::zx::channel channel_;
   };
@@ -5914,6 +6002,11 @@ class DirectoryAdmin final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetDevicePathResponse> GetDevicePath(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.

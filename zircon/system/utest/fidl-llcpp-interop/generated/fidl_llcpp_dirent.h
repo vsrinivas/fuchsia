@@ -9,6 +9,7 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/fidl.h>
@@ -122,6 +123,15 @@ class DirEntTestInterface final {
   };
 
 
+  struct EventHandlers {
+    // Event
+    fit::function<zx_status_t(::fidl::VectorView<DirEnt> dirents)> on_dirents;
+
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -176,6 +186,11 @@ class DirEntTestInterface final {
     // Messages are encoded and decoded in-place.
     zx_status_t OneWayDirents(::fidl::DecodedMessage<OneWayDirentsRequest> params);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
    private:
     ::zx::channel channel_;
   };
@@ -232,6 +247,11 @@ class DirEntTestInterface final {
     // Messages are encoded and decoded in-place.
     static zx_status_t OneWayDirents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OneWayDirentsRequest> params);
 
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Pure-virtual interface to be implemented by a server.

@@ -85,7 +85,10 @@ template("fidl_llcpp_library") {
       }
 
       # The generated code uses these.
-      public_deps += [ "$zx/system/ulib/fidl:fidl-llcpp.headers" ]
+      public_deps += [
+        "$zx/system/ulib/fidl:fidl-llcpp.headers",
+        "$zx/system/ulib/fit:fit.headers",
+      ]
       deps += [ "$zx/system/ulib/fidl:fidl-llcpp" ]
 
       # TODO(BLD-441): Get the metadata below into the dependency graph.

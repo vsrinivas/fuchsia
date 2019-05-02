@@ -112,6 +112,23 @@ class {{ .Name }} final {
 
   {{- end }}
 
+  {{- if .HasEvents }}
+{{ "" }}
+  struct EventHandlers {
+    {{- range .Methods }}
+      {{- if .HasRequest -}} {{ continue }} {{- end }}
+      {{- range .DocComments }}
+    //{{ . }}
+      {{- end }}
+    fit::function<zx_status_t {{- template "SyncEventHandlerIndividualMethodSignature" . }}> {{ .NameInLowerSnakeCase }};
+{{ "" }}
+    {{- end }}
+    // Fallback handler when an unknown ordinal is received.
+    // Caller may put custom error handling logic here.
+    fit::function<zx_status_t()> unknown;
+  };
+  {{- end }}
+
   class SyncClient final {
    public:
     SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
@@ -151,6 +168,13 @@ class {{ .Name }} final {
     {{ if .Response }}::fidl::DecodeResult<{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ template "SyncRequestInPlaceMethodSignature" . }};
 {{ "" }}
       {{- end }}
+    {{- end }}
+    {{- if .HasEvents }}
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    zx_status_t HandleEvents(EventHandlers handlers);
     {{- end }}
    private:
     ::zx::channel channel_;
@@ -193,6 +217,13 @@ class {{ .Name }} final {
     static {{ if .Response }}::fidl::DecodeResult<{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ template "StaticCallSyncRequestInPlaceMethodSignature" . }};
 {{ "" }}
       {{- end }}
+    {{- end }}
+    {{- if .HasEvents }}
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
     {{- end }}
   };
 
@@ -378,6 +409,13 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{ "" }}
 {{- end }}
 
+{{- if .HasEvents }}
+  {{- template "SyncEventHandlerMethodDefinition" . }}
+{{ "" }}
+  {{- template "StaticCallSyncEventHandlerMethodDefinition" . }}
+{{- end }}
+
+{{- /* Server implementation */}}
 {{- if .Methods }}
 {{ template "SyncServerTryDispatchMethodDefinition" . }}
 {{ template "SyncServerDispatchMethodDefinition" . }}

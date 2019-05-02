@@ -794,33 +794,29 @@ bool InPlaceOneWayDirents() {
 }
 
 template <typename DirentArray>
-bool AssertReadOnDirentsEvent(const zx::channel& chan, const DirentArray& expected_dirents) {
+bool AssertReadOnDirentsEvent(zx::channel chan, const DirentArray& expected_dirents) {
     BEGIN_HELPER;
 
-    auto buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-    uint32_t actual = 0;
-    ASSERT_EQ(chan.read(0, buffer.get(), nullptr, ZX_CHANNEL_MAX_MSG_BYTES, 0, &actual, nullptr),
-              ZX_OK);
-    ASSERT_GE(actual, sizeof(fidl_message_header_t));
-    ASSERT_EQ(reinterpret_cast<fidl_message_header_t*>(buffer.get())->ordinal,
-              fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsOrdinal);
-    ASSERT_EQ(reinterpret_cast<fidl_message_header_t*>(buffer.get())->txid, 0);
-    auto encoded_message = ::fidl::EncodedMessage<gen::DirEntTestInterface::OnDirentsResponse>(
-        ::fidl::BytePart(buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, actual));
-    auto decode_result = ::fidl::Decode(std::move(encoded_message));
-    ASSERT_EQ(decode_result.status, ZX_OK, decode_result.error);
-
-    const auto& message = *decode_result.message.message();
-    ASSERT_EQ(message.dirents.count(), expected_dirents.size());
-    for (uint64_t i = 0; i < message.dirents.count(); i++) {
-        ASSERT_EQ(message.dirents[i].is_dir, expected_dirents[i].is_dir);
-        ASSERT_EQ(message.dirents[i].some_flags, expected_dirents[i].some_flags);
-        ASSERT_EQ(message.dirents[i].name.size(), expected_dirents[i].name.size());
-        ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(message.dirents[i].name.data()),
-                        reinterpret_cast<const uint8_t*>(expected_dirents[i].name.data()),
-                        message.dirents[i].name.size(),
-                        "dirent name mismatch");
-    }
+    gen::DirEntTestInterface::SyncClient client(std::move(chan));
+    bool ok = client.HandleEvents(gen::DirEntTestInterface::EventHandlers {
+        .on_dirents = [&](::fidl::VectorView<gen::DirEnt> dirents) {
+            ASSERT_EQ(dirents.count(), expected_dirents.size());
+            for (uint64_t i = 0; i < dirents.count(); i++) {
+                ASSERT_EQ(dirents[i].is_dir, expected_dirents[i].is_dir);
+                ASSERT_EQ(dirents[i].some_flags, expected_dirents[i].some_flags);
+                ASSERT_EQ(dirents[i].name.size(), expected_dirents[i].name.size());
+                ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(dirents[i].name.data()),
+                                reinterpret_cast<const uint8_t*>(expected_dirents[i].name.data()),
+                                dirents[i].name.size(),
+                                "dirent name mismatch");
+            }
+            return true;
+        },
+        .unknown = [&]() {
+            ASSERT_FALSE(true, "unknown event received; expected OnDirents");
+        }
+    });
+    ASSERT_TRUE(ok);
 
     END_HELPER;
 }
@@ -845,7 +841,7 @@ bool CFlavorSendOnDirents() {
                                                                    dirents.data()
                                                                });
     ASSERT_EQ(status, ZX_OK, seed_description);
-    ASSERT_TRUE(AssertReadOnDirentsEvent(client_chan, dirents), seed_description);
+    ASSERT_TRUE(AssertReadOnDirentsEvent(std::move(client_chan), dirents), seed_description);
 
     END_TEST;
 }
@@ -873,7 +869,7 @@ bool CallerAllocateSendOnDirents() {
                                                                    dirents.data()
                                                                });
     ASSERT_EQ(status, ZX_OK, seed_description);
-    ASSERT_TRUE(AssertReadOnDirentsEvent(client_chan, dirents), seed_description);
+    ASSERT_TRUE(AssertReadOnDirentsEvent(std::move(client_chan), dirents), seed_description);
 
     END_TEST;
 }
@@ -905,7 +901,7 @@ bool InPlaceSendOnDirents() {
     auto status = gen::DirEntTestInterface::SendOnDirentsEvent(zx::unowned_channel(server_chan),
                                                                std::move(linearize_result.message));
     ASSERT_EQ(status, ZX_OK, seed_description);
-    ASSERT_TRUE(AssertReadOnDirentsEvent(client_chan, dirents), seed_description);
+    ASSERT_TRUE(AssertReadOnDirentsEvent(std::move(client_chan), dirents), seed_description);
 
     END_TEST;
 }

@@ -792,6 +792,77 @@ zx_status_t Node::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags,
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+zx_status_t Node::SyncClient::HandleEvents(Node::EventHandlers handlers) {
+  return Node::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+}
+
+zx_status_t Node::Call::HandleEvents(zx::unowned_channel client_end,
+                                            Node::EventHandlers handlers) {
+  zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                            zx::time::infinite(),
+                                            nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  constexpr uint32_t kReadAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (::fidl::internal::ClampedMessageSize<OnOpenResponse>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse>();
+    }
+    return x;
+  })();
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (OnOpenResponse::MaxNumHandles >= x) {
+      x = OnOpenResponse::MaxNumHandles;
+    }
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  zx_handle_t read_handles[kHandleAllocSize];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  status = client_end->read(ZX_CHANNEL_READ_MAY_DISCARD,
+                            read_bytes, read_handles,
+                            kReadAllocSize, kHandleAllocSize,
+                            &actual_bytes, &actual_handles);
+  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new event,
+    // whose size exceeds the maximum of known events in the current protocol.
+    return handlers.unknown();
+  }
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (actual_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(read_handles, actual_handles);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  auto msg = fidl_msg_t {
+    .bytes = read_bytes,
+    .handles = read_handles,
+    .num_bytes = actual_bytes,
+    .num_handles = actual_handles
+  };
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  switch (hdr->ordinal) {
+    case kNode_OnOpen_Ordinal: {
+      auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      auto message = result.message.message();
+      return handlers.on_open(std::move(message->s), std::move(message->info));
+    }
+    default:
+      zx_handle_close_many(read_handles, actual_handles);
+      return handlers.unknown();
+  }
+}
 
 bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -2490,6 +2561,77 @@ zx_status_t File::Call::SetFlags(zx::unowned_channel _client_end, uint32_t flags
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+zx_status_t File::SyncClient::HandleEvents(File::EventHandlers handlers) {
+  return File::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+}
+
+zx_status_t File::Call::HandleEvents(zx::unowned_channel client_end,
+                                            File::EventHandlers handlers) {
+  zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                            zx::time::infinite(),
+                                            nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  constexpr uint32_t kReadAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (::fidl::internal::ClampedMessageSize<OnOpenResponse>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse>();
+    }
+    return x;
+  })();
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (OnOpenResponse::MaxNumHandles >= x) {
+      x = OnOpenResponse::MaxNumHandles;
+    }
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  zx_handle_t read_handles[kHandleAllocSize];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  status = client_end->read(ZX_CHANNEL_READ_MAY_DISCARD,
+                            read_bytes, read_handles,
+                            kReadAllocSize, kHandleAllocSize,
+                            &actual_bytes, &actual_handles);
+  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new event,
+    // whose size exceeds the maximum of known events in the current protocol.
+    return handlers.unknown();
+  }
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (actual_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(read_handles, actual_handles);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  auto msg = fidl_msg_t {
+    .bytes = read_bytes,
+    .handles = read_handles,
+    .num_bytes = actual_bytes,
+    .num_handles = actual_handles
+  };
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  switch (hdr->ordinal) {
+    case kFile_OnOpen_Ordinal: {
+      auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      auto message = result.message.message();
+      return handlers.on_open(std::move(message->s), std::move(message->info));
+    }
+    default:
+      zx_handle_close_many(read_handles, actual_handles);
+      return handlers.unknown();
+  }
+}
 
 bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -4552,6 +4694,77 @@ zx_status_t Directory::Call::Watch(zx::unowned_channel _client_end, uint32_t mas
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+zx_status_t Directory::SyncClient::HandleEvents(Directory::EventHandlers handlers) {
+  return Directory::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+}
+
+zx_status_t Directory::Call::HandleEvents(zx::unowned_channel client_end,
+                                            Directory::EventHandlers handlers) {
+  zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                            zx::time::infinite(),
+                                            nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  constexpr uint32_t kReadAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (::fidl::internal::ClampedMessageSize<OnOpenResponse>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse>();
+    }
+    return x;
+  })();
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (OnOpenResponse::MaxNumHandles >= x) {
+      x = OnOpenResponse::MaxNumHandles;
+    }
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  zx_handle_t read_handles[kHandleAllocSize];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  status = client_end->read(ZX_CHANNEL_READ_MAY_DISCARD,
+                            read_bytes, read_handles,
+                            kReadAllocSize, kHandleAllocSize,
+                            &actual_bytes, &actual_handles);
+  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new event,
+    // whose size exceeds the maximum of known events in the current protocol.
+    return handlers.unknown();
+  }
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (actual_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(read_handles, actual_handles);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  auto msg = fidl_msg_t {
+    .bytes = read_bytes,
+    .handles = read_handles,
+    .num_bytes = actual_bytes,
+    .num_handles = actual_handles
+  };
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  switch (hdr->ordinal) {
+    case kDirectory_OnOpen_Ordinal: {
+      auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      auto message = result.message.message();
+      return handlers.on_open(std::move(message->s), std::move(message->info));
+    }
+    default:
+      zx_handle_close_many(read_handles, actual_handles);
+      return handlers.unknown();
+  }
+}
 
 bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -7027,6 +7240,77 @@ zx_status_t DirectoryAdmin::Call::UnmountNode(zx::unowned_channel _client_end, i
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+zx_status_t DirectoryAdmin::SyncClient::HandleEvents(DirectoryAdmin::EventHandlers handlers) {
+  return DirectoryAdmin::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+}
+
+zx_status_t DirectoryAdmin::Call::HandleEvents(zx::unowned_channel client_end,
+                                            DirectoryAdmin::EventHandlers handlers) {
+  zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                            zx::time::infinite(),
+                                            nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  constexpr uint32_t kReadAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (::fidl::internal::ClampedMessageSize<OnOpenResponse>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse>();
+    }
+    return x;
+  })();
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (OnOpenResponse::MaxNumHandles >= x) {
+      x = OnOpenResponse::MaxNumHandles;
+    }
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  zx_handle_t read_handles[kHandleAllocSize];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  status = client_end->read(ZX_CHANNEL_READ_MAY_DISCARD,
+                            read_bytes, read_handles,
+                            kReadAllocSize, kHandleAllocSize,
+                            &actual_bytes, &actual_handles);
+  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new event,
+    // whose size exceeds the maximum of known events in the current protocol.
+    return handlers.unknown();
+  }
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (actual_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(read_handles, actual_handles);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  auto msg = fidl_msg_t {
+    .bytes = read_bytes,
+    .handles = read_handles,
+    .num_bytes = actual_bytes,
+    .num_handles = actual_handles
+  };
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  switch (hdr->ordinal) {
+    case kDirectoryAdmin_OnOpen_Ordinal: {
+      auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      auto message = result.message.message();
+      return handlers.on_open(std::move(message->s), std::move(message->info));
+    }
+    default:
+      zx_handle_close_many(read_handles, actual_handles);
+      return handlers.unknown();
+  }
+}
 
 bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {

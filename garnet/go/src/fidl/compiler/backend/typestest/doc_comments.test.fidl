@@ -46,4 +46,9 @@ protocol Interface {
     ///
     /// method comment #3
     Method();
+
+    /// event comment #1
+    ///
+    /// event comment #3
+    -> OnEvent();
 };

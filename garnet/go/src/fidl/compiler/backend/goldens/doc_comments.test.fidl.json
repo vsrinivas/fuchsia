@@ -66,6 +66,27 @@
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
           "has_response": false
+        },
+        {
+          "ordinal": 325918733,
+          "generated_ordinal": 325918733,
+          "name": "OnEvent",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
+            "line": 53,
+            "column": 8
+          },
+          "has_request": false,
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " event comment #1\n\n event comment #3\n"
+            }
+          ],
+          "has_response": true,
+          "maybe_response": [],
+          "maybe_response_size": 16,
+          "maybe_response_alignment": 8
         }
       ]
     }

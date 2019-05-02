@@ -182,17 +182,19 @@ func (s Struct) NeedsEncodeDecode() bool {
 
 type Interface struct {
 	types.Attributes
-	Namespace       string
-	Name            string
-	ClassName       string
-	ServiceName     string
-	ProxyName       string
-	StubName        string
-	EventSenderName string
-	SyncName        string
-	SyncProxyName   string
-	Methods         []Method
-	Kind            interfaceKind
+	Namespace             string
+	Name                  string
+	ClassName             string
+	ServiceName           string
+	ProxyName             string
+	StubName              string
+	EventSenderName       string
+	SyncName              string
+	SyncProxyName         string
+	Methods               []Method
+	HasEvents             bool
+	StackAllocEventBuffer bool
+	Kind                  interfaceKind
 }
 
 type Method struct {
@@ -202,6 +204,7 @@ type Method struct {
 	GenOrdinal           types.Ordinal
 	GenOrdinalName       string
 	Name                 string
+	NameInLowerSnakeCase string
 	HasRequest           bool
 	Request              []Parameter
 	RequestSize          int
@@ -365,6 +368,7 @@ var reservedWords = map[string]bool{
 	"Unknown":         true,
 	"unknown":         true,
 	"IsEmpty":         true,
+	"HandleEvents":    true,
 	// TODO(ianloic) add: "Clone"
 	// There are Clone methods on a couple of interfaces that are used
 	// across layers so this will be a breaking change.
@@ -757,19 +761,20 @@ func (m Method) NewLLProps(r Interface) LLProps {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		Attributes:      val.Attributes,
-		Namespace:       c.namespace,
-		Name:            c.compileCompoundIdentifier(val.Name, "", ""),
-		ClassName:       c.compileCompoundIdentifier(val.Name, "_clazz", ""),
-		ServiceName:     val.GetServiceName(),
-		ProxyName:       c.compileCompoundIdentifier(val.Name, "_Proxy", ""),
-		StubName:        c.compileCompoundIdentifier(val.Name, "_Stub", ""),
-		EventSenderName: c.compileCompoundIdentifier(val.Name, "_EventSender", ""),
-		SyncName:        c.compileCompoundIdentifier(val.Name, "_Sync", ""),
-		SyncProxyName:   c.compileCompoundIdentifier(val.Name, "_SyncProxy", ""),
-		Methods:         []Method{},
+		Attributes:            val.Attributes,
+		Namespace:             c.namespace,
+		Name:                  c.compileCompoundIdentifier(val.Name, "", ""),
+		ClassName:             c.compileCompoundIdentifier(val.Name, "_clazz", ""),
+		ServiceName:           val.GetServiceName(),
+		ProxyName:             c.compileCompoundIdentifier(val.Name, "_Proxy", ""),
+		StubName:              c.compileCompoundIdentifier(val.Name, "_Stub", ""),
+		EventSenderName:       c.compileCompoundIdentifier(val.Name, "_EventSender", ""),
+		SyncName:              c.compileCompoundIdentifier(val.Name, "_Sync", ""),
+		SyncProxyName:         c.compileCompoundIdentifier(val.Name, "_SyncProxy", ""),
 	}
 
+	hasEvents := false
+	stackAllocEventBuffer := true
 	for _, v := range val.Methods {
 		name := changeIfReserved(v.Name, "")
 		callbackType := ""
@@ -779,6 +784,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		responseTypeNameSuffix := "ResponseTable"
 		if !v.HasRequest {
 			responseTypeNameSuffix = "EventTable"
+			hasEvents = true
 		}
 		_, transitional := v.LookupAttribute("Transitional")
 		m := Method{
@@ -788,6 +794,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			GenOrdinal:           v.GenOrdinal,
 			GenOrdinalName:       fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),
 			Name:                 name,
+			NameInLowerSnakeCase: common.ToSnakeCase(name),
 			HasRequest:           v.HasRequest,
 			Request:              c.compileParameterArray(v.Request),
 			RequestSize:          v.RequestSize,
@@ -807,7 +814,12 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		}
 		m.LLProps = m.NewLLProps(r)
 		r.Methods = append(r.Methods, m)
+		if !v.HasRequest {
+			stackAllocEventBuffer = stackAllocEventBuffer && m.LLProps.StackAllocResponse
+		}
 	}
+	r.HasEvents = hasEvents
+	r.StackAllocEventBuffer = stackAllocEventBuffer
 
 	return r
 }

@@ -73,22 +73,25 @@ func TestCompileInterface(t *testing.T) {
 						{Name: types.Identifier("ServiceName"), Value: "Test"},
 					},
 				},
-				Namespace:       "::",
-				Name:            "Test",
-				ClassName:       "Test_clazz",
-				ServiceName:     "",
-				ProxyName:       "Test_Proxy",
-				StubName:        "Test_Stub",
-				EventSenderName: "Test_EventSender",
-				SyncName:        "Test_Sync",
-				SyncProxyName:   "Test_SyncProxy",
+				Namespace:             "::",
+				Name:                  "Test",
+				ClassName:             "Test_clazz",
+				ServiceName:           "",
+				ProxyName:             "Test_Proxy",
+				StubName:              "Test_Stub",
+				EventSenderName:       "Test_EventSender",
+				SyncName:              "Test_Sync",
+				SyncProxyName:         "Test_SyncProxy",
+				HasEvents:             false,
+				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
-						Ordinal:        1,
-						OrdinalName:    "kTest_First_Ordinal",
-						GenOrdinal:     314159,
-						GenOrdinalName: "kTest_First_GenOrdinal",
-						Name:           "First",
+						Ordinal:              1,
+						OrdinalName:          "kTest_First_Ordinal",
+						GenOrdinal:           314159,
+						GenOrdinalName:       "kTest_First_GenOrdinal",
+						Name:                 "First",
+						NameInLowerSnakeCase: "first",
 						HasRequest:     true,
 						Request: []Parameter{
 							{
@@ -124,11 +127,12 @@ func TestCompileInterface(t *testing.T) {
 						},
 					},
 					{
-						Ordinal:        2,
-						OrdinalName:    "kTest_Second_Ordinal",
-						GenOrdinal:     271828,
-						GenOrdinalName: "kTest_Second_GenOrdinal",
-						Name:           "Second",
+						Ordinal:              2,
+						OrdinalName:          "kTest_Second_Ordinal",
+						GenOrdinal:           271828,
+						GenOrdinalName:       "kTest_Second_GenOrdinal",
+						Name:                 "Second",
+						NameInLowerSnakeCase: "second",
 						HasRequest:     true,
 						Request: []Parameter{
 							{
@@ -178,6 +182,190 @@ func TestCompileInterface(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Events",
+			input: types.Interface{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{Name: types.Identifier("ServiceName"), Value: "EventTest"},
+					},
+				},
+				Name: types.EncodedCompoundIdentifier("EventTest"),
+				Methods: []types.Method{
+					{
+						Ordinal:     types.Ordinal(1),
+						GenOrdinal:  types.Ordinal(314159),
+						Name:        types.Identifier("First"),
+						HasResponse: true,
+						Response: []types.Parameter{
+							{
+								Type: PrimitiveType(types.Int16),
+								Name: types.Identifier("Value"),
+							},
+						},
+						ResponseSize: 18,
+					},
+				},
+			},
+			expected: Interface{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{Name: types.Identifier("ServiceName"), Value: "EventTest"},
+					},
+				},
+				Namespace:             "::",
+				Name:                  "EventTest",
+				ClassName:             "EventTest_clazz",
+				ServiceName:           "",
+				ProxyName:             "EventTest_Proxy",
+				StubName:              "EventTest_Stub",
+				EventSenderName:       "EventTest_EventSender",
+				SyncName:              "EventTest_Sync",
+				SyncProxyName:         "EventTest_SyncProxy",
+				HasEvents:             true,
+				StackAllocEventBuffer: true,
+				Methods: []Method{
+					{
+						Ordinal:              1,
+						OrdinalName:          "kEventTest_First_Ordinal",
+						GenOrdinal:           314159,
+						GenOrdinalName:       "kEventTest_First_GenOrdinal",
+						Name:                 "First",
+						NameInLowerSnakeCase: "first",
+						Request: []Parameter{},
+						RequestSize:         0,
+						RequestTypeName:     "_EventTestFirstRequestTable",
+						RequestMaxHandles:   0,
+						HasResponse:         true,
+						Response: []Parameter{
+							{
+								Type: Type{
+									Decl:                "int16_t",
+									LLDecl:              "int16_t",
+									OvernetEmbeddedDecl: "int16_t",
+								},
+								Name:   "Value",
+								Offset: 0,
+							},
+						},
+						ResponseSize:        18,
+						ResponseTypeName:    "_EventTestFirstEventTable",
+						ResponseMaxHandles:  0,
+						CallbackType:        "FirstCallback",
+						ResponseHandlerType: "EventTest_First_ResponseHandler",
+						ResponderType:       "EventTest_First_Responder",
+						LLProps: LLProps{
+							InterfaceName:      "EventTest",
+							CBindingCompatible: true,
+							LinearizeRequest:   false,
+							LinearizeResponse:  false,
+							StackAllocRequest:  true,
+							StackAllocResponse: true,
+							EncodeRequest:      false,
+							DecodeResponse:     false,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "EventsTooBigForStack",
+			input: types.Interface{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{Name: types.Identifier("ServiceName"), Value: "EventTest"},
+					},
+				},
+				Name: types.EncodedCompoundIdentifier("EventTest"),
+				Methods: []types.Method{
+					{
+						Ordinal:    types.Ordinal(2),
+						GenOrdinal: types.Ordinal(271828),
+						Name:       types.Identifier("Second"),
+						HasResponse: true,
+						Response: []types.Parameter{
+							{
+								Type: types.Type{
+									Kind: types.ArrayType,
+									ElementType: &types.Type{
+										Kind:             types.PrimitiveType,
+										PrimitiveSubtype: types.Int64,
+									},
+									ElementCount: addrOf(8000),
+								},
+								Name: types.Identifier("Value"),
+							},
+						},
+						ResponseSize: 64016,
+					},
+				},
+			},
+			expected: Interface{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{Name: types.Identifier("ServiceName"), Value: "EventTest"},
+					},
+				},
+				Namespace:             "::",
+				Name:                  "EventTest",
+				ClassName:             "EventTest_clazz",
+				ServiceName:           "",
+				ProxyName:             "EventTest_Proxy",
+				StubName:              "EventTest_Stub",
+				EventSenderName:       "EventTest_EventSender",
+				SyncName:              "EventTest_Sync",
+				SyncProxyName:         "EventTest_SyncProxy",
+				HasEvents:             true,
+				StackAllocEventBuffer: false,
+				Methods: []Method{
+					{
+						Ordinal:              2,
+						OrdinalName:          "kEventTest_Second_Ordinal",
+						GenOrdinal:           271828,
+						GenOrdinalName:       "kEventTest_Second_GenOrdinal",
+						Name:                 "Second",
+						NameInLowerSnakeCase: "second",
+						HasRequest:      false,
+						Request: []Parameter{},
+						RequestSize:       0,
+						RequestTypeName:   "_EventTestSecondRequestTable",
+						RequestMaxHandles: 0,
+						HasResponse:       true,
+						Response: []Parameter{
+							{
+								Type: Type{
+									Decl:                "::std::array<int64_t, 8000>",
+									LLDecl:              "::fidl::Array<int64_t, 8000>",
+									Dtor:                "~Array",
+									LLDtor:              "~Array",
+									OvernetEmbeddedDecl: "::std::array<int64_t, 8000>",
+									OvernetEmbeddedDtor: "~Array",
+								},
+								Name:   "Value",
+								Offset: 0,
+							},
+						},
+						ResponseSize:        64016,
+						ResponseTypeName:    "_EventTestSecondEventTable",
+						ResponseMaxHandles:  0,
+						CallbackType:        "SecondCallback",
+						ResponseHandlerType: "EventTest_Second_ResponseHandler",
+						ResponderType:       "EventTest_Second_Responder",
+						LLProps: LLProps{
+							InterfaceName:      "EventTest",
+							CBindingCompatible: true,
+							LinearizeRequest:   false,
+							LinearizeResponse:  false,
+							StackAllocRequest:  true,
+							StackAllocResponse: false,
+							EncodeRequest:      false,
+							DecodeResponse:     false,
+						},
+					},
+				},
+			},
+		},
+
 	}
 	for _, ex := range cases {
 		t.Run(ex.name, func(t *testing.T) {

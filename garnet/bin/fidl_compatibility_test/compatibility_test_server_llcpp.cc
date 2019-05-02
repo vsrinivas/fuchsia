@@ -39,42 +39,15 @@ class EchoClientApp {
                               out_value);
   }
 
-  ::fidl::DecodeResult<Echo::EchoEventResponse> EchoStructNoRetVal(
+  zx_status_t EchoStructNoRetVal(
       Struct value, ::fidl::StringView forward_to_server,
-      ::fidl::BytePart response_buffer) {
+      Echo::EventHandlers event_handlers) {
     auto status =
         client_.EchoStructNoRetVal(std::move(value), forward_to_server);
     if (status != ZX_OK) {
-      return ::fidl::DecodeResult<Echo::EchoEventResponse>(
-          status, "Failed to send echo event");
+      return status;
     }
-    // Wait for event
-    ZX_ASSERT(
-        client_end_->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                              zx::time::infinite(), nullptr) == ZX_OK);
-    ::fidl::EncodedMessage<Echo::EchoEventResponse> encoded_msg;
-    encoded_msg.Initialize(
-        [&](::fidl::BytePart* out_bytes, ::fidl::HandlePart* handles) {
-          *out_bytes = std::move(response_buffer);
-          uint32_t actual_bytes = 0;
-          uint32_t actual_handles = 0;
-          ZX_ASSERT(client_end_->read(0, out_bytes->data(), handles->data(),
-                                      out_bytes->capacity(),
-                                      handles->capacity(),
-                                      &actual_bytes, &actual_handles) == ZX_OK);
-          // TODO(FIDL-350): Hard-coding the event ordinal due to no event
-          // support in llcpp; refactor once that lands.
-          constexpr uint32_t kEchoStructEventOrdinal = 849359397u;
-          ZX_ASSERT(actual_bytes > sizeof(fidl_message_header_t));
-          ZX_ASSERT(
-              reinterpret_cast<fidl_message_header_t*>(
-                  out_bytes->data())->ordinal ==
-              kEchoStructEventOrdinal);
-          out_bytes->set_actual(actual_bytes);
-          handles->set_actual(actual_handles);
-        });
-    // Decode the event
-    return ::fidl::Decode(std::move(encoded_msg));
+    return client_.HandleEvents(std::move(event_handlers));
   }
 
   EchoClientApp(const EchoClientApp&) = delete;
@@ -97,15 +70,12 @@ class EchoClientApp {
     ZX_ASSERT(echo_provider_->Connect(kEchoInterfaceName,
                                       std::move(server_end)) == ZX_OK);
 
-    client_end_ = zx::unowned_channel(client_end);
     return client_end;
   }
 
   std::unique_ptr<sys::ComponentContext> context_;
   std::shared_ptr<sys::ServiceDirectory> echo_provider_;
   fuchsia::sys::ComponentControllerPtr controller_;
-  // Used to monitor events
-  zx::unowned_channel client_end_;
   Echo::SyncClient client_;
 };
 
@@ -146,18 +116,19 @@ class EchoConnection final : public Echo::Interface {
                     "Replying with event failed: %s",
                     zx_status_get_string(status));
     } else {
-      std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       EchoClientApp app(forward_to_server);
-      auto result = app.EchoStructNoRetVal(
+      zx_status_t status = app.EchoStructNoRetVal(
           std::move(value), ::fidl::StringView{0, ""},
-          ::fidl::BytePart(&response_buffer[0],
-                           static_cast<uint32_t>(response_buffer.size())));
-      ZX_ASSERT_MSG(result.status == ZX_OK,
-                    "Forwarding failed: %s",
-                    result.error);
-      auto status =
-          Echo::SendEchoEventEvent(zx::unowned_channel(channel_),
-                                   std::move(result.message.message()->value));
+          Echo::EventHandlers{
+              .echo_event = [&](Struct value) {
+                  return Echo::SendEchoEventEvent(zx::unowned_channel(channel_),
+                                                  std::move(value));
+              },
+              .unknown = [] {
+                  ZX_PANIC("Received unexpected event");
+                  return ZX_ERR_INVALID_ARGS;
+              }
+          });
       ZX_ASSERT_MSG(status == ZX_OK,
                     "Replying with event failed: %s",
                     zx_status_get_string(status));

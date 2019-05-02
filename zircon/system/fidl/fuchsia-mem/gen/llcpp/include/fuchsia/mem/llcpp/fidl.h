@@ -9,6 +9,7 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
 #include <zircon/fidl.h>
 
