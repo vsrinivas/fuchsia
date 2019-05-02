@@ -67,15 +67,17 @@ SettingValue SettingStore::GetValue(const std::string& key) const {
 Setting SettingStore::GetSetting(const std::string& key) const {
   // First check if it's in the schema.
   auto default_setting = schema_->GetSetting(key);
-  if (default_setting.value.is_null())
+  if (default_setting.setting.value.is_null()) {
+    DEBUG_LOG(Setting) << "Store: " << name_ << ": Key not found: " << key;
     return Setting();
+  }
 
   // Check if it already exists. If so, return it.
   auto it = values_.find(key);
   if (it != values_.end()) {
     DEBUG_LOG(Setting) << "Store " << name_ << ": stored value for " << key
                        << ": " << it->second.ToDebugString();
-    return {std::move(default_setting.info),  it->second};
+    return {std::move(default_setting.setting.info),  it->second};
   }
 
   // We check the fallback SettingStore to see if it has the setting.
@@ -88,8 +90,8 @@ Setting SettingStore::GetSetting(const std::string& key) const {
 
   // No fallback has the schema, we return the default.
   DEBUG_LOG(Setting) << "Store: " << name_ << ": schema default for " << key
-                     << ": " << default_setting.value.ToDebugString();
-  return default_setting;
+                     << ": " << default_setting.setting.value.ToDebugString();
+  return default_setting.setting;
 }
 
 bool SettingStore::HasSetting(const std::string& key) const {

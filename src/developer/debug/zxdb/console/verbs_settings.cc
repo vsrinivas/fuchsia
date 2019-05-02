@@ -539,7 +539,7 @@ Err GetSetContext(const Command& cmd, const std::string& setting_name,
   out->target = target;
   out->thread = thread;
   out->store = store;
-  out->setting = store->schema()->GetSetting(setting_name);
+  out->setting = store->schema()->GetSetting(setting_name).setting;
 
   return Err();
 }

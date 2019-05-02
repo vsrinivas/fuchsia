@@ -17,11 +17,23 @@ namespace zxdb {
 // process, etc.).
 class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
  public:
+  // The SchemaSetting holds the actual setting (the value that is stored and
+  // overriden by SettingStore) + some metadata useful for implementing more
+  // complex settings such as enums, by using the |options| field.
+  struct SchemaSetting {
+    Setting setting;
+    std::vector<std::string> options; // Used only for string lists.
+  };
+
   bool HasSetting(const std::string& key);
 
+  bool empty() const { return settings_.empty(); }
+
   // Returns a null setting if |key| is not within the schema.
-  Setting GetSetting(const std::string& name) const;
-  void AddSetting(const std::string& key, Setting setting);
+  const SchemaSetting& GetSetting(const std::string& name) const;
+  const std::map<std::string, SchemaSetting>& settings() const {
+    return settings_;
+  }
 
   // Create new items for settings that only belong to this schema.
   // For inter-schema options, the easier way is to create the Setting
@@ -30,17 +42,24 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
   void AddInt(std::string name, std::string description, int value = 0);
   void AddString(std::string name, std::string description,
                  std::string value = {});
-  void AddList(std::string name, std::string description,
-               std::vector<std::string> list = {});
+
+  // |valid_options| determines which options will be accepted when writing into
+  // a setting. They will be stored as lowercase and comparison will be in
+  // lowercase for simplicty.
+  // Will return false if the given list has a entry that is not within the
+  // valid options.
+  bool AddList(std::string name, std::string description,
+               std::vector<std::string> list = {},
+               std::vector<std::string> valid_options = {});
+
+  // |options| are used to implement enum-like strings/lists.
+  void AddSetting(const std::string& key, Setting setting,
+                  std::vector<std::string> options = {});
 
   Err ValidateSetting(const std::string& key, const SettingValue&) const;
 
-  const std::map<std::string, Setting>& settings() const { return settings_; }
-
-  bool empty() const { return settings_.empty(); }
-
  private:
-  std::map<std::string, Setting> settings_;
+  std::map<std::string, SchemaSetting> settings_;
 };
 
 }  // namespace zxdb

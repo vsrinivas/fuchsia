@@ -113,4 +113,26 @@ TEST(SettingSchema, List) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 }
 
+TEST(SettingSchema, ListWithOptions) {
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  std::vector<std::string> value = {"test", "vector"};
+  std::vector<std::string> options = {"test", "vector", "another"};
+
+  ASSERT_TRUE(schema->AddList("valid", "description", value, options));
+  {
+    auto& schema_setting = schema->GetSetting("valid");
+    ASSERT_TRUE(schema_setting.setting.value.is_list());
+    ASSERT_EQ(schema_setting.options.size(), 3u);
+    EXPECT_EQ(schema_setting.options[0], options[0]);
+    EXPECT_EQ(schema_setting.options[1], options[1]);
+    EXPECT_EQ(schema_setting.options[2], options[2]);
+  }
+
+  ASSERT_FALSE(schema->AddList("invalid", "description", {"non"}, options));
+  {
+    auto& schema_setting = schema->GetSetting("invalid");
+    EXPECT_TRUE(schema_setting.setting.value.is_null());
+  }
+}
+
 }  // namespace zxdb
