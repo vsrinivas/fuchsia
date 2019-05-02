@@ -107,23 +107,27 @@ group("meta_packages") {
 group("monolith_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = [ "//:additional_base_packages" ]
+  public_deps = [
+    "//:additional_base_packages",
+  ]
 }
 
 group("preinstall_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = [ "//:additional_cache_packages" ]
+  public_deps = [
+    "//:additional_cache_packages",
+  ]
 }
 
 group("available_packages") {
   testonly = true
   visibility = [ ":*" ]
   public_deps = [
-                  ":monolith_packages",
-                  ":preinstall_packages",
-                  "//:additional_universe_packages",
-                ]
+    ":monolith_packages",
+    ":preinstall_packages",
+    "//:additional_universe_packages",
+  ]
 }
 
 group("packages") {
@@ -596,8 +600,7 @@ generated_file("zxcrypt_config.txt") {
   contents = zxcrypt_key_source
 }
 
-component_manager_label =
-    "//src/sys/component_manager:component_manager.bootfs"
+component_manager_label = "//src/sys/component_manager:component_manager.bootfs"
 component_manager_target_dir =
     get_label_info(component_manager_label, "target_out_dir")
 component_manager_target_name = get_label_info(component_manager_label, "name")
@@ -1359,10 +1362,10 @@ action("update.manifest") {
         {
           target = image.updater
           forward_variables_from(image,
-                                  [
-                                    "deps",
-                                    "sources",
-                                  ])
+                                 [
+                                   "deps",
+                                   "sources",
+                                 ])
         },
       ]
     }
@@ -1371,8 +1374,10 @@ action("update.manifest") {
   update_manifest += [
     {
       target = "board"
-      sources = [ board_name_file ]
-    }
+      sources = [
+        board_name_file,
+      ]
+    },
   ]
 
   script = "manifest.py"
@@ -1462,7 +1467,7 @@ package_metadata_list("amber_index") {
 # The component index is the index of components in all available packages.
 component_index_metadata = "$target_out_dir/component_index_metadata"
 component_index_metadata_list("component_index_metadata") {
-  visibility = [ "//garnet/bin/component_index:*" ]
+  visibility = [ "//src/sys/component_index:*" ]
 
   testonly = true
 
@@ -1757,7 +1762,9 @@ images += [
 ]
 
 write_images_manifest("images-manifest") {
-  public = [ "FUCHSIA_BOARD_NAME=${board_name}" ]
+  public = [
+    "FUCHSIA_BOARD_NAME=${board_name}",
+  ]
   outputs = [
     "$root_build_dir/images.json",
     "$root_build_dir/image_paths.sh",

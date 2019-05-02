@@ -31,12 +31,12 @@ rustc_binary("component_index_bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/bin/component_index/fidl:index-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/sys/component_index/fidl:index-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]

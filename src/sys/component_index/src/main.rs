@@ -35,7 +35,9 @@ async fn run_fuzzy_search_server(
 
 /// Needle only accepts [A-Z a-z 0-9 / _ - .].
 fn check_needle(needle: &str) -> bool {
-    return needle.chars().all(|c| c.is_alphanumeric() || c == '/' || c == '_' || c == '-' || c == '.');
+    return needle
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '/' || c == '_' || c == '-' || c == '.');
 }
 
 enum IncomingServices {
