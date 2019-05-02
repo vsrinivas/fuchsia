@@ -108,10 +108,7 @@ static_assert(fit::is_callable<int (*)(float, bool)>::value, "");
 static_assert(fit::is_callable<int (member_function_pointer_traits::Object::*)(float, bool)>::value, "");
 static_assert(fit::is_callable<decltype(lambda_traits::lambda)>::value, "");
 static_assert(fit::is_callable<mutable_functor_traits::MutableFunctor>::value, "");
-
 static_assert(fit::is_callable<fit::function<int(float, bool)>>::value, "");
-static_assert(fit::is_callable<fit::callback<int(float, bool)>>::value, "");
-
 static_assert(fit::is_callable<std::function<int(float, bool)>>::value, "");
 
 } // namespace test_callables

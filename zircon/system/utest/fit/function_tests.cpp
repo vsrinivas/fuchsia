@@ -604,9 +604,7 @@ bool sharing() {
     int finlinevalue = 1;
     int finlinedestroy = 0;
     fit::function<Closure> finline =
-        [&finlinevalue, d = DestructionObserver(&finlinedestroy)] {
-            finlinevalue++;
-        };
+        [&finlinevalue, d = DestructionObserver(&finlinedestroy)] { finlinevalue++; };
     fit::function<Closure> finlineshare1 = finline.share();
     fit::function<Closure> finlineshare2 = finline.share();
     fit::function<Closure> finlineshare3 = finlineshare1.share();
@@ -639,9 +637,7 @@ bool sharing() {
     int fheapvalue = 1;
     int fheapdestroy = 0;
     fit::function<Closure> fheap =
-        [&fheapvalue, big = Big(), d = DestructionObserver(&fheapdestroy)] {
-            fheapvalue++;
-        };
+        [&fheapvalue, big = Big(), d = DestructionObserver(&fheapdestroy)] { fheapvalue++; };
     fit::function<Closure> fheapshare1 = fheap.share();
     fit::function<Closure> fheapshare2 = fheap.share();
     fit::function<Closure> fheapshare3 = fheapshare1.share();
@@ -670,26 +666,6 @@ bool sharing() {
     EXPECT_EQ(0, fheapdestroy);
     fheapshare1 = nullptr;
     EXPECT_EQ(1, fheapdestroy);
-
-    // target access now available after share()
-    using ClosureFunction = fit::function<Closure, HugeCallableSize>;
-    ClosureFunction fslot = SlotMachine{42};
-    fslot();
-    SlotMachine* fslottarget = fslot.template target<SlotMachine>();
-    EXPECT_EQ(43, fslottarget->value);
-
-    auto shared_fslot = fslot.share();
-    shared_fslot();
-    fslottarget = shared_fslot.template target<SlotMachine>();
-    EXPECT_EQ(44, fslottarget->value);
-    fslot();
-    EXPECT_EQ(45, fslottarget->value);
-    fslot = nullptr;
-    EXPECT_NULL(fslot.template target<decltype(nullptr)>());
-    shared_fslot();
-    EXPECT_EQ(46, fslottarget->value);
-    shared_fslot = nullptr;
-    EXPECT_NULL(shared_fslot.template target<decltype(nullptr)>());
 
 // These statements do not compile because inline functions cannot be shared
 #if 0
@@ -733,195 +709,12 @@ bool bind_member() {
     fit::bind_member(&obj, &Obj::Call)();
     EXPECT_EQ(23, fit::bind_member(&obj, &Obj::AddOne)(22));
     EXPECT_EQ(6, fit::bind_member(&obj, &Obj::Sum)(1, 2, 3));
-    move_only_value = fit::bind_member(&obj, &Obj::AddAndReturn)(
-        std::move(move_only_value));
+    move_only_value = fit::bind_member(&obj, &Obj::AddAndReturn)(std::move(move_only_value));
     EXPECT_EQ(5, *move_only_value);
     EXPECT_EQ(3, obj.calls);
 
     END_TEST;
 }
-
-// We don't have std::shared in Zircon yet.
-#ifndef FIT_NO_STD_FOR_ZIRCON_USERSPACE
-bool callback_once() {
-    BEGIN_TEST;
-
-    fit::callback<Closure> cbnull;
-    fit::callback<Closure> cbnullshare1 = cbnull.share();
-    fit::callback<Closure> cbnullshare2 = cbnull.share();
-    fit::callback<Closure> cbnullshare3 = cbnullshare1.share();
-    EXPECT_FALSE(!!cbnull);
-    EXPECT_FALSE(!!cbnullshare1);
-    EXPECT_FALSE(!!cbnullshare2);
-    EXPECT_FALSE(!!cbnullshare3);
-
-    int cbinlinevalue = 1;
-    int cbinlinedestroy = 0;
-    fit::callback<Closure> cbinline =
-        [&cbinlinevalue, d = DestructionObserver(&cbinlinedestroy)] {
-            cbinlinevalue++;
-        };
-    EXPECT_TRUE(!!cbinline);
-    EXPECT_FALSE(cbinline == nullptr);
-    EXPECT_EQ(1, cbinlinevalue);
-    EXPECT_EQ(0, cbinlinedestroy);
-    cbinline(); // releases resources even if never shared
-    EXPECT_FALSE(!!cbinline);
-    EXPECT_TRUE(cbinline == nullptr);
-    EXPECT_EQ(2, cbinlinevalue);
-    EXPECT_EQ(1, cbinlinedestroy);
-
-    cbinlinevalue = 1;
-    cbinlinedestroy = 0;
-    cbinline =
-        [&cbinlinevalue, d = DestructionObserver(&cbinlinedestroy)] {
-            cbinlinevalue++;
-        };
-    fit::callback<Closure> cbinlineshare1 = cbinline.share();
-    fit::callback<Closure> cbinlineshare2 = cbinline.share();
-    fit::callback<Closure> cbinlineshare3 = cbinlineshare1.share();
-    EXPECT_TRUE(!!cbinline);
-    EXPECT_TRUE(!!cbinlineshare1);
-    EXPECT_TRUE(!!cbinlineshare2);
-    EXPECT_TRUE(!!cbinlineshare3);
-    EXPECT_EQ(1, cbinlinevalue);
-    EXPECT_EQ(0, cbinlinedestroy);
-    cbinline();
-    EXPECT_EQ(2, cbinlinevalue);
-    EXPECT_EQ(1, cbinlinedestroy);
-    EXPECT_FALSE(!!cbinline);
-    EXPECT_TRUE(cbinline == nullptr);
-    // cbinline(); // should abort
-    EXPECT_FALSE(!!cbinlineshare1);
-    EXPECT_TRUE(cbinlineshare1 == nullptr);
-    // cbinlineshare1(); // should abort
-    EXPECT_FALSE(!!cbinlineshare2);
-    // cbinlineshare2(); // should abort
-    EXPECT_FALSE(!!cbinlineshare3);
-    // cbinlineshare3(); // should abort
-    EXPECT_EQ(1, cbinlinedestroy);
-    cbinlineshare3 = nullptr;
-    EXPECT_EQ(1, cbinlinedestroy);
-    cbinline = nullptr;
-    EXPECT_EQ(1, cbinlinedestroy);
-
-    int cbheapvalue = 1;
-    int cbheapdestroy = 0;
-    fit::callback<Closure> cbheap =
-        [&cbheapvalue, big = Big(), d = DestructionObserver(&cbheapdestroy)] {
-            cbheapvalue++;
-        };
-    EXPECT_TRUE(!!cbheap);
-    EXPECT_FALSE(cbheap == nullptr);
-    EXPECT_EQ(1, cbheapvalue);
-    EXPECT_EQ(0, cbheapdestroy);
-    cbheap(); // releases resources even if never shared
-    EXPECT_FALSE(!!cbheap);
-    EXPECT_TRUE(cbheap == nullptr);
-    EXPECT_EQ(2, cbheapvalue);
-    EXPECT_EQ(1, cbheapdestroy);
-
-    cbheapvalue = 1;
-    cbheapdestroy = 0;
-    cbheap =
-        [&cbheapvalue, big = Big(), d = DestructionObserver(&cbheapdestroy)] {
-            cbheapvalue++;
-        };
-    fit::callback<Closure> cbheapshare1 = cbheap.share();
-    fit::callback<Closure> cbheapshare2 = cbheap.share();
-    fit::callback<Closure> cbheapshare3 = cbheapshare1.share();
-    EXPECT_TRUE(!!cbheap);
-    EXPECT_TRUE(!!cbheapshare1);
-    EXPECT_TRUE(!!cbheapshare2);
-    EXPECT_TRUE(!!cbheapshare3);
-    EXPECT_EQ(1, cbheapvalue);
-    EXPECT_EQ(0, cbheapdestroy);
-    cbheap();
-    EXPECT_EQ(2, cbheapvalue);
-    EXPECT_EQ(1, cbheapdestroy);
-    EXPECT_FALSE(!!cbheap);
-    EXPECT_TRUE(cbheap == nullptr);
-    // cbheap(); // should abort
-    EXPECT_FALSE(!!cbheapshare1);
-    EXPECT_TRUE(cbheapshare1 == nullptr);
-    // cbheapshare1(); // should abort
-    EXPECT_FALSE(!!cbheapshare2);
-    // cbheapshare2(); // should abort
-    EXPECT_FALSE(!!cbheapshare3);
-    // cbheapshare3(); // should abort
-    EXPECT_EQ(1, cbheapdestroy);
-    cbheapshare3 = nullptr;
-    EXPECT_EQ(1, cbheapdestroy);
-    cbheap = nullptr;
-    EXPECT_EQ(1, cbheapdestroy);
-
-    // Verify new design, splitting out fit::callback, still supports
-    // assignment of move-only "Callables" (that is, lambdas made move-only
-    // because they capture a move-only object, like a fit::function, for
-    // example!)
-    fit::function<void()> fn_to_wrap = []() {};
-    fit::function<void()> fn_from_lambda;
-    fn_from_lambda = [fn = fn_to_wrap.share()]() mutable {
-        fn();
-    };
-
-    // Same test for fit::callback
-    fit::callback<void()> cb_to_wrap = []() {};
-    fit::callback<void()> cb_from_lambda;
-    cb_from_lambda = [cb = std::move(cb_to_wrap)]() mutable {
-        cb();
-    };
-
-    // |fit::function| objects can be constructed from or assigned from
-    // a |fit::callback|, if the result and arguments are compatible.
-    fit::function<Closure> fn = []() {};
-    fit::callback<Closure> cb = []() {};
-    fit::callback<Closure> cb_assign;
-    cb_assign = std::move(fn);
-    fit::callback<Closure> cb_construct = std::move(fn);
-    fit::callback<Closure> cb_share = fn.share();
-
-    static_assert(!std::is_convertible<
-                      fit::function<void()>*,
-                      fit::callback<void()>*>::value,
-                  "");
-    static_assert(!std::is_constructible<
-                      fit::function<void()>,
-                      fit::callback<void()>>::value,
-                  "");
-    static_assert(!std::is_assignable<
-                      fit::function<void()>,
-                      fit::callback<void()>>::value,
-                  "");
-    static_assert(!std::is_constructible<
-                      fit::function<void()>,
-                      decltype(cb.share())>::value,
-                  "");
-#if 0
-    // These statements do not compile because inline callbacks cannot be shared
-    fit::inline_callback<Closure> cbbad;
-    cbbad.share();
-
-    {
-        // Attempts to copy, move, or share a callback into a fit::function<>
-        // should not compile. This is verified by static_assert above, and
-        // was verified interactively using the compiler.
-        fit::callback<Closure> cb = []() {};
-        fit::function<Closure> fn = []() {};
-        fit::function<Closure> fn_assign;
-        fn_assign = cb;                                       // BAD
-        fn_assign = std::move(cb);                            // BAD
-        fit::function<Closure> fn_construct = cb;             // BAD
-        fit::function<Closure> fn_construct2 = std::move(cb); // BAD
-        fit::function<Closure> fn_share = cb.share();         // BAD
-    }
-
-#endif
-
-    END_TEST;
-}
-#endif // FIT_NO_STD_FOR_ZIRCON_USERSPACE
-
 } // namespace
 
 namespace test_conversions {
@@ -956,9 +749,6 @@ static_assert(!std::is_convertible<void, fit::function<Closure>>::value, "");
 static_assert(!std::is_convertible<void, fit::function<BinaryOp>>::value, "");
 static_assert(!std::is_assignable<void, fit::function<Closure>>::value, "");
 static_assert(!std::is_assignable<void, fit::function<BinaryOp>>::value, "");
-
-static_assert(std::is_same<fit::function<BinaryOp>::result_type, int>::value, "");
-static_assert(std::is_same<fit::callback<BinaryOp>::result_type, int>::value, "");
 } // namespace test_conversions
 
 BEGIN_TEST_CASE(function_tests)
@@ -970,14 +760,13 @@ RUN_TEST((closure<fit::function<Closure, HugeCallableSize>>))
 RUN_TEST((binary_op<fit::function<BinaryOp, HugeCallableSize>>))
 RUN_TEST((closure<fit::inline_function<Closure, HugeCallableSize>>))
 RUN_TEST((binary_op<fit::inline_function<BinaryOp, HugeCallableSize>>))
-RUN_TEST(sized_function_size_bounds)
-RUN_TEST(inline_function_size_bounds)
-RUN_TEST(move_only_argument_and_result)
-RUN_TEST(implicit_construction)
-RUN_TEST(overload_resolution)
+RUN_TEST(sized_function_size_bounds);
+RUN_TEST(inline_function_size_bounds);
+RUN_TEST(move_only_argument_and_result);
+RUN_TEST(implicit_construction);
+RUN_TEST(overload_resolution);
 #ifndef FIT_NO_STD_FOR_ZIRCON_USERSPACE
 RUN_TEST(sharing)
-RUN_TEST(callback_once)
 #endif
 RUN_TEST(bind_member);
 END_TEST_CASE(function_tests)
