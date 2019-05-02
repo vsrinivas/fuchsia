@@ -57,14 +57,9 @@ zx_status_t sys_pager_create_vmo(zx_handle_t pager, uint32_t options, zx_handle_
     }
 
     uint32_t vmo_options = 0;
-    if (options & ZX_VMO_NON_RESIZABLE) {
-        options &= ~ZX_VMO_NON_RESIZABLE;
-    } else {
-        vmo_options |= VmObjectPaged::kResizable;
-    }
-
-    if (options) {
-        return ZX_ERR_INVALID_ARGS;
+    status = VmObjectDispatcher::parse_create_syscall_flags(options, &vmo_options);
+    if (status != ZX_OK) {
+        return status;
     }
 
     fbl::RefPtr<VmObject> vmo;

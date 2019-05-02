@@ -19,6 +19,8 @@
 class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DEFAULT_VMO_RIGHTS>,
                                  public VmObjectChildObserver {
 public:
+    static zx_status_t parse_create_syscall_flags(uint32_t flags, uint32_t* out_flags);
+
     static zx_status_t Create(fbl::RefPtr<VmObject> vmo,
                               fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights) {

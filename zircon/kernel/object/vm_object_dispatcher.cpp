@@ -8,6 +8,7 @@
 
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
+#include <vm/vm_object_paged.h>
 
 #include <zircon/rights.h>
 
@@ -23,6 +24,24 @@
 
 KCOUNTER(dispatcher_vmo_create_count, "dispatcher.vmo.create")
 KCOUNTER(dispatcher_vmo_destroy_count, "dispatcher.vmo.destroy")
+
+zx_status_t VmObjectDispatcher::parse_create_syscall_flags(uint32_t flags, uint32_t* out_flags) {
+    uint32_t res = 0;
+    if (flags & ZX_VMO_NON_RESIZABLE) {
+        flags &= ~ZX_VMO_NON_RESIZABLE;
+    } else {
+        flags &= ~ZX_VMO_RESIZABLE;
+        res |= VmObjectPaged::kResizable;
+    }
+
+    if (flags) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    *out_flags = res;
+
+    return ZX_OK;
+}
 
 zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
                                        zx_koid_t pager_koid,
@@ -214,16 +233,18 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
     LTRACEF("options 0x%x offset %#" PRIx64 " size %#" PRIx64 "\n",
             options, offset, size);
 
-    bool resizable = true;
     if (options & ZX_VMO_CHILD_COPY_ON_WRITE) {
         options &= ~ZX_VMO_CHILD_COPY_ON_WRITE;
     } else {
         return ZX_ERR_INVALID_ARGS;
     }
 
+    bool resizable = true;
     if (options & ZX_VMO_CHILD_NON_RESIZEABLE) {
         resizable = false;
         options &= ~ZX_VMO_CHILD_NON_RESIZEABLE;
+    } else {
+        options &= ~ZX_VMO_CHILD_RESIZABLE;
     }
 
     if (options)

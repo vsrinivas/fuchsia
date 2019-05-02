@@ -131,7 +131,8 @@ public:
         // TODO: Don't leak these when the thread dies.
         // If the thread should start suspended, give it a 0-size VMO for a stack so
         // that it will crash if it gets to userspace.
-        ASSERT_EQ(zx::vmo::create(start_suspended ? 0 : kStackSize, 0, &stack_handle_), ZX_OK);
+        ASSERT_EQ(zx::vmo::create(start_suspended ? 0 : kStackSize,
+                                  ZX_VMO_RESIZABLE, &stack_handle_), ZX_OK);
         ASSERT_NE(stack_handle_.get(), ZX_HANDLE_INVALID);
 
         ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,

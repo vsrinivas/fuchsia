@@ -300,7 +300,7 @@ bool vmo_resize_test() {
 
     // allocate an object
     size_t len = PAGE_SIZE * 4;
-    status = zx_vmo_create(len, 0, &vmo);
+    status = zx_vmo_create(len, ZX_VMO_RESIZABLE, &vmo);
     EXPECT_EQ(ZX_OK, status, "vm_object_create");
 
     // get the size that we set it to
@@ -436,7 +436,7 @@ bool vmo_info_test() {
 
     // Create a resizeable uncached VMO, query the INFO on it and dump it.
     len = PAGE_SIZE * 8;
-    zx_vmo_create(len, 0, &vmo);
+    zx_vmo_create(len, ZX_VMO_RESIZABLE, &vmo);
     EXPECT_EQ(ZX_OK, status, "vm_info_test: vmo_create");
     zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED);
 
@@ -500,7 +500,7 @@ bool vmo_resize_align_test() {
     // resize a vmo with a particular size and test that the resulting size is aligned on a page
     // boundary.
     zx_handle_t vmo;
-    zx_status_t status = zx_vmo_create(0, 0, &vmo);
+    zx_status_t status = zx_vmo_create(0, ZX_VMO_RESIZABLE, &vmo);
     EXPECT_EQ(ZX_OK, status, "vm_object_create");
 
     for (uint64_t s = 0; s < PAGE_SIZE * 4; s++) {
@@ -1041,7 +1041,7 @@ bool vmo_clone_test_3() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_EQ(ZX_OK, zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo), "vm_object_create");
 
     // map it
     EXPECT_EQ(ZX_OK,
@@ -1466,7 +1466,7 @@ bool vmo_clone_test_4() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_EQ(ZX_OK, zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo), "vm_object_create");
 
     // map it
     EXPECT_EQ(ZX_OK,
@@ -1630,7 +1630,7 @@ bool vmo_resize_hazard() {
 
     const size_t size = PAGE_SIZE * 2;
     zx_handle_t vmo;
-    ASSERT_EQ(zx_vmo_create(size, 0, &vmo), ZX_OK);
+    ASSERT_EQ(zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
 
     uintptr_t ptr_rw;
     EXPECT_EQ(ZX_OK, zx_vmar_map(
@@ -1661,7 +1661,7 @@ bool vmo_clone_resize_clone_hazard() {
 
     zx_handle_t clone_vmo;
     EXPECT_EQ(ZX_OK, zx_vmo_create_child(
-        vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+        vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE, 0, size, &clone_vmo), "vm_clone");
 
     uintptr_t ptr_rw;
     EXPECT_EQ(ZX_OK, zx_vmar_map(
@@ -1688,7 +1688,7 @@ bool vmo_clone_resize_parent_ok() {
 
     const size_t size = PAGE_SIZE * 2;
     zx_handle_t vmo;
-    ASSERT_EQ(zx_vmo_create(size, 0, &vmo), ZX_OK);
+    ASSERT_EQ(zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
 
     zx_handle_t clone_vmo;
     EXPECT_EQ(ZX_OK, zx_vmo_create_child(

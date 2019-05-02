@@ -44,7 +44,7 @@ bool Vmo::CheckVmo(uint64_t offset, uint64_t len, const void* expected) {
     zx::vmo tmp_vmo;
     zx_vaddr_t buf = 0;
 
-    if (zx::vmo::create(len, 0, &tmp_vmo) != ZX_OK) {
+    if (zx::vmo::create(len, ZX_VMO_RESIZABLE, &tmp_vmo) != ZX_OK) {
         return false;
     }
 
@@ -88,7 +88,8 @@ void Vmo::GenerateBufferContents(void* dest_buffer, uint64_t len, uint64_t paged
 
 fbl::unique_ptr<Vmo> Vmo::Clone() {
     zx::vmo clone;
-    if (vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size_, &clone) != ZX_OK) {
+    if (vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE,
+                          0, size_, &clone) != ZX_OK) {
         return nullptr;
     }
 
@@ -116,7 +117,7 @@ bool UserPager::Init() {
 bool UserPager::CreateVmo(uint64_t size, Vmo** vmo_out) {
     zx::vmo vmo;
     size *= ZX_PAGE_SIZE;
-    if (pager_.create_vmo(0, port_, next_base_, size, &vmo) != ZX_OK) {
+    if (pager_.create_vmo(ZX_VMO_RESIZABLE, port_, next_base_, size, &vmo) != ZX_OK) {
         return false;
     }
 
