@@ -84,27 +84,83 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
 
 impl CmInto<fsys::UseDecl> for cm::Use {
     fn cm_into(self) -> Result<fsys::UseDecl, Error> {
-        Ok(fsys::UseDecl {
-            capability: Some(self.capability.cm_into()?),
-            target_path: Some(self.target_path),
+        Ok(match self {
+            cm::Use::Service(s) => fsys::UseDecl::Service(s.cm_into()?),
+            cm::Use::Directory(d) => fsys::UseDecl::Directory(d.cm_into()?),
         })
     }
 }
 
 impl CmInto<fsys::ExposeDecl> for cm::Expose {
     fn cm_into(self) -> Result<fsys::ExposeDecl, Error> {
-        Ok(fsys::ExposeDecl {
-            capability: Some(self.capability.cm_into()?),
-            source: Some(self.source.cm_into()?),
-            target_path: Some(self.target_path),
+        Ok(match self {
+            cm::Expose::Service(s) => fsys::ExposeDecl::Service(s.cm_into()?),
+            cm::Expose::Directory(d) => fsys::ExposeDecl::Directory(d.cm_into()?),
         })
     }
 }
 
 impl CmInto<fsys::OfferDecl> for cm::Offer {
     fn cm_into(self) -> Result<fsys::OfferDecl, Error> {
-        Ok(fsys::OfferDecl {
-            capability: Some(self.capability.cm_into()?),
+        Ok(match self {
+            cm::Offer::Service(s) => fsys::OfferDecl::Service(s.cm_into()?),
+            cm::Offer::Directory(d) => fsys::OfferDecl::Directory(d.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::UseServiceDecl> for cm::UseService {
+    fn cm_into(self) -> Result<fsys::UseServiceDecl, Error> {
+        Ok(fsys::UseServiceDecl {
+            source_path: Some(self.source_path),
+            target_path: Some(self.target_path),
+        })
+    }
+}
+
+impl CmInto<fsys::UseDirectoryDecl> for cm::UseDirectory {
+    fn cm_into(self) -> Result<fsys::UseDirectoryDecl, Error> {
+        Ok(fsys::UseDirectoryDecl {
+            source_path: Some(self.source_path),
+            target_path: Some(self.target_path),
+        })
+    }
+}
+
+impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
+    fn cm_into(self) -> Result<fsys::ExposeServiceDecl, Error> {
+        Ok(fsys::ExposeServiceDecl {
+            source_path: Some(self.source_path),
+            source: Some(self.source.cm_into()?),
+            target_path: Some(self.target_path),
+        })
+    }
+}
+
+impl CmInto<fsys::ExposeDirectoryDecl> for cm::ExposeDirectory {
+    fn cm_into(self) -> Result<fsys::ExposeDirectoryDecl, Error> {
+        Ok(fsys::ExposeDirectoryDecl {
+            source_path: Some(self.source_path),
+            source: Some(self.source.cm_into()?),
+            target_path: Some(self.target_path),
+        })
+    }
+}
+
+impl CmInto<fsys::OfferServiceDecl> for cm::OfferService {
+    fn cm_into(self) -> Result<fsys::OfferServiceDecl, Error> {
+        Ok(fsys::OfferServiceDecl {
+            source_path: Some(self.source_path),
+            source: Some(self.source.cm_into()?),
+            targets: Some(self.targets.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::OfferDirectoryDecl> for cm::OfferDirectory {
+    fn cm_into(self) -> Result<fsys::OfferDirectoryDecl, Error> {
+        Ok(fsys::OfferDirectoryDecl {
+            source_path: Some(self.source_path),
             source: Some(self.source.cm_into()?),
             targets: Some(self.targets.cm_into()?),
         })
@@ -118,27 +174,6 @@ impl CmInto<fsys::ChildDecl> for cm::Child {
             uri: Some(self.uri),
             startup: Some(startup_from_str(&self.startup)?),
         })
-    }
-}
-
-impl CmInto<fsys::Capability> for cm::Capability {
-    fn cm_into(self) -> Result<fsys::Capability, Error> {
-        Ok(match self {
-            cm::Capability::Service(s) => fsys::Capability::Service(s.cm_into()?),
-            cm::Capability::Directory(d) => fsys::Capability::Directory(d.cm_into()?),
-        })
-    }
-}
-
-impl CmInto<fsys::ServiceCapability> for cm::Service {
-    fn cm_into(self) -> Result<fsys::ServiceCapability, Error> {
-        Ok(fsys::ServiceCapability { path: Some(self.path) })
-    }
-}
-
-impl CmInto<fsys::DirectoryCapability> for cm::Directory {
-    fn cm_into(self) -> Result<fsys::DirectoryCapability, Error> {
-        Ok(fsys::DirectoryCapability { path: Some(self.path) })
     }
 }
 
@@ -294,19 +329,12 @@ mod tests {
         let input = json!({
             "exposes": [
                 {
-                    "capability": {},
-                    "source": {
-                        "myself": {}
-                    },
-                    "target_path": "/svc/fuchsia.logger.Log"
                 }
             ]
         });
 
-        let expected_res: Result<fsys::ComponentDecl, Error> = Err(Error::validate_schema(
-            CM_SCHEMA,
-            "OneOf conditions are not met at /exposes/0/capability",
-        ));
+        let expected_res: Result<fsys::ComponentDecl, Error> =
+            Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0"));
         let res = translate(&format!("{}", input));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     }
@@ -418,37 +446,29 @@ mod tests {
             input = json!({
                 "uses": [
                     {
-                        "capability": {
-                            "service": {
-                                "path": "/fonts/CoolFonts"
-                            }
-                        },
-                        "target_path": "/svc/fuchsia.fonts.Provider"
+                        "service": {
+                            "source_path": "/fonts/CoolFonts",
+                            "target_path": "/svc/fuchsia.fonts.Provider"
+                        }
                     },
                     {
-                        "capability": {
-                            "directory": {
-                                "path": "/data/assets"
-                            }
-                        },
-                        "target_path": "/data/assets"
+                        "directory": {
+                            "source_path": "/data/assets",
+                            "target_path": "/data"
+                        }
                     }
                 ]
             }),
             output = {
                 let uses = vec![
-                    fsys::UseDecl{
-                        capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
-                            path: Some("/fonts/CoolFonts".to_string()),
-                        })),
+                    fsys::UseDecl::Service(fsys::UseServiceDecl {
+                        source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
-                    },
-                    fsys::UseDecl{
-                        capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
-                            path: Some("/data/assets".to_string()),
-                        })),
-                        target_path: Some("/data/assets".to_string()),
-                    },
+                    }),
+                    fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
+                        source_path: Some("/data/assets".to_string()),
+                        target_path: Some("/data".to_string()),
+                    }),
                 ];
                 let mut decl = new_component_decl();
                 decl.uses = Some(uses);
@@ -459,28 +479,24 @@ mod tests {
             input = json!({
                 "exposes": [
                     {
-                        "capability": {
-                            "service": {
-                                "path": "/loggers/fuchsia.logger.Log"
-                            }
-                        },
-                        "source": {
-                            "child": {
-                                "name": "logger"
-                            }
-                        },
-                        "target_path": "/svc/fuchsia.logger.Log"
+                        "service": {
+                            "source": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "source_path": "/loggers/fuchsia.logger.Log",
+                            "target_path": "/svc/fuchsia.logger.Log"
+                        }
                     },
                     {
-                        "capability": {
-                            "directory": {
-                                "path": "/volumes/blobfs"
-                            }
-                        },
-                        "source": {
-                            "myself": {}
-                        },
-                        "target_path": "/volumes/blobfs"
+                        "directory": {
+                            "source": {
+                                "myself": {}
+                            },
+                            "source_path": "/volumes/blobfs",
+                            "target_path": "/volumes/blobfs"
+                        }
                     }
                 ],
                 "children": [
@@ -493,22 +509,18 @@ mod tests {
             }),
             output = {
                 let exposes = vec![
-                    fsys::ExposeDecl{
-                        capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
-                            path: Some("/loggers/fuchsia.logger.Log".to_string()),
-                        })),
+                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
+                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         source: Some(fsys::ExposeSource::Child(fsys::ChildId {
                             name: Some("logger".to_string()),
                         })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                    },
-                    fsys::ExposeDecl{
-                        capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
-                            path: Some("/volumes/blobfs".to_string()),
-                        })),
+                    }),
+                    fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
+                        source_path: Some("/volumes/blobfs".to_string()),
                         source: Some(fsys::ExposeSource::Myself(fsys::SelfId{})),
                         target_path: Some("/volumes/blobfs".to_string()),
-                    },
+                    }),
                 ];
                 let children = vec![
                     fsys::ChildDecl{
@@ -527,58 +539,52 @@ mod tests {
             input = json!({
                 "offers": [
                     {
-                        "capability": {
-                            "directory": {
-                                "path": "/data/assets"
-                            }
-                        },
-                        "source": {
-                            "realm": {}
-                        },
-                        "targets": [
-                            {
-                                "target_path": "/data/realm_assets",
-                                "child_name": "logger"
+                        "directory": {
+                            "source": {
+                                "realm": {}
                             },
-                            {
-                                "target_path": "/data/assets",
-                                "child_name": "netstack"
-                            }
-                        ]
+                            "source_path": "/data/assets",
+                            "targets": [
+                                {
+                                    "target_path": "/data/realm_assets",
+                                    "child_name": "logger"
+                                },
+                                {
+                                    "target_path": "/data/assets",
+                                    "child_name": "netstack"
+                                }
+                            ]
+                        }
                     },
                     {
-                        "capability": {
-                            "directory": {
-                                "path": "/data/config"
-                            }
-                        },
-                        "source": {
-                            "myself": {}
-                        },
-                        "targets": [
-                            {
-                                "target_path": "/data/config",
-                                "child_name": "netstack"
-                            }
-                        ]
+                        "directory": {
+                            "source": {
+                                "myself": {}
+                            },
+                            "source_path": "/data/config",
+                            "targets": [
+                                {
+                                    "target_path": "/data/config",
+                                    "child_name": "netstack"
+                                }
+                            ]
+                        }
                     },
                     {
-                        "capability": {
-                            "service": {
-                                "path": "/svc/fuchsia.logger.Log"
-                            }
-                        },
-                        "source": {
-                            "child": {
-                                "name": "logger"
-                            }
-                        },
-                        "targets": [
-                            {
-                                "target_path": "/svc/fuchsia.logger.SysLog",
-                                "child_name": "netstack"
-                            }
-                        ]
+                        "service": {
+                            "source": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "source_path": "/svc/fuchsia.logger.Log",
+                            "targets": [
+                                {
+                                    "target_path": "/svc/fuchsia.logger.SysLog",
+                                    "child_name": "netstack"
+                                }
+                            ]
+                        }
                     }
                 ],
                 "children": [
@@ -596,26 +602,22 @@ mod tests {
             }),
             output = {
                 let offers = vec![
-                    fsys::OfferDecl{
-                        capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
-                            path: Some("/data/assets".to_string()),
-                        })),
+                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                        source_path: Some("/data/assets".to_string()),
                         source: Some(fsys::OfferSource::Realm(fsys::RealmId{})),
                         targets: Some(vec![
-                            fsys::OfferTarget{
+                            fsys::OfferTarget {
                                 target_path: Some("/data/realm_assets".to_string()),
                                 child_name: Some("logger".to_string()),
                             },
-                            fsys::OfferTarget{
+                            fsys::OfferTarget {
                                 target_path: Some("/data/assets".to_string()),
                                 child_name: Some("netstack".to_string()),
                             },
                         ]),
-                    },
-                    fsys::OfferDecl{
-                        capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
-                            path: Some("/data/config".to_string()),
-                        })),
+                    }),
+                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                        source_path: Some("/data/config".to_string()),
                         source: Some(fsys::OfferSource::Myself(fsys::SelfId{})),
                         targets: Some(vec![
                             fsys::OfferTarget{
@@ -623,11 +625,9 @@ mod tests {
                                 child_name: Some("netstack".to_string()),
                             },
                         ]),
-                    },
-                    fsys::OfferDecl{
-                        capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
-                            path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        })),
+                    }),
+                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                        source_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         source: Some(fsys::OfferSource::Child(fsys::ChildId {
                             name: Some("logger".to_string()),
                         })),
@@ -637,7 +637,7 @@ mod tests {
                                 child_name: Some("netstack".to_string()),
                             },
                         ]),
-                    },
+                    }),
                 ];
                 let children = vec![
                     fsys::ChildDecl{
@@ -732,45 +732,39 @@ mod tests {
                 },
                 "uses": [
                     {
-                        "capability": {
-                            "service": {
-                                "path": "/fonts/CoolFonts"
-                            }
-                        },
-                        "target_path": "/svc/fuchsia.fonts.Provider"
+                        "service": {
+                            "source_path": "/fonts/CoolFonts",
+                            "target_path": "/svc/fuchsia.fonts.Provider"
+                        }
                     }
                 ],
                 "exposes": [
                     {
-                        "capability": {
-                            "directory": {
-                                "path": "/volumes/blobfs"
-                            }
-                        },
-                        "source": {
-                            "myself": {}
-                        },
-                        "target_path": "/volumes/blobfs"
+                        "directory": {
+                            "source": {
+                                "myself": {}
+                            },
+                            "source_path": "/volumes/blobfs",
+                            "target_path": "/volumes/blobfs"
+                        }
                     }
                 ],
                 "offers": [
                     {
-                        "capability": {
-                            "service": {
-                                "path": "/svc/fuchsia.logger.Log"
-                            }
-                        },
-                        "source": {
-                            "child": {
-                                "name": "logger"
-                            }
-                        },
-                        "targets": [
-                            {
-                                "target_path": "/svc/fuchsia.logger.Log",
-                                "child_name": "netstack"
-                            }
-                        ]
+                        "service": {
+                            "source": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "source_path": "/svc/fuchsia.logger.Log",
+                            "targets": [
+                                {
+                                    "target_path": "/svc/fuchsia.logger.Log",
+                                    "child_name": "netstack"
+                                }
+                            ]
+                        }
                     }
                 ],
                 "children": [
@@ -791,68 +785,62 @@ mod tests {
                 }
             }),
             output = {
-                let program = fdata::Dictionary{entries: vec![
-                    fdata::Entry{
+                let program = fdata::Dictionary {entries: vec![
+                    fdata::Entry {
                         key: "binary".to_string(),
                         value: Some(Box::new(fdata::Value::Str("bin/app".to_string()))),
                     },
                 ]};
                 let uses = vec![
-                    fsys::UseDecl{
-                        capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
-                            path: Some("/fonts/CoolFonts".to_string()),
-                        })),
+                    fsys::UseDecl::Service(fsys::UseServiceDecl {
+                        source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
-                    },
+                    }),
                 ];
                 let exposes = vec![
-                    fsys::ExposeDecl{
-                        capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability{
-                            path: Some("/volumes/blobfs".to_string()),
-                        })),
+                    fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                         source: Some(fsys::ExposeSource::Myself(fsys::SelfId{})),
+                        source_path: Some("/volumes/blobfs".to_string()),
                         target_path: Some("/volumes/blobfs".to_string()),
-                    },
+                    }),
                 ];
                 let offers = vec![
-                    fsys::OfferDecl{
-                        capability: Some(fsys::Capability::Service(fsys::ServiceCapability{
-                            path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        })),
+                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::OfferSource::Child(fsys::ChildId {
                             name: Some("logger".to_string()),
                         })),
+                        source_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                                 child_name: Some("netstack".to_string()),
                             },
                         ]),
-                    },
+                    }),
                 ];
                 let children = vec![
-                    fsys::ChildDecl{
+                    fsys::ChildDecl {
                         name: Some("logger".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                     },
-                    fsys::ChildDecl{
+                    fsys::ChildDecl {
                         name: Some("netstack".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Eager),
                     },
                 ];
                 let facets = fdata::Dictionary{entries: vec![
-                    fdata::Entry{
+                    fdata::Entry {
                         key: "author".to_string(),
                         value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),
                     },
-                    fdata::Entry{
+                    fdata::Entry {
                         key: "year".to_string(),
                         value: Some(Box::new(fdata::Value::Inum(2018))),
                     },
                 ]};
-                fsys::ComponentDecl{
+                fsys::ComponentDecl {
                     program: Some(program),
                     uses: Some(uses),
                     exposes: Some(exposes),

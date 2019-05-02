@@ -6,9 +6,33 @@ library fuchsia.sys2;
 
 /// Declares a capability exposed to a component's containing realm, such as a
 /// service exposed by the component or one of its children at runtime.
-table ExposeDecl {
-    /// The capability being exposed.
-    1: Capability capability;
+xunion ExposeDecl {
+    ExposeServiceDecl service;
+    ExposeDirectoryDecl directory;
+};
+
+/// Declares a service exposed to a component's containing realm, such as a
+/// service exposed by the component or one of its children at runtime.
+table ExposeServiceDecl {
+    /// The provider of the capability relative to the component itself.
+    1: ExposeSource source;
+
+    /// Path identifying the service, by which it was presented to this
+    /// component.
+    2: string:MAX_PATH_LENGTH source_path;
+
+    /// The path by which the capability is being exposed.
+    ///
+    /// Must be an absolute path starting with /.
+    3: string:MAX_PATH_LENGTH target_path;
+};
+
+/// Declares a directory exposed to a component's containing realm, such as a
+/// directory exposed by the component or one of its children at runtime.
+table ExposeDirectoryDecl {
+    /// Path identifying the directory, by which it was presented to this
+    /// component.
+    1: string:MAX_PATH_LENGTH source_path;
 
     /// The provider of the capability relative to the component itself.
     2: ExposeSource source;
@@ -20,6 +44,7 @@ table ExposeDecl {
 };
 
 /// Identifies a source component of an ExposeDecl.
+// TODO: Split ExposeSource by capability type.
 xunion ExposeSource {
   SelfId myself;
   ChildId child;

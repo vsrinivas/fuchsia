@@ -4,45 +4,39 @@
     },
     "uses": [
         {
-            "capability": {
-                "service": {
-                    "path": "/fonts/CoolFonts"
-                }
-            },
-            "target_path": "/svc/fuchsia.fonts.Provider"
+            "service": {
+                "source_path": "/fonts/CoolFonts",
+                "target_path": "/svc/fuchsia.fonts.Provider"
+            }
         }
     ],
     "exposes": [
         {
-            "capability": {
-                "directory": {
-                    "path": "/volumes/blobfs"
-                }
-            },
-            "source": {
-                "myself": {}
-            },
-            "target_path": "/volumes/blobfs"
+            "directory": {
+                "source": {
+                    "myself": {}
+                },
+                "source_path": "/volumes/blobfs",
+                "target_path": "/volumes/blobfs"
+            }
         }
     ],
     "offers": [
         {
-            "capability": {
-                "service": {
-                    "path": "/svc/fuchsia.logger.Log"
-                }
-            },
-            "source": {
-                "child": {
-                    "name": "logger"
-                }
-            },
-            "targets": [
-                {
-                    "target_path": "/svc/fuchsia.logger.Log",
-                    "child_name": "netstack"
-                }
-            ]
+            "service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/fuchsia.logger.Log",
+                "targets": [
+                    {
+                        "target_path": "/svc/fuchsia.logger.Log",
+                        "child_name": "netstack"
+                    }
+                ]
+            }
         }
     ],
     "children": [

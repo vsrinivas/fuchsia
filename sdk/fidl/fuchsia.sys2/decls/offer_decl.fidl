@@ -4,12 +4,34 @@
 
 library fuchsia.sys2;
 
-/// Declares a capability offered by a component to one of its children, such as
-/// a service offered by the component's containing realm, the component itself,
-/// or one of its children.
-table OfferDecl {
-    /// The capability being offered.
-    1: Capability capability;
+/// Declares a capability offered by a component to one of its children, which may
+/// have been offered by the component's containing realm, the component itself,
+/// or one of its other children.
+xunion OfferDecl {
+    OfferServiceDecl service;
+    OfferDirectoryDecl directory;
+};
+
+/// Declares a service offered by a component to one of its children, which may
+/// have been offered by the component's containing realm, the component itself,
+/// or one of its other children.
+table OfferServiceDecl {
+    /// The provider of the capability relative to the component itself.
+    1: OfferSource source;
+
+    /// Path identifying the service being offered.
+    2: string:MAX_PATH_LENGTH source_path;
+
+    /// The list of children to which the capability should be offered.
+    3: vector<OfferTarget> targets;
+};
+
+/// Declares a directory offered by a component to one of its children, which may
+/// have been offered by the component's containing realm, the component itself,
+/// or one of its other children.
+table OfferDirectoryDecl {
+    /// Path identifying the directory being offered.
+    1: string:MAX_PATH_LENGTH source_path;
 
     /// The provider of the capability relative to the component itself.
     2: OfferSource source;
@@ -19,6 +41,7 @@ table OfferDecl {
 };
 
 /// Identifies a source component of an OfferDecl.
+// TODO: Split OfferSource by capability type.
 xunion OfferSource {
   RealmId realm;
   SelfId myself;
@@ -26,6 +49,7 @@ xunion OfferSource {
 };
 
 /// Describes a target for a capability offering.
+// TODO: Split OfferTarget by capability type.
 table OfferTarget {
     /// The path under which the capability is being offered.
     ///

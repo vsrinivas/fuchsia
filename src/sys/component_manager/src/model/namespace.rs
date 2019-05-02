@@ -7,7 +7,7 @@ use {
     crate::model::*,
     crate::ns_util::PKG_PATH,
     crate::{directory_broker, io_util},
-    cm_rust::{self, ComponentDecl, UseDecl},
+    cm_rust::{self, ComponentDecl, UseDirectoryDecl, UseServiceDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_vfs_pseudo_fs as fvfs,
@@ -74,23 +74,18 @@ impl IncomingNamespace {
         let mut directory_waiters = Vec::new();
 
         for use_ in &decl.uses {
-            match use_.capability {
-                cm_rust::Capability::Directory(_) => {
+            match use_ {
+                cm_rust::UseDecl::Directory(d) => {
                     Self::add_directory_use(
                         &mut ns,
                         &mut directory_waiters,
-                        &use_,
+                        d,
                         model.clone(),
                         abs_moniker.clone(),
                     )?;
                 }
-                cm_rust::Capability::Service(_) => {
-                    Self::add_service_use(
-                        &mut svc_dirs,
-                        &use_,
-                        model.clone(),
-                        abs_moniker.clone(),
-                    )?;
+                cm_rust::UseDecl::Service(s) => {
+                    Self::add_service_use(&mut svc_dirs, s, model.clone(), abs_moniker.clone())?;
                 }
             }
         }
@@ -126,13 +121,13 @@ impl IncomingNamespace {
     fn add_directory_use(
         ns: &mut fsys::ComponentNamespace,
         waiters: &mut Vec<FutureObj<()>>,
-        use_: &UseDecl,
+        use_: &UseDirectoryDecl,
         model: Model,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let (client_end, server_end) =
             create_endpoints().expect("could not create directory proxy endpoints");
-        let capability = use_.capability.clone();
+        let capability = use_.clone().into();
         let route_on_usage = async move {
             // Wait for the channel to become readable.
             let server_end_chan = fasync::Channel::from_channel(server_end.into_channel())
@@ -186,11 +181,11 @@ impl IncomingNamespace {
     /// proxied to the outgoing directory of the source component.
     fn add_service_use(
         svc_dirs: &mut HashMap<String, fvfs::directory::simple::Simple>,
-        use_: &UseDecl,
+        use_: &UseServiceDecl,
         model: Model,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let capability = use_.capability.clone();
+        let capability: cm_rust::Capability = use_.clone().into();
         let route_service_fn = Box::new(move |server_end: ServerEnd<NodeMarker>| {
             let capability = capability.clone();
             let model = model.clone();

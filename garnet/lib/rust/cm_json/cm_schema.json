@@ -2,10 +2,6 @@
   "type": "object",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
-    "capability-clause": {
-      "type": "string",
-      "pattern": "^(service|directory)$"
-    },
     "path-clause": {
       "type": "string",
       "pattern": "^(/[^/]+)+$",
@@ -28,39 +24,90 @@
       "minLength": 1,
       "maxLength": 100
     },
-    "capability-clause": {
+    "expose-source-clause": {
+      "title": "Exposed capability source component",
       "type": "object",
       "oneOf": [
         {
-          "required": [ "service" ]
+          "required": [ "myself" ]
         },
         {
-          "required": [ "directory" ]
+          "required": [ "child" ]
         }
       ],
       "properties": {
-        "service": {
+        "myself": {
           "type": "object",
-          "title": "Service capability",
-          "required": [ "path" ],
+          "title": "Component itself"
+        },
+        "child": {
+          "type": "object",
+          "title": "Component's child",
+          "required": [ "name" ],
           "properties": {
-            "path": {
-              "type": "string",
-              "title": "Capability path",
-              "allOf": [{ "$ref": "#/definitions/path-clause" }]
+            "name": {
+              "title": "Child name",
+              "allOf": [{ "$ref": "#/definitions/name-clause" }]
             }
           }
+        }
+      }
+    },
+    "offer-source-clause": {
+      "title": "Offered capability source component",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [ "realm" ]
         },
-        "directory": {
+        {
+          "required": [ "myself" ]
+        },
+        {
+          "required": [ "child" ]
+        }
+      ],
+      "properties": {
+        "realm": {
           "type": "object",
-          "title": "Directory capability",
-          "required": [ "path" ],
+          "title": "Component's containing realm (parent component)"
+        },
+        "myself": {
+          "type": "object",
+          "title": "Component itself"
+        },
+        "child": {
+          "type": "object",
+          "title": "Component's child",
+          "required": [ "name" ],
           "properties": {
-            "path": {
-              "type": "string",
-              "title": "Capability path",
-              "allOf": [{ "$ref": "#/definitions/path-clause" }]
+            "name": {
+              "title": "Child name",
+              "allOf": [{ "$ref": "#/definitions/name-clause" }]
             }
+          }
+        }
+      }
+    },
+    "offer-targets-clause": {
+      "title": "Offered capability target components",
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "target_path",
+          "child_name"
+        ],
+        "properties": {
+          "target_path": {
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "title": "Offered capability target path"
+          },
+          "child_name": {
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "title": "Offered capability target child name"
           }
         }
       }
@@ -77,18 +124,50 @@
       "uniqueItems": true,
       "items": {
         "type": "object",
-        "required": [
-          "capability",
-          "target_path"
+        "oneOf": [
+          {
+            "required": [ "service" ]
+          },
+          {
+            "required": [ "directory" ]
+          }
         ],
         "properties": {
-          "capability": {
-            "title": "Used capability",
-            "allOf": [{ "$ref": "#/definitions/capability-clause" }]
+          "service": {
+            "type": "object",
+            "title": "Used service capability",
+            "required": [
+              "source_path",
+              "target_path"
+            ],
+            "properties": {
+              "source_path": {
+                "title": "Used service source path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "target_path": {
+                "allOf": [{ "$ref": "#/definitions/path-clause" }],
+                "title": "Used service target path"
+              }
+            }
           },
-          "target_path": {
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
-            "title": "Used capability target path"
+          "directory": {
+            "type": "object",
+            "title": "Used service capability",
+            "required": [
+              "source_path",
+              "target_path"
+            ],
+            "properties": {
+              "source_path": {
+                "title": "Used service source path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "target_path": {
+                "allOf": [{ "$ref": "#/definitions/path-clause" }],
+                "title": "Used service target path"
+              }
+            }
           }
         }
       }
@@ -99,48 +178,60 @@
       "uniqueItems": true,
       "items": {
         "type": "object",
-        "required": [
-          "capability",
-          "source",
-          "target_path"
+        "oneOf": [
+          {
+            "required": [ "service" ]
+          },
+          {
+            "required": [ "directory" ]
+          }
         ],
         "properties": {
-          "capability": {
-            "title": "Exposed capability",
-            "allOf": [{ "$ref": "#/definitions/capability-clause" }]
-          },
-          "source": {
-            "title": "Exposed capability source component",
+          "service": {
             "type": "object",
-            "oneOf": [
-              {
-                "required": [ "myself" ]
-              },
-              {
-                "required": [ "child" ]
-              }
+            "title": "Exposed service capability",
+            "required": [
+              "source",
+              "source_path",
+              "target_path"
             ],
             "properties": {
-              "myself": {
-                "type": "object",
-                "title": "Component itself"
+              "source": {
+                "title": "Exposed service source component",
+                "allOf": [{ "$ref": "#/definitions/expose-source-clause" }]
               },
-              "child": {
-                "type": "object",
-                "title": "Component's child",
-                "required": [ "name" ],
-                "properties": {
-                  "name": {
-                    "title": "Child name",
-                    "allOf": [{ "$ref": "#/definitions/name-clause" }]
-                  }
-                }
+              "source_path": {
+                "title": "Exposed service source path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "target_path": {
+                "allOf": [{ "$ref": "#/definitions/path-clause" }],
+                "title": "Exposed service target path"
               }
             }
           },
-          "target_path": {
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
-            "title": "Exposed capability target path"
+          "directory": {
+            "type": "object",
+            "title": "Exposed directory capability",
+            "required": [
+              "source",
+              "source_path",
+              "target_path"
+            ],
+            "properties": {
+              "source": {
+                "title": "Exposed directory source component",
+                "allOf": [{ "$ref": "#/definitions/expose-source-clause" }]
+              },
+              "source_path": {
+                "title": "Exposed directory source path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "target_path": {
+                "allOf": [{ "$ref": "#/definitions/path-clause" }],
+                "title": "Exposed directory target path"
+              }
+            }
           }
         }
       }
@@ -151,72 +242,54 @@
       "uniqueItems": true,
       "items": {
         "type": "object",
-        "required": [
-          "capability",
-          "source",
-          "targets"
+        "oneOf": [
+          {
+            "required": [ "service" ]
+          },
+          {
+            "required": [ "directory" ]
+          }
         ],
         "properties": {
-          "capability": {
-            "title": "Offered capability",
-            "allOf": [{ "$ref": "#/definitions/capability-clause" }]
-          },
-          "source": {
-            "title": "Offered capability source component",
-            "type": "object",
-            "oneOf": [
-              {
-                "required": [ "realm" ]
-              },
-              {
-                "required": [ "myself" ]
-              },
-              {
-                "required": [ "child" ]
-              }
+          "service": {
+            "required": [
+              "source",
+              "source_path",
+              "targets"
             ],
             "properties": {
-              "realm": {
-                "type": "object",
-                "title": "Component's realm"
+              "source": {
+                "title": "Offered service source component",
+                "allOf": [{ "$ref": "#/definitions/offer-source-clause" }]
               },
-              "myself": {
-                "type": "object",
-                "title": "Component itself"
+              "source_path": {
+                "title": "Offered service source path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
               },
-              "child": {
-                "type": "object",
-                "title": "Component's child",
-                "required": [ "name" ],
-                "properties": {
-                  "name": {
-                    "title": "Child name",
-                    "allOf": [{ "$ref": "#/definitions/name-clause" }]
-                  }
-                }
+              "targets": {
+                "title": "Offered service targets",
+                "allOf": [{ "$ref": "#/definitions/offer-targets-clause" }]
               }
             }
           },
-          "targets": {
-            "type": "array",
-            "title": "Offered capability targets",
-            "uniqueItems": true,
-            "minItems": 1,
-            "items": {
-              "type": "object",
-              "required": [
-                "target_path",
-                "child_name"
-              ],
-              "properties": {
-                "target_path": {
-                  "allOf": [{ "$ref": "#/definitions/path-clause" }],
-                  "title": "Offered capability target path"
-                },
-                "child_name": {
-                  "allOf": [{ "$ref": "#/definitions/name-clause" }],
-                  "title": "Offered capability target child name"
-                }
+          "directory": {
+            "required": [
+              "source",
+              "source_path",
+              "targets"
+            ],
+            "properties": {
+              "source": {
+                "title": "Offered directory source component",
+                "allOf": [{ "$ref": "#/definitions/offer-source-clause" }]
+              },
+              "source_path": {
+                "title": "Offered directory source path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "targets": {
+                "title": "Offered directory targets",
+                "allOf": [{ "$ref": "#/definitions/offer-targets-clause" }]
               }
             }
           }

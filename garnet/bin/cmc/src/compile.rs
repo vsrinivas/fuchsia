@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::cml;
+use crate::cml::{self, CapabilityClause};
 use crate::validate;
 use cm_json::{self, cm, Error, CM_SCHEMA};
 use serde::ser::Serialize;
@@ -89,9 +89,15 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
 fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
-        let capability = extract_capability(use_)?;
-        let target_path = extract_target_path(use_, &capability)?;
-        out_uses.push(cm::Use { capability, target_path });
+        let target_path = extract_target_path(use_, use_)?;
+        let out = if let Some(p) = use_.service() {
+            Ok(cm::Use::Service(cm::UseService { source_path: p.clone(), target_path }))
+        } else if let Some(p) = use_.directory() {
+            Ok(cm::Use::Directory(cm::UseDirectory { source_path: p.clone(), target_path }))
+        } else {
+            Err(Error::internal(format!("no capability")))
+        }?;
+        out_uses.push(out);
     }
     Ok(out_uses)
 }
@@ -99,10 +105,24 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
 fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
-        let capability = extract_capability(expose)?;
         let source = extract_expose_source(expose)?;
-        let target_path = extract_target_path(expose, &capability)?;
-        out_exposes.push(cm::Expose { capability, source, target_path });
+        let target_path = extract_target_path(expose, expose)?;
+        let out = if let Some(p) = expose.service() {
+            Ok(cm::Expose::Service(cm::ExposeService {
+                source,
+                source_path: p.clone(),
+                target_path,
+            }))
+        } else if let Some(p) = expose.directory() {
+            Ok(cm::Expose::Directory(cm::ExposeDirectory {
+                source,
+                source_path: p.clone(),
+                target_path,
+            }))
+        } else {
+            Err(Error::internal(format!("no capability")))
+        }?;
+        out_exposes.push(out);
     }
     Ok(out_exposes)
 }
@@ -110,10 +130,16 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
 fn translate_offer(offer_in: &Vec<cml::Offer>) -> Result<Vec<cm::Offer>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
-        let capability = extract_capability(offer)?;
         let source = extract_offer_source(offer)?;
-        let targets = extract_targets(offer, &capability)?;
-        out_offers.push(cm::Offer { capability, source, targets });
+        let targets = extract_targets(offer)?;
+        let out = if let Some(p) = offer.service() {
+            Ok(cm::Offer::Service(cm::OfferService { source_path: p.clone(), source, targets }))
+        } else if let Some(p) = offer.directory() {
+            Ok(cm::Offer::Directory(cm::OfferDirectory { source_path: p.clone(), source, targets }))
+        } else {
+            Err(Error::internal(format!("no capability")))
+        }?;
+        out_offers.push(out);
     }
     Ok(out_offers)
 }
@@ -173,14 +199,10 @@ where
     Ok(ret)
 }
 
-// Extract "targets" from "offer.to".
-fn extract_targets(
-    in_obj: &cml::Offer,
-    capability: &cm::Capability,
-) -> Result<Vec<cm::Target>, Error> {
+fn extract_targets(in_obj: &cml::Offer) -> Result<Vec<cm::Target>, Error> {
     let mut out_targets = vec![];
     for to in in_obj.to.iter() {
-        let target_path = extract_target_path(to, capability)?;
+        let target_path = extract_target_path(in_obj, to)?;
         let caps = match cml::CHILD_RE.captures(&to.dest) {
             Some(c) => Ok(c),
             None => Err(Error::internal(format!("invalid \"dest\": {}", to.dest))),
@@ -191,33 +213,22 @@ fn extract_targets(
     Ok(out_targets)
 }
 
-fn extract_capability<T>(in_obj: &T) -> Result<cm::Capability, Error>
+fn extract_target_path<T, U>(in_obj: &T, to_obj: &U) -> Result<String, Error>
 where
     T: cml::CapabilityClause,
+    U: cml::AsClause,
 {
-    let capability = if let Some(p) = in_obj.service() {
-        cm::Capability::Service(cm::Service { path: p.clone() })
-    } else if let Some(p) = in_obj.directory() {
-        cm::Capability::Directory(cm::Directory { path: p.clone() })
+    if let Some(as_) = to_obj.r#as() {
+        Ok(as_.clone())
     } else {
-        return Err(Error::internal(format!("no capability")));
-    };
-    Ok(capability)
-}
-
-fn extract_target_path<T>(in_obj: &T, capability: &cm::Capability) -> Result<String, Error>
-where
-    T: cml::AsClause,
-{
-    let out = if let Some(as_) = in_obj.r#as() {
-        as_.clone()
-    } else {
-        match capability {
-            cm::Capability::Service(s) => s.path.clone(),
-            cm::Capability::Directory(d) => d.path.clone(),
+        if let Some(p) = in_obj.service() {
+            Ok(p.clone())
+        } else if let Some(p) = in_obj.directory() {
+            Ok(p.clone())
+        } else {
+            Err(Error::internal(format!("no capability")))
         }
-    };
-    Ok(out)
+    }
 }
 
 #[cfg(test)]
@@ -290,20 +301,16 @@ mod tests {
             output = r#"{
     "uses": [
         {
-            "capability": {
-                "service": {
-                    "path": "/fonts/CoolFonts"
-                }
-            },
-            "target_path": "/svc/fuchsia.fonts.Provider"
+            "service": {
+                "source_path": "/fonts/CoolFonts",
+                "target_path": "/svc/fuchsia.fonts.Provider"
+            }
         },
         {
-            "capability": {
-                "directory": {
-                    "path": "/data/assets"
-                }
-            },
-            "target_path": "/data/assets"
+            "directory": {
+                "source_path": "/data/assets",
+                "target_path": "/data/assets"
+            }
         }
     ]
 }"#,
@@ -328,28 +335,24 @@ mod tests {
             output = r#"{
     "exposes": [
         {
-            "capability": {
-                "service": {
-                    "path": "/loggers/fuchsia.logger.Log"
-                }
-            },
-            "source": {
-                "child": {
-                    "name": "logger"
-                }
-            },
-            "target_path": "/svc/fuchsia.logger.Log"
+            "service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/loggers/fuchsia.logger.Log",
+                "target_path": "/svc/fuchsia.logger.Log"
+            }
         },
         {
-            "capability": {
-                "directory": {
-                    "path": "/volumes/blobfs"
-                }
-            },
-            "source": {
-                "myself": {}
-            },
-            "target_path": "/volumes/blobfs"
+            "directory": {
+                "source": {
+                    "myself": {}
+                },
+                "source_path": "/volumes/blobfs",
+                "target_path": "/volumes/blobfs"
+            }
         }
     ],
     "children": [
@@ -398,42 +401,38 @@ mod tests {
             output = r#"{
     "offers": [
         {
-            "capability": {
-                "service": {
-                    "path": "/svc/fuchsia.logger.Log"
-                }
-            },
-            "source": {
-                "child": {
-                    "name": "logger"
-                }
-            },
-            "targets": [
-                {
-                    "target_path": "/svc/fuchsia.logger.Log",
-                    "child_name": "netstack"
+            "service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
                 },
-                {
-                    "target_path": "/svc/fuchsia.logger.SysLog",
-                    "child_name": "echo_server"
-                }
-            ]
+                "source_path": "/svc/fuchsia.logger.Log",
+                "targets": [
+                    {
+                        "target_path": "/svc/fuchsia.logger.Log",
+                        "child_name": "netstack"
+                    },
+                    {
+                        "target_path": "/svc/fuchsia.logger.SysLog",
+                        "child_name": "echo_server"
+                    }
+                ]
+            }
         },
         {
-            "capability": {
-                "directory": {
-                    "path": "/data/assets"
-                }
-            },
-            "source": {
-                "realm": {}
-            },
-            "targets": [
-                {
-                    "target_path": "/data/assets",
-                    "child_name": "echo_server"
-                }
-            ]
+            "directory": {
+                "source": {
+                    "realm": {}
+                },
+                "source_path": "/data/assets",
+                "targets": [
+                    {
+                        "target_path": "/data/assets",
+                        "child_name": "echo_server"
+                    }
+                ]
+            }
         }
     ],
     "children": [
@@ -560,45 +559,39 @@ mod tests {
     },
     "uses": [
         {
-            "capability": {
-                "service": {
-                    "path": "/fonts/CoolFonts"
-                }
-            },
-            "target_path": "/svc/fuchsia.fonts.Provider"
+            "service": {
+                "source_path": "/fonts/CoolFonts",
+                "target_path": "/svc/fuchsia.fonts.Provider"
+            }
         }
     ],
     "exposes": [
         {
-            "capability": {
-                "directory": {
-                    "path": "/volumes/blobfs"
-                }
-            },
-            "source": {
-                "myself": {}
-            },
-            "target_path": "/volumes/blobfs"
+            "directory": {
+                "source": {
+                    "myself": {}
+                },
+                "source_path": "/volumes/blobfs",
+                "target_path": "/volumes/blobfs"
+            }
         }
     ],
     "offers": [
         {
-            "capability": {
-                "service": {
-                    "path": "/svc/fuchsia.logger.Log"
-                }
-            },
-            "source": {
-                "child": {
-                    "name": "logger"
-                }
-            },
-            "targets": [
-                {
-                    "target_path": "/svc/fuchsia.logger.Log",
-                    "child_name": "netstack"
-                }
-            ]
+            "service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/fuchsia.logger.Log",
+                "targets": [
+                    {
+                        "target_path": "/svc/fuchsia.logger.Log",
+                        "child_name": "netstack"
+                    }
+                ]
+            }
         }
     ],
     "children": [
@@ -629,7 +622,7 @@ mod tests {
                 { "directory": "/data/assets" }
             ]
         });
-        let output = r#"{"uses":[{"capability":{"service":{"path":"/fonts/CoolFonts"}},"target_path":"/svc/fuchsia.fonts.Provider"},{"capability":{"directory":{"path":"/data/assets"}},"target_path":"/data/assets"}]}"#;
+        let output = r#"{"uses":[{"service":{"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"directory":{"source_path":"/data/assets","target_path":"/data/assets"}}]}"#;
         compile_test(input, &output, false);
     }
 

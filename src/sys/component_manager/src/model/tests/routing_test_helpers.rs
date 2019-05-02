@@ -4,7 +4,10 @@
 
 use {
     crate::{directory_broker, log::*, model::tests::mocks::*, model::*},
-    cm_rust::{Capability, CapabilityPath, ComponentDecl, ExposeSource, OfferSource, UseDecl},
+    cm_rust::{
+        Capability, CapabilityPath, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
+        OfferSource, UseDecl,
+    },
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_data as fdata,
@@ -98,43 +101,41 @@ impl OutDir {
         let host_service = self.host_service;
         let host_directory = self.host_directory;
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
-            fasync::spawn(
-                async move {
-                    let mut pseudo_dir = directory::simple::empty();
-                    if host_service {
-                        pseudo_dir.add_entry("svc",
+            fasync::spawn(async move {
+                let mut pseudo_dir = directory::simple::empty();
+                if host_service {
+                    pseudo_dir.add_entry("svc",
                             pseudo_directory! {
                                 "foo" =>
                                     directory_broker::DirectoryBroker::new_service_broker(Box::new(echo_server_fn)),
                             })
                         .map_err(|(s,_)| s)
                         .expect("failed to add svc entry");
-                    }
-                    if host_directory {
-                        pseudo_dir
-                            .add_entry(
-                                "data",
-                                pseudo_directory! {
-                                    "foo" => pseudo_directory! {
-                                        "hippo" => read_only(|| Ok(b"hippo".to_vec())),
-                                    },
+                }
+                if host_directory {
+                    pseudo_dir
+                        .add_entry(
+                            "data",
+                            pseudo_directory! {
+                                "foo" => pseudo_directory! {
+                                    "hippo" => read_only(|| Ok(b"hippo".to_vec())),
                                 },
-                            )
-                            .map_err(|(s, _)| s)
-                            .expect("failed to add data entry");
-                    }
-                    pseudo_dir.open(
-                        OPEN_RIGHT_READABLE,
-                        MODE_TYPE_DIRECTORY,
-                        &mut iter::empty(),
-                        ServerEnd::new(server_end.into_channel()),
-                    );
+                            },
+                        )
+                        .map_err(|(s, _)| s)
+                        .expect("failed to add data entry");
+                }
+                pseudo_dir.open(
+                    OPEN_RIGHT_READABLE,
+                    MODE_TYPE_DIRECTORY,
+                    &mut iter::empty(),
+                    ServerEnd::new(server_end.into_channel()),
+                );
 
-                    let _ = await!(pseudo_dir);
+                let _ = await!(pseudo_dir);
 
-                    log_fatal!("the pseudo dir exited!");
-                },
-            );
+                log_fatal!("the pseudo dir exited!");
+            });
         })
     }
 }
@@ -149,17 +150,15 @@ fn host_capability(out_dir: &mut Option<OutDir>, capability: &Capability) {
 
 /// Hosts a new service on server_end that implements fidl.examples.echo.Echo
 fn echo_server_fn(server_end: ServerEnd<NodeMarker>) {
-    fasync::spawn(
-        async move {
-            let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
-            let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
-            while let Some(EchoRequest::EchoString { value, responder }) =
-                await!(stream.try_next()).unwrap()
-            {
-                responder.send(value.as_ref().map(|s| &**s)).unwrap();
-            }
-        },
-    );
+    fasync::spawn(async move {
+        let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
+        let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
+        while let Some(EchoRequest::EchoString { value, responder }) =
+            await!(stream.try_next()).unwrap()
+        {
+            responder.send(value.as_ref().map(|s| &**s)).unwrap();
+        }
+    });
 }
 
 /// Looks up `resolved_uri` in the namespace, and attempts to read ${dir_path}/hippo. The file
@@ -253,9 +252,9 @@ async fn check_namespace(
     let expected_paths_hs: HashSet<String> = decl
         .uses
         .into_iter()
-        .map(|UseDecl { capability, target_path }| match capability {
-            Capability::Directory(_) => target_path.to_string(),
-            Capability::Service(_) => target_path.dirname,
+        .map(|u| match u {
+            UseDecl::Directory(d) => d.target_path.to_string(),
+            UseDecl::Service(s) => s.target_path.dirname,
         })
         .collect();
     let mut expected_paths = vec![];
@@ -308,16 +307,22 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
     for (name, decl) in test.components.clone() {
         // if this decl is offering/exposing something from Myself, let's host it
         let mut out_dir = None;
-        let source_iter = decl.exposes.iter().map(|e| (e.capability.clone(), e.source.clone()));
-        for (capability, source) in source_iter {
-            if source == ExposeSource::Myself {
-                host_capability(&mut out_dir, &capability);
+        for expose in decl.exposes.iter() {
+            let source = match expose {
+                ExposeDecl::Service(s) => &s.source,
+                ExposeDecl::Directory(d) => &d.source,
+            };
+            if *source == ExposeSource::Myself {
+                host_capability(&mut out_dir, &expose.clone().into());
             }
         }
-        let source_iter = decl.offers.iter().map(|o| (o.capability.clone(), o.source.clone()));
-        for (capability, source) in source_iter {
-            if source == OfferSource::Myself {
-                host_capability(&mut out_dir, &capability);
+        for offer in decl.offers.iter() {
+            let source = match offer {
+                OfferDecl::Service(s) => &s.source,
+                OfferDecl::Directory(d) => &d.source,
+            };
+            if *source == OfferSource::Myself {
+                host_capability(&mut out_dir, &offer.clone().into());
             }
         }
         if let Some(out_dir) = out_dir {

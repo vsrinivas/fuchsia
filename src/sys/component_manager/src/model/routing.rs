@@ -4,7 +4,7 @@
 
 use {
     crate::model::*,
-    cm_rust::{self, Capability, ExposeSource, OfferSource},
+    cm_rust::{self, Capability, ExposeDecl, ExposeSource, OfferDecl, OfferSource},
     failure::format_err,
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fuchsia_zircon as zx,
@@ -117,17 +117,21 @@ async fn find_capability_source<'a>(
         let decl = current_realm.instance.decl.as_ref().expect("missing offer decl");
 
         if let Some(offer) = decl.find_offer_source(&s.capability, &s.name.unwrap().name()) {
-            match &offer.source {
+            let source = match offer {
+                OfferDecl::Service(s) => &s.source,
+                OfferDecl::Directory(d) => &d.source,
+            };
+            match source {
                 OfferSource::Realm => {
                     // The offered capability comes from the realm, so follow the
                     // parent
-                    s.capability = offer.capability.clone();
+                    s.capability = offer.clone().into();
                     s.name = s.moniker.path().last().map(|c| c.clone());
                     s.moniker = match s.moniker.parent() {
                         Some(m) => m,
                         None => {
                             return Ok(CapabilitySource::ComponentMgrNamespace(
-                                s.capability.clone(),
+                                s.capability.clone().into(),
                             ))
                         }
                     };
@@ -137,14 +141,14 @@ async fn find_capability_source<'a>(
                     // The offered capability comes from the current component,
                     // return our current location in the tree.
                     return Ok(CapabilitySource::Component(
-                        offer.capability.clone(),
+                        offer.clone().into(),
                         current_realm_mutex.clone(),
                     ));
                 }
                 OfferSource::Child(child_name) => {
                     // The offered capability comes from a child, break the loop
                     // and begin walking the expose chain.
-                    s.capability = offer.capability.clone();
+                    s.capability = offer.clone().into();
                     s.moniker = s.moniker.child(ChildMoniker::new(child_name.to_string()));
                     break 'offerloop;
                 }
@@ -165,18 +169,22 @@ async fn find_capability_source<'a>(
         let decl = current_realm.instance.decl.as_ref().expect("missing expose decl");
 
         if let Some(expose) = decl.find_expose_source(&s.capability) {
-            match &expose.source {
+            let source = match expose {
+                ExposeDecl::Service(s) => &s.source,
+                ExposeDecl::Directory(d) => &d.source,
+            };
+            match source {
                 ExposeSource::Myself => {
                     // The offered capability comes from the current component, return our
                     // current location in the tree.
                     return Ok(CapabilitySource::Component(
-                        expose.capability.clone(),
+                        expose.clone().into(),
                         current_realm_mutex.clone(),
                     ));
                 }
                 ExposeSource::Child(child_name) => {
                     // The offered capability comes from a child, so follow the child.
-                    s.capability = expose.capability.clone();
+                    s.capability = expose.clone().into();
                     s.moniker = s.moniker.child(ChildMoniker::new(child_name.to_string()));
                     continue;
                 }

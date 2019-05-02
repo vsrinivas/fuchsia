@@ -164,27 +164,35 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_use_decl(&mut self, use_: &fsys::UseDecl) {
-        self.validate_capability(use_.capability.as_ref(), "UseDecl");
-        PATH.check(use_.target_path.as_ref(), "UseDecl", "target_path", &mut self.errors);
-    }
-
-    fn validate_capability(&mut self, capability: Option<&fsys::Capability>, decl_type: &str) {
-        match capability.as_ref() {
-            Some(c) => match c {
-                fsys::Capability::Service(s) => {
-                    PATH.check(s.path.as_ref(), decl_type, "capability.path", &mut self.errors);
-                }
-                fsys::Capability::Directory(s) => {
-                    PATH.check(s.path.as_ref(), decl_type, "capability.path", &mut self.errors);
-                }
-                fsys::Capability::__UnknownVariant { .. } => {
-                    self.errors.push(Error::invalid_field(decl_type, "capability"));
-                }
-            },
-            None => {
-                self.errors.push(Error::missing_field(decl_type, "capability"));
+        match use_ {
+            fsys::UseDecl::Service(u) => {
+                self.validate_use_fields(
+                    "UseServiceDecl",
+                    u.source_path.as_ref(),
+                    u.target_path.as_ref(),
+                );
+            }
+            fsys::UseDecl::Directory(u) => {
+                self.validate_use_fields(
+                    "UseDirectoryDecl",
+                    u.source_path.as_ref(),
+                    u.target_path.as_ref(),
+                );
+            }
+            fsys::UseDecl::__UnknownVariant { .. } => {
+                self.errors.push(Error::invalid_field("ComponentDecl", "use"));
             }
         }
+    }
+
+    fn validate_use_fields(
+        &mut self,
+        decl: &str,
+        source_path: Option<&String>,
+        target_path: Option<&String>,
+    ) {
+        PATH.check(source_path, decl, "source_path", &mut self.errors);
+        PATH.check(target_path, decl, "target_path", &mut self.errors);
     }
 
     fn validate_child_decl(&mut self, child: &'a fsys::ChildDecl) {
@@ -221,26 +229,58 @@ impl<'a> ValidationContext<'a> {
         expose: &'a fsys::ExposeDecl,
         prev_target_paths: &mut HashSet<&'a str>,
     ) {
-        self.validate_capability(expose.capability.as_ref(), "ExposeDecl");
-        match expose.source.as_ref() {
+        match expose {
+            fsys::ExposeDecl::Service(e) => {
+                self.validate_expose_fields(
+                    "ExposeServiceDecl",
+                    e.source.as_ref(),
+                    e.source_path.as_ref(),
+                    e.target_path.as_ref(),
+                    prev_target_paths,
+                );
+            }
+            fsys::ExposeDecl::Directory(e) => {
+                self.validate_expose_fields(
+                    "ExposeDirectoryDecl",
+                    e.source.as_ref(),
+                    e.source_path.as_ref(),
+                    e.target_path.as_ref(),
+                    prev_target_paths,
+                );
+            }
+            fsys::ExposeDecl::__UnknownVariant { .. } => {
+                self.errors.push(Error::invalid_field("ComponentDecl", "expose"));
+            }
+        }
+    }
+
+    fn validate_expose_fields(
+        &mut self,
+        decl: &str,
+        source: Option<&fsys::ExposeSource>,
+        source_path: Option<&String>,
+        target_path: Option<&'a String>,
+        prev_target_paths: &mut HashSet<&'a str>,
+    ) {
+        match source {
             Some(r) => match r {
                 fsys::ExposeSource::Myself(_) => {}
                 fsys::ExposeSource::Child(child) => {
-                    self.validate_source_child(child, "ExposeDecl");
+                    self.validate_source_child(child, decl);
                 }
                 fsys::ExposeSource::__UnknownVariant { .. } => {
-                    self.errors.push(Error::invalid_field("ExposeDecl", "source"));
+                    self.errors.push(Error::invalid_field(decl, "source"));
                 }
             },
             None => {
-                self.errors.push(Error::missing_field("ExposeDecl", "source"));
+                self.errors.push(Error::missing_field(decl, "source"));
             }
         }
-        let target_path = expose.target_path.as_ref();
-        if PATH.check(target_path, "ExposeDecl", "target_path", &mut self.errors) {
+        PATH.check(source_path, decl, "source_path", &mut self.errors);
+        if PATH.check(target_path, decl, "target_path", &mut self.errors) {
             let target_path: &str = target_path.unwrap();
             if !prev_target_paths.insert(target_path) {
-                self.errors.push(Error::duplicate_field("ExposeDecl", "target_path", target_path));
+                self.errors.push(Error::duplicate_field(decl, "target_path", target_path));
             }
         }
     }
@@ -250,37 +290,71 @@ impl<'a> ValidationContext<'a> {
         offer: &'a fsys::OfferDecl,
         prev_target_paths: &mut PathMap<'a>,
     ) {
-        self.validate_capability(offer.capability.as_ref(), "OfferDecl");
-        match offer.source.as_ref() {
+        match offer {
+            fsys::OfferDecl::Service(o) => {
+                self.validate_offer_fields(
+                    "OfferServiceDecl",
+                    o.source.as_ref(),
+                    o.source_path.as_ref(),
+                    o.targets.as_ref(),
+                    prev_target_paths,
+                );
+            }
+            fsys::OfferDecl::Directory(o) => {
+                self.validate_offer_fields(
+                    "OfferDirectoryDecl",
+                    o.source.as_ref(),
+                    o.source_path.as_ref(),
+                    o.targets.as_ref(),
+                    prev_target_paths,
+                );
+            }
+            fsys::OfferDecl::__UnknownVariant { .. } => {
+                self.errors.push(Error::invalid_field("ComponentDecl", "offer"));
+            }
+        }
+    }
+
+    fn validate_offer_fields(
+        &mut self,
+        decl: &str,
+        source: Option<&fsys::OfferSource>,
+        source_path: Option<&String>,
+        targets: Option<&'a Vec<fsys::OfferTarget>>,
+        prev_target_paths: &mut PathMap<'a>,
+    ) {
+        match source {
             Some(r) => match r {
                 fsys::OfferSource::Realm(_) => {}
                 fsys::OfferSource::Myself(_) => {}
                 fsys::OfferSource::Child(child) => {
-                    self.validate_source_child(child, "OfferDecl");
+                    self.validate_source_child(child, decl);
                 }
                 fsys::OfferSource::__UnknownVariant { .. } => {
-                    self.errors.push(Error::invalid_field("OfferDecl", "source"));
+                    self.errors.push(Error::invalid_field(decl, "source"));
                 }
             },
             None => {
-                self.errors.push(Error::missing_field("OfferDecl", "source"));
+                self.errors.push(Error::missing_field(decl, "source"));
             }
         }
-        if let Some(targets) = &offer.targets {
-            self.validate_targets(offer.source.as_ref(), targets, prev_target_paths);
+        PATH.check(source_path, decl, "source_path", &mut self.errors);
+        if let Some(targets) = targets {
+            self.validate_targets(decl, source, targets, prev_target_paths);
         } else {
-            self.errors.push(Error::missing_field("OfferDecl", "targets"));
+            self.errors.push(Error::missing_field(decl, "targets"));
         }
     }
 
     fn validate_targets(
         &mut self,
+        decl: &str,
         source: Option<&fsys::OfferSource>,
         targets: &'a Vec<fsys::OfferTarget>,
         prev_target_paths: &mut PathMap<'a>,
     ) {
         if targets.is_empty() {
-            self.errors.push(Error::empty_field("OfferDecl", "targets"));
+            self.errors.push(Error::empty_field(decl, "targets"));
         }
         for target in targets.iter() {
             let mut valid = true;
@@ -307,7 +381,7 @@ impl<'a> ValidationContext<'a> {
                     prev_target_paths.entry(child_name.to_string()).or_insert(HashSet::new());
                 if !paths_for_target.insert(target_path) {
                     self.errors.push(Error::duplicate_field(
-                        "OfferDecl",
+                        decl,
                         "target_path",
                         target_path,
                     ));
@@ -369,8 +443,9 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_sys2::{
-            Capability, ChildDecl, ChildId, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
-            OfferSource, OfferTarget, RealmId, SelfId, ServiceCapability, StartupMode, UseDecl,
+            ChildDecl, ChildId, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl,
+            ExposeSource, OfferDecl, OfferDirectoryDecl, OfferServiceDecl, OfferSource,
+            OfferTarget, RealmId, SelfId, StartupMode, UseDecl, UseDirectoryDecl, UseServiceDecl,
         },
     };
 
@@ -532,47 +607,67 @@ mod tests {
         test_validate_uses_empty => {
             input = {
                 let mut decl = new_component_decl();
-                decl.uses = Some(vec![UseDecl{
-                    capability: None,
-                    target_path: None,
-                }]);
+                decl.uses = Some(vec![
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: None,
+                        target_path: None,
+                    }),
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: None,
+                        target_path: None,
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("UseDecl", "capability"),
-                Error::missing_field("UseDecl", "target_path"),
+                Error::missing_field("UseServiceDecl", "source_path"),
+                Error::missing_field("UseServiceDecl", "target_path"),
+                Error::missing_field("UseDirectoryDecl", "source_path"),
+                Error::missing_field("UseDirectoryDecl", "target_path"),
             ])),
         },
         test_validate_uses_invalid_identifiers => {
             input = {
                 let mut decl = new_component_decl();
-                decl.uses = Some(vec![UseDecl{
-                    capability: Some(Capability::Service(ServiceCapability{
-                        path: Some("foo/".to_string()),
-                    })),
-                    target_path: Some("/".to_string()),
-                }]);
+                decl.uses = Some(vec![
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: Some("foo/".to_string()),
+                        target_path: Some("/".to_string()),
+                    }),
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: Some("foo/".to_string()),
+                        target_path: Some("/".to_string()),
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("UseDecl", "capability.path"),
-                Error::invalid_field("UseDecl", "target_path"),
+                Error::invalid_field("UseServiceDecl", "source_path"),
+                Error::invalid_field("UseServiceDecl", "target_path"),
+                Error::invalid_field("UseDirectoryDecl", "source_path"),
+                Error::invalid_field("UseDirectoryDecl", "target_path"),
             ])),
         },
         test_validate_uses_long_identifiers => {
             input = {
                 let mut decl = new_component_decl();
-                decl.uses = Some(vec![UseDecl{
-                    capability: Some(Capability::Service(ServiceCapability{
-                        path: Some(format!("/{}", "a".repeat(1024))),
-                    })),
-                    target_path: Some(format!("/{}", "b".repeat(1024))),
-                }]);
+                decl.uses = Some(vec![
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                    }),
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::field_too_long("UseDecl", "capability.path"),
-                Error::field_too_long("UseDecl", "target_path"),
+                Error::field_too_long("UseServiceDecl", "source_path"),
+                Error::field_too_long("UseServiceDecl", "target_path"),
+                Error::field_too_long("UseDirectoryDecl", "source_path"),
+                Error::field_too_long("UseDirectoryDecl", "target_path"),
             ])),
         },
 
@@ -580,98 +675,127 @@ mod tests {
         test_validate_exposes_empty => {
             input = {
                 let mut decl = new_component_decl();
-                decl.exposes = Some(vec![ExposeDecl{
-                    capability: None,
-                    source: None,
-                    target_path: None,
-                }]);
+                decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: None,
+                        source_path: None,
+                        target_path: None,
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: None,
+                        source_path: None,
+                        target_path: None,
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("ExposeDecl", "capability"),
-                Error::missing_field("ExposeDecl", "source"),
-                Error::missing_field("ExposeDecl", "target_path"),
+                Error::missing_field("ExposeServiceDecl", "source"),
+                Error::missing_field("ExposeServiceDecl", "source_path"),
+                Error::missing_field("ExposeServiceDecl", "target_path"),
+                Error::missing_field("ExposeDirectoryDecl", "source"),
+                Error::missing_field("ExposeDirectoryDecl", "source_path"),
+                Error::missing_field("ExposeDirectoryDecl", "target_path"),
             ])),
         },
         test_validate_exposes_invalid_identifiers => {
             input = {
                 let mut decl = new_component_decl();
-                decl.exposes = Some(vec![ExposeDecl{
-                    capability: Some(Capability::Service(ServiceCapability{
-                        path: Some("foo/".to_string()),
-                    })),
-                    source: Some(ExposeSource::Child(ChildId{name: Some("^bad".to_string())})),
-                    target_path: Some("/".to_string()),
-                }]);
+                decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(ExposeSource::Child(ChildId{name: Some("^bad".to_string())})),
+                        source_path: Some("foo/".to_string()),
+                        target_path: Some("/".to_string()),
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(ExposeSource::Child(ChildId{name: Some("^bad".to_string())})),
+                        source_path: Some("foo/".to_string()),
+                        target_path: Some("/".to_string()),
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("ExposeDecl", "capability.path"),
-                Error::invalid_field("ExposeDecl", "source.child.name"),
-                Error::invalid_field("ExposeDecl", "target_path"),
+                Error::invalid_field("ExposeServiceDecl", "source.child.name"),
+                Error::invalid_field("ExposeServiceDecl", "source_path"),
+                Error::invalid_field("ExposeServiceDecl", "target_path"),
+                Error::invalid_field("ExposeDirectoryDecl", "source.child.name"),
+                Error::invalid_field("ExposeDirectoryDecl", "source_path"),
+                Error::invalid_field("ExposeDirectoryDecl", "target_path"),
             ])),
         },
         test_validate_exposes_long_identifiers => {
             input = {
                 let mut decl = new_component_decl();
-                decl.exposes = Some(vec![ExposeDecl{
-                    capability: Some(Capability::Service(ServiceCapability{
-                        path: Some(format!("/{}", "a".repeat(1024))),
-                    })),
-                    source: Some(ExposeSource::Child(ChildId{name: Some("b".repeat(101))})),
-                    target_path: Some(format!("/{}", "b".repeat(1024))),
-                }]);
+                decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(ExposeSource::Child(ChildId{name: Some("b".repeat(101))})),
+                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(ExposeSource::Child(ChildId{name: Some("b".repeat(101))})),
+                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::field_too_long("ExposeDecl", "capability.path"),
-                Error::field_too_long("ExposeDecl", "source.child.name"),
-                Error::field_too_long("ExposeDecl", "target_path"),
+                Error::field_too_long("ExposeServiceDecl", "source.child.name"),
+                Error::field_too_long("ExposeServiceDecl", "source_path"),
+                Error::field_too_long("ExposeServiceDecl", "target_path"),
+                Error::field_too_long("ExposeDirectoryDecl", "source.child.name"),
+                Error::field_too_long("ExposeDirectoryDecl", "source_path"),
+                Error::field_too_long("ExposeDirectoryDecl", "target_path"),
             ])),
         },
         test_validate_exposes_invalid_child => {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
-                    ExposeDecl{
-                        capability: Some(Capability::Service(ServiceCapability{
-                            path: Some("/loggers/fuchsia.logger.Log".to_string()),
-                        })),
+                    ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(ExposeSource::Child(ChildId {
                             name: Some("netstack".to_string()),
                         })),
+                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                    },
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(ExposeSource::Child(ChildId {
+                            name: Some("netstack".to_string()),
+                        })),
+                        source_path: Some("/data/netstack".to_string()),
+                        target_path: Some("/data".to_string()),
+                    }),
                 ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_child("ExposeDecl source", "netstack"),
+                Error::invalid_child("ExposeServiceDecl source", "netstack"),
+                Error::invalid_child("ExposeDirectoryDecl source", "netstack"),
             ])),
         },
         test_validate_exposes_duplicate_target => {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
-                    ExposeDecl{
-                        capability: Some(Capability::Service(ServiceCapability{
-                            path: Some("/svc/logger".to_string()),
-                        })),
+                    ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(ExposeSource::Myself(SelfId{})),
+                        source_path: Some("/svc/logger".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                    },
-                    ExposeDecl{
-                        capability: Some(Capability::Service(ServiceCapability{
-                            path: Some("/svc/logger2".to_string()),
-                        })),
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(ExposeSource::Myself(SelfId{})),
+                        source_path: Some("/svc/logger2".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                    },
+                    }),
                 ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::duplicate_field("ExposeDecl", "target_path", "/svc/fuchsia.logger.Log"),
+                Error::duplicate_field("ExposeDirectoryDecl", "target_path",
+                                       "/svc/fuchsia.logger.Log"),
             ])),
         },
 
@@ -679,39 +803,63 @@ mod tests {
         test_validate_offers_empty => {
             input = {
                 let mut decl = new_component_decl();
-                decl.offers = Some(vec![OfferDecl{
-                    capability: None,
-                    source: None,
-                    targets: None,
-                }]);
+                decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: None,
+                        source_path: None,
+                        targets: None,
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: None,
+                        source_path: None,
+                        targets: None,
+                    })
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("OfferDecl", "capability"),
-                Error::missing_field("OfferDecl", "source"),
-                Error::missing_field("OfferDecl", "targets"),
+                Error::missing_field("OfferServiceDecl", "source"),
+                Error::missing_field("OfferServiceDecl", "source_path"),
+                Error::missing_field("OfferServiceDecl", "targets"),
+                Error::missing_field("OfferDirectoryDecl", "source"),
+                Error::missing_field("OfferDirectoryDecl", "source_path"),
+                Error::missing_field("OfferDirectoryDecl", "targets"),
             ])),
         },
         test_validate_offers_long_identifiers => {
             input = {
                 let mut decl = new_component_decl();
-                decl.offers = Some(vec![OfferDecl{
-                    capability: Some(Capability::Service(ServiceCapability{
-                        path: Some(format!("/{}", "a".repeat(1024))),
-                    })),
-                    source: Some(OfferSource::Child(ChildId{name: Some("a".repeat(101))})),
-                    targets: Some(vec![
-                        OfferTarget{
-                            target_path: Some(format!("/{}", "b".repeat(1024))),
-                            child_name: Some("b".repeat(101)),
-                        },
-                    ]),
-                }]);
+                decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(OfferSource::Child(ChildId{name: Some("a".repeat(101))})),
+                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        targets: Some(vec![
+                            OfferTarget {
+                                target_path: Some(format!("/{}", "b".repeat(1024))),
+                                child_name: Some("b".repeat(101)),
+                            },
+                        ]),
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(OfferSource::Child(ChildId{name: Some("a".repeat(101))})),
+                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        targets: Some(vec![
+                            OfferTarget {
+                                target_path: Some(format!("/{}", "b".repeat(1024))),
+                                child_name: Some("b".repeat(101)),
+                            },
+                        ]),
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::field_too_long("OfferDecl", "capability.path"),
-                Error::field_too_long("OfferDecl", "source.child.name"),
+                Error::field_too_long("OfferServiceDecl", "source.child.name"),
+                Error::field_too_long("OfferServiceDecl", "source_path"),
+                Error::field_too_long("OfferTarget", "target_path"),
+                Error::field_too_long("OfferTarget", "child_name"),
+                Error::field_too_long("OfferDirectoryDecl", "source.child.name"),
+                Error::field_too_long("OfferDirectoryDecl", "source_path"),
                 Error::field_too_long("OfferTarget", "target_path"),
                 Error::field_too_long("OfferTarget", "child_name"),
             ])),
@@ -720,18 +868,26 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
-                    OfferDecl{
-                        capability: Some(Capability::Service(ServiceCapability{
-                            path: Some("/loggers/fuchsia.logger.Log".to_string()),
-                        })),
+                    OfferDecl::Service(OfferServiceDecl {
                         source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
+                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         targets: Some(vec![
-                            OfferTarget{
+                            OfferTarget {
                                 target_path: Some("/data/realm_assets".to_string()),
                                 child_name: Some("netstack".to_string()),
                             },
                         ]),
-                    },
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
+                        source_path: Some("/data/assets".to_string()),
+                        targets: Some(vec![
+                            OfferTarget {
+                                target_path: Some("/data".to_string()),
+                                child_name: Some("netstack".to_string()),
+                            },
+                        ]),
+                    }),
                 ]);
                 decl.children = Some(vec![
                     ChildDecl{
@@ -743,22 +899,30 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_child("OfferDecl source", "logger"),
+                Error::invalid_child("OfferServiceDecl source", "logger"),
+                Error::invalid_child("OfferDirectoryDecl source", "logger"),
             ])),
         },
         test_validate_offer_target_empty => {
             input = {
                 let mut decl = new_component_decl();
-                decl.offers = Some(vec![OfferDecl{
-                    capability: Some(Capability::Service(ServiceCapability{
-                        path: Some("/svc/logger".to_string()),
-                    })),
-                    source: Some(OfferSource::Realm(RealmId{})),
-                    targets: Some(vec![OfferTarget{target_path: None, child_name: None}]),
-                }]);
+                decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(OfferSource::Realm(RealmId{})),
+                        source_path: Some("/svc/logger".to_string()),
+                        targets: Some(vec![OfferTarget{target_path: None, child_name: None}]),
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(OfferSource::Realm(RealmId{})),
+                        source_path: Some("/data/assets".to_string()),
+                        targets: Some(vec![OfferTarget{target_path: None, child_name: None}]),
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::missing_field("OfferTarget", "target_path"),
+                Error::missing_field("OfferTarget", "child_name"),
                 Error::missing_field("OfferTarget", "target_path"),
                 Error::missing_field("OfferTarget", "child_name"),
             ])),
@@ -766,32 +930,46 @@ mod tests {
         test_validate_offer_targets_empty => {
             input = {
                 let mut decl = new_component_decl();
-                decl.offers = Some(vec![OfferDecl{
-                    capability: Some(Capability::Service(ServiceCapability{
-                        path: Some("/svc/logger".to_string()),
-                    })),
-                    source: Some(OfferSource::Myself(SelfId{})),
-                    targets: Some(vec![]),
-                }]);
+                decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(OfferSource::Myself(SelfId{})),
+                        source_path: Some("/svc/logger".to_string()),
+                        targets: Some(vec![]),
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(OfferSource::Myself(SelfId{})),
+                        source_path: Some("/data/assets".to_string()),
+                        targets: Some(vec![]),
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::empty_field("OfferDecl", "targets"),
+                Error::empty_field("OfferServiceDecl", "targets"),
+                Error::empty_field("OfferDirectoryDecl", "targets"),
             ])),
         },
         test_validate_offer_target_equals_from => {
             input = {
                 let mut decl = new_component_decl();
-                decl.offers = Some(vec![OfferDecl{
-                    capability: Some(Capability::Service(ServiceCapability{
-                        path: Some("/svc/logger".to_string()),
-                    })),
-                    source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
-                    targets: Some(vec![OfferTarget{
-                        target_path: Some("/svc/logger".to_string()),
-                        child_name: Some("logger".to_string()),
-                    }]),
-                }]);
+                decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
+                        source_path: Some("/svc/logger".to_string()),
+                        targets: Some(vec![OfferTarget{
+                            target_path: Some("/svc/logger".to_string()),
+                            child_name: Some("logger".to_string()),
+                        }]),
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
+                        source_path: Some("/data/assets".to_string()),
+                        targets: Some(vec![OfferTarget{
+                            target_path: Some("/data".to_string()),
+                            child_name: Some("logger".to_string()),
+                        }]),
+                    }),
+                ]);
                 decl.children = Some(vec![ChildDecl{
                     name: Some("logger".to_string()),
                     uri: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
@@ -801,27 +979,42 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::offer_target_equals_source("logger"),
+                Error::offer_target_equals_source("logger"),
             ])),
         },
         test_validate_offer_target_duplicate_path => {
             input = {
                 let mut decl = new_component_decl();
-                decl.offers = Some(vec![OfferDecl{
-                    capability: Some(Capability::Service(ServiceCapability{
-                        path: Some("/svc/logger".to_string()),
-                    })),
-                    source: Some(OfferSource::Myself(SelfId{})),
-                    targets: Some(vec![
-                        OfferTarget{
-                            target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                            child_name: Some("netstack".to_string()),
-                        },
-                        OfferTarget{
-                            target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                            child_name: Some("netstack".to_string()),
-                        },
-                    ]),
-                }]);
+                decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(OfferSource::Myself(SelfId{})),
+                        source_path: Some("/svc/logger".to_string()),
+                        targets: Some(vec![
+                            OfferTarget {
+                                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                                child_name: Some("netstack".to_string()),
+                            },
+                            OfferTarget {
+                                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                                child_name: Some("netstack".to_string()),
+                            },
+                        ]),
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(OfferSource::Myself(SelfId{})),
+                        source_path: Some("/data/assets".to_string()),
+                        targets: Some(vec![
+                            OfferTarget{
+                                target_path: Some("/data".to_string()),
+                                child_name: Some("netstack".to_string()),
+                            },
+                            OfferTarget{
+                                target_path: Some("/data".to_string()),
+                                child_name: Some("netstack".to_string()),
+                            },
+                        ]),
+                    }),
+                ]);
                 decl.children = Some(vec![
                     ChildDecl{
                         name: Some("netstack".to_string()),
@@ -832,27 +1025,39 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::duplicate_field("OfferDecl", "target_path", "/svc/fuchsia.logger.Log"),
+                Error::duplicate_field("OfferServiceDecl", "target_path", "/svc/fuchsia.logger.Log"),
+                Error::duplicate_field("OfferDirectoryDecl", "target_path", "/data"),
             ])),
         },
         test_validate_offer_target_invalid_child => {
             input = {
                 let mut decl = new_component_decl();
-                decl.offers = Some(vec![OfferDecl{
-                    capability: Some(Capability::Service(ServiceCapability{
-                        path: Some("/svc/logger".to_string()),
-                    })),
-                    source: Some(OfferSource::Myself(SelfId{})),
-                    targets: Some(vec![
-                        OfferTarget{
-                            target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                            child_name: Some("netstack".to_string()),
-                        },
-                    ]),
-                }]);
+                decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(OfferSource::Myself(SelfId{})),
+                        source_path: Some("/svc/logger".to_string()),
+                        targets: Some(vec![
+                            OfferTarget{
+                                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                                child_name: Some("netstack".to_string()),
+                            },
+                        ]),
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(OfferSource::Myself(SelfId{})),
+                        source_path: Some("/data/assets".to_string()),
+                        targets: Some(vec![
+                            OfferTarget{
+                                target_path: Some("/data".to_string()),
+                                child_name: Some("netstack".to_string()),
+                            },
+                        ]),
+                    }),
+                ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::invalid_child("OfferTarget", "netstack"),
                 Error::invalid_child("OfferTarget", "netstack"),
             ])),
         },

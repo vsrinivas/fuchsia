@@ -23,26 +23,6 @@ pub struct Document {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Use {
-    pub capability: Capability,
-    pub target_path: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Expose {
-    pub capability: Capability,
-    pub source: ExposeSource,
-    pub target_path: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Offer {
-    pub capability: Capability,
-    pub source: OfferSource,
-    pub targets: Vec<Target>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct Child {
     pub name: String,
     pub uri: String,
@@ -50,11 +30,67 @@ pub struct Child {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum Capability {
+pub enum Use {
     #[serde(rename = "service")]
-    Service(Service),
+    Service(UseService),
     #[serde(rename = "directory")]
-    Directory(Directory),
+    Directory(UseDirectory),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UseService {
+    pub source_path: String,
+    pub target_path: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UseDirectory {
+    pub source_path: String,
+    pub target_path: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Expose {
+    #[serde(rename = "service")]
+    Service(ExposeService),
+    #[serde(rename = "directory")]
+    Directory(ExposeDirectory),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExposeService {
+    pub source: ExposeSource,
+    pub source_path: String,
+    pub target_path: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExposeDirectory {
+    pub source: ExposeSource,
+    pub source_path: String,
+    pub target_path: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Offer {
+    #[serde(rename = "service")]
+    Service(OfferService),
+    #[serde(rename = "directory")]
+    Directory(OfferDirectory),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OfferService {
+    pub source: OfferSource,
+    pub source_path: String,
+    pub targets: Vec<Target>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OfferDirectory {
+    pub source: OfferSource,
+    pub source_path: String,
+    pub targets: Vec<Target>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -79,16 +115,6 @@ pub enum OfferSource {
 pub struct Target {
     pub target_path: String,
     pub child_name: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Service {
-    pub path: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Directory {
-    pub path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

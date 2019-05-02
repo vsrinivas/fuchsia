@@ -7,7 +7,7 @@ use {
     failure::Fail,
     fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
     std::collections::HashMap,
-    std::convert::{TryFrom, TryInto},
+    std::convert::{From, TryFrom, TryInto},
     std::fmt,
 };
 
@@ -63,8 +63,9 @@ macro_rules! fidl_translations_identical {
 /// - `from_ident` must be identical to `from_type`.
 /// - `field: type` form a list of fields and their types for the generated struct.
 macro_rules! fidl_into_struct {
-    ($into_type:ty, $into_ident:ident, $from_type:ty, $from_ident:path, { $( $field:ident: $type:ty, )+ } ) => {
-        #[derive(Debug, PartialEq)]
+    ($into_type:ty, $into_ident:ident, $from_type:ty, $from_path:path,
+     { $( $field:ident: $type:ty, )+ } ) => {
+        #[derive(Debug, Clone, PartialEq)]
         pub struct $into_ident {
             $(
                 pub $field: $type,
@@ -77,39 +78,67 @@ macro_rules! fidl_into_struct {
             }
         }
 
-        use $from_ident as from_ident;
         impl NativeIntoFidl<$from_type> for $into_type {
             fn native_into_fidl(self) -> $from_type {
+                use $from_path as from_ident;
                 from_ident { $( $field: self.$field.native_into_fidl(), )+ }
             }
         }
     }
 }
 
-/// Generates a struct with a FidlIntoNative implementation on the `Option<Vec<struct>>` that
-/// calls `fidl_into_native()` on each field.
-/// - `into_type` is the name of the struct and the into type for the conversion.
+/// Generates an enum with a `FidlIntoNative` implementation that calls `fidl_into_native()` on each
+/// field.
+/// - `into_type` is the name of the enum and the into type for the conversion.
 /// - `into_ident` must be identical to `into_type`.
 /// - `from_type` is the from type for the conversion.
 /// - `from_ident` must be identical to `from_type`.
-/// - `field: type` form a list of fields and their types for the generated struct.
-macro_rules! fidl_into_vec {
-    ($into_type:ty, $into_ident:ident, $from_type:ty, $from_ident:path, { $( $field:ident: $type:ty, )+ } ) => {
-        #[derive(Debug, PartialEq, Clone)]
-        pub struct $into_ident {
+/// - `variant(type)` form a list of variants and their types for the generated enum.
+macro_rules! fidl_into_enum {
+    ($into_type:ty, $into_ident:ident, $from_type:ty, $from_path:path,
+     { $( $variant:ident($type:ty), )+ } ) => {
+        #[derive(Debug, Clone, PartialEq)]
+        pub enum $into_ident {
             $(
-                pub $field: $type,
+                $variant($type),
             )+
         }
 
+        impl FidlIntoNative<$into_type> for $from_type {
+            fn fidl_into_native(self) -> $into_type {
+                use $from_path as from_ident;
+                match self {
+                    $(
+                    from_ident::$variant(e) => $into_ident::$variant(e.fidl_into_native()),
+                    )+
+                    from_ident::__UnknownVariant {..} => { panic!("invalid variant") }
+                }
+            }
+        }
+
+        impl NativeIntoFidl<$from_type> for $into_type {
+            fn native_into_fidl(self) -> $from_type {
+                use $from_path as from_ident;
+                match self {
+                    $(
+                        $into_ident::$variant(e) => from_ident::$variant(e.native_into_fidl()),
+                    )+
+                }
+            }
+        }
+    }
+}
+
+/// Generates `FidlIntoNative` and `NativeIntoFidl` implementations between `Vec` and
+/// `Option<Vec>`.
+/// - `into_type` is the name of the struct and the into type for the conversion.
+/// - `from_type` is the from type for the conversion.
+macro_rules! fidl_into_vec {
+    ($into_type:ty, $from_type:ty) => {
         impl FidlIntoNative<Vec<$into_type>> for Option<Vec<$from_type>> {
             fn fidl_into_native(self) -> Vec<$into_type> {
                 if let Some(from) = self {
-                    from.into_iter()
-                        .map(|e: $from_type|
-                            $into_ident { $( $field: e.$field.fidl_into_native(), )+ }
-                        )
-                        .collect()
+                    from.into_iter().map(|e: $from_type| e.fidl_into_native()).collect()
                 } else {
                     vec![]
                 }
@@ -121,28 +150,48 @@ macro_rules! fidl_into_vec {
                 if self.is_empty() {
                     None
                 } else {
-                    Some(self
-                         .into_iter()
-                         .map(|e: $into_type| {
-                             use $from_ident as from_ident;
-                             from_ident { $( $field: e.$field.native_into_fidl(), )+ }
-                         })
-                         .collect())
+                    Some(self.into_iter().map(|e: $into_type| e.native_into_fidl()).collect())
                 }
             }
+        }
+    };
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ComponentDecl {
+    pub program: Option<fdata::Dictionary>,
+    pub uses: Vec<UseDecl>,
+    pub exposes: Vec<ExposeDecl>,
+    pub offers: Vec<OfferDecl>,
+    pub children: Vec<ChildDecl>,
+    pub facets: Option<fdata::Dictionary>,
+}
+
+impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
+    fn fidl_into_native(self) -> ComponentDecl {
+        ComponentDecl {
+            program: self.program.fidl_into_native(),
+            uses: self.uses.fidl_into_native(),
+            exposes: self.exposes.fidl_into_native(),
+            offers: self.offers.fidl_into_native(),
+            children: self.children.fidl_into_native(),
+            facets: self.facets.fidl_into_native(),
         }
     }
 }
 
-fidl_into_struct!(ComponentDecl, ComponentDecl, fsys::ComponentDecl, fsys::ComponentDecl,
-                  {
-                      program: Option<fdata::Dictionary>,
-                      uses: Vec<UseDecl>,
-                      exposes: Vec<ExposeDecl>,
-                      offers: Vec<OfferDecl>,
-                      children: Vec<ChildDecl>,
-                      facets: Option<fdata::Dictionary>,
-                  });
+impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
+    fn native_into_fidl(self) -> fsys::ComponentDecl {
+        fsys::ComponentDecl {
+            program: self.program.native_into_fidl(),
+            uses: self.uses.native_into_fidl(),
+            exposes: self.exposes.native_into_fidl(),
+            offers: self.offers.native_into_fidl(),
+            children: self.children.native_into_fidl(),
+            facets: self.facets.native_into_fidl(),
+        }
+    }
+}
 
 impl Clone for ComponentDecl {
     fn clone(&self) -> Self {
@@ -158,76 +207,119 @@ impl Clone for ComponentDecl {
 }
 
 impl ComponentDecl {
-    /// Returns the ExposeDecl that exposes `capability`, if it exists.
-    pub fn find_expose_source<'a>(
-        &'a self,
-        capability: &Capability,
-    ) -> Option<&'a ExposeDecl> {
-        self.exposes.iter().find(|&e| {
-            e.target_path == *capability.path()
-                && match (capability, &e.capability) {
-                    (Capability::Service(_), Capability::Service(_)) => true,
-                    (Capability::Directory(_), Capability::Directory(_)) => true,
-                    _ => false,
-                }
+    /// Returns the `ExposeDecl` that exposes `capability`, if it exists.
+    pub fn find_expose_source<'a>(&'a self, capability: &Capability) -> Option<&'a ExposeDecl> {
+        self.exposes.iter().find(|&e| match (capability, e) {
+            (Capability::Service(p), ExposeDecl::Service(d)) => d.target_path == *p,
+            (Capability::Directory(p), ExposeDecl::Directory(d)) => d.target_path == *p,
+            _ => false,
         })
     }
 
-    /// Returns the OfferDecl that offers a capability under `target_path` to `child_name` with
-    /// the given `type_`, if it exists.
+    /// Returns the `OfferDecl` that offers `capability` to `child_name`, if it exists.
     pub fn find_offer_source<'a>(
         &'a self,
         capability: &Capability,
         child_name: &str,
     ) -> Option<&'a OfferDecl> {
-        for offer in self.offers.iter() {
-            match (capability, &offer.capability) {
-                (Capability::Service(_), Capability::Service(_)) => {}
-                (Capability::Directory(_), Capability::Directory(_)) => {}
-                _ => {
-                    continue;
+        self.offers.iter().find(|&offer| match (capability, offer) {
+            (Capability::Service(p), OfferDecl::Service(d)) => {
+                if let Some(_) =
+                    d.targets.iter().find(|&e| e.target_path == *p && e.child_name == *child_name)
+                {
+                    true
+                } else {
+                    false
                 }
             }
-            if let Some(_) = offer
-                .targets
-                .iter()
-                .find(|&e| e.target_path == *capability.path() && e.child_name == *child_name)
-            {
-                return Some(offer);
+            (Capability::Directory(p), OfferDecl::Directory(d)) => {
+                if let Some(_) =
+                    d.targets.iter().find(|&e| e.target_path == *p && e.child_name == *child_name)
+                {
+                    true
+                } else {
+                    false
+                }
             }
-        }
-        None
+            _ => false,
+        })
     }
 }
 
-fidl_into_vec!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
-               {
-                   capability: Capability,
-                   target_path: CapabilityPath,
-               });
-fidl_into_vec!(ExposeDecl, ExposeDecl, fsys::ExposeDecl, fsys::ExposeDecl,
-               {
-                   capability: Capability,
-                   source: ExposeSource,
-                   target_path: CapabilityPath,
-               });
-fidl_into_vec!(OfferDecl, OfferDecl, fsys::OfferDecl, fsys::OfferDecl,
-               {
-                   capability: Capability,
-                   source: OfferSource,
-                   targets: Vec<OfferTarget>,
-               });
-fidl_into_vec!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
-               {
-                   name: String,
-                   uri: String,
-                   startup: fsys::StartupMode,
-               });
-fidl_into_vec!(OfferTarget, OfferTarget, fsys::OfferTarget, fsys::OfferTarget,
-               {
-                   target_path: CapabilityPath,
-                   child_name: String,
-               });
+fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
+                {
+                    Service(UseServiceDecl),
+                    Directory(UseDirectoryDecl),
+                });
+fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::UseServiceDecl,
+                  {
+                      source_path: CapabilityPath,
+                      target_path: CapabilityPath,
+                  });
+fidl_into_struct!(UseDirectoryDecl, UseDirectoryDecl, fsys::UseDirectoryDecl,
+                  fsys::UseDirectoryDecl,
+                  {
+                      source_path: CapabilityPath,
+                      target_path: CapabilityPath,
+                  });
+
+fidl_into_enum!(ExposeDecl, ExposeDecl, fsys::ExposeDecl, fsys::ExposeDecl,
+                {
+                    Service(ExposeServiceDecl),
+                    Directory(ExposeDirectoryDecl),
+                });
+fidl_into_struct!(ExposeServiceDecl, ExposeServiceDecl, fsys::ExposeServiceDecl,
+                  fsys::ExposeServiceDecl,
+                  {
+                      source: ExposeSource,
+                      source_path: CapabilityPath,
+                      target_path: CapabilityPath,
+                  });
+fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirectoryDecl,
+                  fsys::ExposeDirectoryDecl,
+                  {
+                      source: ExposeSource,
+                      source_path: CapabilityPath,
+                      target_path: CapabilityPath,
+                  });
+
+fidl_into_enum!(OfferDecl, OfferDecl, fsys::OfferDecl, fsys::OfferDecl,
+                {
+                    Service(OfferServiceDecl),
+                    Directory(OfferDirectoryDecl),
+                });
+fidl_into_struct!(OfferServiceDecl, OfferServiceDecl, fsys::OfferServiceDecl,
+                  fsys::OfferServiceDecl,
+                  {
+                      source: OfferSource,
+                      source_path: CapabilityPath,
+                      targets: Vec<OfferTarget>,
+                  });
+fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDecl,
+                  fsys::OfferDirectoryDecl,
+                  {
+                      source: OfferSource,
+                      source_path: CapabilityPath,
+                      targets: Vec<OfferTarget>,
+                  });
+fidl_into_struct!(OfferTarget, OfferTarget, fsys::OfferTarget, fsys::OfferTarget,
+                  {
+                      target_path: CapabilityPath,
+                      child_name: String,
+                  });
+
+fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
+                  {
+                      name: String,
+                      uri: String,
+                      startup: fsys::StartupMode,
+                  });
+
+fidl_into_vec!(UseDecl, fsys::UseDecl);
+fidl_into_vec!(ExposeDecl, fsys::ExposeDecl);
+fidl_into_vec!(OfferDecl, fsys::OfferDecl);
+fidl_into_vec!(ChildDecl, fsys::ChildDecl);
+fidl_into_vec!(OfferTarget, fsys::OfferTarget);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fdata::Dictionary);
@@ -339,6 +431,8 @@ fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, Value> {
     dict.entries.into_iter().map(|e| (e.key, e.value.fidl_into_native())).collect()
 }
 
+/// Generic container for any capability type. Doesn't map onto any fidl declaration, but useful as
+/// an intermediate representation.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Capability {
     Service(CapabilityPath),
@@ -357,36 +451,72 @@ impl Capability {
 impl fmt::Display for Capability {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Capability::Service(s) => {
-                write!(f, "service at {}", s)
-            }
-            Capability::Directory(d) => {
-                write!(f, "directory at {}", d)
-            }
+            Capability::Service(s) => write!(f, "service at {}", s),
+            Capability::Directory(d) => write!(f, "directory at {}", d),
         }
     }
 }
 
-impl FidlIntoNative<Capability> for Option<fsys::Capability> {
-    fn fidl_into_native(self) -> Capability {
-        match self.unwrap() {
-            fsys::Capability::Service(s) => Capability::Service(s.path.fidl_into_native()),
-            fsys::Capability::Directory(d) => Capability::Directory(d.path.fidl_into_native()),
-            fsys::Capability::__UnknownVariant { .. } => panic!("unknown Capability variant"),
+impl From<UseDecl> for Capability {
+    fn from(d: UseDecl) -> Self {
+        match d {
+            UseDecl::Service(d) => d.into(),
+            UseDecl::Directory(d) => d.into(),
         }
     }
 }
 
-impl NativeIntoFidl<Option<fsys::Capability>> for Capability {
-    fn native_into_fidl(self) -> Option<fsys::Capability> {
-        Some(match self {
-            Capability::Service(p) => {
-                fsys::Capability::Service(fsys::ServiceCapability { path: p.native_into_fidl() })
-            }
-            Capability::Directory(p) => fsys::Capability::Directory(fsys::DirectoryCapability {
-                path: p.native_into_fidl(),
-            }),
-        })
+impl From<UseServiceDecl> for Capability {
+    fn from(d: UseServiceDecl) -> Self {
+        Capability::Service(d.source_path)
+    }
+}
+
+impl From<UseDirectoryDecl> for Capability {
+    fn from(d: UseDirectoryDecl) -> Self {
+        Capability::Directory(d.source_path)
+    }
+}
+
+impl From<ExposeDecl> for Capability {
+    fn from(d: ExposeDecl) -> Self {
+        match d {
+            ExposeDecl::Service(d) => d.into(),
+            ExposeDecl::Directory(d) => d.into(),
+        }
+    }
+}
+
+impl From<ExposeServiceDecl> for Capability {
+    fn from(d: ExposeServiceDecl) -> Self {
+        Capability::Service(d.source_path)
+    }
+}
+
+impl From<ExposeDirectoryDecl> for Capability {
+    fn from(d: ExposeDirectoryDecl) -> Self {
+        Capability::Directory(d.source_path)
+    }
+}
+
+impl From<OfferDecl> for Capability {
+    fn from(d: OfferDecl) -> Self {
+        match d {
+            OfferDecl::Service(d) => d.into(),
+            OfferDecl::Directory(d) => d.into(),
+        }
+    }
+}
+
+impl From<OfferServiceDecl> for Capability {
+    fn from(d: OfferServiceDecl) -> Self {
+        Capability::Service(d.source_path)
+    }
+}
+
+impl From<OfferDirectoryDecl> for Capability {
+    fn from(d: OfferDirectoryDecl) -> Self {
+        Capability::Directory(d.source_path)
     }
 }
 
@@ -483,43 +613,7 @@ pub enum Error {
 mod tests {
     use super::*;
 
-    fn try_from_fidl_test(input: fsys::ComponentDecl, expected_res: ComponentDecl) {
-        let res = ComponentDecl::try_from(input).expect("try_from failed");
-        assert_eq!(res, expected_res);
-    }
-
-    fn try_from_rust_test(input: ComponentDecl, expected_res: fsys::ComponentDecl) {
-        let res = fsys::ComponentDecl::try_from(input).expect("try_from failed");
-        assert_eq!(res, expected_res);
-    }
-
-    fn fidl_into_rust_test<T, U>(input: T, expected_res: U)
-    where
-        T: FidlIntoNative<U>,
-        U: std::cmp::PartialEq + std::fmt::Debug,
-    {
-        let res: U = input.fidl_into_native();
-        assert_eq!(res, expected_res);
-    }
-
-    fn rust_into_fidl_test<T, U>(input: T, expected_res: U)
-    where
-        T: NativeIntoFidl<U>,
-        U: std::cmp::PartialEq + std::fmt::Debug,
-    {
-        let res: U = input.native_into_fidl();
-        assert_eq!(res, expected_res);
-    }
-
-    fn capability_path_test(input: &str, expected_res: Result<CapabilityPath, Error>) {
-        let res = CapabilityPath::try_from(input);
-        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-        if let Ok(p) = res {
-            assert_eq!(&p.to_string(), input);
-        }
-    }
-
-    macro_rules! test_try_from {
+    macro_rules! test_from {
         (
             $(
                 $test_name:ident => {
@@ -531,8 +625,40 @@ mod tests {
             $(
                 #[test]
                 fn $test_name() {
-                    try_from_fidl_test($input, $result);
-                    try_from_rust_test($result, $input);
+                    test_from_helper($input, $result);
+                }
+            )+
+        }
+    }
+
+    fn test_from_helper<T, U>(input: Vec<T>, result: Vec<U>)
+    where
+        U: From<T> + std::cmp::PartialEq + std::fmt::Debug,
+    {
+        let res: Vec<U> = input.into_iter().map(|e| e.into()).collect();
+        assert_eq!(res, result);
+    }
+
+    macro_rules! test_try_from_decl {
+        (
+            $(
+                $test_name:ident => {
+                    input = $input:expr,
+                    result = $result:expr,
+                },
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    {
+                        let res = ComponentDecl::try_from($input).expect("try_from failed");
+                        assert_eq!(res, $result);
+                    }
+                    {
+                        let res = fsys::ComponentDecl::try_from($result).expect("try_from failed");
+                        assert_eq!(res, $input);
+                    }
                 }
             )+
         }
@@ -550,8 +676,16 @@ mod tests {
             $(
                 #[test]
                 fn $test_name() {
-                    fidl_into_rust_test($input, $result);
-                    rust_into_fidl_test($result, $input);
+                    {
+                        let res: Vec<_> =
+                            $input.into_iter().map(|e| e.fidl_into_native()).collect();
+                        assert_eq!(res, $result);
+                    }
+                    {
+                        let res: Vec<_> =
+                            $result.into_iter().map(|e| e.native_into_fidl()).collect();
+                        assert_eq!(res, $input);
+                    }
                 }
             )+
         }
@@ -569,10 +703,19 @@ mod tests {
             $(
                 #[test]
                 fn $test_name() {
-                    fidl_into_rust_test($input, $result);
+                    test_fidl_into_helper($input, $result);
                 }
             )+
         }
+    }
+
+    fn test_fidl_into_helper<T, U>(input: T, expected_res: U)
+    where
+        T: FidlIntoNative<U>,
+        U: std::cmp::PartialEq + std::fmt::Debug,
+    {
+        let res: U = input.fidl_into_native();
+        assert_eq!(res, expected_res);
     }
 
     macro_rules! test_capability_path {
@@ -587,13 +730,21 @@ mod tests {
             $(
                 #[test]
                 fn $test_name() {
-                    capability_path_test($input, $result);
+                    test_capability_path_helper($input, $result);
                 }
             )+
         }
     }
 
-    test_try_from! {
+    fn test_capability_path_helper(input: &str, result: Result<CapabilityPath, Error>) {
+        let res = CapabilityPath::try_from(input);
+        assert_eq!(format!("{:?}", res), format!("{:?}", result));
+        if let Ok(p) = res {
+            assert_eq!(&p.to_string(), input);
+        }
+    }
+
+    test_try_from_decl! {
         try_from_empty => {
             input = fsys::ComponentDecl {
                 program: None,
@@ -621,37 +772,52 @@ mod tests {
                    },
                ]}),
                uses: Some(vec![
-                   fsys::UseDecl{
-                       capability: Some(fsys::Capability::Directory(fsys::DirectoryCapability {
-                           path: Some("/data/dir".to_string()),
-                       })),
+                   fsys::UseDecl::Service(fsys::UseServiceDecl {
+                       source_path: Some("/svc/netstack".to_string()),
+                       target_path: Some("/svc/mynetstack".to_string()),
+                   }),
+                   fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
+                       source_path: Some("/data/dir".to_string()),
                        target_path: Some("/data".to_string()),
-                   },
+                   }),
                ]),
                exposes: Some(vec![
-                   fsys::ExposeDecl {
-                       capability: Some(fsys::Capability::Service(fsys::ServiceCapability {
-                           path: Some("/svc/mynetstack".to_string()),
-                       })),
+                   fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                        source: Some(fsys::ExposeSource::Child(fsys::ChildId {
                            name: Some("netstack".to_string()),
                        })),
-                       target_path: Some("/svc/netstack".to_string()),
-                   },
+                       source_path: Some("/svc/netstack".to_string()),
+                       target_path: Some("/svc/mynetstack".to_string()),
+                   }),
+                   fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
+                       source: Some(fsys::ExposeSource::Child(fsys::ChildId {
+                           name: Some("netstack".to_string()),
+                       })),
+                       source_path: Some("/data/dir".to_string()),
+                       target_path: Some("/data".to_string()),
+                   }),
                ]),
                offers: Some(vec![
-                   fsys::OfferDecl {
-                       capability: Some(fsys::Capability::Service(fsys::ServiceCapability {
-                           path: Some("/svc/sys_logger".to_string()),
-                       })),
+                   fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                        source: Some(fsys::OfferSource::Realm(fsys::RealmId {})),
+                       source_path: Some("/svc/netstack".to_string()),
                        targets: Some(vec![
                            fsys::OfferTarget{
-                               target_path: Some("/svc/logger".to_string()),
+                               target_path: Some("/svc/mynetstack".to_string()),
                                child_name: Some("echo".to_string()),
                            },
                        ]),
-                   },
+                   }),
+                   fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                       source: Some(fsys::OfferSource::Realm(fsys::RealmId {})),
+                       source_path: Some("/data/dir".to_string()),
+                       targets: Some(vec![
+                           fsys::OfferTarget{
+                               target_path: Some("/data".to_string()),
+                               child_name: Some("echo".to_string()),
+                           },
+                       ]),
+                   }),
                ]),
                children: Some(vec![
                     fsys::ChildDecl {
@@ -683,29 +849,48 @@ mod tests {
                         },
                     ]}),
                     uses: vec![
-                        UseDecl {
-                            capability: Capability::Directory("/data/dir".try_into().unwrap()),
+                        UseDecl::Service(UseServiceDecl {
+                            source_path: "/svc/netstack".try_into().unwrap(),
+                            target_path: "/svc/mynetstack".try_into().unwrap(),
+                        }),
+                        UseDecl::Directory(UseDirectoryDecl {
+                            source_path: "/data/dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
-                        },
+                        }),
                     ],
                     exposes: vec![
-                        ExposeDecl {
-                            capability: Capability::Service("/svc/mynetstack".try_into().unwrap()),
+                        ExposeDecl::Service(ExposeServiceDecl {
                             source: ExposeSource::Child("netstack".to_string()),
-                            target_path: "/svc/netstack".try_into().unwrap(),
-                        },
+                            source_path: "/svc/netstack".try_into().unwrap(),
+                            target_path: "/svc/mynetstack".try_into().unwrap(),
+                        }),
+                        ExposeDecl::Directory(ExposeDirectoryDecl {
+                            source: ExposeSource::Child("netstack".to_string()),
+                            source_path: "/data/dir".try_into().unwrap(),
+                            target_path: "/data".try_into().unwrap(),
+                        }),
                     ],
                     offers: vec![
-                        OfferDecl {
-                            capability: Capability::Service("/svc/sys_logger".try_into().unwrap()),
+                        OfferDecl::Service(OfferServiceDecl {
                             source: OfferSource::Realm,
+                            source_path: "/svc/netstack".try_into().unwrap(),
                             targets: vec![
                                 OfferTarget {
-                                    target_path: "/svc/logger".try_into().unwrap(),
+                                    target_path: "/svc/mynetstack".try_into().unwrap(),
                                     child_name: "echo".to_string(),
                                 },
                             ],
-                        },
+                        }),
+                        OfferDecl::Directory(OfferDirectoryDecl {
+                            source: OfferSource::Realm,
+                            source_path: "/data/dir".try_into().unwrap(),
+                            targets: vec![
+                                OfferTarget {
+                                    target_path: "/data".try_into().unwrap(),
+                                    child_name: "echo".to_string(),
+                                },
+                            ],
+                        }),
                     ],
                     children: vec![
                         ChildDecl {
@@ -768,32 +953,100 @@ mod tests {
         },
     }
 
-    test_fidl_into_and_from! {
-        fidl_into_expose_source_myself => {
-            input = Some(fsys::ExposeSource::Myself(fsys::SelfId {})),
-            result = ExposeSource::Myself,
+    test_from! {
+        from_use_capability => {
+            input = vec![
+                UseDecl::Service(UseServiceDecl {
+                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
+                    target_path: CapabilityPath::try_from("/blah").unwrap(),
+                }),
+                UseDecl::Directory(UseDirectoryDecl {
+                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
+                    target_path: CapabilityPath::try_from("/blah").unwrap(),
+                }),
+            ],
+            result = vec![
+                Capability::Service(CapabilityPath::try_from("/foo/bar").unwrap()),
+                Capability::Directory(CapabilityPath::try_from("/foo/bar").unwrap()),
+            ],
         },
-        fidl_into_expose_source_child => {
-            input = Some(fsys::ExposeSource::Child(fsys::ChildId {
-                name: Some("foo".to_string()),
-            })),
-            result = ExposeSource::Child("foo".to_string()),
+        from_expose_capability => {
+            input = vec![
+                ExposeDecl::Service(ExposeServiceDecl {
+                    source: ExposeSource::Myself,
+                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
+                    target_path: CapabilityPath::try_from("/blah").unwrap(),
+                }),
+                ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Myself,
+                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
+                    target_path: CapabilityPath::try_from("/blah").unwrap(),
+                }),
+            ],
+            result = vec![
+                Capability::Service(CapabilityPath::try_from("/foo/bar").unwrap()),
+                Capability::Directory(CapabilityPath::try_from("/foo/bar").unwrap()),
+            ],
         },
-        fidl_into_offer_source_realm => {
-            input = Some(fsys::OfferSource::Realm(fsys::RealmId {})),
-            result = OfferSource::Realm,
-        },
-        fidl_into_offer_source_myself => {
-            input = Some(fsys::OfferSource::Myself(fsys::SelfId {})),
-            result = OfferSource::Myself,
-        },
-        fidl_into_offer_source_child => {
-            input = Some(fsys::OfferSource::Child(fsys::ChildId {
-                name: Some("foo".to_string()),
-            })),
-            result = OfferSource::Child("foo".to_string()),
+        from_offer_capability => {
+            input = vec![
+                OfferDecl::Service(OfferServiceDecl {
+                    source: OfferSource::Myself,
+                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
+                    targets: vec![
+                        OfferTarget {
+                            target_path: CapabilityPath::try_from("/blah").unwrap(),
+                            child_name: "child".to_string(),
+                        }
+                    ],
+                }),
+                OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferSource::Myself,
+                    source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
+                    targets: vec![
+                        OfferTarget {
+                            target_path: CapabilityPath::try_from("/blah").unwrap(),
+                            child_name: "child".to_string(),
+                        }
+                    ],
+                }),
+            ],
+            result = vec![
+                Capability::Service(CapabilityPath::try_from("/foo/bar").unwrap()),
+                Capability::Directory(CapabilityPath::try_from("/foo/bar").unwrap()),
+            ],
         },
     }
+
+    test_fidl_into_and_from! {
+        fidl_into_and_from_expose_source => {
+            input = vec![
+                Some(fsys::ExposeSource::Myself(fsys::SelfId {})),
+                Some(fsys::ExposeSource::Child(fsys::ChildId {
+                    name: Some("foo".to_string()),
+                })),
+            ],
+            result = vec![
+                ExposeSource::Myself,
+                ExposeSource::Child("foo".to_string()),
+            ],
+        },
+        fidl_into_and_from_offer_source => {
+            input = vec![
+                Some(fsys::OfferSource::Realm(fsys::RealmId {})),
+                Some(fsys::OfferSource::Myself(fsys::SelfId {})),
+                Some(fsys::OfferSource::Child(fsys::ChildId {
+                    name: Some("foo".to_string()),
+                })),
+            ],
+            result = vec![
+                OfferSource::Realm,
+                OfferSource::Myself,
+                OfferSource::Child("foo".to_string()),
+            ],
+        },
+    }
+
     test_fidl_into! {
         fidl_into_dictionary => {
             input = {
