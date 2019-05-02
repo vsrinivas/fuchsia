@@ -158,6 +158,7 @@ copy("copy_test_so") {
   sources = [
     "$default_shared_out_dir/lib.unstripped/libzxdb_symbol_test.so",
     "test_data/libsymbol_test_so.targetso",
+    "test_data/libsymbol_test_so_stripped.targetso",
   ]
 
   # Use a ".targetso" extension because this isn't a library that can actually

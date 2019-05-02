@@ -58,6 +58,10 @@ class TestSymbolModule {
   // between architectures, the file is compiled offline and remains the same.
   static std::string GetCheckedInTestFileName();
 
+  // Returns a stripped version of the file returned by
+  // GetCheckedInTestFileName().
+  static std::string GetStrippedCheckedInTestFileName();
+
   // Loads the test file. On failure, returns false and sets the given error
   // message to be something helpful.
   bool Load(std::string* err_msg);

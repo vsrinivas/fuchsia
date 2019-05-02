@@ -125,7 +125,11 @@ ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
 
 Err ModuleSymbolsImpl::Load() {
   if (auto elf = elflib::ElfLib::Create(binary_name_)) {
-    plt_locations_ = elf->GetPLTOffsets();
+    if (auto debug = elflib::ElfLib::Create(name_)) {
+      if (elf->SetDebugData(std::move(debug))) {
+        plt_locations_ = elf->GetPLTOffsets();
+      }
+    }
   }
 
   llvm::Expected<llvm::object::OwningBinary<llvm::object::Binary>> bin_or_err =

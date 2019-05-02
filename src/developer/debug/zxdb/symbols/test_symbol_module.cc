@@ -62,6 +62,11 @@ std::string TestSymbolModule::GetCheckedInTestFileName() {
   return path + "libsymbol_test_so.targetso";
 }
 
+std::string TestSymbolModule::GetStrippedCheckedInTestFileName() {
+  std::string path = GetTestFilePath(kRelativeTestDataPath);
+  return path + "libsymbol_test_so_stripped.targetso";
+}
+
 bool TestSymbolModule::Load(std::string* err_msg) {
   return LoadSpecific(GetTestFileName(), err_msg);
 }

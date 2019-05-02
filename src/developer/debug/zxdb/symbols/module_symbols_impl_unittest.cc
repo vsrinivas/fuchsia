@@ -280,7 +280,8 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
 
 TEST(ModuleSymbols, ResolvePLTEntry) {
   ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(),
-                           TestSymbolModule::GetCheckedInTestFileName(), "");
+                           TestSymbolModule::GetStrippedCheckedInTestFileName(),
+                           "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
