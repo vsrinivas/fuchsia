@@ -15,9 +15,15 @@ use {
     fuchsia_uri::pkg_uri::PkgUri,
     fuchsia_zircon::{HandleBased, Status},
     futures::{StreamExt, TryStreamExt},
+    lazy_static::lazy_static,
     std::ffi::CString,
     std::ptr,
 };
+
+lazy_static! {
+    pub static ref PACKAGES_TO_MOCK: Vec<&'static str> =
+        vec!["routing_integration_test", "elf_runner_test"];
+}
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["mock_pkg_resolver"]).expect("can't init logger");
@@ -52,7 +58,7 @@ async fn run_resolver_service(mut stream: fpkg::PackageResolverRequestStream) ->
 async fn resolve(package_uri: String, dir: ServerEnd<DirectoryMarker>) -> Result<(), Status> {
     let uri = PkgUri::parse(&package_uri).map_err(|_| Err(Status::INVALID_ARGS))?;
     let name = uri.name().ok_or_else(|| Err(Status::INVALID_ARGS))?;
-    if name != "routing_integration_test" {
+    if !PACKAGES_TO_MOCK.contains(&name) {
         return Err(Status::NOT_FOUND);
     }
     open_in_namespace("/pkg", dir)

@@ -115,25 +115,23 @@ mod tests {
         fn start() -> PackageResolverProxy {
             let (proxy, server): (_, ServerEnd<PackageResolverMarker>) =
                 endpoints::create_proxy().unwrap();
-            fasync::spawn_local(
-                async move {
-                    let pkg_resolver = MockPackageResolver {};
-                    let mut stream = server.into_stream().unwrap();
-                    while let Some(PackageResolverRequest::Resolve {
-                        package_uri,
-                        dir,
-                        responder,
-                        ..
-                    }) = await!(stream.try_next()).expect("failed to read request")
-                    {
-                        let s = match pkg_resolver.resolve(&package_uri, dir) {
-                            Ok(()) => 0,
-                            Err(s) => s.into_raw(),
-                        };
-                        responder.send(s).expect("responder failed");
-                    }
-                },
-            );
+            fasync::spawn_local(async move {
+                let pkg_resolver = MockPackageResolver {};
+                let mut stream = server.into_stream().unwrap();
+                while let Some(PackageResolverRequest::Resolve {
+                    package_uri,
+                    dir,
+                    responder,
+                    ..
+                }) = await!(stream.try_next()).expect("failed to read request")
+                {
+                    let s = match pkg_resolver.resolve(&package_uri, dir) {
+                        Ok(()) => 0,
+                        Err(s) => s.into_raw(),
+                    };
+                    responder.send(s).expect("responder failed");
+                }
+            });
             proxy
         }
 

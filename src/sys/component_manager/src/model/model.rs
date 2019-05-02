@@ -206,12 +206,10 @@ impl Model {
             let futures: Vec<_> = instances_to_bind
                 .iter()
                 .map(|realm| {
-                    FutureObj::new(Box::new(
-                        async move {
-                            let mut child_realm = await!(realm.lock());
-                            await!(self.bind_instance(&mut child_realm))
-                        },
-                    ))
+                    FutureObj::new(Box::new(async move {
+                        let mut child_realm = await!(realm.lock());
+                        await!(self.bind_instance(&mut child_realm))
+                    }))
                 })
                 .collect();
             let res = await!(join_all(futures));

@@ -1,0 +1,6 @@
+{
+    "program": {
+        "binary": "bin/echo_args",
+        "args": [ "Hippos", "rule!" ],
+    },
+}

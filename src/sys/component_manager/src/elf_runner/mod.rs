@@ -39,6 +39,27 @@ fn get_program_binary(start_info: &fsys::ComponentStartInfo) -> Result<PathBuf, 
     Err(err_msg("\"binary\" must be specified"))
 }
 
+fn get_program_args(start_info: &fsys::ComponentStartInfo) -> Result<Vec<String>, Error> {
+    if let Some(program) = &start_info.program {
+        if let Some(args) = program.find("args") {
+            if let fdata::Value::Vec(vec) = args {
+                return vec
+                    .values
+                    .iter()
+                    .map(|v| {
+                        if let Some(fdata::Value::Str(a)) = v.as_ref().map(|x| &**x) {
+                            Ok(a.clone())
+                        } else {
+                            Err(err_msg("invalid type in arguments"))
+                        }
+                    })
+                    .collect();
+            }
+        }
+    }
+    Ok(vec![])
+}
+
 fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
     // TODO(CF-592): fdio is not guaranteed to be asynchronous, replace with native rust solution
     unsafe {
@@ -61,10 +82,13 @@ fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
 
 async fn load_launch_info(
     uri: String,
-    bin_path: PathBuf,
     start_info: fsys::ComponentStartInfo,
     launcher: &fproc::LauncherProxy,
 ) -> Result<fproc::LaunchInfo, Error> {
+    let bin_path =
+        get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(uri.as_ref(), e))?;
+    let args = get_program_args(&start_info)?;
+
     let name = PathBuf::from(uri)
         .file_name()
         .ok_or(err_msg("invalid uri"))?
@@ -91,7 +115,12 @@ async fn load_launch_info(
     let (ll_client_chan, ll_service_chan) = zx::Channel::create()?;
     library_loader::start(ns_map, ll_service_chan);
 
-    // TODO: launcher.AddArgs
+    if !args.is_empty() {
+        let mut string_iters: Vec<_> = args.iter().map(|s| s.bytes()).collect();
+        launcher.add_args(
+            &mut string_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>),
+        )?;
+    }
     // TODO: launcher.AddEnvirons
 
     let mut handle_infos = vec![];
@@ -135,28 +164,23 @@ impl ElfRunner {
     async fn start_async(&self, start_info: fsys::ComponentStartInfo) -> Result<(), RunnerError> {
         let resolved_uri =
             get_resolved_uri(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
-        let bin_path: PathBuf = get_program_binary(&start_info)
-            .map_err(|e| RunnerError::invalid_args(resolved_uri.as_ref(), e))?;
 
         let launcher = connect_to_service::<fproc::LauncherMarker>()
             .context("failed to connect to launcher service")
             .map_err(|e| RunnerError::component_load_error(resolved_uri.as_ref(), e))?;
 
         // Load the component
-        let mut launch_info =
-            await!(load_launch_info(resolved_uri.clone(), bin_path, start_info, &launcher))
-                .map_err(|e| RunnerError::component_load_error(resolved_uri.as_ref(), e))?;
+        let mut launch_info = await!(load_launch_info(resolved_uri.clone(), start_info, &launcher))
+            .map_err(|e| RunnerError::component_load_error(resolved_uri.as_ref(), e))?;
 
         // Launch the component
-        await!(
-            async {
-                let (status, _process) = await!(launcher.launch(&mut launch_info))?;
-                if zx::Status::from_raw(status) != zx::Status::OK {
-                    return Err(format_err!("failed to launch component: {}", status));
-                }
-                Ok(())
+        await!(async {
+            let (status, _process) = await!(launcher.launch(&mut launch_info))?;
+            if zx::Status::from_raw(status) != zx::Status::OK {
+                return Err(format_err!("failed to launch component: {}", status));
             }
-        )
+            Ok(())
+        })
         .map_err(|e| RunnerError::component_launch_error(resolved_uri, e))?;
 
         Ok(())
@@ -176,45 +200,112 @@ mod tests {
     #[test]
     fn hello_world_test() {
         let mut executor = fasync::Executor::new().unwrap();
-        executor.run_singlethreaded(
-            async {
-                // Get a handle to /bin
-                let bin_path = "/pkg/bin".to_string();
-                let bin_proxy = io_util::open_directory_in_namespace("/pkg/bin").unwrap();
-                let bin_chan = bin_proxy.into_channel().unwrap();
-                let bin_handle = ClientEnd::new(bin_chan.into_zx_channel());
+        executor.run_singlethreaded(async {
+            // Get a handle to /bin
+            let bin_path = "/pkg/bin".to_string();
+            let bin_proxy = io_util::open_directory_in_namespace("/pkg/bin").unwrap();
+            let bin_chan = bin_proxy.into_channel().unwrap();
+            let bin_handle = ClientEnd::new(bin_chan.into_zx_channel());
 
-                // Get a handle to /lib
-                let lib_path = "/pkg/lib".to_string();
-                let lib_proxy = io_util::open_directory_in_namespace("/pkg/lib").unwrap();
-                let lib_chan = lib_proxy.into_channel().unwrap();
-                let lib_handle = ClientEnd::new(lib_chan.into_zx_channel());
+            // Get a handle to /lib
+            let lib_path = "/pkg/lib".to_string();
+            let lib_proxy = io_util::open_directory_in_namespace("/pkg/lib").unwrap();
+            let lib_chan = lib_proxy.into_channel().unwrap();
+            let lib_handle = ClientEnd::new(lib_chan.into_zx_channel());
 
-                let ns = fsys::ComponentNamespace {
-                    paths: vec![lib_path, bin_path],
-                    directories: vec![lib_handle, bin_handle],
-                };
+            let ns = fsys::ComponentNamespace {
+                paths: vec![lib_path, bin_path],
+                directories: vec![lib_handle, bin_handle],
+            };
 
-                let start_info = fsys::ComponentStartInfo {
-                    resolved_uri: Some(
-                        "fuchsia-pkg://fuchsia.com/hello_world_hippo#meta/hello_world.cm"
-                            .to_string(),
-                    ),
-                    program: Some(fdata::Dictionary {
-                        entries: vec![fdata::Entry {
-                            key: "binary".to_string(),
-                            value: Some(Box::new(fdata::Value::Str(
-                                "/pkg/bin/hello_world".to_string(),
-                            ))),
-                        }],
-                    }),
-                    ns: Some(ns),
-                    outgoing_dir: None,
-                };
+            let start_info = fsys::ComponentStartInfo {
+                resolved_uri: Some(
+                    "fuchsia-pkg://fuchsia.com/hello_world_hippo#meta/hello_world.cm".to_string(),
+                ),
+                program: Some(fdata::Dictionary {
+                    entries: vec![fdata::Entry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::Value::Str(
+                            "/pkg/bin/hello_world".to_string(),
+                        ))),
+                    }],
+                }),
+                ns: Some(ns),
+                outgoing_dir: None,
+            };
 
-                let runner = ElfRunner::new();
-                await!(runner.start_async(start_info)).unwrap();
-            },
+            let runner = ElfRunner::new();
+            await!(runner.start_async(start_info)).unwrap();
+        });
+    }
+
+    fn new_args_set(args: Vec<Option<Box<fdata::Value>>>) -> fsys::ComponentStartInfo {
+        fsys::ComponentStartInfo {
+            program: Some(fdata::Dictionary {
+                entries: vec![fdata::Entry {
+                    key: "args".to_string(),
+                    value: Some(Box::new(fdata::Value::Vec(fdata::Vector { values: args }))),
+                }],
+            }),
+            ns: None,
+            outgoing_dir: None,
+            resolved_uri: None,
+        }
+    }
+
+    #[test]
+    fn get_program_args_test() {
+        let e: Vec<String> = vec![];
+
+        assert_eq!(
+            e,
+            get_program_args(&fsys::ComponentStartInfo {
+                program: Some(fdata::Dictionary { entries: vec![] }),
+                ns: None,
+                outgoing_dir: None,
+                resolved_uri: None,
+            })
+            .unwrap()
+        );
+
+        assert_eq!(e, get_program_args(&new_args_set(vec![])).unwrap());
+
+        assert_eq!(
+            vec!["a".to_string()],
+            get_program_args(&new_args_set(vec![Some(Box::new(fdata::Value::Str(
+                "a".to_string()
+            )))]))
+            .unwrap()
+        );
+
+        assert_eq!(
+            vec!["a".to_string(), "b".to_string()],
+            get_program_args(&new_args_set(vec![
+                Some(Box::new(fdata::Value::Str("a".to_string()))),
+                Some(Box::new(fdata::Value::Str("b".to_string()))),
+            ]))
+            .unwrap()
+        );
+
+        assert_eq!(
+            format!("{:?}", err_msg("invalid type in arguments")),
+            format!(
+                "{:?}",
+                get_program_args(&new_args_set(vec![
+                    Some(Box::new(fdata::Value::Str("a".to_string()))),
+                    None,
+                ]))
+                .unwrap_err()
+            )
+        );
+
+        assert_eq!(
+            format!("{:?}", err_msg("invalid type in arguments")),
+            format!(
+                "{:?}",
+                get_program_args(&new_args_set(vec![Some(Box::new(fdata::Value::Inum(1))),]))
+                    .unwrap_err()
+            )
         );
     }
 }

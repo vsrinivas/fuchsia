@@ -82,34 +82,31 @@ mod tests {
     #[test]
     fn hello_world_test() {
         let mut executor = fasync::Executor::new().unwrap();
-        executor.run_singlethreaded(
-            async {
-                let resolver = FuchsiaBootResolver::new();
-                let component = await!(resolver.resolve_async(
-                    "fuchsia-boot:///pkg#meta/component_manager_tests_hello_world.cm"
-                ))
-                .unwrap();
-                assert_eq!(
-                    "fuchsia-boot:///pkg#meta/component_manager_tests_hello_world.cm",
-                    component.resolved_uri.unwrap()
-                );
-                let program = fdata::Dictionary {
-                    entries: vec![fdata::Entry {
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("bin/hello_world".to_string()))),
-                    }],
-                };
-                let component_decl = ComponentDecl {
-                    program: Some(program),
-                    uses: None,
-                    exposes: None,
-                    offers: None,
-                    facets: None,
-                    children: None,
-                };
-                assert_eq!(component_decl, component.decl.unwrap());
-                assert_eq!("fuchsia-boot:///pkg", component.package.unwrap().package_uri.unwrap());
-            },
-        );
+        executor.run_singlethreaded(async {
+            let resolver = FuchsiaBootResolver::new();
+            let component = await!(resolver
+                .resolve_async("fuchsia-boot:///pkg#meta/component_manager_tests_hello_world.cm"))
+            .unwrap();
+            assert_eq!(
+                "fuchsia-boot:///pkg#meta/component_manager_tests_hello_world.cm",
+                component.resolved_uri.unwrap()
+            );
+            let program = fdata::Dictionary {
+                entries: vec![fdata::Entry {
+                    key: "binary".to_string(),
+                    value: Some(Box::new(fdata::Value::Str("bin/hello_world".to_string()))),
+                }],
+            };
+            let component_decl = ComponentDecl {
+                program: Some(program),
+                uses: None,
+                exposes: None,
+                offers: None,
+                facets: None,
+                children: None,
+            };
+            assert_eq!(component_decl, component.decl.unwrap());
+            assert_eq!("fuchsia-boot:///pkg", component.package.unwrap().package_uri.unwrap());
+        });
     }
 }

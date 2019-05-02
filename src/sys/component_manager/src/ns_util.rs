@@ -81,36 +81,34 @@ mod tests {
     #[test]
     fn clone_ns_test() {
         let mut executor = fasync::Executor::new().unwrap();
-        executor.run_singlethreaded(
-            async {
-                // Get a handle to /bin
-                let bin_path = "/bin".to_string();
-                let bin_proxy = io_util::open_directory_in_namespace("/pkg/bin").unwrap();
-                let bin_chan = bin_proxy.into_channel().unwrap();
-                let bin_handle = ClientEnd::new(bin_chan.into_zx_channel());
+        executor.run_singlethreaded(async {
+            // Get a handle to /bin
+            let bin_path = "/bin".to_string();
+            let bin_proxy = io_util::open_directory_in_namespace("/pkg/bin").unwrap();
+            let bin_chan = bin_proxy.into_channel().unwrap();
+            let bin_handle = ClientEnd::new(bin_chan.into_zx_channel());
 
-                // Get a handle to /lib
-                let lib_path = "/lib".to_string();
-                let lib_proxy = io_util::open_directory_in_namespace("/pkg/lib").unwrap();
-                let lib_chan = lib_proxy.into_channel().unwrap();
-                let lib_handle = ClientEnd::new(lib_chan.into_zx_channel());
+            // Get a handle to /lib
+            let lib_path = "/lib".to_string();
+            let lib_proxy = io_util::open_directory_in_namespace("/pkg/lib").unwrap();
+            let lib_chan = lib_proxy.into_channel().unwrap();
+            let lib_handle = ClientEnd::new(lib_chan.into_zx_channel());
 
-                let ns = fsys::ComponentNamespace {
-                    paths: vec![lib_path, bin_path],
-                    directories: vec![lib_handle, bin_handle],
-                };
+            let ns = fsys::ComponentNamespace {
+                paths: vec![lib_path, bin_path],
+                directories: vec![lib_handle, bin_handle],
+            };
 
-                // Load in a VMO holding the target executable from the namespace
-                let (mut _ns, ns_clone) = clone_component_namespace(ns).unwrap();
-                let ns_map = ns_to_map(ns_clone).unwrap();
+            // Load in a VMO holding the target executable from the namespace
+            let (mut _ns, ns_clone) = clone_component_namespace(ns).unwrap();
+            let ns_map = ns_to_map(ns_clone).unwrap();
 
-                let dir = ns_map.get(&PathBuf::from("/lib")).unwrap();
-                let path = PathBuf::from("ld.so.1");
-                io_util::open_file(&dir, &path).unwrap();
-                let dir = ns_map.get(&PathBuf::from("/bin")).unwrap();
-                let path = PathBuf::from("hello_world");
-                io_util::open_file(&dir, &path).unwrap();
-            },
-        );
+            let dir = ns_map.get(&PathBuf::from("/lib")).unwrap();
+            let path = PathBuf::from("ld.so.1");
+            io_util::open_file(&dir, &path).unwrap();
+            let dir = ns_map.get(&PathBuf::from("/bin")).unwrap();
+            let path = PathBuf::from("hello_world");
+            io_util::open_file(&dir, &path).unwrap();
+        });
     }
 }

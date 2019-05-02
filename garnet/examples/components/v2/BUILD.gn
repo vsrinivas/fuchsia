@@ -17,6 +17,21 @@ rustc_binary("ls_root_pkg_bin") {
   edition = "2018"
 }
 
+rustc_binary("echo_args_bin") {
+  source_root = "src/echo_args.rs"
+  name = "echo_args"
+  edition = "2018"
+}
+
+fuchsia_component("echo_args_component") {
+  manifest = rebase_path("meta/echo_args.cml")
+  deps = [
+    ":echo_args_bin",
+  ]
+
+  binary = "echo_args"
+}
+
 fuchsia_component("ls_root_pkg_component") {
   manifest = rebase_path("meta/ls_root_pkg.cml")
   deps = [
@@ -39,5 +54,6 @@ package("hello_world_hippo") {
   components = [
     ":hello_world_component",
     ":ls_root_pkg_component",
+    ":echo_args_component",
   ]
 }
