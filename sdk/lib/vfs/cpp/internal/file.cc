@@ -9,16 +9,10 @@ namespace vfs {
 namespace internal {
 
 File::File() = default;
-
 File::~File() = default;
 
 void File::Describe(fuchsia::io::NodeInfo* out_info) {
   out_info->set_file(fuchsia::io::FileObject());
-}
-
-uint32_t File::GetAdditionalAllowedFlags() const {
-  return fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
-         fuchsia::io::OPEN_FLAG_TRUNCATE;
 }
 
 zx_status_t File::ReadAt(uint64_t count, uint64_t offset,
@@ -41,7 +35,7 @@ zx_status_t File::CreateConnection(uint32_t flags,
 
 size_t File::GetCapacity() { return std::numeric_limits<size_t>::max(); }
 
-bool File::IsDirectory() const { return false; }
+NodeKind::Type File::GetKind() const { return NodeKind::kFile; }
 
 }  // namespace internal
 }  // namespace vfs

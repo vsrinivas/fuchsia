@@ -31,21 +31,6 @@ zx_status_t Directory::CreateConnection(
   return ZX_OK;
 }
 
-uint32_t Directory::GetAdditionalAllowedFlags() const {
-  // TODO(ZX-3251): override this in PseudoDir and Lazydir and remove
-  // OPEN_RIGHT_WRITABLE flag.
-  return fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
-         fuchsia::io::OPEN_FLAG_DIRECTORY;
-}
-
-uint32_t Directory::GetProhibitiveFlags() const {
-  return fuchsia::io::OPEN_FLAG_CREATE |
-         fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT |
-         fuchsia::io::OPEN_FLAG_TRUNCATE | fuchsia::io::OPEN_FLAG_APPEND;
-}
-
-bool Directory::IsDirectory() const { return true; }
-
 zx_status_t Directory::ValidatePath(const char* path, size_t path_len) {
   bool starts_with_dot_dot = (path_len > 1 && path[0] == '.' && path[1] == '.');
   if (path_len > NAME_MAX || (path_len == 2 && starts_with_dot_dot) ||
@@ -54,6 +39,10 @@ zx_status_t Directory::ValidatePath(const char* path, size_t path_len) {
     return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
+}
+
+NodeKind::Type Directory::GetKind() const {
+  return NodeKind::kDirectory | NodeKind::kReadable | NodeKind::kWritable;
 }
 
 zx_status_t Directory::GetAttr(

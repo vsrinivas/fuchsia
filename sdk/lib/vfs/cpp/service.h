@@ -56,14 +56,11 @@ class Service : public vfs::internal::Node {
   const Connector& connector() const { return connector_; }
 
  protected:
+  NodeKind::Type GetKind() const override;
   // |Node| implementations:
   zx_status_t CreateConnection(
       uint32_t flags,
       std::unique_ptr<vfs::internal::Connection>* connection) final;
-
-  uint32_t GetAdditionalAllowedFlags() const override final;
-
-  bool IsDirectory() const override final;
 
   zx_status_t Connect(uint32_t flags, zx::channel request,
                       async_dispatcher_t* dispatcher) override;

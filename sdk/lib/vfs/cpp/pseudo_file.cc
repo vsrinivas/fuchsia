@@ -52,17 +52,12 @@ zx_status_t PseudoFile::GetAttr(
   return ZX_OK;
 }
 
-uint32_t PseudoFile::GetAdditionalAllowedFlags() const {
-  auto allowed_flags = fuchsia::io::OPEN_RIGHT_READABLE;
+NodeKind::Type PseudoFile::GetKind() const {
+  auto kind = File::GetKind() | NodeKind::kReadable;
   if (write_handler_ != nullptr) {
-    allowed_flags |=
-        fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_TRUNCATE;
+    kind |= NodeKind::kWritable | NodeKind::kCanTruncate;
   }
-  return allowed_flags;
-}
-
-uint32_t PseudoFile::GetProhibitiveFlags() const {
-  return fuchsia::io::OPEN_FLAG_APPEND;
+  return kind;
 }
 
 uint64_t PseudoFile::GetLength() {
@@ -95,6 +90,8 @@ PseudoFile::Content::~Content() {
   file_->write_handler_(std::move(buffer_));
 };
 
+NodeKind::Type PseudoFile::Content::GetKind() const { return file_->GetKind(); }
+
 zx_status_t PseudoFile::Content::ReadAt(uint64_t count, uint64_t offset,
                                         std::vector<uint8_t>* out_data) {
   if (offset >= buffer_.size()) {
@@ -104,14 +101,6 @@ zx_status_t PseudoFile::Content::ReadAt(uint64_t count, uint64_t offset,
   out_data->resize(actual);
   std::copy_n(buffer_.begin() + offset, actual, out_data->begin());
   return ZX_OK;
-}
-
-uint32_t PseudoFile::Content::GetAdditionalAllowedFlags() const {
-  return file_->GetAdditionalAllowedFlags();
-}
-
-uint32_t PseudoFile::Content::GetProhibitiveFlags() const {
-  return file_->GetProhibitiveFlags();
 }
 
 zx_status_t PseudoFile::Content::GetAttr(

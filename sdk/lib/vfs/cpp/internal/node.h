@@ -8,6 +8,7 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/vfs/cpp/node_kind.h>
 #include <limits.h>
 
 namespace vfs {
@@ -94,16 +95,26 @@ class Node {
   // Return true if |Node| is a remote node.
   // This function is used in |Directory::Open| to correctly open those kind of
   // nodes.
-  virtual bool IsRemote() const;
+  bool IsRemote() const { return NodeKind::IsRemote(GetKind()); }
 
   // Return true if |Node| is a directory.
   // This function is used in |ValidateFlags| and |Lookup| to return correct
   // error.
-  //
-  // This should be overridden by every implementation.
-  virtual bool IsDirectory() const = 0;
+  bool IsDirectory() const { return NodeKind::IsDirectory(GetKind()); }
+
+  // Return true if |Node| is a file.
+  bool IsFile() const { return NodeKind::IsFile(GetKind()); }
+
+  // Return true if |Node| is a service.
+  bool IsService() const { return NodeKind::IsService(GetKind()); }
+
+  // Return true if |Node| is a VMO.
+  bool IsVMO() const { return NodeKind::IsVMO(GetKind()); }
 
  protected:
+  // Return |Kind| of implementing |Node|.
+  virtual NodeKind::Type GetKind() const = 0;
+
   // Returns total number of active connections
   uint64_t GetConnectionCount() const;
 
@@ -133,16 +144,6 @@ class Node {
   virtual zx_status_t CreateConnection(
       uint32_t flags, std::unique_ptr<Connection>* connection) = 0;
 
-  // Additional Allowed flags for use in |ValidateFlags|.
-  //
-  // See documentation of  |ValidateFlags| for exact details.
-  virtual uint32_t GetAdditionalAllowedFlags() const;
-
-  // Prohibitive flags use in |ValidateFlags|.
-  //
-  // See documentation of  |ValidateFlags| for exact details.
-  virtual uint32_t GetProhibitiveFlags() const;
-
  private:
   // Validate flags on |Serve|.
   //
@@ -155,7 +156,7 @@ class Node {
   // Calls |GetProhibitiveFlags| flags and if one of the flag is in
   // prohibitive list, returns |ZX_ERR_INVALID_ARGS|.
   //
-  // Calls |GetAdditionalAllowedFlags|, appends |OPEN_FLAG_DESCRIBE|,
+  // Calls |GetAllowedFlags|, appends |OPEN_FLAG_DESCRIBE|,
   // |OPEN_FLAG_NODE_REFERENCE|, |OPEN_FLAG_DIRECTORY| (only if
   // |IsDirectory| returns true) to those flags and returns
   // |ZX_ERR_NOT_SUPPORTED| if flags are not found in allowed list.
@@ -174,6 +175,22 @@ class Node {
   // |OPEN_FLAG_NODE_REFERENCE|.
   // Allowed flags are |OPEN_FLAG_DIRECTORY| and |OPEN_FLAG_DESCRIBE|.
   uint32_t FilterRefFlags(uint32_t flags);
+
+  // Allowed flags for use in |ValidateFlags|.
+  //
+  // Uses a internal map to map |Kind| to flags and retuns flags based on kind
+  // returned by |GetKind()|.
+  //
+  // See documentation of  |ValidateFlags| for exact details.
+  uint32_t GetAllowedFlags() const;
+
+  // Prohibitive flags use in |ValidateFlags|.
+  //
+  // Checks if |Node| is a directory and returns flags which cannot be
+  // applied to a directory.
+  //
+  // See documentation of  |ValidateFlags| for exact details.
+  uint32_t GetProhibitiveFlags() const;
 
   // guards connection_
   mutable std::mutex mutex_;

@@ -63,12 +63,10 @@ class File : public Node {
   virtual size_t GetCapacity();
 
  protected:
+  NodeKind::Type GetKind() const override;
+
   zx_status_t CreateConnection(
       uint32_t flags, std::unique_ptr<Connection>* connection) override;
-
-  uint32_t GetAdditionalAllowedFlags() const override;
-
-  bool IsDirectory() const override;
 };
 
 }  // namespace internal

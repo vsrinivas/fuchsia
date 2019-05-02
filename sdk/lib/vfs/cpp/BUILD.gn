@@ -36,6 +36,7 @@ sdk_source_set("cpp") {
     "internal/node_connection.h",
     "lazy_dir.cc",
     "lazy_dir.h",
+    "node_kind.h",
     "pseudo_dir.cc",
     "pseudo_dir.h",
     "pseudo_file.cc",

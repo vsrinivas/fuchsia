@@ -47,7 +47,7 @@ class RemoteDir final : public vfs::internal::Directory {
   zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
                       uint64_t* out_offset, uint64_t* out_actual) final;
 
-  bool IsRemote() const override;
+  NodeKind::Type GetKind() const final;
 
  private:
   fuchsia::io::DirectoryPtr dir_ptr_;

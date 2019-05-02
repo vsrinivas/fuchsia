@@ -90,11 +90,9 @@ class Directory : public Node {
   zx_status_t CreateConnection(
       uint32_t flags, std::unique_ptr<Connection>* connection) override;
 
-  bool IsDirectory() const final;
-
-  uint32_t GetAdditionalAllowedFlags() const override;
-
-  uint32_t GetProhibitiveFlags() const override;
+  // Markes directory with |NODE_KIND_DIRECTORY| and also marks it readable and
+  // writable.
+  NodeKind::Type GetKind() const override;
 
   // Walks |path| until the node corresponding to |path| is found, or a remote
   // filesystem was encountered during traversal. In the latter case,

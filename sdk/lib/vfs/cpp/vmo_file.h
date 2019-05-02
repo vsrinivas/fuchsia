@@ -22,7 +22,7 @@ namespace vfs {
 // See also:
 //
 //  * File, which represents file objects.
-class VmoFile : public vfs::internal::File {
+class VmoFile final : public vfs::internal::File {
  public:
   // Specifies the desired behavior of writes.
   enum class WriteOption {
@@ -113,7 +113,7 @@ class VmoFile : public vfs::internal::File {
       fuchsia::io::NodeAttributes* out_attributes) const override;
 
  protected:
-  uint32_t GetAdditionalAllowedFlags() const override;
+  NodeKind::Type GetKind() const override;
 
  private:
   const size_t offset_;

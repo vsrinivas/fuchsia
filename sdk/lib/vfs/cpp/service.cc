@@ -21,11 +21,6 @@ zx_status_t Service::CreateConnection(
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-uint32_t Service::GetAdditionalAllowedFlags() const {
-  // TODO(ZX-3251): remove OPEN_RIGHT_WRITABLE flag
-  return fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE;
-}
-
 zx_status_t Service::Connect(uint32_t flags, zx::channel request,
                              async_dispatcher_t* dispatcher) {
   if (Flags::IsNodeReference(flags)) {
@@ -39,8 +34,6 @@ zx_status_t Service::Connect(uint32_t flags, zx::channel request,
   return ZX_OK;
 }
 
-bool Service::IsDirectory() const { return false; }
-
 zx_status_t Service::GetAttr(
     fuchsia::io::NodeAttributes* out_attributes) const {
   out_attributes->mode = fuchsia::io::MODE_TYPE_SERVICE | V_IRUSR;
@@ -51,6 +44,10 @@ zx_status_t Service::GetAttr(
   out_attributes->creation_time = 0;
   out_attributes->modification_time = 0;
   return ZX_OK;
+}
+
+NodeKind::Type Service::GetKind() const {
+  return NodeKind::kService | NodeKind::kReadable | NodeKind::kWritable;
 }
 
 }  // namespace vfs

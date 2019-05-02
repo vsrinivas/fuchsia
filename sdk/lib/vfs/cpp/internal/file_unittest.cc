@@ -8,6 +8,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
 #include <lib/vfs/cpp/internal/file.h>
+#include <lib/vfs/cpp/node_kind.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 
@@ -51,6 +52,13 @@ class TestFile : public vfs::internal::File {
   uint64_t GetLength() override { return buffer_->size(); }
 
   size_t GetCapacity() override { return buffer_->size(); }
+
+ protected:
+  vfs::NodeKind::Type GetKind() const override {
+    vfs::NodeKind::Type kind =
+        File::GetKind() | vfs::NodeKind::kReadable | vfs::NodeKind::kWritable;
+    return kind;
+  }
 
  private:
   std::vector<uint8_t>* buffer_;

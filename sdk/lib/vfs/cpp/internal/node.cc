@@ -19,6 +19,15 @@ constexpr uint32_t kCommonAllowedFlags =
     fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
     fuchsia::io::OPEN_FLAG_POSIX | fuchsia::io::CLONE_FLAG_SAME_RIGHTS;
 
+constexpr std::tuple<NodeKind::Type, uint32_t> kKindFlagMap[] = {
+    {NodeKind::kReadable, fuchsia::io::OPEN_RIGHT_READABLE},
+    {NodeKind::kMountable, fuchsia::io::OPEN_RIGHT_ADMIN},
+    {NodeKind::kWritable, fuchsia::io::OPEN_RIGHT_WRITABLE},
+    {NodeKind::kAppendable, fuchsia::io::OPEN_FLAG_APPEND},
+    {NodeKind::kCanTruncate, fuchsia::io::OPEN_FLAG_TRUNCATE},
+    {NodeKind::kCreatable,
+     fuchsia::io::OPEN_FLAG_CREATE | fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT}};
+
 }  // namespace
 
 namespace internal {
@@ -30,7 +39,6 @@ bool IsValidName(const std::string& name) {
 }
 
 Node::Node() = default;
-
 Node::~Node() = default;
 
 std::unique_ptr<Connection> Node::Close(Connection* connection) {
@@ -45,8 +53,6 @@ std::unique_ptr<Connection> Node::Close(Connection* connection) {
 }
 
 zx_status_t Node::Sync() { return ZX_ERR_NOT_SUPPORTED; }
-
-bool Node::IsRemote() const { return false; }
 
 zx_status_t Node::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
   return ZX_ERR_NOT_SUPPORTED;
@@ -94,7 +100,7 @@ zx_status_t Node::ValidateFlags(uint32_t flags) const {
     return ZX_ERR_NOT_FILE;
   }
 
-  uint32_t allowed_flags = kCommonAllowedFlags | GetAdditionalAllowedFlags();
+  uint32_t allowed_flags = kCommonAllowedFlags | GetAllowedFlags();
   if (is_directory) {
     allowed_flags = allowed_flags | fuchsia::io::OPEN_FLAG_DIRECTORY;
   }
@@ -129,9 +135,26 @@ zx_status_t Node::Lookup(const std::string& name, Node** out_node) const {
   return ZX_ERR_NOT_DIR;
 }
 
-uint32_t Node::GetAdditionalAllowedFlags() const { return 0; }
+uint32_t Node::GetAllowedFlags() const {
+  NodeKind::Type kind = GetKind();
+  uint32_t flags = 0;
+  for (auto& tuple : kKindFlagMap) {
+    if ((kind & std::get<0>(tuple)) == std::get<0>(tuple)) {
+      flags = flags | std::get<1>(tuple);
+    }
+  }
+  return flags;
+}
 
-uint32_t Node::GetProhibitiveFlags() const { return 0; }
+uint32_t Node::GetProhibitiveFlags() const {
+  NodeKind::Type kind = GetKind();
+  if (NodeKind::IsDirectory(kind)) {
+    return fuchsia::io::OPEN_FLAG_CREATE |
+           fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT |
+           fuchsia::io::OPEN_FLAG_TRUNCATE | fuchsia::io::OPEN_FLAG_APPEND;
+  }
+  return 0;
+}
 
 zx_status_t Node::SetAttr(uint32_t flags,
                           const fuchsia::io::NodeAttributes& attributes) {

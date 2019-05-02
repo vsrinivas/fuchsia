@@ -22,9 +22,10 @@ class TestNode : public vfs::internal::Node {
     }
   }
 
- private:
-  bool IsDirectory() const override { return false; }
+ protected:
+  vfs::NodeKind::Type GetKind() const override { return 0; }
 
+ private:
   void Describe(fuchsia::io::NodeInfo* out_info) override {}
 
   zx_status_t CreateConnection(

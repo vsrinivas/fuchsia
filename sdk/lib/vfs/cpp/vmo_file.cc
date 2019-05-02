@@ -52,13 +52,6 @@ void VmoFile::Describe(fuchsia::io::NodeInfo* out_info) {
   }
 }
 
-uint32_t VmoFile::GetAdditionalAllowedFlags() const {
-  return fuchsia::io::OPEN_RIGHT_READABLE |
-         (write_option_ == WriteOption::WRITABLE
-              ? fuchsia::io::OPEN_RIGHT_WRITABLE
-              : 0);
-}
-
 zx_status_t VmoFile::ReadAt(uint64_t length, uint64_t offset,
                             std::vector<uint8_t>* out_data) {
   if (length == 0u || offset >= length_) {
@@ -115,6 +108,11 @@ zx_status_t VmoFile::GetAttr(
   out_attributes->creation_time = 0;
   out_attributes->modification_time = 0;
   return ZX_OK;
+}
+
+NodeKind::Type VmoFile::GetKind() const {
+  return File::GetKind() | NodeKind::kVmo | NodeKind::kReadable |
+         (write_option_ == WriteOption::WRITABLE ? NodeKind::kWritable : 0);
 }
 
 }  // namespace vfs

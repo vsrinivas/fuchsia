@@ -25,7 +25,7 @@ namespace vfs {
 // the file is closed(if there were any writes).  Truncation is also supported.
 //
 // Instances of this class are thread-safe.
-class PseudoFile : public vfs::internal::File {
+class PseudoFile final : public vfs::internal::File {
  public:
   // Handler called to read from the pseudo-file.
   using ReadHandler = fit::function<zx_status_t(std::vector<uint8_t>* output)>;
@@ -54,9 +54,7 @@ class PseudoFile : public vfs::internal::File {
       uint32_t flags,
       std::unique_ptr<vfs::internal::Connection>* connection) override;
 
-  uint32_t GetAdditionalAllowedFlags() const override;
-
-  uint32_t GetProhibitiveFlags() const override;
+  NodeKind::Type GetKind() const override;
 
  private:
   class Content final : public vfs::internal::Connection, public File {
@@ -89,11 +87,9 @@ class PseudoFile : public vfs::internal::File {
         fuchsia::io::NodeAttributes* out_attributes) const override;
 
    protected:
-    uint32_t GetAdditionalAllowedFlags() const override;
-
-    uint32_t GetProhibitiveFlags() const override;
-
     void SendOnOpenEvent(zx_status_t status) override;
+
+    NodeKind::Type GetKind() const override;
 
    private:
     void SetInputLength(size_t length);
