@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/iquery/options.h"
+
+#include <lib/inspect/query/json_formatter.h>
+#include <lib/inspect/query/text_formatter.h>
+#include <src/lib/files/path.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/substitute.h>
+
 #include <iostream>
 #include <set>
 #include <string>
 
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/substitute.h>
-#include "src/lib/files/path.h"
-
-#include "garnet/bin/iquery/formatters/json.h"
-#include "garnet/bin/iquery/formatters/text.h"
-#include "garnet/bin/iquery/options.h"
+#include "lib/inspect/query/formatter.h"
 
 namespace iquery {
 
@@ -45,12 +47,18 @@ Options::FormatterType GetFormatterType(const fxl::CommandLine& cmd_line) {
   }
 }
 
-std::unique_ptr<Formatter> CreateFormatter(Options::FormatterType type) {
+std::unique_ptr<inspect::Formatter> CreateFormatter(
+    Options::FormatterType type,
+    const inspect::Formatter::PathFormat& path_format) {
   switch (type) {
-    case Options::FormatterType::TEXT:
-      return std::make_unique<TextFormatter>();
-    case Options::FormatterType::JSON:
-      return std::make_unique<JsonFormatter>();
+    case Options::FormatterType::TEXT: {
+      inspect::TextFormatter::Options options;
+      return std::make_unique<inspect::TextFormatter>(options, path_format);
+    }
+    case Options::FormatterType::JSON: {
+      inspect::JsonFormatter::Options options;
+      return std::make_unique<inspect::JsonFormatter>(options, path_format);
+    }
     case Options::FormatterType::UNSET:
       return nullptr;
   }
@@ -77,22 +85,25 @@ Options::Options(const fxl::CommandLine& command_line) {
   else if (mode == Mode::UNSET)
     SetMode(command_line, Mode::CAT);
 
-  formatter_type = GetFormatterType(command_line);
-  formatter = CreateFormatter(formatter_type);
-  if (!formatter)
-    return;
-
   // Path formatting options.
-  path_format = PathFormatting::NONE;
+  path_format = inspect::Formatter::PathFormat::NONE;
   if (command_line.HasOption("full_paths")) {
-    path_format = PathFormatting::FULL;
+    path_format = inspect::Formatter::PathFormat::FULL;
   }
   if (command_line.HasOption("absolute_paths")) {
-    path_format = PathFormatting::ABSOLUTE;
+    path_format = inspect::Formatter::PathFormat::ABSOLUTE;
   }
+
   // Find has a special case, where none path formatting is not really useful.
-  if (path_format == PathFormatting::NONE && mode == Mode::FIND)
-    path_format = PathFormatting::FULL;
+  if (path_format == inspect::Formatter::PathFormat::NONE &&
+      mode == Mode::FIND) {
+    path_format = inspect::Formatter::PathFormat::FULL;
+  }
+
+  formatter_type = GetFormatterType(command_line);
+  formatter = CreateFormatter(formatter_type, path_format);
+  if (!formatter)
+    return;
 
   recursive = command_line.HasOption("recursive");
   sort = command_line.HasOption("sort");

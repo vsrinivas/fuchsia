@@ -11,7 +11,6 @@
 
 #include <iostream>
 
-#include "garnet/bin/iquery/formatter.h"
 #include "garnet/bin/iquery/modes.h"
 
 int main(int argc, const char** argv) {
@@ -61,9 +60,15 @@ int main(int argc, const char** argv) {
                 source.SortHierarchy();
               }
             }
-            // Formatter will handle the correct case according to the
-            // options values.
-            std::cout << options.formatter->Format(options, results);
+
+            if (options.mode == iquery::Options::Mode::CAT) {
+              std::cout << options.formatter->FormatSourcesRecursive(results);
+            } else if (options.mode == iquery::Options::Mode::FIND) {
+              std::cout << options.formatter->FormatSourceLocations(results);
+            } else if (options.mode == iquery::Options::Mode::LS) {
+              std::cout << options.formatter->FormatChildListing(results);
+            }
+
             loop.Quit();
           })
           .or_else([&loop] {

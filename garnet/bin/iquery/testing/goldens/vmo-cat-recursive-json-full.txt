@@ -5,282 +5,280 @@ iquery --recursive --format=json --full_paths --sort objects/root.inspect
         "contents": {
             "root": {
                 "array:0x15": [
-                    "1",
-                    "10",
-                    "-3"
+                    1,
+                    10,
+                    -3
                 ],
                 "array:0x16": [
-                    "1",
-                    "10",
-                    "2"
+                    1,
+                    10,
+                    2
                 ],
                 "array:0x17": [
-                    "0.250000",
-                    "1.250000",
-                    "-0.750000"
+                    0.25,
+                    1.25,
+                    -0.75
                 ],
                 "histogram:0x18": {
                     "buckets": [
                         {
-                            "floor": "-9223372036854775808",
-                            "upper_bound": "-10",
-                            "count": "10"
+                            "floor": -9223372036854775808,
+                            "upper_bound": -10,
+                            "count": 10
                         },
                         {
-                            "floor": "-10",
-                            "upper_bound": "-5",
-                            "count": "5"
+                            "floor": -10,
+                            "upper_bound": -5,
+                            "count": 5
                         },
                         {
-                            "floor": "-5",
-                            "upper_bound": "0",
-                            "count": "5"
+                            "floor": -5,
+                            "upper_bound": 0,
+                            "count": 5
                         },
                         {
-                            "floor": "0",
-                            "upper_bound": "5",
-                            "count": "5"
+                            "floor": 0,
+                            "upper_bound": 5,
+                            "count": 5
                         },
                         {
-                            "floor": "5",
-                            "upper_bound": "9223372036854775807",
-                            "count": "15"
+                            "floor": 5,
+                            "upper_bound": 9223372036854775807,
+                            "count": 15
                         }
                     ]
                 },
                 "histogram:0x19": {
                     "buckets": [
                         {
-                            "floor": "0",
-                            "upper_bound": "5",
-                            "count": "5"
+                            "floor": 0,
+                            "upper_bound": 5,
+                            "count": 5
                         },
                         {
-                            "floor": "5",
-                            "upper_bound": "10",
-                            "count": "5"
+                            "floor": 5,
+                            "upper_bound": 10,
+                            "count": 5
                         },
                         {
-                            "floor": "10",
-                            "upper_bound": "15",
-                            "count": "5"
+                            "floor": 10,
+                            "upper_bound": 15,
+                            "count": 5
                         },
                         {
-                            "floor": "15",
-                            "upper_bound": "20",
-                            "count": "5"
+                            "floor": 15,
+                            "upper_bound": 20,
+                            "count": 5
                         },
                         {
-                            "floor": "20",
-                            "upper_bound": "18446744073709551615",
-                            "count": "20"
+                            "floor": 20,
+                            "upper_bound": 18446744073709551615,
+                            "count": 20
                         }
                     ]
                 },
                 "histogram:0x1a": {
                     "buckets": [
                         {
-                            "floor": "-inf",
-                            "upper_bound": "0.000000",
-                            "count": "11.000000"
+                            "floor": "-Infinity",
+                            "upper_bound": 0.0,
+                            "count": 11.0
                         },
                         {
-                            "floor": "0.000000",
-                            "upper_bound": "0.500000",
-                            "count": "5.000000"
+                            "floor": 0.0,
+                            "upper_bound": 0.5,
+                            "count": 5.0
                         },
                         {
-                            "floor": "0.500000",
-                            "upper_bound": "1.000000",
-                            "count": "5.000000"
+                            "floor": 0.5,
+                            "upper_bound": 1.0,
+                            "count": 5.0
                         },
                         {
-                            "floor": "1.000000",
-                            "upper_bound": "1.500000",
-                            "count": "4.000000"
+                            "floor": 1.0,
+                            "upper_bound": 1.5,
+                            "count": 4.0
                         },
                         {
-                            "floor": "1.500000",
-                            "upper_bound": "inf",
-                            "count": "15.000000"
+                            "floor": 1.5,
+                            "upper_bound": "Infinity",
+                            "count": 15.0
                         }
                     ]
                 },
                 "histogram:0x1b": {
                     "buckets": [
                         {
-                            "floor": "-9223372036854775808",
-                            "upper_bound": "-10",
-                            "count": "10"
+                            "floor": -9223372036854775808,
+                            "upper_bound": -10,
+                            "count": 10
                         },
                         {
-                            "floor": "-10",
-                            "upper_bound": "-5",
-                            "count": "5"
+                            "floor": -10,
+                            "upper_bound": -5,
+                            "count": 5
                         },
                         {
-                            "floor": "-5",
-                            "upper_bound": "5",
-                            "count": "10"
+                            "floor": -5,
+                            "upper_bound": 5,
+                            "count": 10
                         },
                         {
-                            "floor": "5",
-                            "upper_bound": "25",
-                            "count": "15"
+                            "floor": 5,
+                            "upper_bound": 25,
+                            "count": 15
                         },
                         {
-                            "floor": "25",
-                            "upper_bound": "9223372036854775807",
-                            "count": "0"
+                            "floor": 25,
+                            "upper_bound": 9223372036854775807,
+                            "count": 0
                         }
                     ]
                 },
                 "histogram:0x1c": {
                     "buckets": [
                         {
-                            "floor": "0",
-                            "upper_bound": "1",
-                            "count": "1"
+                            "floor": 0,
+                            "upper_bound": 1,
+                            "count": 1
                         },
                         {
-                            "floor": "1",
-                            "upper_bound": "2",
-                            "count": "1"
+                            "floor": 1,
+                            "upper_bound": 2,
+                            "count": 1
                         },
                         {
-                            "floor": "2",
-                            "upper_bound": "4",
-                            "count": "2"
+                            "floor": 2,
+                            "upper_bound": 4,
+                            "count": 2
                         },
                         {
-                            "floor": "4",
-                            "upper_bound": "8",
-                            "count": "4"
+                            "floor": 4,
+                            "upper_bound": 8,
+                            "count": 4
                         },
                         {
-                            "floor": "8",
-                            "upper_bound": "18446744073709551615",
-                            "count": "32"
+                            "floor": 8,
+                            "upper_bound": 18446744073709551615,
+                            "count": 32
                         }
                     ]
                 },
                 "histogram:0x1d": {
                     "buckets": [
                         {
-                            "floor": "-inf",
-                            "upper_bound": "0.000000",
-                            "count": "11.000000"
+                            "floor": "-Infinity",
+                            "upper_bound": 0.0,
+                            "count": 11.0
                         },
                         {
-                            "floor": "0.000000",
-                            "upper_bound": "1.250000",
-                            "count": "12.000000"
+                            "floor": 0.0,
+                            "upper_bound": 1.25,
+                            "count": 12.0
                         },
                         {
-                            "floor": "1.250000",
-                            "upper_bound": "5.000000",
-                            "count": "17.000000"
+                            "floor": 1.25,
+                            "upper_bound": 5.0,
+                            "count": 17.0
                         },
                         {
-                            "floor": "5.000000",
-                            "upper_bound": "16.250000",
-                            "count": "0.000000"
+                            "floor": 5.0,
+                            "upper_bound": 16.25,
+                            "count": 0.0
                         },
                         {
-                            "floor": "16.250000",
-                            "upper_bound": "inf",
-                            "count": "0.000000"
+                            "floor": 16.25,
+                            "upper_bound": "Infinity",
+                            "count": 0.0
                         }
                     ]
                 },
                 "table:0x0": {
-                    "b64:BQEC": "b64:AQI=",
-                    "b64:BQED": "The key of this value is a binary value.",
                     "binary_data": "b64:IAAREgU=",
                     "object_name": "Example Table",
                     "row:0x1": {
                         "cell:0x2": {
                             "name": "(0,0)",
-                            "double_value": "6.666667",
-                            "value": "0"
+                            "double_value": 6.666666,
+                            "value": 0
                         },
                         "cell:0x3": {
                             "name": "(0,1)",
-                            "double_value": "13.333333",
-                            "value": "0"
+                            "double_value": 13.333333,
+                            "value": 0
                         },
                         "cell:0x4": {
                             "name": "(0,2)",
-                            "double_value": "20.000000",
-                            "value": "0"
+                            "double_value": 20.0,
+                            "value": 0
                         }
                     },
                     "row:0x11": {
                         "cell:0x12": {
                             "name": "(4,0)",
-                            "double_value": "86.666667",
-                            "value": "0"
+                            "double_value": 86.666666,
+                            "value": 0
                         },
                         "cell:0x13": {
                             "name": "(4,1)",
-                            "double_value": "93.333333",
-                            "value": "4"
+                            "double_value": 93.333333,
+                            "value": 4
                         },
                         "cell:0x14": {
                             "name": "(4,2)",
-                            "double_value": "100.000000",
-                            "value": "8"
+                            "double_value": 100.0,
+                            "value": 8
                         }
                     },
                     "row:0x5": {
                         "cell:0x6": {
                             "name": "(1,0)",
-                            "double_value": "26.666667",
-                            "value": "0"
+                            "double_value": 26.666666,
+                            "value": 0
                         },
                         "cell:0x7": {
                             "name": "(1,1)",
-                            "double_value": "33.333333",
-                            "value": "1"
+                            "double_value": 33.333333,
+                            "value": 1
                         },
                         "cell:0x8": {
                             "name": "(1,2)",
-                            "double_value": "40.000000",
-                            "value": "2"
+                            "double_value": 40.0,
+                            "value": 2
                         }
                     },
                     "row:0x9": {
                         "cell:0xa": {
                             "name": "(2,0)",
-                            "double_value": "46.666667",
-                            "value": "0"
+                            "double_value": 46.666666,
+                            "value": 0
                         },
                         "cell:0xb": {
                             "name": "(2,1)",
-                            "double_value": "53.333333",
-                            "value": "2"
+                            "double_value": 53.333333,
+                            "value": 2
                         },
                         "cell:0xc": {
                             "name": "(2,2)",
-                            "double_value": "60.000000",
-                            "value": "4"
+                            "double_value": 60.0,
+                            "value": 4
                         }
                     },
                     "row:0xd": {
                         "cell:0x10": {
                             "name": "(3,2)",
-                            "double_value": "80.000000",
-                            "value": "6"
+                            "double_value": 80.0,
+                            "value": 6
                         },
                         "cell:0xe": {
                             "name": "(3,0)",
-                            "double_value": "66.666667",
-                            "value": "0"
+                            "double_value": 66.666666,
+                            "value": 0
                         },
                         "cell:0xf": {
                             "name": "(3,1)",
-                            "double_value": "73.333333",
-                            "value": "3"
+                            "double_value": 73.333333,
+                            "value": 3
                         }
                     }
                 }

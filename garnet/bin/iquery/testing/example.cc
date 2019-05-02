@@ -68,11 +68,6 @@ class Table {
     object_name_ = object_.CreateStringProperty("object_name", "Example Table");
     binary_data_ = object_.CreateByteVectorProperty(
         "binary_data", std::vector<uint8_t>({0x20, 0x0, 0x11, 0x12, 0x5}));
-    binary_key_ = object_.CreateStringProperty(
-        std::string("\x05\x01\x03", 3),
-        "The key of this value is a binary value.");
-    binary_key_and_data_ = object_.CreateByteVectorProperty(
-        std::string("\x05\x01\x02", 3), std::vector<uint8_t>({0x1, 0x2}));
 
     // Add default rows and columns to the table.
     const int total = row_count * col_count;
@@ -98,8 +93,6 @@ class Table {
   inspect::Object object_;
   inspect::StringProperty object_name_;
   inspect::ByteVectorProperty binary_data_;
-  inspect::StringProperty binary_key_;
-  inspect::ByteVectorProperty binary_key_and_data_;
   std::vector<Row> rows_;
 };
 

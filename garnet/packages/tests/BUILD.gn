@@ -359,7 +359,6 @@ group("all") {
     "//garnet/packages/tests:inspect_query_unittests",
     "//garnet/packages/tests:inspect_unittests",
     "//garnet/packages/tests:iquery_golden_test",
-    "//garnet/packages/tests:iquery_test",
     "//garnet/packages/tests:json",
     "//garnet/packages/tests:kms",
     "//garnet/packages/tests:lib",
@@ -1007,13 +1006,6 @@ group("go_tuf") {
   public_deps = [
     "//garnet/go/src/go-tuf:go_tuf_host_tests($host_toolchain)",
     "//garnet/go/src/go-tuf:go_tuf_tests",
-  ]
-}
-
-group("iquery_test") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/iquery:iquery_test",
   ]
 }
 

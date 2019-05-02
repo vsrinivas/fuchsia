@@ -8,30 +8,23 @@ import("//build/testing/environments.gni")
 
 source_set("lib") {
   sources = [
-    "formatter.h",
-    "formatters/json.cc",
-    "formatters/json.h",
-    "formatters/text.cc",
-    "formatters/text.h",
     "modes.cc",
     "modes.h",
     "options.cc",
     "options.h",
-    "utils.cc",
-    "utils.h",
   ]
 
   configs += [ "//third_party/cobalt:cobalt_config" ]
 
   deps = [
     "//src/lib/fxl",
-    "//third_party/cobalt/util/crypto_util",
-    "//third_party/rapidjson",
   ]
 
   public_deps = [
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/inspect/query",
+    "//garnet/public/lib/inspect/query:json_formatter",
+    "//garnet/public/lib/inspect/query:text_formatter",
   ]
 }
 
@@ -51,20 +44,6 @@ executable("bin") {
   ]
 }
 
-executable("test") {
-  testonly = true
-  output_name = "iquery_test"
-
-  sources = [
-    "utils_test.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
 package("iquery") {
   deps = [
     ":bin",
@@ -74,19 +53,6 @@ package("iquery") {
     {
       name = "iquery"
       shell = true
-    },
-  ]
-}
-
-test_package("iquery_test") {
-  deps = [
-    ":test",
-  ]
-
-  tests = [
-    {
-      name = "iquery_test"
-      environments = basic_envs
     },
   ]
 }

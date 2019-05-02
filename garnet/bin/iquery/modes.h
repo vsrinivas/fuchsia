@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "garnet/bin/iquery/options.h"
-#include "garnet/bin/iquery/utils.h"
 #include "garnet/public/lib/inspect/query/source.h"
 
 namespace iquery {

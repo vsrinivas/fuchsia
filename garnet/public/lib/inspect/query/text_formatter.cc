@@ -41,15 +41,15 @@ void FormatArray(std::ostream& ss, const ArrayType& array) {
       // bucket. Replace them with "<min>"
       if (bucket.floor != 0 &&
           bucket.floor == std::numeric_limits<decltype(bucket.floor)>::min()) {
-        ss << "[<min>," << bucket.upper_limit << "]=";
+        ss << "[<min>," << bucket.upper_limit << ")=";
       } else if (bucket.upper_limit != 0 &&
                  bucket.upper_limit ==
                      std::numeric_limits<decltype(bucket.upper_limit)>::max()) {
-        ss << "[" << bucket.floor << ",<max>]=";
+        ss << "[" << bucket.floor << ",<max>)=";
       }
 
       else {
-        ss << "[" << bucket.floor << "," << bucket.upper_limit << "]=";
+        ss << "[" << bucket.floor << "," << bucket.upper_limit << ")=";
       }
 
       // Cast all counts to integers for display.
