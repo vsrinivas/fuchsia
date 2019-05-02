@@ -39,7 +39,7 @@ def main():
         file_cap_args = [ '--startup_sleep', str(args.startup_sleep) ]
 
     with open(args.path, 'w') as f:
-        json.dump({'apps':[["fuchsia-pkg://fuchsia.com/log_listener#meta/log_listener.cmx", "--file", "/data/logs."+args.name] +
+        json.dump({'apps':[["fuchsia-pkg://fuchsia.com/log_listener#meta/log_listener.cmx", "--file", "/cache/logs."+args.name] +
              file_cap_args + tag_args + ignore_tag_args + startup_sleep_args] }, f)
 
     return 0
