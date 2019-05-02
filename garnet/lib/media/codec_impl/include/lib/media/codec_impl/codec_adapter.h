@@ -41,8 +41,8 @@ class CodecAdapter {
   //
   // The CodecAdapter should never call CodecAdapterEvents methods with lock_
   // held.
-  explicit CodecAdapter(std::mutex& lock,
-                        CodecAdapterEvents* codec_adapter_events);
+  CodecAdapter(std::mutex& lock,
+               CodecAdapterEvents* codec_adapter_events);
   virtual ~CodecAdapter();
 
   //

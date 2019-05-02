@@ -81,7 +81,7 @@ class CodecAdapterH264 : public CodecAdapter {
                                       uint32_t sar_width, uint32_t sar_height);
 
   void OnCoreCodecFailStream();
-  CodecPacket* GetFreePacket(uint32_t buffer_index);
+  CodecPacket* GetFreePacket();
 
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
@@ -107,6 +107,7 @@ class CodecAdapterH264 : public CodecAdapter {
 
   std::vector<const CodecBuffer*> all_output_buffers_;
   std::vector<CodecPacket*> all_output_packets_;
+  std::vector<uint32_t> free_output_packets_;
 
   uint32_t packet_count_total_ = 0;
   uint32_t width_ = 0;

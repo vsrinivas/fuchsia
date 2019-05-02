@@ -202,11 +202,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
     // index (as nice as that would be, VP9, and maybe others, don't get along
     // with that in general, so ... force clients to treat packet index and
     // buffer index as separate things).
-    //
-    // TODO(dustingreen): Make the previous paragraph fully true.  For the
-    // moment for h264 we let the packet_index and buffer_index be equal, just
-    // to split up the separation into smaller steps.
-    CodecPacket* packet = GetFreePacket(buffer->buffer_index());
+    CodecPacket* packet = GetFreePacket();
     // With h.264, we know that an emitted buffer implies an available output
     // packet, because h.264 doesn't put the same output buffer in flight more
     // than once concurrently, and we have as many output packets as buffers.
@@ -363,6 +359,7 @@ void CodecAdapterH264::CoreCodecConfigureBuffers(
     return;
   }
   ZX_DEBUG_ASSERT(all_output_packets_.empty());
+  ZX_DEBUG_ASSERT(free_output_packets_.empty());
   ZX_DEBUG_ASSERT(!all_output_buffers_.empty());
   // TODO(dustingreen): Remove this assert - this CodecAdapter needs to stop
   // forcing this to be true.  Or, set packet count based on buffer collection
@@ -370,7 +367,13 @@ void CodecAdapterH264::CoreCodecConfigureBuffers(
   ZX_DEBUG_ASSERT(all_output_buffers_.size() == packets.size());
   for (auto& packet : packets) {
     all_output_packets_.push_back(packet.get());
+    free_output_packets_.push_back(packet.get()->packet_index());
   }
+  // This should prevent any inadvetent dependence by clients on the ordering
+  // of packet_index values in the output stream or any assumptions re. the
+  // relationship between packet_index and buffer_index.
+  std::shuffle(free_output_packets_.begin(), free_output_packets_.end(),
+               not_for_security_prng_);
 }
 
 void CodecAdapterH264::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
@@ -386,14 +389,13 @@ void CodecAdapterH264::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   ZX_DEBUG_ASSERT(buffer);
 
   // Getting the buffer is all we needed the packet for.  The packet won't get
-  // re-used until after ReturnFrame() below.
+  // re-used until it goes back on the free list below.
   packet->SetBuffer(nullptr);
 
-  // TODO(dustingreen): Use scrambled free_packet_list_ like for VP9, and put
-  // packet back on the free list here (and update comment above re. when re-use
-  // of the packet can happen).  For now for this codec we let packet_index ==
-  // buffer_index to split the separation of buffer_index from packet_index into
-  // smaller changes.
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    free_output_packets_.push_back(packet->packet_index());
+  }  // ~lock
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
@@ -430,6 +432,7 @@ void CodecAdapterH264::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
     // The old all_output_buffers_ are no longer valid.
     all_output_buffers_.clear();
     all_output_packets_.clear();
+    free_output_packets_.clear();
   }
 }
 
@@ -1269,10 +1272,13 @@ void CodecAdapterH264::OnCoreCodecFailStream() {
   events_->onCoreCodecFailStream();
 }
 
-CodecPacket* CodecAdapterH264::GetFreePacket(uint32_t buffer_index) {
-  // TODO(dustingreen): Intentionally don't always have packet_index ==
-  // buffer_index.  However, for the moment, for h.264, always have packet_index
-  // == buffer_index, as a temporary measure to do the separation in smaller
-  // changes.
-  return all_output_packets_[buffer_index];
+CodecPacket* CodecAdapterH264::GetFreePacket() {
+  std::lock_guard<std::mutex> lock(lock_);
+  // The h264 decoder won't repeatedly output a buffer multiple times
+  // concurrently, so a free buffer (for which the caller needs a packet)
+  // implies a free packet.
+  ZX_DEBUG_ASSERT(!free_output_packets_.empty());
+  uint32_t free_index = free_output_packets_.back();
+  free_output_packets_.pop_back();
+  return all_output_packets_[free_index];
 }

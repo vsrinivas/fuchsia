@@ -89,7 +89,18 @@ class CodecAdapterSW : public CodecAdapter {
   void CoreCodecConfigureBuffers(
       CodecPort port,
       const std::vector<std::unique_ptr<CodecPacket>>& packets) override {
-    // Nothing to do here.
+    if (port != kOutputPort) {
+      return;
+    }
+    std::vector<CodecPacket*> all_packets;
+    for (auto& packet : packets) {
+      all_packets.push_back(packet.get());
+    }
+    std::shuffle(all_packets.begin(), all_packets.end(),
+                 not_for_security_prng_);
+    for (CodecPacket* packet : all_packets) {
+      free_output_packets_.Push(packet);
+    }
   }
 
   void CoreCodecStartStream() override {
@@ -152,6 +163,13 @@ class CodecAdapterSW : public CodecAdapter {
   }
 
   void CoreCodecRecycleOutputPacket(CodecPacket* packet) override {
+    if (packet->is_new()) {
+      // CoreCodecConfigureBuffers() took care of initially populating
+      // free_output_packets_ (in shuffled order), so ignore new packets.
+      ZX_DEBUG_ASSERT(!packet->buffer());
+      packet->SetIsNew(false);
+      return;
+    }
     if (packet->buffer()) {
       LocalOutput local_output;
       {

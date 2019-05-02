@@ -345,7 +345,7 @@ void CodecAdapterVp9::CoreCodecConfigureBuffers(
       all_output_packets_.push_back(packet.get());
       free_output_packets_.push_back(packet.get()->packet_index());
     }
-    // This should prevent any inadvetent dependence by clients on the ordering
+    // This should prevent any inadvertent dependence by clients on the ordering
     // of packet_index values in the output stream or any assumptions re. the
     // relationship between packet_index and buffer_index.
     std::shuffle(free_output_packets_.begin(), free_output_packets_.end(),
