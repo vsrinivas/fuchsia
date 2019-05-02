@@ -1387,6 +1387,7 @@ type ZxInterrupt = zx::Interrupt;
 type ZxJob = zx::Job;
 type ZxLog = zx::Log;
 type ZxProcess = zx::Process;
+type ZxResource = zx::Resource;
 type ZxSocket = zx::Socket;
 type ZxThread = zx::Thread;
 type ZxTimer = zx::Timer;
@@ -1403,6 +1404,7 @@ handle_based_codable![
     ZxJob,
     ZxLog,
     ZxProcess,
+    ZxResource,
     ZxSocket,
     ZxThread,
     ZxTimer,
