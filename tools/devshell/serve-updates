@@ -76,7 +76,7 @@ log_verbose() {
 }
 
 if [[ -z "${pm_srv_pid}" ]]; then
-  "${FUCHSIA_BUILD_DIR}/host_x64/pm" serve -d "${FUCHSIA_BUILD_DIR}/amber-files/repository" "${serve_flags[@]}" &
+  "${FUCHSIA_BUILD_DIR}/host_x64/pm" serve -repo "${FUCHSIA_BUILD_DIR}/amber-files" "${serve_flags[@]}" &
   pm_srv_pid=$!
 fi
 
