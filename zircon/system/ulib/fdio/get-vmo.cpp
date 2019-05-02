@@ -87,7 +87,7 @@ static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
                 zx_handle_close(*out_vmo);
                 return status;
             }
-            uint8_t* buffer = (void*)start;
+            uint8_t* buffer = reinterpret_cast<uint8_t*>(start);
             while (chunk > 0) {
                 size_t nread;
                 status = read_at(io, buffer, chunk, offset, &nread);

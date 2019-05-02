@@ -22,7 +22,7 @@ library("fdio") {
     "bsdsocket.cpp",
     "fd.cpp",
     "fdio.c",
-    "get-vmo.c",
+    "get-vmo.cpp",
     "namespace/local-connection.cpp",
     "namespace/local-filesystem.cpp",
     "namespace/local-vnode.cpp",
