@@ -12,10 +12,10 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/bin/component_index/fidl:index",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/sys/component_index/fidl:index",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
