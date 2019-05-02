@@ -17,12 +17,12 @@ situation in Rust is through "re-exports" - in the root, we write something like
 `crate::foo::bar::do_thing`.
 
 This works, but has two major downsides. First, there's no way, when looking at
-an item declaration, whether it's marked `pub` because it's intended to be used
-by other modules in the crate, or because it's going to be re-exported publicly.
-Second, there's no way to enforce that we don't accidentally use some item which
-is *not* re-exported in the API of one that is. So long as both are `pub`, the
-compiler can't tell that one is re-exported and the other isn't. E.g., consider
-this code:
+an item declaration, to know whether it's marked `pub` because it's intended to
+be used by other modules in the crate, or because it's going to be re-exported
+publicly. Second, there's no way to enforce that we don't accidentally use some
+item which is *not* re-exported in the API of one that is. So long as both are
+`pub`, the compiler can't tell that one is re-exported and the other isn't.
+E.g., consider this code:
 
 ```rust
 pub struct Foo;

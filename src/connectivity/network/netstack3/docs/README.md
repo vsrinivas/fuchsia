@@ -11,4 +11,5 @@ This directory contains documentation of various aspects of the netstack. Briefl
 - [`IP_TYPES.md`](./IP_TYPES.md) describes our use of types and traits to represent IP versions and addresses
 - [`PARSING_SERIALIZATION.md`](./PARSING_SERIALIZATION.md) describes how we
   parse and serialize packets, and how we manage packet buffers
-- [`TYPES.md`](./TYPES.md) motivates our enthusiastic use of static typing
+- [`PUB_CRATE.md`](./PUB_CRATE.md) describes how we use visibility modifiers.
+- [`STATIC_TYPING.md`](./STATIC_TYPING.md) motivates our enthusiastic use of static typing
