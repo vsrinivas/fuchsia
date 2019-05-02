@@ -21,7 +21,7 @@
 namespace tcs {
 
 class Tcs3400Device;
-using DeviceType = ddk::Device<Tcs3400Device, ddk::Unbindable, ddk::Readable>;
+using DeviceType = ddk::Device<Tcs3400Device, ddk::Unbindable>;
 
 // Note: the TCS-3400 device is connected via i2c and is not a HID
 // device.  This driver reads a collection of data from the data and
@@ -37,8 +37,6 @@ public:
     zx_status_t Bind();
 
     // Methods required by the ddk mixins
-    zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
-
     zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) TA_EXCL(client_input_lock_);
     zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
     void HidbusStop();

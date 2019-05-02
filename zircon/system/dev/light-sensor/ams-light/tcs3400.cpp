@@ -210,39 +210,6 @@ int Tcs3400Device::Thread() {
     return thrd_success;
 }
 
-zx_status_t Tcs3400Device::DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) {
-    if (count == 0) {
-        return ZX_OK;
-    }
-    uint8_t* p = reinterpret_cast<uint8_t*>(buf);
-    uint8_t addr;
-    zx_status_t status;
-    fbl::AutoLock lock(&i2c_lock_);
-
-    // Read lower byte first, the device holds upper byte of a sample in a shadow register after a
-    // lower byte read
-    addr = TCS_I2C_CDATAL;
-    status = i2c_write_read_sync(&i2c_, &addr, 1, count == 1 ? p : p + 1, 1);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Tcs3400Device::DdkRead: i2c_write_read_sync failed: %d\n", status);
-        return status;
-    }
-    if (count == 1) {
-        zxlogf(INFO, "TCS-3400 clear light read: 0x%02X\n", *p);
-        *actual = 1;
-        return ZX_OK;
-    }
-    addr = TCS_I2C_CDATAH;
-    status = i2c_write_read_sync(&i2c_, &addr, 1, p, 1);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Tcs3400Device::DdkRead: i2c_write_read_sync failed: %d\n", status);
-        return status;
-    }
-    zxlogf(INFO, "TCS-3400 clear light read: 0x%02X%02X\n", *p, *(p + 1));
-    *actual = 2;
-    return ZX_OK;
-}
-
 zx_status_t Tcs3400Device::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
     fbl::AutoLock lock(&client_input_lock_);
     if (client_.is_valid()) {
