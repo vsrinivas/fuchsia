@@ -8,12 +8,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"runtime"
 
 	"fuchsia.googlesource.com/tools/botanist/target"
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/logger"
-	"fuchsia.googlesource.com/tools/memory"
 	"fuchsia.googlesource.com/tools/secrets"
 	"github.com/google/subcommands"
 )
@@ -65,15 +63,14 @@ func (*QEMUCommand) Synopsis() string {
 }
 
 func (cmd *QEMUCommand) SetFlags(f *flag.FlagSet) {
-	totalMB := int(memory.Total()) / (1024 * 1024)
 	f.StringVar(&cmd.imageManifest, "images", "", "path to an image manifest")
 	f.StringVar(&cmd.qemuBinDir, "qemu-dir", "", "")
 	f.StringVar(&cmd.minFSImage, "minfs", "", "path to minFS image")
 	f.StringVar(&cmd.minFSBlkDevPCIAddr, "pci-addr", "06.0", "minFS block device PCI address")
 	f.StringVar(&cmd.targetArch, "arch", "", "target architecture (x64 or arm64)")
 	f.BoolVar(&cmd.enableKVM, "use-kvm", false, "whether to enable KVM")
-	f.IntVar(&cmd.cpu, "cpu", runtime.NumCPU(), "number of processors to emulate")
-	f.IntVar(&cmd.memory, "memory", totalMB, "amount of memory (in MB) to provide")
+	f.IntVar(&cmd.cpu, "cpu", 4, "number of processors to emulate")
+	f.IntVar(&cmd.memory, "memory", 4096, "amount of memory (in MB) to provide")
 }
 
 func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error {
