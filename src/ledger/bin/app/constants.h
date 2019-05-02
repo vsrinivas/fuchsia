@@ -23,11 +23,15 @@ inline constexpr fxl::StringView kServerIdFilename = "server_id";
 // The serialization version of PageUsage DB.
 inline constexpr fxl::StringView kPageUsageDbSerializationVersion = "1";
 
+// The filesystem directory in which the Inspect hierarchy appears.
+inline constexpr char kInspectObjectsDirectory[] = "inspect";
+// The name given to the top-level object at the root of the Inspect hierarchy.
+inline constexpr char kTopLevelObjectName[] = "ledger_component";
 inline constexpr char kRepositoriesInspectPathComponent[] = "repositories";
+inline constexpr char kLedgersInspectPathComponent[] = "ledgers";
 // TODO(nathaniel): "requests" was introduced as a demonstration; it should be
 // either given real meaning or cleaned up.
 inline constexpr char kRequestsInspectPathComponent[] = "requests";
-inline constexpr char kLedgersInspectPathComponent[] = "ledgers";
 
 }  // namespace ledger
 
