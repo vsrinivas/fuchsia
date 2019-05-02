@@ -30,6 +30,7 @@ executable_package("suggestion_engine") {
     ":suggestion_engine_impl",
     "//garnet/public/lib/component/cpp",
     "//peridot/public/lib/app_driver/cpp",
+    "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -179,6 +180,7 @@ executable("suggestion_engine_impl_unittest") {
     "//peridot/bin/sessionmgr/puppet_master:puppet_master_impl",
     "//peridot/lib/testing:test_story_command_executor",
     "//peridot/lib/testing:test_with_session_storage",
+    "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//third_party/googletest:gtest_main",

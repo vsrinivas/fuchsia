@@ -74,7 +74,6 @@ fidl("fuchsia.modular") {
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ledger",
-    "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.speech",
     "//sdk/fidl/fuchsia.sys",

@@ -15,7 +15,6 @@ fidl("fuchsia.web") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.net.http",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.views",
     "//zircon/public/fidl/fuchsia-io",
   ]

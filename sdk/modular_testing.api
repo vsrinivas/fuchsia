@@ -4,8 +4,6 @@ sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.ledger
-sdk://fidl/fuchsia.media
-sdk://fidl/fuchsia.media.audio
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.modular.auth
@@ -13,7 +11,6 @@ sdk://fidl/fuchsia.modular.session
 sdk://fidl/fuchsia.modular.testing
 sdk://fidl/fuchsia.speech
 sdk://fidl/fuchsia.sys
-sdk://fidl/fuchsia.sysmem
 sdk://fidl/fuchsia.ui.gfx
 sdk://fidl/fuchsia.ui.input
 sdk://fidl/fuchsia.ui.policy

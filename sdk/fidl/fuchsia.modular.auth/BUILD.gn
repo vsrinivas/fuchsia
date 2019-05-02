@@ -12,8 +12,4 @@ fidl("fuchsia.modular.auth") {
     "account/account.fidl",
     "account_provider.fidl",
   ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.ui.viewsv1token",
-  ]
 }
