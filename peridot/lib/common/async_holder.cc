@@ -24,7 +24,7 @@ AsyncHolderBase::~AsyncHolderBase() {
 
 void AsyncHolderBase::Teardown(zx::duration timeout,
                                fit::function<void()> done) {
-  fit::function<void(bool)> cont = [this, down = down_, done = std::move(done)](
+  fit::callback<void(bool)> cont = [this, down = down_, done = std::move(done)](
                                        const bool from_timeout) mutable {
     if (*down) {  // |down| shared_ptr prevents using |this| after destruct
       return;
@@ -39,12 +39,17 @@ void AsyncHolderBase::Teardown(zx::duration timeout,
     ImplReset();
 
     done();
-    done = nullptr;  // make sure we release any captured resources
   };
 
-  auto cont_timeout = [cont = cont.share()] { cont(true); };
+  auto cont_timeout = [cont = cont.share()]() mutable {
+    if (cont)
+      cont(true);
+  };
 
-  auto cont_normal = [cont = std::move(cont)] { cont(false); };
+  auto cont_normal = [cont = std::move(cont)]() mutable {
+    if (cont)
+      cont(false);
+  };
 
   async::PostDelayedTask(async_get_default_dispatcher(),
                          std::move(cont_timeout), timeout);

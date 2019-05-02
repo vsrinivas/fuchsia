@@ -510,9 +510,6 @@ class StoryControllerImpl::StopCall : public Operation<> {
     // The following callback is scheduled twice, once as response from
     // DetachView(), and again as a timeout.
     //
-    // The shared bool did_run keeps track of the number of invocations, and
-    // allows to suppress the second one.
-    //
     // The weak pointer is needed because the method invocation would not be
     // cancelled when the OperationQueue holding this Operation instance is
     // deleted, because the method is invoked on an instance outside of the
@@ -520,17 +517,10 @@ class StoryControllerImpl::StopCall : public Operation<> {
     //
     // The argument from_timeout informs whether the invocation was from the
     // timeout or from the method callback. It's used only to log diagnostics.
-    fit::function<void(const bool)> cont =
+    fit::callback<void(const bool)> cont =
         [this, weak_this = GetWeakPtr(),
-         did_run = std::make_shared<bool>(false),
          story_id =
              story_controller_impl_->story_id_](const bool from_timeout) {
-          if (*did_run) {
-            return;
-          }
-
-          *did_run = true;
-
           if (from_timeout) {
             FXL_LOG(INFO) << "DetachView() timed out: story_id=" << story_id;
           }
@@ -546,11 +536,18 @@ class StoryControllerImpl::StopCall : public Operation<> {
     // Note the fit::function will not be destructed until all callers have
     // released their reference, so don't pass a |FlowToken| to the callback,
     // or it might keep the |Operation| alive longer than you might expect.
-    story_controller_impl_->DetachView([cont = cont.share()] { cont(false); });
+    story_controller_impl_->DetachView([cont = cont.share()]() mutable {
+      if (cont)
+        cont(false);
+    });
 
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [cont = std::move(cont)] { cont(true); },
-                           kBasicTimeout);
+    async::PostDelayedTask(
+        async_get_default_dispatcher(),
+        [cont = std::move(cont)]() mutable {
+          if (cont)
+            cont(true);
+        },
+        kBasicTimeout);
   }
 
   void StopStory() {
