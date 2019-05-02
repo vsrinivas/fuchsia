@@ -4,7 +4,7 @@
 
 use crate::{
     canvas::{measure_text, Canvas, FontDescription, FontFace, MappingPixelSink, Paint},
-    geometry::{Coord, Point, Rect, Size},
+    geometry::{Coord, IntSize, Point, Rect, Size},
 };
 use failure::{Error, ResultExt};
 use fidl_fuchsia_images as images;
@@ -42,20 +42,20 @@ impl Label {
     /// Call to update the contents of the Scenic node
     pub fn update(&mut self, font_size: u32, paint: &Paint) -> Result<(), Error> {
         // Figure out the pixel dimension of the label
-        let size = self.dimensions(font_size).ceil();
-        let w = size.width as u32;
-        let h = size.height as u32;
-        if w != 0 && h != 0 {
+        let size = self.dimensions(font_size).ceil().to_i32();
+        let w = size.width;
+        let h = size.height;
+        if w > 0 && h > 0 {
             // Fuchsia is uniformly 4 bytes per pixel but ideally this would
             // come from the graphics environment.
-            let stride = w * 4;
+            let stride = (w * 4) as u32;
 
             // Create a description of this pixel buffer that
             // Scenic can understand.
             let info = images::ImageInfo {
                 transform: images::Transform::Normal,
-                width: w,
-                height: h,
+                width: w as u32,
+                height: h as u32,
                 stride: stride,
                 pixel_format: images::PixelFormat::Bgra8,
                 color_space: images::ColorSpace::Srgb,
@@ -67,8 +67,12 @@ impl Label {
             let guard = self.image_cycler.acquire(info).context("failed to allocate buffer")?;
 
             // Create a canvas to render into the buffer
-            let mut canvas =
-                Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride, 4);
+            let mut canvas = Canvas::<MappingPixelSink>::new(
+                IntSize::new(w, h),
+                guard.image().mapping().clone(),
+                stride,
+                4,
+            );
 
             // since the label buffer is sized to fit the text, always draw at 0,0
             let location = Point::zero();

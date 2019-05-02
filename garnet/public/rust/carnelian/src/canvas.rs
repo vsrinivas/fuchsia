@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::geometry::{Coord, Point, Rect, Size};
+use crate::geometry::{Coord, IntPoint, IntRect, IntSize, Point, Rect, Size};
 use euclid::rect;
 use failure::Error;
 use fidl_fuchsia_ui_gfx::ColorRgba;
@@ -138,23 +138,30 @@ pub struct Canvas<T: PixelSink> {
     pixel_sink: T,
     row_stride: u32,
     col_stride: u32,
+    bounds: IntRect,
 }
 
 impl<T: PixelSink> Canvas<T> {
     /// Create a canvas targeting a shared buffer with stride.
     pub fn new(
+        size: IntSize,
         mapping: Arc<Mapping>,
         row_stride: u32,
         col_stride: u32,
     ) -> Canvas<MappingPixelSink> {
         let pixel_sink = MappingPixelSink { mapping };
-        Canvas { pixel_sink, row_stride, col_stride }
+        Canvas { pixel_sink, row_stride, col_stride, bounds: IntRect::new(IntPoint::zero(), size) }
     }
 
     /// Create a canvas targeting a particular pixel sink and
     /// with a specific row stride in bytes.
-    pub fn new_with_sink(pixel_sink: T, row_stride: u32, col_stride: u32) -> Canvas<T> {
-        Canvas { pixel_sink, row_stride, col_stride }
+    pub fn new_with_sink(
+        size: IntSize,
+        pixel_sink: T,
+        row_stride: u32,
+        col_stride: u32,
+    ) -> Canvas<T> {
+        Canvas { pixel_sink, row_stride, col_stride, bounds: IntRect::new(IntPoint::zero(), size) }
     }
 
     #[inline]
@@ -179,7 +186,7 @@ impl<T: PixelSink> Canvas<T> {
     #[inline]
     fn set_pixel_at_location(&mut self, location: &Point, value: u8, paint: &Paint) {
         let location = location.floor().to_i32();
-        if location.x >= 0 && location.y >= 0 {
+        if self.bounds.contains(&location) {
             let offset = self.offset_from_x_y(location.x, location.y);
             self.set_pixel_at_offset(offset, value, paint);
         }
@@ -217,10 +224,12 @@ impl<T: PixelSink> Canvas<T> {
             return;
         }
         let rect = rect.round_out().to_i32();
-        for y in rect.min_y().max(0)..rect.max_y().max(0) {
-            for x in rect.min_x()..rect.max_x() {
-                let offset = self.offset_from_x_y(x, y);
-                self.write_color_at_offset(offset as usize, color);
+        if let Some(clipped_rect) = self.bounds.intersection(&rect) {
+            for y in clipped_rect.min_y()..clipped_rect.max_y() {
+                for x in clipped_rect.min_x()..clipped_rect.max_x() {
+                    let offset = self.offset_from_x_y(x, y);
+                    self.write_color_at_offset(offset as usize, color);
+                }
             }
         }
     }
@@ -233,18 +242,20 @@ impl<T: PixelSink> Canvas<T> {
         }
         let diameter = radius * 2.0;
         let top_left = *center - Point::new(radius, radius);
-        let bounds = Rect::new(top_left.to_point(), Size::new(diameter, diameter));
-        let rect = bounds.round_out().to_i32();
-        let radius_squared = radius * radius;
-        for y in rect.min_y().max(0)..rect.max_y().max(0) {
-            let delta_y = y as Coord - center.y;
-            let delta_y_2 = delta_y * delta_y;
-            for x in rect.min_x().max(0)..rect.max_x().max(0) {
-                let delta_x = x as Coord - center.x;
-                let delta_x_2 = delta_x * delta_x;
-                if delta_x_2 + delta_y_2 < radius_squared {
-                    let offset = self.offset_from_x_y(x, y);
-                    self.write_color_at_offset(offset as usize, color);
+        let circle_bounds = Rect::new(top_left.to_point(), Size::new(diameter, diameter));
+        let circle_bounds = circle_bounds.round_out().to_i32();
+        if let Some(clipped_rect) = self.bounds.intersection(&circle_bounds) {
+            let radius_squared = radius * radius;
+            for y in clipped_rect.min_y()..clipped_rect.max_y() {
+                let delta_y = y as Coord - center.y;
+                let delta_y_2 = delta_y * delta_y;
+                for x in clipped_rect.min_x()..clipped_rect.max_x() {
+                    let delta_x = x as Coord - center.x;
+                    let delta_x_2 = delta_x * delta_x;
+                    if delta_x_2 + delta_y_2 < radius_squared {
+                        let offset = self.offset_from_x_y(x, y);
+                        self.write_color_at_offset(offset as usize, color);
+                    }
                 }
             }
         }
@@ -261,43 +272,45 @@ impl<T: PixelSink> Canvas<T> {
     /// Fill a rounded rectangle with a particular color.
     pub fn fill_roundrect(&mut self, rect: &Rect, corner_radius: Coord, color: Color) {
         let rect_i = rect.round_out().to_i32();
-        let corner_radius = corner_radius.max(0.0);
-        if corner_radius == 0.0 {
-            self.fill_rect(rect, color);
-            return;
-        }
-        let center_min_x = rect.min_x() + corner_radius;
-        let center_max_x = rect.max_x() - corner_radius;
-        let center_min_y = rect.min_y() + corner_radius;
-        let center_max_y = rect.max_y() - corner_radius;
-        let top_left = Point::new(center_min_x, center_min_y);
-        let bottom_left = Point::new(center_min_x, center_max_y);
-        let top_right = Point::new(center_max_x, center_min_y);
-        let bottom_right = Point::new(center_max_x, center_max_y);
-        let corner_radius2 = corner_radius * corner_radius;
-        for y in rect_i.min_y().max(0)..rect_i.max_y().max(0) {
-            let y_f = y as Coord;
-            for x in rect_i.min_x().max(0)..rect_i.max_x().max(0) {
-                let x_f = x as Coord;
-                let offset = self.offset_from_x_y(x, y);
-                if x_f < center_min_x && y_f < center_min_y {
-                    if Self::point_in_circle(x, y, &top_left, corner_radius2) {
+        if let Some(clipped_rect) = self.bounds.intersection(&rect_i) {
+            let corner_radius = corner_radius.max(0.0);
+            if corner_radius == 0.0 {
+                self.fill_rect(rect, color);
+                return;
+            }
+            let center_min_x = rect.min_x() + corner_radius;
+            let center_max_x = rect.max_x() - corner_radius;
+            let center_min_y = rect.min_y() + corner_radius;
+            let center_max_y = rect.max_y() - corner_radius;
+            let top_left = Point::new(center_min_x, center_min_y);
+            let bottom_left = Point::new(center_min_x, center_max_y);
+            let top_right = Point::new(center_max_x, center_min_y);
+            let bottom_right = Point::new(center_max_x, center_max_y);
+            let corner_radius2 = corner_radius * corner_radius;
+            for y in clipped_rect.min_y()..clipped_rect.max_y() {
+                let y_f = y as Coord;
+                for x in clipped_rect.min_x()..clipped_rect.max_x() {
+                    let x_f = x as Coord;
+                    let offset = self.offset_from_x_y(x, y);
+                    if x_f < center_min_x && y_f < center_min_y {
+                        if Self::point_in_circle(x, y, &top_left, corner_radius2) {
+                            self.write_color_at_offset(offset as usize, color);
+                        }
+                    } else if x_f > center_max_x && y_f < center_min_y {
+                        if Self::point_in_circle(x, y, &top_right, corner_radius2) {
+                            self.write_color_at_offset(offset as usize, color);
+                        }
+                    } else if x_f < center_min_x && y_f > center_max_y {
+                        if Self::point_in_circle(x, y, &bottom_left, corner_radius2) {
+                            self.write_color_at_offset(offset as usize, color);
+                        }
+                    } else if x_f > center_max_x && y_f > center_max_y {
+                        if Self::point_in_circle(x, y, &bottom_right, corner_radius2) {
+                            self.write_color_at_offset(offset as usize, color);
+                        }
+                    } else {
                         self.write_color_at_offset(offset as usize, color);
                     }
-                } else if x_f > center_max_x && y_f < center_min_y {
-                    if Self::point_in_circle(x, y, &top_right, corner_radius2) {
-                        self.write_color_at_offset(offset as usize, color);
-                    }
-                } else if x_f < center_min_x && y_f > center_max_y {
-                    if Self::point_in_circle(x, y, &bottom_left, corner_radius2) {
-                        self.write_color_at_offset(offset as usize, color);
-                    }
-                } else if x_f > center_max_x && y_f > center_max_y {
-                    if Self::point_in_circle(x, y, &bottom_right, corner_radius2) {
-                        self.write_color_at_offset(offset as usize, color);
-                    }
-                } else {
-                    self.write_color_at_offset(offset as usize, color);
                 }
             }
         }
@@ -372,8 +385,8 @@ impl<T: PixelSink> Canvas<T> {
 }
 
 /// Measure a line of text `text` and with the typographic characteristics in `font`.
-/// Returns a tuple containing the measured width and height.
-pub fn measure_text(text: &str, font: &mut FontDescription) -> Size {
+/// Returns the measured width and height.
+pub fn measure_text(text: &str, font: &FontDescription) -> Size {
     let scale = Scale::uniform(font.size as f32);
     let v_metrics = font.face.font.v_metrics(scale);
     let offset = rusttype::point(0.0, v_metrics.ascent);
@@ -388,37 +401,55 @@ pub fn measure_text(text: &str, font: &mut FontDescription) -> Size {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Canvas, Color, PixelSink, Point, Rect, Size};
+    use crate::{Canvas, Color, IntSize, PixelSink, Point, Rect, Size};
     use fuchsia_framebuffer::{Config, PixelFormat};
     use std::collections::HashSet;
 
     struct TestPixelSink {
+        pub max_offset: usize,
         pub touched_offsets: HashSet<usize>,
     }
 
     impl TestPixelSink {
-        pub fn new() -> TestPixelSink {
-            Self { touched_offsets: HashSet::new() }
+        pub fn new(size: IntSize) -> TestPixelSink {
+            Self {
+                max_offset: (size.width * size.height) as usize * 4,
+                touched_offsets: HashSet::new(),
+            }
         }
     }
 
     impl PixelSink for TestPixelSink {
         fn write_pixel_at_offset(&mut self, offset: usize, _value: &[u8]) {
+            assert!(
+                offset < self.max_offset,
+                "attempted to write pixel at an offset {} exceeding limit of {}",
+                offset,
+                self.max_offset
+            );
             self.touched_offsets.insert(offset);
         }
     }
 
     fn make_test_canvas() -> Canvas<TestPixelSink> {
-        let sink = TestPixelSink::new();
+        const WIDTH: i32 = 800;
+        const HEIGHT: i32 = 600;
         let config = Config {
             display_id: 0,
-            width: 800,
-            height: 600,
-            linear_stride_pixels: 800,
+            width: WIDTH as u32,
+            height: HEIGHT as u32,
+            linear_stride_pixels: WIDTH as u32,
             format: PixelFormat::Argb8888,
             pixel_size_bytes: 4,
         };
-        Canvas::new_with_sink(sink, config.linear_stride_bytes() as u32, config.pixel_size_bytes)
+        let size = IntSize::new(WIDTH, HEIGHT);
+        let sink = TestPixelSink::new(size);
+        Canvas::new_with_sink(
+            size,
+            sink,
+            config.linear_stride_bytes() as u32,
+            config.pixel_size_bytes,
+        )
     }
 
     #[test]
@@ -428,5 +459,18 @@ mod tests {
         let color = Color::from_hash_code("#EBD5B3").expect("color failed to parse");
         canvas.fill_rect(&r, color);
         assert!(canvas.pixel_sink.touched_offsets.is_empty(), "Expected no pixles touched");
+    }
+
+    #[test]
+    fn test_draw_out_of_bounds() {
+        let mut canvas = make_test_canvas();
+        let color = Color::from_hash_code("#EBD5B3").expect("color failed to parse");
+        let r = Rect::new(Point::new(10000.0, 10000.0), Size::new(20.0, 20.0));
+        canvas.fill_roundrect(&r, 4.0, color);
+        canvas.fill_circle(&Point::new(20000.0, -10000.0), 204.0, color);
+        assert!(canvas.pixel_sink.touched_offsets.is_empty(), "Expected no pixles touched");
+        let r = Rect::new(Point::new(-10.0, -10.0), Size::new(20.0, 20.0));
+        canvas.fill_rect(&r, color);
+        assert!(canvas.pixel_sink.touched_offsets.len() > 0, "Expected some pixles touched");
     }
 }

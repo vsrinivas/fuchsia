@@ -6,7 +6,8 @@
 #![deny(warnings)]
 
 use carnelian::{
-    measure_text, Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect, Size,
+    measure_text, Canvas, Color, FontDescription, FontFace, IntSize, Paint, PixelSink, Point, Rect,
+    Size,
 };
 use failure::{bail, Error, ResultExt};
 use fuchsia_async as fasync;
@@ -95,14 +96,20 @@ fn main() -> Result<(), Error> {
         bail!("Unsupported pixel format {:#?}", config.format);
     }
 
+    let display_size = IntSize::new(config.width as i32, config.height as i32);
+
     let frame = fb.new_frame(&mut executor)?;
     frame.present(&fb)?;
 
     let face = FontFace::new(FONT_DATA).unwrap();
 
     let sink = FramePixelSink { frame };
-    let canvas =
-        Canvas::new_with_sink(sink, config.linear_stride_bytes() as u32, config.pixel_size_bytes);
+    let canvas = Canvas::new_with_sink(
+        display_size,
+        sink,
+        config.linear_stride_bytes() as u32,
+        config.pixel_size_bytes,
+    );
 
     let mut ui = RecoveryUI { face: face, canvas, config, text_size: config.height / 12 };
 
@@ -113,7 +120,7 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::{RecoveryUI, FONT_DATA};
-    use carnelian::{Canvas, FontFace, PixelSink};
+    use carnelian::{Canvas, FontFace, IntSize, PixelSink};
     use fuchsia_framebuffer::{Config, PixelFormat};
 
     struct TestPixelSink {}
@@ -124,17 +131,20 @@ mod tests {
 
     #[test]
     fn test_draw() {
+        const WIDTH: i32 = 800;
+        const HEIGHT: i32 = 600;
         let face = FontFace::new(FONT_DATA).unwrap();
         let sink = TestPixelSink {};
         let config = Config {
             display_id: 0,
-            width: 800,
-            height: 600,
-            linear_stride_pixels: 800,
+            width: WIDTH as u32,
+            height: HEIGHT as u32,
+            linear_stride_pixels: WIDTH as u32,
             format: PixelFormat::Argb8888,
             pixel_size_bytes: 4,
         };
         let canvas = Canvas::new_with_sink(
+            IntSize::new(WIDTH, HEIGHT),
             sink,
             config.linear_stride_bytes() as u32,
             config.pixel_size_bytes,

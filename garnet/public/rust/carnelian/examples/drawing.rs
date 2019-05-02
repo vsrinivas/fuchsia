@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro)]
 #![deny(warnings)]
 
-use carnelian::{Canvas, Color, Coord, PixelSink, Point, Rect, Size};
+use carnelian::{Canvas, Color, Coord, IntSize, PixelSink, Point, Rect, Size};
 use failure::{bail, Error, ResultExt};
 use fuchsia_async as fasync;
 use fuchsia_framebuffer::{Frame, FrameBuffer, PixelFormat};
@@ -50,13 +50,19 @@ fn main() -> Result<(), Error> {
         bail!("Unsupported pixel format {:#?}", config.format);
     }
 
+    let display_size = IntSize::new(config.width as i32, config.height as i32);
+
     let frame = fb.new_frame(&mut executor)?;
 
     frame.present(&fb)?;
 
     let sink = FramePixelSink { frame };
-    let mut canvas =
-        Canvas::new_with_sink(sink, config.linear_stride_bytes() as u32, config.pixel_size_bytes);
+    let mut canvas = Canvas::new_with_sink(
+        display_size,
+        sink,
+        config.linear_stride_bytes() as u32,
+        config.pixel_size_bytes,
+    );
 
     let r = Rect::new(Point::new(0.0, 0.0), Size::new(config.width as f32, config.height as f32));
 
@@ -79,6 +85,21 @@ fn main() -> Result<(), Error> {
         Rect::new(Point::new(3.0 * grid_size, grid_size), Size::new(grid_size * 2.0, grid_size));
     let c3 = Color::from_hash_code("#FF00FF")?;
     canvas.fill_roundrect(&rr, grid_size / 8.0, c3);
+
+    let r_clipped =
+        Rect::new(Point::new(-grid_size, grid_size * 3.0), Size::new(grid_size * 2.0, grid_size));
+    let c4 = Color::from_hash_code("#00008B")?;
+    canvas.fill_roundrect(&r_clipped, grid_size / 6.0, c4);
+
+    let r_clipped2 = Rect::new(
+        Point::new(
+            display_size.width as Coord - grid_size,
+            display_size.height as Coord - grid_size / 3.0,
+        ),
+        Size::new(grid_size * 4.0, grid_size * 2.0),
+    );
+    let c5 = Color::from_hash_code("#7B68EE")?;
+    canvas.fill_roundrect(&r_clipped2, grid_size / 5.0, c5);
 
     executor.run_singlethreaded(close);
 
