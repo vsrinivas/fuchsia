@@ -21,6 +21,7 @@
 
 config("spirv_warnings") {
   visibility = [ ":*" ]
+  cflags = [ "-Wno-newline-eof" ]
   cflags_cc = [
     "-Wno-delete-non-virtual-dtor",
     "-Wno-return-std-move",

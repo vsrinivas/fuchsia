@@ -379,6 +379,7 @@ config("default_warnings") {
     ]
   } else {
     cflags += [
+      "-Wnewline-eof",
       "-Wno-address-of-packed-member",
       "-Wimplicit-fallthrough",
     ]

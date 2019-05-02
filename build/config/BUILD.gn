@@ -196,6 +196,7 @@ config("default_warnings") {
   cflags = [
     "-Wall",
     "-Wextra",
+    "-Wnewline-eof",
     "-Wno-unused-parameter",
   ]
   if (current_os == "fuchsia") {

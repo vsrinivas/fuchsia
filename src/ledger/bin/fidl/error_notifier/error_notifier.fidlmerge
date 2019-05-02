@@ -245,7 +245,7 @@ class {{ .Name.Parts.Name }}ErrorNotifierDelegate::Impl : public {{ .Name.Parts.
     {{- template "IncludeHeader" . }}
     {{- template "InterfaceWriterDecls" . }}
     {{- template "NamespaceClose" . }}
-{{- end }}
+{{ end }}
 
 {{- define "Main" }}
     {{- $include_path := .Output ".h" }}

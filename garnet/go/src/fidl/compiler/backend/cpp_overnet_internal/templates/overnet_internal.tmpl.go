@@ -41,7 +41,7 @@ const OvernetInternal = `
   {{- range .LibraryReversed }}
   }  // namespace {{ . }}
   {{- end }}
-{{- end }}
+{{ end }}
 
 {{- define "Source" }}
 #include <{{ .PrimaryHeader }}>
@@ -59,7 +59,7 @@ const OvernetInternal = `
   {{- range .LibraryReversed }}
   }  // namespace {{ . }}
   {{- end }}
-{{- end }}
+{{ end }}
 
 {{- define "InterfaceForwardDeclaration" }}
 class {{ .Name }};

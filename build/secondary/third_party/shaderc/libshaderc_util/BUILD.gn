@@ -4,7 +4,13 @@
 
 import("//build/package.gni")
 
+config("libshaderc_warnings") {
+  visibility = [ ":*" ]
+  cflags = [ "-Wno-newline-eof" ]
+}
+
 source_set("libshaderc_util") {
+  configs += [ ":libshaderc_warnings" ]
   deps = [
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",

@@ -58,7 +58,7 @@ namespace {{ . }} {
     {{- range .Name.PartsReversed }}
 } // namespace {{ . }}
     {{- end }}
-{{- end }}
+{{ end }}
 
 
 {{/* Produces a C++ expression for a types.EncodedCompoundIdentifier. */}}
