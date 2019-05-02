@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_ELFLIB_ELFLIB_H_
 #define GARNET_LIB_ELFLIB_ELFLIB_H_
 
+#include <fbl/macros.h>
 #include <stdio.h>
 
 #include <map>
@@ -12,8 +13,6 @@
 #include <optional>
 #include <utility>
 #include <vector>
-
-#include <fbl/macros.h>
 
 #include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 
@@ -44,6 +43,14 @@ class ElfLib {
                   AddressMode address_mode);
 
   virtual ~ElfLib();
+
+  // Attach a second ElfLib to this one which contains debug info. This second
+  // object will be treated as authoritative on section headers.
+  //
+  // Returns true on success. Returns false if either this or the given debug
+  // data already have debug data associated, or if this has sections
+  // associated already.
+  bool SetDebugData(std::unique_ptr<ElfLib> debug);
 
   // Get the contents of a section by its name. Return nullptr if there is no
   // section by that name.
@@ -185,6 +192,7 @@ class ElfLib {
   std::vector<Elf64_Shdr> sections_;
   std::vector<Elf64_Phdr> segments_;
   std::map<std::string, size_t> section_names_;
+  std::unique_ptr<ElfLib> debug_;
 
   std::vector<std::string> warnings_;
 

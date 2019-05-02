@@ -25,6 +25,7 @@ copy("copy_example_elf") {
   sources = [
     "test_data/stripped_example.elf",
     "test_data/unstripped_example.elf",
+    "test_data/unstripped_example_stripped.elf",
   ]
 
   outputs = [
@@ -35,6 +36,7 @@ copy("copy_example_elf") {
     test_runtime_deps = [
       "$root_out_dir/test_data/elflib/stripped_example.elf",
       "$root_out_dir/test_data/elflib/unstripped_example.elf",
+      "$root_out_dir/test_data/elflib/unstripped_example_stripped.elf",
     ]
   }
 }

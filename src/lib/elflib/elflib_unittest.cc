@@ -60,6 +60,8 @@ inline std::string GetTestFilePath(const std::string& rel_path) {
 constexpr char kRelativeTestDataPath[] = "test_data/elflib/";
 constexpr char kStrippedExampleFile[] = "stripped_example.elf";
 constexpr char kUnstrippedExampleFile[] = "unstripped_example.elf";
+constexpr char kUnstrippedExampleFileStripped[] =
+    "unstripped_example_stripped.elf";
 
 inline std::string GetTestBinaryPath(const std::string& bin) {
   return GetTestFilePath(kRelativeTestDataPath) + bin;
@@ -361,4 +363,25 @@ TEST(ElfLib, GetPLTFromUnstripped) {
   EXPECT_EQ(0x1a52b0U, plt["zx_channel_write"]);
 }
 
+TEST(ElfLib, GetPLTFromStrippedDebug) {
+  std::unique_ptr<ElfLib> elf =
+      ElfLib::Create(GetTestBinaryPath(kUnstrippedExampleFileStripped));
+  std::unique_ptr<ElfLib> debug =
+      ElfLib::Create(GetTestBinaryPath(kUnstrippedExampleFile));
+
+  ASSERT_NE(elf.get(), nullptr);
+  ASSERT_NE(debug.get(), nullptr);
+
+  ASSERT_TRUE(elf->SetDebugData(std::move(debug)));
+
+  auto plt = elf->GetPLTOffsets();
+
+  EXPECT_EQ(261U, plt.size());
+
+  // We won't check every entry, but we'll grab a few representative ones.
+  EXPECT_EQ(0x1a4df0U, plt["_ZN3fxl10LogMessageC1EiPKciS2_"]);
+  EXPECT_EQ(0x1a4e50U, plt["_ZNSt3__218condition_variableD1Ev"]);
+  EXPECT_EQ(0x1a5a00U, plt["vprintf"]);
+  EXPECT_EQ(0x1a52b0U, plt["zx_channel_write"]);
+}
 }  // namespace elflib

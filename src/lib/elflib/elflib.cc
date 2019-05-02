@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
-#include <string>
+#include "src/lib/elflib/elflib.h"
 
 #include <zircon/assert.h>
 
-#include "src/lib/elflib/elflib.h"
+#include <algorithm>
+#include <string>
 
 namespace elflib {
 namespace {
@@ -272,6 +272,71 @@ std::unique_ptr<ElfLib> ElfLib::Create(const std::string& path) {
   return Create(fopen(path.c_str(), "r"), ElfLib::Ownership::kTakeOwnership);
 }
 
+bool ElfLib::SetDebugData(std::unique_ptr<ElfLib> debug) {
+  if (debug_) {
+    return false;
+  }
+
+  if (debug->debug_) {
+    return false;
+  }
+
+  if (header_.e_shnum > 0) {
+    return false;
+  }
+
+  debug_ = std::move(debug);
+
+  debug_->LoadSectionNames();
+  section_names_ = debug_->section_names_;
+  sections_ = debug_->sections_;
+
+  LoadProgramHeaders();
+  std::map<size_t, size_t> bounds;
+  for (size_t i = 0; i < segments_.size(); i++) {
+    if (segments_[i].p_type != PT_LOAD) {
+      continue;
+    }
+
+    bounds[segments_[i].p_vaddr] = i;
+  }
+
+  for (auto& section : sections_) {
+    if (section.sh_type != SHT_NOBITS) {
+      // When we encounter an SHT_NULL section and we have debug data, we'll
+      // consult the debug data for that section.
+      section.sh_type = SHT_NULL;
+      continue;
+    }
+
+    // Find the first segment starting at or before this section by finding the
+    // first segment starting at or after this section, and backing up one
+    // entry if necessary.
+    auto found = bounds.lower_bound(section.sh_addr);
+    if (found == bounds.end()) {
+      continue;
+    }
+    if (found->first != section.sh_addr) {
+      if (found == bounds.begin()) {
+        continue;
+      }
+
+      --found;
+    }
+
+    auto& segment = segments_[found->second];
+
+    if (segment.p_vaddr + segment.p_memsz <= section.sh_addr) {
+      continue;
+    }
+
+    section.sh_offset = segment.p_offset + (section.sh_addr - segment.p_vaddr);
+    section.sh_type = SHT_PROGBITS;
+  }
+
+  return true;
+}
+
 const Elf64_Shdr* ElfLib::GetSectionHeader(size_t section) {
   // Processes may not map the section headers at all, so we don't look for
   // section headers unless we're in file mode.
@@ -385,6 +450,10 @@ ElfLib::MemoryRegion ElfLib::GetSectionData(size_t section) {
   }
 
   if (header->sh_type == SHT_NULL) {
+    if (debug_) {
+      return debug_->GetSectionData(section);
+    }
+
     return {};
   }
 
