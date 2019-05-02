@@ -17,6 +17,7 @@
 #include <memory>
 
 #include "gtest/gtest.h"
+#include "peridot/bin/sessionmgr/agent_runner/map_agent_service_index.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 #include "peridot/bin/sessionmgr/message_queue/message_queue_manager.h"
 #include "peridot/lib/fidl/array_to_string.h"
@@ -36,10 +37,12 @@ class AgentRunnerTest : public TestWithLedger {
  public:
   AgentRunnerTest() = default;
 
-  std::unique_ptr<AgentRunner> MakeAgentRunner() {
+  std::unique_ptr<AgentRunner> MakeAgentRunner(
+      std::unique_ptr<AgentServiceIndex> custom_index = nullptr) {
     return std::make_unique<AgentRunner>(
         &launcher_, mqm_.get(), ledger_repository(), &agent_runner_storage_,
-        token_manager_.get(), nullptr, entity_provider_runner_.get());
+        token_manager_.get(), nullptr, entity_provider_runner_.get(),
+        std::move(custom_index));
   }
 
   void SetUp() override {
@@ -63,9 +66,13 @@ class AgentRunnerTest : public TestWithLedger {
   MessageQueueManager* message_queue_manager() { return mqm_.get(); }
 
  protected:
+  AgentRunner* set_agent_runner(std::unique_ptr<AgentRunner> agent_runner) {
+    agent_runner_ = std::move(agent_runner);
+    return agent_runner_.get();
+  }
   AgentRunner* agent_runner() {
     if (agent_runner_ == nullptr) {
-      agent_runner_ = MakeAgentRunner();
+      set_agent_runner(MakeAgentRunner());
     }
     return agent_runner_.get();
   }
@@ -229,21 +236,24 @@ TEST_F(AgentRunnerTest, NoServiceNameInAgentServiceRequest) {
             std::move(launch_info.directory_request), std::move(ctrl));
       });
 
-  bool clipboard_error = false;
+  bool service_error = false;
 
+  // We use an InterfacePtr<Clipboard> to take advantage of set_error_handler().
+  // The choice of Clipboard is arbitrary: InterfacePtr requires a FIDL protocol
+  // type name, but the choice of FIDL protocol is irrelevant for this test.
+  fuchsia::modular::ClipboardPtr service_ptr;
   fuchsia::modular::AgentControllerPtr agent_controller;
-  fuchsia::modular::ClipboardPtr clipboard;
-  clipboard.set_error_handler([&clipboard_error](zx_status_t status) {
-    FXL_LOG(ERROR) << "Error with clipboard service. Status: "
-                   << zx_status_get_string(status);
-    if (ZX_ERR_NOT_FOUND) {
-      clipboard_error = true;
-    }
+  service_ptr.set_error_handler([&service_error](zx_status_t status) {
+    service_error = true;
     EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+    if (status != ZX_ERR_PEER_CLOSED) {
+      FXL_LOG(ERROR) << "Error with the service. Status: "
+                     << zx_status_get_string(status);
+    }
   });
   fuchsia::modular::AgentServiceRequest agent_service_request;
-  // agent_service_request.set_service_name(clipboard->Name_);
-  agent_service_request.set_channel(clipboard.NewRequest().TakeChannel());
+  // agent_service_request.set_service_name(service_ptr->Name_);
+  agent_service_request.set_channel(service_ptr.NewRequest().TakeChannel());
   agent_service_request.set_agent_controller(agent_controller.NewRequest());
   agent_runner()->ConnectToAgentService("requestor_url",
                                         std::move(agent_service_request));
@@ -252,16 +262,16 @@ TEST_F(AgentRunnerTest, NoServiceNameInAgentServiceRequest) {
 
   agent_controller.set_error_handler(
       [&agent_controller_error, &agent_controller](zx_status_t status) {
-        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
         agent_controller_error = true;
+        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
         agent_controller.Unbind();
       });
 
-  RunLoopWithTimeoutOrUntil([&clipboard_error, &agent_controller_error] {
-    return clipboard_error || agent_controller_error;
+  RunLoopWithTimeoutOrUntil([&service_error, &agent_controller_error] {
+    return service_error || agent_controller_error;
   });
 
-  EXPECT_TRUE(clipboard_error);
+  EXPECT_TRUE(service_error);
   EXPECT_TRUE(agent_controller_error);
 
   EXPECT_EQ(dummy_agent, nullptr);
@@ -279,21 +289,24 @@ TEST_F(AgentRunnerTest, NoChannelInAgentServiceRequest) {
             std::move(launch_info.directory_request), std::move(ctrl));
       });
 
-  bool clipboard_error = false;
+  bool service_error = false;
 
+  // We use an InterfacePtr<Clipboard> to take advantage of set_error_handler().
+  // The choice of Clipboard is arbitrary: InterfacePtr requires a FIDL protocol
+  // type name, but the choice of FIDL protocol is irrelevant for this test.
+  fuchsia::modular::ClipboardPtr service_ptr;
   fuchsia::modular::AgentControllerPtr agent_controller;
-  fuchsia::modular::ClipboardPtr clipboard;
-  clipboard.set_error_handler([&clipboard_error](zx_status_t status) {
-    FXL_LOG(ERROR) << "Error with clipboard service. Status: "
-                   << zx_status_get_string(status);
-    if (ZX_ERR_NOT_FOUND) {
-      clipboard_error = true;
-    }
+  service_ptr.set_error_handler([&service_error](zx_status_t status) {
+    service_error = true;
     EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+    if (status != ZX_ERR_PEER_CLOSED) {
+      FXL_LOG(ERROR) << "Error with the service. Status: "
+                     << zx_status_get_string(status);
+    }
   });
   fuchsia::modular::AgentServiceRequest agent_service_request;
-  agent_service_request.set_service_name(clipboard->Name_);
-  // agent_service_request.set_channel(clipboard.NewRequest().TakeChannel());
+  agent_service_request.set_service_name(service_ptr->Name_);
+  // agent_service_request.set_channel(service_ptr.NewRequest().TakeChannel());
   agent_service_request.set_agent_controller(agent_controller.NewRequest());
   agent_runner()->ConnectToAgentService("requestor_url",
                                         std::move(agent_service_request));
@@ -302,16 +315,72 @@ TEST_F(AgentRunnerTest, NoChannelInAgentServiceRequest) {
 
   agent_controller.set_error_handler(
       [&agent_controller_error, &agent_controller](zx_status_t status) {
-        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
         agent_controller_error = true;
+        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
         agent_controller.Unbind();
       });
 
-  RunLoopWithTimeoutOrUntil([&clipboard_error, &agent_controller_error] {
-    return clipboard_error || agent_controller_error;
+  RunLoopWithTimeoutOrUntil([&service_error, &agent_controller_error] {
+    return service_error || agent_controller_error;
   });
 
-  EXPECT_FALSE(clipboard_error);
+  EXPECT_FALSE(service_error);
+  EXPECT_TRUE(agent_controller_error);
+
+  EXPECT_EQ(dummy_agent, nullptr);
+}
+
+TEST_F(AgentRunnerTest, NoAgentForServiceName) {
+  auto agent_service_index = std::make_unique<MapAgentServiceIndex>(
+      std::map<std::string, std::string>({}));
+  set_agent_runner(MakeAgentRunner(std::move(agent_service_index)));
+  std::unique_ptr<MyDummyAgent> dummy_agent;
+  constexpr char kMyAgentUrl[] = "file:///my_agent";
+  launcher()->RegisterComponent(
+      kMyAgentUrl,
+      [&dummy_agent](
+          fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        dummy_agent = std::make_unique<MyDummyAgent>(
+            std::move(launch_info.directory_request), std::move(ctrl));
+      });
+
+  bool service_error = false;
+
+  // We use an InterfacePtr<Clipboard> to take advantage of set_error_handler().
+  // The choice of Clipboard is arbitrary: InterfacePtr requires a FIDL protocol
+  // type name, but the choice of FIDL protocol is irrelevant for this test.
+  fuchsia::modular::ClipboardPtr service_ptr;
+  fuchsia::modular::AgentControllerPtr agent_controller;
+  service_ptr.set_error_handler([&service_error](zx_status_t status) {
+    service_error = true;
+    EXPECT_EQ(status, ZX_ERR_NOT_FOUND);
+    if (status != ZX_ERR_NOT_FOUND) {
+      FXL_LOG(ERROR) << "Error with the service. Status: "
+                     << zx_status_get_string(status);
+    }
+  });
+  fuchsia::modular::AgentServiceRequest agent_service_request;
+  agent_service_request.set_service_name(service_ptr->Name_);
+  agent_service_request.set_channel(service_ptr.NewRequest().TakeChannel());
+  agent_service_request.set_agent_controller(agent_controller.NewRequest());
+  agent_runner()->ConnectToAgentService("requestor_url",
+                                        std::move(agent_service_request));
+
+  bool agent_controller_error = false;
+
+  agent_controller.set_error_handler(
+      [&agent_controller_error, &agent_controller](zx_status_t status) {
+        agent_controller_error = true;
+        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+        agent_controller.Unbind();
+      });
+
+  RunLoopWithTimeoutOrUntil([&service_error, &agent_controller_error] {
+    return service_error || agent_controller_error;
+  });
+
+  EXPECT_TRUE(service_error);
   EXPECT_TRUE(agent_controller_error);
 
   EXPECT_EQ(dummy_agent, nullptr);

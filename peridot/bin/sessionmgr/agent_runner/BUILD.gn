@@ -12,6 +12,8 @@ source_set("agent_runner") {
     "agent_runner.cc",
     "agent_runner_storage_impl.cc",
     "agent_runner_storage_impl.h",
+    "agent_service_index.h",
+    "map_agent_service_index.h",
   ]
 
   public_deps = [
@@ -21,6 +23,7 @@ source_set("agent_runner") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/json",
     "//peridot/bin/sessionmgr:component_context",
     "//peridot/bin/sessionmgr/message_queue",
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
@@ -82,6 +85,7 @@ source_set("public") {
     "agent_runner.h",
     "agent_runner_storage.cc",
     "agent_runner_storage.h",
+    "agent_service_index.h",
   ]
 
   deps = [

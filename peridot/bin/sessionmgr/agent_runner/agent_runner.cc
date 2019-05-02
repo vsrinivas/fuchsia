@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fsl/vmo/strings.h>
+#include <zircon/status.h>
 
 #include <map>
 #include <set>
@@ -31,7 +32,8 @@ AgentRunner::AgentRunner(
     fuchsia::auth::TokenManager* const token_manager,
     fuchsia::modular::UserIntelligenceProvider* const
         user_intelligence_provider,
-    EntityProviderRunner* const entity_provider_runner)
+    EntityProviderRunner* const entity_provider_runner,
+    std::unique_ptr<AgentServiceIndex> agent_service_index)
     : launcher_(launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
@@ -39,7 +41,8 @@ AgentRunner::AgentRunner(
       token_manager_(token_manager),
       user_intelligence_provider_(user_intelligence_provider),
       entity_provider_runner_(entity_provider_runner),
-      terminating_(std::make_shared<bool>(false)) {
+      terminating_(std::make_shared<bool>(false)),
+      agent_service_index_(std::move(agent_service_index)) {
   agent_runner_storage_->Initialize(this, [] {});
 }
 
@@ -172,6 +175,18 @@ void AgentRunner::ConnectToAgent(
   });
 }
 
+void AgentRunner::HandleAgentServiceNotFound(::zx::channel channel,
+                                             std::string service_name) {
+  FXL_LOG(ERROR) << "No agent found for requested service_name: "
+                 << service_name;
+  zx_status_t status = fidl_epitaph_write(channel.get(), ZX_ERR_NOT_FOUND);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR)
+        << "Error writing epitaph ZX_ERR_NOT_FOUND to channel. Status: "
+        << zx_status_get_string(status);
+  }
+}
+
 void AgentRunner::ConnectToAgentService(
     const std::string& requestor_url,
     fuchsia::modular::AgentServiceRequest request) {
@@ -190,14 +205,21 @@ void AgentRunner::ConnectToAgentService(
     return;
   }
 
+  std::string agent_url;
   if (request.has_handler()) {
-    // TODO(MF-368): Connect to GIVEN agent and its service (TBD)
-    FXL_LOG(FATAL) << "Not implemented.";
+    agent_url = request.handler();
   } else {
-    // TODO(MF-368): Lookup agent for given service_name, then connect to agent,
-    // then service
-    FXL_LOG(FATAL) << "Not implemented.";
+    if (auto optional =
+            agent_service_index_->FindAgentForService(request.service_name())) {
+      agent_url = optional.value();
+    } else {
+      HandleAgentServiceNotFound(std::move(*request.mutable_channel()),
+                                 request.service_name());
+      return;
+    }
   }
+  // TODO(MF-368): Connect to GIVEN agent URL
+  FXL_LOG(FATAL) << "Not implemented.";
 }
 
 void AgentRunner::ConnectToEntityProvider(

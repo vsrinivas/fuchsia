@@ -22,6 +22,7 @@
 #include <string>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage.h"
+#include "peridot/bin/sessionmgr/agent_runner/agent_service_index.h"
 
 namespace modular {
 
@@ -45,7 +46,8 @@ class AgentRunner : fuchsia::modular::AgentProvider,
       AgentRunnerStorage* agent_runner_storage,
       fuchsia::auth::TokenManager* token_manager,
       fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
-      EntityProviderRunner* entity_provider_runner);
+      EntityProviderRunner* entity_provider_runner,
+      std::unique_ptr<AgentServiceIndex> agent_service_index = nullptr);
   ~AgentRunner() override;
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::AgentProvider> request);
@@ -96,6 +98,12 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   void DeleteTask(const std::string& agent_url, const std::string& task_id);
 
  private:
+  // During ConnectToAgentService, if an agent is not found, close the channel
+  // established for the service, and indicate the reason with FIDL epitaph
+  // error ZX_ERR_NOT_FOUND.
+  void HandleAgentServiceNotFound(::zx::channel channel,
+                                  std::string service_name);
+
   // Schedules the agent to start running if it isn't already running (e.g.,
   // it could be not running or in the middle of terminating). Once the agent
   // is in a running state, calls |done|.
@@ -226,6 +234,8 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   std::shared_ptr<bool> terminating_;
 
   OperationQueue operation_queue_;
+
+  std::unique_ptr<AgentServiceIndex> agent_service_index_;
 
   // Operations implemented here.
   class InitializeCall;
