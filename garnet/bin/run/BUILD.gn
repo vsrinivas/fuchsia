@@ -12,6 +12,7 @@ executable("bin") {
   ]
 
   deps = [
+    "//garnet/bin/component_index/fidl:index",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
