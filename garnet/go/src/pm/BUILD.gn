@@ -41,10 +41,11 @@ foreach(pkg, test_packages) {
     ]
   }
 
-  test_labels += [":$name"]
+  test_labels += [ ":$name" ]
 }
 
 group("host_tests") {
+  testonly = true
   public_deps = []
   foreach(label, test_labels) {
     public_deps += [ label + "($host_toolchain)" ]

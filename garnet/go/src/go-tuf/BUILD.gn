@@ -70,6 +70,7 @@ test_targets = [
 ]
 
 package("go_tuf_tests") {
+  testonly = true
   deps = []
   tests = []
   foreach(test, test_targets) {
@@ -84,6 +85,7 @@ package("go_tuf_tests") {
 }
 
 group("go_tuf_host_tests") {
+  testonly = true
   deps = []
   foreach(test, test_targets) {
     deps += [ ":${test}" ]

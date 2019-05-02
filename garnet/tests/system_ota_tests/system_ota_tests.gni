@@ -52,6 +52,7 @@ template("system_ota_test_suite") {
     _deps += [ ":${_spec_target_name}" ]
 
     test_spec(_spec_target_name) {
+      testonly = true
       name = test
       location = _test_binary
       command = [

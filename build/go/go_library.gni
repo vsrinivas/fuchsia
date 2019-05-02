@@ -107,5 +107,7 @@ template("go_library") {
     if (defined(invoker.metadata)) {
       metadata = invoker.metadata
     }
+
+    forward_variables_from(invoker, [ "testonly" ])
   }
 }

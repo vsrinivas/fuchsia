@@ -9,6 +9,7 @@ import("//build/testing/environments.gni")
 import("//garnet/tests/system_ota_tests/system_ota_tests.gni")
 
 copy("copy") {
+  testonly = true
   sources = [
     "$zircon_tools_dir/netaddr",
     "//prebuilt/tools/artifacts/artifacts",
@@ -20,6 +21,7 @@ copy("copy") {
 }
 
 go_library("system_ota_tests_lib") {
+  testonly = true
   name = "fuchsia.googlesource.com/system_ota_tests"
   deps = [
     "//garnet/go/src/far:far",
