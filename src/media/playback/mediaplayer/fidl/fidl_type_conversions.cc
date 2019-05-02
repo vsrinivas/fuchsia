@@ -333,8 +333,8 @@ TypeConverter<media_player::Metadata, fuchsia::media::Metadata>::Convert(
 }
 
 fidl::VectorPtr<uint8_t>
-TypeConverter<fidl::VectorPtr<uint8_t>, std::unique_ptr<media_player::Bytes>>::
-    Convert(const std::unique_ptr<media_player::Bytes>& input) {
+TypeConverter<fidl::VectorPtr<uint8_t>, const media_player::Bytes*>::Convert(
+    const media_player::Bytes* input) {
   if (input == nullptr) {
     return nullptr;
   }

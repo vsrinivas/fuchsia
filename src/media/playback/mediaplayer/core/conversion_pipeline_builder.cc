@@ -65,27 +65,6 @@ int Score(const AudioStreamType& in_type,
   return score;
 }
 
-// Finds the stream type set that best matches in_type.
-const std::unique_ptr<StreamTypeSet>* FindBestLpcm(
-    const AudioStreamType& in_type,
-    const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets) {
-  const std::unique_ptr<StreamTypeSet>* best = nullptr;
-  int best_score = -1;
-
-  for (const std::unique_ptr<StreamTypeSet>& out_type_set : out_type_sets) {
-    if (out_type_set->medium() == StreamType::Medium::kAudio &&
-        out_type_set->IncludesEncoding(StreamType::kAudioEncodingLpcm)) {
-      int score = Score(in_type, *out_type_set->audio());
-      if (best_score < score) {
-        best_score = score;
-        best = &out_type_set;
-      }
-    }
-  }
-
-  return best;
-}
-
 class Builder {
  public:
   Builder(const StreamType& in_type,
@@ -101,6 +80,9 @@ class Builder {
   void Succeed();
 
   void Fail();
+
+  const AudioStreamTypeSet* BestLpcmOutputForInput(
+      const AudioStreamType& audio_type);
 
   void AddTransformsForCompressedAudio(const AudioStreamType& audio_type);
 
@@ -173,7 +155,7 @@ void Builder::Fail() {
 void Builder::AddTransformsForCompressedAudio(
     const AudioStreamType& audio_type) {
   // See if we have a matching audio type.
-  for (const std::unique_ptr<StreamTypeSet>& out_type_set : out_type_sets_) {
+  for (const auto& out_type_set : out_type_sets_) {
     if (out_type_set->medium() == StreamType::Medium::kAudio) {
       if (out_type_set->audio()->Includes(audio_type)) {
         // No transform needed.
@@ -186,17 +168,14 @@ void Builder::AddTransformsForCompressedAudio(
     }
   }
 
-  // Find the best LPCM output type.
-  const std::unique_ptr<StreamTypeSet>* best =
-      FindBestLpcm(audio_type, out_type_sets_);
-  if (best == nullptr) {
+  auto output = BestLpcmOutputForInput(audio_type);
+  if (output == nullptr) {
     // No candidates found.
     Fail();
     return;
   }
 
-  FXL_DCHECK((*best)->medium() == StreamType::Medium::kAudio);
-  FXL_DCHECK((*best)->IncludesEncoding(StreamType::kAudioEncodingLpcm));
+  FXL_DCHECK(output->IncludesEncoding(StreamType::kAudioEncodingLpcm));
 
   // Need to decode. Create a decoder and go from there.
   AddDecoder();
@@ -224,6 +203,26 @@ void Builder::AddDecoder() {
 
         Build();
       });
+}
+
+// Finds the stream type set that best matches in_type.
+const AudioStreamTypeSet* Builder::BestLpcmOutputForInput(
+    const AudioStreamType& in_type) {
+  StreamTypeSet* best = nullptr;
+  int best_score = -1;
+
+  for (const auto& out_type_set : out_type_sets_) {
+    if (out_type_set->medium() == StreamType::Medium::kAudio &&
+        out_type_set->IncludesEncoding(StreamType::kAudioEncodingLpcm)) {
+      int score = Score(in_type, *out_type_set->audio());
+      if (best_score < score) {
+        best_score = score;
+        best = out_type_set.get();
+      }
+    }
+  }
+
+  return best->audio();
 }
 
 void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
@@ -264,18 +263,15 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
 }
 
 void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type) {
-  const std::unique_ptr<StreamTypeSet>* best =
-      FindBestLpcm(audio_type, out_type_sets_);
-  if (best == nullptr) {
+  auto output = BestLpcmOutputForInput(audio_type);
+  if (output == nullptr) {
     // TODO(dalesat): Support a compressed output type by encoding.
     FXL_DLOG(ERROR) << "conversion using encoder not supported";
     Fail();
     return;
   }
 
-  FXL_DCHECK((*best)->medium() == StreamType::Medium::kAudio);
-
-  AddTransformsForLpcm(audio_type, *(*best)->audio());
+  AddTransformsForLpcm(audio_type, *output);
 }
 
 }  // namespace

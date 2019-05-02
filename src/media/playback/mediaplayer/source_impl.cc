@@ -130,7 +130,7 @@ void SourceImpl::UpdateStatus() {
           ? fidl::MakeOptional(fidl::To<fuchsia::media::Metadata>(*metadata))
           : nullptr;
 
-  status_.problem = SafeClone(source_segment_->problem());
+  status_.problem = CloneOptional(source_segment_->problem());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

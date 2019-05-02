@@ -9,6 +9,8 @@
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
+#include <cstdint>
+
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/type_converter.h"
 #include "lib/fsl/types/type_converters.h"
@@ -69,16 +71,6 @@ struct TypeConverter<fuchsia::media::StreamType, media_player::StreamType> {
 };
 
 template <>
-struct TypeConverter<fuchsia::media::StreamType,
-                     std::unique_ptr<media_player::StreamType>> {
-  static fuchsia::media::StreamType Convert(
-      const std::unique_ptr<media_player::StreamType>& input) {
-    FXL_DCHECK(input);
-    return To<fuchsia::media::StreamType>(*input);
-  }
-};
-
-template <>
 struct TypeConverter<std::unique_ptr<media_player::StreamType>,
                      fuchsia::media::StreamType> {
   static std::unique_ptr<media_player::StreamType> Convert(
@@ -96,9 +88,8 @@ struct TypeConverter<media_player::Metadata, fuchsia::media::Metadata> {
 };
 
 template <>
-struct TypeConverter<VectorPtr<uint8_t>, std::unique_ptr<media_player::Bytes>> {
-  static VectorPtr<uint8_t> Convert(
-      const std::unique_ptr<media_player::Bytes>& input);
+struct TypeConverter<VectorPtr<uint8_t>, const media_player::Bytes*> {
+  static VectorPtr<uint8_t> Convert(const media_player::Bytes* input);
 };
 
 template <>

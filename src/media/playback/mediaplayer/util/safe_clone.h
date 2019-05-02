@@ -5,8 +5,10 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_UTIL_SAFE_CLONE_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_UTIL_SAFE_CLONE_H_
 
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fidl/cpp/vector.h>
+
 #include <memory>
-#include <vector>
 
 namespace media_player {
 
@@ -17,38 +19,34 @@ std::unique_ptr<T> SafeClone(const std::unique_ptr<T>& t_ptr) {
 
 template <typename T>
 std::unique_ptr<T> SafeClone(const T* t) {
-  if (!t) {
-    return nullptr;
-  }
-
-  auto result = T::New();
-  t->Clone(result.get());
-  return result;
+  return t ? t->Clone() : nullptr;
 }
 
 template <typename T>
-std::unique_ptr<T> SafeClone(const T& t) {
-  auto result = T::New();
-  t.Clone(result.get());
-  return result;
+std::unique_ptr<T> CloneOptional(const T& value) {
+  T new_value;
+  value.Clone(&new_value);
+  return fidl::MakeOptional<T>(std::move(new_value));
 }
 
 template <typename T>
-std::unique_ptr<std::vector<std::unique_ptr<T>>> SafeClone(
-    const std::unique_ptr<std::vector<std::unique_ptr<T>>>& vec) {
-  if (vec == nullptr) {
-    return nullptr;
+std::unique_ptr<T> CloneOptional(const std::unique_ptr<T>& value_ptr) {
+  if (value_ptr) {
+    T new_value;
+    value_ptr->Clone(&new_value);
+    return fidl::MakeOptional<T>(std::move(new_value));
   }
+  return nullptr;
+}
 
-  std::unique_ptr<std::vector<std::unique_ptr<T>>> result =
-      std::unique_ptr<std::vector<std::unique_ptr<T>>>(
-          new std::vector<std::unique_ptr<T>>(vec->size()));
-
-  for (const std::unique_ptr<T>& t_ptr : *vec.get()) {
-    result->push_back(SafeClone(t_ptr));
+template <typename T>
+std::unique_ptr<T> CloneOptional(const T* value_ptr) {
+  if (value_ptr) {
+    T new_value;
+    value_ptr->Clone(&new_value);
+    return fidl::MakeOptional<T>(std::move(new_value));
   }
-
-  return result;
+  return nullptr;
 }
 
 }  // namespace media_player

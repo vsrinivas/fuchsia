@@ -676,12 +676,12 @@ void PlayerImpl::UpdateStatus() {
           : nullptr;
 
   if (video_renderer_) {
-    status_.video_size = SafeClone(video_renderer_->video_size());
+    status_.video_size = CloneOptional(video_renderer_->video_size());
     status_.pixel_aspect_ratio =
-        SafeClone(video_renderer_->pixel_aspect_ratio());
+        CloneOptional(video_renderer_->pixel_aspect_ratio());
   }
 
-  status_.problem = SafeClone(core_.problem());
+  status_.problem = CloneOptional(core_.problem());
 
   status_.ready = ready_if_no_problem_ && (status_.problem == nullptr);
 }

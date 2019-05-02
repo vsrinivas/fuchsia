@@ -66,8 +66,8 @@ class StreamType {
 
   const std::string& encoding() const { return encoding_; }
 
-  const std::unique_ptr<Bytes>& encoding_parameters() const {
-    return encoding_parameters_;
+  const Bytes* encoding_parameters() const {
+    return encoding_parameters_.get();
   }
 
   virtual const AudioStreamType* audio() const;

@@ -101,8 +101,8 @@ class Packet {
   void SetPtsRate(media::TimelineRate pts_rate);
 
   // Gets the revised stream type, which may be null.
-  const std::unique_ptr<StreamType>& revised_stream_type() const {
-    return revised_stream_type_;
+  const StreamType* revised_stream_type() const {
+    return revised_stream_type_.get();
   }
 
   // Sets the revised stream type for the packet.

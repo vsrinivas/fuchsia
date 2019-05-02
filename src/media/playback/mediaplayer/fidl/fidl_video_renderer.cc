@@ -403,9 +403,7 @@ void FidlVideoRenderer::OnTimelineTransition() {
 void FidlVideoRenderer::CheckForRevisedStreamType(const PacketPtr& packet) {
   FXL_DCHECK(packet);
 
-  const std::unique_ptr<StreamType>& revised_stream_type =
-      packet->revised_stream_type();
-
+  auto revised_stream_type = packet->revised_stream_type();
   if (!revised_stream_type) {
     return;
   }
