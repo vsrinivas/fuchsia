@@ -11,8 +11,8 @@ namespace name {
 namespace embedded {
 
 enum class MyBits : uint32_t {
-  MY_FIRST_BIT = 1,
-  MY_OTHER_BIT = 2,
+  MY_FIRST_BIT = 1u,
+  MY_OTHER_BIT = 2u,
 };
 
 inline zx_status_t Clone(::test::name::embedded::MyBits value,

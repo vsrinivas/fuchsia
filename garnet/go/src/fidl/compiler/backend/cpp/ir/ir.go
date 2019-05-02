@@ -467,11 +467,29 @@ func (c *compiler) compileTableType(eci types.EncodedCompoundIdentifier) string 
 	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, val.Name)
 }
 
-func (c *compiler) compileLiteral(val types.Literal) string {
+func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 	switch val.Kind {
 	case types.StringLiteral:
 		return fmt.Sprintf("%q", val.Value)
 	case types.NumericLiteral:
+		// TODO(FIDL-486): Once we expose resolved constants for defaults, e.g.
+		// in structs, we will not need ignore hex and binary values.
+		if strings.HasPrefix(val.Value, "0x") || strings.HasPrefix(val.Value, "0b") {
+			return val.Value
+		}
+
+		// No special handling of floats.
+		if strings.ContainsRune(val.Value, '.') {
+			return val.Value
+		}
+		if typ.Kind == types.PrimitiveType &&
+			(typ.PrimitiveSubtype == types.Float32 || typ.PrimitiveSubtype == types.Float64) {
+			return val.Value
+		}
+
+		if !strings.HasPrefix(val.Value, "-") {
+			return fmt.Sprintf("%su", val.Value)
+		}
 		return val.Value
 	case types.TrueLiteral:
 		return "true"
@@ -485,7 +503,7 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 	}
 }
 
-func (c *compiler) compileConstant(val types.Constant, t *Type, appendNamespace string) string {
+func (c *compiler) compileConstant(val types.Constant, t *Type, typ types.Type, appendNamespace string) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
 		v := c.compileCompoundIdentifier(val.Identifier, "", appendNamespace)
@@ -494,7 +512,7 @@ func (c *compiler) compileConstant(val types.Constant, t *Type, appendNamespace 
 		}
 		return v
 	case types.LiteralConstant:
-		return c.compileLiteral(val.Literal)
+		return c.compileLiteral(val.Literal, typ)
 	default:
 		log.Fatal("Unknown constant kind: ", val.Kind)
 		return ""
@@ -631,7 +649,7 @@ func (c *compiler) compileBits(val types.Bits, appendNamespace string) Bits {
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
 			changeIfReserved(v.Name, ""),
-			c.compileConstant(v.Value, nil, appendNamespace),
+			c.compileConstant(v.Value, nil, val.Type, appendNamespace),
 		})
 	}
 	return r
@@ -647,7 +665,7 @@ func (c *compiler) compileConst(val types.Const, appendNamespace string) Const {
 				Decl: "char",
 			},
 			Name:  c.compileCompoundIdentifier(val.Name, "[]", appendNamespace),
-			Value: c.compileConstant(val.Value, nil, appendNamespace),
+			Value: c.compileConstant(val.Value, nil, val.Type, appendNamespace),
 		}
 	} else {
 		t := c.compileType(val.Type)
@@ -657,7 +675,7 @@ func (c *compiler) compileConst(val types.Const, appendNamespace string) Const {
 			Decorator:  "constexpr",
 			Type:       t,
 			Name:       c.compileCompoundIdentifier(val.Name, "", appendNamespace),
-			Value:      c.compileConstant(val.Value, &t, appendNamespace),
+			Value:      c.compileConstant(val.Value, &t, val.Type, appendNamespace),
 		}
 	}
 }
@@ -671,8 +689,13 @@ func (c *compiler) compileEnum(val types.Enum, appendNamespace string) Enum {
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
-			changeIfReserved(v.Name, ""),
-			c.compileConstant(v.Value, nil, appendNamespace),
+			Name: changeIfReserved(v.Name, ""),
+			// TODO(FIDL-324): When we expose types consistently in the IR, we
+			// will not need to plug this here.
+			Value: c.compileConstant(v.Value, nil, types.Type{
+				Kind:             types.PrimitiveType,
+				PrimitiveSubtype: val.Type,
+			}, appendNamespace),
 		})
 	}
 	return r
@@ -794,7 +817,7 @@ func (c *compiler) compileStructMember(val types.StructMember, appendNamespace s
 
 	defaultValue := ""
 	if val.MaybeDefaultValue != nil {
-		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t, appendNamespace)
+		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t, val.Type, appendNamespace)
 	}
 
 	return StructMember{
@@ -837,7 +860,7 @@ func (c *compiler) compileTableMember(val types.TableMember, appendNamespace str
 
 	defaultValue := ""
 	if val.MaybeDefaultValue != nil {
-		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t, appendNamespace)
+		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t, val.Type, appendNamespace)
 	}
 
 	return TableMember{

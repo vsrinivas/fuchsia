@@ -458,3 +458,61 @@ func TestCompileXUnion(t *testing.T) {
 		})
 	}
 }
+
+func makeLiteralConstant(value string) types.Constant {
+	return types.Constant{
+		Kind: types.LiteralConstant,
+		Literal: types.Literal{
+			Kind:  types.NumericLiteral,
+			Value: value,
+		},
+	}
+}
+
+func makePrimitiveType(subtype types.PrimitiveSubtype) types.Type {
+	return types.Type{
+		Kind:             types.PrimitiveType,
+		PrimitiveSubtype: subtype,
+	}
+}
+
+func TestCompileConstant(t *testing.T) {
+	var c compiler
+	cases := []struct {
+		input    types.Constant
+		typ      types.Type
+		expected string
+	}{
+		{
+			input:    makeLiteralConstant("10"),
+			typ:      makePrimitiveType(types.Uint32),
+			expected: "10u",
+		},
+		{
+			input:    makeLiteralConstant("10"),
+			typ:      makePrimitiveType(types.Float32),
+			expected: "10",
+		},
+		{
+			input:    makeLiteralConstant("-1"),
+			typ:      makePrimitiveType(types.Int16),
+			expected: "-1",
+		},
+		{
+			input:    makeLiteralConstant("0xA"),
+			typ:      makePrimitiveType(types.Uint32),
+			expected: "0xA",
+		},
+		{
+			input:    makeLiteralConstant("1.23"),
+			typ:      makePrimitiveType(types.Float32),
+			expected: "1.23",
+		},
+	}
+	for _, ex := range cases {
+		actual := c.compileConstant(ex.input, nil, ex.typ, "")
+		if ex.expected != actual {
+			t.Errorf("%v: expected %s, actual %s", ex.input, ex.expected, actual)
+		}
+	}
+}

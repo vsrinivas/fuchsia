@@ -25,8 +25,8 @@ class SocketControlProtocol;
 class OvernetInternalProtocol;
 class WithAndWithoutRequestResponse;
 enum class ErrorEnun : uint32_t {
-  ERR_FOO = 1,
-  ERR_BAR = 2,
+  ERR_FOO = 1u,
+  ERR_BAR = 2u,
 };
 
 

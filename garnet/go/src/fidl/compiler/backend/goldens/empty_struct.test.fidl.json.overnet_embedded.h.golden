@@ -16,7 +16,7 @@ class Empty  {
  public:
   static const fidl_type_t* FidlType;
   
-  uint8_t __reserved = 0;
+  uint8_t __reserved = 0u;
 
   static inline ::std::unique_ptr<Empty> New() { return ::std::make_unique<Empty>(); }
 

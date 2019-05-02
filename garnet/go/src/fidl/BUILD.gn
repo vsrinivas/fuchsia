@@ -111,6 +111,14 @@ go_test("fidlgen_rust_test") {
   ]
 }
 
+go_test("fidlgen_rust_ir_test") {
+  gopackage = "fidl/compiler/backend/rust/ir"
+
+  deps = [
+    ":fidlgen_test_lib",
+  ]
+}
+
 go_test("fidlgen_syzkaller_test") {
   gopackage = "fidl/compiler/backend/syzkaller"
 

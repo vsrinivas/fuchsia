@@ -193,7 +193,7 @@ class Interface final {
 // const comment #1
 //
 // const comment #3
-constexpr int32_t C = 4;
+constexpr int32_t C = 4u;
 
 }  // namespace name
 }  // namespace test

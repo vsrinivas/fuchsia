@@ -379,11 +379,18 @@ func (c *compiler) compileScreamingSnakeCompoundIdentifier(eci types.EncodedComp
 	return c.compileCompoundIdentifier(val)
 }
 
-func compileLiteral(val types.Literal) string {
+func compileLiteral(val types.Literal, typ types.Type) string {
 	switch val.Kind {
 	case types.StringLiteral:
 		return fmt.Sprintf("r###\"%s\"###", val.Value)
 	case types.NumericLiteral:
+		if typ.Kind == types.PrimitiveType &&
+			(typ.PrimitiveSubtype == types.Float32 || typ.PrimitiveSubtype == types.Float64) {
+			if !strings.ContainsRune(val.Value, '.') {
+				return fmt.Sprintf("%s.0", val.Value)
+			}
+			return val.Value
+		}
 		return val.Value
 	case types.TrueLiteral:
 		return "true"
@@ -397,12 +404,12 @@ func compileLiteral(val types.Literal) string {
 	}
 }
 
-func (c *compiler) compileConstant(val types.Constant) string {
+func (c *compiler) compileConstant(val types.Constant, typ types.Type) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
 		return c.compileScreamingSnakeCompoundIdentifier(val.Identifier)
 	case types.LiteralConstant:
-		return compileLiteral(val.Literal)
+		return compileLiteral(val.Literal, typ)
 	default:
 		log.Fatal("Unknown constant kind: ", val.Kind)
 		return ""
@@ -417,14 +424,14 @@ func (c *compiler) compileConst(val types.Const) Const {
 			Attributes: val.Attributes,
 			Type:       "&str",
 			Name:       name,
-			Value:      c.compileConstant(val.Value),
+			Value:      c.compileConstant(val.Value, val.Type),
 		}
 	} else {
 		r = Const{
 			Attributes: val.Attributes,
 			Type:       c.compileType(val.Type, false).Decl,
 			Name:       name,
-			Value:      c.compileConstant(val.Value),
+			Value:      c.compileConstant(val.Value, val.Type),
 		}
 	}
 	return r
@@ -580,7 +587,7 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 			Attributes: v.Attributes,
 			Name:       compileCamelIdentifier(v.Name),
 			ConstName:  compileScreamingSnakeIdentifier(v.Name),
-			Value:      c.compileConstant(v.Value),
+			Value:      c.compileConstant(v.Value, val.Type),
 		})
 	}
 	return e
@@ -598,7 +605,12 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 			Attributes: v.Attributes,
 			Name:       compileCamelIdentifier(v.Name),
 			ConstName:  compileScreamingSnakeIdentifier(v.Name),
-			Value:      c.compileConstant(v.Value),
+			// TODO(FIDL-324): When we expose types consistently in the IR, we
+			// will not need to plug this here.
+			Value: c.compileConstant(v.Value, types.Type{
+				Kind:             types.PrimitiveType,
+				PrimitiveSubtype: val.Type,
+			}),
 		})
 	}
 	return e

@@ -208,7 +208,7 @@ using StructPtr = ::std::unique_ptr<Struct>;
 // const comment #1
 //
 // const comment #3
-constexpr int32_t C = 4;
+constexpr int32_t C = 4u;
 
 }  // namespace embedded
 }  // namespace name

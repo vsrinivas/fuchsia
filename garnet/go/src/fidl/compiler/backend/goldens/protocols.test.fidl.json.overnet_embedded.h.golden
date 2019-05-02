@@ -14,8 +14,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Response;
 class WithErrorSyntax_ErrorAsPrimitive_Result;
 class WithErrorSyntax_ErrorAsEnum_Response;
 enum class ErrorEnun : uint32_t {
-  ERR_FOO = 1,
-  ERR_BAR = 2,
+  ERR_FOO = 1u,
+  ERR_BAR = 2u,
 };
 
 inline zx_status_t Clone(::test::name::embedded::ErrorEnun value,
@@ -30,7 +30,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Response  {
  public:
   static const fidl_type_t* FidlType;
   
-  uint8_t __reserved = 0;
+  uint8_t __reserved = 0u;
 
   static inline ::std::unique_ptr<WithErrorSyntax_ErrorAsPrimitive_Response> New() { return ::std::make_unique<WithErrorSyntax_ErrorAsPrimitive_Response>(); }
 
@@ -135,7 +135,7 @@ class WithErrorSyntax_ErrorAsEnum_Response  {
  public:
   static const fidl_type_t* FidlType;
   
-  uint8_t __reserved = 0;
+  uint8_t __reserved = 0u;
 
   static inline ::std::unique_ptr<WithErrorSyntax_ErrorAsEnum_Response> New() { return ::std::make_unique<WithErrorSyntax_ErrorAsEnum_Response>(); }
 

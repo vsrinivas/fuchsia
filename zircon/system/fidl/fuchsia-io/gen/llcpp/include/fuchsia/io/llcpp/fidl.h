@@ -27,9 +27,9 @@ struct Tty;
 class DirectoryWatcher;
 struct Service;
 enum class SeekOrigin : uint32_t {
-  START = 0,
-  CURRENT = 1,
-  END = 2,
+  START = 0u,
+  CURRENT = 1u,
+  END = 2u,
 };
 
 
@@ -83,19 +83,19 @@ constexpr uint32_t WATCH_MASK_ALL = 0x0000001F;
 constexpr uint32_t WATCH_MASK_ADDED = 0x00000002;
 
 // Identifies a node has been removed (either deleted or moved) from the directory.
-constexpr uint8_t WATCH_EVENT_REMOVED = 2;
+constexpr uint8_t WATCH_EVENT_REMOVED = 2u;
 
 // Identifies that no more WATCH_EVENT_EXISTING events will be sent.
-constexpr uint8_t WATCH_EVENT_IDLE = 4;
+constexpr uint8_t WATCH_EVENT_IDLE = 4u;
 
 // Identifies a node already existed in the directory when watching started.
-constexpr uint8_t WATCH_EVENT_EXISTING = 3;
+constexpr uint8_t WATCH_EVENT_EXISTING = 3u;
 
 // Indicates the directory being watched has been deleted.
-constexpr uint8_t WATCH_EVENT_DELETED = 0;
+constexpr uint8_t WATCH_EVENT_DELETED = 0u;
 
 // Indicates a node has been created (either new or moved) into a directory.
-constexpr uint8_t WATCH_EVENT_ADDED = 1;
+constexpr uint8_t WATCH_EVENT_ADDED = 1u;
 
 extern "C" const fidl_type_t fuchsia_io_VmofileTable;
 
@@ -406,18 +406,18 @@ constexpr uint32_t MODE_TYPE_BLOCK_DEVICE = 0x06000;
 constexpr uint32_t MODE_PROTECTION_MASK = 0x00FFF;
 
 // The maximum length, in bytes, of a filesystem string.
-constexpr uint64_t MAX_PATH = 4096;
+constexpr uint64_t MAX_PATH = 4096u;
 
-constexpr uint64_t MAX_IOCTL_HANDLES = 2;
+constexpr uint64_t MAX_IOCTL_HANDLES = 2u;
 
-constexpr uint64_t MAX_FS_NAME_BUFFER = 32;
+constexpr uint64_t MAX_FS_NAME_BUFFER = 32u;
 
 // The maximum length, in bytes, of a single filesystem component.
-constexpr uint64_t MAX_FILENAME = 255;
+constexpr uint64_t MAX_FILENAME = 255u;
 
 // The maximal buffer size which can be transmitted for buffered operations.
 // This capacity is currently set somewhat arbitrarily.
-constexpr uint64_t MAX_BUF = 8192;
+constexpr uint64_t MAX_BUF = 8192u;
 
 // Nodes which do not have ino values should return this value
 // from Readdir and GetAttr.
@@ -6244,22 +6244,22 @@ class DirectoryAdmin final {
 };
 
 // A dirent with an unknown type.
-constexpr uint8_t DIRENT_TYPE_UNKNOWN = 0;
+constexpr uint8_t DIRENT_TYPE_UNKNOWN = 0u;
 
 // A dirent representing a socket object.
-constexpr uint8_t DIRENT_TYPE_SOCKET = 12;
+constexpr uint8_t DIRENT_TYPE_SOCKET = 12u;
 
 // A dirent representing a service object.
-constexpr uint8_t DIRENT_TYPE_SERVICE = 16;
+constexpr uint8_t DIRENT_TYPE_SERVICE = 16u;
 
 // A dirent representing a file object.
-constexpr uint8_t DIRENT_TYPE_FILE = 8;
+constexpr uint8_t DIRENT_TYPE_FILE = 8u;
 
 // A dirent representing a directory object.
-constexpr uint8_t DIRENT_TYPE_DIRECTORY = 4;
+constexpr uint8_t DIRENT_TYPE_DIRECTORY = 4u;
 
 // A dirent representing a block device object.
-constexpr uint8_t DIRENT_TYPE_BLOCK_DEVICE = 6;
+constexpr uint8_t DIRENT_TYPE_BLOCK_DEVICE = 6u;
 
 // Indicates the device is ready for writing.
 constexpr uint32_t DEVICE_SIGNAL_WRITABLE = 0x02000000;
