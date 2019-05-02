@@ -12,6 +12,7 @@
 #include <kernel/sched.h>
 #include <kernel/wait_queue_internal.h>
 #include <ktl/popcount.h>
+#include <ktl/type_traits.h>
 #include <lib/counters.h>
 
 // Notes on the defined kernel counters.
@@ -59,6 +60,27 @@ KCOUNTER(pi_triggered_ipis,              "kernel.pi.resched.ipis")
 KCOUNTER_DECLARE(max_pi_chain_traverse,  "kernel.pi.max_chain_traverse", Max)
 
 namespace {
+
+enum class PiTracingLevel {
+    // No tracing of PI events will happen
+    None,
+
+    // Only PI events which result in change of a target's effective priority
+    // will be traced.
+    Normal,
+
+    // PI events which result in change of either a target's effective or
+    // inherited priority will be traced.
+    Extended,
+};
+
+// Compile time control of whether recursion and infinite loop guards are
+// enabled.  By default, guards are enabled in everything but release builds.
+constexpr bool kEnablePiChainGuards = LK_DEBUGLEVEL > 0;
+
+// Default tracing level is Normal
+constexpr PiTracingLevel kDefaultPiTracingLevel = PiTracingLevel::Normal;
+
 // A couple of small stateful helper classes which drop out of release builds
 // which perform some sanity checks for us when propagating priority
 // inheritance.  In specific, we want to make sure that...
@@ -67,9 +89,8 @@ namespace {
 //    this code.
 // ++ When propagating iteratively, we are always making progress, and we never
 //    exceed any completely insane limits for a priority inheritance chain.
-constexpr bool kEnablePIChainGuards = LK_DEBUGLEVEL > 0;
-template <bool Enable = kEnablePIChainGuards> class RecursionGuard;
-template <bool Enable = kEnablePIChainGuards> class InfiniteLoopGuard;
+template <bool Enable = kEnablePiChainGuards> class RecursionGuard;
+template <bool Enable = kEnablePiChainGuards> class InfiniteLoopGuard;
 
 template <>
 class RecursionGuard<false> {
@@ -140,6 +161,88 @@ inline void UpdateStatsAndSendIPIs(bool local_resched, cpu_mask_t accum_cpu_mask
     }
 }
 
+
+template <PiTracingLevel Level = kDefaultPiTracingLevel, typename = void>
+class PiKTracer;
+
+// Disabled PiKTracer stores nothing and does nothing.
+template <>
+class PiKTracer<PiTracingLevel::None> {
+public:
+    void Trace(thread_t* t, int old_effec_prio, int new_effec_prio) {}
+};
+
+
+struct PiKTracerFlowIdGenerator {
+private:
+    friend class PiKTracer<PiTracingLevel::Normal>;
+    friend class PiKTracer<PiTracingLevel::Extended>;
+    inline static ktl::atomic<uint32_t> gen_{0};
+};
+
+template <PiTracingLevel Level>
+class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
+                                        (Level == PiTracingLevel::Extended)>> {
+public:
+    PiKTracer() = default;
+    ~PiKTracer() { Flush(FlushType::FINAL); }
+
+    void Trace(thread_t* t, int old_effec_prio, int old_inherited_prio) {
+        if ((old_effec_prio != t->effec_priority) ||
+            ((Level == PiTracingLevel::Extended) &&
+             (old_inherited_prio != t->inherited_priority))) {
+            if (thread_ == nullptr) {
+                // Generate the start event and a flow id.
+                flow_id_ = PiKTracerFlowIdGenerator::gen_.fetch_add(1, std::memory_order_relaxed);
+                ktrace(TAG_INHERIT_PRIORITY_START, flow_id_, 0, 0, arch_curr_cpu_num());
+            } else {
+                // Flush the previous event, but do not declare it to be the last in
+                // the flow.
+                Flush(FlushType::INTERMEDIATE);
+            }
+
+            // Record the info we will need for the subsequent event to be logged.
+            // We don't want to actually log this event until we know whether or not
+            // it will be the final event in the flow.
+            thread_ = t;
+            priorities_ = (old_effec_prio & 0xFF) |
+                          ((t->effec_priority & 0xFF) << 8) |
+                          ((old_inherited_prio & 0xFF) << 16) |
+                          ((t->inherited_priority & 0xFF) << 24);
+        }
+    }
+
+private:
+    enum class FlushType { FINAL, INTERMEDIATE };
+
+    void Flush(FlushType type) {
+        if (!thread_) {
+            return;
+        }
+
+        uint32_t tid;
+        uint32_t flags;
+        if (thread_->user_thread != nullptr) {
+            tid = static_cast<uint32_t>(thread_->user_tid);
+            flags = static_cast<uint32_t>(arch_curr_cpu_num());
+        } else {
+            tid = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(thread_));
+            flags = static_cast<uint32_t>(arch_curr_cpu_num()) |
+                    KTRACE_FLAGS_INHERIT_PRIORITY_KERNEL_TID;
+        }
+
+        if (type == FlushType::FINAL) {
+            flags |= KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT;
+        }
+
+        ktrace(TAG_INHERIT_PRIORITY, flow_id_, tid, priorities_, flags);
+    }
+
+    thread_t* thread_ = nullptr;
+    uint32_t flow_id_ = 0;
+    uint32_t priorities_ = 0;
+};
+
 RecursionGuard qpc_recursion_guard;
 
 }  // anon namespace
@@ -189,6 +292,7 @@ bool OwnedWaitQueue::QueuePressureChanged(thread_t* t,
 
     DEBUG_ASSERT(t != nullptr);
 
+    PiKTracer tracer;
     InfiniteLoopGuard inf_loop_guard;
     while (true) {
         inf_loop_guard.CheckProgress(traverse_len);
@@ -236,6 +340,7 @@ bool OwnedWaitQueue::QueuePressureChanged(thread_t* t,
         // this thread (if any).  If not, then we are done.
         const wait_queue_t* bwq = t->blocking_wait_queue;
         int old_effec_prio = t->effec_priority;
+        int old_inherited_prio = t->inherited_priority;
         int old_queue_prio = bwq ? wait_queue_blocked_priority(bwq) : -1;
         int new_queue_prio;
 
@@ -252,6 +357,9 @@ bool OwnedWaitQueue::QueuePressureChanged(thread_t* t,
                 pi_demotions.Add(1);
             }
         }
+
+        // Trace the change in priority if enabled.
+        tracer.Trace(t, old_effec_prio, old_inherited_prio);
 
         if (old_queue_prio == new_queue_prio) {
             return local_resched;

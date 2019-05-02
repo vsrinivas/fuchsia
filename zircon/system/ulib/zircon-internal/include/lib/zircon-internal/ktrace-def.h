@@ -28,8 +28,32 @@ KTRACE_DEF(0x033,16B,SYSCALL_EXIT,IRQ) // (n << 8) | cpu
 KTRACE_DEF(0x034,32B,PAGE_FAULT,IRQ) // virtual_address_hi, virtual_address_lo, flags, cpu
 KTRACE_DEF(0x035,32B,PAGE_FAULT_EXIT,IRQ) // virtual_address_hi, virtual_address_lo, flags, cpu
 
-// to-tid, (new_thread_prioriy<<24) | (old_thread_priority<<16) | (old_thread_state<<8) | cpu), from-kt, to-kt
+// to-tid, ((new_thread_prioriy<<24) | (old_thread_priority<<16) | (old_thread_state<<8) | cpu), from-kt, to-kt
 KTRACE_DEF(0x040,32B,CONTEXT_SWITCH,SCHEDULER)
+
+// Word 0: inherit event ID
+// Word 1: 0
+// Word 2: 0
+// Word 3: bits [0, 7] CPU ID
+KTRACE_DEF(0x041,32B,INHERIT_PRIORITY_START,SCHEDULER)
+
+// Word 0: inherit event ID.
+// Word 1: Target thread TID.
+// Word 2: bits [ 0,  7] : old effective priority as an int8_t
+//       : bits [ 8, 15] : new effective priority as an int8_t
+//       : bits [16, 23] : old inherited priority as an int8_t
+//       : bits [24, 31] : new inherited priority as an int8_t
+// Word 3: bits [ 0,  7] : CPU ID
+//       : bit 8         : Kernel TID flag.
+//       : bit 9         : Final event flag.
+//
+// Note: Target thread TID is one of two things.  Either, the lower 32
+// bits of the KOID for a user mode thread dispatcher object, or the
+// lower 32 bits of a kernel mode thread structure's kernel address.
+// The Kernel TID flag in word #3 can be used to tell the difference
+// (1 => kernel TID, 0 => user mode TID)
+//
+KTRACE_DEF(0x042,32B,INHERIT_PRIORITY,SCHEDULER)
 
 // events from 0x100 on all share the tag/tid/ts common header
 

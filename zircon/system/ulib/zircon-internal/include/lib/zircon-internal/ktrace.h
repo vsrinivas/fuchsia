@@ -120,4 +120,9 @@ enum {
 #define KTRACE_ACTION_REWIND    3 // options ignored
 #define KTRACE_ACTION_NEW_PROBE 4 // options ignored, ptr = name
 
+// Flags defined for the INHERIT_PRIORITY ktrace event.  See ktrace-def.h for details.
+#define KTRACE_FLAGS_INHERIT_PRIORITY_CPUID_MASK ((uint32_t)0xFF)
+#define KTRACE_FLAGS_INHERIT_PRIORITY_KERNEL_TID ((uint32_t)0x100)
+#define KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT  ((uint32_t)0x200)
+
 __END_CDECLS

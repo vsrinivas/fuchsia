@@ -5,20 +5,19 @@
 #ifndef GARNET_BIN_KTRACE_PROVIDER_IMPORTER_H_
 #define GARNET_BIN_KTRACE_PROVIDER_IMPORTER_H_
 
-#include "stddef.h"
-#include "stdint.h"
+#include <fbl/string.h>
+#include <fbl/string_piece.h>
+#include <trace-engine/context.h>
 
 #include <array>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
 
-#include <fbl/string.h>
-#include <fbl/string_piece.h>
-#include <trace-engine/context.h>
-
 #include "garnet/bin/ktrace_provider/tags.h"
 #include "src/lib/fxl/macros.h"
+#include "stddef.h"
+#include "stdint.h"
 
 namespace ktrace_provider {
 
