@@ -193,6 +193,7 @@ group("package_lists") {
     ":available_packages.list",
     ":monolith_packages.list",
     ":preinstall_packages.list",
+    ":all_package_manifests.list",
   ]
 }
 
@@ -1444,19 +1445,17 @@ action("update.sources.manifest") {
   ]
 }
 
-# The amber index is the index of all requested packages, naming each meta.far
-# file instead of its merkleroot. Additionally the amber_index has the system
-# package itself, and the system update package.
-amber_index = "$target_out_dir/amber_index"
-
-package_metadata_list("amber_index") {
-  visibility = [ ":amber_publish_index" ]
+# This output is a manifest of manifests that is usable as an input to `pm
+# publish -lp`, a tool for publishing a set of packages from a build produced
+# list of package manifests.
+all_package_manifests_list = root_build_dir + "/all_package_manifests.list"
+package_metadata_list("all_package_manifests.list") {
   testonly = true
-
   outputs = [
-    amber_index,
+    all_package_manifests_list,
   ]
-  data_keys = [ "meta_far_index_entries" ]
+  data_keys = [ "package_output_manifests" ]
+  rebase = root_build_dir
   deps = [
     ":packages",
     ":system_image.meta",
@@ -1588,64 +1587,21 @@ compiled_action("system_snapshot") {
   ]
 }
 
-# Available blob manifest is a manifest of merkleroot=source_path for all blobs
-# in all packages produced by the build, including the system image and the
-# update package.
-available_blob_manifest = "$root_build_dir/available_blobs.manifest"
-
-collect_blob_manifest("available_blobs.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-  outputs = [
-    available_blob_manifest,
-  ]
-  deps = [
-    ":packages",
-    ":system_image.meta",
-    ":update.meta",
-  ]
-}
-
-# Populate the repository directory with content ID-named copies.
-action("amber_publish_blobs") {
-  testonly = true
-  outputs = [
-    "$amber_repository_dir.stamp",
-  ]
-  deps = [
-    ":available_blobs.manifest",
-  ]
-  inputs = []
-  foreach(dep, deps) {
-    inputs += get_target_outputs(dep)
-  }
-  script = "manifest.py"
-  args = [
-    "--copy-contentaddr",
-    "--output=" + rebase_path(amber_repository_blobs_dir),
-    "--stamp=" + rebase_path("$amber_repository_dir.stamp"),
-  ]
-  foreach(manifest, inputs) {
-    args += [ "--manifest=" + rebase_path(manifest, root_build_dir) ]
-  }
-}
-
-# Sign and publish the package index.
-pm_publish("amber_publish_index") {
+# publish all packages to the package repository.
+pm_publish("publish") {
   testonly = true
   deps = [
-    ":amber_index",
+    ":all_package_manifests.list",
   ]
   inputs = [
-    amber_index,
+    all_package_manifests_list,
   ]
 }
 
 group("updates") {
   testonly = true
   deps = [
-    ":amber_publish_blobs",
-    ":amber_publish_index",
+    ":publish",
     ":ids.txt",
     ":package_lists",
     ":system_snapshot",

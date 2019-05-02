@@ -75,7 +75,7 @@ template("pm_publish") {
       "-C",
       "-r",
       rebase_path(amber_repository_dir, root_build_dir),
-      "-ps",
+      "-lp",
       "-f",
       rebase_path(inputs[0], root_build_dir),
       "-vt",

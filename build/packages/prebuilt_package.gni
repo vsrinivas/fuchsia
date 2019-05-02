@@ -26,6 +26,7 @@ template("prebuilt_package") {
 
   meta_dir = target_out_dir + "/" + pkg_name + ".meta"
   blobs_json = "$meta_dir/blobs.json"
+  package_manifest_json = "$meta_dir/package_manifest.json"
 
   pkg = {
     package_name = pkg_name
@@ -66,6 +67,7 @@ template("prebuilt_package") {
       blobs_manifest,
       system_rsp,
       blobs_json,
+      package_manifest_json,
       meta_merkle,
     ]
 
@@ -99,6 +101,10 @@ template("prebuilt_package") {
       meta_far_merkle_index_entries =
           [ "${pkg.package_name}/${pkg.package_version}=" +
             rebase_path("$meta_dir/meta.far.merkle", root_build_dir) ]
+
+      package_output_manifests = [
+        package_manifest_json,
+      ]
     }
   }
 

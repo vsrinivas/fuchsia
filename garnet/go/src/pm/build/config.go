@@ -6,10 +6,12 @@ package build
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	"fuchsia.googlesource.com/pm/pkg"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -20,6 +22,7 @@ type Config struct {
 	KeyPath      string
 	TempDir      string
 	PkgName      string
+	PkgVersion   string
 
 	// the manifest is memoized lazily, on the first call to Manifest()
 	manifest *Manifest
@@ -33,6 +36,7 @@ func NewConfig() *Config {
 		KeyPath:      "",
 		TempDir:      os.TempDir(),
 		PkgName:      "",
+		PkgVersion:   "0",
 	}
 	return cfg
 }
@@ -51,6 +55,7 @@ func TestConfig() *Config {
 		KeyPath:      filepath.Join(d, "key"),
 		TempDir:      filepath.Join(d, "tmp"),
 		PkgName:      filepath.Join(d, "pkg"),
+		PkgVersion:   "0",
 	}
 	for _, d := range []string{cfg.OutputDir, cfg.TempDir} {
 		os.MkdirAll(d, os.ModePerm)
@@ -65,6 +70,7 @@ func (c *Config) InitFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.KeyPath, "k", c.KeyPath, "signing key")
 	fs.StringVar(&c.TempDir, "t", c.TempDir, "temporary directory")
 	fs.StringVar(&c.PkgName, "n", c.PkgName, "name of the packages")
+	fs.StringVar(&c.PkgVersion, "version", c.PkgVersion, "version of the packages")
 }
 
 // PrivateKey loads the configured private key
@@ -108,4 +114,24 @@ func (c *Config) MetaFAR() string {
 // MetaFARMerkle returns the path to the meta.far.merkle that build.Seal generates
 func (c *Config) MetaFARMerkle() string {
 	return filepath.Join(c.OutputDir, "meta.far.merkle")
+}
+
+func (c *Config) Package() (pkg.Package, error) {
+	p := pkg.Package{
+		Name:    c.PkgName,
+		Version: c.PkgVersion,
+	}
+
+	if p.Name == "" {
+		p.Name = filepath.Base(c.OutputDir)
+		if p.Name == "." {
+			var err error
+			p.Name, err = filepath.Abs(p.Name)
+			if err != nil {
+				return p, fmt.Errorf("build: unable to compute package name from directory: %s", err)
+			}
+			p.Name = filepath.Base(p.Name)
+		}
+	}
+	return p, nil
 }

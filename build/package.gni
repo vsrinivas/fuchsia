@@ -50,6 +50,9 @@ declare_args() {
 #         The metafar merkle index entries are aggregated in image builds to
 #         produce package server indices for monolith serving.
 #
+#       package_output_manifests
+#         The path of each output manifest for each package.
+#
 #       package_barrier
 #         [list of labels] This is passed to walk_keys and can be used as a barrier to
 #         control dependency propgatation below a package target.
@@ -60,6 +63,7 @@ declare_args() {
 #   output_conversion (optional)
 #   outputs (optional)
 #   public_deps (optional)
+#   rebase (optional)
 #   testonly (optional)
 #   visibility (optional)
 #     Same as for any GN `generated_file()` target.
@@ -74,6 +78,7 @@ template("package_metadata_list") {
                              "output_conversion",
                              "outputs",
                              "public_deps",
+                             "rebase",
                              "testonly",
                              "visibility",
                            ])
@@ -186,6 +191,7 @@ template("pm_build_package") {
 
     depfile = "$pkg_out_dir/meta.far.d"
 
+    pkg_output_manifest = "$pkg_out_dir/package_manifest.json"
     outputs = [
       # produced by seal, must be listed first because of depfile rules.
       "$pkg_out_dir/meta.far",
@@ -205,6 +211,9 @@ template("pm_build_package") {
 
       # package blob manifest
       "$pkg_out_dir/blobs.manifest",
+
+      # package output manifest
+      pkg_output_manifest
     ]
 
     blobs_json_path = rebase_path("${pkg_out_dir}/blobs.json", root_build_dir)
@@ -237,6 +246,10 @@ template("pm_build_package") {
       meta_far_merkle_index_entries =
           [ "$package_name/$package_variant=" +
             rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir) ]
+
+      package_output_manifests = [
+        pkg_output_manifest,
+      ]
     }
 
     args = [
@@ -247,6 +260,8 @@ template("pm_build_package") {
       "-m",
       rebase_path(pkg_manifest_file, root_build_dir),
       "build",
+      "-output-package-manifest",
+      rebase_path(pkg_output_manifest, root_build_dir),
       "-depfile",
       "-blobsfile",
       "-blobs-manifest",

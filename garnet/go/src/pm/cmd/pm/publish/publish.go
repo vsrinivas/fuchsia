@@ -50,10 +50,11 @@ type manifestEntry struct {
 func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 
+	listOfPackageManifestsMode := fs.Bool("lp", false, "(mode) Publish a list of packages (and blobs) by package output manifest")
 	archiveMode := fs.Bool("a", false, "(mode) Publish an archived package.")
 	packageSetMode := fs.Bool("ps", false, "(mode) Publish a set of packages from a manifest.")
 	blobSetMode := fs.Bool("bs", false, "(mode) Publish a set of blobs from a manifest.")
-	modeFlags := []*bool{archiveMode, packageSetMode, blobSetMode}
+	modeFlags := []*bool{listOfPackageManifestsMode, archiveMode, packageSetMode, blobSetMode}
 
 	config := &repo.Config{}
 	config.Vars(fs)
@@ -150,6 +151,39 @@ func Run(cfg *build.Config, args []string) error {
 	}
 
 	switch {
+	case *listOfPackageManifestsMode:
+		if len(filePaths) != 1 {
+			return fmt.Errorf("too many file paths supplied")
+		}
+		deps = append(deps, filePaths[0])
+		f, err := os.Open(filePaths[0])
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		scanner := bufio.NewScanner(f)
+
+		for scanner.Scan() {
+			pkgManifestPath := scanner.Text()
+			deps = append(deps, pkgManifestPath)
+			if *verbose {
+				fmt.Printf("publishing: %s\n", pkgManifestPath)
+			}
+			if err := repo.PublishManifest(pkgManifestPath); err != nil {
+				return err
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+
+		if *verbose {
+			fmt.Printf("committing updates\n")
+		}
+		if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
+			log.Fatalf("error committing repository updates: %s", err)
+		}
 	case *archiveMode:
 		if len(filePaths) != 1 {
 			return fmt.Errorf("too many file paths supplied")
@@ -190,7 +224,7 @@ func Run(cfg *build.Config, args []string) error {
 		if *verbose {
 			fmt.Printf("adding package %s\n", name)
 		}
-		if err := repo.AddPackage(name, bytes.NewReader(b)); err != nil {
+		if err := repo.AddPackage(name, bytes.NewReader(b), ""); err != nil {
 			return err
 		}
 
@@ -223,7 +257,7 @@ func Run(cfg *build.Config, args []string) error {
 				return err
 			}
 			defer f.Close()
-			if err := repo.AddPackage(name, f); err != nil {
+			if err := repo.AddPackage(name, f, ""); err != nil {
 				return fmt.Errorf("failed to add package %q from %q: %s", name, src, err)
 			}
 			return nil

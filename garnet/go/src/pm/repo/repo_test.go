@@ -92,7 +92,7 @@ func TestAddPackage(t *testing.T) {
 	}
 
 	targetName := "test-test"
-	err = r.AddPackage("test-test", io.LimitReader(rand.Reader, 8193))
+	err = r.AddPackage("test-test", io.LimitReader(rand.Reader, 8193), "")
 
 	if err != nil {
 		t.Fatalf("Problem adding repo file %v", err)

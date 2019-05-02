@@ -180,7 +180,7 @@ func TestDaemon(t *testing.T) {
 	mf, err := os.Open(store + "/" + pkgBlob)
 	panicerr(err)
 	defer mf.Close()
-	panicerr(repo.AddPackage("foo/0", mf))
+	panicerr(repo.AddPackage("foo/0", mf, ""))
 
 	for _, blob := range []string{pkgBlob, root1} {
 		b, err := os.Open(store + "/" + blob)
@@ -292,7 +292,7 @@ func TestOpenRepository(t *testing.T) {
 	mf, err := os.Open(store + "/" + pkgBlob)
 	panicerr(err)
 	defer mf.Close()
-	panicerr(repo.AddPackage("foo/0", mf))
+	panicerr(repo.AddPackage("foo/0", mf, ""))
 
 	for _, blob := range []string{pkgBlob, root1} {
 		b, err := os.Open(store + "/" + blob)
@@ -398,7 +398,7 @@ func TestDaemonWithEncryption(t *testing.T) {
 	mf, err := os.Open(store + "/" + pkgBlob)
 	panicerr(err)
 	defer mf.Close()
-	panicerr(repo.AddPackage("foo/0", mf))
+	panicerr(repo.AddPackage("foo/0", mf, ""))
 
 	for _, blob := range []string{pkgBlob, root1} {
 		b, err := os.Open(store + "/" + blob)

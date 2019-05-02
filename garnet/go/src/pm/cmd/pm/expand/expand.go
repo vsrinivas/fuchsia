@@ -88,10 +88,11 @@ func merkleFor(b []byte) (build.MerkleRoot, error) {
 	return res, nil
 }
 
-// Extract the meta.far to the `outputDir`, and write out a package manifest
-// into `$outputDir/package.manifest`. for it. The format of the manifest is:
-//
+// Extract the meta.far to the `outputDir`, and write package manifests.
+// `$outputDir/package.manifest` contains:
 //     $PKG_NAME.$PKG_VERSION=$outputDir/meta.far
+// `package_manifest.json` contains a package output manifest as built by `pm
+// build -outut-package-manifest`.
 func writeMetadataAndManifest(pkgArchive *far.Reader, outputDir string) error {
 	// First, extract the package info from the archive, or error out if
 	// the meta.far is malformed.
@@ -163,6 +164,20 @@ func writeMetadataAndManifest(pkgArchive *far.Reader, outputDir string) error {
 		return err
 	}
 	f.Close()
+
+	// Write out package_manifest.json
+	pkgManifest := build.PackageManifest{
+		Version: "1",
+		Package: *p,
+		Blobs:   blobs,
+	}
+	content, err := json.Marshal(pkgManifest)
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(filepath.Join(outputDir, "package_manifest.json"), content, 0644); err != nil {
+		return err
+	}
 
 	cwd, err := os.Getwd()
 	if err != nil {

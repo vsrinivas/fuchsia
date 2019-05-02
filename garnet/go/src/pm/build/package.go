@@ -23,21 +23,17 @@ import (
 	"fuchsia.googlesource.com/pm/pkg"
 )
 
+// PackageManifest is the json structure representation of a full package
+// manifest.
+type PackageManifest struct {
+	Version string            `json:"version"`
+	Package pkg.Package       `json:"package"`
+	Blobs   []PackageBlobInfo `json:"blobs"`
+}
+
 // Init initializes package metadata in the output directory. A manifest
 // is generated with a name matching the output directory name.
 func Init(cfg *Config) error {
-	pkgName := cfg.PkgName
-	if pkgName == "" {
-		pkgName = filepath.Base(cfg.OutputDir)
-		if pkgName == "." {
-			var err error
-			pkgName, err = filepath.Abs(pkgName)
-			if err != nil {
-				return fmt.Errorf("build: unable to compute package name from directory: %s", err)
-			}
-			pkgName = filepath.Base(pkgName)
-		}
-	}
 	metadir := filepath.Join(cfg.OutputDir, "meta")
 	if err := os.MkdirAll(metadir, os.ModePerm); err != nil {
 		return err
@@ -50,9 +46,9 @@ func Init(cfg *Config) error {
 			return err
 		}
 
-		p := pkg.Package{
-			Name:    pkgName,
-			Version: "0",
+		p, err := cfg.Package()
+		if err != nil {
+			return err
 		}
 
 		err = json.NewEncoder(f).Encode(&p)

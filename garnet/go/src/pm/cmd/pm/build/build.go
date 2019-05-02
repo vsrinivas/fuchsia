@@ -29,6 +29,7 @@ func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("build", flag.ExitOnError)
 
 	var depfile = fs.Bool("depfile", true, "Produce a depfile")
+	var pkgManifestPath = fs.String("output-package-manifest", "", "If set, produce a package manifest at the given path")
 	var blobsfile = fs.Bool("blobsfile", false, "Produce blobs.json file")
 	var blobsmani = fs.Bool("blobs-manifest", false, "Produce blobs.manifest file")
 
@@ -68,34 +69,52 @@ func Run(cfg *build.Config, args []string) error {
 		}
 	}
 
-	if *blobsfile {
-		if cfg.ManifestPath == "" {
-			return fmt.Errorf("the -blobsfile option requires the use of the -m manifest option")
-		}
+	if cfg.ManifestPath == "" {
+		return fmt.Errorf("the -blobsfile option requires the use of the -m manifest option")
+	}
 
-		blobs, err := buildPackageBlobInfo(cfg)
+	blobs, err := buildPackageBlobInfo(cfg)
+	if err != nil {
+		return err
+	}
+
+	if *blobsfile {
+		content, err := json.Marshal(blobs)
 		if err != nil {
 			return err
 		}
+		if err := ioutil.WriteFile(filepath.Join(cfg.OutputDir, "blobs.json"), content, 0644); err != nil {
+			return err
+		}
+	}
 
-		if *blobsfile {
-			content, err := json.Marshal(blobs)
-			if err != nil {
-				return err
-			}
-			if err := ioutil.WriteFile(filepath.Join(cfg.OutputDir, "blobs.json"), content, 0644); err != nil {
-				return err
-			}
+	if *blobsmani {
+		var buf bytes.Buffer
+		for _, blob := range blobs {
+			fmt.Fprintf(&buf, "%s=%s\n", blob.Merkle.String(), blob.SourcePath)
+		}
+		if err := ioutil.WriteFile(filepath.Join(cfg.OutputDir, "blobs.manifest"), buf.Bytes(), 0644); err != nil {
+			return err
+		}
+	}
+
+	if *pkgManifestPath != "" {
+		p, err := cfg.Package()
+		if err != nil {
+			return err
+		}
+		pkgManifest := build.PackageManifest{
+			Version: "1",
+			Package: p,
+			Blobs:   blobs,
 		}
 
-		if *blobsmani {
-			var buf bytes.Buffer
-			for _, blob := range blobs {
-				fmt.Fprintf(&buf, "%s=%s\n", blob.Merkle.String(), blob.SourcePath)
-			}
-			if err := ioutil.WriteFile(filepath.Join(cfg.OutputDir, "blobs.manifest"), buf.Bytes(), 0644); err != nil {
-				return err
-			}
+		content, err := json.Marshal(pkgManifest)
+		if err != nil {
+			return err
+		}
+		if err := ioutil.WriteFile(*pkgManifestPath, content, 0644); err != nil {
+			return err
 		}
 	}
 

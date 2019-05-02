@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/merkle"
+	"fuchsia.googlesource.com/pm/build"
 
 	tuf "github.com/flynn/go-tuf"
 )
@@ -56,7 +57,20 @@ func New(path string) (*Repo, error) {
 	}
 
 	repo, err := tuf.NewRepo(tuf.FileSystemStore(path, passphrase), "sha512")
-	return &Repo{repo, path, nil}, err
+	if err != nil {
+		return nil, err
+	}
+	r := &Repo{repo, path, nil}
+
+	blobDir := filepath.Join(r.path, "repository", "blobs")
+	if err := os.MkdirAll(blobDir, os.ModePerm); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(r.stagedFilesPath(), os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 func (r *Repo) EncryptWith(path string) error {
@@ -98,9 +112,10 @@ func (r *Repo) GenKeys() error {
 }
 
 // AddPackage adds a package with the given name with the content from the given
-// reader. The package blob is also added.
-func (r *Repo) AddPackage(name string, rd io.Reader) error {
-	root, size, err := r.AddBlob("", rd)
+// reader. The package blob is also added. If merkle is non-empty, it is used,
+// otherwise the package merkleroot is computed on the fly.
+func (r *Repo) AddPackage(name string, rd io.Reader, merkle string) error {
+	root, size, err := r.AddBlob(merkle, rd)
 	if err != nil {
 		return NewAddErr("adding package blob", err)
 	}
@@ -115,25 +130,12 @@ func (r *Repo) AddPackage(name string, rd io.Reader) error {
 		return NewAddErr(fmt.Sprintf("serializing %v", metadata), err)
 	}
 
-	// The staged package blob is copied from the path produced by AddBlob, as the
-	// AddBlob operation my have performed blob encryption.
-	dst, err := os.Create(stagingPath)
-	if err != nil {
+	blobDir := filepath.Join(r.path, "repository", "blobs")
+	blobPath := filepath.Join(blobDir, root)
+
+	if err := linkOrCopy(blobPath, stagingPath); err != nil {
 		return NewAddErr("creating file in staging directory", err)
 	}
-	blobDir := filepath.Join(r.path, "repository", "blobs")
-	src, err := os.Open(filepath.Join(blobDir, root))
-	if err != nil {
-		dst.Close()
-		return NewAddErr("reading blob", err)
-	}
-	if _, err := io.Copy(dst, src); err != nil {
-		dst.Close()
-		src.Close()
-		return NewAddErr("staging meta.far blob", err)
-	}
-	dst.Close()
-	src.Close()
 
 	// add file with custom JSON to repository
 	if err := r.AddTarget(name, json.RawMessage(jsonStr)); err != nil {
@@ -159,13 +161,20 @@ func cryptingWriter(dst io.Writer, key []byte) (io.WriteCloser, error) {
 	return cipher.StreamWriter{stream, dst, nil}, nil
 }
 
+// HasBlob returns true if the given merkleroot is already in the repository
+// blob store.
+func (r *Repo) HasBlob(root string) bool {
+	blobPath := filepath.Join(r.path, "repository", "blobs", root)
+	fi, err := os.Stat(blobPath)
+	return err == nil && fi.Mode().IsRegular()
+}
+
 // AddBlob writes the content of the given reader to the blob identified by the
 // given merkleroot. If merkleroot is empty string, a merkleroot is computed.
 // Addblob always returns the plaintext size of the blob that is added, even if
 // blob encryption is used.
 func (r *Repo) AddBlob(root string, rd io.Reader) (string, int64, error) {
 	blobDir := filepath.Join(r.path, "repository", "blobs")
-	os.MkdirAll(blobDir, os.ModePerm)
 
 	if root != "" {
 		dstPath := filepath.Join(blobDir, root)
@@ -255,6 +264,47 @@ func (r *Repo) CommitUpdates(dateVersioning bool) error {
 	return r.commitUpdates()
 }
 
+func (r *Repo) PublishManifest(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	var packageManifest build.PackageManifest
+	if err := json.NewDecoder(f).Decode(&packageManifest); err != nil {
+		return err
+	}
+	if packageManifest.Version != "1" {
+		return fmt.Errorf("unknown version %q, can't publish", packageManifest.Version)
+	}
+
+	for _, blob := range packageManifest.Blobs {
+		if blob.Path == "meta/" {
+			p := packageManifest.Package
+			name := p.Name + "/" + p.Version
+			f, err := os.Open(blob.SourcePath)
+			if err != nil {
+				return err
+			}
+			err = r.AddPackage(name, f, blob.Merkle.String())
+			f.Close()
+		} else {
+			if !r.HasBlob(blob.Merkle.String()) {
+				f, err := os.Open(blob.SourcePath)
+				if err != nil {
+					return err
+				}
+				_, _, err = r.AddBlob(blob.Merkle.String(), f)
+				f.Close()
+			}
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *Repo) commitUpdates() error {
 	if err := r.SnapshotWithExpires(tuf.CompressionTypeNone, time.Now().AddDate(0, 0, 30)); err != nil {
 		return NewAddErr("problem snapshotting repository", err)
@@ -286,6 +336,31 @@ func (r *Repo) fixupRootConsistentSnapshot() error {
 	rootSnap := filepath.Join(r.path, "repository", fmt.Sprintf("%x.root.json", sum512))
 	if _, err := os.Stat(rootSnap); os.IsNotExist(err) {
 		return ioutil.WriteFile(rootSnap, b, 0666)
+	}
+	return nil
+}
+
+func linkOrCopy(dstPath, srcPath string) error {
+	if err := os.Link(dstPath, srcPath); err != nil {
+		s, err := os.Open(srcPath)
+		if err != nil {
+			return err
+		}
+		defer s.Close()
+
+		d, err := ioutil.TempFile(filepath.Dir(dstPath), filepath.Base(dstPath))
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(d, s); err != nil {
+			d.Close()
+			os.Remove(d.Name())
+			return err
+		}
+		if err := d.Close(); err != nil {
+			return err
+		}
+		return os.Rename(d.Name(), dstPath)
 	}
 	return nil
 }
