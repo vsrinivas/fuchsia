@@ -20,7 +20,8 @@ void msd_driver_configure(struct msd_driver_t* drv, uint32_t flags);
 // Destroys a driver instance.
 void msd_driver_destroy(struct msd_driver_t* drv);
 
-// Creates a device at system startup.
+// Creates a device at system startup. |device| is a pointer to a platform-specific device object
+// which is guaranteed to outlive the returned msd_device_t.
 struct msd_device_t* msd_driver_create_device(struct msd_driver_t* drv, void* device);
 
 // Destroys a device at system shutdown.
