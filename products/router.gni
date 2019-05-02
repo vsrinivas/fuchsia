@@ -36,6 +36,7 @@ base_package_labels += [
   "//garnet/packages/prod:wlanif",
   "//garnet/packages/prod:wlanphy",
   "//garnet/packages/prod:wlanstack",
+  "//garnet/packages/tools:boringssl",
   "//garnet/packages/tools:netstack",
   "//src/connectivity/dhcp:dhcpd",
   "//src/connectivity/wlan:tests",
