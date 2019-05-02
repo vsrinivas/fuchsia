@@ -192,7 +192,6 @@ impl OutputWorker {
                         Some(ExtractMsg::Start) => {
                             self.extracted_data.clear();
                             self.capturing = true;
-                            fx_log_info!("Someone set us up the start");
                         }
                     }
                 },
@@ -221,7 +220,7 @@ impl OutputWorker {
                             self.on_position_notify(ring_position, clock_time, self.capturing)?;
                         },
                         Some(evt) => {
-                            fx_log_info!("XXXXXXXXXXXXXXXXXXXXXX Got unknown InputEvent {:?}", evt);
+                            fx_log_info!("Got unknown InputEvent {:?}", evt);
                         }
                     }
                 },
