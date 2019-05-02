@@ -49,12 +49,14 @@ typedef struct zx_policy_basic {
 #endif
 
 // Policy actions.
-// ZX_POL_ACTION_ALLOW and ZX_POL_ACTION_DENY can be ORed with ZX_POL_ACTION_EXCEPTION.
-// ZX_POL_ACTION_KILL implies ZX_POL_ACTION_DENY.
 #define ZX_POL_ACTION_ALLOW                 0u
 #define ZX_POL_ACTION_DENY                  1u
-#define ZX_POL_ACTION_EXCEPTION             2u
-#define ZX_POL_ACTION_KILL                  5u
+#define ZX_POL_ACTION_ALLOW_EXCEPTION       2u
+#define ZX_POL_ACTION_DENY_EXCEPTION        3u
+#define ZX_POL_ACTION_KILL                  4u
+#ifdef _KERNEL
+#define ZX_POL_ACTION_MAX                   5u
+#endif
 
 // Input structure to use with ZX_JOB_POL_TIMER_SLACK.
 typedef struct zx_policy_timer_slack {

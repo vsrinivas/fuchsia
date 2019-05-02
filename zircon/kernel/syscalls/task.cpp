@@ -317,7 +317,7 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     // We check the policy against the process calling zx_process_create, which
     // is the operative policy, rather than against |job_handle|. Access to
     // |job_handle| is controlled by the rights associated with the handle.
-    zx_status_t result = up->QueryBasicPolicy(ZX_POL_NEW_PROCESS);
+    zx_status_t result = up->EnforceBasicPolicy(ZX_POL_NEW_PROCESS);
     if (result != ZX_OK)
         return result;
 

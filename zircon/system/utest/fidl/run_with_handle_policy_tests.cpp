@@ -74,7 +74,7 @@ bool LaunchHelper(const char* argv[]) {
     static const zx_policy_basic_t policy[] = {
         zx_policy_basic_t {
             .condition = ZX_POL_BAD_HANDLE,
-            .policy = ZX_POL_ACTION_EXCEPTION
+            .policy = ZX_POL_ACTION_ALLOW_EXCEPTION
         },
     };
     status = test_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, &policy,

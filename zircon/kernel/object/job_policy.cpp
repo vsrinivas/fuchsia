@@ -18,10 +18,8 @@ constexpr pol_cookie_t kPolicyEmpty = 0u;
 
 // The encoding of the basic policy is done 4 bits per each item.
 //
-// - When the top bit is 1, the lower 3 bits track the action:
-//    0 : ZX_POL_ACTION_ALLOW or not (ZX_POL_ACTION_DENY)
-//    1 : ZX_POL_ACTION_EXCEPTION or not
-//    2 : ZX_POL_ACTION_KILL or not
+// - When the top bit is 1, the lower 3 bits contain the action
+//   (ZX_POL_ACTION_ALLOW, ZX_POL_ACTION_DENY, etc.)
 //
 // - When the top bit is 0 then its the default policy and other bits
 //   should be zero so that kPolicyEmpty == 0 meets the requirement of
@@ -56,9 +54,6 @@ union Encoding {
     static uint32_t action(uint64_t item) { return item & kActionBits; }
     static bool is_default(uint64_t item) { return item == 0; }
 };
-
-constexpr uint32_t kPolicyActionValidBits =
-    ZX_POL_ACTION_ALLOW | ZX_POL_ACTION_DENY | ZX_POL_ACTION_EXCEPTION | ZX_POL_ACTION_KILL;
 
 // The packing of bits on a bitset (above) is defined by the standard as
 // implementation dependent so we must check that it is using the storage
@@ -108,7 +103,7 @@ zx_status_t AddPartial(uint32_t mode, pol_cookie_t existing_policy,
     Encoding existing = {existing_policy};
     Encoding result = {};
 
-    if (policy & ~kPolicyActionValidBits)
+    if (policy >= ZX_POL_ACTION_MAX)
         return ZX_ERR_NOT_SUPPORTED;
 
     switch (condition) {

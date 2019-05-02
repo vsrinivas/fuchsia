@@ -826,7 +826,7 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
         return status;
     }
     static const zx_policy_basic_t policy[] = {
-        {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_EXCEPTION},
+        {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_ALLOW_EXCEPTION},
     };
     status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, &policy,
                                     fbl::count_of(policy));

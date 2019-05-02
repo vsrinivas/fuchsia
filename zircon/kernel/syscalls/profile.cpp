@@ -30,7 +30,7 @@ zx_status_t sys_profile_create(zx_handle_t root_job,
                                user_out_handle* out) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    zx_status_t status = up->QueryBasicPolicy(ZX_POL_NEW_PROFILE);
+    zx_status_t status = up->EnforceBasicPolicy(ZX_POL_NEW_PROFILE);
     if (status != ZX_OK) {
         return status;
     }

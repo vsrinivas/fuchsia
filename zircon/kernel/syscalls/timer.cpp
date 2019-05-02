@@ -28,7 +28,7 @@ zx_status_t sys_timer_create(uint32_t options, zx_clock_t clock_id,
         return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t result = up->QueryBasicPolicy(ZX_POL_NEW_TIMER);
+    zx_status_t result = up->EnforceBasicPolicy(ZX_POL_NEW_TIMER);
     if (result != ZX_OK)
         return result;
 

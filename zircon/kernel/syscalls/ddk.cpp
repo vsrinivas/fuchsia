@@ -63,7 +63,7 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t ali
     }
 
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t status = up->QueryBasicPolicy(ZX_POL_NEW_VMO);
+    zx_status_t status = up->EnforceBasicPolicy(ZX_POL_NEW_VMO);
     if (status != ZX_OK) {
         return status;
     }
@@ -101,7 +101,7 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, zx_paddr_t paddr, size_t 
     LTRACEF("size 0x%zu\n", size);
 
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t status = up->QueryBasicPolicy(ZX_POL_NEW_VMO);
+    zx_status_t status = up->EnforceBasicPolicy(ZX_POL_NEW_VMO);
     if (status != ZX_OK) {
         return status;
     }

@@ -178,7 +178,7 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
         return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t status = up->QueryBasicPolicy(ZX_POL_NEW_CHANNEL);
+    zx_status_t status = up->EnforceBasicPolicy(ZX_POL_NEW_CHANNEL);
     if (status != ZX_OK)
         return status;
 

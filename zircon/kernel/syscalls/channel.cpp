@@ -58,7 +58,7 @@ zx_status_t sys_channel_create(uint32_t options,
         return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t res = up->QueryBasicPolicy(ZX_POL_NEW_CHANNEL);
+    zx_status_t res = up->EnforceBasicPolicy(ZX_POL_NEW_CHANNEL);
     if (res != ZX_OK)
         return res;
 

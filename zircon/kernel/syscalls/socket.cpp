@@ -30,7 +30,7 @@ zx_status_t sys_socket_create(uint32_t options,
                               user_out_handle* out0,
                               user_out_handle* out1) {
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t res = up->QueryBasicPolicy(ZX_POL_NEW_SOCKET);
+    zx_status_t res = up->EnforceBasicPolicy(ZX_POL_NEW_SOCKET);
     if (res != ZX_OK)
         return res;
 

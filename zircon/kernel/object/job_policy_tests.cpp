@@ -120,12 +120,10 @@ static bool add_basic_policy_unmodified_on_error() {
     BEGIN_TEST;
 
     JobPolicy p;
-    zx_policy_basic_t policy[2]{{ZX_POL_NEW_VMO,
-                                 ZX_POL_ACTION_ALLOW | ZX_POL_ACTION_EXCEPTION},
-                                {ZX_POL_NEW_CHANNEL,
-                                 ZX_POL_ACTION_KILL}};
+    zx_policy_basic_t policy[2]{{ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW_EXCEPTION},
+                                {ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_KILL}};
     ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, policy, fbl::count_of(policy)), "");
-    ASSERT_EQ(ZX_POL_ACTION_ALLOW | ZX_POL_ACTION_EXCEPTION,
+    ASSERT_EQ(ZX_POL_ACTION_ALLOW_EXCEPTION,
               p.QueryBasicPolicy(ZX_POL_NEW_VMO), "");
     ASSERT_EQ(ZX_POL_ACTION_KILL, p.QueryBasicPolicy(ZX_POL_NEW_CHANNEL), "");
 

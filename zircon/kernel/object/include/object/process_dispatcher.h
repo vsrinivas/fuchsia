@@ -270,7 +270,11 @@ public:
     uintptr_t get_debug_addr() const;
     zx_status_t set_debug_addr(uintptr_t addr);
 
-    // Checks the |condition| against the parent job's policy.
+    // Checks |condition| and enforces the parent job's policy.
+    //
+    // Depending on the parent job's policy, this method may signal an exception
+    // on the calling thread or signal that the current process should be
+    // killed.
     //
     // Must be called by syscalls before performing an action represented by an
     // ZX_POL_xxxxx condition. If the return value is ZX_OK the action can
@@ -280,14 +284,15 @@ public:
     // E.g., in sys_channel_create:
     //
     //     auto up = ProcessDispatcher::GetCurrent();
-    //     zx_status_t res = up->QueryBasicPolicy(ZX_POL_NEW_CHANNEL);
+    //     zx_status_t res = up->EnforceBasicPolicy(ZX_POL_NEW_CHANNEL);
     //     if (res != ZX_OK) {
     //         // Channel creation denied by the calling process's
     //         // parent job's policy.
     //         return res;
     //     }
     //     // Ok to create a channel.
-    zx_status_t QueryBasicPolicy(uint32_t condition) const;
+    __WARN_UNUSED_RESULT
+    zx_status_t EnforceBasicPolicy(uint32_t condition);
 
     // Returns this job's timer slack policy.
     TimerSlack GetTimerSlackPolicy() const;

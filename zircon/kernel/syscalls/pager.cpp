@@ -33,7 +33,7 @@ zx_status_t sys_pager_create_vmo(zx_handle_t pager, uint32_t options, zx_handle_
                                  uint64_t key, uint64_t size, user_out_handle* out) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    zx_status_t status = up->QueryBasicPolicy(ZX_POL_NEW_VMO);
+    zx_status_t status = up->EnforceBasicPolicy(ZX_POL_NEW_VMO);
     if (status != ZX_OK) {
         return status;
     }

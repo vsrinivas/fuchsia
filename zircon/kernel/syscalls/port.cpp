@@ -27,7 +27,7 @@
 zx_status_t sys_port_create(uint32_t options, user_out_handle* out) {
     LTRACEF("options %u\n", options);
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t result = up->QueryBasicPolicy(ZX_POL_NEW_PORT);
+    zx_status_t result = up->EnforceBasicPolicy(ZX_POL_NEW_PORT);
     if (result != ZX_OK)
         return result;
 

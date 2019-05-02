@@ -486,12 +486,14 @@ Handle* ProcessDispatcher::GetHandleLocked(zx_handle_t handle_value,
     if (handle && handle->process_id() == get_koid())
         return handle;
 
-    // Handle lookup failed.  We potentially generate an exception,
-    // depending on the job policy.  Note that we don't use the return
-    // value from QueryBasicPolicy() here: ZX_POL_ACTION_ALLOW and
-    // ZX_POL_ACTION_DENY are equivalent for ZX_POL_BAD_HANDLE.
-    if (likely(!skip_policy))
-        QueryBasicPolicy(ZX_POL_BAD_HANDLE);
+    if (likely(!skip_policy)) {
+        // Handle lookup failed.  We potentially generate an exception or kill the process,
+        // depending on the job policy. Note that we don't use the return value from
+        // EnforceBasicPolicy() here: ZX_POL_ACTION_ALLOW and ZX_POL_ACTION_DENY are equivalent for
+        // ZX_POL_BAD_HANDLE.
+        __UNUSED auto result = EnforceBasicPolicy(ZX_POL_BAD_HANDLE);
+    }
+
     return nullptr;
 }
 
@@ -831,14 +833,26 @@ zx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
     return ZX_OK;
 }
 
-zx_status_t ProcessDispatcher::QueryBasicPolicy(uint32_t condition) const {
-    auto action = policy_.QueryBasicPolicy(condition);
-    if (action & ZX_POL_ACTION_EXCEPTION) {
+zx_status_t ProcessDispatcher::EnforceBasicPolicy(uint32_t condition) {
+    const auto action = policy_.QueryBasicPolicy(condition);
+    switch (action) {
+    case ZX_POL_ACTION_ALLOW:
+        return ZX_OK;
+    case ZX_POL_ACTION_DENY:
+        return ZX_ERR_ACCESS_DENIED;
+    case ZX_POL_ACTION_ALLOW_EXCEPTION:
         thread_signal_policy_exception();
-    }
-    // TODO(cpu): check for the ZX_POL_KILL bit and return an error code
-    // that abigen understands as termination.
-    return (action & ZX_POL_ACTION_DENY) ? ZX_ERR_ACCESS_DENIED : ZX_OK;
+        return ZX_OK;
+    case ZX_POL_ACTION_DENY_EXCEPTION:
+        thread_signal_policy_exception();
+        return ZX_ERR_ACCESS_DENIED;
+    case ZX_POL_ACTION_KILL:
+        Kill(ZX_TASK_RETCODE_POLICY_KILL);
+        // Because we've killed, this return value will never make it out to usermode. However,
+        // callers of this method will see and act on it.
+        return ZX_ERR_ACCESS_DENIED;
+    };
+    panic("unexpected policy action %u\n", action);
 }
 
 TimerSlack ProcessDispatcher::GetTimerSlackPolicy() const {

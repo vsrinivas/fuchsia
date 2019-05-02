@@ -88,16 +88,15 @@ Where *condition* is one of
   and any future **ZX_NEW** policy. This will include any new
   kernel objects which do not require a parent object for creation.
 
-Where *policy* is either
+Where *policy* is one of
 + **ZX_POL_ACTION_ALLOW**  allow *condition*.
 + **ZX_POL_ACTION_DENY**  prevent *condition*.
-
-Optionally it can be augmented via OR with
-+ **ZX_POL_ACTION_EXCEPTION** generate an exception via the debug port. An
-  exception generated this way acts as a breakpoint. The thread may be
++ **ZX_POL_ACTION_ALLOW_EXCEPTION**  generate an exception via the debug port.
+  An exception generated this way acts as a breakpoint. The thread may be
   resumed after the exception.
-+ **ZX_POL_ACTION_KILL** terminate the process. It also
-implies **ZX_POL_ACTION_DENY**.
++ **ZX_POL_ACTION_DENY_EXCEPTION**  just like **ZX_POL_ACTION_ALLOW_EXCEPTION**,
+  but after resuming *condition* is denied.
++ **ZX_POL_ACTION_KILL**  terminate the process.
 
 ### **ZX_JOB_POL_TIMER_SLACK**
 

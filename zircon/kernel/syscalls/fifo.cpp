@@ -27,7 +27,7 @@
 zx_status_t sys_fifo_create(size_t count, size_t elemsize, uint32_t options,
                             user_out_handle* out0, user_out_handle* out1) {
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t res = up->QueryBasicPolicy(ZX_POL_NEW_FIFO);
+    zx_status_t res = up->EnforceBasicPolicy(ZX_POL_NEW_FIFO);
     if (res != ZX_OK)
         return res;
 

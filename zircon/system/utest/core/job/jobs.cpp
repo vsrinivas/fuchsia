@@ -115,7 +115,7 @@ static bool policy_basic_test() {
 
     zx_policy_basic_t policy[] = {
         { ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL },
-        { ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_ALLOW | ZX_POL_ACTION_EXCEPTION },
+        { ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_ALLOW_EXCEPTION },
         { ZX_POL_NEW_FIFO, ZX_POL_ACTION_DENY },
     };
 
