@@ -39,6 +39,7 @@ template("sdk_molecule") {
                            [
                              "assert_no_deps",
                              "testonly",
+                             "visibility",
                            ])
 
     manifest = "$target_gen_dir/$target_name.sdk"

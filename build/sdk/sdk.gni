@@ -90,19 +90,22 @@ template("sdk") {
 
   # Generates the manifest.
   sdk_molecule(generation_target_name) {
+    # Do not expose this molecule to other targets. Depending directly on the
+    # contents of an SDK foregoes API verification, which is not desirable.
+    visibility = [ ":$verify_api_target_name" ]
+
     forward_variables_from(invoker,
-                           "*",
                            [
-                             "api",
-                             "export",
+                             "assert_no_deps",
+                             "category",
+                             "deps",
+                             "testonly",
                            ])
 
     if (!defined(deps)) {
       deps = []
     }
     deps += [ "//build/sdk:schemas" ]
-
-    category = invoker.category
   }
 
   intermediate_manifest_file = "$target_gen_dir/$generation_target_name.sdk"
