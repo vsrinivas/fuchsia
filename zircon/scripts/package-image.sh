@@ -143,6 +143,7 @@ fi
 
 if [[ ${MEXEC} == true ]]; then
     CMDLINE+=" netsvc.netboot=true"
+    MKBOOTIMG_CMDLINE+=" netsvc.netboot=true"
 fi
 
 # Append extra command line items
