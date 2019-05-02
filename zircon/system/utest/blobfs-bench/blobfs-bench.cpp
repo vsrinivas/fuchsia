@@ -341,6 +341,11 @@ bool RunBenchmark(int argc, char** argv) {
     size_t test_index = 0;
     for (auto blob_size : blob_sizes) {
         for (auto blob_count : blob_counts) {
+            // Skip the largest blob size/count combination because it
+            // increases the overall running time too much.
+            if (blob_size >= 1024 * 1024 && blob_count >= 10000) {
+                continue;
+            }
             BlobfsInfo fs_info;
             fs_info.blob_count = (p_opts.is_unittest) ? 1 : blob_count;
             fs_info.blob_size = blob_size;
