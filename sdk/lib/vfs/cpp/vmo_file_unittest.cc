@@ -7,6 +7,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
+#include <lib/vfs/cpp/vmo_file.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 
@@ -16,7 +17,6 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "lib/vfs/cpp/vmo_file.h"
 
 namespace {
 
@@ -36,7 +36,7 @@ zx::vmo MakeTestVmo() {
   return ret;
 }
 
-fuchsia::io::FileSyncPtr OpenAsFile(vfs::Node* node,
+fuchsia::io::FileSyncPtr OpenAsFile(vfs::internal::Node* node,
                                     async_dispatcher_t* dispatcher,
                                     bool writable = false) {
   zx::channel local, remote;

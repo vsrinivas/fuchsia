@@ -6,14 +6,14 @@
 #define LIB_VFS_CPP_SERVICE_H_
 
 #include <fuchsia/io/cpp/fidl.h>
-#include <lib/vfs/cpp/node.h>
+#include <lib/vfs/cpp/internal/node.h>
 
 namespace vfs {
 
 // A |Node| which binds a channel to a service implementation when opened.
 //
 // Instances of this class are thread-safe.
-class Service : public Node {
+class Service : public vfs::internal::Node {
  public:
   // Handler called to bind the provided channel to an implementation
   // of the service.
@@ -57,8 +57,9 @@ class Service : public Node {
 
  protected:
   // |Node| implementations:
-  zx_status_t CreateConnection(uint32_t flags,
-                               std::unique_ptr<Connection>* connection) final;
+  zx_status_t CreateConnection(
+      uint32_t flags,
+      std::unique_ptr<vfs::internal::Connection>* connection) final;
 
   uint32_t GetAdditionalAllowedFlags() const override final;
 

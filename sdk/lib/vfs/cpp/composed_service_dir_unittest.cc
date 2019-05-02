@@ -31,7 +31,7 @@ class EchoImpl : public fidl::examples::echo::Echo {
 
 class ComposedServiceDirectorySimpleTest : public vfs_tests::DirConnection {
  public:
-  vfs::Directory* GetDirectoryNode() override { return &dir_; }
+  vfs::internal::Directory* GetDirectoryNode() override { return &dir_; }
 
   ComposedServiceDirectorySimpleTest()
       : loop_(&kAsyncLoopConfigNoAttachToThread) {
@@ -49,7 +49,7 @@ class ComposedServiceDirectorySimpleTest : public vfs_tests::DirConnection {
     loop_.StartThread("vfs test thread");
   }
 
-  fuchsia::io::DirectoryPtr GetConnection(vfs::Directory* dir) {
+  fuchsia::io::DirectoryPtr GetConnection(vfs::internal::Directory* dir) {
     fuchsia::io::DirectoryPtr ptr;
     dir->Serve(
         fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
@@ -57,7 +57,8 @@ class ComposedServiceDirectorySimpleTest : public vfs_tests::DirConnection {
     return ptr;
   }
 
-  fuchsia::io::DirectorySyncPtr GetSyncConnection(vfs::Directory* dir) {
+  fuchsia::io::DirectorySyncPtr GetSyncConnection(
+      vfs::internal::Directory* dir) {
     fuchsia::io::DirectorySyncPtr ptr;
     dir->Serve(
         fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,

@@ -17,7 +17,7 @@ namespace vfs {
 // A directory-like object which created a composed PseudoDir on top of
 // |fallback_dir|.It can be used to connect to services in |fallback_dir| but it
 // will not enumerate them.
-class ComposedServiceDir : public vfs::Directory {
+class ComposedServiceDir : public vfs::internal::Directory {
  public:
   ComposedServiceDir();
   ~ComposedServiceDir() override;
@@ -28,9 +28,10 @@ class ComposedServiceDir : public vfs::Directory {
                   std::unique_ptr<vfs::Service> service);
 
   //
-  // |vfs::Node| Implementations:
+  // |vfs::internal::Node| Implementations:
   //
-  zx_status_t Lookup(const std::string& name, vfs::Node** out_node) const final;
+  zx_status_t Lookup(const std::string& name,
+                     vfs::internal::Node** out_node) const final;
 
   zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const final;
 

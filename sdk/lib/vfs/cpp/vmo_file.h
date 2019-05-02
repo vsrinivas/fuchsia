@@ -6,7 +6,7 @@
 #define LIB_VFS_CPP_VMO_FILE_H_
 
 #include <fuchsia/io/cpp/fidl.h>
-#include <lib/vfs/cpp/file.h>
+#include <lib/vfs/cpp/internal/file.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 
@@ -22,7 +22,7 @@ namespace vfs {
 // See also:
 //
 //  * File, which represents file objects.
-class VmoFile : public File {
+class VmoFile : public vfs::internal::File {
  public:
   // Specifies the desired behavior of writes.
   enum class WriteOption {

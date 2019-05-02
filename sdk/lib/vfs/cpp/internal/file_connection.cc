@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/file.h>
 #include <lib/vfs/cpp/flags.h>
+#include <lib/vfs/cpp/internal/file.h>
 #include <lib/vfs/cpp/internal/file_connection.h>
 
 #include <utility>
@@ -11,7 +11,7 @@
 namespace vfs {
 namespace internal {
 
-FileConnection::FileConnection(uint32_t flags, vfs::File* vn)
+FileConnection::FileConnection(uint32_t flags, vfs::internal::File* vn)
     : Connection(flags), vn_(vn), binding_(this) {}
 
 FileConnection::~FileConnection() = default;

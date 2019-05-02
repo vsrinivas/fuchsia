@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/file.h>
-
+#include <lib/vfs/cpp/internal/file.h>
 #include <lib/vfs/cpp/internal/file_connection.h>
 
 namespace vfs {
+namespace internal {
 
 File::File() = default;
 
@@ -43,4 +43,5 @@ size_t File::GetCapacity() { return std::numeric_limits<size_t>::max(); }
 
 bool File::IsDirectory() const { return false; }
 
+}  // namespace internal
 }  // namespace vfs

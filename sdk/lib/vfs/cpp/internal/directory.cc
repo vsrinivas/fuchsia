@@ -5,12 +5,13 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/vfs.h>
-#include <lib/vfs/cpp/directory.h>
 #include <lib/vfs/cpp/flags.h>
+#include <lib/vfs/cpp/internal/directory.h>
 #include <lib/vfs/cpp/internal/directory_connection.h>
 #include <zircon/errors.h>
 
 namespace vfs {
+namespace internal {
 
 Directory::Directory() = default;
 
@@ -240,4 +241,5 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode,
   n->ServeWithMode(open_flags, mode, std::move(request), dispatcher);
 }
 
+}  // namespace internal
 }  // namespace vfs

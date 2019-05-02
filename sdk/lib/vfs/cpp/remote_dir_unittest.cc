@@ -24,7 +24,7 @@ class RemoteDirConnection : public vfs_tests::DirConnection {
   }
 
  protected:
-  vfs::Directory* GetDirectoryNode() override { return dir_.get(); }
+  vfs::internal::Directory* GetDirectoryNode() override { return dir_.get(); }
 
   fuchsia::io::DirectoryPtr GetPseudoDirConnection() {
     fuchsia::io::DirectoryPtr ptr;
@@ -33,7 +33,7 @@ class RemoteDirConnection : public vfs_tests::DirConnection {
     return ptr;
   }
 
-  void ReadDir(vfs::Directory* dir, std::vector<uint8_t>* dirents,
+  void ReadDir(vfs::internal::Directory* dir, std::vector<uint8_t>* dirents,
                uint64_t buffer_size = 1024) {
     fuchsia::io::DirectorySyncPtr ptr;
     dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE, ptr.NewRequest().TakeChannel(),

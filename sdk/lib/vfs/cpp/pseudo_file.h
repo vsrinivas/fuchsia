@@ -5,8 +5,8 @@
 #ifndef LIB_VFS_CPP_PSEUDO_FILE_H_
 #define LIB_VFS_CPP_PSEUDO_FILE_H_
 
-#include <lib/vfs/cpp/connection.h>
-#include <lib/vfs/cpp/file.h>
+#include <lib/vfs/cpp/internal/connection.h>
+#include <lib/vfs/cpp/internal/file.h>
 
 namespace vfs {
 
@@ -25,7 +25,7 @@ namespace vfs {
 // the file is closed(if there were any writes).  Truncation is also supported.
 //
 // Instances of this class are thread-safe.
-class PseudoFile : public File {
+class PseudoFile : public vfs::internal::File {
  public:
   // Handler called to read from the pseudo-file.
   using ReadHandler = fit::function<zx_status_t(std::vector<uint8_t>* output)>;
@@ -51,14 +51,15 @@ class PseudoFile : public File {
 
  protected:
   zx_status_t CreateConnection(
-      uint32_t flags, std::unique_ptr<Connection>* connection) override;
+      uint32_t flags,
+      std::unique_ptr<vfs::internal::Connection>* connection) override;
 
   uint32_t GetAdditionalAllowedFlags() const override;
 
   uint32_t GetProhibitiveFlags() const override;
 
  private:
-  class Content final : public Connection, public File {
+  class Content final : public vfs::internal::Connection, public File {
    public:
     Content(PseudoFile* file, uint32_t flags, std::vector<uint8_t> content);
     ~Content() override;

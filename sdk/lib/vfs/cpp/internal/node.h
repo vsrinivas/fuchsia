@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_VFS_CPP_NODE_H_
-#define LIB_VFS_CPP_NODE_H_
+#ifndef LIB_VFS_CPP_INTERNAL_NODE_H_
+#define LIB_VFS_CPP_INTERNAL_NODE_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -11,6 +11,7 @@
 #include <limits.h>
 
 namespace vfs {
+namespace internal {
 
 bool IsValidName(const std::string& name);
 
@@ -180,6 +181,7 @@ class Node {
   std::vector<std::unique_ptr<Connection>> connections_ __TA_GUARDED(mutex_);
 };
 
+}  // namespace internal
 }  // namespace vfs
 
-#endif  // LIB_VFS_CPP_NODE_H_
+#endif  // LIB_VFS_CPP_INTERNAL_NODE_H_

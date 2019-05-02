@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_VFS_CPP_FILE_H_
-#define LIB_VFS_CPP_FILE_H_
+#ifndef LIB_VFS_CPP_INTERNAL_FILE_H_
+#define LIB_VFS_CPP_INTERNAL_FILE_H_
 
 #include <fuchsia/io/cpp/fidl.h>
-#include <lib/vfs/cpp/node.h>
+#include <lib/vfs/cpp/internal/node.h>
 #include <stdint.h>
 
 #include <vector>
 
 namespace vfs {
+namespace internal {
 
 // A file object in a file system.
 //
@@ -70,6 +71,7 @@ class File : public Node {
   bool IsDirectory() const override;
 };
 
+}  // namespace internal
 }  // namespace vfs
 
-#endif  // LIB_VFS_CPP_FILE_H_
+#endif  // LIB_VFS_CPP_INTERNAL_FILE_H_

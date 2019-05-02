@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fdio/limits.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/limits.h>
+#include <lib/vfs/cpp/internal/file.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 
@@ -16,11 +17,10 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "lib/vfs/cpp/file.h"
 
 namespace {
 
-class TestFile : public vfs::File {
+class TestFile : public vfs::internal::File {
  public:
   explicit TestFile(std::vector<uint8_t>* buffer) : buffer_(buffer) {}
   ~TestFile() override = default;
@@ -56,7 +56,7 @@ class TestFile : public vfs::File {
   std::vector<uint8_t>* buffer_;
 };
 
-int OpenAsFD(vfs::Node* node, async_dispatcher_t* dispatcher) {
+int OpenAsFD(vfs::internal::Node* node, async_dispatcher_t* dispatcher) {
   zx::channel local, remote;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
   EXPECT_EQ(ZX_OK, node->Serve(fuchsia::io::OPEN_RIGHT_READABLE |

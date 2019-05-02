@@ -5,11 +5,11 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
-#include <lib/vfs/cpp/file.h>
 #include <lib/vfs/cpp/internal/directory_connection.h>
+#include <lib/vfs/cpp/internal/file.h>
 #include <lib/vfs/cpp/internal/file_connection.h>
+#include <lib/vfs/cpp/internal/node.h>
 #include <lib/vfs/cpp/internal/node_connection.h>
-#include <lib/vfs/cpp/node.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <zircon/errors.h>
 
@@ -17,7 +17,7 @@
 
 namespace {
 
-class DummyTestFile : public vfs::File {
+class DummyTestFile : public vfs::internal::File {
  public:
   zx_status_t ReadAt(uint64_t count, uint64_t offset,
                      std::vector<uint8_t>* out_data) override {
@@ -34,7 +34,7 @@ class DummyTestFile : public vfs::File {
   size_t GetCapacity() override { return 0; }
 };
 
-void CallBindTwiceAndTest(vfs::Connection* connection) {
+void CallBindTwiceAndTest(vfs::internal::Connection* connection) {
   fuchsia::io::NodePtr ptr1;
   fuchsia::io::NodePtr ptr2;
   ASSERT_EQ(ZX_OK, connection->Bind(ptr1.NewRequest().TakeChannel(),

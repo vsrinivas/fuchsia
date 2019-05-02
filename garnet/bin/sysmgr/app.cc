@@ -14,7 +14,6 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/vfs/cpp/node.h>
 #include <lib/vfs/cpp/service.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -142,7 +141,7 @@ zx::channel App::OpenAsDirectory() {
 
 void App::ConnectToService(const std::string& service_name,
                            zx::channel channel) {
-  vfs::Node* child;
+  vfs::internal::Node* child;
   auto status = svc_root_.Lookup(service_name, &child);
   if (status == ZX_OK) {
     status = child->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(channel));

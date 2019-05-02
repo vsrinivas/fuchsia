@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/c/fidl.h>
-#include <lib/vfs/cpp/connection.h>
 #include <lib/vfs/cpp/flags.h>
+#include <lib/vfs/cpp/internal/connection.h>
+#include <lib/vfs/cpp/internal/node.h>
 #include <lib/vfs/cpp/internal/node_connection.h>
-#include <lib/vfs/cpp/node.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
@@ -20,6 +20,8 @@ constexpr uint32_t kCommonAllowedFlags =
     fuchsia::io::OPEN_FLAG_POSIX | fuchsia::io::CLONE_FLAG_SAME_RIGHTS;
 
 }  // namespace
+
+namespace internal {
 
 bool IsValidName(const std::string& name) {
   return name.length() <= NAME_MAX &&
@@ -216,4 +218,5 @@ zx_status_t Node::CreateConnection(uint32_t flags,
   return ZX_OK;
 }
 
+}  // namespace internal
 }  // namespace vfs

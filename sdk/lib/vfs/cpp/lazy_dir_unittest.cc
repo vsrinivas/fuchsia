@@ -20,10 +20,10 @@ class TestLazyDir : public vfs::LazyDir {
  public:
   struct TestContent {
    public:
-    TestContent(std::string name, std::unique_ptr<vfs::Node> node)
+    TestContent(std::string name, std::unique_ptr<vfs::internal::Node> node)
         : name_(std::move(name)), node_(std::move(node)) {}
     std::string name_;
-    std::unique_ptr<vfs::Node> node_;
+    std::unique_ptr<vfs::internal::Node> node_;
   };
 
   TestLazyDir()
@@ -77,7 +77,7 @@ class TestLazyDir : public vfs::LazyDir {
 
 class LazyDirConnection : public vfs_tests::DirConnection {
  protected:
-  vfs::Directory* GetDirectoryNode() override { return &dir_; }
+  vfs::internal::Directory* GetDirectoryNode() override { return &dir_; }
 
   TestLazyDir::TestContent CreateTestFile(std::string name,
                                           std::string content) {
@@ -163,7 +163,7 @@ TEST_F(LazyDirConnection, LookupWorks) {
   dir_.AddContent(CreateTestFile("file2", "file2"));
   dir_.AddContent(CreateTestFile("file3", "file3"));
   dir_.AddContent(CreateTestFile("file4", "file4"));
-  vfs::Node* n;
+  vfs::internal::Node* n;
   ASSERT_EQ(ZX_OK, dir_.Lookup("file3", &n));
   fuchsia::io::FileSyncPtr file_ptr;
   n->Serve(fuchsia::io::OPEN_RIGHT_READABLE,
@@ -182,7 +182,7 @@ TEST_F(LazyDirConnection, LookupReturnsNotFound) {
   dir_.AddContent(CreateTestFile("file2", "file2"));
   dir_.AddContent(CreateTestFile("file3", "file3"));
   dir_.AddContent(CreateTestFile("file4", "file4"));
-  vfs::Node* n;
+  vfs::internal::Node* n;
   ASSERT_EQ(ZX_ERR_NOT_FOUND, dir_.Lookup("file5", &n));
 }
 

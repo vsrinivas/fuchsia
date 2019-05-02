@@ -5,7 +5,7 @@
 #ifndef LIB_VFS_CPP_REMOTE_DIR_H_
 #define LIB_VFS_CPP_REMOTE_DIR_H_
 
-#include <lib/vfs/cpp/directory.h>
+#include <lib/vfs/cpp/internal/directory.h>
 
 namespace vfs {
 
@@ -20,7 +20,7 @@ namespace vfs {
 // to mount a new one in its place.
 //
 // This class is thread-safe.
-class RemoteDir final : public Directory {
+class RemoteDir final : public vfs::internal::Directory {
  public:
   // Binds to a remotely hosted directory using the specified
   // |fuchsia.io.Directory| client channel endpoint.The channel must be valid.

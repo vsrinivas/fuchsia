@@ -34,7 +34,7 @@ zx_status_t PseudoDir::AddEntry(std::string name, std::unique_ptr<Node> vn) {
 zx_status_t PseudoDir::AddEntry(std::unique_ptr<Entry> entry) {
   ZX_DEBUG_ASSERT(entry);
 
-  if (!IsValidName(entry->name())) {
+  if (!vfs::internal::IsValidName(entry->name())) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -74,7 +74,8 @@ zx_status_t PseudoDir::RemoveEntry(const std::string& name, Node* node) {
   return ZX_OK;
 }
 
-zx_status_t PseudoDir::Lookup(const std::string& name, Node** out_node) const {
+zx_status_t PseudoDir::Lookup(const std::string& name,
+                              vfs::internal::Node** out_node) const {
   std::lock_guard<std::mutex> guard(mutex_);
 
   auto search = entries_by_name_.find(name);
@@ -141,7 +142,9 @@ PseudoDir::SharedEntry::SharedEntry(uint64_t id, std::string name,
                                     std::shared_ptr<Node> node)
     : Entry(id, std::move(name)), node_(std::move(node)) {}
 
-Node* PseudoDir::SharedEntry::node() const { return node_.get(); }
+vfs::internal::Node* PseudoDir::SharedEntry::node() const {
+  return node_.get();
+}
 
 PseudoDir::SharedEntry::~SharedEntry() = default;
 
@@ -149,7 +152,9 @@ PseudoDir::UniqueEntry::UniqueEntry(uint64_t id, std::string name,
                                     std::unique_ptr<Node> node)
     : Entry(id, std::move(name)), node_(std::move(node)) {}
 
-Node* PseudoDir::UniqueEntry::node() const { return node_.get(); }
+vfs::internal::Node* PseudoDir::UniqueEntry::node() const {
+  return node_.get();
+}
 
 PseudoDir::UniqueEntry::~UniqueEntry() = default;
 

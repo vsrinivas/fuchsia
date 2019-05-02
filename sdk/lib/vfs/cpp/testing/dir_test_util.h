@@ -8,7 +8,7 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/vfs.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/vfs/cpp/directory.h>
+#include <lib/vfs/cpp/internal/directory.h>
 
 namespace vfs_tests {
 
@@ -47,7 +47,7 @@ class Dirent {
 
 class DirConnection : public gtest::RealLoopFixture {
  protected:
-  virtual vfs::Directory* GetDirectoryNode() = 0;
+  virtual vfs::internal::Directory* GetDirectoryNode() = 0;
 
   void AssertOpen(async_dispatcher_t* dispatcher, uint32_t flags,
                   zx_status_t expected_status, bool test_on_open_event = true);

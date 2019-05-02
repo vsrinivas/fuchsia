@@ -36,7 +36,7 @@ zx_status_t ComposedServiceDir::Readdir(uint64_t offset, void* data,
 }
 
 zx_status_t ComposedServiceDir::Lookup(const std::string& name,
-                                       vfs::Node** out) const {
+                                       vfs::internal::Node** out) const {
   zx_status_t status = root_->Lookup(name, out);
   if (status == ZX_OK) {
     return status;

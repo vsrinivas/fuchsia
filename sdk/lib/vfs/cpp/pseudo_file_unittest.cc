@@ -76,7 +76,7 @@ class FileWrapper {
 
 class PseudoFileTest : public gtest::RealLoopFixture {
  protected:
-  void AssertOpen(vfs::Node* node, async_dispatcher_t* dispatcher,
+  void AssertOpen(vfs::internal::Node* node, async_dispatcher_t* dispatcher,
                   uint32_t flags, zx_status_t expected_status,
                   bool test_on_open_event = true) {
     fuchsia::io::NodePtr node_ptr;
@@ -106,7 +106,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     }
   }
 
-  fuchsia::io::FileSyncPtr OpenReadWrite(vfs::Node* node,
+  fuchsia::io::FileSyncPtr OpenReadWrite(vfs::internal::Node* node,
                                          async_dispatcher_t* dispatcher) {
     return OpenFile(
         node,
@@ -114,12 +114,12 @@ class PseudoFileTest : public gtest::RealLoopFixture {
         dispatcher);
   }
 
-  fuchsia::io::FileSyncPtr OpenRead(vfs::Node* node,
+  fuchsia::io::FileSyncPtr OpenRead(vfs::internal::Node* node,
                                     async_dispatcher_t* dispatcher) {
     return OpenFile(node, fuchsia::io::OPEN_RIGHT_READABLE, dispatcher);
   }
 
-  fuchsia::io::FileSyncPtr OpenFile(vfs::Node* node, uint32_t flags,
+  fuchsia::io::FileSyncPtr OpenFile(vfs::internal::Node* node, uint32_t flags,
                                     async_dispatcher_t* dispatcher) {
     fuchsia::io::FileSyncPtr ptr;
     node->Serve(flags, ptr.NewRequest().TakeChannel(), dispatcher);
@@ -207,7 +207,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     })) << file_wrapper.buffer();
   }
 
-  int OpenAsFD(vfs::Node* node, async_dispatcher_t* dispatcher) {
+  int OpenAsFD(vfs::internal::Node* node, async_dispatcher_t* dispatcher) {
     zx::channel local, remote;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
     EXPECT_EQ(ZX_OK, node->Serve(fuchsia::io::OPEN_RIGHT_READABLE |

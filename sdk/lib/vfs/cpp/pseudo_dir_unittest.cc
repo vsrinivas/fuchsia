@@ -12,7 +12,7 @@ namespace {
 
 using vfs_tests::Dirent;
 
-class TestNode : public vfs::Node {
+class TestNode : public vfs::internal::Node {
  public:
   TestNode(std::function<void()> death_callback = nullptr)
       : death_callback_(death_callback) {}
@@ -28,7 +28,8 @@ class TestNode : public vfs::Node {
   void Describe(fuchsia::io::NodeInfo* out_info) override {}
 
   zx_status_t CreateConnection(
-      uint32_t flags, std::unique_ptr<vfs::Connection>* connection) override {
+      uint32_t flags,
+      std::unique_ptr<vfs::internal::Connection>* connection) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -66,7 +67,7 @@ TEST_F(PseudoDirUnit, Empty) {
 TEST_F(PseudoDirUnit, Lookup) {
   Init(10);
   for (int i = 0; i < 10; i++) {
-    vfs::Node* n;
+    vfs::internal::Node* n;
     ASSERT_EQ(ZX_OK, dir_.Lookup(node_names_[i], &n))
         << "for " << node_names_[i];
     ASSERT_EQ(nodes_[i].get(), n) << "for " << node_names_[i];
@@ -77,9 +78,9 @@ TEST_F(PseudoDirUnit, LookupUniqueNode) {
   Init(1);
 
   auto node = std::make_unique<TestNode>();
-  vfs::Node* node_ptr = node.get();
+  vfs::internal::Node* node_ptr = node.get();
   ASSERT_EQ(ZX_OK, dir_.AddEntry("un", std::move(node)));
-  vfs::Node* n;
+  vfs::internal::Node* n;
   ASSERT_EQ(ZX_OK, dir_.Lookup(node_names_[0], &n));
   ASSERT_EQ(nodes_[0].get(), n);
 
@@ -89,7 +90,7 @@ TEST_F(PseudoDirUnit, LookupUniqueNode) {
 
 TEST_F(PseudoDirUnit, InvalidLookup) {
   Init(3);
-  vfs::Node* n;
+  vfs::internal::Node* n;
   ASSERT_EQ(ZX_ERR_NOT_FOUND, dir_.Lookup("invalid", &n));
 }
 
@@ -101,7 +102,7 @@ TEST_F(PseudoDirUnit, RemoveEntry) {
         << "for " << node_names_[i];
 
     // cannot access
-    vfs::Node* n;
+    vfs::internal::Node* n;
     ASSERT_EQ(ZX_ERR_NOT_FOUND, dir_.Lookup(node_names_[i], &n))
         << "for " << node_names_[i];
     // check that use count went doen by 1
@@ -118,7 +119,7 @@ TEST_F(PseudoDirUnit, RemoveEntryWithNode) {
         << "for " << node_names_[i];
 
     // cannot access
-    vfs::Node* n;
+    vfs::internal::Node* n;
     ASSERT_EQ(ZX_ERR_NOT_FOUND, dir_.Lookup(node_names_[i], &n))
         << "for " << node_names_[i];
     // check that use count went down by 1
@@ -137,7 +138,7 @@ TEST_F(PseudoDirUnit, RemoveUniqueNode) {
   ASSERT_EQ(ZX_OK, dir_.RemoveEntry("un"));
   EXPECT_TRUE(node_died);
 
-  vfs::Node* n;
+  vfs::internal::Node* n;
   ASSERT_EQ(ZX_ERR_NOT_FOUND, dir_.Lookup("un", &n));
 }
 
@@ -147,7 +148,7 @@ TEST_F(PseudoDirUnit, RemoveInvalidEntry) {
 
   // make sure nothing was removed
   for (int i = 0; i < 5; i++) {
-    vfs::Node* n;
+    vfs::internal::Node* n;
     ASSERT_EQ(ZX_OK, dir_.Lookup(node_names_[i], &n))
         << "for " << node_names_[i];
     ASSERT_EQ(nodes_[i].get(), n) << "for " << node_names_[i];
@@ -166,7 +167,7 @@ TEST_F(PseudoDirUnit, AddAfterRemove) {
     if (i == 2) {
       expected_status = ZX_ERR_NOT_FOUND;
     }
-    vfs::Node* n;
+    vfs::internal::Node* n;
     ASSERT_EQ(expected_status, dir_.Lookup(node_names_[i], &n))
         << "for " << node_names_[i];
     if (expected_status == ZX_OK) {
@@ -174,7 +175,7 @@ TEST_F(PseudoDirUnit, AddAfterRemove) {
     }
   }
 
-  vfs::Node* n;
+  vfs::internal::Node* n;
   ASSERT_EQ(ZX_OK, dir_.Lookup("new_node", &n));
   ASSERT_EQ(new_node.get(), n);
 }
@@ -189,12 +190,14 @@ class DirectoryWrapper {
     }
   }
 
-  void AddEntry(const std::string& name, std::unique_ptr<vfs::Node> node,
+  void AddEntry(const std::string& name,
+                std::unique_ptr<vfs::internal::Node> node,
                 zx_status_t expected_status = ZX_OK) {
     ASSERT_EQ(expected_status, dir_->AddEntry(name, std::move(node)));
   }
 
-  void AddSharedEntry(const std::string& name, std::shared_ptr<vfs::Node> node,
+  void AddSharedEntry(const std::string& name,
+                      std::shared_ptr<vfs::internal::Node> node,
                       zx_status_t expected_status = ZX_OK) {
     ASSERT_EQ(expected_status, dir_->AddSharedEntry(name, std::move(node)));
   }
@@ -249,7 +252,9 @@ class DirectoryWrapper {
 
 class PseudoDirConnection : public vfs_tests::DirConnection {
  protected:
-  vfs::Directory* GetDirectoryNode() override { return dir_.dir().get(); }
+  vfs::internal::Directory* GetDirectoryNode() override {
+    return dir_.dir().get();
+  }
 
   DirectoryWrapper dir_;
 };

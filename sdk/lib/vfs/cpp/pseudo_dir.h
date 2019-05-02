@@ -5,7 +5,7 @@
 #ifndef LIB_VFS_CPP_PSEUDO_DIR_H_
 #define LIB_VFS_CPP_PSEUDO_DIR_H_
 
-#include <lib/vfs/cpp/directory.h>
+#include <lib/vfs/cpp/internal/directory.h>
 
 #include <map>
 #include <mutex>
@@ -18,7 +18,7 @@ namespace vfs {
 // them.
 //
 // Instances of this class are thread-safe.
-class PseudoDir : public Directory {
+class PseudoDir : public vfs::internal::Directory {
  public:
   // Creates a directory which is initially empty.
   PseudoDir();
@@ -63,7 +63,8 @@ class PseudoDir : public Directory {
   bool IsEmpty() const;
 
   // |Directory| implementation:
-  zx_status_t Lookup(const std::string& name, Node** out_node) const final;
+  zx_status_t Lookup(const std::string& name,
+                     vfs::internal::Node** out_node) const final;
 
   zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
                       uint64_t* out_offset, uint64_t* out_actual) override;

@@ -23,7 +23,7 @@ PseudoFile::PseudoFile(ReadHandler read_handler, WriteHandler write_handler,
 PseudoFile::~PseudoFile() = default;
 
 zx_status_t PseudoFile::CreateConnection(
-    uint32_t flags, std::unique_ptr<Connection>* connection) {
+    uint32_t flags, std::unique_ptr<vfs::internal::Connection>* connection) {
   std::vector<uint8_t> output;
   if (Flags::IsReadable(flags)) {
     zx_status_t status = read_handler_(&output);
@@ -181,7 +181,8 @@ zx_status_t PseudoFile::Content::BindInternal(zx::channel request,
   return status;
 }
 
-std::unique_ptr<Connection> PseudoFile::Content::Close(Connection* connection) {
+std::unique_ptr<vfs::internal::Connection> PseudoFile::Content::Close(
+    Connection* connection) {
   File::Close(connection);
   return file_->Close(this);
 }

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/service.h>
-
 #include <lib/fdio/vfs.h>
 #include <lib/vfs/cpp/flags.h>
+#include <lib/vfs/cpp/service.h>
 
 namespace vfs {
 
@@ -17,8 +16,8 @@ void Service::Describe(fuchsia::io::NodeInfo* out_info) {
   out_info->set_service(fuchsia::io::Service());
 }
 
-zx_status_t Service::CreateConnection(uint32_t flags,
-                                      std::unique_ptr<Connection>* connection) {
+zx_status_t Service::CreateConnection(
+    uint32_t flags, std::unique_ptr<vfs::internal::Connection>* connection) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

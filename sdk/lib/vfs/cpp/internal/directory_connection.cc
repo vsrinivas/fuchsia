@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vfs/cpp/directory.h>
 #include <lib/vfs/cpp/flags.h>
+#include <lib/vfs/cpp/internal/directory.h>
 #include <lib/vfs/cpp/internal/directory_connection.h>
 
 #include <utility>
@@ -11,7 +11,8 @@
 namespace vfs {
 namespace internal {
 
-DirectoryConnection::DirectoryConnection(uint32_t flags, vfs::Directory* vn)
+DirectoryConnection::DirectoryConnection(uint32_t flags,
+                                         vfs::internal::Directory* vn)
     : Connection(flags), vn_(vn), binding_(this) {}
 
 DirectoryConnection::~DirectoryConnection() = default;

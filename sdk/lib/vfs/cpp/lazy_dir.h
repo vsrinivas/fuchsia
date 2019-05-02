@@ -5,7 +5,7 @@
 #ifndef LIB_VFS_CPP_LAZY_DIR_H_
 #define LIB_VFS_CPP_LAZY_DIR_H_
 
-#include <lib/vfs/cpp/directory.h>
+#include <lib/vfs/cpp/internal/directory.h>
 
 namespace vfs {
 
@@ -14,7 +14,7 @@ namespace vfs {
 // and implement GetContents and GetFile for their use case.  The base
 // implementation of this class is thread-safe, but it is up to implementers
 // to ensure their implementations are thread safe as well.
-class LazyDir : public Directory {
+class LazyDir : public vfs::internal::Directory {
  public:
   // Structure storing a single entry in the directory.
   struct LazyEntry {

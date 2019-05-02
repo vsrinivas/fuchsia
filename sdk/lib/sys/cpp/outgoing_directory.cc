@@ -32,7 +32,7 @@ zx_status_t OutgoingDirectory::ServeFromStartupInfo(
 
 vfs::PseudoDir* OutgoingDirectory::GetOrCreateDirectory(
     const std::string& name) {
-  vfs::Node* node;
+  vfs::internal::Node* node;
   zx_status_t status = root_->Lookup(name, &node);
   if (status != ZX_OK) {
     return AddNewEmptyDirectory(name);

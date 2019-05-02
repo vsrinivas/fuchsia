@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_VFS_CPP_CONNECTION_H_
-#define LIB_VFS_CPP_CONNECTION_H_
+#ifndef LIB_VFS_CPP_INTERNAL_CONNECTION_H_
+#define LIB_VFS_CPP_INTERNAL_CONNECTION_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -12,6 +12,8 @@
 #include <stdint.h>
 
 namespace vfs {
+namespace internal {
+
 class Node;
 
 // A connection to a file system object.
@@ -116,6 +118,7 @@ class Connection {
   uint64_t offset_ = 0u;
 };
 
+}  // namespace internal
 }  // namespace vfs
 
-#endif  // LIB_VFS_CPP_CONNECTION_H_
+#endif  // LIB_VFS_CPP_INTERNAL_CONNECTION_H_

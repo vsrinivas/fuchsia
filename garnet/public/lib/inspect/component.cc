@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/inspect/component.h"
-#include "sdk/lib/vfs/cpp/node.h"
-#include "sdk/lib/vfs/cpp/vmo_file.h"
+#include <lib/inspect/component.h>
+#include <sdk/lib/vfs/cpp/vmo_file.h>
+
+#include <memory>
 
 namespace inspect {
 
@@ -24,9 +25,8 @@ std::shared_ptr<ComponentInspector> ComponentInspector::Initialize(
   ZX_ASSERT(inspector->root_tree()->GetVmo().duplicate(
                 ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
                 &read_only_vmo) == ZX_OK);
-
-  std::unique_ptr<vfs::Node> vmo_file(
-      new vfs::VmoFile(std::move(read_only_vmo), 0, 4096));
+  auto vmo_file =
+      std::make_unique<vfs::VmoFile>(std::move(read_only_vmo), 0, 4096);
   ZX_ASSERT(
       startup_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
           "root.inspect", std::move(vmo_file)) == ZX_OK);

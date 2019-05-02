@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include <lib/vfs/cpp/flags.h>
+#include <lib/vfs/cpp/internal/node.h>
 #include <lib/vfs/cpp/internal/node_connection.h>
-#include <lib/vfs/cpp/node.h>
 
 #include <utility>
 
 namespace vfs {
 namespace internal {
 
-NodeConnection::NodeConnection(uint32_t flags, vfs::Node* vn)
+NodeConnection::NodeConnection(uint32_t flags, vfs::internal::Node* vn)
     : Connection(flags), vn_(vn), binding_(this) {}
 
 NodeConnection::~NodeConnection() = default;

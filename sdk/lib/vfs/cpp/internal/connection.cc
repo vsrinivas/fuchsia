@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/vfs.h>
-#include <lib/vfs/cpp/connection.h>
 #include <lib/vfs/cpp/flags.h>
-#include <lib/vfs/cpp/node.h>
+#include <lib/vfs/cpp/internal/connection.h>
+#include <lib/vfs/cpp/internal/node.h>
 
 namespace vfs {
+namespace internal {
 
 Connection::Connection(uint32_t flags) : flags_(flags) {}
 
@@ -81,4 +82,5 @@ std::unique_ptr<fuchsia::io::NodeInfo> Connection::NodeInfoIfStatusOk(
   return node_info;
 }
 
+}  // namespace internal
 }  // namespace vfs

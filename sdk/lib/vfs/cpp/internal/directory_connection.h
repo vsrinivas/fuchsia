@@ -7,21 +7,22 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/vfs/cpp/connection.h>
+#include <lib/vfs/cpp/internal/connection.h>
 
 #include <memory>
 
 namespace vfs {
-class Directory;
 
 namespace internal {
+class Directory;
 
-// Binds an implementation of |fuchsia.io.Directory| to a |vfs::Directory|.
+// Binds an implementation of |fuchsia.io.Directory| to a
+// |vfs::internal::Directory|.
 class DirectoryConnection final : public Connection,
                                   public fuchsia::io::Directory {
  public:
   // Create a connection to |vn| with the given |flags|.
-  DirectoryConnection(uint32_t flags, vfs::Directory* vn);
+  DirectoryConnection(uint32_t flags, vfs::internal::Directory* vn);
   ~DirectoryConnection() override;
 
   // Start listening for |fuchsia.io.Directory| messages on |request|.
@@ -57,7 +58,7 @@ class DirectoryConnection final : public Connection,
   void SendOnOpenEvent(zx_status_t status) override;
 
  private:
-  vfs::Directory* vn_;
+  vfs::internal::Directory* vn_;
   fidl::Binding<fuchsia::io::Directory> binding_;
 };
 

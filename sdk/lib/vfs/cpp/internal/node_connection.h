@@ -7,20 +7,20 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/vfs/cpp/connection.h>
+#include <lib/vfs/cpp/internal/connection.h>
 
 #include <memory>
 
 namespace vfs {
-class Node;
 
 namespace internal {
+class Node;
 
-// Binds an implementation of |fuchsia.io.Node| to a |vfs::Node|.
+// Binds an implementation of |fuchsia.io.Node| to a |vfs::internal::Node|.
 class NodeConnection final : public Connection, public fuchsia::io::Node {
  public:
   // Create a connection to |vn| with the given |flags|.
-  NodeConnection(uint32_t flags, vfs::Node* vn);
+  NodeConnection(uint32_t flags, vfs::internal::Node* vn);
   ~NodeConnection() override;
 
   // Start listening for |fuchsia.io.Node| messages on |request|.
@@ -44,7 +44,7 @@ class NodeConnection final : public Connection, public fuchsia::io::Node {
   void SendOnOpenEvent(zx_status_t status) override;
 
  private:
-  vfs::Node* vn_;
+  vfs::internal::Node* vn_;
   fidl::Binding<fuchsia::io::Node> binding_;
 };
 

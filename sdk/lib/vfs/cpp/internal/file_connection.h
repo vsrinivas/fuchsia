@@ -7,20 +7,19 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/vfs/cpp/connection.h>
+#include <lib/vfs/cpp/internal/connection.h>
 
 #include <memory>
 
 namespace vfs {
+namespace internal {
 class File;
 
-namespace internal {
-
-// Binds an implementation of |fuchsia.io.File| to a |vfs::File|.
+// Binds an implementation of |fuchsia.io.File| to a |vfs::internal::File|.
 class FileConnection final : public Connection, public fuchsia::io::File {
  public:
   // Create a connection to |vn| with the given |flags|.
-  FileConnection(uint32_t flags, vfs::File* vn);
+  FileConnection(uint32_t flags, vfs::internal::File* vn);
   ~FileConnection() override;
 
   // Start listening for |fuchsia.io.File| messages on |request|.
@@ -56,7 +55,7 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void SendOnOpenEvent(zx_status_t status) override;
 
  private:
-  vfs::File* vn_;
+  vfs::internal::File* vn_;
   fidl::Binding<fuchsia::io::File> binding_;
 };
 
