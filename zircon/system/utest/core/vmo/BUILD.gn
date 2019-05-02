@@ -2,13 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("vmo-signal") {
+source_set("vmo") {
   testonly = true
   sources = [
     "vmo-signal.c",
+    "vmo.cpp",
+    "vmo-clone.cpp",
   ]
   deps = [
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
   ]
