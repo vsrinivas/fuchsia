@@ -77,7 +77,7 @@ class BaseViewTest : public component::testing::TestWithContext {
  protected:
   void SetUp() override {
     controller().AddService(fake_scenic_.GetRequestHandler());
-    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     auto startup_context = TakeContext();
 
     scenic::ViewContext view_context = {

@@ -4,11 +4,11 @@
 
 #include "lib/ui/base_view/cpp/base_view.h"
 
+#include <lib/ui/gfx/cpp/math.h>
+#include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <trace/event.h>
 
-#include "lib/ui/gfx/cpp/math.h"
-#include "lib/ui/scenic/cpp/commands.h"
-#include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/lib/fxl/logging.h"
 
 namespace scenic {
@@ -23,7 +23,7 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
       view_(&session_,
             context.view_token2.value
                 ? std::move(context.view_token2)
-                : scenic::ToViewToken(std::move(context.view_token)),
+                : std::move(context.view_token),
             debug_name),
       root_node_(&session_) {
   session_.SetDebugName(debug_name);

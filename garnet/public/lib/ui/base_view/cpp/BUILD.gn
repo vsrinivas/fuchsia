@@ -25,7 +25,6 @@ source_set("cpp") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/zx",
   ]
 
   deps = [

@@ -8,20 +8,18 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-
-#include "lib/component/cpp/startup_context.h"
-#include "lib/svc/cpp/services.h"
-#include "lib/ui/base_view/cpp/embedded_view_utils.h"
-#include "lib/ui/scenic/cpp/resources.h"
-#include "lib/ui/scenic/cpp/session.h"
-#include "lib/zx/eventpair.h"
+#include <lib/component/cpp/startup_context.h>
+#include <lib/svc/cpp/services.h>
+#include <lib/ui/base_view/cpp/embedded_view_utils.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/session.h>
 
 namespace scenic {
 
 // Parameters for creating a BaseView.
 struct ViewContext {
   scenic::SessionPtrAndListenerRequest session_and_listener_request;
-  zx::eventpair view_token;
+  fuchsia::ui::views::ViewToken view_token;
   fuchsia::ui::views::ViewToken view_token2;
   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services;
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services;
