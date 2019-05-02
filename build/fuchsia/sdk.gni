@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Only set in buildroots where targets configure themselves for use with the
+  # Fuchsia SDK
+  using_fuchsia_sdk = false
+
+  # Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
+  # a specific spot within their buildroots. The target name for the specific
+  # part is then derived from the part name as specified in the meta.json
+  # manifest. Different buildroot instantiate the SDK parts at different
+  # locations and then set this variable. GN rules can then prefix this variable
+  # name in SDK builds to the name of the SDK part. This flag is meaningless in
+  # non-SDK buildroots.
+  fuchsia_sdk_root = ""
+}
