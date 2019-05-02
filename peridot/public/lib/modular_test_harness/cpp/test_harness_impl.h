@@ -15,6 +15,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_interceptor.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
 
 namespace modular::testing {
 
@@ -80,7 +81,7 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
   void GetService(
       fuchsia::modular::testing::TestHarnessService service) override;
 
-  [[nodiscard]] static std::vector<std::string> MakeBasemgrArgs(
+  [[nodiscard]] static std::unique_ptr<vfs::PseudoDir> MakeBasemgrConfigDir(
       const fuchsia::modular::testing::TestHarnessSpec& spec);
 
   // Helper class
@@ -95,23 +96,6 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
   // If |status| is not ZX_OK, the TestHarness binding is closed with |status|
   // as the epitaph, and returns |true|.
   bool CloseBindingIfError(zx_status_t status);
-
-  // Sets up base shell interception (and dispatching a OnNewBaseShellEvent) if
-  // the supplied |TestHarnessSpec| specifies it.
-  [[nodiscard]] zx_status_t SetupBaseShellInterception();
-  // Sets up session shell interception (and dispatching a OnNewBaseShellEvent)
-  // if the supplied |TestHarnessSpec| specifies it.
-  [[nodiscard]] zx_status_t SetupSessionShellInterception();
-  // Sets up story shell interception (and dispatching a OnNewBaseShellEvent) if
-  // the supplied |TestHarnessSpec| specifies it.
-  [[nodiscard]] zx_status_t SetupStoryShellInterception();
-
-  // Helper function for Setup*ShellInterception() methods above; actually
-  // sets up the interception.
-  [[nodiscard]] zx_status_t SetupShellInterception(
-      const fuchsia::modular::testing::ShellSpec& shell_spec,
-      sys::testing::ComponentInterceptor::ComponentLaunchHandler
-          fake_interception_callback);
 
   // Sets up component intercept specified in
   // |TestHarnessSpec.components_to_intercept|.
@@ -154,6 +138,7 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
   // |interceptor_| must outlive |enclosing_env_|.
   sys::testing::ComponentInterceptor interceptor_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env_;
+  std::unique_ptr<vfs::PseudoDir> basemgr_config_dir_;
   fuchsia::sys::ComponentControllerPtr basemgr_ctrl_;
 
   InterceptedSessionAgentInfo intercepted_session_agent_info_;

@@ -46,9 +46,9 @@ SessionContextImpl::SessionContextImpl(
 
   FXL_LOG(INFO) << "SESSIONMGR DATA ORIGIN IS " << data_origin;
 
-  // 1. Create a PseudoDir containing startup.config if basemgr is reading
-  // configurations from file. This directory will be injected into sessionmgr's
-  // namespace and sessionmgr will read its configurations from there.
+  // 1. Create a PseudoDir containing startup.config. This directory will be
+  // injected into sessionmgr's namespace and sessionmgr will read its
+  // configurations from there.
   auto flat_namespace = MakeConfigNamespace();
 
   // 2. Launch Sessionmgr in the current environment.

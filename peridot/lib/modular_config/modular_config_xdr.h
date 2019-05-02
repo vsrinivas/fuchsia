@@ -5,7 +5,6 @@
 #ifndef PERIDOT_LIB_MODULAR_CONFIG_MODULAR_CONFIG_XDR_H_
 #define PERIDOT_LIB_MODULAR_CONFIG_MODULAR_CONFIG_XDR_H_
 
-#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
 
 #include "peridot/lib/fidl/json_xdr.h"

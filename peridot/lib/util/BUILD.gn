@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("util") {
+group("util") {
+  public_deps = [
+    ":pseudo_dir_server",
+    ":pseudo_dir_utils",
+    ":string_escape",
+  ]
+}
+
+source_set("string_escape") {
   sources = [
     "string_escape.cc",
     "string_escape.h",
@@ -10,6 +18,33 @@ source_set("util") {
 
   public_deps = [
     "//src/lib/fxl",
+  ]
+}
+
+source_set("pseudo_dir_utils") {
+  sources = [
+    "pseudo_dir_utils.cc",
+    "pseudo_dir_utils.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/vfs/cpp",
+    "//src/lib/fxl",
+  ]
+}
+
+source_set("pseudo_dir_server") {
+  sources = [
+    "pseudo_dir_server.cc",
+    "pseudo_dir_server.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fsl",
+    "//sdk/lib/vfs/cpp",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

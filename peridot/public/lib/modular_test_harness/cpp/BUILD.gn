@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/cpp/sdk_source_set.gni")
+import("//build/package.gni")
 
 group("unittests") {
   testonly = true
@@ -12,6 +12,7 @@ group("unittests") {
     ":test_harness_impl_unittest",
   ]
 }
+
 # This library has a run-time dependency on the `modular_test_harness` package.
 sdk_source_set("test_harness_fixture") {
   testonly = true
@@ -23,8 +24,8 @@ sdk_source_set("test_harness_fixture") {
   public_configs = [ "//sdk/config" ]
 
   sources = [
+    "test_harness_fixture.cc",
     "test_harness_fixture.h",
-    "test_harness_fixture.cc"
   ]
 
   deps = [
@@ -36,13 +37,15 @@ sdk_source_set("test_harness_fixture") {
 
 executable("test_harness_fixture_test_bin") {
   testonly = true
-  sources = ["test_harness_fixture_test.cc"]
+  sources = [
+    "test_harness_fixture_test.cc",
+  ]
   deps = [
     ":test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.modular.testing",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -90,6 +93,12 @@ source_set("test_harness_impl") {
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//zircon/public/lib/async-loop-cpp",
   ]
+
+  deps = [
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/modular_config:json_xdr",
+    "//peridot/lib/util:pseudo_dir_utils",
+  ]
 }
 
 source_set("test_harness_impl_unittest") {
@@ -101,6 +110,8 @@ source_set("test_harness_impl_unittest") {
 
   deps = [
     ":test_harness_impl",
+    "//peridot/lib/modular_config",
+    "//peridot/lib/util:pseudo_dir_server",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp/testing:integration",

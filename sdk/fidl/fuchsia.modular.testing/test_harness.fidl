@@ -35,22 +35,6 @@ protocol TestHarness {
     ///  * ZX_ERR_ALREADY_BOUND: Run() was already called.
     Run(TestHarnessSpec spec);
 
-    /// This event is sent when a base shell component creation is intercepted,
-    /// which happens if |TestHarnessSpec.base_shell.should_intercept| is set.
-    -> OnNewBaseShell(fuchsia.sys.StartupInfo startup_info,
-                      InterceptedComponent intercepted_component);
-
-    /// This event is sent when a session shell component creation is
-    /// intercepted, which happens if
-    /// |TestHarnessSpec.session_shell.should_intercept| is set.
-    -> OnNewSessionShell(fuchsia.sys.StartupInfo startup_info,
-                         InterceptedComponent intercepted_component);
-
-    /// This event is sent when a story shell component creation is intercepted,
-    /// which happens if |TestHarnessSpec.story_shell.should_intercept| is set.
-    -> OnNewStoryShell(fuchsia.sys.StartupInfo startup_info,
-                       InterceptedComponent intercepted_component);
-
     /// This event is sent when a component specified in
     /// |TestHarnessSpec.components_to_intercept| is created.
     /// |startup_info.launch_info.url| contains the component URL.
@@ -98,52 +82,29 @@ protocol InterceptedComponent {
 /// |TestHarness.Run()|. A malformed |TestHarnessSpec| will cause |TestHarness|
 /// connection to close with an epitaph of ZX_ERR_INVALID_ARGS.
 table TestHarnessSpec {
-    /// There are three ways to configure the session shell:
-    ///  * Do not set |session_shell|:
-    ///      This uses a minimally functioning shell which automatically starts
-    ///      all new stories.
-    ///  * Set |session_shell.intercept_spec|:
-    ///      This will configure the modular runtime to use
-    ///      |session_shell.intercept_spec|, and set it up for interception. The
-    ///      |TestHarness.OnNewSessionShell| event is sent when the session
-    ///      shell component is launched.
-    ///  * Set |session_shell.component_url|:
-    ///      The specified component URL is used as the session shell. In this
-    ///      case, an interception event is NOT sent.
-    1: ShellSpec session_shell;
-
-    /// There are three ways to configure the session shell:
-    ///  * Do not set |base_shell|:
-    ///      This uses a minimally functioning base shell which auto-logins a
-    ///      guest user.
-    ///  * Set |base_shell.intercept_spec|:
-    ///      This will configure the modular runtime to use
-    ///      |base_shell.intercept_spec|, and set it up for interception. The
-    ///      |TestHarness.OnNewStoryShell| event is sent when the story shell
-    ///      component is launched.
-    ///  * Set |base_shell.component_url|:
-    ///      The specified component URL is used as the base shell. In this
-    ///      case, an interception event is NOT sent.
-    2: ShellSpec base_shell;
-
-    /// There are three ways to configure the session shell:
-    ///  * Do not set |story_shell|:
-    ///      This uses a minimally functioning story shell.
-    ///  * Set |story_shell.intercept_spec|:
-    ///      This will configure the modular runtime to use
-    ///      |story_shell.intercept_spec|, and set it up for interception. The
-    ///      |TestHarness.OnNewStoryShell| event is sent when the story shell
-    ///      component is launched.
-    ///  * Set |story_shell.component_url|:
-    ///      The specified component URL is used as the story shell. In this
-    ///      case, an interception event is NOT sent.
-    3: ShellSpec story_shell;
-
-    /// Configuration for basemgr. Only the following fields are processed:
-    ///  * test (default = true)
+    /// Configuration for basemgr. See |fuchsia.modular.session.BasemgrConfig|
+    /// for a description of the defaults.
     ///
-    /// All other fields are ignored, and must not be set.
-    4: fuchsia.modular.session.BasemgrConfig basemgr_config;
+    /// The test harness will use amend |basemgr_config| before passing it off
+    /// to the modular runtime in the following way:
+    /// * If |basemgr_config.base_shell.app_config.url| is not set, the test
+    ///   harness will use a base shell which automatically logs into the
+    ///   session.
+    /// * If |basemgr_config.session_shell_map[0].config.app_config.url| is not
+    ///   set, the test harness will use a shell which automatically starts new
+    ///   stories.
+    /// * If |basemgr_config.story_shell.app_config.url| is not set, the test
+    ///   harness use a minimally functioning story shell which displays all
+    ///   mods in a story.
+    ///
+    /// To intercept and mock the shells, users may provide the shells fake URLs
+    /// and specify that they be intercepted using |components_to_intercept|.
+    1: fuchsia.modular.session.BasemgrConfig basemgr_config;
+
+    /// Configuration for sessionmgr. See
+    /// |fuchsia.modular.session.SessionmgrConfig| for a description of the
+    /// defaults.
+    2: fuchsia.modular.session.SessionmgrConfig sessionmgr_config;
 
     /// The test harness starts the modular runtime in a hermetic environment
     /// which does not allow accessing services outside of the environment,
@@ -152,30 +113,10 @@ table TestHarnessSpec {
     /// For example, adding "fuchsia.ui.policy.Presenter" to this list will
     /// allow the modular runtime use the Presenter to display views; otherwise,
     /// UI exposed by test code will not be shown on screen.
-    5: vector<string> env_services_to_inherit;
-
-    /// Configuration for sessionmgr. Only the following fields are processed:
-    ///  * test (default = true)
-    ///  * use_memfs_for_ledger (default = true)
-    ///  * cloud_provider (default = CloudProvider::NONE)
-    ///  * session_agents (default = empty)
-    ///
-    ///  All other fields are ignored, and must not be set.
-    6: fuchsia.modular.session.SessionmgrConfig sessionmgr_config;
+    3: vector<string> env_services_to_inherit;
 
     /// List of component URLs (and additional .cmx contents) to intercept.
-    7: vector<InterceptSpec> components_to_intercept;
-};
-
-/// Describes the shell component to use for base, session or story shell.
-xunion ShellSpec {
-    /// If set, the specified component URL is used to start the shell, and is
-    /// also intercepted. The shell's component creation is delivered as one of
-    /// the |TestHarness.OnNew*Shell| events.
-    InterceptSpec intercept_spec;
-
-    /// If set, this supplied |url| is used to launch the shell.
-    string:fuchsia.io.MAX_PATH component_url;
+    4: vector<InterceptSpec> components_to_intercept;
 };
 
 /// Describes a component to intercept. Malformed parameters result in closing

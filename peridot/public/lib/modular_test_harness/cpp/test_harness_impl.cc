@@ -5,8 +5,15 @@
 #include "lib/modular_test_harness/cpp/test_harness_impl.h"
 
 #include <lib/fsl/vmo/strings.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+#include <lib/vfs/cpp/pseudo_file.h>
+#include <peridot/lib/modular_config/modular_config_constants.h>
+#include <peridot/lib/modular_config/modular_config_xdr.h>
+#include <peridot/lib/util/pseudo_dir_utils.h>
+#include <src/lib/files/path.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/substitute.h>
 
 namespace modular::testing {
@@ -156,15 +163,6 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
 
   spec_ = std::move(spec);
 
-  if (CloseBindingIfError(SetupBaseShellInterception())) {
-    return;
-  }
-  if (CloseBindingIfError(SetupSessionShellInterception())) {
-    return;
-  }
-  if (CloseBindingIfError(SetupStoryShellInterception())) {
-    return;
-  }
   if (CloseBindingIfError(SetupComponentInterception())) {
     return;
   }
@@ -181,8 +179,24 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
       env_services->AllowParentService(svc_name);
     }
   }
-  // Add account manager and device settings manager which by basemgr has hard
-  // dependencies on.
+
+  // Ledger configuration for tests by default:
+  // * use a memory-backed FS for ledger.
+  // * doesn't sync with a cloudprovider.
+  auto* sessionmgr_config =
+      spec_.mutable_sessionmgr_config();  // auto initialize.
+  if (!sessionmgr_config->has_use_memfs_for_ledger()) {
+    sessionmgr_config->set_use_memfs_for_ledger(true);
+  }
+  if (!sessionmgr_config->has_cloud_provider()) {
+    sessionmgr_config->set_cloud_provider(
+        fuchsia::modular::session::CloudProvider::NONE);
+  }
+
+  // Allow the hard dependency services of basemgr to be specified by the
+  // parent environment:
+  // * AccountManager
+  // * DeviceSettingsManager
   env_services->AllowParentService(
       fuchsia::auth::account::AccountManager::Name_);
   env_services->AllowParentService(
@@ -190,9 +204,19 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   enclosing_env_ = sys::testing::EnclosingEnvironment::Create(
       "modular_test_harness", parent_env_, std::move(env_services));
 
+  zx::channel client;
+  zx::channel request;
+  FXL_CHECK(zx::channel::create(0u, &client, &request) == ZX_OK);
+  basemgr_config_dir_ = MakeBasemgrConfigDir(spec_);
+  basemgr_config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE,
+                             std::move(request));
+
   fuchsia::sys::LaunchInfo info;
   info.url = kBasemgrUrl;
-  info.arguments = fidl::VectorPtr(MakeBasemgrArgs(spec_));
+  info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+  info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
+  info.flat_namespace->directories.push_back(std::move(client));
+
   basemgr_ctrl_ = enclosing_env_->CreateComponent(std::move(info));
 }
 
@@ -220,68 +244,84 @@ zx_status_t TestHarnessImpl::SetupFakeSessionAgent() {
   return ZX_OK;
 }
 
-std::string ParseShellSpec(
-    const fuchsia::modular::testing::ShellSpec& shell_spec) {
-  if (shell_spec.is_component_url()) {
-    return shell_spec.component_url();
-  }
-  return shell_spec.intercept_spec().component_url();
+fuchsia::modular::session::AppConfig MakeAppConfigWithUrl(std::string url) {
+  fuchsia::modular::session::AppConfig app_config;
+  app_config.set_url(url);
+  return app_config;
+}
+
+fuchsia::modular::session::SessionShellMapEntry
+MakeDefaultSessionShellMapEntry() {
+  fuchsia::modular::session::SessionShellConfig config;
+  config.mutable_app_config()->set_url(kSessionShellDefaultUrl);
+
+  fuchsia::modular::session::SessionShellMapEntry entry;
+  entry.set_name("");
+  entry.set_config(std::move(config));
+  return entry;
 }
 
 // static
-std::vector<std::string> TestHarnessImpl::MakeBasemgrArgs(
+std::unique_ptr<vfs::PseudoDir> TestHarnessImpl::MakeBasemgrConfigDir(
     const fuchsia::modular::testing::TestHarnessSpec& const_spec) {
   fuchsia::modular::testing::TestHarnessSpec spec;
   const_spec.Clone(&spec);
 
-  std::string base_shell_url;
-  std::string session_shell_url;
-  std::string story_shell_url;
+  auto* basemgr_config = spec.mutable_basemgr_config();
+  // 1. Give base & story shell a default.
+  if (!basemgr_config->has_base_shell() ||
+      !basemgr_config->mutable_base_shell()->has_app_config()) {
+    basemgr_config->mutable_base_shell()->set_app_config(
+        MakeAppConfigWithUrl(kBaseShellDefaultUrl));
+  }
 
-  // 1. Figure out the base, session & story shell URLs.
-  base_shell_url = spec.has_base_shell() ? ParseShellSpec(spec.base_shell())
-                                         : kBaseShellDefaultUrl;
-  session_shell_url = spec.has_session_shell()
-                          ? ParseShellSpec(spec.session_shell())
-                          : kSessionShellDefaultUrl;
-  story_shell_url = spec.has_story_shell() ? ParseShellSpec(spec.story_shell())
-                                           : kStoryShellDefaultUrl;
+  if (!basemgr_config->has_story_shell() ||
+      !basemgr_config->mutable_story_shell()->has_app_config()) {
+    basemgr_config->mutable_story_shell()->set_app_config(
+        MakeAppConfigWithUrl(kStoryShellDefaultUrl));
+  }
 
-  // 2. Figure out sessionmgr args.
+  // 1.1. Give session shell a default if not specified.
+  if (!basemgr_config->has_session_shell_map() ||
+      basemgr_config->session_shell_map().size() == 0) {
+    basemgr_config->mutable_session_shell_map()->push_back(
+        MakeDefaultSessionShellMapEntry());
+  }
+
+  auto* first_session_shell_entry =
+      &basemgr_config->mutable_session_shell_map()->at(0);
+  if (!first_session_shell_entry->has_config() ||
+      !first_session_shell_entry->config().has_app_config() ||
+      !first_session_shell_entry->config().app_config().has_url()) {
+    first_session_shell_entry->mutable_config()->mutable_app_config()->set_url(
+        kSessionShellDefaultUrl);
+  }
+
+  // 2. Configure a session agent and intercept/mock it for its capabilities.
   std::vector<std::string> sessionmgr_args;
-  std::set<std::string> session_agents = {kSessionAgentFakeInterceptionUrl};
+  auto* sessionmgr_config =
+      spec.mutable_sessionmgr_config();  // initialize if empty.
+  auto* session_agents =
+      sessionmgr_config->mutable_session_agents();  // initialize if empty.
+  session_agents->push_back(kSessionAgentFakeInterceptionUrl);
 
-  // Empty intiialize sessionmgr config if it isn't set, so we can continue to
-  // use it for default-initializing some fields below.
-  if (!spec.has_sessionmgr_config()) {
-    spec.set_sessionmgr_config(fuchsia::modular::session::SessionmgrConfig{});
-  }
+  // 3. Write sessionmgr and basemgr configs into a single modular config
+  // json object, as described in //peridot/docs/modular/guide/config.md
+  std::string basemgr_json;
+  std::string sessionmgr_json;
+  XdrWrite(&basemgr_json, basemgr_config, XdrBasemgrConfig);
+  XdrWrite(&sessionmgr_json, sessionmgr_config, XdrSessionmgrConfig);
 
-  if (!spec.sessionmgr_config().has_use_memfs_for_ledger() ||
-      spec.sessionmgr_config().use_memfs_for_ledger()) {
-    sessionmgr_args.push_back("--use_memfs_for_ledger");
-  }
-  if (!spec.sessionmgr_config().has_cloud_provider() ||
-      spec.sessionmgr_config().cloud_provider() ==
-          fuchsia::modular::session::CloudProvider::NONE) {
-    sessionmgr_args.push_back("--no_cloud_provider_for_ledger");
-  }
-  if (spec.sessionmgr_config().has_session_agents()) {
-    session_agents.insert(spec.sessionmgr_config().session_agents().begin(),
-                          spec.sessionmgr_config().session_agents().end());
-  }
-  sessionmgr_args.push_back("--session_agents=" +
-                            fxl::JoinStrings(session_agents, "\\\\,"));
+  std::string modular_config_json =
+      fxl::Substitute(R"({
+      "$0": $1,
+      "$2": $3
+    })",
+                      modular_config::kBasemgrConfigName, basemgr_json,
+                      modular_config::kSessionmgrConfigName, sessionmgr_json);
 
-  std::vector<std::string> args;
-  // Be default, we use the --test flag.
-  args.push_back("--test");
-  args.push_back(fxl::Substitute("--base_shell=$0", base_shell_url));
-  args.push_back(fxl::Substitute("--session_shell=$0", session_shell_url));
-  args.push_back(fxl::Substitute("--story_shell=$0", story_shell_url));
-  args.push_back("--sessionmgr_args=" + fxl::JoinStrings(sessionmgr_args, ","));
-
-  return args;
+  return MakeFilePathWithContents(modular_config::kStartupConfigFilePath,
+                                  modular_config_json);
 }
 
 fuchsia::modular::testing::InterceptedComponentPtr
@@ -301,73 +341,6 @@ TestHarnessImpl::AddInterceptedComponentBinding(
   return ptr;
 }
 
-zx_status_t TestHarnessImpl::SetupBaseShellInterception() {
-  if (!spec_.has_base_shell() || !spec_.base_shell().is_intercept_spec()) {
-    return ZX_OK;
-  }
-  if (auto retval = SetupShellInterception(
-          spec_.base_shell(),
-          [this](fuchsia::sys::StartupInfo info,
-                 std::unique_ptr<sys::testing::InterceptedComponent>
-                     intercepted_component) {
-            binding_.events().OnNewBaseShell(
-                std::move(info), AddInterceptedComponentBinding(
-                                     std::move(intercepted_component)));
-          });
-      retval != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "Could not process base shell configuration. "
-           "TestHarnessSpec.base_shell must be set to a valid ShellSpec.";
-    return retval;
-  }
-  return ZX_OK;
-}
-
-zx_status_t TestHarnessImpl::SetupSessionShellInterception() {
-  if (!spec_.has_session_shell() ||
-      !spec_.session_shell().is_intercept_spec()) {
-    return ZX_OK;
-  }
-  if (auto retval =
-          SetupShellInterception(
-              spec_.session_shell(),
-              [this](fuchsia::sys::StartupInfo info,
-                     std::unique_ptr<sys::testing::InterceptedComponent>
-                         intercepted_component) {
-                binding_.events().OnNewSessionShell(
-                    std::move(info), AddInterceptedComponentBinding(
-                                         std::move(intercepted_component)));
-              }) != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "Could not process session shell configuration. "
-           "TestHarnessSpec.session_shell must be set to a valid ShellSpec.";
-    return retval;
-  }
-  return ZX_OK;
-}
-
-zx_status_t TestHarnessImpl::SetupStoryShellInterception() {
-  if (!spec_.has_story_shell() || !spec_.story_shell().is_intercept_spec()) {
-    return ZX_OK;
-  }
-  if (auto retval =
-          SetupShellInterception(
-              spec_.story_shell(),
-              [this](fuchsia::sys::StartupInfo info,
-                     std::unique_ptr<sys::testing::InterceptedComponent>
-                         intercepted_component) {
-                binding_.events().OnNewStoryShell(
-                    std::move(info), AddInterceptedComponentBinding(
-                                         std::move(intercepted_component)));
-              }) != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "Could not process story shell configuration. "
-           "TestHarnessSpec.story_shell must be set to a valid ShellSpec.";
-    return retval;
-  }
-  return ZX_OK;
-}
-
 std::string GetCmxAsString(
     const fuchsia::modular::testing::InterceptSpec& intercept_spec) {
   std::string cmx_str = "";
@@ -380,34 +353,6 @@ std::string GetCmxAsString(
   }
 
   return cmx_str;
-}
-
-// Returns `false` if the supplied |shell_spec| is
-zx_status_t TestHarnessImpl::SetupShellInterception(
-    const fuchsia::modular::testing::ShellSpec& shell_spec,
-    sys::testing::ComponentInterceptor::ComponentLaunchHandler
-        fake_interception_callback) {
-  switch (shell_spec.Which()) {
-    case fuchsia::modular::testing::ShellSpec::Tag::kInterceptSpec: {
-      if (!interceptor_.InterceptURL(
-              shell_spec.intercept_spec().component_url(),
-              GetCmxAsString(shell_spec.intercept_spec()),
-              std::move(fake_interception_callback))) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-    } break;
-
-    case fuchsia::modular::testing::ShellSpec::Tag::kComponentUrl:
-      // Consumed by |MakeBasemgrArgs()|.
-      break;
-
-    case fuchsia::modular::testing::ShellSpec::Tag::Empty: {
-      FXL_LOG(WARNING) << "Unset ShellSpec value.";
-      return ZX_ERR_INVALID_ARGS;
-    } break;
-  }
-
-  return ZX_OK;
 }
 
 zx_status_t TestHarnessImpl::SetupComponentInterception() {

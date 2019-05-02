@@ -15,24 +15,24 @@ TEST_F(AutoLoginBaseShellTest, AutoLoginBaseShellLaunchesSessionShell) {
   constexpr char kAutoLoginBaseShellUrl[] =
       "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/"
       "auto_login_base_shell.cmx";
-  constexpr char kFakeSessionShellUrl[] =
-      "fuchsia-pkg://example.com/FAKE_SESSION_SHELL_PKG/fake_session_shell.cmx";
 
   fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.mutable_base_shell()->set_component_url(kAutoLoginBaseShellUrl);
-
-  fuchsia::modular::testing::InterceptSpec shell_intercept_spec;
-  shell_intercept_spec.set_component_url(kFakeSessionShellUrl);
-  spec.mutable_session_shell()->set_intercept_spec(
-      std::move(shell_intercept_spec));
+  spec.mutable_basemgr_config()
+      ->mutable_base_shell()
+      ->mutable_app_config()
+      ->set_url(kAutoLoginBaseShellUrl);
+  auto generated_url = InterceptSessionShell(&spec);
 
   // Listen for session shell interception.
   bool intercepted = false;
-  test_harness().events().OnNewSessionShell =
-      [&intercepted](
+  test_harness().events().OnNewComponent =
+      [&generated_url, &intercepted](
           fuchsia::sys::StartupInfo startup_info,
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) { intercepted = true; };
+              component) {
+        EXPECT_EQ(generated_url, startup_info.launch_info.url);
+        intercepted = true;
+      };
 
   test_harness()->Run(std::move(spec));
 

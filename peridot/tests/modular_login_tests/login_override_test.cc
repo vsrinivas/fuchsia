@@ -44,18 +44,27 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
   env_services.push_back("fuchsia.setui.SetUiService");
   spec.set_env_services_to_inherit(env_services);
 
-  fuchsia::modular::testing::InterceptSpec shell_intercept_spec;
-  shell_intercept_spec.set_component_url(kSingleUserBaseShellUrl);
-  spec.mutable_base_shell()->set_intercept_spec(
-      std::move(shell_intercept_spec));
+  spec.mutable_basemgr_config()
+      ->mutable_base_shell()
+      ->mutable_app_config()
+      ->set_url(kSingleUserBaseShellUrl);
+
+  {
+    fuchsia::modular::testing::InterceptSpec intercept_spec;
+    intercept_spec.set_component_url(kSingleUserBaseShellUrl);
+    spec.mutable_components_to_intercept()->push_back(
+        std::move(intercept_spec));
+  }
 
   // Listen for session shell interception.
   bool intercepted = false;
-  test_harness().events().OnNewBaseShell =
-      [&intercepted](
-          fuchsia::sys::StartupInfo startup_info,
+  test_harness().events().OnNewComponent =
+      [&](fuchsia::sys::StartupInfo startup_info,
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) { intercepted = true; };
+              component) {
+        ASSERT_EQ(kSingleUserBaseShellUrl, startup_info.launch_info.url);
+        intercepted = true;
+      };
 
   SetLoginOverride(fuchsia::setui::LoginOverride::AUTH_PROVIDER,
                    [this, spec = std::move(spec)]() mutable {
@@ -67,26 +76,22 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
 
 // Setting LoginOverride to AUTOLOGIN_GUEST should launch the session shell.
 TEST_F(LoginOverrideTest, AutoLoginGuestOverrideLaunchesSessionShell) {
-  constexpr char kFakeSessionShellUrl[] =
-      "fuchsia-pkg://example.com/FAKE_SESSION_SHELL_PKG/fake_session_shell.cmx";
-
   fuchsia::modular::testing::TestHarnessSpec spec;
+
   std::vector<std::string> env_services;
   env_services.push_back("fuchsia.setui.SetUiService");
   spec.set_env_services_to_inherit(env_services);
 
-  fuchsia::modular::testing::InterceptSpec shell_intercept_spec;
-  shell_intercept_spec.set_component_url(kFakeSessionShellUrl);
-  spec.mutable_session_shell()->set_intercept_spec(
-      std::move(shell_intercept_spec));
-
   // Listen for session shell interception.
+  auto intercepted_url = InterceptSessionShell(&spec);
   bool intercepted = false;
-  test_harness().events().OnNewSessionShell =
-      [&intercepted](
-          fuchsia::sys::StartupInfo startup_info,
+  test_harness().events().OnNewComponent =
+      [&](fuchsia::sys::StartupInfo startup_info,
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) { intercepted = true; };
+              component) {
+        ASSERT_EQ(intercepted_url, startup_info.launch_info.url);
+        intercepted = true;
+      };
 
   SetLoginOverride(fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST,
                    [this, spec = std::move(spec)]() mutable {

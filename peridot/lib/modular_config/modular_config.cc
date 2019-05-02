@@ -43,6 +43,7 @@ ModularConfigReader::ModularConfigReader(fxl::UniqueFD dir_fd) {
   std::string config_path =
       files::JoinPath(StripLeadingSlash(modular_config::kOverriddenConfigDir),
                       modular_config::kStartupConfigFilePath);
+  FXL_LOG(INFO) << config_path;
   if (!files::IsFileAt(dir_fd.get(), config_path)) {
     config_path =
         files::JoinPath(StripLeadingSlash(modular_config::kDefaultConfigDir),

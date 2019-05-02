@@ -23,6 +23,26 @@ class TestHarnessFixture : public sys::testing::TestWithEnvironment {
     return test_harness_;
   }
 
+  // Configure |test_harness| to intercept to base shell. Returns the generated
+  // fake URL used to configure the base shell.
+  std::string InterceptBaseShell(
+      fuchsia::modular::testing::TestHarnessSpec* spec) const;
+
+  // Configure |test_harness| with a new session shell, and set it up for
+  // interception. Returns the generated fake URL used to configure the session
+  // shell.
+  std::string InterceptSessionShell(
+      fuchsia::modular::testing::TestHarnessSpec* spec) const;
+
+  // Configure |test_harness| to intercept to story shell. Returns the generated
+  // fake URL used to configure the story shell.
+  std::string InterceptStoryShell(
+      fuchsia::modular::testing::TestHarnessSpec* spec) const;
+
+  // Returns a generated fake URL. Subsequent calls to this method will generate
+  // a different URL.
+  std::string GenerateFakeUrl() const;
+
  private:
   std::shared_ptr<sys::ServiceDirectory> svc_;
   fuchsia::modular::testing::TestHarnessPtr test_harness_;

@@ -16,8 +16,8 @@ source_set("modular_config") {
     "//garnet/public/lib/json",
     "//peridot/lib/fidl:json_xdr",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.session",
   ]
 }
 
@@ -31,8 +31,8 @@ source_set("json_xdr") {
   deps = [
     "//peridot/lib/fidl:json_xdr",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.session",
   ]
 }
 
@@ -45,12 +45,14 @@ source_set("unittests") {
   ]
 
   deps = [
-    ":modular_config",
     ":json_xdr",
+    ":modular_config",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
-    "//sdk/fidl/fuchsia.modular.session",
+    "//peridot/lib/util:pseudo_dir_server",
+    "//peridot/lib/util:pseudo_dir_utils",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.session",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
