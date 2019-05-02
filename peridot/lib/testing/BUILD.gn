@@ -140,6 +140,7 @@ source_set("session_shell_impl") {
     "//peridot/public/lib/integration_testing/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",

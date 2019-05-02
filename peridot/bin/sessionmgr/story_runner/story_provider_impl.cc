@@ -4,6 +4,10 @@
 
 #include "peridot/bin/sessionmgr/story_runner/story_provider_impl.h"
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -14,10 +18,7 @@
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/zx/time.h>
-
-#include <memory>
-#include <utility>
-#include <vector>
+#include "src/lib/uuid/uuid.h"
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/focus.h"
@@ -33,7 +34,6 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "src/lib/uuid/uuid.h"
 
 // In tests prefetching mondrian saved ~30ms in story start up time.
 #define PREFETCH_MONDRIAN 1
@@ -529,11 +529,11 @@ void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
 
 void StoryProviderImpl::AttachView(
     fidl::StringPtr story_id,
-    fuchsia::ui::views::ViewHolderToken view_holder_token) {
+    fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner) {
   FXL_CHECK(session_shell_);
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = std::move(story_id);
-  session_shell_->AttachView2(std::move(view_id), std::move(view_holder_token));
+  session_shell_->AttachView(std::move(view_id), std::move(view_owner));
 }
 
 void StoryProviderImpl::DetachView(fidl::StringPtr story_id,
