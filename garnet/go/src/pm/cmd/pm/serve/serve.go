@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"fuchsia.googlesource.com/pm/build"
@@ -26,18 +27,22 @@ import (
 // server is a default http server only parameterized for tests.
 var server http.Server
 
-func Run(cfg *build.Config, args []string) error {
-	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	repoDir := fs.String("d", "", "(deprecated, use -repo) path to the repository")
+var (
+	fs            = flag.NewFlagSet("serve", flag.ExitOnError)
+	repoServeDir  = fs.String("d", "", "(deprecated, use -repo) path to the repository")
+	listen        = fs.String("l", ":8083", "HTTP listen address")
+	auto          = fs.Bool("a", true, "Host auto endpoint for realtime client updates")
+	quiet         = fs.Bool("q", false, "Don't print out information about requests")
+	encryptionKey = fs.String("e", "", "Path to a symmetric blob encryption key *UNSAFE*")
+	publishList   = fs.String("p", "", "path to a package list file to be auto-published")
+	config        = &repo.Config{}
+	initOnce      sync.Once
+)
 
-	config := &repo.Config{}
-	config.Vars(fs)
-
-	listen := fs.String("l", ":8083", "HTTP listen address")
-	auto := fs.Bool("a", true, "Host auto endpoint for realtime client updates")
-	quiet := fs.Bool("q", false, "Don't print out information about requests")
-	encryptionKey := fs.String("e", "", "Path to a symmetric blob encryption key *UNSAFE*")
-	publishList := fs.String("p", "", "path to a package list file to be auto-published")
+func ParseFlags(args []string) error {
+	// the flags added by vars can't be added more than once, so when tests invoke
+	// this func more than once, it causes a failure.
+	initOnce.Do(func() { config.Vars(fs) })
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: %s serve", filepath.Base(os.Args[0]))
@@ -50,12 +55,23 @@ func Run(cfg *build.Config, args []string) error {
 	}
 	config.ApplyDefaults()
 
-	if *repoDir == "" {
-		*repoDir = config.RepoDir
+	// The -d flag points at $reporoot/repository, so the "repo" for publishing is
+	// one directory above that.
+	// If -d is passed, it takes priority.
+	if *repoServeDir == "" {
+		*repoServeDir = filepath.Join(config.RepoDir, "repository")
+	} else {
+		config.RepoDir = filepath.Dir(*repoServeDir)
 	}
-	repoPubDir := filepath.Join(*repoDir, "repository")
+	return nil
+}
 
-	repo, err := repo.New(*repoDir)
+func Run(cfg *build.Config, args []string) error {
+	if err := ParseFlags(args); err != nil {
+		return err
+	}
+
+	repo, err := repo.New(config.RepoDir)
 	if err != nil {
 		return err
 	}
@@ -64,7 +80,7 @@ func Run(cfg *build.Config, args []string) error {
 	}
 
 	if err := repo.Init(); err != nil && err != os.ErrExist {
-		return fmt.Errorf("repository at %q is not valid or could not be initialized: %s", *repoDir, err)
+		return fmt.Errorf("repository at %q is not valid or could not be initialized: %s", config.RepoDir, err)
 	}
 
 	if *auto {
@@ -102,7 +118,7 @@ func Run(cfg *build.Config, args []string) error {
 			}
 		}
 
-		timestampPath := filepath.Join(repoPubDir, "timestamp.json")
+		timestampPath := filepath.Join(*repoServeDir, "timestamp.json")
 		if err = w.Add(timestampPath); err != nil {
 			return fmt.Errorf("failed to watch %s: %s", timestampPath, err)
 		}
@@ -138,7 +154,7 @@ func Run(cfg *build.Config, args []string) error {
 		publishAll()
 	}
 
-	dirServer := http.FileServer(http.Dir(repoPubDir))
+	dirServer := http.FileServer(http.Dir(*repoServeDir))
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
@@ -151,7 +167,7 @@ func Run(cfg *build.Config, args []string) error {
 	}))
 
 	cs := pmhttp.NewConfigServer(func() []byte {
-		b, err := ioutil.ReadFile(filepath.Join(repoPubDir, "root.json"))
+		b, err := ioutil.ReadFile(filepath.Join(*repoServeDir, "root.json"))
 		if err != nil {
 			log.Printf("%s", err)
 		}
@@ -161,7 +177,7 @@ func Run(cfg *build.Config, args []string) error {
 
 	if !*quiet {
 		fmt.Printf("%s [pm serve] serving %s at http://%s\n",
-			time.Now().Format("2006-01-02 15:04:05"), *repoDir, *listen)
+			time.Now().Format("2006-01-02 15:04:05"), config.RepoDir, *listen)
 	}
 
 	server.Addr = *listen

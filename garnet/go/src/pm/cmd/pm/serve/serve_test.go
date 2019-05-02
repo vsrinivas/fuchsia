@@ -23,6 +23,38 @@ import (
 	"fuchsia.googlesource.com/sse"
 )
 
+func TestParseFlags(t *testing.T) {
+	// poor mans reset, for the cases covered below
+	resetFlags := func() {
+		config.RepoDir = ""
+		*repoServeDir = ""
+	}
+	defer resetFlags()
+	if err := ParseFlags([]string{"-repo", "amber-files"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := config.RepoDir, "amber-files"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	if got, want := *repoServeDir, "amber-files/repository"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+
+	resetFlags()
+	if err := ParseFlags([]string{"-d", "amber-files/repository"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := config.RepoDir, "amber-files"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	if got, want := *repoServeDir, "amber-files/repository"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+
+	// TODO: add additional coverage (needs some re-arrangement to be able to
+	// re-set flag defaults)
+}
+
 func TestServer(t *testing.T) {
 	cfg := build.TestConfig()
 	build.BuildTestPackage(cfg)
