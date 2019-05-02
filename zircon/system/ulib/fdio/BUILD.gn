@@ -30,7 +30,7 @@ library("fdio") {
     "null.cpp",
     "remoteio.cpp",
     "socket.cpp",
-    "spawn.c",
+    "spawn.cpp",
     "stubs.cpp",
     "uname.c",
     "unistd.c",

@@ -194,7 +194,7 @@ static zx_status_t send_cstring_array(zx_handle_t launcher, int ordinal, const c
         offset += FIDL_ALIGN(size);
     }
 
-    return zx_channel_write(launcher, 0, msg, msg_len, NULL, 0);
+    return zx_channel_write(launcher, 0, msg, static_cast<uint32_t>(msg_len), NULL, 0);
 }
 
 static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
@@ -218,8 +218,9 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
     req->hdr.ordinal = fuchsia_process_LauncherAddHandlesOrdinal;
 
     zx_status_t status = ZX_OK;
-    size_t h = 0;
+    uint32_t h = 0;
     size_t a = 0;
+    size_t msg_len = 0;
 
     if ((flags & FDIO_SPAWN_CLONE_JOB) != 0) {
         handle_infos[h].handle = FIDL_HANDLE_PRESENT;
@@ -304,8 +305,8 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
 
     ZX_DEBUG_ASSERT(h <= handle_capacity);
 
-    size_t msg_len = sizeof(fuchsia_process_LauncherAddHandlesRequest) + FIDL_ALIGN(h * sizeof(fuchsia_process_HandleInfo));
-    status = zx_channel_write(launcher, 0, msg, msg_len, handles, h);
+    msg_len = sizeof(fuchsia_process_LauncherAddHandlesRequest) + FIDL_ALIGN(h * sizeof(fuchsia_process_HandleInfo));
+    status = zx_channel_write(launcher, 0, msg, static_cast<uint32_t>(msg_len), handles, h);
 
     if (status != ZX_OK)
         report_error(err_msg, "failed send handles: %d", status);
@@ -353,17 +354,17 @@ static zx_status_t send_namespace(zx_handle_t launcher, size_t name_count, size_
 
     req->hdr.ordinal = fuchsia_process_LauncherAddNamesOrdinal;
     req->names.count = name_count;
-    req->names.data = (void*)FIDL_ALLOC_PRESENT;
+    req->names.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
 
     size_t n = 0;
-    size_t h = 0;
+    uint32_t h = 0;
     size_t offset = 0;
 
     if (flat) {
         while (n < flat->count) {
             size_t size = strlen(flat->path[n]);
             names[n].path.size = size;
-            names[n].path.data = (void*)FIDL_ALLOC_PRESENT;
+            names[n].path.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
             names[n].directory = FIDL_HANDLE_PRESENT;
             memcpy(payload + offset, flat->path[n], size);
             offset += FIDL_ALIGN(size);
@@ -376,7 +377,7 @@ static zx_status_t send_namespace(zx_handle_t launcher, size_t name_count, size_
         if (actions[i].action == FDIO_SPAWN_ACTION_ADD_NS_ENTRY) {
             size_t size = strlen(actions[i].ns.prefix);
             names[n].path.size = size;
-            names[n].path.data = (void*)FIDL_ALLOC_PRESENT;
+            names[n].path.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
             names[n].directory = FIDL_HANDLE_PRESENT;
             memcpy(payload + offset, actions[i].ns.prefix, size);
             offset += FIDL_ALIGN(size);
@@ -388,7 +389,7 @@ static zx_status_t send_namespace(zx_handle_t launcher, size_t name_count, size_
     ZX_DEBUG_ASSERT(n == name_count);
     ZX_DEBUG_ASSERT(h == name_count);
 
-    zx_status_t status = zx_channel_write(launcher, 0, msg, msg_len, handles, h);
+    zx_status_t status = zx_channel_write(launcher, 0, msg, static_cast<uint32_t>(msg_len), handles, h);
 
     if (status != ZX_OK)
         report_error(err_msg, "failed send namespace: %d", status);
@@ -456,6 +457,8 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
     zx_handle_t launcher_request = ZX_HANDLE_INVALID;
     zx_handle_t msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_COUNT];
     zx_handle_t ldsvc = ZX_HANDLE_INVALID;
+    const char* process_name = NULL;
+    size_t process_name_size = 0;
 
     memset(msg_handles, 0, sizeof(msg_handles));
 
@@ -472,7 +475,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
     if (job == ZX_HANDLE_INVALID)
         job = zx_job_default();
 
-    const char* process_name = argv[0];
+    process_name = argv[0];
 
     for (size_t i = 0; i < action_count; ++i) {
         switch (actions[i].action) {
@@ -552,7 +555,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
 
         char* name = &head[FDIO_RESOLVE_PREFIX_LEN];
         size_t len = fuchsia_process_MAX_RESOLVE_NAME_SIZE;
-        char* end = memchr(name, '\n', len);
+        char* end = reinterpret_cast<char*>(memchr(name, '\n', len));
         if (end != NULL) {
             len = end - name;
         }
@@ -629,7 +632,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
 
     action_count = 0; // We've consumed all the actions at this point.
 
-    size_t process_name_size = strlen(process_name);
+    process_name_size = strlen(process_name);
     if (process_name_size >= ZX_MAX_NAME_LEN)
         process_name_size = ZX_MAX_NAME_LEN - 1;
 
@@ -648,7 +651,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
         msg.req.info.executable = FIDL_HANDLE_PRESENT;
         msg.req.info.job = FIDL_HANDLE_PRESENT;
         msg.req.info.name.size = process_name_size;
-        msg.req.info.name.data = (void*)FIDL_ALLOC_PRESENT;
+        msg.req.info.name.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
         memcpy(msg.process_name, process_name, process_name_size);
 
         msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE] = executable_vmo;
@@ -671,7 +674,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
         args.wr_handles = msg_handles;
         args.rd_bytes = &reply;
         args.rd_handles = &process;
-        args.wr_num_bytes = msg_len;
+        args.wr_num_bytes = static_cast<uint32_t>(msg_len);
         args.wr_num_handles = FDIO_SPAWN_LAUNCH_HANDLE_COUNT;
         args.rd_num_bytes = sizeof(reply);
         args.rd_num_handles = FDIO_SPAWN_LAUNCH_REPLY_HANDLE_COUNT;
