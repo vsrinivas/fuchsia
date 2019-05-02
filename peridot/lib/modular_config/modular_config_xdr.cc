@@ -16,12 +16,16 @@ void XdrBaseShellConfig(
   xdr->FieldWithDefault(modular_config::kUrl,
                         data->mutable_app_config()->mutable_url(), has_url,
                         std::string(modular_config::kDefaultBaseShellUrl));
-  data->mutable_app_config()->set_args(std::vector<std::string>());
 
   bool has_keep_alive_after_login = data->has_keep_alive_after_login();
   xdr->FieldWithDefault(modular_config::kKeepAliveAfterLogin,
                         data->mutable_keep_alive_after_login(),
                         has_keep_alive_after_login, false);
+
+  bool has_args = data->mutable_app_config()->has_args();
+  xdr->FieldWithDefault(modular_config::kArgs,
+                        data->mutable_app_config()->mutable_args(), has_args,
+                        std::vector<std::string>());
 }
 
 fuchsia::ui::policy::DisplayUsage GetDisplayUsageFromString(std::string usage) {

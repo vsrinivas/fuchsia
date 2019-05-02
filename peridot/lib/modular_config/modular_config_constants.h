@@ -21,6 +21,9 @@ constexpr char kStartupConfigFilePath[] = "startup.config";
 
 constexpr char kTrue[] = "true";
 
+// Used by sessionmgr component_args and base shell.
+constexpr char kArgs[] = "args";
+
 // Presentation constants
 constexpr char kDisplayUsage[] = "display_usage";
 constexpr char kHandheld[] = "handheld";
@@ -49,7 +52,6 @@ constexpr char kUseSessionShellForStoryShellFactory[] =
 // Sessionmgr constants
 constexpr char kComponentArgs[] = "component_args";
 constexpr char kUri[] = "uri";
-constexpr char kArgs[] = "args";
 constexpr char kEnableStoryShellPreload[] = "enable_story_shell_preload";
 constexpr char kStartupAgents[] = "startup_agents";
 constexpr char kSessionAgents[] = "session_agents";

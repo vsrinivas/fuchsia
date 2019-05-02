@@ -38,7 +38,7 @@ modular_config() target in the product's monolith packages.
     "component_args": [
       {
         "uri": "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx",
-        "args: [ "test" ]
+        "args: [ "--foo", "--bar=true" ]
       }
     ]
   }
@@ -55,6 +55,9 @@ modular_config() target in the product's monolith packages.
           used for testing because current integration tests expect base shell
           to always be running.
         * **default**: `false`
+    - `args` **string[]** *(optional)*
+        * A list of arguments to be passed to the base shell specified by url.
+          Arguments must be prefixed with --.
 * `session_shells` **array** *(required)*
     - Lists all the session shells with each shell containing the following
       fields:
@@ -133,4 +136,4 @@ modular_config() target in the product's monolith packages.
       argv at launch.
         * `uri`: The component's uri.
         * `args`: A list of arguments to be passed to the component specified by
-                  `uri`.
+                  `uri`. Arguments must be prefixed with --.

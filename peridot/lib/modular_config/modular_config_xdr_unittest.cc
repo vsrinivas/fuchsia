@@ -32,7 +32,8 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
     "use_session_shell_for_story_shell_factory":false,
     "base_shell":{
       "url":"fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
-      "keep_alive_after_login":false
+      "keep_alive_after_login":false,
+      "args":[]
     },
     "session_shells":[
       {
@@ -67,6 +68,7 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
       "auto_login_base_shell.cmx",
       read_config.base_shell().app_config().url());
   EXPECT_FALSE(read_config.base_shell().keep_alive_after_login());
+  EXPECT_EQ(0u, read_config.base_shell().app_config().args().size());
 
   ASSERT_EQ(1u, read_config.session_shell_map().size());
   EXPECT_EQ(
