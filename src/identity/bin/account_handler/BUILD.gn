@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("account_handler") {
+rustc_binary("bin") {
   name = "account_handler"
   edition = "2018"
   with_unit_tests = true
@@ -30,5 +31,20 @@ rustc_binary("account_handler") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+  ]
+}
+
+package("account_handler") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/account_handler"
+
+  meta = [
+    {
+      path = rebase_path("meta/account_handler.cmx")
+      dest = "account_handler.cmx"
+    },
   ]
 }

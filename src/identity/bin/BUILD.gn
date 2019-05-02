@@ -22,11 +22,16 @@ group("tests") {
 test_package("identity_bin_unittests") {
   deps = [
     "google_auth_provider:google_auth_provider_unittests",
+    "account_handler:bin",
   ]
 
   tests = [
     {
       name = "google_auth_provider_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "account_handler_bin_test"
       environments = basic_envs
     },
   ]
