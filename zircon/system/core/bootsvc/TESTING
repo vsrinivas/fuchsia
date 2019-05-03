@@ -1,6 +1,6 @@
 To run the bootsvc integration tests, boot with these boot cmdline arguments:
 
-`userboot=bin/bootsvc bootsvc.next=bin/bootsvc-tests,testargument`.
+`userboot=bin/bootsvc bootsvc.next=bin/bootsvc-integration-test,testargument`.
 
 This will tell bootsvc to execute its test suite instead of the usual boot
 chain. The expected output from a boot in this mode is a unittest suite report

@@ -11,10 +11,9 @@ executable("bootsvc") {
     "main.cpp",
     "svcfs-service.cpp",
     "svcfs-service.h",
-    "util.cpp",
-    "util.h",
   ]
   deps = [
+    ":util",
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/async:async-cpp",
@@ -37,28 +36,60 @@ executable("bootsvc") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/lz4",
-    "$zx/third_party/ulib/safemath",
   ]
   data_deps = [
     "$zx/system/core/devmgr/devcoordinator",
   ]
 }
 
-executable("bootsvc-tests") {
-  testonly = true
+source_set("util") {
   sources = [
-    "integration-test.cpp",
+    "util.h",
     "util.cpp",
   ]
   deps = [
+    "$zx/third_party/ulib/safemath",
+  ]
+  public_deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  data_deps = [
+    ":bootsvc-unit-test",
+    ":bootsvc-integration-test",
+  ]
+}
+
+test("bootsvc-unit-test") {
+  output_name = "bootsvc-unit-test"
+  sources = [
+    "unit-test.cpp",
+  ]
+  deps = [
+    ":util",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/unittest",
+  ]
+}
+
+executable("bootsvc-integration-test") {
+  testonly = true
+  sources = [
+    "integration-test.cpp",
+  ]
+  deps = [
+    ":util",
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
-    "$zx/third_party/ulib/safemath",
   ]
 }
