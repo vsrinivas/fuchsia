@@ -488,7 +488,7 @@ group("libc") {
 group("inspect_unittests") {
   testonly = true
   public_deps = [
-    "//garnet/bin/inspect_unittests",
+    "//garnet/public/lib/inspect/tests:inspect_unittests",
   ]
 }
 
