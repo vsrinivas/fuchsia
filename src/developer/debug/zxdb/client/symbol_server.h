@@ -22,6 +22,8 @@ class SymbolServer : public ClientObject {
   // of a connection error. If the symbols are simply unavailable the error
   // will not be set.
   using FetchCallback = std::function<void(const Err&, const std::string&)>;
+  using CheckFetchCallback =
+      std::function<void(const Err&, std::function<void(FetchCallback)>)>;
 
   enum class State {
     kInitializing,
@@ -43,7 +45,7 @@ class SymbolServer : public ClientObject {
   const std::vector<std::string>& error_log() const { return error_log_; }
 
   State state() const { return state_; }
-  void set_state_change_callback(std::function<void(SymbolServer*,State)> cb) {
+  void set_state_change_callback(std::function<void(SymbolServer*, State)> cb) {
     state_change_callback_ = cb;
   }
 
@@ -60,17 +62,20 @@ class SymbolServer : public ClientObject {
   // same signature as the Fetch method. If the callback == nullptr the symbol
   // was not found. The error supplied is only set if there was a problem with
   // the connection, not if the symbols were simply unavailable.
-  virtual void CheckFetch(
-      const std::string& build_id,
-      std::function<void(const Err&, std::function<void(FetchCallback)>)>
-          cb) = 0;
+  virtual void CheckFetch(const std::string& build_id,
+                          CheckFetchCallback cb) = 0;
 
  protected:
   explicit SymbolServer(Session* session, const std::string& name)
       : ClientObject(session), name_(name) {}
   void ChangeState(State state);
+  void IncrementRetries();
 
   std::vector<std::string> error_log_;
+  size_t retries_ = 0;
+
+  // Incremented each time the state becomes ready.
+  size_t ready_count_ = 0;
 
  private:
   State state_ = State::kInitializing;
@@ -80,7 +85,7 @@ class SymbolServer : public ClientObject {
   // handle custom protocol identifiers etc.
   std::string name_;
 
-  std::function<void(SymbolServer*,State)> state_change_callback_ = nullptr;
+  std::function<void(SymbolServer*, State)> state_change_callback_ = nullptr;
 };
 
 }  // namespace zxdb

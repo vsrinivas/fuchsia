@@ -61,6 +61,7 @@ static_library("client") {
     "breakpoint_location_impl.cc",
     "breakpoint_location_impl.h",
     "client_object.cc",
+    "cloud_storage_symbol_server.cc",
     "curl.cc",
     "disassembler.cc",
     "finish_physical_frame_thread_controller.cc",
@@ -129,6 +130,7 @@ static_library("client") {
     "//src/developer/debug/zxdb/symbols",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
+    "//third_party/curl:libcurl",
   ]
 
   deps = [
@@ -140,7 +142,6 @@ static_library("client") {
     "//third_party/crashpad/snapshot",
     "//third_party/crashpad/third_party/mini_chromium:base",
     "//third_party/crashpad/util",
-    "//third_party/curl:libcurl",
     "//third_party/rapidjson",
   ]
 }
@@ -180,6 +181,22 @@ copy("copy_test_data") {
   ]
 }
 
+copy("copy_fake_home") {
+  sources = [
+    "test_dummy_file",
+  ]
+
+  if (is_mac) {
+    outputs = [
+      "$root_out_dir/test_data/zxdb/fake_home/Library/Caches/com.googlesource.fuchsia.zxdb/googleapi_auth",
+    ]
+  } else {
+    outputs = [
+      "$root_out_dir/test_data/zxdb/fake_home/.cache/zxdb/googleapi_auth",
+    ]
+  }
+}
+
 source_set("tests") {
   testonly = true
   sources = [
@@ -204,6 +221,7 @@ source_set("tests") {
     "step_over_thread_controller_unittest.cc",
     "step_thread_controller_unittest.cc",
     "string_util_unittest.cc",
+    "symbol_server_unittest.cc",
     "target_impl_unittest.cc",
     "thread_controller_test.cc",
     "thread_controller_test.h",
@@ -212,11 +230,13 @@ source_set("tests") {
   ]
 
   data_deps = [
+    ":copy_fake_home",
     ":copy_test_data",
   ]
 
   metadata = {
-    test_runtime_deps = get_target_outputs(":copy_test_data")
+    test_runtime_deps = get_target_outputs(":copy_test_data") +
+                        get_target_outputs(":copy_fake_home")
   }
 
   deps = [
