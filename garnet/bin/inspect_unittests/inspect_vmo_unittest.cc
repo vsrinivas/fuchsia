@@ -12,7 +12,7 @@
 
 namespace {
 
-using inspect::Object;
+using inspect::Node;
 using inspect::ObjectHierarchy;
 using testing::AllOf;
 using testing::IsEmpty;
@@ -42,18 +42,18 @@ TEST(InspectVmo, Object) {
 
 class ValueWrapper {
  public:
-  ValueWrapper(Object obj, int val)
+  ValueWrapper(Node obj, int val)
       : object_(std::move(obj)),
         value_(object_.CreateIntMetric("value", val)) {}
 
  private:
-  Object object_;
+  Node object_;
   inspect::IntMetric value_;
 };
 
 TEST(InspectVmo, Child) {
   auto tree = inspect::Inspector().CreateTree("root");
-  Object& root = tree.GetRoot();
+  Node& root = tree.GetRoot();
   {
     // Create a child and check it exists.
     auto obj = root.CreateChild("child");
@@ -78,7 +78,7 @@ TEST(InspectVmo, Child) {
 
 TEST(InspectVmo, ChildChaining) {
   auto tree = inspect::Inspector().CreateTree("root");
-  Object& root = tree.GetRoot();
+  Node& root = tree.GetRoot();
   {
     ValueWrapper v(root.CreateChild("child"), 100);
     EXPECT_THAT(
@@ -119,7 +119,7 @@ TEST(InspectVmo, Metrics) {
   DefaultMetricTest<inspect::DoubleMetric>();
 
   auto tree = inspect::Inspector().CreateTree("root");
-  Object& root = tree.GetRoot();
+  Node& root = tree.GetRoot();
   {
     auto metric_int = root.CreateIntMetric("int", -10);
     metric_int.Add(5);
@@ -147,7 +147,7 @@ TEST(InspectVmo, Arrays) {
   DefaultArrayTest<inspect::DoubleArray>();
 
   auto tree = inspect::Inspector().CreateTree("root");
-  Object& root = tree.GetRoot();
+  Node& root = tree.GetRoot();
   {
     auto metric_int = root.CreateIntArray("int", 5);
     metric_int.Add(0, 5);
@@ -179,7 +179,7 @@ TEST(InspectVmo, LinearHistograms) {
   DefaultHistogramTest<inspect::LinearDoubleHistogramMetric>();
 
   auto tree = inspect::Inspector().CreateTree("root");
-  Object& root = tree.GetRoot();
+  Node& root = tree.GetRoot();
   {
     auto metric_int = root.CreateLinearIntHistogramMetric("int", 10, 5, 5);
     metric_int.Insert(0, 2);
@@ -226,7 +226,7 @@ TEST(InspectVmo, ExponentialHistograms) {
   DefaultHistogramTest<inspect::ExponentialDoubleHistogramMetric>();
 
   auto tree = inspect::Inspector().CreateTree("root");
-  Object& root = tree.GetRoot();
+  Node& root = tree.GetRoot();
   {
     auto metric_int =
         root.CreateExponentialIntHistogramMetric("int", 1, 1, 2, 4);
@@ -274,7 +274,7 @@ TEST(InspectVmo, ExponentialHistograms) {
 
 TEST(InspectVmo, Properties) {
   auto tree = inspect::Inspector().CreateTree("root");
-  Object& root = tree.GetRoot();
+  Node& root = tree.GetRoot();
   {
     auto property_string = root.CreateStringProperty("str", "test");
     property_string.Set("valid");
@@ -295,11 +295,11 @@ TEST(InspectVmo, Properties) {
 
 TEST(InspectVmo, NestedValues) {
   auto tree = inspect::Inspector().CreateTree("root");
-  Object& root = tree.GetRoot();
+  Node& root = tree.GetRoot();
   {
-    Object child_a = root.CreateChild("child_a");
-    Object child_b = root.CreateChild("child_b");
-    Object child_a_c = child_a.CreateChild("child_a_c");
+    Node child_a = root.CreateChild("child_a");
+    Node child_b = root.CreateChild("child_b");
+    Node child_a_c = child_a.CreateChild("child_a_c");
     auto property_string = root.CreateStringProperty("str", "test");
     property_string.Set("valid");
     auto property_vector =

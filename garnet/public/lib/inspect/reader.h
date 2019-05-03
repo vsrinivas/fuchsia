@@ -94,7 +94,7 @@ fit::result<ObjectHierarchy> ReadFromSnapshot(vmo::Snapshot snapshot);
 // given given inspect::Object.
 // Will only read |depth| levels past the immediate object, or all levels if
 // |depth| is -1.
-ObjectHierarchy ReadFromObject(const Object& object_root, int depth = -1);
+ObjectHierarchy ReadFromObject(const Node& object_root, int depth = -1);
 
 // Construct a new object hierarchy by reading the contents of a FIDL wrapper.
 ObjectHierarchy ReadFromFidlObject(const fuchsia::inspect::Object object);

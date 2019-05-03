@@ -71,13 +71,13 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     auto fake_page_eviction_manager =
         std::make_unique<FakeDiskCleanupManager>();
     disk_cleanup_manager_ = fake_page_eviction_manager.get();
-    inspect_object_ = inspect::Object(kObjectsName);
+    inspect_node_ = inspect::Node(kObjectsName);
 
     repository_ = std::make_unique<LedgerRepositoryImpl>(
         DetachedPath(tmpfs_.root_fd()), &environment_,
         std::make_unique<storage::fake::FakeDbFactory>(dispatcher()), nullptr,
         nullptr, std::move(fake_page_eviction_manager), disk_cleanup_manager_,
-        inspect_object_.CreateChild(kInspectPathComponent));
+        inspect_node_.CreateChild(kInspectPathComponent));
   }
 
   ~LedgerRepositoryImplTest() override {}
@@ -85,7 +85,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   FakeDiskCleanupManager* disk_cleanup_manager_;
-  inspect::Object inspect_object_;
+  inspect::Node inspect_node_;
   std::unique_ptr<LedgerRepositoryImpl> repository_;
 
  private:
@@ -125,7 +125,7 @@ TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
 TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   // When nothing has bound to the repository, check that the "requests" metric
   // is present and is zero.
-  auto zeroth_hierarchy = inspect::ReadFromObject(inspect_object_);
+  auto zeroth_hierarchy = inspect::ReadFromObject(inspect_node_);
   EXPECT_THAT(zeroth_hierarchy,
               ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
                   UIntMetricIs(kRequestsInspectPathComponent, 0UL)))))));
@@ -134,7 +134,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   // metric is present and is one.
   ledger_internal::LedgerRepositoryPtr first_ledger_repository_ptr;
   repository_->BindRepository(first_ledger_repository_ptr.NewRequest());
-  auto first_hierarchy = inspect::ReadFromObject(inspect_object_);
+  auto first_hierarchy = inspect::ReadFromObject(inspect_node_);
   EXPECT_THAT(first_hierarchy,
               ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
                   UIntMetricIs(kRequestsInspectPathComponent, 1UL)))))));
@@ -143,7 +143,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   // "requests" metric is present and is two.
   ledger_internal::LedgerRepositoryPtr second_ledger_repository_ptr;
   repository_->BindRepository(second_ledger_repository_ptr.NewRequest());
-  auto second_hierarchy = inspect::ReadFromObject(inspect_object_);
+  auto second_hierarchy = inspect::ReadFromObject(inspect_node_);
   EXPECT_THAT(second_hierarchy,
               ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
                   UIntMetricIs(kRequestsInspectPathComponent, 2UL)))))));
@@ -157,7 +157,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {
 
   // When nothing has requested a ledger, check that the Inspect hierarchy is as
   // expected with no nodes representing ledgers.
-  auto zeroth_hierarchy = inspect::ReadFromObject(inspect_object_);
+  auto zeroth_hierarchy = inspect::ReadFromObject(inspect_node_);
   EXPECT_THAT(zeroth_hierarchy, HierarchyMatcher({}));
 
   // When one ledger has been created in the repository, check that the Inspect
@@ -166,7 +166,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {
   ledger_repository_ptr->GetLedger(convert::ToArray(first_ledger_name),
                                    first_ledger_ptr.NewRequest());
   RunLoopUntilIdle();
-  auto first_hierarchy = inspect::ReadFromObject(inspect_object_);
+  auto first_hierarchy = inspect::ReadFromObject(inspect_node_);
   EXPECT_THAT(first_hierarchy, HierarchyMatcher({first_ledger_name}));
 
   // When two ledgers have been created in the repository, check that the
@@ -175,7 +175,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {
   ledger_repository_ptr->GetLedger(convert::ToArray(second_ledger_name),
                                    second_ledger_ptr.NewRequest());
   RunLoopUntilIdle();
-  auto second_hierarchy = inspect::ReadFromObject(inspect_object_);
+  auto second_hierarchy = inspect::ReadFromObject(inspect_node_);
   EXPECT_THAT(second_hierarchy,
               HierarchyMatcher({first_ledger_name, second_ledger_name}));
 }

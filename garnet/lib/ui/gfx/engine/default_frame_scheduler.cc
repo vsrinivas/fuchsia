@@ -18,18 +18,18 @@ namespace scenic_impl {
 namespace gfx {
 
 DefaultFrameScheduler::DefaultFrameScheduler(const Display* display,
-                                             inspect::Object inspect_object)
+                                             inspect::Node inspect_node)
     : dispatcher_(async_get_default_dispatcher()),
       display_(display),
-      inspect_object_(std::move(inspect_object)),
+      inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
   outstanding_frames_.reserve(kMaxOutstandingFrames);
 
-  inspect_frame_number_ = inspect_object_.CreateUIntMetric(
-      "most_recent_frame_number", frame_number_);
-  inspect_last_successful_update_start_time_ = inspect_object_.CreateUIntMetric(
+  inspect_frame_number_ =
+      inspect_node_.CreateUIntMetric("most_recent_frame_number", frame_number_);
+  inspect_last_successful_update_start_time_ = inspect_node_.CreateUIntMetric(
       "inspect_last_successful_update_start_time_", 0);
-  inspect_last_successful_render_start_time_ = inspect_object_.CreateUIntMetric(
+  inspect_last_successful_render_start_time_ = inspect_node_.CreateUIntMetric(
       "inspect_last_successful_render_start_time_", 0);
 }
 

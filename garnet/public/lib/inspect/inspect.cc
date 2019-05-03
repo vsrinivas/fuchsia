@@ -110,28 +110,28 @@ ChildrenCallback& ChildrenCallback::operator=(ChildrenCallback&& other) {
   return *this;
 }
 
-Object::Object(std::string name)
-    : Object(component::ExposedObject(std::move(name))) {}
+Node::Node(std::string name)
+    : Node(component::ExposedObject(std::move(name))) {}
 
-Object::Object(ObjectDir object_dir)
-    : Object(component::ExposedObject(std::move(object_dir))) {}
+Node::Node(ObjectDir object_dir)
+    : Node(component::ExposedObject(std::move(object_dir))) {}
 
-Object::Object(vmo::Object object) {
+Node::Node(vmo::Object object) {
   object_.template emplace<kVmoVariant>(std::move(object));
 }
 
-Object::Object(component::ExposedObject object) {
+Node::Node(component::ExposedObject object) {
   object_.template emplace<kComponentVariant>(std::move(object));
 }
 
-fuchsia::inspect::Object Object::object() const {
+fuchsia::inspect::Object Node::object() const {
   if (object_.index() == kComponentVariant) {
     return object_.template get<kComponentVariant>().object()->ToFidl();
   }
   return fuchsia::inspect::Object();
 }
 
-component::ObjectDir Object::object_dir() const {
+component::ObjectDir Node::object_dir() const {
   if (object_.index() == kComponentVariant) {
     return component::ObjectDir(
         object_.template get<kComponentVariant>().object());
@@ -139,26 +139,26 @@ component::ObjectDir Object::object_dir() const {
   return component::ObjectDir();
 }
 
-component::Object::StringOutputVector Object::children() const {
+component::Object::StringOutputVector Node::children() const {
   if (object_.index() == kComponentVariant) {
     return object_.template get<kComponentVariant>().object()->GetChildren();
   }
   return component::Object::StringOutputVector();
 }
 
-Object Object::CreateChild(std::string name) {
+Node Node::CreateChild(std::string name) {
   if (object_.index() == kComponentVariant) {
     component::ExposedObject child(std::move(name));
     object_.template get<kComponentVariant>().add_child(&child);
-    return Object(std::move(child));
+    return Node(std::move(child));
   } else if (object_.index() == kVmoVariant) {
-    return Object(
+    return Node(
         object_.template get<kVmoVariant>().CreateChild(std::move(name)));
   }
-  return Object();
+  return Node();
 }
 
-IntMetric Object::CreateIntMetric(std::string name, int64_t value) {
+IntMetric Node::CreateIntMetric(std::string name, int64_t value) {
   if (object_.index() == kComponentVariant) {
     auto object = object_.template get<kComponentVariant>().object();
     object->SetMetric(name, component::IntMetric(value));
@@ -172,7 +172,7 @@ IntMetric Object::CreateIntMetric(std::string name, int64_t value) {
   return IntMetric();
 }
 
-UIntMetric Object::CreateUIntMetric(std::string name, uint64_t value) {
+UIntMetric Node::CreateUIntMetric(std::string name, uint64_t value) {
   if (object_.index() == kComponentVariant) {
     auto object = object_.template get<kComponentVariant>().object();
     object->SetMetric(name, component::UIntMetric(value));
@@ -186,7 +186,7 @@ UIntMetric Object::CreateUIntMetric(std::string name, uint64_t value) {
   return UIntMetric();
 }
 
-DoubleMetric Object::CreateDoubleMetric(std::string name, double value) {
+DoubleMetric Node::CreateDoubleMetric(std::string name, double value) {
   if (object_.index() == kComponentVariant) {
     auto object = object_.template get<kComponentVariant>().object();
     object->SetMetric(name, component::DoubleMetric(value));
@@ -200,12 +200,12 @@ DoubleMetric Object::CreateDoubleMetric(std::string name, double value) {
   return DoubleMetric();
 }
 
-IntArray Object::CreateIntArray(std::string name, size_t slots) {
+IntArray Node::CreateIntArray(std::string name, size_t slots) {
   return CreateIntArray(std::move(name), slots, vmo::ArrayFormat::kDefault);
 }
 
-IntArray Object::CreateIntArray(std::string name, size_t slots,
-                                vmo::ArrayFormat format) {
+IntArray Node::CreateIntArray(std::string name, size_t slots,
+                              vmo::ArrayFormat format) {
   if (object_.index() == kVmoVariant) {
     return IntArray(object_.template get<kVmoVariant>().CreateIntArray(
         name, slots, format));
@@ -213,12 +213,12 @@ IntArray Object::CreateIntArray(std::string name, size_t slots,
   return IntArray();
 }
 
-UIntArray Object::CreateUIntArray(std::string name, size_t slots) {
+UIntArray Node::CreateUIntArray(std::string name, size_t slots) {
   return CreateUIntArray(std::move(name), slots, vmo::ArrayFormat::kDefault);
 }
 
-UIntArray Object::CreateUIntArray(std::string name, size_t slots,
-                                  vmo::ArrayFormat format) {
+UIntArray Node::CreateUIntArray(std::string name, size_t slots,
+                                vmo::ArrayFormat format) {
   if (object_.index() == kVmoVariant) {
     return UIntArray(object_.template get<kVmoVariant>().CreateUintArray(
         name, slots, format));
@@ -226,12 +226,12 @@ UIntArray Object::CreateUIntArray(std::string name, size_t slots,
   return UIntArray();
 }
 
-DoubleArray Object::CreateDoubleArray(std::string name, size_t slots) {
+DoubleArray Node::CreateDoubleArray(std::string name, size_t slots) {
   return CreateDoubleArray(std::move(name), slots, vmo::ArrayFormat::kDefault);
 }
 
-DoubleArray Object::CreateDoubleArray(std::string name, size_t slots,
-                                      vmo::ArrayFormat format) {
+DoubleArray Node::CreateDoubleArray(std::string name, size_t slots,
+                                    vmo::ArrayFormat format) {
   if (object_.index() == kVmoVariant) {
     return DoubleArray(object_.template get<kVmoVariant>().CreateDoubleArray(
         name, slots, format));
@@ -239,8 +239,10 @@ DoubleArray Object::CreateDoubleArray(std::string name, size_t slots,
   return DoubleArray();
 }
 
-LinearIntHistogramMetric Object::CreateLinearIntHistogramMetric(
-    std::string name, int64_t floor, int64_t step_size, size_t buckets) {
+LinearIntHistogramMetric Node::CreateLinearIntHistogramMetric(std::string name,
+                                                              int64_t floor,
+                                                              int64_t step_size,
+                                                              size_t buckets) {
   if (object_.index() == kVmoVariant) {
     return LinearIntHistogramMetric(
         object_.template get<kVmoVariant>().CreateLinearIntHistogram(
@@ -249,7 +251,7 @@ LinearIntHistogramMetric Object::CreateLinearIntHistogramMetric(
   return LinearIntHistogramMetric();
 }
 
-LinearUIntHistogramMetric Object::CreateLinearUIntHistogramMetric(
+LinearUIntHistogramMetric Node::CreateLinearUIntHistogramMetric(
     std::string name, uint64_t floor, uint64_t step_size, size_t buckets) {
   if (object_.index() == kVmoVariant) {
     return LinearUIntHistogramMetric(
@@ -259,7 +261,7 @@ LinearUIntHistogramMetric Object::CreateLinearUIntHistogramMetric(
   return LinearUIntHistogramMetric();
 }
 
-LinearDoubleHistogramMetric Object::CreateLinearDoubleHistogramMetric(
+LinearDoubleHistogramMetric Node::CreateLinearDoubleHistogramMetric(
     std::string name, double floor, double step_size, size_t buckets) {
   if (object_.index() == kVmoVariant) {
     return LinearDoubleHistogramMetric(
@@ -269,7 +271,7 @@ LinearDoubleHistogramMetric Object::CreateLinearDoubleHistogramMetric(
   return LinearDoubleHistogramMetric();
 }
 
-ExponentialIntHistogramMetric Object::CreateExponentialIntHistogramMetric(
+ExponentialIntHistogramMetric Node::CreateExponentialIntHistogramMetric(
     std::string name, int64_t floor, int64_t initial_step,
     int64_t step_multiplier, size_t buckets) {
   if (object_.index() == kVmoVariant) {
@@ -280,7 +282,7 @@ ExponentialIntHistogramMetric Object::CreateExponentialIntHistogramMetric(
   return ExponentialIntHistogramMetric();
 }
 
-ExponentialUIntHistogramMetric Object::CreateExponentialUIntHistogramMetric(
+ExponentialUIntHistogramMetric Node::CreateExponentialUIntHistogramMetric(
     std::string name, uint64_t floor, uint64_t initial_step,
     uint64_t step_multiplier, size_t buckets) {
   if (object_.index() == kVmoVariant) {
@@ -291,7 +293,7 @@ ExponentialUIntHistogramMetric Object::CreateExponentialUIntHistogramMetric(
   return ExponentialUIntHistogramMetric();
 }
 
-ExponentialDoubleHistogramMetric Object::CreateExponentialDoubleHistogramMetric(
+ExponentialDoubleHistogramMetric Node::CreateExponentialDoubleHistogramMetric(
     std::string name, double floor, double initial_step, double step_multiplier,
     size_t buckets) {
   if (object_.index() == kVmoVariant) {
@@ -302,8 +304,8 @@ ExponentialDoubleHistogramMetric Object::CreateExponentialDoubleHistogramMetric(
   return ExponentialDoubleHistogramMetric();
 }
 
-LazyMetric Object::CreateLazyMetric(std::string name,
-                                    component::Metric::ValueCallback callback) {
+LazyMetric Node::CreateLazyMetric(std::string name,
+                                  component::Metric::ValueCallback callback) {
   if (object_.index() == kComponentVariant) {
     auto object = object_.template get<kComponentVariant>().object();
     object->SetMetric(name, component::CallbackMetric(std::move(callback)));
@@ -313,8 +315,7 @@ LazyMetric Object::CreateLazyMetric(std::string name,
   return LazyMetric();
 }
 
-StringProperty Object::CreateStringProperty(std::string name,
-                                            std::string value) {
+StringProperty Node::CreateStringProperty(std::string name, std::string value) {
   if (object_.index() == kComponentVariant) {
     auto object = object_.template get<kComponentVariant>().object();
     object->SetProperty(name, component::Property(std::move(value)));
@@ -329,8 +330,8 @@ StringProperty Object::CreateStringProperty(std::string name,
   return StringProperty();
 }
 
-ByteVectorProperty Object::CreateByteVectorProperty(std::string name,
-                                                    VectorValue value) {
+ByteVectorProperty Node::CreateByteVectorProperty(std::string name,
+                                                  VectorValue value) {
   if (object_.index() == kComponentVariant) {
     auto object = object_.template get<kComponentVariant>().object();
     object->SetProperty(name, component::Property(std::move(value)));
@@ -346,8 +347,8 @@ ByteVectorProperty Object::CreateByteVectorProperty(std::string name,
   return ByteVectorProperty();
 }
 
-LazyStringProperty Object::CreateLazyStringProperty(std::string name,
-                                                    StringValueCallback value) {
+LazyStringProperty Node::CreateLazyStringProperty(std::string name,
+                                                  StringValueCallback value) {
   if (object_.index() == kComponentVariant) {
     auto object = object_.template get<kComponentVariant>().object();
     object->SetProperty(name, component::Property(std::move(value)));
@@ -357,7 +358,7 @@ LazyStringProperty Object::CreateLazyStringProperty(std::string name,
   return LazyStringProperty();
 }
 
-LazyByteVectorProperty Object::CreateLazyByteVectorProperty(
+LazyByteVectorProperty Node::CreateLazyByteVectorProperty(
     std::string name, VectorValueCallback value) {
   if (object_.index() == kComponentVariant) {
     auto object = object_.template get<kComponentVariant>().object();
@@ -368,7 +369,7 @@ LazyByteVectorProperty Object::CreateLazyByteVectorProperty(
   return LazyByteVectorProperty();
 }
 
-ChildrenCallback Object::CreateChildrenCallback(
+ChildrenCallback Node::CreateChildrenCallback(
     ChildrenCallbackFunction callback) {
   if (object_.index() == kComponentVariant) {
     auto object = object_.template get<kComponentVariant>().object();
@@ -381,7 +382,7 @@ ChildrenCallback Object::CreateChildrenCallback(
 namespace internal {
 struct TreeState {
   // The root of the tree.
-  Object root;
+  Node root;
 
   // The VMO inspector object for this tree.
   vmo::Inspector inspector;
@@ -398,7 +399,7 @@ Tree::~Tree() {}
 
 const zx::vmo& Tree::GetVmo() const { return state_->inspector.GetVmo(); }
 
-Object& Tree::GetRoot() const { return state_->root; }
+Node& Tree::GetRoot() const { return state_->root; }
 
 Tree Inspector::CreateTree(std::string name) {
   return CreateTree(std::move(name), kDefaultTreeSettings);
@@ -408,7 +409,7 @@ Tree Inspector::CreateTree(std::string name, TreeSettings settings) {
   auto state = std::make_unique<internal::TreeState>();
   state->inspector =
       vmo::Inspector(settings.initial_size, settings.maximum_size);
-  state->root = Object(state->inspector.CreateObject(name.c_str()));
+  state->root = Node(state->inspector.CreateObject(name.c_str()));
 
   return Tree(std::move(state));
 }

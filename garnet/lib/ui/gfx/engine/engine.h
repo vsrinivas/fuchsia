@@ -76,7 +76,7 @@ class Engine : public SessionUpdater, public FrameRenderer {
          std::unique_ptr<FrameScheduler> frame_scheduler,
          std::unique_ptr<SessionManager> session_manager,
          DisplayManager* display_manager, escher::EscherWeakPtr escher,
-         inspect::Object inspect_object);
+         inspect::Node inspect_node);
 
   ~Engine() override = default;
 
@@ -165,7 +165,7 @@ class Engine : public SessionUpdater, public FrameRenderer {
  private:
   void InitializeFrameScheduler();
 
-  // Initialize all inspect::Objects, so that the Engine state can be observed.
+  // Initialize all inspect::Nodes, so that the Engine state can be observed.
   void InitializeInspectObjects();
 
   // Creates a command context.
@@ -234,7 +234,7 @@ class Engine : public SessionUpdater, public FrameRenderer {
 
   std::optional<CommandContext> command_context_;
 
-  inspect::Object inspect_object_;
+  inspect::Node inspect_node_;
   inspect::LazyStringProperty inspect_scene_dump_;
 
   fxl::WeakPtrFactory<Engine> weak_factory_;  // must be last

@@ -51,7 +51,7 @@ class Session {
   Session(SessionId id, SessionContext context,
           EventReporter* event_reporter = EventReporter::Default(),
           ErrorReporter* error_reporter = ErrorReporter::Default(),
-          inspect::Object inspect_object = inspect::Object());
+          inspect::Node inspect_node = inspect::Node());
   virtual ~Session();
 
   // Apply the operation to the current session state.  Return true if
@@ -186,7 +186,7 @@ class Session {
   uint64_t scheduled_update_count_ = 0;
   uint64_t applied_update_count_ = 0;
 
-  inspect::Object inspect_object_;
+  inspect::Node inspect_node_;
   inspect::UIntMetric inspect_resource_count_;
   inspect::UIntMetric inspect_last_applied_target_presentation_time_;
   inspect::UIntMetric inspect_last_applied_requested_presentation_time_;

@@ -27,9 +27,8 @@ class Display;
 // concerning the frame scheduler should be added to it as well.
 class DefaultFrameScheduler : public FrameScheduler {
  public:
-  explicit DefaultFrameScheduler(
-      const Display* display,
-      inspect::Object inspect_object = inspect::Object());
+  explicit DefaultFrameScheduler(const Display* display,
+                                 inspect::Node inspect_node = inspect::Node());
   ~DefaultFrameScheduler();
 
   // |FrameScheduler|
@@ -113,7 +112,7 @@ class DefaultFrameScheduler : public FrameScheduler {
                       std::greater<SessionUpdate>>
       updatable_sessions_;
 
-  inspect::Object inspect_object_;
+  inspect::Node inspect_node_;
   inspect::UIntMetric inspect_frame_number_;
   inspect::UIntMetric inspect_last_successful_update_start_time_;
   inspect::UIntMetric inspect_last_successful_render_start_time_;

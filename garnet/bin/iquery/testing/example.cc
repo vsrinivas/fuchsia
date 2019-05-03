@@ -25,7 +25,7 @@ std::string UniqueName(const char* name) {
 class Cell {
  public:
   Cell(const std::string& name, int64_t value, double double_value,
-       inspect::Object obj)
+       inspect::Node obj)
       : object_(std::move(obj)) {
     name_ = object_.CreateStringProperty("name", name);
     value_ = object_.CreateIntMetric("value", value);
@@ -33,7 +33,7 @@ class Cell {
   }
 
  private:
-  inspect::Object object_;
+  inspect::Node object_;
   inspect::StringProperty name_;
   inspect::IntMetric value_;
   inspect::DoubleMetric double_value_;
@@ -42,7 +42,7 @@ class Cell {
 // A row in the table, contains cells.
 class Row {
  public:
-  explicit Row(inspect::Object obj) : object_(std::move(obj)) {}
+  explicit Row(inspect::Node obj) : object_(std::move(obj)) {}
 
   Row(Row&&) = default;
   Row& operator=(Row&&) = default;
@@ -56,14 +56,14 @@ class Row {
   }
 
  private:
-  inspect::Object object_;
+  inspect::Node object_;
   std::vector<Cell> cells_;
 };
 
 // A table, contains rows.
 class Table {
  public:
-  Table(int row_count, int col_count, inspect::Object obj)
+  Table(int row_count, int col_count, inspect::Node obj)
       : object_(std::move(obj)) {
     object_name_ = object_.CreateStringProperty("object_name", "Example Table");
     binary_data_ = object_.CreateByteVectorProperty(
@@ -90,7 +90,7 @@ class Table {
   }
 
  private:
-  inspect::Object object_;
+  inspect::Node object_;
   inspect::StringProperty object_name_;
   inspect::ByteVectorProperty binary_data_;
   std::vector<Row> rows_;
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
       fuchsia::inspect::Inspect::Name_,
       std::make_unique<vfs::Service>(
           inspect_bindings_.GetHandler(root.object().get())));
-  auto root_object_fidl = inspect::Object(root);
+  auto root_object_fidl = inspect::Node(root);
 
   auto inspector =
       inspect::ComponentInspector::Initialize(component_context.get());
@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
       histograms;
 
   for (auto* root :
-       std::vector<inspect::Object*>({&root_object_fidl, &root_object_vmo})) {
+       std::vector<inspect::Node*>({&root_object_fidl, &root_object_vmo})) {
     ResetUniqueNames();
     tables.emplace_back(row_count, col_count,
                         root->CreateChild(UniqueName("table")));

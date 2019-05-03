@@ -39,7 +39,7 @@ namespace {
 
 Session::Session(SessionId id, SessionContext session_context,
                  EventReporter* event_reporter, ErrorReporter* error_reporter,
-                 inspect::Object inspect_object)
+                 inspect::Node inspect_node)
     : id_(id),
       error_reporter_(error_reporter),
       event_reporter_(event_reporter),
@@ -62,20 +62,19 @@ Session::Session(SessionId id, SessionContext session_context,
            session_context_.escher_resource_recycler,
            session_context_.escher_image_factory}),
       resources_(error_reporter),
-      inspect_object_(std::move(inspect_object)),
+      inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
   FXL_DCHECK(error_reporter);
 
-  inspect_resource_count_ =
-      inspect_object_.CreateUIntMetric("resource_count", 0);
+  inspect_resource_count_ = inspect_node_.CreateUIntMetric("resource_count", 0);
   inspect_last_applied_target_presentation_time_ =
-      inspect_object_.CreateUIntMetric("last_applied_target_presentation_time",
-                                       0);
+      inspect_node_.CreateUIntMetric("last_applied_target_presentation_time",
+                                     0);
   inspect_last_applied_requested_presentation_time_ =
-      inspect_object_.CreateUIntMetric("last_applied_request_presentation_time",
-                                       0);
+      inspect_node_.CreateUIntMetric("last_applied_request_presentation_time",
+                                     0);
   inspect_last_requested_presentation_time_ =
-      inspect_object_.CreateUIntMetric("last_requested_presentation_time", 0);
+      inspect_node_.CreateUIntMetric("last_requested_presentation_time", 0);
 }
 
 Session::~Session() {

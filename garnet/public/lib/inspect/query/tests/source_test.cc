@@ -26,8 +26,7 @@ namespace {
 
 class TestDataWrapper {
  public:
-  explicit TestDataWrapper(inspect::Object object)
-      : object_(std::move(object)) {
+  explicit TestDataWrapper(inspect::Node object) : object_(std::move(object)) {
     version_ = object_.CreateStringProperty("version", "1.0");
     child_test_ = object_.CreateChild("test");
     count_ = child_test_.CreateIntMetric("count", 2);
@@ -35,9 +34,9 @@ class TestDataWrapper {
   }
 
  private:
-  inspect::Object object_;
-  inspect::Object child_test_;
-  inspect::Object nested_child_;
+  inspect::Node object_;
+  inspect::Node child_test_;
+  inspect::Node nested_child_;
   inspect::StringProperty version_;
   inspect::IntMetric count_;
 };
@@ -61,7 +60,7 @@ class SourceTestFidl : public TestFixture {
  public:
   SourceTestFidl()
       : fidl_dir_(component::ObjectDir::Make("root")),
-        test_data_(inspect::Object(fidl_dir_)),
+        test_data_(inspect::Node(fidl_dir_)),
         binding_(fidl_dir_.object().get()) {
     binding_.Bind(ptr_.NewRequest().TakeChannel());
   }

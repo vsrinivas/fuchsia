@@ -46,7 +46,7 @@ class LedgerManager : public LedgerImpl::Delegate {
  public:
   LedgerManager(
       Environment* environment, std::string ledger_name,
-      inspect::Object inspect_object,
+      inspect::Node inspect_node,
       std::unique_ptr<encryption::EncryptionService> encryption_service,
       std::unique_ptr<storage::LedgerStorage> storage,
       std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
@@ -176,7 +176,7 @@ class LedgerManager : public LedgerImpl::Delegate {
 
   // The static Inspect object maintaining in Inspect a representation of this
   // LedgerManager.
-  inspect::Object inspect_object_;
+  inspect::Node inspect_node_;
 
   // Must be the last member.
   fxl::WeakPtrFactory<LedgerManager> weak_factory_;

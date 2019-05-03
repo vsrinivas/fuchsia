@@ -16,7 +16,7 @@ SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
                                SessionContext session_context,
                                EventReporter* event_reporter,
                                ErrorReporter* error_reporter,
-                               inspect::Object inspect_object)
+                               inspect::Node inspect_object)
     : TempSessionDelegate(std::move(dispatcher_context)),
 
       session_(std::make_unique<Session>(

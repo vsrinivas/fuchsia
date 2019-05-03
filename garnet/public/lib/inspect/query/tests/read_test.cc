@@ -31,16 +31,15 @@ namespace {
 
 class TestDataWrapper {
  public:
-  explicit TestDataWrapper(inspect::Object object)
-      : object_(std::move(object)) {
+  explicit TestDataWrapper(inspect::Node object) : object_(std::move(object)) {
     version_ = object_.CreateStringProperty("version", "1.0");
     child_test_ = object_.CreateChild("test");
     count_ = child_test_.CreateIntMetric("count", 2);
   }
 
  private:
-  inspect::Object object_;
-  inspect::Object child_test_;
+  inspect::Node object_;
+  inspect::Node child_test_;
   inspect::StringProperty version_;
   inspect::IntMetric count_;
 };
@@ -50,7 +49,7 @@ class ReadTest : public TestFixture {
   ReadTest()
       : tree_(inspector_.CreateTree("root")),
         fidl_dir_(component::ObjectDir::Make("root")),
-        fidl_test_data_(inspect::Object(fidl_dir_)),
+        fidl_test_data_(inspect::Node(fidl_dir_)),
         vmo_test_data_(std::move(tree_.GetRoot())) {
     // Host a FIDL and VMO inspect interface under /test in the global
     // namespace.
@@ -67,8 +66,8 @@ class ReadTest : public TestFixture {
         fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
         ptr.NewRequest().TakeChannel());
     ZX_ASSERT(fdio_ns_get_installed(&ns_) == ZX_OK);
-    ZX_ASSERT(fdio_ns_bind(ns_, "/test", ptr.Unbind().TakeChannel().release()) ==
-           ZX_OK);
+    ZX_ASSERT(fdio_ns_bind(ns_, "/test",
+                           ptr.Unbind().TakeChannel().release()) == ZX_OK);
   }
 
   ~ReadTest() {

@@ -76,7 +76,8 @@ internal::NameMatchesMatcher::NameMatchesMatcher(std::string name)
     : name_(std::move(name)) {}
 
 bool internal::NameMatchesMatcher::MatchAndExplain(
-    const Node& node, ::testing::MatchResultListener* listener) const {
+    const hierarchy::Node& node,
+    ::testing::MatchResultListener* listener) const {
   if (node.name() != name_) {
     *listener << "expected name \"" << name_ << "\" but found \"" << node.name()
               << "\"";
@@ -98,7 +99,8 @@ internal::MetricListMatcher::MetricListMatcher(MetricsMatcher matcher)
     : matcher_(std::move(matcher)) {}
 
 bool internal::MetricListMatcher::MatchAndExplain(
-    const Node& node, ::testing::MatchResultListener* listener) const {
+    const hierarchy::Node& node,
+    ::testing::MatchResultListener* listener) const {
   return ::testing::ExplainMatchResult(matcher_, node.metrics(), listener);
 }
 
@@ -116,7 +118,8 @@ internal::PropertyListMatcher::PropertyListMatcher(PropertiesMatcher matcher)
     : matcher_(std::move(matcher)) {}
 
 bool internal::PropertyListMatcher::MatchAndExplain(
-    const Node& node, ::testing::MatchResultListener* listener) const {
+    const hierarchy::Node& node,
+    ::testing::MatchResultListener* listener) const {
   return ::testing::ExplainMatchResult(matcher_, node.properties(), listener);
 }
 
@@ -131,17 +134,18 @@ void internal::PropertyListMatcher::DescribeNegationTo(
   matcher_.DescribeNegationTo(os);
 }
 
-::testing::Matcher<const Node&> NameMatches(std::string name) {
+::testing::Matcher<const hierarchy::Node&> NameMatches(std::string name) {
   return ::testing::MakeMatcher(
       new internal::NameMatchesMatcher(std::move(name)));
 }
 
-::testing::Matcher<const Node&> MetricList(MetricsMatcher matcher) {
+::testing::Matcher<const hierarchy::Node&> MetricList(MetricsMatcher matcher) {
   return ::testing::MakeMatcher(
       new internal::MetricListMatcher(std::move(matcher)));
 }
 
-::testing::Matcher<const Node&> PropertyList(PropertiesMatcher matcher) {
+::testing::Matcher<const hierarchy::Node&> PropertyList(
+    PropertiesMatcher matcher) {
   return ::testing::MakeMatcher(
       new internal::PropertyListMatcher(std::move(matcher)));
 }

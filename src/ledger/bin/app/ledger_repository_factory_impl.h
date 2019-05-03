@@ -39,7 +39,7 @@ class LedgerRepositoryFactoryImpl
       Environment* environment,
       std::unique_ptr<p2p_sync::UserCommunicatorFactory>
           user_communicator_factory,
-      inspect::Object inspect_object);
+      inspect::Node inspect_node);
   ~LedgerRepositoryFactoryImpl() override;
 
   // LedgerRepositoryFactoryErrorNotifierDelegate:
@@ -82,7 +82,7 @@ class LedgerRepositoryFactoryImpl
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer>
       repositories_;
 
-  inspect::Object inspect_object_;
+  inspect::Node inspect_node_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };

@@ -42,11 +42,10 @@ constexpr char kUserID[] = "test user ID";
 class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryFactoryImplTest() {
-    top_level_inspect_object_ = inspect::Object(kObjectsName);
+    top_level_inspect_node_ = inspect::Node(kObjectsName);
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         &environment_, nullptr,
-        top_level_inspect_object_.CreateChild(
-            kRepositoriesInspectPathComponent));
+        top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent));
   }
 
   ~LedgerRepositoryFactoryImplTest() override {}
@@ -58,7 +57,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
       ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr);
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
-  inspect::Object top_level_inspect_object_;
+  inspect::Node top_level_inspect_node_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> repository_factory_;
 
  private:
@@ -103,7 +102,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
-  auto hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
+  auto hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
   EXPECT_THAT(
       hierarchy,
       AllOf(NodeMatches(AllOf(NameMatches(kObjectsName), MetricList(IsEmpty()),
@@ -135,11 +134,11 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   ASSERT_TRUE(CreateDirectory(first_directory));
   ASSERT_TRUE(CreateDirectory(second_directory));
 
-  // Request one repository, then query the top_level_inspect_object_ (and its
+  // Request one repository, then query the top_level_inspect_node_ (and its
   // children) to verify that that repository is listed (and to learn the name
   // under which it is listed) and that it was requested once.
   ASSERT_TRUE(CallGetRepository(first_directory, &first_ledger_repository_ptr));
-  auto top_hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
+  auto top_hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
   auto lone_repository_match = NodeMatches(
       MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 1UL))));
   auto first_inspection_repositories_match =
@@ -158,7 +157,7 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // repositories were each requested once.
   ASSERT_TRUE(
       CallGetRepository(second_directory, &second_ledger_repository_ptr));
-  top_hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
+  top_hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
   auto second_inspection_two_repositories_match = UnorderedElementsAre(
       NodeMatches(AllOf(NameMatches(first_repository_name),
                         MetricList(Contains(UIntMetricIs(
@@ -189,7 +188,7 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // respectively.
   ASSERT_TRUE(
       CallGetRepository(first_directory, &first_again_ledger_repository_ptr));
-  top_hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
+  top_hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
   auto third_inspection_two_repositories_match = UnorderedElementsAre(
       NodeMatches(AllOf(NameMatches(first_repository_name),
                         MetricList(Contains(UIntMetricIs(

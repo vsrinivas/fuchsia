@@ -30,7 +30,7 @@ class SessionHandler : public TempSessionDelegate {
   SessionHandler(CommandDispatcherContext context,
                  SessionContext session_context, EventReporter* event_reporter,
                  ErrorReporter* error_reporter,
-                 inspect::Object inspect_object = inspect::Object());
+                 inspect::Node inspect_node = inspect::Node());
   ~SessionHandler() = default;
 
   scenic_impl::gfx::Session* session() const { return session_.get(); }

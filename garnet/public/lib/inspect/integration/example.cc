@@ -69,9 +69,9 @@ void CountTasks(int change) {
 class Task {
  public:
   // Construct a new |Task|.
-  // Note that the constructor takes an |inspect::Object|; this object is
+  // Note that the constructor takes an |inspect::Node|; this object is
   // provided by the parent to allow linking into the inspect hierarchy.
-  Task(std::string bug_number, std::string name, inspect::Object object)
+  Task(std::string bug_number, std::string name, inspect::Node object)
       : bug_number_(std::move(bug_number)),
         name_(std::move(name)),
         object_(std::move(object)) {
@@ -105,7 +105,7 @@ class Task {
 
   // Object for this |Task|. All exposed properties and metrics are rooted on
   // this Object.
-  inspect::Object object_;
+  inspect::Node object_;
 
   // |StringProperty| for bug number and name.
   inspect::StringProperty bug_number_property_;
@@ -142,9 +142,9 @@ struct EmployeePerformance {
 class Employee {
  public:
   // Create a new |Employee|.
-  // Note that the constructor takes an |inspect::Object| that we may use to
+  // Note that the constructor takes an |inspect::Node| that we may use to
   // expose our own metrics, properties, and children Objects.
-  Employee(std::string name, std::string email, inspect::Object object)
+  Employee(std::string name, std::string email, inspect::Node object)
       : name_(std::move(name)),
         email_(std::move(email)),
         object_(std::move(object)) {
@@ -270,16 +270,16 @@ class Employee {
   std::vector<std::unique_ptr<Employee>> reports_;
 
   // Object under which this |Employee| can expose inspect information.
-  inspect::Object object_;
+  inspect::Node object_;
 
   // Properties for name and email.
   inspect::StringProperty name_property_;
   inspect::StringProperty email_property_;
 
   // Object under which this |Employee| nests |Task|s.
-  inspect::Object task_object_;
+  inspect::Node task_object_;
   // Object under which this |Employee| nests reporting |Employee|s.
-  inspect::Object report_object_;
+  inspect::Node report_object_;
 
   // Container for various computed "Lazy" metrics we wish to expose.
   std::vector<inspect::LazyMetric> lazy_metrics_;
@@ -293,7 +293,7 @@ int main(int argc, const char** argv) {
 
   // Create a root object and bind it to out/
   auto root_object_dir = component::ObjectDir::Make("root");
-  inspect::Object root_object(root_object_dir);
+  inspect::Node root_object(root_object_dir);
   fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
   context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
       fuchsia::inspect::Inspect::Name_,

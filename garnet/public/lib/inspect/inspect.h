@@ -17,7 +17,7 @@
 
 namespace inspect {
 
-class Object;
+class Node;
 
 namespace internal {
 
@@ -143,7 +143,7 @@ class StaticMetric final {
   }
 
  private:
-  friend class ::inspect::Object;
+  friend class ::inspect::Node;
 
   // Index of the entity wrapper variant of the metric.
   static const int kEntityWrapperVariant = 1;
@@ -182,7 +182,7 @@ class ArrayMetric final {
   void Subtract(size_t index, T value) { vmo_metric_.Subtract(index, value); }
 
  private:
-  friend class ::inspect::Object;
+  friend class ::inspect::Node;
 
   // Internal constructor wrapping a VMO type.
   explicit ArrayMetric(VmoType vmo_metric)
@@ -224,7 +224,7 @@ class HistogramMetric final {
   void Insert(T value, T count) { histogram_.Insert(value, count); }
 
  private:
-  friend class ::inspect::Object;
+  friend class ::inspect::Node;
 
   // Internal constructor wrapping a VMO type.
   HistogramMetric(VmoType histogram) : histogram_(std::move(histogram)) {}
@@ -273,8 +273,8 @@ class LazyMetric final {
   void Set(::component::Metric::ValueCallback callback);
 
  private:
-  friend class ::inspect::Object;
-  // Internal constructor setting an actual value on an Object.
+  friend class ::inspect::Node;
+  // Internal constructor setting an actual value on a Node.
   explicit LazyMetric(internal::EntityWrapper<component::Metric> entity);
 
   fit::optional<internal::EntityWrapper<component::Metric>> entity_;
@@ -296,7 +296,7 @@ class StringProperty final {
   void Set(std::string value);
 
  private:
-  friend class ::inspect::Object;
+  friend class ::inspect::Node;
 
   // Index of the entity wrapper variant of the property.
   static const int kEntityWrapperVariant = 1;
@@ -326,7 +326,7 @@ class ByteVectorProperty final {
   void Set(::component::Property::ByteVector value);
 
  private:
-  friend class ::inspect::Object;
+  friend class ::inspect::Node;
 
   // Index of the entity wrapper variant of the property.
   static const int kEntityWrapperVariant = 1;
@@ -366,9 +366,9 @@ class LazyStringProperty final {
   void Set(StringValueCallback callback);
 
  private:
-  friend class ::inspect::Object;
+  friend class ::inspect::Node;
 
-  // Internal constructor setting an actual value on an Object.
+  // Internal constructor setting an actual value on a Node.
   explicit LazyStringProperty(
       internal::EntityWrapper<component::Property> entity);
 
@@ -395,9 +395,9 @@ class LazyByteVectorProperty final {
   void Set(VectorValueCallback callback);
 
  private:
-  friend class ::inspect::Object;
+  friend class ::inspect::Node;
 
-  // Internal constructor setting an actual value on an Object.
+  // Internal constructor setting an actual value on a Node.
   explicit LazyByteVectorProperty(
       internal::EntityWrapper<component::Property> entity);
 
@@ -410,8 +410,8 @@ using VectorValue = component::Property::ByteVector;
 
 using ChildrenCallbackFunction = ::component::Object::ChildrenCallback;
 
-// ChildrenCallback is an RAII wrapper around a callback attached to an
-// Object that provides additional children dynamically.
+// ChildrenCallback is an RAII wrapper around a callback attached to a
+// Node that provides additional children dynamically.
 class ChildrenCallback final {
  public:
   // Construct a default children callback.
@@ -428,7 +428,7 @@ class ChildrenCallback final {
   ChildrenCallback& operator=(ChildrenCallback&& other);
 
  private:
-  friend class ::inspect::Object;
+  friend class ::inspect::Node;
 
   // Internal constructor setting an actual children callback on an object.
   ChildrenCallback(std::shared_ptr<::component::Object> object);
@@ -437,44 +437,44 @@ class ChildrenCallback final {
 };
 
 // An object under which properties, metrics, and other objects may be nested.
-class Object final {
+class Node final {
  public:
-  // Default construct an empty Object that does nothing until assigned to.
-  Object() = default;
+  // Default construct an empty Node that does nothing until assigned to.
+  Node() = default;
 
   // Construct an object with an explicit name.
   // DEPRECATED: Use Inspector and CreateTree instead of constructing objects
   // directly.
-  explicit Object(std::string name);
+  explicit Node(std::string name);
 
-  // Construct an Object wrapping the given ObjectDir.
-  explicit Object(component::ObjectDir object_dir);
+  // Construct a Node wrapping the given ObjectDir.
+  explicit Node(component::ObjectDir object_dir);
 
-  // Construct an Object wrapping the given VMO Object.
-  explicit Object(vmo::Object object);
+  // Construct a Node wrapping the given VMO Object.
+  explicit Node(vmo::Object object);
 
-  ~Object() = default;
+  ~Node() = default;
 
-  // Output the contents of this object as a FIDL struct.
-  // For Objects stored in a VMO, this method returns a default value.
+  // Output the contents of this node as a FIDL struct.
+  // For Nodes stored in a VMO, this method returns a default value.
   fuchsia::inspect::Object object() const;
 
-  // Get an ObjectDir wrapping this Object's state.
-  // For Objects stored in a VMO, this method returns a default value.
+  // Get an ObjectDir wrapping this Node's state.
+  // For Nodes stored in a VMO, this method returns a default value.
   component::ObjectDir object_dir() const;
 
-  // Output the list of this object's children as a FIDL-compatible vector.
-  // For Objects stored in a VMO, this method returns a default value.
+  // Output the list of this node's children as a FIDL-compatible vector.
+  // For Nodes stored in a VMO, this method returns a default value.
   ::component::Object::StringOutputVector children() const;
 
   // Allow moving, disallow copying.
-  Object(const Object& other) = delete;
-  Object(Object&& other) = default;
-  Object& operator=(const Object& other) = delete;
-  Object& operator=(Object&& other) = default;
+  Node(const Node& other) = delete;
+  Node(Node&& other) = default;
+  Node& operator=(const Node& other) = delete;
+  Node& operator=(Node&& other) = default;
 
-  // Create a new |Object| with the given name that is a child of this object.
-  [[nodiscard]] Object CreateChild(std::string name);
+  // Create a new |Node| with the given name that is a child of this node.
+  [[nodiscard]] Node CreateChild(std::string name);
 
   // Create a new |IntMetric| with the given name that is a child of this
   // object.
@@ -545,31 +545,31 @@ class Object final {
 
   // Create a new |ByteVectorProperty| with the given name that is a child of
   // this object.
-  // For Objects stored in a VMO, this method has no effect.
+  // For Nodes stored in a VMO, this method has no effect.
   [[nodiscard]] ByteVectorProperty CreateByteVectorProperty(
       std::string name, component::Property::ByteVector value);
 
   // Create a new |StringCallbackProperty| with the given name that is a child
   // of this object.
-  // For Objects stored in a VMO, this method has no effect.
+  // For Nodes stored in a VMO, this method has no effect.
   [[nodiscard]] LazyStringProperty CreateLazyStringProperty(
       std::string name, component::Property::StringValueCallback callback);
 
   // Create a new |VectorCallbackProperty| with the given name that is a child
   // of this object.
-  // For Objects stored in a VMO, this method has no effect.
+  // For Nodes stored in a VMO, this method has no effect.
   [[nodiscard]] LazyByteVectorProperty CreateLazyByteVectorProperty(
       std::string name, component::Property::VectorValueCallback callback);
 
   // Create a new |LazyMetric| with the given name that is a child of this
   // object.
-  // For Objects stored in a VMO, this method has no effect.
+  // For Nodes stored in a VMO, this method has no effect.
   [[nodiscard]] LazyMetric CreateLazyMetric(std::string name,
                                             component::Metric::ValueCallback);
 
   // Create a new |ChildrenCallback| that dynamically adds children to the
   // object at runtime.
-  // For Objects stored in a VMO, this method has no effect.
+  // For Nodes stored in a VMO, this method has no effect.
   [[nodiscard]] ChildrenCallback CreateChildrenCallback(
       ChildrenCallbackFunction callback);
 
@@ -577,8 +577,8 @@ class Object final {
   static const int kComponentVariant = 1;
   static const int kVmoVariant = 2;
 
-  // Construct an Object facade in front of an ExposedObject.
-  explicit Object(component::ExposedObject object);
+  // Construct a Node facade in front of an ExposedObject.
+  explicit Node(component::ExposedObject object);
 
   [[nodiscard]] IntArray CreateIntArray(std::string name, size_t slots,
                                         vmo::ArrayFormat format);
@@ -613,7 +613,7 @@ class Tree final {
   Tree& operator=(const Tree& other) = delete;
 
   // Get the root object for this Tree.
-  Object& GetRoot() const;
+  Node& GetRoot() const;
 
   // Get a reference to the VMO backing this tree.
   const zx::vmo& GetVmo() const;

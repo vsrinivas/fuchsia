@@ -13,14 +13,14 @@
 
 namespace {
 
-using inspect::Object;
+using inspect::Node;
 using testing::AllOf;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 using namespace inspect::testing;
 
 TEST(InspectFidl, EmptyObject) {
-  Object obj;
+  Node obj;
 
   auto child = obj.CreateChild("child");
   auto int_metric = obj.CreateIntMetric("int", 0);
@@ -46,7 +46,7 @@ TEST(InspectFidl, EmptyObject) {
 }
 
 TEST(InspectFidl, Object) {
-  Object obj("test");
+  Node obj("test");
 
   auto output = obj.object();
   EXPECT_STREQ("test", output.name.c_str());
@@ -56,19 +56,19 @@ TEST(InspectFidl, Object) {
 
 class ValueWrapper {
  public:
-  ValueWrapper(Object obj, int val)
+  ValueWrapper(Node obj, int val)
       : object_(std::move(obj)),
         value_(object_.CreateIntMetric("value", val)) {}
 
-  Object& object() { return object_; };
+  Node& object() { return object_; };
 
  private:
-  Object object_;
+  Node object_;
   inspect::IntMetric value_;
 };
 
 TEST(InspectFidl, Child) {
-  Object root("root");
+  Node root("root");
   {
     // Create a child and check it exists.
     auto obj = root.CreateChild("child");
@@ -86,7 +86,7 @@ TEST(InspectFidl, Child) {
 }
 
 TEST(InspectFidl, ChildChaining) {
-  Object root("root");
+  Node root("root");
   {
     ValueWrapper v(root.CreateChild("child"), 100);
     EXPECT_THAT(*root.children(), UnorderedElementsAre("child"));
@@ -98,7 +98,7 @@ TEST(InspectFidl, ChildChaining) {
 }
 
 TEST(InspectFidl, ChildrenCallbacks) {
-  Object root("root");
+  Node root("root");
   {
     inspect::ChildrenCallback callback =
         root.CreateChildrenCallback([](component::Object::ObjectVector* out) {
@@ -123,7 +123,7 @@ TEST(InspectFidl, Metrics) {
   DefaultMetricTest<inspect::UIntMetric>();
   DefaultMetricTest<inspect::DoubleMetric>();
 
-  Object root("root");
+  Node root("root");
   {
     // Create a child and check it exists.
     auto metric_int = root.CreateIntMetric("int", -10);
@@ -174,7 +174,7 @@ TEST(InspectFidl, Metrics) {
 }
 
 TEST(InspectFidl, MetricCallbacks) {
-  Object root("root");
+  Node root("root");
   bool defer_called = false;
   auto defer = fit::defer([&defer_called] { defer_called = true; });
   {
@@ -201,7 +201,7 @@ TEST(InspectFidl, MetricCallbacks) {
 }
 
 TEST(InspectFidl, Properties) {
-  Object root("root");
+  Node root("root");
   {
     auto property_string = root.CreateStringProperty("str", "test");
     property_string.Set("valid");
@@ -243,7 +243,7 @@ TEST(InspectFidl, Properties) {
 }
 
 TEST(InspectFidl, PropertyCallbacks) {
-  Object root("root");
+  Node root("root");
   bool defer_called1 = false, defer_called2 = false;
   auto defer1 = fit::defer([&defer_called1] { defer_called1 = true; });
   auto defer2 = fit::defer([&defer_called2] { defer_called2 = true; });

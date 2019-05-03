@@ -28,12 +28,12 @@ class Session;
 class SystemContext final {
  public:
   explicit SystemContext(sys::ComponentContext* app_context,
-                         inspect::Object inspect_object,
+                         inspect::Node inspect_object,
                          fit::closure quit_callback);
   SystemContext(SystemContext&& context);
 
   sys::ComponentContext* app_context() const { return app_context_; }
-  inspect::Object* inspect_object() { return &inspect_object_; }
+  inspect::Node* inspect_node() { return &inspect_node_; }
 
   // Calls quit on the associated message loop.
   void Quit() { quit_callback_(); }
@@ -41,7 +41,7 @@ class SystemContext final {
  private:
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
-  inspect::Object inspect_object_;
+  inspect::Node inspect_node_;
 };
 
 // Systems are a composable way to add functionality to Scenic. A System creates

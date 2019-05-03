@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/inspect/reader.h"
+
 #include <lib/inspect-vmo/block.h>
 #include <lib/inspect-vmo/scanner.h>
 #include <lib/inspect-vmo/snapshot.h>
@@ -13,7 +15,6 @@
 #include "fuchsia/inspect/cpp/fidl.h"
 #include "lib/fit/bridge.h"
 #include "lib/inspect/hierarchy.h"
-#include "lib/inspect/reader.h"
 
 namespace inspect {
 
@@ -75,7 +76,7 @@ ObjectHierarchy Read(std::shared_ptr<component::Object> object_root,
 
 }  // namespace
 
-ObjectHierarchy ReadFromObject(const inspect::Object& object, int depth) {
+ObjectHierarchy ReadFromObject(const Node& object, int depth) {
   return Read(object.object_dir().object(), depth);
 }
 

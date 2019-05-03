@@ -31,7 +31,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::unique_ptr<SyncWatcherSet> watchers,
     std::unique_ptr<sync_coordinator::UserSync> user_sync,
     std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
-    PageUsageListener* page_usage_listener, inspect::Object inspect_object)
+    PageUsageListener* page_usage_listener, inspect::Node inspect_node)
     : content_path_(std::move(content_path)),
       environment_(environment),
       db_factory_(std::move(db_factory)),
@@ -40,11 +40,11 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       user_sync_(std::move(user_sync)),
       page_usage_listener_(page_usage_listener),
       disk_cleanup_manager_(std::move(disk_cleanup_manager)),
-      inspect_object_(std::move(inspect_object)),
+      inspect_node_(std::move(inspect_node)),
       requests_metric_(
-          inspect_object_.CreateUIntMetric(kRequestsInspectPathComponent, 0UL)),
-      ledgers_inspect_object_(
-          inspect_object_.CreateChild(kLedgersInspectPathComponent)) {
+          inspect_node_.CreateUIntMetric(kRequestsInspectPathComponent, 0UL)),
+      ledgers_inspect_node_(
+          inspect_node_.CreateChild(kLedgersInspectPathComponent)) {
   bindings_.set_on_empty([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });
@@ -147,7 +147,7 @@ storage::Status LedgerRepositoryImpl::GetLedgerManager(
   auto result = ledger_managers_.emplace(
       std::piecewise_construct, std::forward_as_tuple(name_as_string),
       std::forward_as_tuple(environment_, name_as_string,
-                            ledgers_inspect_object_.CreateChild(name_as_string),
+                            ledgers_inspect_node_.CreateChild(name_as_string),
                             std::move(encryption_service),
                             std::move(ledger_storage), std::move(ledger_sync),
                             page_usage_listener_));

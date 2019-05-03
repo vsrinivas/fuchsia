@@ -29,7 +29,7 @@ class SessionHandler;
 // particular presentation time.
 class SessionManager {
  public:
-  explicit SessionManager(inspect::Object inspect_object = inspect::Object());
+  explicit SessionManager(inspect::Node inspect_node = inspect::Node());
 
   virtual ~SessionManager() = default;
 
@@ -66,7 +66,7 @@ class SessionManager {
   std::unordered_map<SessionId, SessionHandler*> session_handlers_;
   size_t session_count_ = 0;
 
-  inspect::Object inspect_object_;
+  inspect::Node inspect_node_;
 };
 
 }  // namespace gfx

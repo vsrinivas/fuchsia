@@ -235,7 +235,7 @@ class LedgerManagerTest : public TestWithEnvironment {
     sync_ptr = sync.get();
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     ledger_manager_ = std::make_unique<LedgerManager>(
-        &environment_, kLedgerName, inspect::Object(),
+        &environment_, kLedgerName, inspect::Node(),
         std::make_unique<encryption::FakeEncryptionService>(dispatcher()),
         std::move(storage), std::move(sync), disk_cleanup_manager_.get());
     ResetLedgerPtr();

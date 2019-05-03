@@ -26,7 +26,7 @@ class Clock;
 class Scenic : public fuchsia::ui::scenic::Scenic {
  public:
   explicit Scenic(sys::ComponentContext* app_context,
-                  inspect::Object inspect_object, fit::closure quit_callback);
+                  inspect::Node inspect_node, fit::closure quit_callback);
   ~Scenic();
 
   // Create and register a new system of the specified type.  At most one System
@@ -75,7 +75,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
-  inspect::Object inspect_object_;
+  inspect::Node inspect_node_;
 
   // Registered systems, indexed by their TypeId. These slots could be null,
   // indicating the System is not available or supported.
@@ -104,7 +104,7 @@ SystemT* Scenic::RegisterSystem(Args&&... args) {
       << "System of type: " << SystemT::kTypeId << "was already registered.";
 
   SystemT* system = new SystemT(
-      SystemContext(app_context_, inspect_object_.CreateChild(SystemT::kName),
+      SystemContext(app_context_, inspect_node_.CreateChild(SystemT::kName),
                     quit_callback_.share()),
       std::forward<Args>(args)...);
   systems_[SystemT::kTypeId] = std::unique_ptr<System>(system);

@@ -43,7 +43,7 @@ struct AppParams {
 };
 
 struct InspectObjects {
-  inspect::Object top_level_object;
+  inspect::Node top_level_node;
   inspect::StringProperty statistic_gathering;
 };
 
@@ -89,9 +89,9 @@ class App : public ledger_internal::LedgerController {
         ->AddEntry(fuchsia::inspect::Inspect::Name_,
                    std::make_unique<vfs::Service>(inspect_bindings_.GetHandler(
                        object_dir.object().get())));
-    inspect_objects_.top_level_object = inspect::Object(std::move(object_dir));
+    inspect_objects_.top_level_node = inspect::Node(std::move(object_dir));
     inspect_objects_.statistic_gathering =
-        inspect_objects_.top_level_object.CreateStringProperty(
+        inspect_objects_.top_level_node.CreateStringProperty(
             "statistic_gathering",
             app_params_.disable_statistics ? "off" : "on");
 
@@ -113,7 +113,7 @@ class App : public ledger_internal::LedgerController {
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         environment_.get(), std::move(user_communicator_factory),
-        inspect_objects_.top_level_object.CreateChild(
+        inspect_objects_.top_level_node.CreateChild(
             kRepositoriesInspectPathComponent));
 
     component_context_->outgoing()

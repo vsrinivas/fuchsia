@@ -27,7 +27,7 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::ComponentContext> app_context(
       sys::ComponentContext::Create());
 
-  // Set up an inspect::Object to inject into the App.
+  // Set up an inspect::Node to inject into the App.
   auto object_dir = component::ObjectDir(component::Object::Make("objects"));
   fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings;
   app_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
@@ -35,8 +35,7 @@ int main(int argc, const char** argv) {
       std::make_unique<vfs::Service>(
           inspect_bindings.GetHandler(object_dir.object().get())));
 
-  scenic_impl::App app(app_context.get(),
-                       inspect::Object(std::move(object_dir)),
+  scenic_impl::App app(app_context.get(), inspect::Node(std::move(object_dir)),
                        [&loop] { loop.Quit(); });
 
   loop.Run();

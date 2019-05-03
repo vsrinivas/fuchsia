@@ -252,10 +252,10 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
     Environment* environment,
     std::unique_ptr<p2p_sync::UserCommunicatorFactory>
         user_communicator_factory,
-    inspect::Object inspect_object)
+    inspect::Node inspect_node)
     : environment_(environment),
       user_communicator_factory_(std::move(user_communicator_factory)),
-      inspect_object_(std::move(inspect_object)) {}
+      inspect_node_(std::move(inspect_node)) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
@@ -330,7 +330,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
       repository_information.ledgers_path, environment_, std::move(db_factory),
       std::move(watchers), std::move(user_sync),
       std::move(disk_cleanup_manager), disk_cleanup_manager_ptr,
-      inspect_object_.CreateChild(convert::ToHex(repository_information.name)));
+      inspect_node_.CreateChild(convert::ToHex(repository_information.name)));
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
   container->SetRepository(storage::Status::OK, std::move(repository));
 }

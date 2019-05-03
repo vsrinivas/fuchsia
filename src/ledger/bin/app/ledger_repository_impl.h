@@ -44,7 +44,7 @@ class LedgerRepositoryImpl
                        std::unique_ptr<sync_coordinator::UserSync> user_sync,
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
                        PageUsageListener* page_usage_listener,
-                       inspect::Object inspect_object);
+                       inspect::Node inspect_node);
   ~LedgerRepositoryImpl() override;
 
   void set_on_empty(fit::closure on_empty_callback) {
@@ -111,9 +111,9 @@ class LedgerRepositoryImpl
 
   std::vector<fit::function<void(Status)>> cleanup_callbacks_;
 
-  inspect::Object inspect_object_;
+  inspect::Node inspect_node_;
   inspect::UIntMetric requests_metric_;
-  inspect::Object ledgers_inspect_object_;
+  inspect::Node ledgers_inspect_node_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };

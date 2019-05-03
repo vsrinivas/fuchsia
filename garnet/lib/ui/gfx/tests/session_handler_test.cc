@@ -31,7 +31,7 @@ void SessionHandlerTest::InitializeScenic() {
   // instead of this hack.  This code has the chance to break non-ScenicTests.
   app_context_ = sys::ComponentContext::Create();
   scenic_ =
-      std::make_unique<Scenic>(app_context_.get(), inspect::Object(), [] {});
+      std::make_unique<Scenic>(app_context_.get(), inspect::Node(), [] {});
 }
 
 void SessionHandlerTest::InitializeSessionHandler() {

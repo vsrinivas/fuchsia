@@ -61,11 +61,11 @@ std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
       context()->app_context(),
       std::make_unique<DefaultFrameScheduler>(
           display_manager_->default_display(),
-          context()->inspect_object()->CreateChild("FrameScheduler")),
+          context()->inspect_node()->CreateChild("FrameScheduler")),
       std::make_unique<SessionManager>(
-          context()->inspect_object()->CreateChild("SessionManager")),
+          context()->inspect_node()->CreateChild("SessionManager")),
       display_manager_.get(), escher_->GetWeakPtr(),
-      context()->inspect_object()->CreateChild("Engine"));
+      context()->inspect_node()->CreateChild("Engine"));
 }
 
 std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {

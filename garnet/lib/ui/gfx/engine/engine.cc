@@ -46,8 +46,7 @@ Engine::Engine(sys::ComponentContext* component_context,
                std::unique_ptr<FrameScheduler> frame_scheduler,
                std::unique_ptr<SessionManager> session_manager,
                DisplayManager* display_manager,
-               escher::EscherWeakPtr weak_escher,
-               inspect::Object inspect_object)
+               escher::EscherWeakPtr weak_escher, inspect::Node inspect_node)
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(escher_)),
@@ -61,7 +60,7 @@ Engine::Engine(sys::ComponentContext* component_context,
       session_manager_(std::move(session_manager)),
       frame_scheduler_(std::move(frame_scheduler)),
       has_vulkan_(escher_ && escher_->vk_device()),
-      inspect_object_(std::move(inspect_object)),
+      inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
   FXL_DCHECK(frame_scheduler_);
   FXL_DCHECK(session_manager_);
@@ -102,7 +101,7 @@ void Engine::InitializeFrameScheduler() {
 
 void Engine::InitializeInspectObjects() {
   inspect_scene_dump_ =
-      inspect_object_.CreateLazyStringProperty("scene_dump", [this] {
+      inspect_node_.CreateLazyStringProperty("scene_dump", [this] {
         if (scene_graph_.compositors().empty()) {
           return std::string("(no compositors)");
         }

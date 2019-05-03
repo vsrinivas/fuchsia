@@ -9,16 +9,16 @@
 namespace scenic_impl {
 
 SystemContext::SystemContext(sys::ComponentContext* app_context,
-                             inspect::Object inspect_object,
+                             inspect::Node inspect_node,
                              fit::closure quit_callback)
     : app_context_(app_context),
       quit_callback_(std::move(quit_callback)),
-      inspect_object_(std::move(inspect_object)) {
+      inspect_node_(std::move(inspect_node)) {
   FXL_DCHECK(app_context_);
 }
 
 SystemContext::SystemContext(SystemContext&& context)
-    : SystemContext(context.app_context_, std::move(context.inspect_object_),
+    : SystemContext(context.app_context_, std::move(context.inspect_node_),
                     std::move(context.quit_callback_)) {
   auto& other_app_context =
       const_cast<sys::ComponentContext*&>(context.app_context_);

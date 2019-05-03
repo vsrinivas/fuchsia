@@ -19,7 +19,6 @@
 
 namespace {
 
-using inspect::Object;
 using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
@@ -59,7 +58,7 @@ class TestReader : public gtest::RealLoopFixture {
 
  protected:
   std::shared_ptr<component::Object> object_;
-  inspect::Object root_object_;
+  inspect::Node root_object_;
   fidl::InterfaceHandle<fuchsia::inspect::Inspect> client_;
 
  private:
@@ -236,7 +235,7 @@ class TestHierarchy : public TestReader {
   };
 
  private:
-  inspect::Object child_a_, child_b_, child_b_c_;
+  inspect::Node child_a_, child_b_, child_b_c_;
   inspect::IntMetric metric_a_;
   inspect::UIntMetric metric_b_;
   inspect::DoubleMetric metric_c_;
