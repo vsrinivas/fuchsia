@@ -38,7 +38,11 @@ func (b *Build) GetPackageRepository() (*packages.Repository, error) {
 		return nil, err
 	}
 
-	p, err := packages.NewRepositoryFromTar(packagesDir, path)
+	if err := util.Untar(packagesDir, path); err != nil {
+		return nil, fmt.Errorf("failed to extract packages: %s", err)
+	}
+
+	p, err := packages.NewRepository(filepath.Join(packagesDir, "amber-files"))
 	if err != nil {
 		return nil, err
 	}

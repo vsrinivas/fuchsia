@@ -36,6 +36,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestDowngradeAndUpgrade(t *testing.T) {
+	log.Printf("starting downgrade test")
 	buildID, err := c.BuildID()
 	if err != nil {
 		t.Fatal(err)
@@ -46,21 +47,23 @@ func TestDowngradeAndUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	buildRepo, err := build.GetPackageRepository()
+	repo, err := build.GetPackageRepository()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	currentRepo, err := c.CurrentPackageRepository()
-	if err != nil {
-		t.Fatal(err)
+	doSystemOTA(t, repo)
+
+	if c.AmberFilesDir != "" {
+		log.Printf("starting upgrade test")
+
+		repo, err := packages.NewRepository(c.AmberFilesDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		doSystemOTA(t, repo)
 	}
-
-	log.Printf("starting downgrade test")
-	doSystemOTA(t, buildRepo)
-
-	log.Printf("starting upgrade test")
-	doSystemOTA(t, currentRepo)
 }
 
 func doSystemOTA(t *testing.T, repo *packages.Repository) {

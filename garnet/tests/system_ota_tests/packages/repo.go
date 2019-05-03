@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	"fuchsia.googlesource.com/pm/repo"
-	"fuchsia.googlesource.com/system_ota_tests/util"
 )
 
 type Repository struct {
@@ -69,17 +68,6 @@ func NewRepository(dir string) (*Repository, error) {
 		Dir:     repoDir,
 		targets: s.Signed,
 	}, nil
-}
-
-// NewRepositoryFromTar extracts a repository from a tar.gz, and returns a
-// Repository parsed from it. It returns an error if the repository does not
-// exist, or contains malformed metadata.
-func NewRepositoryFromTar(dst string, src string) (*Repository, error) {
-	if err := util.Untar(dst, src); err != nil {
-		return nil, fmt.Errorf("failed to extract packages: %s", err)
-	}
-
-	return NewRepository(filepath.Join(dst, "amber-files"))
 }
 
 // Open a package from the p

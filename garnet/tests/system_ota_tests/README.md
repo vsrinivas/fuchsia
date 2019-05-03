@@ -15,8 +15,9 @@ into the system image. You can do this by running:
 % fx set core.x64 \
   --with-base //third_party/sbase:cat \
   --with-base //third_party/sbase:ls \
+  --with //garnet/tests/system_ota_tests \
   --args 'extra_authorized_keys_file="//.ssh/authorized_keys"'
-% fx build && fx build //garnet/packages/tests:system_ota_tests
+% fx build
 ```
 
 Next, you need to authenticate against luci to be able to download build
@@ -85,9 +86,10 @@ output to the terminal:
 % fx set core.x64 \
   --with-base //third_party/sbase:cat \
   --with-base //third_party/sbase:ls \
+  --with //garnet/tests/system_ota_tests \
   --args 'extra_authorized_keys_file="//.ssh/authorized_keys"' \
   --args 'kernel_cmdline_args=["kernel.serial=legacy"]'
-% fx build && fx build //garnet/packages/tests:system_ota_tests
+% fx build
 ```
 
 With all that setup, you now should be able to test your OTAs.
