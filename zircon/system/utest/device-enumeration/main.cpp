@@ -187,8 +187,8 @@ bool cleo_enumeration_test() {
     static const char* kDevicePaths[] = {
         "sys/platform/mt8167s_ref",
         "sys/platform/0d:00:1/mt8167-gpio",
-        "sys/platform/0d:00:4/mt8167-i2c",
-        "sys/platform/0d:00:7/mtk-clk",
+        "sys/platform/0d:00:6/mt8167-i2c",
+        "sys/platform/0d:00:8/mtk-clk",
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-000/block",
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-001/block",
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-002/block",
@@ -218,14 +218,12 @@ bool cleo_enumeration_test() {
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-026/block",
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-027/block",
         "sys/platform/0d:00:2/mtk-sdmmc/sdmmc/sdmmc-mmc/block/part-028/block",
-        "sys/platform/0d:00:5/mtk-sdmmc",
-        "sys/platform/0d:00:3",
+        "sys/platform/0d:00:4/mtk-sdmmc",
         "sys/platform/00:00:13/hid-buttons/hid-device-000",
-        "sys/platform/0d:00:6",
         "sys/platform/0d:00:14/mt-usb/usb-peripheral/function-000/cdc-eth-function/ethernet",
-        "sys/platform/00:00:17/ft3x27 HidDevice/hid-device-000",
-        "sys/platform/0d:00:8/mtk-thermal",
-        "sys/platform/00:00:18/ltr-578als/hid-device-000",
+        "touch/focaltouch HidDevice/hid-device-000",
+        "sys/platform/0d:00:9/mtk-thermal",
+        "sys/platform/0d:00:6/mt8167-i2c/i2c/i2c-0-83/ltr-578als/hid-device-000",
     };
 
     ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
