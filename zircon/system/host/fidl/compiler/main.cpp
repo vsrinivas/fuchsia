@@ -255,7 +255,7 @@ void Write(std::ostringstream output, std::fstream file) {
 int compile(fidl::ErrorReporter* error_reporter,
             fidl::flat::Typespace* typespace,
             std::string library_name,
-            std::map<Behavior, std::fstream> outputs,
+            std::map<std::pair<Behavior, std::string>, std::fstream> outputs,
             std::vector<fidl::SourceManager> source_managers);
 
 int main(int argc, char* argv[]) {
@@ -288,7 +288,7 @@ int main(int argc, char* argv[]) {
     std::string library_name;
 
     bool warnings_as_errors = false;
-    std::map<Behavior, std::fstream> outputs;
+    std::map<std::pair<Behavior, std::string>, std::fstream> outputs;
     while (args->Remaining()) {
         // Try to parse an output type.
         std::string behavior_argument = args->Claim();
@@ -302,15 +302,20 @@ int main(int argc, char* argv[]) {
         } else if (behavior_argument == "--werror") {
             warnings_as_errors = true;
         } else if (behavior_argument == "--c-header") {
-            outputs.emplace(Behavior::kCHeader, Open(args->Claim(), std::ios::out));
+            std::string path = args->Claim();
+            outputs.emplace(std::make_pair(Behavior::kCHeader, path), Open(path, std::ios::out));
         } else if (behavior_argument == "--c-client") {
-            outputs.emplace(Behavior::kCClient, Open(args->Claim(), std::ios::out));
+            std::string path = args->Claim();
+            outputs.emplace(std::make_pair(Behavior::kCClient, path), Open(path, std::ios::out));
         } else if (behavior_argument == "--c-server") {
-            outputs.emplace(Behavior::kCServer, Open(args->Claim(), std::ios::out));
+            std::string path = args->Claim();
+            outputs.emplace(std::make_pair(Behavior::kCServer, path), Open(path, std::ios::out));
         } else if (behavior_argument == "--tables") {
-            outputs.emplace(Behavior::kTables, Open(args->Claim(), std::ios::out));
+            std::string path = args->Claim();
+            outputs.emplace(std::make_pair(Behavior::kTables, path), Open(path, std::ios::out));
         } else if (behavior_argument == "--json") {
-            outputs.emplace(Behavior::kJSON, Open(args->Claim(), std::ios::out));
+            std::string path = args->Claim();
+            outputs.emplace(std::make_pair(Behavior::kJSON, path), Open(path, std::ios::out));
         } else if (behavior_argument == "--name") {
             library_name = args->Claim();
         } else if (behavior_argument == "--files") {
@@ -354,7 +359,7 @@ int main(int argc, char* argv[]) {
 int compile(fidl::ErrorReporter* error_reporter,
             fidl::flat::Typespace* typespace,
             std::string library_name,
-            std::map<Behavior, std::fstream> outputs,
+            std::map<std::pair<Behavior, std::string>, std::fstream> outputs,
             std::vector<fidl::SourceManager> source_managers) {
     fidl::flat::Libraries all_libraries;
     const fidl::flat::Library* final_library = nullptr;
@@ -414,7 +419,7 @@ int compile(fidl::ErrorReporter* error_reporter,
     // We recompile dependencies, and only emit output for the final
     // library.
     for (auto& output : outputs) {
-        auto& behavior = output.first;
+        auto& behavior = output.first.first;
         auto& output_file = output.second;
 
         switch (behavior) {
