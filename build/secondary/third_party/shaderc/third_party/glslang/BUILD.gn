@@ -151,6 +151,7 @@ static_library("glslang-default-resource-limits") {
 }
 executable("glslangValidator") {
   include_dirs = [ "." ]
+  defines = [ "ENABLE_OPT=0" ]
   sources = [
     "StandAlone/StandAlone.cpp",
   ]
