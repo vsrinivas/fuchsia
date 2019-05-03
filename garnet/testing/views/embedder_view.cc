@@ -12,7 +12,7 @@ namespace scenic {
 EmbedderView::EmbedderView(ViewContext context, const std::string& debug_name)
     : binding_(this, std::move(context.session_and_listener_request.second)),
       session_(std::move(context.session_and_listener_request.first)),
-      view_(&session_, std::move(context.view_token2), debug_name),
+      view_(&session_, std::move(context.view_token), debug_name),
       top_node_(&session_) {
   binding_.set_error_handler([](zx_status_t status) {
     FXL_LOG(FATAL) << "Session listener binding: "

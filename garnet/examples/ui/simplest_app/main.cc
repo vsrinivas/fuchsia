@@ -64,7 +64,7 @@ int main(int argc, const char** argv) {
   scenic::ViewContext view_context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-      .view_token2 = std::move(view_token),
+      .view_token = std::move(view_token),
       .incoming_services = nullptr,
       .outgoing_services = nullptr,
       .startup_context = startup_context.get(),

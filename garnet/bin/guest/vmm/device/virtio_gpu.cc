@@ -353,7 +353,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
       scenic::ViewContext view_context = {
           .session_and_listener_request =
               scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-          .view_token2 = std::move(view_token),
+          .view_token = std::move(view_token),
           .startup_context = &context_,
       };
       view_ = std::make_unique<GuestView>(std::move(view_context),

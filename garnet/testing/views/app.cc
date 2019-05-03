@@ -54,7 +54,7 @@ class App : public fuchsia::ui::views::View {
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        .view_token2 = std::move(view_token),
+        .view_token = std::move(view_token),
     };
 
     view_ = view_factory_(std::move(view_context));

@@ -696,7 +696,7 @@ void SessionmgrImpl::InitializeSessionShell(
   scenic::ViewContext view_context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-      .view_token2 = std::move(view_token),
+      .view_token = std::move(view_token),
       .startup_context = startup_context_,
   };
   session_shell_view_host_ =

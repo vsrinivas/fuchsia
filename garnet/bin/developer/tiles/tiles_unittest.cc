@@ -49,7 +49,7 @@ class TilesTest : public component::testing::TestWithContext {
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        .view_token2 = std::move(view_token),
+        .view_token = std::move(view_token),
         .incoming_services = {},
         .outgoing_services = {},
         .startup_context = startup_context.get(),

@@ -68,7 +68,7 @@ class ViewEmbedderTest : public sys::testing::TestWithEnvironment {
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
-        .view_token2 = std::move(view_token),
+        .view_token = std::move(view_token),
     };
 
     fuchsia::ui::policy::PresenterPtr presenter;

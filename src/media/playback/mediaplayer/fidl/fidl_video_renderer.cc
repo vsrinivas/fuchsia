@@ -313,7 +313,7 @@ void FidlVideoRenderer::CreateView(fuchsia::ui::views::ViewToken view_token) {
   scenic::ViewContext view_context{
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
-      .view_token2 = std::move(view_token),
+      .view_token = std::move(view_token),
       .startup_context = startup_context_};
   auto view = std::make_unique<View>(
       std::move(view_context),

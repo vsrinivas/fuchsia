@@ -99,7 +99,7 @@ class TestStoryShellApp
       scenic::ViewContext view_context = {
           .session_and_listener_request =
               scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-          .view_token2 = std::move(view_token_),
+          .view_token = std::move(view_token_),
           .startup_context = startup_context(),
       };
 
