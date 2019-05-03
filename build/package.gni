@@ -691,7 +691,7 @@ template("package") {
                  ])
 
       if (!is_disabled) {
-        test_spec_name = "${test.name}_test_spec"
+        test_spec_name = "${dest}_test_spec"
         pkg.deps += [ ":$test_spec_name" ]
 
         test_spec(test_spec_name) {
