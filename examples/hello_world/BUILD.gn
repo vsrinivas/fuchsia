@@ -2,18 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("examples") {
-  testonly = true
+group("hello_world") {
   deps = [
-    "cowsay",
-    "fortune",
-    "hello_world",
+    "cpp",
+    "rust",
   ]
 }
 
-group("tests") {
+group ("tests") {
   testonly = true
   deps = [
-    "hello_world:tests",
+    "cpp:tests",
+    "rust:tests",
   ]
 }

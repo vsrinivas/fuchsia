@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/hello_world_cpp_unittests"
+    }
+}

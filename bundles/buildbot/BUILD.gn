@@ -18,6 +18,7 @@ group("core") {
   public_deps = [
     "//bundles:tools",
     "//examples",
+    "//examples:tests",
     "//garnet/packages:all",
     "//peridot/packages:all",
     "//src:tests",

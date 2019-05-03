@@ -103,6 +103,7 @@ Googler-only channels, see [go/fuchsia-rust-googlers].
 - [Unstable features](unstable.md)
 - [Rust FIDL server/client tutorial][fidl-tutorial]
 - [Syslog API](syslog.md)
+- [Testing rust code](testing.md)
 
 [target-library-rustc]: /build/rust/rustc_library.gni "Rust library"
 [target-binary-rustc]: /build/rust/rustc_binary.gni "Rust binary"
