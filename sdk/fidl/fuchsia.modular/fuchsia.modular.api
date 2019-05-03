@@ -41,7 +41,7 @@
   "fidl/fuchsia.modular/story/story_info.fidl": "7d7b65d7fb51dc4ea7af9328a1cdba79",
   "fidl/fuchsia.modular/story/story_options.fidl": "1c1adfa07595391420fbee5a468ce580",
   "fidl/fuchsia.modular/story/story_provider.fidl": "7ee94342644e3110068df085ff212eed",
-  "fidl/fuchsia.modular/story/story_shell.fidl": "3b6fd5b52ffa62de00f00f359030b5de",
+  "fidl/fuchsia.modular/story/story_shell.fidl": "00f29f5d93f193949dc4f748f9125132",
   "fidl/fuchsia.modular/story/story_shell_factory.fidl": "3be88d4fcad09ad6fb20ea08991d6ff7",
   "fidl/fuchsia.modular/story/story_state.fidl": "cdf09da81629d13a398c6670a7ab20c7",
   "fidl/fuchsia.modular/story/story_visibility_state.fidl": "2af3047bf28be5662d44d8def9414ab4",

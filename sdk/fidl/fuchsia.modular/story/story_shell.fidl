@@ -4,8 +4,8 @@
 
 library fuchsia.modular;
 
-using fuchsia.ui.gfx;
 using fuchsia.ui.policy;
+using fuchsia.ui.views;
 using fuchsia.ui.viewsv1token;
 
 // This interface is implemented by a story shell. Dependencies are passed to it
@@ -13,11 +13,11 @@ using fuchsia.ui.viewsv1token;
 // Lifecycle in order to receive a Terminate() call on teardown.
 //
 // In one component instance there can only be one StoryShell service instance.
-// The ViewOwner request is sent to the separate ViewProvider service. This way,
-// the story shell may be implemented as a flutter component.
+// The view token is sent to the separate View service. This way, the story
+// shell may be implemented as a flutter component.
 //
-// Teardown may be initiated by the session shell calling StoryController.Stop(),
-// by the sessionmgr being terminated, or by the system shutting down.
+// Teardown may occur via the session shell calling StoryController.Stop(), the
+// sessionmgr being terminated, or by the system shutting down.
 [Discoverable] // Created by story shell applications.
 protocol StoryShell {
     Initialize(StoryShellContext story_shell_context);
@@ -28,7 +28,11 @@ protocol StoryShell {
     // focus is obviously missing.
     // |view_connection| the new view and the associated Surface ID.
     // |surface_info| metadata relating to the Surface.
+    [Transitional]
     AddSurface(ViewConnection view_connection, SurfaceInfo surface_info);
+    // DEPRECATED.  For transition purposes only.
+    [Transitional]
+    AddSurface2(ViewConnection2 view_connection, SurfaceInfo surface_info);
 
     // Focuses the surface with surface_id, bringing it to the foreground.
     FocusSurface(string surface_id);
@@ -40,11 +44,19 @@ protocol StoryShell {
     // Optionally provide a parent_id to connect to, if omitted adds the
     // Container node as the root of a new tree in the Story
     // DEPRECATED
+    [Transitional]
     AddContainer(string containerName, string? parentId,
                  SurfaceRelation relation, // relation of container to parent
                  vector<ContainerLayout> layout,
                  vector<ContainerRelationEntry> relationships,
                  vector<ContainerView> views);
+    // DEPRECATED.  For transition purposes only.
+    [Transitional]
+    AddContainer2(string containerName, string? parentId,
+                  SurfaceRelation relation, // relation of container to parent
+                  vector<ContainerLayout> layout,
+                  vector<ContainerRelationEntry> relationships,
+                  vector<ContainerView2> views);
 
     // Notify when a Surface is focused in the story. The focus could be from
     // a user interaction or requested by the framework through
@@ -60,24 +72,36 @@ protocol StoryShell {
 
     // Reconnect the view in viewConnection.
     //
-    // Called to reconnect views that have previously been added
-    // to the StoryShell via addSurface, and then disconnected. a ViewOwner
-    // connects to a child view and is notified if the view is available. If
-    // it becomes unavailable it's disconnected. If a surface with a
-    // disconnected view is to be shown again, ReconnectView is called.
+    // Called to reconnect views that have previously been added to the story
+    // shell via addSurface, and then disconnected. A ViewTokenPair is created
+    // and the View token is given to the child view.  The ViewHolder token
+    // is notified if the View is destroyed before it is connected.  Once the
+    // ViewHolder has been created using a Scenic |Session|, the Session will be
+    // notified when the view is available, if it becomes unavailable, or if
+    // it is disconnected.
+    // If a surface with a disconnected view is to be shown again, ReconnectView
+    // is called.
     //
     // E.g. called in response to StoryShell calling RequestView().
+    [Transitional]
     ReconnectView(ViewConnection view_connection);
+    // DEPRECATED.  For transition purposes only.
+    [Transitional]
+    ReconnectView2(ViewConnection2 view_connection);
 
     // Update the surface
     // This is called when the intent is to update the surface metadata in the
     // story graph in place. Any fields, except for the surface_id can be
     // updated. If no value or null is passed for a field it remains unchanged.
-    // This includes the ViewOwner inside the connection.
+    // This includes the |view_holder_token| inside the connection.
     //
     // E.g called when an intent resolves to a module that is known by the
     // caller to already be running, to update associated metadata.
+    [Transitional]
     UpdateSurface(ViewConnection view_connection, SurfaceInfo surface_info);
+    // DEPRECATED.  For transition purposes only.
+    [Transitional]
+    UpdateSurface2(ViewConnection2 view_connection, SurfaceInfo surface_info);
 };
 
 // DEPRECATED, for backwards compatibility only.
@@ -89,13 +113,13 @@ struct ViewConnection {
     string surface_id;
 };
 
-// A pair mapping the view owner to surface ID
+// A pair mapping a surface ID to a view (via |view_holder_token|).
 struct ViewConnection2 {
     // The ID for the surface
     string surface_id;
 
-    // Token for the new view corresponding to the surface.
-    fuchsia.ui.gfx.ImportToken view_holder_token;
+    // Token for embedding the new view corresponding to the surface.
+    fuchsia.ui.views.ViewHolderToken view_holder_token;
 };
 
 // Contain metadata for a Surface
@@ -121,20 +145,20 @@ struct ContainerView {
     // surface relationship specifications (cf. container.fidl)
     string node_name;
 
-    // The new view resolved from the intent corresponding to node_name
+    // View owner for the surface
     fuchsia.ui.viewsv1token.ViewOwner owner;
 };
 
 // Maps the node_name to the specific scenic view resulting from resolving and
-// launching the intent specified in a Container node
+// launching the intent specified in a Container node.
 struct ContainerView2 {
     // Name by which this container node is referenced in container layout and
     // surface relationship specifications (cf. container.fidl)
     string node_name;
 
-    // Token for the new view resolved from the intent corresponding to
-    // node_name
-    fuchsia.ui.gfx.ImportToken view_holder_token;
+    // Token for embedding the new view.  The view is resolved from the intent
+    // corresponding to |node_name|.
+    fuchsia.ui.views.ViewHolderToken view_holder_token;
 };
 
 // This interface provides the StoryShell instance with everything it needs to
