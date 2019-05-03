@@ -4,8 +4,33 @@
 # found in the LICENSE file.
 
 ### build a fuchsia persistent disk
+## usage: fx make-fuchsia-vol [-include-keys]
+##   -include-keys add the keys from $FUCHSIA_DIR/.ssh/authorized_keys
+##                 to the Zircon ZBI
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/image_build_vars.sh || exit $?
+
 fx-config-read
 
-"${FUCHSIA_BUILD_DIR}/tools/make-fuchsia-vol" "$@"
+fwd_args=()
+include_keys=0
+while (($#)); do
+  case "$1" in
+    -include-keys)
+      include_keys=1
+      ;;
+    *)
+      fwd_args+=("$1")
+      ;;
+  esac
+  shift
+done
+
+if [ "${include_keys}" == 1 ]; then
+  "${ZIRCON_TOOLS_DIR}/zbi" -o "${FUCHSIA_BUILD_DIR}/fuchsia-extra-keys.zbi" \
+    "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" --replace \
+    --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
+fi
+
+"${FUCHSIA_BUILD_DIR}/tools/make-fuchsia-vol" -zbi "${FUCHSIA_BUILD_DIR}/fuchsia-extra-keys.zbi" "${fwd_args[@]}"

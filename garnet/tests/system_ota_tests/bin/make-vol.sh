@@ -60,4 +60,5 @@ EOF
 exec fx make-fuchsia-vol \
   -cmdline "${TMPDIR}/cmdline.txt" \
   -resize "$PARTITION_SIZE" \
+  -include-keys \
   "${FUCHSIA_IMG}"
