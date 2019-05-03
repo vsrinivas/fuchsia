@@ -154,13 +154,13 @@ struct sata_devinfo_t {
     uint32_t max_cmd;
 };
 
-zx_status_t sata_bind(ahci_device_t* controller, zx_device_t* parent, uint32_t port);
+zx_status_t sata_bind(AhciController* controller, zx_device_t* parent, uint32_t port);
 
 // sets the device info for the device at portnr
-void ahci_set_devinfo(ahci_device_t* controller, uint32_t portnr, sata_devinfo_t* devinfo);
+void ahci_set_devinfo(AhciController* controller, uint32_t portnr, sata_devinfo_t* devinfo);
 
 // queue a txn on the controller
-void ahci_queue(ahci_device_t* controller, uint32_t portnr, sata_txn_t* txn);
+void ahci_queue(AhciController* controller, uint32_t portnr, sata_txn_t* txn);
 
 static inline void block_complete(sata_txn_t* txn, zx_status_t status) {
     txn->completion_cb(txn->cookie, status, &txn->bop);

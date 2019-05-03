@@ -29,7 +29,7 @@
 
 struct sata_device_t {
     zx_device_t* zxdev = nullptr;
-    ahci_device_t* controller = nullptr;
+    AhciController* controller = nullptr;
 
     block_info_t info{};
 
@@ -58,7 +58,7 @@ static bool model_id_is_qemu(char* model_id) {
     return !memcmp(model_id, QEMU_MODEL_ID, sizeof(QEMU_MODEL_ID)-1);
 }
 
-static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* controller,
+static zx_status_t sata_device_identify(sata_device_t* dev, AhciController* controller,
                                         const char* name) {
     // Set default devinfo
     sata_devinfo_t di;
@@ -259,7 +259,7 @@ static block_impl_protocol_ops_t sata_block_proto = {
     .queue = sata_queue,
 };
 
-zx_status_t sata_bind(ahci_device_t* controller, zx_device_t* parent, uint32_t port) {
+zx_status_t sata_bind(AhciController* controller, zx_device_t* parent, uint32_t port) {
     // initialize the device
     fbl::AllocChecker ac;
     std::unique_ptr<sata_device_t> device(new (&ac) sata_device_t);
