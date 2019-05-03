@@ -109,6 +109,10 @@ void Collector::UnSubscribe(internal::FlushInterface* flushable) {
     }
 }
 
+void Collector::Subscribe(internal::FlushInterface* flushable) {
+    flushables_.push_back(flushable);
+}
+
 CollectorOptions CollectorOptions::GeneralAvailability() {
     CollectorOptions options;
     options.release_stage = static_cast<uint32_t>(internal::ReleaseStage::kGa);

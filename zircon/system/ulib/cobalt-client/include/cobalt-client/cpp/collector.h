@@ -80,17 +80,17 @@ public:
     Collector(Collector&&) = delete;
     Collector& operator=(const Collector&) = delete;
     Collector& operator=(Collector&&) = delete;
-    ~Collector();
+    virtual ~Collector();
 
     // Allows classes implementing |internal::FlushInterface| to subscribe for Flush events.
-    void Subscribe(internal::FlushInterface* flushable) { flushables_.push_back(flushable); }
+    virtual void Subscribe(internal::FlushInterface* flushable);
 
     // Allows classes implementing |internal::FlushInterface| to UnSubscribe for Flush events.
-    void UnSubscribe(internal::FlushInterface* flushable);
+    virtual void UnSubscribe(internal::FlushInterface* flushable);
 
     // Flushes the content of all flushable metrics into |logger_|. The |logger_| is
     // in charge of persisting the data.
-    void Flush();
+    virtual void Flush();
 
 private:
     // Convert this into a HashTable.
