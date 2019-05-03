@@ -140,9 +140,8 @@ int main(int argc, const char** argv) {
                       program_name.c_str());
               zx_process_exit(1);
             } else {
-              fprintf(stdout, "Found %s, executing.\n",
-                      launch_info.url.c_str());
               std::string matched_name = uris[0];
+              fprintf(stdout, "Found %s, executing.\n", matched_name.c_str());
               launch_info.url = matched_name;
               launch(std::move(launcher), std::move(controller),
                      std::move(launch_info), &loop, daemonize);
