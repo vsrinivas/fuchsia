@@ -26,16 +26,16 @@ var (
 )
 
 func TestEndpointAttributes(t *testing.T) {
+	const zero = stack.LinkEndpointCapabilities(0)
+
 	resolutionRequired := stack.LinkEndpointCapabilities(stack.CapabilityResolutionRequired)
-	var resolutionNotRequired stack.LinkEndpointCapabilities
-	if bridge.CombineCapabilities(resolutionRequired, resolutionNotRequired) != resolutionRequired {
-		t.Errorf("got bridge.Combinecapabilities(%#v, %#v) == %#v, want == %#v", resolutionRequired, resolutionNotRequired, bridge.CombineCapabilities(resolutionRequired, resolutionNotRequired), resolutionRequired)
+	if got := bridge.CombineCapabilities(resolutionRequired, zero); got != resolutionRequired {
+		t.Errorf("got bridge.Combinecapabilities(%#v, %#v) == %#v, want == %#v", resolutionRequired, zero, got, resolutionRequired)
 	}
 
-	checksumAndLoopback := stack.LinkEndpointCapabilities(stack.CapabilityChecksumOffload | stack.CapabilityLoopback)
-	var noChecksumAndLoopback stack.LinkEndpointCapabilities
-	if bridge.CombineCapabilities(checksumAndLoopback, noChecksumAndLoopback) != noChecksumAndLoopback {
-		t.Errorf("got bridge.Combinecapabilities(%#v, %#v) == %#v, want == %#v", checksumAndLoopback, noChecksumAndLoopback, bridge.CombineCapabilities(checksumAndLoopback, noChecksumAndLoopback), noChecksumAndLoopback)
+	loopback := stack.LinkEndpointCapabilities(stack.CapabilityLoopback)
+	if got := bridge.CombineCapabilities(loopback, zero); got != zero {
+		t.Errorf("got bridge.Combinecapabilities(%#v, %#v) == %#v, want == %#v", loopback, zero, got, zero)
 	}
 
 	linkID1, _ := channel.New(1, 101, "")

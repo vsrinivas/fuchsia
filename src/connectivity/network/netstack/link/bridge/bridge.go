@@ -165,8 +165,8 @@ func (ep *Endpoint) SetPromiscuousMode(bool) error {
 // restrictive of the inputs.
 func CombineCapabilities(a, b stack.LinkEndpointCapabilities) stack.LinkEndpointCapabilities {
 	newCapabilities := a
-	// Take the minimum of CapabilityChecksumOffload and CapabilityLoopback.
-	newCapabilities &= b | ^(stack.CapabilityChecksumOffload | stack.CapabilityLoopback)
+	// Take the minimum of CapabilityLoopback.
+	newCapabilities &= b | ^(stack.CapabilityLoopback)
 	// Take the maximum of CapabilityResolutionRequired.
 	newCapabilities |= b & stack.CapabilityResolutionRequired
 	return newCapabilities
@@ -209,7 +209,7 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	broadcast := false
 
 	switch dstLinkAddr {
-	case "\xff\xff\xff\xff\xff\xff":
+	case tcpip.LinkAddress([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}):
 		broadcast = true
 	case ep.linkAddress:
 		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv)
