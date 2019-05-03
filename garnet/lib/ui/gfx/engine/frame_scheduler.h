@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_
 
-#include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/images/cpp/fidl.h>
 #include <lib/zx/time.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 

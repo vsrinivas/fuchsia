@@ -15,7 +15,6 @@
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/id.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {

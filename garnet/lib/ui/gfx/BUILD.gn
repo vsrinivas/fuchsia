@@ -16,9 +16,7 @@ config("common_include_dirs") {
 }
 
 config("swapchain") {
-  defines = [
-    "SCENIC_IGNORE_VSYNC=$scenic_ignore_vsync",
-  ]
+  defines = [ "SCENIC_IGNORE_VSYNC=$scenic_ignore_vsync" ]
 }
 
 source_set("common_gfx_config_source_set") {
@@ -52,24 +50,12 @@ source_set("gfx_always_optimized") {
 
 source_set("gfx") {
   sources = [
-    "displays/color_transform.h",
-    "displays/display.cc",
-    "displays/display.h",
-    "displays/display_manager.cc",
-    "displays/display_manager.h",
-    "displays/display_watcher.cc",
-    "displays/display_watcher.h",
-    "engine/default_frame_scheduler.cc",
-    "engine/default_frame_scheduler.h",
     "engine/engine.cc",
     "engine/engine.h",
     "engine/engine_renderer.cc",
     "engine/engine_renderer.h",
     "engine/engine_renderer_visitor.cc",
     "engine/engine_renderer_visitor.h",
-    "engine/frame_scheduler.h",
-    "engine/frame_timings.cc",
-    "engine/frame_timings.h",
     "engine/gfx_command_applier.cc",
     "engine/gfx_command_applier.h",
     "engine/hardware_layer_assignment.cc",
@@ -93,8 +79,6 @@ source_set("gfx") {
     "engine/unresolved_imports.h",
     "gfx_system.cc",
     "gfx_system.h",
-    "id.cc",
-    "id.h",
     "resources/buffer.cc",
     "resources/buffer.h",
     "resources/camera.cc",
@@ -189,11 +173,6 @@ source_set("gfx") {
     "swapchain/swapchain.h",
     "swapchain/swapchain_factory.cc",
     "swapchain/swapchain_factory.h",
-    "util/event_timestamper.cc",
-    "util/event_timestamper.h",
-    "util/time.h",
-    "util/unwrap.h",
-    "util/wrap.h",
   ]
 
   public_configs = [ ":common_include_dirs" ]
@@ -201,8 +180,11 @@ source_set("gfx") {
   configs += [ ":swapchain" ]
 
   public_deps = [
+    ":display",
+    ":frame_scheduler",
     ":gfx_always_optimized",
     ":snapshot_fbs",
+    ":util",
     "//garnet/lib/ui/scenic",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fsl",
@@ -213,8 +195,6 @@ source_set("gfx") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/public/fidl/fuchsia-hardware-display",
-    "//zircon/public/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
     "//zircon/public/lib/fit",
   ]
 
@@ -224,7 +204,6 @@ source_set("gfx") {
     "//garnet/public/lib/escher/util:check_vulkan_support",
     "//garnet/public/lib/inspect",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//zircon/public/fidl/fuchsia-scheduler",
     "//zircon/public/fidl/fuchsia-sysmem",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
@@ -243,6 +222,78 @@ source_set("object_linker") {
     "//garnet/public/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("display") {
+  sources = [
+    "displays/color_transform.h",
+    "displays/display.cc",
+    "displays/display.h",
+    "displays/display_manager.cc",
+    "displays/display_manager.h",
+    "displays/display_watcher.cc",
+    "displays/display_watcher.h",
+  ]
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-hardware-display",
+    "//zircon/public/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
+  ]
+  deps = [
+    ":util",
+
+    # TODO(SCN-1398): For displayOwned/NotOwnedSignal.
+    "//sdk/fidl/fuchsia.ui.scenic",
+
+    "//src/lib/fxl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/trace",
+  ]
+}
+
+source_set("frame_scheduler") {
+  sources = [
+    # TODO(SCN-1398): Move files out of engine/.
+    "engine/default_frame_scheduler.cc",
+    "engine/default_frame_scheduler.h",
+    "engine/frame_scheduler.h",
+    "engine/frame_timings.cc",
+    "engine/frame_timings.h",
+
+    # TODO(SCN-1398): IDs don't belong here, but this will work until we factor
+    # out another source_set that needs IDs but not frame_scheduler.
+    "id.cc",
+    "id.h",
+  ]
+  deps = [
+    ":display",
+
+    # TODO(SCN-1398): FrameTimings inherits from escher::Reffable.
+    "//garnet/public/lib/escher",
+
+    "//garnet/public/lib/inspect",
+    "//sdk/fidl/fuchsia.images",
+    "//src/lib/fxl",
+  ]
+}
+
+source_set("util") {
+  sources = [
+    "util/event_timestamper.cc",
+    "util/event_timestamper.h",
+    "util/time.h",
+    "util/unwrap.h",
+    "util/wrap.h",
+  ]
+  deps = [
+    # TODO(SCN-1398): Needed by wrap/unwrap.  Move to separate source_set?
+    "//garnet/public/lib/escher",
+
+    "//src/lib/fxl",
+
+    # TODO(SCN-1398): Needed by EventTimestamper.  Move to separate source_set?
+    "//zircon/public/fidl/fuchsia-scheduler",
   ]
 }
 
