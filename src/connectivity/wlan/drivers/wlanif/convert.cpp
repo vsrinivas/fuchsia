@@ -9,6 +9,7 @@
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
+#include <algorithm>
 #include <bitset>
 
 namespace wlanif {
@@ -237,7 +238,8 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
 
     // ssid
     auto in_ssid = &wlanif_desc.ssid;
-    std::vector<uint8_t> ssid(in_ssid->data, in_ssid->data + in_ssid->len);
+    size_t ssid_len = std::min<size_t>(in_ssid->len, WLAN_MAX_SSID_LEN);
+    std::vector<uint8_t> ssid(in_ssid->data, in_ssid->data + ssid_len);
     fidl_desc->ssid = std::move(ssid);
 
     // bss_type

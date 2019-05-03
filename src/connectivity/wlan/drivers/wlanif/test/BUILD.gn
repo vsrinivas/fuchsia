@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
@@ -22,8 +23,8 @@ driver_module("wlanif-test-driver") {
 
   deps = [
     "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/drivers/lib",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/zx",
   ]
@@ -45,6 +46,37 @@ package("wlanif-test") {
   drivers = [
     {
       name = "wlanif-test.so"
+    },
+  ]
+}
+
+executable("convert_unittest") {
+  output_name = "wlanif_convert_unittest"
+
+  testonly = true
+
+  sources = [
+    "convert_unittest.cpp",
+  ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/wlanif:source",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("wlanif_unittest") {
+  testonly = true
+
+  deps = [
+    ":convert_unittest",
+  ]
+
+  tests = [
+    {
+      name = "wlanif_convert_unittest"
+      environments = basic_envs
     },
   ]
 }

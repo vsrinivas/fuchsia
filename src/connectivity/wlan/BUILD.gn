@@ -22,15 +22,16 @@ group("tests") {
   testonly = true
 
   public_deps = [
-    "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_tests",
+    "//src/connectivity/wlan/drivers/wlan:wlan_drivers_tests",
+    "//src/connectivity/wlan/drivers/wlanif/test:wlanif_unittest",
     "//src/connectivity/wlan/lib/bitfield/wlan-bitfield-tests",
     "//src/connectivity/wlan/lib/common/rust:wlan-common-tests",
-    "//src/connectivity/wlan/lib/inspect:wlan-inspect-tests",
-    "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme-tests",
     "//src/connectivity/wlan/lib/eapol:eapol-tests",
+    "//src/connectivity/wlan/lib/inspect:wlan-inspect-tests",
+    "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_tests",
+    "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme-tests",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn-tests",
     "//src/connectivity/wlan/lib/sme:wlan-sme-tests",
-    "//src/connectivity/wlan/drivers/wlan:wlan_drivers_tests",
     "//src/connectivity/wlan/testing/ap-smoke-test:wlan-ap-smoke-test",
     "//src/connectivity/wlan/testing/client-smoke-test:wlan-smoke-test",
     "//src/connectivity/wlan/testing/client-stress-test:wlan-stress-test",
