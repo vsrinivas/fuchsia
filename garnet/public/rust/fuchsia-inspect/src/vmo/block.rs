@@ -7,12 +7,14 @@ use failure::{format_err, Error};
 use mapped_vmo::Mapping;
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::cmp::min;
+use std::ptr;
 use std::rc::Rc;
 use std::sync::atomic::{fence, Ordering};
 
 use crate::vmo::bitfields::{BlockHeader, Payload};
 use crate::vmo::block_type::BlockType;
 use crate::vmo::constants;
+use crate::vmo::utils;
 
 pub struct Block<T> {
     index: u32,
@@ -25,6 +27,10 @@ pub trait ReadableBlockContainer {
 
 pub trait WritableBlockContainer {
     fn write_bytes(&self, offset: usize, bytes: &[u8]) -> usize;
+}
+
+pub trait BlockContainerEq<RHS = Self> {
+    fn ptr_eq(&self, other: &RHS) -> bool;
 }
 
 impl ReadableBlockContainer for Rc<Mapping> {
@@ -42,6 +48,18 @@ impl ReadableBlockContainer for &[u8] {
         let bytes_read = upper_bound - offset;
         bytes[..bytes_read].clone_from_slice(&self[offset..upper_bound]);
         bytes_read
+    }
+}
+
+impl BlockContainerEq for Rc<Mapping> {
+    fn ptr_eq(&self, other: &Rc<Mapping>) -> bool {
+        Rc::ptr_eq(&self, &other)
+    }
+}
+
+impl BlockContainerEq for &[u8] {
+    fn ptr_eq(&self, other: &&[u8]) -> bool {
+        ptr::eq(*self, *other)
     }
 }
 
@@ -190,12 +208,12 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Get the offset of the payload in the container.
     fn payload_offset(&self) -> usize {
-        (self.index.to_usize().unwrap() * constants::MIN_ORDER_SIZE + constants::HEADER_SIZE_BYTES)
+        utils::offset_for_index(self.index) + constants::HEADER_SIZE_BYTES
     }
 
     /// Get the offset of the header in the container.
     fn header_offset(&self) -> usize {
-        (self.index.to_usize().unwrap() * constants::MIN_ORDER_SIZE)
+        utils::offset_for_index(self.index)
     }
 
     /// Check if the HEADER block is locked (when generation count is odd).
@@ -224,7 +242,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 }
 
-impl<T: ReadableBlockContainer + WritableBlockContainer> Block<T> {
+impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Block<T> {
     /// Initializes an empty reserved block.
     pub fn new_free(container: T, index: u32, order: usize, next_free: u32) -> Result<Self, Error> {
         if order >= constants::NUM_ORDERS {
@@ -237,6 +255,15 @@ impl<T: ReadableBlockContainer + WritableBlockContainer> Block<T> {
         let block = Block::new(container, index);
         block.write_header(header);
         Ok(block)
+    }
+
+    /// Swaps two blocks if they are the same order.
+    pub fn swap(&mut self, other: &mut Block<T>) -> Result<(), Error> {
+        if self.order() != other.order() || !self.container.ptr_eq(&other.container) {
+            return Err(format_err!("cannot swap blocks of different order or container"));
+        }
+        std::mem::swap(&mut self.index, &mut other.index);
+        Ok(())
     }
 
     /// Set the order of the block.
@@ -570,6 +597,37 @@ mod tests {
         assert_eq!(block.block_type(), BlockType::Free);
         assert_eq!(container[..8], [0x03, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    }
+
+    #[test]
+    fn test_swap() {
+        let container = [0u8; constants::MIN_ORDER_SIZE * 3];
+        let mut block1 = Block::new_free(&container[..], 0, 1, 2).unwrap();
+        let mut block2 = Block::new_free(&container[..], 1, 1, 0).unwrap();
+        let mut block3 = Block::new_free(&container[..], 2, 3, 4).unwrap();
+
+        // Can't swap with block of different order
+        assert!(block1.swap(&mut block3).is_err());
+
+        assert!(block2.become_reserved().is_ok());
+
+        assert!(block1.swap(&mut block2).is_ok());
+
+        assert_eq!(block1.index(), 1);
+        assert_eq!(block1.order(), 1);
+        assert_eq!(block1.block_type(), BlockType::Reserved);
+        assert!(block1.free_next_index().is_err());
+        assert_eq!(block2.index(), 0);
+        assert_eq!(block2.order(), 1);
+        assert_eq!(block2.block_type(), BlockType::Free);
+        assert_eq!(block2.free_next_index().unwrap(), 2);
+
+        assert_eq!(container[..8], [0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[16..24], [0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[24..32], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[32..40], [0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[40..48], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
     #[test]

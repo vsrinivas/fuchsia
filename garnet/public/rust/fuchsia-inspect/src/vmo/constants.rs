@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 /// Bytes per page
-pub const PAGE_SIZE_BYTES: u32 = 4096;
+pub const PAGE_SIZE_BYTES: usize = 4096;
 
 /// Size of the a VMO block header.
 pub const HEADER_SIZE_BYTES: usize = 8;
@@ -29,3 +29,9 @@ pub const MIN_ORDER_SHIFT: usize = 4;
 
 /// The size for order 0.
 pub const MIN_ORDER_SIZE: usize = 1 << MIN_ORDER_SHIFT; // 16 bytes
+
+/// The shift for order NUM_ORDERS-1 (the maximum order)
+pub const MAX_ORDER_SHIFT: usize = MIN_ORDER_SHIFT + NUM_ORDERS - 1;
+
+/// The size for order NUM_ORDERS-1 (the maximum order)
+pub const MAX_ORDER_SIZE: usize = 1 << MAX_ORDER_SHIFT;

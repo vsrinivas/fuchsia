@@ -9,3 +9,5 @@ mod bitfields;
 mod block;
 mod block_type;
 mod constants;
+mod heap;
+mod utils;
