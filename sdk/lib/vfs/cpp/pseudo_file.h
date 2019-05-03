@@ -42,7 +42,7 @@ class PseudoFile final : public vfs::internal::File {
   using ReadHandler = fit::function<zx_status_t(std::vector<uint8_t>* output)>;
 
   // Handler called to write into the pseudo-file.
-  using WriteHandler = fit::function<void(std::vector<uint8_t> input)>;
+  using WriteHandler = fit::function<zx_status_t(std::vector<uint8_t> input)>;
 
   // Creates a buffered pseudo-file.
   //
@@ -91,6 +91,8 @@ class PseudoFile final : public vfs::internal::File {
     // |Node| implementations:
     std::unique_ptr<Connection> Close(Connection* connection) override;
 
+    zx_status_t PreClose(Connection* connection) override;
+
     void Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
                async_dispatcher_t* dispatcher) override;
 
@@ -103,6 +105,8 @@ class PseudoFile final : public vfs::internal::File {
     NodeKind::Type GetKind() const override;
 
    private:
+    zx_status_t TryFlushIfRequired();
+
     void SetInputLength(size_t length);
 
     PseudoFile* const file_;

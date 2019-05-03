@@ -41,6 +41,13 @@ class Node {
   // |connection| from its list as it is getting closed.
   virtual std::unique_ptr<Connection> Close(Connection* connection);
 
+  // This function is called before |Close| is called and status is passed to
+  // fuchsia::io::Node#Close| call.
+  // Please note |Node| is closed even if this function returns error, so Node
+  // should be ready a |Close| call.
+  // Default implementation returns |ZX_OK|.
+  virtual zx_status_t PreClose(Connection* connection);
+
   // Implementation of |fuchsia.io.Node/Describe|.
   //
   // Subclass must override this method to describe themselves accurately.

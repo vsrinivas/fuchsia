@@ -83,6 +83,7 @@ bool FuchsiaDataSource::InitializeWithRealFiles(
                         content.begin());
               FXL_LOG(INFO) << "Updated file: " << path;
               WriteFile(path, std::move(content));
+              return ZX_OK;
             },
             200 * 1024 * 1024 /* max file size, 200 MB */));
 

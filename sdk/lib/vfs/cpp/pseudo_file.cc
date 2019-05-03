@@ -62,7 +62,7 @@ NodeKind::Type PseudoFile::GetKind() const {
 
 uint64_t PseudoFile::GetLength() {
   // this should never be called
-  ZX_DEBUG_ASSERT(false);
+  ZX_ASSERT(false);
 
   return 0u;
 }
@@ -83,12 +83,19 @@ PseudoFile::Content::Content(PseudoFile* file, uint32_t flags,
   SetInputLength(buffer_.size());
 }
 
-PseudoFile::Content::~Content() {
+PseudoFile::Content::~Content() { TryFlushIfRequired(); };
+
+zx_status_t PseudoFile::Content::TryFlushIfRequired() {
   if (!dirty_) {
-    return;
+    return ZX_OK;
   }
-  file_->write_handler_(std::move(buffer_));
-};
+  dirty_ = false;
+  return file_->write_handler_(std::move(buffer_));
+}
+
+zx_status_t PseudoFile::Content::PreClose(Connection* connection) {
+  return TryFlushIfRequired();
+}
 
 NodeKind::Type PseudoFile::Content::GetKind() const { return file_->GetKind(); }
 

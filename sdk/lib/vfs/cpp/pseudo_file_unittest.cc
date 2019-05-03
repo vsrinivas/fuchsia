@@ -10,6 +10,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
 #include <unistd.h>
+#include <zircon/errors.h>
 #include <zircon/processargs.h>
 
 #include <algorithm>
@@ -59,6 +60,7 @@ class FileWrapper {
         std::string str(input.size(), 0);
         std::copy(input.begin(), input.begin() + input.size(), str.begin());
         buffer_ = std::move(str);
+        return ZX_OK;
       };
     }
 
@@ -602,6 +604,60 @@ TEST_F(PseudoFileTest, NodeReferenceIsClonedAsNodeReference) {
 
   std::vector<uint8_t> buffer;
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, cloned_file->Read(100, &status, &buffer));
+}
+
+class FileWrapperWithFailingWriteFn {
+ public:
+  vfs::PseudoFile* file() { return file_.get(); };
+
+  static FileWrapperWithFailingWriteFn Create(std::string initial_str,
+                                              size_t capacity,
+                                              zx_status_t write_error) {
+    return FileWrapperWithFailingWriteFn(initial_str, capacity, write_error);
+  }
+
+  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
+
+  async::Loop& loop() { return loop_; }
+
+ private:
+  FileWrapperWithFailingWriteFn(std::string initial_str, size_t capacity,
+                                zx_status_t write_error)
+      : buffer_(std::move(initial_str)),
+        loop_(&kAsyncLoopConfigNoAttachToThread) {
+    auto readFn = [this](std::vector<uint8_t>* output) {
+      output->resize(buffer_.length());
+      std::copy(buffer_.begin(), buffer_.end(), output->begin());
+      return ZX_OK;
+    };
+
+    vfs::PseudoFile::WriteHandler writeFn;
+    writeFn = [this, write_error](std::vector<uint8_t> input) {
+      std::string str(input.size(), 0);
+      std::copy(input.begin(), input.begin() + input.size(), str.begin());
+      buffer_ = std::move(str);
+      return write_error;
+    };
+
+    file_ = std::make_unique<vfs::PseudoFile>(std::move(readFn),
+                                              std::move(writeFn), capacity);
+    loop_.StartThread("vfs test thread");
+  }
+
+  std::unique_ptr<vfs::PseudoFile> file_;
+  std::string buffer_;
+  async::Loop loop_;
+};
+
+TEST_F(PseudoFileTest, CloseReturnsWriteError) {
+  const std::string str = "this is a test string";
+  auto file_wrapper =
+      FileWrapperWithFailingWriteFn::Create(str, 100, ZX_ERR_IO);
+  auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
+
+  AssertWrite(file, "It");
+
+  CloseFile(file, ZX_ERR_IO);
 }
 
 }  // namespace

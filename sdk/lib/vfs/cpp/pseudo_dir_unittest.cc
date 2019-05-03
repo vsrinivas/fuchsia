@@ -236,6 +236,7 @@ class DirectoryWrapper {
     auto write_fn = [file_content](std::vector<uint8_t> input) {
       file_content->resize(input.size());
       std::copy(input.begin(), input.end(), file_content->begin());
+      return ZX_OK;
     };
 
     auto file = std::make_unique<vfs::PseudoFile>(std::move(read_fn),

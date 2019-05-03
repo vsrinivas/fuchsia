@@ -10,8 +10,10 @@
 #include <lib/vfs/cpp/internal/file_connection.h>
 #include <lib/vfs/cpp/internal/node.h>
 #include <lib/vfs/cpp/internal/node_connection.h>
+#include <lib/vfs/cpp/node_kind.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include "gtest/gtest.h"
 
@@ -65,6 +67,35 @@ TEST(ConnectionBindCalledTwice, NodeConnection) {
   vfs::internal::NodeConnection connection(0, &dir);
 
   CallBindTwiceAndTest(&connection);
+}
+
+class DummyTestNode : public vfs::internal::Node {
+ public:
+  zx_status_t PreClose(vfs::internal::Connection* connection) override {
+    return ZX_ERR_UNAVAILABLE;
+  }
+
+  void Describe(fuchsia::io::NodeInfo* out_info) override{};
+
+  vfs::NodeKind::Type GetKind() const override { return vfs::NodeKind::kFile; }
+
+  zx_status_t CreateConnection(
+      uint32_t flags,
+      std::unique_ptr<vfs::internal::Connection>* connection) override {
+    return Node::CreateConnection(flags, connection);
+  }
+};
+
+TEST(ConenctionTest, ConnectionPassedErrorInClose) {
+  DummyTestNode node;
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  loop.StartThread("vfs test thread");
+  fuchsia::io::NodeSyncPtr ptr;
+  ASSERT_EQ(ZX_OK,
+            node.Serve(0, ptr.NewRequest().TakeChannel(), loop.dispatcher()));
+  zx_status_t status = -1;
+  ASSERT_EQ(ZX_OK, ptr->Close(&status));
+  ASSERT_EQ(ZX_ERR_UNAVAILABLE, status);
 }
 
 }  // namespace

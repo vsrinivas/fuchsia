@@ -52,6 +52,8 @@ std::unique_ptr<Connection> Node::Close(Connection* connection) {
   return ret;
 }
 
+zx_status_t Node::PreClose(Connection* connection) { return ZX_OK; }
+
 zx_status_t Node::Sync() { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t Node::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {

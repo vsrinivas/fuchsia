@@ -20,7 +20,7 @@ void Connection::Clone(Node* vn, uint32_t flags, zx::channel request,
 }
 
 void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {
-  callback(ZX_OK);
+  callback(vn->PreClose(this));
   vn->Close(this);
   // |this| is destroyed at this point.
 }
