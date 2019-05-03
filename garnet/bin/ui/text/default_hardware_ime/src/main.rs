@@ -4,7 +4,7 @@
 
 #![feature(async_await, await_macro)]
 
-use failure::{bail, Error};
+use failure::{bail, format_err, Error};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_async as fasync;
@@ -14,12 +14,14 @@ use futures::lock::Mutex;
 use futures::prelude::*;
 use serde_json::{self as json, Map, Value};
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::fs;
 use std::sync::Arc;
 use text_common::text_field_state::TextFieldState;
 
 const DEFAULT_LAYOUT_PATH: &'static str = "/pkg/data/us.json";
+const MAX_QUEUED_INPUTS: usize = 100;
 
 type DeadKeyMap = serde_json::map::Map<String, Value>;
 
@@ -35,6 +37,7 @@ struct DefaultHardwareImeState {
     dead_key_state: Option<DeadKeyMap>,
     unicode_input_mode: bool,
     unicode_input_buffer: String,
+    input_queue: VecDeque<uii::KeyboardEvent>,
 }
 
 struct CurrentField {
@@ -56,34 +59,33 @@ impl DefaultHardwareIme {
             dead_key_state: None,
             unicode_input_mode: false,
             unicode_input_buffer: String::new(),
+            input_queue: VecDeque::new(),
         };
         Ok(DefaultHardwareIme(Arc::new(Mutex::new(state))))
     }
 
     fn on_focus(&self, text_field: txt::TextFieldProxy) {
         let this = self.clone();
-        fasync::spawn(
-            async move {
-                let mut evt_stream = text_field.take_event_stream();
-                // wait for first onupdate to populate self.current_field
-                let res = await!(evt_stream.next());
-                if let Some(Ok(txt::TextFieldEvent::OnUpdate { state })) = res {
-                    let internal_state = match state.try_into() {
-                        Ok(v) => v,
-                        Err(e) => {
-                            fx_log_err!("got invalid TextFieldState: {}", e);
-                            return;
-                        }
-                    };
-                    await!(this.0.lock()).on_first_update(text_field, internal_state);
-                    await!(this.process_text_field_events(evt_stream)).unwrap_or_else(|e| {
-                        fx_log_err!("{}", e);
-                    });
-                } else {
-                    fx_log_err!("failed to get OnUpdate from newly focused TextField: {:?}", res);
-                }
-            },
-        );
+        fasync::spawn(async move {
+            let mut evt_stream = text_field.take_event_stream();
+            // wait for first onupdate to populate self.current_field
+            let res = await!(evt_stream.next());
+            if let Some(Ok(txt::TextFieldEvent::OnUpdate { state })) = res {
+                let internal_state = match state.try_into() {
+                    Ok(v) => v,
+                    Err(e) => {
+                        fx_log_err!("got invalid TextFieldState: {}", e);
+                        return;
+                    }
+                };
+                await!(this.0.lock()).on_first_update(text_field, internal_state);
+                await!(this.process_text_field_events(evt_stream)).unwrap_or_else(|e| {
+                    fx_log_err!("{}", e);
+                });
+            } else {
+                fx_log_err!("failed to get OnUpdate from newly focused TextField: {:?}", res);
+            }
+        });
     }
 
     async fn process_text_field_events(
@@ -93,7 +95,9 @@ impl DefaultHardwareIme {
         while let Some(msg) = await!(evt_stream.next()) {
             match msg {
                 Ok(txt::TextFieldEvent::OnUpdate { state }) => {
-                    await!(self.0.lock()).on_update(state.try_into()?);
+                    let mut lock = await!(self.0.lock());
+                    lock.on_update(state.try_into()?);
+                    await!(lock.process_input_queue());
                 }
                 Err(e) => {
                     bail!("error when receiving message from TextFieldEventStream: {}", e);
@@ -101,6 +105,17 @@ impl DefaultHardwareIme {
             }
         }
         Ok(())
+    }
+}
+
+#[derive(Debug)]
+enum OnInputError {
+    Retry,
+    Err(Error),
+}
+impl<E: Into<Error>> From<E> for OnInputError {
+    fn from(other: E) -> OnInputError {
+        OnInputError::Err(other.into())
     }
 }
 
@@ -120,7 +135,30 @@ impl DefaultHardwareImeState {
         }
     }
 
-    async fn on_input_event(&mut self, event: uii::KeyboardEvent) -> Result<(), Error> {
+    async fn process_input_queue(&mut self) {
+        while let Some(key) = self.input_queue.pop_front() {
+            match await!(self.on_input_event(&key)) {
+                Ok(()) => {} // next
+                Err(OnInputError::Retry) => {
+                    // put it back in queue and return
+                    self.input_queue.push_front(key);
+                    return;
+                }
+                Err(OnInputError::Err(e)) => {
+                    fx_log_err!("{:?}", e);
+                }
+            }
+        }
+    }
+
+    /// Returns Err(OnInputError::Err) if something unrecoverably fails
+    /// Returns Err(OnInputError::Retry) if you should retry. In this case, it's important that we
+    /// *don't* mutate anything in self, so that retrying many times is idempotent.
+    /// Returns Ok(()) if edit was successfully committed.
+    async fn on_input_event<'a>(
+        &'a mut self,
+        event: &'a uii::KeyboardEvent,
+    ) -> Result<(), OnInputError> {
         // only process input events if there is an active text field
         let field_state = match &mut self.current_field {
             Some(v) => v,
@@ -156,7 +194,7 @@ impl DefaultHardwareImeState {
                     let mut range = clone_range(&field_state.last_selection.range);
                     field_state.proxy.begin_edit(field_state.last_revision)?;
                     field_state.proxy.replace(&mut range, &output)?;
-                    convert_text_error(await!(field_state.proxy.commit_edit()))?;
+                    convert_commit_result(await!(field_state.proxy.commit_edit()))?;
 
                     self.unicode_input_mode = false;
                     self.unicode_input_buffer = String::new();
@@ -179,7 +217,6 @@ impl DefaultHardwareImeState {
                     } else if let Some(res) = dead_key["\u{0020}"].as_str() {
                         output = res.to_string() + &output;
                     }
-                    self.dead_key_state = None;
                 }
                 if self.unicode_input_mode {
                     // TODO: Set or reset composition highlight.
@@ -188,8 +225,9 @@ impl DefaultHardwareImeState {
                     let mut range = clone_range(&field_state.last_selection.range);
                     field_state.proxy.begin_edit(field_state.last_revision)?;
                     field_state.proxy.replace(&mut range, &output)?;
-                    convert_text_error(await!(field_state.proxy.commit_edit()))?;
+                    convert_commit_result(await!(field_state.proxy.commit_edit()))?;
                 }
+                self.dead_key_state = None;
             }
             Ok(Keymapping::Deadkey(deadkey)) => {
                 // TODO: Set or reset deadkey highlight.
@@ -206,22 +244,18 @@ impl DefaultHardwareImeState {
     }
 }
 
-fn convert_text_error(fidl_result: Result<txt::Error, fidl::Error>) -> Result<(), Error> {
+fn convert_commit_result(fidl_result: Result<txt::Error, fidl::Error>) -> Result<(), OnInputError> {
     match fidl_result {
-        Ok(e) => {
-            if e != txt::Error::Ok {
-                bail!("DefaultHardwareIme received a Error: {:#?}", e);
-            }
-        }
-        Err(e) => {
-            bail!("DefaultHardwareIme received a fidl::Error: {:#?}", e);
-        }
+        Ok(e) => match e {
+            txt::Error::Ok => Ok(()),
+            txt::Error::BadRevision => Err(OnInputError::Retry),
+            e => Err(format_err!("DefaultHardwareIme received a Error: {:#?}", e).into()),
+        },
+        Err(e) => Err(format_err!("DefaultHardwareIme received a fidl::Error: {:#?}", e).into()),
     }
-
-    Ok(())
 }
 
-fn get_key_mapping(layout: &Value, event: uii::KeyboardEvent) -> Result<Keymapping, Error> {
+fn get_key_mapping(layout: &Value, event: &uii::KeyboardEvent) -> Result<Keymapping, Error> {
     let key = &event.hid_usage.to_string();
     let mut current_modifiers = HashMap::new();
     current_modifiers.insert("caps", (event.modifiers & uii::MODIFIER_CAPS_LOCK) != 0);
@@ -285,9 +319,11 @@ async fn main() -> Result<(), Error> {
             Ok(txt::TextInputContextEvent::OnInputEvent { event }) => match event {
                 uii::InputEvent::Keyboard(ke) => {
                     let mut lock = await!(ime.0.lock());
-                    await!(lock.on_input_event(ke)).unwrap_or_else(|e| {
-                        fx_log_err!("{}", e);
-                    });
+                    // drop inputs if the queue is really long
+                    if lock.input_queue.len() < MAX_QUEUED_INPUTS {
+                        lock.input_queue.push_back(ke);
+                    }
+                    await!(lock.process_input_queue());
                 }
                 _ => {
                     fx_log_err!("DefaultHardwareIme received a non-keyboard event");
@@ -363,46 +399,75 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn state_sends_edits_on_input() {
+    async fn state_sends_edits_on_input_and_retries() {
         let ime = DefaultHardwareIme::new().unwrap();
-        let mut state = await!(ime.0.lock());
         let (proxy, server_end) = fidl::endpoints::create_proxy::<txt::TextFieldMarker>().unwrap();
         let mut request_stream = server_end.into_stream().unwrap();
-        state.on_first_update(proxy, default_state().into()); // TODO
+
         let client = async move {
-            await!(state.on_input_event(uii::KeyboardEvent {
+            let mut lock = await!(ime.0.lock());
+
+            // simulate onupdate
+            lock.on_first_update(proxy, default_state().into());
+
+            // dispatch input event, but drop input if we've already queued some wild number of
+            // events
+            lock.input_queue.push_back(uii::KeyboardEvent {
                 event_time: 0,
                 device_id: 0,
                 phase: uii::KeyboardEventPhase::Pressed,
                 hid_usage: 4,
                 code_point: 33,
                 modifiers: 0,
-            }))
-            .unwrap();
-        };
+            });
+            await!(lock.process_input_queue());
 
+            // try again
+            await!(lock.process_input_queue());
+        };
         let server = async move {
+            // first set of edits, reply with BadRevision
             let msg = await!(request_stream.try_next()).unwrap().unwrap();
             match msg {
                 txt::TextFieldRequest::BeginEdit { .. } => {}
-                _ => panic!("expected BeginEdit request"),
+                _ => panic!("expected first BeginEdit request"),
             }
             let msg = await!(request_stream.try_next()).unwrap().unwrap();
             match msg {
                 txt::TextFieldRequest::Replace { new_text, .. } => {
                     assert_eq!("a", new_text);
                 }
-                _ => panic!("expected Replace request"),
+                _ => panic!("expected first Replace request"),
+            }
+            let msg = await!(request_stream.try_next()).unwrap().unwrap();
+            match msg {
+                txt::TextFieldRequest::CommitEdit { responder, .. } => {
+                    responder.send(txt::Error::BadRevision).unwrap();
+                }
+                _ => panic!("expected first CommitEdit request"),
+            }
+
+            // second round of updates
+            let msg = await!(request_stream.try_next()).unwrap().unwrap();
+            match msg {
+                txt::TextFieldRequest::BeginEdit { .. } => {}
+                _ => panic!("expected second BeginEdit request"),
+            }
+            let msg = await!(request_stream.try_next()).unwrap().unwrap();
+            match msg {
+                txt::TextFieldRequest::Replace { new_text, .. } => {
+                    assert_eq!("a", new_text);
+                }
+                _ => panic!("expected second Replace request"),
             }
             let msg = await!(request_stream.try_next()).unwrap().unwrap();
             match msg {
                 txt::TextFieldRequest::CommitEdit { responder, .. } => {
                     responder.send(txt::Error::Ok).unwrap();
                 }
-                _ => panic!("expected CommitEdit request"),
+                _ => panic!("expected second CommitEdit request"),
             }
         };
-
         await!(join(server, client));
     }
 }
