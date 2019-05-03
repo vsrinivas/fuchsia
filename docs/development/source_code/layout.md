@@ -139,6 +139,9 @@ separate repositories that are mapped into the directory structure using `jiri`
  * `build/`
  * `bundles/`
  * `configs/`
+ * `infra/`
+    * `configs/`
+       * `generated/`
  * `integration/`
  * `products/`
  * `scripts/`

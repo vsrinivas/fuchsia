@@ -52,7 +52,6 @@ tmp/
 ### Top-level directories
 /.jiri/
 /.jiri_root/
-/infra/
 /integration/
 # For storing local scripts and data files in a source tree.
 /local/
