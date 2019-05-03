@@ -156,76 +156,9 @@ impl State {
                 _ => State::Authenticating { cmd },
             },
             State::Associating { cmd } => match event {
-                MlmeEvent::AssociateConf { resp } => match resp.result_code {
-                    fidl_mlme::AssociateResultCodes::Success => {
-                        context
-                            .info_sink
-                            .send(InfoEvent::AssociationSuccess { att_id: context.att_id });
-                        match cmd.rsna {
-                            Some(mut rsna) => match rsna.supplicant.start() {
-                                Err(e) => {
-                                    handle_supplicant_start_failure(
-                                        cmd.responder,
-                                        cmd.bss,
-                                        &context,
-                                        e,
-                                    );
-                                    state_change_msg
-                                        .replace("supplicant failed to start".to_string());
-                                    State::Idle
-                                }
-                                Ok(_) => {
-                                    context
-                                        .info_sink
-                                        .send(InfoEvent::RsnaStarted { att_id: context.att_id });
-
-                                    let rsna_timeout = Some(
-                                        context.timer.schedule(Event::EstablishingRsnaTimeout),
-                                    );
-                                    state_change_msg.replace("successful association".to_string());
-                                    State::Associated {
-                                        bss: cmd.bss,
-                                        last_rssi: None,
-                                        link_state: LinkState::EstablishingRsna {
-                                            responder: cmd.responder,
-                                            rsna,
-                                            rsna_timeout,
-                                            resp_timeout: None,
-                                        },
-                                        radio_cfg: cmd.radio_cfg,
-                                    }
-                                }
-                            },
-                            None => {
-                                report_connect_finished(
-                                    cmd.responder,
-                                    &context,
-                                    ConnectResult::Success,
-                                    None,
-                                );
-                                state_change_msg.replace("successful association".to_string());
-                                State::Associated {
-                                    bss: cmd.bss,
-                                    last_rssi: None,
-                                    link_state: LinkState::LinkUp(None),
-                                    radio_cfg: cmd.radio_cfg,
-                                }
-                            }
-                        }
-                    }
-                    other => {
-                        error!("Associate request failed with result code {:?}", other);
-                        report_connect_finished(
-                            cmd.responder,
-                            &context,
-                            ConnectResult::Failed,
-                            Some(ConnectFailure::AssociationFailure(other)),
-                        );
-                        state_change_msg
-                            .replace(format!("failed association; result code: {:?}", other));
-                        State::Idle
-                    }
-                },
+                MlmeEvent::AssociateConf { resp } => {
+                    handle_mlme_assoc_conf(resp, cmd, context, &mut state_change_msg)
+                }
                 _ => State::Associating { cmd },
             },
             State::Associated { bss, last_rssi, link_state, radio_cfg } => match event {
@@ -511,6 +444,67 @@ impl State {
             State::Associated { bss, link_state: LinkState::LinkUp(..), .. } => {
                 Status { connected_to: Some(convert_bss_description(bss)), connecting_to: None }
             }
+        }
+    }
+}
+
+fn handle_mlme_assoc_conf(
+    resp: fidl_mlme::AssociateConfirm,
+    cmd: ConnectCommand,
+    context: &mut Context,
+    state_change_msg: &mut Option<String>,
+) -> State {
+    match resp.result_code {
+        fidl_mlme::AssociateResultCodes::Success => {
+            context.info_sink.send(InfoEvent::AssociationSuccess { att_id: context.att_id });
+            match cmd.rsna {
+                Some(mut rsna) => match rsna.supplicant.start() {
+                    Err(e) => {
+                        handle_supplicant_start_failure(cmd.responder, cmd.bss, &context, e);
+                        state_change_msg.replace("supplicant failed to start".to_string());
+                        State::Idle
+                    }
+                    Ok(_) => {
+                        context.info_sink.send(InfoEvent::RsnaStarted { att_id: context.att_id });
+
+                        let rsna_timeout =
+                            Some(context.timer.schedule(Event::EstablishingRsnaTimeout));
+                        state_change_msg.replace("successful association".to_string());
+                        State::Associated {
+                            bss: cmd.bss,
+                            last_rssi: None,
+                            link_state: LinkState::EstablishingRsna {
+                                responder: cmd.responder,
+                                rsna,
+                                rsna_timeout,
+                                resp_timeout: None,
+                            },
+                            radio_cfg: cmd.radio_cfg,
+                        }
+                    }
+                },
+                None => {
+                    report_connect_finished(cmd.responder, &context, ConnectResult::Success, None);
+                    state_change_msg.replace("successful association".to_string());
+                    State::Associated {
+                        bss: cmd.bss,
+                        last_rssi: None,
+                        link_state: LinkState::LinkUp(None),
+                        radio_cfg: cmd.radio_cfg,
+                    }
+                }
+            }
+        }
+        other => {
+            error!("Associate request failed with result code {:?}", other);
+            report_connect_finished(
+                cmd.responder,
+                &context,
+                ConnectResult::Failed,
+                Some(ConnectFailure::AssociationFailure(other)),
+            );
+            state_change_msg.replace(format!("failed association; result code: {:?}", other));
+            State::Idle
         }
     }
 }
