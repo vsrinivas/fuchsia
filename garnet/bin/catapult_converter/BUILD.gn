@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/package.gni")
+import("//build/test.gni")
 import("//build/testing/environments.gni")
 
 source_set("converter") {
@@ -12,7 +14,6 @@ source_set("converter") {
   ]
   deps = [
     "//src/lib/fxl",
-    "//src/lib/uuid",
     "//third_party/rapidjson",
   ]
 }
@@ -29,8 +30,7 @@ executable("converter_bin") {
   ]
 }
 
-executable("unittest") {
-  output_name = "catapult_converter_test"
+source_set("unittest") {
   testonly = true
   sources = [
     "converter_unittest.cc",
@@ -44,12 +44,22 @@ executable("unittest") {
   ]
 }
 
+executable("unittest_bin") {
+  testonly = true
+  output_name = "catapult_converter_test"
+
+  deps = [
+    ":unittest",
+  ]
+}
+
 package("catapult_converter") {
   testonly = true
 
   deps = [
     ":converter_bin",
-    ":unittest",
+    ":host_catapult_converter",
+    ":unittest_bin",
   ]
 
   meta = [
@@ -72,4 +82,24 @@ package("catapult_converter") {
       environments = basic_envs
     },
   ]
+}
+
+install_host_tools("host_catapult_converter") {
+  testonly = true
+
+  deps = [
+    ":converter_bin",
+  ]
+
+  outputs = [
+    "catapult_converter",
+  ]
+}
+
+if (current_toolchain == host_toolchain) {
+  test("host_catapult_converter_test") {
+    deps = [
+      ":unittest",
+    ]
+  }
 }

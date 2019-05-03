@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "converter.h"
+
 #include <zircon/compiler.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/strings/split_string.h"
 #include "rapidjson/error/en.h"
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/filewritestream.h"
 #include "rapidjson/prettywriter.h"
-
-#include "converter.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/strings/split_string.h"
 
 namespace {
 
@@ -679,6 +679,58 @@ TEST(CatapultConverter, ConverterMain) {
   rapidjson::ParseResult parse_result = input.ParseStream(input_stream);
   EXPECT_TRUE(parse_result);
   fclose(fp);
+}
+
+// Code copied from "//src/lib/uuid/uuid.cc", which does not currently
+// successfully compile as a host side tool.
+inline bool IsHexDigit(char c) {
+  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') ||
+         (c >= 'a' && c <= 'f');
+}
+
+inline bool IsLowerHexDigit(char c) {
+  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+}
+
+bool IsValidUuidInternal(const std::string& guid, bool strict) {
+  constexpr size_t kUUIDLength = 36U;
+  if (guid.length() != kUUIDLength)
+    return false;
+  for (size_t i = 0; i < guid.length(); ++i) {
+    char current = guid[i];
+    if (i == 8 || i == 13 || i == 18 || i == 23) {
+      if (current != '-')
+        return false;
+    } else {
+      if ((strict && !IsLowerHexDigit(current)) || !IsHexDigit(current))
+        return false;
+    }
+  }
+  return true;
+}
+
+// Returns true if the input string conforms to the version 4 UUID format.
+// Note that this does NOT check if the hexadecimal values "a" through "f"
+// are in lower case characters, as Version 4 RFC says they're
+// case insensitive. (Use IsValidOutputString for checking if the
+// given string is valid output string)
+bool IsValidUuid(const std::string& guid) {
+  return IsValidUuidInternal(guid, false /* strict */);
+}
+
+// Returns true if the input string is valid version 4 UUID output string.
+// This also checks if the hexadecimal values "a" through "f" are in lower
+// case characters.
+bool IsValidUuidOutputString(const std::string& guid) {
+  return IsValidUuidInternal(guid, true /* strict */);
+}
+
+TEST(CatapultConverter, GenerateUuid) {
+  for (int i = 0; i < 256; ++i) {
+    auto uuid = GenerateUuid();
+    EXPECT_TRUE(IsValidUuid(uuid));
+    EXPECT_TRUE(IsValidUuidOutputString(uuid));
+  }
 }
 
 }  // namespace

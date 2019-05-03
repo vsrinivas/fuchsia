@@ -6,6 +6,7 @@
 
 #include <getopt.h>
 #include <math.h>
+
 #include <algorithm>
 #include <map>
 #include <numeric>
@@ -18,7 +19,16 @@
 #include "rapidjson/prettywriter.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/uuid/uuid.h"
+
+#if defined(OS_FUCHSIA)
+#include <zircon/syscalls.h>
+#else
+#include <errno.h>
+#include <fcntl.h>
+#include <src/lib/files/file_descriptor.h>
+#include <src/lib/files/unique_fd.h>
+#include <unistd.h>
+#endif
 
 namespace {
 
@@ -107,7 +117,8 @@ void ComputeStatistics(const std::vector<double>& vals,
     meanlogs_json.SetDouble(meanlogs);
 
   output->SetArray();
-  output->PushBack(vals.size(), *alloc);  // "count" entry.
+  output->PushBack(static_cast<uint64_t>(vals.size()),
+                   *alloc);  // "count" entry.
   output->PushBack(max, *alloc);
   output->PushBack(meanlogs_json, *alloc);
   output->PushBack(mean, *alloc);
@@ -179,7 +190,8 @@ void AddHistogram(rapidjson::Document* output,
   histogram.AddMember("guid", guid, *alloc);
 
   // This field is redundant with the "count" entry in "stats".
-  histogram.AddMember("maxNumSampleValues", vals.size(), *alloc);
+  histogram.AddMember("maxNumSampleValues", static_cast<uint64_t>(vals.size()),
+                      *alloc);
 
   // Assume for now that we didn't get any NaN values.
   histogram.AddMember("numNans", 0, *alloc);
@@ -209,7 +221,50 @@ const char* TypeToString(rapidjson::Type type) {
   return "";
 }
 
+// Fills |output_length| bytes of |output| with random data.
+void RandBytes(void* output, size_t output_length) {
+  FXL_DCHECK(output);
+
+#if defined(OS_FUCHSIA)
+  zx_cprng_draw(output, output_length);
+#else
+  fxl::UniqueFD fd(open("/dev/urandom", O_RDONLY | O_CLOEXEC));
+  FXL_CHECK(fd.is_valid());
+  const ssize_t len = fxl::ReadFileDescriptor(
+      fd.get(), static_cast<char*>(output), output_length);
+  FXL_CHECK(len >= 0 && static_cast<size_t>(len) == output_length);
+#endif
+}
+
 }  // namespace
+
+// Code copied from "//src/lib/uuid/uuid.cc", however it uses our |RandBytes|
+// (which uses "/dev/urandom" when running on non-Fuchsia platforms), as
+// opposed to an unconditional |zx_cprng_draw|, so that we can support
+// Linux/Mac platforms as well.
+std::string GenerateUuid() {
+  uint64_t bytes[2];
+  RandBytes(bytes, sizeof(bytes));
+
+  // Set the UUID to version 4 as described in RFC 4122, section 4.4.
+  // The format of UUID version 4 must be xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx,
+  // where y is one of [8, 9, A, B].
+  // Clear the version bits and set the version to 4:
+  bytes[0] &= 0xffffffffffff0fffULL;
+  bytes[0] |= 0x0000000000004000ULL;
+
+  // Set the two most significant bits (bits 6 and 7) of the
+  // clock_seq_hi_and_reserved to zero and one, respectively:
+  bytes[1] &= 0x3fffffffffffffffULL;
+  bytes[1] |= 0x8000000000000000ULL;
+
+  return fxl::StringPrintf(
+      "%08x-%04x-%04x-%04x-%012llx", static_cast<unsigned int>(bytes[0] >> 32),
+      static_cast<unsigned int>((bytes[0] >> 16) & 0x0000ffff),
+      static_cast<unsigned int>(bytes[0] & 0x0000ffff),
+      static_cast<unsigned int>(bytes[1] >> 48),
+      bytes[1] & 0x0000ffffffffffffULL);
+}
 
 void Convert(rapidjson::Document* input, rapidjson::Document* output,
              const ConverterArgs* args) {
@@ -223,7 +278,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
     if (args->use_test_guids) {
       uuid = fxl::StringPrintf("dummy_guid_%d", next_dummy_guid++);
     } else {
-      uuid = uuid::Generate();
+      uuid = GenerateUuid();
     }
     return helper.MakeString(uuid.c_str());
   };
