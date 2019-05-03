@@ -168,6 +168,10 @@ static bool interrupt_suspend_test() {
     ASSERT_TRUE(wait_thread(thread, ZX_THREAD_STATE_BLOCKED_INTERRUPT));
     thread.kill();
 
+    // Wait for termination to reduce interference with subsequent tests.
+    zx_signals_t observed;
+    ASSERT_EQ(thread.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &observed), ZX_OK);
+
     END_TEST;
 }
 
