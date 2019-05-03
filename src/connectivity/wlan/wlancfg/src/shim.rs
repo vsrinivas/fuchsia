@@ -114,42 +114,40 @@ async fn handle_request(
 }
 
 async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::ScanResult {
-    let r = await!(
-        async move {
-            let client = client.get()?;
-            let scan_txn = start_scan_txn(&client, legacy_req).map_err(|e| {
-                eprintln!("Failed to start a scan transaction: {}", e);
-                internal_error()
-            })?;
+    let r = await!(async move {
+        let client = client.get()?;
+        let scan_txn = start_scan_txn(&client, legacy_req).map_err(|e| {
+            eprintln!("Failed to start a scan transaction: {}", e);
+            internal_error()
+        })?;
 
-            let mut evt_stream = scan_txn.take_event_stream();
-            let mut aps = vec![];
-            let mut done = false;
+        let mut evt_stream = scan_txn.take_event_stream();
+        let mut aps = vec![];
+        let mut done = false;
 
-            while let Some(event) = await!(evt_stream.try_next()).map_err(|e| {
-                eprintln!("Error reading from scan transaction stream: {}", e);
-                internal_error()
-            })? {
-                match event {
-                    fidl_sme::ScanTransactionEvent::OnResult { aps: new_aps } => {
-                        aps.extend(new_aps);
-                        done = false;
-                    }
-                    fidl_sme::ScanTransactionEvent::OnFinished {} => done = true,
-                    fidl_sme::ScanTransactionEvent::OnError { error } => {
-                        return Err(convert_scan_err(error));
-                    }
+        while let Some(event) = await!(evt_stream.try_next()).map_err(|e| {
+            eprintln!("Error reading from scan transaction stream: {}", e);
+            internal_error()
+        })? {
+            match event {
+                fidl_sme::ScanTransactionEvent::OnResult { aps: new_aps } => {
+                    aps.extend(new_aps);
+                    done = false;
+                }
+                fidl_sme::ScanTransactionEvent::OnFinished {} => done = true,
+                fidl_sme::ScanTransactionEvent::OnError { error } => {
+                    return Err(convert_scan_err(error));
                 }
             }
-
-            if !done {
-                eprintln!("Failed to fetch all results before the channel was closed");
-                return Err(internal_error());
-            }
-
-            Ok(aps.into_iter().map(|ess| convert_bss_info(ess.best_bss)).collect())
         }
-    );
+
+        if !done {
+            eprintln!("Failed to fetch all results before the channel was closed");
+            return Err(internal_error());
+        }
+
+        Ok(aps.into_iter().map(|ess| convert_bss_info(ess.best_bss)).collect())
+    });
 
     match r {
         Ok(aps) => legacy::ScanResult { error: success(), aps: Some(aps) },

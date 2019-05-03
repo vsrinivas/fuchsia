@@ -19,8 +19,8 @@ use failure::{format_err, Error, ResultExt};
 use fidl_fuchsia_wlan_device_service::DeviceServiceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use futures::prelude::*;
 use futures::future::try_join;
+use futures::prelude::*;
 use std::sync::Arc;
 use void::Void;
 

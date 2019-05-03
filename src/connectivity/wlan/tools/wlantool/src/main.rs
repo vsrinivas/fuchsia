@@ -176,8 +176,12 @@ async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Re
         }
     };
     let sme = await!(get_client_sme(wlan_svc, iface_id)).map_err(|e| {
-      format_err!("error accessing client SME for iface {}: {};\
-                   please ensure the selected iface supports client mode", iface_id, e)  
+        format_err!(
+            "error accessing client SME for iface {}: {};\
+             please ensure the selected iface supports client mode",
+            iface_id,
+            e
+        )
     })?;
     let (local, remote) = endpoints::create_proxy()?;
     let mut req = fidl_sme::ConnectRequest {
@@ -240,8 +244,12 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::ApCmd::Start { iface_id, ssid, password, channel } => {
             let sme = await!(get_ap_sme(wlan_svc, iface_id)).map_err(|e| {
-                format_err!("error accessing client SME for iface {}: {};\
-                             please ensure the selected iface supports AP mode", iface_id, e)
+                format_err!(
+                    "error accessing client SME for iface {}: {};\
+                     please ensure the selected iface supports AP mode",
+                    iface_id,
+                    e
+                )
             })?;
             let mut config = fidl_sme::ApConfig {
                 ssid: ssid.as_bytes().to_vec(),
@@ -277,8 +285,12 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::MeshCmd::Join { iface_id, mesh_id, channel } => {
             let sme = await!(get_mesh_sme(wlan_svc, iface_id)).map_err(|e| {
-                format_err!("error accessing client SME for iface {}: {};\
-                             please ensure the selected iface supports Mesh mode", iface_id, e)
+                format_err!(
+                    "error accessing client SME for iface {}: {};\
+                     please ensure the selected iface supports Mesh mode",
+                    iface_id,
+                    e
+                )
             })?;
             let mut config = fidl_sme::MeshConfig { mesh_id: mesh_id.as_bytes().to_vec(), channel };
             let r = await!(sme.join(&mut config))?;
