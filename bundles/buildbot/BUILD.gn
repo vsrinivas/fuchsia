@@ -17,6 +17,7 @@ group("core") {
   testonly = true
   public_deps = [
     "//bundles:tools",
+    "//examples",
     "//garnet/packages:all",
     "//peridot/packages:all",
     "//src:tests",
