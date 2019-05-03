@@ -21,15 +21,20 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import git_utils
-import paths
+
+FUCHSIA_ROOT = os.path.dirname(  # $root
+    os.path.dirname(             # scripts
+    os.path.dirname(             # git
+    os.path.abspath(__file__))))
+BUILDTOOLS_ROOT = os.path.join(FUCHSIA_ROOT, "buildtools")
 
 clang_os = "linux"
 if platform.platform().startswith("Darwin"):
     clang_os = "mac"
-CLANG_TIDY_TOOL = os.path.join(paths.BUILDTOOLS_ROOT,
+CLANG_TIDY_TOOL = os.path.join(BUILDTOOLS_ROOT,
                                "%s-x64" % clang_os, "clang", "bin",
                                "clang-tidy")
-NINJA_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "ninja")
+NINJA_TOOL = os.path.join(BUILDTOOLS_ROOT, "ninja")
 
 
 def find_ancestor_with(filepath, relpath):
@@ -51,31 +56,27 @@ def get_out_dir(args):
         out_dir = args.out_dir
 
         if not os.path.isabs(out_dir):
-            out_dir = os.path.join(paths.FUCHSIA_ROOT, out_dir)
+            out_dir = os.path.join(FUCHSIA_ROOT, out_dir)
 
         if not os.path.isdir(out_dir):
             print out_dir + " is not a directory"
             sys.exit(-1)
         return out_dir
 
-    if os.environ.get("FUCHSIA_BUILD_DIR"):
-        return os.environ.get("FUCHSIA_BUILD_DIR")
-
-    fuchsia_dir = os.environ.get("FUCHSIA_DIR", paths.FUCHSIA_ROOT)
-    fuchsia_config_file = os.path.join(fuchsia_dir, '.fx-build-dir')
+    fuchsia_config_file = os.path.join(FUCHSIA_ROOT, '.fx-build-dir')
     if os.path.isfile(fuchsia_config_file):
         fuchsia_config = open(fuchsia_config_file).read()
-        return fuchsia_config.strip()
+        return os.path.join(FUCHSIA_ROOT, fuchsia_config.strip())
 
     print("Couldn't find the output directory, pass --out-dir " +
-          "(absolute or relative to Fuchsia root) or set FUCHSIA_BUILD_DIR.")
+          "(absolute or relative to Fuchsia root)")
     sys.exit(-1)
 
 
 def generate_db(out_dir):
     cmd = [NINJA_TOOL, "-C", out_dir, "-t", "compdb", "cc", "cxx"]
     db = subprocess.check_output(
-        cmd, cwd=paths.FUCHSIA_ROOT, universal_newlines=True)
+        cmd, cwd=FUCHSIA_ROOT, universal_newlines=True)
 
     # Strip away `gomacc` from the compile commands. This seems to fix problems
     # with clang-tidy not being able to load system headers.
@@ -122,7 +123,7 @@ def go(args):
         print
 
     # change the working directory to Fuchsia root.
-    os.chdir(paths.FUCHSIA_ROOT)
+    os.chdir(FUCHSIA_ROOT)
 
     # It's not safe to run in parallel with "--fix", as clang-tidy traverses and
     # fixes header files, and we might end up with concurrent writes to the same
