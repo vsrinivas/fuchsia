@@ -174,6 +174,7 @@ copy("copy_test_data") {
   sources = [
     "test_example_minidump.dmp",
     "test_example_minidump_with_aspace.dmp",
+    "test_example_minidump_new_cvrecord.dmp",
   ]
 
   outputs = [

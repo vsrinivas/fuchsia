@@ -94,6 +94,7 @@ std::vector<uint8_t> AsData(Data d) {
   })
 
 constexpr uint32_t kTestExampleMinidumpKOID = 656254UL;
+constexpr uint32_t kTestExampleMinidumpNewCvRecordKOID = 12843UL;
 constexpr uint32_t kTestExampleMinidumpThreadKOID = 671806UL;
 constexpr uint64_t kTestExampleMinidumpStackAddr = 0x37f880947000;
 constexpr uint32_t kTestExampleMinidumpStackSize = 0x40000;
@@ -285,86 +286,62 @@ TEST_F(MinidumpTest, Registers) {
 }
 
 TEST_F(MinidumpTest, Modules) {
-  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump_new_cvrecord.dmp"));
 
   Err err;
   debug_ipc::ModulesRequest request;
   debug_ipc::ModulesReply reply;
 
-  request.process_koid = kTestExampleMinidumpKOID;
+  request.process_koid = kTestExampleMinidumpNewCvRecordKOID;
 
   DoRequest(request, reply, err, &RemoteAPI::Modules);
   ASSERT_ZXDB_SUCCESS(err);
 
-  ASSERT_EQ(17UL, reply.modules.size());
+  ASSERT_EQ(11UL, reply.modules.size());
 
-  EXPECT_EQ("scenic", reply.modules[0].name);
-  EXPECT_EQ(0x5283b9a60000UL, reply.modules[0].base);
-  EXPECT_EQ("10b42e8965d35e1c", reply.modules[0].build_id);
+  EXPECT_EQ("<_>", reply.modules[0].name);
+  EXPECT_EQ(0xdb9f3c9ee000UL, reply.modules[0].base);
+  EXPECT_EQ("bbe04258f9aee727", reply.modules[0].build_id);
 
   EXPECT_EQ("libfxl_logging.so", reply.modules[1].name);
-  EXPECT_EQ(0x4b3297cab000UL, reply.modules[1].base);
-  EXPECT_EQ("1abfa7d0f205d62f", reply.modules[1].build_id);
+  EXPECT_EQ(0x88fde9aa2000UL, reply.modules[1].base);
+  EXPECT_EQ("6990f44a2b829d04", reply.modules[1].build_id);
 
-  EXPECT_EQ("libfxl.so", reply.modules[2].name);
-  EXPECT_EQ(0x668d303bd000UL, reply.modules[2].base);
-  EXPECT_EQ("b1c0b150a904a31a", reply.modules[2].build_id);
+  EXPECT_EQ("libfdio.so", reply.modules[2].name);
+  EXPECT_EQ(0xf84d6c82a000UL, reply.modules[2].base);
+  EXPECT_EQ("47521571b0824b71ddc745a01d7a0352539dd803", reply.modules[2].build_id);
 
-  EXPECT_EQ("libfsl.so", reply.modules[3].name);
-  EXPECT_EQ(0x590935d06000UL, reply.modules[3].base);
-  EXPECT_EQ("381f2ca7be23094b", reply.modules[3].build_id);
+  EXPECT_EQ("libzircon.so", reply.modules[3].name);
+  EXPECT_EQ(0xe0a9f4b35000UL, reply.modules[3].base);
+  EXPECT_EQ("b0cb33d5e533ba8f6dcb73cc9c158cb8247f0263", reply.modules[3].build_id);
 
-  EXPECT_EQ("libvulkan.so", reply.modules[4].name);
-  EXPECT_EQ(0x117b5412000UL, reply.modules[4].base);
-  EXPECT_EQ("4fd73d409f71ae52", reply.modules[4].build_id);
+  EXPECT_EQ("libasync-default.so", reply.modules[4].name);
+  EXPECT_EQ(0xacc33bf02000UL, reply.modules[4].base);
+  EXPECT_EQ("94dee2c0e27202b524255e07f7a9a9e5e282bdb0", reply.modules[4].build_id);
 
-  EXPECT_EQ("libmagma.so", reply.modules[5].name);
-  EXPECT_EQ(0x17e7d1bef000UL, reply.modules[5].base);
-  EXPECT_EQ("b25b19de123448f7", reply.modules[5].build_id);
+  EXPECT_EQ("libsyslog.so", reply.modules[5].name);
+  EXPECT_EQ(0xf4e730afa000UL, reply.modules[5].base);
+  EXPECT_EQ("d9ea935594739f99127a67a1816b4afa2d2fd486", reply.modules[5].build_id);
 
-  EXPECT_EQ("libfdio.so", reply.modules[6].name);
-  EXPECT_EQ(0x6bc14ef2000UL, reply.modules[6].base);
-  EXPECT_EQ("57a8cfe3e3c5f3e618dcf1ea95c2125f", reply.modules[6].build_id);
+  EXPECT_EQ("libtrace-engine.so", reply.modules[6].name);
+  EXPECT_EQ(0xe0f0f0035000UL, reply.modules[6].base);
+  EXPECT_EQ("b1f55f8a9a49d4bd5040c17b69b3e795f5e9ee84", reply.modules[6].build_id);
 
-  EXPECT_EQ("libzircon.so", reply.modules[7].name);
-  EXPECT_EQ(0x469a0a8cc000UL, reply.modules[7].base);
-  EXPECT_EQ("e71aad2e8791e7c1c33ac16dda37994f", reply.modules[7].build_id);
+  EXPECT_EQ("libc++.so.2", reply.modules[7].name);
+  EXPECT_EQ(0xd9512a2b0000UL, reply.modules[7].base);
+  EXPECT_EQ("e2805c6c256fe3bc", reply.modules[7].build_id);
 
-  EXPECT_EQ("libasync-default.so", reply.modules[8].name);
-  EXPECT_EQ(0x3051c2800000UL, reply.modules[8].base);
-  EXPECT_EQ("6501f751ad90dc9259f3e54e6d375fb6", reply.modules[8].build_id);
+  EXPECT_EQ("libc.so", reply.modules[8].name);
+  EXPECT_EQ(0xd339f6596000UL, reply.modules[8].base);
+  EXPECT_EQ("c92393053718b514a70777d18c4c0cc415d544b0", reply.modules[8].build_id);
 
-  EXPECT_EQ("libtrace-engine.so", reply.modules[9].name);
-  EXPECT_EQ(0xfd47fbc000UL, reply.modules[9].base);
-  EXPECT_EQ("cc1477c6ecf592c0b0735fb6214d005a", reply.modules[9].build_id);
+  EXPECT_EQ("libc++abi.so.1", reply.modules[9].name);
+  EXPECT_EQ(0xbcd34b71000UL, reply.modules[9].base);
+  EXPECT_EQ("91766972c93894f3", reply.modules[9].build_id);
 
-  EXPECT_EQ("libsyslog.so", reply.modules[10].name);
-  EXPECT_EQ(0x5615f3ac000UL, reply.modules[10].base);
-  EXPECT_EQ("7fc2dbd770526e2aeaa28d4c0987fd7a", reply.modules[10].build_id);
-
-  EXPECT_EQ("libdriver.so", reply.modules[11].name);
-  EXPECT_EQ(0x3b0bf8718000UL, reply.modules[11].base);
-  EXPECT_EQ("21820c862662441a154cedf719ffe9d6", reply.modules[11].build_id);
-
-  EXPECT_EQ("libc++.so.2", reply.modules[12].name);
-  EXPECT_EQ(0x4bf2c6583000UL, reply.modules[12].base);
-  EXPECT_EQ("e5e82a08a3201ec0", reply.modules[12].build_id);
-
-  EXPECT_EQ("libc++abi.so.1", reply.modules[13].name);
-  EXPECT_EQ(0x2aa8fa149000UL, reply.modules[13].base);
-  EXPECT_EQ("b97722222ed20925", reply.modules[13].build_id);
-
-  EXPECT_EQ("libunwind.so.1", reply.modules[14].name);
-  EXPECT_EQ(0x5ac9a6da2000UL, reply.modules[14].base);
-  EXPECT_EQ("5b1a853e10fb1f98", reply.modules[14].build_id);
-
-  EXPECT_EQ("libc.so", reply.modules[15].name);
-  EXPECT_EQ(0x4dc64798f000UL, reply.modules[15].base);
-  EXPECT_EQ("d9a39391e6747fcd3cce958895461cc0", reply.modules[15].build_id);
-
-  EXPECT_EQ("libframebuffer.so", reply.modules[16].name);
-  EXPECT_EQ(0x5fa025a5b000UL, reply.modules[16].base);
-  EXPECT_EQ("5869ebacaede36a3d43a24359083c628", reply.modules[16].build_id);
+  EXPECT_EQ("libunwind.so.1", reply.modules[10].name);
+  EXPECT_EQ(0xbcc263255000UL, reply.modules[10].base);
+  EXPECT_EQ("3a4ebe2ee4046112", reply.modules[10].build_id);
 }
 
 TEST_F(MinidumpTest, AddressSpace) {
