@@ -25,7 +25,8 @@
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "4"
+          "value": "4",
+          "expression": "4"
         }
       }
     }

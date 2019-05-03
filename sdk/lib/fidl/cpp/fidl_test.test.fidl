@@ -9,6 +9,12 @@ bits Uint32Bits : uint32 {
   TWO = 0x2;
 };
 
+bits SampleBits {
+    B = 2;
+    D = 4;
+    E = 8;
+};
+
 struct Int64Struct {
     int64 x;
 };

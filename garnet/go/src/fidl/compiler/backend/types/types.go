@@ -297,8 +297,8 @@ func (el Attributes) LookupAttribute(name Identifier) (Attribute, bool) {
 }
 
 func (el Attributes) HasAttribute(name Identifier) bool {
-        _, ok := el.LookupAttribute(name)
-        return ok
+	_, ok := el.LookupAttribute(name)
+	return ok
 }
 
 func (el Attributes) GetAttribute(name Identifier) Attribute {
@@ -508,6 +508,7 @@ type Bits struct {
 	Attributes
 	Type    Type                      `json:"type"`
 	Name    EncodedCompoundIdentifier `json:"name"`
+	Mask    string                    `json:"mask"`
 	Members []BitsMember              `json:"members"`
 }
 

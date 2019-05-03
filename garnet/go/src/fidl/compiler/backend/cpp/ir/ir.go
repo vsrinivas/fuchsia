@@ -64,6 +64,8 @@ type Bits struct {
 	Namespace string
 	Type      string
 	Name      string
+	Mask      string
+	MaskName  string
 	Members   []BitsMember
 	Kind      bitsKind
 }
@@ -648,7 +650,8 @@ func (c *compiler) compileBits(val types.Bits, appendNamespace string) Bits {
 		Namespace: c.namespace,
 		Type:      c.compileType(val.Type).Decl,
 		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace),
-		Members:   []BitsMember{},
+		Mask:      val.Mask,
+		MaskName:  c.compileCompoundIdentifier(val.Name, "Mask", appendNamespace),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
@@ -761,16 +764,16 @@ func (m Method) NewLLProps(r Interface) LLProps {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		Attributes:            val.Attributes,
-		Namespace:             c.namespace,
-		Name:                  c.compileCompoundIdentifier(val.Name, "", ""),
-		ClassName:             c.compileCompoundIdentifier(val.Name, "_clazz", ""),
-		ServiceName:           val.GetServiceName(),
-		ProxyName:             c.compileCompoundIdentifier(val.Name, "_Proxy", ""),
-		StubName:              c.compileCompoundIdentifier(val.Name, "_Stub", ""),
-		EventSenderName:       c.compileCompoundIdentifier(val.Name, "_EventSender", ""),
-		SyncName:              c.compileCompoundIdentifier(val.Name, "_Sync", ""),
-		SyncProxyName:         c.compileCompoundIdentifier(val.Name, "_SyncProxy", ""),
+		Attributes:      val.Attributes,
+		Namespace:       c.namespace,
+		Name:            c.compileCompoundIdentifier(val.Name, "", ""),
+		ClassName:       c.compileCompoundIdentifier(val.Name, "_clazz", ""),
+		ServiceName:     val.GetServiceName(),
+		ProxyName:       c.compileCompoundIdentifier(val.Name, "_Proxy", ""),
+		StubName:        c.compileCompoundIdentifier(val.Name, "_Stub", ""),
+		EventSenderName: c.compileCompoundIdentifier(val.Name, "_EventSender", ""),
+		SyncName:        c.compileCompoundIdentifier(val.Name, "_Sync", ""),
+		SyncProxyName:   c.compileCompoundIdentifier(val.Name, "_SyncProxy", ""),
 	}
 
 	hasEvents := false

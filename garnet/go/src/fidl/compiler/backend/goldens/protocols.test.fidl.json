@@ -25,7 +25,8 @@
             "kind": "literal",
             "literal": {
               "kind": "numeric",
-              "value": "1"
+              "value": "1",
+              "expression": "1"
             }
           }
         },
@@ -40,7 +41,8 @@
             "kind": "literal",
             "literal": {
               "kind": "numeric",
-              "value": "2"
+              "value": "2",
+              "expression": "2"
             }
           }
         }

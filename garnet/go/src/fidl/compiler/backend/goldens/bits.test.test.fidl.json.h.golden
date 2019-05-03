@@ -13,11 +13,33 @@ enum class MyBits : uint32_t {
   MY_OTHER_BIT = 2u,
 };
 
+const static MyBits MyBitsMask = static_cast<MyBits>(3u);
+
 inline zx_status_t Clone(::test::name::MyBits value,
                          ::test::name::MyBits* result) {
   *result = value;
   return ZX_OK;
 }
+
+::test::name::MyBits operator|(::test::name::MyBits _lhs,
+                                        ::test::name::MyBits _rhs);
+
+::test::name::MyBits& operator|=(::test::name::MyBits& _lhs,
+                                          ::test::name::MyBits _rhs);
+
+::test::name::MyBits operator&(::test::name::MyBits _lhs,
+                                        ::test::name::MyBits _rhs);
+
+::test::name::MyBits& operator&=(::test::name::MyBits& _lhs,
+                                          ::test::name::MyBits _rhs);
+
+::test::name::MyBits operator^(::test::name::MyBits _lhs,
+                                        ::test::name::MyBits _rhs);
+
+::test::name::MyBits& operator^=(::test::name::MyBits& _lhs,
+                                          ::test::name::MyBits _rhs);
+
+::test::name::MyBits operator~(::test::name::MyBits _value);
 
 }  // namespace name
 }  // namespace test
