@@ -68,27 +68,6 @@ fuchsia_component("example_component") {
   testonly = true
 }
 
-# TODO(IN-933): Reenable once fuchsia_test_component is supported.
-#fuchsia_test_component("cmc_integration_test_component") {
-#  manifest = rebase_path("meta/cmc_integration_test.cmx")
-#  deps = [
-#    ":cmc_integration_test_bin",
-#  ]
-#
-#  resources = [
-#    {
-#      if (is_debug) {
-#        path = rebase_path("tests/golden_debug.cm")
-#      } else {
-#        path = rebase_path("tests/golden_release.cm")
-#      }
-#      dest = "golden.cm"
-#    },
-#  ]
-#
-#  binary = "cmc_integration_test"
-#}
-
 test_package("cmc_integration_test") {
   deps = [
     ":cmc_integration_test_bin",

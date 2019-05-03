@@ -45,17 +45,23 @@ package("log_listener_shell") {
   ]
 }
 
-fuchsia_component("log_listener_component") {
-  manifest = rebase_path("meta/log_listener.cmx")
+package("log_listener") {
   deps = [
     ":bin",
   ]
 
-  binary = "log_listener"
-}
+  binaries = [
+    {
+      name = "log_listener"
+    },
+  ]
 
-package("log_listener") {
-  components = [ ":log_listener_component" ]
+  meta = [
+    {
+      path = rebase_path("meta/log_listener.cmx")
+      dest = "log_listener.cmx"
+    },
+  ]
 
   if (persist_logs) {
     data_deps = [

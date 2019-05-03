@@ -26,10 +26,3 @@ executable("logger_integration_cpp_tests") {
     "//zircon/public/lib/syslog",
   ]
 }
-# TODO(IN-933): Reenable once fuchsia_test_component is supported.
-# fuchsia_test_component("test_component") {
-#   binary = "logger_integration_cpp_tests"
-#   deps = [
-#     ":logger_integration_cpp_tests",
-#   ]
-# }

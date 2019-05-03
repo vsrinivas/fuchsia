@@ -17,15 +17,6 @@ test("scenic_cpp_unittests") {
   ]
 }
 
-# TODO(IN-933): Reenable once fuchsia_test_component is supported.
-# fuchsia_test_component("scenic_cpp_unittests_component") {
-#   deps = [
-#     ":scenic_cpp_unittests",
-#   ]
-#   binary = "scenic_cpp_unittests"
-# }
-
-# TODO(IN-933): Convert back to package
 test_package("scenic_cpp_tests") {
   deps = [
     ":scenic_cpp_unittests",

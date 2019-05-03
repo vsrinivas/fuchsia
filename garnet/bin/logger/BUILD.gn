@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/package/component.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
   name = "logger"
@@ -26,30 +27,34 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("logger_component") {
-  manifest = rebase_path("meta/logger.cmx")
-
+package("logger") {
   deps = [
     ":bin",
   ]
 
-  binary = "logger"
+  binaries = [
+    {
+      name = "logger"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/logger.cmx")
+      dest = "logger.cmx"
+    },
+  ]
 }
 
-package("logger") {
-  components = [ ":logger_component" ]
-}
+test_package("logger_tests") {
+  deps = [
+    ":bin",
+  ]
 
-# TODO(IN-933): Reenable once fuchsia_test_component is supported.
-# fuchsia_test_component("logger_test_component") {
-#   deps = [
-#     ":bin",
-#   ]
-#   binary = "logger_bin_test"
-# }
-
-package("logger_tests") {
-  testonly = true
-  # TODO(IN-933): Reenable once fuchsia_test_component is supported.
-  # components = [ ":logger_test_component" ]
+  tests = [
+    {
+      name = "logger_bin_test"
+      environments = basic_envs
+    },
+  ]
 }

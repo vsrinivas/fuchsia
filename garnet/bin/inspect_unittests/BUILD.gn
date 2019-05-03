@@ -33,16 +33,6 @@ executable("bin") {
   libs = [ "zircon" ]
 }
 
-# TODO(IN-933): Reenable once fuchsia_test_component is supported.
-# fuchsia_test_component("inspect_unittests_component") {
-#   deps = [
-#     ":bin",
-#   ]
-#
-#   binary = "inspect_unittests"
-# }
-
-# TODO(IN-933): Convert back to package
 test_package("inspect_unittests") {
   deps = [
     ":bin",

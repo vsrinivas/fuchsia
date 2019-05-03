@@ -53,17 +53,22 @@ executable("bin") {
   ]
 }
 
-fuchsia_component("sysmgr_component") {
-  manifest = rebase_path("meta/sysmgr.cmx")
+package("sysmgr") {
   deps = [
     ":bin",
   ]
+  binaries = [
+    {
+      name = "sysmgr"
+    },
+  ]
 
-  binary = "sysmgr"
-}
-
-package("sysmgr") {
-  components = [ ":sysmgr_component" ]
+  meta = [
+    {
+      path = rebase_path("meta/sysmgr.cmx")
+      dest = "sysmgr.cmx"
+    },
+  ]
 }
 
 template("cfg") {

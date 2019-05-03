@@ -28,20 +28,21 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("pkg_cached") {
+package("pkg_cache") {
   deps = [
     ":bin",
   ]
+  binaries = [
+    {
+      name = "pkg_cache"
+    },
+  ]
 
-  manifest = rebase_path("meta/pkg_cache.cmx")
-
-  binary_dest = "bin/pkg_cache"
-  binary = "pkg_cache"
-}
-
-package("pkg_cache") {
-  components = [
-    ":pkg_cached",
+  meta = [
+    {
+      path = rebase_path("meta/pkg_cache.cmx")
+      dest = "pkg_cache.cmx"
+    },
   ]
 }
 

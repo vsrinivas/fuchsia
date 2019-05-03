@@ -30,10 +30,3 @@ rustc_binary("bin") {
     "//zircon/public/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
 }
-# TODO(IN-933): Reenable once fuchsia_test_component is supported.
-# fuchsia_test_component("test_component") {
-#   binary = "logger_integration_bin_test"
-#   deps = [
-#     ":bin",
-#   ]
-# }

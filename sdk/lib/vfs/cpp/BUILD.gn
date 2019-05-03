@@ -82,15 +82,6 @@ test("vfs_cpp_unittests") {
   ]
 }
 
-# TODO(IN-933): Reenable once fuchsia_test_component is supported.
-# fuchsia_test_component("vfs_cpp_unittests_component") {
-#   deps = [
-#     ":vfs_cpp_unittests",
-#   ]
-#   binary = "vfs_cpp_unittests"
-# }
-
-# TODO(IN-933): Convert back to package
 test_package("vfs_cpp_tests") {
   deps = [
     ":vfs_cpp_unittests",

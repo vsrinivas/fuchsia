@@ -15,7 +15,6 @@ group("tests") {
   ]
 }
 
-# TODO(IN-933): Convert back to package
 test_package("logger_integration_tests") {
   deps = [
     "cpp:logger_integration_cpp_tests",
