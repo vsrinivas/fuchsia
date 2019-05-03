@@ -68,27 +68,47 @@ function create-git-commit-and-upload {
   return $?
 }
 
+function read-patches-from-stdin {
+  local line host project ref first=true
+  declare -A seen_projects
+  while read line; do
+    local url=$(echo "$line" | cut -d " " -f 3 | sed 's/"//g')
+    host=$(echo "$url" | cut -d / -f 3)
+    project=$(echo "$url" | cut -d / -f 4)
+    ref=$(echo "$line" | cut -d " " -f 4)
+
+    if [[ ${seen_projects[$project]} ]]; then
+      (
+        echo
+        echo "ERROR: You are limited to one patch per project. You already inputted"
+        echo "a patch for project '${project}'. Please collapse these changes into"
+        echo "one and try again."
+      ) > /dev/stderr
+      return 1
+    fi
+    seen_projects[$project]=1
+
+    if [[ $first = false ]]; then
+      printf ',\n'
+    fi
+    printf '  {\n    "ref": "%s",\n    "host": "%s",\n    "project": "%s"\n  }' "$ref" "$host" "$project"
+    first=false
+  done < /dev/stdin
+}
+
 function main {
   local integration_dir="${FUCHSIA_DIR}/integration"
 
   abort-if-unclean $integration_dir
   print-instructions
 
-  patches=$(
-    local line host project ref first=true
-    while read line; do
-      local url=$(echo "$line" | cut -d " " -f 3 | sed 's/"//g')
-      host=$(echo "$url" | cut -d / -f 3)
-      project=$(echo "$url" | cut -d / -f 4)
-      ref=$(echo "$line" | cut -d " " -f 4)
-
-      if [ $first = false ]; then
-        printf ',\n'
-      fi
-      first=false
-      printf '  {\n    "ref": "%s",\n    "host": "%s",\n    "project": "%s"\n  }' "$ref" "$host" "$project"
-    done < /dev/stdin
-  )
+  # Track seen projects. We are limited to a single patch per project.
+  local patches
+  patches=$(read-patches-from-stdin)
+  local result=$?
+  if [[ $result -ne 0 ]]; then
+    exit 1
+  fi
 
   local patch_file_contents=$(printf '[\n%s\n]' "$patches")
 
