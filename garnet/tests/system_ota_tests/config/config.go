@@ -14,6 +14,7 @@ import (
 
 	"fuchsia.googlesource.com/system_ota_tests/artifacts"
 	"fuchsia.googlesource.com/system_ota_tests/device"
+	"fuchsia.googlesource.com/system_ota_tests/packages"
 	"fuchsia.googlesource.com/system_ota_tests/util"
 )
 
@@ -28,7 +29,7 @@ type Config struct {
 	LkgbPath       string
 	ArtifactsPath  string
 	BuilderName    string
-	AmberFilesDir  string
+	PackagesPath   string
 	buildID        string
 	archive        *artifacts.Archive
 }
@@ -54,7 +55,7 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.ArtifactsPath, "artifacts", filepath.Join(testDataPath, "artifacts"), "path to the artifacts binary, default is $FUCHSIA_DIR/prebuilt/tools/artifacts/artifacts")
 	fs.StringVar(&c.BuilderName, "builder-name", "", "download the amber repository from the latest build of this builder")
 	fs.StringVar(&c.buildID, "build-id", "", "download the amber repository from this build id")
-	fs.StringVar(&c.AmberFilesDir, "amber-files", os.Getenv("AMBER_FILES"), "Path to the current build amber-files repository")
+	fs.StringVar(&c.PackagesPath, "packages", filepath.Join(testDataPath, "packages.tar.gz"), "Path to the current packages.tar.gz file")
 
 	return c, nil
 }
@@ -140,4 +141,9 @@ func (c *Config) netaddr(arg ...string) (string, error) {
 		return "", fmt.Errorf("netaddr failed: %s: %s", err, string(stderr))
 	}
 	return strings.TrimRight(string(stdout), "\n"), nil
+}
+
+func (c *Config) CurrentPackageRepository() (*packages.Repository, error) {
+	dir := filepath.Join(c.OutputDir, "current", "packages")
+	return packages.NewRepositoryFromTar(dir, c.PackagesPath)
 }

@@ -29,9 +29,13 @@ go_library("system_ota_tests_lib") {
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
     "//garnet/public/go/third_party:golang.org/x/crypto",
   ]
-  non_go_deps = [ ":copy" ]
+  non_go_deps = [
+    "//build/gn:package_archive($target_toolchain)",
+    ":copy",
+  ]
   metadata = {
     test_runtime_deps = get_target_outputs(":copy")
+    test_runtime_deps += [ "$root_build_dir/packages.tar.gz" ]
   }
 }
 
