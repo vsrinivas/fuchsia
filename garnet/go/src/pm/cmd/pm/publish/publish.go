@@ -46,7 +46,10 @@ func Run(cfg *build.Config, args []string) error {
 
 	archiveMode := fs.Bool("a", false, "(mode) Publish an archived package.")
 	listOfPackageManifestsMode := fs.Bool("lp", false, "(mode) Publish a list of packages (and blobs) by package output manifest")
-	modeFlags := []*bool{archiveMode, listOfPackageManifestsMode}
+	packageSetMode := fs.Bool("ps", false, "(mode) Publish a set of packages from a manifest.")
+	blobSetMode := fs.Bool("bs", false, "(mode) Publish a set of blobs from a manifest.")
+	// WARNING: packageset and blobsset modes are deprecated, but are depended upon by infra code.
+	modeFlags := []*bool{archiveMode, listOfPackageManifestsMode, packageSetMode, blobSetMode}
 
 	config := &repo.Config{}
 	config.Vars(fs)
@@ -250,6 +253,50 @@ func Run(cfg *build.Config, args []string) error {
 		}
 		if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
 			log.Fatalf("error committing repository updates: %s", err)
+		}
+
+	// WARNING: the following two modes are load bearing in infra, but are
+	// deprecated. They do not have any test coverage. Tread carefully.
+	case *packageSetMode:
+		if len(filePaths) != 1 {
+			return fmt.Errorf("too many file paths supplied")
+		}
+		deps = append(deps, filePaths[0])
+		if err := eachEntry(filePaths[0], func(name, src string) error {
+			deps = append(deps, src)
+			f, err := os.Open(src)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			if err := repo.AddPackage(name, f, ""); err != nil {
+				return fmt.Errorf("failed to add package %q from %q: %s", name, src, err)
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+		if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
+			log.Fatalf("error committing repository updates: %s", err)
+		}
+	case *blobSetMode:
+		if len(filePaths) != 1 {
+			return fmt.Errorf("too many file paths supplied")
+		}
+		deps = append(deps, filePaths[0])
+		if err := eachEntry(filePaths[0], func(merkle, src string) error {
+			deps = append(deps, src)
+			f, err := os.Open(src)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			if _, _, err := repo.AddBlob(merkle, f); err != nil {
+				return fmt.Errorf("failed to add blob %q from %q: %s", merkle, src, err)
+			}
+			return nil
+		}); err != nil {
+			return err
 		}
 
 	default:
