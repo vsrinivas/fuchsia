@@ -2,7 +2,6 @@
 #[macro_use] extern crate itertools as it;
 extern crate permutohedron;
 
-use it::flatten;
 use it::Itertools;
 use it::multizip;
 use it::multipeek;
@@ -166,6 +165,7 @@ fn test_rciter() {
     assert_eq!(z.next(), Some((0, 1)));
 }
 
+#[allow(deprecated)]
 #[test]
 fn trait_pointers() {
     struct ByRef<'r, I: ?Sized>(&'r mut I) where I: 'r;
@@ -221,6 +221,7 @@ fn merge_by_btree() {
     it::assert_equal(results, expected.into_iter());
 }
 
+#[allow(deprecated)]
 #[test]
 fn kmerge() {
     let its = (0..4).map(|s| (s..10).step(4));
@@ -228,6 +229,7 @@ fn kmerge() {
     it::assert_equal(its.kmerge(), 0..10);
 }
 
+#[allow(deprecated)]
 #[test]
 fn kmerge_2() {
     let its = vec![3, 2, 1, 0].into_iter().map(|s| (s..10).step(4));
@@ -269,19 +271,19 @@ fn sorted_by() {
     let sc = [3, 4, 1, 2].iter().cloned().sorted_by(|&a, &b| {
         a.cmp(&b)
     });
-    assert_eq!(sc, vec![1, 2, 3, 4]);
+    it::assert_equal(sc, vec![1, 2, 3, 4]);
 
     let v = (0..5).sorted_by(|&a, &b| a.cmp(&b).reverse());
-    assert_eq!(v, vec![4, 3, 2, 1, 0]);
+    it::assert_equal(v, vec![4, 3, 2, 1, 0]);
 }
 
 #[test]
 fn sorted_by_key() {
     let sc = [3, 4, 1, 2].iter().cloned().sorted_by_key(|&x| x);
-    assert_eq!(sc, vec![1, 2, 3, 4]);
+    it::assert_equal(sc, vec![1, 2, 3, 4]);
 
     let v = (0..5).sorted_by_key(|&x| -x);
-    assert_eq!(v, vec![4, 3, 2, 1, 0]);
+    it::assert_equal(v, vec![4, 3, 2, 1, 0]);
 }
 
 #[test]
@@ -539,23 +541,6 @@ fn concat_non_empty() {
 }
 
 #[test]
-fn flatten_iter() {
-    let data = vec![vec![1,2,3], vec![4,5], vec![], vec![6]];
-    it::assert_equal(flatten(data), vec![1,2,3,4,5,6]);
-}
-
-#[test]
-fn flatten_fold() {
-    let xs = [0, 1, 1, 1, 2, 1, 3, 3];
-    let ch = xs.iter().chunks(3);
-    let mut iter = flatten(&ch);
-    iter.next();
-    let mut xs_d = Vec::new();
-    iter.fold((), |(), &elt| xs_d.push(elt));
-    assert_eq!(&xs_d[..], &xs[1..]);
-}
-
-#[test]
 fn combinations() {
     assert!((1..3).combinations(5).next().is_none());
 
@@ -702,6 +687,7 @@ fn while_some() {
     it::assert_equal(ns, vec![1, 2, 3, 4]);
 }
 
+#[allow(deprecated)]
 #[test]
 fn fold_while() {
     let mut iterations = 0;

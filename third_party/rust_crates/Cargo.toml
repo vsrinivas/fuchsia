@@ -41,7 +41,7 @@ hex = "0.3.2"
 http = "0.1"
 hyper = { version = "0.12.13", default-features = false }
 hyper-rustls = { version = "0.16.1", default-features = false }
-itertools = "0.7"
+itertools = "0.8"
 itoa = "0.4"
 json5 = "0.2.4"
 lazy_static = "1"
