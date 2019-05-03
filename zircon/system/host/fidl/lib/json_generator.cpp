@@ -15,11 +15,23 @@ constexpr const char* kIndent = "  ";
 // Functions named "Emit..." are called to actually emit to an std::ostream
 // is here. No other functions should directly emit to the streams.
 
-void EmitBoolean(std::ostream* file, bool value) {
+// ConstantStyle indicates whether the constant value to be emitted should be
+// directly placed in the JSON output, or whether is must be wrapped in a
+// string.
+enum ConstantStyle {
+    kAsConstant,
+    kAsString,
+};
+
+void EmitBoolean(std::ostream* file, bool value, ConstantStyle style = kAsConstant) {
+    if (style == kAsString)
+        *file << "\"";
     if (value)
         *file << "true";
     else
         *file << "false";
+    if (style == kAsString)
+        *file << "\"";
 }
 
 void EmitString(std::ostream* file, std::string_view value) {
@@ -50,8 +62,23 @@ void EmitLiteral(std::ostream* file, std::string_view value) {
     file->rdbuf()->sputn(value.data(), value.size());
 }
 
-void EmitUint32(std::ostream* file, uint32_t value) {
-    *file << value;
+template <typename ValueType>
+void EmitNumeric(std::ostream* file, ValueType value, ConstantStyle style = kAsConstant) {
+    static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, bool>::value,
+                  "EmitNumeric can only be used with a numeric ValueType!");
+    static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, uint8_t>::value,
+                  "EmitNumeric does not work for uint8_t, upcast to uint64_t");
+    static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, int8_t>::value,
+                  "EmitNumeric does not work for int8_t, upcast to int64_t");
+
+    switch (style) {
+    case ConstantStyle::kAsConstant:
+        *file << value;
+        break;
+    case ConstantStyle::kAsString:
+        *file << "\"" << value << "\"";
+        break;
+    }
 }
 
 void EmitNewline(std::ostream* file) {
@@ -218,7 +245,72 @@ void JSONGenerator::Generate(NameLocation value) {
 }
 
 void JSONGenerator::Generate(uint32_t value) {
-    EmitUint32(&json_file_, value);
+    EmitNumeric(&json_file_, value);
+}
+
+void JSONGenerator::Generate(const flat::ConstantValue& value) {
+    switch (value.kind) {
+    case flat::ConstantValue::Kind::kUint8: {
+        auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint8_t>&>(value);
+        EmitNumeric(&json_file_, static_cast<uint64_t>(numeric_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kUint16: {
+        auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint16_t>&>(value);
+        EmitNumeric(&json_file_, static_cast<uint16_t>(numeric_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kUint32: {
+        auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint32_t>&>(value);
+        EmitNumeric(&json_file_, static_cast<uint32_t>(numeric_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kUint64: {
+        auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint64_t>&>(value);
+        EmitNumeric(&json_file_, static_cast<uint64_t>(numeric_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kInt8: {
+        auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int8_t>&>(value);
+        EmitNumeric(&json_file_, static_cast<int64_t>(numeric_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kInt16: {
+        auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int16_t>&>(value);
+        EmitNumeric(&json_file_, static_cast<int16_t>(numeric_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kInt32: {
+        auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int32_t>&>(value);
+        EmitNumeric(&json_file_, static_cast<int32_t>(numeric_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kInt64: {
+        auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<int64_t>&>(value);
+        EmitNumeric(&json_file_, static_cast<int64_t>(numeric_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kFloat32: {
+        auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<float>&>(value);
+        EmitNumeric(&json_file_, static_cast<float>(numeric_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kFloat64: {
+        auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<double>&>(value);
+        EmitNumeric(&json_file_, static_cast<double>(numeric_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kBool: {
+        auto bool_constant = reinterpret_cast<const flat::BoolConstantValue&>(value);
+        EmitBoolean(&json_file_, static_cast<bool>(bool_constant), kAsString);
+        break;
+    }
+    case flat::ConstantValue::Kind::kString: {
+        auto string_constant = reinterpret_cast<const flat::StringConstantValue&>(value);
+        EmitLiteral(&json_file_, string_constant.value);
+        break;
+    }
+    } // switch
 }
 
 void JSONGenerator::Generate(types::HandleSubtype value) {
@@ -244,30 +336,20 @@ void JSONGenerator::Generate(const raw::Identifier& value) {
     EmitString(&json_file_, value.location().data());
 }
 
-void JSONGenerator::Generate(const raw::Literal& value) {
+void JSONGenerator::Generate(const flat::LiteralConstant& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("kind", NameRawLiteralKind(value.kind), Position::kFirst);
+        GenerateObjectMember("kind", NameRawLiteralKind(value.literal->kind), Position::kFirst);
 
-        switch (value.kind) {
-        case raw::Literal::Kind::kString: {
-            auto type = static_cast<const raw::StringLiteral*>(&value);
-            EmitObjectSeparator(&json_file_, indent_level_);
-            EmitObjectKey(&json_file_, indent_level_, "value");
-            EmitLiteral(&json_file_, type->location().data());
-            break;
+        // TODO(FIDL-486): Since some constants are not properly resolved during
+        // library compilation, we must be careful in emitting the resolved
+        // value. Currently, we fall back using the original value, despite this
+        // being problematic in the case of binary literals.
+        if (value.IsResolved()) {
+            GenerateObjectMember("value", value.Value());
+        } else {
+            GenerateObjectMember("value", value.literal->location().data());
         }
-        case raw::Literal::Kind::kNumeric: {
-            auto type = static_cast<const raw::NumericLiteral*>(&value);
-            GenerateObjectMember("value", type->location().data());
-            break;
-        }
-        case raw::Literal::Kind::kTrue: {
-            break;
-        }
-        case raw::Literal::Kind::kFalse: {
-            break;
-        }
-        }
+        GenerateObjectMember("expression", value.literal->location().data());
     });
 }
 
@@ -282,8 +364,8 @@ void JSONGenerator::Generate(const flat::Constant& value) {
         }
         case flat::Constant::Kind::kLiteral: {
             GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
-            auto type = static_cast<const flat::LiteralConstant*>(&value);
-            GenerateObjectMember("literal", type->literal);
+            auto& type = static_cast<const flat::LiteralConstant&>(value);
+            GenerateObjectMember("literal", type);
             break;
         }
         case flat::Constant::Kind::kSynthesized: {
@@ -366,7 +448,7 @@ void JSONGenerator::Generate(const raw::AttributeList& value) {
 }
 
 void JSONGenerator::Generate(const raw::Ordinal& value) {
-    EmitUint32(&json_file_, value.value);
+    EmitNumeric(&json_file_, value.value);
 }
 
 void JSONGenerator::Generate(const flat::Name& value) {

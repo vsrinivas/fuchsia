@@ -1417,7 +1417,8 @@ bits Bits : uint64 {
             "kind": "literal",
             "literal": {
               "kind": "numeric",
-              "value": "1"
+              "value": "1",
+              "expression": "1"
             }
           }
         },
@@ -1427,7 +1428,8 @@ bits Bits : uint64 {
             "kind": "literal",
             "literal": {
               "kind": "numeric",
-              "value": "0x8000000000000000"
+              "value": "9223372036854775808",
+              "expression": "0x8000000000000000"
             }
           }
         }
@@ -1524,7 +1526,8 @@ struct Struct {
             "kind": "literal",
             "literal": {
               "kind": "numeric",
-              "value": "0x8"
+              "value": "8",
+              "expression": "0x8"
             }
           }
         }
@@ -1547,7 +1550,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "0b100"
+          "value": "4",
+          "expression": "0b100"
         }
       }
     },
@@ -1566,7 +1570,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "0b100"
+          "value": "4",
+          "expression": "0b100"
         }
       }
     },
@@ -1585,7 +1590,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "0b100"
+          "value": "4",
+          "expression": "0b100"
         }
       }
     },
@@ -1604,7 +1610,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "0b100"
+          "value": "4",
+          "expression": "0b100"
         }
       }
     },
@@ -1623,7 +1630,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "0b100"
+          "value": "4",
+          "expression": "0b100"
         }
       }
     },
@@ -1642,7 +1650,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "0b100"
+          "value": "4",
+          "expression": "0b100"
         }
       }
     },
@@ -1661,7 +1670,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "0b100"
+          "value": "4",
+          "expression": "0b100"
         }
       }
     },
@@ -1680,7 +1690,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "0b100"
+          "value": "4",
+          "expression": "0b100"
         }
       }
     },
@@ -1699,7 +1710,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "3.14159"
+          "value": "3.14159",
+          "expression": "3.14159"
         }
       }
     },
@@ -1718,7 +1730,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "numeric",
-          "value": "3.14159"
+          "value": "3.14159",
+          "expression": "3.14159"
         }
       }
     },
@@ -1736,7 +1749,9 @@ struct Struct {
       "value": {
         "kind": "literal",
         "literal": {
-          "kind": "true"
+          "kind": "true",
+          "value": "true",
+          "expression": "true"
         }
       }
     },
@@ -1755,7 +1770,8 @@ struct Struct {
         "kind": "literal",
         "literal": {
           "kind": "string",
-          "value": "string"
+          "value": "string",
+          "expression": "\"string\""
         }
       }
     }
@@ -1781,7 +1797,8 @@ struct Struct {
             "kind": "literal",
             "literal": {
               "kind": "numeric",
-              "value": "0b10101010"
+              "value": "170",
+              "expression": "0b10101010"
             }
           }
         }
@@ -1814,7 +1831,8 @@ struct Struct {
             "kind": "literal",
             "literal": {
               "kind": "numeric",
-              "value": "007"
+              "value": "007",
+              "expression": "007"
             }
           },
           "size": 8,

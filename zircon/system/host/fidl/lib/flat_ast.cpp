@@ -3009,6 +3009,8 @@ bool Library::CompileStruct(Struct* struct_declaration) {
                             name_result.previous_occurrence().position());
         if (!CompileTypeConstructor(member.type_ctor.get(), &member.fieldshape.Typeshape()))
             return false;
+        // TODO(FIDL-486): When a default value is present, we must resolve the
+        // constant properly.
         fidl_struct.push_back(&member.fieldshape);
     }
 

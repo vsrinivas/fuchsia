@@ -66,22 +66,22 @@ struct WatchedEvent {
 };
 
 // Used by Directory::Watch. Requests transmission of WATCH_EVENT_REMOVED.
-constexpr uint32_t WATCH_MASK_REMOVED = 0x00000004;
+constexpr uint32_t WATCH_MASK_REMOVED = 4u;
 
 // Used by Directory::Watch. Requests transmission of WATCH_EVENT_IDLE.
-constexpr uint32_t WATCH_MASK_IDLE = 0x00000010;
+constexpr uint32_t WATCH_MASK_IDLE = 16u;
 
 // Used by Directory::Watch. Requests transmission of WATCH_EVENT_EXISTING.
-constexpr uint32_t WATCH_MASK_EXISTING = 0x00000008;
+constexpr uint32_t WATCH_MASK_EXISTING = 8u;
 
 // Used by Directory::Watch. Requests transmission of WATCH_EVENT_DELETED.
-constexpr uint32_t WATCH_MASK_DELETED = 0x00000001;
+constexpr uint32_t WATCH_MASK_DELETED = 1u;
 
 // Used by Directory::Watch. Requests transmission of all watcher events.
-constexpr uint32_t WATCH_MASK_ALL = 0x0000001F;
+constexpr uint32_t WATCH_MASK_ALL = 31u;
 
 // Used by Directory::Watch. Requests transmission of WATCH_EVENT_ADDED.
-constexpr uint32_t WATCH_MASK_ADDED = 0x00000002;
+constexpr uint32_t WATCH_MASK_ADDED = 2u;
 
 // Identifies a node has been removed (either deleted or moved) from the directory.
 constexpr uint8_t WATCH_EVENT_REMOVED = 2u;
@@ -122,23 +122,23 @@ struct Vmofile {
 };
 
 // Requests that the VMO be writable.
-constexpr uint32_t VMO_FLAG_WRITE = 0x00000002;
+constexpr uint32_t VMO_FLAG_WRITE = 2u;
 
 // Requests that the VMO be readable.
-constexpr uint32_t VMO_FLAG_READ = 0x00000001;
+constexpr uint32_t VMO_FLAG_READ = 1u;
 
 // Require a copy-on-write clone of the underlying VMO.
 // The request should fail if the VMO is not cloned.
 // May not be supplied with fuchsia_io_VMO_FLAG_EXACT.
-constexpr uint32_t VMO_FLAG_PRIVATE = 0x00010000;
+constexpr uint32_t VMO_FLAG_PRIVATE = 65536u;
 
 // Requests that the VMO be executable.
-constexpr uint32_t VMO_FLAG_EXEC = 0x00000004;
+constexpr uint32_t VMO_FLAG_EXEC = 4u;
 
 // Require an exact (non-cloned) handle to the underlying VMO.
 // The request should fail if a handle to the exact VMO is not returned.
 // May not be supplied with VMO_FLAG_PRIVATE.
-constexpr uint32_t VMO_FLAG_EXACT = 0x00020000;
+constexpr uint32_t VMO_FLAG_EXACT = 131072u;
 
 extern "C" const fidl_type_t fuchsia_io_TtyTable;
 
@@ -276,16 +276,16 @@ struct Pipe {
 };
 
 // Can write to target object.
-constexpr uint32_t OPEN_RIGHT_WRITABLE = 0x00000002;
+constexpr uint32_t OPEN_RIGHT_WRITABLE = 2u;
 
 // Can read from target object.
-constexpr uint32_t OPEN_RIGHT_READABLE = 0x00000001;
+constexpr uint32_t OPEN_RIGHT_READABLE = 1u;
 
 // Connection can mount/umount filesystem.
-constexpr uint32_t OPEN_RIGHT_ADMIN = 0x00000004;
+constexpr uint32_t OPEN_RIGHT_ADMIN = 4u;
 
 // Truncate the object before usage.
-constexpr uint32_t OPEN_FLAG_TRUNCATE = 0x00040000;
+constexpr uint32_t OPEN_FLAG_TRUNCATE = 262144u;
 
 // Specify this flag to request POSIX-compatibility. Currently, it affects permission handling.
 // During Open:
@@ -303,14 +303,14 @@ constexpr uint32_t OPEN_FLAG_TRUNCATE = 0x00040000;
 // may be ignored by the server, and is not forwarded downstream. This is an implementation detail,
 // necessary to enforce hierarchical permissions across mount points, and should have no effect
 // on the expected behavior for clients.
-constexpr uint32_t OPEN_FLAG_POSIX = 0x01000000;
+constexpr uint32_t OPEN_FLAG_POSIX = 16777216u;
 
 // If the object is a mount point, open the local directory.
-constexpr uint32_t OPEN_FLAG_NO_REMOTE = 0x00200000;
+constexpr uint32_t OPEN_FLAG_NO_REMOTE = 2097152u;
 
 // Assert that the object to be opened is not a directory.
 // Return an error if the target object is a directory.
-constexpr uint32_t OPEN_FLAG_NOT_DIRECTORY = 0x02000000;
+constexpr uint32_t OPEN_FLAG_NOT_DIRECTORY = 33554432u;
 
 // Open a reference to the object, not the object itself.
 // It is ONLY valid to pass the following flags together with OPEN_FLAG_NODE_REFERENCE:
@@ -322,28 +322,28 @@ constexpr uint32_t OPEN_FLAG_NOT_DIRECTORY = 0x02000000;
 // any permission flags.
 // The resulting node allows a limited set of operations: |GetAttr|, |Clone|, |Close|, |Describe|,
 // and, if the node is a file, these extra operations: |GetFlags|, |SetFlags|.
-constexpr uint32_t OPEN_FLAG_NODE_REFERENCE = 0x00400000;
+constexpr uint32_t OPEN_FLAG_NODE_REFERENCE = 4194304u;
 
 // Assert that the object to be opened is a directory.
 // Return an error if the target object is not a directory.
-constexpr uint32_t OPEN_FLAG_DIRECTORY = 0x00080000;
+constexpr uint32_t OPEN_FLAG_DIRECTORY = 524288u;
 
 // Requests that an "OnOpen" event is sent to the interface request.
 // The event will contain a non-null NodeInfo if the open/clone is successful.
-constexpr uint32_t OPEN_FLAG_DESCRIBE = 0x00800000;
+constexpr uint32_t OPEN_FLAG_DESCRIBE = 8388608u;
 
 // (with Create) Fail if the object already exists.
-constexpr uint32_t OPEN_FLAG_CREATE_IF_ABSENT = 0x00020000;
+constexpr uint32_t OPEN_FLAG_CREATE_IF_ABSENT = 131072u;
 
 // Create the object if it doesn't exist.
-constexpr uint32_t OPEN_FLAG_CREATE = 0x00010000;
+constexpr uint32_t OPEN_FLAG_CREATE = 65536u;
 
 // Seek to the end of the object before all writes.
-constexpr uint32_t OPEN_FLAG_APPEND = 0x00100000;
+constexpr uint32_t OPEN_FLAG_APPEND = 1048576u;
 
 // Binary OR of OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_DESCRIBE, and
 // OPEN_FLAG_NODE_REFERENCE. Flags used when opening a node reference must fall within this mask.
-constexpr uint32_t OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE = 0x02c80000;
+constexpr uint32_t OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE = 46661632u;
 
 
 
@@ -377,34 +377,34 @@ struct NodeAttributes {
   uint64_t modification_time{};
 };
 
-constexpr uint32_t NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME = 0x00000002;
+constexpr uint32_t NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME = 2u;
 
 // The fields of 'attributes' which are used to update the Node are indicated
 // by the 'flags' argument.
-constexpr uint32_t NODE_ATTRIBUTE_FLAG_CREATION_TIME = 0x00000001;
+constexpr uint32_t NODE_ATTRIBUTE_FLAG_CREATION_TIME = 1u;
 
-constexpr uint32_t MOUNT_CREATE_FLAG_REPLACE = 0x00000001;
+constexpr uint32_t MOUNT_CREATE_FLAG_REPLACE = 1u;
 
-constexpr uint32_t MODE_TYPE_SOCKET = 0x0C000;
+constexpr uint32_t MODE_TYPE_SOCKET = 49152u;
 
-constexpr uint32_t MODE_TYPE_SERVICE = 0x10000;
+constexpr uint32_t MODE_TYPE_SERVICE = 65536u;
 
 // Bits indicating node type. The canonical mechanism to check
 // for a node type is to take 'mode', bitwise AND it with the
 // MODE_TYPE_MASK, and check exact equality against a mode type.
-constexpr uint32_t MODE_TYPE_MASK = 0xFF000;
+constexpr uint32_t MODE_TYPE_MASK = 1044480u;
 
-constexpr uint32_t MODE_TYPE_FILE = 0x08000;
+constexpr uint32_t MODE_TYPE_FILE = 32768u;
 
-constexpr uint32_t MODE_TYPE_DIRECTORY = 0x04000;
+constexpr uint32_t MODE_TYPE_DIRECTORY = 16384u;
 
-constexpr uint32_t MODE_TYPE_BLOCK_DEVICE = 0x06000;
+constexpr uint32_t MODE_TYPE_BLOCK_DEVICE = 24576u;
 
 // Bits reserved for posix protections. Native fuchsia filesystems
 // are not required to set bits contained within MODE_PROTECTION_MASK,
 // but filesystems that wish to do so may refer to sys/stat.h for their
 // definitions.
-constexpr uint32_t MODE_PROTECTION_MASK = 0x00FFF;
+constexpr uint32_t MODE_PROTECTION_MASK = 4095u;
 
 // The maximum length, in bytes, of a filesystem string.
 constexpr uint64_t MAX_PATH = 4096u;
@@ -422,7 +422,7 @@ constexpr uint64_t MAX_BUF = 8192u;
 
 // Nodes which do not have ino values should return this value
 // from Readdir and GetAttr.
-constexpr uint64_t INO_UNKNOWN = 0xFFFFFFFFFFFFFFFF;
+constexpr uint64_t INO_UNKNOWN = 18446744073709551615u;
 
 
 
@@ -490,10 +490,10 @@ struct FileObject {
 };
 
 // Indicates the file is ready for writing.
-constexpr uint32_t FILE_SIGNAL_WRITABLE = 0x02000000;
+constexpr uint32_t FILE_SIGNAL_WRITABLE = 33554432u;
 
 // Indicates the file is ready for reading.
-constexpr uint32_t FILE_SIGNAL_READABLE = 0x01000000;
+constexpr uint32_t FILE_SIGNAL_READABLE = 16777216u;
 
 
 
@@ -6355,24 +6355,24 @@ constexpr uint8_t DIRENT_TYPE_DIRECTORY = 4u;
 constexpr uint8_t DIRENT_TYPE_BLOCK_DEVICE = 6u;
 
 // Indicates the device is ready for writing.
-constexpr uint32_t DEVICE_SIGNAL_WRITABLE = 0x02000000;
+constexpr uint32_t DEVICE_SIGNAL_WRITABLE = 33554432u;
 
 // Indicates the device is ready for reading.
-constexpr uint32_t DEVICE_SIGNAL_READABLE = 0x01000000;
+constexpr uint32_t DEVICE_SIGNAL_READABLE = 16777216u;
 
 // Indicates an out-of-band state transition has occurred.
-constexpr uint32_t DEVICE_SIGNAL_OOB = 0x10000000;
+constexpr uint32_t DEVICE_SIGNAL_OOB = 268435456u;
 
 // Indicates the device has hung up on the current connection.
-constexpr uint32_t DEVICE_SIGNAL_HANGUP = 0x08000000;
+constexpr uint32_t DEVICE_SIGNAL_HANGUP = 134217728u;
 
 // Indicates the device has encountered an error state.
-constexpr uint32_t DEVICE_SIGNAL_ERROR = 0x04000000;
+constexpr uint32_t DEVICE_SIGNAL_ERROR = 67108864u;
 
 // When used during clone, the new connection inherits the rights on the source connection,
 // regardless if it is a file or directory. Otherwise, clone attempts to use the requested rights.
 // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAGS_SAME_RIGHTS.
-constexpr uint32_t CLONE_FLAG_SAME_RIGHTS = 0x04000000;
+constexpr uint32_t CLONE_FLAG_SAME_RIGHTS = 67108864u;
 
 }  // namespace io
 }  // namespace fuchsia

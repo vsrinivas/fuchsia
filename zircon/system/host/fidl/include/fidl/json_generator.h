@@ -91,7 +91,6 @@ private:
     void Generate(types::PrimitiveSubtype value);
 
     void Generate(const raw::Identifier& value);
-    void Generate(const raw::Literal& value);
     void Generate(const raw::TypeConstructor& value);
     void Generate(const raw::Attribute& value);
     void Generate(const raw::AttributeList& value);
@@ -100,6 +99,7 @@ private:
     void Generate(const flat::Name& value);
     void Generate(const flat::Type* value);
     void Generate(const flat::Constant& value);
+    void Generate(const flat::ConstantValue& value);
     void Generate(const flat::Bits& value);
     void Generate(const flat::Bits::Member& value);
     void Generate(const flat::Const& value);
@@ -108,6 +108,7 @@ private:
     void Generate(const flat::Interface& value);
     void Generate(const flat::Interface::Method* value);
     void GenerateRequest(const std::string& prefix, const flat::Struct& value);
+    void Generate(const flat::LiteralConstant& value);
     void Generate(const flat::Struct& value);
     void Generate(const flat::Struct::Member& value);
     void Generate(const flat::Table& value);
