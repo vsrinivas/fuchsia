@@ -875,4 +875,22 @@ void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatche
     __UNUSED auto ptr = root_devnode.release();
 }
 
+zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* dev) {
+    Devnode* inout = dn;
+    char* remainder = nullptr;
+
+    char path_copy[PATH_MAX];
+    if (strlen(path) + 1 > sizeof(path_copy)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    strcpy(path_copy, path);
+
+    zx_status_t status = devfs_walk(&inout, path_copy, &remainder);
+    if (status != ZX_OK) {
+        return status;
+    }
+    *dev = fbl::WrapRefPtr(inout->device);
+    return ZX_OK;
+}
+
 } // namespace devmgr

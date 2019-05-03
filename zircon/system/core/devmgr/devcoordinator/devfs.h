@@ -32,4 +32,10 @@ void devfs_advertise(const fbl::RefPtr<Device>& dev);
 void devfs_advertise_modified(const fbl::RefPtr<Device>& dev);
 zx_status_t devfs_connect(const Device* dev, zx::channel client_remote);
 
+// This method is exposed for testing.  It walks the devfs from the given node,
+// traversing the given sub-path.
+// If ZX_OK is returned, then *device_out refers to the device at the given path
+// relative to the devnode.
+zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* device_out);
+
 } // namespace devmgr

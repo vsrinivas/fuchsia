@@ -345,6 +345,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
                                             size_t max) const {
     // TODO: Remove VLA.
     char tmp[max];
+    char name_buf[fuchsia_io_MAX_FILENAME + strlen("dev/")];
     char* path = tmp + max - 1;
     *path = 0;
     size_t total = 1;
@@ -356,10 +357,15 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
         }
 
         const char* name;
-        if (itr->parent()) {
-            name = itr->name().data();
-        } else {
+        if (&*itr == root_device_.get()) {
             name = "dev";
+        } else if (itr->composite() != nullptr) {
+            strcpy(name_buf, "dev/");
+            strncpy(name_buf + strlen("dev/"), itr->name().data(), fuchsia_io_MAX_FILENAME);
+            name_buf[sizeof(name_buf)-1] = 0;
+            name = name_buf;
+        } else {
+            name = itr->name().data();
         }
 
         size_t len = strlen(name) + 1;
