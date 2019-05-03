@@ -1504,7 +1504,9 @@ bits Bits {
 };
 
 struct Struct {
-  int64 field = 007;
+  int64 int64_with_default = 007;
+  string string_with_default = "stuff";
+  bool bool_with_default = true;
 };
 
 )FIDL",
@@ -1823,7 +1825,7 @@ struct Struct {
             "kind": "primitive",
             "subtype": "int64"
           },
-          "name": "field",
+          "name": "int64_with_default",
           "location": {
             "filename": "json.fidl",
             "line": 26,
@@ -1842,10 +1844,60 @@ struct Struct {
           "alignment": 8,
           "offset": 0,
           "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "string_with_default",
+          "location": {
+            "filename": "json.fidl",
+            "line": 27,
+            "column": 10
+          },
+          "maybe_default_value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "string",
+              "value": "stuff",
+              "expression": "\"stuff\""
+            }
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 8,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool"
+          },
+          "name": "bool_with_default",
+          "location": {
+            "filename": "json.fidl",
+            "line": 28,
+            "column": 8
+          },
+          "maybe_default_value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "true",
+              "value": "true",
+              "expression": "true"
+            }
+          },
+          "size": 1,
+          "max_out_of_line": 0,
+          "alignment": 1,
+          "offset": 24,
+          "max_handles": 0
         }
       ],
-      "size": 8,
-      "max_out_of_line": 0,
+      "size": 32,
+      "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0
     }

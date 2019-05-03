@@ -347,7 +347,20 @@ void JSONGenerator::Generate(const flat::LiteralConstant& value) {
         if (value.IsResolved()) {
             GenerateObjectMember("value", value.Value());
         } else {
-            GenerateObjectMember("value", value.literal->location().data());
+            switch (value.literal->kind) {
+            case raw::Literal::Kind::kString: {
+                auto string_literal = static_cast<const raw::StringLiteral*>(value.literal.get());
+                EmitObjectSeparator(&json_file_, indent_level_);
+                EmitObjectKey(&json_file_, indent_level_, "value");
+                EmitLiteral(&json_file_, string_literal->location().data());
+                break;
+            }
+            case raw::Literal::Kind::kNumeric:
+            case raw::Literal::Kind::kTrue:
+            case raw::Literal::Kind::kFalse:
+                GenerateObjectMember("value", value.literal->location().data());
+                break;
+            } // switch
         }
         GenerateObjectMember("expression", value.literal->location().data());
     });

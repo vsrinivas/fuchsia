@@ -95,3 +95,17 @@ table PrimitiveArrayInTable {
     2: array<int32>:9 arr;
     3: string after;
 };
+
+enum SampleEnum {
+    MEMBER_A = 23;
+    MEMBER_B = 34;
+    MEMBER_C = 45;
+};
+
+struct VariousDefaults {
+    int64 int64_with_default = 5;
+    string string_with_default = "stuff";
+    // TODO(FIDL-486): This works, but is a happy accident.
+    SampleEnum enum_with_default = MEMBER_B;
+    bool bool_with_default = true;
+};

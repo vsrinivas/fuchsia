@@ -151,6 +151,7 @@ source_set("host_test_sources") {
   sources = [
     "array_unittest.cc",
     "clone_unittest.cc",
+    "defaults_unittest.cc",
     "fidl_test.cc",
     "object_coding_unittest.cc",
     "roundtrip_test.cc",
