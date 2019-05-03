@@ -6,7 +6,39 @@
 
 #include <assert.h>
 
+#include <algorithm>
+#include <cctype>
+#include <stack>
+#include <vector>
+
 namespace inspect {
+
+namespace {
+// Helper to sort an array of T by the value of T::name().
+// If names are numeric unsigned integers, this function will sort numerically
+// rather than lexicographically. Note that this will not handle negative or
+// decimal numbers.
+template <typename T>
+void SortByName(std::vector<T>* values) {
+  if (std::all_of(values->begin(), values->end(), [](const T& value) {
+        for (char c : value.name()) {
+          if (!std::isdigit(c)) {
+            return false;
+          }
+        }
+        return value.name().size() > 0;
+      })) {
+    std::sort(values->begin(), values->end(), [](const T& a, const T& b) {
+      uint64_t a_val = atoll(a.name().c_str());
+      uint64_t b_val = atoll(b.name().c_str());
+      return a_val < b_val;
+    });
+  } else {
+    std::sort(values->begin(), values->end(),
+              [](const T& a, const T& b) { return a.name() < b.name(); });
+  }
+}
+}  // namespace
 
 namespace hierarchy {
 Node::Node(std::string name) : name_(std::move(name)) {}
@@ -18,12 +50,8 @@ Node::Node(std::string name, std::vector<Property> properties,
       metrics_(std::move(metrics)) {}
 
 void Node::Sort() {
-  std::sort(
-      properties_.begin(), properties_.end(),
-      [](const Property& a, const Property& b) { return a.name() < b.name(); });
-  std::sort(
-      metrics_.begin(), metrics_.end(),
-      [](const Metric& a, const Metric& b) { return a.name() < b.name(); });
+  SortByName(&properties_);
+  SortByName(&metrics_);
 }
 
 }  // namespace hierarchy
@@ -53,11 +81,10 @@ const ObjectHierarchy* ObjectHierarchy::GetByPath(
 
 void ObjectHierarchy::Sort() {
   node_.Sort();
-  std::sort(
-      children_.begin(), children_.end(),
-      [](const inspect::ObjectHierarchy& a, const inspect::ObjectHierarchy& b) {
-        return a.node().name() < b.node().name();
-      });
+  SortByName(&children_);
+  for (auto& child : children_) {
+    child.Sort();
+  }
 }
 
 }  // namespace inspect

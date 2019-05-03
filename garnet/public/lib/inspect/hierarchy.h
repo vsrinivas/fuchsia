@@ -315,6 +315,9 @@ class ObjectHierarchy {
   const hierarchy::Node& node() const { return node_; }
   hierarchy::Node& node() { return node_; }
 
+  // Obtains the name of the Node at this level of the hierarchy.
+  const std::string& name() const { return node_.name(); }
+
   // Gets the children of this object in the hierarchy.
   const std::vector<ObjectHierarchy>& children() const { return children_; };
   std::vector<ObjectHierarchy>& children() { return children_; };

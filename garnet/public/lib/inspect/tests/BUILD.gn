@@ -12,6 +12,7 @@ executable("bin") {
   testonly = true
   sources = [
     "expose_unittest.cc",
+    "hierarchy_unittest.cc",
     "inspect_fidl_unittest.cc",
     "inspect_vmo_unittest.cc",
     "reader_unittest.cc",
