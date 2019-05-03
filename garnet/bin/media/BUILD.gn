@@ -19,7 +19,6 @@ group("media") {
     "codec_factory",
     "codecs",
     "signal_generator",
-    "util",
     "vim2_media_config",
     "virtual_audio",
     "vol",

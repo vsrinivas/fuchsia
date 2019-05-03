@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_UTIL_FIDL_PUBLISHER_H_
-#define GARNET_BIN_MEDIA_UTIL_FIDL_PUBLISHER_H_
-
-#include <vector>
+#ifndef GARNET_BIN_NETCONNECTOR_FIDL_PUBLISHER_H_
+#define GARNET_BIN_NETCONNECTOR_FIDL_PUBLISHER_H_
 
 #include <lib/fit/function.h>
 
+#include <vector>
+
 #include "src/lib/fxl/logging.h"
 
-namespace media {
+namespace netconnector {
 
 // Implements pull mode publishing (e.g. MediaPlayer::GetStatus).
 template <typename TCallback>
@@ -61,6 +61,6 @@ class FidlPublisher {
   CallbackRunner callback_runner_;
 };
 
-}  // namespace media
+}  // namespace netconnector
 
-#endif  // GARNET_BIN_MEDIA_UTIL_FIDL_PUBLISHER_H_
+#endif  // GARNET_BIN_NETCONNECTOR_FIDL_PUBLISHER_H_

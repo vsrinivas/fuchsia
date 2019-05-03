@@ -16,8 +16,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/device_service_provider.h"
+#include "garnet/bin/netconnector/fidl_publisher.h"
 #include "garnet/bin/netconnector/listener.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
 #include "garnet/bin/netconnector/requestor_agent.h"
@@ -109,7 +109,7 @@ class NetConnectorImpl : public fuchsia::netconnector::NetConnector,
   fuchsia::net::mdns::SubscriberPtr mdns_subscriber_;
   fidl::Binding<fuchsia::net::mdns::ServiceSubscriber> mdns_subscriber_binding_;
 
-  media::FidlPublisher<GetKnownDeviceNamesCallback> device_names_publisher_;
+  FidlPublisher<GetKnownDeviceNamesCallback> device_names_publisher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetConnectorImpl);
 };

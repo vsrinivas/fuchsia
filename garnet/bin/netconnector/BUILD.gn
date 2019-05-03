@@ -11,6 +11,7 @@ executable("bin") {
   sources = [
     "device_service_provider.cc",
     "device_service_provider.h",
+    "fidl_publisher.h",
     "host_name.cc",
     "host_name.h",
     "listener.cc",
@@ -31,7 +32,6 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/bin/media/util",
     "//garnet/lib/inet",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/netconnector/cpp",
