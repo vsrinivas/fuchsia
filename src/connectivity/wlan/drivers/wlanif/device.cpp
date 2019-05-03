@@ -188,11 +188,17 @@ zx_status_t Device::Bind() {
 
     if (query_info_.driver_features & WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
         ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
-        infof("iface supports SME channel; not adding wlanif device\n");
         status = AddEthDevice(parent_);
         if (status != ZX_OK) {
             errorf("wlanif: could not add ethernet_impl device: %s\n",
                    zx_status_get_string(status));
+        } else {
+            std::lock_guard<std::mutex> lock(lock_);
+            status = binding_.Bind(zx::channel(sme_channel), loop_.dispatcher());
+            if (status != ZX_OK) {
+                errorf("wlanif: unable to wait on SME channel: %s\n", zx_status_get_string(status));
+                device_remove(ethdev_);
+            }
         }
     } else {
         status = AddWlanDevice();
