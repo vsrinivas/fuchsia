@@ -7,6 +7,7 @@
 #include <map>
 #include <string_view>
 
+#include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fs/vfs.h>
 #include <lib/zx/channel.h>
@@ -48,5 +49,7 @@ zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx
 
 // Path relative to /boot used for crashlogs.
 extern const char* const kLastPanicFilePath;
+
+fbl::Vector<fbl::String> SplitString(fbl::String input, char delimiter);
 
 } // namespace bootsvc

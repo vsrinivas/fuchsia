@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
+#include <sstream>
 #include <stdio.h>
 #include <utility>
 
+#include <fbl/string.h>
+#include <fbl/vector.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -109,14 +112,20 @@ struct LaunchNextProcessArgs {
 int LaunchNextProcess(void* raw_ctx) {
     fbl::unique_ptr<LaunchNextProcessArgs> args(static_cast<LaunchNextProcessArgs*>(raw_ctx));
 
-    const char* next_program = getenv("bootsvc.next");
-    if (next_program == nullptr) {
-        next_program = "bin/devcoordinator";
+    const char* bootsvc_next = getenv("bootsvc.next");
+    if (bootsvc_next == nullptr) {
+        bootsvc_next = "bin/devcoordinator";
     }
+
+    // Split the bootsvc.next value into 1 or more arguments using ',' as a
+    // delimiter.
+    printf("bootsvc: bootsvc.next = %s\n", bootsvc_next);
+    fbl::Vector<fbl::String> next_args = bootsvc::SplitString(bootsvc_next, ',');
 
     // Open the executable we will start next
     zx::vmo program;
     uint64_t file_size;
+    const char* next_program = next_args[0].c_str();
     zx_status_t status = args->bootfs->Open(next_program, &program, &file_size);
     ZX_ASSERT_MSG(status == ZX_OK, "bootsvc: failed to open '%s': %s\n", next_program,
                   zx_status_get_string(status));
@@ -145,6 +154,13 @@ int LaunchNextProcess(void* raw_ctx) {
     nametable[count++] = "/boot";
     launchpad_add_handle(lp, svcfs_conn.release(), PA_HND(PA_NS_DIR, count));
     nametable[count++] = "/bootsvc";
+
+    int argc = static_cast<int>(next_args.size());
+    const char* argv[argc];
+    for (int i = 0; i < argc; ++i) {
+        argv[i] = next_args[i].c_str();
+    }
+    launchpad_set_args(lp, argc, argv);
 
     ZX_ASSERT(count <= fbl::count_of(nametable));
     launchpad_set_nametable(lp, count, nametable);

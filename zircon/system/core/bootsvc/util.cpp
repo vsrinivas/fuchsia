@@ -166,14 +166,29 @@ zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx
 
     auto conn = std::make_unique<fs::Connection>(vfs, vnode, std::move(local),
                                                  ZX_FS_FLAG_DIRECTORY |
-                                                 ZX_FS_RIGHT_READABLE |
-                                                 ZX_FS_RIGHT_WRITABLE);
+                                                     ZX_FS_RIGHT_READABLE |
+                                                     ZX_FS_RIGHT_WRITABLE);
     status = vfs->ServeConnection(std::move(conn));
     if (status != ZX_OK) {
         return status;
     }
     *out = std::move(remote);
     return ZX_OK;
+}
+
+fbl::Vector<fbl::String> SplitString(fbl::String input, char delimiter) {
+    fbl::Vector<fbl::String> result;
+
+    // No fbl::String::find, do it ourselves.
+    const char* start = input.begin();
+    for (auto end = start; end != input.end(); start = end + 1) {
+        end = start;
+        while (end != input.end() && *end != delimiter) {
+            ++end;
+        }
+        result.push_back(fbl::String(start, end - start));
+    }
+    return result;
 }
 
 } // namespace bootsvc

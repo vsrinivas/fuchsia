@@ -24,8 +24,13 @@ If this option is set, the system will not use Address Space Layout
 Randomization.
 
 ## bootsvc.next=\<bootfs path\>
+
 Controls what program is executed by bootsvc to continue the boot process.
 If this is not specified, the default next program will be used.
+
+Arguments to the program can optionally be specified using a comma separator
+between the program and individual arguments. For example,
+'bootsvc.next=bin/mybin,arg1,arg2'.
 
 ## devmgr\.epoch=\<seconds\>
 

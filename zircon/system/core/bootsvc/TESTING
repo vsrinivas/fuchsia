@@ -1,7 +1,10 @@
 To run the bootsvc integration tests, boot with these boot cmdline arguments:
-`userboot=bin/bootsvc bootsvc.next=bin/bootsvc-tests`.  This will tell bootsvc
-to execute its test suite instead of the usual boot chain.  The expected output
-from a boot in this mode is a unittest suite report that says 0 failed tests.
+
+`userboot=bin/bootsvc bootsvc.next=bin/bootsvc-tests,testargument`.
+
+This will tell bootsvc to execute its test suite instead of the usual boot
+chain. The expected output from a boot in this mode is a unittest suite report
+that says 0 failed tests.
 
 To test that crashlogs are being added to bootfs, you need to add a CRASHLOG item
 to the boot zbi.  For example, to add the contents of README.md as the crashlog:

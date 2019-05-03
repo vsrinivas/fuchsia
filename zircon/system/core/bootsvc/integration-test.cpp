@@ -26,6 +26,17 @@
 
 #include "util.h"
 
+static fbl::Vector<fbl::String> arguments;
+
+int main(int argc, char** argv) {
+    // Copy arguments for later use in tests.
+    for (int i = 0; i < argc; ++i) {
+        arguments.push_back(fbl::String(argv[i]));
+    }
+
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}
+
 namespace {
 
 constexpr char kArgumentsPath[] = "/bootsvc/" fuchsia_boot_Arguments_Name;
@@ -44,7 +55,7 @@ bool TestLoader() {
     END_TEST;
 }
 
-// Make sure that bootsvc gave us a namespace with only /boot
+// Make sure that bootsvc gave us a namespace with only /boot and /bootsvc.
 bool TestNamespace() {
     BEGIN_TEST;
 
@@ -57,10 +68,70 @@ bool TestNamespace() {
     }
 
     ASSERT_EQ(ns->count, 2);
-    ASSERT_STR_EQ(ns->path[0], "/boot");
-    ASSERT_STR_EQ(ns->path[1], "/bootsvc");
+    EXPECT_STR_EQ(ns->path[0], "/boot");
+    EXPECT_STR_EQ(ns->path[1], "/bootsvc");
 
     free(ns);
+    END_TEST;
+}
+
+// Make sure that bootsvc passed along program arguments from bootsvc.next
+// correctly.
+//
+// As documented in TESTING, this test relies on these tests being run by using
+// a boot cmdline that includes 'bootsvc.next=bin/bootsvc-tests,testargument' so
+// that we can test the parsing on bootsvc.next.
+bool TestArguments() {
+    BEGIN_TEST;
+
+    ASSERT_EQ(arguments.size(), 2);
+    EXPECT_STR_EQ(arguments[0].c_str(), "bin/bootsvc-tests");
+    EXPECT_STR_EQ(arguments[1].c_str(), "testargument");
+
+    END_TEST;
+}
+
+struct SplitStringTestCase {
+    const char* input;
+    char delimiter;
+};
+
+// Test the SplitString util individually.
+bool TestSplitString() {
+    BEGIN_TEST;
+
+    // Makeshift parametrized test.
+    struct {
+        const char* input;
+        char delimiter;
+    } cases[] = {
+        {.input = "", .delimiter = ','},
+        {.input = "abcd", .delimiter = ','},
+        {.input = "a,b c,d", .delimiter = ','},
+        {.input = "a,b c,d", .delimiter = ' '},
+        {.input = "::a:", .delimiter = ':'},
+    };
+    fbl::Vector<fbl::String> expected[] = {
+        {},
+        {"abcd"},
+        {"a", "b c", "d"},
+        {"a,b", "c,d"},
+        {"", "", "a", ""},
+    };
+    for (size_t n = 0; n < sizeof(cases) / sizeof(*cases); ++n) {
+        fbl::String case_msg = fbl::StringPrintf("Test Case %zu", n);
+        auto result = bootsvc::SplitString(cases[n].input, cases[n].delimiter);
+
+        // We use EXPECT_EQ rather than ASSERT_EQ so that we can continue with
+        // other test cases if one fails.
+        EXPECT_EQ(result.size(), expected[n].size(), case_msg.c_str());
+        if (result.size() == expected[n].size()) {
+            for (size_t i = 0; i < result.size(); ++i) {
+                EXPECT_STR_EQ(result[i].c_str(), expected[n][i].c_str(), case_msg.c_str());
+            }
+        }
+    }
+
     END_TEST;
 }
 
@@ -92,8 +163,8 @@ key=value
     END_TEST;
 }
 
-// Make sure the Arguments service works
-bool TestArguments() {
+// Make sure the fuchsia.boot.Arguments service works
+bool TestBootArguments() {
     BEGIN_TEST;
 
     zx::channel local, remote;
@@ -122,8 +193,8 @@ bool TestArguments() {
     END_TEST;
 }
 
-// Make sure the Items service works
-bool TestItems() {
+// Make sure the fuchsia.boot.Items service works
+bool TestBootItems() {
     BEGIN_TEST;
 
     zx::channel local, remote;
@@ -166,8 +237,8 @@ bool TestItems() {
     END_TEST;
 }
 
-// Make sure the RootResource service works
-bool TestRootResource() {
+// Make sure the fuchsia.boot.RootResource service works
+bool TestBootRootResource() {
     BEGIN_TEST;
 
     zx::channel local, remote;
@@ -219,9 +290,11 @@ bool TestVdsosPresent() {
 BEGIN_TEST_CASE(bootsvc_integration_tests)
 RUN_TEST(TestLoader)
 RUN_TEST(TestNamespace)
-RUN_TEST(TestParseBootArgs)
 RUN_TEST(TestArguments)
-RUN_TEST(TestItems)
-RUN_TEST(TestRootResource)
+RUN_TEST(TestParseBootArgs)
+RUN_TEST(TestSplitString)
+RUN_TEST(TestBootArguments)
+RUN_TEST(TestBootItems)
+RUN_TEST(TestBootRootResource)
 RUN_TEST(TestVdsosPresent)
 END_TEST_CASE(bootsvc_integration_tests)
