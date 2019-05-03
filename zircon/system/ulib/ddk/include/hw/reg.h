@@ -54,31 +54,43 @@ static inline uint64_t readll(const volatile void* a) {
 }
 
 #else
+// TODO(MAC-251): Similar to arm64 above, the Fuchsia hypervisor's instruction decoder does not
+// support MMIO access via load/store instructions that use writeback, which the compiler may
+// generate. Until support is implemented, we use inline assembly definitions here to ensure that
+// only the non-writeback move instructions are used.
 
 static inline void writeb(uint8_t v, volatile void* a) {
-    *(volatile uint8_t*)a = v;
+    __asm__("movb %1, %0" : "=m" (*(volatile uint8_t*)a) : "r" (v));
 }
 static inline void writew(uint16_t v, volatile void* a) {
-    *(volatile uint16_t*)a = v;
+    __asm__("movw %1, %0" : "=m" (*(volatile uint16_t*)a) : "r" (v));
 }
 static inline void writel(uint32_t v, volatile void* a) {
-    *(volatile uint32_t*)a = v;
+    __asm__("movl %1, %0" : "=m" (*(volatile uint32_t*)a) : "r" (v));
 }
 static inline void writell(uint64_t v, volatile void* a) {
-    *(volatile uint64_t*)a = v;
+    __asm__("movq %1, %0" : "=m" (*(volatile uint64_t*)a) : "r" (v));
 }
 
 static inline uint8_t readb(const volatile void* a) {
-    return *(const volatile uint8_t*)a;
+    uint8_t v;
+    __asm__("movb %1, %0" : "=r" (v) : "m" (*(volatile uint8_t*)a));
+    return v;
 }
 static inline uint16_t readw(const volatile void* a) {
-    return *(const volatile uint16_t*)a;
+    uint16_t v;
+    __asm__("movw %w1, %0" : "=r" (v) : "m" (*(volatile uint16_t*)a));
+    return v;
 }
 static inline uint32_t readl(const volatile void* a) {
-    return *(const volatile uint32_t*)a;
+    uint32_t v;
+    __asm__("movl %1, %0" : "=r" (v) : "m" (*(volatile uint32_t*)a));
+    return v;
 }
 static inline uint64_t readll(const volatile void* a) {
-    return *(const volatile uint64_t*)a;
+    uint64_t v;
+    __asm__("movq %1, %0" : "=r" (v) : "m" (*(volatile uint64_t*)a));
+    return v;
 }
 
 #endif
