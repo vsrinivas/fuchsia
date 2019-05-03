@@ -124,7 +124,7 @@ zx_status_t MtkPower::PowerImplEnablePowerDomain(uint32_t index) {
         return status;
     }
     if (cur_val & enable_mask) {
-        return ZX_ERR_BAD_STATE;
+        return ZX_OK;
     }
     status = WritePMICReg(domain->enable_reg, (1 << domain->enable_bit));
     if (status != ZX_OK) {
