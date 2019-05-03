@@ -96,6 +96,24 @@ pub struct App {
     pub fingerprint: Option<String>,
 }
 
+impl App {
+    /// Construct an App from an ID and version, from anything that can be converted into a String
+    /// and a Version.
+    pub fn new<I: Into<String>, V: Into<Version>>(id: I, version: V) -> Self {
+        App { id: id.into(), version: version.into(), fingerprint: None }
+    }
+
+    /// Construct an App from an ID, version, and fingerprint.  From anything that can be converted
+    /// into a String and a Version.
+    pub fn with_fingerprint<I: Into<String>, V: Into<Version>, F: Into<String>>(
+        id: I,
+        version: V,
+        fingerprint: F,
+    ) -> Self {
+        App { id: id.into(), version: version.into(), fingerprint: Some(fingerprint.into()) }
+    }
+}
+
 /// Options controlling a single update check
 #[derive(Clone, Debug)]
 pub struct CheckOptions {
@@ -188,5 +206,21 @@ mod tests {
     pub fn test_version_compare() {
         assert!(Version::from([1, 2, 3, 4]) < Version::from([2, 0, 3]));
         assert!(Version::from([1, 2, 3]) < Version::from([1, 2, 3, 4]));
+    }
+
+    #[test]
+    pub fn test_app_new_version() {
+        let app = App::new("some_id", [1, 2]);
+        assert_eq!(app.id, "some_id");
+        assert_eq!(app.version, [1, 2].into());
+        assert_eq!(app.fingerprint, None);
+    }
+
+    #[test]
+    pub fn test_app_with_fingerprint() {
+        let app = App::with_fingerprint("some_id_2", [4, 6], "some_fp");
+        assert_eq!(app.id, "some_id_2");
+        assert_eq!(app.version, [4, 6].into());
+        assert_eq!(app.fingerprint, Some("some_fp".to_string()));
     }
 }

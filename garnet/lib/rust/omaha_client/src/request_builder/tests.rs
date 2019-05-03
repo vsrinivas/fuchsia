@@ -4,7 +4,6 @@
 
 use super::*;
 use crate::{
-    common::Version,
     configuration::test_support::config_generator,
     protocol::request::{EventResult, EventType},
 };
@@ -25,11 +24,7 @@ pub fn test_simple_request() {
         &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
     )
     .add_update_check(
-        &App {
-            id: "app id".to_string(),
-            version: Version::from([5, 6, 7, 8]),
-            fingerprint: None,
-        },
+        &App::with_fingerprint("app id", [5, 6, 7, 8], "fp"),
         &Some(Cohort::new("some-channel")),
     )
     .build_intermediate();
@@ -51,7 +46,7 @@ pub fn test_simple_request() {
     let app = &request.apps[0];
     assert_eq!(app.id, "app id");
     assert_eq!(app.version, "5.6.7.8");
-    assert_eq!(app.fingerprint, None);
+    assert_eq!(app.fingerprint, Some("fp".to_string()));
     assert_eq!(app.cohort, Some(Cohort::new("some-channel")));
     assert_eq!(app.update_check, Some(UpdateCheck::default()));
     assert!(app.events.is_empty());
@@ -78,14 +73,7 @@ pub fn test_single_request() {
         &config,
         &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
     )
-    .add_update_check(
-        &App {
-            id: "app id".to_string(),
-            version: Version::from([5, 6, 7, 8]),
-            fingerprint: None,
-        },
-        &Some(Cohort::new("some-channel")),
-    )
+    .add_update_check(&App::new("app id", [5, 6, 7, 8]), &Some(Cohort::new("some-channel")))
     .build()
     .unwrap()
     .into_parts();
@@ -123,8 +111,8 @@ pub fn test_single_request() {
     // Extract the request body out into a concatenated stream of Chunks, into a slice, so
     // that serde can be used to parse the body into a JSON Value object that can be compared
     // with the expected json constructed above.
-    let actual: serde_json::Value =
-        serde_json::from_slice(&block_on(body.compat().try_concat()).unwrap().to_vec()).unwrap();
+    let body = block_on(body.compat().try_concat()).unwrap().to_vec();
+    let actual: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
     assert_eq!(expected, actual);
 
@@ -147,11 +135,7 @@ pub fn test_simple_ping() {
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
     .add_ping(
-        &App {
-            id: "ping app id".to_string(),
-            version: Version::from([6, 7, 8, 9]),
-            fingerprint: None,
-        },
+        &App::new("ping app id", [6, 7, 8, 9]),
         &Some(Cohort::new("ping-channel")),
         &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) },
     )
@@ -188,11 +172,7 @@ pub fn test_simple_event() {
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
     .add_event(
-        &App {
-            id: "event app id".to_string(),
-            version: Version::from([6, 7, 8, 9]),
-            fingerprint: None,
-        },
+        &App::new("event app id", [6, 7, 8, 9]),
         &Some(Cohort::new("event-channel")),
         &Event {
             event_type: EventType::UpdateDownloadStarted,
@@ -222,11 +202,7 @@ pub fn test_multiple_events() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App {
-        id: "event app id".to_string(),
-        version: Version::from([6, 7, 8, 9]),
-        fingerprint: None,
-    };
+    let app_1 = App::new("event app id", [6, 7, 8, 9]);
     let app_1_cohort = Some(Cohort::new("event-channel"));
 
     // Make the call to the RequestBuilder that is being tested.
@@ -287,20 +263,12 @@ pub fn test_ping_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App {
-        id: "first app id".to_string(),
-        version: Version::from([1, 2, 3, 4]),
-        fingerprint: None,
-    };
+    let app_1 = App::new("first app id", [1, 2, 3, 4]);
     let app_1_cohort = Some(Cohort::new("some-channel"));
 
     // Setup the second app and its cohort
-    let app_2 = App {
-        id: "second app id".to_string(),
-        version: Version::from([5, 6, 7, 8]),
-        fingerprint: None,
-    };
-    let app_2_cohort = Some(Cohort::new("some-channel"));
+    let app_2 = App::new("second app id", [5, 6, 7, 8]);
+    let app_2_cohort = Some(Cohort::new("some-other-channel"));
 
     // Now make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
@@ -336,7 +304,7 @@ pub fn test_ping_added_to_first_app_update_entry() {
     let app = &request.apps[1];
     assert_eq!(app.id, "second app id");
     assert_eq!(app.version, "5.6.7.8");
-    assert_eq!(app.cohort, Some(Cohort::new("some-channel")));
+    assert_eq!(app.cohort, Some(Cohort::new("some-other-channel")));
     assert_eq!(app.ping, None);
 }
 
@@ -347,20 +315,12 @@ pub fn test_ping_added_to_second_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App {
-        id: "first app id".to_string(),
-        version: Version::from([1, 2, 3, 4]),
-        fingerprint: None,
-    };
+    let app_1 = App::new("first app id", [1, 2, 3, 4]);
     let app_1_cohort = Some(Cohort::new("some-channel"));
 
     // Setup the second app and its cohort
-    let app_2 = App {
-        id: "second app id".to_string(),
-        version: Version::from([5, 6, 7, 8]),
-        fingerprint: None,
-    };
-    let app_2_cohort = Some(Cohort::new("some-channel"));
+    let app_2 = App::new("second app id", [5, 6, 7, 8]);
+    let app_2_cohort = Some(Cohort::new("some-other-channel"));
 
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(
@@ -392,7 +352,7 @@ pub fn test_ping_added_to_second_app_update_entry() {
     let app = &request.apps[1];
     assert_eq!(app.id, "second app id");
     assert_eq!(app.version, "5.6.7.8");
-    assert_eq!(app.cohort, Some(Cohort::new("some-channel")));
+    assert_eq!(app.cohort, Some(Cohort::new("some-other-channel")));
 
     let ping = app.ping.as_ref().unwrap();
     assert_eq!(ping.date_last_active, Some(34));
@@ -406,20 +366,12 @@ pub fn test_event_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App {
-        id: "first app id".to_string(),
-        version: Version::from([1, 2, 3, 4]),
-        fingerprint: None,
-    };
+    let app_1 = App::new("first app id", [1, 2, 3, 4]);
     let app_1_cohort = Some(Cohort::new("some-channel"));
 
     // Setup the second app and its cohort
-    let app_2 = App {
-        id: "second app id".to_string(),
-        version: Version::from([5, 6, 7, 8]),
-        fingerprint: None,
-    };
-    let app_2_cohort = Some(Cohort::new("some-channel"));
+    let app_2 = App::new("second app id", [5, 6, 7, 8]);
+    let app_2_cohort = Some(Cohort::new("some-other-channel"));
 
     // Now make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
@@ -459,7 +411,7 @@ pub fn test_event_added_to_first_app_update_entry() {
     let app = &request.apps[1];
     assert_eq!(app.id, "second app id");
     assert_eq!(app.version, "5.6.7.8");
-    assert_eq!(app.cohort, Some(Cohort::new("some-channel")));
+    assert_eq!(app.cohort, Some(Cohort::new("some-other-channel")));
     assert!(app.events.is_empty());
 }
 
@@ -470,20 +422,12 @@ pub fn test_event_added_to_second_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App {
-        id: "first app id".to_string(),
-        version: Version::from([1, 2, 3, 4]),
-        fingerprint: None,
-    };
+    let app_1 = App::new("first app id", [1, 2, 3, 4]);
     let app_1_cohort = Some(Cohort::new("some-channel"));
 
     // Setup the second app and its cohort
-    let app_2 = App {
-        id: "second app id".to_string(),
-        version: Version::from([5, 6, 7, 8]),
-        fingerprint: None,
-    };
-    let app_2_cohort = Some(Cohort::new("some-channel"));
+    let app_2 = App::new("second app id", [5, 6, 7, 8]);
+    let app_2_cohort = Some(Cohort::new("some-other-channel"));
 
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(
@@ -519,7 +463,7 @@ pub fn test_event_added_to_second_app_update_entry() {
     let app = &request.apps[1];
     assert_eq!(app.id, "second app id");
     assert_eq!(app.version, "5.6.7.8");
-    assert_eq!(app.cohort, Some(Cohort::new("some-channel")));
+    assert_eq!(app.cohort, Some(Cohort::new("some-other-channel")));
 
     assert_eq!(app.events.len(), 1);
     let event = &app.events[0];

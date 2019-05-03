@@ -159,20 +159,16 @@ impl<'a> RequestBuilder<'a> {
     where
         F: Fn(&mut AppEntry),
     {
-        for existing_entry in self.app_entries.iter_mut() {
-            if existing_entry.app.id == app.id {
-                // found an existing App in the Vec, so just run the closure on this AppEntry.
-                modify(existing_entry);
-                // and short-circuit out.
-                return;
-            }
+        if let Some(app_entry) = self.app_entries.iter_mut().find(|e| e.app.id == app.id) {
+            // found an existing App in the Vec, so just run the closure on this AppEntry.
+            modify(app_entry);
+        } else {
+            // The App wasn't found, so add it to the list after running the closure on a newly
+            // generated AppEntry for this App.
+            let mut app_entry = AppEntry::new(app, cohort);
+            modify(&mut app_entry);
+            self.app_entries.push(app_entry);
         }
-
-        // The App wasn't found, so add it to the list, after running the closure on a newly
-        // generated AppEntry for this App.
-        let mut app_entry = AppEntry::new(app, cohort);
-        modify(&mut app_entry);
-        self.app_entries.push(app_entry);
     }
 
     /// This function adds an update check for the given App, in the given Cohort.  This function is
