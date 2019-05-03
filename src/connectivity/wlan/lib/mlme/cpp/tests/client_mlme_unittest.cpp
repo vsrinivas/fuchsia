@@ -991,6 +991,37 @@ TEST_F(ClientTest, FailureToAssociateWithAPWithoutAnySupportedRate) {
       wlan_mlme::AssociateResultCodes::REFUSED_CAPABILITIES_MISMATCH);
 }
 
+TEST_F(ClientTest, ProcessZeroRssiFrame) {
+  auto no_rssi_pkt = CreateDataFrame(kTestPayload);
+  auto rx_info =
+      const_cast<wlan_rx_info_t*>(no_rssi_pkt->ctrl_data<wlan_rx_info_t>());
+  rx_info->valid_fields &= ~WLAN_RX_INFO_VALID_DATA_RATE;  // no rssi
+  rx_info->rssi_dbm = 0;
+
+  auto rssi_pkt = CreateDataFrame(kTestPayload);
+  rx_info = const_cast<wlan_rx_info_t*>(rssi_pkt->ctrl_data<wlan_rx_info_t>());
+  rx_info->valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
+  rx_info->rssi_dbm = 0;
+
+  Connect();
+
+  ASSERT_GT(
+      client.GetMlmeStats().client_mlme_stats().assoc_data_rssi.hist.size(),
+      0u);
+  ASSERT_EQ(client.GetMlmeStats().client_mlme_stats().assoc_data_rssi.hist[0],
+            0u);
+
+  // Send a data frame with no rssi and verify that we don't increment stats.
+  ASSERT_EQ(ZX_OK, client.HandleFramePacket(std::move(no_rssi_pkt)));
+  ASSERT_EQ(client.GetMlmeStats().client_mlme_stats().assoc_data_rssi.hist[0],
+            0u);
+
+  // Send a data frame with 0 rssi and verify that we *do* increment stats.
+  ASSERT_EQ(ZX_OK, client.HandleFramePacket(std::move(rssi_pkt)));
+  ASSERT_EQ(client.GetMlmeStats().client_mlme_stats().assoc_data_rssi.hist[0],
+            1u);
+}
+
 // Add additional tests for (tracked in NET-801):
 // AP refuses Authentication/Association
 // Regression tests for:
