@@ -101,6 +101,11 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
 }
 
 void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages) {
+  if (messages.empty()) {
+    FX_LOGS(WARNING) << "LogMany() was called with no messages";
+    return;
+  }
+
   for (auto& message : messages) {
     Log(std::move(message));
   }
@@ -135,6 +140,11 @@ void LogListener::Log(fuchsia::logger::LogMessage message) {
 }
 
 void LogListener::Done() {
+  if (logs_.empty()) {
+    FX_LOGS(WARNING)
+        << "Done() was called, but no logs have been collected yet";
+  }
+
   // Check that the fit::bridge was not already completed, e.g., by the
   // timeout task.
   if (done_->completer) {

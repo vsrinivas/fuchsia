@@ -182,6 +182,14 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
                                   "should appear in the partial logs\n"));
 }
 
+TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
+  ResetStubLogger(std::make_unique<StubLogger>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+
+  ASSERT_TRUE(result.is_error());
+}
+
 TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
   ResetStubLogger(nullptr);
 
