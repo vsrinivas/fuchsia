@@ -74,9 +74,9 @@ TEST(LibraryLoader, LoadFromOrdinal) {
   Ordinal correct_ordinal = found_method->get_ordinal();
   const InterfaceMethod* ordinal_method;
   ASSERT_TRUE(loader.GetByOrdinal(correct_ordinal, &ordinal_method));
-  ASSERT_STREQ(kDesiredInterfaceName.c_str(),
-               ordinal_method->enclosing_interface().name().c_str());
-  ASSERT_STREQ("OnDirectoryReady", ordinal_method->name().c_str());
+  ASSERT_EQ(kDesiredInterfaceName,
+            ordinal_method->enclosing_interface().name());
+  ASSERT_EQ("OnDirectoryReady", ordinal_method->name());
 }
 
 }  // namespace fidlcat

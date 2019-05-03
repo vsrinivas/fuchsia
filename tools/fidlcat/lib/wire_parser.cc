@@ -89,8 +89,8 @@ bool ParamsToJSON(const std::optional<std::vector<InterfaceMethodParameter>>& p,
       return marker.is_valid();
     }
 
-    tracker.ObjectEnqueue(param->name(), std::move(value_callback), result,
-                          result.GetAllocator());
+    tracker.ObjectEnqueue(std::string(param->name()), std::move(value_callback),
+                          result, result.GetAllocator());
 
     current_offset += param->get_size();
   }

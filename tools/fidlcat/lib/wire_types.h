@@ -88,7 +88,10 @@ class ObjectTracker;
 //
 // The |marker| is set to the out-of-line size of the object (which may be
 // 0).
-typedef fit::function<void(ObjectTracker*, Marker& marker,
+//
+// The return value indicates whether the value generated should be included in
+// the json.  It returns false, for example, for absent table members.
+typedef fit::function<bool(ObjectTracker*, Marker& marker,
                            rapidjson::Value& value,
                            rapidjson::Document::AllocatorType& allocator)>
     ValueGeneratingCallback;
@@ -207,9 +210,18 @@ class Type {
 // spits back hex pairs.
 class UnknownType : public Type {
  public:
+  UnknownType(size_t inline_size) : inline_size_(inline_size) {}
+
+  UnknownType() : inline_size_(0) {}
+
   virtual Marker GetValueCallback(
       Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
+
+  virtual size_t InlineSize() const override { return inline_size_; }
+
+ private:
+  size_t inline_size_;
 };
 
 class StringType : public Type {
@@ -289,6 +301,7 @@ class NumericType : public Type {
                      rapidjson::Value& value,
                      rapidjson::Document::AllocatorType& allocator) {
       value.SetString(std::to_string(val).c_str(), allocator);
+      return true;
     };
     marker.AdvanceBytesBy(sizeof(T));
     return marker;
@@ -314,6 +327,8 @@ class BoolType : public Type {
   virtual Marker GetValueCallback(
       Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
+
+  virtual size_t InlineSize() const override { return sizeof(uint8_t); }
 };
 
 class StructType : public Type {
@@ -328,6 +343,20 @@ class StructType : public Type {
 
  private:
   const Struct& struct_;
+};
+
+class TableType : public Type {
+ public:
+  TableType(const Table& tab) : table_(tab) {}
+
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+
+  virtual size_t InlineSize() const override;
+
+ private:
+  const Table& table_;
 };
 
 class UnionType : public Type {
@@ -348,12 +377,17 @@ class UnionType : public Type {
 // another type.
 class PointerType : public Type {
  public:
-  explicit PointerType(Type* target_type);
+  // target_type is the referent type, and keep_null indicates whether the value
+  // callback returns true or false when the pointer is null.
+  explicit PointerType(Type* target_type, bool keep_null = true);
+
+  explicit PointerType(std::shared_ptr<Type> target_type,
+                       bool keep_null = true);
 
   // PointerType's GetValueCallback method does the following:
   //
-  // a) In the case where the intptr at the marker is null, returns a
-  //    callback that sets the value to null.
+  // a) In the case where the intptr at the marker is null, returns a callback
+  //    that sets the value to null.  This callback returns keep_null_.
   // b) In the case where the intptr at the marker is not null, returns a
   //    callback that tracks an instance of the wrapped type out-of-line,
   //    with its own ObjectTracker.
@@ -361,8 +395,11 @@ class PointerType : public Type {
       Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
 
+  virtual size_t InlineSize() const override { return sizeof(uint64_t); }
+
  private:
   std::shared_ptr<Type> target_type_;
+  bool keep_null_;
 };
 
 class ElementSequenceType : public Type {
@@ -425,6 +462,8 @@ class EnumType : public Type {
   virtual Marker GetValueCallback(
       Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
+
+  virtual size_t InlineSize() const override { return enum_.size(); }
 
  private:
   const Enum& enum_;

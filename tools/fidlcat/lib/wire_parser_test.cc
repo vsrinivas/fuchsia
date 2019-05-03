@@ -143,7 +143,7 @@ TEST_F(WireParserTest, ParseSingleString) {
 
   const InterfaceMethod* method;
   ASSERT_TRUE(loader_->GetByOrdinal(header.ordinal, &method));
-  ASSERT_STREQ("Grob", method->name().c_str());
+  ASSERT_EQ("Grob", method->name());
   rapidjson::Document actual;
   fidlcat::RequestToJSON(method, message, actual);
 
@@ -176,7 +176,7 @@ TEST_F(WireParserTest, ParseSingleString) {
                                                                                \
     const InterfaceMethod* method;                                             \
     ASSERT_TRUE(loader_->GetByOrdinal(header.ordinal, &method));               \
-    ASSERT_STREQ(#_iface, method->name().c_str());                             \
+    ASSERT_EQ(#_iface, method->name());                                        \
                                                                                \
     rapidjson::Document actual;                                                \
     ASSERT_TRUE(fidlcat::RequestToJSON(method, message, actual))               \
@@ -548,6 +548,87 @@ TEST_WIRE_TO_JSON(I8Enum, I8Enum, R"({"ev":"x"})",
                   test::fidlcat::examples::i8_enum::x);
 TEST_WIRE_TO_JSON(I16Enum, I16Enum, R"({"ev":"x"})",
                   test::fidlcat::examples::i16_enum::x);
+
+// Table Tests
+
+test::fidlcat::examples::value_table GetTable(
+    std::optional<int16_t> first_int16, std::optional<std::string> value1,
+    std::optional<std::string> value2, std::optional<int32_t> third_union_val) {
+  test::fidlcat::examples::value_table table;
+  if (first_int16.has_value()) {
+    table.set_first_int16(*first_int16);
+  }
+  if (value1.has_value()) {
+    table.set_second_struct(TwoStringStructFromVals(*value1, *value2));
+  }
+  if (third_union_val.has_value()) {
+    test::fidlcat::examples::int_struct_union u;
+    u.set_variant_i(*third_union_val);
+    table.set_third_union(std::move(u));
+  }
+  return table;
+}
+
+TEST_WIRE_TO_JSON(Table0, Table, R"({"table":{}, "i":"2"})",
+                  GetTable({}, {}, {}, {}), 2)
+
+TEST_WIRE_TO_JSON(Table1, Table,
+                  R"({"table":{
+                          "third_union":{"variant_i":"42"}
+                      },
+                      "i":"2"})",
+                  GetTable({}, {}, {}, 42), 2)
+
+TEST_WIRE_TO_JSON(Table2, Table,
+                  R"({"table":{
+                          "second_struct":{"value1":"harpo", "value2":"groucho"}
+                      },
+                      "i":"2"})",
+                  GetTable({}, "harpo", "groucho", {}), 2)
+
+TEST_WIRE_TO_JSON(Table3, Table,
+                  R"({"table":{
+                          "second_struct":{
+                              "value1":"harpo", "value2":"groucho"},
+                          "third_union":{"variant_i":"42"}},
+                      "i":"2"})",
+                  GetTable({}, "harpo", "groucho", 42), 2)
+
+TEST_WIRE_TO_JSON(Table4, Table, R"({"table":{
+                                         "first_int16":"1"
+                                     },
+                                     "i":"2"})",
+                  GetTable(1, {}, {}, {}), 2)
+
+TEST_WIRE_TO_JSON(Table5, Table,
+                  R"({"table":{
+                          "first_int16":"1",
+                          "third_union":{"variant_i":"42"}
+                      },
+                      "i":"2"})",
+                  GetTable(1, {}, {}, 42), 2)
+
+TEST_WIRE_TO_JSON(Table6, Table,
+                  R"({"table":{
+                          "first_int16":"1",
+                          "second_struct":{
+                              "value1":"harpo", "value2":"groucho"}
+                      },
+                      "i":"2"})",
+                  GetTable(1, "harpo", "groucho", {}), 2)
+
+TEST_WIRE_TO_JSON(Table7, Table,
+                  R"({"table":{
+                          "first_int16":"1",
+                          "second_struct":{
+                              "value1":"harpo", "value2":"groucho"},
+                          "third_union":{"variant_i":"42"}
+                      },
+                      "i":"2"})",
+                  GetTable(1, "harpo", "groucho", 42), 2)
+
+// TODO(DX-1476): Add a test that exercises what happens when we encounter an
+// unknown type in a table.
 
 // Handle Tests
 

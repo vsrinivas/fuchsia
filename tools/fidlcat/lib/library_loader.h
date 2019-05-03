@@ -57,6 +57,7 @@ class Interface;
 class InterfaceMethod;
 class Enum;
 class Struct;
+class Table;
 class Union;
 
 class InterfaceMethodParameter {
@@ -78,7 +79,7 @@ class InterfaceMethodParameter {
     return std::strtoll(value_["size"].GetString(), nullptr, 10);
   }
 
-  std::string name() const { return value_["name"].GetString(); }
+  const std::string_view name() const { return value_["name"].GetString(); }
 
   std::unique_ptr<Type> GetType() const;
 
@@ -97,7 +98,7 @@ class InterfaceMethod {
     return std::strtoll(value_["ordinal"].GetString(), nullptr, 10);
   }
 
-  std::string name() const { return value_["name"].GetString(); }
+  const std::string_view name() const { return value_["name"].GetString(); }
 
   std::string fully_qualified_name() const;
 
@@ -150,7 +151,7 @@ class Interface {
   Interface(const Interface& other) = delete;
   Interface& operator=(const Interface&) = delete;
 
-  std::string name() const { return value_["name"].GetString(); }
+  const std::string_view name() const { return value_["name"].GetString(); }
 
   void AddMethodsToIndex(std::map<Ordinal, const InterfaceMethod*>& index) {
     for (size_t i = 0; i < interface_methods_.size(); i++) {
@@ -220,7 +221,9 @@ class UnionMember {
     return std::strtoll(value_["offset"].GetString(), nullptr, 10);
   }
 
-  virtual std::string name() const { return value_["name"].GetString(); }
+  virtual const std::string_view name() const {
+    return value_["name"].GetString();
+  }
 
   virtual const Union& enclosing_union() const { return enclosing_union_; }
 
@@ -263,8 +266,6 @@ class Union {
   }
 
  private:
-  const rapidjson::Value& schema() const { return value_; }
-
   const UnionMember& get_illegal_member() const;
 
   const Library& enclosing_library_;
@@ -288,7 +289,7 @@ class StructMember {
     return std::strtoll(value_["offset"].GetString(), nullptr, 10);
   }
 
-  std::string name() const { return value_["name"].GetString(); }
+  const std::string_view name() const { return value_["name"].GetString(); }
 
   const Struct& enclosing_struct() const { return enclosing_struct_; }
 
@@ -319,40 +320,74 @@ class Struct {
   }
 
  private:
-  const rapidjson::Value& schema() const { return value_; }
-
   const Library& enclosing_library_;
   const rapidjson::Value& value_;
   std::vector<StructMember> members_;
 };
 
+class TableMember {
+ public:
+  TableMember(const Table& enclosing_table, const rapidjson::Value& value)
+      : enclosing_table_(enclosing_table), value_(value) {}
+
+  std::unique_ptr<Type> GetType() const;
+
+  uint64_t size() const {
+    return std::strtoll(value_["size"].GetString(), nullptr, 10);
+  }
+
+  uint64_t offset() const {
+    return std::strtoll(value_["offset"].GetString(), nullptr, 10);
+  }
+
+  const std::string_view name() const { return value_["name"].GetString(); }
+
+  Ordinal ordinal() const {
+    return std::strtoll(value_["ordinal"].GetString(), nullptr, 10);
+  }
+
+  const Table& enclosing_table() const { return enclosing_table_; }
+
+ private:
+  const Table& enclosing_table_;
+  const rapidjson::Value& value_;
+};
+
+class Table {
+ public:
+  Table(const Library& enclosing_library, const rapidjson::Value& value);
+
+  Table(const Table&) = delete;
+
+  Table(Table&& other) : Table(other.enclosing_library_, other.value_) {}
+
+  const Library& enclosing_library() const { return enclosing_library_; }
+
+  // Returns a vector of pointers to the table's members.  The ordinal of each
+  // member is its index in the vector.  Omitted ordinals are indicated by
+  // nullptr.  Also, note that ordinal 0 is disallowed, so element 0 is always
+  // nullptr.
+  const std::vector<const TableMember*>& members() const { return members_; }
+
+  uint32_t size() const {
+    return std::strtoll(value_["size"].GetString(), nullptr, 10);
+  }
+
+ private:
+  const Library& enclosing_library_;
+  const rapidjson::Value& value_;
+
+  // This indirection - elements of members_ pointing to elements of
+  // backing_members_ - is so that we can have empty members.  The author
+  // thought that use sites would be more usable than a map.
+  // These structures are not modified after the constructor.
+  std::vector<const TableMember*> members_;
+  std::vector<TableMember> backing_members_;
+};
+
 class Library {
  public:
-  Library(const LibraryLoader& enclosing, rapidjson::Document& document)
-      : enclosing_loader_(enclosing), backing_document_(std::move(document)) {
-    auto interfaces_array =
-        backing_document_["interface_declarations"].GetArray();
-    interfaces_.reserve(interfaces_array.Size());
-
-    for (auto& decl : interfaces_array) {
-      interfaces_.emplace_back(*this, decl);
-    }
-    for (auto& enu : backing_document_["enum_declarations"].GetArray()) {
-      enums_.emplace(std::piecewise_construct,
-                     std::forward_as_tuple(enu["name"].GetString()),
-                     std::forward_as_tuple(*this, enu));
-    }
-    for (auto& str : backing_document_["struct_declarations"].GetArray()) {
-      structs_.emplace(std::piecewise_construct,
-                       std::forward_as_tuple(str["name"].GetString()),
-                       std::forward_as_tuple(*this, str));
-    }
-    for (auto& str : backing_document_["union_declarations"].GetArray()) {
-      unions_.emplace(std::piecewise_construct,
-                      std::forward_as_tuple(str["name"].GetString()),
-                      std::forward_as_tuple(*this, str));
-    }
-  }
+  Library(const LibraryLoader& enclosing, rapidjson::Document& document);
 
   // Adds methods to this Library.  Pass it a std::map from ordinal value to the
   // InterfaceMethod represented by that ordinal.
@@ -362,7 +397,9 @@ class Library {
     }
   }
 
-  std::string name() { return backing_document_["name"].GetString(); }
+  const std::string_view name() {
+    return backing_document_["name"].GetString();
+  }
 
   const LibraryLoader& enclosing_loader() const { return enclosing_loader_; }
 
@@ -388,6 +425,7 @@ class Library {
   std::vector<Interface> interfaces_;
   std::map<std::string, Enum> enums_;
   std::map<std::string, Struct> structs_;
+  std::map<std::string, Table> tables_;
   std::map<std::string, Union> unions_;
 };
 

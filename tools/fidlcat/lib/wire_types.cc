@@ -47,6 +47,7 @@ void ObjectTracker::ObjectEnqueue(
     const std::string& key, ValueGeneratingCallback&& callback,
     rapidjson::Value& target_object,
     rapidjson::Document::AllocatorType& allocator) {
+  FXL_DCHECK(callback) << "No callback for object";
   callbacks_.push_back([this, cb = std::move(callback), &target_object,
                         key_string = key, &allocator](Marker& marker) {
     rapidjson::Value key;
@@ -54,7 +55,9 @@ void ObjectTracker::ObjectEnqueue(
 
     rapidjson::Value& object =
         target_object.AddMember(key, rapidjson::Value(), allocator);
-    cb(this, marker, object[key_string.c_str()], allocator);
+    if (!cb(this, marker, object[key_string.c_str()], allocator)) {
+      target_object.RemoveMember(key_string);
+    }
   });
 }
 
@@ -100,9 +103,13 @@ std::string Marker::ToString() const {
 
 namespace {
 
-ValueGeneratingCallback NullCallback() {
-  return [](ObjectTracker* tracker, Marker& marker, rapidjson::Value& value,
-            rapidjson::Document::AllocatorType& allocator) { value.SetNull(); };
+ValueGeneratingCallback NullCallback(bool keep_null) {
+  return [keep_null](ObjectTracker* tracker, Marker& marker,
+                     rapidjson::Value& value,
+                     rapidjson::Document::AllocatorType& allocator) {
+    value.SetNull();
+    return keep_null;
+  };
 }
 
 }  // namespace
@@ -125,7 +132,7 @@ Marker UnknownType::GetValueCallback(Marker marker, size_t length,
       }
       output[size - 2] = '\0';
       value.SetString(output, size, allocator);
-      return;
+      return true;
     };
   }
   return marker;
@@ -160,7 +167,7 @@ Marker StringType::GetValueCallback(Marker marker, size_t length,
                  rapidjson::Document::AllocatorType& allocator) {
     if (is_null) {
       value.SetString("(null)", allocator);
-      return;
+      return true;
     }
     const uint8_t* bytes = marker.byte_pos();
     marker.AdvanceBytesTo(
@@ -170,7 +177,7 @@ Marker StringType::GetValueCallback(Marker marker, size_t length,
       value.SetString(reinterpret_cast<const char*>(bytes), string_length,
                       allocator);
     }
-    return;
+    return true;
   };
   return marker;
 }
@@ -190,7 +197,7 @@ Marker BoolType::GetValueCallback(Marker marker, size_t length,
       } else {
         value.SetString("false", allocator);
       }
-      return;
+      return true;
     };
   }
   return marker;
@@ -213,25 +220,163 @@ Marker StructType::GetValueCallback(Marker marker, size_t length,
                           prev_marker.handle_pos(), tracker->end());
       if (!value_marker.is_valid()) {
         marker = value_marker;
-        return;
+        return false;
       }
 
       prev_marker = member_type->GetValueCallback(value_marker, member.size(),
                                                   tracker, value_callback);
       if (!prev_marker.is_valid()) {
         marker = value_marker;
-        return;
+        return false;
       }
 
-      tracker->ObjectEnqueue(member.name(), std::move(value_callback), value,
-                             allocator);
+      tracker->ObjectEnqueue(std::string(member.name()),
+                             std::move(value_callback), value, allocator);
     }
+    return true;
   };
   marker.AdvanceBytesBy(length);
   return marker;
 }
 
 size_t StructType::InlineSize() const { return struct_.size(); }
+
+// Convenience class to access an Envelope embedded in a uint8_t array.  The
+// format is:
+// [ uint32_t num_bytes, uint32_t num_handles, uint64_t pointer ]
+class Envelope {
+ public:
+  Envelope(const uint8_t* ptr) : ptr_(ptr) {}
+
+  uint32_t num_bytes() const { return internal::MemoryFrom<uint32_t>(ptr_); }
+
+  uint32_t num_handles() const {
+    return internal::MemoryFrom<uint32_t>(ptr_ + sizeof(uint32_t));
+  }
+
+  uint64_t pointer() const {
+    return internal::MemoryFrom<uint64_t>(ptr_ + (2 * sizeof(uint32_t)));
+  }
+
+  const uint8_t* pointer_offset() {
+    return ptr_ + sizeof(uint32_t) + sizeof(uint32_t);
+  }
+
+  std::string ToString() {
+    std::ostringstream oss;
+    oss << "(" << num_bytes() << ", " << num_handles() << ", " << pointer()
+        << ")";
+    return oss.str();
+  }
+
+ private:
+  const uint8_t* ptr_;
+};
+
+class EnvelopeType : public Type {
+ public:
+  explicit EnvelopeType(Type* target_type) : target_type_(target_type) {}
+
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override {
+    Envelope envelope(marker.byte_pos());
+
+    // An envelope is a byte count, a handle count, and a pointer.  The referent
+    // of the pointer is very likely to be known, but it may not be.  In the
+    // cases where it isn't, we want to know the length, which can only be
+    // provided by examining the envelope.  This is why there is a has-a
+    // relationship between the EnvelopeType and a pointer type, rather than an
+    // is-a relationship.
+    std::unique_ptr<PointerType> pointer_type;
+    if (target_type_ == nullptr) {
+      pointer_type.reset(
+          new PointerType(new UnknownType(envelope.num_bytes()), false));
+    } else {
+      pointer_type.reset(new PointerType(target_type_, false));
+    }
+    marker.AdvanceBytesTo(envelope.pointer_offset());
+    if (!marker.is_valid()) {
+      return marker;
+    }
+    ValueGeneratingCallback pointer_callback;
+    marker = pointer_type->GetValueCallback(marker, sizeof(uint64_t), tracker,
+                                            pointer_callback);
+    callback = [envelope, cb = std::move(pointer_callback)](
+                   ObjectTracker* tracker, Marker& marker,
+                   rapidjson::Value& value,
+                   rapidjson::Document::AllocatorType& allocator) {
+      Marker tmp = marker;
+      // Always advance bytes and handles by the envelope-provided
+      // values, regardless of what the type might say (or not say)
+      marker.AdvanceBytesBy(envelope.num_bytes());
+      marker.AdvanceHandlesBy(envelope.num_handles());
+      return cb(tracker, tmp, value, allocator);
+    };
+    return marker;
+  }
+
+  virtual size_t InlineSize() const override {
+    return sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint64_t);
+  }
+
+ private:
+  std::shared_ptr<Type> target_type_;
+};
+
+Marker TableType::GetValueCallback(Marker marker, size_t length,
+                                   ObjectTracker* tracker,
+                                   ValueGeneratingCallback& callback) const {
+  const uint8_t* bytes = marker.byte_pos();
+  marker.AdvanceBytesBy(length);
+  if (!marker.is_valid()) {
+    return marker;
+  }
+
+  uint64_t max_ordinal = internal::MemoryFrom<uint64_t>(bytes);
+  uint64_t data = internal::MemoryFrom<uint64_t>(bytes + sizeof(uint64_t));
+
+  // data is only allowed to be FIDL_ALLOC_PRESENT.
+  if (data != FIDL_ALLOC_PRESENT) {
+    // TODO: add "name" to the type, print it here instead of "object".
+    FXL_LOG(INFO) << "Illegally encoded table " << max_ordinal << " " << data;
+    return marker;
+  }
+
+  const Table& tab = table_;
+  callback = [max_ordinal, &tab](
+                 ObjectTracker* tracker, Marker& marker,
+                 rapidjson::Value& value,
+                 rapidjson::Document::AllocatorType& allocator) {
+    value.SetObject();
+    auto& members = tab.members();
+
+    for (size_t ordinal = 1; ordinal <= max_ordinal; ordinal++) {
+      std::unique_ptr<Type> target_type;
+      std::string name;
+      if (ordinal < members.size() && members[ordinal] != nullptr) {
+        target_type = members[ordinal]->GetType();
+        name = members[ordinal]->name();
+      } else {
+        name = "unknown$";
+        name.append(std::to_string(ordinal));
+      }
+      EnvelopeType type(target_type.release());
+      ValueGeneratingCallback value_callback;
+      marker = type.GetValueCallback(marker, type.InlineSize(), tracker,
+                                     value_callback);
+      if (!marker.is_valid()) {
+        return false;
+      }
+      tracker->ObjectEnqueue(name, std::move(value_callback), value, allocator);
+    }
+    return true;
+  };
+
+  return marker;
+}
+
+size_t TableType::InlineSize() const { return table_.size(); }
 
 UnionType::UnionType(const Union& uni) : union_(uni) {}
 
@@ -252,7 +397,7 @@ Marker UnionType::GetValueCallback(Marker marker, size_t length,
     inline_marker.AdvanceBytesBy(uni.alignment());
     if (!inline_marker.is_valid()) {
       marker = inline_marker;
-      return;
+      return false;
     }
 
     // Determine member type and get appropriate callback
@@ -274,11 +419,14 @@ Marker UnionType::GetValueCallback(Marker marker, size_t length,
           marker.AdvanceBytesTo(final_pos);
           if (!marker.is_valid()) {
             tracker_marker = marker;
+            return false;
           }
+          return true;
         };
 
-    tracker->ObjectEnqueue(member.name(), std::move(value_callback), value,
-                           allocator);
+    tracker->ObjectEnqueue(std::string(member.name()),
+                           std::move(value_callback), value, allocator);
+    return true;
   };
 
   marker.AdvanceBytesBy(length);
@@ -287,7 +435,11 @@ Marker UnionType::GetValueCallback(Marker marker, size_t length,
 
 size_t UnionType::InlineSize() const { return union_.size(); }
 
-PointerType::PointerType(Type* target_type) : target_type_(target_type) {}
+PointerType::PointerType(Type* target_type, bool keep_null)
+    : target_type_(target_type), keep_null_(keep_null) {}
+
+PointerType::PointerType(std::shared_ptr<Type> target_type, bool keep_null)
+    : target_type_(target_type), keep_null_(keep_null) {}
 
 Marker PointerType::GetValueCallback(Marker marker, size_t length,
                                      ObjectTracker* tracker,
@@ -302,7 +454,7 @@ Marker PointerType::GetValueCallback(Marker marker, size_t length,
   }
   data = internal::MemoryFrom<uint64_t>(bytes);
   if (data == FIDL_ALLOC_ABSENT) {
-    callback = NullCallback();
+    callback = NullCallback(keep_null_);
     return marker;
   }
 
@@ -323,14 +475,15 @@ Marker PointerType::GetValueCallback(Marker marker, size_t length,
         marker, target_type->InlineSize(), &local_tracker, callback);
     if (!val.is_valid()) {
       marker = val;
-      return;
+      return false;
     }
-    callback(&local_tracker, marker, value, allocator);
+    bool retval = callback(&local_tracker, marker, value, allocator);
     local_tracker.RunCallbacksFrom(val);
     if (!val.is_valid()) {
       marker = val;
-      return;
+      return false;
     }
+    return retval;
   };
   return marker;
 }
@@ -360,10 +513,11 @@ ValueGeneratingCallback ElementSequenceType::GetIteratingCallback(
                                                 value_callback);
       if (!marker.is_valid()) {
         inline_marker = marker;
-        return;
+        return false;
       }
       tracker->ArrayEnqueue(std::move(value_callback), value, allocator);
     }
+    return true;
   };
 }
 
@@ -405,12 +559,13 @@ Marker VectorType::GetValueCallback(Marker marker, size_t length,
                    rapidjson::Document::AllocatorType& allocator) {
       ValueGeneratingCallback value_cb =
           vt.GetIteratingCallback(tracker, count, marker, element_size * count);
-      value_cb(tracker, marker, value, allocator);
+      bool retval = value_cb(tracker, marker, value, allocator);
       marker.AdvanceBytesBy(element_size * count);
+      return retval;
     };
   } else if (data == 0) {
     // TODO: Validate this is a nullable vector.
-    callback = NullCallback();
+    callback = NullCallback(true);
   }
   return marker;
 }
@@ -429,6 +584,7 @@ Marker EnumType::GetValueCallback(Marker marker, size_t length,
                     rapidjson::Value& value,
                     rapidjson::Document::AllocatorType& allocator) {
     value.SetString(name, allocator);
+    return true;
   };
   return marker;
 }
@@ -450,17 +606,18 @@ Marker HandleType::GetValueCallback(Marker marker, size_t length,
       const zx_handle_t* handles = marker.handle_pos();
       marker.AdvanceHandlesBy(1);
       if (!marker.is_valid()) {
-        return;
+        return false;
       }
       zx_handle_t val = internal::MemoryFrom<zx_handle_t>(handles);
       value.SetString(std::to_string(val).c_str(), allocator);
-      return;
+      return true;
     };
   } else if (val == FIDL_HANDLE_ABSENT) {
     callback = [val](ObjectTracker* tracker, Marker& marker,
                      rapidjson::Value& value,
                      rapidjson::Document::AllocatorType& allocator) {
       value.SetString(std::to_string(val).c_str(), allocator);
+      return true;
     };
   } else {
     FXL_LOG(INFO) << "Illegally encoded handle";

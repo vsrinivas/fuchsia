@@ -201,8 +201,9 @@ void OnZxChannelWrite(LibraryLoader* loader, const zxdb::Err& err,
   fprintf(stderr, "ordinal = %d\n", header.ordinal);
   fprintf(stderr, "Output: %s\n", output.c_str());
 #endif
-  fprintf(stdout, "%s.%s = %s\n", method->enclosing_interface().name().c_str(),
-          method->name().c_str(), output.c_str());
+  fprintf(stdout, "%s.%s = %s\n",
+          std::string(method->enclosing_interface().name()).c_str(),
+          std::string(method->name()).c_str(), output.c_str());
 }
 
 // Add the startup actions to the loop: connect, attach to pid, set breakpoints.

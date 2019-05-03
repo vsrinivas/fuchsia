@@ -41,6 +41,8 @@ protocol this_is_an_interface {
     NullableUnion(int_struct_union? isu, int32 i);
     NullableUnionIntFirst(int32 i, int_struct_union? isu);
     ShortUnion(u8_u16_union u, int32 i);
+
+    Table(value_table table, int32 i);
 };
 
 struct primitive_types {
@@ -88,4 +90,10 @@ union int_struct_union {
 union u8_u16_union {
     uint8 variant_u8;
     uint16 variant_u16;
+};
+
+table value_table {
+    1: int16 first_int16;
+    2: two_string_struct second_struct;
+    3: int_struct_union third_union;
 };
