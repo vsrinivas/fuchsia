@@ -39,19 +39,6 @@ class TestHost(unittest.TestCase):
     print(host.find_build_dir())
     self.assertTrue(os.path.isdir(host.find_build_dir()))
 
-  def test_set_ssh_config(self):
-    host = Host()
-    with self.assertRaises(Host.ConfigError):
-      host.set_ssh_config('no_such_config')
-    if not os.getenv('FUCHSIA_DIR'):
-      return
-    build_dir = host.find_build_dir()
-    ssh_config = Host.join(build_dir, 'ssh-keys', 'ssh_config')
-    if not os.path.exists(ssh_config):
-      return
-    host.set_ssh_config(ssh_config)
-    self.assertEqual(host.ssh_config, ssh_config)
-
   def test_set_build_ids(self):
     host = Host()
     with self.assertRaises(Host.ConfigError):
@@ -137,7 +124,6 @@ class TestHost(unittest.TestCase):
         build_ids) or not os.path.isdir(zxtools):
       return
     host.set_build_dir(build_dir)
-    self.assertEqual(host.ssh_config, ssh_config)
     self.assertEqual(host._ids, build_ids)
     self.assertEqual(host._zxtools, zxtools)
     self.assertEqual(host._platform, platform)

@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os
 import unittest
 import subprocess
 
@@ -25,12 +26,64 @@ class TestDevice(unittest.TestCase):
       args = parser.parse_args(['--device', 'just-four-random-words'])
       device = Device.from_args(host, args)
 
+  def test_set_ssh_config(self):
+    mock = MockDevice()
+    with self.assertRaises(Host.ConfigError):
+      mock.set_ssh_config('no_such_config')
+    if not os.getenv('FUCHSIA_DIR'):
+      return
+    build_dir = mock.host.find_build_dir()
+    ssh_config = Host.join(build_dir, 'ssh-keys', 'ssh_config')
+    if not os.path.exists(ssh_config):
+      return
+    mock.set_ssh_config(ssh_config)
+    cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
+    self.assertIn('ssh', cmd)
+    self.assertIn('-F ' + ssh_config, cmd)
+
+  def test_set_ssh_identity(self):
+    mock = MockDevice()
+    with self.assertRaises(Host.ConfigError):
+      mock.set_ssh_identity('no_such_identity')
+    if not os.getenv('FUCHSIA_DIR'):
+      return
+    identity_file = Host.join('.ssh', 'pkey')
+    if not os.path.exists(identity_file):
+      return
+    mock.set_ssh_identity(identity_file)
+    cmd = ' '.join(mock.get_ssh_cmd(['scp']))
+    self.assertIn('scp', cmd)
+    self.assertIn('-i ' + identity_file, cmd)
+
+  def test_set_ssh_identity(self):
+    mock = MockDevice()
+    mock.set_ssh_option('StrictHostKeyChecking no')
+    mock.set_ssh_option('UserKnownHostsFile=/dev/null')
+    cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
+    self.assertIn('-o StrictHostKeyChecking no', cmd)
+    self.assertIn('-o UserKnownHostsFile=/dev/null', cmd)
+
+  def test_set_ssh_identity(self):
+    mock = MockDevice()
+    mock.set_ssh_verbosity(3)
+    cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
+    self.assertIn('-vvv', cmd)
+    mock.set_ssh_verbosity(1)
+    cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
+    self.assertIn('-v', cmd)
+    self.assertNotIn('-vvv', cmd)
+    mock.set_ssh_verbosity(0)
+    cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
+    self.assertNotIn('-v', cmd)
+
   def test_ssh(self):
     mock = MockDevice()
     mock.ssh(['some-command', '--with', 'some-argument'])
     self.assertIn(
-        'ssh -F ' + mock.host.ssh_config +
-        ' ::1 some-command --with some-argument', mock.history)
+        ' '.join(
+            mock.get_ssh_cmd(
+                ['ssh', '::1', 'some-command', '--with some-argument'])),
+        mock.history)
 
   def test_getpids(self):
     mock = MockDevice()
@@ -43,8 +96,9 @@ class TestDevice(unittest.TestCase):
     mock = MockDevice()
     files = mock.ls('path-to-some-corpus')
     self.assertIn(
-        'ssh -F ' + mock.host.ssh_config + ' ::1 ls -l path-to-some-corpus',
-        mock.history)
+        ' '.join(
+            mock.get_ssh_cmd(['ssh', '::1', 'ls', '-l',
+                              'path-to-some-corpus'])), mock.history)
     self.assertTrue('feac37187e77ff60222325cf2829e2273e04f2ea' in files)
     self.assertEqual(files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
 
@@ -53,17 +107,18 @@ class TestDevice(unittest.TestCase):
     with self.assertRaises(ValueError):
       mock.fetch('foo', 'not-likely-to-be-a-directory')
     mock.fetch('remote-path', '/tmp')
-    self.assertIn('scp -F ' + mock.host.ssh_config + ' [::1]:remote-path /tmp',
-                  mock.history)
+    self.assertIn(
+        ' '.join(mock.get_ssh_cmd(['scp', '[::1]:remote-path', '/tmp'])),
+        mock.history)
     mock.fetch('corpus/*', '/tmp')
-    self.assertIn('scp -F ' + mock.host.ssh_config + ' [::1]:corpus/* /tmp',
+    self.assertIn(' '.join(mock.get_ssh_cmd(['scp', '[::1]:corpus/*', '/tmp'])),
                   mock.history)
 
   def test_store(self):
     mock = MockDevice()
     mock.store('local-path', 'remote-path')
     self.assertIn(
-        'scp -F ' + mock.host.ssh_config + ' local-path [::1]:remote-path',
+        ' '.join(mock.get_ssh_cmd(['scp', 'local-path', '[::1]:remote-path'])),
         mock.history)
 
 

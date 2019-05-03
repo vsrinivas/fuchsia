@@ -17,8 +17,8 @@ class Host(object):
     paths, as well as details about the host architecture and platform.
 
     Attributes:
-      fuchsia: The root directory of the Fuchsia repository
-      ssh_config: Location of the SSH configuration used to connect to device.
+      fuzzers:   The fuzzer binaries available in the current Fuchsia image
+      build_dir: The build output directory, if present.
   """
 
   # Convenience file descriptor for silencing subprocess output
@@ -49,9 +49,10 @@ class Host(object):
     self._symbolizer_exec = None
     self._platform = None
     self._zxtools = None
-    self.ssh_config = None
     self.fuzzers = []
+    self.build_dir = None
 
+  @classmethod
   def find_build_dir(self):
     """Examines the source tree to locate a build directory."""
     build_dir = Host.join('.fx-build-dir')
@@ -59,12 +60,6 @@ class Host(object):
       raise Host.ConfigError('Unable to find .fx-build-dir; have you `fx set`?')
     with open(build_dir, 'r') as f:
       return Host.join(f.read().strip())
-
-  def set_ssh_config(self, config_file):
-    """Sets the SSH arguments to use a config file."""
-    if not os.path.exists(config_file):
-      raise Host.ConfigError('Unable to find SSH configuration.')
-    self.ssh_config = config_file
 
   def set_build_ids(self, build_ids):
     """Sets the build IDs used to symbolize logs."""
@@ -107,7 +102,6 @@ class Host(object):
 
   def set_build_dir(self, build_dir):
     """Configure the host using data from a build directory."""
-    self.set_ssh_config(Host.join(build_dir, 'ssh-keys', 'ssh_config'))
     self.set_build_ids(Host.join(build_dir, 'ids.txt'))
     self.set_zxtools(Host.join(build_dir + '.zircon', 'tools'))
     platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
@@ -119,6 +113,7 @@ class Host(object):
     # fuzzers.json isn't emitted in release builds
     if os.path.exists(json_file):
       self.set_fuzzers_json(json_file)
+    self.build_dir = build_dir
 
   def zircon_tool(self, cmd, logfile=None):
     """Executes a tool found in the ZIRCON_BUILD_DIR."""
