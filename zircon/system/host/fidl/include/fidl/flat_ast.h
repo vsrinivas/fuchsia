@@ -730,8 +730,12 @@ struct Bits : public TypeDecl {
           subtype_ctor(std::move(subtype_ctor)),
           members(std::move(members)) {}
 
+    // Set during construction.
     std::unique_ptr<TypeConstructor> subtype_ctor;
     std::vector<Member> members;
+
+    // Set during compilation.
+    uint64_t mask = 0;
 };
 
 struct Struct : public TypeDecl {
@@ -1215,7 +1219,7 @@ private:
     template <typename DeclType, typename MemberType>
     bool ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator);
     template <typename MemberType>
-    bool ValidateBitsMembers(Bits* bits_decl);
+    bool ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask);
     template <typename MemberType>
     bool ValidateEnumMembers(Enum* enum_decl);
 

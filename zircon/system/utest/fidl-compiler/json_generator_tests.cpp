@@ -1410,6 +1410,7 @@ bits Bits : uint64 {
         "kind": "primitive",
         "subtype": "uint64"
       },
+      "mask": "9223372036854775809",
       "members": [
         {
           "name": "SMALLEST",
@@ -1519,6 +1520,7 @@ struct Struct {
         "kind": "primitive",
         "subtype": "uint32"
       },
+      "mask": "8",
       "members": [
         {
           "name": "B",

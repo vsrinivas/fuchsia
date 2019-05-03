@@ -465,6 +465,11 @@ void JSONGenerator::Generate(const flat::Bits& value) {
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("type", value.subtype_ctor->type);
+        // TODO(FIDL-324): When all numbers are wrapped as string, we can simply
+        // call GenerateObjectMember directly.
+        GenerateObjectPunctuation(Position::kSubsequent);
+        EmitObjectKey(&json_file_, indent_level_, "mask");
+        EmitNumeric(&json_file_, value.mask, kAsString);
         GenerateObjectMember("members", value.members);
     });
 }

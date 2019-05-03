@@ -213,6 +213,27 @@ bits BitsImplicit {
     END_TEST;
 }
 
+bool GoodBitsTestMask() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+bits Life {
+    A = 0b000010;
+    B = 0b001000;
+    C = 0b100000;
+};
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+
+    auto bits = library.LookupBits("Life");
+    ASSERT_NONNULL(bits);
+    EXPECT_EQ(bits->mask, 42);
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(bits_tests)
@@ -227,5 +248,5 @@ RUN_TEST(BadBitsTestDuplicateMember)
 RUN_TEST(GoodBitsTestKeywordNames)
 RUN_TEST(GoodBitsTestShape)
 RUN_TEST(BadBitsTestNonPowerOfTwo)
-
+RUN_TEST(GoodBitsTestMask)
 END_TEST_CASE(bits_tests)

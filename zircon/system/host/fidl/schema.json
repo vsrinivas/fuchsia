@@ -108,6 +108,7 @@
             "required": [
                 "name",
                 "type",
+                "mask",
                 "members"
             ],
             "properties": {
@@ -122,6 +123,10 @@
                 "type": {
                     "description": "Type of the bits",
                     "$ref": "#/definitions/type"
+                },
+                "mask": {
+                    "description": "Mask of all members",
+                    "type": "string"
                 },
                 "members": {
                     "description": "List of bits members",

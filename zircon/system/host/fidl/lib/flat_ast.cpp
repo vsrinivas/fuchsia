@@ -2799,22 +2799,34 @@ bool Library::CompileBits(Bits* bits_declaration) {
     // Validate constants.
     auto primitive_type = static_cast<const PrimitiveType*>(bits_declaration->subtype_ctor->type);
     switch (primitive_type->subtype) {
-    case types::PrimitiveSubtype::kUint8:
-        if (!ValidateBitsMembers<uint8_t>(bits_declaration))
+    case types::PrimitiveSubtype::kUint8: {
+        uint8_t mask;
+        if (!ValidateBitsMembersAndCalcMask<uint8_t>(bits_declaration, &mask))
             return false;
+        bits_declaration->mask = mask;
         break;
-    case types::PrimitiveSubtype::kUint16:
-        if (!ValidateBitsMembers<uint16_t>(bits_declaration))
+    }
+    case types::PrimitiveSubtype::kUint16: {
+        uint16_t mask;
+        if (!ValidateBitsMembersAndCalcMask<uint16_t>(bits_declaration, &mask))
             return false;
+        bits_declaration->mask = mask;
         break;
-    case types::PrimitiveSubtype::kUint32:
-        if (!ValidateBitsMembers<uint32_t>(bits_declaration))
+    }
+    case types::PrimitiveSubtype::kUint32: {
+        uint32_t mask;
+        if (!ValidateBitsMembersAndCalcMask<uint32_t>(bits_declaration, &mask))
             return false;
+        bits_declaration->mask = mask;
         break;
-    case types::PrimitiveSubtype::kUint64:
-        if (!ValidateBitsMembers<uint64_t>(bits_declaration))
+    }
+    case types::PrimitiveSubtype::kUint64: {
+        uint64_t mask;
+        if (!ValidateBitsMembersAndCalcMask<uint64_t>(bits_declaration, &mask))
             return false;
+        bits_declaration->mask = mask;
         break;
+    }
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kInt8:
     case types::PrimitiveSubtype::kInt16:
@@ -3300,18 +3312,24 @@ static bool IsPowerOfTwo(T t) {
 }
 
 template <typename MemberType>
-bool Library::ValidateBitsMembers(Bits* bits_decl) {
+bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask) {
     static_assert(std::is_unsigned<MemberType>::value && !std::is_same<MemberType, bool>::value,
                   "Bits members must be an unsigned integral type!");
     // Each bits member must be a power of two.
-    auto validator = [](MemberType member, std::string* out_error) {
+    MemberType mask = 0u;
+    auto validator = [&mask](MemberType member, std::string* out_error) {
         if (!IsPowerOfTwo(member)) {
             *out_error = "bits members must be powers of two";
             return false;
         }
+        mask |= member;
         return true;
     };
-    return ValidateMembers<Bits, MemberType>(bits_decl, validator);
+    if (!ValidateMembers<Bits, MemberType>(bits_decl, validator)) {
+        return false;
+    }
+    *out_mask = mask;
+    return true;
 }
 
 template <typename MemberType>
