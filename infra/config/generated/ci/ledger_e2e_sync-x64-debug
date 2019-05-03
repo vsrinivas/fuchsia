@@ -1,0 +1,26 @@
+checkout {
+  manifest: "flower"
+  project: "integration"
+  remote: "https://fuchsia.googlesource.com/integration"
+}
+build {
+  build_type: "debug"
+  board: "boards/x64.gni"
+  packages: "//peridot/packages/tests:ledger"
+  packages: "//garnet/packages:garnet"
+  packages: "//garnet/packages/testing:all"
+  product: "products/core.gni"
+  run_tests: true
+  target: "x64"
+  variants: "host_asan"
+}
+test {
+  device_type: "QEMU"
+  pave: true
+  pool: "fuchsia.tests"
+  runtests_args: " -t ledger_e2e_sync \'/pkgfs/packages/ledger_tests/*/test/disabled\'"
+  requires_secrets: true
+  timeout_secs: 1800
+}
+gcs_bucket: "fuchsia-build"
+

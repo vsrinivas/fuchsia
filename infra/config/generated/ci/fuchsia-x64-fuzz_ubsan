@@ -1,0 +1,21 @@
+checkout {
+  manifest: "flower"
+  project: "integration"
+  remote: "https://fuchsia.googlesource.com/integration"
+}
+build {
+  build_type: "debug"
+  board: "boards/x64.gni"
+  packages: "//bundles/buildbot:core"
+  product: "products/core.gni"
+  target: "x64"
+  variants: "{variant=\"ubsan-fuzzer\" target_type=[\"fuzzed_executable\"]}"
+}
+test {
+  device_type: "QEMU"
+  pave: true
+  pool: "fuchsia.tests"
+  timeout_secs: 2400
+}
+gcs_bucket: "fuchsia-build"
+

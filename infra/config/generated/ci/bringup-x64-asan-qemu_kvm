@@ -1,0 +1,22 @@
+checkout {
+  manifest: "flower"
+  project: "integration"
+  remote: "https://fuchsia.googlesource.com/integration"
+}
+build {
+  build_type: "debug"
+  board: "boards/x64.gni"
+  packages: "//bundles/buildbot:bringup"
+  product: "products/bringup.gni"
+  run_tests: true
+  target: "x64"
+  variants: "asan"
+  variants: "host_asan"
+}
+test {
+  device_type: "QEMU"
+  pool: "fuchsia.tests"
+  timeout_secs: 1800
+}
+gcs_bucket: "fuchsia-build"
+
