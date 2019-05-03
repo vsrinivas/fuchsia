@@ -13,18 +13,26 @@ fidl_support_templates = [
   {
     import = "$zx/public/gn/fidl/llcpp.gni"
     target = "fidl_llcpp_library"
-    fidlc = "json"
+    fidlc = "llcpp"
   },
 ]
 
 # This tells fidl_library() what fidlc outputs fidl_llcpp_library() requires.
 fidl_support_fidlc = [
   {
-    name = "json"
+    name = "llcpp"
     files = [
+      # TODO(BLD-470): Refactor fidl.gni to better support multiple bindings
+      # using tables.cpp.
+      # First item must be json, because the fidl_llcpp_library
+      # exposes the first item to fidlgen_llcpp_zircon in the Fuchsia build.
       {
         switch = "--json"
         path = "fidl.json"
+      },
+      {
+        switch = "--tables"
+        path = "tables.cpp"
       },
     ]
   },
@@ -65,13 +73,14 @@ template("fidl_llcpp_library") {
       sources = [
         "gen/llcpp/fidl.cc",
       ]
+      sources += invoker.fidlc_outputs
 
       configs += [ "$zx/public/gn/config:visibility_hidden" ]
 
       # Users of the bindings library need the generated headers.
       public_configs = [ ":_fidl_llcpp_library.config.$library_target" ]
 
-      deps = []
+      deps = invoker.fidlc_deps
       public_deps = []
 
       # The generated headers of a dependent fidl_library() will #include the
@@ -120,7 +129,6 @@ template("fidl_llcpp_library") {
     # need to be updated.
     # This will go away when the bindings generation is done directly here.
     fidlc_outputs = invoker.fidlc_outputs
-    assert(fidlc_outputs == [ fidlc_outputs[0] ])
     group(library_target) {
       metadata = {
         fidl_gen = [
