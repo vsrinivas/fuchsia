@@ -7,6 +7,7 @@
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/fit/bridge.h>
 #include <lib/syslog/cpp/logger.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -57,13 +58,15 @@ const char kOverrideConfigPath[] = "/config/data/override_config.json";
 }  // namespace
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
+    async_dispatcher_t* dispatcher,
     std::shared_ptr<::sys::ServiceDirectory> services) {
   Config config;
 
   if (files::IsFile(kOverrideConfigPath)) {
     const zx_status_t status = ParseConfig(kOverrideConfigPath, &config);
     if (status == ZX_OK) {
-      return CrashpadAgent::TryCreate(std::move(services), std::move(config));
+      return CrashpadAgent::TryCreate(dispatcher, std::move(services),
+                                      std::move(config));
     }
     FX_LOGS(ERROR) << "failed to read override config file at "
                    << kOverrideConfigPath << ": " << status << " ("
@@ -75,7 +78,8 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
   // config was specified or we failed to parse it.
   const zx_status_t status = ParseConfig(kDefaultConfigPath, &config);
   if (status == ZX_OK) {
-    return CrashpadAgent::TryCreate(std::move(services), std::move(config));
+    return CrashpadAgent::TryCreate(dispatcher, std::move(services),
+                                    std::move(config));
   }
   FX_LOGS(ERROR) << "failed to read default config file at "
                  << kDefaultConfigPath << ": " << status << " ("
@@ -86,16 +90,18 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
+    async_dispatcher_t* dispatcher,
     std::shared_ptr<::sys::ServiceDirectory> services, Config config) {
   std::unique_ptr<CrashServer> crash_server;
   if (config.enable_upload_to_crash_server && config.crash_server_url) {
     crash_server = std::make_unique<CrashServer>(*config.crash_server_url);
   }
-  return CrashpadAgent::TryCreate(std::move(services), std::move(config),
-                                  std::move(crash_server));
+  return CrashpadAgent::TryCreate(dispatcher, std::move(services),
+                                  std::move(config), std::move(crash_server));
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
+    async_dispatcher_t* dispatcher,
     std::shared_ptr<::sys::ServiceDirectory> services, Config config,
     std::unique_ptr<CrashServer> crash_server) {
   if (!files::IsDirectory(config.local_crashpad_database_path)) {
@@ -118,15 +124,17 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
       config.enable_upload_to_crash_server);
 
   return std::unique_ptr<CrashpadAgent>(
-      new CrashpadAgent(std::move(services), std::move(config),
+      new CrashpadAgent(dispatcher, std::move(services), std::move(config),
                         std::move(database), std::move(crash_server)));
 }
 
 CrashpadAgent::CrashpadAgent(
+    async_dispatcher_t* dispatcher,
     std::shared_ptr<::sys::ServiceDirectory> services, Config config,
     std::unique_ptr<crashpad::CrashReportDatabase> database,
     std::unique_ptr<CrashServer> crash_server)
-    : services_(services),
+    : executor_(dispatcher),
+      services_(services),
       config_(std::move(config)),
       database_(std::move(database)),
       crash_server_(std::move(crash_server)) {
@@ -140,79 +148,116 @@ CrashpadAgent::CrashpadAgent(
 void CrashpadAgent::OnNativeException(zx::process process, zx::thread thread,
                                       zx::port exception_port,
                                       OnNativeExceptionCallback callback) {
-  const zx_status_t status = OnNativeException(
-      std::move(process), std::move(thread), std::move(exception_port));
-  Analyzer_OnNativeException_Result result;
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to handle native exception. Won't retry.";
-    result.set_err(status);
-  } else {
-    Analyzer_OnNativeException_Response response;
-    result.set_response(response);
-  }
-  callback(std::move(result));
-  PruneDatabase();
+  auto promise =
+      OnNativeException(std::move(process), std::move(thread),
+                        std::move(exception_port))
+          .and_then([] {
+            Analyzer_OnNativeException_Result result;
+            Analyzer_OnNativeException_Response response;
+            result.set_response(response);
+            return fit::ok(std::move(result));
+          })
+          .or_else([] {
+            FX_LOGS(ERROR) << "Failed to handle native exception. Won't retry.";
+            Analyzer_OnNativeException_Result result;
+            result.set_err(ZX_ERR_INTERNAL);
+            return fit::ok(std::move(result));
+          })
+          .and_then([callback = std::move(callback),
+                     this](Analyzer_OnNativeException_Result& result) {
+            callback(std::move(result));
+            PruneDatabase();
+          });
+
+  executor_.schedule_task(std::move(promise));
 }
 
 void CrashpadAgent::OnManagedRuntimeException(
     std::string component_url, ManagedRuntimeException exception,
     OnManagedRuntimeExceptionCallback callback) {
-  const zx_status_t status =
-      OnManagedRuntimeException(component_url, std::move(exception));
-  Analyzer_OnManagedRuntimeException_Result result;
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR)
-        << "failed to handle managed runtime exception. Won't retry.";
-    result.set_err(status);
-  } else {
-    Analyzer_OnManagedRuntimeException_Response response;
-    result.set_response(response);
-  }
-  callback(std::move(result));
-  PruneDatabase();
+  auto promise =
+      OnManagedRuntimeException(component_url, std::move(exception))
+          .and_then([] {
+            Analyzer_OnManagedRuntimeException_Result result;
+            Analyzer_OnManagedRuntimeException_Response response;
+            result.set_response(response);
+            return fit::ok(std::move(result));
+          })
+          .or_else([] {
+            FX_LOGS(ERROR)
+                << "Failed to handle managed runtime exception. Won't retry.";
+            Analyzer_OnManagedRuntimeException_Result result;
+            result.set_err(ZX_ERR_INTERNAL);
+            return fit::ok(std::move(result));
+          })
+          .and_then([callback = std::move(callback),
+                     this](Analyzer_OnManagedRuntimeException_Result& result) {
+            callback(std::move(result));
+            PruneDatabase();
+          });
+
+  executor_.schedule_task(std::move(promise));
 }
 
 void CrashpadAgent::OnKernelPanicCrashLog(
     fuchsia::mem::Buffer crash_log, OnKernelPanicCrashLogCallback callback) {
-  const zx_status_t status = OnKernelPanicCrashLog(std::move(crash_log));
-  Analyzer_OnKernelPanicCrashLog_Result result;
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to process kernel panic crash log. Won't retry.";
-    result.set_err(status);
-  } else {
-    Analyzer_OnKernelPanicCrashLog_Response response;
-    result.set_response(response);
-  }
-  callback(std::move(result));
-  PruneDatabase();
+  auto promise =
+      OnKernelPanicCrashLog(std::move(crash_log))
+          .and_then([] {
+            Analyzer_OnKernelPanicCrashLog_Result result;
+            Analyzer_OnKernelPanicCrashLog_Response response;
+            result.set_response(response);
+            return fit::ok(std::move(result));
+          })
+          .or_else(
+              [] {
+                FX_LOGS(ERROR)
+                    << "Failed to process kernel panic crash log. Won't retry.";
+                Analyzer_OnKernelPanicCrashLog_Result result;
+                result.set_err(ZX_ERR_INTERNAL);
+                return fit::ok(std::move(result));
+              })
+          .and_then([callback = std::move(callback),
+                     this](Analyzer_OnKernelPanicCrashLog_Result& result) {
+            callback(std::move(result));
+            PruneDatabase();
+          });
+
+  executor_.schedule_task(std::move(promise));
 }
 
-zx_status_t CrashpadAgent::GetFeedbackData(Data* data) {
+fit::promise<Data> CrashpadAgent::GetFeedbackData() {
   if (!feedback_data_provider_) {
-    services_->Connect(feedback_data_provider_.NewRequest());
+    feedback_data_provider_ =
+        services_->Connect<fuchsia::feedback::DataProvider>();
+    // TODO(DX-1469): set up set_error_handler() and call complete_error() on
+    // all the pending fit::bridges.
   }
 
-  fuchsia::feedback::DataProvider_GetData_Result out_result;
-  const zx_status_t status = feedback_data_provider_->GetData(&out_result);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (out_result.is_err()) {
-    return out_result.err();
-  }
+  // We use a fit::bridge to turn GetData() callback into a fit::promise.
+  //
+  // We use a share_ptr to share the bridge between the return value owned by
+  // this and GetData() callback.
+  //
+  // TODO(DX-1469): add a timeout to the fit::bridge completion.
+  std::shared_ptr<fit::bridge<Data>> get_data_done =
+      std::make_shared<fit::bridge<Data>>();
+  feedback_data_provider_->GetData(
+      [get_data_done](
+          fuchsia::feedback::DataProvider_GetData_Result out_result) {
+        if (out_result.is_err()) {
+          FX_LOGS(WARNING) << "Failed to fetch feedback data: "
+                           << out_result.err() << " ("
+                           << zx_status_get_string(out_result.err()) << ")";
+          get_data_done->completer.complete_error();
+          return;
+        }
 
-  *data = std::move(out_result.response().data);
-  return ZX_OK;
-}
+        get_data_done->completer.complete_ok(
+            std::move(out_result.response().data));
+      });
 
-Data CrashpadAgent::GetFeedbackData() {
-  Data data;
-  const zx_status_t get_status = GetFeedbackData(&data);
-  if (get_status != ZX_OK) {
-    FX_LOGS(WARNING) << "error fetching feedback data: " << get_status << " ("
-                     << zx_status_get_string(get_status) << ")";
-  }
-  return data;
+  return get_data_done->consumer.promise_or(fit::error());
 }
 
 namespace {
@@ -238,119 +283,155 @@ std::map<std::string, fuchsia::mem::Buffer> MakeAttachments(
 
 }  // namespace
 
-zx_status_t CrashpadAgent::OnNativeException(zx::process process,
-                                             zx::thread thread,
-                                             zx::port exception_port) {
+fit::promise<void> CrashpadAgent::OnNativeException(zx::process process,
+                                                    zx::thread thread,
+                                                    zx::port exception_port) {
   const std::string package_name = GetPackageName(process);
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << package_name;
 
   // Prepare annotations and attachments.
-  Data feedback_data = GetFeedbackData();
-  const std::map<std::string, std::string> annotations =
-      MakeDefaultAnnotations(feedback_data, package_name);
-  const std::map<std::string, fuchsia::mem::Buffer> attachments =
-      MakeAttachments(&feedback_data);
+  return GetFeedbackData().then(
+      [this, process = std::move(process), thread = std::move(thread),
+       exception_port = std::move(exception_port),
+       package_name](fit::result<Data>& result) mutable -> fit::result<void> {
+        Data feedback_data;
+        if (result.is_ok()) {
+          feedback_data = result.take_value();
+        }
+        const std::map<std::string, std::string> annotations =
+            MakeDefaultAnnotations(feedback_data, package_name);
+        const std::map<std::string, fuchsia::mem::Buffer> attachments =
+            MakeAttachments(&feedback_data);
 
-  // Set minidump and create local crash report.
-  //   * The annotations will be stored in the minidump of the report and
-  //     augmented with modules' annotations.
-  //   * The attachments will be stored in the report.
-  // We don't pass an upload_thread so we can do the upload ourselves
-  // synchronously.
-  crashpad::CrashReportExceptionHandler exception_handler(
-      database_.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
-      /*user_stream_data_sources=*/nullptr);
-  crashpad::UUID local_report_id;
-  if (!exception_handler.HandleExceptionHandles(
-          process, thread, zx::unowned_port(exception_port),
-          &local_report_id)) {
-    database_->SkipReportUpload(
-        local_report_id,
-        crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
-    FX_LOGS(ERROR) << "error handling exception for local crash report, ID "
-                   << local_report_id.ToString();
-    return ZX_ERR_INTERNAL;
-  }
+        // Set minidump and create local crash report.
+        //   * The annotations will be stored in the minidump of the report
+        //     and augmented with modules' annotations.
+        //   * The attachments will be stored in the report.
+        // We don't pass an upload_thread so we can do the upload ourselves
+        // synchronously.
+        crashpad::CrashReportExceptionHandler exception_handler(
+            database_.get(), /*upload_thread=*/nullptr, &annotations,
+            &attachments,
+            /*user_stream_data_sources=*/nullptr);
+        crashpad::UUID local_report_id;
+        if (!exception_handler.HandleExceptionHandles(
+                process, thread, zx::unowned_port(exception_port),
+                &local_report_id)) {
+          database_->SkipReportUpload(
+              local_report_id,
+              crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+          FX_LOGS(ERROR)
+              << "error handling exception for local crash report, ID "
+              << local_report_id.ToString();
+          return fit::error();
+        }
 
-  // For userspace, we read back the annotations from the minidump instead of
-  // passing them as argument like for kernel crashes because the Crashpad
-  // handler augmented them with the modules' annotations.
-  return UploadReport(local_report_id, /*annotations=*/nullptr,
-                      /*read_annotations_from_minidump=*/true);
+        // For userspace, we read back the annotations from the minidump
+        // instead of passing them as argument like for kernel crashes because
+        // the Crashpad handler augmented them with the modules' annotations.
+        if (UploadReport(local_report_id, /*annotations=*/nullptr,
+                         /*read_annotations_from_minidump=*/true) != ZX_OK) {
+          return fit::error();
+        }
+        return fit::ok();
+      });
 }
 
-zx_status_t CrashpadAgent::OnManagedRuntimeException(
+fit::promise<void> CrashpadAgent::OnManagedRuntimeException(
     std::string component_url, ManagedRuntimeException exception) {
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << component_url;
 
-  crashpad::CrashReportDatabase::OperationStatus database_status;
-
   // Create local crash report.
   std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
-  database_status = database_->PrepareNewCrashReport(&report);
+  const crashpad::CrashReportDatabase::OperationStatus database_status =
+      database_->PrepareNewCrashReport(&report);
   if (database_status != crashpad::CrashReportDatabase::kNoError) {
     FX_LOGS(ERROR) << "error creating local crash report (" << database_status
                    << ")";
-    return ZX_ERR_INTERNAL;
+    return fit::make_error_promise();
   }
 
   // Prepare annotations and attachments.
-  const Data feedback_data = GetFeedbackData();
-  const std::map<std::string, std::string> annotations =
-      MakeManagedRuntimeExceptionAnnotations(feedback_data, component_url,
-                                             &exception);
-  AddManagedRuntimeExceptionAttachments(report.get(), feedback_data,
-                                        &exception);
+  return GetFeedbackData().then(
+      [this, component_url, exception = std::move(exception),
+       report = std::move(report)](
+          fit::result<Data>& result) mutable -> fit::result<void> {
+        Data feedback_data;
+        if (result.is_ok()) {
+          feedback_data = result.take_value();
+        }
+        const std::map<std::string, std::string> annotations =
+            MakeManagedRuntimeExceptionAnnotations(feedback_data, component_url,
+                                                   &exception);
+        AddManagedRuntimeExceptionAttachments(report.get(), feedback_data,
+                                              &exception);
 
-  // Finish new local crash report.
-  crashpad::UUID local_report_id;
-  database_status = database_->FinishedWritingCrashReport(std::move(report),
-                                                          &local_report_id);
-  if (database_status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "error writing local crash report (" << database_status
-                   << ")";
-    return ZX_ERR_INTERNAL;
-  }
+        // Finish new local crash report.
+        crashpad::UUID local_report_id;
+        const crashpad::CrashReportDatabase::OperationStatus database_status =
+            database_->FinishedWritingCrashReport(std::move(report),
+                                                  &local_report_id);
+        if (database_status != crashpad::CrashReportDatabase::kNoError) {
+          FX_LOGS(ERROR) << "error writing local crash report ("
+                         << database_status << ")";
+          return fit::error();
+        }
 
-  return UploadReport(local_report_id, &annotations,
-                      /*read_annotations_from_minidump=*/false);
+        if (UploadReport(local_report_id, &annotations,
+                         /*read_annotations_from_minidump=*/false) != ZX_OK) {
+          return fit::error();
+        }
+        return fit::ok();
+      });
 }
 
-zx_status_t CrashpadAgent::OnKernelPanicCrashLog(
+fit::promise<void> CrashpadAgent::OnKernelPanicCrashLog(
     fuchsia::mem::Buffer crash_log) {
   FX_LOGS(INFO) << "generating crash report for previous kernel panic";
 
-  crashpad::CrashReportDatabase::OperationStatus database_status;
-
   // Create local crash report.
   std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
-  database_status = database_->PrepareNewCrashReport(&report);
+  const crashpad::CrashReportDatabase::OperationStatus database_status =
+      database_->PrepareNewCrashReport(&report);
   if (database_status != crashpad::CrashReportDatabase::kNoError) {
     FX_LOGS(ERROR) << "error creating local crash report (" << database_status
                    << ")";
-    return ZX_ERR_INTERNAL;
+    return fit::make_error_promise();
   }
 
   // Prepare annotations and attachments.
-  const Data feedback_data = GetFeedbackData();
-  const std::map<std::string, std::string> annotations =
-      MakeDefaultAnnotations(feedback_data, /*package_name=*/"kernel");
-  AddKernelPanicAttachments(report.get(), feedback_data, std::move(crash_log));
+  return GetFeedbackData().then(
+      [this, crash_log = std::move(crash_log), report = std::move(report)](
+          fit::result<Data>& result) mutable -> fit::result<void> {
+        Data feedback_data;
+        if (result.is_ok()) {
+          feedback_data = result.take_value();
+        }
+        const std::map<std::string, std::string> annotations =
+            MakeDefaultAnnotations(feedback_data,
+                                   /*package_name=*/"kernel");
+        AddKernelPanicAttachments(report.get(), feedback_data,
+                                  std::move(crash_log));
 
-  // Finish new local crash report.
-  crashpad::UUID local_report_id;
-  database_status = database_->FinishedWritingCrashReport(std::move(report),
-                                                          &local_report_id);
-  if (database_status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "error writing local crash report (" << database_status
-                   << ")";
-    return ZX_ERR_INTERNAL;
-  }
+        // Finish new local crash report.
+        crashpad::UUID local_report_id;
+        const crashpad::CrashReportDatabase::OperationStatus database_status =
+            database_->FinishedWritingCrashReport(std::move(report),
+                                                  &local_report_id);
+        if (database_status != crashpad::CrashReportDatabase::kNoError) {
+          FX_LOGS(ERROR) << "error writing local crash report ("
+                         << database_status << ")";
+          return fit::error();
+        }
 
-  return UploadReport(local_report_id, &annotations,
-                      /*read_annotations_from_minidump=*/false);
+        if (UploadReport(local_report_id, &annotations,
+                         /*read_annotations_from_minidump=*/false) != ZX_OK) {
+          return fit::error();
+        }
+        return fit::ok();
+      });
 }
 
 zx_status_t CrashpadAgent::UploadReport(

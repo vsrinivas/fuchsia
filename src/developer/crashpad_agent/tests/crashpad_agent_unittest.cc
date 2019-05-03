@@ -7,8 +7,6 @@
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/dispatcher.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/vmo/strings.h>
@@ -79,10 +77,8 @@ Attachment BuildAttachment(const std::string& key) {
 class StubFeedbackDataProvider : public DataProvider {
  public:
   // Returns a request handler for binding to this stub service.
-  // We pass a dispatcher to run it on a different loop than the agent.
-  fidl::InterfaceRequestHandler<DataProvider> GetHandler(
-      async_dispatcher_t* dispatcher) {
-    return bindings_.GetHandler(this, dispatcher);
+  fidl::InterfaceRequestHandler<DataProvider> GetHandler() {
+    return bindings_.GetHandler(this);
   }
 
   // DataProvider methods.
@@ -165,24 +161,10 @@ class StubCrashServer : public CrashServer {
 // class, without connecting through FIDL.
 class CrashpadAgentTest : public gtest::RealLoopFixture {
  public:
-  CrashpadAgentTest()
-      : service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
-        service_directory_provider_(
-            service_directory_provider_loop_.dispatcher()) {
-    // We run the service directory provider in a different loop so that it can
-    // serve the requests to and responses from the stub feedback data provider
-    // as the agent connects it synchronously.
-    FXL_CHECK(service_directory_provider_loop_.StartThread(
-                  "service directory provider thread") == ZX_OK);
-  }
-
-  ~CrashpadAgentTest() { service_directory_provider_loop_.Shutdown(); }
-
   void SetUp() override {
     stub_feedback_data_provider_.reset(new StubFeedbackDataProvider());
     FXL_CHECK(service_directory_provider_.AddService(
-                  stub_feedback_data_provider_->GetHandler(
-                      service_directory_provider_loop_.dispatcher())) == ZX_OK);
+                  stub_feedback_data_provider_->GetHandler()) == ZX_OK);
 
     // The underlying agent is initialized with a default config, but can
     // be reset via ResetAgent() if a different config is necessary.
@@ -213,8 +195,8 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     attachments_dir_ =
         files::JoinPath(config.local_crashpad_database_path, "attachments");
     agent_ = CrashpadAgent::TryCreate(
-        service_directory_provider_.service_directory(), std::move(config),
-        std::move(crash_server_));
+        dispatcher(), service_directory_provider_.service_directory(),
+        std::move(config), std::move(crash_server_));
     FXL_CHECK(agent_);
   }
 
@@ -299,12 +281,18 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
       const std::string& attachment) {
     fuchsia::mem::Buffer crash_log;
     FXL_CHECK(fsl::VmoFromString(attachment, &crash_log));
+
     Analyzer_OnKernelPanicCrashLog_Result out_result;
+    bool has_out_result = false;
     agent_->OnKernelPanicCrashLog(
         std::move(crash_log),
-        [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
+        [&out_result,
+         &has_out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
           out_result = std::move(result);
+          has_out_result = true;
         });
+    FXL_CHECK(RunLoopWithTimeoutOrUntil(
+        [&has_out_result] { return has_out_result; }));
     return out_result;
   }
 
@@ -326,7 +314,6 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     dirs->erase(std::remove(dirs->begin(), dirs->end(), "."), dirs->end());
   }
 
-  async::Loop service_directory_provider_loop_;
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider_;
   std::string attachments_dir_;
@@ -389,11 +376,16 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
 
   // Test crash analysis.
   Analyzer_OnNativeException_Result out_result;
+  bool has_out_result = false;
   agent_->OnNativeException(
       std::move(process), std::move(thread), std::move(exception_port),
-      [&out_result](Analyzer_OnNativeException_Result result) {
+      [&out_result, &has_out_result](Analyzer_OnNativeException_Result result) {
         out_result = std::move(result);
+        has_out_result = true;
       });
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&has_out_result] { return has_out_result; }));
+
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments();
 
@@ -421,11 +413,17 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_Dart_Basic) {
   dart_exception.set_dart(std::move(exception));
 
   Analyzer_OnManagedRuntimeException_Result out_result;
+  bool has_out_result = false;
   agent_->OnManagedRuntimeException(
       "component_url", std::move(dart_exception),
-      [&out_result](Analyzer_OnManagedRuntimeException_Result result) {
+      [&out_result,
+       &has_out_result](Analyzer_OnManagedRuntimeException_Result result) {
         out_result = std::move(result);
+        has_out_result = true;
       });
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&has_out_result] { return has_out_result; }));
+
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"DartError"});
 }
@@ -437,11 +435,17 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
   unknown_exception.set_unknown_(std::move(exception));
 
   Analyzer_OnManagedRuntimeException_Result out_result;
+  bool has_out_result = false;
   agent_->OnManagedRuntimeException(
       "component_url", std::move(unknown_exception),
-      [&out_result](Analyzer_OnManagedRuntimeException_Result result) {
+      [&out_result,
+       &has_out_result](Analyzer_OnManagedRuntimeException_Result result) {
         out_result = std::move(result);
+        has_out_result = true;
       });
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&has_out_result] { return has_out_result; }));
+
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"data"});
 }
@@ -449,12 +453,18 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
 TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
   fuchsia::mem::Buffer crash_log;
   ASSERT_TRUE(fsl::VmoFromString("ZIRCON KERNEL PANIC", &crash_log));
+
   Analyzer_OnKernelPanicCrashLog_Result out_result;
+  bool has_out_result = false;
   agent_->OnKernelPanicCrashLog(
-      std::move(crash_log),
-      [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
+      std::move(crash_log), [&out_result, &has_out_result](
+                                Analyzer_OnKernelPanicCrashLog_Result result) {
         out_result = std::move(result);
+        has_out_result = true;
       });
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&has_out_result] { return has_out_result; }));
+
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"kernel_panic_crash_log"});
 }

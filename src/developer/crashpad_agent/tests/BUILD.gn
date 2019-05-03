@@ -126,8 +126,6 @@ executable("crashpad_agent_unittest") {
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/fidl/fuchsia-mem",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
   ]
 }

@@ -18,7 +18,8 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = sys::ComponentContext::Create();
   std::unique_ptr<fuchsia::crash::CrashpadAgent> agent =
-      fuchsia::crash::CrashpadAgent::TryCreate(context->svc());
+      fuchsia::crash::CrashpadAgent::TryCreate(loop.dispatcher(),
+                                               context->svc());
   if (!agent) {
     return EXIT_FAILURE;
   }
