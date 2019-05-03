@@ -11,7 +11,7 @@ use wlan_common::ie::rsn::{
 };
 use wlan_rsn::{self, nonce::NonceReader, psk, rsna::UpdateSink, NegotiatedRsne};
 
-use crate::DeviceInfo;
+use crate::{client::state::Protection, DeviceInfo};
 
 #[derive(Debug)]
 pub struct Rsna {
@@ -87,11 +87,11 @@ pub fn get_rsna(
     device_info: &DeviceInfo,
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
-) -> Result<Option<Rsna>, failure::Error> {
+) -> Result<Protection, failure::Error> {
     let a_rsne_bytes = match credential {
         fidl_sme::Credential::None(_) => {
             ensure!(bss.rsn.is_none(), "password required for secure network, but none provided");
-            return Ok(None);
+            return Ok(Protection::Open);
         }
         fidl_sme::Credential::Psk(_) | fidl_sme::Credential::Password(_) => {
             ensure!(bss.rsn.is_some(), "password provided for open network, but none expected");
@@ -118,7 +118,7 @@ pub fn get_rsna(
         a_rsne,
     )
     .map_err(|e| format_err!("failed to create ESS-SA: {:?}", e))?;
-    Ok(Some(Rsna { negotiated_rsne, supplicant: Box::new(supplicant) }))
+    Ok(Protection::Rsna(Rsna { negotiated_rsne, supplicant: Box::new(supplicant) }))
 }
 
 fn compute_psk(credential: &fidl_sme::Credential, ssid: &[u8]) -> Result<psk::Psk, failure::Error> {

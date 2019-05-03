@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use wlan_common::format::MacFmt;
 use wlan_common::RadioConfig;
-use wlan_inspect::{inspect_log, log::InspectListClosure, NodeExt, nodes::BoundedListNode};
+use wlan_inspect::{inspect_log, log::InspectListClosure, nodes::BoundedListNode, NodeExt};
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
@@ -269,12 +269,12 @@ impl super::Station for ClientSme {
                                     &token.credential,
                                     &best_bss,
                                 ) {
-                                    Ok(rsna) => {
+                                    Ok(protection) => {
                                         inspect_msg.replace("attempt to connect".to_string());
                                         let cmd = ConnectCommand {
                                             bss: Box::new(clone_bss_desc(&best_bss)),
                                             responder: Some(token.responder),
-                                            rsna,
+                                            protection,
                                             radio_cfg: token.radio_cfg,
                                         };
                                         state.connect(cmd, &mut self.context)

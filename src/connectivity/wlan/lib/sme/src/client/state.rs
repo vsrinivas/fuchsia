@@ -46,14 +46,22 @@ pub enum LinkState {
         // RSNA when all the key frames have finished exchanging.
         resp_timeout: Option<EventId>,
     },
-    LinkUp(Option<Rsna>),
+    LinkUp {
+        protection: Protection,
+    },
+}
+
+#[derive(Debug)]
+pub enum Protection {
+    Open,
+    Rsna(Rsna),
 }
 
 #[derive(Debug)]
 pub struct ConnectCommand {
     pub bss: Box<BssDescription>,
     pub responder: Option<Responder<ConnectResult>>,
-    pub rsna: Option<Rsna>,
+    pub protection: Protection,
     pub radio_cfg: RadioConfig,
 }
 
@@ -94,7 +102,7 @@ impl State {
             State::Associating { .. } => ASSOCIATING_STATE,
             State::Associated { link_state, .. } => match link_state {
                 LinkState::EstablishingRsna { .. } => RSNA_STATE,
-                LinkState::LinkUp(..) => LINK_UP_STATE,
+                LinkState::LinkUp { .. } => LINK_UP_STATE,
             },
         }
     }
@@ -163,18 +171,18 @@ impl State {
             },
             State::Associated { bss, last_rssi, link_state, radio_cfg } => match event {
                 MlmeEvent::DisassociateInd { .. } => {
-                    let (responder, mut rsna) = match link_state {
-                        LinkState::LinkUp(rsna) => (None, rsna),
+                    let (responder, mut protection) = match link_state {
+                        LinkState::LinkUp { protection } => (None, protection),
                         LinkState::EstablishingRsna { responder, rsna, .. } => {
-                            (responder, Some(rsna))
+                            (responder, Protection::Rsna(rsna))
                         }
                     };
                     // Client is disassociating. The ESS-SA must be kept alive but reset.
-                    if let Some(rsna) = &mut rsna {
+                    if let Protection::Rsna(rsna) = &mut protection {
                         rsna.supplicant.reset();
                     }
 
-                    let cmd = ConnectCommand { bss, responder, rsna, radio_cfg };
+                    let cmd = ConnectCommand { bss, responder, protection, radio_cfg };
                     context.att_id += 1;
                     state_change_msg.replace("received DisassociateInd msg".to_string());
                     to_associating_state(cmd, &context.mlme_sink)
@@ -227,7 +235,8 @@ impl State {
                                     None,
                                 );
                                 state_change_msg.replace("RSNA established".to_string());
-                                let link_state = LinkState::LinkUp(Some(rsna));
+                                let link_state =
+                                    LinkState::LinkUp { protection: Protection::Rsna(rsna) };
                                 State::Associated { bss, last_rssi, link_state, radio_cfg }
                             }
                             RsnaStatus::Failed(result) => {
@@ -259,21 +268,28 @@ impl State {
                                 State::Associated { bss, last_rssi, link_state, radio_cfg }
                             }
                         },
-                        LinkState::LinkUp(Some(mut rsna)) => {
-                            match process_eapol_ind(context, &mut rsna, &ind) {
-                                RsnaStatus::Unchanged => {}
-                                // This can happen when there's a GTK rotation. Timeout is ignored
-                                // because only one RX frame is needed in the exchange, so we are
-                                // not waiting for another one.
-                                RsnaStatus::Progressed { new_resp_timeout: _ } => {}
-                                // Once re-keying is supported, the RSNA can fail in LinkUp as well
-                                // and cause deauthentication.
-                                s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
-                            };
-                            let link_state = LinkState::LinkUp(Some(rsna));
-                            State::Associated { bss, last_rssi, link_state, radio_cfg }
-                        }
-                        _ => panic!("expected Link to carry RSNA because bss.rsn is present"),
+                        LinkState::LinkUp { protection } => match protection {
+                            Protection::Rsna(mut rsna) => {
+                                match process_eapol_ind(context, &mut rsna, &ind) {
+                                    RsnaStatus::Unchanged => {}
+                                    // This can happen when there's a GTK rotation.
+                                    // Timeout is ignored because only one RX frame is needed in
+                                    // the exchange, so we are not waiting for another one.
+                                    RsnaStatus::Progressed { new_resp_timeout: _ } => {}
+                                    // Once re-keying is supported, the RSNA can fail in LinkUp as
+                                    // well and cause deauthentication.
+                                    s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
+                                };
+                                let link_state =
+                                    LinkState::LinkUp { protection: Protection::Rsna(rsna) };
+                                State::Associated { bss, last_rssi, link_state, radio_cfg }
+                            }
+                            // Drop EAPOL frames if the BSS is not an RSN.
+                            _ => {
+                                let link_state = LinkState::LinkUp { protection };
+                                State::Associated { bss, last_rssi, link_state, radio_cfg }
+                            }
+                        },
                     }
                 }
                 _ => State::Associated { bss, last_rssi, link_state, radio_cfg },
@@ -441,7 +457,7 @@ impl State {
             State::Associated { bss, link_state: LinkState::EstablishingRsna { .. }, .. } => {
                 Status { connected_to: None, connecting_to: Some(bss.ssid.clone()) }
             }
-            State::Associated { bss, link_state: LinkState::LinkUp(..), .. } => {
+            State::Associated { bss, link_state: LinkState::LinkUp { .. }, .. } => {
                 Status { connected_to: Some(convert_bss_description(bss)), connecting_to: None }
             }
         }
@@ -457,8 +473,8 @@ fn handle_mlme_assoc_conf(
     match resp.result_code {
         fidl_mlme::AssociateResultCodes::Success => {
             context.info_sink.send(InfoEvent::AssociationSuccess { att_id: context.att_id });
-            match cmd.rsna {
-                Some(mut rsna) => match rsna.supplicant.start() {
+            match cmd.protection {
+                Protection::Rsna(mut rsna) => match rsna.supplicant.start() {
                     Err(e) => {
                         handle_supplicant_start_failure(cmd.responder, cmd.bss, &context, e);
                         state_change_msg.replace("supplicant failed to start".to_string());
@@ -483,13 +499,13 @@ fn handle_mlme_assoc_conf(
                         }
                     }
                 },
-                None => {
+                Protection::Open => {
                     report_connect_finished(cmd.responder, &context, ConnectResult::Success, None);
                     state_change_msg.replace("successful association".to_string());
                     State::Associated {
                         bss: cmd.bss,
                         last_rssi: None,
-                        link_state: LinkState::LinkUp(None),
+                        link_state: LinkState::LinkUp { protection: Protection::Open },
                         radio_cfg: cmd.radio_cfg,
                     }
                 }
@@ -592,7 +608,7 @@ fn process_eapol_ind(
                 status: "processed"
             });
             if update_sink.is_empty() {
-                return RsnaStatus::Unchanged
+                return RsnaStatus::Unchanged;
             }
         }
     }
@@ -703,12 +719,15 @@ fn send_deauthenticate_request(current_bss: Box<BssDescription>, mlme_sink: &Mlm
 }
 
 fn to_associating_state(cmd: ConnectCommand, mlme_sink: &MlmeSink) -> State {
-    let s_rsne_data = cmd.rsna.as_ref().map(|rsna| {
-        let s_rsne = rsna.negotiated_rsne.to_full_rsne();
-        let mut buf = Vec::with_capacity(s_rsne.len());
-        s_rsne.as_bytes(&mut buf);
-        buf
-    });
+    let s_rsne_data = match &cmd.protection {
+        Protection::Open => None,
+        Protection::Rsna(rsna) => {
+            let s_rsne = rsna.negotiated_rsne.to_full_rsne();
+            let mut buf = Vec::with_capacity(s_rsne.len());
+            s_rsne.as_bytes(&mut buf);
+            Some(buf)
+        }
+    };
 
     mlme_sink.send(MlmeRequest::Associate(fidl_mlme::AssociateRequest {
         peer_sta_address: cmd.bss.bssid.clone(),
@@ -1093,7 +1112,7 @@ mod tests {
         // Verify state did not change.
         match state {
             State::Associated { link_state, .. } => match link_state {
-                LinkState::LinkUp(Some(_)) => (), // expected path
+                LinkState::LinkUp { protection: Protection::Rsna(_) } => (), // expected path
                 _ => panic!("expected unchanged link state"),
             },
             _ => panic!("not associated anymore"),
@@ -1192,7 +1211,7 @@ mod tests {
         expect_set_gtk(&mut h.mlme_stream);
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
         match state {
-            State::Associated { link_state: LinkState::LinkUp(..), .. } => (), // expected
+            State::Associated { link_state: LinkState::LinkUp { .. }, .. } => (), // expected
             _ => panic!("expect still in link-up state"),
         }
 
@@ -1200,7 +1219,7 @@ mod tests {
         let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
         state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
         match state {
-            State::Associated { link_state: LinkState::LinkUp(..), .. } => (), // expected
+            State::Associated { link_state: LinkState::LinkUp { .. }, .. } => (), // expected
             _ => panic!("expect still in link-up state"),
         }
     }
@@ -1505,7 +1524,7 @@ mod tests {
         let cmd = ConnectCommand {
             bss: Box::new(unprotected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
             responder: Some(responder),
-            rsna: None,
+            protection: Protection::Open,
             radio_cfg: RadioConfig::default(),
         };
         (cmd, receiver)
@@ -1516,7 +1535,7 @@ mod tests {
         let cmd = ConnectCommand {
             bss: Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
             responder: Some(responder),
-            rsna: None,
+            protection: Protection::Open,
             radio_cfg: RadioConfig::default(),
         };
         (cmd, receiver)
@@ -1531,7 +1550,7 @@ mod tests {
         let cmd = ConnectCommand {
             bss: Box::new(bss),
             responder: Some(responder),
-            rsna: Some(Rsna {
+            protection: Protection::Rsna(Rsna {
                 negotiated_rsne: NegotiatedRsne::from_rsne(&rsne).expect("invalid NegotiatedRsne"),
                 supplicant: Box::new(supplicant),
             }),
@@ -1582,7 +1601,10 @@ mod tests {
     }
 
     fn establishing_rsna_state(cmd: ConnectCommand) -> State {
-        let rsna = cmd.rsna.expect("expect rsna for establishing_rsna_state");
+        let rsna = match cmd.protection {
+            Protection::Rsna(rsna) => rsna,
+            _ => panic!("expect rsna for establishing_rsna_state"),
+        };
         State::Associated {
             bss: cmd.bss,
             last_rssi: None,
@@ -1600,7 +1622,7 @@ mod tests {
         State::Associated {
             bss,
             last_rssi: None,
-            link_state: LinkState::LinkUp(None),
+            link_state: LinkState::LinkUp { protection: Protection::Open },
             radio_cfg: RadioConfig::default(),
         }
     }
@@ -1615,7 +1637,7 @@ mod tests {
         State::Associated {
             bss: Box::new(bss),
             last_rssi: None,
-            link_state: LinkState::LinkUp(Some(rsna)),
+            link_state: LinkState::LinkUp { protection: Protection::Rsna(rsna) },
             radio_cfg: RadioConfig::default(),
         }
     }
