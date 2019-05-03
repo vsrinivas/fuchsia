@@ -12,7 +12,21 @@ package("component_index") {
   testonly = true
 
   deps = [
+    ":component_index_bin",
     "//build/images:component_index_metadata",
+  ]
+
+  binaries = [
+    {
+      name = "component_index"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/component_index.cmx")
+      dest = "component_index.cmx"
+    },
   ]
 
   resources = [
@@ -22,7 +36,6 @@ package("component_index") {
       dest = "component_index.txt"
     },
   ]
-  components = [ ":component_index_component" ]
 }
 
 rustc_binary("component_index_bin") {
@@ -40,15 +53,6 @@ rustc_binary("component_index_bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
-}
-
-fuchsia_component("component_index_component") {
-  manifest = rebase_path("meta/component_index.cmx")
-  deps = [
-    ":component_index_bin",
-  ]
-
-  binary = "component_index"
 }
 
 test_package("component_index_tests") {

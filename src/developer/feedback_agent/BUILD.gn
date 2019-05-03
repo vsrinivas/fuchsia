@@ -6,16 +6,21 @@ import("//build/package.gni")
 import("//build/package/component.gni")
 
 package("feedback_agent") {
-  components = [ ":component" ]
-}
-
-fuchsia_component("component") {
-  binary = "feedback_agent"
-
-  manifest = "meta/feedback_agent.cmx"
-
   deps = [
     ":main",
+  ]
+
+  binaries = [
+    {
+      name = "feedback_agent"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/feedback_agent.cmx")
+      dest = "feedback_agent.cmx"
+    },
   ]
 }
 

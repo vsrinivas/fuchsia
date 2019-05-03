@@ -7,23 +7,27 @@ import("//build/package.gni")
 import("//build/package/component.gni")
 
 package("crashpad_agent") {
-  components = [ ":component" ]
-}
+  deps = [
+    ":main",
+  ]
+  binaries = [
+    {
+      name = "crashpad_agent"
+    },
+  ]
 
-fuchsia_component("component") {
-  binary = "crashpad_agent"
-
-  manifest = "meta/crashpad_agent.cmx"
+  meta = [
+    {
+      path = rebase_path("meta/crashpad_agent.cmx")
+      dest = "crashpad_agent.cmx"
+    },
+  ]
 
   resources = [
     {
       path = "configs/default.json"
       dest = "default_config.json"
     },
-  ]
-
-  deps = [
-    ":main",
   ]
 }
 

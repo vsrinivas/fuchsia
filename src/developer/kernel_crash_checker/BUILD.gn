@@ -7,16 +7,21 @@ import("//build/package.gni")
 import("//build/package/component.gni")
 
 package("kernel_crash_checker") {
-  components = [ ":component" ]
-}
-
-fuchsia_component("component") {
-  binary = "kernel_crash_checker"
-
-  manifest = "meta/kernel_crash_checker.cmx"
-
   deps = [
     ":main",
+  ]
+
+  binaries = [
+    {
+      name = "kernel_crash_checker"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/kernel_crash_checker.cmx")
+      dest = "kernel_crash_checker.cmx"
+    },
   ]
 }
 
