@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/package.gni")
 
 # TODO(aarongreen): SEC-224.  Add tests to catch fuzzer building/packaging
@@ -204,9 +205,16 @@ template("fuzz_package") {
     ]
   }
 
+  if (defined(invoker.fuzz_host)) {
+    fuzz_host = invoker.fuzz_host
+  } else {
+    fuzz_host = false
+  }
+
   # Collect the selected fuzz targets listed in this package based on the
   # variants selected in args.gn and filtered by the package's list of
   # supported sanitizers.
+  selected = false
   selected_targets = []
   foreach(fuzz_target, invoker.targets) {
     selected = false
@@ -223,9 +231,6 @@ template("fuzz_package") {
         }
       }
     }
-
-    # When no variants are present, `selected` is unused.
-    not_needed([ "selected" ])
   }
 
   # Assemble the Fuchsia package
@@ -239,12 +244,14 @@ template("fuzz_package") {
             foreach(selected_target, selected_targets) {
               fuzz_targets += [ get_label_info(selected_target, "name") ]
             }
+            fuzz_host = fuzz_host
           },
         ]
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*", [ "fuzz_spec" ])
         }
       }
+      deps = []
       components = []
       forward_variables_from(invoker, [ "visibility" ])
       forward_variables_from(invoker,
@@ -259,19 +266,32 @@ template("fuzz_package") {
       foreach(selected_target, selected_targets) {
         components += [ "${selected_target}_component" ]
       }
+      if (fuzz_host) {
+        deps += [ ":host_${target_name}" ]
+      }
+    }
+
+    # Treat host fuzzers as tools. If we get to the point of having name
+    # collisions, we'll need to extend `install_host_tools` to allow copying to
+    # specific subdirectories of `host_tools_dir`
+    if (fuzz_host) {
+      install_host_tools("host_${target_name}") {
+        testonly = true
+        deps = selected_targets
+        outputs = []
+        foreach(target, selected_targets) {
+          outputs += [ get_label_info(target, "name") ]
+        }
+      }
     }
   } else {
     # Dummy package for non-fuzzed builds
     group(target_name) {
     }
     not_needed(invoker, "*")
-  }
-
-  # Create a (possibly empty) target for host fuzzers
-  group("host_${target_name}") {
-    testonly = true
-    if (defined(invoker.fuzz_host) && invoker.fuzz_host) {
-      deps = selected_targets
-    }
+    not_needed([
+                 "fuzz_host",
+                 "selected",
+               ])
   }
 }

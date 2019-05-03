@@ -29,6 +29,7 @@ group("tests") {
     "cobalt:tests",
     "connectivity:tests",
     "developer:tests",
+    "fuzzing:tests",
     "identity:tests",
     "ledger:tests",
     "lib:tests",

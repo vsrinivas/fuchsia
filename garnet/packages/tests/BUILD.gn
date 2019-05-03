@@ -578,7 +578,6 @@ group("overnet") {
   public_deps = [
     # FIXME(FLK-187, FLK-188): Disabled because of flakes.
     # "//src/connectivity/overnet/examples:overnet_examples_tests",
-    "//src/connectivity/overnet/lib:host_overnet_fuzzers",
     "//src/connectivity/overnet/lib:overnet_fuzzers",
     "//src/connectivity/overnet/lib:overnet_tests",
     "//src/connectivity/overnet/lib:overnet_unittests($host_toolchain)",
