@@ -22,7 +22,8 @@ the following steps:
 1. Reference the crates you need in [`third_party/rust_crates/Cargo.toml`][3p-cargo-toml].
 1. Run `scripts/fx update-rustc-third-party`. This will download all crates listed in
    [`rust_crates/Cargo.toml`][3p-cargo-toml] as well as their dependencies and
-   place them in the `vendor` directory.
+   place them in the `vendor` directory. If on Linux, note that the `pkg-config`
+   package must be installed for this to work.
 1. `git add` the `Cargo.toml`, `Cargo.lock` and `vendor` directory.
 1.  __Do not__  upload this change to gerrit yet.
 1. Get OSRB approval. Make sure to include the requested information for all
