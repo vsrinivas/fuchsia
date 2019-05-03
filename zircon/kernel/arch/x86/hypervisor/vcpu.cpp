@@ -785,30 +785,9 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
     return ZX_OK;
 }
 
-static uint64_t get_hypervisor_xcr0(const GuestState& guest_state, uint64_t guest_cr4) {
-    // Configure XCR0 with all of the state we need to save and restore. Start with the guest XCR0
-    // and add any state that's not XSAVE-enabled. See Intel Volume 1, Section 13.5. We do not
-    // handle any supervisor state (PT and HDC) because that state is inaccessible to guest because
-    // both the MSRs and xsaves/xrstors are disabled for the guest.
-    uint64_t xcr0 = guest_state.xcr0;
-
-    // Save and restore SSE state if the guest enables SSE.
-    if (x86_feature_test(X86_FEATURE_SSE) && x86_feature_test(X86_FEATURE_FXSR) &&
-        (guest_cr4 & X86_CR4_OSFXSR)) {
-        xcr0 |= X86_XSAVE_STATE_BIT_SSE;
-    }
-
-    // Save and restore PKRU state if the guest enables protection keys.
-    if (guest_cr4 & X86_CR4_PKE) {
-        xcr0 |= X86_XSAVE_STATE_BIT_PKRU;
-    }
-
-    return xcr0;
-}
-
 void Vcpu::RestoreGuestExtendedRegisters(uint64_t guest_cr4) {
     DEBUG_ASSERT(arch_ints_disabled());
-    if (!x86_feature_test(X86_FEATURE_XSAVE)) {
+    if (!x86_xsave_supported()) {
         // Save host and restore guest x87/SSE state with fxrstor/fxsave.
         x86_extended_register_save_state(thread_->arch.extended_register_state);
         x86_extended_register_restore_state(guest_extended_registers_.get());
@@ -820,14 +799,14 @@ void Vcpu::RestoreGuestExtendedRegisters(uint64_t guest_cr4) {
     x86_extended_register_save_state(thread_->arch.extended_register_state);
 
     // Restore guest state.
-    x86_xsetbv(0, get_hypervisor_xcr0(vmx_state_.guest_state, guest_cr4));
+    x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
     x86_extended_register_restore_state(guest_extended_registers_.get());
     x86_xsetbv(0, vmx_state_.guest_state.xcr0);
 }
 
 void Vcpu::SaveGuestExtendedRegisters(uint64_t guest_cr4) {
     DEBUG_ASSERT(arch_ints_disabled());
-    if (!x86_feature_test(X86_FEATURE_XSAVE)) {
+    if (!x86_xsave_supported()) {
         // Save host and restore guest x87/SSE state with fxrstor/fxsave.
         x86_extended_register_save_state(guest_extended_registers_.get());
         x86_extended_register_restore_state(thread_->arch.extended_register_state);
@@ -836,7 +815,7 @@ void Vcpu::SaveGuestExtendedRegisters(uint64_t guest_cr4) {
 
     // Save guest state.
     vmx_state_.guest_state.xcr0 = x86_xgetbv(0);
-    x86_xsetbv(0, get_hypervisor_xcr0(vmx_state_.guest_state, guest_cr4));
+    x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
     x86_extended_register_save_state(guest_extended_registers_.get());
 
     // Restore host state.

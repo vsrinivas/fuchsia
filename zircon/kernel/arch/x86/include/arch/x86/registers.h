@@ -254,6 +254,12 @@ size_t x86_extended_register_size(void);
 /* Return the size required for all supported features, whether requested or not. */
 size_t x86_extended_register_max_size(void);
 
+/* Return all potentially supported (although possibly not currently enabled) state bits for xcr0 */
+uint64_t x86_extended_xcr0_component_bitmap(void);
+
+/* Returns whether or not xsave is supported by the CPU */
+bool x86_xsave_supported(void);
+
 /* Initialize a state vector. The passed in buffer must be X86_EXTENDED_REGISTER_SIZE big and it
  * must be 64-byte aligned. This function will initialize it for use in save and restore. */
 void x86_extended_register_init_state(void* buffer);

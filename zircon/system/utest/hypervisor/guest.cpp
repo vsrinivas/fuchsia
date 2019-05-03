@@ -862,6 +862,11 @@ static bool vcpu_extended_registers() {
     EXPECT_EQ(vcpu_state.rax, 0x89abcdef01234567);
     EXPECT_EQ(vcpu_state.rbx, 0x76543210fedcba98);
 
+    // Guest disables SSE
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+    // Guest successfully runs again
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;

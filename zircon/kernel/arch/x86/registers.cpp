@@ -344,6 +344,14 @@ size_t x86_extended_register_max_size(void) {
     return xsave_max_area_size;
 }
 
+uint64_t x86_extended_xcr0_component_bitmap(void) {
+    return xcr0_component_bitmap;
+}
+
+bool x86_xsave_supported(void) {
+    return xsave_supported;
+}
+
 void x86_extended_register_init_state(void* register_state) {
     // Copy the initialization state; this overcopies on systems that fall back
     // to fxsave, but the buffer is required to be large enough.

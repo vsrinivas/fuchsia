@@ -409,6 +409,15 @@ FUNCTION vcpu_extended_registers_start
 
     movq $0, (EXIT_TEST_ADDR)
 
+    // Disable SSE instructions
+    mov %cr4, %rax
+    and $(~(X86_CR4_OSFXSR)), %rax
+    mov %rax, %cr4
+
+    movq $0, (EXIT_TEST_ADDR)
+    // If we can get back here then the host correctly handled our sse state becoming reduced
+    movq $0, (EXIT_TEST_ADDR)
+
 .align 16
 xmm_data:
     .4byte 0x01234567
