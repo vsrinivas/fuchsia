@@ -67,7 +67,7 @@ static_assert(PAGE_SIZE <= AHCI_PRD_MAX_SIZE, "page size must be less than PRD m
 
 struct ahci_device_t;
 
-typedef struct {
+struct ahci_port_reg_t {
     uint32_t clb;           // command list base address 1024-byte aligned
     uint32_t clbu;          // command list base address upper 32 bits
     uint32_t fb;            // FIS base address 256-byte aligned
@@ -88,14 +88,14 @@ typedef struct {
     uint32_t devslp;        // device sleep
     uint32_t reserved1[10]; // reserved
     uint32_t vendor[4];     // vendor specific
-} __attribute__((packed)) ahci_port_reg_t;
+} __attribute__((packed));
 
 #define AHCI_CAP_NCQ (1 << 30)
 #define AHCI_GHC_HR  (1 << 0)
 #define AHCI_GHC_IE  (1 << 1)
 #define AHCI_GHC_AE  (1 << 31)
 
-typedef struct {
+struct ahci_hba_t {
     uint32_t cap;              // host capabilities
     uint32_t ghc;              // global host control
     uint32_t is;               // interrupt status
@@ -110,9 +110,10 @@ typedef struct {
     uint32_t reserved[29];     // reserved
     uint32_t vendor[24];       // vendor specific registers
     ahci_port_reg_t ports[32]; // port control registers
-} __attribute__((packed)) ahci_hba_t;
+} __attribute__((packed));
 
-typedef struct {
+// Command List.
+struct ahci_cl_t {
     union {
         struct {
             uint16_t cfl : 5; // command FIS length
@@ -132,9 +133,10 @@ typedef struct {
     uint32_t ctba;            // command table base address 128-byte aligned
     uint32_t ctbau;           // command table base address upper 32 bits
     uint32_t reserved[4];     // reserved
-} __attribute__((packed)) ahci_cl_t;
+} __attribute__((packed));
 
-typedef struct {
+// Frame Information Structure.
+struct ahci_fis_t {
     uint8_t dsfis[0x1c];     // DMA setup FIS
     uint8_t reserved1[0x4];
     uint8_t psfis[0x14];     // PIO setup FIS
@@ -144,20 +146,22 @@ typedef struct {
     uint8_t sdbfis[0x8];     // set device bits FIS
     uint8_t ufis[0x40];      // unknown FIS
     uint8_t reserved4[0x60];
-} __attribute__((packed)) ahci_fis_t;
+} __attribute__((packed));
 
-typedef struct {
+// Command Table Header.
+struct ahci_ct_t {
     uint8_t cfis[0x40];            // command FIS
     uint8_t acmd[0x20];            // ATAPI command
     uint8_t reserved[0x20];        // reserved
-} __attribute__((packed)) ahci_ct_t;
+} __attribute__((packed));
 
-typedef struct {
+// Physical Region Descriptor Entry.
+struct ahci_prd_t {
     uint32_t dba;      // data base address 2-byte aligned
     uint32_t dbau;     // data base address upper 32 bits
     uint32_t reserved; // reserved
     uint32_t dbc;      // byte count max 4mb
-} __attribute__((packed)) ahci_prd_t;
+} __attribute__((packed));
 
 static_assert(sizeof(ahci_cl_t) == 0x20, "unexpected command list size");
 static_assert(sizeof(ahci_fis_t) == 0x100, "unexpected fis size");
