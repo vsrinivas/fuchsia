@@ -41,8 +41,7 @@ const char* Pluralize(T value, bool capitalize = false) {
 
 namespace internal {
 
-Timer::Timer()
-    : start_(now()) {}
+Timer::Timer() : start_(now()) {}
 
 void Timer::Reset() {
     start_ = now();
@@ -60,8 +59,7 @@ void IterationSummary::Reset() {
 }
 } // namespace internal
 
-Reporter::Reporter(FILE* stream)
-    : stream_(stream) {}
+Reporter::Reporter(FILE* stream) : stream_(stream) {}
 
 void Reporter::OnProgramStart(const Runner& runner) {
     timers_.program.Reset();
@@ -142,6 +140,10 @@ void Reporter::OnTestStart(const TestCase& test_case, const TestInfo& test) {
 }
 
 void Reporter::OnAssertion(const Assertion& assertion) {
+    if (stream_ == nullptr) {
+        return;
+    }
+
     fprintf(stream_, "%s:%" PRIi64 ": error: Failure:\n%s\n    Expected: %s\n",
             assertion.location().filename, assertion.location().line_number,
             assertion.description().c_str(), assertion.expected().c_str());
@@ -192,8 +194,8 @@ void Reporter::OnTestSuccess(const TestCase& test_case, const TestInfo& test) {
 
     int64_t elapsed_time = timers_.test.GetElapsedTime();
     iteration_summary_.passed++;
-    fprintf(stream_, "[       OK ] %s.%s (%" PRIi64 " ms)\n", test_case.name().c_str(), test.name().c_str(),
-            elapsed_time);
+    fprintf(stream_, "[       OK ] %s.%s (%" PRIi64 " ms)\n", test_case.name().c_str(),
+            test.name().c_str(), elapsed_time);
 }
 
 void Reporter::OnTestCaseEnd(const TestCase& test_case) {
@@ -237,8 +239,8 @@ void Reporter::OnIterationEnd(const Runner& runner, int iteration) {
                 Pluralize(iteration_summary_.skipped));
     }
     if (iteration_summary_.failed > 0) {
-        fprintf(stream_, "[  FAILED  ] %" PRIu64 " test%s, listed below:\n", iteration_summary_.failed,
-                Pluralize(iteration_summary_.failed));
+        fprintf(stream_, "[  FAILED  ] %" PRIu64 " test%s, listed below:\n",
+                iteration_summary_.failed, Pluralize(iteration_summary_.failed));
         if (iteration_summary_.failed_tests.size() > 0) {
             for (auto& failed_test : iteration_summary_.failed_tests) {
                 fprintf(stream_, "[  FAILED  ] %s\n", failed_test.c_str());

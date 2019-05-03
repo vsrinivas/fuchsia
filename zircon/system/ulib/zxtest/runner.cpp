@@ -54,8 +54,7 @@ void TestDriverImpl::Reset() {
 
 } // namespace internal
 
-Runner::Runner(Reporter&& reporter)
-    : reporter_(std::move(reporter)) {
+Runner::Runner(Reporter&& reporter) : reporter_(std::move(reporter)) {
     event_broadcaster_.Subscribe(&test_driver_);
     event_broadcaster_.Subscribe(&reporter_);
 }
@@ -103,7 +102,7 @@ int Runner::Run(const Runner::Options& options) {
 
     event_broadcaster_.OnProgramStart(*this);
     bool end_execution = false;
-    for (int i = 0; i < options.repeat && !end_execution; ++i) {
+    for (int i = 0; (i < options.repeat || options.repeat == -1) && !end_execution; ++i) {
         event_broadcaster_.OnIterationStart(*this, i);
         event_broadcaster_.OnEnvironmentSetUp(*this);
         // Set them up in order.

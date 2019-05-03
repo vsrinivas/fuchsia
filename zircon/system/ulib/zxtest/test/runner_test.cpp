@@ -147,6 +147,66 @@ void RunnerRunAllTests() {
     ZX_ASSERT_MSG(test_2_counter == 1, "test_2 was not executed.\n");
 }
 
+// This test Will increase |counter_| each time is executed, until |*counter_| equals |fail_at|.
+// When this happens, an assertion will be dispatched to |runner_|. This allows testing for
+// infinite iterations and breaking on failure.
+template <int fail_at>
+class FakeRepeatingTest : public zxtest::Test {
+public:
+    static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner,
+                                                                         int* counter) {
+        return [counter, runner](TestDriver* driver) {
+            std::unique_ptr<FakeRepeatingTest> test =
+                zxtest::Test::Create<FakeRepeatingTest>(driver);
+            test->counter_ = counter;
+            test->runner_ = runner;
+            return test;
+        };
+    }
+
+private:
+    void TestBody() final {
+        ++*counter_;
+        if (*counter_ >= fail_at) {
+            Assertion assertion("eq", "a", "1", "b", "2",
+                                {.filename = __FILE__, .line_number = __LINE__},
+                                /*is_fatal=*/true);
+            runner_->NotifyAssertion(assertion);
+        }
+    }
+
+    int* counter_;
+    Runner* runner_;
+};
+
+void RunnerRunAllTestsUntilFailure() {
+    Runner runner(Reporter(/*stream*/ nullptr));
+    int test_counter = 0;
+    constexpr int kAttemptsUntilFailure = 10;
+
+    runner.RegisterTest<Test, FakeRepeatingTest<kAttemptsUntilFailure>>(
+        kTestCaseName, kTestName, kFileName, kLineNumber,
+        FakeRepeatingTest<kAttemptsUntilFailure>::MakeFactory(&runner, &test_counter));
+
+    // Verify that the runner actually claims to hold two tests from one test case.
+    ZX_ASSERT_MSG(runner.summary().registered_test_count == 1,
+                  "Test failed to register correctly.\n");
+    ZX_ASSERT_MSG(runner.summary().registered_test_case_count == 1,
+                  "TestCase failed to register correctly.\n");
+
+    Runner::Options options = Runner::kDefaultOptions;
+    options.break_on_failure = true;
+    options.repeat = -1;
+    ZX_ASSERT_MSG(runner.Run(options) != 0, "Test Execution Should Fail.\n");
+
+    // Check that the active count reflects a filter matching all.
+    ZX_ASSERT_MSG(runner.summary().active_test_count == 1, "Failed to register test.\n");
+    ZX_ASSERT_MSG(runner.summary().active_test_case_count == 1, "Failed to register test.\n");
+
+    // Check that both tests were executed 10 times before they failed.
+    ZX_ASSERT_MSG(test_counter == kAttemptsUntilFailure, "test was not executed enough.\n");
+}
+
 class FakeEnv : public zxtest::Environment {
 public:
     FakeEnv(int* curr_setup, int* curr_tear_down) {

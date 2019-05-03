@@ -98,6 +98,7 @@ void EventBroadcasterOnProgramEnd();
 void RunnerRegisterTest();
 void RunnerRegisterTestWithCustomFactory();
 void RunnerRunAllTests();
+void RunnerRunAllTestsUntilFailure();
 void RunnerRunAllTestsSameTestCase();
 void RunnerSetUpAndTearDownEnvironmentsTests();
 void RunnerRunOnlyFilteredTests();
@@ -168,6 +169,7 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(RunnerRegisterTest),
     RUN_TEST(RunnerRegisterTestWithCustomFactory),
     RUN_TEST(RunnerRunAllTests),
+    RUN_TEST(RunnerRunAllTestsUntilFailure),
     RUN_TEST(RunnerRunAllTestsSameTestCase),
     RUN_TEST(RunnerSetUpAndTearDownEnvironmentsTests),
     RUN_TEST(RunnerRunOnlyFilteredTests),
