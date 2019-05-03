@@ -31,7 +31,8 @@ Here's a simple example of a cmx for an ELF binary component:
 ```
 {
     "program": {
-        "binary": "bin/example_app"
+        "binary": "bin/example_app",
+    "args": [ "--example", "args" ]
     },
     "sandbox": {
         "system": [ "data/sysmgr" ],
@@ -64,13 +65,20 @@ the following schema:
     "properties": {
         "binary": {
             "type": "string"
-        }
+        },
+        "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+        },
     }
 }
 ```
 
 The `binary` property describes where in the package namespace to find the
-binary to run the component.
+binary to run the component, and the optional `args` property contains the
+string arguments to be provided to the process.
 
 If [`runner`](#runner) is present, `program` is a freeform string-string JSON
 object interpreted as args to pass to the runner.
