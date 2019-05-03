@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <kernel/sched.h>
 #include <kernel/thread_lock.h>
+#include <lib/ktrace.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <trace.h>
@@ -16,7 +17,117 @@
 
 #define LOCAL_TRACE 0
 
-namespace {     // file scope only
+namespace { // file scope only
+
+// By default, Futex KTracing is disabled as it introduces some overhead in user
+// mode operations which might be performance sensitive.  Developers who are
+// debugging issues which could involve futex interactions may enable the
+// tracing by setting this top level flag to true, provided that their
+// investigation can tolerate the overhead.
+constexpr bool kEnableFutexKTracing = false;
+
+class KTraceBase {
+public:
+    enum class FutexActive { Yes, No };
+    enum class RequeueOp { Yes, No };
+
+protected:
+    static constexpr uint32_t kCountSaturate = 0xFE;
+    static constexpr uint32_t kUnlimitedCount = 0xFFFFFFFF;
+};
+
+template <bool Enabled>
+class KTrace;
+
+template <>
+class KTrace<false> : public KTraceBase {
+public:
+    KTrace() {}
+    void FutexWait(uintptr_t futex_id, thread_t* new_owner) {}
+    void FutexWoke(uintptr_t futex_id, zx_status_t result) {}
+    void FutexWake(uintptr_t futex_id,
+                   FutexActive active,
+                   RequeueOp requeue_op,
+                   uint32_t count,
+                   thread_t* assigned_owner) {}
+    void FutexRequeue(uintptr_t futex_id,
+                      FutexActive active,
+                      uint32_t count,
+                      thread_t* assigned_owner) {}
+};
+
+template <>
+class KTrace<true> : public KTraceBase {
+public:
+    KTrace() : ts_(ktrace_timestamp()) {}
+
+    void FutexWait(uintptr_t futex_id, thread_t* new_owner) {
+        ktrace(TAG_FUTEX_WAIT,
+                static_cast<uint32_t>(futex_id),
+                static_cast<uint32_t>(futex_id >> 32),
+                static_cast<uint32_t>(new_owner ? new_owner->user_tid : 0),
+                static_cast<uint32_t>(arch_curr_cpu_num() & 0xFF),
+                ts_);
+    }
+
+    void FutexWoke(uintptr_t futex_id, zx_status_t result) {
+        ktrace(TAG_FUTEX_WOKE,
+                static_cast<uint32_t>(futex_id),
+                static_cast<uint32_t>(futex_id >> 32),
+                static_cast<uint32_t>(result),
+                static_cast<uint32_t>(arch_curr_cpu_num() & 0xFF),
+                ts_);
+    }
+
+    void FutexWake(uintptr_t futex_id,
+                   FutexActive active,
+                   RequeueOp requeue_op,
+                   uint32_t count,
+                   thread_t* assigned_owner) {
+        if ((count >= kCountSaturate) && (count != kUnlimitedCount)) {
+            count = kCountSaturate;
+        }
+
+        uint32_t flags =
+            (arch_curr_cpu_num() & KTRACE_FLAGS_FUTEX_CPUID_MASK) |
+            ((count & KTRACE_FLAGS_FUTEX_COUNT_MASK) << KTRACE_FLAGS_FUTEX_COUNT_SHIFT) |
+            ((requeue_op == RequeueOp::Yes) ?  KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG : 0) |
+            ((active == FutexActive::Yes) ?  KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
+
+        ktrace(TAG_FUTEX_WAKE,
+                static_cast<uint32_t>(futex_id),
+                static_cast<uint32_t>(futex_id >> 32),
+                static_cast<uint32_t>(assigned_owner ? assigned_owner->user_tid : 0),
+                flags, ts_);
+    }
+
+    void FutexRequeue(uintptr_t futex_id,
+                      FutexActive active,
+                      uint32_t count,
+                      thread_t* assigned_owner) {
+        if ((count >= kCountSaturate) && (count != kUnlimitedCount)) {
+            count = kCountSaturate;
+        }
+
+        uint32_t flags =
+            (arch_curr_cpu_num() & KTRACE_FLAGS_FUTEX_CPUID_MASK) |
+            ((count & KTRACE_FLAGS_FUTEX_COUNT_MASK) << KTRACE_FLAGS_FUTEX_COUNT_SHIFT) |
+            KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG |
+            ((active == FutexActive::Yes) ?  KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
+
+        ktrace(TAG_FUTEX_WAKE,
+                static_cast<uint32_t>(futex_id),
+                static_cast<uint32_t>(futex_id >> 32),
+                static_cast<uint32_t>(assigned_owner ? assigned_owner->user_tid : 0),
+                flags, ts_);
+    }
+
+private:
+    const uint64_t ts_;
+};
+
+using KTracer = KTrace<kEnableFutexKTracing>;
+
 inline zx_status_t ValidateFutexPointer(user_in_ptr<const zx_futex_t> value_ptr) {
     if (!value_ptr || (reinterpret_cast<uintptr_t>(value_ptr.get()) % sizeof(zx_futex_t))) {
         return ZX_ERR_INVALID_ARGS;
@@ -195,6 +306,9 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
 
         thread_t* new_owner = futex_owner_thread ? &futex_owner_thread->thread_ : nullptr;
 
+        KTracer tracer;
+        tracer.FutexWait(futex_id, new_owner);
+
         current_thread->thread_.interruptable = true;
         result = futex->waiters_.BlockAndAssignOwner(deadline,
                                                      new_owner,
@@ -220,10 +334,12 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
     // zx_futex_requeue, the futex that we went to sleep on may not be the futex
     // we just woke up from.  We need to re-enter the context's futex lock and
     // revalidate the state of the world.
+    KTracer tracer;
     if (result == ZX_OK) {
         // The FutexWake operation should have already cleared our blocking
         // futex ID.
         DEBUG_ASSERT(current_thread->blocking_futex_id_ == 0);
+        tracer.FutexWoke(futex_id, result);
         return ZX_OK;
     }
 
@@ -232,6 +348,7 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
 
         DEBUG_ASSERT(current_thread->blocking_futex_id_ != 0);
         FutexState* futex = ObtainActiveFutex(current_thread->blocking_futex_id_);
+        tracer.FutexWoke(current_thread->blocking_futex_id_, result);
         current_thread->blocking_futex_id_ = 0;
 
         // Important Note:
@@ -308,6 +425,7 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr,
                                     OwnerAction owner_action) {
     LTRACE_ENTRY;
     zx_status_t result;
+    KTracer tracer;
 
     // Make sure the futex pointer is following the basic rules.
     result = ValidateFutexPointer(value_ptr);
@@ -324,6 +442,8 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr,
         // wake, we are finished.
         FutexState* futex = ObtainActiveFutex(futex_id);
         if (futex == nullptr) {
+            tracer.FutexWake(futex_id, KTracer::FutexActive::No, KTracer::RequeueOp::No,
+                             wake_count, nullptr);
             return ZX_OK;
         }
 
@@ -344,6 +464,8 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr,
             }
 
             futex_emptied = futex->waiters_.IsEmpty();
+            tracer.FutexWake(futex_id, KTracer::FutexActive::Yes, KTracer::RequeueOp::No,
+                             wake_count, futex->waiters_.owner());
         }
 
         // Now that we are outside of the thread lock, if there are no longer
@@ -362,9 +484,10 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr,
                                        OwnerAction owner_action,
                                        user_in_ptr<const zx_futex_t> requeue_ptr,
                                        uint32_t requeue_count,
-                                       zx_handle_t new_requeue_owner) {
+                                       zx_handle_t new_requeue_owner_handle) {
     LTRACE_ENTRY;
     zx_status_t result;
+    KTracer tracer;
 
     // Make sure the futex pointers are following the basic rules.
     result = ValidateFutexPointer(wake_ptr);
@@ -384,7 +507,7 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr,
     // Fetch a reference to the thread that the user is asserting is the new
     // requeue futex owner, if any.
     fbl::RefPtr<ThreadDispatcher> requeue_owner_thread;
-    result = ValidateNewFutexOwner(new_requeue_owner, &requeue_owner_thread);
+    result = ValidateNewFutexOwner(new_requeue_owner_handle, &requeue_owner_thread);
     if (result != ZX_OK) {
         return result;
     }
@@ -411,10 +534,22 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr,
         return ZX_ERR_INVALID_ARGS;
     }
 
+    thread_t* new_requeue_owner = requeue_owner_thread
+                                ? &(requeue_owner_thread->thread_)
+                                : nullptr;
+    KTracer::FutexActive requeue_futex_was_active = (requeue_futex == nullptr)
+                                                  ? KTracer::FutexActive::No
+                                                  : KTracer::FutexActive::Yes;
+
     // If we have no waiters for the wake futex, then we are more or less
     // finished.  Just be sure to re-assign the futex owner for the requeue
     // futex if needed.
     if (wake_futex == nullptr) {
+        tracer.FutexWake(wake_id, KTracer::FutexActive::No, KTracer::RequeueOp::Yes,
+                         wake_count, nullptr);
+        tracer.FutexRequeue(requeue_id, requeue_futex_was_active,
+                            requeue_count, new_requeue_owner);
+
         if (requeue_futex != nullptr) {
             Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
@@ -454,9 +589,6 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr,
 
         if (requeue_count) {
             DEBUG_ASSERT(requeue_futex != nullptr);
-            thread_t* new_requeue_owner = requeue_owner_thread
-                                        ? &(requeue_owner_thread->thread_)
-                                        : nullptr;
             do_resched = wake_futex->waiters_.WakeAndRequeue(
                     wake_count,
                     &(requeue_futex->waiters_),
@@ -467,6 +599,11 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr,
         } else {
             do_resched = wake_futex->waiters_.WakeThreads(wake_count, { wake_hook, nullptr });
         }
+
+        tracer.FutexWake(wake_id, KTracer::FutexActive::Yes, KTracer::RequeueOp::Yes,
+                         wake_count, wake_futex->waiters_.owner());
+        tracer.FutexRequeue(requeue_id, requeue_futex_was_active,
+                            requeue_count, new_requeue_owner);
 
         wake_futex_emptied = wake_futex->waiters_.IsEmpty();
         requeue_futex_emptied = (requeue_futex != nullptr) && requeue_futex->waiters_.IsEmpty();

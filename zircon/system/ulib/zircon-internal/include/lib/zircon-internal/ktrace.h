@@ -125,4 +125,15 @@ enum {
 #define KTRACE_FLAGS_INHERIT_PRIORITY_KERNEL_TID ((uint32_t)0x100)
 #define KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT  ((uint32_t)0x200)
 
+// Flags defined for the FUTEX_* ktrace events.  See ktrace-def.h for details.
+#define KTRACE_FLAGS_FUTEX_CPUID_MASK        ((uint32_t)0xFF)
+#define KTRACE_FLAGS_FUTEX_COUNT_MASK        ((uint32_t)0xFF)
+#define KTRACE_FLAGS_FUTEX_COUNT_SHIFT       ((uint32_t)8)
+#define KTRACE_FLAGS_FUTEX_UNBOUND_COUNT_VAL ((uint32_t)0xFF)
+#define KTRACE_FLAGS_FUTEX_FLAGS_MASK        ((uint32_t) \
+        ~(KTRACE_FLAGS_FUTEX_CPUID_MASK | \
+        (KTRACE_FLAGS_FUTEX_COUNT_MASK << KTRACE_FLAGS_FUTEX_COUNT_SHIFT)))
+#define KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG   ((uint32_t)0x80000000)
+#define KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG  ((uint32_t)0x40000000)
+
 __END_CDECLS

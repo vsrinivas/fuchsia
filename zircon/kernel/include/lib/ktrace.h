@@ -9,6 +9,7 @@
 #include <err.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/zircon-internal/ktrace.h>
+#include <platform.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -32,6 +33,8 @@ constexpr auto LocalTrace = TraceEnabled<enabled>{};
 constexpr auto TraceAlways = TraceEnabled<true>{};
 constexpr auto TraceNever = TraceEnabled<false>{};
 
+static inline uint64_t ktrace_timestamp() { return current_ticks(); }
+
 // Utility macro to convert string literals passed to local tracing macros into
 // StringRef literals.
 //
@@ -49,7 +52,7 @@ constexpr auto TraceNever = TraceEnabled<false>{};
 // Allocates a new trace record in the trace buffer. Returns a pointer to the
 // start of the record or nullptr if tracing is disabled or the end of the
 // buffer is reached.
-void* ktrace_open(uint32_t tag);
+void* ktrace_open(uint32_t tag, uint64_t ts = ktrace_timestamp());
 
 // Emits a tiny trace record.
 void ktrace_tiny(uint32_t tag, uint32_t arg);
@@ -58,11 +61,12 @@ void ktrace_tiny(uint32_t tag, uint32_t arg);
 // is false.
 template <bool enabled>
 inline void ktrace(TraceEnabled<enabled>, TraceContext context, uint32_t tag,
-                   uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+                   uint32_t a, uint32_t b, uint32_t c, uint32_t d,
+                   uint64_t explicit_ts = ktrace_timestamp()) {
     if constexpr (enabled) {
         const uint32_t effective_tag = KTRACE_TAG_FLAGS(
             tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-        if (uint32_t* data = static_cast<uint32_t*>(ktrace_open(effective_tag))) {
+        if (uint32_t* data = static_cast<uint32_t*>(ktrace_open(effective_tag, explicit_ts))) {
             data[0] = a;
             data[1] = b;
             data[2] = c;
@@ -80,8 +84,9 @@ inline void ktrace(TraceEnabled<enabled>, TraceContext context, uint32_t tag,
 
 // Backwards-compatible API for existing users of unconditional thread-context
 // traces.
-static inline void ktrace(uint32_t tag, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-    ktrace(TraceAlways, TraceContext::Thread, tag, a, b, c, d);
+static inline void ktrace(uint32_t tag, uint32_t a, uint32_t b, uint32_t c, uint32_t d,
+                          uint64_t explicit_ts = ktrace_timestamp()) {
+    ktrace(TraceAlways, TraceContext::Thread, tag, a, b, c, d, explicit_ts);
 }
 
 // Backwards-compatible API for existing users of unconditional thread-context

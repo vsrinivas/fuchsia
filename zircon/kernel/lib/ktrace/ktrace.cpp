@@ -21,7 +21,6 @@
 #include <vm/vm_aspace.h>
 #include <zircon/thread_annotations.h>
 
-#define ktrace_timestamp() current_ticks();
 #define ktrace_ticks_per_ms() (ticks_per_second() / 1000)
 
 // Generated struct that has the syscall index and name.
@@ -258,7 +257,7 @@ void ktrace_tiny(uint32_t tag, uint32_t arg) {
     }
 }
 
-void* ktrace_open(uint32_t tag) {
+void* ktrace_open(uint32_t tag, uint64_t ts) {
     ktrace_state_t* ks = &KTRACE_STATE;
     if (!(tag & atomic_load(&ks->grpmask))) {
         return nullptr;
@@ -272,7 +271,7 @@ void* ktrace_open(uint32_t tag) {
     }
 
     ktrace_header_t* hdr = reinterpret_cast<ktrace_header_t*>(ks->buffer + off);
-    hdr->ts = ktrace_timestamp();
+    hdr->ts = ts;
     hdr->tag = tag;
     hdr->tid = KTRACE_FLAGS(tag) & KTRACE_FLAGS_CPU
                    ? arch_curr_cpu_num()

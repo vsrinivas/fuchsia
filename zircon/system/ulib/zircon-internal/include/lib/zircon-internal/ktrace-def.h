@@ -55,6 +55,41 @@ KTRACE_DEF(0x041,32B,INHERIT_PRIORITY_START,SCHEDULER)
 //
 KTRACE_DEF(0x042,32B,INHERIT_PRIORITY,SCHEDULER)
 
+// Word 0: futex ID bits [0..31]
+// Word 1: futex ID bits [32..63]
+// Word 2: new owner user-mode TID, or 0 for no owner
+// Word 3: bits [0..7] CPU ID
+KTRACE_DEF(0x043,32B,FUTEX_WAIT,SCHEDULER)
+
+// Word 0: futex ID bits [0..31]
+// Word 1: futex ID bits [32..63]
+// Word 2: zx_status_t result of the wait operation.
+// Word 3: bits [0..7] CPU ID
+KTRACE_DEF(0x044,32B,FUTEX_WOKE,SCHEDULER)
+
+// Word 0: futex ID bits [0..31]
+// Word 1: futex ID bits [32..63]
+// Word 2: assigned owner user-mode TID, or 0 for no owner
+// Word 3: bits [0..7] CPU ID
+// Word 3: bits [8..15] Low 8 bits of count
+//                      [0, 0xFE) => count
+//                      0xFE      => count was >= 0xFE
+//                      0xFF      => count was unlimited
+// Word 3: bit 30; 1 => requeue operation, 0 => wake operation
+// Word 3: bit 31; 1 => futex was active, 0 => it was not.
+KTRACE_DEF(0x045,32B,FUTEX_WAKE,SCHEDULER)
+
+// Word 0: requeue target futex ID bits [0..31]
+// Word 1: requeue target futex ID bits [32..63]
+// Word 2: assigned owner user-mode TID, or 0 for no owner
+// Word 3: bits [0..7] CPU ID
+// Word 3: bits [8..15] Low 8 bits of count
+//                      [0, 0xFE) => count
+//                      0xFE      => count was >= 0xFE
+//                      0xFF      => count was unlimited
+// Word 3: bit 31; 1 => futex was active, 0 => it was not.
+KTRACE_DEF(0x046,32B,FUTEX_REQUEUE,SCHEDULER)
+
 // events from 0x100 on all share the tag/tid/ts common header
 
 KTRACE_DEF(0x100,32B,OBJECT_DELETE,LIFECYCLE) // id
