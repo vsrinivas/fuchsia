@@ -195,20 +195,22 @@ samples.  Refer to the [audio](../../system/public/zircon/device/audio.h)
 protocol header for exact symbol definitions.
 
 Notes
- * With the exception of FORMAT_BITSTREAM, samples are always assumed to
+ * With the exception of `FORMAT_BITSTREAM`, samples are always assumed to
    use linear PCM encoding.  BITSTREAM is used for transporting compressed
    audio encodings (such as AC3, DTS, and so on) over a digital interconnect
    to a decoder device somewhere outside of the system.
- * Be default, multi-byte sample formats are assumed to use host-endianness.
-   If the INVERT_ENDIAN flag is set on the format, the format uses the
+ * By default, multi-byte sample formats are assumed to use host-endianness.
+   If the `INVERT_ENDIAN` flag is set on the format, the format uses the
    opposite of host endianness.  eg. A 16 bit little endian PCM audio format
-   would have the INVERT_ENDIAN flag set on it in a when used on a big endian
-   host.  The INVERT_ENDIAN flag has no effect on COMPRESSED, 8BIT or FLOAT
+   would have the `INVERT_ENDIAN` flag set on it in a when used on a big endian
+   host.  The `INVERT_ENDIAN` flag has no effect on COMPRESSED, 8BIT or FLOAT
    encodings.
- * The 32BIT_FLOAT encoding uses specifically the IEE 754 floating point
+ * The `32BIT_FLOAT` encoding uses specifically the
+   [IEEE 754](https://en.wikipedia.org/wiki/IEEE_754) floating point
    representation.
- * Be default, non-floating point PCM encodings are assumed expressed using
-   2s compliment signed integers.  eg. the bit values for a 16 bit PCM sample
+ * By default, non-floating point PCM encodings are assumed expressed using
+   [two's complement](https://en.wikipedia.org/wiki/Two%27s_complement) signed
+   integers.  eg. the bit values for a 16 bit PCM sample
    format would range from [0x8000, 0x7FFF] with 0x0000 representing zero
    speaker deflection.  If the UNSIGNED flag is set on the format, the bit
    values would range from [0x0000, 0xFFFF] with 0x8000 representing zero
@@ -216,7 +218,7 @@ Notes
  * When used to set formats, exactly one non-flag bit **must** be set.
  * When used to describe supported formats, any number of non-flag bits **may**
    be set.  Flags (when present) apply to all of the relevant non-flag bits in
-   the bitfield.  eg.  If a stream supports COMPRESSED, 16BIT and 32BIT_FLOAT,
+   the bitfield.  eg.  If a stream supports BITSTREAM, 16BIT and 32BIT_FLOAT,
    and the UNSIGNED bit is set, it applies only to the 16BIT format.
  * When encoding a smaller sample size in a larger container (eg 20 or 24bit
    in 32), the most significant bits of the 32 bit container are used while
@@ -275,6 +277,7 @@ Supported frame rates are signalled similarly to channel counts using a pair of
 min/max frame per second fields along with a flags field.  While the min/max
 values provide an inclusive range of frame rates, the flags determine how to
 interpret this range.  Currently defined flags include...
+
 Flag | Definition
 -----|-----------
 `ASF_RANGE_FLAG_FPS_CONTINUOUS` | The frame rate range is continuous.  All frame rates in the range [min, max] are valid.
@@ -291,30 +294,30 @@ example, if both the 48 KHz and 44.1 KHz were set, and the range given was
  * 44100 Hz
 
 The official members of the 48 KHz and 44.1 KHz families are
+
 Family | Frame Rates
 -------|------------
-`ASF_RANGE_FLAG_FPS_48000_FAMILY` | 8000 16000 32000 48000 96000 192000 384000 768000
-`ASF_RANGE_FLAG_FPS_44100_FAMILY` | 11025 22050 44100 88200 176400
+`ASF_RANGE_FLAG_FPS_48000_FAMILY` | 8000, 16000, 32000, 48000, 96000, 192000, 384000, 768000
+`ASF_RANGE_FLAG_FPS_44100_FAMILY` | 11025, 22050, 44100, 88200, 176400
 
 Drivers **must** set at least one of the flags, or else the set of supported
-frame rates is empty and there was no reason to transmit this range structure.
+frame rates is empty and this range structure is not allowed.
 Also note that the set of valid frame rates is the union of the frame rates
-produce by applying each of the set flags.  This implies that there is never any
-good reason to set the `ASF_RANGE_FLAG_FPS_CONTINUOUS` in conjunction with any
-of the other flags.  While it is technically legal to do so, drivers **should**
-avoid this behavior.
+produce by applying each of the set flags.  If the
+`ASF_RANGE_FLAG_FPS_CONTINUOUS` flag is set the other flags have no effect.
+While it is legal to do so, drivers **should** avoid this behavior.
 
 ### Transporting range structures
 
-Range structures are transmitted from drivers to applications using the
-`audio_stream_cmd_get_formats_resp_t` message.  Because of the large number of
-formats which may be supported by a stream, drivers may need to send multiple
-messages in order to enumerate all available modes.  Messages include the
+Range structures are transmitted from drivers to applications within the
+`audio_stream_cmd_get_formats_resp_t` message.  If a large number of
+formats are supported by a stream, drivers may need to send multiple
+messages to enumerate all available modes.  Messages include the
 following fields.
  * A standard `audio_cmd_hdr_t` header.  **All** messages involved in the
-   response to an application request **must** use the transaction ID of the
-   original request, and **must** set the cmd field of the header to
-   `AUDIO_STREAM_CMD_GET_FORMATS`.
+   response to an `AUDIO_STREAM_CMD_GET_FORMATS` request **must** use the
+   transaction ID of the original request, and the cmd field in the header
+   **must** be `AUDIO_STREAM_CMD_GET_FORMATS`.
  * A `format_range_count` field.  This indicates the total number of format
    range structures which will be sent in this response to the application.
    This number **must** be present in **all** messages involved in the response,
@@ -335,6 +338,7 @@ Given these requirements, if the maximum number of ranges per response were 15,
 and a driver needed to send 35 ranges in response to an application's request,
 then 3 messages in total would be needed, and the `format_range_count` and
 `first_format_range_ndx` fields for each message would be as follows.
+
 Msg # | `format_range_count` | `first_format_range_ndx`
 ------|----------------------|-------------------------
 1 | 35 | 0
@@ -393,6 +397,26 @@ to preserve a pre-existing ring-buffer channel, or to simply close such a
 channel as is mandated for a successful operation.
 
 > TODO: specify how compressed bitstream formats will be set
+
+## Determining external latency
+
+The external latency of an audio stream is defined as the amount of time it
+takes outbound audio to travel from the system's interconnect to the speakers
+themselves, or inbound audio to travel from the microphone to the system's
+interconnect.  As an example, consider an external codec connected to the system
+using a TDM interconnect: if this interconnect introduces a 4 frame delay
+between the reception of a TDM frame and the rendering of that frame at the
+speakers themselves, then the external delay of this audio path is the time
+duration equivalent to 4 audio frames.
+
+External delay is reported in the `external_delay_nsec` field of a successful
+`AUDIO_STREAM_CMD_SET_FORMAT` response as a non-negative number of nanoseconds.
+Drivers **should** make their best attempt to accurately report the total of all
+of the sources of delay the driver knows about.  Information about this delay
+can frequently be found in codec data sheets, dynamically reported as properties
+of codecs using protocols such as Intel HDA or the USB Audio specifications, or
+reported by down stream devices using mechanisms such as EDID when using HDMI or
+DisplayPort interconnects.
 
 ## Hardware Gain Control
 
@@ -462,26 +486,6 @@ the command.  If an acknowledgement was requested by the application, drivers
 respond with a message indicating the success or failure of the operation as
 well as the current gain/mute status of the system (regardless of whether the
 request was a success).
-
-## Determining external latency
-
-The external latency of an audio stream is defined as the amount of time it
-takes outbound audio to travel from the system's interconnect to the speakers
-themselves, or inbound audio to travel from the microphone to the system's
-interconnect.  As an example, consider an external codec connected to the system
-using a TDM interconnect: if this interconnect introduces a 4 frame delay
-between the reception of a TDM frame and the rendering of that frame at the
-speakers themselves, then the external delay of this audio path is the time
-duration equivalent to 4 audio frames.
-
-External delay is reported in the `external_delay_nsec` field of a successful
-`AUDIO_STREAM_CMD_SET_FORMAT` response as a non-negative number of nanoseconds.
-Drivers **should** make their best attempt to accurately report the total of all
-of the sources of delay the driver knows about.  Information about this delay
-can frequently be found in codec data sheets, dynamically reported as properties
-of codecs using protocols such as Intel HDA or the USB Audio specifications, or
-reported by down stream devices using mechanisms such as EDID when using HDMI or
-DisplayPort interconnects.
 
 ## Plug Detection
 
@@ -581,9 +585,12 @@ message.
 
 ### Overview
 
-Generally speaking, client use the ring-buffer channel to establish a shared
-memory buffer, and then start/stop playback/capture of audio stream data.  Once
-started, stream consumption/production is assumed to proceed at the nominal rate
+Once an application has successfully set the format of a stream, it receives
+in the response a new [channel](../objects/channel.md) representing its connection to the
+stream's ring-buffer.  Clients use the ring-buffer channel to establish a shared
+memory buffer and start/stop playback/capture of audio stream data.
+
+Once started, stream consumption/production is assumed to proceed at the nominal rate
 from the point in time given in a successful response to the start command,
 allowing clients to operate without the need to receive any periodic
 notifications about consumption/production position from the ring buffer itself.
@@ -604,11 +611,11 @@ captured data.
 
 ### Determining the FIFO depth
 
-Applications determine stream's FIFO depth using the
+Applications determine a stream's FIFO depth using the
 `AUDIO_RB_CMD_GET_FIFO_DEPTH` command.  Drivers **must** return their FIFO
-depth, expressed in bytes, in the `fifo_depth` field of the response.  In order
-to ensure proper playback or capture of audio, applications and drivers must be
-careful to respect this value.  This is to say that drivers must not read beyond
+depth, expressed in bytes, in the `fifo_depth` field of the response.
+To ensure proper playback or capture of audio, applications and drivers must be
+careful to respect this value.  Drivers must not read beyond
 the nominal playback position of the stream plus this number of bytes when
 playing audio stream data.  Applications must stay this number of bytes behind
 the nominal capture point of the stream when capturing audio stream data.
@@ -619,20 +626,21 @@ it is a constant property of the ring-buffer channel.
 
 ### Obtaining a shared buffer
 
-Once an application has successfully set the format of a stream, it will receive
-a new [channel](../objects/channel.md) representing its connection to the
-stream's ring-buffer.  In order to send or receive audio, the application must
-first establish a shared memory buffer.  This is done by sending an
-`AUDIO_RB_CMD_GET_BUFFER` request over the ring-buffer channel.  This may only
-be done while the ring-buffer is stopped.  Applications **must** specify two
-parameters when requesting a ring buffer.
+To send or receive audio, the application must first establish a shared memory buffer.
+This is done by sending an `AUDIO_RB_CMD_GET_BUFFER` request over the ring-buffer channel.
+This may only be done while the ring-buffer is stopped.  Applications **must** specify two
+parameters when requesting a ring buffer: `min_ring_buffer_frames` and
+`notifications_per_ring`.
 
 #### `min_ring_buffer_frames`
-The minimum number of frames of audio the client need allocated for the ring
-buffer.  Drivers may need to make this buffer larger in order to meet hardware
-requirement.  Clients **must** use the returned VMOs size (in bytes) to
-determine the actual size of the ring buffer may not assume that the size of
-the buffer (as determined by the driver) is exactly the size they requested.
+
+The minimum number of frames of audio the client needs allocated for the ring
+buffer.
+Drivers **may** make this buffer larger to meet hardware requirements.
+Clients **must** use the returned VMOs size (in bytes) to
+determine the actual size of the ring buffer.
+Clients **may not** assume that the size of the buffer (as determined by the
+driver) is exactly the size they requested.
 Drivers **must** ensure that the size of the ring buffer is an integral number
 of audio frames.
 
@@ -646,11 +654,11 @@ of audio frames.
 #### `notifications_per_ring`
 The number of position update notifications (`audio_rb_position_notify_t`) the
 client would like the driver to send per cycle through the ring buffer.  Drivers
-should attempt to space the notifications as uniformly throughout the ring as
-their hardware design allows, but clients may not rely on perfectly uniform
-spacing of the update notifications.  Client's are not required to request any
-notifications at all and may choose to run using only start time and FIFO depth
-information to determine the driver's playout or capture position.
+should attempt to space notifications uniformly throughout the ring.
+Clients **may not** rely on perfectly uniform spacing of the update
+notifications. Clients are not required to request any
+notifications and may use only start time and FIFO depth information
+to determine the driver's playout or capture position.
 
 Success or failure, drivers **must** respond to a `GET_BUFFER` request using an
 `audio_rb_cmd_get_buffer_resp_t` message.  If the driver fails the request
@@ -661,17 +669,18 @@ already established a buffer while the ring buffer is stopped, it **must**
 consider the existing buffer is has to be invalid.  Success or failure, the old
 buffer is now gone.
 
-Upon succeeding, the driver **must** return a handle to a
+If the request succeeds, the driver **must** return a handle to a
 [VMO](../objects/vm_object.md) with permissions which allow applications to map
 the VMO into their address space using [zx_vmar_map](../syscalls/vmar_map.md),
 and to read/write data in the buffer in the case of playback, or simply to read
 the data in the buffer in the case of capture.  Additionally, the driver
 **must** report the actual number of frames of audio it will use in the buffer
 via the `num_ring_buffer_frames` field of the `audio_rb_cmd_get_buffer_resp_t`
-message.  This number **may** be larger than the `min_ring_buffer_frames`
-request from the client but **must not** be either smaller than this number,
-nor larger than the size (when converted to bytes) of the VMO as reported by
-[zx_vmo_get_size()](../syscalls/vmo_get_size.md).
+message.  The size of the VMO returned (as reported by
+[zx_vmo_get_size()](../syscalls/vmo_get_size.md)) **must not** be larger than
+this number of frames (when converted to bytes).
+This number **may** be larger than the `min_ring_buffer_frames` request from the
+client but **must not** be smaller than this number.
 
 ### Starting and Stopping the ring-buffer
 
@@ -721,16 +730,16 @@ If requested by the application during the `GET_BUFFER` operation, the driver
 will periodically send updates to the application informing it of its current
 production or consumption position in the buffer.  This position is expressed in
 bytes in the `ring_buffer_pos` field of the `audio_rb_position_notify_t`
-message.  These messages will only ever be sent while the ring-buffer is
+message.  These messages **must** only be sent while the ring-buffer is
 started.  Note, these position notifications indicate where in the buffer the
 driver has consumed or produced data, *not* where the nominal playback or
 capture position is.  Their arrival is not guaranteed to be perfectly uniform
 and they should not be used in an attempt to effect clock recovery.  If an
 application discovers that a driver has consumed past the point in the ring
-buffer where it has written data for playback, the audio presentation has
-certainly glitched.  Applications should increase their clock lead time and be
+buffer where it has written data for playback, audio presentation is
+undefined.  Applications should increase their clock lead time and be
 certain to stay ahead of this point in the stream in the future.  Likewise,
-applications which are capturing audio data should make no attempt to read
+applications which are capturing audio data **should not** attempt to read
 beyond the point in the ring buffer indicated by the most recent position
 notification sent by the driver.
 
@@ -750,12 +759,12 @@ quickly enough that aliasing does not occur.
 
 ### Unexpected application termination
 
-If the other side of a ring buffer control channel is closed for any reason,
+If the client side of a ring buffer control channel is closed for any reason,
 drivers **must** immediately close the control channel, and shut down the ring
-buffer such that playback ring buffers begin to produce silence.  While drivers
+buffer such that no audio is produced.  While drivers
 are encouraged to do so in a way which produces a graceful transition to
 silence, the requirement is that the audio stream go silent instead of looping.
-Once the transition to silence is complete, the resources associated with
+Once a transition to silence is complete, the resources associated with
 playback may be released and reused by the driver.
 
 This way, if an application teminates unexpectedly, the kernel will close the
