@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -180,8 +181,9 @@ func (c *ControlServer) Gc() error {
 }
 
 type repoHandler struct {
-	config pkg.RepositoryConfig
-	repo   source.Repository
+	config              pkg.RepositoryConfig
+	repo                source.Repository
+	outstandingRequests sync.WaitGroup
 }
 
 func (h *repoHandler) GetUpdateComplete(name string, variant *string, merkle *string, result amber.FetchResultInterfaceRequest) error {
@@ -189,18 +191,35 @@ func (h *repoHandler) GetUpdateComplete(name string, variant *string, merkle *st
 	log.Printf("getting update for %s from %s", name, h.config.RepoUrl)
 	resultChannel := fidl.InterfaceRequest(result).Channel
 	resultProxy := (*amber.FetchResultEventProxy)(&fidl.ChannelProxy{Channel: resultChannel})
-	defer resultProxy.Close()
+	h.outstandingRequests.Add(1)
 
-	err := resultProxy.OnError((int32)(zx.ErrNotSupported), "Not implemented")
-	if err != nil {
-		// Ignore errors here, it just means whoever asked for this has gone away already.
-		log.Printf("can't report status for update of %s; caller didn't care enough to stick around.", name)
-	}
+	go func() {
+		defer h.outstandingRequests.Done()
+		defer resultProxy.Close()
+		result, status, err := h.repo.GetUpdateComplete(name, variant, merkle)
+		if err != nil {
+			err := resultProxy.OnError((int32)(status), err.Error())
+			if err != nil {
+				// Ignore errors here, it just means whoever asked for this has gone away already.
+				log.Printf("can't report error for update of %s; caller didn't care enough to stick around.", name)
+			}
+		} else {
+			err := resultProxy.OnSuccess(result)
+			if err != nil {
+				// Ignore errors here, it just means whoever asked for this has gone away already.
+				log.Printf("can't report success for update of %s; caller didn't care enough to stick around.", name)
+			}
+		}
+	}()
+
 	return nil
 }
 
 func (h *repoHandler) Close() error {
-	// Not implemented
+	go func() {
+		h.outstandingRequests.Wait()
+		h.repo.Close()
+	}()
 	return nil
 }
 
@@ -208,13 +227,13 @@ var _ amber.OpenedRepository = (*repoHandler)(nil)
 
 func (c *ControlServer) OpenRepository(config pkg.RepositoryConfig, repo amber.OpenedRepositoryInterfaceRequest) (int32, error) {
 	log.Printf("opening repository: %q", config.RepoUrl)
-	opened, err := source.OpenRepository(&config)
+	opened, err := c.daemon.OpenRepository(&config)
 	if err != nil {
 		log.Printf("error opening repository %q: %v", config.RepoUrl, err)
 		repo.Close()
 		return (int32)(zx.ErrInternal), nil
 	}
-	handler := &repoHandler{config, opened}
+	handler := &repoHandler{config, opened, sync.WaitGroup{}}
 	c.openRepos.Add(handler, (fidl.InterfaceRequest(repo)).Channel, func(err error) {
 		log.Printf("closing repository: %s", config.RepoUrl)
 		handler.Close()

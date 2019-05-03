@@ -6,7 +6,6 @@ package daemon
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -274,6 +273,7 @@ func TestOpenRepository(t *testing.T) {
 
 	// TODO(raggi): make this a real package instead, but that's a lot more setup
 	pkgContent := "very fake package"
+	pkgBlobLength := int64(len(pkgContent))
 	pkgBlob, err := makeBlob(store, pkgContent)
 	panicerr(err)
 	root1, err := makeBlob(store, "first blob")
@@ -315,6 +315,16 @@ func TestOpenRepository(t *testing.T) {
 	// // so that the httptest server can close:
 	// defer http.DefaultTransport.(*http.Transport).CloseIdleConnections()
 
+	pkgsDir, err := ioutil.TempDir("", "amber-test-pkgs")
+	panicerr(err)
+	defer os.RemoveAll(pkgsDir)
+	blobsDir, err := ioutil.TempDir("", "amber-test-blobs")
+	panicerr(err)
+	defer os.RemoveAll(blobsDir)
+	pkgNeedsDir, err := ioutil.TempDir("", "amber-test-pkgneeds")
+	panicerr(err)
+	defer os.RemoveAll(pkgNeedsDir)
+
 	keyConfig := &pkg.RepositoryKeyConfig{}
 	keyConfig.SetEd25519Key(([]byte)(rootKey.Value.Public))
 
@@ -331,36 +341,43 @@ func TestOpenRepository(t *testing.T) {
 		// TODO(raggi): fix keyconfig
 		RootKeys:        []pkg.RepositoryKeyConfig{*keyConfig},
 		RootKeysPresent: true,
-	})
+	}, pkgsDir, blobsDir, pkgNeedsDir)
 	panicerr(err)
 
 	err = r.Update()
 	panicerr(err)
 
-	c, err := ioutil.ReadFile(r.LocalStoreDir() + "/tuf.json")
+	merkle, length, err := r.MerkleFor("foo", "0", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if merkle != pkgBlob {
+		t.Errorf("merkleFor: got %q, want %q", merkle, pkgBlob)
+	}
+	if length != int64(pkgBlobLength) {
+		t.Errorf("merkleFor length: got %d, want %d", length, pkgBlobLength)
+	}
+
+	os.MkdirAll(filepath.Join(pkgNeedsDir, pkgBlob), 0755)
+	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
+
+	result, _, err := r.GetUpdateComplete("foo", nil, nil)
 	panicerr(err)
-
-	// Quick parse TUF store JSON to look at the signature on root.json
-	type keyMeta struct {
-		Keyid string
-	}
-	type rootMeta struct {
-		Signatures []keyMeta
-	}
-	type tuf struct {
-		Root rootMeta `json:"root.json"`
+	if result != pkgBlob {
+		t.Errorf("GetUpdateComplete: got %q, want %q", result, pkgBlob)
 	}
 
-	var meta tuf
-	err = json.Unmarshal(c, &meta)
+	c, err := ioutil.ReadFile(pkgsDir + "/" + pkgBlob)
 	panicerr(err)
+	if got := string(c); got != pkgContent {
+		t.Errorf("getpkg: got %q, want %q", got, pkgContent)
+	}
 
-	// FIXME(PKG-687) Undo after go-tuf has been updated to G1.
-	/*
-		if rootKey.ID() != meta.Root.Signatures[0].Keyid {
-			t.Fatalf("wrong signature in root.json; want key %s, got %s", rootKey.ID(), meta.Root.Signatures[0].Keyid)
-		}
-	*/
+	c, err = ioutil.ReadFile(blobsDir + "/" + root1)
+	panicerr(err)
+	if got, want := string(c), "first blob"; got != want {
+		t.Errorf("getblob: got %q, want %q", got, want)
+	}
 }
 
 func TestDaemonWithEncryption(t *testing.T) {
