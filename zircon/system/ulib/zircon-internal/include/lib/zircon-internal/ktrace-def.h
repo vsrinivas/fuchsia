@@ -90,7 +90,31 @@ KTRACE_DEF(0x045,32B,FUTEX_WAKE,SCHEDULER)
 // Word 3: bit 31; 1 => futex was active, 0 => it was not.
 KTRACE_DEF(0x046,32B,FUTEX_REQUEUE,SCHEDULER)
 
-// events from 0x100 on all share the tag/tid/ts common header
+// Trace events logged when a thread interacts with a kernel mutex.  Three
+// operations are defined, Acquire, release and block, but the meaning of the
+// parameters vary slightly from operation to operation.
+//
+// Acquire operations are only logged in the case that a mutex is obtained while
+// uncontested.  There will never be a TID specified, and the number of waiters
+// will always be 0.
+//
+// Release operations will only log a TID in the case that the mutex is being
+// granted atomically to a specific waiter, and the TID will specify the waiter
+// that the mutex is being release to.  In the case that an uncontested mutex is
+// being released, the TID will be 0.
+//
+// Block operations will log a TID indicating the TID of the thread which
+// current owns the mutex and is blocking them.
+//
+// Word 0: low 32 bits of kernel mutex address
+// Word 1: TID
+// Word 2: The number of threads blocked on this mutex
+// Word 3: bits [0..7] CPU ID
+// Word 3: bit 31: 1 => word 1 TID is user mode
+//                 0 => word 1 TID is kernel mode
+KTRACE_DEF(0x047,32B,KERNEL_MUTEX_ACQUIRE,SCHEDULER)
+KTRACE_DEF(0x048,32B,KERNEL_MUTEX_RELEASE,SCHEDULER)
+KTRACE_DEF(0x049,32B,KERNEL_MUTEX_BLOCK,SCHEDULER)
 
 KTRACE_DEF(0x100,32B,OBJECT_DELETE,LIFECYCLE) // id
 

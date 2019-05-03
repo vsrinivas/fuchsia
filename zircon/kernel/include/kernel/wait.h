@@ -180,6 +180,8 @@ public:
 
     bool IsEmpty() const TA_REQ(thread_lock) { return (this->count == 0); }
 
+    uint32_t Count() const TA_REQ(thread_lock) { return this->count; }
+
     struct thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock) {
         return wait_queue_dequeue_one(this, wait_queue_error);
     }

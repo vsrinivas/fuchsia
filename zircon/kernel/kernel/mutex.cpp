@@ -23,11 +23,84 @@
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
+#include <ktl/type_traits.h>
 #include <lib/ktrace.h>
 #include <trace.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
+
+namespace {
+
+enum class KernelMutexTracingLevel {
+    None,       // No tracing is ever done.  All code drops out at compile time.
+    Contested,  // Trace events are only generated when mutexes are contested.
+    All         // Trace events are generated for all mutex interactions.
+};
+
+// By default, kernel mutex tracing is disabled.
+template <KernelMutexTracingLevel = KernelMutexTracingLevel::None, typename = void>
+class KTracer;
+
+template <>
+class KTracer<KernelMutexTracingLevel::None> {
+public:
+    KTracer() = default;
+    void KernelMutexUncontestedAcquire(const Mutex* mutex) {}
+    void KernelMutexUncontestedRelease(const Mutex* mutex) {}
+    void KernelMutexBlock(const Mutex* mutex, thread_t* blocker, uint32_t waiter_count) {}
+    void KernelMutexWake(const Mutex* mutex, thread_t* new_owner, uint32_t waiter_count) {}
+};
+
+template <KernelMutexTracingLevel Level>
+class KTracer<Level,
+              ktl::enable_if_t<(Level == KernelMutexTracingLevel::Contested) ||
+                               (Level == KernelMutexTracingLevel::All)>> {
+public:
+    KTracer() : ts_(ktrace_timestamp()) {}
+
+    void KernelMutexUncontestedAcquire(const Mutex* mutex) {
+        if constexpr (Level == KernelMutexTracingLevel::All) {
+            KernelMutexTrace(TAG_KERNEL_MUTEX_ACQUIRE, mutex, nullptr, 0);
+        }
+    }
+
+    void KernelMutexUncontestedRelease(const Mutex* mutex) {
+        if constexpr (Level == KernelMutexTracingLevel::All) {
+            KernelMutexTrace(TAG_KERNEL_MUTEX_RELEASE, mutex, nullptr, 0);
+        }
+    }
+
+    void KernelMutexBlock(const Mutex* mutex, const thread_t* blocker, uint32_t waiter_count) {
+        KernelMutexTrace(TAG_KERNEL_MUTEX_BLOCK, mutex, blocker, waiter_count);
+    }
+
+    void KernelMutexWake(const Mutex* mutex, const thread_t* new_owner, uint32_t waiter_count) {
+        KernelMutexTrace(TAG_KERNEL_MUTEX_RELEASE, mutex, new_owner, waiter_count);
+    }
+
+private:
+    void KernelMutexTrace(uint32_t tag,
+                          const Mutex* mutex,
+                          const thread_t* t,
+                          uint32_t waiter_count) {
+        uint32_t mutex_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(mutex));
+        uint32_t tid = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(t));
+        uint32_t flags = static_cast<uint32_t>(
+                arch_curr_cpu_num() & KTRACE_FLAGS_KERNEL_MUTEX_CPUID_MASK);
+
+        if ((t != nullptr) && (t->user_thread != nullptr)) {
+            tid = static_cast<uint32_t>(t->user_tid);
+            flags |= KTRACE_FLAGS_KERNEL_MUTEX_USER_MODE_TID;
+        }
+
+        ktrace(tag, mutex_id, tid, waiter_count, flags, ts_);
+    }
+
+    const uint64_t ts_;
+};
+
+}  // anon namespace
 
 Mutex::~Mutex() {
     magic_.Assert();
@@ -67,6 +140,7 @@ void Mutex::Acquire() {
         // If someone else attempts to acquire the mutex and discovers it to be
         // already locked, they will take care of updating the wait queue
         // ownership while they are inside of the thread_lock.
+        KTracer{}.KernelMutexUncontestedAcquire(this);
         return;
     }
 
@@ -104,6 +178,7 @@ void Mutex::Acquire() {
         // to be sure that we inform our owned wait queue that this is the
         // proper queue owner as we block.
         thread_t* cur_owner = holder_from_val(old_mutex_state);
+        KTracer{}.KernelMutexBlock(this, cur_owner, wait_.Count() + 1);
         zx_status_t ret = wait_.BlockAndAssignOwner(Deadline::infinite(),
                                                     cur_owner,
                                                     ResourceOwnership::Normal);
@@ -133,6 +208,7 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
         // We're done.  Since this mutex was uncontested, we know that we were
         // not receiving any priority pressure from the wait queue, and there is
         // nothing further to do.
+        KTracer{}.KernelMutexUncontestedRelease(this);
         return;
     }
 
@@ -170,7 +246,9 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
         return Action::SelectAndAssignOwner;
     };
 
+    KTracer tracer;
     bool need_reschedule = wait_.WakeThreads(1, { cbk, &woken });
+    tracer.KernelMutexWake(this, woken, wait_.Count());
 
     ktrace_ptr(TAG_KWAIT_WAKE, &wait_, 1, 0);
 
