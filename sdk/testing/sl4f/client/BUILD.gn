@@ -7,6 +7,8 @@ import("//build/dart/dart_library.gni")
 dart_library("client") {
   package_name = "sl4f"
 
+  sdk_category = "partner"
+
   sources = [
     "sl4f.dart",
     "src/audio.dart",
