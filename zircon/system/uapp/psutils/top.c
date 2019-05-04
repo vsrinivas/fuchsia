@@ -306,6 +306,14 @@ int main(int argc, char** argv) {
         }
     }
 
+    bool is_term = false;
+    if (!strncmp(getenv("TERM"), "screen", 6)) {
+        is_term = true;
+    }
+    if (!strncmp(getenv("TERM"), "xterm", 5)) {
+        is_term = true;
+    }
+
     // set stdin to non blocking
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
@@ -354,6 +362,9 @@ int main(int argc, char** argv) {
         sort_threads(sort_order);
 
         // dump the list of threads
+        if (is_term) {
+            printf("\E[H\E[J");
+        }
         print_threads();
 
         if (num_loops > 0) {
