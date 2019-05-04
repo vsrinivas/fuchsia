@@ -6,7 +6,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
-#include "garnet/examples/testing/test_with_environment/fake_echo.h"
+#include "fake_echo.h"
 
 // This test file demostrates how to use |TestWithEnvironment|.
 

@@ -266,8 +266,8 @@ group("examples") {
   testonly = true
   public_deps = [
     ":intl_examples",
-    "//garnet/examples/testing:component_context_provider_example",
-    "//garnet/examples/testing/test_with_environment:test_with_environment_example_test",
+    "//sdk/lib/sys/cpp/testing/examples:component_context_provider_example_test",
+    "//sdk/lib/sys/cpp/testing/examples/test_with_environment:test_with_environment_example_test",
   ]
 }
 

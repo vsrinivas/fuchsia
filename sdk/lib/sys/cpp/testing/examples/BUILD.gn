@@ -7,7 +7,7 @@ import("//build/testing/environments.gni")
 
 executable("component_context_provider_example_bin") {
   testonly = true
-  output_name = "component_context_provider_example"
+  output_name = "component_context_provider_example_test"
 
   sources = [
     "component_context_provider_example.cc",
@@ -21,14 +21,14 @@ executable("component_context_provider_example_bin") {
   ]
 }
 
-test_package("component_context_provider_example") {
+test_package("component_context_provider_example_test") {
   deps = [
     ":component_context_provider_example_bin",
   ]
 
   tests = [
     {
-      name = "component_context_provider_example"
+      name = "component_context_provider_example_test"
       environments = basic_envs
     },
   ]

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/testing/test_with_environment/fake_echo.h"
+#include "fake_echo.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
