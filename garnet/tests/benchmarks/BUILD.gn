@@ -33,35 +33,14 @@ executable("garnet_benchmarks_perfcompare_bin") {
   ]
 }
 
-zircon_tests = [
-  "test/fs/fs-bench-test",
-  "test/sys/blobfs-bench-test",
-  "test/sys/perf-test",
-]
-
-action("zircon-test-manifest") {
+zircon_extras_manifest("zircon-test-manifest") {
   visibility = [ ":*" ]
-  foreach(image, zircon_images) {
-    if (image.type == "manifest" && image.name == "legacy-tests-$target_cpu") {
-      sources = [
-        "$zircon_root_build_dir/${image.path}",
-      ]
-    }
-  }
-  outputs = [
-    "$target_gen_dir/zircon-tests.manifest",
+  manifest = "tests"
+  patterns = [
+    "test/fs/fs-bench-test",
+    "test/sys/blobfs-bench-test",
+    "test/sys/perf-test",
   ]
-  script = "//build/images/manifest.py"
-  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  foreach(test, zircon_tests) {
-    args += [ "--include=$test" ]
-  }
-  foreach(manifest, sources) {
-    args += [
-      "--cwd=" + rebase_path(get_path_info(manifest, "dir"), root_build_dir),
-      "--manifest=" + rebase_path(manifest, root_build_dir),
-    ]
-  }
 }
 
 package("garnet_benchmarks") {
@@ -73,7 +52,7 @@ package("garnet_benchmarks") {
     ":zircon-test-manifest",
   ]
 
-  extra = [ "$target_gen_dir/zircon-tests.manifest" ]
+  extra = get_target_outputs(":zircon-test-manifest")
 
   binaries = [
     {
