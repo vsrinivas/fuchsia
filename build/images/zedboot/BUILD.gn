@@ -40,7 +40,6 @@ zedboot_binary_patterns = [
   "bin/devcoordinator",
   "bin/dlog",
   "bin/fshost",
-  "bin/miscsvc",
   "bin/netsvc",
   "bin/pwrbtn-monitor",
   "bin/svchost",

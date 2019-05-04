@@ -19,7 +19,6 @@ executable("devcoordinator") {
   data_deps = [
     ":internal-drivers",
     "../fshost",
-    "$zx/system/core/miscsvc",
     "$zx/system/core/netsvc",
     "$zx/system/core/svchost",
     "$zx/system/core/virtcon:virtual-console",
