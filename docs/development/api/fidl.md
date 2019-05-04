@@ -348,6 +348,21 @@ structure must match an ABI defined in a C header, reference the C header.
 For more information about what your comments should contain, consult the [API
 Documentation Rubric](documentation.md).
 
+#### Referencing FIDL protocols or protocol methods
+
+References to FIDL protocols or their methods in comments should follow the
+pattern:
+
+```fidl
+/// See fuchsia.library.ProtocolName/Method for more information.
+```
+
+When referring to a protocol in the same library as the comment, the library
+name may be left off: `ProtocolName/Method`.
+
+Similarly, when referring to a method in the same protocol as the comment,
+the library name and protocol name may be left off: `Method`.
+
 #### Non flow-through comments
 
 If your comments are meant for library authors, use the simpler comments `//`
