@@ -18,7 +18,6 @@ executable("install-disk-image") {
     "$zx/system/ulib/async",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/paver",

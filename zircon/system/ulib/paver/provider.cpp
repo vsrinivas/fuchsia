@@ -6,10 +6,9 @@
 
 #include <fuchsia/paver/c/fidl.h>
 #include <lib/fidl-async/bind.h>
+#include <lib/paver/paver.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-
-#include "paver.h"
 
 namespace {
 

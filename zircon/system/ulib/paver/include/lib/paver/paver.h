@@ -7,10 +7,9 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fuchsia/paver/c/fidl.h>
+#include <lib/paver/device-partitioner.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
-
-#include "device-partitioner.h"
 
 namespace paver {
 

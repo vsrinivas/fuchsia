@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "paver.h"
+#include <lib/paver/paver.h>
 
 #include <dirent.h>
 #include <fcntl.h>

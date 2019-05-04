@@ -25,7 +25,6 @@ library("paver") {
     "$zx/system/ulib/crypto",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/digest",
-    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fs",
@@ -34,6 +33,7 @@ library("paver") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/ramdevice-client:static",
+    "$zx/system/ulib/svc",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
@@ -44,7 +44,9 @@ library("paver") {
     "$zx/third_party/ulib/uboringssl",
   ]
   public_deps = [
-    "$zx/system/ulib/svc",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/gpt",
   ]
 }
 
