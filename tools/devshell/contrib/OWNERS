@@ -21,5 +21,6 @@ per-file rustfmt=cramertj@google.com
 per-file save-package-stats=raggi@google.com
 per-file set-petal=abarth@google.com
 per-file set-relay=tamird@google.com
+per-file setup-usb-ethernet=voydanoff@google.com
 per-file update-rustc-third-party=cramertj@google.com
 per-file make-integration-patch=thatguy@google.com

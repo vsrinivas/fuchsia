@@ -1,0 +1,25 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Setup udev rules for USB CDC ethernet
+
+## usage: fx setup-usb-ethernet
+##
+##    This script is only for Linux systems.
+
+if [[ $(uname) != "Linux" ]]; then
+  echo >&2 "This script is only intended for Linux systems"
+  exit 1
+fi
+
+cat << EOF | sudo tee /etc/udev/rules.d/70-zircon-ethernet.rules
+# Rule for CDC Ethernet-only configuration
+SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="a020", NAME="zircon%b"
+# Rule for CDC Ethernet & USB Test Function composite configuration
+SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="a023", NAME="zircon%b"
+EOF
+
+sudo udevadm control --reload
+sudo udevadm trigger --action=change
