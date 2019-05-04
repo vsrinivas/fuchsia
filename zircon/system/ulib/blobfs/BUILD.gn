@@ -57,13 +57,13 @@ library("blobfs") {
       "compression/blob-compressor.cpp",
       "directory.cpp",
       "iterator/node-populator.cpp",
-      "journal.cpp",
       "journal-entry.cpp",
+      "journal.cpp",
       "metrics.cpp",
       "write-txn.cpp",
-      "writeback.cpp",
       "writeback-queue.cpp",
       "writeback-work.cpp",
+      "writeback.cpp",
     ]
     public_deps += [
       "$zx/system/ulib/block-client:headers",
@@ -82,7 +82,6 @@ library("blobfs") {
       "$zx/system/ulib/async-loop",
       "$zx/system/ulib/async-loop:async-loop-cpp",
       "$zx/system/ulib/block-client",
-      "$zx/system/ulib/c",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl-utils",
       "$zx/system/ulib/fzl",

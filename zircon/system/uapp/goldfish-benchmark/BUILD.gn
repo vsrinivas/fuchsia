@@ -8,7 +8,6 @@ executable("goldfish-benchmark") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-goldfish-pipe:c",
-    "$zx/system/ulib/c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

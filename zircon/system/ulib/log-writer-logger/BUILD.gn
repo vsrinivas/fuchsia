@@ -10,7 +10,6 @@ library("log-writer-logger") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-logger:c",
-    "$zx/system/ulib/c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/log",

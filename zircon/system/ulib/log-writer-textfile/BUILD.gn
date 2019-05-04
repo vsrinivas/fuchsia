@@ -9,7 +9,6 @@ library("log-writer-textfile") {
     "log-writer-textfile.cpp",
   ]
   deps = [
-    "$zx/system/ulib/c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/log",
