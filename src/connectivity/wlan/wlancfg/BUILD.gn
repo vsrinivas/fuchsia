@@ -35,6 +35,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",

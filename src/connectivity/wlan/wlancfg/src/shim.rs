@@ -12,6 +12,7 @@ use fidl_fuchsia_wlan_sme as fidl_sme;
 use fidl_fuchsia_wlan_stats as fidl_wlan_stats;
 use fuchsia_zircon as zx;
 use futures::{channel::oneshot, prelude::*};
+use itertools::Itertools;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -146,7 +147,11 @@ async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::Sc
             return Err(internal_error());
         }
 
-        Ok(aps.into_iter().map(|ess| convert_bss_info(ess.best_bss)).collect())
+        Ok(aps
+            .iter()
+            .map(|ess| convert_bss_info(&ess.best_bss))
+            .sorted_by(|a, b| a.ssid.cmp(&b.ssid))
+            .collect())
     });
 
     match r {
@@ -178,7 +183,7 @@ fn convert_scan_err(error: fidl_sme::ScanError) -> legacy::Error {
     }
 }
 
-fn convert_bss_info(bss: fidl_sme::BssInfo) -> legacy::Ap {
+fn convert_bss_info(bss: &fidl_sme::BssInfo) -> legacy::Ap {
     legacy::Ap {
         bssid: bss.bssid.to_vec(),
         ssid: String::from_utf8_lossy(&bss.ssid).to_string(),
@@ -259,7 +264,7 @@ fn status(client: &ClientRef) -> impl Future<Output = legacy::WlanStatus> {
             Ok(status) => legacy::WlanStatus {
                 error: success(),
                 state: convert_state(&status),
-                current_ap: status.connected_to.map(|bss| Box::new(convert_bss_info(*bss))),
+                current_ap: status.connected_to.map(|bss| Box::new(convert_bss_info(bss.as_ref()))),
             },
             Err(error) => {
                 legacy::WlanStatus { error, state: legacy::State::Unknown, current_ap: None }

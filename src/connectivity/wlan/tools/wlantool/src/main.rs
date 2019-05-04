@@ -19,6 +19,7 @@ use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use hex::FromHex;
+use itertools::Itertools;
 use std::fmt;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -392,7 +393,7 @@ async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Re
                     print_scan_header();
                     printed_header = true;
                 }
-                for ap in aps {
+                for ap in aps.iter().sorted_by(|a, b| a.best_bss.ssid.cmp(&b.best_bss.ssid)) {
                     print_scan_result(ap);
                 }
             }
@@ -428,7 +429,7 @@ fn is_printable_ascii(v: &Vec<u8>) -> bool {
     return true;
 }
 
-fn print_scan_result(ess: fidl_sme::EssInfo) {
+fn print_scan_result(ess: &fidl_sme::EssInfo) {
     let is_ascii = is_ascii(&ess.best_bss.ssid);
     let is_ascii_print = is_printable_ascii(&ess.best_bss.ssid);
     let is_utf8 = String::from_utf8(ess.best_bss.ssid.clone()).is_ok();
