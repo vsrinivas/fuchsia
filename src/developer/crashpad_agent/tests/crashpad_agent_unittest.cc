@@ -5,10 +5,8 @@
 #include "src/developer/crashpad_agent/crashpad_agent.h"
 
 #include <fuchsia/crash/cpp/fidl.h>
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
-#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
@@ -27,7 +25,8 @@
 #include <vector>
 
 #include "src/developer/crashpad_agent/config.h"
-#include "src/developer/crashpad_agent/crash_server.h"
+#include "src/developer/crashpad_agent/tests/stub_crash_server.h"
+#include "src/developer/crashpad_agent/tests/stub_feedback_data_provider.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -40,12 +39,6 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
-using fuchsia::feedback::Annotation;
-using fuchsia::feedback::Attachment;
-using fuchsia::feedback::DataProvider;
-using fuchsia::feedback::DataProvider_GetData_Response;
-using fuchsia::feedback::DataProvider_GetData_Result;
-
 // We keep the local Crashpad database size under a certain value. As we want to
 // check the produced attachments in the database, we should set the size to be
 // at least the total size for a single report so that it does not get cleaned
@@ -53,107 +46,8 @@ using fuchsia::feedback::DataProvider_GetData_Result;
 // For now, a single report should take up to 1MB.
 constexpr uint64_t kMaxTotalReportSizeInKb = 1024u;
 
-const char kStubCrashServerUrl[] = "localhost:1234";
-
 constexpr bool alwaysReturnSuccess = true;
 constexpr bool alwaysReturnFailure = false;
-
-Annotation BuildAnnotation(const std::string& key) {
-  Annotation annotation;
-  annotation.key = key;
-  annotation.value = "unused";
-  return annotation;
-}
-
-Attachment BuildAttachment(const std::string& key) {
-  Attachment attachment;
-  attachment.key = key;
-  FXL_CHECK(fsl::VmoFromString("unused", &attachment.value));
-  return attachment;
-}
-
-// Stub fuchsia.feedback.DataProvider service that returns canned responses for
-// DataProvider::GetData().
-class StubFeedbackDataProvider : public DataProvider {
- public:
-  // Returns a request handler for binding to this stub service.
-  fidl::InterfaceRequestHandler<DataProvider> GetHandler() {
-    return bindings_.GetHandler(this);
-  }
-
-  // DataProvider methods.
-  void GetData(GetDataCallback callback) override {
-    DataProvider_GetData_Result result;
-
-    if (!next_annotation_keys_ && !next_attachment_keys_) {
-      result.set_err(ZX_ERR_INTERNAL);
-    } else {
-      DataProvider_GetData_Response response;
-
-      if (next_annotation_keys_) {
-        std::vector<Annotation> annotations;
-        for (const auto& key : *next_annotation_keys_.get()) {
-          annotations.push_back(BuildAnnotation(key));
-        }
-        response.data.set_annotations(annotations);
-        reset_annotation_keys();
-      }
-
-      if (next_attachment_keys_) {
-        std::vector<Attachment> attachments;
-        for (const auto& key : *next_attachment_keys_.get()) {
-          attachments.push_back(BuildAttachment(key));
-        }
-        response.data.set_attachments(std::move(attachments));
-        reset_attachment_keys();
-      }
-
-      result.set_response(std::move(response));
-    }
-
-    callback(std::move(result));
-  }
-  void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,
-                     GetScreenshotCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  // Stub injection methods.
-  void set_annotation_keys(const std::vector<std::string>& annotation_keys) {
-    next_annotation_keys_ =
-        std::make_unique<std::vector<std::string>>(annotation_keys);
-  }
-  void set_attachment_keys(const std::vector<std::string>& attachment_keys) {
-    next_attachment_keys_ =
-        std::make_unique<std::vector<std::string>>(attachment_keys);
-  }
-  void reset_annotation_keys() { next_annotation_keys_.reset(); }
-  void reset_attachment_keys() { next_attachment_keys_.reset(); }
-
- private:
-  fidl::BindingSet<fuchsia::feedback::DataProvider> bindings_;
-  std::unique_ptr<std::vector<std::string>> next_annotation_keys_;
-  std::unique_ptr<std::vector<std::string>> next_attachment_keys_;
-};
-
-class StubCrashServer : public CrashServer {
- public:
-  StubCrashServer(bool request_return_value)
-      : CrashServer(kStubCrashServerUrl),
-        request_return_value_(request_return_value) {}
-
-  bool MakeRequest(const crashpad::HTTPHeaders& headers,
-                   std::unique_ptr<crashpad::HTTPBodyStream> stream,
-                   std::string* server_report_id) override {
-    // TODO(frousseau): check this is the one written in the local Crashpad
-    // database.
-    *server_report_id = "untestedRepordId";
-    return request_return_value_;
-  }
-
- private:
-  const bool request_return_value_;
-};
 
 // Unit-tests the implementation of the fuchsia.crash.Analyzer FIDL interface.
 //

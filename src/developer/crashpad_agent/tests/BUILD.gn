@@ -112,6 +112,10 @@ executable("crashpad_agent_unittest") {
 
   sources = [
     "crashpad_agent_unittest.cc",
+    "stub_crash_server.cc",
+    "stub_crash_server.h",
+    "stub_feedback_data_provider.cc",
+    "stub_feedback_data_provider.h",
   ]
 
   deps = [
@@ -122,6 +126,7 @@ executable("crashpad_agent_unittest") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/crashpad_agent:src",
     "//src/lib/fxl",
+    "//third_party/crashpad/util",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-crash",

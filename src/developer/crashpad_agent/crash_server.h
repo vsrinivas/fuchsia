@@ -5,10 +5,8 @@
 #ifndef SRC_DEVELOPER_CRASHPAD_AGENT_CRASH_SERVER_H_
 #define SRC_DEVELOPER_CRASHPAD_AGENT_CRASH_SERVER_H_
 
-#include <memory>
 #include <string>
 
-#include "src/developer/crashpad_agent/config.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/net/http_body.h"
 #include "third_party/crashpad/util/net/http_headers.h"
