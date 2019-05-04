@@ -29,6 +29,13 @@ pub struct EssInfo {
     pub best_bss: BssInfo,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Protection {
+    Open,
+    Wep,
+    Rsna,
+}
+
 pub fn convert_bss_description(bss: &BssDescription) -> BssInfo {
     BssInfo {
         bssid: bss.bssid.clone(),
@@ -56,18 +63,35 @@ fn get_rx_dbm(bss: &BssDescription) -> i8 {
     }
 }
 
-fn is_bss_compatible(bss: &BssDescription) -> bool {
-    // See IEEE Std 802.11-2016, 9.4.1.4
+pub fn get_protection(bss: &BssDescription) -> Protection {
     match bss.rsn.as_ref() {
-        // Incompatible if the privacy bit is set without an RSNE (WEP, WPA1).
-        None => !bss.cap.privacy,
+        Some(_) => Protection::Rsna,
+        None => {
+            if bss.cap.privacy {
+                // TODO(WLAN-1107): Fuchsia does not support the vendor specific WPA1 IE.
+                // Thus, the assumption that the BSS is using WEP is a simplification and not quite
+                // correct.
+                Protection::Wep
+            } else {
+                Protection::Open
+            }
+        }
+    }
+}
+
+fn is_bss_compatible(bss: &BssDescription) -> bool {
+    match get_protection(bss) {
+        Protection::Open => true,
+        Protection::Wep => false,
         // If the BSS is an RSN, require the privacy bit to be set and verify the RSNE's
         // compatiblity.
-        Some(rsn) if bss.cap.privacy => match rsne::from_bytes(&rsn[..]).to_full_result() {
-            Ok(a_rsne) => is_rsn_compatible(&a_rsne),
+        Protection::Rsna => match bss.rsn.as_ref() {
+            Some(rsn) if bss.cap.privacy => match rsne::from_bytes(&rsn[..]).to_full_result() {
+                Ok(a_rsne) => is_rsn_compatible(&a_rsne),
+                _ => false,
+            },
             _ => false,
         },
-        Some(_) => false,
     }
 }
 
@@ -187,6 +211,19 @@ mod tests {
         let bss3 = bss(-80, -80, ProtectionCfg::Wpa2);
         let bss_list = vec![bss1, bss2, bss3];
         assert_eq!(get_best_bss(&bss_list), Some(&bss_list[1]));
+    }
+
+    #[test]
+    fn test_get_protection() {
+        assert_eq!(Protection::Open, get_protection(&bss(-30, -10, ProtectionCfg::Open)));
+        assert_eq!(Protection::Wep, get_protection(&bss(-30, -10, ProtectionCfg::Wep)));
+        assert_eq!(Protection::Rsna, get_protection(&bss(-30, -10, ProtectionCfg::Wpa2)));
+        assert_eq!(
+            Protection::Rsna,
+            get_protection(&bss(-30, -10, ProtectionCfg::Wpa2Wpa3MixedMode))
+        );
+        assert_eq!(Protection::Rsna, get_protection(&bss(-30, -10, ProtectionCfg::Wpa2NoPrivacy)));
+        assert_eq!(Protection::Rsna, get_protection(&bss(-30, -10, ProtectionCfg::Wpa3)));
     }
 
     #[test]

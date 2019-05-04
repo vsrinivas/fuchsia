@@ -12,8 +12,9 @@ mod state;
 #[cfg(test)]
 pub mod test_utils;
 
+use failure::bail;
 use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, ScanRequest};
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent, ScanRequest};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use futures::channel::{mpsc, oneshot};
 use log::error;
@@ -29,7 +30,7 @@ use self::bss::{get_best_bss, get_channel_map, get_standard_map, group_networks}
 use self::event::Event;
 use self::rsn::get_rsna;
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
-use self::state::{ConnectCommand, State};
+use self::state::{ConnectCommand, Protection, State};
 
 use crate::clone_utils::clone_bss_desc;
 use crate::responder::Responder;
@@ -264,7 +265,7 @@ impl super::Station for ClientSme {
                         let mut inspect_msg: Option<String> = None;
                         let new_state = match get_best_bss(&bss_list) {
                             Some(best_bss) => {
-                                match get_rsna(
+                                match get_protection(
                                     &self.context.device_info,
                                     &token.credential,
                                     &best_bss,
@@ -411,6 +412,21 @@ fn report_connect_finished(
     context.info_sink.send(InfoEvent::ConnectFinished { result, failure });
 }
 
+pub fn get_protection(
+    device_info: &DeviceInfo,
+    credential: &fidl_sme::Credential,
+    bss: &BssDescription,
+) -> Result<Protection, failure::Error> {
+    match bss::get_protection(bss) {
+        bss::Protection::Open => match credential {
+            fidl_sme::Credential::None(_) => Ok(Protection::Open),
+            _ => bail!("password provided for open network, but none expected"),
+        },
+        bss::Protection::Wep => bail!("WEP is not supported"),
+        bss::Protection::Rsna => get_rsna(device_info, credential, bss),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -421,6 +437,7 @@ mod tests {
 
     use super::test_utils::{
         expect_info_event, fake_protected_bss_description, fake_unprotected_bss_description,
+        fake_wep_bss_description,
     };
 
     use crate::test_utils;
@@ -435,6 +452,57 @@ mod tests {
         sme.on_mlme_event(MlmeEvent::OnScanEnd {
             end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCodes::Success },
         });
+    }
+
+    #[test]
+    fn test_get_protection() {
+        let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
+
+        // Open network without credentials:
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let bss = fake_unprotected_bss_description(b"unprotected".to_vec());
+        match get_protection(&dev_info, &credential, &bss) {
+            Ok(Protection::Open) => (),
+            other => panic!("expected open network found: {:?}", other),
+        }
+
+        // Open network with credentials:
+        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        let bss = fake_unprotected_bss_description(b"unprotected".to_vec());
+        get_protection(&dev_info, &credential, &bss)
+            .expect_err("unprotected network cannot use password");
+
+        // RSN with user entered password:
+        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        let bss = fake_protected_bss_description(b"rsn".to_vec());
+        match get_protection(&dev_info, &credential, &bss) {
+            Ok(Protection::Rsna(_)) => (),
+            other => panic!("expected RSN found: {:?}", other),
+        }
+
+        // RSN with user entered PSK:
+        let credential = fidl_sme::Credential::Psk(vec![0xAC; 32]);
+        let bss = fake_protected_bss_description(b"rsn".to_vec());
+        match get_protection(&dev_info, &credential, &bss) {
+            Ok(Protection::Rsna(_)) => (),
+            other => panic!("expected RSN found: {:?}", other),
+        }
+
+        // RSN without credentials:
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let bss = fake_protected_bss_description(b"rsn".to_vec());
+        get_protection(&dev_info, &credential, &bss)
+            .expect_err("protected network requires password");
+
+        // WEP with credentials:
+        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        let bss = fake_wep_bss_description(b"wep".to_vec());
+        get_protection(&dev_info, &credential, &bss).expect_err("WEP network not supported");
+
+        // WEP without credentials:
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let bss = fake_wep_bss_description(b"wep".to_vec());
+        get_protection(&dev_info, &credential, &bss).expect_err("WEP network not supported");
     }
 
     #[test]

@@ -67,6 +67,12 @@ pub fn fake_unprotected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription
     fake_bss_description(ssid, None)
 }
 
+pub fn fake_wep_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
+    let mut bss = fake_bss_description(ssid, None);
+    bss.cap.privacy = true;
+    bss
+}
+
 pub fn fake_protected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
     let a_rsne = test_utils::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
     fake_bss_description(ssid, Some(test_utils::rsne_as_bytes(a_rsne)))
