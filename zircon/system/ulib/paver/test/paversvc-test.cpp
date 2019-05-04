@@ -14,12 +14,12 @@
 #include <fuchsia/paver/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/paver/device-partitioner.h>
-#include <lib/paver/paver.h>
 #include <lib/zx/vmo.h>
 #include <zircon/hw/gpt.h>
 #include <zxtest/zxtest.h>
 
+#include "device-partitioner.h"
+#include "paver.h"
 #include "test/test-utils.h"
 
 namespace {

@@ -11,10 +11,13 @@
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
+#include <lib/fdio/directory.h>
 #include <fuchsia/paver/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
-#include <lib/paver/paver.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 
@@ -188,11 +191,24 @@ zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, fuchsia_mem_Buffer* payload
 }
 
 zx_status_t RealMain(Flags flags) {
-    paver::Paver paver;
+    zx::channel paver, paver_svc;
+    auto status = zx::channel::create(0, &paver, &paver_svc);
+    if (status != ZX_OK) {
+        ERROR("Unable to create channels.\n");
+        return status;
+    }
+    const auto path = fbl::StringPrintf("/svc/%s", fuchsia_paver_Paver_Name);
+    status = fdio_service_connect(path.c_str(), paver_svc.release());
+    if (status != ZX_OK) {
+        ERROR("Unable to open /svc/fuchsia.paver.Paver.\n");
+        return status;
+    }
+
+    zx_status_t io_status = ZX_ERR_INTERNAL;
     switch (flags.cmd) {
     case Command::kFvm: {
         zx::channel client, server;
-        auto status = zx::channel::create(0, &client, &server);
+        status = zx::channel::create(0, &client, &server);
         if (status) {
             return status;
         }
@@ -202,16 +218,18 @@ zx_status_t RealMain(Flags flags) {
         disk_pave::PayloadStreamer streamer(std::move(server), std::move(flags.payload_fd));
         loop.StartThread("payload-stream");
 
-        return paver.WriteVolumes(std::move(client));
+        io_status = fuchsia_paver_PaverWriteVolumes(paver.get(), client.release(), &status);
+        return io_status == ZX_OK ? status : io_status;
     }
     case Command::kWipe:
-        return paver.WipeVolumes();
+        io_status = fuchsia_paver_PaverWipeVolumes(paver.get(), &status);
+        return io_status == ZX_OK ? status : io_status;
     default:
         break;
     }
 
     fuchsia_mem_Buffer payload;
-    auto status = ReadFileToVmo(std::move(flags.payload_fd), &payload);
+    status = ReadFileToVmo(std::move(flags.payload_fd), &payload);
     if (status != ZX_OK) {
         return status;
     }
@@ -223,15 +241,22 @@ zx_status_t RealMain(Flags flags) {
             PrintUsage();
             return ZX_ERR_INVALID_ARGS;
         }
-        return paver.WriteDataFile(fbl::String(flags.path), payload);
+        io_status = fuchsia_paver_PaverWriteDataFile(paver.get(), flags.path, strlen(flags.path),
+                                                     &payload, &status);
+        break;
     }
     case Command::kBootloader:
-        return paver.WriteBootloader(payload);
+        io_status = fuchsia_paver_PaverWriteBootloader(paver.get(), &payload, &status);
+        break;
     case Command::kAsset:
-        return paver.WriteAsset(flags.configuration, flags.asset, payload);
+        io_status = fuchsia_paver_PaverWriteAsset(paver.get(), flags.configuration, flags.asset,
+                                                  &payload, &status);
+        break;
     default:
         return ZX_ERR_INTERNAL;
     }
+
+    return io_status == ZX_OK ? status : io_status;
 }
 
 } // namespace
