@@ -29,11 +29,11 @@ pub struct EssInfo {
     pub best_bss: BssInfo,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub enum Protection {
-    Open,
-    Wep,
-    Rsna,
+    Open = 0,
+    Wep = 1,
+    Rsna = 2,
 }
 
 pub fn convert_bss_description(bss: &BssDescription) -> BssInfo {
@@ -50,6 +50,7 @@ pub fn convert_bss_description(bss: &BssDescription) -> BssInfo {
 pub fn compare_bss(left: &BssDescription, right: &BssDescription) -> Ordering {
     is_bss_compatible(left)
         .cmp(&is_bss_compatible(right))
+        .then(get_protection(left).cmp(&get_protection(right)))
         .then(get_rx_dbm(left).cmp(&get_rx_dbm(right)))
 }
 
@@ -82,7 +83,7 @@ pub fn get_protection(bss: &BssDescription) -> Protection {
 fn is_bss_compatible(bss: &BssDescription) -> bool {
     match get_protection(bss) {
         Protection::Open => true,
-        Protection::Wep => false,
+        Protection::Wep => true,
         // If the BSS is an RSN, require the privacy bit to be set and verify the RSNE's
         // compatiblity.
         Protection::Rsna => match bss.rsn.as_ref() {
@@ -188,6 +189,9 @@ mod tests {
             compare_bss(&bss(-10, -30, ProtectionCfg::Wpa2), &bss(-10, -30, ProtectionCfg::Wpa2))
         );
         // Compatibility takes priority over everything else
+        assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Wpa1), &bss(-50, -50, ProtectionCfg::Wpa2));
+        // Higher security is better.
+        assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Open), &bss(-50, -50, ProtectionCfg::Wep));
         assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Wep), &bss(-50, -50, ProtectionCfg::Wpa2));
         // RCPI in dBmh takes priority over RSSI in dBmh
         assert_bss_cmp(&bss(-20, -30, ProtectionCfg::Wpa2), &bss(-30, -20, ProtectionCfg::Wpa2));
@@ -232,9 +236,9 @@ mod tests {
         assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Open)));
         assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2)));
         assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2Wpa3MixedMode)));
+        assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
 
         // Not compatible:
-        assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
         assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa1)));
         assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2NoPrivacy)));
         assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa3)));
@@ -263,7 +267,7 @@ mod tests {
                 rx_dbm: -5,
                 channel: 1,
                 protected: true,
-                compatible: false,
+                compatible: true,
             }
         );
     }

@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("wep_deprecated") {
+  name = "wep_deprecated"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
+    "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:hex",
+  ]
+}
+
+package("wep-deprecated-tests") {
+  testonly = true
+
+  deps = [
+    ":wep_deprecated",
+  ]
+
+  tests = [
+    {
+      name = "wep_deprecated_lib_test"
+      environments = basic_envs
+    },
+  ]
+}

@@ -32,6 +32,7 @@ group("tests") {
     "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme-tests",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn-tests",
     "//src/connectivity/wlan/lib/sme:wlan-sme-tests",
+    "//src/connectivity/wlan/lib/wep_deprecated:wep-deprecated-tests",
     "//src/connectivity/wlan/testing/ap-smoke-test:wlan-ap-smoke-test",
     "//src/connectivity/wlan/testing/client-smoke-test:wlan-smoke-test",
     "//src/connectivity/wlan/testing/client-stress-test:wlan-stress-test",
