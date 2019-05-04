@@ -40,7 +40,7 @@ group("tests") {
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim-tests",
     "//src/connectivity/wlan/testing/wlantap-client",
     "//src/connectivity/wlan/testing/wlantap-driver:wlantap",
-    "//src/connectivity/wlan/tools/wlantool:wlantool2-tests",
+    "//src/connectivity/wlan/tools/wlantool:wlan-tests",
     "//src/connectivity/wlan/wlancfg:wlancfg-tests",
     "//src/connectivity/wlan/wlanstack:wlanstack2-tests",
   ]
@@ -48,7 +48,6 @@ group("tests") {
 
 group("tools") {
   public_deps = [
-    "//src/connectivity/wlan/tools/wlan:wlantool",
-    "//src/connectivity/wlan/tools/wlantool:wlantool2",
+    "//src/connectivity/wlan/tools/wlantool:wlan",
   ]
 }

@@ -6,17 +6,8 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 
-group("wlantool") {
-  testonly = true
-  deps = [
-    ":bin",
-    ":wlantool2",
-    ":wlantool2-tests",
-  ]
-}
-
 rustc_binary("bin") {
-  name = "wlantool2"
+  name = "wlan"
   with_unit_tests = true
   edition = "2018"
 
@@ -40,21 +31,21 @@ rustc_binary("bin") {
   ]
 }
 
-package("wlantool2") {
+package("wlan") {
   deps = [
     ":bin",
   ]
 
   binaries = [
     {
-      name = "wlantool2"
-      dest = "wlantool2"
+      name = "wlan"
+      dest = "wlan"
       shell = true
     },
   ]
 }
 
-package("wlantool2-tests") {
+package("wlan-tests") {
   testonly = true
 
   deps = [
@@ -63,7 +54,7 @@ package("wlantool2-tests") {
 
   tests = [
     {
-      name = "wlantool2_bin_test"
+      name = "wlan_bin_test"
       environments = basic_envs
     },
   ]
