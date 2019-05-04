@@ -188,6 +188,7 @@ zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, fuchsia_mem_Buffer* payload
 }
 
 zx_status_t RealMain(Flags flags) {
+    paver::Paver paver;
     switch (flags.cmd) {
     case Command::kFvm: {
         zx::channel client, server;
@@ -201,10 +202,10 @@ zx_status_t RealMain(Flags flags) {
         disk_pave::PayloadStreamer streamer(std::move(server), std::move(flags.payload_fd));
         loop.StartThread("payload-stream");
 
-        return paver::WriteVolumes(std::move(client));
+        return paver.WriteVolumes(std::move(client));
     }
     case Command::kWipe:
-        return paver::WipeVolumes();
+        return paver.WipeVolumes();
     default:
         break;
     }
@@ -222,12 +223,12 @@ zx_status_t RealMain(Flags flags) {
             PrintUsage();
             return ZX_ERR_INVALID_ARGS;
         }
-        return paver::WriteDataFile(fbl::String(flags.path), payload);
+        return paver.WriteDataFile(fbl::String(flags.path), payload);
     }
     case Command::kBootloader:
-        return paver::WriteBootloader(payload);
+        return paver.WriteBootloader(payload);
     case Command::kAsset:
-        return paver::WriteAsset(flags.configuration, flags.asset, payload);
+        return paver.WriteAsset(flags.configuration, flags.asset, payload);
     default:
         return ZX_ERR_INTERNAL;
     }

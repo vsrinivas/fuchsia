@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device-partitioner.h"
+#include <lib/paver/device-partitioner.h>
 
 #include <dirent.h>
 #include <errno.h>
@@ -265,21 +265,21 @@ const char* PartitionName(Partition type) {
     }
 }
 
-fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create() {
-    fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
+fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root) {
+    // TODO(surajmalhotra): Only use injected devfs_root for skip-block until
+    // ramdisks spawn in isolated devmgr.
+    fbl::unique_fd block_devfs_root((open("/dev", O_RDONLY)));
     fbl::unique_ptr<DevicePartitioner> device_partitioner;
-#if defined(__x86_64__)
-    if ((CrosDevicePartitioner::Initialize(devfs_root.duplicate(), &device_partitioner) == ZX_OK) ||
-        (EfiDevicePartitioner::Initialize(std::move(devfs_root), &device_partitioner) == ZX_OK)) {
-        return device_partitioner;
-    }
-#elif defined(__aarch64__)
-    if ((SkipBlockDevicePartitioner::Initialize(devfs_root.duplicate(),
+    if ((CrosDevicePartitioner::Initialize(block_devfs_root.duplicate(),
+                                           &device_partitioner) == ZX_OK) ||
+        (EfiDevicePartitioner::Initialize(block_devfs_root.duplicate(),
+                                          &device_partitioner) == ZX_OK) ||
+        (SkipBlockDevicePartitioner::Initialize(std::move(devfs_root),
                                                 &device_partitioner) == ZX_OK) ||
-        (FixedDevicePartitioner::Initialize(std::move(devfs_root), &device_partitioner) == ZX_OK)) {
+        (FixedDevicePartitioner::Initialize(std::move(block_devfs_root),
+                                            &device_partitioner) == ZX_OK)) {
         return device_partitioner;
     }
-#endif
     return nullptr;
 }
 
@@ -307,6 +307,10 @@ bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, f
             continue;
         }
         out->Set(PATH_MAX, '\0');
+
+        if (TestBlockFilter && TestBlockFilter(fd)) {
+            continue;
+        }
 
         zx::channel dev;
         zx_status_t status = fdio_get_service_handle(fd.release(), dev.reset_and_get_address());
@@ -478,7 +482,7 @@ zx_status_t GptDevicePartitioner::FindFirstFit(size_t bytes_requested, size_t* s
 
 zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* type,
                                                      uint64_t offset, uint64_t blocks,
-                                                     uint8_t* out_guid) {
+                                                     uint8_t* out_guid) const {
     zx_cprng_draw(out_guid, GPT_GUID_LEN);
 
     zx_status_t status;
@@ -508,7 +512,7 @@ zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* 
 
 zx_status_t GptDevicePartitioner::AddPartition(
     const char* name, uint8_t* type, size_t minimum_size_bytes,
-    size_t optional_reserve_bytes, fbl::unique_fd* out_fd) {
+    size_t optional_reserve_bytes, fbl::unique_fd* out_fd) const {
 
     uint64_t start, length;
     zx_status_t status;
@@ -549,7 +553,7 @@ zx_status_t GptDevicePartitioner::AddPartition(
 }
 
 zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter, gpt_partition_t** out,
-                                                fbl::unique_fd* out_fd) {
+                                                fbl::unique_fd* out_fd) const {
     for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
         gpt_partition_t* p = gpt_->GetPartition(i);
         if (!p) {
@@ -599,7 +603,7 @@ zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter,
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t GptDevicePartitioner::WipeFvm() {
+zx_status_t GptDevicePartitioner::WipeFvm() const {
     bool modify = false;
     for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
         const gpt_partition_t* p = gpt_->GetPartition(i);
@@ -655,7 +659,8 @@ zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
     return ZX_OK;
 }
 
-zx_status_t EfiDevicePartitioner::AddPartition(Partition partition_type, fbl::unique_fd* out_fd) {
+zx_status_t EfiDevicePartitioner::AddPartition(Partition partition_type,
+                                               fbl::unique_fd* out_fd) const {
     const char* name;
     uint8_t type[GPT_GUID_LEN];
     size_t minimum_size_bytes = 0;
@@ -742,7 +747,7 @@ zx_status_t EfiDevicePartitioner::FindPartition(Partition partition_type,
     }
 }
 
-zx_status_t EfiDevicePartitioner::WipeFvm() {
+zx_status_t EfiDevicePartitioner::WipeFvm() const {
     return gpt_->WipeFvm();
 }
 
@@ -795,7 +800,7 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
 }
 
 zx_status_t CrosDevicePartitioner::AddPartition(Partition partition_type,
-                                                fbl::unique_fd* out_fd) {
+                                                fbl::unique_fd* out_fd) const {
     const char* name;
     uint8_t type[GPT_GUID_LEN];
     size_t minimum_size_bytes = 0;
@@ -857,7 +862,7 @@ zx_status_t CrosDevicePartitioner::FindPartition(Partition partition_type,
     }
 }
 
-zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
+zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) const {
     // Special partition finalization is only necessary for Zircon partitions.
     if (partition_type != Partition::kZirconA) {
         return ZX_OK;
@@ -927,7 +932,7 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
     return ZX_OK;
 }
 
-zx_status_t CrosDevicePartitioner::WipeFvm() {
+zx_status_t CrosDevicePartitioner::WipeFvm() const {
     return gpt_->WipeFvm();
 }
 
@@ -955,7 +960,8 @@ zx_status_t FixedDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
     return ZX_OK;
 }
 
-zx_status_t FixedDevicePartitioner::AddPartition(Partition partition_type, fbl::unique_fd* out_fd) {
+zx_status_t FixedDevicePartitioner::AddPartition(Partition partition_type,
+                                                 fbl::unique_fd* out_fd) const {
     ERROR("Cannot add partitions to a fixed-map partition device\n");
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -1008,7 +1014,7 @@ zx_status_t FixedDevicePartitioner::FindPartition(Partition partition_type,
     return OpenBlockPartition(devfs_root_, nullptr, type, ZX_SEC(5), out_fd);
 }
 
-zx_status_t FixedDevicePartitioner::WipeFvm() {
+zx_status_t FixedDevicePartitioner::WipeFvm() const {
     const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
     zx_status_t status;
     if ((status = WipeBlockPartition(devfs_root_, nullptr, fvm_type)) != ZX_OK) {
@@ -1059,7 +1065,7 @@ zx_status_t SkipBlockDevicePartitioner::Initialize(
 }
 
 zx_status_t SkipBlockDevicePartitioner::AddPartition(Partition partition_type,
-                                                     fbl::unique_fd* out_fd) {
+                                                     fbl::unique_fd* out_fd) const {
     ERROR("Cannot add partitions to a skip-block, fixed partition device\n");
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -1118,7 +1124,7 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(Partition partition_type,
     return OpenSkipBlockPartition(devfs_root_, type, ZX_SEC(5), out_fd);
 }
 
-zx_status_t SkipBlockDevicePartitioner::WipeFvm() {
+zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
     const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
     zx_status_t status;
     fbl::unique_fd block_fd;

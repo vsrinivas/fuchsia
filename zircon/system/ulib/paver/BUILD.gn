@@ -4,64 +4,49 @@
 
 library("paver") {
   sources = [
+    "device-partitioner.cpp",
     "paver.cpp",
+    "pave-utils.cpp",
+    "provider.cpp",
+    "stream-reader.cpp",
   ]
   deps = [
-    ":pave-utils",
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
+    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",
     "$zx/system/fidl/fuchsia-hardware-zxcrypt:c",
     "$zx/system/fidl/fuchsia-paver:c",
+    "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/block-client",
+    "$zx/system/ulib/chromeos-disk-setup",
     "$zx/system/ulib/crypto",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/digest",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fs",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/ramdevice-client:static",
+    "$zx/system/ulib/svc",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxcrypt",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/lz4",
-  ]
-  public_deps = [
-    "$zx/system/ulib/fbl",
-  ]
-}
-
-source_set("pave-utils") {
-  sources = [
-    "device-partitioner.cpp",
-    "pave-utils.cpp",
-    "stream-reader.cpp",
-  ]
-  deps = [
-    "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/fidl/fuchsia-hardware-skipblock:c",
-    "$zx/system/fidl/fuchsia-paver:c",
-    "$zx/system/ulib/chromeos-disk-setup",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/digest",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fs-management",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
-    "$zx/system/ulib/zxcrypt",
     "$zx/third_party/ulib/uboringssl",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/ulib/block-client",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fvm",
-    "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
-    "$zx/system/ulib/zx",
   ]
 }
 
@@ -69,25 +54,27 @@ test("paver-test") {
   output_name = "paver-test"
   sources = [
     "test/device-partitioner-test.cpp",
+    "test/paversvc-test.cpp",
     "test/stream-reader-test.cpp",
+    "test/test-utils.cpp",
   ]
   include_dirs = [ "." ]
   deps = [
-    ":pave-utils",
+    ":paver",
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-paver:c",
     "$zx/system/ulib/async",
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
-    "$zx/system/ulib/ramdevice-client",
+    "$zx/system/ulib/ramdevice-client:static",
+    "$zx/system/ulib/svc",
     "$zx/system/ulib/zxtest",
   ]
 }

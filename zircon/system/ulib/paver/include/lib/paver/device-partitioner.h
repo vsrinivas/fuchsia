@@ -48,7 +48,7 @@ class DevicePartitioner {
 public:
     // Factory method which automatically returns the correct DevicePartitioner
     // implementation. Returns nullptr on failure.
-    static fbl::unique_ptr<DevicePartitioner> Create();
+    static fbl::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root);
 
     virtual ~DevicePartitioner() = default;
 
@@ -58,17 +58,17 @@ public:
 
     // Returns a file descriptor to a partition of type |partition_type|, creating it.
     // Assumes that the partition does not already exist.
-    virtual zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) = 0;
+    virtual zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) const = 0;
 
     // Returns a file descriptor to a partition of type |partition_type| if one exists.
     virtual zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const = 0;
 
     // Finalizes the partition of type |partition_type| after it has been
     // written.
-    virtual zx_status_t FinalizePartition(Partition partition_type) = 0;
+    virtual zx_status_t FinalizePartition(Partition partition_type) const = 0;
 
     // Wipes Fuchsia Volume Manager partition.
-    virtual zx_status_t WipeFvm() = 0;
+    virtual zx_status_t WipeFvm() const = 0;
 
     // Returns block size in bytes for specified device.
     virtual zx_status_t GetBlockSize(const fbl::unique_fd& device_fd,
@@ -92,7 +92,7 @@ public:
     }
 
     GptDevice* GetGpt() const { return gpt_.get(); }
-    zx::unowned_channel Channel() { return zx::unowned_channel(caller_.borrow_channel()); }
+    zx::unowned_channel Channel() const { return zx::unowned_channel(caller_.borrow_channel()); }
 
     // Find the first spot that has at least |bytes_requested| of space.
     //
@@ -104,17 +104,17 @@ public:
     // Creates a partition, adds an entry to the GPT, and returns a file descriptor to it.
     // Assumes that the partition does not already exist.
     zx_status_t AddPartition(const char* name, uint8_t* type, size_t minimum_size_bytes,
-                             size_t optional_reserve_bytes, fbl::unique_fd* out_fd);
+                             size_t optional_reserve_bytes, fbl::unique_fd* out_fd) const;
 
     // Returns a file descriptor to a partition which can be paved,
     // if one exists.
     zx_status_t FindPartition(FilterCallback filter, gpt_partition_t** out,
-                              fbl::unique_fd* out_fd);
+                              fbl::unique_fd* out_fd) const;
     zx_status_t FindPartition(FilterCallback filter, fbl::unique_fd* out_fd) const;
 
     // Wipes a specified partition from the GPT, and overwrites first 8KiB with
     // nonsense.
-    zx_status_t WipeFvm();
+    zx_status_t WipeFvm() const;
 
 private:
     // Find and return the topological path of the GPT which we will pave.
@@ -127,11 +127,11 @@ private:
           block_info_(block_info) {}
 
     zx_status_t CreateGptPartition(const char* name, uint8_t* type, uint64_t offset,
-                                   uint64_t blocks, uint8_t* out_guid);
+                                   uint64_t blocks, uint8_t* out_guid) const;
 
     fbl::unique_fd devfs_root_;
     fzl::FdioCaller caller_;
-    fbl::unique_ptr<GptDevice> gpt_;
+    mutable fbl::unique_ptr<GptDevice> gpt_;
     fuchsia_hardware_block_BlockInfo block_info_;
 };
 
@@ -143,13 +143,13 @@ public:
 
     bool UseSkipBlockInterface() const override { return false; }
 
-    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override;
+    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
     zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
-    zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
+    zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
 
-    zx_status_t WipeFvm() override;
+    zx_status_t WipeFvm() const override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -168,13 +168,13 @@ public:
 
     bool UseSkipBlockInterface() const override { return false; }
 
-    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override;
+    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
     zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
-    zx_status_t FinalizePartition(Partition unused) override;
+    zx_status_t FinalizePartition(Partition unused) const override;
 
-    zx_status_t WipeFvm() override;
+    zx_status_t WipeFvm() const override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -196,13 +196,13 @@ public:
 
     bool UseSkipBlockInterface() const override { return false; }
 
-    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override;
+    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
     zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
-    zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
+    zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
 
-    zx_status_t WipeFvm() override;
+    zx_status_t WipeFvm() const override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -225,13 +225,13 @@ public:
 
     bool UseSkipBlockInterface() const override { return true; }
 
-    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override;
+    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
     zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
-    zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
+    zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
 
-    zx_status_t WipeFvm() override;
+    zx_status_t WipeFvm() const override;
 
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
