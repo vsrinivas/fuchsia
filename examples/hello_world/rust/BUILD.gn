@@ -20,7 +20,7 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":hello_world_rust_bin_test"
+    ":hello_world_rust_tests"
   ]
 }
 
@@ -53,7 +53,7 @@ package("hello_world_rust") {
   ]
 }
 
-test_package("hello_world_rust_bin_test") {
+test_package("hello_world_rust_tests") {
   deps = [
     ":bin",
   ]

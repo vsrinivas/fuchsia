@@ -110,7 +110,7 @@ package that holds the test component.
 ```GN
 import("//build/test/test_package.gni")
 
-test_package("hello_world_rust_bin_test") {
+test_package("hello_world_rust_tests") {
   deps = [
     ":bin",
   ]
@@ -122,7 +122,7 @@ test_package("hello_world_rust_bin_test") {
 }
 ```
 
-This example will produce a new package named `hello_world_rust_bin_test` that
+This example will produce a new package named `hello_world_rust_tests` that
 contains the artifacts necessary to run a test component. This example requires
 that the `:bin` target produce a test binary named `hello_world_rust_bin_test`.
 
