@@ -68,6 +68,12 @@ struct {
     // If appmgr cannot be launched within a timeout, this handle is closed.
     zx::channel appmgr_server;
 
+    // The handle used to transmit messages to miscsvc.
+    zx::channel miscsvc_client;
+
+    // The handle used by miscsvc to serve incoming requests.
+    zx::channel miscsvc_server;
+
     zx::unowned_job root_job;
     zx::job svc_job;
     zx::job fuchsia_job;
@@ -406,6 +412,8 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
     zx::debuglog logger;
     zx::channel appmgr_svc_req;
     zx::channel appmgr_svc;
+    zx::channel miscsvc_svc_req;
+    zx::channel miscsvc_svc;
 
     zx_status_t status = zx::channel::create(0, &dir_request, &svchost_local);
     if (status != ZX_OK) {
@@ -424,6 +432,18 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
 
     status =
         fdio_service_connect_at(g_handles.appmgr_client.get(), "svc", appmgr_svc_req.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = zx::channel::create(0, &miscsvc_svc_req, &miscsvc_svc);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status =
+        fdio_service_connect_at(g_handles.miscsvc_client.get(), "public",
+                                miscsvc_svc_req.release());
     if (status != ZX_OK) {
         return status;
     }
@@ -517,6 +537,9 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
         // virtcon.
         launchpad_add_handle(lp, virtcon_client.release(), PA_HND(PA_USER0, 5));
     }
+
+    // Add handle to channel to allow svchost to talk to miscsvc.
+    launchpad_add_handle(lp, miscsvc_svc.release(), PA_HND(PA_USER0, 6));
 
     // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
     // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
@@ -655,6 +678,18 @@ void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs&
 
 int service_starter(void* arg) {
     auto coordinator = static_cast<devmgr::Coordinator*>(arg);
+
+    // Launch miscsvc binary with access to:
+    // * /dev to talk to hardware
+    // * /boot to dynamically load drivers (zxcrypt)
+    // * /svc to call launch processes (minfs)
+    // * /volume to mount (minfs)
+    const zx_handle_t handles[] = { g_handles.miscsvc_server.release() };
+    const uint32_t types[] = { PA_DIRECTORY_REQUEST };
+    const char* args[] = { "/boot/bin/miscsvc", nullptr };
+
+    devmgr::devmgr_launch(g_handles.svc_job, "miscsvc", args, nullptr, -1, handles,
+                          types, countof(handles), nullptr, FS_BOOT | FS_DEV | FS_SVC | FS_VOLUME);
 
     bool netboot = false;
     bool vruncmd = false;
@@ -978,6 +1013,7 @@ int main(int argc, char** argv) {
     zx::channel fshost_client, fshost_server;
     zx::channel::create(0, &fshost_client, &fshost_server);
     zx::channel::create(0, &g_handles.appmgr_client, &g_handles.appmgr_server);
+    zx::channel::create(0, &g_handles.miscsvc_client, &g_handles.miscsvc_server);
 
     if (devmgr_args.use_system_svchost) {
         zx::channel dir_request;

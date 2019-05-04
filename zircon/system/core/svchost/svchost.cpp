@@ -9,6 +9,7 @@
 #include <fs/remote-dir.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/fshost/c/fidl.h>
+#include <fuchsia/paver/c/fidl.h>
 #include <fuchsia/virtualconsole/c/fidl.h>
 #include <fuchsia/net/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -149,6 +150,12 @@ static constexpr const char* fshost_services[] = {
     nullptr,
 };
 
+// Forward these Zircon services to miscsvc.
+static constexpr const char* miscsvc_services[] = {
+    fuchsia_paver_Paver_Name,
+    nullptr,
+};
+
 // The ServiceProxy is a Vnode which, if opened, connects to a service.
 // However, if treated like a directory, the service proxy will attempt to
 // relay the underlying request to the connected service channel.
@@ -237,6 +244,7 @@ int main(int argc, char** argv) {
     zx::channel devmgr_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
     zx::channel fshost_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 4)));
     zx::channel virtcon_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 5)));
+    zx::channel miscsvc_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 6)));
 
     zx_status_t status = outgoing.ServeFromStartupInfo();
     if (status != ZX_OK) {
@@ -292,6 +300,7 @@ int main(int argc, char** argv) {
 
     publish_services(outgoing.public_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));
     publish_services(outgoing.public_dir(), fshost_services, zx::unowned_channel(fshost_svc));
+    publish_services(outgoing.public_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
 
     publish_remote_service(outgoing.public_dir(),
                           fuchsia_device_manager_DebugDumper_Name,
