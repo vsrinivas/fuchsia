@@ -20,10 +20,10 @@ class MockHost(Host):
     self._zxtools = os.path.join('mock', 'out', 'default.zircon', 'tools')
     self.ssh_config = os.path.join('mock', 'out', 'default', 'ssh-keys',
                                    'ssh_config')
-    self.fuzzers = [(u'mock-package1', u'mock-target1'),
-                    (u'mock-package1', u'mock-target2'),
-                    (u'mock-package1', u'mock-target3'),
-                    (u'mock-package2', u'mock-target1'),
+    self.fuzzers = [(u'mock-package1', u'mock-target1'), (u'mock-package1',
+                                                          u'mock-target2'),
+                    (u'mock-package1', u'mock-target3'), (u'mock-package2',
+                                                          u'mock-target1'),
                     (u'mock-package2', u'an-extremely-verbose-target-name')]
     self.history = []
 

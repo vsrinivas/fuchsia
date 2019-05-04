@@ -79,11 +79,9 @@ class TestDevice(unittest.TestCase):
   def test_ssh(self):
     mock = MockDevice()
     mock.ssh(['some-command', '--with', 'some-argument'])
-    self.assertIn(
-        ' '.join(
-            mock.get_ssh_cmd(
-                ['ssh', '::1', 'some-command', '--with some-argument'])),
-        mock.history)
+    self.assertIn(' '.join(
+        mock.get_ssh_cmd(['ssh', '::1', 'some-command',
+                          '--with some-argument'])), mock.history)
 
   def test_getpids(self):
     mock = MockDevice()
@@ -95,10 +93,9 @@ class TestDevice(unittest.TestCase):
   def test_ls(self):
     mock = MockDevice()
     files = mock.ls('path-to-some-corpus')
-    self.assertIn(
-        ' '.join(
-            mock.get_ssh_cmd(['ssh', '::1', 'ls', '-l',
-                              'path-to-some-corpus'])), mock.history)
+    self.assertIn(' '.join(
+        mock.get_ssh_cmd(['ssh', '::1', 'ls', '-l', 'path-to-some-corpus'])),
+                  mock.history)
     self.assertTrue('feac37187e77ff60222325cf2829e2273e04f2ea' in files)
     self.assertEqual(files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
 
@@ -107,9 +104,8 @@ class TestDevice(unittest.TestCase):
     with self.assertRaises(ValueError):
       mock.fetch('foo', 'not-likely-to-be-a-directory')
     mock.fetch('remote-path', '/tmp')
-    self.assertIn(
-        ' '.join(mock.get_ssh_cmd(['scp', '[::1]:remote-path', '/tmp'])),
-        mock.history)
+    self.assertIn(' '.join(
+        mock.get_ssh_cmd(['scp', '[::1]:remote-path', '/tmp'])), mock.history)
     mock.fetch('corpus/*', '/tmp')
     self.assertIn(' '.join(mock.get_ssh_cmd(['scp', '[::1]:corpus/*', '/tmp'])),
                   mock.history)
@@ -117,9 +113,9 @@ class TestDevice(unittest.TestCase):
   def test_store(self):
     mock = MockDevice()
     mock.store('local-path', 'remote-path')
-    self.assertIn(
-        ' '.join(mock.get_ssh_cmd(['scp', 'local-path', '[::1]:remote-path'])),
-        mock.history)
+    self.assertIn(' '.join(
+        mock.get_ssh_cmd(['scp', 'local-path', '[::1]:remote-path'])),
+                  mock.history)
 
 
 if __name__ == '__main__':

@@ -130,9 +130,8 @@ class Host(object):
 
   def killall(self, process):
     """ Invokes killall on the process name."""
-    subprocess.call(['killall', process],
-                    stdout=Host.DEVNULL,
-                    stderr=Host.DEVNULL)
+    subprocess.call(
+        ['killall', process], stdout=Host.DEVNULL, stderr=Host.DEVNULL)
 
   def symbolize(self, log_in, log_out):
     """Symbolizes backtraces in a log file using the current build."""
@@ -142,12 +141,13 @@ class Host(object):
       raise Host.ConfigError('Build IDs not set.')
     if not self._llvm_symbolizer:
       raise Host.ConfigError('LLVM symbolizer not set.')
-    subprocess.check_call([
-        self._symbolizer_exec, '-ids-rel', '-ids', self._ids,
-        '-llvm-symbolizer', self._llvm_symbolizer
-    ],
-                          stdin=log_in,
-                          stdout=log_out)
+    subprocess.check_call(
+        [
+            self._symbolizer_exec, '-ids-rel', '-ids', self._ids,
+            '-llvm-symbolizer', self._llvm_symbolizer
+        ],
+        stdin=log_in,
+        stdout=log_out)
 
   def notify_user(self, title, body):
     """Displays a message to the user in a platform-specific way"""
@@ -158,13 +158,15 @@ class Host(object):
           'osascript', '-e',
           'display notification "' + body + '" with title "' + title + '"'
       ])
-    elif subprocess.call(['which', 'notify-send'],
-                         stdout=Host.DEVNULL,
-                         stderr=Host.DEVNULL) == 0:
-      subprocess.call(['notify-send', title, body],
-                      stdout=Host.DEVNULL,
-                      stderr=Host.DEVNULL)
+    elif subprocess.call(
+        ['which', 'notify-send'], stdout=Host.DEVNULL,
+        stderr=Host.DEVNULL) == 0:
+      subprocess.call(
+          ['notify-send', title, body],
+          stdout=Host.DEVNULL,
+          stderr=Host.DEVNULL)
     else:
-      subprocess.call(['wall', title + '; ' + body],
-                      stdout=Host.DEVNULL,
-                      stderr=Host.DEVNULL)
+      subprocess.call(
+          ['wall', title + '; ' + body],
+          stdout=Host.DEVNULL,
+          stderr=Host.DEVNULL)

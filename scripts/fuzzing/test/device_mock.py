@@ -53,9 +53,10 @@ drw-r--r--    2 0        0             13552 Mar 20 01:40 corpus
 """
     else:
       response = ''
-    return subprocess.Popen(['printf', '\'' + response + '\''],
-                            stdout=stdout,
-                            stderr=subprocess.STDOUT)
+    return subprocess.Popen(
+        ['printf', '\'' + response + '\''],
+        stdout=stdout,
+        stderr=subprocess.STDOUT)
 
   def _scp(self, src, dst):
     """ Overrides Device._scp."""

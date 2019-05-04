@@ -34,10 +34,9 @@ class Args:
         '--staging',
         help='Host directory to use for un/packing corpus bundles.' +
         ' Defaults to a temporary directory.')
-    name_help = (
-        'Fuzzer name to match.  This can be part of the package and/or' +
-        ' target name, e.g. "foo", "bar", and "foo/bar" all match' +
-        ' "foo_package/bar_target".')
+    name_help = ('Fuzzer name to match.  This can be part of the package and/or'
+                 + ' target name, e.g. "foo", "bar", and "foo/bar" all match' +
+                 ' "foo_package/bar_target".')
     if name_required:
       parser.add_argument('name', help=name_help)
     else:

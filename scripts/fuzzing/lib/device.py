@@ -169,8 +169,8 @@ class Device(object):
     """
     results = {}
     try:
-      out, _ = self._ssh(['ls', '-l', path],
-                         stdout=subprocess.PIPE).communicate()
+      out, _ = self._ssh(
+          ['ls', '-l', path], stdout=subprocess.PIPE).communicate()
       for line in str(out).split('\n'):
         # Line ~= '-rw-r--r-- 1 0 0 8192 Mar 18 22:02 some-name'
         parts = line.split()
