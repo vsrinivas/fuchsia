@@ -216,6 +216,7 @@ __BEGIN_CDECLS
 // Synaptics
 #define PDEV_VID_SYNAPTICS          20
 #define PDEV_PID_SYNAPTICS_AS370     1
+#define PDEV_DID_SYNAPTICS_GPIO      2
 
 __END_CDECLS
 

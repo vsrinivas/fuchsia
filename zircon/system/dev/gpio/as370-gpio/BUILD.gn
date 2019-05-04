@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("as370-gpio") {
+  sources = [
+    "as370-gpio.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+test("as370-gpio-test") {
+  output_name = "as370-gpio-test"
+  sources = [
+    "as370-gpio.cpp",
+    "as370-gpio-test.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/dev/lib/aaa-mock-mmio-reg",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
+  ]
+}
