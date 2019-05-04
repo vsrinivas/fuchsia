@@ -32,6 +32,10 @@ class DockyardProxyGrpc : public DockyardProxy {
   // |DockyardProxy|.
   virtual DockyardProxyStatus SendSampleList(const SampleList list) override;
 
+  // |DockyardProxy|.
+  virtual DockyardProxyStatus SendStringSampleList(
+      const StringSampleList list) override;
+
  private:
   // A local stub for the remote Dockyard instance.
   std::unique_ptr<dockyard_proto::Dockyard::Stub> stub_;
@@ -60,6 +64,10 @@ class DockyardProxyGrpc : public DockyardProxy {
   // the cache.
   grpc::Status GetDockyardIdForPath(dockyard::DockyardId* dockyard_id,
                                     const std::string& dockyard_path);
+  // As above, but for a list of paths and IDs.
+  grpc::Status GetDockyardIdsForPaths(
+      std::vector<dockyard::DockyardId>* dockyard_id,
+      const std::vector<const std::string*>& dockyard_path);
 };
 
 }  // namespace harvester

@@ -30,6 +30,10 @@ class DockyardProxyLocal : public DockyardProxy {
 
   // |DockyardProxy|.
   virtual DockyardProxyStatus SendSampleList(const SampleList list) override;
+
+  // |DockyardProxy|.
+  virtual DockyardProxyStatus SendStringSampleList(
+      const StringSampleList list) override;
 };
 
 }  // namespace harvester

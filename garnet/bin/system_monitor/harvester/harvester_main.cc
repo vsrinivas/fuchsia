@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 
   // The wip number is incremented arbitrarily.
   // TODO(smbug.com/44) replace wip number with real version number.
-  constexpr char VERSION_OUTPUT[] = "System Monitor Harvester - wip 10";
+  constexpr char VERSION_OUTPUT[] = "System Monitor Harvester - wip 11";
 
   // Command line options.
   constexpr char COMMAND_INSPECT[] = "inspect";
@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   harvester::Harvester harvester(zx::msec(cycle_msec_period), root_resource,
-                                 loop.dispatcher(), dockyard_proxy.release());
+                                 loop.dispatcher(), std::move(dockyard_proxy));
   harvester.GatherData();
   loop.Run();
 

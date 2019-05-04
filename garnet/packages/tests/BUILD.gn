@@ -409,7 +409,8 @@ group("all") {
     "//garnet/packages/tests:sysmem_connector",
     "//garnet/packages/tests:sysmgr",
     "//garnet/packages/tests:sysmgr_tests",
-    "//garnet/packages/tests:system_monitor",
+    "//garnet/packages/tests:system_monitor_fuchsia",
+    "//garnet/packages/tests:system_monitor_host",
     "//garnet/packages/tests:system_ota_tests",
     "//garnet/packages/tests:telephony",
     "//garnet/packages/tests:terminal",
@@ -795,7 +796,14 @@ group("media") {
   ]
 }
 
-group("system_monitor") {
+group("system_monitor_fuchsia") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
+  ]
+}
+
+group("system_monitor_host") {
   testonly = true
   public_deps = [
     "//garnet/lib/system_monitor:system_monitor_tests($host_toolchain)",

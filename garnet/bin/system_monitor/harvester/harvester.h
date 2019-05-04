@@ -21,7 +21,8 @@ class Harvester {
  public:
   Harvester(zx::duration cycle_msec_rate, zx_handle_t root_resource,
             async_dispatcher_t* dispatcher,
-            harvester::DockyardProxy* dockyard_proxy);
+            std::unique_ptr<DockyardProxy> dockyard_proxy);
+
   void GatherData();
 
  private:

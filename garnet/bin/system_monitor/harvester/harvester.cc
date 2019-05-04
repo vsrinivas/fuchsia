@@ -37,20 +37,34 @@ class TaskHarvester final : public TaskEnumerator {
   // After gathering the data, upload it to |dockyard|.
   void UploadTaskInfo(const std::unique_ptr<DockyardProxy>& dockyard_proxy) {
     // TODO(smbug.com/20): Send data to dockyard.
-    for (auto iter = list_.begin(); iter != list_.end(); ++iter) {
-      FXL_LOG(INFO) << iter->first << ": " << iter->second;
+#ifdef VERBOSE_OUTPUT
+    for (const auto& int_sample : int_sample_list_) {
+      FXL_LOG(INFO) << int_sample.first << ": " << int_sample.second;
     }
+    for (const auto& string_sample : string_sample_list_) {
+      FXL_LOG(INFO) << string_sample.first << ": " << string_sample.second;
+    }
+#endif  // VERBOSE_OUTPUT
   }
 
  private:
-  SampleList list_;
+  SampleList int_sample_list_;
+  StringSampleList string_sample_list_;
 
-  // Helper to add a value to the sample |list|.
+  // Helper to add a value to the sample |int_sample_list_|.
   void AddKoidValue(zx_koid_t koid, const std::string path,
                     dockyard::SampleValue value) {
     std::ostringstream label;
     label << "koid:" << koid << ":" << path;
-    list_.emplace_back(label.str(), value);
+    int_sample_list_.emplace_back(label.str(), value);
+  }
+
+  // Helper to add a value to the string list.
+  void AddKoidString(zx_koid_t koid, const std::string path,
+                     std::string value) {
+    std::ostringstream label;
+    label << "koid:" << koid << ":" << path;
+    string_sample_list_.emplace_back(label.str(), value);
   }
 
   // |TaskEnumerator| Callback for a job.
@@ -67,8 +81,17 @@ class TaskHarvester final : public TaskEnumerator {
                         zx_koid_t parent_koid) override {
     AddKoidValue(koid, "type", dockyard::KoidType::PROCESS);
     AddKoidValue(koid, "parent_koid", parent_koid);
+
+    char process_name[ZX_MAX_NAME_LEN];
+    zx_status_t status = zx_object_get_property(
+        process, ZX_PROP_NAME, &process_name, sizeof(process_name));
+    AddKoidString(koid, "name", process_name);
+#ifdef VERBOSE_OUTPUT
+    FXL_LOG(INFO) << "process_name " << process_name;
+#endif  // VERBOSE_OUTPUT
     // TODO(smbug.com/20): gather more info.
-    return ZX_OK;
+
+    return status;
   }
 
   // |TaskEnumerator| Callback for a thread.
@@ -101,11 +124,11 @@ std::ostream& operator<<(std::ostream& out, const DockyardProxyStatus& status) {
 
 Harvester::Harvester(zx::duration cycle_period, zx_handle_t root_resource,
                      async_dispatcher_t* dispatcher,
-                     harvester::DockyardProxy* dockyard_proxy)
+                     std::unique_ptr<DockyardProxy> dockyard_proxy)
     : cycle_period_(cycle_period),
       root_resource_(root_resource),
       dispatcher_(dispatcher),
-      dockyard_proxy_(dockyard_proxy) {}
+      dockyard_proxy_(std::move(dockyard_proxy)) {}
 
 void Harvester::GatherData() {
   GatherCpuSamples();
@@ -173,10 +196,12 @@ void Harvester::GatherMemorySamples() {
     return;
   }
 
+#ifdef VERBOSE_OUTPUT
   FXL_LOG(INFO) << "free memory total " << stats.free_bytes << ", heap "
                 << stats.free_heap_bytes << ", vmo " << stats.vmo_bytes
                 << ", mmu " << stats.mmu_overhead_bytes << ", ipc "
                 << stats.ipc_bytes;
+#endif  // VERBOSE_OUTPUT
 
   const std::string DEVICE_TOTAL = "memory:device_total_bytes";
   const std::string DEVICE_FREE = "memory:device_free_bytes";
@@ -212,6 +237,7 @@ void Harvester::GatherMemorySamples() {
 
 void Harvester::GatherThreadSamples() {
   TaskHarvester task_harvester;
+  task_harvester.WalkRootJobTree();
   task_harvester.UploadTaskInfo(dockyard_proxy_);
 }
 

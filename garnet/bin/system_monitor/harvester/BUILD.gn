@@ -3,12 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 group("harvester") {
   testonly = true
   deps = [
     ":bin",
     ":system_monitor_harvester",
+    ":system_monitor_harvester_test",
   ]
 }
 
@@ -54,6 +57,51 @@ package("system_monitor_harvester") {
     {
       path = rebase_path("meta/system_monitor_harvester.cmx")
       dest = "system_monitor_harvester.cmx"
+    },
+  ]
+}
+
+executable("system_monitor_harvester_test") {
+  testonly = true
+
+  sources = [
+    "dockyard_proxy.h",
+    "dockyard_proxy_fake.cc",
+    "dockyard_proxy_fake.h",
+    "harvester.cc",
+    "harvester.h",
+    "harvester_test.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/system_monitor/dockyard:lib",
+    "//garnet/lib/system_monitor/dockyard:protos",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/grpc:grpc++",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/lib/task-utils",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test_package("system_monitor_harvester_tests") {
+  deps = [
+    ":system_monitor_harvester_test",
+  ]
+
+  binaries = [
+    {
+      name = "system_monitor_harvester_test"
+    },
+  ]
+
+  tests = [
+    {
+      name = "system_monitor_harvester_test"
+      environments = basic_envs
     },
   ]
 }

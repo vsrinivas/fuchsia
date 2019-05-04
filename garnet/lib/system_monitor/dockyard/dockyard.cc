@@ -113,14 +113,16 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
     return grpc::Status::OK;
   }
 
-  grpc::Status GetDockyardIdForPath(
+  grpc::Status GetDockyardIdsForPaths(
       grpc::ServerContext* context,
-      const dockyard_proto::DockyardPathMessage* request,
-      dockyard_proto::DockyardIdMessage* reply) override {
-    DockyardId id = dockyard_->GetDockyardId(request->path());
-    reply->set_id(id);
-    FXL_LOG(INFO) << "Received DockyardIdMessage "
-                  << ": " << request->path() << ", id " << id;
+      const dockyard_proto::DockyardPaths* request,
+      dockyard_proto::DockyardIds* reply) override {
+    for (int i = 0; i < request->path_size(); ++i) {
+      DockyardId id = dockyard_->GetDockyardId(request->path(i));
+      reply->add_id(id);
+      FXL_LOG(INFO) << "Received DockyardIds "
+                    << ": " << request->path(i) << ", id " << id;
+    }
     return grpc::Status::OK;
   }
 };

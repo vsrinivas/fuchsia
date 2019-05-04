@@ -100,6 +100,35 @@ DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList list) {
   return ToDockyardProxyStatus(SendSampleListById(nanoseconds, by_id));
 }
 
+DockyardProxyStatus DockyardProxyGrpc::SendStringSampleList(
+    const StringSampleList list) {
+  // TODO(smbug.com/35): system_clock might be at usec resolution. Consider
+  // using high_resolution_clock.
+  auto now = std::chrono::system_clock::now();
+  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             now.time_since_epoch())
+                             .count();
+
+  std::vector<dockyard::DockyardId> dockyard_ids;
+  std::vector<const std::string*> dockyard_strings;
+  for (const auto& element : list) {
+    // Both the key (first) and value (second) are strings. Get IDs for each.
+    dockyard_strings.emplace_back(&element.first);
+    dockyard_strings.emplace_back(&element.second);
+  }
+  // Get an ID for each string (path or otherwise). The ID will then be used to
+  // in place of the strings.
+  GetDockyardIdsForPaths(&dockyard_ids, dockyard_strings);
+  SampleListById by_id;
+  auto ids_iter = dockyard_ids.begin();
+  for (size_t i = 0; i < list.size(); ++i) {
+    dockyard::DockyardId path_id = *ids_iter++;
+    dockyard::DockyardId value_id = *ids_iter++;
+    by_id.emplace_back(path_id, value_id);
+  }
+  return ToDockyardProxyStatus(SendSampleListById(nanoseconds, by_id));
+}
+
 grpc::Status DockyardProxyGrpc::SendInspectJsonById(
     uint64_t time, dockyard::DockyardId dockyard_id, const std::string& json) {
   // Data we are sending to the server.
@@ -160,24 +189,51 @@ grpc::Status DockyardProxyGrpc::SendSampleListById(uint64_t time,
 
 grpc::Status DockyardProxyGrpc::GetDockyardIdForPath(
     dockyard::DockyardId* dockyard_id, const std::string& dockyard_path) {
-  auto iter = dockyard_path_to_id_.find(dockyard_path);
-  if (iter != dockyard_path_to_id_.end()) {
-    *dockyard_id = iter->second;
-    return grpc::Status::OK;
+  std::vector<dockyard::DockyardId> dockyard_ids;
+  std::vector<const std::string*> dockyard_paths = {&dockyard_path};
+  grpc::Status status = GetDockyardIdsForPaths(&dockyard_ids, dockyard_paths);
+  if (status.ok()) {
+    *dockyard_id = dockyard_ids[0];
+  }
+  return status;
+}
+
+grpc::Status DockyardProxyGrpc::GetDockyardIdsForPaths(
+    std::vector<dockyard::DockyardId>* dockyard_ids,
+    const std::vector<const std::string*>& dockyard_paths) {
+  dockyard_proto::DockyardPaths need_ids;
+
+  std::vector<size_t> indexes;
+  for (const auto& dockyard_path : dockyard_paths) {
+    auto iter = dockyard_path_to_id_.find(*dockyard_path);
+    if (iter != dockyard_path_to_id_.end()) {
+      dockyard_ids->emplace_back(iter->second);
+    } else {
+      need_ids.add_path(*dockyard_path);
+      indexes.emplace_back(dockyard_ids->size());
+      dockyard_ids->emplace_back(-1);
+    }
   }
 
-  dockyard_proto::DockyardPathMessage path;
-  path.set_path(dockyard_path);
+  if (indexes.size() == 0) {
+    // All strings had cached IDs.
+    return grpc::Status::OK;
+  }
+  // Missing some IDs, request them from the Dockyard.
 
   // Container for the data we expect from the server.
-  dockyard_proto::DockyardIdMessage reply;
+  dockyard_proto::DockyardIds reply;
 
   grpc::ClientContext context;
-  grpc::Status status = stub_->GetDockyardIdForPath(&context, path, &reply);
+  grpc::Status status =
+      stub_->GetDockyardIdsForPaths(&context, need_ids, &reply);
   if (status.ok()) {
-    *dockyard_id = reply.id();
-    // Memoize it.
-    dockyard_path_to_id_.emplace(dockyard_path, *dockyard_id);
+    for (size_t index : indexes) {
+      dockyard::DockyardId dockyard_id = reply.id(index);
+      (*dockyard_ids)[index] = dockyard_id;
+      // Memoize it.
+      dockyard_path_to_id_.emplace(*dockyard_paths[index], dockyard_id);
+    }
   }
   return status;
 }

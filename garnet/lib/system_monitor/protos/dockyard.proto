@@ -17,7 +17,7 @@ service Dockyard {
   rpc Init (InitRequest) returns (InitReply) {}
 
   // Ask the Dockyard what the ID is for the given path.
-  rpc GetDockyardIdForPath (DockyardPathMessage) returns (DockyardIdMessage) {}
+  rpc GetDockyardIdsForPaths (DockyardPaths) returns (DockyardIds) {}
 
   // Sends a single JSON inspection message.
   rpc SendInspectJson (stream InspectJson) returns (stream EmptyMessage) {}
@@ -50,16 +50,16 @@ message InitReply {
 // A non-message. Used for stream protocols to say that nothing is returned.
 message EmptyMessage {}
 
-// A path is a colon separated label. E.g. "cpu:0:busy_time". Paths are often
-// converted to an ID for reduced cpu, memory, and bandwidth usage.
-message DockyardPathMessage {
-  string path = 1;
+// A path is a colon separated label. E.g. "cpu:0:busy_time". Paths are
+// converted to an ID to reduce cpu, memory, and bandwidth usage.
+message DockyardPaths {
+  repeated string path = 1;
 }
 
 // A dockyard ID is an integer reference to a dockyard path (e.g. in a
 // |DockyardPathMessage|).
-message DockyardIdMessage {
-  uint64 id = 1;
+message DockyardIds {
+  repeated uint64 id = 1;
 }
 
 // Sample data going from the Harvester to the Dockyard. This message defines
@@ -88,7 +88,7 @@ message RawSamples {
 
 // Component inspection data in JSON format.
 // |time| is in nanoseconds.
-// |id| is a dockyard ID for a path, as returned by GetDockyardIdForPath()
+// |id| is a dockyard ID for a path, as returned by GetDockyardIdsForPaths()
 // |json| is a JSON format utf-8 string.
 message InspectJson {
   uint64 time = 1;
