@@ -345,8 +345,11 @@ func (r *Repo) fixupRootConsistentSnapshot() error {
 	return nil
 }
 
-func linkOrCopy(dstPath, srcPath string) error {
-	if err := os.Link(dstPath, srcPath); err != nil {
+// link is available for stubbing in tests
+var link = os.Link
+
+func linkOrCopy(srcPath, dstPath string) error {
+	if err := link(srcPath, dstPath); err != nil {
 		s, err := os.Open(srcPath)
 		if err != nil {
 			return err

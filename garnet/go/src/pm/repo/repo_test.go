@@ -235,3 +235,62 @@ func TestAddBlob(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestLinkOrCopy(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "link-or-copy-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	srcPath := filepath.Join(tmpDir, "source-file")
+	dstPath := filepath.Join(tmpDir, "dest-file")
+
+	srcContent := "I am a file"
+
+	t.Run("hardlinking", func(t *testing.T) {
+		defer os.RemoveAll(dstPath)
+		if err := ioutil.WriteFile(srcPath, []byte(srcContent), os.ModePerm); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := linkOrCopy(srcPath, dstPath); err != nil {
+			t.Fatal(err)
+		}
+
+		dstBytes, err := ioutil.ReadFile(dstPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if got, want := string(dstBytes), srcContent; got != want {
+			t.Fatalf("post link content: got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("copying", func(t *testing.T) {
+		defer os.RemoveAll(dstPath)
+
+		var oldLink func(s, d string) error
+		oldLink, link = link, func(s, d string) error { return &os.LinkError{"", "", "", fmt.Errorf("stub error")} }
+		defer func() { link = oldLink }()
+
+		if err := ioutil.WriteFile(srcPath, []byte(srcContent), os.ModePerm); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := linkOrCopy(srcPath, dstPath); err != nil {
+			t.Fatal(err)
+		}
+
+		dstBytes, err := ioutil.ReadFile(dstPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if got, want := string(dstBytes), srcContent; got != want {
+			t.Fatalf("post copy content: got %q, want %q", got, want)
+		}
+	})
+
+}
