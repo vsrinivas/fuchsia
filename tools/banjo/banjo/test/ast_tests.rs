@@ -7,6 +7,7 @@
 use super::codegen_test;
 
 codegen_test!(alignment, AstBackend, ["banjo/alignment.test.banjo"], "ast/alignment.test.ast");
+codegen_test!(attributes, AstBackend, ["banjo/attributes.test.banjo"], "ast/attributes.test.ast");
 codegen_test!(empty, AstBackend, ["banjo/empty.test.banjo"], "ast/empty.test.ast");
 codegen_test!(enums, AstBackend, ["banjo/enums.test.banjo"], "ast/enums.test.ast");
 codegen_test!(example_0, AstBackend, ["banjo/example-0.test.banjo"], "ast/example-0.test.ast");

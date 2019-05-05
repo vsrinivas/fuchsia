@@ -155,6 +155,18 @@ pub fn name_size(ty: &str) -> &'static str {
     }
 }
 
+fn struct_attrs_to_c_str(attributes: &Attrs) -> String {
+    attributes
+        .0
+        .iter()
+        .filter_map(|a| match a.key.as_ref() {
+            "Packed" => Some("__PACKED"),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String), Error> {
     // Return parameter if a primitive type.
     if method.out_params.get(0).map_or(false, |p| p.1.is_primitive(&ast)) {
@@ -460,6 +472,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         fields: &Vec<UnionField>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
+        let attrs = struct_attrs_to_c_str(attributes);
         let members = fields
             .iter()
             .map(|f| {
@@ -484,6 +497,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 include_str!("templates/c/struct.h"),
                 c_name = to_c_name(name.name()),
                 decl = "union",
+                attrs = if attrs.is_empty() { "".to_string() } else { format!(" {}", attrs) },
                 members = members
             )
             .as_str(),
@@ -516,6 +530,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         if fields.len() == 0 {
             return Ok("".to_string());
         }
+        let attrs = struct_attrs_to_c_str(attributes);
         let members = fields
             .iter()
             .map(|f| {
@@ -596,6 +611,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 include_str!("templates/c/struct.h"),
                 c_name = to_c_name(name.name()),
                 decl = "struct",
+                attrs = if attrs.is_empty() { "".to_string() } else { format!(" {}", attrs) },
                 members = members
             )
             .as_str(),

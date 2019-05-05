@@ -1,0 +1,195 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.attributes",
+    namespaces: {
+        "banjo.examples.attributes": [
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.attributes",
+                    ),
+                    name: "none_struct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "foo",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "baz",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Packed",
+                            val: None,
+                        },
+                    ],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.attributes",
+                    ),
+                    name: "packed_struct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "foo",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "baz",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Union {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.attributes",
+                    ),
+                    name: "none_union",
+                },
+                fields: [
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "foo",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "baz",
+                        },
+                    },
+                ],
+            },
+            Union {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Packed",
+                            val: None,
+                        },
+                    ],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.attributes",
+                    ),
+                    name: "packed_union",
+                },
+                fields: [
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "foo",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "baz",
+                        },
+                    },
+                ],
+            },
+        ],
+    },
+}

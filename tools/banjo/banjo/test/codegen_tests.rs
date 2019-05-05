@@ -10,6 +10,7 @@ mod c {
     use super::*;
 
     codegen_test!(alignment, CBackend, ["banjo/alignment.test.banjo"], "c/alignment.h");
+    codegen_test!(attributes, CBackend, ["banjo/attributes.test.banjo"], "c/attributes.h");
     codegen_test!(empty, CBackend, ["banjo/empty.test.banjo"], "c/empty.h");
     codegen_test!(enums, CBackend, ["banjo/enums.test.banjo"], "c/enums.h");
     codegen_test!(example_0, CBackend, ["banjo/example-0.test.banjo"], "c/example-0.h");
