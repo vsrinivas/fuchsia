@@ -163,4 +163,10 @@ protocol POfMany
     -> After();
 };
 
+// Some multiline
+//
+// comment with blank lines
+struct Hi {
+};
+
 // Comments at EOF

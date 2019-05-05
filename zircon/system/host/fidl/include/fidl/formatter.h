@@ -261,7 +261,11 @@ private:
             // doc comments, which start with three slashes, should not
             // be treated as comments since they get internally converted
             // to attributes
-            return (i < static_cast<int>(str.size()) - 2) && str[i + 2] != '/';
+            if (str.size() == 2) {
+                return true;
+            } else {
+                return str[i + 2] != '/';
+            }
         } else {
             return false;
         }
