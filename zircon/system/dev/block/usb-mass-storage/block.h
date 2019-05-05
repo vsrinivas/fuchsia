@@ -17,20 +17,28 @@ namespace ums {
 class UsbMassStorageDevice;
 
 struct BlockDeviceParameters {
-    uint64_t total_blocks;
+    bool device_added = false;
 
-    uint32_t block_size;
+    bool cache_enabled = false;
 
-    uint8_t lun; // our logical unit number
+    uint8_t lun = 0; // our logical unit number
 
-    uint32_t flags; // flags for block_info_t
+    unsigned char padding = 0;
 
-    uint32_t max_transfer;
+    uint32_t block_size = 0;
 
-    bool device_added;
+    uint32_t flags = 0; // flags for block_info_t
 
-    bool cache_enabled;
+    uint32_t max_transfer = 0;
+
+    uint64_t total_blocks = 0;
+
+    bool operator==(const BlockDeviceParameters& other) {
+        return memcmp(this, &other, sizeof(other)) == 0;
+    }
 };
+// This ensures that it is safe to use memcmp to compare equality
+static_assert(std::has_unique_object_representations_v<BlockDeviceParameters>);
 
 class UmsBlockDevice;
 using DeviceType = ddk::Device<UmsBlockDevice, ddk::GetSizable, ddk::Unbindable>;

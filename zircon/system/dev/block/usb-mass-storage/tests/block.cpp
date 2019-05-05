@@ -51,8 +51,8 @@ bool UmsBlockDeviceConstructorTest() {
     context.dev = &dev;
     ums::BlockDeviceParameters params = {};
     params.lun = 5;
-    EXPECT_EQ(0, memcmp(&params, &dev.GetBlockDeviceParameters(), sizeof(params)),
-              "Parameters must be set to user-provided values.");
+    EXPECT_TRUE(params == dev.GetBlockDeviceParameters(),
+                "Parameters must be set to user-provided values.");
     dev.Adopt();
     EXPECT_TRUE(dev.Release(), "Expected to free the device");
     END_TEST;
@@ -67,8 +67,8 @@ bool UmsBlockDeviceAddTest() {
     context.dev = &dev;
     ums::BlockDeviceParameters params = {};
     params.lun = 5;
-    EXPECT_EQ(0, memcmp(&params, &dev.GetBlockDeviceParameters(), sizeof(params)),
-              "Parameters must be set to user-provided values.");
+    EXPECT_TRUE(params == dev.GetBlockDeviceParameters(),
+                "Parameters must be set to user-provided values.");
     dev.Adopt();
     EXPECT_EQ(ZX_OK, dev.Add(), "Expected Add to succeed");
     EXPECT_EQ(ZX_OK, dev.DdkRemove(), "Expected DdkRemove to succeed");
@@ -86,8 +86,8 @@ bool UmsBlockDeviceGetSizeTest() {
     ums::BlockDeviceParameters params = {};
     params.lun = 5;
     dev.Adopt();
-    EXPECT_EQ(0, memcmp(&params, &dev.GetBlockDeviceParameters(), sizeof(params)),
-              "Parameters must be set to user-provided values.");
+    EXPECT_TRUE(params == dev.GetBlockDeviceParameters(),
+                "Parameters must be set to user-provided values.");
     EXPECT_EQ(ZX_OK, dev.Add(), "Expected Add to succeed");
     EXPECT_TRUE(fbl::String("lun-005") == context.name);
     params = dev.GetBlockDeviceParameters();
