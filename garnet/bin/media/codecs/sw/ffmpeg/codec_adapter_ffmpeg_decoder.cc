@@ -253,14 +253,16 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
   // use single_buffer_mode.
   //
   // TODO(dustingreen): Support single_buffer_mode on input (only).
-  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() || !partial_settings.single_buffer_mode());
+  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() ||
+                  !partial_settings.single_buffer_mode());
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
 
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-  uint32_t packet_count = partial_settings.packet_count_for_server() + partial_settings.packet_count_for_client();
+  uint32_t packet_count = partial_settings.packet_count_for_server() +
+                          partial_settings.packet_count_for_client();
 
   // For now this is true - when we plumb more flexible buffer count range this
   // will change to account for a range.
@@ -278,7 +280,8 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
   // be just the buffers needed for camping and maybe 1 for shared slack.  If
   // the client wants more buffers the client can demand buffers in its own
   // fuchsia::sysmem::BufferCollection::SetConstraints().
-  result.min_buffer_count_for_camping = partial_settings.packet_count_for_server();
+  result.min_buffer_count_for_camping =
+      partial_settings.packet_count_for_server();
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
   // TODO: Uncap max_buffer_count, have both sides infer that packet count is
@@ -297,7 +300,9 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
 
     ZX_DEBUG_ASSERT(port == kOutputPort);
     // NV12, based on min stride.
-    per_packet_buffer_bytes_min = uncompressed_format.primary_line_stride_bytes * uncompressed_format.primary_height_pixels * 3 / 2;
+    per_packet_buffer_bytes_min =
+        uncompressed_format.primary_line_stride_bytes *
+        uncompressed_format.primary_height_pixels * 3 / 2;
     // At least for now, don't cap the per-packet buffer size for output.  The
     // HW only cares about the portion we set up for output anyway, and the
     // client has no way to force output to occur into portions of the output
@@ -322,7 +327,8 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
     result.image_format_constraints_count = 1;
     fuchsia::sysmem::ImageFormatConstraints& image_constraints =
         result.image_format_constraints[0];
-    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::YV12;
+    image_constraints.pixel_format.type =
+        fuchsia::sysmem::PixelFormatType::YV12;
     // TODO(MTWN-251): confirm that REC709 is always what we want here, or plumb
     // actual YUV color space if it can ever be REC601_*.  Since 2020 and 2100
     // are minimum 10 bits per Y sample and we're outputting NV12, 601 is the
@@ -374,13 +380,19 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
     // larger range of dimensions that includes the required range indicated
     // here (via a-priori knowledge of the potential stream dimensions), an
     // initiator is free to do so.
-    image_constraints.required_min_coded_width = uncompressed_format.primary_width_pixels;
-    image_constraints.required_max_coded_width = uncompressed_format.primary_width_pixels;
-    image_constraints.required_min_coded_height = uncompressed_format.primary_height_pixels;
-    image_constraints.required_max_coded_height = uncompressed_format.primary_height_pixels;
+    image_constraints.required_min_coded_width =
+        uncompressed_format.primary_width_pixels;
+    image_constraints.required_max_coded_width =
+        uncompressed_format.primary_width_pixels;
+    image_constraints.required_min_coded_height =
+        uncompressed_format.primary_height_pixels;
+    image_constraints.required_max_coded_height =
+        uncompressed_format.primary_height_pixels;
     // As needed we might want to plumb more flexibility for the stride.
-    image_constraints.required_min_bytes_per_row = uncompressed_format.primary_line_stride_bytes;
-    image_constraints.required_max_bytes_per_row = uncompressed_format.primary_line_stride_bytes;
+    image_constraints.required_min_bytes_per_row =
+        uncompressed_format.primary_line_stride_bytes;
+    image_constraints.required_max_bytes_per_row =
+        uncompressed_format.primary_line_stride_bytes;
   } else {
     ZX_DEBUG_ASSERT(result.image_format_constraints_count == 0);
   }
@@ -399,5 +411,6 @@ void CodecAdapterFfmpegDecoder::CoreCodecSetBufferCollectionInfo(
     const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
   // TODO: Should uncap max_buffer_count and stop asserting this, or assert
   // instead that buffer_count >= buffers for camping + dedicated slack.
-  ZX_DEBUG_ASSERT(port != kOutputPort || buffer_collection_info.buffer_count == kOutputPacketCount);
+  ZX_DEBUG_ASSERT(port != kOutputPort ||
+                  buffer_collection_info.buffer_count == kOutputPacketCount);
 }

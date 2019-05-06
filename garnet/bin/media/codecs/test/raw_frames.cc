@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <math.h>
-#include <fstream>
-#include <iostream>
-#include <memory>
+#include "raw_frames.h"
 
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <math.h>
 
-#include "raw_frames.h"
+#include <fstream>
+#include <iostream>
+#include <memory>
 
 size_t AlignUp(size_t raw, size_t alignment) {
   return (raw + alignment - 1) / alignment * alignment;

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef VDEC1_H_
-#define VDEC1_H_
-
-#include "decoder_core.h"
+#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VDEC1_H_
+#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VDEC1_H_
 
 #include <assert.h>
+
+#include "decoder_core.h"
 
 // This core is used for decoding all formats that aren't VP9 or HEVC, including
 // MPEG-2 and h.264.
@@ -43,4 +43,4 @@ class Vdec1 : public DecoderCore {
   bool decoding_started_ = false;
 };
 
-#endif  // VDEC1_H_
+#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VDEC1_H_

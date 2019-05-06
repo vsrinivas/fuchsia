@@ -8,12 +8,11 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-#include <src/lib/fxl/logging.h>
-
 #include <openssl/sha.h>
-
+#include <src/lib/fxl/logging.h>
 #include <stddef.h>
 #include <stdint.h>
+
 #include <functional>
 #include <memory>
 

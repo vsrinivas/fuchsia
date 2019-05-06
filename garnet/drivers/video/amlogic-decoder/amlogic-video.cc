@@ -235,7 +235,8 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(
     return nullptr;
   }
   uint8_t idx;
-  status = amlogic_canvas_config(&canvas_, dup_vmo.release(), offset, &info, &idx);
+  status =
+      amlogic_canvas_config(&canvas_, dup_vmo.release(), offset, &info, &idx);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to configure canvas, status: %d\n", status);
     return nullptr;
@@ -657,7 +658,8 @@ void AmlogicVideo::SwapInCurrentInstance() {
   video_decoder_->SwappedIn();
 }
 
-fidl::InterfaceHandle<fuchsia::sysmem::Allocator> AmlogicVideo::ConnectToSysmem() {
+fidl::InterfaceHandle<fuchsia::sysmem::Allocator>
+AmlogicVideo::ConnectToSysmem() {
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> client_end;
   fidl::InterfaceRequest<fuchsia::sysmem::Allocator> server_end =
       client_end.NewRequest();
@@ -673,8 +675,7 @@ fidl::InterfaceHandle<fuchsia::sysmem::Allocator> AmlogicVideo::ConnectToSysmem(
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
-  zx_status_t status =
-      device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
+  zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to get parent protocol");
     return ZX_ERR_NO_MEMORY;
@@ -715,32 +716,37 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   }
 
   mmio_buffer_t cbus_mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &cbus_mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                &cbus_mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map cbus");
     return ZX_ERR_NO_MEMORY;
   }
   cbus_ = std::make_unique<CbusRegisterIo>(cbus_mmio);
   mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kDosbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kDosbus,
+                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dosbus");
     return ZX_ERR_NO_MEMORY;
   }
   dosbus_ = std::make_unique<DosRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer(&pdev_, kHiubus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kHiubus,
+                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map hiubus");
     return ZX_ERR_NO_MEMORY;
   }
   hiubus_ = std::make_unique<HiuRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map aobus");
     return ZX_ERR_NO_MEMORY;
   }
   aobus_ = std::make_unique<AoRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dmc");
     return ZX_ERR_NO_MEMORY;

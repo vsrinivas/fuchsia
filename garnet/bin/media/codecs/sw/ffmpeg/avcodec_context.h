@@ -13,8 +13,8 @@ extern "C" {
 }
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/media/codec_impl/codec_packet.h>
+#include <src/lib/fxl/macros.h>
 
 // Wraps AVCodecContext type from ffmpeg.
 class AvCodecContext {

@@ -5,12 +5,6 @@
 #ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_IMPL_H_
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_IMPL_H_
 
-#include "codec_adapter.h"
-#include "codec_adapter_events.h"
-#include "codec_admission_control.h"
-#include "codec_buffer.h"
-#include "codec_packet.h"
-
 #include <fbl/macros.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -20,6 +14,12 @@
 
 #include <list>
 #include <queue>
+
+#include "codec_adapter.h"
+#include "codec_adapter_events.h"
+#include "codec_admission_control.h"
+#include "codec_buffer.h"
+#include "codec_packet.h"
 
 // The CodecImpl class can be used for both SW and HW codecs.
 //
@@ -287,85 +287,88 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // later from sysmem (whether we've received them yet, and if so, what the
   // values are).
   class PortSettings {
-    public:
-      PortSettings(CodecImpl* parent, CodecPort port, fuchsia::media::StreamBufferSettings settings);
-      PortSettings(CodecImpl* parent, CodecPort port,
-          fuchsia::media::StreamBufferPartialSettings partial_settings);
-      ~PortSettings();
+   public:
+    PortSettings(CodecImpl* parent, CodecPort port,
+                 fuchsia::media::StreamBufferSettings settings);
+    PortSettings(CodecImpl* parent, CodecPort port,
+                 fuchsia::media::StreamBufferPartialSettings partial_settings);
+    ~PortSettings();
 
-      uint64_t buffer_lifetime_ordinal();
+    uint64_t buffer_lifetime_ordinal();
 
-      uint64_t buffer_constraints_version_ordinal();
+    uint64_t buffer_constraints_version_ordinal();
 
-      uint32_t packet_count();
-      uint32_t buffer_count();
+    uint32_t packet_count();
+    uint32_t buffer_count();
 
-      // If is_partial_settings(), the PortSettings are initially partial, with
-      // sysmem used to complete the settings.  Along the way the PortSettings
-      // transiently also have the zx::vmo handles.  In contrast, if
-      // !is_partial_settings(), the settings are complete from the start (aside
-      // from vmo handles which are never owned by PortSettings in this case).
-      bool is_partial_settings();
+    // If is_partial_settings(), the PortSettings are initially partial, with
+    // sysmem used to complete the settings.  Along the way the PortSettings
+    // transiently also have the zx::vmo handles.  In contrast, if
+    // !is_partial_settings(), the settings are complete from the start (aside
+    // from vmo handles which are never owned by PortSettings in this case).
+    bool is_partial_settings();
 
-      const fuchsia::media::StreamBufferPartialSettings& partial_settings();
+    const fuchsia::media::StreamBufferPartialSettings& partial_settings();
 
-      const fuchsia::media::StreamBufferSettings& settings();
+    const fuchsia::media::StreamBufferSettings& settings();
 
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> TakeToken();
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> TakeToken();
 
-      // The caller should std::move() in the buffer_collection_info.  This call
-      // is only valid if this instance was created from
-      // StreamBufferPartialSettings, and this method hasn't been called before
-      // on this instance.
-      void SetBufferCollectionInfo(
-          fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
+    // The caller should std::move() in the buffer_collection_info.  This call
+    // is only valid if this instance was created from
+    // StreamBufferPartialSettings, and this method hasn't been called before
+    // on this instance.
+    void SetBufferCollectionInfo(
+        fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
 
-      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info();
+    const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info();
 
-      // We use SetBufferCollectionInfo(), but then take the VMOs back.  This
-      // just happens to be more convenient than taking the VMOs before doing
-      // SetBufferCollectionInfo().
-      zx::vmo TakeVmo(uint32_t buffer_index);
+    // We use SetBufferCollectionInfo(), but then take the VMOs back.  This
+    // just happens to be more convenient than taking the VMOs before doing
+    // SetBufferCollectionInfo().
+    zx::vmo TakeVmo(uint32_t buffer_index);
 
-      uint64_t vmo_usable_start(uint32_t buffer_index);
-      uint64_t vmo_usable_size();
+    uint64_t vmo_usable_start(uint32_t buffer_index);
+    uint64_t vmo_usable_size();
 
-      // Only call from FIDL thread.
-      fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> NewBufferCollectionRequest(async_dispatcher_t* dispatcher);
+    // Only call from FIDL thread.
+    fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection>
+    NewBufferCollectionRequest(async_dispatcher_t* dispatcher);
 
-      // Only call from FIDL thread.
-      fuchsia::sysmem::BufferCollectionPtr& buffer_collection();
+    // Only call from FIDL thread.
+    fuchsia::sysmem::BufferCollectionPtr& buffer_collection();
 
-      // Only call from FIDL thread.
-      void UnbindBufferCollection();
+    // Only call from FIDL thread.
+    void UnbindBufferCollection();
 
-      // This condition is necessary (but not sufficient) for
-      // IsOutputConfiguredLocked() to return true.
-      bool is_complete_seen_output();
-      void SetCompleteSeenOutput();
+    // This condition is necessary (but not sufficient) for
+    // IsOutputConfiguredLocked() to return true.
+    bool is_complete_seen_output();
+    void SetCompleteSeenOutput();
 
-    private:
-      CodecImpl* parent_ = nullptr;
+   private:
+    CodecImpl* parent_ = nullptr;
 
-      CodecPort port_ = kInvalidPort;
+    CodecPort port_ = kInvalidPort;
 
-      // Only one or the other of settings_ or partial_settings_ is set.
-      std::unique_ptr<fuchsia::media::StreamBufferSettings> settings_;
+    // Only one or the other of settings_ or partial_settings_ is set.
+    std::unique_ptr<fuchsia::media::StreamBufferSettings> settings_;
 
-      // Only needed/set for the partial_settings_ case.
-      std::unique_ptr<const fuchsia::media::StreamBufferConstraints>
-          constraints_;
-      std::unique_ptr<fuchsia::media::StreamBufferPartialSettings> partial_settings_;
+    // Only needed/set for the partial_settings_ case.
+    std::unique_ptr<const fuchsia::media::StreamBufferConstraints> constraints_;
+    std::unique_ptr<fuchsia::media::StreamBufferPartialSettings>
+        partial_settings_;
 
-      fuchsia::sysmem::BufferCollectionPtr buffer_collection_;
+    fuchsia::sysmem::BufferCollectionPtr buffer_collection_;
 
-      // In the case of partial_settings_, the remainder of the settings arrive
-      // from sysmem in a BufferCollectionInfo_2.  When that arrives from
-      // sysmem, we move the VMOs into CodecBuffer(s), and the remainder of the
-      // settings get stored here.
-      std::unique_ptr<fuchsia::sysmem::BufferCollectionInfo_2> buffer_collection_info_;
+    // In the case of partial_settings_, the remainder of the settings arrive
+    // from sysmem in a BufferCollectionInfo_2.  When that arrives from
+    // sysmem, we move the VMOs into CodecBuffer(s), and the remainder of the
+    // settings get stored here.
+    std::unique_ptr<fuchsia::sysmem::BufferCollectionInfo_2>
+        buffer_collection_info_;
 
-      bool is_complete_seen_output_ = false;
+    bool is_complete_seen_output_ = false;
   };
 
   // While we list this first in the member variables to hint that this gets
@@ -409,8 +412,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // Setup/teardown aspects.
   //
 
-  // Will send an initial Codec.OnOutputConstraints() if the codec can't tolerate
-  // null output config during format detection.
+  // Will send an initial Codec.OnOutputConstraints() if the codec can't
+  // tolerate null output config during format detection.
   void onInputConstraintsReady();
 
   // This starts unbinding.  When unbinding is done and CodecImpl is ready to
@@ -517,10 +520,10 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // StreamControl thread.
   void SetInputBufferSettings_StreamControl(
       fuchsia::media::StreamBufferSettings input_settings);
-  void AddInputBuffer_StreamControl(
-      bool is_client, fuchsia::media::StreamBuffer buffer);
+  void AddInputBuffer_StreamControl(bool is_client,
+                                    fuchsia::media::StreamBuffer buffer);
   void SetInputBufferPartialSettings_StreamControl(
-    fuchsia::media::StreamBufferPartialSettings input_partial_settings);
+      fuchsia::media::StreamBufferPartialSettings input_partial_settings);
   void FlushEndOfStreamAndCloseStream_StreamControl(
       uint64_t stream_lifetime_ordinal);
   void CloseCurrentStream_StreamControl(uint64_t stream_lifetime_ordinal,
@@ -545,9 +548,9 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
       fuchsia::media::StreamBufferPartialSettings* input_partial_settings);
 
   void SetOutputBufferSettingsCommon(
-    std::unique_lock<std::mutex>& lock,
-    fuchsia::media::StreamBufferSettings* output_settings,
-    fuchsia::media::StreamBufferPartialSettings* output_partial_settings);
+      std::unique_lock<std::mutex>& lock,
+      fuchsia::media::StreamBufferSettings* output_settings,
+      fuchsia::media::StreamBufferPartialSettings* output_partial_settings);
 
   void SetBufferSettingsCommon(
       std::unique_lock<std::mutex>& lock, CodecPort port,
@@ -568,14 +571,15 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // involvement of sysmem yet (but soon), so there's not a ton to validate
   // here.
   __WARN_UNUSED_RESULT bool ValidatePartialBufferSettingsVsConstraintsLocked(
-      CodecPort port, const fuchsia::media::StreamBufferPartialSettings& partial_settings,
+      CodecPort port,
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings,
       const fuchsia::media::StreamBufferConstraints& constraints);
 
-  void AddInputBufferInternal(
-      bool is_client, fuchsia::media::StreamBuffer buffer);
+  void AddInputBufferInternal(bool is_client,
+                              fuchsia::media::StreamBuffer buffer);
 
-  void AddOutputBufferInternal(
-      bool is_client, fuchsia::media::StreamBuffer buffer);
+  void AddOutputBufferInternal(bool is_client,
+                               fuchsia::media::StreamBuffer buffer);
 
   // Returns true if the port is done configuring (last buffer was added).
   // Returns false if the port is not done configuring or if Fail() was called;
@@ -609,8 +613,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // Returns false if IsStoppingLocked() is already true - just to save the
   // caller the hassle of checking itself.
   bool WaitEnsureSysmemReadyOnInput(std::unique_lock<std::mutex>& lock);
-  void RunAnySysmemCompletionsOrWait(
-      std::unique_lock<std::mutex>& lock);
+  void RunAnySysmemCompletionsOrWait(std::unique_lock<std::mutex>& lock);
 
   bool is_on_stream_failed_enabled_ = false;
 
@@ -629,10 +632,10 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // this queue.  This queue is how the StreamControl ordering domain knows
   // whether a stream is discarded or not.  If a stream isn't discarded then the
   // StreamControl domain can keep waiting for the client to process
-  // OnOutputConstraints() for that stream.  If the stream has been discarded, then
-  // StreamControl ordering domain cannot expect the client to ever process
-  // OnOutputConstraints() for the stream, and the StreamControl ordering domain can
-  // instead move on to the next stream.
+  // OnOutputConstraints() for that stream.  If the stream has been discarded,
+  // then StreamControl ordering domain cannot expect the client to ever process
+  // OnOutputConstraints() for the stream, and the StreamControl ordering domain
+  // can instead move on to the next stream.
   //
   // In addition, this can allow the StreamControl ordering domain to skip past
   // stream-specific items for a stream that's already known to be discarded by
@@ -662,9 +665,10 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   uint64_t last_provided_buffer_constraints_version_ordinal_[kPortCount] = {};
 
   // For CodecImpl, the initial StreamOutputConstraints can be the first sent
-  // message. If sent that early, the StreamOutputConstraints is likely to change
-  // again before any output data is emitted, but it _may not_.
-  std::unique_ptr<const fuchsia::media::StreamOutputConstraints> output_constraints_;
+  // message. If sent that early, the StreamOutputConstraints is likely to
+  // change again before any output data is emitted, but it _may not_.
+  std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
+      output_constraints_;
 
   // The core codec indicated that it didn't like an output config that had this
   // buffer_constraints_version_ordinal set.  Normally this would lead to
@@ -792,15 +796,17 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   void StartIgnoringClientOldOutputConfig(std::unique_lock<std::mutex>& lock);
 
-  void GenerateAndSendNewOutputConstraints(std::unique_lock<std::mutex>& lock,
-                                      bool buffer_constraints_action_required);
+  void GenerateAndSendNewOutputConstraints(
+      std::unique_lock<std::mutex>& lock,
+      bool buffer_constraints_action_required);
 
   void MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordinal);
 
   bool FixupBufferCollectionConstraints(
-    CodecPort port,
-    const fuchsia::media::StreamBufferPartialSettings& partial_settings,
-    fuchsia::sysmem::BufferCollectionConstraints* buffer_collection_constraints);
+      CodecPort port,
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings,
+      fuchsia::sysmem::BufferCollectionConstraints*
+          buffer_collection_constraints);
 
   void OnBufferCollectionInfo(
       CodecPort port, uint64_t buffer_lifetime_ordinal, zx_status_t status,
@@ -809,7 +815,9 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // When this method is called we know we're already on the correct thread per
   // the port.
   void OnBufferCollectionInfoInternal(
-      CodecPort port, uint64_t buffer_lifetime_ordinal, zx_status_t allocate_status, fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
+      CodecPort port, uint64_t buffer_lifetime_ordinal,
+      zx_status_t allocate_status,
+      fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
 
   // These are 1:1 with logical CodecBuffer(s).
   std::vector<std::unique_ptr<CodecBuffer>> all_buffers_[kPortCount];
@@ -954,8 +962,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   __WARN_UNUSED_RESULT bool IsCoreCodecRequiringOutputConfigForFormatDetection()
       override;
 
-  __WARN_UNUSED_RESULT bool IsCoreCodecMappedBufferNeeded(CodecPort port)
-      override;
+  __WARN_UNUSED_RESULT bool IsCoreCodecMappedBufferNeeded(
+      CodecPort port) override;
 
   __WARN_UNUSED_RESULT bool IsCoreCodecHwBased() override;
 
@@ -966,11 +974,13 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   CoreCodecGetBufferCollectionConstraints(
       CodecPort port,
       const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
-      const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings)
+      override;
 
   void CoreCodecSetBufferCollectionInfo(
       CodecPort port,
-      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) override;
+      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info)
+      override;
 
   fuchsia::media::StreamOutputFormat CoreCodecGetOutputFormat(
       uint64_t stream_lifetime_ordinal,

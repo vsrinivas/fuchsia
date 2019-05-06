@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/media/codec_impl/codec_adapter.h>
-
 #include <zircon/assert.h>
 
 CodecAdapter::CodecAdapter(std::mutex& lock,

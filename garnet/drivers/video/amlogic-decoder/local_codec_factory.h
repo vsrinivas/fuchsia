@@ -5,9 +5,8 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_
 
-#include <fuchsia/mediacodec/cpp/fidl.h>
-
 #include <fbl/macros.h>
+#include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 
 // TODO(dustingreen): Concider pulling LocalCodecFactory out into a source_set

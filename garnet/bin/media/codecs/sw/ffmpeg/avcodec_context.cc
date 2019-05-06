@@ -4,10 +4,10 @@
 
 #include "avcodec_context.h"
 
+#include <lib/media/codec_impl/codec_buffer.h>
+
 #include <map>
 #include <string>
-
-#include <lib/media/codec_impl/codec_buffer.h>
 
 namespace {
 

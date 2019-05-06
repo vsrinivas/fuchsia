@@ -21,11 +21,13 @@ class CodecAdapterFfmpegDecoder
   CoreCodecGetBufferCollectionConstraints(
       CodecPort port,
       const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
-      const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings)
+      override;
 
   void CoreCodecSetBufferCollectionInfo(
       CodecPort port,
-      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) override;
+      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info)
+      override;
 
  protected:
   // Processes input in a loop. Should only execute on input_processing_thread_.

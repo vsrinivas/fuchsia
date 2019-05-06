@@ -5,8 +5,8 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_
 
-#include <hwreg/bitfields.h>
 #include <ddk/mmio-buffer.h>
+#include <hwreg/bitfields.h>
 #include <lib/mmio/mmio.h>
 
 template <class RegType>
@@ -79,29 +79,32 @@ class DmcRegisterIo : public ddk::MmioBuffer {
 
 class ResetRegisterIo : public ddk::MmioView {
  public:
-  ResetRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
+  ResetRegisterIo(const mmio_buffer_t& mmio, zx_off_t off)
+      : ddk::MmioView(mmio, off) {}
 };
 
 class ParserRegisterIo : public ddk::MmioView {
  public:
-  ParserRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
+  ParserRegisterIo(const mmio_buffer_t& mmio, zx_off_t off)
+      : ddk::MmioView(mmio, off) {}
 };
 
 class DemuxRegisterIo : public ddk::MmioView {
  public:
-  DemuxRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
+  DemuxRegisterIo(const mmio_buffer_t& mmio, zx_off_t off)
+      : ddk::MmioView(mmio, off) {}
 };
 
 #define DEFINE_REGISTER(name, type, address)                           \
   class name : public TypedRegisterBase<type, name, uint32_t> {        \
    public:                                                             \
-    static auto Get() { return TypedRegisterAddr<name>((address) * 4); } \
+    static auto Get() { return TypedRegisterAddr<name>((address)*4); } \
   };
 
 #define REGISTER_NAME(name, type, address)                      \
   class name : public TypedRegisterBase<type, name, uint32_t> { \
    public:                                                      \
-    static auto Get() { return AddrType((address) * 4); }
+    static auto Get() { return AddrType((address)*4); }
 
 // clang-format off
 DEFINE_REGISTER(Mpsr, DosRegisterIo, 0x301);

@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "amlogic-video.h"
-
 #include <byteswap.h>
 #include <zircon/compiler.h>
 
+#include "amlogic-video.h"
 #include "gtest/gtest.h"
 #include "hevcdec.h"
+#include "macros.h"
+#include "pts_manager.h"
 #include "tests/test_support.h"
 #include "vp9_decoder.h"
 #include "vp9_utils.h"
-
-#include "macros.h"
-#include "pts_manager.h"
 
 struct __attribute__((__packed__)) IvfHeader {
   uint32_t signature;

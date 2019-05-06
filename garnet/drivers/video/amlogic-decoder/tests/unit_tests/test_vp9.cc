@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/unique_ptr.h>
+
 #include "amlogic-video.h"
 #include "gtest/gtest.h"
 #include "tests/test_support.h"
 #include "vp9_decoder.h"
-#include <fbl/unique_ptr.h>
 
 namespace {
 class FakeDecoderCore : public DecoderCore {
@@ -77,7 +78,8 @@ constexpr uint32_t kDosbusMemorySize = 0x10000;
 class Vp9UnitTest {
  public:
   static void LoopFilter() {
-    auto dosbus_memory = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    auto dosbus_memory =
+        fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memset(dosbus_memory.get(), 0, kDosbusMemorySize);
     mmio_buffer_t dosbus_mmio = {.vaddr = dosbus_memory.get(),
                                  .size = kDosbusMemorySize,
@@ -93,8 +95,10 @@ class Vp9UnitTest {
   }
 
   static void InitializeMemory() {
-    auto zeroed_memory = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
-    auto dosbus_memory = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    auto zeroed_memory =
+        fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    auto dosbus_memory =
+        fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memset(zeroed_memory.get(), 0, kDosbusMemorySize);
     memset(dosbus_memory.get(), 0, kDosbusMemorySize);
     mmio_buffer_t dosbus_mmio = {.vaddr = dosbus_memory.get(),
@@ -105,11 +109,14 @@ class Vp9UnitTest {
     auto decoder = std::make_unique<Vp9Decoder>(
         &fake_owner, Vp9Decoder::InputType::kSingleStream);
     EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
-    EXPECT_EQ(0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
+    EXPECT_EQ(
+        0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
 
     EXPECT_EQ(ZX_OK, decoder->InitializeHardware());
-    EXPECT_NE(0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
-    auto dosbus_memory_copy = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    EXPECT_NE(
+        0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
+    auto dosbus_memory_copy =
+        fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memcpy(dosbus_memory_copy.get(), dosbus_memory.get(), kDosbusMemorySize);
     memset(dosbus_memory.get(), 0, kDosbusMemorySize);
 

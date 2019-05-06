@@ -4,16 +4,16 @@
 
 #include "local_codec_factory.h"
 
-#include "device_ctx.h"
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fit/function.h>
+#include <lib/media/codec_impl/codec_admission_control.h>
+
+#include <optional>
 
 #include "codec_adapter_h264.h"
 #include "codec_adapter_mpeg2.h"
 #include "codec_adapter_vp9.h"
-
-#include <lib/fidl/cpp/clone.h>
-#include <lib/fit/function.h>
-#include <lib/media/codec_impl/codec_admission_control.h>
-#include <optional>
+#include "device_ctx.h"
 
 namespace {
 
@@ -238,8 +238,7 @@ void LocalCodecFactory::CreateDecoder(
         }
 
         std::unique_ptr<CodecImpl> codec = std::make_unique<CodecImpl>(
-            std::move(sysmem),
-            std::move(codec_admission),
+            std::move(sysmem), std::move(codec_admission),
             device_->driver()->shared_fidl_loop()->dispatcher(),
             device_->driver()->shared_fidl_thread(),
             std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>(

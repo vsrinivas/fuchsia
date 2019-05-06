@@ -5,13 +5,12 @@
 #ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADMISSION_CONTROL_H_
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADMISSION_CONTROL_H_
 
+#include <fbl/macros.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <zircon/compiler.h>
 
 #include <mutex>
-
-#include <fbl/macros.h>
 
 // Controls how many Codec instances are concurrently served by this process.
 //

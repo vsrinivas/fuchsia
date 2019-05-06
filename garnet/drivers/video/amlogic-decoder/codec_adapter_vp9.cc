@@ -4,14 +4,14 @@
 
 #include "codec_adapter_vp9.h"
 
+#include <lib/fidl/cpp/clone.h>
+#include <lib/zx/bti.h>
+
 #include "device_ctx.h"
 #include "hevcdec.h"
 #include "pts_manager.h"
 #include "vp9_decoder.h"
 #include "vp9_utils.h"
-
-#include <lib/fidl/cpp/clone.h>
-#include <lib/zx/bti.h>
 
 // TODO(dustingreen):
 //   * Split InitializeStream() into two parts, one to get the format info from
@@ -19,10 +19,10 @@
 //     output buffers once the client has configured Codec output config based
 //     on the format info.  Wire up so that
 //     onCoreCodecMidStreamOutputConstraintsChange() gets called and so that
-//     CoreCodecBuildNewOutputConstraints() will pick up the correct current format
-//     info (whether still mid-stream, or at the start of a new stream that's
-//     starting before the mid-stream format change was processed for the old
-//     stream).
+//     CoreCodecBuildNewOutputConstraints() will pick up the correct current
+//     format info (whether still mid-stream, or at the start of a new stream
+//     that's starting before the mid-stream format change was processed for the
+//     old stream).
 //   * Allocate output video buffers contig by setting relevant buffer
 //     constraints to indicate contig to BufferAllocator / BufferCollection.
 //   * On EndOfStream at input, push all remaining data through the HW decoder
@@ -124,9 +124,7 @@ bool CodecAdapterVp9::IsCoreCodecMappedBufferNeeded(CodecPort port) {
   return true;
 }
 
-bool CodecAdapterVp9::IsCoreCodecHwBased() {
-  return true;
-}
+bool CodecAdapterVp9::IsCoreCodecHwBased() { return true; }
 
 void CodecAdapterVp9::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
@@ -156,16 +154,16 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
   // use single_buffer_mode.
   //
   // TODO(dustingreen): Support single_buffer_mode on input (only).
-  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() || !partial_settings.single_buffer_mode());
+  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() ||
+                  !partial_settings.single_buffer_mode());
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
 
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-  uint32_t packet_count =
-      partial_settings.packet_count_for_server() +
-      partial_settings.packet_count_for_client();
+  uint32_t packet_count = partial_settings.packet_count_for_server() +
+                          partial_settings.packet_count_for_client();
 
   // For now this is true - when we plumb more flexible buffer count range this
   // will change to account for a range.
@@ -220,7 +218,8 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
     result.image_format_constraints_count = 1;
     fuchsia::sysmem::ImageFormatConstraints& image_constraints =
         result.image_format_constraints[0];
-    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+    image_constraints.pixel_format.type =
+        fuchsia::sysmem::PixelFormatType::NV12;
     // TODO(MTWN-251): confirm that REC709 is always what we want here, or plumb
     // actual YUV color space if it can ever be REC601_*.  Since 2020 and 2100
     // are minimum 10 bits per Y sample and we're outputting NV12, 601 is the
@@ -292,11 +291,17 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
 void CodecAdapterVp9::CoreCodecSetBufferCollectionInfo(
     CodecPort port,
     const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
-  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
-  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.coherency_domain == fuchsia::sysmem::CoherencyDomain::Cpu);
+  ZX_DEBUG_ASSERT(
+      buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
+  ZX_DEBUG_ASSERT(
+      buffer_collection_info.settings.buffer_settings.coherency_domain ==
+      fuchsia::sysmem::CoherencyDomain::Cpu);
   if (port == kOutputPort) {
-    ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
-    ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type == fuchsia::sysmem::PixelFormatType::NV12);
+    ZX_DEBUG_ASSERT(
+        buffer_collection_info.settings.has_image_format_constraints);
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints
+                        .pixel_format.type ==
+                    fuchsia::sysmem::PixelFormatType::NV12);
   }
 }
 
@@ -595,8 +600,8 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
   auto* constraints = config->mutable_buffer_constraints();
   auto* default_settings = constraints->mutable_default_settings();
 
-  // For the moment, there will be only one StreamOutputConstraints, and it'll need
-  // output buffers configured for it.
+  // For the moment, there will be only one StreamOutputConstraints, and it'll
+  // need output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
   config->set_buffer_constraints_action_required(
       buffer_constraints_action_required);
@@ -654,8 +659,7 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
   return config;
 }
 
-fuchsia::media::StreamOutputFormat
-CodecAdapterVp9::CoreCodecGetOutputFormat(
+fuchsia::media::StreamOutputFormat CodecAdapterVp9::CoreCodecGetOutputFormat(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_format_details_version_ordinal) {
   fuchsia::media::StreamOutputFormat result;

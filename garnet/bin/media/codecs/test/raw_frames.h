@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_MEDIA_CODECS_TEST_RAW_FRAMES_H_
 #define GARNET_BIN_MEDIA_CODECS_TEST_RAW_FRAMES_H_
 
-#include <optional>
-#include <string>
-
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
+
+#include <optional>
+#include <string>
 
 // RawFrames loads a test file with raw uncompressed frames into RAM in YV12
 // format and prepares them for sending to a decoder or image pipe for testing.

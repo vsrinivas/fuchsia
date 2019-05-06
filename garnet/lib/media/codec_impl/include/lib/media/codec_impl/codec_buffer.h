@@ -5,12 +5,12 @@
 #ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_BUFFER_H_
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_BUFFER_H_
 
-#include "codec_port.h"
-
 #include <fbl/macros.h>
 #include <fuchsia/media/cpp/fidl.h>
 
 #include <memory>
+
+#include "codec_port.h"
 
 class CodecImpl;
 

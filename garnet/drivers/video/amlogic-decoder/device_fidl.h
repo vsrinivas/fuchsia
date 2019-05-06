@@ -5,13 +5,13 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_FIDL_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_FIDL_H_
 
-#include "local_codec_factory.h"
-
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/media/codec_impl/codec_impl.h>
 
 #include <map>
+
+#include "local_codec_factory.h"
 
 // This class is the per-device FIDL context.
 class DeviceFidl {
@@ -21,8 +21,8 @@ class DeviceFidl {
 
   // The one FIDL method supported by the driver is to connect a CodecFactory
   // request channel to a server.  This method associates that request with
-  // this DeviceCtx.  The LocalCodecFactory instance is destructed if the channel
-  // closes or if DeviceCtx is destructed.
+  // this DeviceCtx.  The LocalCodecFactory instance is destructed if the
+  // channel closes or if DeviceCtx is destructed.
   //
   // This method runs on the same thread as the driver's message() handler - the
   // lifetime of the channel is entirely under the control of the driver while

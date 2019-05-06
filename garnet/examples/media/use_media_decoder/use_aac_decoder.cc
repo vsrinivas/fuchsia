@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "util.h"
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
@@ -11,9 +9,10 @@
 #include <lib/media/test/codec_client.h>
 #include <lib/media/test/codec_output.h>
 
-#include "garnet/lib/media/wav_writer/wav_writer.h"
-
 #include <thread>
+
+#include "garnet/lib/media/wav_writer/wav_writer.h"
+#include "util.h"
 
 // Re. this example and threading:
 //
@@ -120,7 +119,7 @@ std::unique_ptr<uint8_t[]> make_AudioSpecificConfig_from_ADTS_header(
 // out_md - SHA256_DIGEST_LENGTH bytes long
 void use_aac_decoder(async::Loop* main_loop,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-                     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem, 
+                     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                      const std::string& input_adts_file,
                      const std::string& output_wav_file, uint8_t* out_md) {
   memset(out_md, 0, SHA256_DIGEST_LENGTH);
@@ -433,7 +432,7 @@ void use_aac_decoder(async::Loop* main_loop,
            !format->format_details().has_format_details_version_ordinal() ||
            format->format_details().format_details_version_ordinal() !=
                stream_format->format_details()
-                    .format_details_version_ordinal())) {
+                   .format_details_version_ordinal())) {
         Exit(
             "codec server unexpectedly changed output format mid-stream - "
             "unexpected for this stream");
@@ -469,7 +468,8 @@ void use_aac_decoder(async::Loop* main_loop,
         if (!format_details.domain().is_audio()) {
           Exit("!format.domain.is_audio() - unexpected");
         }
-        const fuchsia::media::AudioFormat& audio = format_details.domain().audio();
+        const fuchsia::media::AudioFormat& audio =
+            format_details.domain().audio();
         if (!audio.is_uncompressed()) {
           Exit("!audio.is_uncompressed() - unexpected");
         }

@@ -6,6 +6,7 @@
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_PORT_H_
 
 #include <stdint.h>
+
 #include <limits>
 
 // Constants for indexing into our own member variable arrays.

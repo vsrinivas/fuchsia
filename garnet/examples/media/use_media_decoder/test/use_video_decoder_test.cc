@@ -8,22 +8,25 @@
 // If this test breaks and it's not immediately obvoius why, please feel free to
 // involve dustingreen@ (me) in figuring it out.
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <map>
-
 #include "use_video_decoder_test.h"
-#include "../use_video_decoder.h"
-#include "../util.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/media/codec_impl/fourcc.h>
+#include <src/lib/fxl/logging.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+#include <map>
 #include <set>
 
-int use_video_decoder_test(const char* input_file_path, int frame_count, UseVideoDecoderFunction use_video_decoder, const std::map<uint32_t, const char*>& golden_sha256s) {
+#include "../use_video_decoder.h"
+#include "../util.h"
+
+int use_video_decoder_test(
+    const char* input_file_path, int frame_count,
+    UseVideoDecoderFunction use_video_decoder,
+    const std::map<uint32_t, const char*>& golden_sha256s) {
   async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
   main_loop.StartThread("FIDL_thread");
 
@@ -42,7 +45,7 @@ int use_video_decoder_test(const char* input_file_path, int frame_count, UseVide
 
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
   startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
-    sysmem.NewRequest());
+      sysmem.NewRequest());
 
   printf("The test file is: %s\n", input_file_path);
   printf("Decoding test file and computing sha256...\n");
@@ -50,8 +53,8 @@ int use_video_decoder_test(const char* input_file_path, int frame_count, UseVide
   uint8_t md[SHA256_DIGEST_LENGTH];
   std::vector<std::pair<bool, uint64_t>> timestamps;
   uint32_t fourcc;
-  use_video_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file_path, "", md,
-                    &timestamps, &fourcc, nullptr);
+  use_video_decoder(&main_loop, std::move(codec_factory), std::move(sysmem),
+                    input_file_path, "", md, &timestamps, &fourcc, nullptr);
 
   std::set<uint64_t> expected_timestamps;
   for (int i = 0; i < frame_count; i++) {

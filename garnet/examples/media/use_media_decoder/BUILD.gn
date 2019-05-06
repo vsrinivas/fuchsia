@@ -26,15 +26,15 @@ source_set("use_media_decoder_source_set") {
   ]
 
   deps = [
+    "//garnet/lib/media/codec_impl:fourcc",
     "//garnet/lib/media/raw_video_writer:raw_video_writer",
     "//garnet/lib/media/test:codec_client",
     "//garnet/lib/media/test:frame_sink",
     "//garnet/lib/media/wav_writer:wav_writer",
     "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//garnet/lib/media/codec_impl:fourcc",
-    "//garnet/public/lib/component/cpp/testing",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",

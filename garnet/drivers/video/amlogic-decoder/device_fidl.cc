@@ -5,9 +5,9 @@
 #include "device_fidl.h"
 
 #include <lib/media/codec_impl/codec_admission_control.h>
-#include "device_ctx.h"
-
 #include <threads.h>
+
+#include "device_ctx.h"
 
 DeviceFidl::DeviceFidl(DeviceCtx* device) : device_(device) {
   // Nothing else to do here.
@@ -43,7 +43,8 @@ void DeviceFidl::ConnectChannelBoundCodecFactory(zx::channel request) {
   // taking a dependency on Bind() working from a different thread (both in
   // Bind() and in DeviceFidl code).
   device_->driver()->PostToSharedFidl([this, factory = std::move(factory),
-                                       server_endpoint = std::move(request)]() mutable {
+                                       server_endpoint =
+                                           std::move(request)]() mutable {
     ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
     LocalCodecFactory* raw_factory_ptr = factory.get();
     auto insert_result =

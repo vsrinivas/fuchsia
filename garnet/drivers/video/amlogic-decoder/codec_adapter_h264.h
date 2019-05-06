@@ -49,13 +49,15 @@ class CodecAdapterH264 : public CodecAdapter {
   CoreCodecGetBufferCollectionConstraints(
       CodecPort port,
       const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
-      const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings)
+      override;
   void CoreCodecSetBufferCollectionInfo(
       CodecPort port,
-      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) override;
+      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info)
+      override;
   fuchsia::media::StreamOutputFormat CoreCodecGetOutputFormat(
-    uint64_t stream_lifetime_ordinal,
-    uint64_t new_output_format_details_version_ordinal) override;
+      uint64_t stream_lifetime_ordinal,
+      uint64_t new_output_format_details_version_ordinal) override;
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
 

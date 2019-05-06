@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/media/codec_impl/codec_buffer.h>
-
-#include <zircon/assert.h>
-
 #include <lib/media/codec_impl/codec_impl.h>
 #include <lib/media/codec_impl/codec_port.h>
+#include <zircon/assert.h>
 
 CodecBuffer::CodecBuffer(CodecImpl* parent, CodecPort port,
                          fuchsia::media::StreamBuffer buffer)

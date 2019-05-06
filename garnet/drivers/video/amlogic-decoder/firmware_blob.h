@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FIRMWARE_BLOB_H_
-#define FIRMWARE_BLOB_H_
+#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
+#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -43,4 +43,4 @@ class FirmwareBlob {
   std::map<std::string, FirmwareCode> firmware_code_;
 };
 
-#endif  // FIRMWARE_BLOB_H_
+#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_FIRMWARE_BLOB_H_

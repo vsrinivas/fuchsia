@@ -12,16 +12,16 @@
 // of that coverage will be making test failures of this test easier to narrow
 // down.
 
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "garnet/examples/media/use_media_decoder/use_aac_decoder.h"
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "gtest/gtest.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_ptr.h"
@@ -55,8 +55,7 @@ constexpr char kGoldenSha256_arm64[SHA256_DIGEST_LENGTH * 2 + 1] =
 TEST(DecoderTest, AacDecoder) {
   async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
   main_loop.StartThread("main_loop");
-  auto startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   startup_context->ConnectToEnvironmentService(
       codec_factory.NewRequest(main_loop.dispatcher()));
@@ -66,7 +65,8 @@ TEST(DecoderTest, AacDecoder) {
       sysmem.NewRequest());
 
   uint8_t md[SHA256_DIGEST_LENGTH];
-  use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), kInputFilePath, "", md);
+  use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem),
+                  kInputFilePath, "", md);
 
   char actual_sha256[SHA256_DIGEST_LENGTH * 2 + 1];
   char* actual_sha256_ptr = actual_sha256;

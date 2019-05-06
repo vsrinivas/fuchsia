@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-
-#include "../mpsc_queue.h"
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+
+#include "../mpsc_queue.h"
+#include "gtest/gtest.h"
 
 TEST(MpscQueueTest, Sanity) {
   MpscQueue<int> under_test;

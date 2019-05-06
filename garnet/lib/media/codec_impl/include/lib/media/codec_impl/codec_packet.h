@@ -5,13 +5,12 @@
 #ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_PACKET_H_
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_PACKET_H_
 
+#include <fbl/macros.h>
 #include <fuchsia/media/cpp/fidl.h>
-
 #include <stdint.h>
+
 #include <limits>
 #include <memory>
-
-#include <fbl/macros.h>
 
 class CodecBuffer;
 

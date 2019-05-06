@@ -4,21 +4,21 @@
 
 #include "use_video_decoder.h"
 
-#include "util.h"
-
 #include <garnet/lib/media/raw_video_writer/raw_video_writer.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/media/test/codec_client.h>
 #include <lib/media/test/frame_sink.h>
-
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
 #include <stdint.h>
 #include <string.h>
+
 #include <thread>
+
+#include "util.h"
 
 namespace {
 
@@ -133,8 +133,8 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
       }
 
       // For input we do buffer_index == packet_index.
-      const CodecBuffer& buffer = codec_client->GetInputBufferByIndex(
-          packet->header().packet_index());
+      const CodecBuffer& buffer =
+          codec_client->GetInputBufferByIndex(packet->header().packet_index());
       size_t bytes_to_copy =
           std::min(byte_count - bytes_so_far, buffer.size_bytes());
       packet->set_stream_lifetime_ordinal(kStreamLifetimeOrdinal);
@@ -206,10 +206,9 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
 void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
                     size_t input_size) {
   uint64_t input_frame_pts_counter = 0;
-  auto queue_access_unit =
-      [&codec_client, &input_bytes, &input_frame_pts_counter](
-          uint8_t* bytes,
-          size_t byte_count) {
+  auto queue_access_unit = [&codec_client, &input_bytes,
+                            &input_frame_pts_counter](uint8_t* bytes,
+                                                      size_t byte_count) {
     std::unique_ptr<fuchsia::media::Packet> packet =
         codec_client->BlockingGetFreeInputPacket();
     ZX_ASSERT(packet->has_header());
@@ -257,9 +256,9 @@ void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
 
 static void use_video_decoder(
     async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-    Format format, const std::string& input_file,
-    const std::string& output_file, uint8_t md_out[SHA256_DIGEST_LENGTH],
+    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem, Format format,
+    const std::string& input_file, const std::string& output_file,
+    uint8_t md_out[SHA256_DIGEST_LENGTH],
     std::vector<std::pair<bool, uint64_t>>* timestamps_out, uint32_t* fourcc,
     FrameSink* frame_sink) {
   VLOGF("use_h264_decoder()\n");
@@ -443,7 +442,7 @@ static void use_video_decoder(
            !format->format_details().has_format_details_version_ordinal() ||
            format->format_details().format_details_version_ordinal() !=
                stream_format->format_details()
-                    .format_details_version_ordinal())) {
+                   .format_details_version_ordinal())) {
         Exit(
             "codec server unexpectedly changed output format mid-stream - "
             "unexpected for this stream");
@@ -782,20 +781,20 @@ void use_h264_decoder(async::Loop* main_loop,
                       uint8_t md_out[SHA256_DIGEST_LENGTH],
                       std::vector<std::pair<bool, uint64_t>>* timestamps_out,
                       uint32_t* fourcc, FrameSink* frame_sink) {
-  use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem), Format::kH264,
-                    input_file, output_file, md_out, timestamps_out, fourcc,
-                    frame_sink);
+  use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem),
+                    Format::kH264, input_file, output_file, md_out,
+                    timestamps_out, fourcc, frame_sink);
 }
 
 void use_vp9_decoder(async::Loop* main_loop,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
+                     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                      const std::string& input_file,
                      const std::string& output_file,
                      uint8_t md_out[SHA256_DIGEST_LENGTH],
                      std::vector<std::pair<bool, uint64_t>>* timestamps_out,
                      uint32_t* fourcc, FrameSink* frame_sink) {
-  use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem), Format::kVp9,
-                    input_file, output_file, md_out, timestamps_out, fourcc,
-                    frame_sink);
+  use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem),
+                    Format::kVp9, input_file, output_file, md_out,
+                    timestamps_out, fourcc, frame_sink);
 }

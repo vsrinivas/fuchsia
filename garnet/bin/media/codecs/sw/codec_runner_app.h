@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_MEDIA_CODECS_SW_CODEC_RUNNER_APP_H_
 #define GARNET_BIN_MEDIA_CODECS_SW_CODEC_RUNNER_APP_H_
 
-#include <memory>
-
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <src/lib/fxl/logging.h>
+
+#include <memory>
 
 #include "local_single_codec_factory.h"
 
@@ -44,7 +44,8 @@ class CodecRunnerApp {
                   ->RemoveService<fuchsia::mediacodec::CodecFactory>();
 
               fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
-              startup_context_->ConnectToEnvironmentService(sysmem.NewRequest());
+              startup_context_->ConnectToEnvironmentService(
+                  sysmem.NewRequest());
 
               codec_factory_ =
                   std::make_unique<LocalSingleCodecFactory<Decoder, Encoder>>(

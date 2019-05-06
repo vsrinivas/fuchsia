@@ -6,11 +6,11 @@
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_TEST_SUPPORT_H_
 
 #include <ddk/device.h>
-
+#include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
-#include <lib/zx/vmo.h>
+#include <memory>
 
 class TestSupport {
  public:

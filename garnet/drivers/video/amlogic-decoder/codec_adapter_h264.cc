@@ -4,13 +4,13 @@
 
 #include "codec_adapter_h264.h"
 
+#include <lib/fidl/cpp/clone.h>
+#include <lib/zx/bti.h>
+
 #include "device_ctx.h"
 #include "h264_decoder.h"
 #include "pts_manager.h"
 #include "vdec1.h"
-
-#include <lib/fidl/cpp/clone.h>
-#include <lib/zx/bti.h>
 
 // TODO(dustingreen):
 //   * Split InitializeStream() into two parts, one to get the format info from
@@ -18,10 +18,10 @@
 //     output buffers once the client has configured Codec output config based
 //     on the format info.  Wire up so that
 //     onCoreCodecMidStreamOutputConstraintsChange() gets called and so that
-//     CoreCodecBuildNewOutputConstraints() will pick up the correct current format
-//     info (whether still mid-stream, or at the start of a new stream that's
-//     starting before the mid-stream format change was processed for the old
-//     stream).
+//     CoreCodecBuildNewOutputConstraints() will pick up the correct current
+//     format info (whether still mid-stream, or at the start of a new stream
+//     that's starting before the mid-stream format change was processed for the
+//     old stream).
 //   * Allocate output video buffers contig by setting relevant buffer
 //     constraints to indicate contig to BufferAllocator / BufferCollection.
 //   * On EndOfStream at input, push all remaining data through the HW decoder
@@ -136,9 +136,7 @@ bool CodecAdapterH264::IsCoreCodecMappedBufferNeeded(CodecPort port) {
   return true;
 }
 
-bool CodecAdapterH264::IsCoreCodecHwBased() {
-  return true;
-}
+bool CodecAdapterH264::IsCoreCodecHwBased() { return true; }
 
 void CodecAdapterH264::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
@@ -475,8 +473,8 @@ CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
   auto* constraints = config->mutable_buffer_constraints();
   auto* default_settings = constraints->mutable_default_settings();
 
-  // For the moment, there will be only one StreamOutputConstraints, and it'll need
-  // output buffers configured for it.
+  // For the moment, there will be only one StreamOutputConstraints, and it'll
+  // need output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
   config->set_buffer_constraints_action_required(
       buffer_constraints_action_required);
@@ -546,16 +544,16 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
   // use single_buffer_mode.
   //
   // TODO(dustingreen): Support single_buffer_mode on input (only).
-  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() || !partial_settings.single_buffer_mode());
+  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() ||
+                  !partial_settings.single_buffer_mode());
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
 
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-  uint32_t packet_count =
-      partial_settings.packet_count_for_server() +
-      partial_settings.packet_count_for_client();
+  uint32_t packet_count = partial_settings.packet_count_for_server() +
+                          partial_settings.packet_count_for_client();
 
   // For now this is true - when we plumb more flexible buffer count range this
   // will change to account for a range.
@@ -610,7 +608,8 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
     result.image_format_constraints_count = 1;
     fuchsia::sysmem::ImageFormatConstraints& image_constraints =
         result.image_format_constraints[0];
-    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+    image_constraints.pixel_format.type =
+        fuchsia::sysmem::PixelFormatType::NV12;
     // TODO(MTWN-251): confirm that REC709 is always what we want here, or plumb
     // actual YUV color space if it can ever be REC601_*.  Since 2020 and 2100
     // are minimum 10 bits per Y sample and we're outputting NV12, 601 is the
@@ -682,11 +681,17 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
 void CodecAdapterH264::CoreCodecSetBufferCollectionInfo(
     CodecPort port,
     const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
-  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
-  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.coherency_domain == fuchsia::sysmem::CoherencyDomain::Cpu);
+  ZX_DEBUG_ASSERT(
+      buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
+  ZX_DEBUG_ASSERT(
+      buffer_collection_info.settings.buffer_settings.coherency_domain ==
+      fuchsia::sysmem::CoherencyDomain::Cpu);
   if (port == kOutputPort) {
-    ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
-    ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type == fuchsia::sysmem::PixelFormatType::NV12);
+    ZX_DEBUG_ASSERT(
+        buffer_collection_info.settings.has_image_format_constraints);
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints
+                        .pixel_format.type ==
+                    fuchsia::sysmem::PixelFormatType::NV12);
   }
 }
 
@@ -911,7 +916,8 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
   // If there's no OOB info, then there's nothing to do, as all such info will
   // be in-band in normal packet-based AnnexB NALs (including start codes and
   // start code emulation prevention bytes).
-  if (!latest_input_format_details_.has_oob_bytes() || latest_input_format_details_.oob_bytes().empty()) {
+  if (!latest_input_format_details_.has_oob_bytes() ||
+      latest_input_format_details_.oob_bytes().empty()) {
     // success
     return true;
   }
@@ -1223,10 +1229,10 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(
   // during InitializeStream().  Maybe delaying configuring of a canvas would
   // work, but in that case would the delayed configuring adversely impact
   // decoding performance consistency?  If we can do this, detect when we can,
-  // and call onCoreCodecMidStreamOutputConstraintsChange() but pass false instead of
-  // true, and don't expect a response or block in here.  Still have to return
-  // the vector of buffers, and will need to indicate which are actually
-  // available to decode into.  The rest will get indicated via
+  // and call onCoreCodecMidStreamOutputConstraintsChange() but pass false
+  // instead of true, and don't expect a response or block in here.  Still have
+  // to return the vector of buffers, and will need to indicate which are
+  // actually available to decode into.  The rest will get indicated via
   // CoreCodecRecycleOutputPacket(), despite not necessarily getting signalled
   // to the HW by H264Decoder::ReturnFrame further down.  For now, we always
   // re-allocate buffers.  Old buffers still active elsewhere in the system can

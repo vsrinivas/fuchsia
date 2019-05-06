@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <openssl/sha.h>
-
 #include "../raw_frames.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/media/test/frame_sink.h>
+#include <openssl/sha.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
-#include <lib/media/test/frame_sink.h>
 
 constexpr char kInputFilePath[] = "/pkg/data/bear_320x192_40frames.yuv";
 constexpr char kGoldenSha[SHA256_DIGEST_LENGTH * 2 + 1] =

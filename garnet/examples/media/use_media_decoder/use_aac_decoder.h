@@ -8,7 +8,6 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <openssl/sha.h>
-
 #include <stdint.h>
 
 // use_aac_decoder()

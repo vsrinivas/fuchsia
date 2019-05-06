@@ -7,10 +7,9 @@
 #include "amlogic-video.h"
 #include "gtest/gtest.h"
 #include "h264_decoder.h"
-#include "tests/test_support.h"
-
 #include "macros.h"
 #include "pts_manager.h"
+#include "tests/test_support.h"
 #include "vdec1.h"
 
 std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data,

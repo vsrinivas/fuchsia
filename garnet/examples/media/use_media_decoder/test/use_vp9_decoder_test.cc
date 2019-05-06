@@ -8,20 +8,19 @@
 // If this test breaks and it's not immediately obvoius why, please feel free to
 // involve dustingreen@ (me) in figuring it out.
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <map>
-
-#include "use_video_decoder_test.h"
-#include "../use_video_decoder.h"
-#include "../util.h"
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/media/codec_impl/fourcc.h>
+#include <src/lib/fxl/logging.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+#include <map>
 #include <set>
+
+#include "../use_video_decoder.h"
+#include "../util.h"
+#include "use_video_decoder_test.h"
 
 namespace {
 
@@ -34,5 +33,6 @@ const std::map<uint32_t, const char*> GoldenSha256s = {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_vp9_decoder, GoldenSha256s);
+  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount,
+                                use_vp9_decoder, GoldenSha256s);
 }

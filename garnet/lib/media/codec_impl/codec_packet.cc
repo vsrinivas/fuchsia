@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/media/codec_impl/codec_packet.h>
-
 #include <lib/media/codec_impl/codec_buffer.h>
-
+#include <lib/media/codec_impl/codec_packet.h>
 #include <stdint.h>
 
 CodecPacket::CodecPacket(uint64_t buffer_lifetime_ordinal,

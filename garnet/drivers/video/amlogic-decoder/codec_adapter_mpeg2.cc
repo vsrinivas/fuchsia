@@ -34,9 +34,7 @@ bool CodecAdapterMpeg2::IsCoreCodecMappedBufferNeeded(CodecPort port) {
   return true;
 }
 
-bool CodecAdapterMpeg2::IsCoreCodecHwBased() {
-  return true;
-}
+bool CodecAdapterMpeg2::IsCoreCodecHwBased() { return true; }
 
 void CodecAdapterMpeg2::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
@@ -106,8 +104,7 @@ CodecAdapterMpeg2::CoreCodecBuildNewOutputConstraints(
   return std::make_unique<const fuchsia::media::StreamOutputConstraints>();
 }
 
-fuchsia::media::StreamOutputFormat
-CodecAdapterMpeg2::CoreCodecGetOutputFormat(
+fuchsia::media::StreamOutputFormat CodecAdapterMpeg2::CoreCodecGetOutputFormat(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_format_details_version_ordinal) {
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");

@@ -5,9 +5,9 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_HEVCDEC_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_HEVCDEC_H_
 
-#include "decoder_core.h"
-
 #include <assert.h>
+
+#include "decoder_core.h"
 
 // Used for both HEVC and VP9 video.
 class HevcDec : public DecoderCore {

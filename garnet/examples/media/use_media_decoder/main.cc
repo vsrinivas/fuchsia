@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-#include <stdio.h>
-
-#include "use_aac_decoder.h"
-#include "use_video_decoder.h"
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/media/test/frame_sink.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
-#include <lib/media/test/frame_sink.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include <thread>
+
+#include "use_aac_decoder.h"
+#include "use_video_decoder.h"
 
 void usage(const char* prog_name) {
   printf(
@@ -53,7 +52,7 @@ int main(int argc, char* argv[]) {
 
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
   startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
-    sysmem.NewRequest());
+      sysmem.NewRequest());
 
   std::string input_file = command_line.positional_args()[0];
   std::string output_file;
@@ -107,26 +106,26 @@ int main(int argc, char* argv[]) {
   fit::closure use_decoder;
   if (command_line.HasOption("aac_adts")) {
     use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
-                   sysmem = std::move(sysmem),
-                   input_file, output_file, &md]() mutable {
-      use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file,
-                      output_file, md);
+                   sysmem = std::move(sysmem), input_file, output_file,
+                   &md]() mutable {
+      use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem),
+                      input_file, output_file, md);
     };
   } else if (command_line.HasOption("h264")) {
     use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
-                   sysmem = std::move(sysmem),
-                   input_file, output_file, &md,
+                   sysmem = std::move(sysmem), input_file, output_file, &md,
                    frame_sink = frame_sink.get()]() mutable {
-      use_h264_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file,
-                       output_file, md, nullptr, nullptr, frame_sink);
+      use_h264_decoder(&main_loop, std::move(codec_factory), std::move(sysmem),
+                       input_file, output_file, md, nullptr, nullptr,
+                       frame_sink);
     };
   } else if (command_line.HasOption("vp9")) {
     use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
-                   sysmem = std::move(sysmem),
-                   input_file, output_file, &md,
+                   sysmem = std::move(sysmem), input_file, output_file, &md,
                    frame_sink = frame_sink.get()]() mutable {
-      use_vp9_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file,
-                      output_file, md, nullptr, nullptr, frame_sink);
+      use_vp9_decoder(&main_loop, std::move(codec_factory), std::move(sysmem),
+                      input_file, output_file, md, nullptr, nullptr,
+                      frame_sink);
     };
   } else {
     usage(command_line.argv0().c_str());

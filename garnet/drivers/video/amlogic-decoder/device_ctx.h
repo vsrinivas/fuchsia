@@ -5,10 +5,9 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_CTX_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_CTX_H_
 
+#include "amlogic-video.h"
 #include "device_fidl.h"
 #include "driver_ctx.h"
-
-#include "amlogic-video.h"
 
 class AmlogicVideo;
 

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/media/codec_impl/codec_admission_control.h>
-
 #include <stdint.h>
 #include <zircon/assert.h>
 

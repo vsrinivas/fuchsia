@@ -4,14 +4,12 @@
 
 #include "driver_ctx.h"
 
-#include "amlogic-video.h"
-#include "macros.h"
-
 #include <ddk/driver.h>
-
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "amlogic-video.h"
+#include "macros.h"
 #include "tests/test_support.h"
 
 namespace {

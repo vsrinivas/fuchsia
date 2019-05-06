@@ -10,9 +10,9 @@
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/zx/bti.h>
 
-#include "vp9_decoder.h"
-
 #include <random>
+
+#include "vp9_decoder.h"
 
 class AmlogicVideo;
 struct CodecFrame;
@@ -37,10 +37,12 @@ class CodecAdapterVp9 : public CodecAdapter,
   CoreCodecGetBufferCollectionConstraints(
       CodecPort port,
       const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
-      const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings)
+      override;
   void CoreCodecSetBufferCollectionInfo(
       CodecPort port,
-      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) override;
+      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info)
+      override;
   void CoreCodecStartStream() override;
   void CoreCodecQueueInputFormatDetails(
       const fuchsia::media::FormatDetails& per_stream_override_format_details)
@@ -59,8 +61,7 @@ class CodecAdapterVp9 : public CodecAdapter,
       uint64_t stream_lifetime_ordinal,
       uint64_t new_output_buffer_constraints_version_ordinal,
       bool buffer_constraints_action_required) override;
-  fuchsia::media::StreamOutputFormat
-  CoreCodecGetOutputFormat(
+  fuchsia::media::StreamOutputFormat CoreCodecGetOutputFormat(
       uint64_t stream_lifetime_ordinal,
       uint64_t new_output_format_details_version_ordinal) override;
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;

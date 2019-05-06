@@ -7,7 +7,6 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-
 #include <openssl/sha.h>
 #include <stdint.h>
 
@@ -62,13 +61,11 @@ void use_vp9_decoder(async::Loop* main_loop,
 
 // Common function pointer type shared by use_h264_decoder, use_vp9_decoder.
 typedef void (*UseVideoDecoderFunction)(
-    async::Loop* main_loop,
-    fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+    async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-    const std::string& input_file,
-    const std::string& output_file,
+    const std::string& input_file, const std::string& output_file,
     uint8_t md_out[SHA256_DIGEST_LENGTH],
-    std::vector<std::pair<bool, uint64_t>>* timestamps_out,
-    uint32_t* fourcc, FrameSink* frame_sink);
+    std::vector<std::pair<bool, uint64_t>>* timestamps_out, uint32_t* fourcc,
+    FrameSink* frame_sink);
 
 #endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_VIDEO_DECODER_H_

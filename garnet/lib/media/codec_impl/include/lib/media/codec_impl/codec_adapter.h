@@ -5,15 +5,15 @@
 #ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADAPTER_H_
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADAPTER_H_
 
-#include "codec_adapter_events.h"
-#include "codec_input_item.h"
-#include "codec_port.h"
-
 #include <fbl/macros.h>
 #include <fuchsia/media/cpp/fidl.h>
 
 #include <list>
 #include <random>
+
+#include "codec_adapter_events.h"
+#include "codec_input_item.h"
+#include "codec_port.h"
 
 class CodecBuffer;
 
@@ -41,8 +41,7 @@ class CodecAdapter {
   //
   // The CodecAdapter should never call CodecAdapterEvents methods with lock_
   // held.
-  CodecAdapter(std::mutex& lock,
-               CodecAdapterEvents* codec_adapter_events);
+  CodecAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events);
   virtual ~CodecAdapter();
 
   //
@@ -166,8 +165,8 @@ class CodecAdapter {
   // set (regardless of whether the client is using sysmem), after the client
   // sets input or output settings, and before the first buffer is added.
   virtual void CoreCodecSetBufferCollectionInfo(
-      CodecPort port,
-      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) = 0;
+      CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2&
+                          buffer_collection_info) = 0;
 
   // Stream lifetime:
   //
@@ -230,8 +229,8 @@ class CodecAdapter {
   // Add input or output buffer.
   //
   // The buffers added via this method correspond to the buffers of the buffer
-  // collection - these are buffers of the collection most recently indicated via
-  // a call to CoreCodecSetBufferCollectionInfo().  While the VMOs are
+  // collection - these are buffers of the collection most recently indicated
+  // via a call to CoreCodecSetBufferCollectionInfo().  While the VMOs are
   // intentionally not included in that call, the VMOs are indicated here (this
   // lets the CodecImpl own allocation of CodecBuffer instances).
   //
@@ -319,10 +318,10 @@ class CodecAdapter {
   //
   // For a mid-stream format change where output buffer re-configuration is
   // needed (as initiated async by the core codec calling
-  // CodecAdapterEvents::onCoreCodecMidStreamOutputConstraintsChange(true)), this
-  // method is called on the StreamControl thread before the client is notified
-  // of the need for output buffer re-config (via OnOutputConstraints() with
-  // buffer_constraints_action_required true).
+  // CodecAdapterEvents::onCoreCodecMidStreamOutputConstraintsChange(true)),
+  // this method is called on the StreamControl thread before the client is
+  // notified of the need for output buffer re-config (via OnOutputConstraints()
+  // with buffer_constraints_action_required true).
   //
   // The core codec should do whatever is necessary to ensure that output
   // buffers are done de-configuring to the extent feasible by the time this

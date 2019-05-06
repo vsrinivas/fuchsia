@@ -4,31 +4,33 @@
 
 #include "device_ctx.h"
 
+#include <fuchsia/hardware/mediacodec/c/fidl.h>
+
 #include "amlogic-video.h"
 #include "macros.h"
-
-#include <fuchsia/hardware/mediacodec/c/fidl.h>
 
 namespace {
 
 const fuchsia_hardware_mediacodec_Device_ops_t kFidlOps = {
-  .GetCodecFactory = [](void* ctx, zx_handle_t handle) {
-    zx::channel request(handle);
-    reinterpret_cast<DeviceCtx*>(ctx)->GetCodecFactory(std::move(request));
-    return ZX_OK;
-  },
+    .GetCodecFactory =
+        [](void* ctx, zx_handle_t handle) {
+          zx::channel request(handle);
+          reinterpret_cast<DeviceCtx*>(ctx)->GetCodecFactory(
+              std::move(request));
+          return ZX_OK;
+        },
 };
 
-static zx_status_t amlogic_video_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+static zx_status_t amlogic_video_message(void* ctx, fidl_msg_t* msg,
+                                         fidl_txn_t* txn) {
   return fuchsia_hardware_mediacodec_Device_dispatch(ctx, txn, msg, &kFidlOps);
 }
 
 static zx_protocol_device_t amlogic_video_device_ops = {
-  DEVICE_OPS_VERSION,
-  .message = amlogic_video_message,
-  // TODO(jbauman) or TODO(dustingreen): .suspend .resume, maybe .release if
-  // it would ever be run.  Currently ~AmlogicVideo code sets lower power, but
-  // ~AmlogicVideo doesn't run yet.
+    DEVICE_OPS_VERSION, .message = amlogic_video_message,
+    // TODO(jbauman) or TODO(dustingreen): .suspend .resume, maybe .release if
+    // it would ever be run.  Currently ~AmlogicVideo code sets lower power, but
+    // ~AmlogicVideo doesn't run yet.
 };
 
 }  // namespace

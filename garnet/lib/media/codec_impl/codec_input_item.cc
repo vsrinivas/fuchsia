@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/media/codec_impl/codec_input_item.h>
-
-#include <zircon/assert.h>
-
 #include <lib/fidl/cpp/clone.h>
+#include <lib/media/codec_impl/codec_input_item.h>
+#include <zircon/assert.h>
 
 CodecInputItem::CodecInputItem() : is_valid_(false) {
   // nothing else to do here
