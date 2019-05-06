@@ -332,8 +332,8 @@ test_package("trace_tests") {
 
   resources = [
     {
-      path = rebase_path("oneshot-spawn.tspec")
-      dest = "oneshot-spawn.tspec"
+      path = rebase_path("oneshot.tspec")
+      dest = "oneshot.tspec"
     },
     {
       path = rebase_path("circular.tspec")

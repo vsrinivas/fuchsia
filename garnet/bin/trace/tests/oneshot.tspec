@@ -1,0 +1,8 @@
+// Test of oneshot mode that fills the buffer.
+{
+  "test_name": "fill-buffer",
+  "app": "fuchsia-pkg://fuchsia.com/trace_tests#meta/basic_integration_test_app.cmx",
+  "categories": [ "trace:test" ],
+  "buffer_size_in_mb": 1,
+  "buffering_mode": "oneshot"
+}

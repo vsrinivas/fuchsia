@@ -27,7 +27,7 @@ static void RunAndVerify(const char* relative_tspec_path) {
       VerifyTspec(g_context.get(), relative_tspec_path, kOutputFilePath));
 }
 
-TEST(Oneshot, FillBuffer) { RunAndVerify("data/oneshot-spawn.tspec"); }
+TEST(Oneshot, FillBuffer) { RunAndVerify("data/oneshot.tspec"); }
 
 TEST(Circular, FillBuffer) { RunAndVerify("data/circular.tspec"); }
 

@@ -9,7 +9,6 @@
 #include <utility>
 
 #include <trace-engine/types.h>
-#include <trace-provider/provider.h>
 #include <trace-reader/reader.h>
 
 #include "garnet/lib/perfmon/writer.h"
