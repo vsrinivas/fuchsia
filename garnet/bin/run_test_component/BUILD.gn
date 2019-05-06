@@ -25,6 +25,7 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
+    "//src/sys/component_index/fidl:index",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/fidl/fuchsia-net-stack",
@@ -92,6 +93,7 @@ executable("test_bin") {
     ":lib",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

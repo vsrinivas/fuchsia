@@ -2,22 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <glob.h>
-
-#include <lib/fit/defer.h>
-
 #include "garnet/bin/run_test_component/run_test_component.h"
-#include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/pkg_url/fuchsia_pkg_url.h"
+
+#include <fuchsia/sys/index/cpp/fidl.h>
+#include <glob.h>
+#include <lib/fit/defer.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include <regex>
 #include <string>
 
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
+
 namespace run {
+
+using fuchsia::sys::index::ComponentIndex_FuzzySearch_Result;
+using fuchsia::sys::index::ComponentIndexSyncPtr;
 
 // path is <package_name>/*/meta/<test>.cmx
 static const std::regex* const kCmxPath =
     new std::regex("^([^/]+)/[^/]+/(meta/[^\\.]+\\.cmx)$");
+static constexpr char kComponentIndexerUrl[] =
+    "fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx";
 
 std::string GetComponentManifestPath(const std::string& url) {
   if (component::FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
@@ -40,8 +47,9 @@ std::string GenerateComponentUrl(const std::string& cmx_file_path) {
                            sm[1].str().c_str(), sm[2].str().c_str());
 }
 
-ParseArgsResult ParseArgs(int argc, const char** argv,
-                          const std::string& glob_dir) {
+ParseArgsResult ParseArgs(
+    const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
+    const char** argv) {
   ParseArgsResult result;
   result.error = false;
   if (argc < 2) {
@@ -53,42 +61,60 @@ ParseArgsResult ParseArgs(int argc, const char** argv,
   result.cmx_file_path = GetComponentManifestPath(url);
 
   if (result.cmx_file_path == "") {
-    // try to find cmx files
-    std::string test_prefix = argv[1];
-    if (test_prefix.find('*') != std::string::npos) {
+    fuchsia::sys::LaunchInfo index_launch_info;
+    index_launch_info.url = kComponentIndexerUrl;
+    auto index_provider = sys::ServiceDirectory::CreateWithRequest(
+        &index_launch_info.directory_request);
+
+    // Connect to the Launcher service through our static environment.
+    fuchsia::sys::LauncherSyncPtr launcher;
+    services->Connect(launcher.NewRequest());
+    fuchsia::sys::ComponentControllerPtr component_index_controller;
+    launcher->CreateComponent(std::move(index_launch_info),
+                              component_index_controller.NewRequest());
+
+    ComponentIndexSyncPtr index;
+    index_provider->Connect(index.NewRequest());
+
+    std::string test_name = argv[1];
+    ComponentIndex_FuzzySearch_Result fuzzy_search_result;
+    zx_status_t status = index->FuzzySearch(test_name, &fuzzy_search_result);
+    if (status != ZX_OK) {
       result.error = true;
-      result.error_msg = "test prefix should not contain '*'";
+      result.error_msg = fxl::StringPrintf(
+          "\"%s\" is not a valid URL. Attempted to match to a URL with "
+          "fuchsia.sys.index.FuzzySearch, but the service is not available.",
+          test_name.c_str());
       return result;
     }
-    auto glob_str =
-        fxl::StringPrintf("%s/*/*/meta/%s*.cmx", glob_dir.c_str(), argv[1]);
-    glob_t globbuf;
-    auto status = glob(glob_str.c_str(), 0, nullptr, &globbuf);
-    if (status != 0) {
+
+    if (fuzzy_search_result.is_err()) {
       result.error = true;
-      if (status == GLOB_NOMATCH) {
+      result.error_msg = fxl::StringPrintf(
+          "\"%s\" contains unsupported characters for fuzzy "
+          "matching. Valid characters are [A-Z a-z 0-9 / _ - .].\n",
+          test_name.c_str());
+      return result;
+    } else {
+      std::vector<std::string> uris = fuzzy_search_result.response().uris;
+      if (uris.size() == 0) {
+        result.error = true;
         result.error_msg = fxl::StringPrintf(
-            "cannot find test component with prefix '%s'", argv[1]);
+            "\"%s\" did not match any components.\n", test_name.c_str());
+        return result;
       } else {
-        result.error_msg =
-            fxl::StringPrintf("glob failed on %s, glob return: %d, error: %s",
-                              argv[1], status, strerror(errno));
+        for (auto& uri : uris) {
+          result.matching_urls.push_back(uri);
+        }
+        if (uris.size() > 1) {
+          return result;
+        }
+        url = uris[0];
+        result.cmx_file_path = GetComponentManifestPath(url);
       }
-      return result;
     }
-    auto guard = fit::defer([&]() { globfree(&globbuf); });
-    for (size_t i = 0; i < globbuf.gl_pathc; i++) {
-      result.matching_urls.push_back(
-          GenerateComponentUrl(globbuf.gl_pathv[i] + glob_dir.length() + 1)
-              .c_str());
-    }
-    result.cmx_file_path = globbuf.gl_pathv[0];
-    if (globbuf.gl_pathc > 1) {
-      return result;
-    }
-    url = result.matching_urls[0];
-  } else {
   }
+
   result.launch_info.url = url;
   for (int i = 2; i < argc; i++) {
     result.launch_info.arguments.push_back(argv[i]);

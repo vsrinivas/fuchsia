@@ -6,6 +6,7 @@
 #define GARNET_BIN_RUN_TEST_COMPONENT_RUN_TEST_COMPONENT_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include <string>
 
@@ -30,8 +31,9 @@ std::string GetComponentManifestPath(const std::string& url);
 std::string GenerateComponentUrl(const std::string& cmx_file_path);
 
 // Parses args.
-ParseArgsResult ParseArgs(int argc, const char** argv,
-                          const std::string& glob_dir);
+ParseArgsResult ParseArgs(
+    const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
+    const char** argv);
 
 }  // namespace run
 

@@ -4,12 +4,12 @@
 
 #include "garnet/bin/run_test_component/run_test_component.h"
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include <string>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/substitute.h"
 
@@ -44,18 +44,16 @@ TEST(Url, GenerateComponentUrl) {
             GenerateComponentUrl("component_hello_world/0/meta/hello.cmx"));
 }
 
-bool CreateEmptyFile(const std::string& path) {
-  return files::WriteFile(path, "", 0);
-}
-
 TEST(RunTest, ParseArgs) {
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto env_services = sys::ServiceDirectory::CreateFromNamespace();
   constexpr char kBinName[] = "bin_name";
 
   constexpr char component_url[] =
       "fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello.cmx";
   {
     const char* argv[] = {kBinName, component_url};
-    auto result = ParseArgs(2, argv, "");
+    auto result = ParseArgs(env_services, 2, argv);
     EXPECT_FALSE(result.error);
     EXPECT_EQ(component_url, result.launch_info.url);
     EXPECT_EQ(0u, result.launch_info.arguments->size());
@@ -64,7 +62,7 @@ TEST(RunTest, ParseArgs) {
 
   {
     const char* argv[] = {kBinName, component_url, "myarg1", "myarg2"};
-    auto result = ParseArgs(4, argv, "");
+    auto result = ParseArgs(env_services, 4, argv);
     EXPECT_FALSE(result.error);
     EXPECT_EQ(component_url, result.launch_info.url);
     EXPECT_EQ(2u, result.launch_info.arguments->size());
@@ -72,54 +70,40 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[3], result.launch_info.arguments.get()[1]);
   }
 
-  // Create filesystem to run glob on.
-  files::ScopedTempDir dir;
-  constexpr char test_pkg[] = "test_pkg";
-  constexpr char test_file_prefix[] = "test_file";
-  auto meta_dir_path = fxl::Substitute("$0/$1/0/meta", dir.path(), test_pkg);
-  ASSERT_TRUE(files::CreateDirectory(meta_dir_path))
-      << meta_dir_path << " " << errno;
-  auto cmx_file_path1 =
-      fxl::Substitute("$0/$11.cmx", meta_dir_path, test_file_prefix);
-  auto cmx_file_path2 =
-      fxl::Substitute("$0/$12.cmx", meta_dir_path, test_file_prefix);
-  auto cmx_file_path3 =
-      fxl::Substitute("$0/$13.cmx", meta_dir_path, test_file_prefix);
-  ASSERT_TRUE(CreateEmptyFile(cmx_file_path1));
-  ASSERT_TRUE(CreateEmptyFile(cmx_file_path2));
-  ASSERT_TRUE(CreateEmptyFile(cmx_file_path3));
-  auto expected_url1 = fxl::StringPrintf(
-      "fuchsia-pkg://fuchsia.com/%s#meta/%s1.cmx", test_pkg, test_file_prefix);
-  auto expected_url2 = fxl::StringPrintf(
-      "fuchsia-pkg://fuchsia.com/%s#meta/%s2.cmx", test_pkg, test_file_prefix);
-  auto expected_url3 = fxl::StringPrintf(
-      "fuchsia-pkg://fuchsia.com/%s#meta/%s3.cmx", test_pkg, test_file_prefix);
-
   {
-    const char* argv[] = {kBinName, "test_file*"};
-    auto result = ParseArgs(2, argv, dir.path());
+    const char* argv[] = {kBinName, "run_test_component_test_invalid_matcher"};
+    auto result = ParseArgs(env_services, 2, argv);
     EXPECT_TRUE(result.error);
   }
 
   {
-    const char* argv[] = {kBinName, "test_file"};
-    auto result = ParseArgs(2, argv, dir.path());
+    std::string expected_urls[] = {
+        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+        "run_test_component_test.cmx",
+        "fuchsia-pkg://fuchsia.com/run_test_component_unittests#meta/"
+        "run_test_component_unittests.cmx"};
+    const char* argv[] = {kBinName, "run_test_component"};
+    auto result = ParseArgs(env_services, 2, argv);
     EXPECT_FALSE(result.error);
-    ASSERT_EQ(3u, result.matching_urls.size());
-    EXPECT_EQ(result.matching_urls[0], expected_url1);
-    EXPECT_EQ(result.matching_urls[1], expected_url2);
-    EXPECT_EQ(result.matching_urls[2], expected_url3);
-    EXPECT_EQ(result.cmx_file_path, cmx_file_path1);
+    EXPECT_EQ(2u, result.matching_urls.size());
+    EXPECT_THAT(result.matching_urls,
+                ::testing::UnorderedElementsAreArray(expected_urls));
   }
 
   {
-    const char* argv[] = {kBinName, "test_file2"};
-    auto result = ParseArgs(2, argv, dir.path());
+    auto expected_url =
+        "fuchsia-pkg://fuchsia.com/run_test_component_unittests#meta/"
+        "run_test_component_unittests.cmx";
+    auto expected_cmx_path =
+        "/pkgfs/packages/run_test_component_unittests/0/meta/"
+        "run_test_component_unittests.cmx";
+    const char* argv[] = {kBinName, "run_test_component_unittests"};
+    auto result = ParseArgs(env_services, 2, argv);
     EXPECT_FALSE(result.error);
     ASSERT_EQ(1u, result.matching_urls.size());
-    EXPECT_EQ(result.matching_urls[0], expected_url2);
-    EXPECT_EQ(expected_url2, result.launch_info.url);
-    EXPECT_EQ(result.cmx_file_path, cmx_file_path2);
+    EXPECT_EQ(result.matching_urls[0], expected_url);
+    EXPECT_EQ(expected_url, result.launch_info.url);
+    EXPECT_EQ(result.cmx_file_path, expected_cmx_path);
   }
 }
 

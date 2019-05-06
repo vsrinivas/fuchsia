@@ -5,6 +5,9 @@
     "sandbox": {
         "features": [
             "system-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher"
         ]
     }
 }

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -12,18 +10,19 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/file_descriptor.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
-#include <zircon/syscalls.h>
+#include <lib/sys/cpp/testing/enclosing_environment.h>
+#include <stdio.h>
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
-#include "src/lib/fxl/strings/string_printf.h"
-#include "lib/sys/cpp/service_directory.h"
-#include "lib/sys/cpp/testing/enclosing_environment.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 using fuchsia::sys::TerminationReason;
 
@@ -35,20 +34,20 @@ constexpr char kConfigPath[] =
 void PrintUsage() {
   fprintf(stderr, R"(
 Usage: run_test_component <test_url> [arguments...]
-       run_test_component <test_prefix> [arguments...]
+       run_test_component <test_matcher> [arguments...]
 
        *test_url* takes the form of component manifest URL which uniquely
        identifies a test component. Example:
           fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello.cmx
 
-       if *test_prefix* is provided, this tool will glob over /pkgfs and look for
-       matching cmx files. If multiple files are found, it will print
-       corresponding component URLs and exit.  If there is only one match, it
-       will generate a component URL and execute the test.
+       if *test_matcher* is provided, this tool will use component index 
+       to find matching component. If multiple urls are found, it will
+       print corresponding component URLs and exit.  If there is only
+       one match, it will generate a component URL and execute the test.
 
        example:
         run_test_component run_test_component_unit
-          will match /pkgfs/packages/run_test_component_unittests/meta/run_test_component_unittests.cmx and run it.
+          will match fuchsia-pkg://fuchsia.com/run_test_component_unittests#meta/run_test_component_unittests.cmx and run it.
 )");
 }
 
@@ -109,8 +108,9 @@ int main(int argc, const char** argv) {
             config.error_str().c_str());
     return 1;
   }
-
-  auto parse_result = run::ParseArgs(argc, argv, "/pkgfs/packages");
+  auto env_services = sys::ServiceDirectory::CreateFromNamespace();
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto parse_result = run::ParseArgs(env_services, argc, argv);
   if (parse_result.error) {
     if (parse_result.error_msg != "") {
       fprintf(stderr, "%s\n", parse_result.error_msg.c_str());
@@ -130,7 +130,6 @@ int main(int argc, const char** argv) {
   }
   std::string program_name = parse_result.launch_info.url;
 
-
   // We make a request to the resolver API to ensure that the on-disk package
   // data is up to date before continuing to try and parse the CMX file.
   // TODO(anmittal): Ideally we could use the VMO returned by the resolver to
@@ -141,16 +140,19 @@ int main(int argc, const char** argv) {
     // TODO(raggi): replace this with fuchsia.pkg.Resolver, once it is stable.
     fuchsia::process::ResolverSyncPtr resolver;
     auto svc_dir = sys::ServiceDirectory::CreateFromNamespace();
-    zx_status_t status = svc_dir->Connect<fuchsia::process::Resolver>(resolver.NewRequest());
+    zx_status_t status =
+        svc_dir->Connect<fuchsia::process::Resolver>(resolver.NewRequest());
     if (status != ZX_OK) {
-      fprintf(stderr, "connect to %s failed: %s. Can not continue.\n", fuchsia::process::Resolver::Name_, zx_status_get_string(status));
+      fprintf(stderr, "connect to %s failed: %s. Can not continue.\n",
+              fuchsia::process::Resolver::Name_, zx_status_get_string(status));
       return 1;
     }
     zx::vmo cmx_unused;
     fidl::InterfaceHandle<::fuchsia::ldsvc::Loader> ldsvc_unused;
     resolver->Resolve(program_name, &status, &cmx_unused, &ldsvc_unused);
     if (status != ZX_OK) {
-      fprintf(stderr, "Failed to resolve %s: %s\n", program_name.c_str(), zx_status_get_string(status));
+      fprintf(stderr, "Failed to resolve %s: %s\n", program_name.c_str(),
+              zx_status_get_string(status));
       return 1;
     }
   }
@@ -162,9 +164,6 @@ int main(int argc, const char** argv) {
             test_metadata.error_str().c_str());
     return 1;
   }
-
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto env_services = sys::ServiceDirectory::CreateFromNamespace();
 
   fuchsia::sys::ComponentControllerPtr controller;
   fuchsia::sys::EnvironmentPtr parent_env;
