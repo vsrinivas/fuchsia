@@ -33,7 +33,7 @@
 #![warn(missing_docs)]
 
 use {
-    crate::common::send_on_open_with_error,
+    crate::common::{send_on_open_with_error, try_inherit_rights_for_clone},
     crate::directory::entry::{DirectoryEntry, EntryInfo},
     crate::file::{
         connection::{ConnectionState, FileConnection},
@@ -322,7 +322,12 @@ where
     ) -> Result<ConnectionState, Error> {
         match req {
             FileRequest::Clone { flags, object, control_handle: _ } => {
-                self.add_connection(connection.flags, flags, 0, object);
+                match try_inherit_rights_for_clone(connection.flags, flags) {
+                    Ok(clone_flags) =>
+                        self.add_connection(connection.flags, clone_flags, 0, object),
+                    Err(status) =>
+                        send_on_open_with_error(flags, object, status),
+                }
                 Ok(ConnectionState::Alive)
             }
             FileRequest::Close { responder } => {
@@ -1200,6 +1205,42 @@ mod tests {
                 assert_read!(second_proxy, "Initial content");
                 assert_truncate_err!(second_proxy, 0, Status::ACCESS_DENIED);
                 assert_write_err!(second_proxy, "As updated", Status::ACCESS_DENIED);
+
+                assert_close!(first_proxy);
+                assert_close!(second_proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn clone_inherit_access() {
+        use fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS;
+
+        run_server_client(
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            read_write(
+                || Ok(b"Initial content".to_vec()),
+                100,
+                |content| {
+                    assert_eq!(*&content, b"As updated");
+                    Ok(())
+                },
+            ),
+            async move |first_proxy| {
+                assert_read!(first_proxy, "Initial content");
+                assert_truncate!(first_proxy, 0);
+                assert_seek!(first_proxy, 0, Start);
+                assert_write!(first_proxy, "As updated");
+
+                let second_proxy = clone_get_file_proxy_assert_ok!(
+                    &first_proxy,
+                    CLONE_FLAG_SAME_RIGHTS | OPEN_FLAG_DESCRIBE
+                );
+
+                assert_read!(second_proxy, "Initial content");
+                assert_truncate!(second_proxy, 0);
+                assert_seek!(second_proxy, 0, Start);
+                assert_write!(second_proxy, "As updated");
 
                 assert_close!(first_proxy);
                 assert_close!(second_proxy);

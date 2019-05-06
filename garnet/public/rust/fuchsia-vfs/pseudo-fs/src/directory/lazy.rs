@@ -5,7 +5,7 @@
 //! Implementation of a "lazy" pseudo directory.  See [`Lazy`] for details.
 
 use {
-    crate::common::send_on_open_with_error,
+    crate::common::{send_on_open_with_error, try_inherit_rights_for_clone},
     crate::directory::{
         common::{encode_dirent, validate_and_split_path},
         connection::DirectoryConnection,
@@ -376,7 +376,12 @@ where
     ) -> Result<ConnectionState, failure::Error> {
         match req {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                self.add_connection(connection.flags, flags, 0, object);
+                match try_inherit_rights_for_clone(connection.flags, flags) {
+                    Ok(clone_flags) =>
+                        self.add_connection(connection.flags, clone_flags, 0, object),
+                    Err(status) =>
+                        send_on_open_with_error(flags, object, status),
+                }
             }
             DirectoryRequest::Close { responder } => {
                 responder.send(ZX_OK)?;

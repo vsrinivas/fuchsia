@@ -6,9 +6,51 @@
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{NodeMarker, OPEN_FLAG_DESCRIBE},
+    fidl_fuchsia_io::{
+        NodeMarker, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_RIGHT_ADMIN, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_APPEND
+    },
     fuchsia_zircon::Status,
 };
+
+/// Set of known rights.
+const FS_RIGHTS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_ADMIN;
+
+/// Returns true if the rights flags in `flags_a` does not exceed those in `flags_b`.
+pub fn stricter_or_same_rights(
+    flags_a: u32,
+    flags_b: u32
+) -> bool {
+    let rights_a = flags_a & FS_RIGHTS;
+    let rights_b = flags_b & FS_RIGHTS;
+    return (rights_a & !rights_b) == 0;
+}
+
+/// Common logic for rights processing during cloning a node, shared by both file and directory
+/// implementations.
+pub fn try_inherit_rights_for_clone(
+    source_flags: u32,
+    mut flags: u32
+) -> Result<u32, Status> {
+    // TODO(ZX-3673): Start enforcing this check after soft transition.
+    // if (flags & CLONE_FLAG_SAME_RIGHTS != 0) && (flags & FS_RIGHTS != 0) {
+    //     return Err(Status::INVALID_ARGS);
+    // }
+    flags |= source_flags & (OPEN_FLAG_APPEND | OPEN_FLAG_NODE_REFERENCE);
+    // If CLONE_FLAG_SAME_RIGHTS is requested, cloned connection will inherit the same rights
+    // as those from the originating connection.
+    if flags & CLONE_FLAG_SAME_RIGHTS != 0 {
+        flags &= !FS_RIGHTS;
+        flags |= source_flags & FS_RIGHTS;
+        flags &= !CLONE_FLAG_SAME_RIGHTS
+    }
+    // TODO(ZX-3673): Start enforcing this check after soft transition.
+    // if !stricter_or_same_rights(flags, source_flags) {
+    //     return Err(Status::ACCESS_DENIED);
+    // }
+
+    Ok(flags)
+}
 
 /// A helper method to send OnOpen event on the handle owned by the `server_end` in case `flags`
 /// contains `OPEN_FLAG_STATUS`.

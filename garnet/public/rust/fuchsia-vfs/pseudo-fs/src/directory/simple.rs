@@ -5,7 +5,7 @@
 //! Implementation of a "simple" pseudo directory.  See [`Simple`] for details.
 
 use {
-    crate::common::send_on_open_with_error,
+    crate::common::{send_on_open_with_error, try_inherit_rights_for_clone},
     crate::directory::{
         common::{encode_dirent, validate_and_split_path},
         connection::DirectoryConnection,
@@ -128,7 +128,12 @@ impl<'entries> Simple<'entries> {
     ) -> Result<ConnectionState, failure::Error> {
         match req {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                self.add_connection(connection.flags, flags, 0, object);
+                match try_inherit_rights_for_clone(connection.flags, flags) {
+                    Ok(clone_flags) =>
+                        self.add_connection(connection.flags, clone_flags, 0, object),
+                    Err(status) =>
+                        send_on_open_with_error(flags, object, status),
+                }
             }
             DirectoryRequest::Close { responder } => {
                 responder.send(ZX_OK)?;
@@ -640,6 +645,37 @@ mod tests {
             let second_proxy = clone_get_directory_proxy_assert_ok!(
                 &first_proxy,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE
+            );
+
+            await!(assert_read_file(&second_proxy));
+
+            assert_close!(first_proxy);
+            assert_close!(second_proxy);
+        });
+    }
+
+    #[test]
+    fn clone_inherit_access() {
+        use fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS;
+
+        let root = pseudo_directory! {
+            "file" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |first_proxy| {
+            async fn assert_read_file(root: &DirectoryProxy) {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+
+                assert_read!(file, "Content");
+                assert_close!(file);
+            }
+
+            await!(assert_read_file(&first_proxy));
+
+            let second_proxy = clone_get_directory_proxy_assert_ok!(
+                &first_proxy,
+                CLONE_FLAG_SAME_RIGHTS | OPEN_FLAG_DESCRIBE
             );
 
             await!(assert_read_file(&second_proxy));

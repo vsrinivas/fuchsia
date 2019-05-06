@@ -5,6 +5,7 @@
 //! Common utilities used by several directory implementations.
 
 use {
+    crate::common::stricter_or_same_rights,
     crate::directory::entry::EntryInfo,
     byteorder::{LittleEndian, WriteBytesExt},
     fidl_fuchsia_io::{
@@ -41,17 +42,18 @@ pub fn new_connection_validate_flags(
         flags &= OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
     }
 
-    let allowed_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
+    let allowed_flags =
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
 
     let prohibited_flags =
         OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_FLAG_TRUNCATE | OPEN_FLAG_APPEND;
 
-    if flags & OPEN_RIGHT_READABLE != 0 && parent_flags & OPEN_RIGHT_READABLE == 0 {
+    if !stricter_or_same_rights(flags, parent_flags) {
         return Err(Status::ACCESS_DENIED);
     }
 
-    // Pseudo directories do not allow modifications or mounting, at this point.
-    if flags & OPEN_RIGHT_WRITABLE != 0 || flags & OPEN_RIGHT_ADMIN != 0 {
+    // Pseudo directories do not allow mounting at this point.
+    if flags & OPEN_RIGHT_ADMIN != 0 {
         return Err(Status::ACCESS_DENIED);
     }
 

@@ -25,7 +25,7 @@
 #![warn(missing_docs)]
 
 use {
-    crate::common::send_on_open_with_error,
+    crate::common::{send_on_open_with_error, try_inherit_rights_for_clone},
     crate::directory::entry::{DirectoryEntry, EntryInfo},
     crate::file::{
         connection::{
@@ -323,7 +323,12 @@ where
     ) -> Result<ConnectionState, Error> {
         match req {
             FileRequest::Clone { flags, object, control_handle: _ } => {
-                self.add_connection(connection.flags, flags, 0, object);
+                match try_inherit_rights_for_clone(connection.flags, flags) {
+                    Ok(clone_flags) =>
+                        self.add_connection(connection.flags, clone_flags, 0, object),
+                    Err(status) =>
+                        send_on_open_with_error(flags, object, status),
+                }
                 Ok(ConnectionState::Alive)
             }
             FileRequest::Close { responder } => {
