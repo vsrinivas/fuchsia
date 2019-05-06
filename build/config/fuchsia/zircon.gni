@@ -28,8 +28,9 @@ declare_args() {
   }
 
   # Whether to include various features (non-shipping, insecure, etc.) in the
-  # kernel build.
+  # kernel or netsvc builds.
   zircon_enable_kernel_debugging_features = false
+  zircon_enable_netsvc_debugging_features = false
 }
 
 declare_args() {
@@ -55,6 +56,7 @@ declare_args() {
     variants = _zircon_variants
     default_deps = [ ":legacy-$target_cpu" ]
     enable_kernel_debugging_features = zircon_enable_kernel_debugging_features
+    enable_netsvc_debugging_features = zircon_enable_netsvc_debugging_features
     forward_variables_from(zircon_extra_args, "*")
   }
 }

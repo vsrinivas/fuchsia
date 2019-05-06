@@ -21,10 +21,6 @@ declare_args() {
     ":images",
     ":tools",
   ]
-
-  # Whether to include various features (non-shipping, insecure, etc.) in the
-  # kernel build.
-  enable_kernel_debugging_features = false
 }
 
 # Build the native host tools intended for developer use.
