@@ -18,6 +18,7 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/object_util.h"
+#include "src/lib/files/file.h"
 
 namespace debug_agent {
 
@@ -126,6 +127,35 @@ zx::job GetJobFromKoid(zx_koid_t koid) {
   zx::job result;
   FindJob(GetRootJob(), koid, &result);
   return result;
+}
+
+zx_koid_t GetRootJobKoid() {
+  return KoidForObject(GetRootJob());
+}
+
+// The hub writes the job it uses to create components in a special file.
+//
+// This is note quite correct. This code actually returns the job that contains
+// the debug agent itself, which is usually the right thing because the debug
+// agent normally runs in the component root.
+//
+// TODO: Find the correct job even when the debug agent is run from elsewhere.
+zx_koid_t GetComponentJobKoid() {
+  std::string koid_str;
+  bool file_read = files::ReadFileToString("/hub/job-id", &koid_str);
+  if (!file_read) {
+    FXL_LOG(ERROR) << "Not able to read job-id: " << strerror(errno);
+    return 0;
+  }
+
+  char* end = NULL;
+  uint64_t koid = strtoul(koid_str.c_str(), &end, 10);
+  if (*end) {
+    FXL_LOG(ERROR) << "Invalid job-id: " << koid_str.c_str();
+    return 0;
+  }
+
+  return koid;
 }
 
 }  // namespace debug_agent

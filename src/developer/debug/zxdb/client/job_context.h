@@ -34,21 +34,17 @@ class JobContext : public ClientObject {
   using Callback =
       std::function<void(fxl::WeakPtr<JobContext> job_context, const Err&)>;
 
-  enum State {
+  enum class State {
     // There is no job currently running. From here, it can only transition
     // to starting.
     kNone,
 
-    // A pending state when the job has been requested to be started but
-    // there is no reply from the debug agent yet. From here, it can transition
-    // to running (success) or stopped (if launching or attaching failed).
-    kStarting,
-
-    // A pending state like starting but when we're waiting to attach.
+    // A pending state during the time we requested to be attached and when the
+    // reply from the debug_agent comes back.
     kAttaching,
 
-    // The job is running. From here, it can only transition to stopped.
-    kRunning
+    // The job is attached. From here, it can only transition to none.
+    kAttached
   };
 
   ~JobContext() override;
@@ -66,9 +62,10 @@ class JobContext : public ClientObject {
   // executed when the attach is complete (or fails).
   virtual void Attach(uint64_t koid, Callback callback) = 0;
 
-  // Attaches to the component's root job., in which all the component's are
-  // created. The callback will be executed when the attach is complete (or
-  // fails).
+  // Attaches to the given special job. The root job is the system root, and
+  // the component job is the one in which all the components are created. The
+  // callback will be executed when the attach is complete (or fails).
+  virtual void AttachToSystemRoot(Callback callback) = 0;
   virtual void AttachToComponentRoot(Callback callback) = 0;
 
   // Detaches from the job with the given koid. The callback will be

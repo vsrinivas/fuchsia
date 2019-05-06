@@ -24,6 +24,10 @@ zx::process GetProcessFromKoid(zx_koid_t koid);
 // on failure.
 zx::job GetJobFromKoid(zx_koid_t koid);
 
+// Returns the KOID associated with the given job. Returns 0 on failure.
+zx_koid_t GetRootJobKoid();
+zx_koid_t GetComponentJobKoid();
+
 }  // namespace debug_agent
 
 #endif  // GARNET_BIN_DEBUG_AGENT_SYSTEM_INFO_H_

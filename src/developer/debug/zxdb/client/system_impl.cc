@@ -456,13 +456,12 @@ void SystemImpl::DidConnect() {
   // launched which will have a different build ID file.
   symbols_.build_id_index().ClearCache();
 
-  // Implicitly attach a job to the component root. If there was already an
-  // implicit job created (from a previous connection) re-use it since there
-  // will be settings on it about what processes to attach to that we want to
-  // preserve.
+  // Implicitly attach a job to the root. If there was already an implicit job
+  // created (from a previous connection) re-use it since there will be
+  // settings on it about what processes to attach to that we want to preserve.
   JobContextImpl* implicit_job = nullptr;
   for (auto& job : job_contexts_) {
-    if (job->is_implicit_component_root()) {
+    if (job->is_implicit_root()) {
       implicit_job = job.get();
       break;
     }
@@ -474,7 +473,7 @@ void SystemImpl::DidConnect() {
     implicit_job = new_job.get();
     AddNewJobContext(std::move(new_job));
   }
-  implicit_job->AttachToComponentRoot(
+  implicit_job->AttachToSystemRoot(
       [](fxl::WeakPtr<JobContext>, const Err&) {});
 }
 

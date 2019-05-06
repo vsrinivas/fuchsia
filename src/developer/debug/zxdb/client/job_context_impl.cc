@@ -19,11 +19,10 @@
 
 namespace zxdb {
 
-JobContextImpl::JobContextImpl(SystemImpl* system,
-                               bool is_implicit_component_root)
+JobContextImpl::JobContextImpl(SystemImpl* system, bool is_implicit_root)
     : JobContext(system->session()),
       system_(system),
-      is_implicit_component_root_(is_implicit_component_root),
+      is_implicit_root_(is_implicit_root),
       impl_weak_factory_(this) {
   settings_.AddObserver(ClientSettings::Job::kFilters, this);
   settings_.set_name("job");
@@ -74,7 +73,7 @@ void JobContextImpl::OnAttachReplyThunk(
 void JobContextImpl::OnAttachReply(Callback callback, const Err& err,
                                    uint64_t koid, uint32_t status,
                                    const std::string& job_name) {
-  FXL_DCHECK(state_ == State::kAttaching || state_ == State::kStarting);
+  FXL_DCHECK(state_ == State::kAttaching);
   FXL_DCHECK(!job_.get());  // Shouldn't have a job.
 
   Err issue_err;  // Error to send in callback.
@@ -87,7 +86,7 @@ void JobContextImpl::OnAttachReply(Callback callback, const Err& err,
     state_ = State::kNone;
     issue_err = Err(fxl::StringPrintf("Error attaching, status = %d.", status));
   } else {
-    state_ = State::kRunning;
+    state_ = State::kAttached;
     job_ = std::make_unique<JobImpl>(this, koid, job_name);
   }
 
@@ -123,6 +122,10 @@ void JobContextImpl::Attach(uint64_t koid, Callback callback) {
   AttachInternal(debug_ipc::TaskType::kJob, koid, callback);
 }
 
+void JobContextImpl::AttachToSystemRoot(Callback callback) {
+  AttachInternal(debug_ipc::TaskType::kSystemRoot, 0, callback);
+}
+
 void JobContextImpl::AttachToComponentRoot(Callback callback) {
   AttachInternal(debug_ipc::TaskType::kComponentRoot, 0, callback);
 }
@@ -136,11 +139,10 @@ void JobContextImpl::Detach(Callback callback) {
     return;
   }
 
-  // This job could have been the one automatically created to watch the
-  // component root. If the user explicitly detaches it, the user is taking
-  // control over what job it's attached to so we don't want to track it
-  // implicitly any more.
-  is_implicit_component_root_ = false;
+  // This job could have been the one automatically created. If the user
+  // explicitly detaches it, the user is taking control over what job it's
+  // attached to so we don't want to track it implicitly any more.
+  is_implicit_root_ = false;
 
   debug_ipc::DetachRequest request;
   request.koid = job_->GetKoid();

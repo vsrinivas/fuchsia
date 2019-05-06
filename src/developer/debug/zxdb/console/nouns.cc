@@ -306,7 +306,7 @@ void ListJobs(ConsoleContext* context) {
 
     // State and koid (if running).
     row.push_back(JobContextStateToString(pair.second->GetState()));
-    if (pair.second->GetState() == JobContext::State::kRunning) {
+    if (pair.second->GetState() == JobContext::State::kAttached) {
       row.push_back(
           fxl::StringPrintf("%" PRIu64, pair.second->GetJob()->GetKoid()));
     } else {

@@ -136,6 +136,8 @@ const char* TaskTypeToString(TaskType type) {
       return "Process";
     case TaskType::kJob:
       return "Job";
+    case TaskType::kSystemRoot:
+      return "System root";
     case TaskType::kComponentRoot:
       return "Component Root";
     case TaskType::kLast:

@@ -27,7 +27,6 @@
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -135,92 +134,42 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
 void DebugAgent::OnAttach(uint32_t transaction_id,
                           const debug_ipc::AttachRequest& request) {
   TIME_BLOCK();
-  // Don't return early since we must send the reply at the bottom.
-  debug_ipc::AttachReply reply;
-  reply.status = ZX_ERR_NOT_FOUND;
+
   if (request.type == debug_ipc::TaskType::kProcess) {
-    zx::process process = GetProcessFromKoid(request.koid);
-    if (process.is_valid()) {
-      reply.name = NameForObject(process);
-      reply.koid = request.koid;
+    AttachToProcess(transaction_id, request.koid);
+    return;
+  }
 
-      // TODO(donosoc): change resume thread setting once we have global
-      // settings.
-      DebuggedProcessCreateInfo create_info;
-      create_info.name = reply.name;
-      create_info.koid = request.koid;
-      create_info.handle = std::move(process);
-      reply.status = AddDebuggedProcess(std::move(create_info));
-    }
-
-    // Send the reply.
-    debug_ipc::MessageWriter writer;
-    debug_ipc::WriteReply(reply, transaction_id, &writer);
-    stream()->Write(writer.MessageComplete());
-
-    // For valid attaches, follow up with the current module and thread lists.
-    DebuggedProcess* new_process = GetDebuggedProcess(request.koid);
-    if (new_process) {
-      new_process->PopulateCurrentThreads();
-
-      if (new_process->RegisterDebugState()) {
-        // Suspend all threads while the module list is being sent. The client
-        // will resume the threads once it's loaded symbols and processed
-        // breakpoints (this may take a while and we'd like to get any
-        // breakpoints as early as possible).
-        std::vector<uint64_t> paused_thread_koids;
-        new_process->SuspendAll(false, &paused_thread_koids);
-        new_process->SendModuleNotification(std::move(paused_thread_koids));
-      }
-    }
-  } else if (request.type == debug_ipc::TaskType::kJob) {
-    zx::job job = GetJobFromKoid(request.koid);
-    if (job.is_valid()) {
-      reply.name = NameForObject(job);
-      reply.koid = request.koid;
-      reply.status = AddDebuggedJob(request.koid, std::move(job));
-    }
-
-    // Send the reply.
-    debug_ipc::MessageWriter writer;
-    debug_ipc::WriteReply(reply, transaction_id, &writer);
-    stream()->Write(writer.MessageComplete());
+  // All other attach types are variants of job attaches, find the KOID.
+  zx_koid_t job_koid = 0;
+  if (request.type == debug_ipc::TaskType::kJob) {
+    job_koid = request.koid;
   } else if (request.type == debug_ipc::TaskType::kComponentRoot) {
-    std::string koid_str;
-    bool file_read = files::ReadFileToString("/hub/job-id", &koid_str);
-    if (!file_read) {
-      FXL_LOG(ERROR) << "Not able to read job-id: " << strerror(errno);
-      reply.status = ZX_ERR_INTERNAL;
-    } else {
-      char* end = NULL;
-      uint64_t koid = strtoul(koid_str.c_str(), &end, 10);
-      if (*end) {
-        FXL_LOG(ERROR) << "Invalid job-id: " << koid_str.c_str();
-        reply.status = ZX_ERR_INTERNAL;
-      } else {
-        zx::job job = GetJobFromKoid(koid);
-        if (job.is_valid()) {
-          reply.koid = koid;
-          reply.name = NameForObject(job);
-          reply.status = AddDebuggedJob(koid, std::move(job));
-          if (reply.status == ZX_OK) {
-            reply.status = ZX_OK;
-            component_root_job_koid_ = koid;
-          } else {
-            FXL_LOG(ERROR) << "Could not attach to the root job: "
-                           << debug_ipc::ZxStatusToString(reply.status);
-          }
-        }
-      }
-    }
-    // Send the reply.
-    debug_ipc::MessageWriter writer;
-    debug_ipc::WriteReply(reply, transaction_id, &writer);
-    stream()->Write(writer.MessageComplete());
+    job_koid = GetComponentJobKoid();
+    attached_root_job_koid_ = job_koid;
+  } else if (request.type == debug_ipc::TaskType::kSystemRoot) {
+    job_koid = GetRootJobKoid();
+    attached_root_job_koid_ = job_koid;
   } else {
     FXL_LOG(WARNING) << "Got bad debugger attach request type, ignoring.";
     return;
   }
+
+  debug_ipc::AttachReply reply;
+  reply.status = ZX_ERR_NOT_FOUND;
+
+  // Don't return early since we always need to send the reply, even on fail.
+  zx::job job = GetJobFromKoid(job_koid);
+  if (job.is_valid()) {
+    reply.name = NameForObject(job);
+    reply.koid = job_koid;
+    reply.status = AddDebuggedJob(job_koid, std::move(job));
+  }
+
+  // Send the reply.
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteReply(reply, transaction_id, &writer);
+  stream()->Write(writer.MessageComplete());
 }
 
 void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
@@ -352,7 +301,6 @@ void DebugAgent::OnWriteRegisters(
 void DebugAgent::OnAddOrChangeBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     debug_ipc::AddOrChangeBreakpointReply* reply) {
-
   switch (request.breakpoint_type) {
     case debug_ipc::BreakpointType::kSoftware:
     case debug_ipc::BreakpointType::kHardware:
@@ -436,8 +384,8 @@ void DebugAgent::SetupBreakpoint(
                          std::forward_as_tuple(this))
                 .first;
   }
-  reply->status = found->second.SetSettings(request.breakpoint_type,
-                                            request.breakpoint);
+  reply->status =
+      found->second.SetSettings(request.breakpoint_type, request.breakpoint);
 }
 
 zx_status_t DebugAgent::RegisterWatchpoint(
@@ -553,6 +501,48 @@ zx_status_t DebugAgent::AddDebuggedProcess(
   return ZX_OK;
 }
 
+void DebugAgent::AttachToProcess(uint32_t transaction_id,
+                                 zx_koid_t process_koid) {
+  // Don't return early without sending this reply, even in the failure case.
+  debug_ipc::AttachReply reply;
+  reply.status = ZX_ERR_NOT_FOUND;
+
+  zx::process process = GetProcessFromKoid(process_koid);
+  if (process.is_valid()) {
+    reply.name = NameForObject(process);
+    reply.koid = process_koid;
+
+    // TODO(donosoc): change resume thread setting once we have global
+    // settings.
+    DebuggedProcessCreateInfo create_info;
+    create_info.name = reply.name;
+    create_info.koid = process_koid;
+    create_info.handle = std::move(process);
+    reply.status = AddDebuggedProcess(std::move(create_info));
+  }
+
+  // Send the reply.
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteReply(reply, transaction_id, &writer);
+  stream()->Write(writer.MessageComplete());
+
+  // For valid attaches, follow up with the current module and thread lists.
+  DebuggedProcess* new_process = GetDebuggedProcess(process_koid);
+  if (new_process) {
+    new_process->PopulateCurrentThreads();
+
+    if (new_process->RegisterDebugState()) {
+      // Suspend all threads while the module list is being sent. The client
+      // will resume the threads once it's loaded symbols and processed
+      // breakpoints (this may take a while and we'd like to get any
+      // breakpoints as early as possible).
+      std::vector<uint64_t> paused_thread_koids;
+      new_process->SuspendAll(false, &paused_thread_koids);
+      new_process->SendModuleNotification(std::move(paused_thread_koids));
+    }
+  }
+}
+
 void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
                                debug_ipc::LaunchReply* reply) {
   FXL_DCHECK(!request.argv.empty());
@@ -608,8 +598,13 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   }
   FXL_DCHECK(expected_components_.count(description.filter) == 0);
 
-  // Create the filter
-  DebuggedJob* job = GetDebuggedJob(component_root_job_koid_);
+  // Create the filter.
+  //
+  // This is a hack. It will fail if the debugger isn't already attached to
+  // either the system or component root jobs. Ideally we would get the exact
+  // parent job for the component being launched and not depend on what the
+  // client may have already attached to.
+  DebuggedJob* job = GetDebuggedJob(attached_root_job_koid_);
   if (!job) {
     FXL_LOG(WARNING) << "Could not obtain component root job. Are you running "
                         "attached to another debugger?";

@@ -9,6 +9,9 @@
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
+#include "src/developer/debug/debug_agent/system_info.h"
+#include "src/developer/debug/ipc/agent_protocol.h"
+#include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/logging.h"
@@ -77,6 +80,8 @@ zx::process LaunchProcess(const zx::job& job, const std::string name,
 class JobStreamBackend : public MockStreamBackend {
  public:
   JobStreamBackend(MessageLoop* message_loop) : message_loop_(message_loop) {}
+
+  void ClearAttachReply() { attach_reply_ = std::nullopt; }
 
   // Notification Handling -----------------------------------------------------
 
@@ -397,6 +402,48 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   const auto& exit_event = backend.process_exit_events().back();
   EXPECT_EQ(exit_event.process_koid, process_koid);
   EXPECT_EQ(exit_event.return_code, 0);
+}
+
+TEST(DebuggedJobIntegrationTest, AttachSpecial) {
+  MessageLoopWrapper loop_wrapper;
+
+  JobStreamBackend mock_stream_backend(loop_wrapper.loop());
+  RemoteAPI* remote_api = mock_stream_backend.remote_api();
+
+  // Request attaching to the component root job.
+  debug_ipc::AttachRequest attach_request = {};
+  attach_request.type = debug_ipc::TaskType::kComponentRoot;
+
+  // OnAttach is special and takes a serialized message.
+  const uint32_t kTransactionId = 1;
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteRequest(attach_request, kTransactionId, &writer);
+  remote_api->OnAttach(writer.MessageComplete());
+
+  ASSERT_TRUE(mock_stream_backend.attach_reply());
+  debug_ipc::AttachReply comp_reply = *mock_stream_backend.attach_reply();
+
+  // At this point we can't validate that much since the test environment is
+  // special and the component manager's job won't actually be the real one.
+  // But we can at least check that the KOID matches what the component job
+  // KOID getter computes.
+  EXPECT_EQ(GetComponentJobKoid(), comp_reply.koid);
+
+  // Now attach to the system root.
+  mock_stream_backend.ClearAttachReply();
+  attach_request.type = debug_ipc::TaskType::kSystemRoot;
+
+  debug_ipc::WriteRequest(attach_request, kTransactionId, &writer);
+  remote_api->OnAttach(writer.MessageComplete());
+
+  ASSERT_TRUE(mock_stream_backend.attach_reply());
+  debug_ipc::AttachReply root_reply = *mock_stream_backend.attach_reply();
+
+  // Validate we got a root job KOID and that its different than the
+  // component one. As above, this isn't the real root job so we can't do
+  // too much checking.
+  EXPECT_EQ(GetRootJobKoid(), root_reply.koid);
+  EXPECT_NE(root_reply.koid, comp_reply.koid);
 }
 
 }  // namespace debug_agent

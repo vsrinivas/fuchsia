@@ -265,13 +265,11 @@ std::string TargetStateToString(Target::State state) {
 std::string JobContextStateToString(JobContext::State state) {
   switch (state) {
     case JobContext::State::kNone:
-      return "Not running";
-    case JobContext::State::kStarting:
-      return "Starting";
+      return "Not attached";
     case JobContext::State::kAttaching:
       return "Attaching";
-    case JobContext::State::kRunning:
-      return "Running";
+    case JobContext::State::kAttached:
+      return "Attached";
   }
   FXL_NOTREACHED();
   return std::string();
@@ -338,7 +336,7 @@ std::string DescribeJobContext(const ConsoleContext* context,
   // Koid string. This includes a trailing space when present so it can be
   // concat'd even when not present and things look nice.
   std::string koid_str;
-  if (job_context->GetState() == JobContext::State::kRunning) {
+  if (job_context->GetState() == JobContext::State::kAttached) {
     koid_str = fxl::StringPrintf("koid=%" PRIu64 " ",
                                  job_context->GetJob()->GetKoid());
   }
@@ -386,7 +384,7 @@ std::string DescribeTargetName(const Target* target) {
 std::string DescribeJobContextName(const JobContext* job_context) {
   // When running, use the object name if any.
   std::string name;
-  if (job_context->GetState() == JobContext::State::kRunning)
+  if (job_context->GetState() == JobContext::State::kAttached)
     name = job_context->GetJob()->GetName();
 
   return name;

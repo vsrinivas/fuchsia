@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 7;
+constexpr uint32_t kProtocolVersion = 8;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -44,7 +44,8 @@ struct MsgHeader {
     kWriteRegisters,
     kRemoveBreakpoint,
     kResume,
-    kSysInfo, kThreadStatus,
+    kSysInfo,
+    kThreadStatus,
     kThreads,
     kWriteMemory,
 
@@ -130,7 +131,13 @@ struct KillReply {
   zx_status_t status = 0;
 };
 
-enum class TaskType : uint32_t { kProcess = 0, kJob, kComponentRoot, kLast };
+enum class TaskType : uint32_t {
+  kProcess = 0,
+  kJob,
+  kSystemRoot,
+  kComponentRoot,
+  kLast
+};
 const char* TaskTypeToString(TaskType);
 
 // The debug agent will follow a successful AttachReply with notifications for
@@ -432,7 +439,7 @@ struct NotifyIO {
   enum class Type : uint32_t {
     kStderr,
     kStdout,
-    kLast,    // Not a real type.
+    kLast,  // Not a real type.
   };
   static const char* TypeToString(Type);
 

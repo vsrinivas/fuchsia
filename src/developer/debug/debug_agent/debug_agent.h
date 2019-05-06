@@ -136,6 +136,10 @@ class DebugAgent : public RemoteAPI,
   DebuggedThread* GetDebuggedThread(zx_koid_t process_koid,
                                     zx_koid_t thread_koid);
 
+  // Attempts to attach to the given process and sends a AttachReply message
+  // to the client with the result.
+  void AttachToProcess(uint32_t transaction_id, zx_koid_t process_koid);
+
   void LaunchProcess(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
 
   void LaunchComponent(const debug_ipc::LaunchRequest&,
@@ -155,12 +159,13 @@ class DebugAgent : public RemoteAPI,
   std::map<uint32_t, Breakpoint> breakpoints_;
   std::map<uint32_t, Watchpoint> watchpoints_;
 
-  // Normally the debug agent would be attached to the base component and give
-  // the client the koid. This is a job koid needed to be able to create an
-  // invisible filter to catch the newly started component.
+  // Normally the debug agent would be attached to the root job or the
+  // component root job and give the client the koid. This is a job koid needed
+  // to be able to create an invisible filter to catch the newly started
+  // component. This will be 0 if not attached to such a job.
   // TODO(donosoc): Hopefully we could get the created job for the component
   //                so we can only filter on that.
-  zx_koid_t component_root_job_koid_ = 0;
+  zx_koid_t attached_root_job_koid_ = 0;
 
   // Each component launch is asigned an unique filter and id. This is because
   // new components are attached via the job filter mechanism. When a particular

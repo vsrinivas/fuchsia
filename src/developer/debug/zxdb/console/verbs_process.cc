@@ -47,16 +47,13 @@ Err AssertRunnableTarget(Target* target) {
 // Verifies that the given job_context can be run or attached.
 Err AssertRunnableJobContext(JobContext* job_context) {
   JobContext::State state = job_context->GetState();
-  if (state == JobContext::State::kStarting ||
-      state == JobContext::State::kAttaching) {
-    return Err(
-        "The current job is in the job of starting or attaching.\n"
-        "Either \"kill\" it or create a \"new\" job context.");
+  if (state == JobContext::State::kAttaching) {
+    return Err("The current job is in the process of attaching.");
   }
-  if (state == JobContext::State::kRunning) {
+  if (state == JobContext::State::kAttached) {
     return Err(
-        "The current job is already running.\n"
-        "Either \"kill\" it or create a \"new\" job context.");
+        "The current job is already attached.\n"
+        "Either \"job detach\" it or create a new context with \"job new\".");
   }
   return Err();
 }
@@ -267,16 +264,43 @@ Err DoKill(ConsoleContext* context, const Command& cmd,
 
 // attach ----------------------------------------------------------------------
 
+constexpr int kAttachComponentRootSwitch = 1;
+constexpr int kAttachSystemRootSwitch = 2;
+
 const char kAttachShortHelp[] = "attach: Attach to a running process/job.";
 const char kAttachHelp[] =
     R"(attach <process/job koid>
+
+  Attaches to an existing process or job. When no noun is provided it will
+  assume the KOID refers to a process. To be explicit, prefix with a "process"
+  or "job" noun.
+
+  When attaching to a job, two switches are accepted to refer to special jobs:
+
+    --root | -r
+        Attaches to the system's root job.
+
+    --app | -a
+        Attaches to the component manager's job which is the root of all
+        components.
+
+  Each job and process can have only one attached debugger system-wide. New
+  process notifications are delivered to the most specific attached job (they
+  don't "bubble up").
+
+   • Using job filters with multiple debuggers is not advised unless watching
+     completely non-overlapping jobs.
+
+   • Even within the same debugger, if there are multiple overapping job
+     contexts only the most specific one's filters will apply to a launched
+     process.
 
 Hints
 
   Use the "ps" command to view the active process and job tree.
 
   To debug more than one process/job at a time, use "new" to create a new
-  process/job context.
+  process ("process new") or job ("job new") context.
 
 Examples
 
@@ -285,6 +309,12 @@ Examples
 
   job attach 2323
       Attaches to job with koid 2323.
+
+  job attach -a
+      Attaches to the component manager's root job.
+
+  job attach -r
+      Attaches to the system's root job.
 
   process 4 attach 2371
       Attaches process context 4 to the process with koid 2371.
@@ -300,21 +330,37 @@ Err DoAttach(ConsoleContext* context, const Command& cmd,
     return err;
 
   if (cmd.HasNoun(Noun::kJob)) {
+    // Attach a job.
     err = AssertRunnableJobContext(cmd.job_context());
     if (err.has_error())
       return err;
 
-    // Should have one arg which is the koid.
-    uint64_t koid = 0;
-    err = ReadUint64Arg(cmd, 0, "job koid", &koid);
-    if (err.has_error())
-      return err;
+    auto cb = [callback](fxl::WeakPtr<JobContext> job_context, const Err& err) {
+      JobCommandCallback("attach", job_context, true, err, callback);
+    };
 
-    cmd.job_context()->Attach(
-        koid, [callback](fxl::WeakPtr<JobContext> job_context, const Err& err) {
-          JobCommandCallback("attach", job_context, true, err, callback);
-        });
+    if (cmd.HasSwitch(kAttachComponentRootSwitch) &&
+        cmd.HasSwitch(kAttachSystemRootSwitch))
+      return Err("Can't specify both component and root job.");
+
+    if (cmd.HasSwitch(kAttachComponentRootSwitch)) {
+      if (!cmd.args().empty())
+        return Err("No argument expected attaching to the component root.");
+      cmd.job_context()->AttachToComponentRoot(std::move(cb));
+    } else if (cmd.HasSwitch(kAttachSystemRootSwitch)) {
+      if (!cmd.args().empty())
+        return Err("No argument expected attaching to the system root.");
+      cmd.job_context()->AttachToSystemRoot(std::move(cb));
+    } else {
+      // Expect a numeric KOID.
+      uint64_t koid = 0;
+      err = ReadUint64Arg(cmd, 0, "job koid", &koid);
+      if (err.has_error())
+        return err;
+      cmd.job_context()->Attach(koid, std::move(cb));
+    }
   } else {
+    // Attach a process.
     err = AssertRunnableTarget(cmd.target());
     if (err.has_error())
       return err;
@@ -548,8 +594,7 @@ Err DoAspace(ConsoleContext* context, const Command& cmd) {
 
 // stdout/stderr ---------------------------------------------------------------
 
-const char kStdioShortHelp[] =
-      "stdout | stderr: Show process io.";
+const char kStdioShortHelp[] = "stdout | stderr: Show process io.";
 const char kStdioHelp[] =
     R"(stdout | stderr
 
@@ -571,7 +616,6 @@ Examples
   pr 2 stderr
     [ERROR] This is a stderr entry.
 )";
-
 
 template <typename ContainerType>
 std::string OutputContainer(const ContainerType& container) {
@@ -646,7 +690,6 @@ OutputBuffer TemporaryOutputBacktrace(const Backtrace& backtrace) {
     row.push_back(fxl::StringPrintf("%s:%d", fl.file().c_str(), fl.line()));
   }
 
-
   OutputBuffer out;
   FormatTable({ColSpec(Align::kLeft, 0, "No", 0),
                ColSpec(Align::kRight, 0, "Function", 0),
@@ -663,7 +706,6 @@ Err DoPastBacktrace(ConsoleContext* context, const Command& cmd) {
 
   if (!cmd.args().empty())
     return Err("No arguments for now.");
-
 
   auto* process = cmd.target()->GetProcess();
   if (!process)
@@ -690,7 +732,6 @@ Err DoPastBacktrace(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
-  // TODO(anmittal): Add one for job when we fix verbs.
   VerbRecord run(&DoRun, {"run", "r"}, kRunShortHelp, kRunHelp,
                  CommandGroup::kProcess);
   run.switches.push_back(
@@ -699,8 +740,15 @@ void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
 
   (*verbs)[Verb::kKill] = VerbRecord(&DoKill, {"kill", "k"}, kKillShortHelp,
                                      kKillHelp, CommandGroup::kProcess);
-  (*verbs)[Verb::kAttach] = VerbRecord(&DoAttach, {"attach"}, kAttachShortHelp,
-                                       kAttachHelp, CommandGroup::kProcess);
+
+  VerbRecord attach(&DoAttach, {"attach"}, kAttachShortHelp, kAttachHelp,
+                    CommandGroup::kProcess);
+  attach.switches.push_back(
+      SwitchRecord(kAttachComponentRootSwitch, false, "app", 'a'));
+  attach.switches.push_back(
+      SwitchRecord(kAttachSystemRootSwitch, false, "root", 'r'));
+  (*verbs)[Verb::kAttach] = std::move(attach);
+
   (*verbs)[Verb::kDetach] = VerbRecord(&DoDetach, {"detach"}, kDetachShortHelp,
                                        kDetachHelp, CommandGroup::kProcess);
   (*verbs)[Verb::kLibs] = VerbRecord(&DoLibs, {"libs"}, kLibsShortHelp,
