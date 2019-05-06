@@ -48,6 +48,7 @@ use {
         task::Context,
         Future, FutureExt, Poll,
     },
+    pin_utils::{unsafe_pinned, unsafe_unpinned},
     std::{marker::Unpin, pin::Pin},
     void::Void,
 };
@@ -67,7 +68,7 @@ pub fn read_only<OnRead, OnReadRes>(
 >
 where
     OnRead: FnMut() -> OnReadRes + Send,
-    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
 {
     read_only_attr(DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES, on_read)
 }
@@ -86,7 +87,7 @@ pub fn read_only_attr<OnRead, OnReadRes>(
 >
 where
     OnRead: FnMut() -> OnReadRes + Send,
-    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
 {
     AsyncPseudoFile::new(protection_attributes & MODE_PROTECTION_MASK, Some(on_read), 0, None)
 }
@@ -107,7 +108,7 @@ pub fn write_only<OnWrite, OnWriteRes>(
 >
 where
     OnWrite: FnMut(Vec<u8>) -> OnWriteRes + Send,
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     write_only_attr(DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES, capacity, on_write)
 }
@@ -127,7 +128,7 @@ pub fn write_only_attr<OnWrite, OnWriteRes>(
 >
 where
     OnWrite: FnMut(Vec<u8>) -> OnWriteRes + Send,
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     AsyncPseudoFile::new(
         protection_attributes & MODE_PROTECTION_MASK,
@@ -153,9 +154,9 @@ pub fn read_write<OnRead, OnReadRes, OnWrite, OnWriteRes>(
 ) -> AsyncPseudoFile<OnRead, OnReadRes, OnWrite, OnWriteRes>
 where
     OnRead: FnMut() -> OnReadRes + Send,
-    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
     OnWrite: FnMut(Vec<u8>) -> OnWriteRes + Send,
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     read_write_attr(DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES, on_read, capacity, on_write)
 }
@@ -171,9 +172,9 @@ pub fn read_write_attr<OnRead, OnReadRes, OnWrite, OnWriteRes>(
 ) -> AsyncPseudoFile<OnRead, OnReadRes, OnWrite, OnWriteRes>
 where
     OnRead: FnMut() -> OnReadRes + Send,
-    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
     OnWrite: FnMut(Vec<u8>) -> OnWriteRes + Send,
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     AsyncPseudoFile::new(
         protection_attributes & MODE_PROTECTION_MASK,
@@ -185,7 +186,7 @@ where
 
 struct OnWriteFuture<OnWriteRes>
 where
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     res: OnWriteRes,
     responder: Option<FileCloseResponder>,
@@ -193,8 +194,15 @@ where
 
 impl<OnWriteRes> OnWriteFuture<OnWriteRes>
 where
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
+    // unsafe: `OnWriteFuture` does not implement `Drop`, or `Unpin`.  And it is not
+    // `#[repr(packed)]`.
+    unsafe_pinned!(res: OnWriteRes);
+    // unsafe: `responder` is not referenced by any other field in the `OnWriteFuture`, so it is
+    // safe to get a mutable reference from a pinned one.
+    unsafe_unpinned!(responder: Option<FileCloseResponder>);
+
     pub fn new(res: OnWriteRes, responder: FileCloseResponder) -> Self {
         OnWriteFuture { res, responder: Some(responder) }
     }
@@ -202,20 +210,20 @@ where
 
 impl<OnWriteRes> Future for OnWriteFuture<OnWriteRes>
 where
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     type Output = ();
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        match self.res.poll_unpin(cx) {
+        match self.as_mut().res().poll_unpin(cx) {
             Poll::Ready(Ok(())) => {
                 // if the responder fails here we have no recourse.
-                let _ = self.responder.take().unwrap().send(Status::OK.into_raw());
+                let _ = self.as_mut().responder().take().unwrap().send(Status::OK.into_raw());
                 Poll::Ready(())
             }
             Poll::Ready(Err(e)) => {
                 // if the responder fails here we have no recourse.
-                let _ = self.responder.take().unwrap().send(e.into_raw());
+                let _ = self.as_mut().responder().take().unwrap().send(e.into_raw());
                 Poll::Ready(())
             }
             Poll::Pending => Poll::Pending,
@@ -230,9 +238,9 @@ where
 pub struct AsyncPseudoFile<OnRead, OnReadRes, OnWrite, OnWriteRes>
 where
     OnRead: FnMut() -> OnReadRes + Send,
-    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
     OnWrite: FnMut(Vec<u8>) -> OnWriteRes + Send,
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     protection_attributes: u32,
     on_read: Option<OnRead>,
@@ -246,9 +254,9 @@ where
 impl<OnRead, OnReadRes, OnWrite, OnWriteRes> AsyncPseudoFile<OnRead, OnReadRes, OnWrite, OnWriteRes>
 where
     OnRead: FnMut() -> OnReadRes + Send,
-    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
     OnWrite: FnMut(Vec<u8>) -> OnWriteRes + Send,
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     fn new(
         protection_attributes: u32,
@@ -349,9 +357,9 @@ impl<OnRead, OnReadRes, OnWrite, OnWriteRes> DirectoryEntry
     for AsyncPseudoFile<OnRead, OnReadRes, OnWrite, OnWriteRes>
 where
     OnRead: FnMut() -> OnReadRes + Send,
-    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
     OnWrite: FnMut(Vec<u8>) -> OnWriteRes + Send,
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     fn open(
         &mut self,
@@ -377,9 +385,9 @@ impl<OnRead, OnReadRes, OnWrite, OnWriteRes> Unpin
     for AsyncPseudoFile<OnRead, OnReadRes, OnWrite, OnWriteRes>
 where
     OnRead: FnMut() -> OnReadRes + Send,
-    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
     OnWrite: FnMut(Vec<u8>) -> OnWriteRes + Send,
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
 }
 
@@ -387,9 +395,9 @@ impl<OnRead, OnReadRes, OnWrite, OnWriteRes> FusedFuture
     for AsyncPseudoFile<OnRead, OnReadRes, OnWrite, OnWriteRes>
 where
     OnRead: FnMut() -> OnReadRes + Send,
-    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
     OnWrite: FnMut(Vec<u8>) -> OnWriteRes + Send,
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     fn is_terminated(&self) -> bool {
         // The `AsyncPseudoFile` never completes, but once there are no more connections, it is
@@ -406,9 +414,9 @@ impl<OnRead, OnReadRes, OnWrite, OnWriteRes> Future
     for AsyncPseudoFile<OnRead, OnReadRes, OnWrite, OnWriteRes>
 where
     OnRead: FnMut() -> OnReadRes + Send,
-    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
     OnWrite: FnMut(Vec<u8>) -> OnWriteRes + Send,
-    OnWriteRes: Future<Output = Result<(), Status>> + Send + Unpin,
+    OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     type Output = Void;
 
@@ -483,14 +491,14 @@ mod tests {
         },
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::{
-            FileMarker, SeekOrigin, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
-            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            FileMarker, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
         fuchsia_zircon::sys::ZX_OK,
         futures::{
             channel::{mpsc, oneshot},
-            future::{join, lazy, Shared},
+            future::{join, lazy},
             FutureExt, SinkExt,
         },
         std::sync::{Arc, Mutex},
@@ -1008,43 +1016,6 @@ mod tests {
         );
     }
 
-    /// the implementation of this future is relatively straight-forward, but we should be able to do
-    /// this in an async block instead of defining a real type for it. however, we require `Unpin`
-    /// for futures returned by the `on_read` and `on_write` callbacks, and async blocks are
-    /// `!Unpin`. we are investigating removing the `Unpin` requirement, which means we can get rid
-    /// of this type - ZX-3913.
-    struct Staller<F, R>
-    where
-        F: FnOnce() -> R + Unpin,
-    {
-        rx: Shared<oneshot::Receiver<()>>,
-        run: Option<F>,
-    }
-
-    impl<F, R> Staller<F, R>
-    where
-        F: FnOnce() -> R + Unpin,
-    {
-        pub fn new(rx: Shared<oneshot::Receiver<()>>, run: F) -> Self {
-            Staller { rx, run: Some(run) }
-        }
-    }
-
-    impl<F, R> Future for Staller<F, R>
-    where
-        F: FnOnce() -> R + Unpin,
-    {
-        type Output = R;
-
-        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-            if let Poll::Ready(Ok(())) = self.rx.poll_unpin(cx) {
-                Poll::Ready((self.run.take().unwrap())())
-            } else {
-                Poll::Pending
-            }
-        }
-    }
-
     #[test]
     fn slow_on_read() {
         // the rest of the tests for the async file all use fast_future! to wrap their relevant
@@ -1069,58 +1040,42 @@ mod tests {
             OPEN_RIGHT_READABLE,
             exec,
             read_only(|| {
-                let read_count = read_counter.clone();
-                let mut count = read_count.lock().unwrap();
-                *count += 1;
-                Staller::new(finish_future_receiver.clone(), || Ok(b"content".to_vec()))
+                let read_counter = read_counter.clone();
+                let finish_future_receiver = finish_future_receiver.clone();
+                async move {
+                    *read_counter.lock().unwrap() += 1;
+                    await!(finish_future_receiver)
+                        .expect("finish_future_sender was not called before been dropped.");
+                    *read_counter.lock().unwrap() += 1;
+                    Ok(b"content".to_vec())
+                }
             }),
             async move |proxy| {
-                let expected1 = b"content".to_vec();
-                let expected2 = b"ent".to_vec();
-                let read_fut1 = proxy.read(expected1.len() as u64);
-                let seek_fut = proxy.seek(4, SeekOrigin::Start);
-                let read_fut2 = proxy.read(expected2.len() as u64);
-                let close_fut = proxy.close();
+                *client_count.lock().unwrap() += 1;
 
-                let (status, content) = await!(read_fut1).expect("read 1 failed");
-                assert_eq!(Status::from_raw(status), Status::OK);
-                assert_eq!(content, expected1);
+                assert_read!(proxy, "content");
 
-                let (status, actual) = await!(seek_fut).expect("seek failed");
-                assert_eq!(Status::from_raw(status), Status::OK);
-                assert_eq!(actual, 4);
+                assert_seek!(proxy, 4, Start);
+                assert_read!(proxy, "ent");
+                assert_close!(proxy);
 
-                let (status, content) = await!(read_fut2).expect("read 2 failed");
-                assert_eq!(Status::from_raw(status), Status::OK);
-                assert_eq!(content, expected2);
-
-                let status = await!(close_fut).expect("close failed");
-                assert_eq!(Status::from_raw(status), Status::OK);
-
-                let mut count = client_count.lock().unwrap();
-                *count += 1;
+                *client_count.lock().unwrap() += 1;
             },
             |run_until_stalled_assert| {
                 let check_read_client_counts = |expected_read, expected_client| {
                     assert_eq!(*read_counter.lock().unwrap(), expected_read);
                     assert_eq!(*client_counter.lock().unwrap(), expected_client);
                 };
-                // confirm that on_read has been called once. it's called by server.open
-                // confirm that we haven't executed the client read and close yet
-                check_read_client_counts(1, 0);
-
                 run_until_stalled_assert(false);
 
-                // confirm that on_read has been called once
-                // confirm that we haven't executed the client read and close yet
-                check_read_client_counts(1, 0);
+                // on_read is waiting yet, as well as the client.
+                check_read_client_counts(1, 1);
 
                 finish_future_sender.send(()).unwrap();
                 run_until_stalled_assert(true);
 
-                // confirm that on_read has still only been called once
-                // confirm that we have executed the client read and close
-                check_read_client_counts(1, 1);
+                // Both have reached the end.
+                check_read_client_counts(2, 2);
             },
         );
     }
@@ -1140,26 +1095,24 @@ mod tests {
             OPEN_RIGHT_WRITABLE,
             exec,
             write_only(100, |content| {
-                let write_count = write_counter.clone();
-
-                Staller::new(finish_future_receiver.clone(), move || {
+                let write_counter = write_counter.clone();
+                let finish_future_receiver = finish_future_receiver.clone();
+                async move {
                     assert_eq!(*&content, b"content");
-                    // we need to confirm that the write future was actually executed,
-                    // whereas for the read future, we trivially know that when we try to
-                    // read.
-                    let mut count = write_count.lock().unwrap();
-                    *count += 1;
+                    *write_counter.lock().unwrap() += 1;
+                    await!(finish_future_receiver)
+                        .expect("finish_future_sender was not called before been dropped.");
+                    *write_counter.lock().unwrap() += 1;
                     Ok(())
-                })
+                }
             }),
             async move |proxy| {
-                // since we are waiting for the on_write side of the future, we don't need to test
-                // the action queueing, so we just use the normal assert macros.
+                *client_count.lock().unwrap() += 1;
+
                 assert_write!(proxy, "content");
                 assert_close!(proxy);
 
-                let mut count = client_count.lock().unwrap();
-                *count += 1;
+                *client_count.lock().unwrap() += 1;
             },
             |run_until_stalled_assert| {
                 let check_write_client_counts = |expected_write, expected_client| {
@@ -1174,22 +1127,17 @@ mod tests {
                         "client count mismatch"
                     );
                 };
-                // confirm that we haven't yet completed the write
-                // confirm that we haven't executed the client write and close yet
-                check_write_client_counts(0, 0);
 
                 run_until_stalled_assert(false);
 
-                // confirm that we haven't yet completed the write
-                // confirm that we haven't completed the close call yet
-                check_write_client_counts(0, 0);
+                // The server and the client are waiting.
+                check_write_client_counts(1, 1);
 
                 finish_future_sender.send(()).unwrap();
                 run_until_stalled_assert(true);
 
-                // confirm that we have completed the write
-                // confirm that we have only executed the client write and close once
-                check_write_client_counts(1, 1);
+                // The server and the client are done.
+                check_write_client_counts(2, 2);
             },
         );
     }

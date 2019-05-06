@@ -11,7 +11,11 @@ use {
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{FileMarker, FileProxy},
     fuchsia_async as fasync,
-    futures::{channel::mpsc, future::{join, LocalFutureObj}, select, Future, Poll, StreamExt},
+    futures::{
+        channel::mpsc,
+        future::{join, LocalFutureObj},
+        select, Future, Poll, StreamExt,
+    },
     pin_utils::pin_mut,
     std::iter,
     void::unreachable,

@@ -23,6 +23,7 @@ use {
         task::Context,
         Future, FutureExt, Poll,
     },
+    pin_utils::{unsafe_pinned, unsafe_unpinned},
     static_assertions::assert_eq_size,
     std::{io::Write, iter, mem, pin::Pin},
 };
@@ -71,7 +72,7 @@ pub struct FileConnection {
 
 pub enum InitialConnectionState<BufferFut>
 where
-    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send,
 {
     Failed,
     Pending(FileConnectionFuture<BufferFut>),
@@ -147,7 +148,7 @@ impl FileConnection {
     ) -> InitialConnectionState<OnReadRes>
     where
         InitBuffer: FnOnce(u32) -> (BufferResult<OnReadRes>, bool),
-        OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+        OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
     {
         let flags =
             match new_connection_validate_flags(parent_flags, flags, mode, readable, writable) {
@@ -548,7 +549,7 @@ impl Stream for FileConnection {
 /// are truncating, so hard-coding was_written to false is fine.
 pub struct FileConnectionFuture<BufferFut>
 where
-    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send,
 {
     flags: u32,
     protection_attributes: u32,
@@ -559,8 +560,15 @@ where
 
 impl<BufferFut> FileConnectionFuture<BufferFut>
 where
-    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send,
 {
+    // unsafe: `server_end` is not referenced by any other field in the `OnWriteFuture`, so it is
+    // safe to get a mutable reference from a pinned one.
+    unsafe_unpinned!(server_end: Option<ServerEnd<NodeMarker>>);
+    // unsafe: `FileConnectionFuture` does not implement `Drop`, or `Unpin`.  And it is not
+    // `#[repr(packed)]`.
+    unsafe_pinned!(res: BufferFut);
+
     pub fn new(
         flags: u32,
         protection_attributes: u32,
@@ -580,16 +588,16 @@ where
 
 impl<BufferFut> Future for FileConnectionFuture<BufferFut>
 where
-    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send + Unpin,
+    BufferFut: Future<Output = Result<Vec<u8>, Status>> + Send,
 {
     type Output = Option<StreamFuture<FileConnection>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        match self.res.poll_unpin(cx) {
+        match self.as_mut().res().poll_unpin(cx) {
             Poll::Ready(Ok(buf)) => {
                 // unwrap is "safe" in that it only happens when we are returning Poll::Ready, which
                 // means any subsequent calls to poll can do nasty things (like panic!)
-                let server_end = self.server_end.take().unwrap();
+                let server_end = self.as_mut().server_end().take().unwrap();
                 let conn = FileConnection::create_connection(
                     self.flags,
                     self.protection_attributes,
@@ -603,7 +611,7 @@ where
             // if on_read returns an error, we want to attempt to signal that something went wrong.
             Poll::Ready(Err(status)) => {
                 // same reasoning here as above for the safety of unwrapping this value.
-                let server_end = self.server_end.take().unwrap();
+                let server_end = self.as_mut().server_end().take().unwrap();
                 send_on_open_with_error(self.flags, server_end, status);
                 Poll::Ready(None)
             }
