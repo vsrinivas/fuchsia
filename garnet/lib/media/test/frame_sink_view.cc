@@ -235,7 +235,7 @@ void FrameSinkView::PutFrame(
       });
 
   // The frame will self-delete when its wait is done, so don't ~frame here.
-  frame.release();
+  (void)frame.release();
 }
 
 FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent,

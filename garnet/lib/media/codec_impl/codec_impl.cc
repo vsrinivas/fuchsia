@@ -1783,19 +1783,19 @@ void CodecImpl::OnBufferCollectionInfoInternal(
   // This code trusts sysmem to really be sysmem and to behave correctly, but
   // doesn't hurt to double-check some things in debug build.
   ZX_DEBUG_ASSERT(buffer_count >= 1);
-  ZX_DEBUG_ASSERT(buffer_count <= countof(buffer_collection_info.buffers));
+  ZX_DEBUG_ASSERT(buffer_count <= buffer_collection_info.buffers.size());
   // Spot check that the boundary between valid and invalid handles is where it
   // should be.
   ZX_DEBUG_ASSERT(
       buffer_collection_info.buffers[buffer_count - 1].vmo.is_valid());
-  ZX_DEBUG_ASSERT(buffer_count == countof(buffer_collection_info.buffers) ||
+  ZX_DEBUG_ASSERT(buffer_count == buffer_collection_info.buffers.size() ||
                   !buffer_collection_info.buffers[buffer_count].vmo.is_valid());
 
   // Let's move the VMO handles out first, so that the BufferCollectionInfo_2 we
   // send to the core codec doesn't have the VMO handles.  We want the core
   // codec to get its VMO handles via the CodecBuffer*(s) we'll provide shortly
   // below.
-  zx::vmo vmos[countof(buffer_collection_info.buffers)];
+  zx::vmo vmos[buffer_collection_info.buffers.size()];
   for (uint32_t i = 0; i < buffer_count; ++i) {
     vmos[i] = std::move(buffer_collection_info.buffers[i].vmo);
     ZX_DEBUG_ASSERT(!buffer_collection_info.buffers[i].vmo.is_valid());
