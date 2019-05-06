@@ -656,5 +656,5 @@ end-to-end from the client, through the server, and back to the client.
   additions required by the trace provider in order to add tracing, or disable it completely.
 * [Fuchsia Tracing System Design](design.md)
   goes through the design goals of the tracing system.
-* [Fuchsia Trace Format](trace-format.md)
+* [Fuchsia Trace Format](trace-format/README.md)
   is a reference for the in-memory data format used by the tracing system.

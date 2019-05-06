@@ -195,4 +195,4 @@ the [dashboard user guide] and the instructions for [automating benchmarks].
 [examples/benchmark]: /garnet/examples/benchmark/
 [results schema]: results_schema.md
 [best practices]: #best-practices
-[tracing]: ../tracing/tracing-usage-guide.md
+[tracing]: ../tracing/usage-guide.md

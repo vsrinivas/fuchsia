@@ -36,7 +36,7 @@ We have shell scripts that run all of a layer's benchmarks at every commit to th
 * Peridot: [//peridot/tests/benchmarks](/peridot/tests/benchmarks)
 * Topaz: [//topaz/tests/benchmarks](https://fuchsia.googlesource.com/topaz/+/master/tests/benchmarks)
 
-These shell scripts are written using a helper library called [Runbenchmarks].  Add a
+These shell scripts are written using a helper library called [benchmarking].  Add a
 command to the appropriate script to execute your test.  See the existing commands for
 examples.
 
@@ -77,6 +77,6 @@ NOTE: We do not yet have a User guide for the [Performance Dashboard Version 2].
 [Performance Dashboard]: https://chromeperf.appspot.com/report
 [Performance Dashboard User Guide]: catapult_user_guide.md
 [Performance Dashboard Version 2]: https://v2spa-dot-chromeperf.appspot.com/
-[Runbenchmarks]: /garnet/testing/runbenchmarks
+[benchmarking]: /garnet/testing/benchmarking
 [//zircon/system/ulib/perftest]: /zircon/system/ulib/perftest/
 [//garnet/go/src/benchmarks]: /garnet/go/src/benchmarks

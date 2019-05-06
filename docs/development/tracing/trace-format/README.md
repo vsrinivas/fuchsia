@@ -3,7 +3,7 @@
 This document describes the binary format used to collect, store, and
 transmit Fuchsia trace records.
 
-See [Fuchsia Tracing System Design](design.md) for an overview.
+See [Fuchsia Tracing System Design](../design.md) for an overview.
 
 ## Purpose
 

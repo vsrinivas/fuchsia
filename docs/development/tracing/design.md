@@ -62,7 +62,7 @@ Components which can be traced or offer tracing information to the system
 implement the `TraceProvider` FIDL protocol and register it with the
 `TraceRegistry`.  Once registered, they will receive messages whenever
 tracing is started or stopped and will have the opportunity to provide
-trace data encoded in the [Fuchsia Trace Format](trace-format.md).
+trace data encoded in the [Fuchsia Trace Format](trace-format/README.md).
 
 #### Kernel Trace Provider
 
