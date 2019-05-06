@@ -355,7 +355,7 @@ zx_status_t AudioDeviceSettings::Deserialize(const fbl::unique_fd& storage) {
   ::fuchsia::media::AudioGainInfo gain_info;
   const auto& gain_obj = doc["gain"].GetObject();
 
-  gain_info.gain_db = gain_obj["gain_db"].GetDouble();
+  gain_info.gain_db = static_cast<float>(gain_obj["gain_db"].GetDouble());
 
   if (gain_obj["mute"].GetBool()) {
     gain_info.flags |= ::fuchsia::media::AudioGainInfoFlag_Mute;

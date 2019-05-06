@@ -5,6 +5,7 @@
 #include "garnet/bin/media/audio_core/test/gain_control_test.h"
 
 #include <lib/gtest/real_loop_fixture.h>
+
 #include <cmath>
 
 #include "garnet/bin/media/audio_core/test/audio_tests_shared.h"
@@ -239,7 +240,7 @@ void GainControlTestBase::TestSetGain() {
 }
 
 void GainControlTestBase::TestSetMute() {
-  float expect_mute = true;
+  bool expect_mute = true;
   SetMute(expect_mute);
   EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, expect_mute));
 
@@ -269,7 +270,7 @@ void GainControlTestBase::TestDuplicateSetGain() {
 }
 
 void GainControlTestBase::TestDuplicateSetMute() {
-  float expect_mute = true;
+  bool expect_mute = true;
   SetMute(expect_mute);
   EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, expect_mute));
 

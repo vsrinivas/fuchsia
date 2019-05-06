@@ -8,6 +8,7 @@
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <lib/fit/defer.h>
 #include <zircon/process.h>
+
 #include <iomanip>
 #include <optional>
 
@@ -178,7 +179,9 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         // Looks like we recovered.  Log and go back to mixing.
         FXL_LOG(INFO) << "UNDERFLOW: Recovered after " << std::fixed
                       << std::setprecision(3)
-                      << (now - underflow_start_time_) / 1000000.0 << " mSec.";
+                      << static_cast<double>(now - underflow_start_time_) /
+                             1000000.0
+                      << " mSec.";
         underflow_start_time_ = 0;
         underflow_cooldown_deadline_ = 0;
       }

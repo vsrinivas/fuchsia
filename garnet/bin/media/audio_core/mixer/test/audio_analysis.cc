@@ -5,6 +5,7 @@
 #include "garnet/bin/media/audio_core/mixer/test/audio_analysis.h"
 
 #include <fbl/algorithm.h>
+
 #include <iomanip>
 #include <vector>
 
@@ -156,7 +157,7 @@ inline uint8_t Finalize(double value) {
 }
 template <>
 inline float Finalize(double value) {
-  return value;
+  return static_cast<float>(value);
 }
 template <>
 inline double Finalize(double value) {
