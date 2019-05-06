@@ -7,7 +7,7 @@
 
 ## usage: fx update [-h|--help]
 ##
-## Ask the target to update all pacakges that it has, then do an OTA. The
+## Ask the target to update all packages that it has, then do an OTA. The
 ## target will use any update server available to it to do the update. This
 ## requires the target have a update server available to it. The 'serve' fx
 ## command is typically used to make your development host available to the

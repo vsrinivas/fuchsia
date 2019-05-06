@@ -4,7 +4,7 @@
 
 library fuchsia.sys;
 
-// An interface for loading from pacakges.
+// An interface for loading from packages.
 [Discoverable]
 protocol Loader {
     // LoadUrl a package by url.
