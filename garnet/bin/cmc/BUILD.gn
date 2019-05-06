@@ -59,7 +59,7 @@ rustc_binary("example_bin") {
   source_root = "tests/example.rs"
 }
 
-fuchsia_component("example_component") {
+deprecated_fuchsia_component("example_component") {
   manifest = rebase_path("meta/example.cml")
   deps = [
     ":example_bin",

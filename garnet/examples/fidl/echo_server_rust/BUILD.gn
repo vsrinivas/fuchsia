@@ -21,7 +21,7 @@ rustc_binary("echo_server_rust_bin") {
   ]
 }
 
-fuchsia_component("echo_server_rust_component") {
+deprecated_fuchsia_component("echo_server_rust_component") {
   manifest = rebase_path("../meta/echo_server.cmx")
   manifest_dest = "meta/echo_server_rust.cmx"
   deps = [

@@ -5,7 +5,7 @@
 import("//build/package.gni")
 import("//build/package/component.gni")
 
-fuchsia_component("echo_server") {
+deprecated_fuchsia_component("echo_server") {
   manifest = rebase_path("meta/echo_server.cml")
   deps = [
     "//src/sys/examples/topology/echo_server",
@@ -13,7 +13,7 @@ fuchsia_component("echo_server") {
   binary = "echo_server"
 }
 
-fuchsia_component("echo_client") {
+deprecated_fuchsia_component("echo_client") {
   manifest = rebase_path("meta/echo_client.cml")
   deps = [
     "//src/sys/examples/topology/echo_client",
@@ -21,7 +21,7 @@ fuchsia_component("echo_client") {
   binary = "echo_client"
 }
 
-fuchsia_component("echo_realm") {
+deprecated_fuchsia_component("echo_realm") {
   manifest = rebase_path("meta/echo_realm.cml")
 }
 

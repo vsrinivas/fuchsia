@@ -115,7 +115,7 @@ template("fuzz_target") {
   }
 
   # Create the fuzz_target component
-  fuchsia_component("${fuzz_target_name}_component") {
+  deprecated_fuchsia_component("${fuzz_target_name}_component") {
     testonly = true
     manifest = fuzz_target_cmx
     if (defined(invoker.binary)) {

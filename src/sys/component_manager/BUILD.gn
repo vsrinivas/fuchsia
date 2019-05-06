@@ -54,7 +54,7 @@ generate_manifest("component_manager.bootfs") {
            rebase_path("$root_build_dir/component_manager", root_build_dir) ]
 }
 
-fuchsia_component("component_manager_as_v1_component") {
+deprecated_fuchsia_component("component_manager_as_v1_component") {
   deps = [
     ":bin",
   ]
@@ -75,7 +75,8 @@ test_package("component_manager_tests") {
     "//garnet/examples/components/v2:hello_world_bin",
   ]
 
-  components = [ "//garnet/examples/fidl/echo_server_rust:echo_server_rust_component" ]
+  components =
+      [ "//garnet/examples/fidl/echo_server_rust:echo_server_rust_component" ]
 
   tests = [
     {

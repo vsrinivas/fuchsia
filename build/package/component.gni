@@ -5,6 +5,8 @@
 import("//build/cmx/cmx.gni")
 import("//build/images/manifest.gni")
 
+# Deprecated!!! Please use the `package` rule instead.
+#
 # Defines a fuchsia component.
 #
 # This template is used to define a unit of component.
@@ -68,7 +70,7 @@ import("//build/images/manifest.gni")
 #   testonly (optional)
 #     Usual GN meanings.
 #
-template("fuchsia_component") {
+template("deprecated_fuchsia_component") {
   if (current_toolchain == target_toolchain) {
     component_label = get_label_info(":$target_name", "label_with_toolchain")
     forward_variables_from(invoker, [ "testonly" ])

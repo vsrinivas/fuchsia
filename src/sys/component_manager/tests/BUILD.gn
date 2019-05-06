@@ -43,11 +43,11 @@ rustc_binary("mock_pkg_resolver_bin") {
   ]
 }
 
-fuchsia_component("echo_realm") {
+deprecated_fuchsia_component("echo_realm") {
   manifest = rebase_path("meta/echo_realm.cml")
 }
 
-fuchsia_component("mock_pkg_resolver") {
+deprecated_fuchsia_component("mock_pkg_resolver") {
   manifest = rebase_path("meta/mock_pkg_resolver.cmx")
   deps = [
     ":mock_pkg_resolver_bin",

@@ -23,7 +23,7 @@ rustc_binary("echo_args_bin") {
   edition = "2018"
 }
 
-fuchsia_component("echo_args_component") {
+deprecated_fuchsia_component("echo_args_component") {
   manifest = rebase_path("meta/echo_args.cml")
   deps = [
     ":echo_args_bin",
@@ -32,7 +32,7 @@ fuchsia_component("echo_args_component") {
   binary = "echo_args"
 }
 
-fuchsia_component("ls_root_pkg_component") {
+deprecated_fuchsia_component("ls_root_pkg_component") {
   manifest = rebase_path("meta/ls_root_pkg.cml")
   deps = [
     ":ls_root_pkg_bin",
@@ -41,7 +41,7 @@ fuchsia_component("ls_root_pkg_component") {
   binary = "ls_root_pkg"
 }
 
-fuchsia_component("hello_world_component") {
+deprecated_fuchsia_component("hello_world_component") {
   manifest = rebase_path("meta/hello_world.cml")
   deps = [
     ":hello_world_bin",
