@@ -1,0 +1,43 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+
+# Currently, we ony support working with the QEMU simulator on Linux.
+if (is_linux) {
+  # The infrastructure does not provide a way for host tests to access
+  # qemu, so we need to archive our own copy of qemu from the source
+  # tree.
+  action("archive") {
+    visibility = [ ":*" ]
+
+    archive_path = "$root_out_dir/test_data/qemu/qemu.tar.gz"
+
+    outputs = [
+      archive_path,
+    ]
+
+    depfile = "${archive_path}.d"
+
+    script = "archive.py"
+
+    args = [
+      "--src",
+      rebase_path("//buildtools/linux-x64/qemu"),
+      "--dst",
+      rebase_path(archive_path, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+    ]
+
+    metadata = {
+      test_runtime_deps = [ archive_path ]
+    }
+  }
+
+  go_library("qemu") {
+    name = "fuchsia.googlesource.com/testing/qemu"
+    non_go_deps = [ ":archive" ]
+  }
+}
