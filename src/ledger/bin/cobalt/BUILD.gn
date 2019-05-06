@@ -7,7 +7,12 @@ import("//third_party/cobalt_config/metrics_registry.gni")
 visibility = [ "//src/ledger/*" ]
 
 metrics_registry("ledger_metrics_registry") {
-  project_id = 100
+  # This must match the name of our Cobalt project as specified in:
+  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
+  project_name = "fuchsia_ledger"
+  generate_cc = true
+  namespace = "cobalt_registry"
+  generate_binarypb = false
 }
 
 source_set("cobalt") {
@@ -22,6 +27,7 @@ source_set("cobalt") {
   ]
 
   deps = [
+    ":ledger_metrics_registry_cc",
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
     "//src/lib/cobalt/cpp:cobalt_logger",

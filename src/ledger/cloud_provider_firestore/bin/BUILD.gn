@@ -9,16 +9,6 @@ package("bin") {
 
   deps = [
     "app",
-    "//src/ledger/bin/cobalt:ledger_metrics_registry",
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              get_label_info("//src/ledger/bin/cobalt:ledger_metrics_registry",
-                             "target_gen_dir") + "/ledger_metrics_registry.pb")
-      dest = "firebase_auth_ledger_metrics_config.pb"
-    },
   ]
 
   binary = "cloud_provider_firestore"

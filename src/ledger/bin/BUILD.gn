@@ -12,7 +12,6 @@ package("bin") {
 
   deps = [
     "app",
-    "cobalt:ledger_metrics_registry",
   ]
 
   binary = "ledger"
@@ -21,21 +20,6 @@ package("bin") {
     {
       path = rebase_path("meta/ledger.cmx")
       dest = "ledger.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              get_label_info("cobalt:ledger_metrics_registry",
-                             "target_gen_dir") + "/ledger_metrics_registry.pb")
-      dest = "ledger_cobalt_config.pb"
-    },
-    {
-      path = rebase_path(
-              get_label_info("cobalt:ledger_metrics_registry",
-                             "target_gen_dir") + "/ledger_metrics_registry.pb")
-      dest = "firebase_auth_cobalt_config.pb"
     },
   ]
 }

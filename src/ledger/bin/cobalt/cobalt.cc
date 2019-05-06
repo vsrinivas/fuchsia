@@ -7,12 +7,11 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/file.h>
 
+#include "src/ledger/bin/cobalt/ledger_metrics_registry.cb.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 
 namespace ledger {
 namespace {
-constexpr char kConfigBinProtoPath[] = "/pkg/data/ledger_cobalt_config.pb";
-constexpr int32_t kCobaltMetricId = 2;
 
 cobalt::CobaltLogger* g_cobalt_logger = nullptr;
 
@@ -23,8 +22,8 @@ fit::deferred_action<fit::closure> InitializeCobalt(
   std::unique_ptr<cobalt::CobaltLogger> cobalt_logger;
   FXL_DCHECK(!g_cobalt_logger);
 
-  cobalt_logger =
-      cobalt::NewCobaltLogger(dispatcher, context, kConfigBinProtoPath);
+  cobalt_logger = cobalt::NewCobaltLoggerFromProjectName(
+      dispatcher, context, cobalt_registry::kProjectName);
 
   g_cobalt_logger = cobalt_logger.get();
   return fit::defer<fit::closure>([cobalt_logger = std::move(cobalt_logger)] {
@@ -37,7 +36,8 @@ void ReportEvent(CobaltEvent event) {
   if (!g_cobalt_logger) {
     return;
   }
-  g_cobalt_logger->LogEvent(kCobaltMetricId, static_cast<uint32_t>(event));
+  g_cobalt_logger->LogEvent(cobalt_registry::kRareEventOccurrenceMetricId,
+                            static_cast<uint32_t>(event));
 }
 
 }  // namespace ledger

@@ -11,12 +11,10 @@
 
 #include <utility>
 
+#include "src/ledger/bin/cobalt/ledger_metrics_registry.cb.h"
+
 namespace firebase_auth {
 namespace {
-
-constexpr char kConfigBinProtoPath[] =
-    "/pkg/data/firebase_auth_cobalt_config.pb";
-constexpr int32_t kCobaltAuthFailureMetricId = 4;
 
 // Returns true if the authentication failure may be transient.
 bool IsRetriableError(fuchsia::auth::Status status) {
@@ -54,8 +52,8 @@ FirebaseAuthImpl::FirebaseAuthImpl(Config config,
       cobalt_client_name_(config_.cobalt_client_name),
       task_runner_(dispatcher) {
   if (component_context) {
-    cobalt_logger_ = cobalt::NewCobaltLogger(dispatcher, component_context,
-                                             kConfigBinProtoPath);
+    cobalt_logger_ = cobalt::NewCobaltLoggerFromProjectName(
+        dispatcher, component_context, cobalt_registry::kProjectName);
   } else {
     cobalt_logger_ = nullptr;
   }
@@ -141,7 +139,7 @@ void FirebaseAuthImpl::GetToken(
         if (status == fuchsia::auth::Status::OK) {
           callback(AuthStatus::OK, std::move(token));
         } else {
-          ReportError(kCobaltAuthFailureMetricId,
+          ReportError(cobalt_registry::kFirebaseAuthenticationFailuresMetricId,
                       static_cast<uint32_t>(status));
           callback(AuthStatus::ERROR, std::move(token));
         }
