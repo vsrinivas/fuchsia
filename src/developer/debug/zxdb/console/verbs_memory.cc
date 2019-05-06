@@ -340,8 +340,8 @@ const char kMemReadHelp[] =
   When no size is given, the size will be the object size if a typed expression
   is given, otherwise 20 lines will be output.
 
-  See also "a-mem" to print a memory analysis and "a-stack" to print a more
-  useful dump of the raw stack.
+  See also the "mem-analyze" command to print a memory analysis and the "stack"
+  command to print a more useful dump of the raw stack.
 
 Arguments
 
