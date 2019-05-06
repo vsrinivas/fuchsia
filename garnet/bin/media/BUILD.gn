@@ -7,82 +7,18 @@ import("//build/package.gni")
 group("media") {
   testonly = true
   deps = [
-    ":audio",
-    ":audio_core",
     ":codec_factory",
     ":codec_runner_sw_ffmpeg",
     ":services",
-    ":tools",
-    "audio",
-    "audio_core",
     "camera_manager",
     "codec_factory",
     "codecs",
-    "signal_generator",
-    "vim2_media_config",
-    "virtual_audio",
-    "vol",
-    "wav_recorder",
   ]
 }
 
 group("services") {
   public_deps = [
     "//garnet/bin/media/codec_factory",
-  ]
-}
-
-group("tools") {
-  public_deps = [
-    "//garnet/bin/media/signal_generator",
-    "//garnet/bin/media/vol",
-    "//garnet/bin/media/wav_recorder",
-  ]
-}
-
-package("audio_core") {
-  deps = [
-    "//garnet/bin/media/audio_core",
-    "//garnet/bin/media/audio_core/audiofx",
-  ]
-
-  binaries = [
-    {
-      name = "audio_core"
-    },
-  ]
-
-  loadable_modules = [
-    {
-      # This audio processing library is hosted in the audio_core process.
-      name = "audiofx.so"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("audio_core/meta/audio_core.cmx")
-      dest = "audio_core.cmx"
-    },
-  ]
-}
-
-package("audio") {
-  deps = [
-    "//garnet/bin/media/audio",
-  ]
-
-  binaries = [
-    {
-      name = "audio"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("audio/meta/audio.cmx")
-      dest = "audio.cmx"
-    },
   ]
 }
 

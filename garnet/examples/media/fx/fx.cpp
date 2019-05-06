@@ -20,17 +20,18 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <limits>
 #include <math.h>
 #include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <utility>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/media/wav_writer/wav_writer.h"
+#include <limits>
+#include <utility>
+
+#include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 constexpr bool kWavWriterEnabled = false;
 
@@ -760,9 +761,8 @@ int main(int argc, char** argv) {
       startup_context->svc()->Connect<fuchsia::media::Audio>();
 
   fuchsia::scheduler::ProfileProviderSyncPtr profile_provider;
-  startup_context
-      ->svc()->Connect<fuchsia::scheduler::ProfileProvider>(
-          profile_provider.NewRequest());
+  startup_context->svc()->Connect<fuchsia::scheduler::ProfileProvider>(
+      profile_provider.NewRequest());
 
   FxProcessor fx(std::move(input), [&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });

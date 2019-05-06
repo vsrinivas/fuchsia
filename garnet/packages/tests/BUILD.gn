@@ -783,8 +783,8 @@ group("log_listener") {
 group("media") {
   testonly = true
   public_deps = [
-    "//garnet/bin/media/audio_core/mixer:audio_mixer_tests",
-    "//garnet/bin/media/audio_core/test:audio_fidl_tests",
+    "//src/media/audio/audio_core/mixer:audio_mixer_tests",
+    "//src/media/audio/audio_core/test:audio_fidl_tests",
     "//garnet/bin/media/codecs/sw:mpsc_queue_tests",
     "//garnet/bin/media/codecs/test:raw_frames_test",
     "//garnet/examples/media:use_h264_decoder_test",
@@ -1103,14 +1103,14 @@ group("terminal") {
 group("virtual_audio_service") {
   testonly = true
   public_deps = [
-    "//garnet/bin/media/virtual_audio/service:virtual_audio_service",
+    "//src/media/audio/virtual_audio_service",
   ]
 }
 
 group("virtual_audio_util") {
   testonly = true
   public_deps = [
-    "//garnet/bin/media/virtual_audio/util:virtual_audio_util",
+    "//src/media/audio/tools/virtual_audio_util",
   ]
 }
 

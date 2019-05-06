@@ -457,8 +457,8 @@ group("virtual_camera") {
 group("media_audio") {
   testonly = true
   public_deps = [
-    "//garnet/bin/media:audio",
-    "//garnet/bin/media:audio_core",
+    "//src/media/audio/audio",
+    "//src/media/audio/audio_core",
   ]
 }
 
@@ -712,7 +712,7 @@ group("wlan") {
 group("virtual_audio_driver") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/audio/virtual_audio",
+    "//src/media/audio/drivers/virtual_audio",
   ]
 }
 

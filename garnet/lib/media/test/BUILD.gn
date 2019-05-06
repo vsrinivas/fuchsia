@@ -36,10 +36,10 @@ source_set("frame_sink") {
   deps = [
     "//garnet/lib/media/codec_impl:fourcc",
     "//garnet/lib/media/raw_video_writer:raw_video_writer",
-    "//garnet/lib/media/wav_writer:wav_writer",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
+    "//src/media/audio/lib/wav_writer:wav_writer",
   ]
 }
 

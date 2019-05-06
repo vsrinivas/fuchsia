@@ -1,0 +1,63 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+
+group("service") {
+  testonly = true
+  deps = [
+    ":virtual_audio_bin",
+    ":virtual_audio_config",
+    ":virtual_audio_service",
+  ]
+}
+
+package("virtual_audio_service") {
+  deps = [
+    ":virtual_audio_bin",
+  ]
+
+  binaries = [
+    {
+      name = "virtual_audio_service"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/virtual_audio_service.cmx")
+      dest = "virtual_audio_service.cmx"
+    },
+  ]
+}
+
+executable("virtual_audio_bin") {
+  output_name = "virtual_audio_service"
+
+  sources = [
+    "//src/media/audio/drivers/virtual_audio/virtual_audio.h",
+    "main.cc",
+    "virtual_audio_service_impl.cc",
+    "virtual_audio_service_impl.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_c_client",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+config_data("virtual_audio_config") {
+  for_pkg = "sysmgr"
+  outputs = [
+    "virtual_audio_service.config",
+  ]
+  sources = [
+    "service.config",
+  ]
+}

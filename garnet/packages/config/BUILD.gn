@@ -24,7 +24,7 @@ group("network") {
 group("vim2_media_config") {
   testonly = true
   public_deps = [
-    "//garnet/bin/media/vim2_media_config:vim2_media_config",
+    "//src/media/audio/vim2_media_config:vim2_media_config",
   ]
 }
 
@@ -129,6 +129,6 @@ group("mediasession") {
 group("virtual_audio") {
   testonly = true
   public_deps = [
-    "//garnet/bin/media/virtual_audio/service:virtual_audio_config",
+    "//src/media/audio/virtual_audio_service:virtual_audio_config",
   ]
 }

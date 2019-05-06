@@ -6,6 +6,7 @@ group("media") {
   testonly = true
   deps = [
     ":tests",
+    "audio",
     "lib",
     "playback",
     "sessions",
@@ -16,6 +17,7 @@ group("tests") {
   testonly = true
 
   data_deps = [
-    "sessions:tests"
+    "audio:tests",
+    "sessions:tests",
   ]
 }

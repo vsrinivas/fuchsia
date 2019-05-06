@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("audio") {
+  testonly = true
+  deps = [
+    ":tests",
+    "audio",
+    "audio_core",
+    "drivers",
+    "lib",
+    "tools",
+    "vim2_media_config",
+    "virtual_audio_service",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  data_deps = [
+    "audio_core:tests",
+  ]
+}

@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 
 #include <dlfcn.h>
+
 #include <cmath>
 
-#include "garnet/bin/media/audio_core/mixer/fx_loader.h"
-#include "garnet/bin/media/audio_core/mixer/fx_processor.h"
 #include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_base.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_delay.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_rechannel.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_swap.h"
 #include "gtest/gtest.h"
+#include "src/media/audio/audio_core/mixer/fx_loader.h"
+#include "src/media/audio/audio_core/mixer/fx_processor.h"
 
 // By directly including the fx_loader module from audio_mixer_lib, we eliminate
 // a lot of duplicate SO-loading and export-checking code, plus we can now

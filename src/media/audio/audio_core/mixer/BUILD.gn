@@ -1,0 +1,93 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("mixer") {
+  testonly = true
+  deps = [
+    ":audio_mixer_lib",
+  ]
+}
+
+source_set("audio_mixer_lib") {
+  sources = [
+    "//garnet/public/lib/media/audio_dfx/audio_device_fx.h",
+    "constants.h",
+    "fx_loader.cc",
+    "fx_loader.h",
+    "fx_processor.cc",
+    "fx_processor.h",
+    "gain.cc",
+    "gain.h",
+    "linear_sampler.cc",
+    "linear_sampler.h",
+    "mixer.cc",
+    "mixer.h",
+    "mixer_utils.h",
+    "no_op.cc",
+    "no_op.h",
+    "output_producer.cc",
+    "output_producer.h",
+    "point_sampler.cc",
+    "point_sampler.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.media",
+  ]
+
+  deps = [
+    "//garnet/public/lib/media/timeline:no_converters",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+executable("test") {
+  testonly = true
+  output_name = "audio_mixer_tests"
+
+  sources = [
+    "test/audio_analysis.cc",
+    "test/audio_analysis.h",
+    "test/audio_analysis_tests.cc",
+    "test/audio_performance.cc",
+    "test/audio_performance.h",
+    "test/audio_result.cc",
+    "test/audio_result.h",
+    "test/frequency_set.cc",
+    "test/frequency_set.h",
+    "test/main.cc",
+    "test/mixer_bitwise_tests.cc",
+    "test/mixer_gain_tests.cc",
+    "test/mixer_range_tests.cc",
+    "test/mixer_resampling_tests.cc",
+    "test/mixer_response_tests.cc",
+    "test/mixer_tests_recap.cc",
+    "test/mixer_tests_shared.cc",
+    "test/mixer_tests_shared.h",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//src/media/audio/audio_core/mixer:audio_mixer_lib",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+test_package("audio_mixer_tests") {
+  deps = [
+    ":test",
+  ]
+
+  tests = [
+    {
+      name = "audio_mixer_tests"
+      environments = basic_envs
+    },
+  ]
+}

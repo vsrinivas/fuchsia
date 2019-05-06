@@ -21,9 +21,9 @@ group("scenic") {
 group("audio") {
   testonly = true
   public_deps = [
-    "//garnet/bin/media/signal_generator",
-    "//garnet/bin/media/vol",
-    "//garnet/bin/media/wav_recorder",
+    "//src/media/audio/tools/signal_generator",
+    "//src/media/audio/tools/vol",
+    "//src/media/audio/tools/wav_recorder",
   ]
 }
 
