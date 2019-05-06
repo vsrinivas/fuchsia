@@ -81,11 +81,11 @@ class App : public ledger_internal::LedgerController {
 
   bool Start() {
     io_loop_.StartThread("io thread");
-    auto objects = component::Object::Make(kTopLevelObjectName);
+    auto objects = component::Object::Make(kTopLevelNodeName);
     auto object_dir = component::ObjectDir(objects);
 
     component_context_->outgoing()
-        ->GetOrCreateDirectory(kInspectObjectsDirectory)
+        ->GetOrCreateDirectory(kInspectNodesDirectory)
         ->AddEntry(fuchsia::inspect::Inspect::Name_,
                    std::make_unique<vfs::Service>(inspect_bindings_.GetHandler(
                        object_dir.object().get())));

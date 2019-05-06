@@ -36,13 +36,13 @@ using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
 
-constexpr char kObjectsName[] = "test objects";
+constexpr char kTestTopLevelNodeName[] = "top-level-of-test node";
 constexpr char kUserID[] = "test user ID";
 
 class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryFactoryImplTest() {
-    top_level_inspect_node_ = inspect::Node(kObjectsName);
+    top_level_inspect_node_ = inspect::Node(kTestTopLevelNodeName);
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         &environment_, nullptr,
         top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent));
@@ -105,8 +105,8 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
   auto hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
   EXPECT_THAT(
       hierarchy,
-      AllOf(NodeMatches(AllOf(NameMatches(kObjectsName), MetricList(IsEmpty()),
-                              PropertyList(IsEmpty()))),
+      AllOf(NodeMatches(AllOf(NameMatches(kTestTopLevelNodeName),
+                              MetricList(IsEmpty()), PropertyList(IsEmpty()))),
             ChildrenMatch(UnorderedElementsAre(NodeMatches(
                 AllOf(NameMatches(kRepositoriesInspectPathComponent)))))));
 }

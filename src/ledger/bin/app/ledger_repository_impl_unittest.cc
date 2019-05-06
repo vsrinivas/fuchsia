@@ -35,7 +35,7 @@ namespace ledger {
 namespace {
 
 constexpr char kInspectPathComponent[] = "test_repository";
-constexpr char kObjectsName[] = "test objects";
+constexpr char kTestTopLevelNodeName[] = "top-level-of-test node";
 
 using ::inspect::testing::ChildrenMatch;
 using ::inspect::testing::MetricList;
@@ -71,7 +71,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     auto fake_page_eviction_manager =
         std::make_unique<FakeDiskCleanupManager>();
     disk_cleanup_manager_ = fake_page_eviction_manager.get();
-    inspect_node_ = inspect::Node(kObjectsName);
+    inspect_node_ = inspect::Node(kTestTopLevelNodeName);
 
     repository_ = std::make_unique<LedgerRepositoryImpl>(
         DetachedPath(tmpfs_.root_fd()), &environment_,
