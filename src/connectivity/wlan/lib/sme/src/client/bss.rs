@@ -80,10 +80,10 @@ pub fn get_protection(bss: &BssDescription) -> Protection {
     }
 }
 
-fn is_bss_compatible(bss: &BssDescription) -> bool {
+pub fn is_bss_compatible(bss: &BssDescription) -> bool {
     match get_protection(bss) {
         Protection::Open => true,
-        Protection::Wep => true,
+        Protection::Wep => wep_deprecated::is_supported(),
         // If the BSS is an RSN, require the privacy bit to be set and verify the RSNE's
         // compatiblity.
         Protection::Rsna => match bss.rsn.as_ref() {
@@ -191,8 +191,8 @@ mod tests {
         // Compatibility takes priority over everything else
         assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Wpa1), &bss(-50, -50, ProtectionCfg::Wpa2));
         // Higher security is better.
-        assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Open), &bss(-50, -50, ProtectionCfg::Wep));
-        assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Wep), &bss(-50, -50, ProtectionCfg::Wpa2));
+        assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Open), &bss(-50, -50, ProtectionCfg::Wpa2));
+
         // RCPI in dBmh takes priority over RSSI in dBmh
         assert_bss_cmp(&bss(-20, -30, ProtectionCfg::Wpa2), &bss(-30, -20, ProtectionCfg::Wpa2));
         // Compare RSSI if RCPI is absent
@@ -201,6 +201,12 @@ mod tests {
         assert_bss_cmp(&bss(0, 0, ProtectionCfg::Wpa2), &bss(0, -200, ProtectionCfg::Wpa2));
         // Having an RSSI measurement is always better than not having any measurement
         assert_bss_cmp(&bss(0, 0, ProtectionCfg::Wpa2), &bss(-100, 0, ProtectionCfg::Wpa2));
+    }
+
+    #[cfg(feature = "wep_enabled")]
+    #[test]
+    fn compare_wep() {
+        assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Wep), &bss(-50, -50, ProtectionCfg::Wpa2));
     }
 
     #[test]
@@ -236,13 +242,18 @@ mod tests {
         assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Open)));
         assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2)));
         assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2Wpa3MixedMode)));
-        assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
 
         // Not compatible:
         assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa1)));
         assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2NoPrivacy)));
         assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa3)));
         assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Eap)));
+
+        // WEP support can be conditionally turned off via BUILD arguments:
+        assert_eq!(
+            wep_deprecated::is_supported(),
+            is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep))
+        );
     }
 
     #[test]
@@ -267,7 +278,7 @@ mod tests {
                 rx_dbm: -5,
                 channel: 1,
                 protected: true,
-                compatible: true,
+                compatible: wep_deprecated::is_supported(),
             }
         );
     }

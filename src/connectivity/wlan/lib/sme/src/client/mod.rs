@@ -265,7 +265,8 @@ impl super::Station for ClientSme {
                     ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
                         let mut inspect_msg: Option<String> = None;
                         let new_state = match get_best_bss(&bss_list) {
-                            Some(best_bss) => {
+                            // BSS found and compatible.
+                            Some(best_bss) if bss::is_bss_compatible(best_bss) => {
                                 match get_protection(
                                     &self.context.device_info,
                                     &token.credential,
@@ -299,6 +300,19 @@ impl super::Station for ClientSme {
                                     }
                                 }
                             }
+                            // Incompatible network
+                            Some(_) => {
+                                inspect_msg.replace("incompatible BSS".to_string());
+                                error!("incompatible BSS");
+                                report_connect_finished(
+                                    Some(token.responder),
+                                    &self.context,
+                                    ConnectResult::Failed,
+                                    Some(ConnectFailure::NoMatchingBssFound),
+                                );
+                                state
+                            }
+                            // No matching BSS found
                             None => {
                                 inspect_msg.replace("no matching BSS".to_string());
                                 error!("no matching BSS found");
@@ -499,6 +513,12 @@ mod tests {
         let bss = fake_protected_bss_description(b"rsn".to_vec());
         get_protection(&dev_info, &credential, &bss)
             .expect_err("protected network requires password");
+    }
+
+    #[cfg(feature = "wep_enabled")]
+    #[test]
+    fn test_get_protection_wep_supported() {
+        let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
 
         // WEP-40 with credentials:
         let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
@@ -526,6 +546,17 @@ mod tests {
         let bss = fake_wep_bss_description(b"wep".to_vec());
         get_protection(&dev_info, &credential, &bss)
             .expect_err("expected error for invalid WEP credentials");
+    }
+
+    #[cfg(not(feature = "wep_enabled"))]
+    #[test]
+    fn test_get_protection_wep_unsupported() {
+        let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
+
+        // WEP-40 with credentials:
+        let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
+        let bss = fake_wep_bss_description(b"wep40".to_vec());
+        get_protection(&dev_info, &credential, &bss).expect_err("WEP is not supported");
     }
 
     #[test]
@@ -574,8 +605,9 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "wep_enabled")]
     #[test]
-    fn connecting_to_wep_network() {
+    fn connecting_to_wep_network_supported() {
         let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
@@ -610,6 +642,35 @@ mod tests {
         } else {
             panic!("expect join request to MLME");
         }
+    }
+
+    #[cfg(not(feature = "wep_enabled"))]
+    #[test]
+    fn connecting_to_wep_network_unsupported() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        // Issue a connect command and verify that connecting_to status is changed for upper
+        // layer (but not underlying state machine) and a scan request is sent to MLME.
+        let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
+        let req = connect_req(b"foo".to_vec(), credential);
+        let mut connect_fut = sme.on_connect_command(req);
+        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(
+            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+            sme.status()
+        );
+
+        if let Ok(Some(MlmeRequest::Scan(..))) = mlme_stream.try_next() {
+            // expected path; nothing to do
+        } else {
+            panic!("expect scan request to MLME");
+        }
+
+        // Simulate scan end and verify that underlying state machine's status is not changed,
+        report_fake_scan_result(&mut sme, fake_wep_bss_description(b"foo".to_vec()));
+        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(Ok(Some(ConnectResult::Failed)), connect_fut.try_recv());
     }
 
     #[test]

@@ -32,7 +32,7 @@ fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescr
             ibss: false,
             cf_pollable: false,
             cf_poll_req: false,
-            privacy: false,
+            privacy: rsn.is_some(),
             short_preamble: false,
             spectrum_mgmt: false,
             qos: false,
