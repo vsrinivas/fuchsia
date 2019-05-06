@@ -23,40 +23,63 @@ pub trait WriteInspect {
 /// Example:
 ///
 /// ```
-/// let node = ...;  // wlan_inspect::nodes::BoundedListNode
-/// inspect_log!(node, k1: "1", k2: 2i64, k3: "3");
-/// inspect_log!(node, foo: "bar", meaning_of_life: 42u64);
-/// inspect_log!(node, {
+/// let bounded_list_node = ...;  // wlan_inspect::nodes::BoundedListNode
+/// inspect_log!(bounded_list_node, k1: "1", k2: 2i64, k3: "3");   // non-block form
+/// inspect_log!(bounded_list_node, {   // block form (only difference is syntactic)
 ///     ba: "dum",
 ///     tss: "tss"
+/// })
+/// inspect_log!(bounded_list_node, {   // logging nested data structure
+///     k1: {
+///        subkey1: "subval1",
+///        subkey2: 2,
+///     }
 /// })
 /// ```
 #[macro_export]
 macro_rules! inspect_log {
-    // block version (allows trailing comma)
-    ($bounded_list_node:expr, { $($key:ident: $val:expr,)+ }) => {
-        inspect_log!($bounded_list_node, $($key: $val),+)
-    };
-    // block version (no-trailing comma)
-    ($bounded_list_node:expr, { $($key:ident: $val:expr),+ }) => {
-        inspect_log!($bounded_list_node, $($key: $val),+)
-    };
-    // non-block version (allows trailing comma)
-    ($bounded_list_node:expr, $($key:ident: $val:expr,)+) => {
-        inspect_log!($bounded_list_node, $($key: $val),+)
-    };
-    // non-block version (no-trailing comma)
-    ($bounded_list_node:expr, $($key:ident: $val:expr),+) => {
+    // internal-only shared implementation, should not be used outside
+    (@internal $bounded_list_node:expr, $($args:tt)+) => {
         {
-            use $crate::{log::WriteInspect, NodeExt};
+            use $crate::{NodeExt, inspect_insert};
 
             let node = $bounded_list_node.request_entry();
             let mut node = node.lock();
             node.set_time();
-            $(
-                $val.write_inspect(&mut node, stringify!($key));
-            )+
+            inspect_insert!(node, $($args)+);
         }
+    };
+    // block syntax
+    ($bounded_list_node:expr, { $($args:tt)+ }) => {
+        inspect_log!(@internal $bounded_list_node, $($args)+);
+    };
+    // non-block syntax
+    ($bounded_list_node:expr, $($args:tt)+) => {
+        inspect_log!(@internal $bounded_list_node, $($args)+);
+    }
+}
+
+#[macro_export]
+macro_rules! inspect_insert {
+    ($node:expr,) => {};
+    ($node:expr, $key:ident: { $($sub:tt)+ }) => {
+        {
+            let child = $node.create_child(stringify!($key));
+            let mut child = child.lock();
+            inspect_insert!(child, $($sub)+);
+        }
+    };
+    ($node:expr, $key:ident: { $($sub:tt)+ }, $($rest:tt)*) => {
+        inspect_insert!($node, $key: { $($sub)+ });
+        inspect_insert!($node, $($rest)*);
+    };
+
+    ($node:expr, $key:ident: $val:expr) => {
+        $node.insert(stringify!($key), &$val);
+    };
+    ($node:expr, $key:ident: $val:expr, $($rest:tt)*) => {
+        inspect_insert!($node, $key: $val);
+        inspect_insert!($node, $($rest)*);
     };
 }
 
@@ -71,7 +94,7 @@ mod tests {
     use fuchsia_inspect::{self as finspect, object::ObjectUtil};
 
     #[test]
-    fn test_inspect_log_macro() {
+    fn test_inspect_log_basic() {
         let mut node = BoundedListNode::new(finspect::ObjectTreeNode::new_root(), 10);
 
         // Logging string and full-size numeric type
@@ -103,6 +126,34 @@ mod tests {
         obj2.get_property("@time").expect("expect time property");
         test_utils::assert_str_prop(&obj2, "s", "str");
         test_utils::assert_uint_metric(&obj2, "uint", 13u64);
+    }
+
+    #[test]
+    fn test_inspect_log_nested() {
+        let mut node = BoundedListNode::new(finspect::ObjectTreeNode::new_root(), 10);
+
+        inspect_log!(node, {
+            k1: {
+                sub1: "subval1",
+                sub2: {
+                    subsub1: "subsubval1",
+                },
+                sub3: 3u64,
+            },
+            k2: if true { 10u64 } else { 20 }
+        });
+        let node0 = node.inner().lock().get_child("0").expect("expect node entry 0");
+        let obj0 = node0.lock().evaluate();
+        test_utils::assert_uint_metric(&obj0, "k2", 10);
+
+        let k1_node = node0.lock().get_child("k1").expect("expect child k1");
+        let k1_obj = k1_node.lock().evaluate();
+        test_utils::assert_str_prop(&k1_obj, "sub1", "subval1");
+        test_utils::assert_uint_metric(&k1_obj, "sub3", 3);
+
+        let sub2_node = k1_node.lock().get_child("sub2").expect("expect child sub2");
+        let sub2_obj = sub2_node.lock().evaluate();
+        test_utils::assert_str_prop(&sub2_obj, "subsub1", "subsubval1");
     }
 
     #[test]
@@ -147,13 +198,11 @@ mod tests {
         inspect_log!(node, some: Some("a"));
         let node0 = node.inner().lock().get_child("0").expect("expect node entry 0");
         let obj0 = node0.lock().evaluate();
-        obj0.get_property("@time").expect("expect time property");
         test_utils::assert_str_prop(&obj0, "some", "a");
 
         inspect_log!(node, none: None as Option<String>);
         let node1 = node.inner().lock().get_child("1").expect("expect node entry 1");
         let obj1 = node1.lock().evaluate();
-        obj1.get_property("@time").expect("expect time property");
         assert!(obj1.get_property("none").is_none());
     }
 
@@ -165,7 +214,6 @@ mod tests {
         inspect_log!(node, bytes: InspectBytes(&bytes));
         let node0 = node.inner().lock().get_child("0").expect("expect node entry 0");
         let obj0 = node0.lock().evaluate();
-        obj0.get_property("@time").expect("expect time property");
         test_utils::assert_bytes_prop(&obj0, "bytes", vec![11, 22, 33]);
     }
 
@@ -175,10 +223,8 @@ mod tests {
         let list = [11u8, 22, 33];
 
         inspect_log!(node, list: InspectList(&list));
-        let node0 = node.inner().lock().get_child("0").expect("expect node entry 0");
-        let obj0 = node0.lock().evaluate();
-        obj0.get_property("@time").expect("expect time property");
 
+        let node0 = node.inner().lock().get_child("0").expect("expect node entry 0");
         let list_node = node0.lock().get_child("list").expect("expect node entry 'list'");
         let list_obj = list_node.lock().evaluate();
         test_utils::assert_uint_metric(&list_obj, "0", 11);
@@ -196,8 +242,6 @@ mod tests {
         inspect_log!(node, list: list_mapped);
 
         let node0 = node.inner().lock().get_child("0").expect("expect node entry 0");
-        let obj0 = node0.lock().evaluate();
-        obj0.get_property("@time").expect("expect time property");
         let list_node = node0.lock().get_child("list").expect("expect node entry 'list'");
         let list_obj = list_node.lock().evaluate();
         test_utils::assert_uint_metric(&list_obj, "0", 26);
