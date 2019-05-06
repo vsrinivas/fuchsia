@@ -2,7 +2,7 @@
 
 This document is part of the [Driver Development Kit tutorial][ddk-tutorial] documentation.
 
-The preceeding sections in the tutorial have illustrated the basics
+The preceding sections in the tutorial have illustrated the basics
 of what a device driver needs to do (e.g., register its name, handle
 operations, etc.) and were presented in C.
 
@@ -90,7 +90,7 @@ for `DeviceType`.
 > calls **DdkRelease()**, and that frees the driver's device context.
 > This would constitute a "use-after-free" violation.
 
-Recall from the preceeding sections that your device must register with the device manager
+Recall from the preceding sections that your device must register with the device manager
 in order to be usable.
 This is accomplished as follows:
 
