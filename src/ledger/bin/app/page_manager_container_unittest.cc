@@ -22,7 +22,7 @@ constexpr char kLedgerName[] = "test_ledger_name";
 using PageManagerContainerTest = TestWithEnvironment;
 
 TEST_F(PageManagerContainerTest, OneEarlyBindingNoPageManager) {
-  storage::PageId page_id = std::string(::fuchsia::ledger::kPageIdSize, 'a');
+  storage::PageId page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, 'a');
   FakeDiskCleanupManager page_usage_listener;
   PagePtr page;
   bool callback_called;
@@ -56,7 +56,7 @@ TEST_F(PageManagerContainerTest, OneEarlyBindingNoPageManager) {
 }
 
 TEST_F(PageManagerContainerTest, BindBeforePageManager) {
-  storage::PageId page_id = std::string(::fuchsia::ledger::kPageIdSize, '3');
+  storage::PageId page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3');
   FakeDiskCleanupManager page_usage_listener;
   auto page_storage =
       std::make_unique<storage::fake::FakePageStorage>(&environment_, page_id);

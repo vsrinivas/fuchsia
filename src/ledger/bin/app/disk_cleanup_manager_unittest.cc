@@ -73,7 +73,7 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
 
 TEST_F(DiskCleanupManagerTest, DontEvictNonEmptyPagesOnPageUnused) {
   std::string ledger_name = "ledger";
-  storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
+  storage::PageId page = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '1');
 
   // The page cannot be evicted if its not empty and offline.
   disk_cleanup_manager_.OnPageOpened(ledger_name, page);
@@ -85,7 +85,7 @@ TEST_F(DiskCleanupManagerTest, DontEvictNonEmptyPagesOnPageUnused) {
 
 TEST_F(DiskCleanupManagerTest, DontEvictUnknownEmptyPagesOnPageUnused) {
   std::string ledger_name = "ledger";
-  storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
+  storage::PageId page = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '1');
 
   // The page cannot be evicted if we can't determine whether it is empty and
   // offline.
@@ -98,7 +98,7 @@ TEST_F(DiskCleanupManagerTest, DontEvictUnknownEmptyPagesOnPageUnused) {
 
 TEST_F(DiskCleanupManagerTest, EvictEmptyOfflinePagesOnPageUnused) {
   std::string ledger_name = "ledger";
-  storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
+  storage::PageId page = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '1');
 
   // The page should be evicted is it is empty and offline.
   disk_cleanup_manager_.OnPageOpened(ledger_name, page);
@@ -110,7 +110,7 @@ TEST_F(DiskCleanupManagerTest, EvictEmptyOfflinePagesOnPageUnused) {
 
 TEST_F(DiskCleanupManagerTest, DontEvictPagesOnPageClosed) {
   std::string ledger_name = "ledger";
-  storage::PageId page = std::string(::fuchsia::ledger::kPageIdSize, '1');
+  storage::PageId page = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '1');
 
   disk_cleanup_manager_.OnPageOpened(ledger_name, page);
   delegate_.closed_offline_empty = PagePredicateResult::YES;

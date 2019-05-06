@@ -74,7 +74,7 @@ class PageManagerTest : public TestWithEnvironment {
   // ApplicationTestBase:
   void SetUp() override {
     ::testing::Test::SetUp();
-    page_id_ = storage::PageId(::fuchsia::ledger::kPageIdSize, 'a');
+    page_id_ = storage::PageId(::fuchsia::ledger::PAGE_ID_SIZE, 'a');
   }
 
   void DrainLoop() {

@@ -44,7 +44,7 @@ class PageUsageDbTest : public TestWithEnvironment {
 TEST_F(PageUsageDbTest, GetPagesEmpty) {
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::string ledger_name = "ledger_name";
-    std::string page_id(::fuchsia::ledger::kPageIdSize, 'p');
+    std::string page_id(::fuchsia::ledger::PAGE_ID_SIZE, 'p');
 
     std::unique_ptr<storage::Iterator<const PageInfo>> pages;
     EXPECT_EQ(storage::Status::OK, db_.GetPages(handler, &pages));
@@ -57,7 +57,7 @@ TEST_F(PageUsageDbTest, GetPagesEmpty) {
 TEST_F(PageUsageDbTest, MarkPageOpened) {
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::string ledger_name = "ledger_name";
-    std::string page_id(::fuchsia::ledger::kPageIdSize, 'p');
+    std::string page_id(::fuchsia::ledger::PAGE_ID_SIZE, 'p');
 
     // Open the same page.
     EXPECT_EQ(storage::Status::OK,
@@ -82,7 +82,7 @@ TEST_F(PageUsageDbTest, MarkPageOpened) {
 TEST_F(PageUsageDbTest, MarkPageOpenedAndClosed) {
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::string ledger_name = "ledger_name";
-    std::string page_id(::fuchsia::ledger::kPageIdSize, 'p');
+    std::string page_id(::fuchsia::ledger::PAGE_ID_SIZE, 'p');
 
     // Open and close the same page.
     EXPECT_EQ(storage::Status::OK,
@@ -113,7 +113,7 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
     int N = 5;
     std::string page_ids[N];
     for (int i = 0; i < N; ++i) {
-      page_ids[i] = RandomString(::fuchsia::ledger::kPageIdSize);
+      page_ids[i] = RandomString(::fuchsia::ledger::PAGE_ID_SIZE);
     }
 
     // Open 5 pages.

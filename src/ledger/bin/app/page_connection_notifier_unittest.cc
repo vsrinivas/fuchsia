@@ -23,7 +23,7 @@ class PageConnectionNotifierTest : public TestWithEnvironment {
  public:
   PageConnectionNotifierTest()
       : page_connection_notifier_(
-            kLedgerName, std::string(::fuchsia::ledger::kPageIdSize, '3'),
+            kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
             &fake_disk_cleanup_manager_){};
   ~PageConnectionNotifierTest() override = default;
 
@@ -176,7 +176,7 @@ TEST_F(PageConnectionNotifierTest,
   bool on_empty_called;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::kPageIdSize, '3'),
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
       &fake_disk_cleanup_manager);
   page_connection_notifier->set_on_empty(
       callback::SetWhenCalled(&on_empty_called));
@@ -194,7 +194,7 @@ TEST_F(PageConnectionNotifierTest,
   bool on_empty_called;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::kPageIdSize, '3'),
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
       &fake_disk_cleanup_manager);
   page_connection_notifier->set_on_empty(
       callback::SetWhenCalled(&on_empty_called));
@@ -213,7 +213,7 @@ TEST_F(PageConnectionNotifierTest,
   bool on_empty_called;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::kPageIdSize, '3'),
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
       &fake_disk_cleanup_manager);
   page_connection_notifier->set_on_empty(
       callback::SetWhenCalled(&on_empty_called));
@@ -241,7 +241,7 @@ TEST_F(PageConnectionNotifierTest,
   std::vector<std::unique_ptr<ExpiringToken>> tokens;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::kPageIdSize, '3'),
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
       &fake_disk_cleanup_manager);
   page_connection_notifier->set_on_empty(
       callback::SetWhenCalled(&on_empty_called));

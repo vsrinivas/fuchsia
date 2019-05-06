@@ -34,11 +34,11 @@ enum Status : int32 {
 };
 
 /// Size in bytes of Page IDs.
-const uint32 kPageIdSize = 16;
+const uint32 PAGE_ID_SIZE = 16;
 
 /// Type of the identifier of a ledger Page.
 struct PageId {
-    array<uint8>:kPageIdSize id;
+    array<uint8>:PAGE_ID_SIZE id;
 };
 
 /// Base interface for all services offered by the Ledger.

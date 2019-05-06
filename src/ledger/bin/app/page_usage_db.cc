@@ -21,16 +21,16 @@ constexpr fxl::StringView kOpenedPagePrefix = "opened/";
 
 std::string GetKeyForOpenedPage(fxl::StringView ledger_name,
                                 storage::PageIdView page_id) {
-  FXL_DCHECK(page_id.size() == ::fuchsia::ledger::kPageIdSize);
+  FXL_DCHECK(page_id.size() == ::fuchsia::ledger::PAGE_ID_SIZE);
   return fxl::Concatenate({kOpenedPagePrefix, ledger_name, page_id});
 }
 
 void GetPageFromOpenedRow(fxl::StringView row, std::string* ledger_name,
                           storage::PageId* page_id) {
   FXL_DCHECK(row.size() >
-             ::fuchsia::ledger::kPageIdSize + kOpenedPagePrefix.size());
+             ::fuchsia::ledger::PAGE_ID_SIZE + kOpenedPagePrefix.size());
   size_t ledger_name_size =
-      row.size() - ::fuchsia::ledger::kPageIdSize - kOpenedPagePrefix.size();
+      row.size() - ::fuchsia::ledger::PAGE_ID_SIZE - kOpenedPagePrefix.size();
   *ledger_name =
       row.substr(kOpenedPagePrefix.size(), ledger_name_size).ToString();
   *page_id = row.substr(kOpenedPagePrefix.size() + ledger_name_size).ToString();
@@ -107,7 +107,7 @@ storage::Status PageUsageDb::MarkPageOpened(
 storage::Status PageUsageDb::MarkPageClosed(
     coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
     storage::PageIdView page_id) {
-  FXL_DCHECK(page_id.size() == ::fuchsia::ledger::kPageIdSize);
+  FXL_DCHECK(page_id.size() == ::fuchsia::ledger::PAGE_ID_SIZE);
   zx::time_utc now;
   if (clock_->Now(&now) != ZX_OK) {
     return storage::Status::IO_ERROR;

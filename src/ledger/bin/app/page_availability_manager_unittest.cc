@@ -20,7 +20,7 @@ namespace {
 using PageAvailabilityManagerTest = TestWithEnvironment;
 
 TEST_F(PageAvailabilityManagerTest, PageAvailableByDefault) {
-  storage::PageId page_id = std::string(::fuchsia::ledger::kPageIdSize, '4');
+  storage::PageId page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '4');
   bool on_empty_called;
   bool on_available_called;
 
@@ -36,7 +36,7 @@ TEST_F(PageAvailabilityManagerTest, PageAvailableByDefault) {
 }
 
 TEST_F(PageAvailabilityManagerTest, SingleBusyPage) {
-  storage::PageId page_id = std::string(::fuchsia::ledger::kPageIdSize, '4');
+  storage::PageId page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '4');
   bool on_empty_called;
   bool on_available_called;
 
@@ -63,7 +63,7 @@ TEST_F(PageAvailabilityManagerTest, MultiplePages) {
   std::map<storage::PageId, size_t> indices;
   for (uint8_t i = 0; i < page_count; i++) {
     storage::PageId page_id =
-        std::string(::fuchsia::ledger::kPageIdSize, i + 'a');
+        std::string(::fuchsia::ledger::PAGE_ID_SIZE, i + 'a');
     page_ids.push_back(page_id);
     indices[page_id] = i;
   }
@@ -118,9 +118,9 @@ TEST_F(PageAvailabilityManagerTest, MultiplePages) {
 
 TEST_F(PageAvailabilityManagerTest, PageAvailabilityManagerReusable) {
   storage::PageId first_page_id =
-      std::string(::fuchsia::ledger::kPageIdSize, '8');
+      std::string(::fuchsia::ledger::PAGE_ID_SIZE, '8');
   storage::PageId second_page_id =
-      std::string(::fuchsia::ledger::kPageIdSize, '9');
+      std::string(::fuchsia::ledger::PAGE_ID_SIZE, '9');
   bool on_empty_called;
   bool first_on_available_called;
   bool second_on_available_called;
@@ -180,9 +180,9 @@ TEST_F(PageAvailabilityManagerTest, PageAvailabilityManagerReusable) {
 
 TEST_F(PageAvailabilityManagerTest, CallbacksNotCalledOnDestruction) {
   storage::PageId first_page_id =
-      std::string(::fuchsia::ledger::kPageIdSize, '8');
+      std::string(::fuchsia::ledger::PAGE_ID_SIZE, '8');
   storage::PageId second_page_id =
-      std::string(::fuchsia::ledger::kPageIdSize, '9');
+      std::string(::fuchsia::ledger::PAGE_ID_SIZE, '9');
   bool on_empty_called;
   bool first_on_available_called;
   bool second_on_available_called;

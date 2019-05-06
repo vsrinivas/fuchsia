@@ -62,7 +62,7 @@ class PageImplTest : public TestWithEnvironment {
   // ApplicationTestBase:
   void SetUp() override {
     ::testing::Test::SetUp();
-    page_id1_ = storage::PageId(::fuchsia::ledger::kPageIdSize, 'a');
+    page_id1_ = storage::PageId(::fuchsia::ledger::PAGE_ID_SIZE, 'a');
     auto fake_storage = std::make_unique<storage::fake::FakePageStorage>(
         &environment_, page_id1_);
     fake_storage_ = fake_storage.get();

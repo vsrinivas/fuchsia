@@ -11,11 +11,11 @@
 namespace ledger {
 
 namespace {
-const char kNullPageId[::fuchsia::ledger::kPageIdSize] = {};
+const char kNullPageId[::fuchsia::ledger::PAGE_ID_SIZE] = {};
 }  // namespace
 
 // The zero-initialized root id.
 constexpr fxl::StringView kRootPageId(kNullPageId,
-                                      ::fuchsia::ledger::kPageIdSize);
+                                      ::fuchsia::ledger::PAGE_ID_SIZE);
 
 }  // namespace ledger
