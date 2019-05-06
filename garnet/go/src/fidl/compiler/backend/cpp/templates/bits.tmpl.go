@@ -20,25 +20,46 @@ inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
   return ZX_OK;
 }
 
-{{ .Namespace }}::{{ .Name }} operator|({{ .Namespace }}::{{ .Name }} _lhs,
-                                        {{ .Namespace }}::{{ .Name }} _rhs);
+constexpr inline {{ .Namespace }}::{{ .Name }} operator|({{ .Namespace }}::{{ .Name }} _lhs,
+                                                         {{ .Namespace }}::{{ .Name }} _rhs) {
+  return static_cast<{{ .Namespace }}::{{ .Name }}>(
+    static_cast<{{ .Type }}>(_lhs) | static_cast<{{ .Type }}>(_rhs));
+}
 
-{{ .Namespace }}::{{ .Name }}& operator|=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                          {{ .Namespace }}::{{ .Name }} _rhs);
+constexpr inline {{ .Namespace }}::{{ .Name }}& operator|=({{ .Namespace }}::{{ .Name }}& _lhs,
+                                                           {{ .Namespace }}::{{ .Name }} _rhs) {
+  _lhs = _lhs | _rhs;
+  return _lhs;
+}
 
-{{ .Namespace }}::{{ .Name }} operator&({{ .Namespace }}::{{ .Name }} _lhs,
-                                        {{ .Namespace }}::{{ .Name }} _rhs);
+constexpr inline {{ .Namespace }}::{{ .Name }} operator&({{ .Namespace }}::{{ .Name }} _lhs,
+                                                         {{ .Namespace }}::{{ .Name }} _rhs) {
+  return static_cast<{{ .Namespace }}::{{ .Name }}>(
+    static_cast<{{ .Type }}>(_lhs) & static_cast<{{ .Type }}>(_rhs));
+}
 
-{{ .Namespace }}::{{ .Name }}& operator&=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                          {{ .Namespace }}::{{ .Name }} _rhs);
+constexpr inline {{ .Namespace }}::{{ .Name }}& operator&=({{ .Namespace }}::{{ .Name }}& _lhs,
+                                                           {{ .Namespace }}::{{ .Name }} _rhs) {
+  _lhs = _lhs & _rhs;
+  return _lhs;
+}
 
-{{ .Namespace }}::{{ .Name }} operator^({{ .Namespace }}::{{ .Name }} _lhs,
-                                        {{ .Namespace }}::{{ .Name }} _rhs);
+constexpr inline {{ .Namespace }}::{{ .Name }} operator^({{ .Namespace }}::{{ .Name }} _lhs,
+                                                         {{ .Namespace }}::{{ .Name }} _rhs) {
+  return static_cast<{{ .Namespace }}::{{ .Name }}>(
+    static_cast<{{ .Type }}>(_lhs) ^ static_cast<{{ .Type }}>(_rhs));
+}
 
-{{ .Namespace }}::{{ .Name }}& operator^=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                          {{ .Namespace }}::{{ .Name }} _rhs);
+constexpr inline {{ .Namespace }}::{{ .Name }}& operator^=({{ .Namespace }}::{{ .Name }}& _lhs,
+                                                           {{ .Namespace }}::{{ .Name }} _rhs) {
+  _lhs = _lhs ^ _rhs;
+  return _lhs;
+}
 
-{{ .Namespace }}::{{ .Name }} operator~({{ .Namespace }}::{{ .Name }} _value);
+constexpr inline {{ .Namespace }}::{{ .Name }} operator~({{ .Namespace }}::{{ .Name }} _value) {
+  return static_cast<{{ .Namespace }}::{{ .Name }}>(
+    ~static_cast<{{ .Type }}>(_value) & static_cast<{{ .Type }}>({{ .MaskName }}));
+}
 {{ end }}
 
 {{- define "BitsTraits" }}
@@ -69,48 +90,5 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
     return Equality<{{ .Type }}>::Equals(_lhs_underlying, _rhs_underlying);
   }
 };
-{{- end }}
-
-{{- define "BitsDefinition" }}
-{{ .Namespace }}::{{ .Name }} operator|({{ .Namespace }}::{{ .Name }} _lhs,
-                                        {{ .Namespace }}::{{ .Name }} _rhs) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    static_cast<{{ .Type }}>(_lhs) | static_cast<{{ .Type }}>(_rhs));
-}
-
-{{ .Namespace }}::{{ .Name }}& operator|=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                          {{ .Namespace }}::{{ .Name }} _rhs) {
-  _lhs = _lhs | _rhs;
-  return _lhs;
-}
-
-{{ .Namespace }}::{{ .Name }} operator&({{ .Namespace }}::{{ .Name }} _lhs,
-                                        {{ .Namespace }}::{{ .Name }} _rhs) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    static_cast<{{ .Type }}>(_lhs) & static_cast<{{ .Type }}>(_rhs));
-}
-
-{{ .Namespace }}::{{ .Name }}& operator&=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                          {{ .Namespace }}::{{ .Name }} _rhs) {
-  _lhs = _lhs & _rhs;
-  return _lhs;
-}
-
-{{ .Namespace }}::{{ .Name }} operator^({{ .Namespace }}::{{ .Name }} _lhs,
-                                        {{ .Namespace }}::{{ .Name }} _rhs) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    static_cast<{{ .Type }}>(_lhs) ^ static_cast<{{ .Type }}>(_rhs));
-}
-
-{{ .Namespace }}::{{ .Name }}& operator^=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                          {{ .Namespace }}::{{ .Name }} _rhs) {
-  _lhs = _lhs ^ _rhs;
-  return _lhs;
-}
-
-{{ .Namespace }}::{{ .Name }} operator~({{ .Namespace }}::{{ .Name }} _value) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    ~static_cast<{{ .Type }}>(_value) & static_cast<{{ .Type }}>({{ .MaskName }}));
-}
 {{- end }}
 `

@@ -58,6 +58,11 @@ TEST(Bits, BitwiseAssignOperators) {
     EXPECT_EQ(static_cast<uint32_t>(SampleBits::E), 8u);
 }
 
+TEST(Bits, IsConstexpr) {
+    static constexpr auto this_should_compile = SampleBits::B | SampleBits::D | SampleBits::E;
+    EXPECT_EQ(this_should_compile, SampleBitsMask);
+}
+
 }  // namespace
 }  // namespace misc
 }  // namespace test

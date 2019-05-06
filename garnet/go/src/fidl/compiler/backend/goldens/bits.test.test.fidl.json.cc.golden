@@ -6,46 +6,6 @@
 namespace test {
 namespace name {
 
-::test::name::MyBits operator|(::test::name::MyBits _lhs,
-                                        ::test::name::MyBits _rhs) {
-  return static_cast<::test::name::MyBits>(
-    static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
-}
-
-::test::name::MyBits& operator|=(::test::name::MyBits& _lhs,
-                                          ::test::name::MyBits _rhs) {
-  _lhs = _lhs | _rhs;
-  return _lhs;
-}
-
-::test::name::MyBits operator&(::test::name::MyBits _lhs,
-                                        ::test::name::MyBits _rhs) {
-  return static_cast<::test::name::MyBits>(
-    static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
-}
-
-::test::name::MyBits& operator&=(::test::name::MyBits& _lhs,
-                                          ::test::name::MyBits _rhs) {
-  _lhs = _lhs & _rhs;
-  return _lhs;
-}
-
-::test::name::MyBits operator^(::test::name::MyBits _lhs,
-                                        ::test::name::MyBits _rhs) {
-  return static_cast<::test::name::MyBits>(
-    static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
-}
-
-::test::name::MyBits& operator^=(::test::name::MyBits& _lhs,
-                                          ::test::name::MyBits _rhs) {
-  _lhs = _lhs ^ _rhs;
-  return _lhs;
-}
-
-::test::name::MyBits operator~(::test::name::MyBits _value) {
-  return static_cast<::test::name::MyBits>(
-    ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(MyBitsMask));
-}
 }  // namespace name
 }  // namespace test
 
