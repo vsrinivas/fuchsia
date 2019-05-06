@@ -1,12 +1,15 @@
 # Debug IPC
 
-This is the shared IPC code between the debug router and the client debugger.
-It's not useful for random programs. Client debugging code should use the
-client debug library.
+This is the shared IPC code between the debug agent (code in
+[../debug_agent](../debug_agent)) and the zxdb frontend (code in
+[../zxdb](../zxdb)). It's not useful for other programs. Client debugging code
+should use the client debug library in [../zxdb/client](.,./zxdb/client).
 
 This is a super simple custom IPC format because it is intended to be used
 between two computers (unlike FIDL) and called at a very low level when
-debugging the system (when higher-level primitives should be avoided).
+debugging the system (when higher-level primitives should be avoided). The
+goal is to replace it with a more robust IPC library when one is provided for
+the system that can communicate off-device.
 
 ## Protocol information
 
