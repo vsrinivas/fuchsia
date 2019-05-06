@@ -20,6 +20,8 @@ struct RoundedRectSpec {
   RoundedRectSpec(float width, float height, float top_left_radius,
                   float top_right_radius, float bottom_right_radius,
                   float bottom_left_radius);
+  // Set all values to 0.
+  RoundedRectSpec();
 
   float width;
   float height;

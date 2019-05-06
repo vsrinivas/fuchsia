@@ -30,6 +30,7 @@
 
 #include "garnet/testing/views/background_view.h"
 #include "garnet/testing/views/coordinate_test_view.h"
+#include "garnet/testing/views/opacity_view.h"
 #include "garnet/testing/views/test_view.h"
 #include "garnet/public/lib/escher/impl/vulkan_utils.h"
 #include "garnet/lib/ui/gfx/tests/vk_session_test.h"
@@ -721,6 +722,42 @@ VK_TEST_F(ScenicPixelTest, PoseBuffer) {
         << "i = " << i;
   }
   device.freeMemory(memory);
+}
+
+TEST_F(ScenicPixelTest, Opacity) {
+  constexpr int kNumTests = 3;
+
+  // We use the same background/foreground color for each test iteration, but
+  // vary the opacity.  When the opacity is 0% we expect the pure background
+  // color, and when it is 100% we expect the pure foreground color.  When
+  // opacity is 50% we expect a blend of the two.
+  float opacities[kNumTests] = {0.f, 0.5f, 1.f};
+  scenic::Color expected_colors[kNumTests] = {{0xff, 0x00, 0xf0, 0xff},
+                                              {0x80, 0x80, 0x80, 0xff},
+                                              {0x00, 0xff, 0x0f, 0xff}};
+
+  for (int i = 0; i < kNumTests; ++i) {
+    scenic::OpacityView view(CreatePresentationContext());
+
+    view.set_background_color(0xff, 0x00, 0xf0);
+    view.set_foreground_color(0x00, 0xff, 0x0f);
+    view.set_foreground_opacity(opacities[i]);
+
+    RunUntilPresent(&view);
+    fuchsia::ui::scenic::ScreenshotData screenshot = TakeScreenshot();
+
+    EXPECT_GT(screenshot.info.width, 0u);
+    EXPECT_GT(screenshot.info.height, 0u);
+
+    // We could assert on each pixel individually, but a histogram might give us
+    // a more meaningful failure.
+    std::map<scenic::Color, size_t> histogram = scenic::Histogram(screenshot);
+
+    EXPECT_GT(histogram[expected_colors[i]], 0u);
+    histogram.erase(expected_colors[i]);
+    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram)
+        << "Unexpected colors";
+  }
 }
 
 }  // namespace

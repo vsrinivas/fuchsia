@@ -30,6 +30,7 @@ using escher::ShapeModifier;
 using escher::plane3;
 using escher::vec2;
 using escher::vec3;
+using escher::vec4;
 
 PaperDemoScene1::PaperDemoScene1(Demo* demo) : Scene(demo) {}
 
@@ -94,6 +95,27 @@ void PaperDemoScene1::Init(escher::PaperScene* scene) {
       .radians1 = M_PI * 1.5f,
       .radians2 = M_PI * 1.5f,
   });
+
+  // Generate animated translucent rounded rectangle, not clipped by any
+  // of the planes above.
+  {
+    translucent_ = fxl::MakeRefCounted<escher::Material>();
+    translucent_->set_color(vec4(0.2f, 0.8f, 0.5f, 0.7f));
+    translucent_->set_opaque(false);
+
+    const float big_radius = 200.f;
+    const float tiny_radius = 30.f;
+    translucent_rectangle_ = RectState{
+        .animation = {.cycle_duration = 10.f,
+                      .cycle_count_before_pause = 1,
+                      .inter_cycle_pause_duration = 0.5f},
+        .material = translucent_,
+        .pos1 = vec3(-600, 0, -90),
+        .pos2 = vec3(300, 0, -90),
+        .spec1 = {600, 800, big_radius, tiny_radius, big_radius, tiny_radius},
+        .spec2 = {1200, 800, tiny_radius, big_radius, tiny_radius, big_radius},
+    };
+  }
 }
 
 PaperDemoScene1::~PaperDemoScene1() {}
@@ -156,7 +178,25 @@ void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
       transform_stack->Pop();
     }
 
+    // Pop world-space clip-planes and background-plane elevation.
     transform_stack->Pop();
+
+    // Draw translucent rectangle.
+    {
+      const float t = translucent_rectangle_.animation.Update(current_time_sec);
+      const vec3 base_position(screen_width * 0.5f, screen_height * 0.5f, 0.f);
+      const vec3 position =
+          base_position + escher::Lerp(translucent_rectangle_.pos1,
+                                       translucent_rectangle_.pos2, t);
+      const RoundedRectSpec rect_spec = escher::Lerp(
+          translucent_rectangle_.spec1, translucent_rectangle_.spec2, t);
+
+      transform_stack->PushTranslation(position);
+      renderer->DrawRoundedRect(
+          rect_spec, translucent_,
+          escher::PaperDrawableFlagBits::kDisableShadowCasting);
+      transform_stack->Pop();
+    }
   }
 
   // Animated stack of circles, and a clip plane.

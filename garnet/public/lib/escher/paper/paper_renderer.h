@@ -202,6 +202,7 @@ class PaperRenderer final : public Renderer {
   std::unique_ptr<FrameData> frame_data_;
 
   ShaderProgramPtr ambient_light_program_;
+  ShaderProgramPtr no_lighting_program_;
   ShaderProgramPtr point_light_program_;
   ShaderProgramPtr point_light_falloff_program_;
   ShaderProgramPtr shadow_volume_geometry_program_;

@@ -28,12 +28,12 @@
 namespace escher {
 
 PaperRendererPtr PaperRenderer::New(EscherWeakPtr escher,
-                                      const PaperRendererConfig& config) {
+                                    const PaperRendererConfig& config) {
   return fxl::AdoptRef(new PaperRenderer(std::move(escher), config));
 }
 
 PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher,
-                               const PaperRendererConfig& config)
+                             const PaperRendererConfig& config)
     : Renderer(weak_escher),
       config_(config),
       draw_call_factory_(weak_escher, config),
@@ -42,6 +42,15 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher,
       ambient_light_program_(escher()->GetGraphicsProgram(
           "shaders/model_renderer/main.vert",
           "shaders/paper/frag/main_ambient_light.frag",
+          ShaderVariantArgs({
+              {"USE_ATTRIBUTE_UV", "1"},
+              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
+              // TODO(ES-153): currently required by main.vert.
+              {"NO_SHADOW_LIGHTING_PASS", "1"},
+          }))),
+      no_lighting_program_(escher()->GetGraphicsProgram(
+          "shaders/model_renderer/main.vert",
+          "shaders/model_renderer/main.frag",
           ShaderVariantArgs({
               {"USE_ATTRIBUTE_UV", "1"},
               {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
@@ -205,9 +214,9 @@ bool PaperRenderer::SupportsShadowType(
 }
 
 void PaperRenderer::BeginFrame(const FramePtr& frame,
-                                const PaperScenePtr& scene,
-                                const std::vector<Camera>& cameras,
-                                const ImagePtr& output_image) {
+                               const PaperScenePtr& scene,
+                               const std::vector<Camera>& cameras,
+                               const ImagePtr& output_image) {
   TRACE_DURATION("gfx", "PaperRenderer::BeginFrame");
   FXL_DCHECK(!frame_data_ && !cameras.empty());
 
@@ -287,7 +296,7 @@ void PaperRenderer::BindSceneAndCameraUniforms(uint32_t camera_index) {
 }
 
 void PaperRenderer::Draw(PaperDrawable* drawable, PaperDrawableFlags flags,
-                          mat4* matrix) {
+                         mat4* matrix) {
   TRACE_DURATION("gfx", "PaperRenderer::Draw");
 
   // For restoring state afterward.
@@ -305,7 +314,7 @@ void PaperRenderer::Draw(PaperDrawable* drawable, PaperDrawableFlags flags,
 }
 
 void PaperRenderer::DrawCircle(float radius, const PaperMaterialPtr& material,
-                                PaperDrawableFlags flags, mat4* matrix) {
+                               PaperDrawableFlags flags, mat4* matrix) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawCircle");
 
   if (!material)
@@ -324,8 +333,8 @@ void PaperRenderer::DrawCircle(float radius, const PaperMaterialPtr& material,
 }
 
 void PaperRenderer::DrawRect(vec2 min, vec2 max,
-                              const PaperMaterialPtr& material,
-                              PaperDrawableFlags flags, mat4* matrix) {
+                             const PaperMaterialPtr& material,
+                             PaperDrawableFlags flags, mat4* matrix) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawRect");
 
   if (!material)
@@ -341,8 +350,8 @@ void PaperRenderer::DrawRect(vec2 min, vec2 max,
 }
 
 void PaperRenderer::DrawRoundedRect(const RoundedRectSpec& spec,
-                                     const PaperMaterialPtr& material,
-                                     PaperDrawableFlags flags, mat4* matrix) {
+                                    const PaperMaterialPtr& material,
+                                    PaperDrawableFlags flags, mat4* matrix) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawRoundedRect");
 
   if (!material)
@@ -358,7 +367,7 @@ void PaperRenderer::DrawRoundedRect(const RoundedRectSpec& spec,
 }
 
 void PaperRenderer::DrawLegacyObject(const Object& obj,
-                                      PaperDrawableFlags flags) {
+                                     PaperDrawableFlags flags) {
   FXL_DCHECK(frame_data_);
 
   PaperLegacyDrawable drawable(obj);
@@ -366,9 +375,9 @@ void PaperRenderer::DrawLegacyObject(const Object& obj,
 }
 
 void PaperRenderer::InitRenderPassInfo(RenderPassInfo* rp,
-                                        ResourceRecycler* recycler,
-                                        const FrameData& frame_data,
-                                        uint32_t camera_index) {
+                                       ResourceRecycler* recycler,
+                                       const FrameData& frame_data,
+                                       uint32_t camera_index) {
   const ImagePtr& output_image = frame_data.output_image;
   const TexturePtr& depth_texture = frame_data.depth_texture;
   const TexturePtr& msaa_texture = frame_data.msaa_texture;
@@ -454,11 +463,16 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
   {
     PaperRenderQueueContext context;
     context.set_draw_mode(PaperRendererDrawMode::kAmbient);
-    context.set_shader_program(ambient_light_program_);
 
+    context.set_shader_program(ambient_light_program_);
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
     render_queue_.GenerateCommands(cmd_buf, &context,
                                    PaperRenderQueueFlagBits::kOpaque);
+
+    context.set_shader_program(no_lighting_program_);
+    cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
+    render_queue_.GenerateCommands(cmd_buf, &context,
+                                   PaperRenderQueueFlagBits::kTranslucent);
   }
   cmd_buf->EndRenderPass();
   frame->AddTimestamp("finished no-shadows render pass");
@@ -600,6 +614,14 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
                                      PaperRenderQueueFlagBits::kOpaque);
     }
   }
+
+  // Draw translucent geometry without lighting.
+  context.set_draw_mode(PaperRendererDrawMode::kAmbient);
+  context.set_shader_program(no_lighting_program_);
+  cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
+  render_queue_.GenerateCommands(cmd_buf, &context,
+                                 PaperRenderQueueFlagBits::kTranslucent);
+
   cmd_buf->EndRenderPass();
   frame->AddTimestamp("finished shadow_volume render pass");
 }

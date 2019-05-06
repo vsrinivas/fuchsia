@@ -78,6 +78,9 @@ class PaperDemoScene1 : public Scene {
   escher::MaterialPtr color1_;
   escher::MaterialPtr color2_;
 
+  RectState translucent_rectangle_;
+  escher::MaterialPtr translucent_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(PaperDemoScene1);
 };
 

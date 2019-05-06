@@ -640,11 +640,12 @@ void CommandBuffer::SetToDefaultState(DefaultState default_state) {
       static_state->blend_enable = false;
     } break;
     case DefaultState::kTranslucent: {
+      // See definition in header for explanation of these blend factors.
       static_state->blend_enable = true;
       static_state->src_color_blend = VK_BLEND_FACTOR_SRC_ALPHA;
-      static_state->dst_color_blend = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-      static_state->src_alpha_blend = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-      static_state->dst_alpha_blend = VK_BLEND_FACTOR_ONE;
+      static_state->dst_color_blend = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+      static_state->src_alpha_blend = VK_BLEND_FACTOR_ONE;
+      static_state->dst_alpha_blend = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
       static_state->color_blend_op = VK_BLEND_OP_ADD;
       static_state->alpha_blend_op = VK_BLEND_OP_ADD;
     } break;
