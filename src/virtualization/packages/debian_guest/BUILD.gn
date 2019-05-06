@@ -18,7 +18,6 @@ linux_image = "vmlinuz"
 template("image") {
   assert(defined(invoker.filename), "")
   action(target_name) {
-    visibility = [ ":*" ]
     script = "check_image.sh"
     depfile = "${target_out_dir}/debian/${invoker.filename}.d"
     args = [

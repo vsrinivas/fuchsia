@@ -14,7 +14,6 @@ declare_args() {
 }
 
 action("block") {
-  visibility = [ ":*" ]
   script = "check_image.sh"
   depfile = "$target_out_dir/block.d"
   args = [
@@ -28,7 +27,6 @@ action("block") {
 }
 
 action("tests") {
-  visibility = [ ":*" ]
   script = "check_image.sh"
   depfile = "$target_out_dir/tests.d"
   args = [
@@ -42,7 +40,6 @@ action("tests") {
 }
 
 action("kernel") {
-  visibility = [ ":*" ]
   script = "check_image.sh"
   depfile = "$target_out_dir/kernel.d"
   args = [
@@ -56,7 +53,6 @@ action("kernel") {
 }
 
 action("extras") {
-  visibility = [ ":*" ]
   script = "mkextras.sh"
   depfile = "$target_out_dir/extras.d"
   if ("${linux_guest_extras_path}" != "") {
