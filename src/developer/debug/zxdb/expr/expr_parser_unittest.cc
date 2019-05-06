@@ -627,6 +627,11 @@ TEST_F(ExprParserTest, ParseIdentifier) {
   EXPECT_FALSE(word_err.has_error()) << word_err.msg();
   EXPECT_EQ("\"foo\"", word_ident.GetDebugName());
 
+  // Destructor.
+  auto [destr_err, destr_ident] = ExprParser::ParseIdentifier("Foo::~Foo");
+  EXPECT_FALSE(destr_err.has_error()) << destr_err.msg();
+  EXPECT_EQ(R"("Foo"; ::"~Foo")", destr_ident.GetDebugName());
+
   // Complicated identifier (copied from STL).
   auto [complex_err, complex_ident] = ExprParser::ParseIdentifier(
       "std::unordered_map<"
