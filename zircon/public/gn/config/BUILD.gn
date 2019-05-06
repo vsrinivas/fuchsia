@@ -289,9 +289,10 @@ config("opt_level") {
   }
 
   configs = []
-  if (opt_level > 1) {
-    # TODO(ZX-3427): enable this later; it's not used in the make build.
-    #configs += [ ":icf" ]
+  if (opt_level > 1 && is_kernel) {
+    # Our code should never rely on C's unique function pointer semantics,
+    # which is broken by --icf=all for sometimes substantial space savings.
+    configs += [ ":icf" ]
   }
 
   asmflags = compiler_flags
