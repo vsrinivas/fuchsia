@@ -30,8 +30,10 @@
 ##   fetch   <name> [label]  Retrieves the corpus for the named fuzzer.  If
 ##                           'label' is a directory, installs the corpus from
 ##                           that location.  Otherwise fetches and installs the
-##                           corpus from CIPD given by 'label' or the latest
-##                           corpus if 'label' is omitted.
+##                           corpus from CIPD given by 'label', which may
+##                           either be a CIPD "ref", or a CIPD "tag" of the
+##                           form "key:value".  If omitted, 'label' defaults to
+##                           "latest".
 ##   start   <name> [...]    Fetches the latest corpus for a named fuzzer and
 ##                           starts it. Additional arguments are passed to the
 ##                           fuzzer. This is default command if not provided.
@@ -46,7 +48,9 @@
 ##                           minimizes it with the corpus on device, and stores
 ##                           the result in CIPD.
 ##   store   <name>          Gathers the current corpus from the target platform
-##                           and publishes it.
+##                           and publishes it to CIPD.  The package will be
+##                           tagged with the current integration revision and
+##                           referenced as 'latest'.
 ##
 ## Typical workflow is one of three commands:
 ##   fx fuzz <name>        # Fetches the latest corpus and starts the fuzzer

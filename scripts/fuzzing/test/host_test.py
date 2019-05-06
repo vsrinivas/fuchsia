@@ -176,6 +176,19 @@ class TestHost(unittest.TestCase):
       return
     host.notify_user('This is a test', 'This is only a test.')
 
+  def test_snapshot(self):
+    fuchsia_dir = os.getenv('FUCHSIA_DIR')
+    os.unsetenv('FUCHSIA_DIR')
+    del os.environ['FUCHSIA_DIR']
+    host = Host()
+    with self.assertRaises(Host.ConfigError):
+      host.snapshot()
+    if not fuchsia_dir:
+      return
+    os.environ['FUCHSIA_DIR'] = fuchsia_dir
+    line = host.snapshot()
+    self.assertRegexpMatches(line, r'[0-9a-f]{40}')
+
 
 if __name__ == '__main__':
   unittest.main()

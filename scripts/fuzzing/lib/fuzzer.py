@@ -93,7 +93,7 @@ class Fuzzer(object):
     if output:
       self._output = output
     else:
-      self._output = Host.join('test_data', 'fuzzing', self.pkg, self.tgt)
+      self._output = self.host.join('test_data', 'fuzzing', self.pkg, self.tgt)
     self._foreground = foreground
 
   def __str__(self):

@@ -17,6 +17,8 @@ class MockCipd(Cipd):
     self.history = []
     super(MockCipd, self).__init__(self.fuzzer)
 
-  def _exec(self, cmd, quiet=False):
+  def _exec(self, cmd, cwd=None, quiet=False):
     """Overrides Cipd._exec for testing."""
-    self.history.append(self._bin + ' ' + ' '.join(cmd))
+    logged = 'CWD=' + cwd + ' ' if cwd else ''
+    logged += self._bin + ' ' + ' '.join(cmd)
+    self.history.append(logged)

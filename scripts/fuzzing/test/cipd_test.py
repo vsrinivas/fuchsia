@@ -35,23 +35,25 @@ class TestCipd(unittest.TestCase):
     finally:
       shutil.rmtree(tmp_dir)
 
-  def test_list(self):
-    mock_cipd = MockCipd()
-    mock_cipd.list()
-    self.assertIn(mock_cipd._bin + ' instances fuchsia/test_data/fuzzing/' +
-                  str(mock_cipd.fuzzer), mock_cipd.history)
-
   def test_install(self):
     mock_cipd = MockCipd()
     mock_cipd.install()
-    self.assertIn(mock_cipd._bin + ' install fuchsia/test_data/fuzzing/' + str(
-        mock_cipd.fuzzer) + ' --root ' + mock_cipd.root, mock_cipd.history)
+    self.assertIn('CWD=' + mock_cipd.root + ' ' + mock_cipd._bin +
+                  ' install fuchsia/test_data/fuzzing/' +
+                  str(mock_cipd.fuzzer) + ' latest', mock_cipd.history)
+    mock_cipd.label = 'integration:f581cfbbb07fd975f2008ddfed7a9d9f92491375'
+    mock_cipd.install()
+    self.assertIn(
+        'CWD=' + mock_cipd.root + ' ' + mock_cipd._bin +
+        ' install fuchsia/test_data/fuzzing/' + str(mock_cipd.fuzzer) +
+        ' s4BNxLyjxJIdZWumbZZtIf1a5TdrjGSpvEbSxQhQBE4C', mock_cipd.history)
 
   def test_create(self):
     mock_cipd = MockCipd()
     mock_cipd.create()
     self.assertIn(mock_cipd._bin + ' create --pkg-def ' + os.path.join(
-        mock_cipd.root, 'cipd.yaml') + ' --ref latest', mock_cipd.history)
+        mock_cipd.root, 'cipd.yaml') + ' --ref latest --tag integration:' +
+                  mock_cipd.host.snapshot(), mock_cipd.history)
 
 
 if __name__ == '__main__':

@@ -170,3 +170,11 @@ class Host(object):
           ['wall', title + '; ' + body],
           stdout=Host.DEVNULL,
           stderr=Host.DEVNULL)
+
+  def snapshot(self):
+    integration = Host.join('integration')
+    if not os.path.isdir(integration):
+      raise Host.ConfigError('Missing integration repo.')
+    return subprocess.check_output(
+        ['git', 'rev-parse', 'HEAD'], stderr=Host.DEVNULL,
+        cwd=integration).strip()

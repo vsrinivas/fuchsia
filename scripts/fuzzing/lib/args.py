@@ -47,5 +47,9 @@ class Args:
           nargs='?',
           default='latest',
           help='If a directory, installs a corpus from that location. ' +
-          'Otherwise installs the labeled version from CIPD.')
+          'Otherwise installs the labeled version from CIPD. In this case, ' +
+          '"label" may be either a "ref" or a key:value "tag"  as described ' +
+          'in `cipd help`. By default, corpora are uploaded with the ' +
+          '"latest" ref and a tag of "integration:<git-revision>" ' +
+          'corresponding to current revision of the //integration repository.')
     return parser

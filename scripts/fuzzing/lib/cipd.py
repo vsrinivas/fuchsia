@@ -8,6 +8,7 @@ import argparse
 import tempfile
 import subprocess
 import shutil
+import errno
 
 from lib.host import Host
 from lib.fuzzer import Fuzzer
@@ -41,11 +42,19 @@ class Cipd(object):
     if disabled:
       return
     self.device = fuzzer.device
+    self.host = fuzzer.host
     self.fuzzer = fuzzer
-    self._bin = Host.join('.jiri_root', 'bin', 'cipd')
+    self._bin = self.host.join('.jiri_root', 'bin', 'cipd')
     if root:
       self.root = root
       self._is_tmp = False
+      try:
+        os.makedirs(root)
+      except OSError as e:
+        if e.errno == errno.EEXIST and os.path.isdir(root):
+          pass
+        else:
+          raise
     else:
       self.root = tempfile.mkdtemp()
       self._is_tmp = True
@@ -62,37 +71,45 @@ class Cipd(object):
     """Defines naming convention for Fuchsia fuzzing corpora in CIPD."""
     return 'fuchsia/test_data/fuzzing/' + str(self.fuzzer)
 
-  def _exec(self, cmd, quiet=False):
+  def _exec(self, cmd, cwd=None, quiet=False):
     """Executes a CIPD command."""
     if quiet:
-      subprocess.check_call([self._bin] + cmd, stdout=Host.DEVNULL)
+      subprocess.check_call([self._bin] + cmd, stdout=Host.DEVNULL, cwd=cwd)
     else:
-      subprocess.check_call([self._bin] + cmd)
-
-  def list(self, quiet=False):
-    """Lists the instances of the corpus available for the fuzzer."""
-    if self.disabled:
-      return False
-    try:
-      self._exec(['instances', self._pkg()], quiet)
-      return True
-    except subprocess.CalledProcessError:
-      print 'No corpus instances found in CIPD for ' + str(self.fuzzer)
-      return False
+      subprocess.check_call([self._bin] + cmd, cwd=cwd)
 
   def install(self):
     """Downloads and unpacks a CIPD package for a Fuchsia fuzzer."""
-    if self.disabled or not self.list(quiet=True):
+    if self.disabled:
       return False
     self.fuzzer.require_stopped()
-    cipd_cmd = ['install', self._pkg()]
-    if self.label:
-      cipd_cmd.append(self.label)
-    cipd_cmd.extend(['--root', self.root])
-    self._exec(cipd_cmd)
+
+    # Default to latest
+    if not self.label:
+      self.label = 'latest'
+
+    # Look up version from tag.  Note if multiple versions of the package have
+    # the same tag (e.g. the same integration revision), this will select the
+    # most recent.
+    if ':' in self.label:
+      output = subprocess.check_output(
+          [self._bin, 'search',
+           self._pkg(), '-tag', self.label])
+      if not output.startswith('Instances:'):
+        print 'Failed to find corpus with ' + self.label
+        return False
+      self.label = output.split(':')[-1].strip()
+
+    # Check that the version or ref is valid
+    if subprocess.call(
+        [self._bin, 'describe',
+         self._pkg(), '-version', self.label],
+        stdout=Host.DEVNULL) != 0:
+      print 'Failed to find corpus with ' + self.label
+      return False
+
+    self._exec(['install', self._pkg(), self.label], cwd=self.root)
     subprocess.check_call(['chmod', '-R', '+w', self.root])
-    self.device.store(
-        os.path.join(self.root, '*'), self.fuzzer.data_path('corpus'))
     return True
 
   def create(self):
@@ -113,7 +130,11 @@ class Cipd(object):
         if 'cipd' not in elem:
           f.write('  - file: ' + elem + '\n')
     try:
-      self._exec(['create', '--pkg-def', pkg_def, '--ref', 'latest'])
+      # See the note in `install` above about duplicate tags.
+      self._exec([
+          'create', '--pkg-def', pkg_def, '--ref', 'latest', '--tag',
+          'integration:' + self.host.snapshot()
+      ])
       return True
     except subprocess.CalledProcessError:
       print('Failed to upload corpus for ' + str(self.fuzzer) +
