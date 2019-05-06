@@ -6,94 +6,114 @@ This is the command usage guide for zxdb. Please see also:
 
 ## Quick start
 
-### Debug a regular process
+### Connecting in-tree
 
-Console apps like unit tests can be launched directly from within the debugger:
+In-tree developers should use the `fx debug` command to start the debugger. The
+system must already be running and reachable via networking from your computer:
 
 ```
-connect 192.168.3.1:2345
-break main
-run /bin/cowsay moo
+$ scripts/fx debug
+Attempting to start the Debug Agent.
+Waiting for the Debug Agent to start.
+Connecting (use "disconnect" to cancel)...
+Connected successfully.
+[zxdb]
+```
+
+### Debugging a process or component.
+
+Running a process on Fuchsia is more complicated than in other systems because
+there are different loader environments (see "A note about launcher
+environments" below).
+
+The only want to reliably debug all types of processes is to create a filter on
+the process name and start it the normal way you would start that process. This
+example sets a pending breakpoint on `main` to stop at the beginning of
+execution, and waits for a process called "my_app" to start:
+
+```
+[zxdb] set filters my_app
+Set value(s) for job 1:
+• my_app
+
+[zxdb] break main
+Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
+Pending: No matches for location, it will be pending library loads.
+```
+
+Then run the process the way you would in normal use (direcly on the command
+line, via `fx run-test`, via the shell's `run fuchsia-pkg://...`, or another
+way. The debugger should then immediately break on `main` (it may take some
+time to load symbols so you may see a delay before showing the source code):
+
+```
+Attached Process 1 [Running] koid=51590 my_app.cmx
+🛑 on bp 1 main(…) • main.cc:222
+   220 }
+   221
+ ▶ 222 int main(int argc, const char* argv[]) {
+   223   foo::CommandLineOptions options;
+   224   cmdline::Status status = ParseCommandLine(argc, argv, &options);
+```
+
+You can then do basic commands that are similar to GDB:
+
+```
 next
+step
 print argv[1]
 continue
 quit
 ```
 
-### Attaching to new processes or components
+#### A note about launcher environments
 
-When zxdb is connected, it attaches itself to appmgr's job. This enables it to
-detect when new process are being launched. With this, zxdb has the ability of
-attaching to a process before it starts (before the first instruction has been
-run).
+The following loader environments all have different capabilities (in order
+from least capable to most capable):
 
-Components are launched by appmgr, so they're always launched in a job that's a
-child of appmgr's job. Under the hood, they will appear as a new process so they
-can be attached in the same way.
+  * The debugger's `run <file name>` command (base system process stuff).
+  * The system console or `fx shell` (adds some libraries).
+  * The base component environment via the shell's `run` and the debugger's
+    `run -c <package url>` (adds component capabilities).
+  * The test environment via `fx run-test`.
+  * The user environment when launched from a "story" (adds high-level
+    services like scenic).
 
-In order for the user to attach, they have to tell zxdb what processes they are
-interested in attaching to. For this, they can use the filter option:
+This panoply of environments is why the debugger can't have a simple "run"
+command that always works.
 
-```
-[zxdb] set filters some_substr_that_matches
-Set value(s) for job 1:
-• some_substr_that_matches
-```
+### Launching simple command-line processes
 
-With that, all new processes that match that filter will be caught by the
-debugger (run `get filters` and `help get` for more details). In this example,
-a new process called "awesome_substr_that_matches_process.cmx" was launched:
-
-```
-// Within zxdb you will see something like:
-Attached Process 1 [Running] koid=12345 awesome_substr_that_matches_process.cmx
-  The process is currently in an initializing state. You can set pending
-  breakpoints (symbols haven't been loaded yet) and "continue".
-[zxdb]
-```
-NOTE: The process has *not started*. This means that there is no code loaded,
-and hence no symbols to query. You will still be able to set pending breakpoints
-that will be set before starting the process. See
-[breakpoints](#working-with-breakpoints) for more information:
+Minimal console apps including some unit tests can be launched directly from
+within the debugger which avoids the "set filters" dance:
 
 ```
 [zxdb] break main
 Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
 Pending: No matches for location, it will be pending library loads.
 
-[zxdb] continue
-
-Thread 1 stopped on breakpoint 1 at main(…) • awesome_substr_that_matches_process.cc:15
- ▶ 15 int main(int argc, const char** argv) {
+[zxdb] run /bin/cowsay
 ```
 
-#### As a complete example:
+If you get a shared library load error or errors about files or services not
+being found, it means the app can't be run from within the debugger's launcher
+environment. This is true even for things that may seem relatively simple.
+
+### Directly launching components
+
+Components that can be executed with the console comand `run fuchsia-pkg://...`
+can be loaded in the debugger with the following command, substituting your
+component's URL:
 
 ```
-[zxdb] set filters some_comp
-Set value(s) for job 1:
-• some_comp
-
-[zxdb] break main
-Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
-Pending: No matches for location, it will be pending library loads.
-
-// Launch Component (within the target).
-$ run fuchsia-pkg://fuchsia.com/awesome_package#meta/awesome_component.cmx
-
-// Back in zxdb.
-Attached Process 1 [Running] koid=12345 awesome_component.cmx
-  The process is currently in an initializing state. You can set pending
-  breakpoints (symbols haven't been loaded yet) and "continue".
-
-[zxdb] process
-# State     Koid Name
-▶ 1 Running 3471 echo_client_cpp.cmx
-
-[zxdb] continue
-Thread 1 stopped on breakpoint 1 at main(…) • my_component_main.cc:15
- ▶ 15 int main(int argc, const char** argv) {
+[zxdb] run -c fuchsia-pkg://fuchsia.com/your_app#meta/your_app.cmx
 ```
+
+Not all components can be launched this way since most higher-level services
+won't be accessible: if you can't do `run ...` from the system console, it
+won't work from the debugger either. Note also that `fx run-test` is a
+different environment. According to your test's dependencies, it may or may not
+work from the debugger's `run` command. 
 
 ### Attaching to an existing process
 
@@ -118,22 +138,6 @@ Process 1 Running koid=1249 pwrbtn-monitor
 
 When you’re done, you can choose to `detach` (keep running) or `kill`
 (terminate) the process.
-
-### Launch a component (Experimental)
-
-Components can be launched through the debugger, though the support is in an
-*experimental* state, so YMMV. In general, the preferred way for now is to use
-filters to catch new components.
-See [Attach to a new process or component](#attaching-to-new-processes-or-components).
-
-In order to run the component, you can do:
-
-```
-[zxdb] run -c fuchsia-pkg://fuchsia.com/some_package#meta/some_component.cmx
-```
-
-Overall the functionality will be similar to what running a binary is, meaning
-that you can pause the process, set breakpoints before hand, etc.
 
 ## Interaction model
 
@@ -248,30 +252,6 @@ thread, and frame for the print command:
 
 # Attaching and running
 
-### Connecting to the target system
-
-zxdb currently runs only in remote mode. This means that the debugger fromtend
-(zxdb) runs on your development Linux or Mac workstation, while the target
-Fuchsia system is running connected over a network or in QEMU.
-
-The set up guide provides more information on how to do this. In short, first
-run the debug agent on the target system with a port number:
-
-```
-$ run debug_agent --port=2345
-```
-
-Then on the host use the `-c` command-line option or the connect command to
-connect to the target’s IP and the port you specified above:
-
-```
-[zxdb] connect 192.168.3.1:2345
-```
-
-Use `disconnect` to close the connection, or `quit` to disconnect and close the
-frontend. Note that currently you may need to also exit the debug agent before
-reconnecting ([DX-517](https://fuchsia.atlassian.net/browse/DX-517)).
-
 ### Debugging drivers
 
 It's not currently possible to set up the debugger early enough in system
@@ -307,69 +287,18 @@ Or jump to the line after the loop:
 
 ### Debugging crash dumps
 
-Work on this capability is ongoing
-([DX-603](https://fuchsia.atlassian.net/browse/DX-603)).
-
-### Directly running a new process
-
-You can start a new process from the debugger. Most applications in Fuchsia are
-launched in a specific context from the application manager or the dev manager
-and these won’t work when started from the debugger directly. But certain
-processes like command line utilities and most tests can be.
-
-To start a process, provide the full path and any command line arguments
-(optional):
+You can load a minidump generated by a crash report. Use the "opendump" verb
+and supply the local file name of the dump. The debugger must not be attached
+to another dump or a running system (use "disconnect" first if so).
 
 ```
-[zxdb] run /path/to/process --command --line=args go here
+[zxdb] opendump upload_file_minidump-e71256ba30163a0.dmp
+Opening dump file
+Dump loaded successfully.
 ```
 
-Most tests are in `/pkgfs/<complicated_path>` while some legacy utilities are
-in `/system/bin`. It can be hard to find the full path in some cases, so
-Fuchsia’s `find` utility is your friend. On the target Fuchsia system:
-
-```
-$ find . -name my_test
-```
-
-The run command will immediately start running the process. Many utilities run
-and exit right away, so you’ll see:
-
-```
-[zxdb] run /bin/cowsay moo
-Process 1 Running koid=10734 /bin/cowsay
-Exited with code 1: Process 1 Not running /bin/cowsay
-```
-
-This is expected because the process did its work and exited. Currently stdout
-and stdin from the running process are inaccessible so you won’t see any
-printed output. In many cases you’ll want to set a breakpoint before running to
-catch it at some point (see below for more on breakpoints):
-
-```
-[zxdb] break main
-Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
-Pending: No matches for location, it will be pending library loads.
-[zxdb] run
-```
-
-In this this example we didn’t need to supply any parameters to `run` because
-the process and command line switches carry over from the previous invocation.
-It gives a warning that there are no matching symbols because the process is
-not started yet. This is expected: the symbols will be resolved when the
-process (and therefore symbols) are loaded.
-
-To terminate the process:
-
-```
-[zxdb] kill
-```
-
-Or keep the process running outside of the debugger:
-
-```
-[zxdb] detach
-```
+Now the thread, stack, and memory commands can be used to inspect the state of
+the program. Use "disconnect" to close the dump.
 
 ### Debugging multiple processes
 
