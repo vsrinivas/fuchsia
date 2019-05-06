@@ -73,7 +73,6 @@ static const uint8_t zxcrypt_magic[16] = {
 };
 
 disk_format_t detect_disk_format(int fd);
-disk_format_t detect_disk_format_log_unknown(int fd);
 
 typedef struct mount_options {
     bool readonly;

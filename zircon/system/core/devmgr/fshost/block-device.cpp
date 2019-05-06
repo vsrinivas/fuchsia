@@ -86,7 +86,7 @@ int UnsealZxcryptThread(void* arg) {
     zx_status_t rc;
     std::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
     if ((rc = zxcrypt::FdioVolume::Init(std::move(fd), &zxcrypt_volume)) != ZX_OK) {
-        printf("fshost: couldn't open zxcrypt fdio volume\n");
+        printf("fshost: couldn't open zxcrypt fdio volume");
         return ZX_OK;
     }
 
@@ -94,14 +94,14 @@ int UnsealZxcryptThread(void* arg) {
     if ((rc = zxcrypt_volume->OpenManager(zx::sec(2),
                                           zxcrypt_volume_manager_chan.reset_and_get_address())) !=
         ZX_OK) {
-        printf("fshost: couldn't open zxcrypt manager device\n");
+        printf("fshost: couldn't open zxcrypt manager device");
         return 0;
     }
 
     zxcrypt::FdioVolumeManager zxcrypt_volume_manager(std::move(zxcrypt_volume_manager_chan));
     uint8_t slot = 0;
     if ((rc = zxcrypt_volume_manager.UnsealWithDeviceKey(slot)) != ZX_OK) {
-        printf("fshost: couldn't unseal zxcrypt manager device\n");
+        printf("fshost: couldn't unseal zxcrypt manager device");
         return 0;
     }
 
@@ -112,7 +112,7 @@ int UnsealZxcryptThread(void* arg) {
 
 BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd)
     : mounter_(mounter), fd_(std::move(fd)),
-      format_(detect_disk_format_log_unknown(fd_.get())) {}
+      format_(detect_disk_format(fd_.get())) {}
 
 disk_format_t BlockDevice::GetFormat() {
     return format_;
