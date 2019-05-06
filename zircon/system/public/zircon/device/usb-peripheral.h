@@ -17,6 +17,9 @@
 #define GOOGLE_USB_UMS_PID 0xA021
 
 // USB Product ID for Zircon USB Function Test.
-#define GOOGLE_USB_PERIPHERAL_TEST_PID 0xA022
+#define GOOGLE_USB_FUNCTION_TEST_PID 0xA022
+
+// USB Product ID for CDC Ethernet and Function Test composite device.
+#define GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID 0xA023
 
 #endif  // SYSROOT_ZIRCON_DEVICE_USB_PERIPHERAL_H_

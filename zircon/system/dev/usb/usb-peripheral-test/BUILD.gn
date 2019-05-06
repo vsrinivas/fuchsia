@@ -20,6 +20,7 @@ if (is_fuchsia) {
   }
 } else if (current_os == "linux") {
   test("usb-peripheral-test") {
+    output_name = "usb-peripheral-test"
     sources = [
       "test.cpp",
     ]

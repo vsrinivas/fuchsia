@@ -34,54 +34,86 @@
 #define CDC_PRODUCT_STRING "CDC Ethernet"
 #define UMS_PRODUCT_STRING "USB Mass Storage"
 #define TEST_PRODUCT_STRING "USB Function Test"
+#define CDC_TEST_PRODUCT_STRING "CDC Ethernet & USB Function Test"
 #define SERIAL_STRING "12345678"
 
 typedef fuchsia_hardware_usb_peripheral_FunctionDescriptor usb_function_descriptor_t;
 
-const usb_function_descriptor_t cdc_function_desc = {
-    .interface_class = USB_CLASS_COMM,
-    .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
-    .interface_protocol = 0,
+const usb_function_descriptor_t cdc_function_descs[] = {
+    {
+        .interface_class = USB_CLASS_COMM,
+        .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
+        .interface_protocol = 0,
+    },
 };
 
-const usb_function_descriptor_t ums_function_desc = {
-    .interface_class = USB_CLASS_MSC,
-    .interface_subclass = USB_SUBCLASS_MSC_SCSI,
-    .interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
+const usb_function_descriptor_t ums_function_descs[] = {
+    {
+        .interface_class = USB_CLASS_MSC,
+        .interface_subclass = USB_SUBCLASS_MSC_SCSI,
+        .interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
+    },
 };
 
-const usb_function_descriptor_t test_function_desc = {
-    .interface_class = USB_CLASS_VENDOR,
-    .interface_subclass = 0,
-    .interface_protocol = 0,
+const usb_function_descriptor_t test_function_descs[] = {
+    {
+        .interface_class = USB_CLASS_VENDOR,
+        .interface_subclass = 0,
+        .interface_protocol = 0,
+    },
+};
+
+const usb_function_descriptor_t cdc_test_function_descs[] = {
+    {
+        .interface_class = USB_CLASS_COMM,
+        .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
+        .interface_protocol = 0,
+    },
+    {
+        .interface_class = USB_CLASS_VENDOR,
+        .interface_subclass = 0,
+        .interface_protocol = 0,
+    },
 };
 
 typedef struct {
-    const usb_function_descriptor_t* desc;
+    const usb_function_descriptor_t* descs;
+    size_t descs_count;
     const char* product_string;
     uint16_t vid;
     uint16_t pid;
-} usb_function_t;
+} usb_config_t;
 
-static const usb_function_t cdc_function = {
-    .desc = &cdc_function_desc,
+static const usb_config_t cdc_function = {
+    .descs = cdc_function_descs,
+    .descs_count = countof(cdc_function_descs),
     .product_string = CDC_PRODUCT_STRING,
     .vid = GOOGLE_USB_VID,
     .pid = GOOGLE_USB_CDC_PID,
 };
 
-static const usb_function_t ums_function = {
-    .desc = &ums_function_desc,
+static const usb_config_t ums_function = {
+    .descs = ums_function_descs,
+    .descs_count = countof(ums_function_descs),
     .product_string = UMS_PRODUCT_STRING,
     .vid = GOOGLE_USB_VID,
     .pid = GOOGLE_USB_UMS_PID,
 };
 
-static const usb_function_t test_function = {
-    .desc = &test_function_desc,
+static const usb_config_t test_function = {
+    .descs = test_function_descs,
+    .descs_count = countof(test_function_descs),
     .product_string = TEST_PRODUCT_STRING,
     .vid = GOOGLE_USB_VID,
-    .pid = GOOGLE_USB_PERIPHERAL_TEST_PID,
+    .pid = GOOGLE_USB_FUNCTION_TEST_PID,
+};
+
+static const usb_config_t cdc_test_function = {
+    .descs = cdc_test_function_descs,
+    .descs_count = countof(cdc_test_function_descs),
+    .product_string = CDC_TEST_PRODUCT_STRING,
+    .vid = GOOGLE_USB_VID,
+    .pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID,
 };
 
 static fuchsia_hardware_usb_peripheral_DeviceDescriptor device_desc = {
@@ -122,11 +154,11 @@ static int open_usb_device(void) {
     return -1;
 }
 
-static zx_status_t device_init(zx_handle_t svc, const usb_function_t* function) {
+static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
     zx_status_t status2;
 
-    device_desc.idVendor = htole16(function->vid);
-    device_desc.idProduct = htole16(function->pid);
+    device_desc.idVendor = htole16(config->vid);
+    device_desc.idProduct = htole16(config->pid);
 
     // allocate string descriptors
     zx_status_t status = fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc(
@@ -139,7 +171,7 @@ static zx_status_t device_init(zx_handle_t svc, const usb_function_t* function) 
         return status;
     }
     status = fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc(
-        svc, function->product_string, strlen(function->product_string) + 1, &status2,
+        svc, config->product_string, strlen(config->product_string) + 1, &status2,
         &device_desc.iProduct);
     if (status == ZX_OK) status = status2;
     if (status != ZX_OK) {
@@ -165,11 +197,15 @@ static zx_status_t device_init(zx_handle_t svc, const usb_function_t* function) 
         return status;
     }
 
-    status = fuchsia_hardware_usb_peripheral_DeviceAddFunction(svc, function->desc, &status2);
-    if (status == ZX_OK) status = status2;
-    if (status != ZX_OK) {
-        fprintf(stderr, "fuchsia_hardware_usb_peripheral_DeviceAddFunction failed: %d\n", status);
-        return status;
+    for (size_t i = 0; i < config->descs_count; i++) {
+        status = fuchsia_hardware_usb_peripheral_DeviceAddFunction(svc, &config->descs[i],
+                                                                   &status2);
+        if (status == ZX_OK) status = status2;
+        if (status != ZX_OK) {
+            fprintf(stderr, "fuchsia_hardware_usb_peripheral_DeviceAddFunction failed: %d\n",
+                    status);
+            return status;
+        }
     }
 
     status = fuchsia_hardware_usb_peripheral_DeviceBindFunctions(svc, &status2);
@@ -215,6 +251,19 @@ static int test_command(zx_handle_t svc, int argc, const char* argv[]) {
         status = status2;
     if (status == ZX_OK) {
         status = device_init(svc, &test_function);
+    }
+
+    return status == ZX_OK ? 0 : -1;
+}
+
+static int cdc_test_command(zx_handle_t svc, int argc, const char* argv[]) {
+    zx_status_t status, status2;
+
+    status = fuchsia_hardware_usb_peripheral_DeviceClearFunctions(svc, &status2);
+    if (status == ZX_OK)
+        status = status2;
+    if (status == ZX_OK) {
+        status = device_init(svc, &cdc_test_function);
     }
 
     return status == ZX_OK ? 0 : -1;
@@ -288,6 +337,8 @@ static usbctl_command_t commands[] = {
     {"init-ums", ums_command, "init-ums - initializes the USB Mass Storage function"},
     {"init-cdc", cdc_command, "init-cdc - initializes the CDC Ethernet function"},
     {"init-test", test_command, "init-test - initializes the USB Peripheral Test function"},
+    {"init-cdc-test", cdc_test_command,
+                    "init-cdc-test - initializes CDC plus Test Function composite device"},
     {"mode", mode_command,
      "mode [none|host|peripheral|otg] - sets the current USB mode. "
      "Returns the current mode if no additional arugment is provided."},

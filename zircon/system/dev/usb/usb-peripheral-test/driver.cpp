@@ -425,8 +425,9 @@ zx_driver_ops_t driver_ops = [](){
 } // namespace usb_function_test
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_function_test, usb_function_test::driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(usb_function_test, usb_function_test::driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
     BI_ABORT_IF(NE, BIND_USB_VID, GOOGLE_USB_VID),
-    BI_MATCH_IF(EQ, BIND_USB_PID, GOOGLE_USB_PERIPHERAL_TEST_PID),
+    BI_MATCH_IF(EQ, BIND_USB_PID, GOOGLE_USB_FUNCTION_TEST_PID),
+    BI_MATCH_IF(EQ, BIND_USB_PID, GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID),
 ZIRCON_DRIVER_END(usb_function_test)

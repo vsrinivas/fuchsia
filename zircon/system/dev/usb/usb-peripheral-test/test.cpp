@@ -181,7 +181,8 @@ int usb_device_added(const char *dev_name, void *client_data) {
     uint16_t vid = usb_device_get_vendor_id(dev);
     uint16_t pid = usb_device_get_product_id(dev);
 
-    if (vid != GOOGLE_USB_VID || pid != GOOGLE_USB_PERIPHERAL_TEST_PID) {
+    if (vid != GOOGLE_USB_VID ||
+        (pid != GOOGLE_USB_FUNCTION_TEST_PID && pid != GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID)) {
         // Device doesn't match, so keep looking.
         usb_device_close(dev);
         dev = nullptr;
