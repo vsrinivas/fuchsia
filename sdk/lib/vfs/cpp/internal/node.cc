@@ -67,12 +67,10 @@ void Node::Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
     return;
   }
   // If SAME_RIGHTS is specified, the client cannot request any specific rights.
-  // TODO(yifeit): Start enforcing this after soft transition
-  // if (Flags::ShouldCloneWithSameRights(flags) && (flags & Flags::kFsRights))
-  // {
-  //   SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_INVALID_ARGS);
-  //   return;
-  // }
+  if (Flags::ShouldCloneWithSameRights(flags) && (flags & Flags::kFsRights)) {
+    SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_INVALID_ARGS);
+    return;
+  }
   flags |= (parent_flags & Flags::kStatusFlags);
   // If SAME_RIGHTS is requested, cloned connection will inherit the same rights
   // as those from the originating connection.
@@ -81,12 +79,10 @@ void Node::Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
     flags |= (parent_flags & Flags::kFsRights);
     flags &= ~fuchsia::io::CLONE_FLAG_SAME_RIGHTS;
   }
-  // TODO(yifeit): Start enforcing hierarchical rights during clone
-  // after soft transition
-  // if (!Flags::StricterOrSameRights(flags, parent_flags)) {
-  //   SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_ACCESS_DENIED);
-  //   return;
-  // }
+  if (!Flags::StricterOrSameRights(flags, parent_flags)) {
+    SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_ACCESS_DENIED);
+    return;
+  }
   Serve(flags, std::move(request), dispatcher);
 }
 

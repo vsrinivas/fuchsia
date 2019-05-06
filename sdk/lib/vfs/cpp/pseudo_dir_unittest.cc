@@ -874,6 +874,26 @@ TEST_F(PseudoDirConnection, CanCloneDirectoryConnection) {
                  fuchsia::io::OPEN_RIGHT_READABLE, 0);
 }
 
+TEST_F(PseudoDirConnection, CloneFlagSameRightsFailsWithSpecificRights) {
+  auto ptr = dir_.Serve();
+
+  uint32_t rights[] = {fuchsia::io::OPEN_RIGHT_READABLE,
+                       fuchsia::io::OPEN_RIGHT_WRITABLE,
+                       fuchsia::io::OPEN_RIGHT_ADMIN};
+
+  for (auto right : rights) {
+    fuchsia::io::DirectorySyncPtr cloned_ptr;
+    ptr->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS | right,
+               fidl::InterfaceRequest<fuchsia::io::Node>(
+                   cloned_ptr.NewRequest().TakeChannel()));
+    // The other end of |cloned_ptr| is closed.
+    zx_status_t status;
+    std::vector<uint8_t> out_dirents;
+    ASSERT_EQ(ZX_ERR_PEER_CLOSED,
+              cloned_ptr->ReadDirents(100, &status, &out_dirents));
+  }
+}
+
 TEST_F(PseudoDirConnection, NodeReferenceIsClonedAsNodeReference) {
   fuchsia::io::DirectorySyncPtr cloned_ptr;
   {

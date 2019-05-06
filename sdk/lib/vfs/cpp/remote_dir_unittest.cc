@@ -28,8 +28,9 @@ class RemoteDirConnection : public vfs_tests::DirConnection {
 
   fuchsia::io::DirectoryPtr GetPseudoDirConnection() {
     fuchsia::io::DirectoryPtr ptr;
-    pseudo_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE,
-                      ptr.NewRequest().TakeChannel(), loop_.dispatcher());
+    pseudo_dir_.Serve(
+        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+        ptr.NewRequest().TakeChannel(), loop_.dispatcher());
     return ptr;
   }
 
