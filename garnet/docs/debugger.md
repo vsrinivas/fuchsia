@@ -9,7 +9,6 @@ CPU (ARM64 or x64). The state of other languages (like Rust) can be seen
 This is the very detailed setup guide. Please see:
 
   * The [user guide](debugger_usage.md) for help on debugger commands.
-  * The [zxdb codelab](http://go.corp.google.com/zxdb-codelab) (Googlers only).
 
 The debugger runs remotely only (you can't do self-hosted debug).
 
