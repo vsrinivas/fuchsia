@@ -59,8 +59,8 @@ repository compiles.
 
 ```fidl
 struct A {         struct A_new {
-  int32 a;           string b;
-  string b;          int32 a;
+  int32 a;           int32 a;
+  string b;          string b;
 };                 };
 ```
 
