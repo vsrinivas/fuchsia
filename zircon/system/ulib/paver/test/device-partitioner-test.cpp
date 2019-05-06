@@ -256,6 +256,18 @@ TEST(SkipBlockDevicePartitionerTests, UseSkipBlockInterfaceTest) {
     ASSERT_TRUE(partitioner->UseSkipBlockInterface());
 }
 
+TEST(SkipBlockDevicePartitionerTests, ChooseSkipBlockPartitioner) {
+    ASSERT_TRUE(Initialize());
+    fbl::unique_ptr<SkipBlockDevice> device;
+    SkipBlockDevice::Create(kNandInfo, &device);
+    fbl::unique_ptr<BlockDevice> zircon_a;
+    BlockDevice::Create(kZirconAType, &zircon_a);
+
+    auto partitioner = paver::DevicePartitioner::Create(device->devfs_root());
+    ASSERT_NE(partitioner.get(), nullptr);
+    ASSERT_TRUE(partitioner->UseSkipBlockInterface());
+}
+
 TEST(SkipBlockDevicePartitionerTests, AddPartitionTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<SkipBlockDevice> device;

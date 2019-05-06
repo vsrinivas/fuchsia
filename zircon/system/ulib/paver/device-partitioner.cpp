@@ -270,12 +270,12 @@ fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devf
     // ramdisks spawn in isolated devmgr.
     fbl::unique_fd block_devfs_root((open("/dev", O_RDONLY)));
     fbl::unique_ptr<DevicePartitioner> device_partitioner;
-    if ((CrosDevicePartitioner::Initialize(block_devfs_root.duplicate(),
+    if ((SkipBlockDevicePartitioner::Initialize(std::move(devfs_root),
+                                                &device_partitioner) == ZX_OK) ||
+        (CrosDevicePartitioner::Initialize(block_devfs_root.duplicate(),
                                            &device_partitioner) == ZX_OK) ||
         (EfiDevicePartitioner::Initialize(block_devfs_root.duplicate(),
                                           &device_partitioner) == ZX_OK) ||
-        (SkipBlockDevicePartitioner::Initialize(std::move(devfs_root),
-                                                &device_partitioner) == ZX_OK) ||
         (FixedDevicePartitioner::Initialize(std::move(block_devfs_root),
                                             &device_partitioner) == ZX_OK)) {
         return device_partitioner;
@@ -336,7 +336,8 @@ bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, f
         //
         // The GPT which will contain an FVM should be the first non-removable
         // block device that isn't a partition itself.
-        if (!(info.flags & BLOCK_FLAG_REMOVABLE) && strstr(out->c_str(), "part-") == nullptr) {
+        if (!(info.flags & BLOCK_FLAG_REMOVABLE) && !(info.flags & BLOCK_FLAG_BOOTPART) &&
+            strstr(out->c_str(), "part-") == nullptr) {
             return true;
         }
     }
