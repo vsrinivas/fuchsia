@@ -272,13 +272,12 @@ config("opt_level") {
     compiler_flags = [ "-O0" ]
   } else {
     assert(opt_level >= 0)
-    if (opt_level == 0) {
-      if (is_gcc) {
-        compiler_flags = [ "-O0" ]
-      } else {
-        compiler_flags = [ "-Og" ]
-      }
-    } else if (opt_level == 4) {
+    # TODO(TC-472): opt_level==0 should mean -Og if that ever comes
+    # to mean something useful.  Correctly clang -Og is just -O1, which
+    # is still not as debugging-friendly as -O0, so don't use it.  It
+    # also doesn't actually work at all when LTO is enabled (the linker
+    # plugin doesn't grok -Og, but the compiler driver passes it -Og).
+    if (opt_level == 4) {
       if (is_gcc) {
         compiler_flags = [ "-Os" ]
       } else {
