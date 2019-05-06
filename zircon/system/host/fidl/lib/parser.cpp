@@ -146,14 +146,8 @@ std::unique_ptr<raw::NumericLiteral> Parser::ParseNumericLiteral() {
     return std::make_unique<raw::NumericLiteral>(scope.GetSourceElement());
 }
 
-std::unique_ptr<raw::Ordinal> Parser::MaybeParseOrdinal() {
+std::unique_ptr<raw::Ordinal> Parser::ParseOrdinal() {
     ASTScope scope(this);
-
-    if (Peek().kind() != Token::Kind::kNumericLiteral) {
-        // Ordinals are currently optional.  If there is none, generate it later
-        // (once we've figured out the method name and signature).
-        return nullptr;
-    }
 
     ConsumeToken(OfKind(Token::Kind::kNumericLiteral));
     if (!Ok())
@@ -866,7 +860,7 @@ Parser::ParseTableMember() {
     if (!Ok())
         return Fail();
 
-    auto ordinal = MaybeParseOrdinal();
+    auto ordinal = ParseOrdinal();
     if (!Ok())
         return Fail();
 
@@ -916,7 +910,7 @@ Parser::ParseTableDeclaration(std::unique_ptr<raw::AttributeList> attributes, AS
 
     auto parse_member = [&members, this]() {
         switch (Peek().combined()) {
-        default:
+        case CASE_TOKEN(Token::Kind::kRightCurly):
             ConsumeToken(OfKind(Token::Kind::kRightCurly));
             return Done;
 
@@ -924,6 +918,12 @@ Parser::ParseTableDeclaration(std::unique_ptr<raw::AttributeList> attributes, AS
         TOKEN_ATTR_CASES:
             members.emplace_back(ParseTableMember());
             return More;
+
+        default:
+            std::string msg = "Expected one of ordinal or '}', found ";
+            msg.append(Token::Name(Peek()));
+            Fail(msg);
+            return Done;
         }
     };
 

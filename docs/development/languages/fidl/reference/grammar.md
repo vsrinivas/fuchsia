@@ -109,7 +109,7 @@ union-field = ( attribute-list ) , type-constructor , IDENTIFIER ;
 
 table-declaration = ( attribute-list ) , "table" , IDENTIFIER , "{" , ( ( attribute-list ) , table-field , ";" )* , "}" ;
 
-table-field = ( attribute-list ) , ( table-field-ordinal ) , table-field-declaration ;
+table-field = ( attribute-list ) , table-field-ordinal , table-field-declaration ;
 
 table-field-ordinal = ordinal , ":" ;
 

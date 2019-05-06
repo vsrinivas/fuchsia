@@ -123,7 +123,10 @@ library fidl.test.tables;
 table Foo {
     int64 x;
 };
-)FIDL"));
+)FIDL", &errors));
+
+    EXPECT_EQ(errors.size(), 1u);
+    ASSERT_STR_STR(errors.at(0).c_str(), "Expected one of ordinal or '}'");
 
     // Attributes on fields.
     EXPECT_TRUE(Compiles(R"FIDL(
@@ -188,7 +191,7 @@ struct OptionalTableContainer {
 
 )FIDL", &errors));
     EXPECT_EQ(errors.size(), 1u);
-    EXPECT_NE(errors.at(0).find("cannot be nullable"), std::string::npos);
+    ASSERT_STR_STR(errors.at(0).c_str(), "cannot be nullable");
 
     // Optional tables in (static) unions are invalid.
     EXPECT_FALSE(Compiles(R"FIDL(
@@ -204,7 +207,7 @@ union OptionalTableContainer {
 
 )FIDL", &errors));
     EXPECT_EQ(errors.size(), 1u);
-    EXPECT_NE(errors.at(0).find("cannot be nullable"), std::string::npos);
+    ASSERT_STR_STR(errors.at(0).c_str(), "cannot be nullable");
 
     // Tables in tables are valid.
     EXPECT_TRUE(Compiles(R"FIDL(
