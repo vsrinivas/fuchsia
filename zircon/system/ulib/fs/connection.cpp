@@ -491,11 +491,10 @@ zx_status_t Connection::NodeClone(uint32_t flags, zx_handle_t object) {
     if (!PrevalidateFlags(flags, &clone_flags, &describe)) {
         return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
     }
-    // TODO(yifeit): Start enforcing this check after soft transition
     // If CLONE_SAME_RIGHTS is specified, the client cannot request any specific rights.
-    // if ((clone_flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) && (clone_flags & ZX_FS_RIGHTS)) {
-    //     return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
-    // }
+    if ((clone_flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) && (clone_flags & ZX_FS_RIGHTS)) {
+        return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
+    }
     clone_flags |= (flags_ & kStatusFlags);
     // If CLONE_SAME_RIGHTS is requested, cloned connection will inherit the same rights
     // as those from the originating connection.
@@ -503,11 +502,10 @@ zx_status_t Connection::NodeClone(uint32_t flags, zx_handle_t object) {
         clone_flags &= (~ZX_FS_RIGHTS);
         clone_flags |= (flags_ & ZX_FS_RIGHTS);
     }
-    // TODO(yifeit): Start enforcing hierarchical rights during clone after soft transition
-    // if (!StricterOrSameRights(clone_flags, flags_)) {
-    //     FS_PRETTY_TRACE_DEBUG("Rights violation during NodeClone");
-    //     return write_error(std::move(channel), ZX_ERR_ACCESS_DENIED);
-    // }
+    if (!StricterOrSameRights(clone_flags, flags_)) {
+        FS_PRETTY_TRACE_DEBUG("Rights violation during NodeClone");
+        return write_error(std::move(channel), ZX_ERR_ACCESS_DENIED);
+    }
 
     fbl::RefPtr<Vnode> vn(vnode_);
     zx_status_t status = ZX_OK;

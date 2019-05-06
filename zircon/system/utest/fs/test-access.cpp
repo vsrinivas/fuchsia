@@ -226,6 +226,74 @@ bool CloneFdAsReadOnlyHelper(fbl::unique_fd in_fd, fbl::unique_fd* out_fd) {
     END_HELPER;
 }
 
+bool TestCloneWithBadFlags() {
+    BEGIN_TEST;
+
+    uint32_t rights[] = {
+        fuchsia_io_OPEN_RIGHT_READABLE,
+        fuchsia_io_OPEN_RIGHT_WRITABLE,
+        fuchsia_io_OPEN_RIGHT_ADMIN,
+    };
+
+    // CLONE_FLAG_SAME_RIGHTS cannot appear together with any specific rights.
+    for (uint32_t right : rights) {
+        DirectoryPermissionTestFixture fixture;
+        ASSERT_TRUE(fixture.ok());
+
+        fbl::unique_fd foo_fd(open("::foo", O_RDONLY | O_DIRECTORY, 0644));
+        ASSERT_GT(foo_fd.get(), 0);
+
+        // Obtain the underlying connection behind |foo_fd|.
+        fzl::FdioCaller fdio_caller(std::move(foo_fd));
+        zx_handle_t foo_handle = fdio_caller.borrow_channel();
+
+        zx::channel foo_clone_client_end, foo_clone_server_end;
+        ASSERT_EQ(zx::channel::create(0, &foo_clone_client_end, &foo_clone_server_end), ZX_OK);
+        ASSERT_EQ(fuchsia_io_NodeClone(foo_handle,
+                                       fuchsia_io_CLONE_FLAG_SAME_RIGHTS | right,
+                                       foo_clone_server_end.release()),
+                  ZX_OK);
+
+        fuchsia_io_NodeInfo out_info;
+        ASSERT_EQ(fuchsia_io_NodeDescribe(foo_clone_client_end.get(), &out_info),
+                  ZX_ERR_PEER_CLOSED);
+    }
+
+    END_TEST;
+}
+
+bool TestCloneCannotIncreaseRights() {
+    BEGIN_TEST;
+
+    {
+        DirectoryPermissionTestFixture fixture;
+        ASSERT_TRUE(fixture.ok());
+
+        fbl::unique_fd foo_fd(open("::foo", O_RDONLY | O_DIRECTORY, 0644));
+        ASSERT_GT(foo_fd.get(), 0);
+
+        fbl::unique_fd foo_readonly;
+        ASSERT_TRUE(CloneFdAsReadOnlyHelper(std::move(foo_fd), &foo_readonly));
+
+        // Attempt to clone the read-only fd back to read-write.
+        fzl::FdioCaller fdio_caller(std::move(foo_readonly));
+        zx_handle_t foo_handle = fdio_caller.borrow_channel();
+        zx::channel foo_clone_client_end, foo_clone_server_end;
+        ASSERT_EQ(zx::channel::create(0, &foo_clone_client_end, &foo_clone_server_end), ZX_OK);
+        ASSERT_EQ(fuchsia_io_NodeClone(foo_handle,
+                                       fuchsia_io_OPEN_RIGHT_READABLE
+                                           | fuchsia_io_OPEN_RIGHT_WRITABLE,
+                                       foo_clone_server_end.release()),
+                  ZX_OK);
+
+        fuchsia_io_NodeInfo out_info;
+        ASSERT_EQ(fuchsia_io_NodeDescribe(foo_clone_client_end.get(), &out_info),
+                  ZX_ERR_PEER_CLOSED);
+    }
+
+    END_TEST;
+}
+
 bool TestFaccessat() {
     BEGIN_TEST;
 
@@ -493,6 +561,8 @@ RUN_FOR_ALL_FILESYSTEMS(access_tests,
     RUN_TEST_SMALL(TestAccessWritable)
     RUN_TEST_SMALL(TestAccessBadFlags)
     RUN_TEST_SMALL(TestAccessDirectory)
+    RUN_TEST_SMALL(TestCloneWithBadFlags)
+    RUN_TEST_SMALL(TestCloneCannotIncreaseRights)
     RUN_TEST_SMALL(TestFaccessat)
     RUN_TEST_SMALL(TestOpathDirectoryAccess)
     RUN_TEST_SMALL(TestRestrictDirectoryAccess)
