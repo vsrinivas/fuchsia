@@ -57,6 +57,7 @@ private:
     const Finding& AddReplaceIdFinding(
         const SourceElementSubtypeRefOrPtr& element,
         const CheckDef& check,
+        std::string check_subtype,
         std::string id,
         std::string replacement) const;
 

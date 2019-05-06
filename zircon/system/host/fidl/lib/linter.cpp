@@ -18,13 +18,13 @@
 namespace fidl {
 namespace linter {
 
-#define CHECK_CASE(CASE, IDENTIFIER)          \
-    assert(IDENTIFIER != nullptr);            \
-    std::string id = to_string(IDENTIFIER);   \
-    if (!utils::is_##CASE##_case(id)) {       \
-        linter.AddReplaceIdFinding(           \
-            IDENTIFIER, check,                \
-            id, utils::to_##CASE##_case(id)); \
+#define CHECK_CASE(CHECK_SUBTYPE, CASE, IDENTIFIER) \
+    assert(IDENTIFIER != nullptr);                  \
+    std::string id = to_string(IDENTIFIER);         \
+    if (!utils::is_##CASE##_case(id)) {             \
+        linter.AddReplaceIdFinding(                 \
+            IDENTIFIER, check, CHECK_SUBTYPE,       \
+            id, utils::to_##CASE##_case(id));       \
     }
 
 const std::set<std::string>& Linter::permitted_library_prefixes() const {
@@ -149,12 +149,14 @@ template <typename SourceElementSubtypeRefOrPtr>
 const Finding& Linter::AddReplaceIdFinding(
     const SourceElementSubtypeRefOrPtr& element,
     const CheckDef& check,
+    std::string check_subtype,
     std::string id,
     std::string replacement) const {
     return AddFinding(
         element,
         check,
         {
+            {"CHECK_SUBTYPE", check_subtype},
             {"IDENTIFIER", id},
             {"REPLACEMENT", replacement},
         },
@@ -192,38 +194,40 @@ Linter::Linter()
         //
         (const raw::Using& element) {
             if (element.maybe_alias != nullptr) {
-                CHECK_CASE(lower_snake, element.maybe_alias)
+                CHECK_CASE("Primitive alias", lower_snake, element.maybe_alias)
             }
         });
 
+    auto& invalid_case_for_constant = DefineCheck(
+        "invalid-case-for-constant",
+        "${CHECK_SUBTYPE} must be named in ALL_CAPS_SNAKE_CASE");
+
     callbacks_.OnConstDeclaration(
         [& linter = *this,
-         check = DefineCheck(
-             "invalid-case-for-constant",
-             "Constants must be named in ALL_CAPS_SNAKE_CASE")]
+         check = invalid_case_for_constant]
         //
         (const raw::ConstDeclaration& element) {
-            CHECK_CASE(upper_snake, element.identifier)
+            CHECK_CASE("Constants", upper_snake, element.identifier)
         });
 
     callbacks_.OnEnumMember(
         [& linter = *this,
-         check = DefineCheck(
-             "invalid-case-for-enum-member",
-             "Enum members must be named in ALL_CAPS_SNAKE_CASE")]
+         check = invalid_case_for_constant]
         //
         (const raw::EnumMember& element) {
-            CHECK_CASE(upper_snake, element.identifier)
+            CHECK_CASE("enum members", upper_snake, element.identifier)
         });
+
+    auto& invalid_case_for_decl_name = DefineCheck(
+        "invalid-case-for-decl-name",
+        "${CHECK_SUBTYPE} must be named in UpperCamelCase");
 
     callbacks_.OnInterfaceDeclaration(
         [& linter = *this,
-         check = DefineCheck(
-             "invalid-case-for-protocol",
-             "Protocols must be named in UpperCamelCase")]
+         check = invalid_case_for_decl_name]
         //
         (const raw::InterfaceDeclaration& element) {
-            CHECK_CASE(upper_camel, element.identifier)
+            CHECK_CASE("Protocols", upper_camel, element.identifier)
         });
 
     callbacks_.OnFile(
@@ -273,28 +277,28 @@ Linter::Linter()
 
     auto& invalid_case_for_decl_member = DefineCheck(
         "invalid-case-for-decl-member",
-        "Structs, unions, and tables members must be named in lower_snake_case");
+        "${CHECK_SUBTYPE} members must be named in lower_snake_case");
 
     callbacks_.OnStructMember(
         [& linter = *this,
          check = invalid_case_for_decl_member]
         //
         (const raw::StructMember& element) {
-            CHECK_CASE(lower_snake, element.identifier)
+            CHECK_CASE("struct", lower_snake, element.identifier)
         });
     callbacks_.OnUnionMember(
         [& linter = *this,
          check = invalid_case_for_decl_member]
         //
         (const raw::UnionMember& element) {
-            CHECK_CASE(lower_snake, element.identifier)
+            CHECK_CASE("union", lower_snake, element.identifier)
         });
     callbacks_.OnXUnionMember(
         [& linter = *this,
          check = invalid_case_for_decl_member]
         //
         (const raw::XUnionMember& element) {
-            CHECK_CASE(lower_snake, element.identifier)
+            CHECK_CASE("xunion", lower_snake, element.identifier)
         });
     callbacks_.OnTableMember(
         [& linter = *this,
@@ -302,7 +306,7 @@ Linter::Linter()
         //
         (const raw::TableMember& element) {
             if (element.maybe_used != nullptr) {
-                CHECK_CASE(lower_snake, element.maybe_used->identifier)
+                CHECK_CASE("table", lower_snake, element.maybe_used->identifier)
             }
         });
 }
