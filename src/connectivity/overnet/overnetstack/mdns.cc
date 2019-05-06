@@ -58,15 +58,6 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
   }
 
  private:
-  struct ServiceInstance {
-    ServiceInstance(std::vector<std::string> t,
-                    std::vector<fuchsia::net::Endpoint> e)
-        : text(std::move(t)), endpoints(std::move(e)) {}
-    std::vector<std::string> text;
-    std::vector<fuchsia::net::Endpoint> endpoints;
-  };
-  using ServiceMap = std::map<overnet::NodeId, ServiceInstance>;
-
   void HandleDiscoverOrUpdate(const fuchsia::net::mdns::ServiceInstance& svc,
                               bool update) {
     if (svc.service != kServiceName) {
@@ -80,61 +71,21 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
       return;
     }
     auto instance_id = *parsed_instance_name.get();
-    auto it = service_map_.find(instance_id);
-    if ((it != service_map_.end()) != update) {
-      if (update) {
-        std::cout << "WARNING: Update for unknown instance " << instance_id
-                  << "; ignoring\n";
-      } else {
-        std::cout << "WARNING: Discovery of known instance " << instance_id
-                  << "; ignoring\n";
-      }
-      return;
-    }
 
-    std::vector<fuchsia::net::Endpoint> endpoints;
-    for (auto& endpoint : svc.endpoints) {
-      endpoints.emplace_back();
-      auto result = overnet::Status::FromZx(endpoint.Clone(&endpoints.back()));
-      if (result.is_error()) {
-        std::cout << "Failed to clone address: " << result << "\n";
-        endpoints.pop_back();
-      }
-    }
-
-    std::vector<std::string> text;
-    for (const auto& line : svc.text) {
-      text.push_back(line);
-    }
-
-    if (it == service_map_.end()) {
-      NewConnection(instance_id, endpoints);
-      service_map_.emplace(
-          std::piecewise_construct, std::forward_as_tuple(instance_id),
-          std::forward_as_tuple(std::move(text), std::move(endpoints)));
-    } else if (it->second.endpoints != endpoints) {
-      NewConnection(instance_id, endpoints);
-      it->second.endpoints = std::move(endpoints);
-    }
-  }
-
-  void NewConnection(overnet::NodeId node_id,
-                     const std::vector<fuchsia::net::Endpoint>& endpoints) {
-    for (const auto& endpoint : endpoints) {
-      auto status = ToUdpAddr(endpoint).Then(
-          [node_id, nub = nub_](const overnet::IpAddr& addr) {
-            std::cerr << "Initiating connection to: " << node_id << " at "
-                      << addr << "\n";
-            nub->Initiate(addr, node_id);
-            return overnet::Status::Ok();
-          });
+    std::vector<overnet::IpAddr> addrs;
+    for (const auto& endpoint : svc.endpoints) {
+      auto status = ToIpAddr(endpoint);
       if (status.is_error()) {
-        std::cerr << "Failed to initiate connection: " << status << "\n";
+        std::cout << "Failed to convert address: " << status << "\n";
+      } else {
+        addrs.emplace_back(std::move(*status));
       }
     }
+
+    nub_->Initiate(std::move(addrs), instance_id);
   }
 
-  static overnet::StatusOr<overnet::IpAddr> ToUdpAddr(
+  static overnet::StatusOr<overnet::IpAddr> ToIpAddr(
       const fuchsia::net::Endpoint& endpoint) {
     const fuchsia::net::IpAddress& net_addr = endpoint.addr;
     overnet::IpAddr udp_addr;
@@ -188,7 +139,6 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
 
   UdpNub* const nub_;
   fidl::Binding<fuchsia::net::mdns::ServiceSubscriber> subscriber_binding_;
-  ServiceMap service_map_;
 };
 
 MdnsIntroducer::MdnsIntroducer(OvernetApp* app, UdpNub* udp_nub)

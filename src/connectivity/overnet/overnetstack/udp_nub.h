@@ -74,12 +74,6 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
 
   void WaitForInbound() {
     assert(socket_.IsValid());
-    overnet::IpAddr whoami;
-    socklen_t whoami_len = sizeof(whoami.addr);
-    if (getsockname(socket_.get(), &whoami.addr, &whoami_len) < 0) {
-      OVERNET_TRACE(DEBUG) << StatusFromErrno("getsockname") << "\n";
-    }
-    OVERNET_TRACE(DEBUG) << "WaitForInbound on " << whoami << "\n";
     if (!fd_waiter_.Wait(
             [this](zx_status_t status, uint32_t events) {
               InboundReady(status, events);

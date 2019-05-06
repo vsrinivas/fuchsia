@@ -62,7 +62,7 @@ TEST(PacketNub, InitiateBiggerNodeId) {
         memcpy(p, prefix, sizeof(prefix));
       });
   EXPECT_CALL(nub, SendTo(123, kHello));
-  nub.Initiate(123, NodeId(2));
+  nub.Initiate({123}, NodeId(2));
 
   int remaining = 4;
   EXPECT_CALL(nub, SendTo(123, kHello))
@@ -92,7 +92,7 @@ TEST(PacketNub, InitiateSmallerNodeId) {
         memcpy(p, prefix, sizeof(prefix));
       });
   EXPECT_CALL(nub, SendTo(123, kAnnounce));
-  nub.Initiate(123, NodeId(1));
+  nub.Initiate({123}, NodeId(1));
   EXPECT_TRUE(Mock::VerifyAndClearExpectations(&nub));
 
   int remaining = 4;

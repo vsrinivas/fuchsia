@@ -168,8 +168,8 @@ static const auto kConfigurationCommandLineProcessors = []() {
 }();
 
 bool Configuration::ParseCommandLine(int argc, const char** argv) {
-  for (const auto& option :
-       fxl::CommandLineFromArgcArgv(argc, argv).options()) {
+  auto cmdline = fxl::CommandLineFromArgcArgv(argc, argv);
+  for (const auto& option : cmdline.options()) {
     auto processor = kConfigurationCommandLineProcessors.find(option.name);
     if (processor == kConfigurationCommandLineProcessors.end()) {
       std::cerr << "Unknown option: " << option.name << "\n";
@@ -178,6 +178,10 @@ bool Configuration::ParseCommandLine(int argc, const char** argv) {
     if (!processor->second(this, option.value)) {
       return false;
     }
+  }
+  if (!cmdline.positional_args().empty()) {
+    std::cerr << "Expected no positional args\n";
+    return false;
   }
   return true;
 }
@@ -242,6 +246,9 @@ int main(int argc, const char** argv) {
   app.InstantiateActor<overnetstack::Service>();
   overnetstack::UdpNub* udp_nub = nullptr;
   // Build up actors for the configuration.
+  for (auto module : config->modules) {
+    OVERNET_TRACE(INFO) << "GOT MODULE: " << module;
+  }
   if (config->TakeModule("udp")) {
     udp_nub = app.InstantiateActor<overnetstack::UdpNub>();
   }

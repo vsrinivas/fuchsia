@@ -129,11 +129,10 @@ source_set("packet_nub") {
   ]
   public_deps = [
     ":packet_link",
-  ]
-  deps = [
     "//src/connectivity/overnet/lib/environment:timer",
     "//src/connectivity/overnet/lib/labels:node_id",
     "//src/connectivity/overnet/lib/vocabulary:slice",
+    "//zircon/public/lib/fbl",
   ]
 }
 

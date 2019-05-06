@@ -23,17 +23,13 @@ class Nub final : public PacketNub<int, 256> {
   void SendTo(int dest, Slice slice) override;
   Router* GetRouter() override;
   void Publish(LinkPtr<> link) override {
-    done_ = true;
     router_.RegisterLink(std::move(link));
   }
-
-  bool IsDone() const { return done_; }
 
  private:
   Fuzzer* const fuzzer_;
   const uint8_t index_;
   Router router_;
-  bool done_ = false;
 };
 
 class Fuzzer {
@@ -41,14 +37,18 @@ class Fuzzer {
   Fuzzer();
 
   Timer* timer() { return &timer_; }
-  bool IsDone() const { return nub2_.IsDone(); }
+  bool IsDone() {
+    return nub1_.GetRouter()->HasRouteTo(NodeId(2)) &&
+           nub2_.GetRouter()->HasRouteTo(NodeId(1));
+  }
   bool StepTime() { return timer_.StepUntilNextEvent(); }
   bool StepTime(uint64_t us) { return timer_.Step(us); }
   void QueueSend(int src, int dest, Slice slice);
   bool FlushPackets();
   void AllowPacket(uint64_t packet);
   void DropPacket(uint64_t packet);
-  void BeginStep();
+  void Initiate1();
+  void Initiate2();
 
  private:
   TestTimer timer_;
@@ -85,7 +85,8 @@ Router* Nub::GetRouter() { return &router_; }
 
 Fuzzer::Fuzzer() = default;
 
-void Fuzzer::BeginStep() { nub1_.Initiate(2, NodeId(2)); }
+void Fuzzer::Initiate1() { nub1_.Initiate({2}, NodeId(2)); }
+void Fuzzer::Initiate2() { nub2_.Initiate({1}, NodeId(1)); }
 
 void Fuzzer::QueueSend(int src, int dest, Slice slice) {
   packets_.emplace_back(
@@ -166,15 +167,24 @@ class InputStream {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   InputStream input(data, size);
   Fuzzer fuzzer;
+  const uint8_t end_behavior = input.NextByte();
   while (!fuzzer.IsDone()) {
-    fuzzer.BeginStep();
     switch (input.NextByte()) {
       case 0:
         OVERNET_TRACE(INFO) << "Fuzzer: Flush";
         do {
-          fuzzer.BeginStep();
+          if (input.IsEof()) {
+            if (end_behavior & 1) {
+              OVERNET_TRACE(INFO) << "Fuzzer: Initiate from 1 -> 2";
+              fuzzer.Initiate1();
+            } else {
+              OVERNET_TRACE(INFO) << "Fuzzer: Initiate from 2 -> 1";
+              fuzzer.Initiate2();
+            }
+          }
         } while (fuzzer.FlushPackets() || fuzzer.StepTime());
         if (input.IsEof() && !fuzzer.IsDone()) {
+          std::cerr << "Failed to connect\n";
           abort();
         }
         break;
@@ -194,6 +204,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         auto idx = input.Next64();
         OVERNET_TRACE(INFO) << "Fuzzer: Drop packet " << idx;
         fuzzer.DropPacket(idx);
+      } break;
+      case 4: {
+        OVERNET_TRACE(INFO) << "Fuzzer: Initiate from 1 -> 2";
+        fuzzer.Initiate1();
+      } break;
+      case 5: {
+        OVERNET_TRACE(INFO) << "Fuzzer: Initiate from 2 -> 1";
+        fuzzer.Initiate2();
       } break;
       default: {
         return 0;

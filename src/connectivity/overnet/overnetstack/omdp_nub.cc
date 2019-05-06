@@ -58,7 +58,7 @@ void OmdpNub::EnsureIncoming() {
 }
 
 void OmdpNub::OnNewNode(uint64_t node_id, overnet::IpAddr addr) {
-  udp_nub_->Initiate(addr, overnet::NodeId(node_id));
+  udp_nub_->Initiate({addr}, overnet::NodeId(node_id));
 }
 
 void OmdpNub::Broadcast(overnet::Slice data) {

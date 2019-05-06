@@ -41,7 +41,7 @@
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                     "fuchsia.overnet.Overnet": {
                         "arguments": [
-                            "--verbosity=trace",
+                            "--verbosity=debug",
                             "--modules=udp,mdns_subscriber,mdns_advertiser"
                         ],
                         "url": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx"
