@@ -193,84 +193,6 @@ enum Int8Enum : int8 {
     END_TEST;
 }
 
-bool invalid_case_for_decl_name_checking_enum_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Implement the check and then UNCOMMENT THE "Enum" test template in
-    //   invalid_case_for_decl_name()
-    // And remove this test function.
-
-    END_TEST;
-}
-
-bool invalid_case_for_decl_name_checking_bitfield_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Implement the check and then add test templates to
-    //   invalid_case_for_decl_name()
-    // And remove this test function.
-
-    END_TEST;
-}
-
-bool invalid_case_for_decl_name_checking_struct_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Implement the checks for struct, table, union, and xunion, then add test templates to
-    //   invalid_case_for_decl_name()
-    // And remove this test function.
-
-    END_TEST;
-}
-
-bool invalid_case_for_decl_name_checking_table_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Implement the checks for struct, table, union, and xunion, then add test templates to
-    //   invalid_case_for_decl_name()
-    // And remove this test function.
-
-    END_TEST;
-}
-
-bool invalid_case_for_decl_name_checking_union_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Implement the checks for struct, table, union, and xunion, then add test templates to
-    //   invalid_case_for_decl_name()
-    // And remove this test function.
-
-    END_TEST;
-}
-
-bool invalid_case_for_decl_name_checking_xunion_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Implement the checks for struct, table, union, and xunion, then add test templates to
-    //   invalid_case_for_decl_name()
-    // And remove this test function.
-
-    END_TEST;
-}
-
 bool invalid_case_for_decl_name() {
     BEGIN_TEST;
 
@@ -280,16 +202,48 @@ library fidl.a;
 
 protocol ${TEST} {};
 )FIDL"},
-        //         {"Enums", R"FIDL(
-        // library fidl.a;
+        {"Enums", R"FIDL(
+library fidl.a;
 
-        // enum ${TEST} : int8 {
-        //     SOME_CONST = -1;
-        // };
-        // )FIDL"},
-        //
-        // Also add to this, struct, table, union, and xunion
-        //
+enum ${TEST} : int8 {
+    SOME_CONST = -1;
+};
+)FIDL"},
+        {"Bitfields", R"FIDL(
+library fidl.a;
+
+bits ${TEST} : uint32 {
+  SOME_BIT = 0x00000004;
+};
+)FIDL"},
+        {"Structs", R"FIDL(
+library fidl.a;
+
+struct ${TEST} {
+    string decl_member;
+};
+)FIDL"},
+        {"Tables", R"FIDL(
+library fidl.a;
+
+table ${TEST} {
+    1: string decl_member;
+};
+)FIDL"},
+        {"Unions", R"FIDL(
+library fidl.a;
+
+union ${TEST} {
+    string decl_member;
+};
+)FIDL"},
+        {"XUnions", R"FIDL(
+library fidl.a;
+
+xunion ${TEST} {
+    string decl_member;
+};
+)FIDL"},
     };
 
     for (auto const& named_template : named_templates) {
@@ -2032,12 +1986,6 @@ RUN_TEST(invalid_case_for_decl_member)
 RUN_TEST(invalid_case_for_decl_member_checking_method_please_implement_me)    // TO MERGE
 RUN_TEST(invalid_case_for_decl_member_checking_parameter_please_implement_me) // TO MERGE
 RUN_TEST(invalid_case_for_decl_name)
-RUN_TEST(invalid_case_for_decl_name_checking_bitfield_please_implement_me) // TO MERGE
-RUN_TEST(invalid_case_for_decl_name_checking_enum_please_implement_me)     // TO MERGE
-RUN_TEST(invalid_case_for_decl_name_checking_struct_please_implement_me)   // TO MERGE
-RUN_TEST(invalid_case_for_decl_name_checking_table_please_implement_me)    // TO MERGE
-RUN_TEST(invalid_case_for_decl_name_checking_union_please_implement_me)    // TO MERGE
-RUN_TEST(invalid_case_for_decl_name_checking_xunion_please_implement_me)   // TO MERGE
 RUN_TEST(invalid_case_for_primitive_alias)
 RUN_TEST(invalid_copyright_for_platform_source_library_please_implement_me)
 RUN_TEST(library_name_does_not_match_file_path_please_implement_me)

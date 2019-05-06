@@ -24,28 +24,36 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
             }
             DeclarationOrderTreeVisitor::OnFile(element);
         }
-
         void OnUsing(std::unique_ptr<raw::Using> const& element) override {
             for (auto& callback : callbacks_.using_callbacks_) {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnUsing(element);
         }
-
         void OnConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const& element) override {
             for (auto& callback : callbacks_.const_declaration_callbacks_) {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnConstDeclaration(element);
         }
-
+        void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override {
+            for (auto& callback : callbacks_.bits_declaration_callbacks_) {
+                callback(*element.get());
+            }
+            DeclarationOrderTreeVisitor::OnBitsDeclaration(element);
+        }
         void OnEnumMember(std::unique_ptr<raw::EnumMember> const& element) override {
             for (auto& callback : callbacks_.enum_member_callbacks_) {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnEnumMember(element);
         }
-
+        void OnEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> const& element) override {
+            for (auto& callback : callbacks_.enum_declaration_callbacks_) {
+                callback(*element.get());
+            }
+            DeclarationOrderTreeVisitor::OnEnumDeclaration(element);
+        }
         void OnInterfaceDeclaration(std::unique_ptr<raw::InterfaceDeclaration> const& element) override {
             for (auto& callback : callbacks_.interface_declaration_callbacks_) {
                 callback(*element.get());
@@ -58,11 +66,23 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
             }
             DeclarationOrderTreeVisitor::OnStructMember(element);
         }
+        void OnStructDeclaration(std::unique_ptr<raw::StructDeclaration> const& element) override {
+            for (auto& callback : callbacks_.struct_declaration_callbacks_) {
+                callback(*element.get());
+            }
+            DeclarationOrderTreeVisitor::OnStructDeclaration(element);
+        }
         void OnTableMember(std::unique_ptr<raw::TableMember> const& element) override {
             for (auto& callback : callbacks_.table_member_callbacks_) {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnTableMember(element);
+        }
+        void OnTableDeclaration(std::unique_ptr<raw::TableDeclaration> const& element) override {
+            for (auto& callback : callbacks_.table_declaration_callbacks_) {
+                callback(*element.get());
+            }
+            DeclarationOrderTreeVisitor::OnTableDeclaration(element);
         }
         void OnUnionMember(std::unique_ptr<raw::UnionMember> const& element) override {
             for (auto& callback : callbacks_.union_member_callbacks_) {
@@ -70,11 +90,23 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
             }
             DeclarationOrderTreeVisitor::OnUnionMember(element);
         }
+        void OnUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> const& element) override {
+            for (auto& callback : callbacks_.union_declaration_callbacks_) {
+                callback(*element.get());
+            }
+            DeclarationOrderTreeVisitor::OnUnionDeclaration(element);
+        }
         void OnXUnionMember(std::unique_ptr<raw::XUnionMember> const& element) override {
             for (auto& callback : callbacks_.xunion_member_callbacks_) {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnXUnionMember(element);
+        }
+        void OnXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> const& element) override {
+            for (auto& callback : callbacks_.xunion_declaration_callbacks_) {
+                callback(*element.get());
+            }
+            DeclarationOrderTreeVisitor::OnXUnionDeclaration(element);
         }
     };
 

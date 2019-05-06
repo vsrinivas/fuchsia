@@ -37,8 +37,14 @@ public:
     void OnUsing(fit::function<void(const raw::Using&)> callback) {
         using_callbacks_.push_back(std::move(callback));
     }
+    void OnBitsDeclaration(fit::function<void(const raw::BitsDeclaration&)> callback) {
+        bits_declaration_callbacks_.push_back(std::move(callback));
+    }
     void OnConstDeclaration(fit::function<void(const raw::ConstDeclaration&)> callback) {
         const_declaration_callbacks_.push_back(std::move(callback));
+    }
+    void OnEnumDeclaration(fit::function<void(const raw::EnumDeclaration&)> callback) {
+        enum_declaration_callbacks_.push_back(std::move(callback));
     }
     void OnEnumMember(fit::function<void(const raw::EnumMember&)> callback) {
         enum_member_callbacks_.push_back(std::move(callback));
@@ -49,14 +55,28 @@ public:
     void OnStructMember(fit::function<void(const raw::StructMember&)> callback) {
         struct_member_callbacks_.push_back(std::move(callback));
     }
+    void OnStructDeclaration(fit::function<void(const raw::StructDeclaration&)> callback) {
+        struct_declaration_callbacks_.push_back(std::move(callback));
+    }
     void OnTableMember(fit::function<void(const raw::TableMember&)> callback) {
         table_member_callbacks_.push_back(std::move(callback));
+    }
+    void OnTableDeclaration(fit::function<void(const raw::TableDeclaration&)> callback) {
+        table_declaration_callbacks_.push_back(std::move(callback));
     }
     void OnUnionMember(fit::function<void(const raw::UnionMember&)> callback) {
         union_member_callbacks_.push_back(std::move(callback));
     }
+    void OnUnionDeclaration(fit::function<void(const raw::UnionDeclaration&)> callback) {
+        union_declaration_callbacks_.push_back(std::move(callback));
+    }
+    // TODO(fxb/FIDL-554): Change fidlc code to spell the SnakeCase version of
+    // xunion like "Xunion" instead of "XUnion".
     void OnXUnionMember(fit::function<void(const raw::XUnionMember&)> callback) {
         xunion_member_callbacks_.push_back(std::move(callback));
+    }
+    void OnXUnionDeclaration(fit::function<void(const raw::XUnionDeclaration&)> callback) {
+        xunion_declaration_callbacks_.push_back(std::move(callback));
     }
 
 private:
@@ -74,13 +94,19 @@ private:
 
     std::vector<fit::function<void(const raw::File&)>> file_callbacks_;
     std::vector<fit::function<void(const raw::Using&)>> using_callbacks_;
+    std::vector<fit::function<void(const raw::BitsDeclaration&)>> bits_declaration_callbacks_;
     std::vector<fit::function<void(const raw::ConstDeclaration&)>> const_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::EnumDeclaration&)>> enum_declaration_callbacks_;
     std::vector<fit::function<void(const raw::EnumMember&)>> enum_member_callbacks_;
     std::vector<fit::function<void(const raw::InterfaceDeclaration&)>> interface_declaration_callbacks_;
     std::vector<fit::function<void(const raw::StructMember&)>> struct_member_callbacks_;
+    std::vector<fit::function<void(const raw::StructDeclaration&)>> struct_declaration_callbacks_;
     std::vector<fit::function<void(const raw::TableMember&)>> table_member_callbacks_;
+    std::vector<fit::function<void(const raw::TableDeclaration&)>> table_declaration_callbacks_;
     std::vector<fit::function<void(const raw::UnionMember&)>> union_member_callbacks_;
+    std::vector<fit::function<void(const raw::UnionDeclaration&)>> union_declaration_callbacks_;
     std::vector<fit::function<void(const raw::XUnionMember&)>> xunion_member_callbacks_;
+    std::vector<fit::function<void(const raw::XUnionDeclaration&)>> xunion_declaration_callbacks_;
 };
 
 } // namespace linter
