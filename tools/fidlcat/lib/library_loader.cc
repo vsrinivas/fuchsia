@@ -13,6 +13,102 @@
 
 namespace fidlcat {
 
+const std::unique_ptr<Type> Enum::GetType() const {
+  // TODO Consider caching this.
+  return Type::ScalarTypeFromName(value_["type"].GetString());
+}
+
+std::string Enum::GetNameFromBytes(const uint8_t* bytes, size_t length) const {
+  std::unique_ptr<Type> type = GetType();
+  for (auto& member : value_["members"].GetArray()) {
+    Marker end(bytes + length, nullptr);
+    Marker marker(bytes, nullptr, end);
+    if (type->ValueEquals(marker, length, member["value"]["literal"])) {
+      return member["name"].GetString();
+    }
+  }
+  return "(Unknown enum member)";
+}
+
+uint32_t Enum::size() const { return GetType()->InlineSize(); }
+
+std::unique_ptr<Type> UnionMember::GetType() const {
+  if (!value_.HasMember("type")) {
+    FXL_LOG(ERROR) << "Type missing";
+    return Type::get_illegal();
+  }
+  const rapidjson::Value& type = value_["type"];
+  return Type::GetType(enclosing_union().enclosing_library().enclosing_loader(),
+                       type);
+}
+
+const UnionMember& Union::MemberWithTag(uint32_t tag) const {
+  if (tag >= members_.size() || tag < 0) {
+    return get_illegal_member();
+  }
+  return members_[tag];
+}
+
+const UnionMember& Union::get_illegal_member() const {
+  class IllegalUnionMember : public UnionMember {
+   public:
+    IllegalUnionMember(const Union& uni) : UnionMember(uni, value_) {}
+
+    virtual std::unique_ptr<Type> GetType() const override {
+      return Type::get_illegal();
+    }
+
+    virtual uint64_t size() const override { return enclosing_union().size(); }
+
+    virtual const std::string_view name() const override { return "unknown"; }
+
+   private:
+    const rapidjson::Value value_;
+  };
+  if (illegal_ == nullptr) {
+    illegal_.reset(new IllegalUnionMember(*this));
+  }
+  return *illegal_;
+}
+
+std::unique_ptr<Type> StructMember::GetType() const {
+  if (!value_.HasMember("type")) {
+    FXL_LOG(ERROR) << "Type missing";
+    return Type::get_illegal();
+  }
+  const rapidjson::Value& type = value_["type"];
+  return Type::GetType(
+      enclosing_struct().enclosing_library().enclosing_loader(), type);
+}
+
+std::unique_ptr<Type> TableMember::GetType() const {
+  if (!value_.HasMember("type")) {
+    FXL_LOG(ERROR) << "Type missing";
+    return Type::get_illegal();
+  }
+  const rapidjson::Value& type = value_["type"];
+  return Type::GetType(enclosing_table().enclosing_library().enclosing_loader(),
+                       type);
+}
+
+Table::Table(const Library& enclosing_library, const rapidjson::Value& value)
+    : enclosing_library_(enclosing_library), value_(value) {
+  auto member_arr = value["members"].GetArray();
+  uint32_t max_ordinal = 0;
+  for (auto& member : member_arr) {
+    Ordinal ordinal = std::strtoll(member["ordinal"].GetString(), nullptr, 10);
+    backing_members_.emplace_back(*this, member);
+    max_ordinal = std::max(max_ordinal, ordinal);
+  }
+
+  // There is one element in this array for each possible ordinal value.  The
+  // array is dense, so there are unlikely to be gaps.
+  members_.resize(max_ordinal + 1, nullptr);
+  for (auto& backing_member : backing_members_) {
+    members_[backing_member.ordinal()] = &backing_member;
+  }
+}
+
 std::unique_ptr<Type> InterfaceMethodParameter::GetType() const {
   if (!value_.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
@@ -23,6 +119,75 @@ std::unique_ptr<Type> InterfaceMethodParameter::GetType() const {
                            .enclosing_library()
                            .enclosing_loader(),
                        type);
+}
+
+InterfaceMethod::InterfaceMethod(const Interface& interface,
+                                 const rapidjson::Value& value)
+    : enclosing_interface_(interface), value_(value) {
+  if (value_["has_request"].GetBool()) {
+    request_params_ =
+        std::make_optional<std::vector<InterfaceMethodParameter>>();
+    auto request_arr = value["maybe_request"].GetArray();
+    request_params_->reserve(request_arr.Size());
+    for (auto& request : request_arr) {
+      request_params_->emplace_back(*this, request);
+    }
+  } else {
+    request_params_ = {};
+  }
+
+  if (value_["has_response"].GetBool()) {
+    response_params_ =
+        std::make_optional<std::vector<InterfaceMethodParameter>>();
+    auto response_arr = value["maybe_response"].GetArray();
+    response_params_->reserve(response_arr.Size());
+    for (auto& response : response_arr) {
+      response_params_->emplace_back(*this, response);
+    }
+  } else {
+    response_params_ = {};
+  }
+}
+
+InterfaceMethod::InterfaceMethod(InterfaceMethod&& other)
+    : enclosing_interface_(other.enclosing_interface_), value_(other.value_) {
+  if (other.request_params_) {
+    request_params_ =
+        std::make_optional<std::vector<InterfaceMethodParameter>>();
+    for (auto& request : *other.request_params_) {
+      request_params_->emplace_back(*this, request.value_);
+    }
+  } else {
+    request_params_ = {};
+  }
+
+  if (other.response_params_) {
+    response_params_ =
+        std::make_optional<std::vector<InterfaceMethodParameter>>();
+    for (auto& response : *other.response_params_) {
+      response_params_->emplace_back(*this, response.value_);
+    }
+  } else {
+    response_params_ = {};
+  }
+}
+
+std::string InterfaceMethod::fully_qualified_name() const {
+  std::string fqn(enclosing_interface_.name());
+  fqn.append(".");
+  fqn.append(name());
+  return fqn;
+}
+
+bool Interface::GetMethodByFullName(const std::string& name,
+                                    const InterfaceMethod** method_ptr) const {
+  for (const auto& method : methods()) {
+    if (method.fully_qualified_name() == name) {
+      *method_ptr = &method;
+      return true;
+    }
+  }
+  return false;
 }
 
 Library::Library(const LibraryLoader& enclosing, rapidjson::Document& document)
@@ -98,102 +263,6 @@ bool Library::GetInterfaceByName(const std::string& name,
   return false;
 }
 
-const std::unique_ptr<Type> Enum::GetType() const {
-  // TODO Consider caching this.
-  return Type::ScalarTypeFromName(value_["type"].GetString());
-}
-
-std::string Enum::GetNameFromBytes(const uint8_t* bytes, size_t length) const {
-  std::unique_ptr<Type> type = GetType();
-  for (auto& member : value_["members"].GetArray()) {
-    Marker end(bytes + length, nullptr);
-    Marker marker(bytes, nullptr, end);
-    if (type->ValueEquals(marker, length, member["value"]["literal"])) {
-      return member["name"].GetString();
-    }
-  }
-  return "(Unknown enum member)";
-}
-
-uint32_t Enum::size() const { return GetType()->InlineSize(); }
-
-std::unique_ptr<Type> StructMember::GetType() const {
-  if (!value_.HasMember("type")) {
-    FXL_LOG(ERROR) << "Type missing";
-    return Type::get_illegal();
-  }
-  const rapidjson::Value& type = value_["type"];
-  return Type::GetType(
-      enclosing_struct().enclosing_library().enclosing_loader(), type);
-}
-
-std::unique_ptr<Type> TableMember::GetType() const {
-  if (!value_.HasMember("type")) {
-    FXL_LOG(ERROR) << "Type missing";
-    return Type::get_illegal();
-  }
-  const rapidjson::Value& type = value_["type"];
-  return Type::GetType(enclosing_table().enclosing_library().enclosing_loader(),
-                       type);
-}
-
-Table::Table(const Library& enclosing_library, const rapidjson::Value& value)
-    : enclosing_library_(enclosing_library), value_(value) {
-  auto member_arr = value["members"].GetArray();
-  uint32_t max_ordinal = 0;
-  for (auto& member : member_arr) {
-    Ordinal ordinal = std::strtoll(member["ordinal"].GetString(), nullptr, 10);
-    backing_members_.emplace_back(*this, member);
-    max_ordinal = std::max(max_ordinal, ordinal);
-  }
-
-  // There is one element in this array for each possible ordinal value.  The
-  // array is dense, so there are unlikely to be gaps.
-  members_.resize(max_ordinal + 1, nullptr);
-  for (auto& backing_member : backing_members_) {
-    members_[backing_member.ordinal()] = &backing_member;
-  }
-}
-
-std::unique_ptr<Type> UnionMember::GetType() const {
-  if (!value_.HasMember("type")) {
-    FXL_LOG(ERROR) << "Type missing";
-    return Type::get_illegal();
-  }
-  const rapidjson::Value& type = value_["type"];
-  return Type::GetType(enclosing_union().enclosing_library().enclosing_loader(),
-                       type);
-}
-
-const UnionMember& Union::get_illegal_member() const {
-  class IllegalUnionMember : public UnionMember {
-   public:
-    IllegalUnionMember(const Union& uni) : UnionMember(uni, value_) {}
-
-    virtual std::unique_ptr<Type> GetType() const override {
-      return Type::get_illegal();
-    }
-
-    virtual uint64_t size() const override { return enclosing_union().size(); }
-
-    virtual const std::string_view name() const override { return "unknown"; }
-
-   private:
-    const rapidjson::Value value_;
-  };
-  if (illegal_ == nullptr) {
-    illegal_.reset(new IllegalUnionMember(*this));
-  }
-  return *illegal_;
-}
-
-const UnionMember& Union::MemberWithTag(uint32_t tag) const {
-  if (tag >= members_.size() || tag < 0) {
-    return get_illegal_member();
-  }
-  return members_[tag];
-}
-
 LibraryLoader::LibraryLoader(
     std::vector<std::unique_ptr<std::istream>>& library_streams,
     LibraryReadError* err) {
@@ -212,75 +281,6 @@ LibraryLoader::LibraryLoader(
       return;
     }
   }
-}
-
-InterfaceMethod::InterfaceMethod(const Interface& interface,
-                                 const rapidjson::Value& value)
-    : enclosing_interface_(interface), value_(value) {
-  if (value_["has_request"].GetBool()) {
-    request_params_ =
-        std::make_optional<std::vector<InterfaceMethodParameter>>();
-    auto request_arr = value["maybe_request"].GetArray();
-    request_params_->reserve(request_arr.Size());
-    for (auto& request : request_arr) {
-      request_params_->emplace_back(*this, request);
-    }
-  } else {
-    request_params_ = {};
-  }
-
-  if (value_["has_response"].GetBool()) {
-    response_params_ =
-        std::make_optional<std::vector<InterfaceMethodParameter>>();
-    auto response_arr = value["maybe_response"].GetArray();
-    response_params_->reserve(response_arr.Size());
-    for (auto& response : response_arr) {
-      response_params_->emplace_back(*this, response);
-    }
-  } else {
-    response_params_ = {};
-  }
-}
-
-InterfaceMethod::InterfaceMethod(InterfaceMethod&& other)
-    : enclosing_interface_(other.enclosing_interface_), value_(other.value_) {
-  if (other.request_params_) {
-    request_params_ =
-        std::make_optional<std::vector<InterfaceMethodParameter>>();
-    for (auto& request : *other.request_params_) {
-      request_params_->emplace_back(*this, request.value_);
-    }
-  } else {
-    request_params_ = {};
-  }
-
-  if (other.response_params_) {
-    response_params_ =
-        std::make_optional<std::vector<InterfaceMethodParameter>>();
-    for (auto& response : *other.response_params_) {
-      response_params_->emplace_back(*this, response.value_);
-    }
-  } else {
-    response_params_ = {};
-  }
-}
-
-std::string InterfaceMethod::fully_qualified_name() const {
-  std::string fqn(enclosing_interface_.name());
-  fqn.append(".");
-  fqn.append(name());
-  return fqn;
-}
-
-bool Interface::GetMethodByFullName(const std::string& name,
-                                    const InterfaceMethod** method_ptr) const {
-  for (const auto& method : methods()) {
-    if (method.fully_qualified_name() == name) {
-      *method_ptr = &method;
-      return true;
-    }
-  }
-  return false;
 }
 
 }  // namespace fidlcat
