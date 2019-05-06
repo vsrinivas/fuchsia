@@ -4,7 +4,7 @@
 
 ## CLion
 
-Follow either the **CMake** (recommended) or **Compilation Database**
+Follow either the **Compilation Database** (recommended) or **CMake**
 instructions below to create the appropriate project description file in
 the fuchsia root directory.
 
@@ -15,8 +15,8 @@ fuchsia root directory.
 
 To improve performance you can try some or all of the following. They
 are only suggestions, we recommend checking with directly with JetBrains
-at https://intellij-support.jetbrains.com/hc to be sure what works
-best for your environment. Also see 
+at <https://intellij-support.jetbrains.com/hc> to be sure what works
+best for your environment.
 
 ##### Exclude Directories
 
@@ -45,7 +45,7 @@ See
 for general tips on tweaking CLion JVM Options and Platform Properties.
 As that link suggests, contact CLion support for instructions
 regarding the options and values that might help you with whatever issue
-you are trying to solve  
+you are trying to solve.
 
 ## VIM
 
@@ -111,7 +111,19 @@ IDE.
 A [Compilation
 Database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) file
 can be generated using `fx compdb`. This will create/update the file
-`compile_commands.json` in the fuchsia root directory.
+`compile_commands.json` in the fuchsia root directory. When you add,
+delete, or rename source files the command needs to be rerun to update
+the `compile_commands.json` file.
 
-When you add, delete, or rename source files the command needs to be
-rerun to update the `compile_commands.json` file.
+NOTE: If using goma (currently only Googlers), you should run the
+following instead of fx compdb. It will remove the gomacc
+entries that confuse CLion. See
+<https://youtrack.jetbrains.com/issue/CPP-15475> for background.
+
+```
+fx compdb && perl -pi -e 's|/[/\w]+/gomacc ||' compile_commands.json
+```
+
+NOTE: There is an ongoing issue where CLion shows compiler errors for a few
+hundred files in the Fuchsia source code. Other files should work
+fine in CLion.
