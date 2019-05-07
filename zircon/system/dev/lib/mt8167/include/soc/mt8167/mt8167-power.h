@@ -4,37 +4,68 @@
 
 #pragma once
 
+#include <vector>
+
 //PMIC REGISTERS
 
-#define PMIC_ANALDO_CON1 0x0402
-#define PMIC_ANALDO_CON2 0x0404
-#define PMIC_ANALDO_CON4 0x0408
-#define PMIC_VPROC_CON7 0x021A
-#define PMIC_ANALDO_CON21 0x0420
-#define PMIC_ANALDO_CON23 0x0424
-#define PMIC_ANALDO_CON25 0x0428
-#define PMIC_DIGLDO_CON0 0x0500
-#define PMIC_DIGLDO_CON2 0x0502
-#define PMIC_DIGLDO_CON3 0x0504
-#define PMIC_DIGLDO_CON5 0x0506
-#define PMIC_DIGLDO_CON6 0x0508
-#define PMIC_DIGLDO_CON7 0x050A
-#define PMIC_DIGLDO_CON8 0x050C
-#define PMIC_DIGLDO_CON11 0x0512
-#define PMIC_DIGLDO_CON31 0x0536
-#define PMIC_DIGLDO_CON55 0x0562
-#define PMIC_DIGLDO_CON30 0x0534
-#define PMIC_DIGLDO_CON32 0x0538
-#define PMIC_DIGLDO_CON33 0x053A
-#define PMIC_DIGLDO_CON36 0x0540
-#define PMIC_DIGLDO_CON41 0x0546
-#define PMIC_DIGLDO_CON44 0x054C
-#define PMIC_DIGLDO_CON47 0x0552
-#define PMIC_DIGLDO_CON48 0x0554
-#define PMIC_DIGLDO_CON49 0x0556
-#define PMIC_DIGLDO_CON50 0x0558
-#define PMIC_DIGLDO_CON51 0x055A
-#define PMIC_DIGLDO_CON53 0x055E
+constexpr uint32_t kPmicVprocCon5 = 0x0216;
+constexpr uint32_t kPmicVprocCon7 = 0x021A;
+constexpr uint32_t kPmicVprocCon8 = 0x021C;
+constexpr uint32_t kPmicVprocCon9 = 0x021E;
+constexpr uint32_t kPmicVprocCon10 = 0x0220;
+
+constexpr uint32_t kPmicVsysCon5 = 0x023C;
+constexpr uint32_t kPmicVsysCon7 = 0x0240;
+constexpr uint32_t kPmicVsysCon8 = 0x0242;
+constexpr uint32_t kPmicVsysCon9 = 0x0244;
+constexpr uint32_t kPmicVsysCon10 = 0x0246;
+
+constexpr uint32_t kPmicVcoreCon5 = 0x030A;
+constexpr uint32_t kPmicVcoreCon7 = 0x030E;
+constexpr uint32_t kPmicVcoreCon8 = 0x0310;
+constexpr uint32_t kPmicVcoreCon9 = 0x0312;
+constexpr uint32_t kPmicVcoreCon10 = 0x0314;
+
+constexpr uint32_t kPmicAnaLdoCon1 = 0x0402;
+constexpr uint32_t kPmicAnaLdoCon2 = 0x0404;
+constexpr uint32_t kPmicAnaLdoCon4 = 0x0408;
+constexpr uint32_t kPmicAnaLdoCon8 = 0x0410;
+constexpr uint32_t kPmicAnaLdoCon16 = 0x0416;
+constexpr uint32_t kPmicAnaLdoCon21 = 0x0420;
+constexpr uint32_t kPmicAnaLdoCon23 = 0x0424;
+constexpr uint32_t kPmicAnaLdoCon25 = 0x0428;
+constexpr uint32_t kPmicAnaLdoCon26 = 0x042A;
+
+constexpr uint32_t kPmicDigLdoCon0 = 0x0500;
+constexpr uint32_t kPmicDigLdoCon2 = 0x0502;
+constexpr uint32_t kPmicDigLdoCon3 = 0x0504;
+constexpr uint32_t kPmicDigLdoCon5 = 0x0506;
+constexpr uint32_t kPmicDigLdoCon6 = 0x0508;
+constexpr uint32_t kPmicDigLdoCon7 = 0x050A;
+constexpr uint32_t kPmicDigLdoCon8 = 0x050C;
+constexpr uint32_t kPmicDigLdoCon11 = 0x0512;
+constexpr uint32_t kPmicDigLdoCon24 = 0x052A;
+constexpr uint32_t kPmicDigLdoCon26 = 0x052C;
+constexpr uint32_t kPmicDigLdoCon27 = 0x052E;
+constexpr uint32_t kPmicDigLdoCon28 = 0x0530;
+constexpr uint32_t kPmicDigLdoCon29 = 0x0532;
+constexpr uint32_t kPmicDigLdoCon31 = 0x0536;
+constexpr uint32_t kPmicDigLdoCon55 = 0x0562;
+constexpr uint32_t kPmicDigLdoCon30 = 0x0534;
+constexpr uint32_t kPmicDigLdoCon32 = 0x0538;
+constexpr uint32_t kPmicDigLdoCon33 = 0x053A;
+constexpr uint32_t kPmicDigLdoCon36 = 0x0540;
+constexpr uint32_t kPmicDigLdoCon41 = 0x0546;
+constexpr uint32_t kPmicDigLdoCon44 = 0x054C;
+constexpr uint32_t kPmicDigLdoCon47 = 0x0552;
+constexpr uint32_t kPmicDigLdoCon48 = 0x0554;
+constexpr uint32_t kPmicDigLdoCon49 = 0x0556;
+constexpr uint32_t kPmicDigLdoCon50 = 0x0558;
+constexpr uint32_t kPmicDigLdoCon51 = 0x055A;
+constexpr uint32_t kPmicDigLdoCon52 = 0x055C;
+constexpr uint32_t kPmicDigLdoCon53 = 0x055E;
+
+constexpr uint32_t kMt8167NumPowerDomains = 23;
 
 enum Mt8167PowerDomains {
     kBuckVProc,

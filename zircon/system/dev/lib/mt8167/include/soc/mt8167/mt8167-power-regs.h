@@ -8,16 +8,14 @@
 #include <soc/mt8167/mt8167-hw.h>
 #include <zircon/types.h>
 
-//PMIC WRAP REGISTERS
+// PMIC WRAP REGISTERS
 #define PMIC_WRAP_WACS2_CMD_OFFSET 0x00A0
 #define PMIC_WRAP_WACS2_RDATA_OFFSET 0x00A4
 #define PMIC_WRAP_WACS2_VLDCLR_OFFSET 0x00A8
 
 class PmicWacs2Cmd : public hwreg::RegisterBase<PmicWacs2Cmd, uint32_t> {
 public:
-    static auto Get() {
-        return hwreg::RegisterAddr<PmicWacs2Cmd>(PMIC_WRAP_WACS2_CMD_OFFSET);
-    }
+    static auto Get() { return hwreg::RegisterAddr<PmicWacs2Cmd>(PMIC_WRAP_WACS2_CMD_OFFSET); }
     // Data reag/to write in the above reg address.
     DEF_FIELD(15, 0, wacs2_data);
     // Register address in pmic
@@ -31,11 +29,9 @@ public:
     static constexpr uint32_t kFsmStateIdle = 0x0;
     static constexpr uint32_t kFsmStateReq = 0x2;
     static constexpr uint32_t kFsmStateWfIdle = 0x4;
-    static constexpr uint32_t kFsmStateWfVldClr = 0x6;
+    static constexpr uint32_t kFsmStateWfVldClear = 0x6;
 
-    static auto Get() {
-        return hwreg::RegisterAddr<PmicWacs2RData>(PMIC_WRAP_WACS2_RDATA_OFFSET);
-    }
+    static auto Get() { return hwreg::RegisterAddr<PmicWacs2RData>(PMIC_WRAP_WACS2_RDATA_OFFSET); }
 
     // Check valid flag befor reading this data
     DEF_FIELD(15, 0, wacs2_rdata);
@@ -51,8 +47,10 @@ public:
     DEF_BIT(22, sys_idle);
 };
 
-class PmicWacs2VldClr : public hwreg::RegisterBase<PmicWacs2VldClr, uint32_t> {
+class PmicWacs2VldClear : public hwreg::RegisterBase<PmicWacs2VldClear, uint32_t> {
 public:
-    static auto Get() { return hwreg::RegisterAddr<PmicWacs2VldClr>(PMIC_WRAP_WACS2_VLDCLR_OFFSET); }
+    static auto Get() {
+        return hwreg::RegisterAddr<PmicWacs2VldClear>(PMIC_WRAP_WACS2_VLDCLR_OFFSET);
+    }
     DEF_BIT(0, wacs2_vldclr);
 };
