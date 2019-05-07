@@ -11,6 +11,7 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -106,15 +107,15 @@ class CollectSystemLogTest : public gtest::RealLoopFixture {
 TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
   std::unique_ptr<StubLogger> stub_logger = std::make_unique<StubLogger>();
   stub_logger->set_messages({
-      BuildLogMessage(0 /*INFO*/, "line 1"),
-      BuildLogMessage(1 /*WARN*/, "line 2", zx::msec(1)),
-      BuildLogMessage(2 /*ERROR*/, "line 3", zx::msec(2)),
-      BuildLogMessage(3 /*FATAL*/, "line 4", zx::msec(3)),
+      BuildLogMessage(FX_LOG_INFO, "line 1"),
+      BuildLogMessage(FX_LOG_WARNING, "line 2", zx::msec(1)),
+      BuildLogMessage(FX_LOG_ERROR, "line 3", zx::msec(2)),
+      BuildLogMessage(FX_LOG_FATAL, "line 4", zx::msec(3)),
       BuildLogMessage(-1 /*VLOG(1)*/, "line 5", zx::msec(4)),
       BuildLogMessage(-2 /*VLOG(2)*/, "line 6", zx::msec(5)),
-      BuildLogMessage(0 /*INFO*/, "line 7", zx::msec(6), /*tags=*/{"foo"}),
-      BuildLogMessage(0 /*INFO*/, "line 8", zx::msec(7), /*tags=*/{"bar"}),
-      BuildLogMessage(0 /*INFO*/, "line 9", zx::msec(8),
+      BuildLogMessage(FX_LOG_INFO, "line 7", zx::msec(6), /*tags=*/{"foo"}),
+      BuildLogMessage(FX_LOG_INFO, "line 8", zx::msec(7), /*tags=*/{"bar"}),
+      BuildLogMessage(FX_LOG_INFO, "line 9", zx::msec(8),
                       /*tags=*/{"foo", "bar"}),
   });
   ResetStubLogger(std::move(stub_logger));
@@ -140,9 +141,9 @@ TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsAfterOneMessage) {
   std::unique_ptr<StubLogger> stub_logger =
       std::make_unique<StubLoggerUnbindsAfterOneMessage>();
   stub_logger->set_messages({
-      BuildLogMessage(0 /*INFO*/,
+      BuildLogMessage(FX_LOG_INFO,
                       "this line should appear in the partial logs"),
-      BuildLogMessage(0 /*INFO*/,
+      BuildLogMessage(FX_LOG_INFO,
                       "this line should be missing from the partial logs"),
   });
   ResetStubLogger(std::move(stub_logger));
@@ -165,9 +166,9 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   std::unique_ptr<StubLogger> stub_logger =
       std::make_unique<StubLoggerSleepsAfterOneMessage>(logger_sleep);
   stub_logger->set_messages({
-      BuildLogMessage(0 /*INFO*/,
+      BuildLogMessage(FX_LOG_INFO,
                       "this line should appear in the partial logs"),
-      BuildLogMessage(0 /*INFO*/,
+      BuildLogMessage(FX_LOG_INFO,
                       "this line should be missing from the partial logs"),
   });
   ResetStubLogger(std::move(stub_logger));

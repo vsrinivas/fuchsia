@@ -12,6 +12,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -116,13 +117,13 @@ namespace {
 std::string SeverityToString(const int32_t severity) {
   if (severity < 0) {
     return fxl::StringPrintf("VLOG(%d)", -severity);
-  } else if (severity == 0) {
+  } else if (severity == FX_LOG_INFO) {
     return "INFO";
-  } else if (severity == 1) {
+  } else if (severity == FX_LOG_WARNING) {
     return "WARN";
-  } else if (severity == 2) {
+  } else if (severity == FX_LOG_ERROR) {
     return "ERROR";
-  } else if (severity == 3) {
+  } else if (severity == FX_LOG_FATAL) {
     return "FATAL";
   }
   return "INVALID";

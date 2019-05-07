@@ -16,6 +16,7 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -320,7 +321,7 @@ TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log
   // message here to check that we are attaching the logs.
   set_logger_messages({
-      BuildLogMessage(0 /*INFO*/, "log message",
+      BuildLogMessage(FX_LOG_INFO, "log message",
                       /*timestamp_offset=*/zx::duration(0), {"foo"}),
   });
 
