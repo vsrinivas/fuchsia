@@ -98,6 +98,24 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   void DeleteTask(const std::string& agent_url, const std::string& task_id);
 
  private:
+  // Used by ConnectToAgentService() to connect to the agent (if known) and its
+  // named service. Calls ConnectToAgent(), providing a temporary
+  // |ServiceProviderPtr| on which to then invoke ConnecToService() with the
+  // given service_name and channel.
+  //
+  // |requestor_url| The URL of the component requesting the service.
+  // |agent_url| The URL of the agent believed to provide the service.
+  // |agent_controller_request| Returns the object that maintains the requestor
+  // connection to the agent.
+  // |service_name| The name of the requested service.
+  // |channel| The channel associated with the requestor's pending service
+  // request, to be used to communicate with the service, once connected.
+  void ConnectToService(
+      std::string requestor_url, std::string agent_url,
+      fidl::InterfaceRequest<fuchsia::modular::AgentController>
+          agent_controller_request,
+      std::string service_name, ::zx::channel channel);
+
   // During ConnectToAgentService, if an agent is not found, close the channel
   // established for the service, and indicate the reason with FIDL epitaph
   // error ZX_ERR_NOT_FOUND.

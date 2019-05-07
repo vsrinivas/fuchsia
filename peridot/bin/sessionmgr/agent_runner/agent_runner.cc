@@ -187,6 +187,17 @@ void AgentRunner::HandleAgentServiceNotFound(::zx::channel channel,
   }
 }
 
+void AgentRunner::ConnectToService(
+    std::string requestor_url, std::string agent_url,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController>
+        agent_controller_request,
+    std::string service_name, ::zx::channel channel) {
+  fuchsia::sys::ServiceProviderPtr agent_services;
+  ConnectToAgent(requestor_url, agent_url, agent_services.NewRequest(),
+                 std::move(agent_controller_request));
+  agent_services->ConnectToService(service_name, std::move(channel));
+}
+
 void AgentRunner::ConnectToAgentService(
     const std::string& requestor_url,
     fuchsia::modular::AgentServiceRequest request) {
@@ -218,8 +229,10 @@ void AgentRunner::ConnectToAgentService(
       return;
     }
   }
-  // TODO(MF-368): Connect to GIVEN agent URL
-  FXL_LOG(FATAL) << "Not implemented.";
+
+  ConnectToService(
+      requestor_url, agent_url, std::move(*request.mutable_agent_controller()),
+      request.service_name(), std::move(*request.mutable_channel()));
 }
 
 void AgentRunner::ConnectToEntityProvider(
