@@ -4,11 +4,8 @@
 
 #pragma once
 
-#include "src/developer/debug/shared/fd_watcher.h"
-#include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
-#include "src/developer/debug/zxdb/console/line_input.h"
 #include "src/lib/fxl/macros.h"
 
 namespace zxdb {
@@ -16,9 +13,7 @@ namespace zxdb {
 class OutputBuffer;
 class Session;
 
-// The console has some virtual functions for ease of mocking the interface
-// for tests.
-class Console : public debug_ipc::FDWatcher {
+class Console {
  public:
   explicit Console(Session* session);
   virtual ~Console();
@@ -30,15 +25,15 @@ class Console : public debug_ipc::FDWatcher {
   fxl::WeakPtr<Console> GetWeakPtr();
 
   // Prints the first prompt to the screen. This only needs to be called once.
-  void Init();
+  virtual void Init(){};
 
   // Prints the buffer/string to the console.
-  void Output(const OutputBuffer& output);
+  virtual void Output(const OutputBuffer& output) = 0;
   void Output(const std::string& s);
   void Output(const Err& err);
 
   // Clears the contents of the console.
-  void Clear();
+  virtual void Clear() = 0;
 
   // The result of dispatching input is either to keep running or quit the
   // message loop to exit.
@@ -50,31 +45,12 @@ class Console : public debug_ipc::FDWatcher {
   // can indicate whether they want the console to continue processing
   // commands.
   virtual Result ProcessInputLine(const std::string& line,
-                                  CommandCallback callback = nullptr);
+                                  CommandCallback callback = nullptr) = 0;
 
  protected:
-  Result DispatchInputLine(const std::string& line,
-                           CommandCallback callback = nullptr);
-
-  // FDWatcher implementation.
-  void OnFDReady(int fd, bool read, bool write, bool err) override;
-
-  // Searches for history at $HOME/.zxdb_history and loads it if found.
-  bool SaveHistoryFile();
-  void LoadHistoryFile();
-
   static Console* singleton_;
 
   ConsoleContext context_;
-
-  debug_ipc::MessageLoop::WatchHandle stdio_watch_;
-
-  LineInputStdout line_input_;
-
-  // Saves the last nonempty input line for re-running when the user just
-  // presses "Enter" with no parameters. This must be re-parsed each time
-  // because the context can be different.
-  std::string previous_line_;
 
   fxl::WeakPtrFactory<Console> weak_factory_;
 

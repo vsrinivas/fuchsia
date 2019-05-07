@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/console/actions.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/console/console_impl.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -20,9 +22,9 @@ using debug_ipc::MessageLoop;
 
 // We override the Console in order to be able to override the dispatch
 // function
-class ConsoleTest : public Console {
+class ConsoleTest : public ConsoleImpl {
  public:
-  ConsoleTest(Session* session) : Console(session) {}
+  ConsoleTest(Session* session) : ConsoleImpl(session) {}
 
   Result ProcessInputLine(const std::string& line,
                           CommandCallback callback = nullptr) override {

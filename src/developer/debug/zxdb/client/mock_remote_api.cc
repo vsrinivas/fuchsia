@@ -18,6 +18,17 @@ int MockRemoteAPI::GetAndResetResumeCount() {
   return result;
 }
 
+void MockRemoteAPI::Attach(
+    const debug_ipc::AttachRequest& request,
+    std::function<void(const Err&, debug_ipc::AttachReply)> cb) {
+  debug_ipc::AttachReply reply;
+  reply.koid = request.koid;
+  reply.name = "<mock>";
+
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [cb, reply]() { cb(Err(), reply); });
+}
+
 void MockRemoteAPI::AddOrChangeBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {

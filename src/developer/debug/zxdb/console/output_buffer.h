@@ -133,6 +133,8 @@ class OutputBuffer {
   //   kComment "foo", kNormal kGreen kGray "bar"
   std::string GetDebugString() const;
 
+  bool operator==(const OutputBuffer& other) const;
+
  private:
   struct Span {
     Span(Syntax s, std::string t);
@@ -146,6 +148,9 @@ class OutputBuffer {
 
     std::string text;
   };
+
+  std::vector<Span> NormalizedSpans() const;
+
   std::vector<Span> spans_;
 };
 

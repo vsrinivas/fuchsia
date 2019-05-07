@@ -301,9 +301,7 @@ size_t OutputBuffer::UnicodeCharWidth() const {
 
 void OutputBuffer::Clear() { spans_.clear(); }
 
-std::string OutputBuffer::GetDebugString() const {
-  // Normalize so the output is the same even if it was built with different
-  // sequences of spans.
+std::vector<OutputBuffer::Span> OutputBuffer::NormalizedSpans() const {
   std::vector<Span> normalized;
   for (const auto& cur : spans_) {
     if (normalized.empty()) {
@@ -317,6 +315,14 @@ std::string OutputBuffer::GetDebugString() const {
         normalized.push_back(cur);  // New format.
     }
   }
+
+  return normalized;
+}
+
+std::string OutputBuffer::GetDebugString() const {
+  // Normalize so the output is the same even if it was built with different
+  // sequences of spans.
+  std::vector<Span> normalized = NormalizedSpans();
 
   std::string result;
   for (size_t i = 0; i < normalized.size(); i++) {
@@ -337,6 +343,40 @@ std::string OutputBuffer::GetDebugString() const {
     result.push_back('"');
   }
   return result;
+}
+
+bool OutputBuffer::operator==(const OutputBuffer& other) const {
+  auto spans = NormalizedSpans();
+  auto other_spans = other.NormalizedSpans();
+
+  if (spans.size() != other_spans.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < spans.size(); i++) {
+    auto& ours = spans[i];
+    auto& theirs = other_spans[i];
+
+    if (ours.syntax != theirs.syntax) {
+      return false;
+    }
+
+    if (ours.syntax == Syntax::kNormal) {
+      if (ours.foreground != theirs.foreground) {
+        return false;
+      }
+
+      if (ours.background != theirs.background) {
+        return false;
+      }
+    }
+
+    if (ours.text != theirs.text) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace zxdb

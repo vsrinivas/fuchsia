@@ -17,7 +17,7 @@
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/actions.h"
 #include "src/developer/debug/zxdb/console/command_line_options.h"
-#include "src/developer/debug/zxdb/console/console.h"
+#include "src/developer/debug/zxdb/console/console_impl.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/lib/fxl/command_line.h"
@@ -128,7 +128,7 @@ int ConsoleMain(int argc, const char* argv[]) {
                                           true);
     }
 
-    Console console(&session);
+    ConsoleImpl console(&session);
     if (options.quit_agent_on_quit) {
       session.system().settings().SetBool(
           ClientSettings::System::kQuitAgentOnExit, true);

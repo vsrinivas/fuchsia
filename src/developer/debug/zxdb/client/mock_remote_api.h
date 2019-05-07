@@ -51,6 +51,9 @@ class MockRemoteAPI : public RemoteAPI {
   }
 
   // RemoteAPI implementation.
+  void Attach(
+      const debug_ipc::AttachRequest& request,
+      std::function<void(const Err&, debug_ipc::AttachReply)> cb) override;
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
       std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)

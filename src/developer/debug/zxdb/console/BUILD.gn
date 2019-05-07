@@ -21,6 +21,8 @@ static_library("console") {
     "console.h",
     "console_context.cc",
     "console_context.h",
+    "console_impl.cc",
+    "console_impl.h",
     "console_main.cc",
     "console_main.h",
     "format_context.cc",
@@ -105,11 +107,13 @@ source_set("tests") {
     "format_value_unittest.cc",
     "input_location_parser_unittest.cc",
     "line_input_unittest.cc",
+    "mock_console.cc",
     "mock_format_value_process_context.cc",
     "mock_format_value_process_context.h",
     "source_util_unittest.cc",
     "string_formatters_unittest.cc",
     "string_util_unittest.cc",
+    "verbs_symbol_unittest.cc",
   ]
 
   deps = [

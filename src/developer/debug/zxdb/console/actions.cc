@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/actions.h"
 
+#include "src/developer/debug/shared/message_loop.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/split_string.h"
