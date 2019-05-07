@@ -74,7 +74,7 @@ function read-patches-from-stdin {
   while read line; do
     local url=$(echo "$line" | cut -d " " -f 3 | sed 's/"//g')
     host=$(echo "$url" | cut -d / -f 3)
-    project=$(echo "$url" | cut -d / -f 4)
+    project=$(echo "$url" | cut -d / -f 4-)
     ref=$(echo "$line" | cut -d " " -f 4)
 
     if [[ ${seen_projects[$project]} ]]; then
