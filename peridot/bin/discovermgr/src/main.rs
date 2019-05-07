@@ -1,0 +1,95 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#![feature(async_await, await_macro)]
+
+use {
+    crate::module_output::ModuleOutputWriterService,
+    failure::{Error, ResultExt},
+    fidl_fuchsia_app_discover::{DiscoverRegistryRequest, DiscoverRegistryRequestStream},
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_syslog as syslog,
+    futures::prelude::*,
+};
+
+mod module_output;
+
+// The directory name where the discovermgr FIDL services are exposed.
+static SERVICE_DIRECTORY: &str = "public";
+
+enum IncomingServices {
+    DiscoverRegistry(DiscoverRegistryRequestStream),
+    // TODO(miguelfrde): add additional services
+}
+
+/// Handle DiscoveryRegistry requests.
+async fn run_discover_registry_server(
+    mut stream: DiscoverRegistryRequestStream,
+) -> Result<(), Error> {
+    while let Some(request) =
+        await!(stream.try_next()).context("Error running discover registry")?
+    {
+        match request {
+            DiscoverRegistryRequest::RegisterModuleOutputWriter { module, request, .. } => {
+                let module_output_stream = request.into_stream()?;
+                ModuleOutputWriterService::new(module)?.spawn(module_output_stream);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    syslog::init_with_tags(&["discovermgr"])?;
+
+    let mut fs = ServiceFs::new_local();
+    fs.dir(SERVICE_DIRECTORY).add_fidl_service(IncomingServices::DiscoverRegistry);
+
+    fs.take_and_serve_directory_handle()?;
+
+    const MAX_CONCURRENT: usize = 10_000;
+    let fut =
+        fs.for_each_concurrent(MAX_CONCURRENT, |IncomingServices::DiscoverRegistry(stream)| {
+            run_discover_registry_server(stream).unwrap_or_else(|e| syslog::fx_log_err!("{:?}", e))
+        });
+
+    await!(fut);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use failure::ResultExt;
+    use fidl_fuchsia_app_discover::{
+        DiscoverRegistryMarker, ModuleIdentifier, ModuleOutputWriterMarker,
+    };
+    use fuchsia_component::client;
+
+    static COMPONENT_URL: &str = "fuchsia-pkg://fuchsia.com/discovermgr#meta/discovermgr.cmx";
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_module_output() -> Result<(), Error> {
+        let launcher = client::launcher().context("Failed to open launcher service")?;
+        let app = client::launch(&launcher, COMPONENT_URL.to_string(), None /* arguments */)
+            .context("Failed to launch discovermgr")?;
+        let discover_manager = app
+            .connect_to_service::<DiscoverRegistryMarker>()
+            .context("Failed to connect to DiscoverRegistry")?;
+
+        let mod_scope = ModuleIdentifier {
+            story_id: Some("test-story".to_string()),
+            module_path: Some(vec!["test-mod".to_string()]),
+        };
+        let (module_output_proxy, server_end) =
+            fidl::endpoints::create_proxy::<ModuleOutputWriterMarker>()?;
+        assert!(discover_manager.register_module_output_writer(mod_scope, server_end).is_ok());
+
+        let result = await!(module_output_proxy.write("test-param", Some("test-ref")))?;
+        assert!(result.is_ok());
+        Ok(())
+    }
+}

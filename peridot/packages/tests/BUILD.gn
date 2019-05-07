@@ -54,6 +54,7 @@ group("maxwell_unittests") {
   testonly = true
   public_deps = [
     "//peridot/bin/context_engine:context_engine_unittests",
+    "//peridot/bin/discovermgr:discovermgr_tests",
     "//peridot/bin/module_resolver:module_resolver_unittests",
     "//peridot/bin/suggestion_engine:suggestion_engine_unittests",
   ]
@@ -91,10 +92,10 @@ group("modular_integration_tests") {
     "//peridot/tests/intents:intent_test_parent_module",
     "//peridot/tests/last_focus_time:last_focus_time_test_session_shell",
     "//peridot/tests/modular_config:test_config",
+    "//peridot/tests/modular_login_tests:modular_login_tests",
     "//peridot/tests/module_context:module_context_test_entity_module",
     "//peridot/tests/module_context:module_context_test_module",
     "//peridot/tests/module_context:module_context_test_session_shell",
-    "//peridot/tests/modular_login_tests:modular_login_tests",
     "//peridot/tests/parent_child:parent_child_test_child_module1",
     "//peridot/tests/parent_child:parent_child_test_child_module2",
     "//peridot/tests/parent_child:parent_child_test_parent_module",

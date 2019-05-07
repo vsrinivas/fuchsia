@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("bin") {
+  name = "discovermgr"
+  edition = "2018"
+
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//sdk/fidl/fuchsia.app.discover:fuchsia.app.discover-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:maplit",
+  ]
+}
+
+package("discovermgr") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "discovermgr"
+
+  meta = [
+    {
+      path = rebase_path("meta/discovermgr.cmx")
+      dest = "discovermgr.cmx"
+    },
+  ]
+}
+
+package("discovermgr_tests") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "discovermgr_bin_test"
+    },
+  ]
+}
