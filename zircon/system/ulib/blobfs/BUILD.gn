@@ -60,6 +60,7 @@ library("blobfs") {
       "journal-entry.cpp",
       "journal.cpp",
       "metrics.cpp",
+      "unbuffered-operations-builder.cpp",
       "write-txn.cpp",
       "writeback-queue.cpp",
       "writeback-work.cpp",
