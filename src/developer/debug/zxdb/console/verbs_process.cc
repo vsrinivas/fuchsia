@@ -420,7 +420,7 @@ Err DoDetach(ConsoleContext* context, const Command& cmd,
   if (cmd.HasNoun(Noun::kJob)) {
     cmd.job_context()->Detach(
         [callback](fxl::WeakPtr<JobContext> job_context, const Err& err) {
-          JobCommandCallback("detach", job_context, false, err, callback);
+          JobCommandCallback("detach", job_context, true, err, callback);
         });
   } else {
     // Only print something when there was an error detaching. The console
