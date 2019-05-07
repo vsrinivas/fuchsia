@@ -50,15 +50,16 @@ bool Buffer::IsSpaceAvailable(size_t blocks) const {
 
 void Buffer::CopyTransaction(WriteTxn* txn) {
     ZX_DEBUG_ASSERT(!txn->IsBuffered());
-    auto& reqs = txn->Requests();
+    auto& ops = txn->Operations();
 
-    for (size_t i = 0; i < reqs.size(); i++) {
-        ZX_DEBUG_ASSERT(reqs[i].vmo != ZX_HANDLE_INVALID);
+    for (size_t i = 0; i < ops.size(); i++) {
+        ZX_DEBUG_ASSERT(ops[i].vmo->get() != ZX_HANDLE_INVALID);
+        ZX_DEBUG_ASSERT(ops[i].op.type == OperationType::kWrite);
 
         // Read parameters of the current request.
-        size_t vmo_offset = reqs[i].vmo_offset;
-        size_t dev_offset = reqs[i].dev_offset;
-        const size_t vmo_len = reqs[i].length;
+        size_t vmo_offset = ops[i].op.vmo_offset;
+        size_t dev_offset = ops[i].op.dev_offset;
+        const size_t vmo_len = ops[i].op.length;
         ZX_DEBUG_ASSERT(vmo_len > 0);
 
         // Calculate the offset/length we will need to write into the buffer.
@@ -71,7 +72,7 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
         ZX_DEBUG_ASSERT(buf_len > 0);
         ZX_DEBUG_ASSERT(buf_len <= vmo_len);
         ZX_DEBUG_ASSERT(buf_len < capacity_);
-        zx_handle_t vmo = reqs[i].vmo;
+        zx_handle_t vmo = ops[i].vmo->get();
         ZX_DEBUG_ASSERT(vmo != mapper_.vmo().get());
 
         // Write data from the vmo into the buffer.
@@ -90,12 +91,12 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
         // Update the write_request to transfer from the writeback buffer out to disk,
         // rather than the supplied VMO.
         // Set the vmo handle to invalid, since we will be using the same vmoid for all requests.
-        reqs[i].vmo = ZX_HANDLE_INVALID;
-        reqs[i].vmo_offset = buf_offset;
-        reqs[i].length = buf_len;
+        ops[i].vmo = zx::unowned_vmo(ZX_HANDLE_INVALID);
+        ops[i].op.vmo_offset = buf_offset;
+        ops[i].op.length = buf_len;
 
         if (buf_len != vmo_len) {
-            // We wrapped around; write what remains from this request.
+            // We wrapped around; write what remains from this operation.
             vmo_offset += buf_len;
             dev_offset += buf_len;
             buf_len = vmo_len - buf_len;
@@ -109,19 +110,15 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
             length_ += buf_len;
             total_len += buf_len;
 
-            // Shift down all following write requests.
-            static_assert(std::is_pod<WriteRequest>::value, "Can't memmove non-POD");
-
-            // Shift down all following write requests
-            static_assert(std::is_pod<WriteRequest>::value, "Can't memmove non-POD");
-            // Insert the "new" request, which is the latter half of the last request
-            WriteRequest request;
-            request.vmo = vmo;
-            request.vmo_offset = 0;
-            request.dev_offset = dev_offset;
-            request.length = buf_len;
+            // Insert the "new" operation, which is the latter half of the last operation.
+            UnbufferedOperation operation;
+            operation.vmo = zx::unowned_vmo(vmo);
+            operation.op.type = OperationType::kWrite;
+            operation.op.vmo_offset = 0;
+            operation.op.dev_offset = dev_offset;
+            operation.op.length = buf_len;
             i++;
-            reqs.insert(i, request);
+            ops.insert(i, operation);
         }
 
         // Verify that the length of all vmo writes we did match the total length we were meant to
@@ -160,13 +157,13 @@ void Buffer::ValidateTransaction(WriteTxn* txn) {
         // If transaction is already buffered, make sure it belongs to this buffer.
         ZX_DEBUG_ASSERT(txn->CheckBuffer(vmoid_));
     } else {
-        fbl::Vector<WriteRequest>& reqs = txn->Requests();
+        fbl::Vector<UnbufferedOperation>& ops = txn->Operations();
 
-        for (size_t i = 0; i < reqs.size(); i++) {
+        for (size_t i = 0; i < ops.size(); i++) {
             // Verify that each request references this buffer VMO,
             // and that the transaction fits within the buffer.
-            ZX_DEBUG_ASSERT(reqs[i].vmo == mapper_.vmo().get());
-            reqs[i].vmo = ZX_HANDLE_INVALID;
+            ZX_DEBUG_ASSERT(ops[i].vmo->get() == mapper_.vmo().get());
+            ops[i].vmo = zx::unowned_vmo(ZX_HANDLE_INVALID);
         }
 
         // Once each request has been verified, set the buffer.

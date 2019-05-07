@@ -28,9 +28,10 @@ JournalEntry::JournalEntry(JournalBase* journal, EntryStatus status, size_t head
     ZX_DEBUG_ASSERT(work_blocks <= kMaxEntryDataBlocks);
 
     // Copy all target blocks from the WritebackWork to the entry's header block.
-    for (size_t i = 0; i < work_->Transaction().Requests().size(); i++) {
-        WriteRequest& request = work_->Transaction().Requests()[i];
-        for (size_t j = request.dev_offset; j < request.dev_offset + request.length; j++) {
+    for (size_t i = 0; i < work_->Transaction().Operations().size(); i++) {
+        UnbufferedOperation& operation = work_->Transaction().Operations()[i];
+        for (size_t j = operation.op.dev_offset;
+             j < operation.op.dev_offset + operation.op.length; j++) {
             header_block_.target_blocks[block_count_++] = j;
         }
     }
@@ -42,8 +43,7 @@ JournalEntry::JournalEntry(JournalBase* journal, EntryStatus status, size_t head
     header_block_.num_blocks = block_count_;
     header_block_.timestamp = zx_ticks_get();
     commit_block_.magic = kEntryCommitMagic;
-    commit_block_.timestamp = header_block_.timestamp;
-    commit_block_.checksum = 0;
+    commit_block_.timestamp = header_block_.timestamp; commit_block_.checksum = 0;
 }
 
 fbl::unique_ptr<WritebackWork> JournalEntry::TakeWork() {

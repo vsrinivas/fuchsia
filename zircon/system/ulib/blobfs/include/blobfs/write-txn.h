@@ -11,17 +11,11 @@
 #include <utility>
 
 #include <blobfs/transaction-manager.h>
+#include <blobfs/operation.h>
 #include <fbl/vector.h>
 #include <lib/zx/vmo.h>
 
 namespace blobfs {
-
-struct WriteRequest {
-    zx_handle_t vmo;
-    size_t vmo_offset;
-    size_t dev_offset;
-    size_t length;
-};
 
 // A transaction consisting of enqueued VMOs to be written
 // out to disk at specified locations.
@@ -39,7 +33,7 @@ public:
     void Enqueue(const zx::vmo& vmo, uint64_t relative_block, uint64_t absolute_block,
                  uint64_t nblocks);
 
-    fbl::Vector<WriteRequest>& Requests() { return requests_; }
+    fbl::Vector<UnbufferedOperation>& Operations() { return operations_; }
 
     // Returns the first block at which this WriteTxn exists within its VMO buffer.
     // Requires all requests within the transaction to have been copied to a single buffer.
@@ -64,7 +58,7 @@ public:
 
     // Resets the transaction's state.
     void Reset() {
-        requests_.reset();
+        operations_.reset();
         vmoid_ = VMOID_INVALID;
     }
 
@@ -74,7 +68,7 @@ public:
 private:
     TransactionManager* transaction_manager_;
     vmoid_t vmoid_;
-    fbl::Vector<WriteRequest> requests_;
+    fbl::Vector<UnbufferedOperation> operations_;
     size_t block_count_;
 };
 
