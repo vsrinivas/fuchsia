@@ -14,7 +14,7 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-constexpr zx_time_t kLogMessageBaseTimestamp = ZX_SEC(15604);
+constexpr zx::duration kLogMessageBaseTimestamp = zx::sec(15604);
 constexpr uint64_t kLogMessageProcessId = 7559;
 constexpr uint64_t kLogMessageThreadId = 7687;
 
@@ -22,9 +22,9 @@ constexpr uint64_t kLogMessageThreadId = 7687;
 
 fuchsia::logger::LogMessage BuildLogMessage(
     const int32_t severity, const std::string& text,
-    const zx_time_t timestamp_offset, const std::vector<std::string>& tags) {
+    const zx::duration timestamp_offset, const std::vector<std::string>& tags) {
   fuchsia::logger::LogMessage msg{};
-  msg.time = kLogMessageBaseTimestamp + timestamp_offset;
+  msg.time = (kLogMessageBaseTimestamp + timestamp_offset).get();
   msg.pid = kLogMessageProcessId;
   msg.tid = kLogMessageThreadId;
   msg.tags = tags;

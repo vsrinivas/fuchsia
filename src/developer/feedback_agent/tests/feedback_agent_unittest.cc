@@ -320,7 +320,8 @@ TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log
   // message here to check that we are attaching the logs.
   set_logger_messages({
-      BuildLogMessage(0 /*INFO*/, "log message", 0, {"foo"}),
+      BuildLogMessage(0 /*INFO*/, "log message",
+                      /*timestamp_offset=*/zx::duration(0), {"foo"}),
   });
 
   DataProvider_GetData_Result feedback_result;

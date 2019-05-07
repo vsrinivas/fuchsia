@@ -106,15 +106,15 @@ class CollectSystemLogTest : public gtest::RealLoopFixture {
 TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
   std::unique_ptr<StubLogger> stub_logger = std::make_unique<StubLogger>();
   stub_logger->set_messages({
-      BuildLogMessage(0 /*INFO*/, "line 1", 0),
-      BuildLogMessage(1 /*WARN*/, "line 2", ZX_MSEC(1)),
-      BuildLogMessage(2 /*ERROR*/, "line 3", ZX_MSEC(2)),
-      BuildLogMessage(3 /*FATAL*/, "line 4", ZX_MSEC(3)),
-      BuildLogMessage(-1 /*VLOG(1)*/, "line 5", ZX_MSEC(4)),
-      BuildLogMessage(-2 /*VLOG(2)*/, "line 6", ZX_MSEC(5)),
-      BuildLogMessage(0 /*INFO*/, "line 7", ZX_MSEC(6), /*tags=*/{"foo"}),
-      BuildLogMessage(0 /*INFO*/, "line 8", ZX_MSEC(7), /*tags=*/{"bar"}),
-      BuildLogMessage(0 /*INFO*/, "line 9", ZX_MSEC(8),
+      BuildLogMessage(0 /*INFO*/, "line 1"),
+      BuildLogMessage(1 /*WARN*/, "line 2", zx::msec(1)),
+      BuildLogMessage(2 /*ERROR*/, "line 3", zx::msec(2)),
+      BuildLogMessage(3 /*FATAL*/, "line 4", zx::msec(3)),
+      BuildLogMessage(-1 /*VLOG(1)*/, "line 5", zx::msec(4)),
+      BuildLogMessage(-2 /*VLOG(2)*/, "line 6", zx::msec(5)),
+      BuildLogMessage(0 /*INFO*/, "line 7", zx::msec(6), /*tags=*/{"foo"}),
+      BuildLogMessage(0 /*INFO*/, "line 8", zx::msec(7), /*tags=*/{"bar"}),
+      BuildLogMessage(0 /*INFO*/, "line 9", zx::msec(8),
                       /*tags=*/{"foo", "bar"}),
   });
   ResetStubLogger(std::move(stub_logger));

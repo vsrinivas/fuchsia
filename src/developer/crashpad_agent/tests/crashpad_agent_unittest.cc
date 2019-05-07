@@ -513,7 +513,7 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
 
   // We sleep for one second to guarantee a different creation time for the
   // next crash report.
-  zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
+  zx::nanosleep(zx::deadline_after(zx::sec(1)));
 
   // We generate a new crash report.
   EXPECT_TRUE(RunOneCrashAnalysis(large_string).is_response());

@@ -21,7 +21,7 @@ namespace feedback {
 // the optionally provided offset.
 fuchsia::logger::LogMessage BuildLogMessage(
     const int32_t severity, const std::string& text,
-    const zx_time_t timestamp_offset = 0,
+    const zx::duration timestamp_offset = zx::duration(0),
     const std::vector<std::string>& tags = {});
 
 // Stub Log service to return canned responses to Log::DumpLogs().
