@@ -4,10 +4,6 @@
 
 #include "peridot/bin/sessionmgr/story_runner/story_controller_impl.h"
 
-#include <memory>
-#include <string>
-#include <vector>
-
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
@@ -705,8 +701,9 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
     //
     // TODO(thatguy): Revisit this decision. It seems wrong: we do not want to
     // auto-start mods added through ModuleContext.EmbedModule(), because we do
-    // not have the necessary capabilities (the ImportToken). Mods added through
-    // ModuleContext.AddModuleToStory() can be started automatically, however.
+    // not have the necessary capabilities (the ViewHolderToken). Mods added
+    // through ModuleContext.AddModuleToStory() can be started automatically,
+    // however.
     if (module_data_.module_source ==
         fuchsia::modular::ModuleSource::INTERNAL) {
       return;
@@ -1377,15 +1374,12 @@ void StoryControllerImpl::GetLink(
 }
 
 void StoryControllerImpl::StartStoryShell() {
-  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
   story_shell_holder_ = story_provider_impl_->StartStoryShell(
-      story_id_,
-      scenic::ToViewToken(
-          zx::eventpair(view_owner.NewRequest().TakeChannel().release())),
-      story_shell_.NewRequest());
+      story_id_, std::move(view_token), story_shell_.NewRequest());
 
-  story_provider_impl_->AttachView(story_id_, std::move(view_owner));
+  story_provider_impl_->AttachView(story_id_, std::move(view_holder_token));
 
   fuchsia::modular::StoryShellContextPtr story_shell_context;
   story_shell_context_impl_.Connect(story_shell_context.NewRequest());

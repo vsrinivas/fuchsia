@@ -5,10 +5,6 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 
-#include <map>
-#include <memory>
-#include <set>
-
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
@@ -16,7 +12,6 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr.h>
@@ -25,6 +20,10 @@
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
+
+#include <map>
+#include <memory>
+#include <set>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "peridot/bin/sessionmgr/component_context_impl.h"
@@ -136,7 +135,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Called by StoryControllerImpl. Sends, using AttachView(), a token for the
   // view of the story identified by |story_id| to the current session shell.
   void AttachView(fidl::StringPtr story_id,
-                  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner);
+                  fuchsia::ui::views::ViewHolderToken view_holder_token);
 
   // Called by StoryControllerImpl. Notifies, using DetachView(), the current
   // session shell that the view of the story identified by |story_id| is about

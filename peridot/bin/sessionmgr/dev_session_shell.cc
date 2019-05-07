@@ -6,9 +6,6 @@
 // root module URL and data for its fuchsia::modular::Link as command line
 // arguments, which can be set using the basemgr --user-shell-args flag.
 
-#include <memory>
-#include <utility>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -26,6 +23,9 @@
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
+
+#include <memory>
+#include <utility>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
@@ -209,9 +209,16 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   void AttachView(fuchsia::modular::ViewIdentifier view_id,
                   fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
                       view_owner) override {
+    AttachView2(view_id, scenic::ToViewHolderToken(zx::eventpair(
+                             view_owner.TakeChannel().release())));
+  }
+
+  // |SessionShell|
+  void AttachView2(
+      fuchsia::modular::ViewIdentifier view_id,
+      fuchsia::ui::views::ViewHolderToken view_holder_token) override {
     FXL_LOG(INFO) << "DevSessionShell AttachView(): " << view_id.story_id;
-    view_->ConnectView(scenic::ToViewHolderToken(
-        zx::eventpair(view_owner.TakeChannel().release())));
+    view_->ConnectView(std::move(view_holder_token));
   }
 
   // |SessionShell|

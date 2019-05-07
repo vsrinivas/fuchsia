@@ -32,7 +32,7 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
   fidl::InterfaceRequestHandler<fuchsia::modular::SessionShell> GetHandler();
 
   // Whenever SessionShell.AttachView() is called, the supplied callback is
-  // invoked with the view ID. The ImportToken is dropped.
+  // invoked with the view ID. The ViewHolderToken is dropped.
   void set_on_attach_view(fit::function<void(ViewId view_id)> callback) {
     on_attach_view_ = std::move(callback);
   }
@@ -56,6 +56,11 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
   void AttachView(fuchsia::modular::ViewIdentifier view_id,
                   fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
                       view_owner) override;
+
+  // |SessionShell|
+  void AttachView2(
+      fuchsia::modular::ViewIdentifier view_id,
+      fuchsia::ui::views::ViewHolderToken view_holder_token) override;
 
   // |SessionShell|
   void DetachView(fuchsia::modular::ViewIdentifier view_id,
