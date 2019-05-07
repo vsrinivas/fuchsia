@@ -5,6 +5,7 @@
 #include "src/lib/url/url_util.h"
 
 #include <string.h>
+
 #include <vector>
 
 #include "src/lib/fxl/logging.h"
@@ -18,35 +19,21 @@ namespace url {
 
 namespace {
 
-const size_t kNumStandardURLSchemes = 7;
-const char* kStandardURLSchemes[kNumStandardURLSchemes] = {
-    // clang-format off
-    kHttpScheme,
-    kHttpsScheme,
-    kFileScheme,  // Yes, file URLs can have a hostname!
-    kFtpScheme,
-    kGopherScheme,
-    kWsScheme,    // WebSocket.
-    kWssScheme,   // WebSocket secure.
-    // clang-format on
-};
-
 // List of the currently installed standard schemes. This list is lazily
 // initialized by InitStandardSchemes and is leaked on shutdown to prevent
 // any destructors from being called that will slow us down or cause problems.
-std::vector<const char*>* standard_schemes = NULL;
-
-// See the LockStandardSchemes declaration in the header.
-bool standard_schemes_locked = false;
-
-// Ensures that the standard_schemes list is initialized, does nothing if it
-// already has values.
-void InitStandardSchemes() {
-  if (standard_schemes)
-    return;
-  standard_schemes = new std::vector<const char*>;
-  for (size_t i = 0; i < kNumStandardURLSchemes; i++)
-    standard_schemes->push_back(kStandardURLSchemes[i]);
+const std::vector<const char*>& StandardSchemes() {
+  static const std::vector<const char*>* standard_schemes =
+      new std::vector<const char*>({
+          kHttpScheme,    //
+          kHttpsScheme,   //
+          kFileScheme,    // Yes, file URLs can have a hostname!
+          kFtpScheme,     //
+          kGopherScheme,  //
+          kWsScheme,      // WebSocket.
+          kWssScheme,     // WebSocket secure.
+      });
+  return *standard_schemes;
 }
 
 // Given a string and a range inside the string, compares it to the given
@@ -69,10 +56,9 @@ bool IsStandard(const char* spec, const Component& scheme) {
   if (scheme.is_invalid_or_empty())
     return false;  // Empty or invalid schemes are non-standard.
 
-  InitStandardSchemes();
-  for (size_t i = 0; i < standard_schemes->size(); i++) {
+  for (const auto& standard_scheme : StandardSchemes()) {
     if (LowerCaseEqualsASCII(fxl::StringView(&spec[scheme.begin], scheme.len()),
-                             fxl::StringView(standard_schemes->at(i))))
+                             fxl::StringView(standard_scheme)))
       return true;
   }
   return false;
@@ -210,43 +196,6 @@ bool ResolveRelative(const char* base_spec, size_t base_spec_len,
   return Canonicalize(relative, relative_length, true, charset_converter,
                       output, output_parsed);
 }
-
-void Initialize() { InitStandardSchemes(); }
-
-void Shutdown() {
-  if (standard_schemes) {
-    delete standard_schemes;
-    standard_schemes = NULL;
-  }
-}
-
-void AddStandardScheme(const char* new_scheme) {
-  // If this assert triggers, it means you've called AddStandardScheme after
-  // LockStandardSchemes have been called (see the header file for
-  // LockStandardSchemes for more).
-  //
-  // This normally means you're trying to set up a new standard scheme too late
-  // in your application's init process. Locate where your app does this
-  // initialization and calls LockStandardSchemes, and add your new standard
-  // scheme there.
-  FXL_DCHECK(!standard_schemes_locked)
-      << "Trying to add a standard scheme after the list has been locked.";
-
-  size_t scheme_len = strlen(new_scheme);
-  if (scheme_len == 0)
-    return;
-
-  // Duplicate the scheme into a new buffer and add it to the list of standard
-  // schemes. This pointer will be leaked on shutdown.
-  char* dup_scheme = new char[scheme_len + 1];
-  // ANNOTATE_LEAKING_OBJECT_PTR(dup_scheme);
-  memcpy(dup_scheme, new_scheme, scheme_len + 1);
-
-  InitStandardSchemes();
-  standard_schemes->push_back(dup_scheme);
-}
-
-void LockStandardSchemes() { standard_schemes_locked = true; }
 
 void EncodeURIComponent(const char* input, size_t length, CanonOutput* output) {
   for (size_t i = 0; i < length; ++i) {
