@@ -20,7 +20,7 @@ namespace perfmon {
 // TODO(dje): Add missing event descriptions. See perfmon --list-events.
 
 struct EventDetails {
-  perfmon_event_id_t id;
+  EventId id;
   // All these pointers point to storage of static duration.
   const char* name;
   const char* readable_name;
@@ -63,7 +63,7 @@ class ModelEventManager {
   // Returns true if |id| is valid, otherwise false.
   // This function is thread-safe.
   // TODO(dje): Rename to LookupEventById.
-  bool EventIdToEventDetails(perfmon_event_id_t id,
+  bool EventIdToEventDetails(EventId id,
                              const EventDetails** out_details) const;
 
   // Look up the event details for event |event_name| in group |group_name|.
@@ -104,10 +104,6 @@ class ModelEventManager {
 // current system.
 // Returns "" if the default model is unknown (e.g., on unsupported arch).
 std::string GetDefaultModelName();
-
-// Return the number of events in |config|.
-// This function is thread-safe.
-size_t GetConfigEventCount(const perfmon_ioctl_config_t& config);
 
 }  // namespace perfmon
 

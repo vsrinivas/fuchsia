@@ -10,9 +10,9 @@
 namespace cpuperf_provider {
 
 #define DEF_FIXED_CATEGORY(symbol, name, events...) \
-  const perfmon_event_id_t symbol##_events[] = {events};
+  const perfmon::EventId symbol##_events[] = {events};
 #define DEF_ARCH_CATEGORY(symbol, name, events...) \
-  const perfmon_event_id_t symbol##_events[] = {events};
+  const perfmon::EventId symbol##_events[] = {events};
 #include "arm64-pm-categories.inc"
 
 extern const CategorySpec kTargetCategories[] = {

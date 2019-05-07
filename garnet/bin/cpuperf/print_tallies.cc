@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <locale>
 #include <sstream>
@@ -42,35 +43,32 @@ struct EventColumn {
   int width;
 };
 
-using SessionColumns = std::unordered_map<perfmon_event_id_t, EventColumn>;
+using SessionColumns = std::unordered_map<perfmon::EventId, EventColumn>;
 
 struct EventResult {
   uint64_t value_or_count;
 };
 
-using TraceResults = std::unordered_map<perfmon_event_id_t, EventResult>;
+using TraceResults = std::unordered_map<perfmon::EventId, EventResult>;
 
 // Indexed by trace number.
 using SessionResults = std::vector<TraceResults>;
 
-template<typename T>
+using IterateFunc = std::function<void(perfmon::EventId event,
+                                       const perfmon::EventDetails* details)>;
+
 void IterateOverEventIds(const cpuperf::SessionSpec& spec,
                          const perfmon::ModelEventManager* model_event_manager,
-                         T func) {
-  for (size_t i = 0; i < PERFMON_MAX_EVENTS; ++i) {
-    perfmon_event_id_t id = spec.perfmon_config.events[i];
-    if (id == 0) {
-      // End of present events.
-      break;
-    }
-
+                         IterateFunc func) {
+  perfmon::Config::IterateFunc iterate_helper =
+    [&model_event_manager, &func](const perfmon::Config::EventConfig& event) {
     const perfmon::EventDetails* details = nullptr;
-    if (!model_event_manager->EventIdToEventDetails(id, &details)) {
+    if (!model_event_manager->EventIdToEventDetails(event.event, &details)) {
       // This shouldn't happen, but let |func| decide what to do.
     }
-
-    func(i, id, details);
-  }
+    func(event.event, details);
+  };
+  spec.perfmon_config.IterateOverEvents(iterate_helper);
 }
 
 static SessionColumns BuildSessionColumns(
@@ -79,7 +77,7 @@ static SessionColumns BuildSessionColumns(
   SessionColumns columns;
 
   IterateOverEventIds(spec, model_event_manager,
-                      [&columns] (size_t index, perfmon_event_id_t id,
+                      [&columns] (perfmon::EventId id,
                                   const perfmon::EventDetails* details) {
     const char* name;
     if (details) {
@@ -106,7 +104,7 @@ static void PrintColumnTitles(FILE* f, const cpuperf::SessionSpec& spec,
   fprintf(f, "%*s", kTraceNameColumnWidth, "");
 
   IterateOverEventIds(spec, model_event_manager,
-                      [&] (size_t index, perfmon_event_id_t id,
+                      [&] (perfmon::EventId id,
                            const perfmon::EventDetails* details) {
     auto iter = columns.find(id);
     FXL_DCHECK(iter != columns.end());
@@ -127,7 +125,7 @@ static void PrintTrace(FILE* f, const cpuperf::SessionSpec& spec,
   fprintf(f, "%-*s", kTraceNameColumnWidth, label);
 
   IterateOverEventIds(spec, model_event_manager,
-                      [&] (size_t index, perfmon_event_id_t id,
+                      [&] (perfmon::EventId id,
                            const perfmon::EventDetails* details) {
     auto column_iter = columns.find(id);
     FXL_DCHECK(column_iter != columns.end());
@@ -184,7 +182,7 @@ void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
 
     if (record.header->event == 0)
       continue;
-    perfmon_event_id_t id = record.header->event;
+    perfmon::EventId id = record.header->event;
     const perfmon::EventDetails* details;
     if (!model_event_manager->EventIdToEventDetails(id, &details)) {
       FXL_LOG(WARNING) << "Unknown event: 0x" << std::hex

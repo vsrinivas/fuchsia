@@ -79,7 +79,7 @@ class LastBranchVerifier : public Verifier {
   }
 
   // Ids of the events we should see.
-  perfmon_event_id_t instructions_retired_id_;
+  perfmon::EventId instructions_retired_id_;
 
   // Counts of the events we should see.
   size_t instructions_retired_count_ = 0;

@@ -11,11 +11,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <functional>
 #include <string>
 #include <unordered_set>
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
+#include "garnet/lib/perfmon/config.h"
 #include "garnet/lib/perfmon/events.h"
 
 namespace cpuperf_provider {
@@ -55,12 +57,12 @@ struct CategorySpec {
   // This is only used by kOption and kSample.
   CategoryValue value;
   size_t count;
-  const perfmon_event_id_t* events;
+  const perfmon::EventId* events;
 };
 
 struct TimebaseSpec {
   const char* name;
-  const perfmon_event_id_t event;
+  const perfmon::EventId event;
 };
 
 extern const CategorySpec kCommonCategories[];
@@ -76,7 +78,11 @@ extern const size_t kNumTimebaseCategories;
 // This records the user-specified configuration of the trace.
 class TraceConfig final {
  public:
-  TraceConfig() {}
+  using IsCategoryEnabledFunc = std::function<bool(const char* name)>;
+
+  static std::unique_ptr<TraceConfig> Create(
+      perfmon::ModelEventManager* model_event_manager,
+      IsCategoryEnabledFunc category_is_enabled);
 
   perfmon::ModelEventManager* model_event_manager() const {
     return model_event_manager_;
@@ -91,18 +97,13 @@ class TraceConfig final {
 
   uint32_t sample_rate() const { return sample_rate_; }
 
-  perfmon_event_id_t timebase_event() const { return timebase_event_; }
-
-  // Reset state so that nothing is traced.
-  void Reset();
-
-  void Update(perfmon::ModelEventManager* model_event_manager);
+  perfmon::EventId timebase_event() const { return timebase_event_; }
 
   // Return true if the configuration has changed.
   bool Changed(const TraceConfig& old) const;
 
   // Translate our representation of the configuration to the device's.
-  bool TranslateToDeviceConfig(perfmon_ioctl_config_t* out_config) const;
+  bool TranslateToDeviceConfig(perfmon::Config* out_config) const;
 
   // Return a string representation of the config for error reporting.
   std::string ToString() const;
@@ -115,6 +116,9 @@ class TraceConfig final {
     bool have_programmable_category = false;
   };
 
+  TraceConfig(perfmon::ModelEventManager* model_event_manager,
+              IsCategoryEnabledFunc category_is_enabled);
+
   bool ProcessAllCategories();
   bool ProcessCategories(const CategorySpec categories[],
                          size_t num_categories,
@@ -123,7 +127,9 @@ class TraceConfig final {
   bool ProcessTimebase();
 
   // Non-owning.
-  perfmon::ModelEventManager* model_event_manager_ = nullptr;
+  perfmon::ModelEventManager* const model_event_manager_;
+
+  const IsCategoryEnabledFunc is_category_enabled_;
 
   bool is_enabled_ = false;
 
@@ -132,7 +138,7 @@ class TraceConfig final {
   bool trace_pc_ = false;
   bool trace_last_branch_ = false;
   uint32_t sample_rate_ = 0;
-  perfmon_event_id_t timebase_event_ = PERFMON_EVENT_ID_NONE;
+  perfmon::EventId timebase_event_ = perfmon::kEventIdNone;
 
   // Set of selected fixed + programmable categories.
   std::unordered_set<const CategorySpec*> selected_categories_;

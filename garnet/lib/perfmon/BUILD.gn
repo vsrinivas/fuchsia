@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 static_library("perfmon") {
   sources = [
@@ -32,6 +33,9 @@ static_library("perfmon") {
 
   if (is_fuchsia) {
     sources += [
+      "config.cc",
+      "config.h",
+      "config_impl.h",
       "controller.cc",
       "controller.h",
       "device_reader.cc",
@@ -61,4 +65,37 @@ static_library("perfmon") {
   if (!is_fuchsia) {
     public_deps += [ "//zircon/system/public" ]
   }
+}
+
+executable("perfmon_tests_app") {
+  testonly = true
+  output_name = "perfmon_tests"
+
+  sources = [
+    "config_unittest.cc",
+    "test_main.cc",
+  ]
+
+  deps = [
+    ":perfmon",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+test_package("perfmon_tests") {
+  deps = [
+    ":perfmon_tests_app",
+  ]
+
+  tests = [
+    {
+      name = "perfmon_tests"
+      environments = basic_envs
+    },
+  ]
 }

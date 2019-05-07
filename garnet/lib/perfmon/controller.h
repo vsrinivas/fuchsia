@@ -11,6 +11,7 @@
 #include "src/lib/files/unique_fd.h"
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
+#include "garnet/lib/perfmon/config.h"
 #include "garnet/lib/perfmon/device_reader.h"
 #include "garnet/lib/perfmon/properties.h"
 
@@ -18,13 +19,6 @@ namespace perfmon {
 
 class Controller {
  public:
-  enum class Mode {
-    // Collect profile-based samples.
-    kSample,
-    // Collect simple counts of events.
-    kTally,
-  };
-
   // The protcol specifies buffer sizes in 4K pages.
   static constexpr uint32_t kLog2PageSize = 12;
   static constexpr uint32_t kPageSize = 1 << kLog2PageSize;
@@ -38,8 +32,7 @@ class Controller {
   // Fetch the properties of this device.
   static bool GetProperties(Properties* props);
 
-  static bool Create(uint32_t buffer_size_in_pages,
-                     const perfmon_ioctl_config_t& config,
+  static bool Create(uint32_t buffer_size_in_pages, const Config& config,
                      std::unique_ptr<Controller>* out_controller);
 
   ~Controller();
@@ -50,23 +43,23 @@ class Controller {
 
   bool started() const { return started_; }
 
-  Mode mode() const { return mode_; }
+  CollectionMode collection_mode() const { return collection_mode_; }
 
   uint32_t num_traces() const { return num_traces_; }
 
   std::unique_ptr<DeviceReader> GetReader();
 
  private:
-  static bool Alloc(int fd, uint32_t num_traces, uint32_t buffer_size_in_pages,
-                    const perfmon_ioctl_config_t& config);
-  Controller(fxl::UniqueFD fd, Mode mode, uint32_t num_traces,
-             uint32_t buffer_size, const perfmon_ioctl_config_t& config);
+  static bool Alloc(int fd, uint32_t num_traces, uint32_t buffer_size_in_pages);
+  Controller(fxl::UniqueFD fd, CollectionMode collection_mode,
+             uint32_t num_traces, uint32_t buffer_size,
+             const perfmon_ioctl_config_t& config);
   bool Stage();
   void Free();
   void Reset();
 
   fxl::UniqueFD fd_;
-  const Mode mode_;
+  const CollectionMode collection_mode_;
   // The number of traces we will collect (== #cpus for now).
   uint32_t num_traces_;
   // This is the actual buffer size we use, in pages.

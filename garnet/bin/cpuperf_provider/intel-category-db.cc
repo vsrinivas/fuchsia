@@ -13,17 +13,17 @@ namespace cpuperf_provider {
 // fixed/programmable+arch/model.
 
 #define DEF_FIXED_CATEGORY(symbol, name, events...) \
-  const perfmon_event_id_t symbol##_events[] = {events};
+  const perfmon::EventId symbol##_events[] = {events};
 #define DEF_ARCH_CATEGORY(symbol, name, events...) \
-  const perfmon_event_id_t symbol##_events[] = {events};
+  const perfmon::EventId symbol##_events[] = {events};
 #include "intel-pm-categories.inc"
 
 #define DEF_SKL_CATEGORY(symbol, name, events...) \
-  const perfmon_event_id_t symbol##_events[] = {events};
+  const perfmon::EventId symbol##_events[] = {events};
 #include "skylake-pm-categories.inc"
 
 #define DEF_MISC_SKL_CATEGORY(symbol, name, events...) \
-  const perfmon_event_id_t symbol##_events[] = {events};
+  const perfmon::EventId symbol##_events[] = {events};
 #include "skylake-misc-categories.inc"
 
 extern const CategorySpec kTargetCategories[] = {

@@ -79,21 +79,21 @@ ModelEventManager::ModelEventManager(const std::string& model_name,
 }
 
 bool ModelEventManager::EventIdToEventDetails(
-    perfmon_event_id_t id, const EventDetails** out_details) const {
-  unsigned event = PERFMON_EVENT_ID_EVENT(id);
+    EventId id, const EventDetails** out_details) const {
+  unsigned event = GetEventIdEvent(id);
   const EventTable* events;
 
-  switch (PERFMON_EVENT_ID_GROUP(id)) {
-    case PERFMON_GROUP_ARCH:
+  switch (GetEventIdGroup(id)) {
+    case kGroupArch:
       events = arch_events_;
       break;
-    case PERFMON_GROUP_FIXED:
+    case kGroupFixed:
       events = fixed_events_;
       break;
-    case PERFMON_GROUP_MODEL:
+    case kGroupModel:
       events = model_events_;
       break;
-    case PERFMON_GROUP_MISC:
+    case kGroupMisc:
       events = misc_events_;
       break;
     default:
@@ -183,17 +183,6 @@ void ModelEventManager::DumpGroup(const char* name,
       printf("  %s\n", event->name);
     }
   }
-}
-
-size_t GetConfigEventCount(const perfmon_ioctl_config_t& config) {
-  size_t count;
-
-  for (count = 0; count < PERFMON_MAX_EVENTS; ++count) {
-    if (config.events[count] == PERFMON_EVENT_ID_NONE)
-      break;
-  }
-
-  return count;
 }
 
 }  // namespace perfmon

@@ -72,16 +72,16 @@ class ProgrammableCounterVerifier : public Verifier {
   }
 
   // Ids of the events we should see.
-  perfmon_event_id_t llc_references_id_;
-  perfmon_event_id_t llc_misses_id_;
-  perfmon_event_id_t branch_instructions_retired_id_;
-  perfmon_event_id_t branch_misses_retired_id_;
+  perfmon::EventId llc_references_id_;
+  perfmon::EventId llc_misses_id_;
+  perfmon::EventId branch_instructions_retired_id_;
+  perfmon::EventId branch_misses_retired_id_;
 
   // Counts of the events we should see;
-  perfmon_event_id_t llc_references_count_ = 0;
-  perfmon_event_id_t llc_misses_count_ = 0;
-  perfmon_event_id_t branch_instructions_retired_count_ = 0;
-  perfmon_event_id_t branch_misses_retired_count_ = 0;
+  perfmon::EventId llc_references_count_ = 0;
+  perfmon::EventId llc_misses_count_ = 0;
+  perfmon::EventId branch_instructions_retired_count_ = 0;
+  perfmon::EventId branch_misses_retired_count_ = 0;
 };
 
 const TestSpec kProgrammableCounterSpec = {

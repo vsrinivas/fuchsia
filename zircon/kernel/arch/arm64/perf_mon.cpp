@@ -74,7 +74,7 @@ struct PerfmonState : public PerfmonStateBase  {
     uint32_t pmcr_el0 = 0;
 
     // See arm64-pm.h:Arm64PmuConfig.
-    PmuEventId timebase_event = PERFMON_EVENT_ID_NONE;
+    PmuEventId timebase_event = perfmon::kEventIdNone;
 
     // The number of each kind of event in use, so we don't have to iterate
     // over the entire arrays.
@@ -278,7 +278,7 @@ static zx_status_t arm64_perfmon_verify_fixed_config(
         const ArchPmuConfig* config, unsigned* out_num_used) {
     // There's only one fixed counter on ARM64, the cycle counter.
     PmuEventId id = config->fixed_events[0];
-    if (id == PERFMON_EVENT_ID_NONE) {
+    if (id == perfmon::kEventIdNone) {
         *out_num_used = 0;
         return ZX_OK;
     }
@@ -288,7 +288,7 @@ static zx_status_t arm64_perfmon_verify_fixed_config(
 
     // Sanity check on the driver.
     if ((config->fixed_flags[0] & perfmon::kPmuConfigFlagTimebase0) &&
-        config->timebase_event == PERFMON_EVENT_ID_NONE) {
+        config->timebase_event == perfmon::kEventIdNone) {
         TRACEF("Timebase requested for |fixed_flags[0]|, but not provided\n");
         return ZX_ERR_INVALID_ARGS;
     }
@@ -306,7 +306,7 @@ static zx_status_t arm64_perfmon_verify_programmable_config(
         // driver's job to map them to the hw values we use. Thus we don't
         // validate the ID here. We are given it so that we can include
         // this ID in the trace output.
-        if (id == PERFMON_EVENT_ID_NONE) {
+        if (id == perfmon::kEventIdNone) {
             num_used = i;
             break;
         }
@@ -319,7 +319,7 @@ static zx_status_t arm64_perfmon_verify_programmable_config(
 
         // Sanity check on the driver.
         if ((config->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
-            config->timebase_event == PERFMON_EVENT_ID_NONE) {
+            config->timebase_event == perfmon::kEventIdNone) {
             TRACEF("Timebase requested for |programmable_flags[%u]|, but not provided\n", i);
             return ZX_ERR_INVALID_ARGS;
         }
@@ -332,7 +332,7 @@ static zx_status_t arm64_perfmon_verify_programmable_config(
 static zx_status_t arm64_perfmon_verify_timebase_config(
         ArchPmuConfig* config,
         unsigned num_fixed, unsigned num_programmable) {
-    if (config->timebase_event == PERFMON_EVENT_ID_NONE) {
+    if (config->timebase_event == perfmon::kEventIdNone) {
         return ZX_OK;
     }
 
@@ -406,7 +406,7 @@ static void arm64_perfmon_stage_fixed_config(const ArchPmuConfig* config,
 
     if (state->num_used_fixed > 0) {
         DEBUG_ASSERT(state->num_used_fixed == 1);
-        DEBUG_ASSERT(state->fixed_events[0] != PERFMON_EVENT_ID_NONE);
+        DEBUG_ASSERT(state->fixed_events[0] != perfmon::kEventIdNone);
         // Don't generate PMI's for counters that use another as the timebase.
         // We still generate interrupts in "counting mode" in case the counter
         // overflows.
@@ -672,7 +672,7 @@ static void arm64_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) 
     perfmon_record_header_t* next = data->buffer_next;
 
     zx_ticks_t now = current_ticks();
-    next = arch_perfmon_write_time_record(next, PERFMON_EVENT_ID_NONE, now);
+    next = arch_perfmon_write_time_record(next, perfmon::kEventIdNone, now);
 
     // If the counter triggers interrupts then the PMI handler will
     // continually reset it to its initial value. To keep things simple
@@ -871,7 +871,7 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
         auto next = data->buffer_next;
         bool saw_timebase = false;
 
-        next = arch_perfmon_write_time_record(next, PERFMON_EVENT_ID_NONE, now);
+        next = arch_perfmon_write_time_record(next, perfmon::kEventIdNone, now);
 
         // Note: We don't write "value" records here instead prefering the
         // smaller "tick" record. If the user is tallying the counts the user

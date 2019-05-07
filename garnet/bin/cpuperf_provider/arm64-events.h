@@ -13,10 +13,10 @@ enum EventId {
 
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
                         readable_name, description) \
-  symbol = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id),
+  symbol = perfmon::MakeEventId(perfmon::kGroupFixed, id),
 #define DEF_ARCH_EVENT(symbol, event_name, id, pmceid_bit, event, \
                        flags, readable_name, description) \
-  symbol = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_ARCH, id),
+  symbol = perfmon::MakeEventId(perfmon::kGroupArch, id),
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm-events.inc>
 
 };

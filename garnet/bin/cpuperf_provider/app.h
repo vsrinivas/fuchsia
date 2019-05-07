@@ -26,7 +26,7 @@ class App {
  private:
   void UpdateState();
 
-  void StartTracing(const TraceConfig& trace_config);
+  void StartTracing(std::unique_ptr<TraceConfig> trace_config);
   void StopTracing();
 
   void PrintHelp();
@@ -39,7 +39,7 @@ class App {
   std::unique_ptr<sys::ComponentContext> startup_context_;
   trace::TraceObserver trace_observer_;
   std::unique_ptr<perfmon::ModelEventManager> model_event_manager_;
-  TraceConfig trace_config_;
+  std::unique_ptr<TraceConfig> trace_config_;
   // This context keeps the trace context alive until we've written our trace
   // records, which doesn't happen until after tracing has stopped.
   trace_prolonged_context_t* context_ = nullptr;

@@ -73,10 +73,10 @@ class ValueRecordsVerifier : public Verifier {
   }
 
   // Ids of the events we should see.
-  perfmon_event_id_t edram_temperature_id_;
-  perfmon_event_id_t package_temperature_id_;
-  perfmon_event_id_t ia_temperature_id_;
-  perfmon_event_id_t gt_temperature_id_;
+  perfmon::EventId edram_temperature_id_;
+  perfmon::EventId package_temperature_id_;
+  perfmon::EventId ia_temperature_id_;
+  perfmon::EventId gt_temperature_id_;
 
   // Counts of the events we should see;
   size_t edram_temperature_count_ = 0;

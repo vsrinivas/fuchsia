@@ -17,7 +17,7 @@ namespace {
 const EventDetails g_fixed_event_details[] = {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
                         readable_name, description) \
-  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id), #event_name, \
+  [id] = {MakeEventId(kGroupFixed, id), #event_name, \
           readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm-events.inc>
 };
@@ -27,7 +27,7 @@ const size_t g_num_fixed_event_details = arraysize(g_fixed_event_details);
 const EventDetails g_arch_event_details[] = {
 #define DEF_ARCH_EVENT(symbol, event_name, id, pmceid_bit, event, flags, \
                        readable_name, description) \
-  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_ARCH, id), #event_name, \
+  [id] = {MakeEventId(kGroupArch, id), #event_name, \
           readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm-events.inc>
 };

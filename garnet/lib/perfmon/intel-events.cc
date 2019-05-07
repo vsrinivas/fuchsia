@@ -17,7 +17,7 @@ namespace {
 const EventDetails g_fixed_event_details[] = {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
                         readable_name, description) \
-  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id), #event_name, \
+  [id] = {MakeEventId(kGroupFixed, id), #event_name, \
           readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
@@ -27,7 +27,7 @@ const size_t g_num_fixed_event_details = arraysize(g_fixed_event_details);
 const EventDetails g_arch_event_details[] = {
 #define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, \
                        umask, flags, readable_name, description) \
-  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_ARCH, id), #event_name, \
+  [id] = {MakeEventId(kGroupArch, id), #event_name, \
           readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
@@ -37,7 +37,7 @@ const size_t g_num_arch_event_details = arraysize(g_arch_event_details);
 const EventDetails g_skl_event_details[] = {
 #define DEF_SKL_EVENT(symbol, event_name, id, event, umask, \
                       flags, readable_name, description) \
-  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MODEL, id), #event_name, \
+  [id] = {MakeEventId(kGroupModel, id), #event_name, \
           readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 };
@@ -47,7 +47,7 @@ const size_t g_num_skl_event_details = arraysize(g_skl_event_details);
 const EventDetails g_skl_misc_event_details[] = {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, \
                            flags, readable_name, description) \
-  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MISC, id), #event_name, \
+  [id] = {MakeEventId(kGroupMisc, id), #event_name, \
           readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };

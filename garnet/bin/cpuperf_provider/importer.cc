@@ -109,7 +109,7 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
 
   while (reader.ReadNextRecord(&cpu, &record) == perfmon::ReaderStatus::kOk) {
     FXL_DCHECK(cpu < kMaxNumCpus);
-    perfmon_event_id_t event_id = record.event();
+    perfmon::EventId event_id = record.event();
     uint64_t ticks_per_second = reader.ticks_per_second();
 
     // There can be millions of records. This log message is useful for small
@@ -121,7 +121,7 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
 
     if (record.type() == PERFMON_RECORD_TIME) {
       current_time = reader.time();
-      if (event_id == PERFMON_EVENT_ID_NONE) {
+      if (event_id == perfmon::kEventIdNone) {
         // This is just a time update, not a combined time+tick record.
         ++record_count;
         continue;
@@ -154,7 +154,7 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
     } else {
       switch (record.type()) {
         case PERFMON_RECORD_TIME:
-          FXL_DCHECK(event_id != PERFMON_EVENT_ID_NONE);
+          FXL_DCHECK(event_id != perfmon::kEventIdNone);
           // fall through
         case PERFMON_RECORD_TICK:
           if (is_tally_mode) {
@@ -229,7 +229,7 @@ void Importer::ImportSampleRecord(trace_cpu_number_t cpu,
                                   trace_ticks_t current_time,
                                   uint64_t ticks_per_second,
                                   uint64_t event_value) {
-  perfmon_event_id_t event_id = record.event();
+  perfmon::EventId event_id = record.event();
   const perfmon::EventDetails* details;
   // Note: Errors here are generally rare, so at present we don't get clever
   // with minimizing the noise.
@@ -375,9 +375,9 @@ void Importer::EmitTallyCounts(const perfmon_ioctl_config_t& config,
 
   for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
     for (unsigned ctr = 0; ctr < countof(config.events) &&
-                           config.events[ctr] != PERFMON_EVENT_ID_NONE;
+                           config.events[ctr] != perfmon::kEventIdNone;
          ++ctr) {
-      perfmon_event_id_t event_id = config.events[ctr];
+      perfmon::EventId event_id = config.events[ctr];
       if (event_data->HaveValue(cpu, event_id)) {
         uint64_t value = event_data->GetCountOrValue(cpu, event_id);
         if (event_data->IsValue(cpu, event_id)) {
@@ -392,7 +392,7 @@ void Importer::EmitTallyCounts(const perfmon_ioctl_config_t& config,
 }
 
 void Importer::EmitTallyRecord(trace_cpu_number_t cpu,
-                               perfmon_event_id_t event_id, trace_ticks_t time,
+                               perfmon::EventId event_id, trace_ticks_t time,
                                bool is_value, uint64_t value) {
   trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu, event_id)};
   trace_arg_t args[1] = {
@@ -418,11 +418,11 @@ trace_string_ref_t Importer::GetCpuNameRef(trace_cpu_number_t cpu) {
 }
 
 trace_thread_ref_t Importer::GetCpuThreadRef(trace_cpu_number_t cpu,
-                                             perfmon_event_id_t id) {
+                                             perfmon::EventId id) {
   FXL_DCHECK(cpu < countof(cpu_thread_refs_));
   // TODO(dje): Misc events are currently all system-wide, not attached
   // to any specific cpu. That won't always be the case.
-  if (PERFMON_EVENT_ID_GROUP(id) == PERFMON_GROUP_MISC)
+  if (perfmon::GetEventIdGroup(id) == perfmon::kGroupMisc)
     cpu = 0;
   else
     ++cpu;

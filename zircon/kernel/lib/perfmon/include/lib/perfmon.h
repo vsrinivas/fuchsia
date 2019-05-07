@@ -14,7 +14,7 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 
-using PmuEventId = perfmon_event_id_t;
+using PmuEventId = perfmon::EventId;
 
 // While the last-branch record is far larger, it is not emitted for each
 // event.
@@ -94,7 +94,7 @@ zx_status_t arch_perfmon_fini();
 
 static inline void arch_perfmon_write_header(perfmon_record_header_t* hdr,
                                              perfmon_record_type_t type,
-                                             perfmon_event_id_t event) {
+                                             PmuEventId event) {
     hdr->type = type;
     hdr->reserved_flags = 0;
     hdr->event = event;
@@ -102,7 +102,7 @@ static inline void arch_perfmon_write_header(perfmon_record_header_t* hdr,
 
 static inline perfmon_record_header_t* arch_perfmon_write_time_record(
         perfmon_record_header_t* hdr,
-        perfmon_event_id_t event, zx_ticks_t time) {
+        PmuEventId event, zx_ticks_t time) {
     auto rec = reinterpret_cast<perfmon_time_record_t*>(hdr);
     arch_perfmon_write_header(&rec->header, PERFMON_RECORD_TIME, event);
     rec->time = time;
@@ -112,7 +112,7 @@ static inline perfmon_record_header_t* arch_perfmon_write_time_record(
 
 static inline perfmon_record_header_t* arch_perfmon_write_tick_record(
         perfmon_record_header_t* hdr,
-        perfmon_event_id_t event) {
+        PmuEventId event) {
     auto rec = reinterpret_cast<perfmon_tick_record_t*>(hdr);
     arch_perfmon_write_header(&rec->header, PERFMON_RECORD_TICK, event);
     ++rec;
@@ -121,7 +121,7 @@ static inline perfmon_record_header_t* arch_perfmon_write_tick_record(
 
 static inline perfmon_record_header_t* arch_perfmon_write_count_record(
         perfmon_record_header_t* hdr,
-        perfmon_event_id_t event, uint64_t count) {
+        PmuEventId event, uint64_t count) {
     auto rec = reinterpret_cast<perfmon_count_record_t*>(hdr);
     arch_perfmon_write_header(&rec->header, PERFMON_RECORD_COUNT, event);
     rec->count = count;
@@ -131,7 +131,7 @@ static inline perfmon_record_header_t* arch_perfmon_write_count_record(
 
 static inline perfmon_record_header_t* arch_perfmon_write_value_record(
         perfmon_record_header_t* hdr,
-        perfmon_event_id_t event, uint64_t value) {
+        PmuEventId event, uint64_t value) {
     auto rec = reinterpret_cast<perfmon_value_record_t*>(hdr);
     arch_perfmon_write_header(&rec->header, PERFMON_RECORD_VALUE, event);
     rec->value = value;
@@ -141,7 +141,7 @@ static inline perfmon_record_header_t* arch_perfmon_write_value_record(
 
 static inline perfmon_record_header_t* arch_perfmon_write_pc_record(
         perfmon_record_header_t* hdr,
-        perfmon_event_id_t event, uint64_t aspace, uint64_t pc) {
+        PmuEventId event, uint64_t aspace, uint64_t pc) {
     auto rec = reinterpret_cast<perfmon_pc_record_t*>(hdr);
     arch_perfmon_write_header(&rec->header, PERFMON_RECORD_PC, event);
     rec->aspace = aspace;

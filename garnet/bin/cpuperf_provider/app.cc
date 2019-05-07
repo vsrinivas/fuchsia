@@ -103,25 +103,26 @@ void App::PrintHelp() {
 
 void App::UpdateState() {
   if (trace_state() == TRACE_STARTED) {
-    TraceConfig config;
-    config.Update(model_event_manager_.get());
-    if (trace_config_.Changed(config)) {
+    auto new_config = TraceConfig::Create(model_event_manager_.get(),
+                                          trace_is_category_enabled);
+    if (new_config && trace_config_->Changed(*new_config)) {
       StopTracing();
-      if (config.is_enabled())
-        StartTracing(config);
+      if (new_config->is_enabled()) {
+        StartTracing(std::move(new_config));
+      }
     }
   } else {
     StopTracing();
   }
 }
 
-void App::StartTracing(const TraceConfig& trace_config) {
-  FXL_DCHECK(trace_config.is_enabled());
+void App::StartTracing(std::unique_ptr<TraceConfig> trace_config) {
+  FXL_DCHECK(trace_config->is_enabled());
   FXL_DCHECK(!context_);
   FXL_DCHECK(!controller_);
 
-  perfmon_ioctl_config_t device_config;
-  if (!trace_config.TranslateToDeviceConfig(&device_config)) {
+  perfmon::Config device_config;
+  if (!trace_config->TranslateToDeviceConfig(&device_config)) {
     FXL_LOG(ERROR) << "Error converting trace config to device config";
     return;
   }
@@ -139,14 +140,14 @@ void App::StartTracing(const TraceConfig& trace_config) {
     return;
   }
 
-  FXL_VLOG(1) << "Starting trace, config = " << trace_config.ToString();
+  FXL_VLOG(1) << "Starting trace, config = " << trace_config->ToString();
 
   start_time_ = zx_ticks_get();
   if (!controller->Start())
     goto Fail;
 
   FXL_LOG(INFO) << "Started tracing";
-  trace_config_ = trace_config;
+  trace_config_ = std::move(trace_config);
   controller_.reset(controller.release());
   return;
 
@@ -159,7 +160,7 @@ void App::StopTracing() {
   if (!context_) {
     return;  // not currently tracing
   }
-  FXL_DCHECK(trace_config_.is_enabled());
+  FXL_DCHECK(trace_config_->is_enabled());
 
   FXL_LOG(INFO) << "Stopping trace";
 
@@ -172,7 +173,8 @@ void App::StopTracing() {
 
   auto reader = controller_->GetReader();
   if (reader) {
-    Importer importer(buffer_context, &trace_config_, start_time_, stop_time_);
+    Importer importer(buffer_context, trace_config_.get(),
+                      start_time_, stop_time_);
     if (!importer.Import(*reader)) {
       FXL_LOG(ERROR) << "Errors encountered while importing perfmon data";
     }
@@ -183,7 +185,7 @@ void App::StopTracing() {
   trace_release_context(buffer_context);
   trace_release_prolonged_context(context_);
   context_ = nullptr;
-  trace_config_.Reset();
+  trace_config_.reset();
   controller_.reset();
 }
 

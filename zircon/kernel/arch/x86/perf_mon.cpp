@@ -72,7 +72,7 @@ static void x86_perfmon_reset_task(void* raw_context);
 // so handle them directly.
 typedef enum {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
-    symbol ## _ID = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MISC, id),
+    symbol ## _ID = perfmon::MakeEventId(perfmon::kGroupMisc, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 } misc_event_id_t;
 
@@ -283,7 +283,7 @@ struct PerfmonState : public PerfmonStateBase {
     bool need_mchbar = false;
 
     // See intel-pm.h:X86PmuConfig.
-    PmuEventId timebase_event = PERFMON_EVENT_ID_NONE;
+    PmuEventId timebase_event = perfmon::kEventIdNone;
 
     // The number of each kind of event in use, so we don't have to iterate
     // over the entire arrays.
@@ -552,9 +552,9 @@ static void x86_perfmon_clear_overflow_indicators() {
 // Return the h/w register number for fixed event id |id|
 // or IPM_MAX_FIXED_COUNTERS if not found.
 static unsigned x86_perfmon_lookup_fixed_counter(PmuEventId id) {
-    if (PERFMON_EVENT_ID_GROUP(id) != PERFMON_GROUP_FIXED)
+    if (perfmon::GetEventIdGroup(id) != perfmon::kGroupFixed)
         return IPM_MAX_FIXED_COUNTERS;
-    switch (PERFMON_EVENT_ID_EVENT(id)) {
+    switch (perfmon::GetEventIdEvent(id)) {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
     case id: return regnum;
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
@@ -715,7 +715,7 @@ static zx_status_t x86_perfmon_verify_fixed_config(
                 return ZX_ERR_NOT_SUPPORTED;
             }
             if ((config->fixed_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
-                    config->timebase_event == PERFMON_EVENT_ID_NONE) {
+                    config->timebase_event == perfmon::kEventIdNone) {
                 TRACEF("Timebase requested for |fixed_flags[%u]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
@@ -783,7 +783,7 @@ static zx_status_t x86_perfmon_verify_programmable_config(
                 return ZX_ERR_NOT_SUPPORTED;
             }
             if ((config->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
-                    config->timebase_event == PERFMON_EVENT_ID_NONE) {
+                    config->timebase_event == perfmon::kEventIdNone) {
                 TRACEF("Timebase requested for |programmable_flags[%u]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
@@ -830,11 +830,11 @@ static zx_status_t x86_perfmon_verify_misc_config(
                 return ZX_ERR_INVALID_ARGS;
             }
             if ((config->misc_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
-                    config->timebase_event == PERFMON_EVENT_ID_NONE) {
+                    config->timebase_event == perfmon::kEventIdNone) {
                 TRACEF("Timebase requested for |misc_flags[%zu]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
-            switch (PERFMON_EVENT_ID_EVENT(id)) {
+            switch (perfmon::GetEventIdEvent(id)) {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
             case id: break;
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
@@ -852,7 +852,7 @@ static zx_status_t x86_perfmon_verify_misc_config(
 static zx_status_t x86_perfmon_verify_timebase_config(
         ArchPmuConfig* config,
         unsigned num_fixed, unsigned num_programmable) {
-    if (config->timebase_event == PERFMON_EVENT_ID_NONE) {
+    if (config->timebase_event == perfmon::kEventIdNone) {
         return ZX_OK;
     }
 
@@ -970,7 +970,7 @@ static void x86_perfmon_stage_misc_config(const ArchPmuConfig* config,
     for (unsigned i = 0; i < state->num_used_misc; ++i) {
         // All misc events currently come from MCHBAR.
         // When needed we can add a flag to the event to denote origin.
-        switch (PERFMON_EVENT_ID_EVENT(state->misc_events[i])) {
+        switch (perfmon::GetEventIdEvent(state->misc_events[i])) {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
         case id:
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
@@ -1562,7 +1562,7 @@ static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) TA
     perfmon_record_header_t* next = data->buffer_next;
 
     zx_time_t now = rdtsc();
-    next = arch_perfmon_write_time_record(next, PERFMON_EVENT_ID_NONE, now);
+    next = arch_perfmon_write_time_record(next, perfmon::kEventIdNone, now);
 
     // If the counter triggers interrupts then the PMI handler will
     // continually reset it to its initial value. To keep things simple
@@ -1824,9 +1824,9 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
         bool saw_timebase = false;
         // We can't record every event that requested LBR data.
         // It is unspecified which one we pick.
-        PmuEventId lbr_id = PERFMON_EVENT_ID_NONE;
+        PmuEventId lbr_id = perfmon::kEventIdNone;
 
-        next = arch_perfmon_write_time_record(next, PERFMON_EVENT_ID_NONE, now);
+        next = arch_perfmon_write_time_record(next, perfmon::kEventIdNone, now);
 
         // Note: We don't write "value" records here instead prefering the
         // smaller "tick" record. If the user is tallying the counts the user
@@ -1947,7 +1947,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             }
         }
 
-        if (lbr_id != PERFMON_EVENT_ID_NONE) {
+        if (lbr_id != perfmon::kEventIdNone) {
             next = x86_perfmon_write_last_branches(state, cr3, next, lbr_id);
         }
 

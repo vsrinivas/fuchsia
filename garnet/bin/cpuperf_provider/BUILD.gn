@@ -3,19 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 
-executable("bin") {
-  output_name = "cpuperf_provider"
-
+# Split out so that unittests can reference it.
+source_set("categories") {
   sources = [
-    "app.cc",
-    "app.h",
     "categories.cc",
     "categories.h",
     "category-db.cc",
-    "importer.cc",
-    "importer.h",
-    "main.cc",
   ]
 
   if (current_cpu == "arm64") {
@@ -39,6 +34,30 @@ executable("bin") {
   }
 
   deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fbl",
+  ]
+
+  public_deps = [
+    "//garnet/lib/perfmon",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/zircon-internal",
+  ]
+}
+
+executable("bin") {
+  output_name = "cpuperf_provider"
+
+  sources = [
+    "app.cc",
+    "app.h",
+    "importer.cc",
+    "importer.h",
+    "main.cc",
+  ]
+
+  deps = [
+    ":categories",
     "//garnet/lib/perfmon",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -67,5 +86,33 @@ package("cpuperf_provider") {
 group("report_generators") {
   deps = [
     "//garnet/bin/cpuperf_provider/report-generators/tally",
+  ]
+}
+
+executable("cpuperf_provider_tests_bin") {
+  testonly = true
+  output_name = "cpuperf_provider_tests"
+
+  sources = [
+    "categories_unittest.cc",
+  ]
+
+  deps = [
+    ":categories",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("cpuperf_provider_tests") {
+  deps = [
+    ":cpuperf_provider_tests_bin",
+    "//src/lib/fxl",
+  ]
+
+  tests = [
+    {
+      name = "cpuperf_provider_tests"
+      environments = basic_envs
+    },
   ]
 }

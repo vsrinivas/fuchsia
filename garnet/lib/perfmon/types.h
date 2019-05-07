@@ -5,10 +5,19 @@
 #ifndef GARNET_LIB_PERFMON_TYPES_H_
 #define GARNET_LIB_PERFMON_TYPES_H_
 
+#include <stdint.h>
 #include <string>
 
 namespace perfmon {
 
+enum class CollectionMode {
+  // Collect profile-based samples.
+  kSample,
+  // Collect simple counts of events.
+  kTally,
+};
+
+// TODO(dje): Move to |Reader::Status|.
 enum class ReaderStatus {
   kOk,
   kNoMoreRecords,

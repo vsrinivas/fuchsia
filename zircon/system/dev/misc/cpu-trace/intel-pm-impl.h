@@ -9,7 +9,7 @@ namespace perfmon {
 // There's only a few fixed events, so handle them directly.
 enum FixedEventId {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
-    symbol ## _ID = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id),
+    symbol ## _ID = MakeEventId(kGroupFixed, id),
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
 
@@ -22,7 +22,7 @@ static_assert(1
 
 enum MiscEventId {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
-    symbol ## _ID = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MISC, id),
+    symbol ## _ID = MakeEventId(kGroupMisc, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };
 

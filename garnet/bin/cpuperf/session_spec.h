@@ -13,6 +13,7 @@
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zx/time.h>
 
+#include "garnet/lib/perfmon/config.h"
 #include "garnet/lib/perfmon/events.h"
 
 namespace cpuperf {
@@ -40,7 +41,7 @@ struct SessionSpec {
   std::string model_name;
 
   // Configuration for collecting cpu performance data.
-  perfmon_ioctl_config_t perfmon_config{};
+  perfmon::Config perfmon_config{};
 
   // The size of the trace buffer to use, in MB.
   uint32_t buffer_size_in_mb{kDefaultBufferSizeInMb};

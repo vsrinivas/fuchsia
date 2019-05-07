@@ -16,7 +16,7 @@ namespace perfmon {
 // There's only a few fixed events, so handle them directly.
 enum FixedEventId {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
-    symbol ## _ID = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id),
+    symbol ## _ID = MakeEventId(kGroupFixed, id),
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm-events.inc>
 };
 
@@ -113,7 +113,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
                                             unsigned input_index,
                                             PmuConfig* ocfg) {
     const unsigned ii = input_index;
-    const perfmon_event_id_t id = icfg->events[ii];
+    const EventId id = icfg->events[ii];
     bool uses_timebase0 = !!(icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0);
 
     // There's only one fixed counter on ARM64, the cycle counter.
@@ -152,9 +152,9 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
                                                    unsigned input_index,
                                                    PmuConfig* ocfg) {
     const unsigned ii = input_index;
-    perfmon_event_id_t id = icfg->events[ii];
-    unsigned group = PERFMON_EVENT_ID_GROUP(id);
-    unsigned event = PERFMON_EVENT_ID_EVENT(id);
+    EventId id = icfg->events[ii];
+    unsigned group = GetEventIdGroup(id);
+    unsigned event = GetEventIdEvent(id);
     bool uses_timebase0 = !!(icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0);
 
     // TODO(dje): Verify no duplicates.
@@ -183,7 +183,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     }
     const EventDetails* details = NULL;
     switch (group) {
-    case PERFMON_GROUP_ARCH:
+    case kGroupArch:
         if (event >= kArchEventMapSize) {
             zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;

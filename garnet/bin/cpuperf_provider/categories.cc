@@ -9,20 +9,30 @@
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
-#include "garnet/lib/perfmon/events.h"
-
 namespace cpuperf_provider {
 
-void TraceConfig::Reset() {
-  model_event_manager_ = nullptr;
-  is_enabled_ = false;
-  trace_os_ = false;
-  trace_user_ = false;
-  trace_pc_ = false;
-  trace_last_branch_ = false;
-  sample_rate_ = 0;
-  timebase_event_ = PERFMON_EVENT_ID_NONE;
-  selected_categories_.clear();
+std::unique_ptr<TraceConfig> TraceConfig::Create(
+    perfmon::ModelEventManager* model_event_manager,
+    IsCategoryEnabledFunc is_category_enabled) {
+  auto config = std::unique_ptr<TraceConfig>(
+      new TraceConfig(model_event_manager, is_category_enabled));
+
+  if (!config->ProcessAllCategories()) {
+    return nullptr;
+  }
+
+  if (!config->ProcessTimebase()) {
+    return nullptr;
+  }
+
+  return config;
+}
+
+TraceConfig::TraceConfig(perfmon::ModelEventManager* model_event_manager,
+                         IsCategoryEnabledFunc is_category_enabled)
+    : model_event_manager_(model_event_manager),
+      is_category_enabled_(is_category_enabled) {
+  FXL_DCHECK(model_event_manager);
 }
 
 bool TraceConfig::ProcessCategories(const CategorySpec categories[],
@@ -30,7 +40,7 @@ bool TraceConfig::ProcessCategories(const CategorySpec categories[],
                                     CategoryData* data) {
   for (size_t i = 0; i < num_categories; ++i) {
     const CategorySpec& cat = categories[i];
-    if (trace_is_category_enabled(cat.name)) {
+    if (is_category_enabled_(cat.name)) {
       FXL_VLOG(1) << "Category " << cat.name << " enabled";
       switch (cat.group) {
         case CategoryGroup::kOption:
@@ -91,11 +101,11 @@ bool TraceConfig::ProcessAllCategories() {
   // trace_is_category_enabled(), and if present apply our own default.
   size_t num_enabled_categories = 0;
   for (size_t i = 0; i < kNumCommonCategories; ++i) {
-    if (trace_is_category_enabled(kCommonCategories[i].name))
+    if (is_category_enabled_(kCommonCategories[i].name))
       ++num_enabled_categories;
   }
   for (size_t i = 0; i < kNumTargetCategories; ++i) {
-    if (trace_is_category_enabled(kTargetCategories[i].name))
+    if (is_category_enabled_(kTargetCategories[i].name))
       ++num_enabled_categories;
   }
   bool is_default_case = num_enabled_categories ==
@@ -130,9 +140,9 @@ bool TraceConfig::ProcessAllCategories() {
 bool TraceConfig::ProcessTimebase() {
   for (size_t i = 0; i < kNumTimebaseCategories; ++i) {
     const TimebaseSpec& cat = kTimebaseCategories[i];
-    if (trace_is_category_enabled(cat.name)) {
+    if (is_category_enabled_(cat.name)) {
       FXL_VLOG(1) << "Category " << cat.name << " enabled";
-      if (timebase_event_ != PERFMON_EVENT_ID_NONE) {
+      if (timebase_event_ != perfmon::kEventIdNone) {
         FXL_LOG(ERROR) << "Timebase already specified";
         return false;
       }
@@ -145,21 +155,6 @@ bool TraceConfig::ProcessTimebase() {
   }
 
   return true;
-}
-
-void TraceConfig::Update(perfmon::ModelEventManager* model_event_manager) {
-  Reset();
-
-  model_event_manager_ = model_event_manager;
-
-  if (ProcessAllCategories()) {
-    if (ProcessTimebase()) {
-      return;
-    }
-  }
-
-  // Some error occurred while parsing the selected categories.
-  Reset();
 }
 
 bool TraceConfig::Changed(const TraceConfig& old) const {
@@ -182,21 +177,40 @@ bool TraceConfig::Changed(const TraceConfig& old) const {
   return false;
 }
 
-bool TraceConfig::TranslateToDeviceConfig(perfmon_ioctl_config_t* out_config) const {
-  FXL_CHECK(model_event_manager_);
+bool TraceConfig::TranslateToDeviceConfig(perfmon::Config* out_config) const {
+  perfmon::Config* cfg = out_config;
+  cfg->Reset();
 
-  perfmon_ioctl_config_t* cfg = out_config;
-  memset(cfg, 0, sizeof(*cfg));
+  uint32_t flags = 0;
+  if (trace_os_) {
+    flags |= perfmon::Config::kFlagOs;
+  }
+  if (trace_user_) {
+    flags |= perfmon::Config::kFlagUser;
+  }
 
-  unsigned ctr = 0;
+  // These can only be set for events that are their own timebase.
+  uint32_t pc_flags = 0;
+  if (trace_pc_) {
+    pc_flags |= perfmon::Config::kFlagPc;
+  }
+  if (trace_last_branch_) {
+    pc_flags |= perfmon::Config::kFlagLastBranch;
+  }
 
-  // If a timebase is requested, it is the first event.
-  if (timebase_event_ != PERFMON_EVENT_ID_NONE) {
+  uint32_t rate;
+
+  if (timebase_event_ != perfmon::kEventIdNone) {
     const perfmon::EventDetails* details;
     FXL_CHECK(model_event_manager_->EventIdToEventDetails(
                 timebase_event_, &details));
     FXL_VLOG(2) << fxl::StringPrintf("Using timebase %s", details->name);
-    cfg->events[ctr++] = timebase_event_;
+    cfg->AddEvent(timebase_event_, sample_rate_,
+                  flags | pc_flags | perfmon::Config::kFlagTimebase);
+    rate = 0;
+  } else {
+    rate = sample_rate_;
+    flags |= pc_flags;
   }
 
   for (const auto& cat : selected_categories_) {
@@ -218,58 +232,28 @@ bool TraceConfig::TranslateToDeviceConfig(perfmon_ioctl_config_t* out_config) co
         FXL_NOTREACHED();
     }
     for (size_t i = 0; i < cat->count; ++i) {
-      if (ctr < countof(cfg->events)) {
-        perfmon_event_id_t id = cat->events[i];
-        FXL_VLOG(2) << fxl::StringPrintf("Adding %s event id %u to trace",
-                                         group_name, id);
-        cfg->events[ctr++] = id;
-      } else {
-        FXL_LOG(ERROR) << "Maximum number of events exceeded";
+      perfmon::EventId id = cat->events[i];
+      perfmon::Config::Status status = cfg->AddEvent(id, rate, flags);
+      if (status != perfmon::Config::Status::OK) {
+        FXL_LOG(ERROR) << "Error processing event configuration: "
+                       << perfmon::Config::StatusToString(status);
         return false;
       }
+      FXL_VLOG(2) << fxl::StringPrintf("Adding %s event id %u to trace",
+                                       group_name, id);
     }
-  }
-  unsigned num_used_events = ctr;
-
-  uint32_t flags = 0;
-  if (trace_os_)
-    flags |= PERFMON_CONFIG_FLAG_OS;
-  if (trace_user_)
-    flags |= PERFMON_CONFIG_FLAG_USER;
-  if (timebase_event_ == PERFMON_EVENT_ID_NONE) {
-    // These can only be set for events that are their own timebase.
-    if (trace_pc_)
-      flags |= PERFMON_CONFIG_FLAG_PC;
-    if (trace_last_branch_)
-      flags |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
-  }
-  if (timebase_event_ != PERFMON_EVENT_ID_NONE)
-    flags |= PERFMON_CONFIG_FLAG_TIMEBASE0;
-
-  for (unsigned i = 0; i < num_used_events; ++i) {
-    cfg->rate[i] = sample_rate_;
-    cfg->flags[i] = flags;
-  }
-
-  if (timebase_event_ != PERFMON_EVENT_ID_NONE) {
-    if (trace_pc_)
-      cfg->flags[0] |= PERFMON_CONFIG_FLAG_PC;
-    if (trace_last_branch_)
-      cfg->flags[0] |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
   }
 
   return true;
 }
 
 std::string TraceConfig::ToString() const {
-  FXL_CHECK(model_event_manager_);
-
   std::string result;
 
   if (!is_enabled_)
     return "disabled";
 
-  if (timebase_event_ != PERFMON_EVENT_ID_NONE) {
+  if (timebase_event_ != perfmon::kEventIdNone) {
     const perfmon::EventDetails* details;
     FXL_CHECK(model_event_manager_->EventIdToEventDetails(timebase_event_, &details));
     result +=

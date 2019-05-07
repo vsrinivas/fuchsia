@@ -69,33 +69,56 @@ typedef enum {
   PERFMON_RECORD_LAST_BRANCH = 6,
 } perfmon_record_type_t;
 
+// TODO(dje): Expand this to cover the entire file.
+namespace perfmon {
+
 // Trace buffer space is expensive, we want to keep records small.
 // Having more than 64K different events for any one arch is unlikely
 // so we use 16 bits for the event id.
 // To help each arch manage the plethora of different events, the event id
-// is split it two parts: 6 bit event group, and 10 bit event within that
+// is split it two parts: 5 bit event group, and 11 bit event within that
 // group.
-// An event id of zero is defined to be unused. To simplify things we just
-// take the whole set of |group| == 0 as reserved.
-typedef uint16_t perfmon_event_id_t;
-#define PERFMON_MAKE_EVENT_ID(group, event) (((group) << 10) | (event))
-#define PERFMON_EVENT_ID_GROUP(id) (((id) >> 10) & 0x3f)
-#define PERFMON_EVENT_ID_EVENT(id) ((id) & 0x3ff)
-#define PERFMON_MAX_GROUP 0x3f
-#define PERFMON_MAX_EVENT 0x3ff
-#define PERFMON_EVENT_ID_NONE 0
+using EventId = uint16_t;
 
-// Possible values for the |group| field of |perfmon_event_id_t|.
+// Event id zero is reserved to mean "no event".
+static constexpr EventId kEventIdNone = 0;
+
+using EventIdGroupType = uint16_t;
+using EventIdEventType = uint16_t;
+
+static constexpr EventIdGroupType kMaxGroup = 0x1f;
+static constexpr EventIdEventType kMaxEvent = 0x7ff;
+
+// Possible values for the |group| field of |EventId|.
 // TODO(dje): Reorganize these into something like
 // {arch,model} -x- {fixed,programmable}, which these currently are,
 // it's just not immediately apparent.
-typedef enum {
-    PERFMON_GROUP_RESERVED = 0,
-    PERFMON_GROUP_ARCH = 1,
-    PERFMON_GROUP_FIXED = 2,
-    PERFMON_GROUP_MODEL = 3,
-    PERFMON_GROUP_MISC = 4,
-} perfmon_group_type_t;
+constexpr uint16_t kGroupReserved = 0;
+constexpr uint16_t kGroupArch = 1;
+constexpr uint16_t kGroupFixed = 2;
+constexpr uint16_t kGroupModel = 3;
+constexpr uint16_t kGroupMisc = 4;
+
+static inline constexpr EventId MakeEventId(EventIdGroupType group,
+                                            EventIdEventType event) {
+    return static_cast<EventId>((group << 11) | event);
+}
+
+static inline constexpr EventIdGroupType GetEventIdGroup(EventId id) {
+    EventIdGroupType mask = kMaxGroup;
+    return static_cast<EventIdGroupType>((id >> 11) & mask);
+}
+
+static inline constexpr EventIdEventType GetEventIdEvent(EventId id) {
+    EventIdEventType mask = kMaxEvent;
+    return static_cast<EventIdEventType>(id & mask);
+}
+
+// The rate at which to collect data.
+// For counters this is every N ticks of the counter.
+using EventRate = uint32_t;
+
+}  // namespace perfmon
 
 // The typical record is a tick record which is 4 + 8 bytes.
 // Aligning records to 8-byte boundaries would waste a lot of space,
@@ -113,8 +136,8 @@ typedef struct {
     uint8_t reserved_flags;
 
     // The event the record is for.
-    // If there is none then use PERFMON_EVENT_ID_NONE.
-    perfmon_event_id_t event;
+    // If there is none then use |kEventIdNone|.
+    perfmon::EventId event;
 } PERFMON_ALIGN_RECORD perfmon_record_header_t;
 
 // Verify our alignment assumptions.
@@ -290,14 +313,14 @@ typedef uint32_t perfmon_rate_t;
 
 // Passed to STAGE_CONFIG to select the data to be collected.
 // Events must be consecutively allocated from the front with no holes.
-// A value of PERFMON_EVENT_ID_NONE in |events| marks the end.
+// A value of |kEventIdNone| in |events| marks the end.
 typedef struct {
     // Events to collect data for.
-    // The values are architecture specific ids: perfmon_<arch>_event_id_t
+    // The values are architecture specific ids.
     // Each event may appear at most once.
     // |events[0]| is special: It is used as the timebase when any other
     // event has PERFMON_CONFIG_FLAG_TIMEBASE0 set.
-    perfmon_event_id_t events[PERFMON_MAX_EVENTS];
+    perfmon::EventId events[PERFMON_MAX_EVENTS];
 
     // Sampling rate for each event in |events|.
     // If zero then do simple counting (collect a tally of the count and

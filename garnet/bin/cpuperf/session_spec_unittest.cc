@@ -29,7 +29,7 @@ class SessionSpecTest : public ::testing::Test {
     // Only do this once though, the effect is otherwise cumulative.
     if (!models_registered_) {
       static const perfmon::EventDetails TestEvents[] = {
-        { PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, 1), "test-event",
+        { perfmon::MakeEventId(perfmon::kGroupFixed, 1), "test-event",
           "test-event", "test-event description" },
       };
       perfmon::ModelEventManager::RegisterEvents(
@@ -129,18 +129,18 @@ TEST_F(SessionSpecTest, DecodeEvents) {
   const perfmon::EventDetails* details;
   ASSERT_TRUE(result.model_event_manager->LookupEventByName(
                 "misc", "test-event", &details));
-  perfmon_event_id_t test_event_id = details->id;
+  perfmon::EventId test_event_id = details->id;
 
-  EXPECT_EQ(result.perfmon_config.events[0], test_event_id);
-  EXPECT_EQ(result.perfmon_config.rate[0], 42u);
-  EXPECT_EQ(result.perfmon_config.flags[0],
-            PERFMON_CONFIG_FLAG_OS |
-            PERFMON_CONFIG_FLAG_USER |
-            PERFMON_CONFIG_FLAG_PC |
-            PERFMON_CONFIG_FLAG_TIMEBASE0);
-  for (size_t i = 1; i < PERFMON_MAX_EVENTS; ++i) {
-    EXPECT_EQ(result.perfmon_config.events[i], 0);
-  }
+  EXPECT_EQ(result.perfmon_config.GetEventCount(), 1u);
+  result.perfmon_config.IterateOverEvents([&test_event_id] (
+        const perfmon::Config::EventConfig& event) {
+    EXPECT_EQ(event.event, test_event_id);
+    EXPECT_EQ(event.rate, 42u);
+    EXPECT_EQ(event.flags, (perfmon::Config::kFlagOs |
+                            perfmon::Config::kFlagUser |
+                            perfmon::Config::kFlagPc |
+                            perfmon::Config::kFlagTimebase));
+  });
 }
 
 TEST_F(SessionSpecTest, DecodeBufferSizeInMb) {

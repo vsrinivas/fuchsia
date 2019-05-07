@@ -159,6 +159,14 @@ group("cpuperf") {
   ]
 }
 
+group("cpuperf_provider") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/cpuperf_provider:cpuperf_provider_tests",
+    "//garnet/packages/prod:tracing",
+  ]
+}
+
 group("netcfg_tests") {
   testonly = true
   public_deps = [
@@ -319,6 +327,7 @@ group("all") {
     "//garnet/packages/tests:components_binary_tests",
     "//garnet/packages/tests:containers_cpp",
     "//garnet/packages/tests:cpuperf",
+    "//garnet/packages/tests:cpuperf_provider",
     "//garnet/packages/tests:crashpad",
     "//garnet/packages/tests:debug_agent",
     "//garnet/packages/tests:debugserver",

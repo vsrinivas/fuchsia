@@ -14,21 +14,12 @@
 #include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
 
+#include "garnet/lib/perfmon/config_impl.h"
 #include "garnet/lib/perfmon/properties_impl.h"
 
 namespace perfmon {
 
 const char kPerfMonDev[] = "/dev/sys/cpu-trace/perfmon";
-
-static Controller::Mode GetMode(const perfmon_ioctl_config_t& config) {
-  for (size_t i = 0; i < countof(config.rate); ++i) {
-    // If any event is doing sampling, then we're in "sample mode".
-    if (config.rate[i] != 0) {
-      return Controller::Mode::kSample;
-    }
-  }
-  return Controller::Mode::kTally;
-}
 
 static uint32_t RoundUpToPages(uint32_t value) {
   uint32_t size = fbl::round_up(value, Controller::kPageSize);
@@ -36,13 +27,13 @@ static uint32_t RoundUpToPages(uint32_t value) {
   return size >> Controller::kLog2PageSize;
 }
 
-static uint32_t GetBufferSizeInPages(Controller::Mode mode,
+static uint32_t GetBufferSizeInPages(CollectionMode mode,
                                      uint32_t requested_size_in_pages) {
   switch (mode) {
-  case Controller::Mode::kSample:
+  case CollectionMode::kSample:
     return requested_size_in_pages;
-  case Controller::Mode::kTally: {
-    // For "counting mode" we just need something large enough to hold
+  case CollectionMode::kTally: {
+    // For tally mode we just need something large enough to hold
     // the header + records for each event.
     unsigned num_events = PERFMON_MAX_EVENTS;
     uint32_t size = (sizeof(perfmon_buffer_header_t) +
@@ -82,8 +73,7 @@ bool Controller::GetProperties(Properties* props) {
 }
 
 bool Controller::Alloc(int fd, uint32_t num_traces,
-                       uint32_t buffer_size_in_pages,
-                       const perfmon_ioctl_config_t& config) {
+                       uint32_t buffer_size_in_pages) {
   ioctl_perfmon_alloc_t alloc;
   alloc.num_buffers = num_traces;
   alloc.buffer_size_in_pages = buffer_size_in_pages;
@@ -117,8 +107,7 @@ bool Controller::Alloc(int fd, uint32_t num_traces,
   return true;
 }
 
-bool Controller::Create(uint32_t buffer_size_in_pages,
-                        const perfmon_ioctl_config_t& config,
+bool Controller::Create(uint32_t buffer_size_in_pages, const Config& config,
                         std::unique_ptr<Controller>* out_controller) {
   int raw_fd = open(kPerfMonDev, O_WRONLY);
   if (raw_fd < 0) {
@@ -133,27 +122,35 @@ bool Controller::Create(uint32_t buffer_size_in_pages,
     return false;
   }
 
-  Mode mode = GetMode(config);
+  CollectionMode mode = config.GetMode();
   uint32_t num_traces = zx_system_get_num_cpus();
   // For "tally" mode we only need a small fixed amount, so toss what the
   // caller provided and use our own value.
   uint32_t actual_buffer_size_in_pages =
       GetBufferSizeInPages(mode, buffer_size_in_pages);
 
-  if (!Alloc(raw_fd, num_traces, actual_buffer_size_in_pages, config)) {
+  perfmon_ioctl_config_t ioctl_config;
+  Config::Status status = internal::PerfmonToIoctlConfig(config, &ioctl_config);
+  if (status != Config::Status::OK) {
+    FXL_LOG(ERROR) << "Error processing configuration: "
+                   << Config::StatusToString(status);
+    return false;
+  }
+
+  if (!Alloc(raw_fd, num_traces, actual_buffer_size_in_pages)) {
     return false;
   }
 
   out_controller->reset(new Controller(std::move(fd), mode, num_traces,
-                                       buffer_size_in_pages, config));
+                                       buffer_size_in_pages, ioctl_config));
   return true;
 }
 
-Controller::Controller(fxl::UniqueFD fd, Mode mode, uint32_t num_traces,
-                       uint32_t buffer_size_in_pages,
+Controller::Controller(fxl::UniqueFD fd, CollectionMode collection_mode,
+                       uint32_t num_traces, uint32_t buffer_size_in_pages,
                        const perfmon_ioctl_config_t& config)
     : fd_(std::move(fd)),
-      mode_(mode),
+      collection_mode_(collection_mode),
       num_traces_(num_traces),
       buffer_size_in_pages_(buffer_size_in_pages),
       config_(config) {

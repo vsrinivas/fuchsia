@@ -28,7 +28,7 @@ union SampleRecord {
   // Ideally this would return the enum type, but we don't make any
   // assumptions about the validity of the trace data.
   uint8_t type() const { return header->type; }
-  perfmon_event_id_t event() const { return header->event; }
+  EventId event() const { return header->event; }
 };
 
 // Returns IPM_RECORD_RESERVED for an invalid record type.

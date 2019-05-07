@@ -152,7 +152,7 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
 
   // Print a summary of this run.
   // In tally mode this is noise, but if verbosity is on sure.
-  if (controller->mode() != perfmon::Controller::Mode::kTally ||
+  if (controller->collection_mode() != perfmon::CollectionMode::kTally ||
       FXL_VLOG_IS_ON(1)) {
     FXL_VLOG(1) << "Iteration " << iter << " summary";
     for (size_t trace = 0; trace < result_spec.num_traces; ++trace) {
@@ -191,7 +191,7 @@ static bool RunSession(const cpuperf::SessionSpec& spec,
       SaveTrace(result_spec, controller, iter);
     }
 
-    if (controller->mode() == perfmon::Controller::Mode::kTally) {
+    if (controller->collection_mode() == perfmon::CollectionMode::kTally) {
       PrintTallyResults(stdout, spec, result_spec, model_event_manager,
                         controller);
     }
@@ -257,7 +257,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  if (perfmon::GetConfigEventCount(spec.perfmon_config) == 0) {
+  if (spec.perfmon_config.GetEventCount() == 0) {
     FXL_LOG(ERROR) << "No events specified";
     return EXIT_FAILURE;
   }

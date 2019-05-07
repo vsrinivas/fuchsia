@@ -29,8 +29,8 @@ namespace perfmon {
 PmuHwProperties PerfmonDevice::pmu_hw_properties_;
 
 int ComparePerfmonEventId(const void* ap, const void* bp) {
-    auto a = reinterpret_cast<const perfmon_event_id_t*>(ap);
-    auto b = reinterpret_cast<const perfmon_event_id_t*>(bp);
+    auto a = reinterpret_cast<const EventId*>(ap);
+    auto b = reinterpret_cast<const EventId*>(bp);
     if (*a < *b) {
         return -1;
     }
@@ -55,14 +55,14 @@ uint16_t GetLargestEventId(const EventDetails* events, size_t count) {
 
 zx_status_t BuildEventMap(const EventDetails* events, size_t count,
                           const uint16_t** out_event_map, size_t* out_map_size) {
-    static_assert(PERFMON_MAX_EVENT < std::numeric_limits<uint16_t>::max());
+    static_assert(kMaxEvent < std::numeric_limits<uint16_t>::max());
 
     uint16_t largest_event_id = GetLargestEventId(events, count);
     // See perf-mon.h: The full event id is split into two pieces:
     // group type and id within that group. The event recorded in
     // |EventDetails| is the id within the group. Each id must be in
     // the range [1,PERFMON_MAX_EVENT]. ID 0 is reserved.
-    if (largest_event_id == 0 || largest_event_id > PERFMON_MAX_EVENT) {
+    if (largest_event_id == 0 || largest_event_id > kMaxEvent) {
         zxlogf(ERROR, "PMU: Corrupt event database\n");
         return ZX_ERR_INTERNAL;
     }
@@ -310,12 +310,12 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     zx_status_t status;
     unsigned ii;  // ii: input index
     for (ii = 0; ii < fbl::count_of(icfg->events); ++ii) {
-        perfmon_event_id_t id = icfg->events[ii];
+        EventId id = icfg->events[ii];
         zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
         if (id == 0) {
             break;
         }
-        unsigned group = PERFMON_EVENT_ID_GROUP(id);
+        unsigned group = GetEventIdGroup(id);
 
         if (icfg->flags[ii] & ~PERFMON_CONFIG_FLAG_MASK) {
             zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
@@ -323,20 +323,20 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
         }
 
         switch (group) {
-        case PERFMON_GROUP_FIXED:
+        case kGroupFixed:
             status = StageFixedConfig(icfg, ss, ii, ocfg);
             if (status != ZX_OK) {
                 return status;
             }
             break;
-        case PERFMON_GROUP_ARCH:
-        case PERFMON_GROUP_MODEL:
+        case kGroupArch:
+        case kGroupModel:
             status = StageProgrammableConfig(icfg, ss, ii, ocfg);
             if (status != ZX_OK) {
                 return status;
             }
             break;
-        case PERFMON_GROUP_MISC:
+        case kGroupMisc:
             status = StageMiscConfig(icfg, ss, ii, ocfg);
             if (status != ZX_OK) {
                 return status;
@@ -359,7 +359,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
 
     // Ensure there are no holes.
     for (; ii < fbl::count_of(icfg->events); ++ii) {
-        if (icfg->events[ii] != PERFMON_EVENT_ID_NONE) {
+        if (icfg->events[ii] != kEventIdNone) {
             zxlogf(ERROR, "%s: Hole at event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }

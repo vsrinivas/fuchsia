@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/cpuperf_provider/categories.h"
-
 #include <fbl/algorithm.h>
 
+#include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/perfmon/events.h"
 
 namespace cpuperf_provider {

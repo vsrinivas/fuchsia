@@ -9,7 +9,7 @@
       "group_name": "fixed",
       "event_name": "instructions_retired",
       "rate": 10000,
-      "flags": [ "os", "user" ]
+      "flags": [ "os", "user", "timebase0" ]
     },
     {
       "group_name": "misc",

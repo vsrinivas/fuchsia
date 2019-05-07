@@ -358,7 +358,7 @@ struct X86PmuConfig {
     // IA32_DEBUGCTL
     uint64_t debug_ctrl;
 
-    // The id of the timebase counter to use or PERFMON_EVENT_ID_NONE.
+    // The id of the timebase counter to use or |kEventIdNone|.
     // A "timebase counter" is used to trigger collection of data from other
     // events. In other words it sets the sample rate for those events.
     // If zero, then no timebase is in use: Each event must trigger its own

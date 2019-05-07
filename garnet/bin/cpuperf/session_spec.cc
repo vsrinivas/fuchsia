@@ -116,9 +116,8 @@ bool DecodeEvents(T events,
 
   FXL_VLOG(1) << "Processing " << events.Size() << " events";
 
-  int event_index = 0;
   for (const auto& event : events) {
-    perfmon_event_id_t id = PERFMON_EVENT_ID_NONE;
+    perfmon::EventId id = perfmon::kEventIdNone;
     perfmon_rate_t rate = 0;
     uint32_t flags = 0;
     if (!event.HasMember(kGroupNameKey) || !event.HasMember(kEventNameKey)) {
@@ -146,15 +145,16 @@ bool DecodeEvents(T events,
         }
         const std::string& flag_name = flag.GetString();
         if (flag_name == "os") {
-          flags |= PERFMON_CONFIG_FLAG_OS;
+          flags |= perfmon::Config::kFlagOs;
         } else if (flag_name == "user") {
-          flags |= PERFMON_CONFIG_FLAG_USER;
+          flags |= perfmon::Config::kFlagUser;
         } else if (flag_name == "pc") {
-          flags |= PERFMON_CONFIG_FLAG_PC;
-        } else if (flag_name == "timebase0") {
-          flags |= PERFMON_CONFIG_FLAG_TIMEBASE0;
+          flags |= perfmon::Config::kFlagPc;
+        } else if (flag_name == "timebase" ||
+                   flag_name == "timebase0") {
+          flags |= perfmon::Config::kFlagTimebase;
         } else if (flag_name == "last_branch") {
-          flags |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
+          flags |= perfmon::Config::kFlagLastBranch;
         } else {
           FXL_LOG(ERROR) << "Unknown flag for event " << group_name << ":"
                          << event_name << ": " << flag_name;
@@ -167,10 +167,13 @@ bool DecodeEvents(T events,
                 << ", id 0x" << std::hex << id << ", rate " << std::dec << rate
                 << ", flags 0x" << std::hex << flags;
 
-    out_spec->perfmon_config.events[event_index] = id;
-    out_spec->perfmon_config.rate[event_index] = rate;
-    out_spec->perfmon_config.flags[event_index] = flags;
-    ++event_index;
+    perfmon::Config::Status status =
+        out_spec->perfmon_config.AddEvent(id, rate, flags);
+    if (status != perfmon::Config::Status::OK) {
+      FXL_LOG(ERROR) << "Error processing event configuration: "
+                     << perfmon::Config::StatusToString(status);
+      return false;
+    }
   }
 
   return true;

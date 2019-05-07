@@ -13,20 +13,20 @@ enum EventId {
 
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
                         readable_name, description) \
-  symbol = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id),
+  symbol = perfmon::MakeEventId(perfmon::kGroupFixed, id),
 #define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, \
                        umask, flags, readable_name, description) \
-  symbol = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_ARCH, id),
+  symbol = perfmon::MakeEventId(perfmon::kGroupArch, id),
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 
 #define DEF_SKL_EVENT(symbol, event_name, id, event, umask, \
                       flags, readable_name, description) \
-  symbol = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MODEL, id),
+  symbol = perfmon::MakeEventId(perfmon::kGroupModel, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, \
                            flags, readable_name, description) \
-  symbol = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MISC, id),
+  symbol = perfmon::MakeEventId(perfmon::kGroupMisc, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 
 };

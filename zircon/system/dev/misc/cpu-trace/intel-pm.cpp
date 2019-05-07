@@ -25,14 +25,14 @@ namespace perfmon {
 #define FIXED_CTR_ENABLE_USR 2
 
 // This table is sorted at startup.
-static perfmon_event_id_t misc_event_table_contents[IPM_NUM_MISC_EVENTS] = {
+static EventId misc_event_table_contents[IPM_NUM_MISC_EVENTS] = {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, description) \
-    PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MISC, id),
+    MakeEventId(kGroupMisc, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };
 
 // Const accessor to give the illusion of the table being const.
-static const perfmon_event_id_t* misc_event_table = &misc_event_table_contents[0];
+static const EventId* misc_event_table = &misc_event_table_contents[0];
 
 enum ArchEvent : uint16_t {
 #define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, umask, flags, readable_name, description) \
@@ -70,7 +70,7 @@ static size_t kModelEventMapSize;
 
 // Map a fixed counter event id to its h/w register number.
 // Returns IPM_MAX_FIXED_COUNTERS if |id| is unknown.
-static unsigned PmuFixedCounterNumber(perfmon_event_id_t id) {
+static unsigned PmuFixedCounterNumber(EventId id) {
     enum {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
         symbol ## _NUMBER = regnum,
@@ -98,8 +98,8 @@ static void PmuInitMiscEventTable() {
 // Map a misc event id to its ordinal (unique number in range
 // 0 ... IPM_NUM_MISC_EVENTS - 1).
 // Returns -1 if |id| is unknown.
-static int PmuLookupMiscEvent(perfmon_event_id_t id) {
-    auto p = reinterpret_cast<perfmon_event_id_t*>(
+static int PmuLookupMiscEvent(EventId id) {
+    auto p = reinterpret_cast<EventId*>(
         bsearch(&id, misc_event_table,
                 countof(misc_event_table_contents),
                 sizeof(id),
@@ -198,7 +198,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
                                             unsigned input_index,
                                             PmuConfig* ocfg) {
     const unsigned ii = input_index;
-    const perfmon_event_id_t id = icfg->events[ii];
+    const EventId id = icfg->events[ii];
     bool uses_timebase0 = !!(icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0);
     unsigned counter = PmuFixedCounterNumber(id);
 
@@ -271,9 +271,9 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
                                                    unsigned input_index,
                                                    PmuConfig* ocfg) {
     const unsigned ii = input_index;
-    perfmon_event_id_t id = icfg->events[ii];
-    unsigned group = PERFMON_EVENT_ID_GROUP(id);
-    unsigned event = PERFMON_EVENT_ID_EVENT(id);
+    EventId id = icfg->events[ii];
+    unsigned group = GetEventIdGroup(id);
+    unsigned event = GetEventIdEvent(id);
     bool uses_timebase0 = !!(icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0);
 
     // TODO(dje): Verify no duplicates.
@@ -295,14 +295,14 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     }
     const EventDetails* details = nullptr;
     switch (group) {
-    case PERFMON_GROUP_ARCH:
+    case kGroupArch:
         if (event >= kArchEventMapSize) {
             zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
         details = &kArchEvents[kArchEventMap[event]];
         break;
-    case PERFMON_GROUP_MODEL:
+    case kGroupModel:
         if (event >= kModelEventMapSize) {
             zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
@@ -377,7 +377,7 @@ zx_status_t PerfmonDevice::StageMiscConfig(const perfmon_ioctl_config_t* icfg,
                                               unsigned input_index,
                                               PmuConfig* ocfg) {
     const unsigned ii = input_index;
-    perfmon_event_id_t id = icfg->events[ii];
+    EventId id = icfg->events[ii];
     int event = PmuLookupMiscEvent(id);
 
     if (event < 0) {
