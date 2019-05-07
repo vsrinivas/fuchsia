@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MEDIA_AUDIO_PERCEIVED_LEVEL_H_
-#define LIB_MEDIA_AUDIO_PERCEIVED_LEVEL_H_
+#ifndef LIB_MEDIA_AUDIO_CPP_PERCEIVED_LEVEL_H_
+#define LIB_MEDIA_AUDIO_CPP_PERCEIVED_LEVEL_H_
 
 namespace media {
 
@@ -36,4 +36,4 @@ class PerceivedLevel {
 
 }  // namespace media
 
-#endif  // LIB_MEDIA_AUDIO_PERCEIVED_LEVEL_H_
+#endif  // LIB_MEDIA_AUDIO_CPP_PERCEIVED_LEVEL_H_

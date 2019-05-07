@@ -7,7 +7,7 @@
 
 #include <zircon/types.h>
 
-#include "lib/media/audio_dfx/audio_device_fx.h"
+#include "lib/media/audio_dfx/cpp/audio_device_fx.h"
 
 namespace media::audio {
 
