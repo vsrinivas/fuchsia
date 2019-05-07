@@ -89,6 +89,12 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
     {{- end }}
 {{- end }}
 
+{{- define "BitWriterDecls" }}
+    {{- range .Bits }}
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
+    {{- end }}
+{{- end }}
+
 
 {{- define "StructWriterDecls" }}
     {{- range .Structs }}
@@ -150,6 +156,23 @@ std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& value) {
 
 {{- define "EnumWriterDefs" }}
     {{- range .Enums }}
+        {{- $type_name := .Name.Parts.Name }}
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+  using fidl::operator<<;
+  switch (value) {
+        {{- range .Members }}
+    case {{ $type_name }}::{{ .Name }}:
+      return os << "{{ toFriendlyCase .Name }}";
+        {{- end }}
+  }
+
+  return os;
+}
+    {{- end }}
+{{- end }}
+
+{{- define "BitWriterDefs" }}
+    {{- range .Bits }}
         {{- $type_name := .Name.Parts.Name }}
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
   using fidl::operator<<;
@@ -259,6 +282,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 {{- define "IncludeFile" }}
     {{- template "IncludeHeader" . }}
     {{- template "EnumWriterDecls" . }}
+    {{- template "BitWriterDecls" . }}
     {{- template "StructWriterDecls" . }}
     {{- template "TableWriterDecls" . }}
     {{- template "UnionWriterDecls" . }}
@@ -270,6 +294,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 {{- define "ImplementationFile" }}
     {{- template "ImplementationHeader" . }}
     {{- template "EnumWriterDefs" . }}
+    {{- template "BitWriterDefs" . }}
     {{- template "StructWriterDefs" . }}
     {{- template "TableWriterDefs" . }}
     {{- template "UnionWriterDefs" . }}
