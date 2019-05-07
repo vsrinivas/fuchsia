@@ -23,7 +23,7 @@ func (r *SSHRunner) Run(ctx context.Context, command []string, stdout io.Writer,
 	r.Session.Stderr = stderr
 
 	// TERM-dumb, to avoid a loop fetching a cursor position.
-	command = append([]string{"TERM=dumb;"}, command...)
+	r.Session.Setenv("TERM", "dumb")
 	cmd := strings.Join(command, " ")
 
 	if err := r.Session.Start(cmd); err != nil {
