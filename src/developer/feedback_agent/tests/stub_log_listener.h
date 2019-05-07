@@ -28,10 +28,11 @@ fuchsia::logger::LogMessage BuildLogMessage(
 class StubLogger : public fuchsia::logger::Log {
  public:
   // Returns a request handler for binding to this stub service.
-  // // We pass a dispatcher to run it on a different loop than the main one.
+  // We pass a dispatcher to be able to run it on a different loop than the
+  // default one.
   fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler(
       async_dispatcher_t* dispatcher) {
-    return bindings_.GetHandler(this);
+    return bindings_.GetHandler(this, dispatcher);
   }
 
   // fuchsia::logger::Log methods.
