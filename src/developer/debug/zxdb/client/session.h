@@ -152,8 +152,11 @@ class Session : public SettingStoreObserver {
   Err SetArch(debug_ipc::Arch arch);
 
   // Checks whether it's safe to begin establishing a connection. If not, the
-  // callback is invoked with details.
-  bool ConnectCanProceed(std::function<void(const Err&)> callback);
+  // callback is invoked with details. The opening_dump argument indicates
+  // whether we are trying to open a dump file rather than connect to a debug
+  // agent.
+  bool ConnectCanProceed(std::function<void(const Err&)> callback,
+                         bool opening_dump);
 
   // Dispatches unsolicited notifications sent from the agent.
   void DispatchNotification(const debug_ipc::MsgHeader& header,

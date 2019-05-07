@@ -265,7 +265,13 @@ const char kOpenDumpShortHelp[] =
 const char kOpenDumpHelp[] =
     R"(opendump <path>
 
-  Opens a minidump file. Currently only the 'minidump' format is supported.
+  Opens a dump file. Currently only the 'minidump' format is supported.
+
+  With the dump open, you will be able to list processes and threads, view the
+  memory map at the time the dump occurred, obtain a backtrace of threads, and
+  read some memory from the time of the crash. What memory is readable depends
+  on what the dump chose to include and what binaries are available from the
+  original system.
 )";
 
 Err DoOpenDump(ConsoleContext* context, const Command& cmd,

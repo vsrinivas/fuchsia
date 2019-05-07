@@ -358,10 +358,15 @@ void Session::OnStreamError() {
   }
 }
 
-bool Session::ConnectCanProceed(std::function<void(const Err&)> callback) {
+bool Session::ConnectCanProceed(std::function<void(const Err&)> callback,
+                                bool opening_dump) {
   Err err;
   if (stream_) {
-    err = Err("Already connected.");
+    if (opening_dump) {
+      err = Err("Cannot open a dump while connected to a debugged system.");
+    } else {
+      err = Err("Already connected.");
+    }
   } else if (is_minidump_) {
     err = Err("A dump file is currently open.");
   } else if (pending_connection_.get()) {
@@ -383,7 +388,7 @@ bool Session::IsConnected() const { return stream_ != nullptr; }
 
 void Session::Connect(const std::string& host, uint16_t port,
                       std::function<void(const Err&)> callback) {
-  if (!ConnectCanProceed(callback)) {
+  if (!ConnectCanProceed(callback, false)) {
     return;
   }
 
@@ -405,7 +410,7 @@ Err Session::SetArch(debug_ipc::Arch arch) {
 
 void Session::OpenMinidump(const std::string& path,
                            std::function<void(const Err&)> callback) {
-  if (!ConnectCanProceed(callback)) {
+  if (!ConnectCanProceed(callback, true)) {
     return;
   }
 
