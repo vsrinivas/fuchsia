@@ -13,12 +13,13 @@
 
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
 
 class ProfileDispatcher final :
     public SoloDispatcher<ProfileDispatcher, ZX_DEFAULT_PROFILE_RIGHTS> {
 public:
     static zx_status_t Create(const zx_profile_info_t& info,
-                              fbl::RefPtr<Dispatcher>* dispatcher,
+                              KernelHandle<ProfileDispatcher>* handle,
                               zx_rights_t* rights);
 
     ~ProfileDispatcher() final;

@@ -53,16 +53,16 @@ zx_status_t sys_profile_create(zx_handle_t root_job,
         return status;
     }
 
-    fbl::RefPtr<Dispatcher> dispatcher;
+    KernelHandle<ProfileDispatcher> handle;
     zx_rights_t rights;
-    status = ProfileDispatcher::Create(profile_info, &dispatcher, &rights);
+    status = ProfileDispatcher::Create(profile_info, &handle, &rights);
     if (status != ZX_OK) {
         return status;
     }
 
     kcounter_add(profile_create, 1);
 
-    return out->make(ktl::move(dispatcher), rights);
+    return out->make(ktl::move(handle), rights);
 }
 
 // zx_status_t zx_object_set_profile

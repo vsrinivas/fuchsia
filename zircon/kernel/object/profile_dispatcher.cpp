@@ -29,19 +29,19 @@ zx_status_t validate_profile(const zx_profile_info_t& info) {
 }
 
 zx_status_t ProfileDispatcher::Create(const zx_profile_info_t& info,
-                                      fbl::RefPtr<Dispatcher>* dispatcher,
+                                      KernelHandle<ProfileDispatcher>* handle,
                                       zx_rights_t* rights) {
     auto status = validate_profile(info);
     if (status != ZX_OK)
         return status;
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) ProfileDispatcher(info);
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) ProfileDispatcher(info)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
     *rights = default_rights();
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    *handle = ktl::move(new_handle);
     return ZX_OK;
 }
 
