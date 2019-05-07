@@ -11,3 +11,4 @@ board_package_labels += [ "//garnet/packages/config:vim2_media_config" ]
 # partitions for fx flash to flash
 zircon_a_partition = "boot"
 zircon_r_partition = "recovery"
+fastboot_product = "q200"

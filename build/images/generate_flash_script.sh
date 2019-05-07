@@ -13,6 +13,7 @@ VBMETA_B_PARTITION=
 VBMETA_R_PARTITION=
 ACTIVE_PARTITION=
 SIGNED_IMAGE=
+PRODUCT=
 
 for i in "$@"
 do
@@ -57,6 +58,10 @@ case $i in
     SIGNED_IMAGE="${i#*=}"
     shift
     ;;
+    --product=*)
+    PRODUCT="${i#*=}"
+    shift
+    ;;
 esac
 done
 
@@ -72,6 +77,17 @@ DIR="\$(dirname "\$0")"
 set -e
 FASTBOOT_ARGS="\$@"
 EOF
+
+if [[ ! -z "${PRODUCT}" ]]; then
+  cat >> "${OUTPUT}" << EOF
+PRODUCT=${PRODUCT}
+actual=\$(fastboot \${FASTBOOT_ARGS} getvar product 2>&1 | head -n1 | cut -d' ' -f2)
+if [[ "\${actual}" != "\${PRODUCT}" ]]; then
+  echo >&2 "Expected device \${PRODUCT} but found \${actual}"
+  exit 1
+fi
+EOF
+fi
 
 if [[ ! -z "${ZIRCON_A_PARTITION}" ]]; then
   echo fastboot "\${FASTBOOT_ARGS}" flash "${ZIRCON_A_PARTITION}" \"\${DIR}/${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"

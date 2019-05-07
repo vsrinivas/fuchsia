@@ -18,3 +18,4 @@ vbmeta_a_partition = "vbmeta_a"
 vbmeta_b_partition = "vbmeta_b"
 active_partition = "a"
 signed_image = true
+fastboot_product = "mt8167s"
