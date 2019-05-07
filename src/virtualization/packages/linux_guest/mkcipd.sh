@@ -9,7 +9,7 @@
 set -eo pipefail
 
 declare -r LINUX_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-declare -r FUCHSIA_DIR="${LINUX_GUEST_DIR}/../../../../.."
+declare -r FUCHSIA_DIR=$(git rev-parse --show-toplevel)
 declare -r CIPD="${FUCHSIA_DIR}/buildtools/cipd"
 declare -r SOURCE_DIR="/tmp/linux_guest"
 declare -r LINUX_VERSION="4.18"
@@ -26,22 +26,26 @@ esac
 
 ${CIPD} auth-login
 
+# Clean the existing source checkout.
 rm -rf "${SOURCE_DIR}"
-rm -rf "${LINUX_GUEST_DIR}/images/${ARCH}/Image"
-rm -rf "${LINUX_GUEST_DIR}/images/${ARCH}/tests.img"
-rm -rf "${LINUX_GUEST_DIR}/images/${ARCH}/disk.img"
+
+# Clean the existing images.
+declare -r IMAGE_DIR="${FUCHSIA_DIR}/prebuilt/virtualization/packages/linux_guest/images/${ARCH}"
+rm -rf "${IMAGE_DIR}/Image"
+rm -rf "${IMAGE_DIR}/tests.img"
+rm -rf "${IMAGE_DIR}/disk.img"
 
 ${LINUX_GUEST_DIR}/mklinux.sh \
     -b "machina-${LINUX_VERSION}" \
     -d "machina_defconfig" \
     -l "${SOURCE_DIR}/linux" \
-    -o "${LINUX_GUEST_DIR}/images/${ARCH}/Image" \
+    -o "${IMAGE_DIR}/Image" \
     ${ARCH}
 LINUX_GIT_HASH="$( cd ${SOURCE_DIR}/linux && git rev-parse --verify HEAD )"
 
 ${LINUX_GUEST_DIR}/mktests.sh \
     -d "${SOURCE_DIR}/linux-tests" \
-    -o "${LINUX_GUEST_DIR}/images/${ARCH}/tests.img" \
+    -o "${IMAGE_DIR}/tests.img" \
     -u \
     ${ARCH}
 TESTS_GIT_HASH="$( cd ${SOURCE_DIR}/linux-tests && git rev-parse --verify HEAD )"
@@ -49,7 +53,7 @@ TESTS_GIT_HASH="$( cd ${SOURCE_DIR}/linux-tests && git rev-parse --verify HEAD )
 ${LINUX_GUEST_DIR}/mksysroot.sh \
     -d "${SOURCE_DIR}/toybox-${ARCH}" \
     -s "${SOURCE_DIR}/dash" \
-    -o "${LINUX_GUEST_DIR}/images/${ARCH}/disk.img" \
+    -o "${IMAGE_DIR}/disk.img" \
     -u \
     ${ARCH}
 TOYBOX_GIT_HASH="$( cd ${SOURCE_DIR}/toybox-${ARCH} && git rev-parse --verify HEAD )"
@@ -58,7 +62,7 @@ DASH_GIT_HASH="$( cd ${SOURCE_DIR}/dash && git rev-parse --verify HEAD )"
 declare -r CIPD_PATH="fuchsia_internal/linux/linux_guest-${LINUX_VERSION}-${ARCH}"
 
 ${CIPD} create \
-    -in "${LINUX_GUEST_DIR}/images/${ARCH}" \
+    -in "${IMAGE_DIR}" \
     -name "${CIPD_PATH}" \
     -install-mode copy \
     -tag "kernel_git_revision:${LINUX_GIT_HASH}" \

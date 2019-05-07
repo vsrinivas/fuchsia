@@ -17,7 +17,8 @@ action("block") {
   script = "check_image.sh"
   depfile = "$target_out_dir/block.d"
   args = [
-    rebase_path("images/${target_cpu}/disk.img", root_build_dir),
+    rebase_path("//prebuilt/virtualization/packages/linux_guest/images/" +
+                "${target_cpu}/disk.img", root_build_dir),
     rebase_path(disk_image, root_build_dir),
     rebase_path(depfile, root_build_dir),
   ]
@@ -30,7 +31,8 @@ action("tests") {
   script = "check_image.sh"
   depfile = "$target_out_dir/tests.d"
   args = [
-    rebase_path("images/${target_cpu}/tests.img", root_build_dir),
+    rebase_path("//prebuilt/virtualization/packages/linux_guest/images/" +
+                "${target_cpu}/tests.img", root_build_dir),
     rebase_path(tests_image, root_build_dir),
     rebase_path(depfile, root_build_dir),
   ]
@@ -43,7 +45,8 @@ action("kernel") {
   script = "check_image.sh"
   depfile = "$target_out_dir/kernel.d"
   args = [
-    rebase_path("images/${target_cpu}/Image", root_build_dir),
+    rebase_path("//prebuilt/virtualization/packages/linux_guest/images/" +
+                "${target_cpu}/Image", root_build_dir),
     rebase_path(linux_image, root_build_dir),
     rebase_path(depfile, root_build_dir),
   ]

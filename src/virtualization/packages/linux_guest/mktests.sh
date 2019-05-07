@@ -17,7 +17,7 @@ usage() {
 
 declare UPDATE="${UPDATE:-false}"
 declare -r LINUX_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-declare -r FUCHSIA_DIR="${DEBIAN_GUEST_DIR}/../../../../.."
+declare -r FUCHSIA_DIR=$(git rev-parse --show-toplevel)
 
 while getopts "d:o:u" OPT; do
   case $OPT in

@@ -9,7 +9,7 @@
 set -eo pipefail
 
 declare -r DEBIAN_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-declare -r FUCHSIA_DIR="${DEBIAN_GUEST_DIR}/../../../../.."
+declare -r FUCHSIA_DIR=$(git rev-parse --show-toplevel)
 declare -r CIPD="${FUCHSIA_DIR}/buildtools/cipd"
 
 case "${1}" in
@@ -25,7 +25,7 @@ esac
 ${CIPD} auth-login
 
 # Clean the existing images directory.
-declare -r IMAGE_DIR="${DEBIAN_GUEST_DIR}/images/${ARCH}/"
+declare -r IMAGE_DIR="${FUCHSIA_DIR}/prebuilt/virtualization/packages/debian_guest/images/${ARCH}"
 rm -rf "${IMAGE_DIR}"
 mkdir -p "${IMAGE_DIR}"
 
@@ -35,20 +35,20 @@ rm -rf "${TESTS_DIR}"
 
 # Build Debian.
 ${DEBIAN_GUEST_DIR}/build-image.sh \
-    -o "${DEBIAN_GUEST_DIR}/images/${ARCH}" \
+    -o ${IMAGE_DIR} \
     ${ARCH}
 
 # Build tests.
 ${DEBIAN_GUEST_DIR}/mktests.sh \
     -d "${TESTS_DIR}" \
-    -o "${DEBIAN_GUEST_DIR}/images/${ARCH}/tests.img" \
+    -o "${IMAGE_DIR}/tests.img" \
     -u \
     ${ARCH}
 TESTS_GIT_HASH="$( cd ${TESTS_DIR} && git rev-parse --verify HEAD )"
 
 declare -r CIPD_PATH="fuchsia_internal/linux/debian_guest-${ARCH}"
 ${CIPD} create \
-    -in "${DEBIAN_GUEST_DIR}/images/${ARCH}" \
+    -in "${IMAGE_DIR}" \
     -name "${CIPD_PATH}" \
     -install-mode copy \
     -tag "tests_git_revision:${TESTS_GIT_HASH}"

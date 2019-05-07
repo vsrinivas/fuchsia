@@ -21,7 +21,8 @@ template("image") {
     script = "check_image.sh"
     depfile = "${target_out_dir}/debian/${invoker.filename}.d"
     args = [
-      rebase_path("images/${target_cpu}/${invoker.filename}", root_build_dir),
+      rebase_path("//prebuilt/virtualization/packages/debian_guest/images/" +
+                  "${target_cpu}/${invoker.filename}", root_build_dir),
       rebase_path("${target_out_dir}/debian/${invoker.filename}",
                   root_build_dir),
       rebase_path(depfile, root_build_dir),
