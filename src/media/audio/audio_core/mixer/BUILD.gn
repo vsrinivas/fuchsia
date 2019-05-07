@@ -14,6 +14,7 @@ group("mixer") {
 
 source_set("audio_mixer_lib") {
   sources = [
+    "//garnet/public/lib/media/audio_dfx/audio_device_fx.h",
     "constants.h",
     "fx_loader.cc",
     "fx_loader.h",
@@ -32,7 +33,6 @@ source_set("audio_mixer_lib") {
     "output_producer.h",
     "point_sampler.cc",
     "point_sampler.h",
-    "//sdk/lib/media/audio_dfx/cpp/audio_device_fx.h",
   ]
 
   public_deps = [

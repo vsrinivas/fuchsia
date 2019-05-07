@@ -5,14 +5,13 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#ifndef LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_BASE_H_
-#define LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_BASE_H_
+#ifndef LIB_MEDIA_AUDIO_DFX_LIB_DFX_BASE_H_
+#define LIB_MEDIA_AUDIO_DFX_LIB_DFX_BASE_H_
 
 #include <stdint.h>
-
 #include <memory>
 
-#include "sdk/lib/media/audio_dfx/cpp/audio_device_fx.h"
+#include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 
 namespace media::audio_dfx_test {
 
@@ -70,4 +69,4 @@ class DfxBase {
 
 }  // namespace media::audio_dfx_test
 
-#endif  // LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_BASE_H_
+#endif  // LIB_MEDIA_AUDIO_DFX_LIB_DFX_BASE_H_

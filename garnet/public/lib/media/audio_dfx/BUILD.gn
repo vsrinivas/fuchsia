@@ -46,8 +46,8 @@ executable("test_bin") {
 
   # We include mixer_lib to use its fx_loader, to directly test it and FX libs.
   deps = [
-    "//src/lib/fxl",
     "//src/media/audio/audio_core/mixer:audio_mixer_lib",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
   ]

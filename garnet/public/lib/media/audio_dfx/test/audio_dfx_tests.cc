@@ -6,12 +6,12 @@
 
 #include <cmath>
 
+#include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
+#include "garnet/public/lib/media/audio_dfx/lib/dfx_base.h"
+#include "garnet/public/lib/media/audio_dfx/lib/dfx_delay.h"
+#include "garnet/public/lib/media/audio_dfx/lib/dfx_rechannel.h"
+#include "garnet/public/lib/media/audio_dfx/lib/dfx_swap.h"
 #include "gtest/gtest.h"
-#include "sdk/lib/media/audio_dfx/cpp/audio_device_fx.h"
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_base.h"
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_delay.h"
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_rechannel.h"
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_swap.h"
 #include "src/media/audio/audio_core/mixer/fx_loader.h"
 #include "src/media/audio/audio_core/mixer/fx_processor.h"
 

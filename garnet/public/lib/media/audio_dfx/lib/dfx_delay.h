@@ -5,15 +5,14 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#ifndef LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_DELAY_H_
-#define LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_DELAY_H_
+#ifndef LIB_MEDIA_AUDIO_DFX_LIB_DFX_DELAY_H_
+#define LIB_MEDIA_AUDIO_DFX_LIB_DFX_DELAY_H_
 
 #include <stdint.h>
-
 #include <memory>
 
-#include "sdk/lib/media/audio_dfx/cpp/audio_device_fx.h"
-#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_base.h"
+#include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
+#include "garnet/public/lib/media/audio_dfx/lib/dfx_base.h"
 
 namespace media::audio_dfx_test {
 
@@ -62,4 +61,4 @@ class DfxDelay : public DfxBase {
 
 }  // namespace media::audio_dfx_test
 
-#endif  // LIB_MEDIA_AUDIO_DFX_CPP_LIB_DFX_DELAY_H_
+#endif  // LIB_MEDIA_AUDIO_DFX_LIB_DFX_DELAY_H_
