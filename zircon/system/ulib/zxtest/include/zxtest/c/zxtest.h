@@ -46,6 +46,10 @@ bool zxtest_runner_current_test_has_fatal_failures(void);
 // Returns true when the current test has registered any kind of failure.
 bool zxtest_runner_current_test_has_failures(void);
 
+// Fails the current running test.
+void zxtest_runner_fail_current_test(bool fatal, const char* file, int line_number,
+                                     const char* message);
+
 // Entry point for executing all tests.
 int zxtest_run_all_tests(int argc, char** argv);
 
@@ -243,3 +247,17 @@ static void zxtest_clean_buffer(char** buffer) {
 #define _ASSERT_VAR(op, expected, actual, fatal, file, line, desc, ...)                            \
     _ASSERT_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(expected), fatal, file, line,   \
                        desc, ##__VA_ARGS__)
+
+#define _ZXTEST_FAIL_NO_RETURN(fatal, desc, ...)                                                   \
+    do {                                                                                           \
+        _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                         \
+        zxtest_runner_fail_current_test(fatal, __FILE__, __LINE__, msg_buffer);                    \
+    } while (0)
+
+#define _ZXTEST_ASSERT_ERROR(has_errors, fatal, desc, ...)                                         \
+    do {                                                                                           \
+        if (has_errors) {                                                                          \
+            _ZXTEST_FAIL_NO_RETURN(fatal, desc, ##__VA_ARGS__);                                    \
+            _RETURN_IF_FATAL(fatal);                                                               \
+        }                                                                                          \
+    } while (0)

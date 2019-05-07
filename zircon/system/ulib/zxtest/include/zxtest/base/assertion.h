@@ -18,6 +18,7 @@ public:
     Assertion(const fbl::String& desc, const fbl::String& expected,
               const fbl::String& expected_eval, const fbl::String& actual,
               const fbl::String& actual_eval, const SourceLocation& location, bool is_fatal);
+    Assertion(const fbl::String& desc, const SourceLocation& location, bool is_fatal);
     Assertion(const Assertion&) = delete;
     Assertion(Assertion&&);
     ~Assertion();
@@ -51,6 +52,9 @@ public:
     // asserting macro is ASSERT_* or EXPECT_*.
     bool is_fatal() const { return is_fatal_; }
 
+    // Returns true if this assertions is value based or manually generated.
+    bool has_values() const { return has_values_; }
+
 private:
     // Text indicating the nature of the assertion. Whether it was expected to be equal, not equal,
     // etc.
@@ -63,6 +67,7 @@ private:
     SourceLocation location_;
 
     bool is_fatal_;
+    bool has_values_;
 };
 
 // Helper functions used on assertion reporting contexts.

@@ -12,6 +12,7 @@ group("test") {
 
 test("zxtest") {
   sources = [
+    "assertion_test.cpp",
     "event-broadcaster_test.cpp",
     "main.cpp",
     "runner_test.cpp",

@@ -235,3 +235,18 @@ bool CompareHelper(const Actual& actual, const Expected& expected, const Compare
             _RETURN_IF_FATAL(fatal);                                                               \
         }                                                                                          \
     } while (0)
+
+#define _ZXTEST_FAIL_NO_RETURN(fatal, desc, ...)                                                   \
+    do {                                                                                           \
+        _GEN_ASSERT_DESC(out_desc, desc, ##__VA_ARGS__);                                           \
+        zxtest::Runner::GetInstance()->NotifyAssertion(                                            \
+            zxtest::Assertion(out_desc, {.filename = __FILE__, .line_number = __LINE__}, fatal));  \
+    } while (0)
+
+#define _ZXTEST_ASSERT_ERROR(has_errors, fatal, desc, ...)                                         \
+    do {                                                                                           \
+        if (has_errors) {                                                                          \
+            _ZXTEST_FAIL_NO_RETURN(fatal, desc, ##__VA_ARGS__);                                    \
+            _RETURN_IF_FATAL(fatal);                                                               \
+        }                                                                                          \
+    } while (0)

@@ -144,18 +144,21 @@ void Reporter::OnAssertion(const Assertion& assertion) {
         return;
     }
 
-    fprintf(stream_, "%s:%" PRIi64 ": error: Failure:\n%s\n    Expected: %s\n",
-            assertion.location().filename, assertion.location().line_number,
-            assertion.description().c_str(), assertion.expected().c_str());
-    // When it is not a literal.
-    if (assertion.expected() != assertion.expected_eval()) {
-        fprintf(stream_, "    Which is: %s\n", assertion.expected_eval().c_str());
-    }
+    fprintf(stream_, "%s:%" PRIi64 ": Failure: %s\n", assertion.location().filename,
+            assertion.location().line_number, assertion.description().c_str());
 
-    fprintf(stream_, "    Actual  : %s\n", assertion.actual().c_str());
-    // When it is not a literal.
-    if (assertion.actual() != assertion.actual_eval()) {
-        fprintf(stream_, "    Which is: %s\n", assertion.actual_eval().c_str());
+    if (assertion.has_values()) {
+        fprintf(stderr, "Expected: %s\n", assertion.expected().c_str());
+        // When it is not a literal.
+        if (assertion.expected() != assertion.expected_eval()) {
+            fprintf(stream_, "    Which is: %s\n", assertion.expected_eval().c_str());
+        }
+
+        fprintf(stream_, "    Actual  : %s\n", assertion.actual().c_str());
+        // When it is not a literal.
+        if (assertion.actual() != assertion.actual_eval()) {
+            fprintf(stream_, "    Which is: %s\n", assertion.actual_eval().c_str());
+        }
     }
 }
 

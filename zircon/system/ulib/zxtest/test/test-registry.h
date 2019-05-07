@@ -78,6 +78,10 @@ void TestCaseShuffle();
 // Verify that |TestCase::UnShuffle| restores original order.
 void TestCaseUnShuffle();
 
+// Verify that |Assertion::Assertion(...)| generate the right values.
+void AssertionHasValues();
+void AssertionHasNoValues();
+
 // Verify that the broadcasting is working for all LifecycleObserver
 // events.
 void EventBroadcasterOnProgramStart();
@@ -153,6 +157,8 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(TestCaseFilterDoNotAccumulate),
     RUN_TEST(TestCaseShuffle),
     RUN_TEST(TestCaseUnShuffle),
+    RUN_TEST(AssertionHasValues),
+    RUN_TEST(AssertionHasNoValues),
     RUN_TEST(EventBroadcasterOnProgramStart),
     RUN_TEST(EventBroadcasterOnIterationStart),
     RUN_TEST(EventBroadcasterOnEnvironmentSetUp),

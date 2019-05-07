@@ -147,9 +147,25 @@
                 ##__VA_ARGS__)
 
 #define FAIL(...)                                                                                  \
-    _ASSERT_VAR(_EQ, false, true, true, __FILE__, __LINE__, "Failure condition met.", ##__VA_ARGS__)
+    do {                                                                                           \
+        _ZXTEST_FAIL_NO_RETURN(true, "", ##__VA_ARGS__);                                           \
+        return;                                                                                    \
+    } while (0)
+
+#define ADD_FAILURE(...) _ZXTEST_FAIL_NO_RETURN(false, "", ##__VA_ARGS__)
+
+#define ADD_FATAL_FAILURE(...) _ZXTEST_FAIL_NO_RETURN(true, "", ##__VA_ARGS__)
 
 #define ASSERT_NO_FATAL_FAILURES(statement, ...)                                                   \
-    statement;                                                                                     \
-    _ASSERT_VAR(_EQ, _ZXTEST_ABORT_IF_ERROR, false, true, __FILE__, __LINE__,                      \
-                "Test registered fatal failures in " #statement ".", ##__VA_ARGS__)
+    do {                                                                                           \
+        statement;                                                                                 \
+        _ZXTEST_ASSERT_ERROR(_ZXTEST_ABORT_IF_ERROR, true,                                         \
+                             "Test registered fatal failures in " #statement ".", ##__VA_ARGS__);  \
+    } while (0)
+
+#define ASSERT_NO_FAILURES(statement, ...)                                                         \
+    do {                                                                                           \
+        statement;                                                                                 \
+        _ZXTEST_ASSERT_ERROR(_ZXTEST_TEST_HAS_ERRORS, true,                                        \
+                             "Test registered failures in " #statement ".", ##__VA_ARGS__);        \
+    } while (0)

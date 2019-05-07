@@ -644,3 +644,23 @@ TEST(ZxTestCAssertionTest, NonVoidHelperTestNonFatalFailures) {
     ASSERT_NO_FATAL_FAILURES(HasExpects());
     TEST_CHECKPOINT();
 }
+
+TEST(ZxTestCAssertionTest, AssertNoFailures) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to detect non fatal failure");
+    ASSERT_NO_FAILURES(HasExpects());
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionTest, AddFailure) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect non fatal failure");
+    ADD_FAILURE("Something went wrong.");
+    ASSERT_NO_FATAL_FAILURES();
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionTest, AddFatalFailure) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to detect fatal failure");
+    ADD_FATAL_FAILURE("Something went wrong.");
+    ASSERT_NO_FATAL_FAILURES();
+    TEST_CHECKPOINT();
+}

@@ -15,7 +15,10 @@ Assertion::Assertion(const fbl::String& desc, const fbl::String& expected,
                      const fbl::String& expected_eval, const fbl::String& actual,
                      const fbl::String& actual_eval, const SourceLocation& location, bool is_fatal)
     : description_(desc), expected_(expected), expected_eval_(expected_eval), actual_(actual),
-      actual_eval_(actual_eval), location_(location), is_fatal_(is_fatal) {}
+      actual_eval_(actual_eval), location_(location), is_fatal_(is_fatal), has_values_(true) {}
+
+Assertion::Assertion(const fbl::String& desc, const SourceLocation& location, bool is_fatal)
+    : description_(desc), location_(location), is_fatal_(is_fatal), has_values_(false) {}
 
 Assertion::Assertion(Assertion&& other) = default;
 Assertion::~Assertion() = default;

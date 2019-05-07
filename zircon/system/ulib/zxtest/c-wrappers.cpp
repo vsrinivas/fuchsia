@@ -118,3 +118,9 @@ size_t _zxtest_print_hex(const void* val, size_t size, char* buffer, size_t buff
 void zxtest_c_clean_buffer(char** buffer) {
     free(*buffer);
 }
+
+void zxtest_runner_fail_current_test(bool is_fatal, const char* file, int line,
+                                     const char* message) {
+    zxtest::Runner::GetInstance()->NotifyAssertion(
+        zxtest::Assertion(message, {.filename = file, .line_number = line}, is_fatal));
+}
