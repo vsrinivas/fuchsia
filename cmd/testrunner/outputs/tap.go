@@ -5,6 +5,7 @@
 package outputs
 
 import (
+	"fmt"
 	"io"
 
 	"fuchsia.googlesource.com/tools/runtests"
@@ -27,5 +28,6 @@ func NewTAPOutput(output io.Writer, testCount int) *TAPOutput {
 
 // Record writes the test's result and name to the output given at construction time.
 func (o *TAPOutput) Record(result testrunner.TestResult) {
-	o.producer.Ok(result.Result == runtests.TestSuccess, result.Name)
+	desc := fmt.Sprintf("%s (%v)", result.Name, result.EndTime.Sub(result.StartTime))
+	o.producer.Ok(result.Result == runtests.TestSuccess, desc)
 }
