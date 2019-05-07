@@ -49,6 +49,50 @@ TEST(LocalhostTest, IP_MULTICAST_IF_ifindex) {
   ASSERT_EQ(param_out.s_addr, INADDR_ANY);
 }
 
+class ReuseTest
+    : public ::testing::TestWithParam<
+          ::testing::tuple<int /* type */, in_addr_t /* address */>> {};
+
+TEST_P(ReuseTest, AllowsAddressReuse) {
+  const int on = true;
+
+  int s1 = socket(AF_INET, ::testing::get<0>(GetParam()), 0);
+  ASSERT_GE(s1, 0) << strerror(errno);
+
+  ASSERT_EQ(setsockopt(s1, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0)
+      << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = ::testing::get<1>(GetParam());
+  ASSERT_EQ(
+      bind(s1, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+      0)
+      << strerror(errno);
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(
+      getsockname(s1, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  int s2 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  ASSERT_GE(s2, 0) << strerror(errno);
+
+  ASSERT_EQ(setsockopt(s2, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0)
+      << strerror(errno);
+
+  ASSERT_EQ(
+      bind(s2, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+      0)
+      << strerror(errno);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    LocalhostTest, ReuseTest,
+    ::testing::Combine(::testing::Values(SOCK_DGRAM, SOCK_STREAM),
+                       ::testing::Values(htonl(INADDR_LOOPBACK),
+                                         inet_addr("224.0.2.1"))));
+
 TEST(LocalhostTest, Accept) {
   int serverfd = socket(AF_INET6, SOCK_STREAM, 0);
   ASSERT_GE(serverfd, 0) << strerror(errno);
