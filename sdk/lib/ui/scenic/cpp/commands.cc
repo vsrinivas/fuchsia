@@ -376,8 +376,8 @@ fuchsia::ui::gfx::Command NewCreateEntityNodeCmd(uint32_t id) {
   return NewCreateResourceCmd(id, std::move(resource));
 }
 
-fuchsia::ui::gfx::Command NewCreateOpacityNodeCmd(uint32_t id) {
-  fuchsia::ui::gfx::OpacityNodeArgs node;
+fuchsia::ui::gfx::Command NewCreateOpacityNodeCmdHACK(uint32_t id) {
+  fuchsia::ui::gfx::OpacityNodeArgsHACK node;
 
   fuchsia::ui::gfx::ResourceArgs resource;
   resource.set_opacity_node(std::move(node));

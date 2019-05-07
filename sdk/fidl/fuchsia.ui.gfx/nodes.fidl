@@ -49,7 +49,7 @@ struct ClipNodeArgs {
 // - has_children
 // - has_parts
 // - has_opacity
-struct OpacityNodeArgs {
+struct OpacityNodeArgsHACK {
     uint32 unused = 0;
 };
 

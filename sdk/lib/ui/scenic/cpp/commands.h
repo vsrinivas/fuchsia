@@ -85,7 +85,7 @@ fuchsia::ui::gfx::Command NewCreateMeshCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateMaterialCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateClipNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateEntityNodeCmd(uint32_t id);
-fuchsia::ui::gfx::Command NewCreateOpacityNodeCmd(uint32_t id);
+fuchsia::ui::gfx::Command NewCreateOpacityNodeCmdHACK(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id);
 
 fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, zx::eventpair token,
