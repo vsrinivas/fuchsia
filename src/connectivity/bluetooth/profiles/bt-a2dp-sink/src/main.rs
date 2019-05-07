@@ -10,7 +10,8 @@ use {
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::AUDIO_ENCODING_SBC,
-    fuchsia_async as fasync, fuchsia_cobalt as cobalt,
+    fuchsia_async as fasync,
+    fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
@@ -24,14 +25,14 @@ use {
 
 lazy_static! {
     /// COBALT_SENDER must only be accessed from within an async context;
-    static ref COBALT_SENDER: cobalt::CobaltSender = {
-        let (sender, reporter) = cobalt::serve_with_project_name(100, "bluetooth");
+    static ref COBALT_SENDER: CobaltSender = {
+        let (sender, reporter) = CobaltConnector::default().serve(ConnectionType::project_name("bluetooth"));
         fasync::spawn(reporter);
         sender
     };
 }
 
-fn get_cobalt_logger() -> cobalt::CobaltSender {
+fn get_cobalt_logger() -> CobaltSender {
     COBALT_SENDER.clone()
 }
 
@@ -284,30 +285,28 @@ impl RemotePeer {
     /// from the `remotes` map.
     fn start_requests_task(&mut self, remotes: Arc<RwLock<RemotesMap>>, device_id: String) {
         let mut request_stream = self.peer.take_request_stream();
-        fuchsia_async::spawn(
-            async move {
-                while let Some(r) = await!(request_stream.next()) {
-                    match r {
-                        Err(e) => fx_log_info!("Request Error on {}: {:?}", device_id, e),
-                        Ok(request) => {
-                            let mut peer;
-                            {
-                                let mut wremotes = remotes.write();
-                                peer = wremotes.remove(&device_id).expect("Can't get peer");
-                            }
-                            let fut = peer.handle_request(request);
-                            if let Err(e) = await!(fut) {
-                                fx_log_warn!("{} Error handling request: {:?}", device_id, e);
-                            }
-                            let replaced = remotes.write().insert(device_id.clone(), peer);
-                            assert!(replaced.is_none(), "Two peers of {} connected", device_id);
+        fuchsia_async::spawn(async move {
+            while let Some(r) = await!(request_stream.next()) {
+                match r {
+                    Err(e) => fx_log_info!("Request Error on {}: {:?}", device_id, e),
+                    Ok(request) => {
+                        let mut peer;
+                        {
+                            let mut wremotes = remotes.write();
+                            peer = wremotes.remove(&device_id).expect("Can't get peer");
                         }
+                        let fut = peer.handle_request(request);
+                        if let Err(e) = await!(fut) {
+                            fx_log_warn!("{} Error handling request: {:?}", device_id, e);
+                        }
+                        let replaced = remotes.write().insert(device_id.clone(), peer);
+                        assert!(replaced.is_none(), "Two peers of {} connected", device_id);
                     }
                 }
-                remotes.write().remove(&device_id);
-                fx_log_info!("Peer {} disconnected", device_id);
-            },
-        );
+            }
+            remotes.write().remove(&device_id);
+            fx_log_info!("Peer {} disconnected", device_id);
+        });
     }
 
     /// Handle a single request event from the avdtp peer.
@@ -496,6 +495,7 @@ async fn decode_media_stream(
     get_cobalt_logger().log_event_count(
         metrics::A2DP_NUMBER_OF_SECONDS_STREAMED_METRIC_ID,
         metrics::A2dpNumberOfSecondsStreamedMetricDimensionCodec::Sbc as u32,
+        0,
         (end_time - start_time).seconds(),
     );
 }

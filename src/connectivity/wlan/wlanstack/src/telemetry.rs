@@ -115,6 +115,7 @@ fn report_dispatcher_packets(
     sender.log_event_count(
         metrics::DISPATCHER_PACKET_COUNTS_METRIC_ID,
         packet_type as u32,
+        0,
         packet_count as i64,
     );
 }
@@ -164,22 +165,26 @@ fn report_client_mlme_rx_tx_frames(
     sender.log_event_count(
         metrics::MLME_RX_TX_FRAME_COUNTS_METRIC_ID,
         metrics::MlmeRxTxFrameCountsMetricDimensionFrameType::Rx as u32,
+        0,
         get_diff(last_stats.rx_frame.in_.count, current_stats.rx_frame.in_.count) as i64,
     );
     sender.log_event_count(
         metrics::MLME_RX_TX_FRAME_COUNTS_METRIC_ID,
         metrics::MlmeRxTxFrameCountsMetricDimensionFrameType::Tx as u32,
+        0,
         get_diff(last_stats.tx_frame.out.count, current_stats.tx_frame.out.count) as i64,
     );
 
     sender.log_event_count(
         metrics::MLME_RX_TX_FRAME_BYTES_METRIC_ID,
         metrics::MlmeRxTxFrameBytesMetricDimensionFrameType::Rx as u32,
+        0,
         get_diff(last_stats.rx_frame.in_bytes.count, current_stats.rx_frame.in_bytes.count) as i64,
     );
     sender.log_event_count(
         metrics::MLME_RX_TX_FRAME_BYTES_METRIC_ID,
         metrics::MlmeRxTxFrameBytesMetricDimensionFrameType::Tx as u32,
+        0,
         get_diff(last_stats.tx_frame.out_bytes.count, current_stats.tx_frame.out_bytes.count)
             as i64,
     );
@@ -217,7 +222,7 @@ fn report_rssi_stats(
     }
 
     if !histogram.is_empty() {
-        sender.log_int_histogram(rssi_metric_id, histogram);
+        sender.log_int_histogram(rssi_metric_id, (), histogram);
     }
 }
 
@@ -282,11 +287,13 @@ pub fn report_neighbor_networks_count(
     sender.log_event_count(
         metrics::NEIGHBOR_NETWORKS_COUNT_METRIC_ID,
         metrics::NeighborNetworksCountMetricDimensionNetworkType::Bss as u32,
+        0,
         bss_count as i64,
     );
     sender.log_event_count(
         metrics::NEIGHBOR_NETWORKS_COUNT_METRIC_ID,
         metrics::NeighborNetworksCountMetricDimensionNetworkType::Ess as u32,
+        0,
         ess_count as i64,
     );
 }
@@ -311,6 +318,7 @@ pub fn report_standards(
         sender.log_event_count(
             metrics::NEIGHBOR_NETWORKS_WLAN_STANDARDS_COUNT_METRIC_ID,
             label.clone() as u32,
+            0,
             count,
         )
     });
@@ -321,6 +329,7 @@ pub fn report_channels(sender: &mut CobaltSender, num_bss_by_channel: HashMap<u8
         sender.log_event_count(
             metrics::NEIGHBOR_NETWORKS_PRIMARY_CHANNELS_COUNT_METRIC_ID,
             channel as u32,
+            0,
             count as i64,
         );
     });
@@ -483,13 +492,13 @@ mod tests {
             },
             CobaltEvent {
                 metric_id: metrics::CLIENT_ASSOC_RSSI_METRIC_ID,
-                event_codes: vec![0],
+                event_codes: vec![],
                 component: None,
                 payload: EventPayload::IntHistogram(vec![HistogramBucket { index: 128, count: 1 }]),
             },
             CobaltEvent {
                 metric_id: metrics::CLIENT_BEACON_RSSI_METRIC_ID,
-                event_codes: vec![0],
+                event_codes: vec![],
                 component: None,
                 payload: EventPayload::IntHistogram(vec![HistogramBucket { index: 128, count: 1 }]),
             },

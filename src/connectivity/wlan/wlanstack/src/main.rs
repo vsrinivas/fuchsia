@@ -26,11 +26,11 @@ use failure::Error;
 use fidl_fuchsia_inspect::InspectRequestStream;
 use fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream;
 use fuchsia_async as fasync;
-use fuchsia_cobalt::{self, CobaltSender};
+use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect as finspect;
-use futures::prelude::*;
 use futures::future::{try_join, try_join5};
+use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
 use wlan_inspect;
@@ -38,7 +38,6 @@ use wlan_inspect;
 use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::watcher_service::WatcherService;
 
-const COBALT_BUFFER_SIZE: usize = 100;
 const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
 const CONCURRENT_LIMIT: usize = 1000;
@@ -59,10 +58,8 @@ async fn main() -> Result<(), Error> {
     let ifaces = Arc::new(ifaces);
 
     let phy_server = device::serve_phys(phys.clone()).map_ok(|x| match x {});
-    let (cobalt_sender, cobalt_reporter) = fuchsia_cobalt::serve_with_project_name(
-        COBALT_BUFFER_SIZE,
-        wlan_metrics_registry::PROJECT_NAME,
-    );
+    let (cobalt_sender, cobalt_reporter) = CobaltConnector::default()
+        .serve(ConnectionType::project_name(wlan_metrics_registry::PROJECT_NAME));
     let telemetry_server =
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
     // TODO(WLAN-927): Remove once drivers support SME channel.
