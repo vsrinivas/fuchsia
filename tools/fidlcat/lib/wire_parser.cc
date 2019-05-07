@@ -46,54 +46,30 @@ void PrintMembers(FILE* fstream, const rapidjson::Value& value) {
 
 namespace {
 
-// Takes <request or response> parameters and converts them to JSON.
-// |params| is the schema for those parameters.
-// |size| is the size of those parameters
-// |message| is the FIDL wire format representation of those parameters.
-// |result| is where the resulting JSON is stored.
+// Takes a Message which holds either a request or a response and extract a JSON
+// object which represents the message. The format of the message is specified
+// by str.
 // Returns true on success, false on failure.
-bool ParamsToJSON(const std::optional<std::vector<InterfaceMethodParameter>>& p,
-                  const fidl::Message& message, rapidjson::Document& result) {
-  // TODO: Deal with what happens if p is nullopt
+bool MessageToJSON(const Struct& str, const fidl::Message& message,
+                   rapidjson::Document& result) {
   result.SetObject();
   const fidl::BytePart& bytes = message.bytes();
-  uint64_t current_offset = sizeof(message.header());
   const fidl::HandlePart& handles = message.handles();
 
-  // Go in order of offset.
-  std::vector<const InterfaceMethodParameter*> params;
-  for (size_t i = 0; i < p->size(); i++) {
-    params.push_back(&p->at(i));
-  }
-  std::sort(
-      params.begin(), params.end(),
-      [](const InterfaceMethodParameter* l, const InterfaceMethodParameter* r) {
-        return l->get_offset() < r->get_offset();
-      });
-
-  // TODO: This should be exactly the same logic as we use for Struct.  Unite
-  // them.
   Marker end(bytes.end(), handles.end());
   ObjectTracker tracker(end);
   Marker marker(bytes.begin(), handles.begin(), tracker.end());
-  for (const InterfaceMethodParameter* param : params) {
-    marker.AdvanceBytesTo(bytes.begin() + param->get_offset());
-    if (!marker.is_valid()) {
-      return marker.is_valid();
-    }
-    std::unique_ptr<Type> type = param->GetType();
-    ValueGeneratingCallback value_callback;
-    marker = type->GetValueCallback(marker, param->get_size(), &tracker,
-                                    value_callback);
-    if (!marker.is_valid()) {
-      return marker.is_valid();
-    }
 
-    tracker.ObjectEnqueue(std::string(param->name()), std::move(value_callback),
-                          result, result.GetAllocator());
-
-    current_offset += param->get_size();
+  StructType type(str);
+  ValueGeneratingCallback value_callback;
+  marker = type.GetValueCallback(marker, str.size(), &tracker,
+                                 value_callback);
+  if (!marker.is_valid()) {
+    return false;
   }
+
+  tracker.MessageEnqueue(std::move(value_callback), result,
+                         result.GetAllocator());
   return tracker.RunCallbacksFrom(marker);
 }
 
@@ -101,23 +77,19 @@ bool ParamsToJSON(const std::optional<std::vector<InterfaceMethodParameter>>& p,
 
 bool RequestToJSON(const InterfaceMethod* method, const fidl::Message& message,
                    rapidjson::Document& request) {
-  if (!method->request_params().has_value()) {
+  if (method->request() == nullptr) {
     return false;
   }
-  const std::optional<std::vector<InterfaceMethodParameter>>& params =
-      method->request_params();
-  return ParamsToJSON(params, message, request);
+  return MessageToJSON(*method->request(), message, request);
 }
 
 bool ResponseToJSON(const InterfaceMethod* method, const fidl::Message& message,
                     rapidjson::Document& response) {
-  if (!method->response_params().has_value()) {
+  if (method->response() == nullptr) {
     return false;
   }
 
-  const std::optional<std::vector<InterfaceMethodParameter>>& params =
-      method->response_params();
-  return ParamsToJSON(params, message, response);
+  return MessageToJSON(*method->response(), message, response);
 }
 
 }  // namespace fidlcat

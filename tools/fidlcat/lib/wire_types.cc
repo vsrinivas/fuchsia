@@ -43,6 +43,15 @@ bool ObjectTracker::RunCallbacksFrom(Marker& marker) {
   return true;
 }
 
+void ObjectTracker::MessageEnqueue(
+    ValueGeneratingCallback&& callback, rapidjson::Value& target_object,
+    rapidjson::Document::AllocatorType& allocator) {
+  callbacks_.push_back([this, cb = std::move(callback), &target_object,
+                        &allocator](Marker& marker) {
+    cb(this, marker, target_object, allocator);
+  });
+}
+
 void ObjectTracker::ObjectEnqueue(
     const std::string& key, ValueGeneratingCallback&& callback,
     rapidjson::Value& target_object,

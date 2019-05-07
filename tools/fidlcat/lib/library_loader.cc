@@ -109,66 +109,20 @@ Table::Table(const Library& enclosing_library, const rapidjson::Value& value)
   }
 }
 
-std::unique_ptr<Type> InterfaceMethodParameter::GetType() const {
-  if (!value_.HasMember("type")) {
-    FXL_LOG(ERROR) << "Type missing";
-    return Type::get_illegal();
-  }
-  const rapidjson::Value& type = value_["type"];
-  return Type::GetType(enclosing_method_.enclosing_interface()
-                           .enclosing_library()
-                           .enclosing_loader(),
-                       type);
-}
-
 InterfaceMethod::InterfaceMethod(const Interface& interface,
                                  const rapidjson::Value& value)
-    : enclosing_interface_(interface), value_(value) {
+    : enclosing_interface_(interface),
+      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10)),
+      name_(value["name"].GetString()), value_(value) {
   if (value_["has_request"].GetBool()) {
-    request_params_ =
-        std::make_optional<std::vector<InterfaceMethodParameter>>();
-    auto request_arr = value["maybe_request"].GetArray();
-    request_params_->reserve(request_arr.Size());
-    for (auto& request : request_arr) {
-      request_params_->emplace_back(*this, request);
-    }
-  } else {
-    request_params_ = {};
+    request_ = std::make_unique<Struct>(interface.enclosing_library(), value,
+                                        "maybe_request_size", "maybe_request");
   }
 
   if (value_["has_response"].GetBool()) {
-    response_params_ =
-        std::make_optional<std::vector<InterfaceMethodParameter>>();
-    auto response_arr = value["maybe_response"].GetArray();
-    response_params_->reserve(response_arr.Size());
-    for (auto& response : response_arr) {
-      response_params_->emplace_back(*this, response);
-    }
-  } else {
-    response_params_ = {};
-  }
-}
-
-InterfaceMethod::InterfaceMethod(InterfaceMethod&& other)
-    : enclosing_interface_(other.enclosing_interface_), value_(other.value_) {
-  if (other.request_params_) {
-    request_params_ =
-        std::make_optional<std::vector<InterfaceMethodParameter>>();
-    for (auto& request : *other.request_params_) {
-      request_params_->emplace_back(*this, request.value_);
-    }
-  } else {
-    request_params_ = {};
-  }
-
-  if (other.response_params_) {
-    response_params_ =
-        std::make_optional<std::vector<InterfaceMethodParameter>>();
-    for (auto& response : *other.response_params_) {
-      response_params_->emplace_back(*this, response.value_);
-    }
-  } else {
-    response_params_ = {};
+    response_ = std::make_unique<Struct>(interface.enclosing_library(), value,
+                                         "maybe_response_size",
+                                         "maybe_response");
   }
 }
 
@@ -207,7 +161,7 @@ Library::Library(const LibraryLoader& enclosing, rapidjson::Document& document)
   for (auto& str : backing_document_["struct_declarations"].GetArray()) {
     structs_.emplace(std::piecewise_construct,
                      std::forward_as_tuple(str["name"].GetString()),
-                     std::forward_as_tuple(*this, str));
+                     std::forward_as_tuple(*this, str, "size", "members"));
   }
   for (auto& tab : backing_document_["table_declarations"].GetArray()) {
     tables_.emplace(std::piecewise_construct,
@@ -219,7 +173,7 @@ Library::Library(const LibraryLoader& enclosing, rapidjson::Document& document)
                     std::forward_as_tuple(uni["name"].GetString()),
                     std::forward_as_tuple(*this, uni));
   }
-};
+}
 
 std::unique_ptr<Type> Library::TypeFromIdentifier(
     bool is_nullable, std::string& identifier) const {

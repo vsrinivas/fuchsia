@@ -112,6 +112,10 @@ class ObjectTracker {
   // constructor) + the given offset.
   bool RunCallbacksFrom(Marker& marker);
 
+  void MessageEnqueue(
+      ValueGeneratingCallback&& callback, rapidjson::Value& target_object,
+      rapidjson::Document::AllocatorType& allocator);
+
   // Enqueues a callback to be executed when running RunCallbacksFrom.
   // |key| is the JSON key it will construct.
   // |callback| is the callback to execute to construct the value.

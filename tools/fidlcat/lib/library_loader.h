@@ -185,9 +185,11 @@ class Struct {
   friend class Library;
 
  public:
-  Struct(const Library& enclosing_library, const rapidjson::Value& value)
-      : enclosing_library_(enclosing_library), value_(value) {
-    auto member_arr = value["members"].GetArray();
+  Struct(const Library& enclosing_library, const rapidjson::Value& value,
+         std::string size_name, std::string member_name)
+      : enclosing_library_(enclosing_library), value_(value),
+        size_(std::strtoll(value_[size_name].GetString(), nullptr, 10)) {
+    auto member_arr = value[member_name].GetArray();
     members_.reserve(member_arr.Size());
     for (auto& member : member_arr) {
       members_.emplace_back(*this, member);
@@ -198,13 +200,12 @@ class Struct {
 
   const std::vector<StructMember>& members() const { return members_; }
 
-  uint32_t size() const {
-    return std::strtoll(value_["size"].GetString(), nullptr, 10);
-  }
+  uint32_t size() const { return size_; }
 
  private:
   const Library& enclosing_library_;
   const rapidjson::Value& value_;
+  uint32_t size_;
   std::vector<StructMember> members_;
 };
 
@@ -268,104 +269,61 @@ class Table {
   std::vector<TableMember> backing_members_;
 };
 
-class InterfaceMethodParameter {
-  friend class InterfaceMethod;
-
- public:
-  InterfaceMethodParameter(const InterfaceMethod& enclosing_method,
-                           const rapidjson::Value& value)
-      : enclosing_method_(enclosing_method), value_(value) {}
-
-  InterfaceMethodParameter(const InterfaceMethodParameter&) = default;
-  InterfaceMethodParameter& operator=(const InterfaceMethodParameter&) = delete;
-
-  uint64_t get_offset() const {
-    return std::strtoll(value_["offset"].GetString(), nullptr, 10);
-  }
-
-  uint64_t get_size() const {
-    return std::strtoll(value_["size"].GetString(), nullptr, 10);
-  }
-
-  const std::string_view name() const { return value_["name"].GetString(); }
-
-  std::unique_ptr<Type> GetType() const;
-
- private:
-  const InterfaceMethod& enclosing_method_;
-  const rapidjson::Value& value_;
-};
-
 class InterfaceMethod {
  public:
   friend class Interface;
   InterfaceMethod(const Interface& interface, const rapidjson::Value& value);
-  InterfaceMethod(InterfaceMethod&& other);
+  InterfaceMethod(InterfaceMethod&& other) = default;
 
-  Ordinal get_ordinal() const {
-    return std::strtoll(value_["ordinal"].GetString(), nullptr, 10);
-  }
+  const Interface& enclosing_interface() const { return enclosing_interface_; }
 
-  const std::string_view name() const { return value_["name"].GetString(); }
+  Ordinal ordinal() const { return ordinal_; }
+
+  std::string name() const { return name_; }
+
+  const Struct* request() const { return request_.get(); }
+
+  const Struct* response() const { return response_.get(); }
 
   std::string fully_qualified_name() const;
 
-  const std::optional<std::vector<InterfaceMethodParameter>>& request_params()
-      const {
-    return request_params_;
-  }
-
   const std::optional<uint64_t> request_size() const {
-    if (value_.HasMember("maybe_request_size")) {
-      return std::strtoll(value_["maybe_request_size"].GetString(), nullptr,
-                          10);
+    if (request_ == nullptr) {
+      return {};
     }
-    return {};
+    return request_->size();
   }
-
-  const std::optional<std::vector<InterfaceMethodParameter>>& response_params()
-      const {
-    return response_params_;
-  }
-
-  const Interface& enclosing_interface() const { return enclosing_interface_; }
 
   InterfaceMethod(const InterfaceMethod& other) = delete;
   InterfaceMethod& operator=(const InterfaceMethod&) = delete;
 
  private:
   const Interface& enclosing_interface_;
-  std::optional<std::vector<InterfaceMethodParameter>> request_params_;
-  std::optional<std::vector<InterfaceMethodParameter>> response_params_;
+  Ordinal ordinal_;
+  std::string name_;
+  std::unique_ptr<Struct> request_;
+  std::unique_ptr<Struct> response_;
   const rapidjson::Value& value_;
 };
 
 class Interface {
  public:
   Interface(const Library& library, const rapidjson::Value& value)
-      : value_(value), enclosing_library_(library) {
+      : value_(value), enclosing_library_(library),
+        name_(value_["name"].GetString()) {
     for (auto& method : value["methods"].GetArray()) {
       interface_methods_.emplace_back(*this, method);
     }
   }
-
-  Interface(Interface&& other)
-      : value_(other.value_), enclosing_library_(other.enclosing_library_) {
-    for (auto& method : other.interface_methods_) {
-      interface_methods_.emplace_back(*this, method.value_);
-    }
-  }
+  Interface(Interface&& other) = default;
 
   Interface(const Interface& other) = delete;
   Interface& operator=(const Interface&) = delete;
 
-  const std::string_view name() const { return value_["name"].GetString(); }
-
   void AddMethodsToIndex(std::map<Ordinal, const InterfaceMethod*>& index) {
     for (size_t i = 0; i < interface_methods_.size(); i++) {
       const InterfaceMethod* method = &interface_methods_[i];
-      Ordinal ordinal = method->get_ordinal();
-      index[ordinal] = method;
+      index[method->ordinal()] = method;
     }
   }
 
@@ -375,6 +333,8 @@ class Interface {
 
   const Library& enclosing_library() const { return enclosing_library_; }
 
+  std::string_view name() const { return name_; }
+
   const std::vector<InterfaceMethod>& methods() const {
     return interface_methods_;
   }
@@ -382,6 +342,7 @@ class Interface {
  private:
   const rapidjson::Value& value_;
   const Library& enclosing_library_;
+  std::string name_;
   std::vector<InterfaceMethod> interface_methods_;
 };
 
