@@ -23,6 +23,7 @@ test_package("identity_bin_unittests") {
   deps = [
     "google_auth_provider:google_auth_provider_unittests",
     "account_handler:bin",
+    "account_manager:bin",
   ]
 
   tests = [
@@ -32,6 +33,10 @@ test_package("identity_bin_unittests") {
     },
     {
       name = "account_handler_bin_test"
+      environments = basic_envs
+    },
+    {
+      name = "account_manager_bin_test"
       environments = basic_envs
     },
   ]

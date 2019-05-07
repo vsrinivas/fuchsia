@@ -9,7 +9,6 @@ group("auth") {
   testonly = true
 
   public_deps = [
-    ":account_manager",
     ":auth_bin_tests",
     ":token_manager_factory",
   ]
@@ -30,35 +29,15 @@ package("token_manager_factory") {
   ]
 }
 
-package("account_manager") {
-  deps = [
-    "//garnet/bin/auth/account_manager",
-  ]
-
-  binary = "account_manager"
-
-  meta = [
-    {
-      path = rebase_path("meta/account_manager.cmx")
-      dest = "account_manager.cmx"
-    },
-  ]
-}
-
 package("auth_bin_tests") {
   testonly = true
 
   deps = [
-    "account_manager:account_manager",
     "testing/dev_auth_provider:dev_auth_provider",
     "testing/dev_auth_provider_iotid:dev_auth_provider_iotid",
   ]
 
   tests = [
-    {
-      name = "account_manager_bin_test"
-      environments = basic_envs
-    },
     {
       name = "dev_auth_provider_bin_test"
       environments = basic_envs
