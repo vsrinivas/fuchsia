@@ -18,8 +18,6 @@ struct StagingState {
     // The maximum value the counter can have before overflowing.
     uint64_t max_fixed_value;
     uint64_t max_programmable_value;
-
-    bool have_timebase0_user;
 };
 
 }  // namespace perfmon

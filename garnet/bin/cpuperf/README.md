@@ -129,7 +129,7 @@ that may be collected, with the qualification that at most a total of
 There are two basic modes of operation: sampling and tally.
 
 They are distinguished by the sample rate: Tally mode has a sample rate
-of zero.
+of zero with no timebase event present to drive sampling.
 
 ### Sampling Mode
 
@@ -148,12 +148,11 @@ Some events, like all the miscellaneous events, can't be collected this way.
 They are not hooked up to generate a PMI. Instead, a separate counter
 called the "timebase" is used: when that counter triggers a PMI then
 data for the misc counter is collected. For simplicity there can be only
-one timebase, and for simplicity the timebase counter is always the
-first specified event. See below for details on how to specify a timebase.
+one timebase. See below for details on how to specify a timebase.
 
 ### Tally Mode
 
-In tally mode data is collected cumulatively across the entire traces
+In tally mode data is collected cumulatively across the entire trace
 session, and the only data written to the trace buffer are the final
 counts. This mode is useful for providing a macroscopic view of performance
 in realtime, as the data can be easily and quickly reported after each
@@ -208,7 +207,8 @@ The format of the specification file has the following schema:
                 "os",
                 "user",
                 "pc",
-                "timebase0"
+                "last_branch"
+                "timebase",
               ]
             }
           },
@@ -244,46 +244,58 @@ Some values have defaults.
  - `model_name`: obtained from `perfmon::GetDefaultModelName()`
  - `output_path_prefix`: "/tmp/cpuperf"
  - `session_result_spec_path`: "/tmp/cpuperf.cpsession"
+ 
+### Event flags
+
+Flags can be provided for each event to control how data for that event
+is collected.
+
+ - `os`: Data is collected while the CPU is running kernel code.
+ - `user`: Data is collected while the CPU is running userspace code.
+ - `pc`: When data is sampled, record the PC value.
+ - `last_branch`: When data is sampled, record the set of preceding branches
+   leading up to the PMI. This is currently only supported on X64.
+ - `timebase`: Mark this event as the "timebase" event. Data for other events
+   that have a rate of zero is collected at the same time data for this event
+   is collected. Timebase events must have a non-zero rate.
 
 ### Example Specification
 
 This spec collects data every 10,000 retired instructions.
 
 ```json
-// Basic cpu and memory stats, reported in "tally mode".
+// Basic cpu and memory stats.
 {
   "config_name": "printer-test",
   "events": [
     {
       "group_name": "fixed",
       "event_name": "instructions_retired",
-	  "rate": 10000,
-      "flags": [ "os", "user" ]
+      "rate": 10000,
+      "flags": [ "os", "user", "timebase" ]
     },
     {
       "group_name": "fixed",
       "event_name": "unhalted_reference_cycles",
-      "flags": [ "os", "user", "timebase0" ]
+      "flags": [ "os", "user" ]
     },
     {
       "group_name": "arch",
       "event_name": "llc_references",
-      "flags": [ "os", "user", "timebase0" ]
+      "flags": [ "os", "user" ]
     },
     {
       "group_name": "arch",
       "event_name": "llc_misses",
-      "flags": [ "os", "user", "timebase0" ]
+      "flags": [ "os", "user" ]
     },
     {
       "group_name": "misc",
       "event_name": "memory_bytes_read",
-      "flags": [ "timebase0" ]
     },
     {
       "group_name": "misc",
       "event_name": "memory_bytes_written",
-      "flags": [ "timebase0" ]
     }
   ],
   "buffer_size_in_mb": 16,

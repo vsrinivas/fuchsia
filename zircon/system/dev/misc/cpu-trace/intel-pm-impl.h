@@ -54,8 +54,6 @@ struct StagingState {
     bool have_fixed[IPM_MAX_FIXED_COUNTERS];
     // For catching duplicates of the misc events, 1 bit per event.
     uint64_t have_misc[(IPM_NUM_MISC_EVENTS + 63) / 64];
-
-    bool have_timebase0_user;
 };
 
 }  // namespace perfmon

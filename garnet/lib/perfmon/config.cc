@@ -86,7 +86,7 @@ static void ToIoctlEvent(const Config::EventConfig& event, size_t index,
     out_config->events[index].flags |= PERFMON_CONFIG_FLAG_PC;
   }
   if (event.flags & Config::kFlagTimebase) {
-    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_TIMEBASE0;
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_TIMEBASE;
   }
   if (event.flags & Config::kFlagLastBranch) {
     out_config->events[index].flags |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
@@ -95,41 +95,17 @@ static void ToIoctlEvent(const Config::EventConfig& event, size_t index,
 
 namespace internal {
 
-Config::Status PerfmonToIoctlConfig(const Config& config,
-                                    perfmon_ioctl_config_t* out_config) {
+void PerfmonToIoctlConfig(const Config& config,
+                          perfmon_ioctl_config_t* out_config) {
   *out_config = {};
   FXL_DCHECK(config.GetEventCount() <= kMaxNumEvents);
 
-  // There can be only one timebase event.
-  bool have_timebase_event = false;
   size_t i = 0;
-  Config::Status status = Config::Status::OK;
-
-  // The ioctl takes the timebase in event #0, do that one first.
-  // The timebase event is the event with kFlagTimebase and a non-zero rate.
-  config.IterateOverEvents([&](const Config::EventConfig& event) {
-    if ((event.flags & Config::kFlagTimebase) && event.rate != 0) {
-      if (have_timebase_event) {
-        status = Config::Status::INVALID_ARGS;
-        return;
-      }
-      have_timebase_event = true;
-      ToIoctlEvent(event, i, out_config);
-      ++i;
-    }
-  });
-  if (status != Config::Status::OK) {
-    return status;
-  }
 
   config.IterateOverEvents([&](const Config::EventConfig& event) {
-    if (!((event.flags & Config::kFlagTimebase) && event.rate != 0)) {
-      ToIoctlEvent(event, i, out_config);
-      ++i;
-    }
+    ToIoctlEvent(event, i, out_config);
+    ++i;
   });
-
-  return Config::Status::OK;
 }
 
 }  // namespace internal

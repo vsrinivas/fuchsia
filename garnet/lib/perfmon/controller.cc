@@ -130,12 +130,7 @@ bool Controller::Create(uint32_t buffer_size_in_pages, const Config& config,
       GetBufferSizeInPages(mode, buffer_size_in_pages);
 
   perfmon_ioctl_config_t ioctl_config;
-  Config::Status status = internal::PerfmonToIoctlConfig(config, &ioctl_config);
-  if (status != Config::Status::OK) {
-    FXL_LOG(ERROR) << "Error processing configuration: "
-                   << Config::StatusToString(status);
-    return false;
-  }
+  internal::PerfmonToIoctlConfig(config, &ioctl_config);
 
   if (!Alloc(raw_fd, num_traces, actual_buffer_size_in_pages)) {
     return false;

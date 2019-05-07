@@ -114,7 +114,9 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
                                             PmuConfig* ocfg) {
     const unsigned ii = input_index;
     const EventId id = icfg->events[ii].event;
-    bool uses_timebase0 = !!(icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0);
+    EventRate rate = icfg->events[ii].rate;
+    uint32_t flags = icfg->events[ii].flags;
+    bool uses_timebase = ocfg->timebase_event != kEventIdNone && rate == 0;
 
     // There's only one fixed counter on ARM64, the cycle counter.
     if (id != FIXED_CYCLE_COUNTER_ID) {
@@ -127,7 +129,8 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
         return ZX_ERR_INVALID_ARGS;
     }
     ocfg->fixed_events[ss->num_fixed] = id;
-    if ((uses_timebase0 && input_index != 0) || icfg->events[ii].rate == 0) {
+
+    if (rate == 0) {
         ocfg->fixed_initial_value[ss->num_fixed] = 0;
     } else {
 #if 0 // TODO(ZX-3302): Disable until overflow interrupts are working.
@@ -135,13 +138,28 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
         // |icfg->rate[ii]| here.
         ZX_DEBUG_ASSERT(ss->max_fixed_value == UINT64_MAX);
         ocfg->fixed_initial_value[ss->num_fixed] =
-            ss->max_fixed_value - icfg->rate[ii] + 1;
+            ss->max_fixed_value - rate + 1;
 #else
         zxlogf(ERROR, "%s: data collection rates not supported yet\n", __func__);
         return ZX_ERR_NOT_SUPPORTED;
 #endif
     }
-    ocfg->fixed_flags[ss->num_fixed] = icfg->events[ii].flags;
+
+    // TODO(ZX-3302): Disable until overflow interrupts are working.
+    if (uses_timebase) {
+        zxlogf(ERROR, "%s: data collection rates not supported yet\n", __func__);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    uint32_t pmu_flags = 0;
+    if (flags & PERFMON_CONFIG_FLAG_OS) {
+        pmu_flags |= kPmuConfigFlagOs;
+    }
+    if (flags & PERFMON_CONFIG_FLAG_USER) {
+        pmu_flags |= kPmuConfigFlagUser;
+    }
+    // TODO(ZX-3302): PC flag.
+    ocfg->fixed_flags[ss->num_fixed] = pmu_flags;
 
     ++ss->num_fixed;
     return ZX_OK;
@@ -155,7 +173,9 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     EventId id = icfg->events[ii].event;
     unsigned group = GetEventIdGroup(id);
     unsigned event = GetEventIdEvent(id);
-    bool uses_timebase0 = !!(icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0);
+    EventRate rate = icfg->events[ii].rate;
+    uint32_t flags = icfg->events[ii].flags;
+    bool uses_timebase = ocfg->timebase_event != kEventIdNone && rate == 0;
 
     // TODO(dje): Verify no duplicates.
     if (ss->num_programmable == ss->max_num_programmable) {
@@ -164,7 +184,8 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
         return ZX_ERR_INVALID_ARGS;
     }
     ocfg->programmable_events[ss->num_programmable] = id;
-    if ((uses_timebase0 && input_index != 0) || icfg->events[ii].rate == 0) {
+
+    if (rate == 0) {
         ocfg->programmable_initial_value[ss->num_programmable] = 0;
     } else {
 #if 0 // TODO(ZX-3302): Disable until overflow interrupts are working.
@@ -181,6 +202,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
         return ZX_ERR_NOT_SUPPORTED;
 #endif
     }
+
     const EventDetails* details = NULL;
     switch (group) {
     case kGroupArch:
@@ -201,8 +223,24 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     }
     ZX_DEBUG_ASSERT((details->flags & (ARM64_PMU_REG_FLAG_ARCH |
                                        ARM64_PMU_REG_FLAG_MICROARCH)) != 0);
+
     ocfg->programmable_hw_events[ss->num_programmable] = details->event;
-    ocfg->programmable_flags[ss->num_programmable] = icfg->events[ii].flags;
+
+    // TODO(ZX-3302): Disable until overflow interrupts are working.
+    if (uses_timebase) {
+        zxlogf(ERROR, "%s: data collection rates not supported yet\n", __func__);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    uint32_t pmu_flags = 0;
+    if (flags & PERFMON_CONFIG_FLAG_OS) {
+        pmu_flags |= kPmuConfigFlagOs;
+    }
+    if (flags & PERFMON_CONFIG_FLAG_USER) {
+        pmu_flags |= kPmuConfigFlagUser;
+    }
+    // TODO(ZX-3302): PC flag.
+    ocfg->programmable_flags[ss->num_programmable] = pmu_flags;
 
     ++ss->num_programmable;
     return ZX_OK;

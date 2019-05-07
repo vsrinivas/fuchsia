@@ -64,8 +64,8 @@ const char kRootSchema[] = R"({
                 "os",
                 "user",
                 "pc",
-                "timebase0",
-                "last_branch"
+                "last_branch",
+                "timebase"
               ]
             }
           },
@@ -118,7 +118,7 @@ bool DecodeEvents(T events,
 
   for (const auto& event : events) {
     perfmon::EventId id = perfmon::kEventIdNone;
-    perfmon_rate_t rate = 0;
+    perfmon::EventRate rate = 0;
     uint32_t flags = 0;
     if (!event.HasMember(kGroupNameKey) || !event.HasMember(kEventNameKey)) {
       FXL_LOG(ERROR) << "Event is missing group_name,event_name fields";
@@ -150,8 +150,7 @@ bool DecodeEvents(T events,
           flags |= perfmon::Config::kFlagUser;
         } else if (flag_name == "pc") {
           flags |= perfmon::Config::kFlagPc;
-        } else if (flag_name == "timebase" ||
-                   flag_name == "timebase0") {
+        } else if (flag_name == "timebase") {
           flags |= perfmon::Config::kFlagTimebase;
         } else if (flag_name == "last_branch") {
           flags |= perfmon::Config::kFlagLastBranch;

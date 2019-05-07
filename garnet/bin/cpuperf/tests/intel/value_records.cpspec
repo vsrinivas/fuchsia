@@ -9,27 +9,23 @@
       "group_name": "fixed",
       "event_name": "instructions_retired",
       "rate": 10000,
-      "flags": [ "os", "user", "timebase0" ]
+      "flags": [ "os", "user", "timebase" ]
     },
     {
       "group_name": "misc",
-      "event_name": "edram_temperature",
-      "flags": [ "timebase0" ]
+      "event_name": "edram_temperature"
     },
     {
       "group_name": "misc",
-      "event_name": "package_temperature",
-      "flags": [ "timebase0" ]
+      "event_name": "package_temperature"
     },
     {
       "group_name": "misc",
-      "event_name": "ia_temperature",
-      "flags": [ "timebase0" ]
+      "event_name": "ia_temperature"
     },
     {
       "group_name": "misc",
-      "event_name": "gt_temperature",
-      "flags": [ "timebase0" ]
+      "event_name": "gt_temperature"
     }
   ],
   "buffer_size_in_mb": 16,

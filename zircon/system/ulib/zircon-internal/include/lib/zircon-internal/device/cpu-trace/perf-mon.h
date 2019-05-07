@@ -314,9 +314,6 @@ typedef struct {
 #define PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH (1u << 0)
 } perfmon_ioctl_properties_t;
 
-// The type of the |rate| field of perfmon_ioctl_config_t.
-typedef uint32_t perfmon_rate_t;
-
 // Configuration for collecting data for one event.
 typedef struct {
     // Event to collect data for.
@@ -325,31 +322,38 @@ typedef struct {
     perfmon::EventId event;
 
     // Sampling rate.
-    // If zero then do simple counting (collect a tally of the count and
-    // report at the end). Otherwise (non-zero) then when the event gets
-    // this many hits data is collected (e.g., pc, time).
-    // The value can be non-zero only for counting based events.
-    // This value is ignored if PERFMON_CONFIG_FLAG_TIMEBASE0 is set.
-    // Setting PERFMON_CONFIG_FLAG_TIMEBASE0 in |flags[0]| is redundant but ok.
-    perfmon_rate_t rate;
+    // - If rate is non-zero then when the event gets this many hits data is
+    //   collected (e.g., pc, time).
+    //   The rate can be non-zero for counting based events only.
+    // - If rate is zero then:
+    //     If there is a timebase event then data for this event is collected
+    //     when data for the timebase event is collected.
+    //     Otherwise data for the event is collected once, when tracing stops.
+    perfmon::EventRate rate;
 
     // Flags for the event.
     // TODO(dje): hypervisor, host/guest os/user
     uint32_t flags;
+
 // Valid bits in |flags|.
 #define PERFMON_CONFIG_FLAG_MASK      0x1f
+
 // Collect os data.
 #define PERFMON_CONFIG_FLAG_OS        (1u << 0)
+
 // Collect userspace data.
 #define PERFMON_CONFIG_FLAG_USER      (1u << 1)
+
 // Collect aspace+pc values.
 #define PERFMON_CONFIG_FLAG_PC        (1u << 2)
-// If set then use |events[0]| as the timebase: data for this event is
-// collected when data for |events[0]| is collected, and the record emitted
-// for this event is either a PERFMON_RECORD_COUNT or PERFMON_RECORD_VALUE
-// record (depending on what the event is).
-// It is an error to have this bit set for an event and have rate[0] be zero.
-#define PERFMON_CONFIG_FLAG_TIMEBASE0 (1u << 3)
+
+// If set for an event then the event is used as the "timebase": data
+// for events with a zero rate is collected when data for the timebase
+// event is collected.
+// It is an error to have this set and have the event's rate be zero.
+// At most one event may be the timebase event.
+#define PERFMON_CONFIG_FLAG_TIMEBASE (1u << 3)
+
 // Collect the available set of last branches.
 // Branch data is emitted as PERFMON_RECORD_LAST_BRANCH records.
 // This is only available when the underlying system supports it.
@@ -362,7 +366,7 @@ typedef struct {
 // A value of |kEventIdNone| in |events[N].event| marks the end.
 typedef struct {
     // |events[0]| is special: It is used as the timebase when any other
-    // event has PERFMON_CONFIG_FLAG_TIMEBASE0 set.
+    // event has PERFMON_CONFIG_FLAG_TIMEBASE set.
     perfmon_ioctl_event_config_t events[::perfmon::kMaxNumEvents];
 } perfmon_ioctl_config_t;
 

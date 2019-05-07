@@ -28,18 +28,13 @@ class Config {
     EventId event;
 
     // Sampling rate.
-    // This field is interpreted differently depending on whether
-    // PERFMON_CONFIG_FLAG_TIMEBASE0 is set in |events[0].flags|.
-    // If it is not set then,
-    // - If rate is zero then do simple counting (collect a tally of the
-    //   count as a single value).
     // - If rate is non-zero then when the event gets this many hits data is
     //   collected (e.g., pc, time).
     //   The rate can be non-zero for counting based events only.
-    // If PERFMON_CONFIG_FLAG_TIMEBASE0 is set in |events[0].flags| then,
-    // - |events[0].rate| specifies the collection rate for all events and
-    //   must be non-zero.
-    // - |events[N>0].rate| must be zero.
+    // - If rate is zero then:
+    //     If there is a timebase event then data for this event is collected
+    //     when data for the timebase event is collected.
+    //     Otherwise data for the event is collected once, when tracing stops.
     EventRate rate;
 
     // Flags for each event in |events|.
@@ -79,7 +74,8 @@ class Config {
   static constexpr uint32_t kFlagLastBranch = 0x10;
 
   // These flags may only be specified with a non-zero rate.
-  static constexpr uint32_t kNonZeroRateOnlyFlags = kFlagPc + kFlagLastBranch;
+  static constexpr uint32_t kNonZeroRateOnlyFlags =
+    kFlagPc + kFlagLastBranch + kFlagTimebase;
 
   enum class Status {
     OK,

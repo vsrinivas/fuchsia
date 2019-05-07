@@ -714,7 +714,7 @@ static zx_status_t x86_perfmon_verify_fixed_config(
                        " but not supported\n", i);
                 return ZX_ERR_NOT_SUPPORTED;
             }
-            if ((config->fixed_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
+            if ((config->fixed_flags[i] & perfmon::kPmuConfigFlagUsesTimebase) &&
                     config->timebase_event == perfmon::kEventIdNone) {
                 TRACEF("Timebase requested for |fixed_flags[%u]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
@@ -782,7 +782,7 @@ static zx_status_t x86_perfmon_verify_programmable_config(
                        " but not supported\n", i);
                 return ZX_ERR_NOT_SUPPORTED;
             }
-            if ((config->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
+            if ((config->programmable_flags[i] & perfmon::kPmuConfigFlagUsesTimebase) &&
                     config->timebase_event == perfmon::kEventIdNone) {
                 TRACEF("Timebase requested for |programmable_flags[%u]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
@@ -829,7 +829,7 @@ static zx_status_t x86_perfmon_verify_misc_config(
                        config->misc_flags[i], i);
                 return ZX_ERR_INVALID_ARGS;
             }
-            if ((config->misc_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
+            if ((config->misc_flags[i] & perfmon::kPmuConfigFlagUsesTimebase) &&
                     config->timebase_event == perfmon::kEventIdNone) {
                 TRACEF("Timebase requested for |misc_flags[%zu]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
@@ -859,7 +859,7 @@ static zx_status_t x86_perfmon_verify_timebase_config(
     for (unsigned i = 0; i < num_fixed; ++i) {
         if (config->fixed_events[i] == config->timebase_event) {
             // The PMI code is simpler if this is the case.
-            config->fixed_flags[i] &= ~perfmon::kPmuConfigFlagTimebase0;
+            config->fixed_flags[i] &= ~perfmon::kPmuConfigFlagUsesTimebase;
             return ZX_OK;
         }
     }
@@ -867,7 +867,7 @@ static zx_status_t x86_perfmon_verify_timebase_config(
     for (unsigned i = 0; i < num_programmable; ++i) {
         if (config->programmable_events[i] == config->timebase_event) {
             // The PMI code is simpler if this is the case.
-            config->programmable_flags[i] &= ~perfmon::kPmuConfigFlagTimebase0;
+            config->programmable_flags[i] &= ~perfmon::kPmuConfigFlagUsesTimebase;
             return ZX_OK;
         }
     }
@@ -1844,7 +1844,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             // TODO(dje): The counter could still overflow. Later.
             if (id == state->timebase_event) {
                 saw_timebase = true;
-            } else if (state->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0) {
+            } else if (state->programmable_flags[i] & perfmon::kPmuConfigFlagUsesTimebase) {
                 continue;
             }
             if (state->programmable_flags[i] & perfmon::kPmuConfigFlagPc) {
@@ -1871,7 +1871,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             // TODO(dje): The counter could still overflow. Later.
             if (id == state->timebase_event) {
                 saw_timebase = true;
-            } else if (state->fixed_flags[i] & perfmon::kPmuConfigFlagTimebase0) {
+            } else if (state->fixed_flags[i] & perfmon::kPmuConfigFlagUsesTimebase) {
                 continue;
             }
             if (state->fixed_flags[i] & perfmon::kPmuConfigFlagPc) {
@@ -1892,7 +1892,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
         // Now handle events that have kPmuConfigFlagTimebase0 set.
         if (saw_timebase) {
             for (unsigned i = 0; i < state->num_used_programmable; ++i) {
-                if (!(state->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0))
+                if (!(state->programmable_flags[i] & perfmon::kPmuConfigFlagUsesTimebase))
                     continue;
                 PmuEventId id = state->programmable_events[i];
                 uint64_t count = read_msr(IA32_PMC_FIRST + i);
@@ -1904,7 +1904,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                 write_msr(IA32_PMC_FIRST + i, state->programmable_initial_value[i]);
             }
             for (unsigned i = 0; i < state->num_used_fixed; ++i) {
-                if (!(state->fixed_flags[i] & perfmon::kPmuConfigFlagTimebase0))
+                if (!(state->fixed_flags[i] & perfmon::kPmuConfigFlagUsesTimebase))
                     continue;
                 PmuEventId id = state->fixed_events[i];
                 unsigned hw_num = state->fixed_hw_map[i];
@@ -1927,7 +1927,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             // ameliorates the problem somewhat.
             if (cpu == 0) {
                 for (unsigned i = 0; i < state->num_used_misc; ++i) {
-                    if (!(state->misc_flags[i] & perfmon::kPmuConfigFlagTimebase0)) {
+                    if (!(state->misc_flags[i] & perfmon::kPmuConfigFlagUsesTimebase)) {
                         // While a timebase is required for all current misc
                         // counters, we don't assume this here.
                         continue;

@@ -275,6 +275,74 @@ zx_status_t PerfmonDevice::PmuGetBufferHandle(const void* cmd, size_t cmdlen,
     return ZX_OK;
 }
 
+// Do an architecture-independent verification pass over |icfg|,
+// and see if there's a timebase event.
+static zx_status_t VerifyAndCheckTimebase(const perfmon_ioctl_config_t* icfg,
+                                          PmuConfig* ocfg) {
+    unsigned ii;  // ii: input index
+    for (ii = 0; ii < countof(icfg->events); ++ii) {
+        EventId id = icfg->events[ii].event;
+        if (id == kEventIdNone) {
+            break;
+        }
+        EventRate rate = icfg->events[ii].rate;
+        uint32_t flags = icfg->events[ii].flags;
+
+        if (flags & ~PERFMON_CONFIG_FLAG_MASK) {
+            zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        if (flags & PERFMON_CONFIG_FLAG_TIMEBASE) {
+            if (ocfg->timebase_event != kEventIdNone) {
+                zxlogf(ERROR, "%s: multiple timebases [%u]\n", __func__, ii);
+                return ZX_ERR_INVALID_ARGS;
+            }
+            ocfg->timebase_event = icfg->events[ii].event;
+        }
+
+        if (flags & PERFMON_CONFIG_FLAG_PC) {
+            if (rate == 0) {
+                zxlogf(ERROR, "%s: PC flag requires own timebase, event [%u]\n",
+                       __func__, ii);
+                return ZX_ERR_INVALID_ARGS;
+            }
+        }
+
+        if (flags & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
+            // Further verification is architecture specific.
+            if (icfg->events[ii].rate == 0) {
+                zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]\n",
+                       __func__, ii);
+                return ZX_ERR_INVALID_ARGS;
+            }
+        }
+    }
+
+    if (ii == 0) {
+        zxlogf(ERROR, "%s: No events provided\n", __func__);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Ensure there are no holes.
+    for (; ii < countof(icfg->events); ++ii) {
+        if (icfg->events[ii].event != kEventIdNone) {
+            zxlogf(ERROR, "%s: Hole at event [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (icfg->events[ii].rate != 0) {
+            zxlogf(ERROR, "%s: Hole at rate [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (icfg->events[ii].flags != 0) {
+            zxlogf(ERROR, "%s: Hole at flags [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
+    }
+
+    return ZX_OK;
+}
+
 zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
 
@@ -307,20 +375,19 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     StagingState* ss = &staging_state;
     InitializeStagingState(ss);
 
-    zx_status_t status;
+    zx_status_t status = VerifyAndCheckTimebase(icfg, ocfg);
+    if (status != ZX_OK) {
+        return ZX_OK;
+    }
+
     unsigned ii;  // ii: input index
     for (ii = 0; ii < fbl::count_of(icfg->events); ++ii) {
         EventId id = icfg->events[ii].event;
         zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
-        if (id == 0) {
+        if (id == kEventIdNone) {
             break;
         }
         unsigned group = GetEventIdGroup(id);
-
-        if (icfg->events[ii].flags & ~PERFMON_CONFIG_FLAG_MASK) {
-            zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
 
         switch (group) {
         case kGroupFixed:
@@ -347,34 +414,6 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
                    __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
-
-        if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0) {
-            ss->have_timebase0_user = true;
-        }
-    }
-    if (ii == 0) {
-        zxlogf(ERROR, "%s: No events provided\n", __func__);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // Ensure there are no holes.
-    for (; ii < fbl::count_of(icfg->events); ++ii) {
-        if (icfg->events[ii].event != kEventIdNone) {
-            zxlogf(ERROR, "%s: Hole at event [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (icfg->events[ii].rate != 0) {
-            zxlogf(ERROR, "%s: Hole at rate [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (icfg->events[ii].flags != 0) {
-            zxlogf(ERROR, "%s: Hole at flags [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-    }
-
-    if (ss->have_timebase0_user) {
-        ocfg->timebase_event = icfg->events[0].event;
     }
 
     // TODO(dje): Basic sanity check that some data will be collected.

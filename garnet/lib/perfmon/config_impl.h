@@ -11,8 +11,8 @@ namespace perfmon {
 namespace internal {
 
 // Convert the config to what the ioctl requires.
-Config::Status PerfmonToIoctlConfig(const Config& config,
-                                    perfmon_ioctl_config_t* out_config);
+void PerfmonToIoctlConfig(const Config& config,
+                          perfmon_ioctl_config_t* out_config);
 
 }  // namespace internal
 }  // namespace perfmon

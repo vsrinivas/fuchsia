@@ -118,7 +118,7 @@ TEST_F(SessionSpecTest, DecodeEvents) {
       "group_name": "misc",
       "event_name": "test-event",
       "rate": 42,
-      "flags": [ "os", "user", "pc", "timebase0" ]
+      "flags": [ "os", "user", "pc", "timebase" ]
     }
   ]
 })";

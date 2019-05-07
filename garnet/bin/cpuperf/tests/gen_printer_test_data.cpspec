@@ -14,13 +14,12 @@
       "group_name": "fixed",
       "event_name": "instructions_retired",
       "rate": 10000,
-      "flags": [ "os", "user", "pc", "last_branch" ]
+      "flags": [ "os", "user", "pc", "last_branch", "timebase" ]
     },
     {
-      // This one is used to get PERFMON_RECORD_VALUE records.
+      // This one is used to get |kRecordTypeValue| records.
       "group_name": "misc",
-      "event_name": "package_temperature",
-      "flags": [ "timebase0" ]
+      "event_name": "package_temperature"
     }
   ],
   "buffer_size_in_mb": 16,
