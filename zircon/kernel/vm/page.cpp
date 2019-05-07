@@ -53,8 +53,11 @@ void vm_page::set_state(vm_page_state new_state) {
     const vm_page_state old_state = vm_page_state(state_priv);
     state_priv = (new_state & kMask);
 
+    // By only modifying the counters for the current CPU with preemption disabled, we can ensure
+    // the values are not modified concurrently. See comment at the definition of |vm_page_counts|.
     Percpus::WithCurrentPreemptDisable(
         [&old_state, &new_state](percpu* p) {
+            // Be sure to not block, else we lose the protection provided by disabling preemption.
             p->vm_page_counts.by_state[old_state] -= 1;
             p->vm_page_counts.by_state[new_state] += 1;
         });
@@ -63,6 +66,9 @@ void vm_page::set_state(vm_page_state new_state) {
 uint64_t vm_page::get_count(vm_page_state state) {
     int64_t result = 0;
     Percpus::ForEachPreemptDisable([&state, &result](percpu* p) {
+        // Because |get_count| could be called concurrently with |set_state| we're not guaranteed to
+        // get a consistent snapshot of the page counts. It's OK if the values are a little off. See
+        // comment at the definition of |vm_page_state|.
         result += p->vm_page_counts.by_state[state];
     });
     return result >= 0 ? result : 0;

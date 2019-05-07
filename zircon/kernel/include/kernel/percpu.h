@@ -116,9 +116,16 @@ struct percpu {
     thread_t* dpc_thread;
 
     // Page state counts are percpu because they change frequently and we don't want to pay for
-    // synchronization.
+    // synchronization, including atomic load/add/subtract.
     //
-    // When accessing, be sure to do so with preemption disabled. See |WithCurrent| and |ForEach|.
+    // While it's OK for an observer to temporarily see incorrect values, the counts need to
+    // eventually quiesce. It's important that we don't "drop" changes and that the values don't
+    // drift over time.
+    //
+    // When modifying, use |WithCurrentPreemptDisable|.
+    //
+    // When reading, use |ForEachPreemptDisable|. Although it is not possible to guarantee a
+    // consistent snapshot of these counters, it should be good enough for diagnostic uses.
     vm_page_counts_t vm_page_counts;
 
     // Initialize this percpu object, |cpu_num| will be used to initialize
