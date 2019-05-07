@@ -14,23 +14,26 @@ import (
 
 	"fuchsia.googlesource.com/system_ota_tests/artifacts"
 	"fuchsia.googlesource.com/system_ota_tests/device"
+	"fuchsia.googlesource.com/system_ota_tests/packages"
 	"fuchsia.googlesource.com/system_ota_tests/util"
 )
 
 type Config struct {
-	OutputDir      string
-	FuchsiaDir     string
-	SshKeyFile     string
-	netaddrPath    string
-	localHostname  string
-	DeviceName     string
-	deviceHostname string
-	LkgbPath       string
-	ArtifactsPath  string
-	BuilderName    string
-	AmberFilesDir  string
-	buildID        string
-	archive        *artifacts.Archive
+	OutputDir            string
+	FuchsiaDir           string
+	SshKeyFile           string
+	netaddrPath          string
+	localHostname        string
+	DeviceName           string
+	deviceHostname       string
+	LkgbPath             string
+	ArtifactsPath        string
+	PackagesPath         string
+	downgradeBuilderName string
+	downgradeBuildID     string
+	upgradeBuildID       string
+	upgradeAmberFilesDir string
+	archive              *artifacts.Archive
 }
 
 func NewConfig(fs *flag.FlagSet) (*Config, error) {
@@ -52,17 +55,27 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.deviceHostname, "device-hostname", os.Getenv("FUCHSIA_IPV4_ADDR"), "device hostname or IPv4/IPv6 address")
 	fs.StringVar(&c.LkgbPath, "lkgb", filepath.Join(testDataPath, "lkgb"), "path to lkgb, default is $FUCHSIA_DIR/prebuilt/tools/lkgb/lkgb")
 	fs.StringVar(&c.ArtifactsPath, "artifacts", filepath.Join(testDataPath, "artifacts"), "path to the artifacts binary, default is $FUCHSIA_DIR/prebuilt/tools/artifacts/artifacts")
-	fs.StringVar(&c.BuilderName, "builder-name", "", "download the amber repository from the latest build of this builder")
-	fs.StringVar(&c.buildID, "build-id", "", "download the amber repository from this build id")
-	fs.StringVar(&c.AmberFilesDir, "amber-files", os.Getenv("AMBER_FILES"), "Path to the current build amber-files repository")
+	fs.StringVar(&c.downgradeBuilderName, "downgrade-builder-name", "", "downgrade to the latest version of this builder")
+	fs.StringVar(&c.downgradeBuildID, "downgrade-build-id", "", "downgrade to this specific build id")
+	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
+	fs.StringVar(&c.upgradeAmberFilesDir, "upgrade-amber-files", "", "Path to the current build amber-files repository")
 
 	return c, nil
 }
 
 func (c *Config) Validate() error {
-	if c.BuilderName == "" && c.buildID == "" {
-		return fmt.Errorf("-builder-name or -build-id must be specified")
+	if c.downgradeBuilderName == "" && c.downgradeBuildID == "" {
+		return fmt.Errorf("-downgrade-builder-name or -downgrade-build-id must be specified")
+	} else if c.downgradeBuilderName != "" && c.downgradeBuildID != "" {
+		return fmt.Errorf("-downgrade-builder-name and -downgrade-build-id are incompatible")
 	}
+
+	if c.upgradeBuildID == "" && c.upgradeAmberFilesDir == "" {
+		return fmt.Errorf("-upgrade-builder-id or -upgrade-amber-files must be specified")
+	} else if c.upgradeBuildID != "" && c.upgradeAmberFilesDir != "" {
+		return fmt.Errorf("-upgrade-builder-id and -upgrade-amber-files are incompatible")
+	}
+
 	return nil
 }
 
@@ -91,17 +104,35 @@ func (c *Config) BuildArchive() *artifacts.Archive {
 	return c.archive
 }
 
-func (c *Config) BuildID() (string, error) {
-	if c.buildID == "" {
+func (c *Config) GetDowngradeRepository() (*packages.Repository, error) {
+	if c.downgradeBuildID == "" {
 		a := c.BuildArchive()
-		id, err := a.LookupBuildID(c.BuilderName)
+		id, err := a.LookupBuildID(c.downgradeBuilderName)
 		if err != nil {
-			return "", fmt.Errorf("failed to lookup build id: %s", err)
+			return nil, fmt.Errorf("failed to lookup build id: %s", err)
 		}
-		c.buildID = id
+		c.downgradeBuildID = id
 	}
 
-	return c.buildID, nil
+	build, err := c.BuildArchive().GetBuildByID(c.downgradeBuildID)
+	if err != nil {
+		return nil, err
+	}
+
+	return build.GetPackageRepository()
+}
+
+func (c *Config) GetUpgradeRepository() (*packages.Repository, error) {
+	if c.upgradeBuildID != "" {
+		build, err := c.BuildArchive().GetBuildByID(c.upgradeBuildID)
+		if err != nil {
+			return nil, err
+		}
+
+		return build.GetPackageRepository()
+	}
+
+	return packages.NewRepository(c.upgradeAmberFilesDir)
 }
 
 func (c *Config) LocalHostname() (string, error) {
