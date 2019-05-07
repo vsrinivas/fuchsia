@@ -5,6 +5,7 @@
 #include "garnet/lib/cmx/cmx.h"
 
 #include <fcntl.h>
+
 #include <string>
 
 #include "gmock/gmock.h"
@@ -21,24 +22,36 @@ namespace {
 class CmxMetadataTest : public ::testing::Test {
  protected:
   void ExpectFailedParse(const std::string& json, std::string expected_error) {
-    std::string error;
-    CmxMetadata cmx;
-    json::JSONParser json_parser;
-    std::string json_basename;
-    EXPECT_FALSE(ParseFrom(&cmx, &json_parser, json, &json_basename));
-    EXPECT_TRUE(json_parser.HasError());
-    EXPECT_THAT(json_parser.error_str(), ::testing::HasSubstr(expected_error));
+    bool create_tmp_file[] = {true, false};
+    for (bool create_file : create_tmp_file) {
+      SCOPED_TRACE("create file: " + std::to_string(create_file));
+      std::string error;
+      CmxMetadata cmx;
+      json::JSONParser json_parser;
+      std::string json_basename;
+      EXPECT_FALSE(
+          ParseFrom(&cmx, &json_parser, json, &json_basename, create_file));
+      EXPECT_TRUE(json_parser.HasError());
+      EXPECT_THAT(json_parser.error_str(),
+                  ::testing::HasSubstr(expected_error));
+    }
   }
 
   bool ParseFrom(CmxMetadata* cmx, json::JSONParser* json_parser,
-                 const std::string& json, std::string* json_basename) {
-    std::string json_path;
-    if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
-      return false;
+                 const std::string& json, std::string* json_basename,
+                 bool create_tmp_file) {
+    if (create_tmp_file) {
+      std::string json_path;
+      if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
+        return false;
+      }
+      *json_basename = files::GetBaseName(json_path);
+      const int dirfd = open(tmp_dir_.path().c_str(), O_RDONLY);
+      return cmx->ParseFromFileAt(dirfd, *json_basename, json_parser);
+    } else {
+      *json_basename = "file_name";
+      return cmx->ParseFromString(json, *json_basename, json_parser);
     }
-    *json_basename = files::GetBaseName(json_path);
-    const int dirfd = open(tmp_dir_.path().c_str(), O_RDONLY);
-    return cmx->ParseFromFileAt(dirfd, *json_basename, json_parser);
   }
 
  private:
@@ -46,8 +59,6 @@ class CmxMetadataTest : public ::testing::Test {
 };
 
 TEST_F(CmxMetadataTest, ParseMetadata) {
-  CmxMetadata cmx;
-  json::JSONParser json_parser;
   const std::string json = R"JSON({
   "sandbox": {
       "dev": [ "class/input" ],
@@ -60,26 +71,33 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
   },
   "other": "stuff"
   })JSON";
-  std::string file_unused;
-  EXPECT_TRUE(ParseFrom(&cmx, &json_parser, json, &file_unused))
-      << json_parser.error_str();
-  EXPECT_FALSE(json_parser.HasError());
+  bool create_tmp_file[] = {true, false};
+  for (bool create_file : create_tmp_file) {
+    CmxMetadata cmx;
+    json::JSONParser json_parser;
+    SCOPED_TRACE("create file: " + std::to_string(create_file));
+    std::string file_unused;
+    EXPECT_TRUE(ParseFrom(&cmx, &json_parser, json, &file_unused, create_file))
+        << json_parser.error_str();
+    EXPECT_FALSE(json_parser.HasError());
 
-  const auto& sandbox = cmx.sandbox_meta();
-  EXPECT_FALSE(sandbox.IsNull());
-  EXPECT_THAT(sandbox.dev(), ::testing::ElementsAre("class/input"));
-  EXPECT_TRUE(sandbox.HasFeature("feature_a"));
-  EXPECT_FALSE(sandbox.HasFeature("feature_b"));
-  EXPECT_THAT(sandbox.services(), ::testing::ElementsAre("fuchsia.MyService"));
+    const auto& sandbox = cmx.sandbox_meta();
+    EXPECT_FALSE(sandbox.IsNull());
+    EXPECT_THAT(sandbox.dev(), ::testing::ElementsAre("class/input"));
+    EXPECT_TRUE(sandbox.HasFeature("feature_a"));
+    EXPECT_FALSE(sandbox.HasFeature("feature_b"));
+    EXPECT_THAT(sandbox.services(),
+                ::testing::ElementsAre("fuchsia.MyService"));
 
-  EXPECT_FALSE(cmx.runtime_meta().IsNull());
-  EXPECT_EQ(cmx.runtime_meta().runner(), "dart_runner");
+    EXPECT_FALSE(cmx.runtime_meta().IsNull());
+    EXPECT_EQ(cmx.runtime_meta().runner(), "dart_runner");
 
-  const auto& some_value = cmx.GetFacet("some_key");
-  ASSERT_TRUE(some_value.IsString());
-  EXPECT_EQ("some_value", std::string(some_value.GetString()));
-  const auto& null_value = cmx.GetFacet("invalid");
-  EXPECT_TRUE(null_value.IsNull());
+    const auto& some_value = cmx.GetFacet("some_key");
+    ASSERT_TRUE(some_value.IsString());
+    EXPECT_EQ("some_value", std::string(some_value.GetString()));
+    const auto& null_value = cmx.GetFacet("invalid");
+    EXPECT_TRUE(null_value.IsNull());
+  }
 }
 
 TEST_F(CmxMetadataTest, ParseEmpty) {
@@ -91,16 +109,20 @@ TEST_F(CmxMetadataTest, ParseEmpty) {
     "sandwich": { "ingredients": [ "bacon", "lettuce", "tomato" ] }
   }
   )JSON";
-  CmxMetadata cmx;
-  json::JSONParser json_parser;
-  std::string file_unused;
-  EXPECT_TRUE(ParseFrom(&cmx, &json_parser, json, &file_unused))
-      << json_parser.error_str();
-  // Missing "sandbox" defaults to empty.
-  EXPECT_FALSE(cmx.sandbox_meta().IsNull());
-  EXPECT_TRUE(cmx.runtime_meta().IsNull());
-  EXPECT_TRUE(cmx.program_meta().IsBinaryNull());
-  EXPECT_TRUE(cmx.program_meta().IsDataNull());
+  bool create_tmp_file[] = {true, false};
+  for (bool create_file : create_tmp_file) {
+    SCOPED_TRACE("create file: " + std::to_string(create_file));
+    CmxMetadata cmx;
+    json::JSONParser json_parser;
+    std::string file_unused;
+    EXPECT_TRUE(ParseFrom(&cmx, &json_parser, json, &file_unused, create_file))
+        << json_parser.error_str();
+    // Missing "sandbox" defaults to empty.
+    EXPECT_FALSE(cmx.sandbox_meta().IsNull());
+    EXPECT_TRUE(cmx.runtime_meta().IsNull());
+    EXPECT_TRUE(cmx.program_meta().IsBinaryNull());
+    EXPECT_TRUE(cmx.program_meta().IsDataNull());
+  }
 }
 
 TEST_F(CmxMetadataTest, ParseWithErrors) {

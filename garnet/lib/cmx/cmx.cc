@@ -5,13 +5,14 @@
 #include "garnet/lib/cmx/cmx.h"
 
 #include <trace/event.h>
+
 #include <algorithm>
 #include <regex>
 #include <sstream>
 #include <string>
 
-#include "src/lib/fxl/strings/substitute.h"
 #include "rapidjson/document.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
@@ -22,10 +23,8 @@ constexpr char kProgram[] = "program";
 CmxMetadata::CmxMetadata() = default;
 CmxMetadata::~CmxMetadata() = default;
 
-bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file,
-                                  json::JSONParser* json_parser) {
-  TRACE_DURATION("cmx", "CmxMetadata::ParseFromFileAt", "file", file);
-  rapidjson::Document document = json_parser->ParseFromFileAt(dirfd, file);
+bool CmxMetadata::ParseDocument(const rapidjson::Document& document,
+                                json::JSONParser* json_parser) {
   if (json_parser->HasError()) {
     return false;
   }
@@ -38,6 +37,21 @@ bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file,
   ParseProgramMetadata(document, json_parser);
   facet_parser_.Parse(document, json_parser);
   return !json_parser->HasError();
+}
+
+bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file,
+                                  json::JSONParser* json_parser) {
+  TRACE_DURATION("cmx", "CmxMetadata::ParseFromFileAt", "file", file);
+  rapidjson::Document document = json_parser->ParseFromFileAt(dirfd, file);
+  return ParseDocument(document, json_parser);
+}
+
+bool CmxMetadata::ParseFromString(const std::string& data,
+                                  const std::string& filename,
+                                  json::JSONParser* json_parser) {
+  TRACE_DURATION("cmx", "CmxMetadata::ParseFromString");
+  rapidjson::Document document = json_parser->ParseFromString(data, filename);
+  return ParseDocument(document, json_parser);
 }
 
 const rapidjson::Value& CmxMetadata::GetFacet(const std::string& key) {

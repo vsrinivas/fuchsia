@@ -20,32 +20,8 @@ namespace run {
 using fuchsia::sys::index::ComponentIndex_FuzzySearch_Result;
 using fuchsia::sys::index::ComponentIndexSyncPtr;
 
-// path is <package_name>/*/meta/<test>.cmx
-static const std::regex* const kCmxPath =
-    new std::regex("^([^/]+)/[^/]+/(meta/[^\\.]+\\.cmx)$");
 static constexpr char kComponentIndexerUrl[] =
     "fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx";
-
-std::string GetComponentManifestPath(const std::string& url) {
-  if (component::FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
-    component::FuchsiaPkgUrl fp;
-    if (!fp.Parse(url)) {
-      return "";
-    }
-    return fxl::StringPrintf("%s/%s", fp.pkgfs_dir_path().c_str(),
-                             fp.resource_path().c_str());
-  }
-  return "";
-}
-
-std::string GenerateComponentUrl(const std::string& cmx_file_path) {
-  std::smatch sm;
-  if (!(std::regex_search(cmx_file_path, sm, *kCmxPath))) {
-    return "";
-  }
-  return fxl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#%s",
-                           sm[1].str().c_str(), sm[2].str().c_str());
-}
 
 ParseArgsResult ParseArgs(
     const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
@@ -58,9 +34,8 @@ ParseArgsResult ParseArgs(
     return result;
   }
   std::string url = argv[1];
-  result.cmx_file_path = GetComponentManifestPath(url);
 
-  if (result.cmx_file_path == "") {
+  if (!component::FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
     fuchsia::sys::LaunchInfo index_launch_info;
     index_launch_info.url = kComponentIndexerUrl;
     auto index_provider = sys::ServiceDirectory::CreateWithRequest(
@@ -110,7 +85,6 @@ ParseArgsResult ParseArgs(
           return result;
         }
         url = uris[0];
-        result.cmx_file_path = GetComponentManifestPath(url);
       }
     }
   }

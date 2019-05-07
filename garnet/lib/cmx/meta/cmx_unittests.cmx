@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/cmx_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

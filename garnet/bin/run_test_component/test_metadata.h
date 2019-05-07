@@ -5,15 +5,15 @@
 #ifndef GARNET_BIN_RUN_TEST_COMPONENT_TEST_METADATA_H_
 #define GARNET_BIN_RUN_TEST_COMPONENT_TEST_METADATA_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
+
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <fuchsia/sys/cpp/fidl.h>
-
-#include "src/lib/fxl/macros.h"
 #include "lib/json/json_parser.h"
 #include "rapidjson/document.h"
+#include "src/lib/fxl/macros.h"
 
 namespace run {
 
@@ -44,7 +44,8 @@ class TestMetadata {
   TestMetadata();
   ~TestMetadata();
 
-  bool ParseFromFile(const std::string& cmx_file_path);
+  bool ParseFromString(const std::string& cmx_data,
+                       const std::string& filename);
 
   bool HasError() const { return json_parser_.HasError(); }
   std::string error_str() const { return json_parser_.error_str(); }

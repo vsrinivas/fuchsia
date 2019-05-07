@@ -28,6 +28,9 @@ class CmxMetadata {
   bool ParseFromFileAt(int dirfd, const std::string& file,
                        json::JSONParser* json_parser);
 
+  bool ParseFromString(const std::string& data, const std::string& filename,
+                       json::JSONParser* json_parser);
+
   // Returns the Facet section value if found, else returns null value.
   const rapidjson::Value& GetFacet(const std::string& key);
 
@@ -42,6 +45,9 @@ class CmxMetadata {
                             json::JSONParser* json_parser);
   void ParseProgramMetadata(const rapidjson::Document& document,
                             json::JSONParser* json_parser);
+
+  bool ParseDocument(const rapidjson::Document& document,
+                     json::JSONParser* json_parser);
 
   SandboxMetadata sandbox_meta_;
   RuntimeMetadata runtime_meta_;

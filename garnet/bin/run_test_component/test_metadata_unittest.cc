@@ -4,13 +4,13 @@
 
 #include "garnet/bin/run_test_component/test_metadata.h"
 
-#include <string>
-#include <utility>
-
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+
+#include <string>
+#include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -49,11 +49,7 @@ class TestMetadataTest : public ::testing::Test {
   }
 
   bool ParseFrom(TestMetadata* tm, const std::string& json) {
-    std::string json_path;
-    if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
-      return false;
-    }
-    const bool ret = tm->ParseFromFile(json_path);
+    const bool ret = tm->ParseFromString(json, "");
     EXPECT_EQ(ret, !tm->HasError());
     return ret;
   }

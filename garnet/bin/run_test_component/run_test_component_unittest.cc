@@ -16,34 +16,6 @@
 namespace run {
 namespace {
 
-TEST(Url, ParseURL) {
-  EXPECT_EQ("", GetComponentManifestPath(""));
-  EXPECT_EQ("", GetComponentManifestPath("random_string"));
-  EXPECT_EQ("", GetComponentManifestPath("https://google.com"));
-  EXPECT_EQ("", GetComponentManifestPath(
-                    "fuchsia-pkg://fuchsia.com/component_hello_world#"));
-
-  EXPECT_EQ(
-      "/pkgfs/packages/component_hello_world/0/meta/hello.cmx",
-      GetComponentManifestPath(
-          "fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello.cmx"));
-}
-
-TEST(Url, GenerateComponentUrl) {
-  EXPECT_EQ("", GenerateComponentUrl(""));
-
-  EXPECT_EQ("", GenerateComponentUrl("/system/sys/pname/0/meta/hello.cmx"));
-
-  EXPECT_EQ("", GenerateComponentUrl("pname"));
-
-  EXPECT_EQ("", GenerateComponentUrl("pname/0/meta/foo"));
-
-  EXPECT_EQ("", GenerateComponentUrl("pname/meta/foo.cmx"));
-
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello.cmx",
-            GenerateComponentUrl("component_hello_world/0/meta/hello.cmx"));
-}
-
 TEST(RunTest, ParseArgs) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto env_services = sys::ServiceDirectory::CreateFromNamespace();
@@ -94,16 +66,13 @@ TEST(RunTest, ParseArgs) {
     auto expected_url =
         "fuchsia-pkg://fuchsia.com/run_test_component_unittests#meta/"
         "run_test_component_unittests.cmx";
-    auto expected_cmx_path =
-        "/pkgfs/packages/run_test_component_unittests/0/meta/"
-        "run_test_component_unittests.cmx";
+
     const char* argv[] = {kBinName, "run_test_component_unittests"};
     auto result = ParseArgs(env_services, 2, argv);
     EXPECT_FALSE(result.error);
     ASSERT_EQ(1u, result.matching_urls.size());
     EXPECT_EQ(result.matching_urls[0], expected_url);
     EXPECT_EQ(expected_url, result.launch_info.url);
-    EXPECT_EQ(result.cmx_file_path, expected_cmx_path);
   }
 }
 

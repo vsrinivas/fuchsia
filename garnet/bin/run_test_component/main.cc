@@ -17,6 +17,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <string>
+
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
@@ -110,6 +112,7 @@ int main(int argc, const char** argv) {
   }
   auto env_services = sys::ServiceDirectory::CreateFromNamespace();
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
+
   auto parse_result = run::ParseArgs(env_services, argc, argv);
   if (parse_result.error) {
     if (parse_result.error_msg != "") {
@@ -132,35 +135,42 @@ int main(int argc, const char** argv) {
 
   // We make a request to the resolver API to ensure that the on-disk package
   // data is up to date before continuing to try and parse the CMX file.
-  // TODO(anmittal): Ideally we could use the VMO returned by the resolver to
-  // parse the data, but there are many layers of indirection between us and the
-  // JSON parser that do not know how to talk anything but file paths, so that
-  // was not yet done.
-  {
-    // TODO(raggi): replace this with fuchsia.pkg.Resolver, once it is stable.
-    fuchsia::process::ResolverSyncPtr resolver;
-    auto svc_dir = sys::ServiceDirectory::CreateFromNamespace();
-    zx_status_t status =
-        svc_dir->Connect<fuchsia::process::Resolver>(resolver.NewRequest());
-    if (status != ZX_OK) {
-      fprintf(stderr, "connect to %s failed: %s. Can not continue.\n",
-              fuchsia::process::Resolver::Name_, zx_status_get_string(status));
-      return 1;
-    }
-    zx::vmo cmx_unused;
-    fidl::InterfaceHandle<::fuchsia::ldsvc::Loader> ldsvc_unused;
-    resolver->Resolve(program_name, &status, &cmx_unused, &ldsvc_unused);
-    if (status != ZX_OK) {
-      fprintf(stderr, "Failed to resolve %s: %s\n", program_name.c_str(),
-              zx_status_get_string(status));
-      return 1;
-    }
+  // TODO(raggi): replace this with fuchsia.pkg.Resolver, once it is stable.
+  fuchsia::process::ResolverSyncPtr resolver;
+  zx_status_t status =
+      env_services->Connect<fuchsia::process::Resolver>(resolver.NewRequest());
+  if (status != ZX_OK) {
+    fprintf(stderr, "connect to %s failed: %s. Can not continue.\n",
+            fuchsia::process::Resolver::Name_, zx_status_get_string(status));
+    return 1;
+  }
+  zx::vmo cmx_data;
+  fidl::InterfaceHandle<::fuchsia::ldsvc::Loader> ldsvc_unused;
+  resolver->Resolve(program_name, &status, &cmx_data, &ldsvc_unused);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to resolve %s: %s\n", program_name.c_str(),
+            zx_status_get_string(status));
+    return 1;
+  }
+  
+  uint64_t size;
+  status = cmx_data.get_size(&size);
+  if (status != ZX_OK) {
+    fprintf(stderr, "error getting size of cmx file from vmo %s: %s\n",
+            program_name.c_str(), zx_status_get_string(status));
+    return 1;
+  }
+  std::string cmx_str(size, ' ');
+  status = cmx_data.read(cmx_str.data(), 0, size);
+  if (status != ZX_OK) {
+    fprintf(stderr, "error reading cmx file from vmo %s: %s\n",
+            program_name.c_str(), zx_status_get_string(status));
+    return 1;
   }
 
   run::TestMetadata test_metadata;
-  if (!test_metadata.ParseFromFile(parse_result.cmx_file_path)) {
-    fprintf(stderr, "Error parsing cmx %s: %s\n",
-            parse_result.cmx_file_path.c_str(),
+  if (!test_metadata.ParseFromString(cmx_str, program_name)) {
+    fprintf(stderr, "Error parsing cmx %s: %s\n", program_name.c_str(),
             test_metadata.error_str().c_str());
     return 1;
   }
