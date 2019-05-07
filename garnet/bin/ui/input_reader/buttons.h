@@ -26,12 +26,16 @@ class Buttons : public Device {
 
  private:
   enum Capabilities : uint32_t {
-    VOLUME = 1 << 0,
-    PHONE_MUTE = 1 << 1,
+    VOLUME_UP = 1 << 0,
+    VOLUME_DOWN = 1 << 1,
+    RESET = 1 << 2,
+    PHONE_MUTE = 1 << 3,
   };
   uint32_t capabilities_ = 0;
 
-  hid::Attributes volume_ = {};
+  hid::Attributes volume_up_ = {};
+  hid::Attributes volume_down_ = {};
+  hid::Attributes reset_ = {};
   hid::Attributes phone_mute_ = {};
 
   size_t report_size_ = 0;

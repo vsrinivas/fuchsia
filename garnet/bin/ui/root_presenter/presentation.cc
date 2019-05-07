@@ -732,7 +732,14 @@ void Presentation::OnMediaButtonsEvent(fuchsia::ui::input::InputReport report) {
 
   for (auto& listener : media_buttons_listeners_) {
     fuchsia::ui::input::MediaButtonsEvent event;
-    event.set_volume(report.media_buttons->volume);
+    int8_t volume_gain = 0;
+    if (report.media_buttons->volume_up) {
+      volume_gain++;
+    }
+    if (report.media_buttons->volume_down) {
+      volume_gain--;
+    }
+    event.set_volume(volume_gain);
     event.set_mic_mute(report.media_buttons->mic_mute);
     listener->OnMediaButtonsEvent(std::move(event));
   }

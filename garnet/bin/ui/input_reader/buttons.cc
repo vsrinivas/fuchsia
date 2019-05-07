@@ -21,7 +21,9 @@ bool Buttons::ParseReportDescriptor(
     Descriptor* device_descriptor) {
   FXL_CHECK(device_descriptor);
 
-  hid::Attributes volume = {};
+  hid::Attributes volume_up = {};
+  hid::Attributes volume_down = {};
+  hid::Attributes reset = {};
   hid::Attributes phone_mute = {};
   uint32_t caps = 0;
 
@@ -29,9 +31,18 @@ bool Buttons::ParseReportDescriptor(
     const hid::ReportField& field = report_descriptor.input_fields[i];
 
     if (field.attr.usage == hid::USAGE(hid::usage::Page::kConsumer,
-                                       hid::usage::Consumer::kVolume)) {
-      volume = field.attr;
-      caps |= Capabilities::VOLUME;
+                                       hid::usage::Consumer::kVolumeUp)) {
+      volume_up = field.attr;
+      caps |= Capabilities::VOLUME_UP;
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kConsumer,
+                          hid::usage::Consumer::kVolumeDown)) {
+      volume_down = field.attr;
+      caps |= Capabilities::VOLUME_DOWN;
+    } else if (field.attr.usage == hid::USAGE(hid::usage::Page::kConsumer,
+                                              hid::usage::Consumer::kReset)) {
+      reset = field.attr;
+      caps |= Capabilities::RESET;
     } else if (field.attr.usage ==
                hid::USAGE(hid::usage::Page::kTelephony,
                           hid::usage::Telephony::kPhoneMute)) {
@@ -45,7 +56,9 @@ bool Buttons::ParseReportDescriptor(
     return false;
   }
 
-  volume_ = volume;
+  volume_up_ = volume_up;
+  volume_down_ = volume_down;
+  reset_ = reset;
   phone_mute_ = phone_mute;
 
   report_size_ = report_descriptor.input_byte_sz;
@@ -61,11 +74,17 @@ bool Buttons::ParseReportDescriptor(
     device_descriptor->buttons_descriptor->buttons |=
         fuchsia::ui::input::kMicMute;
   }
-  if (caps & Capabilities::VOLUME) {
+  if (caps & Capabilities::VOLUME_UP) {
     device_descriptor->buttons_descriptor->buttons |=
         fuchsia::ui::input::kVolumeUp;
+  }
+  if (caps & Capabilities::VOLUME_DOWN) {
     device_descriptor->buttons_descriptor->buttons |=
         fuchsia::ui::input::kVolumeDown;
+  }
+  if (caps & Capabilities::RESET) {
+    device_descriptor->buttons_descriptor->buttons |=
+        fuchsia::ui::input::kReset;
   }
   return true;
 }
@@ -74,7 +93,9 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
                           fuchsia::ui::input::InputReport* report) {
   FXL_CHECK(report);
   FXL_CHECK(report->media_buttons);
-  double volume = 0;
+  double volume_up = 0;
+  double volume_down = 0;
+  double reset = 0;
   double mic_mute = 0;
 
   if (report_size_ != len) {
@@ -83,9 +104,21 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
     return false;
   }
 
-  if (capabilities_ & Capabilities::VOLUME) {
-    if (!hid::ExtractAsUnit(data, len, volume_, &volume)) {
+  if (capabilities_ & Capabilities::VOLUME_UP) {
+    if (!hid::ExtractAsUnit(data, len, volume_up_, &volume_up)) {
       FXL_LOG(INFO) << "Sensor report: Failed to parse volume";
+      return false;
+    }
+  }
+  if (capabilities_ & Capabilities::VOLUME_DOWN) {
+    if (!hid::ExtractAsUnit(data, len, volume_down_, &volume_down)) {
+      FXL_LOG(INFO) << "Sensor report: Failed to parse volume";
+      return false;
+    }
+  }
+  if (capabilities_ & Capabilities::RESET) {
+    if (!hid::ExtractAsUnit(data, len, reset_, &reset)) {
+      FXL_LOG(INFO) << "Sensor report: Failed to parse reset";
       return false;
     }
   }
@@ -97,13 +130,21 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
   }
 
   report->media_buttons->mic_mute = 0;
-  report->media_buttons->volume = 0;
+  report->media_buttons->volume_up = 0;
+  report->media_buttons->volume_down = 0;
+  report->media_buttons->reset = 0;
 
   if (capabilities_ & Capabilities::PHONE_MUTE) {
     report->media_buttons->mic_mute = (mic_mute > 0);
   }
-  if (capabilities_ & Capabilities::VOLUME) {
-    report->media_buttons->volume = static_cast<int8_t>(volume);
+  if (capabilities_ & Capabilities::VOLUME_UP) {
+    report->media_buttons->volume_up = (volume_up > 0);
+  }
+  if (capabilities_ & Capabilities::VOLUME_DOWN) {
+    report->media_buttons->volume_down = (volume_down > 0);
+  }
+  if (capabilities_ & Capabilities::RESET) {
+    report->media_buttons->reset = (reset > 0);
   }
 
   return true;

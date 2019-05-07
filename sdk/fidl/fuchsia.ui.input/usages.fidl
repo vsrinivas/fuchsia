@@ -16,3 +16,4 @@ const uint32 kStylusBarrel = 1;
 const uint32 kVolumeUp = 1;
 const uint32 kVolumeDown = 2;
 const uint32 kMicMute = 4;
+const uint32 kReset = 8;

@@ -266,12 +266,15 @@ TEST_F(ReaderInterpreterInputTest, MediaButtonsTest) {
   RunLoopUntilIdle();
 
   // Create a single buttons report.
-  uint8_t report_data[] = {
-      0x01,  // Report ID
-      0x01,  // Volume
-      0xFF,  // Mute
-  };
-  std::vector<uint8_t> report(report_data, report_data + sizeof(report_data));
+  buttons_input_rpt_t report_data = {};
+  report_data.rpt_id = BUTTONS_RPT_ID_INPUT;
+  report_data.volume_up = true;
+  report_data.volume_down = false;
+  report_data.reset = true;
+  report_data.mute = true;
+  uint8_t* report_data_ptr = reinterpret_cast<uint8_t*>(&report_data);
+  std::vector<uint8_t> report(report_data_ptr,
+                              report_data_ptr + sizeof(report_data));
 
   // Send the touch report.
   device->SetHidDecoderRead(report, sizeof(report_data));
@@ -280,8 +283,10 @@ TEST_F(ReaderInterpreterInputTest, MediaButtonsTest) {
   // Check that the report matches.
   ASSERT_EQ(1, report_count_);
   ASSERT_TRUE(last_report_.media_buttons);
+  EXPECT_EQ(true, last_report_.media_buttons->volume_up);
+  EXPECT_EQ(false, last_report_.media_buttons->volume_down);
+  EXPECT_EQ(true, last_report_.media_buttons->reset);
   EXPECT_EQ(true, last_report_.media_buttons->mic_mute);
-  EXPECT_EQ(0x1, last_report_.media_buttons->volume);
 }
 
 }  // namespace ui_input

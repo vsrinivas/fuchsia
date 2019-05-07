@@ -219,11 +219,14 @@ union SensorReport {
     uint16 scalar;
 };
 
-// |MediaButtonsReport| describes the media buttons event delivered from the event stream.
+/// |MediaButtonsReport| describes the media buttons event delivered from the event stream.
+/// Each bool in the report represents a single button where true means the button
+/// is being pressed. A single report should be sent on every state change.
 struct MediaButtonsReport {
-    // Volume changes +1/-1 for volume up/down, this is a relative value.
-    int8 volume;
+    bool volume_up;
+    bool volume_down;
     bool mic_mute;
+    bool reset;
 };
 
 // Device and Report
