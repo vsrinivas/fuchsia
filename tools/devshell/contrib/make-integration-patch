@@ -48,23 +48,23 @@ function write-patches-json {
   local file="$1/patches.json"
   local contents="$2"
 
-  echo "$contents" > $file
+  echo "$contents" > "$file"
 }
 
 function prompt-or-exit {
   local prompt="$1"
   read -p "${prompt} [yN] " -n 1 -r yesno
   echo
-  if [[ ! $yesno =~ ^[Yy]$ ]]; then
+  if [[ ! "$yesno" =~ ^[Yy]$ ]]; then
     exit 0
   fi
 }
 
 function create-git-commit-and-upload {
   local dir="$1"
-  git -C $dir add -A
-  git -C $dir commit -m "DO NOT SUBMIT - testing unsubmitted changes in GI"
-  git -C $dir push origin HEAD:refs/for/master
+  git -C "$dir" add -A
+  git -C "$dir" commit -m "DO NOT SUBMIT - testing unsubmitted changes in GI"
+  git -C "$dir" push origin HEAD:refs/for/master
   return $?
 }
 
@@ -78,17 +78,17 @@ function read-patches-from-stdin {
     ref=$(echo "$line" | cut -d " " -f 4)
 
     if [[ ${seen_projects[$project]} ]]; then
-      (
-        echo
-        echo "ERROR: You are limited to one patch per project. You already inputted"
-        echo "a patch for project '${project}'. Please collapse these changes into"
-        echo "one and try again."
-      ) > /dev/stderr
+      fx-error "You are limited to one patch per project. Project '${project}' saw two patches."
+      fx-error "Please collapse all changes in one project into a single change."
       return 1
     fi
     seen_projects[$project]=1
 
-    if [[ $first = false ]]; then
+    # The patches.json requires host-review.googlesource.com, while Gerrit's download
+    # commands vend host.googlesource.com.
+    host=$(echo "$host" | sed "s/\.googlesource/-review\.googlesource/")
+
+    if [[ ${first} = false ]]; then
       printf ',\n'
     fi
     printf '  {\n    "ref": "%s",\n    "host": "%s",\n    "project": "%s"\n  }' "$ref" "$host" "$project"
@@ -99,7 +99,7 @@ function read-patches-from-stdin {
 function main {
   local integration_dir="${FUCHSIA_DIR}/integration"
 
-  abort-if-unclean $integration_dir
+  abort-if-unclean "$integration_dir"
   print-instructions
 
   # Track seen projects. We are limited to a single patch per project.
