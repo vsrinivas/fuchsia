@@ -61,6 +61,7 @@ library("blobfs") {
       "journal.cpp",
       "metrics.cpp",
       "unbuffered-operations-builder.cpp",
+      "ring-buffer.cpp",
       "vmo-buffer.cpp",
       "write-txn.cpp",
       "writeback-queue.cpp",

@@ -23,6 +23,7 @@ test("blobfs-unit") {
     "node-populator-test.cpp",
     "node-reserver-test.cpp",
     "unbuffered-operations-builder-test.cpp",
+    "ring-buffer-test.cpp",
     "utils.cpp",
     "vector-extent-iterator-test.cpp",
     "vmo-buffer-test.cpp",
