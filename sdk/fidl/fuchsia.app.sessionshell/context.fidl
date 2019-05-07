@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.sessionshell;
+
+using fuchsia.app;
+
+/// An instance of this service is exposed to session shells in their namespace.
+/// It exposes the base capabilities offered by modular to session shells.
+///
+/// See also: fuchsia.app.SessionShell
+[Discoverable]
+protocol Context {
+    compose fuchsia.app.Context;
+
+    compose SessionObserver;
+    compose SessionController;
+};

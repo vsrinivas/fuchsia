@@ -1,0 +1,18 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app;
+
+/// Ongoing activities are classified by the nature of their activity.
+enum OngoingActivityType {
+    /// Any activity that does not fall into one of the other classes.
+    UNSPECIFIED = 0;
+
+    /// The activity is displaying a video, or has another significant
+    /// visual element.
+    VIDEO = 1;
+
+    /// The activity is playing audio.
+    AUDIO = 2;
+};

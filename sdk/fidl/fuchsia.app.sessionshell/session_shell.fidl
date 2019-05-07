@@ -1,0 +1,47 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.sessionshell;
+
+using fuchsia.app;
+using fuchsia.ui.views;
+
+// This interface is implemented by a session shell and is used by the
+// sessionmgr to hand to the session shell views of stories, or to notify that
+// the view of a story is about to be closed.
+[Discoverable]
+protocol SessionShell {
+    /// Attaches |view_holder_token| as the view for |story_id|. Session
+    /// shells are expected to compose the view into the session UI. Metadata
+    /// about the story are available through SessionObserver/WatchStories() for the same
+    /// StoryId.
+    ///
+    /// It is customary for the session shell to display a placeholder before a
+    /// the first call to AttachView() for a given view_id.
+    AttachView(fuchsia.app.StoryId story_id, fuchsia.ui.views.ViewHolderToken view_holder_token);
+
+    /// Instructs the session shell to detach from the shell UI the view
+    /// for |story_id|.  The view will be closed soon after
+    /// DetachView() returns, or after a timeout is reached.
+    ///
+    /// If the story identified by |story_id| is being deleted, the
+    /// shell will observe the story's removal in a future call to
+    /// SessionObserver/WatchStories().
+    ///
+    /// If the session for which this session shell is responsible for is being
+    /// terminated, the shell should expect to be terminated without observing
+    /// individual calls to DetachView() for each story.
+    ///
+    /// It is customary for the session shell to display a placeholder after a
+    /// call to DetachView().
+    DetachView(fuchsia.app.StoryId story_id) -> ();
+
+    /// Instructs the shell that another client (such as a session controller)
+    /// is requesting a specific story be brought into focus. The shell should
+    /// return true if it will honor the request and false otherwise.
+    ///
+    /// Returning true has the same behavior as returning false and calling
+    /// SessionController/FocusStory(id).
+    HandleFocusStoryRequest(fuchsia.app.StoryId id) -> (bool did_focus);
+};

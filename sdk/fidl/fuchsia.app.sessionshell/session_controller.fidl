@@ -1,0 +1,32 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.sessionshell;
+
+using fuchsia.app;
+
+/// Allows clients to make changes to the session.
+[FragileBase]
+protocol SessionController {
+    /// Focuses the story given the |id|. The shell can expect:
+    ///   * The story's runtime state to transition to RUNNING, observable
+    ///     through SessionObserver/WatchStories().
+    ///   * The story's |StoryInfo.last_focus_time| to increase.
+    ///   * A future call to SessionShell/AttachView(), if there is not already
+    ///     a view attached.
+    ///
+    /// Modular priotizes runtime resources for the focused story.
+    FocusStory(fuchsia.app.StoryId id);
+
+    /// Sets the prioritized stories.  |ids| should include those stories that
+    /// the shell wishes to remain interactive such as ambient UI elements or
+    /// other stories that do not classify as focused but remain important.
+    ///
+    /// The list is used to prioritize runtime resources.
+    SetPrioritizedStories(vector<fuchsia.app.StoryId> ids);
+
+    /// Tears down the session. The SessionController channel will close
+    /// immediately.
+    TeardownSession();
+};

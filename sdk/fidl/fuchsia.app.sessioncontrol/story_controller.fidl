@@ -23,7 +23,7 @@ enum Error {
     ERR_MODULE_ID_NOT_FOUND = 2;
 };
 
-/// Allows agents to alter the model of the story for a specific story. Acquired through
+/// Allows clients to alter the model of the story for a specific story. Acquired through
 /// SessionController/ObtainStoryController().
 ///
 /// Not all method calls are guaranteed to result in equivalent and observable side-effects due to

@@ -9,5 +9,13 @@ using MessageQueueName = string:MESSAGE_QUEUE_NAME_MAX_LENGTH;
 // TODO(CF-694): Use the type defined in fuchsia.sys2 when it becomes available.
 using ComponentUrl = string;
 
+// An identifier for a story.
+//
+// TODO(FIDL-582): convert to doc comment once that is supported.
+using StoryId = string:STORY_ID_MAX_LENGTH;
+
 /// Maximum length of message queue name. See fuchsia.app.Context.
 const uint32 MESSAGE_QUEUE_NAME_MAX_LENGTH = 100;
+
+/// Maximum length of story id.
+const uint32 STORY_ID_MAX_LENGTH = 1024;

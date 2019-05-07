@@ -103,6 +103,7 @@ group("new_modular_apis") {
     "//sdk/fidl/fuchsia.app",
     "//sdk/fidl/fuchsia.app.agent",
     "//sdk/fidl/fuchsia.app.sessioncontrol",
+    "//sdk/fidl/fuchsia.app.sessionshell",
   ]
 }
 

@@ -1,0 +1,90 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.sessionshell;
+
+using fuchsia.app;
+using zx;
+
+/// Allows clients to observe changes in the session.
+[FragileBase]
+protocol SessionObserver {
+    /// Returns the list of existing stories.  Subsequent calls will wait until
+    /// the list has changed to return.
+    WatchStories() -> (vector<StorySummary> stories);
+
+    /// Immediately returns the list of ongoing activities in the session on the
+    /// first call. On subsequent calls, waits and returns a new list only once
+    /// the list has changed.
+    WatchOngoingActivities()
+        -> (vector<OngoingActivityInfo> ongoing_activies);
+};
+
+table StorySummary {
+    /// The ID, unique to the session and assigned by the framework, for this story.
+    ///
+    /// NOTE: the value of |id| is different from that provided by session
+    /// controllers through fuchsia.app.sessioncontrol.SessionController.
+    1 : fuchsia.app.StoryId id;
+
+    /// Contains the latest runtime state for this story. Shells may opt to use
+    /// this state to, e.g., dim a story's UI while it is not running.
+    2 : StoryRuntimeState runtime_state;
+
+    /// Informs the session shell how to display this story when on screen. See
+    /// StoryDisplayInfo below for details.
+    ///
+    /// The value can change at any time. Shells are expected to update the
+    /// story's UI accordingly.
+    3 : StoryDisplayInfo display_info;
+
+    /// The last time this story was the foreground story in any session shell
+    /// across all devices.
+    /// Updated after a session shell calls SessionController/FocusedStory().
+    4 : zx.time last_focus_time;
+};
+
+/// Describes how a story should be displayed within the session
+/// shell when the story is being displayed on screen. Session shells are
+/// expected to honor the semantics of this struct.
+table StoryDisplayInfo {
+    /// The expected display mode for the story within the shell. See
+    /// StoryVisibilityMode docs for details.
+    1: StoryVisibilityMode mode;
+};
+
+/// Describes how a story should be displayed, when focused, within the session
+/// shell.
+enum StoryVisibilityMode {
+    /// Default for a story: the story should be given the majority of the
+    /// screen.
+    DEFAULT = 1;
+
+    /// Full-screen user experience, e.g. playing a video.
+    IMMERSIVE = 2;
+};
+
+/// Information about a single ongoing activity within a story.
+table OngoingActivityInfo {
+    1 : fuchsia.app.StoryId id;
+
+    2 : fuchsia.app.OngoingActivityType type;
+};
+
+/// State of a Story. A story is either running, stopping, or stopped,
+/// separately on every device of the user. If it's running, it can also be
+/// focused, but that's tracked in a separate service, cf. FocusProvider in
+/// focus.fidl.
+///
+/// State transitions are:
+///   STOPPED -> RUNNING -> STOPPING -> STOPPED
+enum StoryRuntimeState {
+    /// Modules are running and the story can react to user input.
+    RUNNING = 1;
+    /// Story is in the process of being torn down.
+    STOPPING = 2;
+    /// Story is not running and will not react to user input if displayed. UI
+    /// for a story, if available, is a static snapshot of previous story state.
+    STOPPED = 3;
+};

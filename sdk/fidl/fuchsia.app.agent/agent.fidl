@@ -62,7 +62,7 @@ table ClientIdentity {
     /// module creation time. Otherwise not set.
     ///
     /// See fuchsia.app.sessioncontrol.StoryController.
-    2: fuchsia.app.sessioncontrol.StoryId story_id;
+    2: fuchsia.app.StoryId story_id;
 
     /// If the client is a module created by this agent (using
     /// fuchsia.app.sessioncontrol.StoryController), identifies the ModuleId the agent specified at

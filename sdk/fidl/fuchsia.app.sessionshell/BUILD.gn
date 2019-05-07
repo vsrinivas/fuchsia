@@ -4,17 +4,18 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.app") {
+fidl("fuchsia.app.sessionshell") {
   sdk_category = "partner"
 
   sources = [
     "context.fidl",
-    "ongoing_activity.fidl",
-    "intent.fidl",
-    "types.fidl",
+    "session_observer.fidl",
+    "session_controller.fidl",
+    "session_shell.fidl",
   ]
 
   deps = [
-    "//zircon/public/fidl/fuchsia-io",
+    "//sdk/fidl/fuchsia.app",
+    "//sdk/fidl/fuchsia.ui.views",
   ]
 }
