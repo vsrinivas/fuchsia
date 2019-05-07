@@ -109,10 +109,10 @@ using closure = function<void()>;
 // As an example, sharing |fit::callback| between both a service and a timeout
 // might look something like this:
 //
-//   void service_with_timeout(fit::callback<void(bool)> cb, uint timeout_ms) {
-//     service_request([cb = std::move(cb.share())]() { if (cb) cb(false); });
-//     on_timeout(timeout_ms, [cb = std::move(cb)]() { if (cb) cb(true); });
-//   }
+//  void service_with_timeout(fit::callback<void(bool)> cb, uint timeout_ms) {
+//    service_request([cb = cb.share()]() mutable { if (cb) cb(false); });
+//    timeout(timeout_ms, [cb = std::move(cb)]() mutable { if (cb) cb(true); });
+//  }
 //
 // Since |fit::callback| objects are move-only, and not copyable, duplicate
 // references to the same |fit::callback| can be obtained via share(), as shown
