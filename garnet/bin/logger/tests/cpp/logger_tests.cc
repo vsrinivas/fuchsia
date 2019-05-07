@@ -3,31 +3,31 @@
 // found in the LICENSE file.
 
 #include <fuchsia/logger/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/logger.h>
 #include <lib/syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
 
 #include <vector>
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/gtest/real_loop_fixture.h"
-#include "lib/syslog/cpp/logger.h"
+#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace {
 
-class LogListenerMock : public fuchsia::logger::LogListener {
+class StubLogListener : public fuchsia::logger::LogListener {
  public:
-  LogListenerMock();
+  StubLogListener();
+  ~StubLogListener() override;
 
   void LogMany(::std::vector<fuchsia::logger::LogMessage> Log) override;
   void Log(fuchsia::logger::LogMessage Log) override;
   void Done() override;
-  ~LogListenerMock() override;
 
   const std::vector<fuchsia::logger::LogMessage>& GetLogs() {
     return log_messages_;
   }
-  void CollectLogs(size_t expected_logs);
   bool ConnectToLogger(sys::ComponentContext* component_context, zx_koid_t pid);
 
  private:
@@ -36,23 +36,23 @@ class LogListenerMock : public fuchsia::logger::LogListener {
   std::vector<fuchsia::logger::LogMessage> log_messages_;
 };
 
-LogListenerMock::LogListenerMock() : binding_(this) {
+StubLogListener::StubLogListener() : binding_(this) {
   binding_.Bind(log_listener_.NewRequest());
 }
 
-LogListenerMock::~LogListenerMock() {}
+StubLogListener::~StubLogListener() {}
 
-void LogListenerMock::LogMany(::std::vector<fuchsia::logger::LogMessage> logs) {
+void StubLogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> logs) {
   std::move(logs.begin(), logs.end(), std::back_inserter(log_messages_));
 }
 
-void LogListenerMock::Log(fuchsia::logger::LogMessage log) {
+void StubLogListener::Log(fuchsia::logger::LogMessage log) {
   log_messages_.push_back(std::move(log));
 }
 
-void LogListenerMock::Done() {}
+void StubLogListener::Done() {}
 
-bool LogListenerMock::ConnectToLogger(sys::ComponentContext* component_context,
+bool StubLogListener::ConnectToLogger(sys::ComponentContext* component_context,
                                       zx_koid_t pid) {
   if (!log_listener_) {
     return false;
@@ -114,7 +114,7 @@ TEST(CAbi, LogRecordAbi) {
 }
 
 TEST_F(LoggerTest, Integration) {
-  LogListenerMock log_listener;
+  StubLogListener log_listener;
 
   auto pid = GetCurrentProcessKoid();
 
