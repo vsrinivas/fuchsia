@@ -2,20 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("examples") {
+group("speech") {
   testonly = true
   deps = [
-    "cowsay",
-    "fortune",
-    "hello_world",
-    "media",
-    "speech",
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [
-    "hello_world:tests",
+    "tts",
   ]
 }

@@ -90,6 +90,7 @@ group("all") {
     "//garnet/packages/examples:overnet",
     "//garnet/packages/examples:rust",
     "//garnet/packages/examples:scenic",
+    "//garnet/packages/examples:speech",
     "//garnet/packages/examples:tcp",
     "//garnet/packages/examples:vkcube_on_fb",
     "//garnet/packages/examples:vkcube_on_scenic",
@@ -160,14 +161,21 @@ group("media") {
   testonly = true
   public_deps = [
     "//garnet/examples/camera/camera_client:camera_client",
-    "//garnet/examples/media:fx",
-    "//garnet/examples/media:simple_sine",
-    "//garnet/examples/media:simple_sine_sync",
-    "//garnet/examples/media:tones",
-    "//garnet/examples/media:tts",
+    "//examples/media/audio/fx",
+    "//examples/media/audio/simple_sine",
+    "//examples/media/audio/sync_sine",
+    "//examples/media/audio/tones",
+    "//examples/media/audio/vu_meter",
     "//garnet/examples/media:use_h264_decoder_test",
     "//garnet/examples/media:use_vp9_decoder_test",
     "//garnet/examples/media:use_media_decoder",
+  ]
+}
+
+group("speech") {
+  testonly = true
+  public_deps = [
+    "//examples/speech/tts/speak",
   ]
 }
 

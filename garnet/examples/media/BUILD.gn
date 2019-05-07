@@ -9,106 +9,6 @@ import("//build/testing/environments.gni")
 # We have a separate package for each example to clarify the dependencies of
 # each example.
 
-package("fx") {
-  deps = [
-    "fx",
-  ]
-
-  binaries = [
-    {
-      name = "fx"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("fx/meta/fx.cmx")
-      dest = "fx.cmx"
-    },
-  ]
-}
-
-package("simple_sine") {
-  deps = [
-    "simple_sine",
-  ]
-
-  binaries = [
-    {
-      name = "simple_sine"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("simple_sine/meta/simple_sine.cmx")
-      dest = "simple_sine.cmx"
-    },
-  ]
-}
-
-package("simple_sine_sync") {
-  deps = [
-    "simple_sine_sync",
-  ]
-
-  binaries = [
-    {
-      name = "simple_sine_sync"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("simple_sine_sync/meta/simple_sine_sync.cmx")
-      dest = "simple_sine_sync.cmx"
-    },
-  ]
-}
-
-package("tones") {
-  deps = [
-    "tones",
-  ]
-
-  binaries = [
-    {
-      name = "tones"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("tones/meta/tones.cmx")
-      dest = "tones.cmx"
-    },
-  ]
-}
-
-package("tts") {
-  deps = [
-    "tts",
-  ]
-
-  binaries = [
-    {
-      name = "tts"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("tts/meta/tts.cmx")
-      dest = "tts.cmx"
-    },
-  ]
-}
-
 package("use_media_decoder") {
   testonly = true
 
@@ -163,9 +63,6 @@ package("use_aac_decoder_test") {
     },
   ]
 }
-
-# TODO(perley): Take the wav_recorder utility and strip
-#               it down to a minimal simple_cap example
 
 #
 # Tests that don't run on CQ yet.

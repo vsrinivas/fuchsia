@@ -1,0 +1,44 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("vu_meter") {
+  deps = [
+    ":vu_meter_bin",
+  ]
+
+  binary = "vu_meter"
+
+  meta = [
+    {
+      path = rebase_path("meta/vu_meter.cmx")
+      dest = "vu_meter.cmx"
+    },
+  ]
+}
+
+executable("vu_meter_bin") {
+  output_name = "vu_meter"
+
+  sources = [
+    "main.cc",
+    "vu_meter_view.cc",
+    "vu_meter_view.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/media/audio",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//third_party/skia",
+    "//topaz/examples/ui/lib:skia_view",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/trace-provider",
+  ]
+}

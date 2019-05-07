@@ -1,0 +1,46 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("fx") {
+  deps = [
+    ":fx_bin",
+  ]
+
+  binaries = [
+    {
+      name = "fx"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/fx.cmx")
+      dest = "fx.cmx"
+    },
+  ]
+}
+
+executable("fx_bin") {
+  output_name = "fx"
+
+  sources = [
+    "fx.cpp",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/timeline",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/sys/cpp",
+    "//src/media/audio/lib/wav_writer:wav_writer",
+    "//zircon/public/fidl/fuchsia-scheduler",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/audio-utils",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
+  ]
+}
