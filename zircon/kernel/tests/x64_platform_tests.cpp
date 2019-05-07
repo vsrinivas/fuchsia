@@ -10,7 +10,6 @@
 #include <arch/mp.h>
 #if defined(__x86_64__)
 #include <arch/x86.h>
-#include <arch/x86/feature.h>
 #endif
 #include <lib/unittest/unittest.h>
 
@@ -71,32 +70,7 @@ static bool test_x64_msrs_k_commands() {
     END_TEST;
 }
 
-static bool test_x64_cpuid_bit_checks() {
-    BEGIN_TEST;
-
-#if defined(__x86_64__)
-    // Test x86_feature_test_raw correctly finds at least SSE2; all x64 CPUs have it
-    EXPECT_EQ(x86_feature_test_raw(X86_FEATURE_SSE2), true, "");
-
-    // Test x86_feature_test_raw vs x86_feature_test.
-    EXPECT_EQ(x86_feature_test_raw(X86_FEATURE_SSE3), x86_feature_test(X86_FEATURE_SSE3), "");
-    EXPECT_EQ(x86_feature_test_raw(X86_FEATURE_MON), x86_feature_test(X86_FEATURE_MON), "");
-    EXPECT_EQ(x86_feature_test_raw(X86_FEATURE_AVX2), x86_feature_test(X86_FEATURE_AVX2), "");
-    EXPECT_EQ(x86_feature_test_raw(X86_FEATURE_FSGSBASE),
-              x86_feature_test(X86_FEATURE_FSGSBASE), "");
-    EXPECT_EQ(x86_feature_test_raw(X86_FEATURE_AMD_TOPO),
-              x86_feature_test(X86_FEATURE_AMD_TOPO), "");
-    EXPECT_EQ(x86_feature_test_raw(X86_FEATURE_RDTSCP),
-              x86_feature_test(X86_FEATURE_RDTSCP), "");
-    EXPECT_EQ(x86_feature_test_raw(X86_FEATURE_AESNI),
-              x86_feature_test(X86_FEATURE_AESNI), "");
-#endif
-
-    END_TEST;
-}
-
 UNITTEST_START_TESTCASE(x64_platform_tests)
 UNITTEST("basic test of read/write MSR variants", test_x64_msrs)
 UNITTEST("test k cpu rdmsr commands", test_x64_msrs_k_commands)
-UNITTEST("test cpuid feature testing vs raw", test_x64_cpuid_bit_checks)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "");

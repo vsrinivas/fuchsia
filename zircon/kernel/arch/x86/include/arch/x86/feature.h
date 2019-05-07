@@ -110,23 +110,6 @@ static inline bool x86_feature_test(struct x86_cpuid_bit bit)
     }
 }
 
-// Test whether CPUID has a certain x86 feature.
-// Uncached, unchecked variant of x86_feature_test. Suitable for use in early boot,
-// before feature cache is filled.
-static inline bool x86_feature_test_raw(struct x86_cpuid_bit bit)
-{
-    struct cpuid_leaf leaf = {};
-    __cpuid(bit.leaf_num, leaf.a, leaf.b, leaf.c, leaf.d);
-
-    switch (bit.word) {
-        case 0: return !!((1u << bit.bit) & leaf.a);
-        case 1: return !!((1u << bit.bit) & leaf.b);
-        case 2: return !!((1u << bit.bit) & leaf.c);
-        case 3: return !!((1u << bit.bit) & leaf.d);
-        default: return false;
-    }
-}
-
 void x86_feature_debug(void);
 
 /* add feature bits to test here */
@@ -329,15 +312,11 @@ static inline const x86_microarch_config_t* x86_get_microarch_config(void) {
     return x86_microarch_config;
 }
 
-// Get the x86 vendor; does not use CPUID leaf cache.
-enum x86_vendor_list x86_get_vendor_raw(void);
-
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);
 bool x86_intel_cpu_has_meltdown(void);
 bool x86_intel_cpu_has_l1tf(void);
-void x86_intel_load_microcode_patch(void);
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);
 

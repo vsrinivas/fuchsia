@@ -45,29 +45,6 @@ static const x86_microarch_config_t* select_microarch_config(enum x86_microarch_
 
 static enum x86_hypervisor_list get_hypervisor();
 
-enum x86_vendor_list x86_get_vendor_raw(void) {
-    uint32_t eax, ebx, ecx, edx;
-    eax = ebx = ecx = edx = 0;
-    __cpuid(0, eax, ebx, ecx, edx);
-
-    /* figure out the vendor */
-    union {
-        uint32_t vendor_id[3];
-        char vendor_string[12];
-    } vu;
-
-    vu.vendor_id[0] = ebx;
-    vu.vendor_id[1] = edx;
-    vu.vendor_id[2] = ecx;
-    if (!memcmp(vu.vendor_string, "GenuineIntel", sizeof(vu.vendor_string))) {
-        return X86_VENDOR_INTEL;
-    } else if (!memcmp(vu.vendor_string, "AuthenticAMD", sizeof(vu.vendor_string))) {
-        return X86_VENDOR_AMD;
-    } else {
-        return X86_VENDOR_UNKNOWN;
-    }
-}
-
 void x86_feature_init(void) {
     if (atomic_swap(&initialized, 1)) {
         return;
@@ -80,7 +57,22 @@ void x86_feature_init(void) {
         max_cpuid = MAX_SUPPORTED_CPUID;
 
     LTRACEF("max cpuid 0x%x\n", max_cpuid);
-    x86_vendor = x86_get_vendor_raw();
+
+    /* figure out the vendor */
+    union {
+        uint32_t vendor_id[3];
+        char vendor_string[12];
+    } vu;
+    vu.vendor_id[0] = _cpuid[0].b;
+    vu.vendor_id[1] = _cpuid[0].d;
+    vu.vendor_id[2] = _cpuid[0].c;
+    if (!memcmp(vu.vendor_string, "GenuineIntel", sizeof(vu.vendor_string))) {
+        x86_vendor = X86_VENDOR_INTEL;
+    } else if (!memcmp(vu.vendor_string, "AuthenticAMD", sizeof(vu.vendor_string))) {
+        x86_vendor = X86_VENDOR_AMD;
+    } else {
+        x86_vendor = X86_VENDOR_UNKNOWN;
+    }
 
     /* read in the base cpuids */
     for (uint32_t i = 1; i <= max_cpuid; i++) {
@@ -135,7 +127,6 @@ void x86_feature_init(void) {
 
         x86_microarch = get_microarch(&model_info);
     }
-
     // Get microcode patch level
     switch (x86_vendor) {
     case X86_VENDOR_INTEL:

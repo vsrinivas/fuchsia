@@ -8,31 +8,6 @@
 #include <arch/x86/feature.h>
 #include <bits.h>
 
-struct x86_intel_microcode_update_header {
-    uint32_t header_version;
-    uint32_t update_revision;
-    uint32_t date;
-    uint32_t processor_signature;
-    uint32_t checksum;
-    uint32_t loader_revision;
-    uint32_t processor_flags;
-    uint32_t data_size;
-    uint32_t total_size;
-    uint32_t reserved[3];
-};
-
-static uint32_t x86_intel_processor_signature(void) {
-    uint32_t eax, ebx, ecx, edx;
-    __cpuid(X86_CPUID_MODEL_FEATURES, eax, ebx, ecx, edx);
-    return eax;
-}
-
-// Attempt to load a compatible microcode patch, if applicable.
-// Invoked on every logical processor before CPUID leaves are cached.
-void x86_intel_load_microcode_patch(void) {
-    // See Intel SDM Volume 3 9.11 "Microcode Update Facilities"
-}
-
 uint32_t x86_intel_get_patch_level(void) {
     uint32_t patch_level = 0;
     if (!x86_feature_test(X86_FEATURE_HYPERVISOR)) {
