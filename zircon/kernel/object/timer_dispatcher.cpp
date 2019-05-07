@@ -33,7 +33,7 @@ static void dpc_callback(dpc_t* d) {
 }
 
 zx_status_t TimerDispatcher::Create(uint32_t options,
-                                    fbl::RefPtr<Dispatcher>* dispatcher,
+                                    KernelHandle<TimerDispatcher>* handle,
                                     zx_rights_t* rights) {
     if (options > ZX_TIMER_SLACK_LATE)
         return ZX_ERR_INVALID_ARGS;
@@ -52,12 +52,12 @@ zx_status_t TimerDispatcher::Create(uint32_t options,
     };
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) TimerDispatcher(slack_mode);
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) TimerDispatcher(slack_mode)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
     *rights = default_rights();
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    *handle = ktl::move(new_handle);
     return ZX_OK;
 }
 

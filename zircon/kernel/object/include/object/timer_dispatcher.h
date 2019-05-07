@@ -15,13 +15,14 @@
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
 
 #include <sys/types.h>
 
 class TimerDispatcher final : public SoloDispatcher<TimerDispatcher, ZX_DEFAULT_TIMER_RIGHTS> {
 public:
     static zx_status_t Create(uint32_t options,
-                              fbl::RefPtr<Dispatcher>* dispatcher,
+                              KernelHandle<TimerDispatcher>* handle,
                               zx_rights_t* rights);
 
     ~TimerDispatcher() final;
