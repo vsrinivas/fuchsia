@@ -60,6 +60,24 @@ namespace fidl {
 //  * |InterfacePtr|, which is the client analog of a |Binding|.
 template <typename Interface, typename ImplPtr = Interface*>
 class Binding final {
+private:
+  template <class T>
+  struct is_unique_ptr : std::false_type {};
+
+  template <class T, class D>
+  struct is_unique_ptr<std::unique_ptr<T, D>> : std::true_type {};
+
+  template <class T>
+  struct is_shared_ptr : std::false_type {};
+
+  template <class T>
+  struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
+
+  static_assert(std::is_pointer<ImplPtr>::value ||
+                is_unique_ptr<ImplPtr>::value ||
+                is_shared_ptr<ImplPtr>::value,
+                "Binding only supports ImplPtr which are pointers");
+
  public:
   // Constructs an incomplete binding that will use the implementation |impl|.
   //
