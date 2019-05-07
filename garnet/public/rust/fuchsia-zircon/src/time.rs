@@ -119,8 +119,12 @@ impl Duration {
         self.0
     }
 
+    pub fn micros(self) -> i64 {
+        self.0 / 1_000
+    }
+
     pub fn millis(self) -> i64 {
-        self.0 / 1_000_000
+        self.micros() / 1_000
     }
 
     pub fn seconds(self) -> i64 {
@@ -139,8 +143,12 @@ impl Duration {
         Duration(nanos)
     }
 
+    pub fn from_micros(micros: i64) -> Self {
+        Duration(micros * 1_000)
+    }
+
     pub fn from_millis(millis: i64) -> Self {
-        Duration(millis * 1_000_000)
+        Duration::from_micros(millis * 1_000)
     }
 
     pub fn from_seconds(secs: i64) -> Self {
@@ -164,12 +172,14 @@ impl Duration {
 
 pub trait DurationNum: Sized {
     fn nanos(self) -> Duration;
+    fn micros(self) -> Duration;
     fn millis(self) -> Duration;
     fn seconds(self) -> Duration;
     fn minutes(self) -> Duration;
     fn hours(self) -> Duration;
 
     // Singular versions to allow for `1.milli()` and `1.second()`, etc.
+    fn micro(self) -> Duration { self.micros() }
     fn milli(self) -> Duration { self.millis() }
     fn second(self) -> Duration { self.seconds() }
     fn minute(self) -> Duration { self.minutes() }
@@ -181,6 +191,10 @@ pub trait DurationNum: Sized {
 impl DurationNum for i64 {
     fn nanos(self) -> Duration {
         Duration::from_nanos(self)
+    }
+
+    fn micros(self) -> Duration {
+        Duration::from_micros(self)
     }
 
     fn millis(self) -> Duration {
@@ -320,6 +334,17 @@ mod tests {
         let dur = Duration::from(std_dur);
         let std_dur_nanos = (1_000_000_000 * std_dur.as_secs()) + std_dur.subsec_nanos() as u64;
         assert_eq!(std_dur_nanos as i64, dur.nanos());
+    }
+
+    #[test]
+    fn i64_conversions() {
+        let nanos_in_one_hour = 3_600_000_000_000;
+        let dur_from_nanos = Duration::from_nanos(nanos_in_one_hour);
+        let dur_from_hours = Duration::from_hours(1);
+        assert_eq!(dur_from_nanos, dur_from_hours);
+        assert_eq!(dur_from_nanos.nanos(), dur_from_hours.nanos());
+        assert_eq!(dur_from_nanos.nanos(), nanos_in_one_hour);
+        assert_eq!(dur_from_nanos.hours(), 1);
     }
 
     #[test]

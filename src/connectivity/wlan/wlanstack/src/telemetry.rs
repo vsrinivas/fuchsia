@@ -231,7 +231,7 @@ pub fn report_scan_delay(
     scan_started_time: zx::Time,
     scan_finished_time: zx::Time,
 ) {
-    let delay_micros = (scan_finished_time - scan_started_time).nanos() / 1000;
+    let delay_micros = (scan_finished_time - scan_started_time).micros();
     sender.log_elapsed_time(metrics::SCAN_DELAY_METRIC_ID, (), delay_micros);
 }
 
@@ -244,7 +244,7 @@ pub fn report_connection_delay(
 ) {
     use wlan_metrics_registry::ConnectionDelayMetricDimensionConnectionResult::{Fail, Success};
 
-    let delay_micros = (conn_finished_time - conn_started_time).nanos() / 1000;
+    let delay_micros = (conn_finished_time - conn_started_time).micros();
     let connection_result_cobalt = match (result, failure) {
         (ConnectResult::Success, None) => Some(Success),
         (ConnectResult::Success, Some(_)) => None,
@@ -266,7 +266,7 @@ pub fn report_assoc_success_delay(
     assoc_started_time: zx::Time,
     assoc_finished_time: zx::Time,
 ) {
-    let delay_micros = (assoc_finished_time - assoc_started_time).nanos() / 1000;
+    let delay_micros = (assoc_finished_time - assoc_started_time).micros();
     sender.log_elapsed_time(metrics::ASSOCIATION_DELAY_METRIC_ID, 0, delay_micros);
 }
 
@@ -275,7 +275,7 @@ pub fn report_rsna_established_delay(
     rsna_started_time: zx::Time,
     rsna_finished_time: zx::Time,
 ) {
-    let delay_micros = (rsna_finished_time - rsna_started_time).nanos() / 1000;
+    let delay_micros = (rsna_finished_time - rsna_started_time).micros();
     sender.log_elapsed_time(metrics::RSNA_DELAY_METRIC_ID, 0, delay_micros);
 }
 
