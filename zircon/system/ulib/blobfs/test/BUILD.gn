@@ -25,6 +25,7 @@ test("blobfs-unit") {
     "unbuffered-operations-builder-test.cpp",
     "utils.cpp",
     "vector-extent-iterator-test.cpp",
+    "vmo-buffer-test.cpp",
     "writeback-test.cpp",
   ]
   deps = [

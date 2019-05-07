@@ -69,8 +69,7 @@ using function = function_impl<inline_target_size,
 // Behaves just like |fit::function<T, inline_target_size>| except that
 // attempting to store a target larger than |inline_target_size| will fail to
 // compile.
-template <typename T,
-          size_t inline_target_size = default_inline_target_size>
+template <typename T, size_t inline_target_size = default_inline_target_size>
 using inline_function = function_impl<inline_target_size,
                                       /*require_inline=*/true, T>;
 
