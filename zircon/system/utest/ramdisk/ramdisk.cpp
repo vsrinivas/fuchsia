@@ -28,6 +28,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/fifo.h>
@@ -46,6 +47,9 @@
 #include <utility>
 
 namespace tests {
+
+using devmgr_integration_test::IsolatedDevmgr;
+using devmgr_integration_test::RecursiveWaitForFile;
 
 static ramdisk_client_t* GetRamdisk(uint64_t blk_size, uint64_t blk_count,
                                     const uint8_t* guid = nullptr, size_t guid_len = 0) {
@@ -1613,6 +1617,83 @@ bool RamdiskTestFifoSleepDeferred(void) {
     END_TEST;
 }
 
+static bool RamdiskCreateAt(void) {
+    BEGIN_TEST;
+    IsolatedDevmgr devmgr;
+    auto args = IsolatedDevmgr::DefaultArgs();
+    args.disable_block_watcher = false;
+    args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
+    args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+    args.driver_search_paths.push_back("/boot/driver");
+    ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
+
+    fbl::unique_fd fd;
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl",
+                                   zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
+    ramdisk_client_t* ramdisk = nullptr;
+    ASSERT_EQ(ramdisk_create_at(devmgr.devfs_root().get(), PAGE_SIZE / 2, 512, &ramdisk),
+              ZX_OK);
+
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk),
+                                   zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
+    END_TEST;
+}
+
+static bool RamdiskCreateAtGuid(void) {
+    constexpr uint8_t kGuid[ZBI_PARTITION_GUID_LEN] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
+                                                       0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
+    BEGIN_TEST;
+    IsolatedDevmgr devmgr;
+    auto args = IsolatedDevmgr::DefaultArgs();
+    args.disable_block_watcher = false;
+    args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
+    args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+    args.driver_search_paths.push_back("/boot/driver");
+    ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
+
+    fbl::unique_fd fd;
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl",
+                                   zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
+    ramdisk_client_t* ramdisk = nullptr;
+    ASSERT_EQ(ramdisk_create_at_with_guid(devmgr.devfs_root().get(), PAGE_SIZE / 2, 512, kGuid,
+                                          sizeof(kGuid), &ramdisk),
+              ZX_OK);
+
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk),
+                                   zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
+    END_TEST;
+}
+
+static bool RamdiskCreateAtVmo(void) {
+    BEGIN_TEST;
+    IsolatedDevmgr devmgr;
+    auto args = IsolatedDevmgr::DefaultArgs();
+    args.disable_block_watcher = false;
+    args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
+    args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+    args.driver_search_paths.push_back("/boot/driver");
+    ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
+    zx::vmo vmo;
+    ASSERT_EQ(zx::vmo::create(256 * PAGE_SIZE, 0, &vmo), ZX_OK);
+
+    fbl::unique_fd fd;
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl",
+                                   zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
+    ramdisk_client_t* ramdisk = nullptr;
+    ASSERT_EQ(ramdisk_create_at_from_vmo(devmgr.devfs_root().get(), vmo.release(), &ramdisk),
+              ZX_OK);
+
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk),
+                                   zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(ramdisk_tests)
 RUN_TEST_SMALL(RamdiskTestWaitForDevice)
 RUN_TEST_SMALL(RamdiskGrowTestDimensionsChange)
@@ -1642,6 +1723,9 @@ RUN_TEST_SMALL(RamdiskTestFifoBadClientOverflow)
 RUN_TEST_SMALL(RamdiskTestFifoBadClientBadVmo)
 RUN_TEST_SMALL(RamdiskTestFifoSleepUnavailable)
 RUN_TEST_SMALL(RamdiskTestFifoSleepDeferred)
+RUN_TEST_MEDIUM(RamdiskCreateAt)
+RUN_TEST_MEDIUM(RamdiskCreateAtVmo)
+RUN_TEST_MEDIUM(RamdiskCreateAtGuid)
 END_TEST_CASE(ramdisk_tests)
 
 } // namespace tests

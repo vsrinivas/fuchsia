@@ -24,16 +24,29 @@ zx_status_t wait_for_device(const char* path, zx_duration_t timeout);
 // Creates a ramdisk and returns the full path to the ramdisk's block interface in ramdisk_path_out.
 // This path should be at least PATH_MAX characters long.
 zx_status_t ramdisk_create(uint64_t blk_size, uint64_t blk_count, ramdisk_client_t** out);
+// Same as above except that it opens the ramdisk relative to the passed in 'dev_root_fd'.
+// Ownership of 'dev_root_fd' is not transferred.
+zx_status_t ramdisk_create_at(int dev_root_fd, uint64_t blk_size, uint64_t blk_count,
+                              ramdisk_client_t** out);
 
 // Creates a ramdisk and returns the full path to the ramdisk's block interface in ramdisk_path_out.
 // This path should be at least PATH_MAX characters long.
 zx_status_t ramdisk_create_with_guid(uint64_t blk_size, uint64_t blk_count,
                                      const uint8_t* type_guid, size_t guid_len,
                                      ramdisk_client_t** out);
+// Same as above except that it opens the ramdisk relative to the passed in 'dev_root_fd'.
+// Ownership of 'dev_root_fd' is not transferred.
+zx_status_t ramdisk_create_at_with_guid(int dev_root_fd, uint64_t blk_size,
+                                        uint64_t blk_count,
+                                        const uint8_t* type_guid, size_t guid_len,
+                                        ramdisk_client_t** out);
 
 // Same but uses an existing VMO as the ramdisk.
 // The handle is always consumed, and must be the only handle to this VMO.
 zx_status_t ramdisk_create_from_vmo(zx_handle_t vmo, ramdisk_client_t** out);
+// Same as above except that it opens the ramdisk relative to the passed in 'dev_root_fd'.
+// Ownership of 'dev_root_fd' is not transferred.
+zx_status_t ramdisk_create_at_from_vmo(int dev_root_fd, zx_handle_t vmo, ramdisk_client_t** out);
 
 // Returns the file descriptor to the block device interface of the client.
 //
