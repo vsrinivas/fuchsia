@@ -403,11 +403,11 @@ class ClipNode final : public ContainerNode {
 };
 
 // Creates a node that renders its hierarchy with the specified opacity.
-class OpacityNodeHACK final : public ContainerNode {
+class OpacityNode final : public ContainerNode {
  public:
-  explicit OpacityNodeHACK(Session* session);
-  OpacityNodeHACK(OpacityNodeHACK&& moved);
-  ~OpacityNodeHACK();
+  explicit OpacityNode(Session* session);
+  OpacityNode(OpacityNode&& moved);
+  ~OpacityNode();
 
   // The opacity with which to render the contents of the hierarchy rooted at
   // this node. The opacity values are clamped 0.0 to 1.0.

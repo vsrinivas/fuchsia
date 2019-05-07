@@ -203,9 +203,8 @@ class GfxCommandApplier {
                                   fuchsia::ui::gfx::ClipNodeArgs args);
   static bool ApplyCreateEntityNode(Session* session, ResourceId id,
                                     fuchsia::ui::gfx::EntityNodeArgs args);
-  static bool ApplyCreateOpacityNode(
-      Session* session, ResourceId id,
-      fuchsia::ui::gfx::OpacityNodeArgsHACK args);
+  static bool ApplyCreateOpacityNode(Session* session, ResourceId id,
+                                     fuchsia::ui::gfx::OpacityNodeArgs args);
   static bool ApplyCreateShapeNode(Session* session, ResourceId id,
                                    fuchsia::ui::gfx::ShapeNodeArgs args);
   static bool ApplyCreateCompositor(Session* session, ResourceId id,
@@ -260,9 +259,8 @@ class GfxCommandApplier {
                                     fuchsia::ui::gfx::ClipNodeArgs args);
   static ResourcePtr CreateEntityNode(Session* session, ResourceId id,
                                       fuchsia::ui::gfx::EntityNodeArgs args);
-  static ResourcePtr CreateOpacityNode(
-      Session* session, ResourceId id,
-      fuchsia::ui::gfx::OpacityNodeArgsHACK args);
+  static ResourcePtr CreateOpacityNode(Session* session, ResourceId id,
+                                       fuchsia::ui::gfx::OpacityNodeArgs args);
   static ResourcePtr CreateShapeNode(Session* session, ResourceId id,
                                      fuchsia::ui::gfx::ShapeNodeArgs args);
 
