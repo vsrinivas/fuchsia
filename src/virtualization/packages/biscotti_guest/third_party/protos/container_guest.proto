@@ -84,10 +84,20 @@ message LaunchVshdResponse {
   string failure_reason = 2;
 }
 
-// Request to get information about a Linux package file in the container.
+// Request to get information about a Linux package in the container.
+// Only one of |file_path| or |package_name| needs to be set. If |file_path|
+// is set, this will get information about a Linux package file, if
+// |package_name| is set, it will try to resolve |package_name| into a package
+// id and get information about a Linux package with that id. If both
+// |file_path| and |package_id| are set, |file_path| will take precedence and
+// |package_id| will be unused.
 message LinuxPackageInfoRequest {
   // Path to the package file (e.g. .deb) in the container's filesystem.
   string file_path = 1;
+
+  // Name (not package_id) of package to look up. Used when |file_path| is
+  // empty.
+  string package_name = 2;
 }
 
 // Response sent back from a GetLinuxPackageInfo call.
@@ -123,10 +133,19 @@ message LinuxPackageInfoResponse {
   string summary = 8;
 }
 
-// Request protobuf for installing a Linux package file.
+// Request protobuf for installing a Linux package.
+// Only one of |file_path| or |package_id| needs to be set. If |file_path|
+// is set, this will try installing a Linux package file at that path, if
+// |package_id| is set, this will try and install a Linux package with that
+// |package_id|. If both |file_path| and |package_id| are set, |file_path|
+// will take precedence and |package_id| will be unused.
 message InstallLinuxPackageRequest {
   // Path to the package file (e.g. .deb) in the container's filesystem.
   string file_path = 1;
+
+  // Package ID to install in the form "package_name;version;arch;data". Used
+  // when |file_path| is empty.
+  string package_id = 5;
 }
 
 // Response sent back from a request to install a Linux package.
@@ -187,6 +206,22 @@ message GetDebugInformationResponse {
   string debug_information = 1;
 }
 
+// Request to search for Linux packages that are not installed and that match
+// the passed query.
+message AppSearchRequest {
+  // Query (plaintext) to search. Query is compared against the names of
+  // packages.
+  string query = 1;
+}
+
+// Response for AppSearch containing packages that match the searched
+// search query and are not installed.
+message AppSearchResponse {
+  message AppSearchResult { string package_name = 1; }
+  // List of valid packages matching the search query.
+  repeated AppSearchResult packages = 1;
+}
+
 // Implemented by garcon inside of the container.
 service Garcon {
   // Called to launch an application in a container.
@@ -215,4 +250,7 @@ service Garcon {
   // Get debug information about container state.
   rpc GetDebugInformation(GetDebugInformationRequest)
       returns (GetDebugInformationResponse);
+
+  // Search for and return not installed apps matching passed query.
+  rpc AppSearch(AppSearchRequest) returns (AppSearchResponse);
 }

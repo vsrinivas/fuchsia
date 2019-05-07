@@ -40,6 +40,18 @@ message Application {
     repeated StringWithLocale values = 1;
   }
 
+  // A repeated "localestring". Entries with a locale should set the |locale|
+  // field to the value inside the [], e.g for the key "Name[fr]", |locale|
+  // should be "fr"; for the default entry, |locale| should be empty. The
+  // browser is responsible for mapping this to something it can use.
+  message LocaleStrings {
+    message StringsWithLocale {
+      string locale = 1;
+      repeated string value = 2;
+    }
+    repeated StringsWithLocale values = 1;
+  }
+
   // This is the 'key' for the application and used in other requests such as
   // launching the application or retrieving its icon.
   string desktop_file_id = 1;
@@ -51,9 +63,11 @@ message Application {
   bool no_display = 5;
   string startup_wm_class = 6;
   bool startup_notify = 7;
+  LocaleStrings keywords = 9;
+  string executable_file_name = 10;
 
-  // If set, the package_id of the installed package that owns the .desktop
-  // file. Allows for operations like uninstalling the related application.
+  // If set, the package_id of the installed package that owns this .desktop
+  // file. If not set, the .desktop file is not owned by an installed package.
   string package_id = 8;
 }
 
@@ -188,4 +202,7 @@ service ContainerListener {
   // Called by a container to update the MIME type associations for this
   // container.
   rpc UpdateMimeTypes(UpdateMimeTypesRequest) returns (EmptyMessage);
+
+  // If adding more rpc's, please update ContainerListenerFuzzerSingleAction as
+  // well.
 }

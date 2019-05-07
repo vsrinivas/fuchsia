@@ -48,6 +48,33 @@ message CreateContainerResponse {
   string failure_reason = 2;
 }
 
+message DeleteContainerRequest {
+  // Name of the container to delete.
+  string container_name = 1;
+}
+
+message DeleteContainerResponse {
+  enum Status {
+    // The status of deleting the container is unknown
+    UNKNOWN = 0;
+
+    // The container is being deleted.
+    DELETING = 1;
+
+    // The named container doesn't exist.
+    DOES_NOT_EXIST = 2;
+
+    // The container could not be deleted.
+    FAILED = 3;
+  }
+
+  // Container deletion status.
+  Status status = 1;
+
+  // The failure reason if the container could not be deleted.
+  string failure_reason = 2;
+}
+
 message StartContainerRequest {
   // Name of the container to start within the VM.
   string container_name = 1;
@@ -60,6 +87,12 @@ message StartContainerRequest {
 
   // Container token.
   string token = 4;
+
+  // If true, StartContainer will return immediately and provide updates to the
+  // host via UpdateStartStatus. If false, StartContainer will block until the
+  // container has started. This field will be required to be true once all
+  // clients are migrated to use async.
+  bool async = 5;
 }
 
 message StartContainerResponse {
@@ -75,6 +108,15 @@ message StartContainerResponse {
 
     // The container could not be started.
     FAILED = 3;
+
+    // The container is starting. Further updates will be delievered via
+    // UpdateStartStatus.
+    STARTING = 4;
+
+    // The container is remapping its rootfs uids/gids and will take longer than
+    // usual to start up. Further updates will be delievered via
+    // UpdateStartStatus.
+    REMAPPING = 5;
   }
 
   // Container startup status.
@@ -118,6 +160,9 @@ message GetContainerUsernameResponse {
 
   // The failure_reason if the username could not be retrieved.
   string failure_reason = 3;
+
+  // The primary homedir of the container, if successful.
+  string homedir = 4;
 }
 
 message SetUpUserRequest {
@@ -148,6 +193,11 @@ message SetUpUserResponse {
 
   // The failure_reason if the user was not set up successfully.
   string failure_reason = 2;
+
+  // The primary username of the container, if successful or if user already
+  // exists.  This may be different from container_username in SetUpUserRequest
+  // if the container already exists, and uid 1000 user has changed username.
+  string username = 3;
 }
 
 message TremplinStartupInfo {}
@@ -187,6 +237,58 @@ message ContainerCreationProgress {
   string failure_reason = 4;
 }
 
+// Sent by tremplin to update the host on the deletion of a container.
+message ContainerDeletionProgress {
+  enum Status {
+    // Deletion status is unknown.
+    UNKNOWN = 0;
+
+    // The container has been deleted.
+    DELETED = 1;
+
+    // The container deletion was cancelled.
+    CANCELLED = 2;
+
+    // One or more steps failed and the container could not be deleted.
+    FAILED = 3;
+  }
+
+  // The current status of the container.
+  Status status = 1;
+
+  // Name of the container to delete.
+  string container_name = 2;
+
+  // The failure_reason if the container could not be deleted.
+  string failure_reason = 3;
+}
+
+// Sent by tremplin to update the host on the start progress of a container.
+message ContainerStartProgress {
+  enum Status {
+    // Start status is unknown.
+    UNKNOWN = 0;
+
+    // The container has started.
+    STARTED = 1;
+
+    // The container start was cancelled.
+    CANCELLED = 2;
+
+    // One or more steps failed and the container could not be started.
+    FAILED = 3;
+  }
+
+  // The current status of the container.
+  Status status = 1;
+
+  // Name of the container to start.
+  string container_name = 2;
+
+  // The failure_reason if the container could not be started.
+  string failure_reason = 3;
+}
+
 message GetContainerInfoRequest {
   // Name of the container to get information for.
   string container_name = 1;
@@ -221,19 +323,211 @@ message GetContainerInfoResponse {
   fixed32 ipv4_address = 3;
 }
 
+message SetTimezoneRequest {
+  // Timezone name as per values from the timezone-data package in
+  // /usr/share/zoneinfo.
+  string timezone_name = 1;
+
+  // Timezone properties in POSIX compatible TZ environment variable format
+  // (see 'man timezone'). Used if the guest VM does not support timezone-data
+  // timezone names.
+  //
+  // cicerone/tzif_parser.h can extract these strings from TZif files.
+  string posix_tz_string = 2;
+
+  // Containers for which we want to set the timezone.
+  repeated string container_names = 3;
+}
+
+message SetTimezoneResponse {
+  // The number of LXD containers for which the timezone was successfully set.
+  int32 successes = 1;
+
+  // The failure_reason if the request was unsuccessful.
+  repeated string failure_reasons = 2;
+}
+
+message ExportContainerRequest {
+  // Name of the container to export.
+  string container_name = 1;
+
+  // Path to write the exported container.  This path, or a parent
+  // must have already been shared using seneschal.  It is the path relative
+  // to the VM root mount point (/mnt/shared) as returned in seneschal
+  // SharePathResponse.path.  E.g.: "MyFiles/export".  If path is a directory,
+  // it must already exist, and the export will be named <fingerprint>.tar.gz
+  // otherwise this path must already exist as a file, or its parent directory
+  // must exist.
+  string export_path = 2;
+}
+
+message ExportContainerResponse {
+  enum Status {
+    // The result is unknown.
+    UNKNOWN = 0;
+
+    // The container has started exporting.
+    EXPORTING = 1;
+
+    // One or more steps failed and the container could not be exported.
+    FAILED = 2;
+  }
+
+  // Current container status.
+  Status status = 1;
+
+  // Details relating to the failure state.
+  string failure_reason = 2;
+}
+
+// Sent by tremplin to update the host on the export progress of a container.
+message ContainerExportProgress {
+  // Name of the container to export.
+  string container_name = 1;
+
+  enum Status {
+    // The result is unknown.
+    UNKNOWN = 0;
+
+    // Export is completed.
+    DONE = 1;
+
+    // One or more steps failed and the container could not be exported.
+    FAILED = 2;
+
+    // Deprecated.  The container is exporting into a tar file.
+    EXPORTING_TAR = 3;
+
+    // Deprecated.  The container tar file is being compressed into an image
+    // file.
+    EXPORTING_COMPRESS = 4;
+
+    // The exported image file is being downloaded.
+    EXPORTING_DOWNLOAD = 5;
+
+    // The exported image file is being packed.  This is equivalent to
+    // tar/compress.
+    EXPORTING_PACK = 6;
+  }
+
+  // Container status.
+  Status status = 2;
+
+  // Percentage progress for the current stage given in status.
+  uint32 progress_percent = 3;
+
+  // Speed (bytes per second) for the current stage given in status.
+  uint64 progress_speed = 4;
+
+  // Details relating to the failure state.
+  string failure_reason = 5;
+}
+
+message ImportContainerRequest {
+  // Name of the container to import.
+  string container_name = 1;
+
+  // Path to read the container unified tarball.  This is a file which
+  // must have already been shared using seneschal.  It is the path relative
+  // to the VM root mount point (/mnt/shared) as returned in seneschal
+  // SharePathResponse.path.  E.g.: "MyFiles/export/backup.tar.gz".
+  string import_path = 2;
+}
+
+message ImportContainerResponse {
+  enum Status {
+    // The result is unknown.
+    UNKNOWN = 0;
+
+    // The container is importing. Further updates will be delievered via
+    // UpdateImportStatus.
+    IMPORTING = 1;
+
+    // One or more steps failed and the container could not be imported.
+    FAILED = 2;
+  }
+
+  // Current container status.
+  Status status = 1;
+
+  // Details relating to the failure state.
+  string failure_reason = 2;
+
+}
+
+// Sent by tremplin to update the host on the import progress of a container.
+message ContainerImportProgress {
+  // Name of the container to import.
+  string container_name = 1;
+
+  enum Status {
+    // The result is unknown.
+    UNKNOWN = 0;
+
+    // Import is completed.
+    DONE = 1;
+
+    // One or more steps failed and the container could not be imported.
+    FAILED = 2;
+
+    // The image is being uploaded.
+    IMPORTING_UPLOAD = 3;
+
+    // The image is being unpacked to create a container.
+    IMPORTING_UNPACK = 4;
+
+    // The container could be imported due to mismatched architecture.
+    FAILED_ARCHITECTURE = 5;
+  }
+
+  // Container status.
+  Status status = 2;
+
+  // Percentage progress for the current stage given in status.
+  uint32 progress_percent = 3;
+
+  // Speed (bytes per second) for the current stage given in status.
+  uint64 progress_speed = 4;
+
+  // Details relating to the failure state.
+  string failure_reason = 5;
+
+  // Architecture of device.  Set when status is FAILED_ARCHITECTURE.
+  string architecture_device = 6;
+
+  // Architecture of container which failed to import.
+  // Set when status is FAILED_ARCHITECTURE.
+  string architecture_container = 7;
+}
+
+// Sent by tremplin to update the host that a container has shutdown.
+message ContainerShutdownInfo {
+  // Name of the container.
+  string container_name = 1;
+}
+
 // Tremplin service methods.
 service Tremplin {
   rpc CreateContainer(CreateContainerRequest) returns (CreateContainerResponse);
+  rpc DeleteContainer(DeleteContainerRequest) returns (DeleteContainerResponse);
   rpc StartContainer(StartContainerRequest) returns (StartContainerResponse);
   rpc GetContainerUsername(GetContainerUsernameRequest)
       returns (GetContainerUsernameResponse);
   rpc SetUpUser(SetUpUserRequest) returns (SetUpUserResponse);
   rpc GetContainerInfo(GetContainerInfoRequest)
       returns (GetContainerInfoResponse);
+  rpc SetTimezone(SetTimezoneRequest) returns (SetTimezoneResponse);
+  rpc ExportContainer(ExportContainerRequest) returns (ExportContainerResponse);
+  rpc ImportContainer(ImportContainerRequest) returns (ImportContainerResponse);
 }
 
 // Service that is notified of events from tremplin.
 service TremplinListener {
   rpc TremplinReady(TremplinStartupInfo) returns (EmptyMessage);
   rpc UpdateCreateStatus(ContainerCreationProgress) returns (EmptyMessage);
+  rpc UpdateDeletionStatus(ContainerDeletionProgress) returns (EmptyMessage);
+  rpc UpdateStartStatus(ContainerStartProgress) returns (EmptyMessage);
+  rpc UpdateExportStatus(ContainerExportProgress) returns (EmptyMessage);
+  rpc UpdateImportStatus(ContainerImportProgress) returns (EmptyMessage);
+  rpc ContainerShutdown(ContainerShutdownInfo) returns (EmptyMessage);
 }

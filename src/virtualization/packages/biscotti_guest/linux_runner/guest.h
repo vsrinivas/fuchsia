@@ -82,9 +82,6 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   grpc::Status VmReady(grpc::ServerContext* context,
                        const vm_tools::EmptyMessage* request,
                        vm_tools::EmptyMessage* response) override;
-  grpc::Status ContainerStartupFailed(
-      grpc::ServerContext* context, const vm_tools::ContainerName* request,
-      vm_tools::EmptyMessage* response) override;
 
   // |vm_tools::tremplin::TremplinListener::Service|
   grpc::Status TremplinReady(
@@ -95,6 +92,26 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
       grpc::ServerContext* context,
       const vm_tools::tremplin::ContainerCreationProgress* request,
       vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status UpdateDeletionStatus(
+      ::grpc::ServerContext* context,
+      const ::vm_tools::tremplin::ContainerDeletionProgress* request,
+      ::vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status UpdateStartStatus(
+      ::grpc::ServerContext* context,
+      const ::vm_tools::tremplin::ContainerStartProgress* request,
+      ::vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status UpdateExportStatus(
+      ::grpc::ServerContext* context,
+      const ::vm_tools::tremplin::ContainerExportProgress* request,
+      ::vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status UpdateImportStatus(
+      ::grpc::ServerContext* context,
+      const ::vm_tools::tremplin::ContainerImportProgress* request,
+      ::vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status ContainerShutdown(
+      ::grpc::ServerContext* context,
+      const ::vm_tools::tremplin::ContainerShutdownInfo* request,
+      ::vm_tools::tremplin::EmptyMessage* response) override;
 
   // |vm_tools::container::ContainerListener::Service|
   grpc::Status ContainerReady(

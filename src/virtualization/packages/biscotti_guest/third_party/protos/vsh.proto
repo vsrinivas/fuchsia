@@ -36,6 +36,14 @@ message SetupConnectionRequest {
   string command = 4;
   // Argv of the target program to run. Empty indicates a login shell.
   repeated string argv = 5;
+  // Initial window size (rows) of the pty.
+  int32 window_rows = 6;
+  // Initial window size (cols) of the pty.
+  int32 window_cols = 7;
+  // True if using a noninteractive client and a pty should not be allocated.
+  // The logic here is inverted from a sane value to keep backwards
+  // compatibility with the current behavior (always allocate a pty).
+  bool nopty = 8;
 }
 
 // Response to a SetupConnectionRequest.
@@ -67,6 +75,8 @@ enum StdioStream {
   STDIN_STREAM = 1;
   // This is a stdout stream, flowing from server to client.
   STDOUT_STREAM = 2;
+  // This is a stderr stream, flowing from server to client.
+  STDERR_STREAM = 3;
 }
 
 // DataMessages encapsulate stdio to be forwarded between the server and client.

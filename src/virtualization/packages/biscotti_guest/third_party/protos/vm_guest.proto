@@ -10,6 +10,7 @@ option cc_enable_arenas = true;
 package vm_tools;
 
 import "common.proto";
+import "google/protobuf/timestamp.proto";
 
 // Parameters for setting up IPv4 networking inside the VM.  Each parameter
 // is stored in network-byte order (for example from the output of inet_pton).
@@ -153,6 +154,17 @@ message SetResolvConfigRequest {
   ResolvConfig resolv_config = 1;
 }
 
+// Protos to update time in guest.
+// This RPC is necessary because Linux on ARM does not have paravirtualized
+// time, so (especially on resume) there can be significant clock drift as
+// compared to the host.  We work around this on ARM by triggering guest clock
+// update on resume, using this RPC.
+// See https://crbug.com/823406 for details.
+message SetTimeRequest {
+  // The current time, as seconds and nanos since UTC epoch. (Jan 1, 1970)
+  google.protobuf.Timestamp time = 1;
+}
+
 // Implemented by maitred inside the VM.
 service Maitred {
   // Set up networking inside the VM so that it can access the internet.
@@ -169,6 +181,12 @@ service Maitred {
 
   // Start Termina-specific system services.
   rpc StartTermina(StartTerminaRequest) returns (StartTerminaResponse);
+
+  // Set the VM time to a specified value.
+  // If the new time is invalid (roughly 0), ignore it.
+  // This RPC is to address cases where the guest loses time for some reason
+  // (e.g. due to the host being suspended for a while).
+  rpc SetTime(SetTimeRequest) returns (EmptyMessage);
 
   // Mount a 9P server using a vsock socket.  This uses the trans=fd option
   // when mounting the 9P server, which requires first connecting a socket

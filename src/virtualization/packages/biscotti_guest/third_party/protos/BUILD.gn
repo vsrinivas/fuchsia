@@ -26,6 +26,7 @@ proto_library("vm_cc_proto") {
   ]
   deps = [
     "//third_party/grpc:grpc++",
+    "//third_party/protobuf:protobuf_full",
   ]
 }
 

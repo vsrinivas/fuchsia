@@ -69,11 +69,6 @@ message LogRequest {
   repeated LogRecord records = 1;
 }
 
-// Message used to hold a container name for when starting it failed.
-message ContainerName {
-  string name = 1;
-}
-
 // The LogCollector service stores log records that were generated from within
 // a VM in a persistent location outside the VM.
 service LogCollector {
@@ -99,7 +94,4 @@ service StartupListener {
   // Called by each VM when it starts up to indicate that it is ready to handle
   // incoming requests.
   rpc VmReady(EmptyMessage) returns (EmptyMessage);
-
-  // Called by a VM if it fails to start a container when requested.
-  rpc ContainerStartupFailed(ContainerName) returns (EmptyMessage);
 }

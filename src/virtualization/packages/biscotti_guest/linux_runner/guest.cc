@@ -610,13 +610,6 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
-grpc::Status Guest::ContainerStartupFailed(
-    grpc::ServerContext* context, const vm_tools::ContainerName* request,
-    vm_tools::EmptyMessage* response) {
-  FXL_LOG(ERROR) << "Container Startup Failed";
-  return grpc::Status::OK;
-}
-
 grpc::Status Guest::TremplinReady(
     grpc::ServerContext* context,
     const ::vm_tools::tremplin::TremplinStartupInfo* request,
@@ -668,6 +661,47 @@ grpc::Status Guest::UpdateCreateStatus(
       FXL_LOG(INFO) << "Unknown download status: " << request->status();
       break;
   }
+  return grpc::Status::OK;
+}
+
+grpc::Status Guest::UpdateDeletionStatus(
+    ::grpc::ServerContext* context,
+    const ::vm_tools::tremplin::ContainerDeletionProgress* request,
+    ::vm_tools::tremplin::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::UpdateDeletionStatus");
+  FXL_LOG(INFO) << "Update Deletion Status";
+  return grpc::Status::OK;
+}
+grpc::Status Guest::UpdateStartStatus(
+    ::grpc::ServerContext* context,
+    const ::vm_tools::tremplin::ContainerStartProgress* request,
+    ::vm_tools::tremplin::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::UpdateStartStatus");
+  FXL_LOG(INFO) << "Update Start Status";
+  return grpc::Status::OK;
+}
+grpc::Status Guest::UpdateExportStatus(
+    ::grpc::ServerContext* context,
+    const ::vm_tools::tremplin::ContainerExportProgress* request,
+    ::vm_tools::tremplin::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::UpdateExportStatus");
+  FXL_LOG(INFO) << "Update Export Status";
+  return grpc::Status::OK;
+}
+grpc::Status Guest::UpdateImportStatus(
+    ::grpc::ServerContext* context,
+    const ::vm_tools::tremplin::ContainerImportProgress* request,
+    ::vm_tools::tremplin::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::UpdateImportStatus");
+  FXL_LOG(INFO) << "Update Import Status";
+  return grpc::Status::OK;
+}
+grpc::Status Guest::ContainerShutdown(
+    ::grpc::ServerContext* context,
+    const ::vm_tools::tremplin::ContainerShutdownInfo* request,
+    ::vm_tools::tremplin::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::ContainerShutdown");
+  FXL_LOG(INFO) << "Container Shutdown";
   return grpc::Status::OK;
 }
 
