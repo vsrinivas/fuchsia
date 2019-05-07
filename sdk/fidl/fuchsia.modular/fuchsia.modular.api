@@ -7,7 +7,7 @@
   "fidl/fuchsia.modular/basemgr/user_provider.fidl": "57bb829cc755bc2e2557a8c82a969011",
   "fidl/fuchsia.modular/clipboard/clipboard.fidl": "f562cc1c6973f5f74647774b350d9303",
   "fidl/fuchsia.modular/component/component_context.fidl": "1d491934727326cf130de16e27477d02",
-  "fidl/fuchsia.modular/component/message_queue.fidl": "4213c1e0dbdc33a28e1917164717dc3c",
+  "fidl/fuchsia.modular/component/message_queue.fidl": "45b0f3d1e24369d90c010c57f8092dcd",
   "fidl/fuchsia.modular/config/config.fidl": "453578c9ad1bf9defa2db81e1bb8ed88",
   "fidl/fuchsia.modular/context/context_engine.fidl": "c87ca341e9fb072d1fb8f9041c4bc21d",
   "fidl/fuchsia.modular/context/context_reader.fidl": "fea8453b32292ec68ae518f44a4e4627",
