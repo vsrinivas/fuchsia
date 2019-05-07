@@ -38,14 +38,6 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
   InvalidateScene();
 }
 
-void BaseView::SetConfig(fuchsia::ui::views::ViewConfig view_config) {
-  if (!fidl::Equals(view_config, view_config_)) {
-    fuchsia::ui::views::ViewConfig old_config = std::move(view_config_);
-    view_config_ = std::move(view_config);
-    OnConfigChanged(old_config);
-  }
-}
-
 void BaseView::SetReleaseHandler(fit::function<void(zx_status_t)> callback) {
   listener_binding_.set_error_handler(std::move(callback));
 }

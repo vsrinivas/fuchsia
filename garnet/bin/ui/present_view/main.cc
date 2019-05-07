@@ -13,30 +13,11 @@
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
 
-using fuchsia::ui::views::ViewConfig;
 using scenic::ViewTokenPair;
 
 namespace {
 
 constexpr char kKeyLocale[] = "locale";
-
-// Build a minimal |ViewConfig| using the given |locale_id|. This is needed for
-// calls to |View::SetConfig|.
-ViewConfig BuildSampleViewConfig(
-    const std::string& locale_id,
-    const std::string& timezone_id = "America/Los_Angeles",
-    const std::string& calendar_id = "gregorian") {
-  ViewConfig view_config;
-  fuchsia::intl::Profile* intl_profile = view_config.mutable_intl_profile();
-  intl_profile->mutable_locales()->push_back(
-      fuchsia::intl::LocaleId{.id = locale_id});
-  intl_profile->mutable_time_zones()->push_back(
-      fuchsia::intl::TimeZoneId{.id = timezone_id});
-  intl_profile->mutable_calendars()->push_back(
-      fuchsia::intl::CalendarId{.id = calendar_id});
-  intl_profile->set_temperature_unit(fuchsia::intl::TemperatureUnit::CELSIUS);
-  return view_config;
-}
 
 }  // namespace
 
@@ -96,11 +77,10 @@ int main(int argc, const char** argv) {
   if (command_line.HasOption(kKeyLocale)) {
     std::string locale_str;
     command_line.GetOptionValue(kKeyLocale, &locale_str);
-    auto view_config = BuildSampleViewConfig(locale_str);
-
     // Create a view using the |fuchsia::ui::views::View| interface.
     services.ConnectToService<fuchsia::ui::views::View>(view.NewRequest());
-    view->Present(std::move(view_token), std::move(view_config));
+    view->Present2(std::move(view_token));
+    // TODO(I18N-13): Provide fuchsia.intl.PropertyProvider instance.
   } else {
     // Create the view using the |fuchsia::ui::app::ViewProvider| interface.
     fidl::InterfacePtr<::fuchsia::ui::app::ViewProvider> view_provider;

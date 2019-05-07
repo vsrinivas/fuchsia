@@ -43,17 +43,13 @@ class App : public fuchsia::ui::views::View {
       : context_(context), view_factory_(std::move(view_factory)) {}
 
  private:
-  // |fuchsia::ui::views::View|
-  void SetConfig(fuchsia::ui::views::ViewConfig config) override {}
-
   // |fuchsia::ui::view::View|
-  void Present(fuchsia::ui::views::ViewToken view_token,
-               fuchsia::ui::views::ViewConfig initial_config) override {
+  void Present2(fuchsia::ui::views::ViewToken view_token) override {
     auto scenic =
         context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext view_context = {
         .session_and_listener_request =
-            scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
+        scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
     };
 

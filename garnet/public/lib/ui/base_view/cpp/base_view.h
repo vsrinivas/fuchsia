@@ -51,11 +51,6 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
     return view_properties_;
   }
 
-  [[deprecated("SCN-1343: ViewConfig is going away")]]
-  const fuchsia::ui::views::ViewConfig& view_config2() const {
-    return view_config_;
-  }
-
   // Returns true if the view has a non-empty size in logical pixels.
   bool has_logical_size() const {
     auto& sz = logical_size();
@@ -86,14 +81,6 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   // Gets the view's metrics.
   // This value is zero until the view receives metrics from its session.
   const fuchsia::ui::gfx::Metrics& metrics() const { return metrics_; }
-
-  // Sets the view's presentation configuration (i18n profile, etc.). If the new
-  // |ViewConfig| differs at all from the existing one, |OnConfigChanged()|
-  // will be called.
-  //
-  // This method should be called at least once before the view is displayed.
-  [[deprecated("SCN-1343: ViewConfig is going away")]]
-  void SetConfig(fuchsia::ui::views::ViewConfig view_config);
 
   // Sets a callback which is invoked when the view's owner releases the
   // view causing the view manager to unregister it.
@@ -131,17 +118,6 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   //
   // The default implementation does nothing.
   virtual void OnMetricsChanged(fuchsia::ui::gfx::Metrics old_metrics){};
-
-  // Called when the view's |ViewConfig| is first set or has changed.
-  //
-  // This is not called unless there was an actual value change between the old
-  // and the new config. The new config can be accessed at |view_config()|.
-  //
-  // The default implementation does nothing. Subclasses will usually want to
-  // call |InvalidateScene()|.
-  [[deprecated("SCN-1343: ViewConfig is going away")]]
-  virtual void OnConfigChanged(
-      const fuchsia::ui::views::ViewConfig& old_config) {}
 
   // Called to handle an input event.
   //
@@ -200,8 +176,6 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   fuchsia::ui::gfx::vec3 logical_size_;
   fuchsia::ui::gfx::vec3 physical_size_;
   fuchsia::ui::gfx::ViewProperties view_properties_;
-  [[deprecated("SCN-1343: ViewConfig is going away")]]
-  fuchsia::ui::views::ViewConfig view_config_;
   fuchsia::ui::gfx::Metrics metrics_;
 
   zx_time_t last_presentation_time_ = 0;
