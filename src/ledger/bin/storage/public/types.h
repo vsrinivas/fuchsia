@@ -10,6 +10,7 @@
 #include <string>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
@@ -152,7 +153,7 @@ enum class IsObjectSynced : bool { NO, YES };
 
 enum class JournalContainsClearOperation { NO, YES };
 
-enum class Status {
+enum class FXL_WARN_UNUSED_RESULT Status {
   // User visible status.
   OK,
   IO_ERROR,

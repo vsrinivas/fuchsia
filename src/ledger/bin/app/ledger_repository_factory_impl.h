@@ -72,7 +72,7 @@ class LedgerRepositoryFactoryImpl
       const RepositoryInformation& repository_information);
   void OnVersionMismatch(RepositoryInformation repository_information);
 
-  storage::Status DeleteRepositoryDirectory(
+  void DeleteRepositoryDirectory(
       const RepositoryInformation& repository_information);
 
   Environment* const environment_;

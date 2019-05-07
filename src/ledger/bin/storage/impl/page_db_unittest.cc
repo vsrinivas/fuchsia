@@ -216,7 +216,8 @@ TEST_F(PageDbTest, ObjectStorage) {
                                  DataSource::DataChunk::Create(content)),
                   PageDbObjectStatus::TRANSIENT,
                   {{child_identifier.object_digest(), KeyPriority::LAZY}}));
-    page_db_.GetObjectStatus(handler, object_identifier, &object_status);
+    ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier,
+                                                   &object_status));
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
     ASSERT_EQ(Status::OK,
               page_db_.ReadObject(handler, object_identifier, &piece));
@@ -237,7 +238,8 @@ TEST_F(PageDbTest, ObjectStorage) {
                                  DataSource::DataChunk::Create(new_content)),
                   PageDbObjectStatus::LOCAL,
                   {{child_identifier.object_digest(), KeyPriority::EAGER}}));
-    page_db_.GetObjectStatus(handler, object_identifier, &object_status);
+    ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_identifier,
+                                                   &object_status));
     EXPECT_EQ(PageDbObjectStatus::LOCAL, object_status);
     EXPECT_EQ(content, piece->GetData());
     EXPECT_NE(new_content, piece->GetData());
@@ -470,12 +472,12 @@ TEST_F(PageDbTest, PageIsOnline) {
     bool page_is_online;
 
     // Check that the initial state is not online.
-    page_db_.IsPageOnline(handler, &page_is_online);
+    ASSERT_EQ(Status::OK, page_db_.IsPageOnline(handler, &page_is_online));
     EXPECT_FALSE(page_is_online);
 
     // Mark page as online and check it was updated.
     EXPECT_EQ(Status::OK, page_db_.MarkPageOnline(handler));
-    page_db_.IsPageOnline(handler, &page_is_online);
+    ASSERT_EQ(Status::OK, page_db_.IsPageOnline(handler, &page_is_online));
     EXPECT_TRUE(page_is_online);
   });
 }

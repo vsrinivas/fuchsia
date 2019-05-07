@@ -50,7 +50,7 @@ class BatchImpl : public Db::Batch {
   // Creates a new Batch based on a leveldb batch. Once |Execute| is called,
   // |callback| will be called with the same batch, ready to be written in
   // leveldb. If the destructor is called without a previous execution of the
-  // batch, |callback| will be called with a |nullptr|.
+  // batch, |callback| will be called with a |nullptr| and must return OK.
   BatchImpl(
       async_dispatcher_t* dispatcher,
       std::unique_ptr<leveldb::WriteBatch> batch,
@@ -60,8 +60,10 @@ class BatchImpl : public Db::Batch {
         callback_(std::move(callback)) {}
 
   ~BatchImpl() override {
-    if (batch_)
-      callback_(nullptr);
+    if (batch_) {
+      Status status = callback_(nullptr);
+      FXL_DCHECK(status == Status::OK);
+    }
   }
 
   Status Put(CoroutineHandler* handler, convert::ExtendedStringView key,

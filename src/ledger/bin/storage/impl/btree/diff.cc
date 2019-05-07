@@ -116,8 +116,7 @@ class IteratorPair {
   Status SkipIteratorsTo(fxl::StringView min_key) {
     for (;;) {
       if (left_.SkipToIndex(min_key)) {
-        right_.SkipTo(min_key);
-        return Status::OK;
+        return right_.SkipTo(min_key);
       }
       if (right_.SkipToIndex(min_key)) {
         left_.SkipToIndex(min_key);
@@ -127,12 +126,10 @@ class IteratorPair {
       auto left_child = left_.GetNextChild();
       auto right_child = right_.GetNextChild();
       if (!left_child) {
-        right_.SkipTo(min_key);
-        return Status::OK;
+        return right_.SkipTo(min_key);
       }
       if (!right_child) {
-        left_.SkipTo(min_key);
-        return Status::OK;
+        return left_.SkipTo(min_key);
       }
       if (left_child == right_child) {
         return Status::OK;

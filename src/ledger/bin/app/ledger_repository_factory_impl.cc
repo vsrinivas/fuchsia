@@ -398,7 +398,7 @@ void LedgerRepositoryFactoryImpl::OnVersionMismatch(
   repositories_.erase(find_repository);
 }
 
-storage::Status LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
+void LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
     const RepositoryInformation& repository_information) {
   files::ScopedTempDirAt tmp_directory(
       repository_information.staging_path.root_fd(),
@@ -412,14 +412,13 @@ storage::Status LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
                tmp_directory.root_fd(), destination.c_str()) != 0) {
     FXL_LOG(ERROR) << "Unable to move repository local storage to "
                    << destination << ". Error: " << strerror(errno);
-    return storage::Status::IO_ERROR;
+    return;
   }
   if (!files::DeletePathAt(tmp_directory.root_fd(), destination, true)) {
     FXL_LOG(ERROR) << "Unable to delete repository staging storage at "
                    << destination;
-    return storage::Status::IO_ERROR;
+    return;
   }
-  return storage::Status::OK;
 }
 
 }  // namespace ledger

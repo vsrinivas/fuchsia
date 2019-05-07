@@ -1637,13 +1637,16 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
         handler, tree_reference,
         {{object_identifier.object_digest(), KeyPriority::LAZY}});
     // Check piece references.
-    ForEachIndexChild(piece->GetData(), [this, handler, object_identifier](
-                                            ObjectIdentifier piece_identifier) {
-      CheckInboundObjectReferences(
-          handler, piece_identifier,
-          {{object_identifier.object_digest(), KeyPriority::EAGER}});
-      return Status::OK;
-    });
+    ASSERT_EQ(
+        Status::OK,
+        ForEachIndexChild(
+            piece->GetData(), [this, handler, object_identifier](
+                                  ObjectIdentifier piece_identifier) {
+              CheckInboundObjectReferences(
+                  handler, piece_identifier,
+                  {{object_identifier.object_digest(), KeyPriority::EAGER}});
+              return Status::OK;
+            }));
   });
 }
 
