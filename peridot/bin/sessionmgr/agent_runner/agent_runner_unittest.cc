@@ -67,16 +67,36 @@ class AgentRunnerTest : public TestWithLedger {
   MessageQueueManager* message_queue_manager() { return mqm_.get(); }
 
  protected:
-  AgentRunner* set_agent_runner(std::unique_ptr<AgentRunner> agent_runner) {
+  void set_agent_runner(std::unique_ptr<AgentRunner> agent_runner) {
     agent_runner_ = std::move(agent_runner);
-    return agent_runner_.get();
   }
+
   AgentRunner* agent_runner() {
     if (agent_runner_ == nullptr) {
       set_agent_runner(MakeAgentRunner());
     }
     return agent_runner_.get();
   }
+
+  void set_service_to_agent_map(
+      std::map<std::string, std::string> service_name_to_agent_url) {
+    set_agent_runner(MakeAgentRunner(
+        std::make_unique<MapAgentServiceIndex>(service_name_to_agent_url)));
+  }
+
+  template <typename Interface>
+  void request_agent_service(
+      std::string service_name,
+      fidl::InterfaceRequest<Interface> service_request,
+      fuchsia::modular::AgentControllerPtr agent_controller) {
+    fuchsia::modular::AgentServiceRequest agent_service_request;
+    agent_service_request.set_service_name(service_name);
+    agent_service_request.set_channel(service_request.TakeChannel());
+    agent_service_request.set_agent_controller(agent_controller.NewRequest());
+    agent_runner()->ConnectToAgentService("requestor_url",
+                                          std::move(agent_service_request));
+  }
+
   FakeLauncher* launcher() { return &launcher_; }
 
  private:
@@ -267,7 +287,6 @@ TEST_F(AgentRunnerTest, NoServiceNameInAgentServiceRequest) {
       [&agent_controller_error, &agent_controller](zx_status_t status) {
         agent_controller_error = true;
         EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
-        agent_controller.Unbind();
       });
 
   RunLoopWithTimeoutOrUntil([&service_error, &agent_controller_error] {
@@ -313,7 +332,6 @@ TEST_F(AgentRunnerTest, NoChannelInAgentServiceRequest) {
       [&agent_controller_error, &agent_controller](zx_status_t status) {
         agent_controller_error = true;
         EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
-        agent_controller.Unbind();
       });
 
   RunLoopWithTimeoutOrUntil([&service_error, &agent_controller_error] {
@@ -327,11 +345,32 @@ TEST_F(AgentRunnerTest, NoChannelInAgentServiceRequest) {
 }
 
 TEST_F(AgentRunnerTest, NoAgentForServiceName) {
-  auto agent_service_index = std::make_unique<MapAgentServiceIndex>(
-      std::map<std::string, std::string>({}));
-  set_agent_runner(MakeAgentRunner(std::move(agent_service_index)));
-  std::unique_ptr<TestAgent> test_agent;
   constexpr char kMyAgentUrl[] = "file:///my_agent";
+
+  // Client-side service pointer
+  fuchsia::modular::ClipboardPtr service_ptr;
+  auto service_name = service_ptr->Name_;
+  auto service_request = service_ptr.NewRequest();
+  bool service_error = false;
+  service_ptr.set_error_handler([&service_error](zx_status_t status) {
+    service_error = true;
+    EXPECT_EQ(status, ZX_ERR_NOT_FOUND);
+  });
+
+  // requested service will not have a matching agent
+  set_service_to_agent_map(std::map<std::string, std::string>({}));
+
+  // standard AgentController initialization
+  fuchsia::modular::AgentControllerPtr agent_controller;
+  bool agent_controller_error = false;
+  agent_controller.set_error_handler(
+      [&agent_controller_error, &agent_controller](zx_status_t status) {
+        agent_controller_error = true;
+        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+      });
+
+  // register and launch the test agent, WITHOUT services
+  std::unique_ptr<TestAgent> test_agent;
   launcher()->RegisterComponent(
       kMyAgentUrl,
       [&test_agent](
@@ -341,38 +380,15 @@ TEST_F(AgentRunnerTest, NoAgentForServiceName) {
             std::move(launch_info.directory_request), std::move(ctrl));
       });
 
-  bool service_error = false;
-
-  fuchsia::modular::ClipboardPtr service_ptr;
-  fuchsia::modular::AgentControllerPtr agent_controller;
-  service_ptr.set_error_handler([&service_error](zx_status_t status) {
-    service_error = true;
-    EXPECT_EQ(status, ZX_ERR_NOT_FOUND);
-  });
-  fuchsia::modular::AgentServiceRequest agent_service_request;
-  agent_service_request.set_service_name(service_ptr->Name_);
-  agent_service_request.set_channel(service_ptr.NewRequest().TakeChannel());
-  agent_service_request.set_agent_controller(agent_controller.NewRequest());
-  agent_runner()->ConnectToAgentService("requestor_url",
-                                        std::move(agent_service_request));
-
-  bool agent_controller_error = false;
-
-  agent_controller.set_error_handler(
-      [&agent_controller_error, &agent_controller](zx_status_t status) {
-        agent_controller_error = true;
-        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
-        agent_controller.Unbind();
-      });
+  request_agent_service(service_name, std::move(service_request),
+                        std::move(agent_controller));
 
   RunLoopWithTimeoutOrUntil([&service_error, &agent_controller_error] {
     return service_error || agent_controller_error;
   });
 
   EXPECT_TRUE(service_error);
-  EXPECT_TRUE(agent_controller_error);
-
-  EXPECT_EQ(test_agent, nullptr);
+  EXPECT_FALSE(agent_controller_error);
 }
 
 static zx_koid_t get_object_koid(zx_handle_t handle) {
@@ -385,9 +401,12 @@ static zx_koid_t get_object_koid(zx_handle_t handle) {
 }
 
 TEST_F(AgentRunnerTest, ConnectToServiceName) {
+  constexpr char kMyAgentUrl[] = "file:///my_agent";
+
+  // Client-side service pointer
   fuchsia::modular::ClipboardPtr service_ptr;
+  auto service_name = service_ptr->Name_;
   auto service_request = service_ptr.NewRequest();
-  auto service_request_koid = get_object_koid(service_request.channel().get());
   bool service_error = false;
   service_ptr.set_error_handler([&service_error](zx_status_t status) {
     service_error = true;
@@ -396,18 +415,34 @@ TEST_F(AgentRunnerTest, ConnectToServiceName) {
     EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
   });
 
+  // requested service will map to test agent
+  set_service_to_agent_map(std::map<std::string, std::string>({
+      {service_name, kMyAgentUrl},
+  }));
+
+  // standard AgentController initialization
+  fuchsia::modular::AgentControllerPtr agent_controller;
+  bool agent_controller_error = false;
+  agent_controller.set_error_handler(
+      [&agent_controller_error, &agent_controller](zx_status_t status) {
+        agent_controller_error = true;
+        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+      });
+
+  // register a service for the agent to serve, and expect the client's request
   auto services_ptr = std::make_unique<component::ServiceNamespace>();
   bool agent_got_service_request = false;
   services_ptr->AddService<fuchsia::modular::Clipboard>(
-      [&agent_got_service_request, &service_request_koid](
+      [&agent_got_service_request,
+       client_request_koid = get_object_koid(service_request.channel().get())](
           fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
-        auto request_koid = get_object_koid(request.channel().get());
-        EXPECT_EQ(request_koid, service_request_koid);
+        auto server_request_koid = get_object_koid(request.channel().get());
+        EXPECT_EQ(server_request_koid, client_request_koid);
         agent_got_service_request = true;
       });
 
+  // register and launch the test agent, with services
   std::unique_ptr<TestAgent> test_agent;
-  constexpr char kMyAgentUrl[] = "file:///my_agent";
   launcher()->RegisterComponent(
       kMyAgentUrl,
       [&test_agent, &services_ptr](
@@ -418,27 +453,8 @@ TEST_F(AgentRunnerTest, ConnectToServiceName) {
             std::move(services_ptr));
       });
 
-  auto agent_service_index = std::make_unique<MapAgentServiceIndex>(
-      std::map<std::string, std::string>({
-          {service_ptr->Name_, kMyAgentUrl},
-      }));
-  set_agent_runner(MakeAgentRunner(std::move(agent_service_index)));
-
-  fuchsia::modular::AgentControllerPtr agent_controller;
-  bool agent_controller_error = false;
-  agent_controller.set_error_handler(
-      [&agent_controller_error, &agent_controller](zx_status_t status) {
-        agent_controller_error = true;
-        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
-        agent_controller.Unbind();
-      });
-
-  fuchsia::modular::AgentServiceRequest agent_service_request;
-  agent_service_request.set_service_name(service_ptr->Name_);
-  agent_service_request.set_channel(service_request.TakeChannel());
-  agent_service_request.set_agent_controller(agent_controller.NewRequest());
-  agent_runner()->ConnectToAgentService("requestor_url",
-                                        std::move(agent_service_request));
+  request_agent_service(service_name, std::move(service_request),
+                        std::move(agent_controller));
 
   RunLoopWithTimeoutOrUntil([&agent_got_service_request, &service_error,
                              &agent_controller_error] {
