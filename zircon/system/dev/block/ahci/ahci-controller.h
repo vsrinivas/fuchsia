@@ -6,7 +6,23 @@
 
 #include <zircon/types.h>
 
+#include "ahci.h"
 #include "sata.h"
+
+// Command table for a port.
+struct ahci_command_tab_t {
+    ahci_ct_t ct;
+    ahci_prd_t prd[AHCI_MAX_PRDS];
+} __attribute__((aligned(128)));
+
+// Memory for port command lists is laid out in the order described by this struct.
+struct ahci_port_mem_t {
+    ahci_cl_t cl[AHCI_MAX_COMMANDS];            // 1024-byte aligned.
+    ahci_fis_t fis;                             // 256-byte aligned.
+    ahci_command_tab_t tab[AHCI_MAX_COMMANDS];  // 128-byte aligned.
+};
+
+static_assert(sizeof(ahci_port_mem_t) == 271616, "port memory layout size invalid");
 
 struct ahci_port_t {
     uint32_t nr; // 0-based
@@ -15,9 +31,7 @@ struct ahci_port_t {
     sata_devinfo_t devinfo;
 
     ahci_port_reg_t* regs = nullptr;
-    ahci_cl_t* cl = nullptr;
-    ahci_fis_t* fis = nullptr;
-    ahci_ct_t* ct[AHCI_MAX_COMMANDS] = {};
+    ahci_port_mem_t* mem = nullptr;
 
     mtx_t lock;
 
