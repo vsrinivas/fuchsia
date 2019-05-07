@@ -42,6 +42,8 @@ TEST_F(ConsoleTest, SymStat) {
       "fakelib", "abc123",
       std::make_unique<LoadedModuleSymbols>(nullptr, "abc123", 0));
 
+  auto download = session->system().InjectDownloadForTesting("abc123");
+
   console.ProcessInputLine("sym-stat");
 
   event = console.GetOutputEvent();
@@ -49,7 +51,7 @@ TEST_F(ConsoleTest, SymStat) {
 
   auto text = event.output.AsString();
   EXPECT_NE(text.find("Process 1 symbol status"), std::string::npos);
-  EXPECT_NE(text.find("Build ID: abc123"), std::string::npos);
+  EXPECT_NE(text.find("Build ID: abc123 (Downloading...)"), std::string::npos);
 }
 
 }  // namespace zxdb

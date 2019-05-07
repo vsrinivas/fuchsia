@@ -487,7 +487,13 @@ void SummarizeProcessSymbolStatus(ConsoleContext* context, Process* process,
   for (const auto& module : modules) {
     out->Append(Syntax::kHeading, "  " + module.name + "\n");
     out->Append(fxl::StringPrintf("    Base: 0x%" PRIx64 "\n", module.base));
-    out->Append("    Build ID: " + module.build_id + "\n");
+    out->Append("    Build ID: " + module.build_id);
+
+    if (context->session()->system().HasDownload(module.build_id)) {
+      out->Append(Syntax::kWarning, " (Downloading...)");
+    }
+
+    out->Append("\n");
 
     if (module.symbols_loaded) {
       out->Append("    Symbols loaded: Yes\n    Symbol file: " +

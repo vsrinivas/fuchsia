@@ -450,6 +450,21 @@ void SystemImpl::Continue() {
       request, std::function<void(const Err&, debug_ipc::ResumeReply)>());
 }
 
+bool SystemImpl::HasDownload(const std::string& build_id) {
+  auto download = downloads_.find(build_id);
+
+  if (download == downloads_.end()) {
+    return false;
+  }
+
+  return !download->second.expired();
+}
+
+std::shared_ptr<Download> SystemImpl::InjectDownloadForTesting(
+    const std::string& build_id) {
+  return GetDownload(build_id, true);
+}
+
 void SystemImpl::DidConnect() {
   // Force reload the symbol mappings after connection. This needs to be done
   // for every connection since a new image could have been compiled and

@@ -6,6 +6,7 @@
 #define GARNET_BIN_ZXDB_CLIENT_SYSTEM_H_
 
 #include <functional>
+#include <memory>
 #include <vector>
 
 #include "src/developer/debug/ipc/protocol.h"
@@ -22,6 +23,7 @@
 namespace zxdb {
 
 class Breakpoint;
+class Download;
 class Err;
 class SystemObserver;
 class SystemSymbols;
@@ -104,6 +106,15 @@ class System : public ClientObject {
 
   // Applies to all threads of all debugged processes.
   virtual void Continue() = 0;
+
+  // Whether there's a download pending for the given build ID.
+  virtual bool HasDownload(const std::string& build_id) { return false; }
+
+  // Get a test download object.
+  virtual std::shared_ptr<Download> InjectDownloadForTesting(
+      const std::string& build_id) {
+    return nullptr;
+  }
 
   // Provides the setting schema for this object.
   static fxl::RefPtr<SettingSchema> GetSchema();
