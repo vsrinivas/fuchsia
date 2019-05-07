@@ -11,32 +11,12 @@ type EmptyTable struct {
 	_ struct{} `fidl2:"t,16,8"`
 }
 
-// Implements Payload.
-func (_ *EmptyTable) InlineAlignment() int {
-	return 8
-}
-
-// Implements Payload.
-func (_ *EmptyTable) InlineSize() int {
-	return 16
-}
-
 type SimpleTable struct {
 	_ struct{} `fidl2:"t,16,8"`
 	X int64 `fidl:"1" fidl2:"1"`
 	XPresent bool
 	Y int64 `fidl:"5" fidl2:"5"`
 	YPresent bool
-}
-
-// Implements Payload.
-func (_ *SimpleTable) InlineAlignment() int {
-	return 8
-}
-
-// Implements Payload.
-func (_ *SimpleTable) InlineSize() int {
-	return 16
 }
 
 func (u *SimpleTable) SetX(x int64) {
@@ -93,16 +73,6 @@ type OlderSimpleTable struct {
 	XPresent bool
 }
 
-// Implements Payload.
-func (_ *OlderSimpleTable) InlineAlignment() int {
-	return 8
-}
-
-// Implements Payload.
-func (_ *OlderSimpleTable) InlineSize() int {
-	return 16
-}
-
 func (u *OlderSimpleTable) SetX(x int64) {
 	u.X = x
 	u.XPresent = true
@@ -135,16 +105,6 @@ type NewerSimpleTable struct {
 	YPresent bool
 	Z int64 `fidl:"6" fidl2:"6"`
 	ZPresent bool
-}
-
-// Implements Payload.
-func (_ *NewerSimpleTable) InlineAlignment() int {
-	return 8
-}
-
-// Implements Payload.
-func (_ *NewerSimpleTable) InlineSize() int {
-	return 16
 }
 
 func (u *NewerSimpleTable) SetX(x int64) {

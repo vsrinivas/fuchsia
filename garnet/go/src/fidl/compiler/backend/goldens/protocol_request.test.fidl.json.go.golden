@@ -83,16 +83,6 @@ func (msg *parentGetChildResponse) Marshaler() _bindings.Marshaler {
 	return _mparentGetChildResponse
 }
 
-// Implements Payload.
-func (_ *parentGetChildResponse) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *parentGetChildResponse) InlineSize() int {
-	return 8
-}
-
 type parentGetChildRequestResponse struct {
 	_ struct{} `fidl2:"s,8,0"`
 	R ChildInterfaceRequest`fidl2:"0"`
@@ -102,16 +92,6 @@ var _mparentGetChildRequestResponse = _bindings.CreateLazyMarshaler(parentGetChi
 
 func (msg *parentGetChildRequestResponse) Marshaler() _bindings.Marshaler {
 	return _mparentGetChildRequestResponse
-}
-
-// Implements Payload.
-func (_ *parentGetChildRequestResponse) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *parentGetChildRequestResponse) InlineSize() int {
-	return 8
 }
 
 type parentTakeChildRequest struct {
@@ -125,16 +105,6 @@ func (msg *parentTakeChildRequest) Marshaler() _bindings.Marshaler {
 	return _mparentTakeChildRequest
 }
 
-// Implements Payload.
-func (_ *parentTakeChildRequest) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *parentTakeChildRequest) InlineSize() int {
-	return 8
-}
-
 type parentTakeChildRequestRequest struct {
 	_ struct{} `fidl2:"s,8,0"`
 	R ChildInterfaceRequest`fidl2:"0"`
@@ -146,30 +116,20 @@ func (msg *parentTakeChildRequestRequest) Marshaler() _bindings.Marshaler {
 	return _mparentTakeChildRequestRequest
 }
 
-// Implements Payload.
-func (_ *parentTakeChildRequestRequest) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *parentTakeChildRequestRequest) InlineSize() int {
-	return 8
-}
-
 type ParentInterface _bindings.ChannelProxy
 
 
 func (p *ParentInterface) GetChild() (ChildInterface, error) {
-	var req_ _bindings.Payload
+	var req_ _bindings.Message
 	resp_ := &parentGetChildResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).CallNew(ParentGetChildOrdinal, req_, resp_)
 	return resp_.C, err
 }
 
 func (p *ParentInterface) GetChildRequest() (ChildInterfaceRequest, error) {
-	var req_ _bindings.Payload
+	var req_ _bindings.Message
 	resp_ := &parentGetChildRequestResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildRequestOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).CallNew(ParentGetChildRequestOrdinal, req_, resp_)
 	return resp_.R, err
 }
 
@@ -177,7 +137,7 @@ func (p *ParentInterface) TakeChild(c ChildInterface) error {
 	req_ := &parentTakeChildRequest{
 		C: c,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).SendNew(ParentTakeChildOrdinal, req_)
 	return err
 }
 
@@ -185,7 +145,7 @@ func (p *ParentInterface) TakeChildRequest(r ChildInterfaceRequest) error {
 	req_ := &parentTakeChildRequestRequest{
 		R: r,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildRequestOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).SendNew(ParentTakeChildRequestOrdinal, req_)
 	return err
 }
 
@@ -229,14 +189,14 @@ func (s *ParentStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindi
 		return &out_, err_
 	case ParentTakeChildOrdinal:
 		in_ := parentTakeChildRequest{}
-		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		err_ := s.Impl.TakeChild(in_.C)
 		return nil, err_
 	case ParentTakeChildRequestOrdinal:
 		in_ := parentTakeChildRequestRequest{}
-		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		err_ := s.Impl.TakeChildRequest(in_.R)

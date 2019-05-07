@@ -24,15 +24,5 @@ var _m{{ .Name }} = _bindings.CreateLazyMarshaler({{ .Name }}{})
 func (msg *{{ .Name }}) Marshaler() _bindings.Marshaler {
 	return _m{{ .Name }}
 }
-
-// Implements Payload.
-func (_ *{{ .Name }}) InlineAlignment() int {
-	return {{ .Alignment }}
-}
-
-// Implements Payload.
-func (_ *{{ .Name }}) InlineSize() int {
-	return {{ .Size }}
-}
 {{- end -}}
 `

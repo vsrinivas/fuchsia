@@ -26,26 +26,26 @@ type SwitchingOrdinalsInterface _bindings.ChannelProxy
 
 
 func (p *SwitchingOrdinalsInterface) OrdinalFive() error {
-	var req_ _bindings.Payload
-	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOrdinalFiveOrdinal, req_)
+	var req_ _bindings.Message
+	err := ((*_bindings.ChannelProxy)(p)).SendNew(SwitchingOrdinalsOrdinalFiveOrdinal, req_)
 	return err
 }
 
 func (p *SwitchingOrdinalsInterface) OnlyGeneratedOrdinal() error {
-	var req_ _bindings.Payload
-	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal, req_)
+	var req_ _bindings.Message
+	err := ((*_bindings.ChannelProxy)(p)).SendNew(SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal, req_)
 	return err
 }
 
 func (p *SwitchingOrdinalsInterface) ExpectEventOrdinalFifteen() error {
-	var resp_ _bindings.Payload
-	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOrdinalFifteenOrdinal, resp_)
+	var resp_ _bindings.Message
+	err := ((*_bindings.ChannelProxy)(p)).RecvNew(SwitchingOrdinalsEventOrdinalFifteenOrdinal, resp_)
 	return err
 }
 
 func (p *SwitchingOrdinalsInterface) ExpectEventOnlyGeneratedOrdinal() error {
-	var resp_ _bindings.Payload
-	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, resp_)
+	var resp_ _bindings.Message
+	err := ((*_bindings.ChannelProxy)(p)).RecvNew(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, resp_)
 	return err
 }
 
@@ -100,12 +100,12 @@ func (s *SwitchingOrdinalsService) EventProxyFor(key _bindings.BindingKey) (*Swi
 type SwitchingOrdinalsEventProxy _bindings.ChannelProxy
 
 func (p *SwitchingOrdinalsEventProxy) EventOrdinalFifteen() error {
-	var event_ _bindings.Payload
-	return ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsEventOrdinalFifteenOrdinal, event_)
+	var event_ _bindings.Message
+	return ((*_bindings.ChannelProxy)(p)).SendNew(SwitchingOrdinalsEventOrdinalFifteenOrdinal, event_)
 }
 func (p *SwitchingOrdinalsEventProxy) EventOnlyGeneratedOrdinal() error {
-	var event_ _bindings.Payload
-	return ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, event_)
+	var event_ _bindings.Message
+	return ((*_bindings.ChannelProxy)(p)).SendNew(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, event_)
 }
 
 

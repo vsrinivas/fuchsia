@@ -60,25 +60,25 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 		{{- end }}
 	}
 	{{- else }}
-	var req_ _bindings.Payload
+	var req_ _bindings.Message
 	{{- end }}
 	{{- end }}
 	{{- if .Response }}
 	{{- if len .Response.Members }}
 	resp_ := &{{ .Response.Name }}{}
 	{{- else }}
-	var resp_ _bindings.Payload
+	var resp_ _bindings.Message
 	{{- end }}
 	{{- end }}
 	{{- if .Request }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .OrdinalName }}, req_, resp_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).CallNew({{ .OrdinalName }}, req_, resp_)
 		{{- else }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, req_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).SendNew({{ .OrdinalName }}, req_)
 		{{- end }}
 	{{- else }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName }}, resp_{{ if ne .Ordinal .GenOrdinal }}, {{ .GenOrdinalName }}{{ end }})
+	err := ((*_bindings.{{ $.ProxyType }})(p)).RecvNew({{ .OrdinalName }}, resp_{{ if ne .Ordinal .GenOrdinal }}, {{ .GenOrdinalName }}{{ end }})
 		{{- else }}
 	err := nil
 		{{- end }}
@@ -187,7 +187,7 @@ func (s *{{ .StubName }}) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_
 		{{- if .Request }}
 		{{- if len .Request.Members }}
 		in_ := {{ .Request.Name }}{}
-		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		{{- end }}
@@ -255,10 +255,10 @@ func (p *{{ $.EventProxyName }}) {{ .Name }}(
 		{{- end }}
 	}
 	{{- else }}
-	var event_ _bindings.Payload
+	var event_ _bindings.Message
 	{{- end }}
 	{{- end }}
-	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, event_)
+	return ((*_bindings.{{ $.ProxyType }})(p)).SendNew({{ .OrdinalName }}, event_)
 }
 {{- end }}
 {{- end }}

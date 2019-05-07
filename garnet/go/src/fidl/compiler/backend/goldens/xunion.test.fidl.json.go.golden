@@ -19,16 +19,6 @@ type OlderSimpleUnion struct {
 	F float32 `fidl:"1362546558" fidl2:"1362546558"`
 }
 
-// Implements Payload.
-func (_ *OlderSimpleUnion) InlineAlignment() int {
-	return 8
-}
-
-// Implements Payload.
-func (_ *OlderSimpleUnion) InlineSize() int {
-	return 24
-}
-
 func (_m *OlderSimpleUnion) Which() OlderSimpleUnionTag {
 	return _m.OlderSimpleUnionTag
 }
@@ -55,16 +45,6 @@ type NewerSimpleUnion struct {
 	I int64 `fidl:"693944286" fidl2:"693944286"`
 	S string `fidl:",473666119" fidl2:"473666119,"`
 	V []string `fidl:",,1815655055" fidl2:"1815655055,,"`
-}
-
-// Implements Payload.
-func (_ *NewerSimpleUnion) InlineAlignment() int {
-	return 8
-}
-
-// Implements Payload.
-func (_ *NewerSimpleUnion) InlineSize() int {
-	return 24
 }
 
 func (_m *NewerSimpleUnion) Which() NewerSimpleUnionTag {

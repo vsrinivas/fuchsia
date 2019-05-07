@@ -20,16 +20,6 @@ type {{ .Name }} struct {
 	{{- end }}
 }
 
-// Implements Payload.
-func (_ *{{ .Name }}) InlineAlignment() int {
-	return {{ .Alignment }}
-}
-
-// Implements Payload.
-func (_ *{{ .Name }}) InlineSize() int {
-	return {{ .Size }}
-}
-
 {{- range .Members }}
 
 func (u *{{ $.Name }}) {{ .Setter }}({{ .PrivateDataField }} {{ .Type }}) {

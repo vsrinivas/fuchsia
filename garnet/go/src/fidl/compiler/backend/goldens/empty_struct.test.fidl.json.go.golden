@@ -20,13 +20,3 @@ var _mEmpty = _bindings.CreateLazyMarshaler(Empty{})
 func (msg *Empty) Marshaler() _bindings.Marshaler {
 	return _mEmpty
 }
-
-// Implements Payload.
-func (_ *Empty) InlineAlignment() int {
-	return 1
-}
-
-// Implements Payload.
-func (_ *Empty) InlineSize() int {
-	return 1
-}

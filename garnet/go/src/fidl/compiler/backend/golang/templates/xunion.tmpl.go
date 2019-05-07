@@ -26,16 +26,6 @@ type {{ .Name }} struct {
 	{{- end }}
 }
 
-// Implements Payload.
-func (_ *{{ .Name }}) InlineAlignment() int {
-	return {{ .Alignment }}
-}
-
-// Implements Payload.
-func (_ *{{ .Name }}) InlineSize() int {
-	return {{ .Size }}
-}
-
 func (_m *{{ .Name }}) Which() {{ .TagName }} {
 	return _m.{{ .TagName }}
 }

@@ -22,16 +22,6 @@ type Union struct {
 	VectorStringAlsoNeedsConstructor []string 
 }
 
-// Implements Payload.
-func (_ *Union) InlineAlignment() int {
-	return 8
-}
-
-// Implements Payload.
-func (_ *Union) InlineSize() int {
-	return 24
-}
-
 func (u *Union) Which() UnionTag {
 	return u.UnionTag
 }
