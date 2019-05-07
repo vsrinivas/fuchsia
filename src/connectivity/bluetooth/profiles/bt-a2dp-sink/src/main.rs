@@ -223,6 +223,7 @@ impl Streams {
 
 /// Discovers any remote streams and reports their information to the log.
 async fn discover_remote_streams(peer: Arc<avdtp::Peer>) {
+    let mut cobalt = get_cobalt_logger();
     let streams = await!(peer.discover()).expect("Failed to discover source streams");
     fx_log_info!("Discovered {} streams", streams.len());
     for info in streams {
@@ -231,6 +232,21 @@ async fn discover_remote_streams(peer: Arc<avdtp::Peer>) {
                 fx_log_info!("Stream {:?}", info);
                 for cap in capabilities {
                     fx_log_info!("  - {:?}", cap);
+                    if let avdtp::ServiceCapability::MediaCodec {
+                        media_type: avdtp::MediaType::Audio,
+                        codec_type,
+                        ..
+                    } = cap {
+                        let event_code = match codec_type {
+                            avdtp::MediaCodecType::AUDIO_SBC =>
+                                metrics::A2dpCodecAvailabilityMetricDimensionCodec::Sbc,
+                            _ => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Unknown,
+                        };
+                        cobalt.log_event(
+                            metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID,
+                            event_code as u32,
+                        );
+                    }
                 }
             }
             Err(e) => fx_log_info!("Stream {} discovery failed: {:?}", info.id(), e),

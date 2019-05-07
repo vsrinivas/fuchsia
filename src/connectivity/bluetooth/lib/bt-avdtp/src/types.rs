@@ -458,11 +458,19 @@ impl fmt::Display for StreamEndpointId {
 /// Valid values are defined in the Bluetooth Assigned Numbers and are
 /// interpreted differently for different Media Types, so we do not interpret
 /// them here.
+/// Associated constants are provided that specify the value of `MediaCodecType`
+/// for different codecs given the `MediaType::Audio`.
 /// See https://www.bluetooth.com/specifications/assigned-numbers/audio-video
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MediaCodecType(u8);
 
 impl MediaCodecType {
+    pub const AUDIO_SBC: Self = MediaCodecType(0b0);
+    pub const AUDIO_MPEG12: Self = MediaCodecType(0b1);
+    pub const AUDIO_AAC: Self = MediaCodecType(0b10);
+    pub const AUDIO_ATRAC: Self = MediaCodecType(0b100);
+    pub const AUDIO_NON_A2DP: Self = MediaCodecType(0b1111_1111);
+
     pub fn new(num: u8) -> MediaCodecType {
         MediaCodecType(num)
     }
