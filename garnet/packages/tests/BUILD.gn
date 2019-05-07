@@ -797,6 +797,7 @@ group("media") {
     "//src/media/audio/audio_core/test:audio_fidl_tests",
     "//garnet/bin/media/codecs/sw:mpsc_queue_tests",
     "//garnet/bin/media/codecs/test:raw_frames_test",
+    "//garnet/bin/media/codecs/test:timestamp_extrapolator_tests",
     "//garnet/examples/media:use_h264_decoder_test",
     "//garnet/packages/prod:media_audio",
     "//garnet/packages/testing:run_test_component",

@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/timestamp_extrapolator_tests"
+    },
+    "sandbox": {
+        "services": []
+    }
+}

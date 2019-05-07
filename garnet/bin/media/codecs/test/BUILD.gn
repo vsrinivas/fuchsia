@@ -12,6 +12,7 @@ group("test") {
     ":raw_frames",
     ":raw_frames_test",
     ":raw_frames_test_bin",
+    ":timestamp_extrapolator_tests",
   ]
 }
 
@@ -69,6 +70,34 @@ test_package("raw_frames_test") {
       path = rebase_path(
               "../../../../test_data/media/third_party/chromium_media_test_data/bear_320x192_40frames.yuv")
       dest = "bear_320x192_40frames.yuv"
+    },
+  ]
+}
+
+executable("timestamp_extrapolator_test_bin") {
+  output_name = "timestamp_extrapolator_tests"
+
+  testonly = true
+
+  sources = [
+    "timestamp_extrapolator_tests.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/media/codecs:timestamp_extrapolator",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("timestamp_extrapolator_tests") {
+  deps = [
+    ":timestamp_extrapolator_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "timestamp_extrapolator_tests"
+      environments = basic_envs
     },
   ]
 }

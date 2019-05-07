@@ -5,7 +5,25 @@
 group("codecs") {
   testonly = true
   deps = [
+    ":timestamp_extrapolator",
     "sw",
     "test",
+  ]
+}
+
+config("local_header_include_config") {
+  include_dirs = [ "." ]
+}
+
+source_set("timestamp_extrapolator") {
+  public = [
+    "timestamp_extrapolator.h",
+  ]
+  sources = [
+    "timestamp_extrapolator.cc",
+  ]
+  public_configs = [ ":local_header_include_config" ]
+  public_deps = [
+    "//zircon/public/lib/zx",
   ]
 }
