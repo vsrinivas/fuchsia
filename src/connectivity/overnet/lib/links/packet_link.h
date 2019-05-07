@@ -24,6 +24,7 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
   fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override final;
   // Mark this link as inoperable
   virtual void Tombstone();
+  const LinkStats* GetStats() const override final { return &stats_; }
 
  private:
   void SchedulePacket();
@@ -38,6 +39,7 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
   uint64_t metrics_version_ = 1;
   PacketProtocol protocol_;
   Optional<MessageWithPayload> stashed_;
+  LinkStats stats_;
   bool sending_ = false;
 
   class LinkSendRequest final : public PacketProtocol::SendRequest {

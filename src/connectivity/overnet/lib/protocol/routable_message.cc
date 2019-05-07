@@ -31,8 +31,9 @@ size_t RoutableMessage::HeaderLength(NodeId writer, NodeId target,
     hinf->flags_length = flags_length;
   }
   header_length += flags_length;
-  if (!is_local)
+  if (!is_local) {
     header_length += src_.wire_length();
+  }
   for (const auto& dst : dsts_) {
     if (!is_local)
       header_length += dst.dst_.wire_length();

@@ -35,6 +35,7 @@ source_set("router") {
     "//src/connectivity/overnet/lib/environment:trace",
     "//src/connectivity/overnet/lib/protocol:fidl",
     "//src/connectivity/overnet/lib/protocol:routable_message",
+    "//src/connectivity/overnet/lib/stats:link",
     "//src/connectivity/overnet/lib/vocabulary:callback",
     "//src/connectivity/overnet/lib/vocabulary:closed_ptr",
     "//src/connectivity/overnet/lib/vocabulary:lazy_slice",

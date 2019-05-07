@@ -62,11 +62,13 @@ class RoutingTable {
   static constexpr TimeDelta EntryExpiry() { return TimeDelta::FromMinutes(5); }
 
   struct SelectedLink {
+    NodeId target_node;
     uint64_t link_id;
     uint32_t route_mss;
 
     bool operator==(SelectedLink other) const {
-      return link_id == other.link_id && route_mss == other.route_mss;
+      return target_node == other.target_node && link_id == other.link_id &&
+             route_mss == other.route_mss;
     }
   };
   using SelectedLinks = std::unordered_map<NodeId, SelectedLink>;

@@ -228,6 +228,7 @@ void PacketLink::SendPacket(SeqNum seq, LazySlice data) {
       seq.Write(p);
     });
     OVERNET_TRACE(DEBUG) << "Emit " << send_slice;
+    stats_.outgoing_packet_count++;
     Emit(std::move(send_slice));
 
     if (send_packet_queue.empty()) {
@@ -242,6 +243,7 @@ void PacketLink::SendPacket(SeqNum seq, LazySlice data) {
 }
 
 void PacketLink::Process(TimeStamp received, Slice packet) {
+  stats_.incoming_packet_count++;
   ScopedModule<PacketLink> scoped_module(this);
   const uint8_t* const begin = packet.begin();
   const uint8_t* p = begin;

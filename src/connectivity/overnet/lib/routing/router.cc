@@ -217,7 +217,8 @@ void Router::MaybeStartPollingLinkChanges() {
                   OVERNET_TRACE(DEBUG)
                       << "Select: " << sl.first << " " << sl.second.link_id
                       << " (route_mss=" << sl.second.route_mss << ")";
-                  auto it = owned_links_.find(sl.second.link_id);
+                  auto it = owned_links_.find(
+                      OwnedLabel{sl.second.target_node, sl.second.link_id});
                   auto* link =
                       it == owned_links_.end() ? nullptr : it->second.get();
                   link_holder(sl.first)->SetLink(
@@ -311,7 +312,8 @@ std::vector<T> TakeVector(std::vector<T>* vec) {
 void Router::RegisterLink(LinkPtr<> link) {
   ScopedModule<Router> scoped_module(this);
   auto status = link->GetLinkStatus();
-  owned_links_.emplace(status.local_id, std::move(link));
+  assert(status.from == node_id());
+  owned_links_.emplace(OwnedLabel{status.to, status.local_id}, std::move(link));
   auto target = status.to;
   UpdateRoutingTable({{target, 0}}, {std::move(status)}, false);
 }

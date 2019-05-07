@@ -302,8 +302,9 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
     }
     Link* link = n->best_link;
     assert(link->status.from == root_node_);
-    selected_links[node_it->first] =
-        SelectedLink{link->status.local_id, n->mss};
+    selected_links.emplace(
+        node_it->first,
+        SelectedLink{link->status.to, link->status.local_id, n->mss});
   }
 
   return selected_links;

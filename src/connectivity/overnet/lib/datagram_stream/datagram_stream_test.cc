@@ -37,6 +37,8 @@ class MockLink {
         link_->Forward(std::make_shared<Message>(std::move(message)));
       }
 
+      const LinkStats* GetStats() const override { return nullptr; }
+
       fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override {
         return fuchsia::overnet::protocol::LinkStatus{src_.as_fidl(),
                                                       peer_.as_fidl(), 1, 1};

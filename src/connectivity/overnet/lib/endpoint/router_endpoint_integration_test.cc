@@ -164,10 +164,28 @@ class InProcessLink final : public Link {
   fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override {
     return impl_->GetLinkStatus();
   }
+  const LinkStats* GetStats() const override { return impl_->GetStats(); }
 
  private:
   std::shared_ptr<InProcessLinkImpl> impl_;
 };
+
+class StatsDumper final : public StatsVisitor {
+ public:
+  void Counter(const char* name, uint64_t value) override {
+    OVERNET_TRACE(INFO) << "    " << name << " = " << value;
+  }
+};
+
+void DumpStats(const char* label, RouterEndpoint* endpoint) {
+  OVERNET_TRACE(INFO) << "STATS DUMP FOR: '" << label << "' -- "
+                      << endpoint->node_id();
+  endpoint->ForEachLink([endpoint](NodeId target, const Link* link) {
+    OVERNET_TRACE(INFO) << "  LINK: " << endpoint->node_id() << "->" << target;
+    StatsDumper dumper;
+    link->GetStats()->Accept(&dumper);
+  });
+}
 
 class Env {
  public:
@@ -235,6 +253,9 @@ class TwoNode final : public Env {
 
   virtual ~TwoNode() {
     if (!testing::Test::HasFailure()) {
+      DumpStats("1", endpoint1_);
+      DumpStats("2", endpoint2_);
+
       bool done = false;
       endpoint1_->Close(Callback<void>(ALLOCATED_CALLBACK, [&done, this]() {
         endpoint2_->Close(Callback<void>(ALLOCATED_CALLBACK, [&done, this]() {
@@ -286,6 +307,10 @@ class ThreeNode final : public Env {
 
   virtual ~ThreeNode() {
     if (!testing::Test::HasFailure()) {
+      DumpStats("1", endpoint1_);
+      DumpStats("H", endpointH_);
+      DumpStats("2", endpoint2_);
+
       bool done = false;
       endpointH_->Close(Callback<void>(ALLOCATED_CALLBACK, [this, &done]() {
         endpoint1_->Close(Callback<void>(ALLOCATED_CALLBACK, [this, &done]() {

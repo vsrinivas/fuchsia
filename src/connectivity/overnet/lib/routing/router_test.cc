@@ -51,6 +51,8 @@ class MockLink {
                                                       peer_.as_fidl(), 1, 1};
       }
 
+      const LinkStats* GetStats() const override { return nullptr; }
+
      private:
       MockLink* link_;
       const NodeId src_;
