@@ -143,6 +143,19 @@ void x86_init_percpu(cpu_num_t cpu_num) {
     /* when we enter user space, this will be populated via a swapgs */
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, 0);
 
+    // Attempt to apply microcode patch, if we have a compatible patch and we
+    // are not running under a hypervisor. Do this on every CPU, before capturing
+    // CPUID features - some microcode patches may update CPUID flags.
+    if (!x86_feature_test_raw(X86_FEATURE_HYPERVISOR)) {
+         switch (x86_get_vendor_raw()) {
+         case X86_VENDOR_INTEL:
+             x86_intel_load_microcode_patch();
+             break;
+         default:
+             break;
+         }
+    }
+
     x86_feature_init();
 
     x86_extended_register_init();
