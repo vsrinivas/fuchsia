@@ -29,17 +29,15 @@ impl FidlWorker {
             });
         fs.take_and_serve_directory_handle()?;
 
-        fasync::spawn_local(
-            async move {
-                while let Some(event_stream) = await!(fs.next()) {
-                    let event_chan = event_chan.clone().sink_map_err(|e| error!("{:?}", e));
-                    let event_stream = event_stream.map_err(|e| error!("{:?}", e));
-                    fasync::spawn_local(
-                        event_stream.forward(event_chan).map(|_sink_res: Result<_, ()>| ()),
-                    );
-                }
-            },
-        );
+        fasync::spawn_local(async move {
+            while let Some(event_stream) = await!(fs.next()) {
+                let event_chan = event_chan.clone().sink_map_err(|e| error!("{:?}", e));
+                let event_stream = event_stream.map_err(|e| error!("{:?}", e));
+                fasync::spawn_local(
+                    event_stream.forward(event_chan).map(|_sink_res: Result<_, ()>| ()),
+                );
+            }
+        });
 
         Ok(())
     }
