@@ -36,6 +36,8 @@ pub fn start_test_server() -> Result<(), Error> {
     Ok(())
 }
 
+// Disabled because test is flaky. See FLK-217.
+#[ignore]
 #[fasync::run_singlethreaded]
 #[test]
 async fn test_oldhttp() -> Result<(), Error> {
