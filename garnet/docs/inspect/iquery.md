@@ -9,6 +9,7 @@ iquery(3)
 
 ```
 iquery [MODE] [--recursive] [--format=<FORMAT>]
+       [--sort]
        [(--full_paths|--absolute_paths)]
        PATH [...PATH]
 ```
@@ -87,6 +88,35 @@ ls: Currently ignored.
 Current supported formatters:
 - text: Meant for human inspection. This is the default option.
 - json: Meant for machine consumption.
+```
+
+## `--sort`
+> When specified, sort the values for each Node before printing.
+```
+$ iquery root.inspect
+root:
+  c:
+  a:
+  b:
+
+$ iquery --sort root.inspect
+root:
+  a:
+  b:
+  c:
+
+$ iquery numeric.inspect
+root:
+  11:
+  2:
+  1:
+
+# When all children are numeric, iquery sorts numerically.
+$ iquery --sort numeric.inspect
+root:
+  1:
+  2:
+  11:
 ```
 
 ## `--full_paths`
