@@ -837,17 +837,22 @@ zx_status_t ProcessDispatcher::EnforceBasicPolicy(uint32_t condition) {
     const auto action = policy_.QueryBasicPolicy(condition);
     switch (action) {
     case ZX_POL_ACTION_ALLOW:
+        // Not calling IncrementCounter here because this is the common case (fast path).
         return ZX_OK;
     case ZX_POL_ACTION_DENY:
+        JobPolicy::IncrementCounter(action, condition);
         return ZX_ERR_ACCESS_DENIED;
     case ZX_POL_ACTION_ALLOW_EXCEPTION:
         thread_signal_policy_exception();
+        JobPolicy::IncrementCounter(action, condition);
         return ZX_OK;
     case ZX_POL_ACTION_DENY_EXCEPTION:
         thread_signal_policy_exception();
+        JobPolicy::IncrementCounter(action, condition);
         return ZX_ERR_ACCESS_DENIED;
     case ZX_POL_ACTION_KILL:
         Kill(ZX_TASK_RETCODE_POLICY_KILL);
+        JobPolicy::IncrementCounter(action, condition);
         // Because we've killed, this return value will never make it out to usermode. However,
         // callers of this method will see and act on it.
         return ZX_ERR_ACCESS_DENIED;

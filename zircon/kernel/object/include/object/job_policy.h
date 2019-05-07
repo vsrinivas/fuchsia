@@ -58,6 +58,13 @@ public:
     bool operator==(const JobPolicy& rhs) const;
     bool operator!=(const JobPolicy& rhs) const;
 
+    // Increment the kcounter for the given |action| and |condition|.
+    //
+    // action must be < ZX_POL_ACTION_MAX and condition must be < ZX_POL_MAX.
+    //
+    // For example: IncrementCounter(ZX_POL_ACTION_KILL, ZX_POL_NEW_CHANNEL);
+    static void IncrementCounter(uint32_t action, uint32_t condition);
+
 private:
     // Remember, JobPolicy is a value type so think carefully before increasing its size.
     //

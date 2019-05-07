@@ -171,6 +171,21 @@ static bool set_get_timer_slack() {
     END_TEST;
 }
 
+static bool increment_counters() {
+    BEGIN_TEST;
+
+    // There's no programmatic interface to read kcounters so there's nothing to assert (aside from
+    // not crashing).
+    JobPolicy p;
+    for (uint32_t action = 0; action < ZX_POL_ACTION_MAX; ++action) {
+        for (uint32_t condition = 0; condition < ZX_POL_MAX; ++condition) {
+            p.IncrementCounter(action, condition);
+        }
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 UNITTEST_START_TESTCASE(job_policy_tests)
@@ -182,4 +197,5 @@ UNITTEST("add_basic_policy_relative", add_basic_policy_relative)
 UNITTEST("add_basic_policy_unmodified_on_error", add_basic_policy_unmodified_on_error)
 UNITTEST("add_basic_policy_deny_any", add_basic_policy_deny_any)
 UNITTEST("set_get_timer_slack", set_get_timer_slack)
+UNITTEST("increment_counters", increment_counters)
 UNITTEST_END_TESTCASE(job_policy_tests, "job_policy", "JobPolicy tests");
