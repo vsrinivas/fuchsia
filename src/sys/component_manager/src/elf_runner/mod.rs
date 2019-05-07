@@ -87,6 +87,7 @@ async fn load_launch_info(
 ) -> Result<fproc::LaunchInfo, Error> {
     let bin_path =
         get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(uri.as_ref(), e))?;
+    let bin_arg = &[String::from(bin_path.to_str().ok_or(err_msg("invalid binary path"))?)];
     let args = get_program_args(&start_info)?;
 
     let name = PathBuf::from(uri)
@@ -115,12 +116,10 @@ async fn load_launch_info(
     let (ll_client_chan, ll_service_chan) = zx::Channel::create()?;
     library_loader::start(ns_map, ll_service_chan);
 
-    if !args.is_empty() {
-        let mut string_iters: Vec<_> = args.iter().map(|s| s.bytes()).collect();
-        launcher.add_args(
-            &mut string_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>),
-        )?;
-    }
+    let mut string_iters: Vec<_> = bin_arg.iter().chain(args.iter()).map(|s| s.bytes()).collect();
+    launcher.add_args(
+        &mut string_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>),
+    )?;
     // TODO: launcher.AddEnvirons
 
     let mut handle_infos = vec![];

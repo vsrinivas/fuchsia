@@ -36,5 +36,5 @@ fn main() {
     let mut reader = BufReader::new(pipe_handle);
     let mut line = String::new();
     reader.read_line(&mut line).expect("failed to read \"Hippos rule!\\n\"");
-    assert_eq!(line, "Hippos rule!\n");
+    assert_eq!(line, "/pkg/bin/echo_args Hippos rule!\n");
 }
