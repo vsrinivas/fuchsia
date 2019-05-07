@@ -1,0 +1,86 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/package.gni")
+import("//build/test.gni")
+
+executable("bin") {
+  output_name = "trace2json"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":trace_parser",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("trace_parser") {
+  sources = [
+    "trace_parser.cc",
+    "trace_parser.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    "//garnet/lib/trace_converters:chromium",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/trace-reader",
+  ]
+}
+
+install_host_tools("trace2json") {
+  deps = [
+    ":bin",
+  ]
+  outputs = [
+    "trace2json",
+  ]
+}
+
+copy("copy_test_data") {
+  sources = [
+    "test_data/example_benchmark.fxt",
+    "test_data/example_benchmark.json",
+    "test_data/simple_trace.fxt",
+    "test_data/simple_trace.json",
+  ]
+
+  outputs = [
+    "$root_out_dir/test_data/trace2json/{{source_file_part}}",
+  ]
+
+  metadata = {
+    test_runtime_deps = [
+      "$root_out_dir/test_data/trace2json/example_benchmark.fxt",
+      "$root_out_dir/test_data/trace2json/example_benchmark.json",
+      "$root_out_dir/test_data/trace2json/simple_trace.fxt",
+      "$root_out_dir/test_data/trace2json/simple_trace.json",
+    ]
+  }
+}
+
+test("trace2json_tests") {
+  output_name = "trace2json_tests"
+
+  sources = [
+    "trace_parser_test.cc",
+  ]
+
+  deps = [
+    ":trace_parser",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+
+  data_deps = [
+    ":copy_test_data",
+  ]
+}

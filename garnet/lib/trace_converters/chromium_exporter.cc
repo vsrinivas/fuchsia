@@ -5,16 +5,15 @@
 #include "garnet/lib/trace_converters/chromium_exporter.h"
 
 #include <inttypes.h>
-
 #include <utility>
 
 #include <trace-engine/types.h>
 #include <trace-reader/reader.h>
 
 #include "garnet/lib/perfmon/writer.h"
+#include "rapidjson/writer.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "rapidjson/writer.h"
 
 namespace tracing {
 namespace {

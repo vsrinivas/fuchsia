@@ -80,12 +80,16 @@ func getBuildRoot(fxRoot string) string {
 }
 
 func getZirconBuildRoot() string {
-	return buildRoot+".zircon"
+	return buildRoot + ".zircon"
 }
 
 func getHtmlGenerator() string {
 	return path.Join(fuchsiaRoot, "third_party", "catapult",
 		"tracing", "bin", "trace2html")
+}
+
+func getJsonGenerator() string {
+	return path.Join(path.Dir(os.Args[0]), "trace2json")
 }
 
 func getExternalReportGenerator(reportType string) string {

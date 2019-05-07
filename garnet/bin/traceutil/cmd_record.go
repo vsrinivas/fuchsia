@@ -254,6 +254,13 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	var remoteFilename string
 	if cmd.captureConfig.Binary {
 		remoteFilename = "/data/trace.fxt"
+		// Disable compression.
+		// `trace` can handle --compress with --binary and produce a correct .fxt.gz file, but currently `trace2json` does not handle compressed fxt files.
+		// TODO(PT-125): Remove this once trace2json supports .fxt.gz files.
+		if cmd.captureConfig.Compress {
+			fmt.Println("Warning: -compress is being ignored as -binary is specified.")
+			cmd.captureConfig.Compress = false
+		}
 	} else {
 		remoteFilename = "/data/trace.json"
 	}
@@ -352,25 +359,33 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 
 	title := cmd.getReportTitle()
 
-	// TODO(PT-113): Convert binary format to JSON and HTML when able.
-	if !cmd.captureConfig.Binary {
-		// Zedmon: Include additional zedmon trace data file in HTML output.
-		if doZedmon {
-			zFilename := "zedmon-" + prefix + ".json"
-			err = ioutil.WriteFile(zFilename, zData, 0644)
-			if err != nil {
-				fmt.Printf("Failed to write zedmon trace to file")
-				err = convertTrace(generatorPath, outputFilename, title, localFilename)
-			} else {
-				err = convertTrace(generatorPath, outputFilename, title, localFilename, zFilename)
-			}
-		} else {
-			err = convertTrace(generatorPath, outputFilename, title, localFilename)
-		}
+	jsonFilename := localFilename
+	if cmd.captureConfig.Binary {
+		jsonFilename = replaceFilenameExt(localFilename, "json")
+		jsonGenerator := getJsonGenerator()
+		err = convertToJson(jsonGenerator, jsonFilename, localFilename)
 		if err != nil {
 			fmt.Println(err.Error())
 			return subcommands.ExitFailure
 		}
+	}
+
+	// Zedmon: Include additional zedmon trace data file in HTML output.
+	if doZedmon {
+		zFilename := "zedmon-" + prefix + ".json"
+		err = ioutil.WriteFile(zFilename, zData, 0644)
+		if err != nil {
+			fmt.Printf("Failed to write zedmon trace to file")
+			err = convertToHtml(generatorPath, outputFilename, title, jsonFilename)
+		} else {
+			err = convertToHtml(generatorPath, outputFilename, title, jsonFilename, zFilename)
+		}
+	} else {
+		err = convertToHtml(generatorPath, outputFilename, title, jsonFilename)
+	}
+	if err != nil {
+		fmt.Println(err.Error())
+		return subcommands.ExitFailure
 	}
 
 	// Handle special report-to-stdout case.

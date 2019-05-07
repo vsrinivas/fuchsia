@@ -61,8 +61,9 @@ func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
 		"Capture trace in binary format on the target.")
 	f.BoolVar(&config.Stream, "stream", false,
 		"Stream trace output to a local file, instead of saving to target disk and then copying it.")
+	// TODO(PT-125): Update this message when compressed binary (fxt) traces are supported.
 	f.BoolVar(&config.Compress, "compress", false,
-		"Compress the trace output before writing to disk. This option is currently ignored if --stream is specified.")
+		"Compress the trace output before writing to disk. This option is currently ignored if -stream or -binary is specified.")
 	f.BoolVar(&config.Detach, "detach", false,
 		"Don't stop the traced program when tracing finished.")
 	f.BoolVar(&config.Decouple, "decouple", false,
@@ -199,7 +200,7 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection, traceOutpu
 	return err
 }
 
-func convertTrace(generator string, outputPath string,
+func convertToHtml(generator string, outputPath string,
 	title string, inputPaths ...string) error {
 	fmt.Printf("Converting %v to %s... ", inputPaths, outputPath)
 	var args []string
@@ -208,6 +209,21 @@ func convertTrace(generator string, outputPath string,
 		args = append(args, "--title="+title)
 	}
 	args = append(args, inputPaths...)
+	err := runCommand(generator, args)
+	if err != nil {
+		fmt.Printf("failed: %s\n", err.Error())
+		fmt.Printf("Invoked as: %s %s\n", generator, args)
+	} else {
+		fmt.Println("done.")
+	}
+	return err
+}
+
+func convertToJson(generator string, outputPath string, inputPath string) error {
+	fmt.Printf("Converting %s to %s... ", inputPath, outputPath)
+	var args []string
+	args = append(args, "--input-file="+inputPath)
+	args = append(args, "--output-file="+outputPath)
 	err := runCommand(generator, args)
 	if err != nil {
 		fmt.Printf("failed: %s\n", err.Error())

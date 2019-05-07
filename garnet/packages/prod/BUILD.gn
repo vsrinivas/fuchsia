@@ -59,6 +59,7 @@ group("tracing") {
     "//garnet/bin/ktrace_provider",
     "//garnet/bin/memory_monitor",
     "//garnet/bin/trace",
+    "//garnet/bin/trace2json",
     "//garnet/bin/trace_manager",
     "//garnet/bin/traceutil",
   ]
