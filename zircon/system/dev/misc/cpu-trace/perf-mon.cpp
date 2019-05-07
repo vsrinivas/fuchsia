@@ -310,14 +310,14 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     zx_status_t status;
     unsigned ii;  // ii: input index
     for (ii = 0; ii < fbl::count_of(icfg->events); ++ii) {
-        EventId id = icfg->events[ii];
+        EventId id = icfg->events[ii].event;
         zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
         if (id == 0) {
             break;
         }
         unsigned group = GetEventIdGroup(id);
 
-        if (icfg->flags[ii] & ~PERFMON_CONFIG_FLAG_MASK) {
+        if (icfg->events[ii].flags & ~PERFMON_CONFIG_FLAG_MASK) {
             zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
@@ -348,7 +348,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
             return ZX_ERR_INVALID_ARGS;
         }
 
-        if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
+        if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0) {
             ss->have_timebase0_user = true;
         }
     }
@@ -359,22 +359,22 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
 
     // Ensure there are no holes.
     for (; ii < fbl::count_of(icfg->events); ++ii) {
-        if (icfg->events[ii] != kEventIdNone) {
+        if (icfg->events[ii].event != kEventIdNone) {
             zxlogf(ERROR, "%s: Hole at event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
-        if (icfg->rate[ii] != 0) {
+        if (icfg->events[ii].rate != 0) {
             zxlogf(ERROR, "%s: Hole at rate [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
-        if (icfg->flags[ii] != 0) {
+        if (icfg->events[ii].flags != 0) {
             zxlogf(ERROR, "%s: Hole at flags [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
     }
 
     if (ss->have_timebase0_user) {
-        ocfg->timebase_event = icfg->events[0];
+        ocfg->timebase_event = icfg->events[0].event;
     }
 
     // TODO(dje): Basic sanity check that some data will be collected.

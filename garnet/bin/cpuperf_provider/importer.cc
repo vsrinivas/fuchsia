@@ -375,9 +375,9 @@ void Importer::EmitTallyCounts(const perfmon_ioctl_config_t& config,
 
   for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
     for (unsigned ctr = 0; ctr < countof(config.events) &&
-                           config.events[ctr] != perfmon::kEventIdNone;
+                           config.events[ctr].event != perfmon::kEventIdNone;
          ++ctr) {
-      perfmon::EventId event_id = config.events[ctr];
+      perfmon::EventId event_id = config.events[ctr].event;
       if (event_data->HaveValue(cpu, event_id)) {
         uint64_t value = event_data->GetCountOrValue(cpu, event_id);
         if (event_data->IsValue(cpu, event_id)) {

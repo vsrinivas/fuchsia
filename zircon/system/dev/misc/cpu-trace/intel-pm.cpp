@@ -198,8 +198,8 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
                                             unsigned input_index,
                                             PmuConfig* ocfg) {
     const unsigned ii = input_index;
-    const EventId id = icfg->events[ii];
-    bool uses_timebase0 = !!(icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0);
+    const EventId id = icfg->events[ii].event;
+    bool uses_timebase0 = !!(icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0);
     unsigned counter = PmuFixedCounterNumber(id);
 
     if (counter == IPM_MAX_FIXED_COUNTERS ||
@@ -215,15 +215,15 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
     }
     ss->have_fixed[counter] = true;
     ocfg->fixed_events[ss->num_fixed] = id;
-    if ((uses_timebase0 && input_index != 0) || icfg->rate[ii] == 0) {
+    if ((uses_timebase0 && input_index != 0) || icfg->events[ii].rate == 0) {
         ocfg->fixed_initial_value[ss->num_fixed] = 0;
     } else {
-        if (icfg->rate[ii] > ss->max_fixed_value) {
+        if (icfg->events[ii].rate > ss->max_fixed_value) {
             zxlogf(ERROR, "%s: Rate too large, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
         ocfg->fixed_initial_value[ss->num_fixed] =
-            ss->max_fixed_value - icfg->rate[ii] + 1;
+            ss->max_fixed_value - icfg->events[ii].rate + 1;
     }
     // KISS: For now don't generate PMI's for counters that use
     // another as the timebase.
@@ -231,28 +231,28 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
         ocfg->fixed_ctrl |= IA32_FIXED_CTR_CTRL_PMI_MASK(counter);
     }
     unsigned enable = 0;
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_OS) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_OS) {
         enable |= FIXED_CTR_ENABLE_OS;
     }
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_USER) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_USER) {
         enable |= FIXED_CTR_ENABLE_USR;
     }
     ocfg->fixed_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(counter);
     ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_FIXED_EN_MASK(counter);
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0) {
         ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagTimebase0;
     }
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_PC) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_PC) {
         ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagPc;
     }
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
         if (!LbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
                    , __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
-        if (icfg->rate[ii] == 0 ||
-                ((icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) &&
+        if (icfg->events[ii].rate == 0 ||
+                ((icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0) &&
                  ii != 0)) {
             zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]\n"
                    , __func__, ii);
@@ -271,10 +271,10 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
                                                    unsigned input_index,
                                                    PmuConfig* ocfg) {
     const unsigned ii = input_index;
-    EventId id = icfg->events[ii];
+    EventId id = icfg->events[ii].event;
     unsigned group = GetEventIdGroup(id);
     unsigned event = GetEventIdEvent(id);
-    bool uses_timebase0 = !!(icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0);
+    bool uses_timebase0 = !!(icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0);
 
     // TODO(dje): Verify no duplicates.
     if (ss->num_programmable == ss->max_num_programmable) {
@@ -283,15 +283,15 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
         return ZX_ERR_INVALID_ARGS;
     }
     ocfg->programmable_events[ss->num_programmable] = id;
-    if ((uses_timebase0 && input_index != 0) || icfg->rate[ii] == 0) {
+    if ((uses_timebase0 && input_index != 0) || icfg->events[ii].rate == 0) {
         ocfg->programmable_initial_value[ss->num_programmable] = 0;
     } else {
-        if (icfg->rate[ii] > ss->max_programmable_value) {
+        if (icfg->events[ii].rate > ss->max_programmable_value) {
             zxlogf(ERROR, "%s: Rate too large, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
         ocfg->programmable_initial_value[ss->num_programmable] =
-            ss->max_programmable_value - icfg->rate[ii] + 1;
+            ss->max_programmable_value - icfg->events[ii].rate + 1;
     }
     const EventDetails* details = nullptr;
     switch (group) {
@@ -320,10 +320,10 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     uint64_t evtsel = 0;
     evtsel |= details->event << IA32_PERFEVTSEL_EVENT_SELECT_SHIFT;
     evtsel |= details->umask << IA32_PERFEVTSEL_UMASK_SHIFT;
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_OS) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_OS) {
         evtsel |= IA32_PERFEVTSEL_OS_MASK;
     }
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_USER) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_USER) {
         evtsel |= IA32_PERFEVTSEL_USR_MASK;
     }
     if (details->flags & IPM_REG_FLAG_EDG) {
@@ -345,20 +345,20 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     evtsel |= IA32_PERFEVTSEL_EN_MASK;
     ocfg->programmable_hw_events[ss->num_programmable] = evtsel;
     ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_PMC_EN_MASK(ss->num_programmable);
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0) {
         ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagTimebase0;
     }
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_PC) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_PC) {
         ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagPc;
     }
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
         if (!LbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
                    , __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
-        if (icfg->rate[ii] == 0 ||
-                ((icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) &&
+        if (icfg->events[ii].rate == 0 ||
+                ((icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0) &&
                  ii != 0)) {
             zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]\n"
                    , __func__, ii);
@@ -377,7 +377,7 @@ zx_status_t PerfmonDevice::StageMiscConfig(const perfmon_ioctl_config_t* icfg,
                                               unsigned input_index,
                                               PmuConfig* ocfg) {
     const unsigned ii = input_index;
-    EventId id = icfg->events[ii];
+    EventId id = icfg->events[ii].event;
     int event = PmuLookupMiscEvent(id);
 
     if (event < 0) {
@@ -396,10 +396,10 @@ zx_status_t PerfmonDevice::StageMiscConfig(const perfmon_ioctl_config_t* icfg,
     }
     ss->have_misc[event / 64] |= 1ul << (event % 64);
     ocfg->misc_events[ss->num_misc] = id;
-    if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
+    if (icfg->events[ii].flags & PERFMON_CONFIG_FLAG_TIMEBASE0) {
         ocfg->misc_flags[ss->num_misc] |= kPmuConfigFlagTimebase0;
     } else {
-        if (icfg->rate[ii] != 0) {
+        if (icfg->events[ii].rate != 0) {
             zxlogf(ERROR, "%s: Misc event [%u] requires a timebase\n",
                    __func__, ii);
             return ZX_ERR_INVALID_ARGS;

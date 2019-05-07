@@ -311,29 +311,25 @@ typedef struct {
 // The type of the |rate| field of perfmon_ioctl_config_t.
 typedef uint32_t perfmon_rate_t;
 
-// Passed to STAGE_CONFIG to select the data to be collected.
-// Events must be consecutively allocated from the front with no holes.
-// A value of |kEventIdNone| in |events| marks the end.
+// Configuration for collecting data for one event.
 typedef struct {
-    // Events to collect data for.
+    // Event to collect data for.
     // The values are architecture specific ids.
     // Each event may appear at most once.
-    // |events[0]| is special: It is used as the timebase when any other
-    // event has PERFMON_CONFIG_FLAG_TIMEBASE0 set.
-    perfmon::EventId events[PERFMON_MAX_EVENTS];
+    perfmon::EventId event;
 
-    // Sampling rate for each event in |events|.
+    // Sampling rate.
     // If zero then do simple counting (collect a tally of the count and
     // report at the end). Otherwise (non-zero) then when the event gets
     // this many hits data is collected (e.g., pc, time).
     // The value can be non-zero only for counting based events.
     // This value is ignored if PERFMON_CONFIG_FLAG_TIMEBASE0 is set.
     // Setting PERFMON_CONFIG_FLAG_TIMEBASE0 in |flags[0]| is redundant but ok.
-    perfmon_rate_t rate[PERFMON_MAX_EVENTS];
+    perfmon_rate_t rate;
 
-    // Flags for each event in |events|.
+    // Flags for the event.
     // TODO(dje): hypervisor, host/guest os/user
-    uint32_t flags[PERFMON_MAX_EVENTS];
+    uint32_t flags;
 // Valid bits in |flags|.
 #define PERFMON_CONFIG_FLAG_MASK      0x1f
 // Collect os data.
@@ -353,6 +349,15 @@ typedef struct {
 // This is only available when the underlying system supports it.
 // TODO(dje): Provide knob to specify how many branches.
 #define PERFMON_CONFIG_FLAG_LAST_BRANCH (1u << 4)
+} perfmon_ioctl_event_config_t;
+
+// Passed to STAGE_CONFIG to select the data to be collected.
+// Events must be consecutively allocated from the front with no holes.
+// A value of |kEventIdNone| in |events[N].event| marks the end.
+typedef struct {
+    // |events[0]| is special: It is used as the timebase when any other
+    // event has PERFMON_CONFIG_FLAG_TIMEBASE0 set.
+    perfmon_ioctl_event_config_t events[PERFMON_MAX_EVENTS];
 } perfmon_ioctl_config_t;
 
 ///////////////////////////////////////////////////////////////////////////////

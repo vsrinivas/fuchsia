@@ -74,22 +74,22 @@ std::string Config::ToString() {
 
 static void ToIoctlEvent(const Config::EventConfig& event, size_t index,
                          perfmon_ioctl_config_t* out_config) {
-  out_config->events[index] = event.event;
-  out_config->rate[index] = event.rate;
+  out_config->events[index].event = event.event;
+  out_config->events[index].rate = event.rate;
   if (event.flags & Config::kFlagOs) {
-    out_config->flags[index] |= PERFMON_CONFIG_FLAG_OS;
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_OS;
   }
   if (event.flags & Config::kFlagUser) {
-    out_config->flags[index] |= PERFMON_CONFIG_FLAG_USER;
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_USER;
   }
   if (event.flags & Config::kFlagPc) {
-    out_config->flags[index] |= PERFMON_CONFIG_FLAG_PC;
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_PC;
   }
   if (event.flags & Config::kFlagTimebase) {
-    out_config->flags[index] |= PERFMON_CONFIG_FLAG_TIMEBASE0;
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_TIMEBASE0;
   }
   if (event.flags & Config::kFlagLastBranch) {
-    out_config->flags[index] |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
   }
 }
 
