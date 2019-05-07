@@ -506,7 +506,10 @@ mod tests {
             future::{join, lazy},
             FutureExt, SinkExt,
         },
-        std::sync::{Arc, Mutex},
+        std::sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
     };
 
     macro_rules! fast_future {
@@ -613,17 +616,16 @@ mod tests {
 
     #[test]
     fn read_twice() {
-        let attempts = Arc::new(Mutex::new(0));
+        let attempts = Arc::new(AtomicUsize::new(0));
 
         run_server_client(
             OPEN_RIGHT_READABLE,
             read_only(|| {
-                let attempter = attempts.clone();
+                let attempts = attempts.clone();
                 lazy(move |_| {
-                    let mut read_attempt = attempter.lock().unwrap();
-                    *read_attempt += 1;
-                    match *read_attempt {
-                        1 => Ok(b"State one".to_vec()),
+                    let read_attempt = attempts.fetch_add(1, Ordering::Relaxed);
+                    match read_attempt {
+                        0 => Ok(b"State one".to_vec()),
                         _ => panic!("Called on_read() a second time."),
                     }
                 })
@@ -636,22 +638,21 @@ mod tests {
             },
         );
 
-        assert_eq!(*attempts.lock().unwrap(), 1);
+        assert_eq!(attempts.load(Ordering::Relaxed), 1);
     }
 
     #[test]
     fn write_twice() {
-        let attempts = Arc::new(Mutex::new(0));
+        let attempts = Arc::new(AtomicUsize::new(0));
 
         run_server_client(
             OPEN_RIGHT_WRITABLE,
             write_only(100, |content| {
-                let attempter = attempts.clone();
+                let attempts = attempts.clone();
                 lazy(move |_| {
-                    let mut write_attempt = attempter.lock().unwrap();
-                    *write_attempt += 1;
-                    match *write_attempt {
-                        1 => {
+                    let write_attempt = attempts.fetch_add(1, Ordering::Relaxed);
+                    match write_attempt {
+                        0 => {
                             assert_eq!(&*content, b"Write one and two");
                             Ok(())
                         }
@@ -666,22 +667,21 @@ mod tests {
             },
         );
 
-        assert_eq!(*attempts.lock().unwrap(), 1);
+        assert_eq!(attempts.load(Ordering::Relaxed), 1);
     }
 
     #[test]
     fn read_error() {
-        let read_attempt = Arc::new(Mutex::new(0));
+        let read_attempt = Arc::new(AtomicUsize::new(0));
 
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
         let server = read_only(|| {
-            let attempter = read_attempt.clone();
+            let read_attempt = read_attempt.clone();
             fast_future!({
-                let mut attempt = attempter.lock().unwrap();
-                *attempt += 1;
-                match *attempt {
-                    1 => Err(Status::SHOULD_WAIT),
-                    2 => Ok(b"Have value".to_vec()),
+                let attempt = read_attempt.fetch_add(1, Ordering::Relaxed);
+                match attempt {
+                    0 => Err(Status::SHOULD_WAIT),
+                    1 => Ok(b"Have value".to_vec()),
                     _ => panic!("Third call to read()."),
                 }
             })
@@ -974,18 +974,17 @@ mod tests {
             )
         };
 
-        let counter = Arc::new(Mutex::new(0));
-        let (get_client1, client1_start, client1_read_and_close) = create_client("Content 1");
-        let (get_client2, client2_start, client2_read_and_close) = create_client("Content 2");
+        let read_count = Arc::new(AtomicUsize::new(0));
+        let (get_client1, client1_start, client1_read_and_close) = create_client("Content 0");
+        let (get_client2, client2_start, client2_read_and_close) = create_client("Content 1");
 
         run_server_client_with_open_requests_channel_and_executor(
             exec,
             read_only(|| {
-                let read_count = counter.clone();
+                let read_count = read_count.clone();
                 fast_future!({
-                    let mut count = read_count.lock().unwrap();
-                    *count += 1;
-                    Ok(format!("Content {}", *count).into_bytes())
+                    let count = read_count.fetch_add(1, Ordering::Relaxed);
+                    Ok(format!("Content {}", count).into_bytes())
                 })
             }),
             async move |open_sender| {
@@ -997,7 +996,7 @@ mod tests {
             |run_until_stalled_assert| {
                 let mut run_and_check_read_count = |expected_count, should_complete: bool| {
                     run_until_stalled_assert(should_complete);
-                    assert_eq!(*counter.lock().unwrap(), expected_count);
+                    assert_eq!(read_count.load(Ordering::Relaxed), expected_count);
                 };
 
                 run_and_check_read_count(0, false);
@@ -1023,20 +1022,20 @@ mod tests {
 
     #[test]
     fn slow_on_read() {
-        // the rest of the tests for the async file all use fast_future! to wrap their relevant
+        // The rest of the tests for the async file all use `fast_future!` to wrap their relevant
         // pseudo file callbacks in the simplest possible way, using the lazy future combinator.
-        // however, we want to confirm that we behave as expected if we have an on_read future that
+        // However, we want to confirm that we behave as expected if we have an on_read future that
         // doesn't immediately return.
         //
-        // this test creates an on_read future that doesn't return `Ready` with the result of the
-        // on_read operation until it recieves a signal on a oneshot channel. we confirm the
+        // This test creates an on_read future that doesn't return `Ready` with the result of the
+        // on_read operation until it receives a signal on a oneshot channel. We confirm the
         // behavior we expect from the file - notably that we are able to send multiple requests to
         // the file before the connection is actually created and populated, and have them be
         // executed once the buffer is filled with what we expect.
         let exec = fasync::Executor::new().expect("Executor creation failed");
 
-        let read_counter = Arc::new(Mutex::new(0));
-        let client_counter = Arc::new(Mutex::new(0));
+        let read_counter = Arc::new(AtomicUsize::new(0));
+        let client_counter = Arc::new(AtomicUsize::new(0));
         let client_count = client_counter.clone();
         let (finish_future_sender, finish_future_receiver) = oneshot::channel::<()>();
         let finish_future_receiver = finish_future_receiver.shared();
@@ -1048,15 +1047,15 @@ mod tests {
                 let read_counter = read_counter.clone();
                 let finish_future_receiver = finish_future_receiver.clone();
                 async move {
-                    *read_counter.lock().unwrap() += 1;
+                    read_counter.fetch_add(1, Ordering::Relaxed);
                     await!(finish_future_receiver)
                         .expect("finish_future_sender was not called before been dropped.");
-                    *read_counter.lock().unwrap() += 1;
+                    read_counter.fetch_add(1, Ordering::Relaxed);
                     Ok(b"content".to_vec())
                 }
             }),
             async move |proxy| {
-                *client_count.lock().unwrap() += 1;
+                client_count.fetch_add(1, Ordering::Relaxed);
 
                 assert_read!(proxy, "content");
 
@@ -1064,12 +1063,12 @@ mod tests {
                 assert_read!(proxy, "ent");
                 assert_close!(proxy);
 
-                *client_count.lock().unwrap() += 1;
+                client_count.fetch_add(1, Ordering::Relaxed);
             },
             |run_until_stalled_assert| {
                 let check_read_client_counts = |expected_read, expected_client| {
-                    assert_eq!(*read_counter.lock().unwrap(), expected_read);
-                    assert_eq!(*client_counter.lock().unwrap(), expected_client);
+                    assert_eq!(read_counter.load(Ordering::Relaxed), expected_read);
+                    assert_eq!(client_counter.load(Ordering::Relaxed), expected_client);
                 };
                 run_until_stalled_assert(false);
 
@@ -1090,8 +1089,8 @@ mod tests {
         // this test is pretty similar to the above, except that it lags the on_write call instead.
         let exec = fasync::Executor::new().expect("Executor creation failed");
 
-        let write_counter = Arc::new(Mutex::new(0));
-        let client_counter = Arc::new(Mutex::new(0));
+        let write_counter = Arc::new(AtomicUsize::new(0));
+        let client_counter = Arc::new(AtomicUsize::new(0));
         let client_count = client_counter.clone();
         let (finish_future_sender, finish_future_receiver) = oneshot::channel::<()>();
         let finish_future_receiver = finish_future_receiver.shared();
@@ -1104,33 +1103,25 @@ mod tests {
                 let finish_future_receiver = finish_future_receiver.clone();
                 async move {
                     assert_eq!(*&content, b"content");
-                    *write_counter.lock().unwrap() += 1;
+                    write_counter.fetch_add(1, Ordering::Relaxed);
                     await!(finish_future_receiver)
                         .expect("finish_future_sender was not called before been dropped.");
-                    *write_counter.lock().unwrap() += 1;
+                    write_counter.fetch_add(1, Ordering::Relaxed);
                     Ok(())
                 }
             }),
             async move |proxy| {
-                *client_count.lock().unwrap() += 1;
+                client_count.fetch_add(1, Ordering::Relaxed);
 
                 assert_write!(proxy, "content");
                 assert_close!(proxy);
 
-                *client_count.lock().unwrap() += 1;
+                client_count.fetch_add(1, Ordering::Relaxed);
             },
             |run_until_stalled_assert| {
                 let check_write_client_counts = |expected_write, expected_client| {
-                    assert_eq!(
-                        *write_counter.lock().unwrap(),
-                        expected_write,
-                        "write count mismatch"
-                    );
-                    assert_eq!(
-                        *client_counter.lock().unwrap(),
-                        expected_client,
-                        "client count mismatch"
-                    );
+                    assert_eq!(write_counter.load(Ordering::Relaxed), expected_write);
+                    assert_eq!(client_counter.load(Ordering::Relaxed), expected_client);
                 };
 
                 run_until_stalled_assert(false);
