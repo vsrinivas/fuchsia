@@ -6,7 +6,7 @@ use {crate::ast::BanjoAst, failure::Error, std::io};
 
 pub use self::{
     abigen::AbigenBackend, ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppInternalBackend,
-    kernel::KernelBackend,
+    kernel::KernelBackend, kernel::KernelSubtype,
 };
 
 mod abigen;

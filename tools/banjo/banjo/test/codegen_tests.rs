@@ -252,13 +252,14 @@ mod abigen {
 
 mod kernel {
     use super::*;
+    use banjo_lib::backends::KernelSubtype;
 
     codegen_test!(
         trace_empty,
         KernelBackend,
         ["banjo/empty.test.banjo"],
         "kernel/trace-empty.inc",
-        "trace"
+        KernelSubtype::Trace
     );
 
     codegen_test!(
@@ -266,6 +267,22 @@ mod kernel {
         KernelBackend,
         ["banjo/abigen-protocol-basic.test.banjo"],
         "kernel/trace-basic.inc",
-        "trace"
+        KernelSubtype::Trace
+    );
+
+    codegen_test!(
+        numbers_empty,
+        KernelBackend,
+        ["banjo/empty.test.banjo"],
+        "kernel/numbers-empty.h",
+        KernelSubtype::Numbers
+    );
+
+    codegen_test!(
+        numbers_basic,
+        KernelBackend,
+        ["banjo/abigen-protocol-basic.test.banjo"],
+        "kernel/numbers-basic.h",
+        KernelSubtype::Numbers
     );
 }

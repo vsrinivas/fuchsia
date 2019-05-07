@@ -30,7 +30,7 @@ enum BackendName {
     Json,
     Ast,
     Abigen,
-    KernelTrace,
+    Kernel(backends::KernelSubtype),
 }
 
 impl FromStr for BackendName {
@@ -45,10 +45,11 @@ impl FromStr for BackendName {
             "json" => Ok(BackendName::Json),
             "ast" => Ok(BackendName::Ast),
             "abigen" => Ok(BackendName::Abigen),
-            "kerneltrace" => Ok(BackendName::KernelTrace),
+            "kernelnumbers" => Ok(BackendName::Kernel(backends::KernelSubtype::Numbers)),
+            "kerneltrace" => Ok(BackendName::Kernel(backends::KernelSubtype::Trace)),
             _ => Err(format!(
                 "Unrecognized backend for banjo. Current valid ones are: \
-                 C, Cpp, Rust, Ast, Abigen, KernelTrace"
+                 C, Cpp, Rust, Ast, Abigen, KernelNumbers, KernelTrace"
             )),
         }
     }
@@ -178,7 +179,7 @@ fn main() -> Result<(), Error> {
         BackendName::CppInternal => Box::new(CppInternalBackend::new(&mut output)),
         BackendName::Ast => Box::new(AstBackend::new(&mut output)),
         BackendName::Abigen => Box::new(AbigenBackend::new(&mut output)),
-        BackendName::KernelTrace => Box::new(KernelBackend::new(&mut output, "trace")),
+        BackendName::Kernel(subtype) => Box::new(KernelBackend::new(&mut output, subtype)),
         e => {
             eprintln!("{:?} backend is not yet implemented", e);
             ::std::process::exit(1);

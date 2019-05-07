@@ -9,13 +9,19 @@ use {
     std::io,
 };
 
+#[derive(Debug)]
+pub enum KernelSubtype {
+    Numbers,
+    Trace,
+}
+
 pub struct KernelBackend<'a, W: io::Write> {
     w: &'a mut W,
-    subtype: &'a str,
+    subtype: KernelSubtype,
 }
 
 impl<'a, W: io::Write> KernelBackend<'a, W> {
-    pub fn new(w: &'a mut W, subtype: &'a str) -> Self {
+    pub fn new(w: &'a mut W, subtype: KernelSubtype) -> Self {
         KernelBackend { w, subtype }
     }
 }
@@ -54,6 +60,26 @@ impl<'a, W: io::Write> KernelBackend<'a, W> {
             .collect::<Result<Vec<_>, Error>>()
             .map(|x| x.join("\n"))
     }
+
+    fn codegen_numbers(
+        &self,
+        methods: &Vec<ast::Method>,
+        _ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        methods
+            .iter()
+            .filter(|m| !m.attributes.0.iter().any(|x| x.key == "vdsocall"))
+            .enumerate()
+            .map(|(id, m)| {
+                Ok(format!(
+                    "#define ZX_SYS_{fn_name} {id}",
+                    fn_name = util::to_c_name(m.name.as_str()),
+                    id = id
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n") + format!("\n#define ZX_SYS_COUNT {}", x.len()).as_str())
+    }
 }
 
 impl<'a, W: io::Write> Backend<'a, W> for KernelBackend<'a, W> {
@@ -72,9 +98,9 @@ impl<'a, W: io::Write> Backend<'a, W> for KernelBackend<'a, W> {
                     if name.name() != "Api" {
                         panic!("Expecting single protocol 'Api'");
                     }
-                    match self.subtype {
-                        "trace" => Some(self.codegen_trace(methods, &ast)),
-                        _ => panic!("unexpected subtype"),
+                    match &self.subtype {
+                        KernelSubtype::Trace => Some(self.codegen_trace(methods, &ast)),
+                        KernelSubtype::Numbers => Some(self.codegen_numbers(methods, &ast)),
                     }
                 }
                 _ => None,
