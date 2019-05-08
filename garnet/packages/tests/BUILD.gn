@@ -22,13 +22,6 @@ group("netfilter") {
   ]
 }
 
-group("broadcom") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:brcmfmac_test",
-  ]
-}
-
 group("containers_cpp") {
   testonly = true
   public_deps = [
@@ -316,7 +309,6 @@ group("all") {
     "//garnet/packages/tests:banjo",
     "//garnet/packages/tests:bluetooth",
     "//garnet/packages/tests:boringssl",
-    "//garnet/packages/tests:broadcom",
     "//garnet/packages/tests:camera_client",
     "//garnet/packages/tests:carnelian",
     "//garnet/packages/tests:catapult_converter",
