@@ -69,6 +69,7 @@ source_set("lib") {
 }
 
 action("extras") {
+  visibility = [ ":*" ]
   script = "mkextras.sh"
 
   deps = [
@@ -123,6 +124,7 @@ package("linux_runner") {
 }
 
 executable("linux_runner_unittests") {
+  visibility = [ ":*" ]
   testonly = true
 
   sources = [
