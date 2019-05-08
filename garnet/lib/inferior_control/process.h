@@ -84,8 +84,9 @@ class Process final {
   // kernel process instance because we still have a handle of the process.
   // Returns true on success, or false if already detached.
   // N.B. It is the caller's responsibility to have first removed any and all
-  // breakpoints. This includes the ld.so breakpoint which is automagically
-  // set if we launched the inferior. Furthermore, if the ld.so breakpoint
+  // breakpoints. This does not include the ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET
+  // ld.so breakpoint which is automagically set if we launched the inferior
+  // and is managed internally. Furthermore, if the ld.so breakpoint
   // hasn't been hit yet, which can be determined by calling
   // |ldso_debug_data_has_initialized()|, then this must be called while the
   // inferior is stopped. Typically this happens when processing the
@@ -235,17 +236,15 @@ class Process final {
 
   // Wrapper on |zx_object_get_property()| to fetch the value of
   // ZX_PROP_PROCESS_DEBUG_ADDR.
-  // Returns a boolean indicating success.
-  bool GetDebugAddrProperty(zx_vaddr_t* out_debug_addr);
+  zx_vaddr_t GetDebugAddrProperty();
 
   // Wrapper on |zx_object_set_property()| to set the value of
   // ZX_PROP_PROCESS_DEBUG_ADDR.
-  // Returns a boolean indicating success.
-  bool SetDebugAddrProperty(zx_vaddr_t debug_addr);
+  void SetDebugAddrProperty(zx_vaddr_t debug_addr);
 
   // Cause ld.so to execute a s/w breakpoint instruction after all dsos have
-  // been loaded at startup. Returns true on success.
-  bool SetLdsoDebugTrigger();
+  // been loaded at startup.
+  void SetLdsoDebugTrigger();
 
   // Fetch the value of ZX_PROP_PROCESS_DEBUG_ADDR.
   // Returns true the value if it has been set (by the dynamic linker) or
