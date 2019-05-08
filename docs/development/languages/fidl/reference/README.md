@@ -45,7 +45,7 @@ Fuchsia has adopted a [readability rubric](../../../api/fidl.md) for FIDL librar
 
 ### Rust
 
-- [Documentation](../tutorial/tutorial-dart.md)
+- [Documentation](../tutorial/tutorial-rust.md)
 - [Echo server example](/garnet/examples/fidl/echo_server_rust/)
 - [Echo client example](/garnet/examples/fidl/echo_client_rust/)
 
