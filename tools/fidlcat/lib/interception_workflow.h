@@ -26,10 +26,15 @@ class InterceptionWorkflow;
 
 namespace internal {
 
-class InterceptingThreadObserver : public zxdb::ThreadObserver {
+class InterceptingThreadObserver : public zxdb::ThreadObserver,
+                                   public BreakpointRegisterer {
  public:
   explicit InterceptingThreadObserver(InterceptionWorkflow* workflow)
       : workflow_(workflow) {}
+
+  InterceptingThreadObserver(const InterceptingThreadObserver&) = delete;
+  InterceptingThreadObserver& operator=(const InterceptingThreadObserver&) =
+      delete;
 
   virtual void OnThreadStopped(
       zxdb::Thread* thread, debug_ipc::NotifyException::Type type,
@@ -38,8 +43,12 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver {
 
   virtual ~InterceptingThreadObserver() {}
 
+  virtual void Register(int64_t koid,
+                        std::function<void(zxdb::Thread*)>&& cb) override;
+
  private:
   InterceptionWorkflow* workflow_;
+  std::map<int64_t, std::function<void(zxdb::Thread*)>> breakpoint_map_;
 };
 
 class InterceptingProcessObserver : public zxdb::ProcessObserver {
@@ -47,12 +56,18 @@ class InterceptingProcessObserver : public zxdb::ProcessObserver {
   explicit InterceptingProcessObserver(InterceptionWorkflow* workflow)
       : dispatcher_(workflow) {}
 
+  InterceptingProcessObserver(const InterceptingProcessObserver&) = delete;
+  InterceptingProcessObserver& operator=(const InterceptingProcessObserver&) =
+      delete;
+
   virtual void DidCreateThread(zxdb::Process* process,
                                zxdb::Thread* thread) override {
     thread->AddObserver(&dispatcher_);
   }
 
   virtual ~InterceptingProcessObserver() {}
+
+  InterceptingThreadObserver& thread_observer() { return dispatcher_; }
 
  private:
   InterceptingThreadObserver dispatcher_;
@@ -63,13 +78,16 @@ class InterceptingTargetObserver : public zxdb::TargetObserver {
   explicit InterceptingTargetObserver(InterceptionWorkflow* workflow)
       : dispatcher_(workflow), workflow_(workflow) {}
 
+  InterceptingTargetObserver(const InterceptingTargetObserver&) = delete;
+  InterceptingTargetObserver& operator=(const InterceptingTargetObserver&) =
+      delete;
+
   virtual void DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
                                 bool autoattached_to_new_process) override;
 
   virtual ~InterceptingTargetObserver() {}
 
-  // For testing
-  InterceptingProcessObserver* process_observer() { return &dispatcher_; }
+  InterceptingProcessObserver& process_observer() { return dispatcher_; }
 
  private:
   InterceptingProcessObserver dispatcher_;
@@ -91,7 +109,8 @@ using SimpleErrorFunction = std::function<void(const zxdb::Err&)>;
 class InterceptionWorkflow {
  public:
   friend class internal::InterceptingThreadObserver;
-  friend class DataForZxWriteTest;
+  friend class DataForZxChannelTest;
+  friend class ProcessController;
 
   InterceptionWorkflow();
   ~InterceptionWorkflow();
@@ -128,8 +147,13 @@ class InterceptionWorkflow {
   void SetBreakpoints(uint64_t process_koid);
 
   // Sets the user-callback to be run when we intercept a zx_channel_write call.
-  void SetZxChannelWriteCallback(ZxChannelWriteCallback&& callback) {
+  void SetZxChannelWriteCallback(ZxChannelCallback&& callback) {
     zx_channel_write_callback_ = std::move(callback);
+  }
+
+  // Sets the user-callback to be run when we intercept a zx_channel_read call.
+  void SetZxChannelReadCallback(ZxChannelCallback&& callback) {
+    zx_channel_read_callback_ = std::move(callback);
   }
 
   // Starts running the loop.  Returns when loop is (asynchronously) terminated.
@@ -147,7 +171,8 @@ class InterceptionWorkflow {
  private:
   zxdb::Target* GetTarget(uint64_t process_koid = ULLONG_MAX);
 
-  void OnZxChannelWrite(zxdb::Thread* thread);
+  template <class T>
+  void OnZxChannelAction(zxdb::Thread* thread);
 
   debug_ipc::BufferedFD buffer_;
   zxdb::Session* session_;
@@ -156,9 +181,11 @@ class InterceptionWorkflow {
   bool delete_loop_;
 
   internal::InterceptingTargetObserver observer_;
-  ZxChannelWriteCallback zx_channel_write_callback_;
+  ZxChannelCallback zx_channel_write_callback_;
+  ZxChannelCallback zx_channel_read_callback_;
 
   static const char kZxChannelWriteName[];
+  static const char kZxChannelReadName[];
 };
 
 }  // namespace fidlcat

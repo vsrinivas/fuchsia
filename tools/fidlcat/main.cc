@@ -142,13 +142,8 @@ std::string DocumentToString(rapidjson::Document& document) {
   return output.GetString();
 }
 
-// The meat of the program: decode the given zx_channel_write params.
-void OnZxChannelWrite(LibraryLoader* loader, const zxdb::Err& err,
-                      const ZxChannelWriteParams& params) {
-  if (!err.ok()) {
-    FXL_LOG(INFO) << "Unable to decode zx_channel_write params: " << err.msg();
-    return;
-  }
+void OnZxChannelAction(LibraryLoader* loader, const zxdb::Err& err,
+                       const ZxChannelParams& params) {
   fidl::BytePart bytes(params.GetBytes().get(), params.GetNumBytes(),
                        params.GetNumBytes());
   fidl::HandlePart handles(params.GetHandles().get(), params.GetNumHandles(),
@@ -210,8 +205,25 @@ void OnZxChannelWrite(LibraryLoader* loader, const zxdb::Err& err,
 void EnqueueStartup(InterceptionWorkflow& workflow, LibraryLoader& loader,
                     CommandLineOptions& options,
                     std::vector<std::string>& params) {
-  workflow.SetZxChannelWriteCallback(std::bind(
-      OnZxChannelWrite, &loader, std::placeholders::_1, std::placeholders::_2));
+  workflow.SetZxChannelWriteCallback(
+      [loader = &loader](const zxdb::Err& err, const ZxChannelParams& params) {
+        if (!err.ok()) {
+          FXL_LOG(INFO) << "Unable to decode zx_channel_write params: "
+                        << err.msg();
+          return;
+        }
+        OnZxChannelAction(loader, err, params);
+      });
+  workflow.SetZxChannelReadCallback(
+      [loader = &loader](const zxdb::Err& err, const ZxChannelParams& params) {
+        if (!err.ok()) {
+          FXL_LOG(INFO) << "Unable to decode zx_channel_read params: "
+                        << err.msg();
+          return;
+        }
+        OnZxChannelAction(loader, err, params);
+      });
+
   uint64_t process_koid = ULLONG_MAX;
   if (options.remote_pid) {
     std::string& pid_str = *options.remote_pid;
@@ -240,6 +252,7 @@ void EnqueueStartup(InterceptionWorkflow& workflow, LibraryLoader& loader,
                      std::move(set_breakpoints)](const zxdb::Err& err) {
     if (!err.ok()) {
       FXL_LOG(FATAL) << "Unable to connect: " << err.msg();
+      return;
     }
     FXL_LOG(INFO) << "Connected!";
     if (process_koid != ULLONG_MAX) {

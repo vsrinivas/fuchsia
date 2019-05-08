@@ -17,25 +17,64 @@
 namespace fidlcat {
 
 const char InterceptionWorkflow::kZxChannelWriteName[] = "zx_channel_write@plt";
+const char InterceptionWorkflow::kZxChannelReadName[] = "zx_channel_read@plt";
 
 namespace internal {
 
 void InterceptingThreadObserver::OnThreadStopped(
     zxdb::Thread* thread, debug_ipc::NotifyException::Type type,
     const std::vector<fxl::WeakPtr<zxdb::Breakpoint>>& hit_breakpoints) {
+  FXL_CHECK(thread)
+      << "Internal error: Stopped in a breakpoint without a thread?";
+
+  // There a two possible breakpoints we can hit:
+  //  - A breakpoint right before a system call (zx_channel_read,
+  //    zx_channel_write, etc)
+  //  - A breakpoint that we hit because we ran the system call to see what the
+  //    result will be.
+
+  // This is the breakpoint that we hit after running the system call.  The
+  // initial breakpoint - the one on the system call - registered a callback in
+  // this per-thread map, so that the next breakpoint on this thread would be
+  // handled here.
+  auto entry = breakpoint_map_.find(thread->GetKoid());
+  if (entry != breakpoint_map_.end()) {
+    entry->second(thread);
+    // Erasing under the assumption that the next step will put it back, if
+    // necessary.
+    breakpoint_map_.erase(thread->GetKoid());
+    return;
+  }
+
+  // If there was no registered breakpoint on this thread, we hit it because we
+  // encountered a system call.  Run the callbacks associated with this system
+  // call.
   for (auto& bp_ptr : hit_breakpoints) {
     zxdb::BreakpointSettings settings = bp_ptr->GetSettings();
     if (settings.location.type == zxdb::InputLocation::Type::kSymbol &&
-        settings.location.symbol.components().size() == 1u &&
-        settings.location.symbol.components()[0].name() ==
-            InterceptionWorkflow::kZxChannelWriteName) {
-      workflow_->OnZxChannelWrite(thread);
-      return;
+        settings.location.symbol.components().size() == 1u) {
+      if (settings.location.symbol.components()[0].name() ==
+          InterceptionWorkflow::kZxChannelWriteName) {
+        workflow_->OnZxChannelAction<ZxChannelWriteParamsBuilder>(thread);
+        return;
+      } else if (settings.location.symbol.components()[0].name() ==
+                 InterceptionWorkflow::kZxChannelReadName) {
+        workflow_->OnZxChannelAction<ZxChannelReadParamsBuilder>(thread);
+        return;
+      } else {
+        thread->Continue();
+        return;
+      }
     }
   }
   FXL_LOG(INFO)
       << "Internal error: Thread stopped on exception with no breakpoint set";
   thread->Continue();
+}
+
+void InterceptingThreadObserver::Register(
+    int64_t koid, std::function<void(zxdb::Thread*)>&& cb) {
+  breakpoint_map_[koid] = std::move(cb);
 }
 
 void InterceptingTargetObserver::DidCreateProcess(
@@ -52,7 +91,13 @@ InterceptionWorkflow::InterceptionWorkflow()
       delete_session_(true),
       loop_(new debug_ipc::PlatformMessageLoop()),
       delete_loop_(true),
-      observer_(this) {}
+      observer_(this),
+      zx_channel_write_callback_([](const zxdb::Err&, const ZxChannelParams&) {
+        FXL_DCHECK(false) << "Did not specify zx_channel_write callback";
+      }),
+      zx_channel_read_callback_([](const zxdb::Err&, const ZxChannelParams&) {
+        FXL_DCHECK(false) << "Did not specify zx_channel_read callback";
+      }) {}
 
 InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
                                            debug_ipc::PlatformMessageLoop* loop)
@@ -227,6 +272,16 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Target* target) {
       FXL_LOG(INFO) << "Error in setting breakpoints: " << err.msg();
     }
   });
+
+  settings.location.symbol = zxdb::Identifier(kZxChannelReadName);
+
+  breakpoint = session_->system().CreateNewBreakpoint();
+
+  breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
+    if (!err.ok()) {
+      FXL_LOG(INFO) << "Error in setting breakpoints: " << err.msg();
+    }
+  });
 }
 
 void InterceptionWorkflow::SetBreakpoints(uint64_t process_koid) {
@@ -259,50 +314,29 @@ class AlwaysContinue {
 
 }  // namespace
 
-// The workflow for zx_channel_write.  Read the registers, read the associated
-// memory, pass it to the callback to do the user-facing thing.
-void InterceptionWorkflow::OnZxChannelWrite(zxdb::Thread* thread) {
-  std::vector<debug_ipc::RegisterCategory::Type> register_types = {
-      debug_ipc::RegisterCategory::Type::kGeneral};
+// The workflow for zx_channel syscalls.
+template <class T>
+void InterceptionWorkflow::OnZxChannelAction(zxdb::Thread* thread) {
+  ZxChannelCallback& callback = (std::is_same_v<T, ZxChannelWriteParamsBuilder>)
+                                    ? zx_channel_write_callback_
+                                    : zx_channel_read_callback_;
+  FXL_DCHECK(callback != nullptr) << "Callback not set for zx channels param";
 
-  thread->ReadRegisters(register_types, [this,
-                                         thread_weak = thread->GetWeakPtr()](
-                                            const zxdb::Err& err,
-                                            const zxdb::RegisterSet& in_regs) {
-    if (!thread_weak) {
-      zxdb::Err e(zxdb::ErrType::kGeneral,
-                  "Error reading registers: thread went away");
-      ZxChannelWriteParams params;
-      zx_channel_write_callback_(e, params);
-    }
-    if (!err.ok()) {
-      AlwaysContinue ac(thread_weak.get());
-      ZxChannelWriteParams params;
-      zx_channel_write_callback_(
-          zxdb::Err(err.type(), "Error reading registers" + err.msg()), params);
-    }
-    ZxChannelWriteParams::BuildZxChannelWriteParamsAndContinue(
-        thread_weak, in_regs,
-        [this, thread_weak](const zxdb::Err& err,
-                            const ZxChannelWriteParams& params) {
-          if (!thread_weak) {
-            zxdb::Err e(
-                zxdb::ErrType::kGeneral,
-                "Error constructing zx_channel_write data: thread went away");
-            ZxChannelWriteParams params;
-            zx_channel_write_callback_(e, params);
-          }
-          AlwaysContinue ac(thread_weak.get());
-          zx_channel_write_callback_(err, params);
-        });
-  });
-
-#if 0
-  for (uint32_t i = 0; i < params.GetNumBytes(); i++) {
-    fprintf(stderr, "%d %c\n", params.GetBytes().get()[i],
-            params.GetBytes().get()[i]);
-  }
-#endif
+  // It might be considered more readable to use a shared_ptr here.  However,
+  // the callback passed to BuildZxChannelParamsAndContinue is stored in the
+  // builder object.  If we use a shared_ptr, we will have a cycle between the
+  // shared_ptr, the builder, and the callback, and the shared_ptr will never
+  // get collected.
+  T* builder = new T();
+  builder->BuildZxChannelParamsAndContinue(
+      thread->GetWeakPtr(), observer_.process_observer().thread_observer(),
+      [thread_weak = thread->GetWeakPtr(), &callback, builder](
+          const zxdb::Err& err, const ZxChannelParams& params) {
+        // To ensure the builder gets deleted.
+        std::unique_ptr<T> ptr(builder);
+        AlwaysContinue ac(thread_weak.get());
+        callback(err, params);
+      });
 }
 
 }  // namespace fidlcat
