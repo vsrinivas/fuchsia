@@ -183,7 +183,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     fuchsia::modular::ModuleDataPtr module_data;
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
-    fuchsia::ui::views::ViewHolderToken module_pending_view_holder_token;
   };
 
   // A module's story shell-related information that we pend until we are able
@@ -193,7 +192,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     fuchsia::modular::ModuleManifestPtr module_manifest;
     fuchsia::modular::SurfaceRelationPtr surface_relation;
     fuchsia::modular::ModuleSource module_source;
-    fuchsia::ui::views::ViewHolderToken view_holder_token;
+    fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
   };
 
   // |StoryController|
