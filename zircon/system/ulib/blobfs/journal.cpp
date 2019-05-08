@@ -71,13 +71,11 @@ zx_status_t Journal::Create(TransactionManager* transaction_manager, uint64_t jo
     }
 
     // Create another buffer for the journal info block.
-    fbl::unique_ptr<Buffer> info;
-    if ((status = Buffer::Create(transaction_manager, 1, "blobfs-journal-info", &info)) != ZX_OK) {
+    VmoBuffer info;
+    status = info.Initialize(transaction_manager, 1, "blobfs-journal-info");
+    if (status != ZX_OK) {
         return status;
     }
-
-    // Reserve the only block in the info buffer so its impossible to copy transactions to it.
-    info->ReserveIndex();
 
     // Create the Journal with the newly created vmos.
     fbl::unique_ptr<Journal> journal(new Journal(transaction_manager, std::move(info),
@@ -133,7 +131,7 @@ zx_status_t Journal::Load() {
 
     // Load info block and journal entries into their respective buffers.
     fs::ReadTxn txn(transaction_manager_);
-    info_->Load(&txn, start_block_);
+    txn.Enqueue(info_.vmoid(), 0, start_block_, info_.capacity());
     entries_->Load(&txn, start_block_ + 1);
     zx_status_t status = txn.Transact();
 
@@ -609,8 +607,7 @@ zx_status_t Journal::WriteInfo(uint64_t start, uint64_t length) {
     uint8_t* info_ptr = reinterpret_cast<uint8_t*>(info);
     info->checksum = crc32(0, info_ptr, sizeof(JournalInfo));
 
-    info_->AddTransaction(0, start_block_, 1, &work->Transaction());
-    info_->ValidateTransaction(&work->Transaction());
+    work->Transaction().Enqueue(info_.vmo(), 0, start_block_, 1);
     return transaction_manager_->EnqueueWork(std::move(work), EnqueueType::kData);
 }
 

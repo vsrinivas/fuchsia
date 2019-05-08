@@ -43,6 +43,9 @@ public:
     // Returns the vmoid of the underlying VmoBuffer.
     vmoid_t vmoid() const { return vmoid_; }
 
+    // Returns a const view of the underlying VMO.
+    const zx::vmo& vmo() const { return mapper_.vmo(); }
+
     // Returns data starting at block |index| in the buffer.
     void* MutableData(size_t index);
 

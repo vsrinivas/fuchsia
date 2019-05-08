@@ -149,5 +149,24 @@ TEST(VmoBufferTest, MappingTest) {
     }
 }
 
+TEST(VmoBufferTest, CompareVmoToMapping) {
+    MockSpaceManager manager;
+    VmoBuffer buffer;
+    ASSERT_OK(buffer.Initialize(&manager, kCapacity, kGoldenLabel));
+
+    // Fill |buffer| with some arbitrary data via mapping.
+    char buf[kBlobfsBlockSize * 3];
+    memset(buf, 'a', sizeof(buf));
+    for (size_t i = 0; i < kCapacity; i++) {
+        memcpy(buffer.MutableData(i), buf, kBlobfsBlockSize);
+    }
+
+    // Check that we can read from the VMO directly.
+    ASSERT_OK(buffer.vmo().read(buf, 0, kCapacity * kBlobfsBlockSize));
+
+    // The data from the VMO is equivalent to the data from the mapping.
+    EXPECT_EQ(0, memcmp(buf, buffer.MutableData(0), kCapacity * kBlobfsBlockSize));
+}
+
 } // namespace
 } // namespace blobfs

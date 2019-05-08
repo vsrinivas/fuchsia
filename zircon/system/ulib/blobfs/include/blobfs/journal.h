@@ -15,6 +15,7 @@ static_assert(false, "Fuchsia only header");
 
 #include <blobfs/format.h>
 #include <blobfs/transaction-manager.h>
+#include <blobfs/vmo-buffer.h>
 #include <blobfs/writeback.h>
 #include <blobfs/writeback-queue.h>
 #include <fbl/intrusive_single_list.h>
@@ -275,7 +276,7 @@ private:
     struct Waiter : public fbl::SinglyLinkedListable<Waiter*> {};
     using ProducerQueue = fs::Queue<Waiter*>;
 
-    Journal(TransactionManager* transaction_manager, fbl::unique_ptr<Buffer> info,
+    Journal(TransactionManager* transaction_manager, VmoBuffer info,
             fbl::unique_ptr<Buffer> entries, uint64_t start_block)
         : transaction_manager_(transaction_manager), start_block_(start_block),
           info_(std::move(info)), entries_(std::move(entries)) {}
@@ -328,7 +329,7 @@ private:
 
     // Returns data from the info buffer as a JournalInfo block.
     JournalInfo* GetInfo() {
-        return reinterpret_cast<JournalInfo*>(info_->MutableData(0));
+        return reinterpret_cast<JournalInfo*>(info_.MutableData(0));
     }
 
     // Blocks until |blocks| blocks of data are available within the entries buffer.
@@ -368,7 +369,7 @@ private:
 
     // This buffer contains the data for the journal info block,
     // which is periodically updated and written back to disk.
-    fbl::unique_ptr<Buffer> info_;
+    VmoBuffer info_;
 
     // This buffer contains all journal entry data.
     fbl::unique_ptr<Buffer> entries_;
