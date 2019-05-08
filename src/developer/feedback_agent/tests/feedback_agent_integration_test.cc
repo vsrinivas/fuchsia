@@ -7,8 +7,6 @@
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include <zircon/errors.h>
 
-#include <ostream>
-
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback_agent/annotations.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -29,17 +27,10 @@ MATCHER_P(MatchesKey, expected_key,
 class FeedbackAgentIntegrationTest : public testing::Test {
  public:
   void SetUp() override {
-    auto environment_services_ = component::GetEnvironmentServices();
-    environment_services_->ConnectToService(
-        feedback_data_provider_.NewRequest());
+    environment_services_ = component::GetEnvironmentServices();
   }
 
-  void TearDown() override { feedback_data_provider_.Unbind(); }
-
  protected:
-  DataProviderSyncPtr feedback_data_provider_;
-
- private:
   std::shared_ptr<component::Services> environment_services_;
 };
 
@@ -48,17 +39,23 @@ class FeedbackAgentIntegrationTest : public testing::Test {
 // indefinitely for headless devices so this test assumes the device has a
 // display like the other Scenic tests, see SCN-1281.
 VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
+  DataProviderSyncPtr data_provider;
+  environment_services_->ConnectToService(data_provider.NewRequest());
+
   std::unique_ptr<Screenshot> out_screenshot;
-  ASSERT_EQ(feedback_data_provider_->GetScreenshot(ImageEncoding::PNG,
-                                                   &out_screenshot),
+  ASSERT_EQ(data_provider->GetScreenshot(ImageEncoding::PNG, &out_screenshot),
             ZX_OK);
   // We cannot expect a particular payload in the response because Scenic might
   // return a screenshot or not depending on which device the test runs.
 }
 
 TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
+  DataProviderSyncPtr data_provider;
+  environment_services_->ConnectToService(data_provider.NewRequest());
+
   DataProvider_GetData_Result out_result;
-  ASSERT_EQ(feedback_data_provider_->GetData(&out_result), ZX_OK);
+  ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
+
   ASSERT_TRUE(out_result.is_response());
 
   // We cannot expect a particular value for each annotation or attachment
