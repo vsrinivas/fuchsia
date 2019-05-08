@@ -31,7 +31,6 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/job.h>
-#include <lib/zx/socket.h>
 #include <libzbi/zbi-cpp.h>
 #include <zircon/assert.h>
 #include <zircon/processargs.h>
@@ -130,36 +129,6 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
                                                ZX_PROTOCOL_TEST_PARENT, zx::channel());
     test_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
     return ZX_OK;
-}
-
-zx_status_t Coordinator::DmCommand(size_t len, const char* cmd) {
-    if (InSuspend()) {
-        log(ERROR, "devcoordinator: rpc: dm-command \"%.*s\" forbidden in suspend\n",
-            static_cast<uint32_t>(len), cmd);
-        return ZX_ERR_BAD_STATE;
-    }
-    if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
-        Suspend(DEVICE_SUSPEND_FLAG_REBOOT);
-        return ZX_OK;
-    }
-    if ((len == 17) && !memcmp(cmd, "reboot-bootloader", 17)) {
-        Suspend(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER);
-        return ZX_OK;
-    }
-    if ((len == 15) && !memcmp(cmd, "reboot-recovery", 15)) {
-        Suspend(DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY);
-        return ZX_OK;
-    }
-    if ((len == 7) && !memcmp(cmd, "suspend", 7)) {
-        Suspend(DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
-        return ZX_OK;
-    }
-    if (len == 8 && (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8))) {
-        Suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
-        return ZX_OK;
-    }
-    log(ERROR, "dmctl: unknown command '%.*s'\n", (int)len, cmd);
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 const Driver* Coordinator::LibnameToDriver(const fbl::String& libname) const {
@@ -981,19 +950,6 @@ zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const c
     return ZX_OK;
 }
 
-zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket, const char* command_data,
-                           size_t command_size, fidl_txn_t* txn) {
-    zx::socket log_socket(raw_log_socket);
-
-    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
-    if (log_socket.is_valid()) {
-        dev->coordinator->set_dmctl_socket(std::move(log_socket));
-    }
-
-    zx_status_t status = dev->coordinator->DmCommand(command_size, command_data);
-    dev->coordinator->set_dmctl_socket(zx::socket());
-    return fuchsia_device_manager_CoordinatorDmCommand_reply(txn, status);
-}
 
 zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata) {
     zx_status_t st;
@@ -1273,7 +1229,7 @@ void Coordinator::Suspend(SuspendContext ctx) {
     if (suspend_context().flags() == SuspendContext::Flags::kSuspend) {
         return;
     }
-    // Move the socket in to prevent the rpc handler from closing the handle.
+
     suspend_context() = std::move(ctx);
 
     auto completion = [this](zx_status_t status) {
@@ -1283,8 +1239,6 @@ void Coordinator::Suspend(SuspendContext ctx) {
             // do not continue to suspend as this indicates a driver suspend
             // problem and should show as a bug
             log(ERROR, "devcoordinator: failed to suspend: %s\n", zx_status_get_string(status));
-            // notify dmctl
-            ctx.CloseSocket();
             if (ctx.sflags() == DEVICE_SUSPEND_FLAG_MEXEC) {
                 ctx.kernel().signal(0, ZX_USER_SIGNAL_0);
             }
@@ -1299,8 +1253,6 @@ void Coordinator::Suspend(SuspendContext ctx) {
             // on arm, if the platform driver does not implement
             // suspend go to the kernel fallback
             ::suspend_fallback(root_resource(), ctx.sflags());
-            // this handle is leaked on the shutdown path for x86
-            ctx.CloseSocket();
             // if we get here the system did not suspend successfully
             ctx.set_flags(devmgr::SuspendContext::Flags::kRunning);
         }
@@ -1328,12 +1280,12 @@ void Coordinator::Suspend(uint32_t flags) {
         vfs_exit(fshost_event());
     }
 
-    Suspend(SuspendContext(SuspendContext::Flags::kSuspend, flags, std::move(dmctl_socket_)));
+    Suspend(SuspendContext(SuspendContext::Flags::kSuspend, flags));
 }
 
 void Coordinator::DmMexec(zx::vmo kernel, zx::vmo bootdata) {
     Suspend(SuspendContext(SuspendContext::Flags::kSuspend, DEVICE_SUSPEND_FLAG_MEXEC,
-                           zx::socket(), std::move(kernel), std::move(bootdata)));
+                           std::move(kernel), std::move(bootdata)));
 }
 
 // device binding program that pure (parentless)

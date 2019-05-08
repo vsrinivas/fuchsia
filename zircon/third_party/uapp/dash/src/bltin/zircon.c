@@ -479,66 +479,6 @@ static int print_dm_help() {
     return 0;
 }
 
-static int send_dmctl(const char* command, size_t length) {
-    int fd = open("/dev/misc/dmctl", O_WRONLY);
-    if (fd < 0) {
-        fprintf(stderr, "error: cannot open dmctl: %d\n", fd);
-        return fd;
-    }
-    zx_handle_t dmctl;
-    zx_status_t status = fdio_get_service_handle(fd, &dmctl);
-    if (status != ZX_OK) {
-        return -1;
-    }
-
-    if (length > fuchsia_device_manager_COMMAND_MAX) {
-        fprintf(stderr, "error: dmctl command longer than %u bytes: '%.*s'\n",
-                fuchsia_device_manager_COMMAND_MAX, (int)length, command);
-        return -1;
-    }
-
-    zx_handle_t local, remote;
-    if (zx_socket_create(0, &remote, &local) != ZX_OK) {
-        zx_handle_close(dmctl);
-        return -1;
-    }
-
-    zx_status_t call_status;
-    status = fuchsia_device_manager_ExternalControllerExecuteCommand(dmctl, remote, command,
-                                                                     length, &call_status);
-    remote = ZX_HANDLE_INVALID;
-    zx_handle_close(dmctl);
-    if (status != ZX_OK || call_status != ZX_OK) {
-        zx_handle_close(local);
-        return -1;
-    }
-
-    for (;;) {
-        char buf[32768];
-        size_t actual;
-        if ((status = zx_socket_read(local, 0, buf, sizeof(buf), &actual)) < 0) {
-            if (status == ZX_ERR_SHOULD_WAIT) {
-                zx_object_wait_one(local, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                                   ZX_TIME_INFINITE, NULL);
-                continue;
-            }
-            break;
-        }
-        size_t written = 0;
-        while (written < actual) {
-            ssize_t count = write(1, buf + written, actual - written);
-            if (count < 0) {
-                break;
-            } else {
-                written += count;
-            }
-        }
-    }
-    zx_handle_close(local);
-
-    return 0;
-}
-
 static const uint32_t kVmoBufferSize = 512*1024;
 
 typedef struct {
@@ -763,12 +703,13 @@ int zxc_dm(int argc, char** argv) {
                command_cmp("shutdown", argv[1], &command_length)) {
         return send_suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
 
+    } else {
+        printf("Unknown command '%s'\n\n", argv[1]);
+        printf("Valid commands:\n");
+        print_dm_help();
     }
 
-    // Fallback to dmctl.
-    // TODO(edcoyne): all dmctl commands will eventually be deprecated and this
-    // will be removed.
-    return send_dmctl(argv[1], strlen(argv[1]));
+    return -1;
 }
 
 static char* join(char* buffer, size_t buffer_length, int argc, char** argv) {

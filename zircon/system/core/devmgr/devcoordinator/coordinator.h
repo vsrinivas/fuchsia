@@ -17,7 +17,6 @@
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
-#include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
 #include <utility>
@@ -44,10 +43,10 @@ public:
 
     SuspendContext() = default;
 
-    SuspendContext(Flags flags, uint32_t sflags, zx::socket socket,
-                   zx::vmo kernel = zx::vmo(), zx::vmo bootdata = zx::vmo())
-        : flags_(flags), sflags_(sflags), socket_(std::move(socket)),
-          kernel_(std::move(kernel)), bootdata_(std::move(bootdata)) {}
+    SuspendContext(Flags flags, uint32_t sflags, zx::vmo kernel = zx::vmo(),
+                   zx::vmo bootdata = zx::vmo())
+        : flags_(flags), sflags_(sflags), kernel_(std::move(kernel)),
+          bootdata_(std::move(bootdata)) {}
 
     ~SuspendContext() {}
 
@@ -63,9 +62,6 @@ public:
     const zx::vmo& kernel() const { return kernel_; }
     const zx::vmo& bootdata() const { return bootdata_; }
 
-    // Close the socket whose ownership was handed to this SuspendContext.
-    void CloseSocket() { socket_.reset(); }
-
 private:
     fbl::RefPtr<SuspendTask> task_;
 
@@ -73,9 +69,6 @@ private:
 
     // suspend flags
     uint32_t sflags_ = 0u;
-
-    // socket to notify on for 'dm reboot' and 'dm poweroff'
-    zx::socket socket_;
 
     // mexec arguments
     zx::vmo kernel_;
@@ -184,7 +177,6 @@ public:
                                    const fuchsia_device_manager_DeviceComponent* components,
                                    size_t components_count, uint32_t coresident_device_index);
 
-    zx_status_t DmCommand(size_t len, const char* cmd);
     void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 
     void HandleNewDevice(const fbl::RefPtr<Device>& dev);
@@ -208,7 +200,6 @@ public:
     void set_loader_service(DevhostLoaderService* loader_service) {
         loader_service_ = loader_service;
     }
-    void set_dmctl_socket(zx::socket dmctl_socket) { dmctl_socket_ = std::move(dmctl_socket); }
 
     fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() { return drivers_; }
     const fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() const { return drivers_; }
@@ -248,10 +239,6 @@ private:
     bool system_loaded_ = false;
     DevhostLoaderService* loader_service_ = nullptr;
 
-    // This socket is used by DmPrintf for output, and DmPrintf can be called in
-    // the context of a const member function, therefore it is also const. Given
-    // that, we must make dmctl_socket_ mutable.
-    mutable zx::socket dmctl_socket_;
 
     // Services offered to the rest of the system.
     svc::Outgoing outgoing_services_;
@@ -318,8 +305,6 @@ bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
 // Path to driver that should be bound to components of composite devices
 extern const char* kComponentDriverPath;
 
-zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket, const char* command_data,
-                           size_t command_size, fidl_txn_t* txn);
 zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata);
 zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options,
                                 zx_handle_t raw_watcher, fidl_txn_t* txn);

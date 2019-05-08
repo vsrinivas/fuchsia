@@ -34,9 +34,6 @@ const uint32 DEVICE_ARGS_MAX = 1024;
 /// Maximum number of bytes in a metadata payload
 const uint32 METADATA_MAX = 4096;
 
-/// Maximum number of bytes in a command string
-const uint32 COMMAND_MAX = 1024;
-
 /// Maximum number of properties that can be attached to a device
 const uint32 PROPERTIES_MAX = 256;
 
@@ -209,11 +206,6 @@ protocol Coordinator {
     // Special commands for implementing the dmctl device.
     // TODO(teisenbe): We should revisit how these are carried over.
 
-    /// Execute the given string command.  This is mostly used for accessing debug
-    /// interfaces, but also as a backdoor for plumbing that has not been fully
-    /// solved.
-    DmCommand(handle<socket>? log_socket, string:COMMAND_MAX? command)
-        -> (zx.status status);
 
     /// Perform an mexec with the given kernel and bootdata.
     /// See ZX-2069 for the thoughts on deprecating mexec.

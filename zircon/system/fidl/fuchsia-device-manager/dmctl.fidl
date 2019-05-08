@@ -4,18 +4,10 @@
 
 library fuchsia.device.manager;
 
-using zx;
-
 /// Interface for requesting devmgr perform miscellaneous actions.
 /// These methods are all work-arounds that should go away eventually.
 [Layout = "Simple"]
 protocol ExternalController {
-    /// Execute the given string command.  This is mostly used for accessing debug
-    /// interfaces, but also as a backdoor for plumbing that has not been fully
-    /// solved.
-    ExecuteCommand(handle<socket>? log_socket, string:COMMAND_MAX? command)
-        -> (zx.status status);
-
     /// Perform an mexec with the given kernel and bootdata.
     /// See ZX-2069 for the thoughts on deprecating mexec.
     PerformMexec(handle<vmo> kernel, handle<vmo> bootdata);
