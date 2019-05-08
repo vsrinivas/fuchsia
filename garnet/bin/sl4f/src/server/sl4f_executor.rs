@@ -25,6 +25,7 @@ use crate::bluetooth::commands::gatt_client_method_to_fidl;
 use crate::bluetooth::commands::gatt_server_method_to_fidl;
 use crate::netstack::commands::netstack_method_to_fidl;
 use crate::scenic::commands::scenic_method_to_fidl;
+use crate::setui::commands::setui_method_to_fidl;
 use crate::wlan::commands::wlan_method_to_fidl;
 
 pub async fn run_fidl_loop(
@@ -120,6 +121,11 @@ async fn method_to_fidl(
             method_name,
             args,
             sl4f_session.read().get_scenic_facade(),
+        )),
+        FacadeType::SetUiFacade => await!(setui_method_to_fidl(
+            method_name,
+            args,
+            sl4f_session.read().get_setui_facade(),
         )),
         FacadeType::Wlan => {
             await!(wlan_method_to_fidl(method_name, args, sl4f_session.read().get_wlan_facade()))

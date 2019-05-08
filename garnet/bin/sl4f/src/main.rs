@@ -21,6 +21,7 @@ mod bluetooth;
 mod netstack;
 mod scenic;
 mod server;
+mod setui;
 mod wlan;
 
 use fuchsia_syslog::macros::*;

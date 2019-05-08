@@ -17,6 +17,7 @@
             "fuchsia.net.SocketProvider",
             "fuchsia.net.stack.Stack",
             "fuchsia.sys.Launcher",
+            "fuchsia.setui.SetUiService",
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",

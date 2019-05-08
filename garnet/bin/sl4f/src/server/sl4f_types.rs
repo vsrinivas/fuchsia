@@ -115,6 +115,7 @@ pub enum FacadeType {
     GattClientFacade,
     GattServerFacade,
     NetstackFacade,
+    SetUiFacade,
     ScenicFacade,
     Wlan,
     Undefined,
@@ -132,6 +133,7 @@ impl FacadeType {
             "gatt_server_facade" => FacadeType::GattServerFacade,
             "netstack_facade" => FacadeType::NetstackFacade,
             "scenic_facade" => FacadeType::ScenicFacade,
+            "setui_facade" => FacadeType::SetUiFacade,
             "wlan" => FacadeType::Wlan,
             _ => FacadeType::Undefined,
         }
