@@ -11,6 +11,8 @@
 #include <lib/ui/scenic/cpp/session.h>
 #include <zircon/assert.h>
 
+#include <array>
+
 namespace scenic {
 
 // Represents a resource in a session with a dynamically allocated id.
@@ -644,6 +646,10 @@ class DisplayCompositor final : public Resource {
     SetLayerStack(layer_stack.id());
   }
   void SetLayerStack(uint32_t layer_stack_id);
+
+  void SetColorConversion(const std::array<float, 3>& preoffsets,
+                          const std::array<float, 9>& matrix,
+                          const std::array<float, 3>& postoffsets);
 };
 
 // Represents a display-less compositor resource in a session.

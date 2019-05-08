@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ui/scenic/cpp/resources.h>
-
 #include <lib/images/cpp/images.h>
 #include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/resources.h>
+
 #include <algorithm>
 
 namespace scenic {
@@ -568,6 +568,13 @@ DisplayCompositor::~DisplayCompositor() = default;
 
 void DisplayCompositor::SetLayerStack(uint32_t layer_stack_id) {
   session()->Enqueue(NewSetLayerStackCmd(id(), layer_stack_id));
+}
+
+void DisplayCompositor::SetColorConversion(
+    const std::array<float, 3>& preoffsets, const std::array<float, 9>& matrix,
+    const std::array<float, 3>& postoffsets) {
+  session()->Enqueue(NewSetDisplayColorConversionCmdHACK(id(), preoffsets,
+                                                         matrix, postoffsets));
 }
 
 Compositor::Compositor(Session* session) : Resource(session) {

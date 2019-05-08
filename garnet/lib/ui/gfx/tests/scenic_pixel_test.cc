@@ -760,4 +760,139 @@ TEST_F(ScenicPixelTest, Opacity) {
   }
 }
 
+// TODO(SCN-1375): Blocked against hardware inability
+// to provide accurate screenshots from the physical
+// display. Our "TakeScreenshot()" method only grabs
+// pixel data from Escher before it gets sent off to
+// the display controller and thus cannot accurately
+// capture color conversion information.
+VK_TEST_F(ScenicPixelTest, DISABLED_Compositor) {
+  // Synchronously get display dimensions.
+  float display_width;
+  float display_height;
+  scenic_->GetDisplayInfo([this, &display_width, &display_height](
+                              fuchsia::ui::gfx::DisplayInfo display_info) {
+    display_width = static_cast<float>(display_info.width_in_px);
+    display_height = static_cast<float>(display_info.height_in_px);
+    QuitLoop();
+  });
+  RunLoop();
+
+  // Initialize session.
+  auto unique_session = std::make_unique<scenic::Session>(scenic_.get());
+  auto session = unique_session.get();
+  session->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+
+  // Initialize components.
+  scenic::DisplayCompositor compositor(session);
+  scenic::LayerStack layer_stack(session);
+  scenic::Layer layer(session);
+  scenic::Renderer renderer(session);
+  scenic::Scene scene(session);
+  scenic::Camera camera(scene);
+
+  // Color correction data
+  std::array<float, 3> preoffsets = {0, 0, 0};
+  std::array<float, 9> matrix = {.288299,  0.052709,  -0.257912,
+                                 0.711701, 0.947291,  0.257912,
+                                 0.000000, -0.000000, 1.000000};
+  std::array<float, 3> postoffsets = {0, 0, 0};
+
+  glm::mat4 glm_matrix(.288299, 0.052709, -0.257912, 0.00000, 0.711701,
+                       0.947291, 0.257912, 0.00000, 0.000000, -0.000000,
+                       1.000000, 0.00000, 0.000000, 0.000000, 0.00000, 1.00000);
+
+  // Position camera at the center of the display, looking down
+  float eye_position[3] = {display_width / 2.f, display_height / 2.f, -1001};
+  float look_at[3] = {display_width / 2.f, display_height / 2.f, 1};
+  float up[3] = {0, -1, 0};
+  camera.SetTransform(eye_position, look_at, up);
+  camera.SetProjection(0);
+
+  // Setup.
+  compositor.SetLayerStack(layer_stack);
+  layer_stack.AddLayer(layer);
+  layer.SetSize(display_width, display_height);
+  layer.SetRenderer(renderer);
+  renderer.SetCamera(camera.id());
+
+  // Set up lights.
+  scenic::AmbientLight ambient_light(session);
+  scene.AddLight(ambient_light);
+  ambient_light.SetColor(1.f, 1.f, 1.f);
+
+  // Create an EntityNode to serve as the scene root.
+  scenic::EntityNode root_node(session);
+  scene.AddChild(root_node.id());
+
+  static const float pane_width = display_width / 5;
+  static const float pane_height = display_height;
+
+  float colors[15] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0};
+
+  for (uint32_t i = 0; i < 5; i++) {
+    scenic::Rectangle pane_shape(session, pane_width, pane_height);
+    scenic::Material pane_material(session);
+    pane_material.SetColor(255 * colors[3 * i], 255 * colors[3 * i + 1],
+                           255 * colors[3 * i + 2], 255);
+
+    scenic::ShapeNode pane_node(session);
+    pane_node.SetShape(pane_shape);
+    pane_node.SetMaterial(pane_material);
+    pane_node.SetTranslation((i + 0.5) * pane_width, 0.5 * pane_height, -20);
+    root_node.AddChild(pane_node);
+  }
+
+  // Display uncorrected version first.
+  session->Present(
+      0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  RunLoop();
+
+  // Take screenshot.
+  fuchsia::ui::scenic::ScreenshotData prev_screenshot = TakeScreenshot();
+  std::vector<uint8_t> prev_data;
+  EXPECT_TRUE(fsl::VectorFromVmo(prev_screenshot.data, &prev_data))
+      << "Failed to read screenshot";
+
+  // Apply color correction.
+  compositor.SetColorConversion(preoffsets, matrix, postoffsets);
+
+  // Display color corrected version.
+  session->Present(
+      1000000, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  RunLoop();
+
+  sleep(1);
+
+  // Take screenshot.
+  fuchsia::ui::scenic::ScreenshotData post_screenshot = TakeScreenshot();
+  std::vector<uint8_t> post_data;
+  EXPECT_TRUE(fsl::VectorFromVmo(post_screenshot.data, &post_data))
+      << "Failed to read screenshot";
+
+  // Lambda function for getting pixel based on normalized coordintes.
+  auto get_color = [&display_width, &display_height](
+                       std::vector<uint8_t>& pixel_data, float x,
+                       float y) -> scenic::Color {
+    auto pixels = reinterpret_cast<scenic::Color*>(pixel_data.data());
+    uint32_t index_x = x * display_width;
+    uint32_t index_y = y * display_height;
+    uint32_t index = index_y * display_width + index_x;
+    return pixels[index];
+  };
+
+  for (uint32_t i = 0; i < 5; i++) {
+    scenic::Color prev_color = get_color(prev_data, i * .2, 0.5);
+    scenic::Color post_color = get_color(post_data, i * .2, 0.5);
+
+    glm::vec4 vec =
+        glm_matrix * glm::vec4(prev_color.r, prev_color.g, prev_color.b, 1);
+    scenic::Color res(vec.x, vec.y, vec.z, vec.w);
+    EXPECT_EQ(res, post_color);
+  }
+}
+
 }  // namespace
