@@ -50,11 +50,7 @@ std::string SyncFormatFrameLong(const Frame* frame,
 }  // namespace
 
 TEST(FormatFrame, Unsymbolized) {
-  debug_ipc::StackFrame stack_frame;
-  stack_frame.ip = 0x12345678;
-  stack_frame.bp = 0xdeadbeef;
-  stack_frame.sp = 0x567890;
-
+  debug_ipc::StackFrame stack_frame(0x12345678, 0xdeadbeef, 0x567890);
   MockFrame frame(nullptr, nullptr, stack_frame,
                   Location(Location::State::kSymbolized, stack_frame.ip));
 
@@ -75,10 +71,7 @@ TEST(FormatFrame, Unsymbolized) {
 }
 
 TEST(FormatFrame, Inline) {
-  debug_ipc::StackFrame stack_frame;
-  stack_frame.ip = 0x12345678;
-  stack_frame.bp = 0xdeadbeef;
-  stack_frame.sp = 0x567890;
+  debug_ipc::StackFrame stack_frame(0x12345678, 0xdeadbeef, 0x567890);
 
   // This is to have some place for the inline frame to refer to as the
   // underlying physical frame. The values are ignored.

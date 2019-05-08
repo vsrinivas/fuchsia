@@ -101,14 +101,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   constexpr uint64_t kProcessKoid = 1234;
   Process* process = InjectProcess(kProcessKoid);
 
-  constexpr uint64_t kIP = 0x12345678;
-  constexpr uint64_t kSP = 0x7890;
-  constexpr uint64_t kBP = 0xabcdef;
-  debug_ipc::StackFrame stack;
-  stack.ip = kIP;
-  stack.bp = kBP;
-  stack.sp = kSP;
-
+  const debug_ipc::StackFrame stack(0x12345678, 0xabcdef, 0x7890);
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
   // This describes the frame base location for the function.
@@ -118,7 +111,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_frame_base(frame_base);
 
-  Location location(kIP, FileLine("file.cc", 12), 0, symbol_context,
+  Location location(stack.ip, FileLine("file.cc", 12), 0, symbol_context,
                     LazySymbol(function));
 
   MockThread thread(process);
@@ -144,7 +137,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   // DWARF expression evaluation will fail. This should then fall back to the
   // base pointer extracted by the backend.
   debug_ipc::MessageLoop::Current()->Run();
-  EXPECT_EQ(kBP, sync_base);
+  EXPECT_EQ(stack.bp, sync_base);
 
   // Now set the registers. Need a new frame because the old computed base
   // pointer will be cached.
@@ -158,12 +151,8 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
 
   // Set a value for "rax" which is register 0 on x64.
   uint64_t kReg0Value = 0x86124309723;
-  debug_ipc::Register reg0_contents;
-  reg0_contents.id = debug_ipc::RegisterID::kX64_rax;
-  reg0_contents.data.resize(sizeof(kReg0Value));
-  memcpy(&reg0_contents.data[0], &kReg0Value, sizeof(kReg0Value));
-
-  general_regs.emplace_back(reg0_contents);
+  general_regs.emplace_back(
+      debug_ipc::Register(debug_ipc::RegisterID::kX64_rax, kReg0Value));
 
   sync_base = 0;
   frame2->GetBasePointerAsync([&sync_base](uint64_t value) {

@@ -94,7 +94,13 @@ bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat) {
 }
 
 bool Deserialize(MessageReader* reader, StackFrame* frame) {
-  return reader->ReadBytes(sizeof(StackFrame), frame);
+  if (!reader->ReadUint64(&frame->ip))
+    return false;
+  if (!reader->ReadUint64(&frame->bp))
+    return false;
+  if (!reader->ReadUint64(&frame->sp))
+    return false;
+  return Deserialize(reader, &frame->regs);
 }
 
 bool Deserialize(MessageReader* reader, BreakpointStats* stats) {

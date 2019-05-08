@@ -97,7 +97,10 @@ void Serialize(const RegisterCategory& reg_cat, MessageWriter* writer) {
 }
 
 void Serialize(const StackFrame& frame, MessageWriter* writer) {
-  writer->WriteBytes(&frame, sizeof(StackFrame));
+  writer->WriteUint64(frame.ip);
+  writer->WriteUint64(frame.bp);
+  writer->WriteUint64(frame.sp);
+  Serialize(frame.regs, writer);
 }
 
 void Serialize(const AddressRegion& region, MessageWriter* writer) {

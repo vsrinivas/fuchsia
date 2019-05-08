@@ -28,19 +28,60 @@ struct ProcessTreeRecord {
   std::vector<ProcessTreeRecord> children;
 };
 
+// Value representing a particular register.
+struct Register {
+  Register() = default;
+  Register(RegisterID rid, std::vector<uint8_t> d)
+      : id(rid), data(std::move(d)) {}
+
+  // Constructs a 64-bit value for the current platform.
+  Register(RegisterID rid, uint64_t val) : id(rid) {
+    data.resize(sizeof(val));
+    memcpy(&data[0], &val, sizeof(val));
+  }
+
+  // Comparisons (primarily for tests).
+  bool operator==(const Register& other) const {
+    return id == other.id && data == other.data;
+  }
+  bool operator!=(const Register& other) const { return !operator==(other); }
+
+  RegisterID id = RegisterID::kUnknown;
+
+  // This data is stored in the architecture's native endianness
+  // (eg. the result of running memcpy over the data).
+  std::vector<uint8_t> data;
+};
+
 struct StackFrame {
   StackFrame() = default;
-  StackFrame(uint64_t ip, uint64_t bp, uint64_t sp) : ip(ip), bp(bp), sp(sp) {}
+  StackFrame(uint64_t ip, uint64_t bp, uint64_t sp,
+             std::vector<Register> r = {})
+      : ip(ip), bp(bp), sp(sp), regs(std::move(r)) {}
+
+  // Comparisons (primarily for tests).
+  bool operator==(const StackFrame& other) const {
+    return ip == other.ip && bp == other.bp && sp == other.sp &&
+           regs == other.regs;
+  }
+  bool operator!=(const StackFrame& other) const { return !operator==(other); }
 
   // Instruction pointer.
   uint64_t ip = 0;
 
   // Frame base pointer. This may be invalid if the code was compiled without
   // frame pointers.
+  // TODO(brettw) remove this. We often won't have this and any stack values
+  // will be relative to registers encoded in "regs".
   uint64_t bp = 0;
 
   // Stack pointer.
   uint64_t sp = 0;
+
+  // Known general registers for this stack frame other than IP/SP.
+  // CURRENTLY UNUSED.o
+  // TODO(brettw) finish hooking this up.
+  std::vector<Register> regs;
 };
 
 struct ThreadRecord {
@@ -212,15 +253,6 @@ struct AddressRegion {
 
 // ReadRegisters ---------------------------------------------------------------
 
-// Value representing a particular register.
-struct Register {
-  RegisterID id = RegisterID::kUnknown;
-
-  // This data is stored in the architecture native's endianness
-  // (eg. the result of running memcpy over the data).
-  std::vector<uint8_t> data;
-};
-
 // Division of RegisterSections, according to their usage.
 struct RegisterCategory {
   // Categories will always be sorted from lower to upper
@@ -242,7 +274,7 @@ struct RegisterCategory {
 struct ConfigAction {
   enum class Type : uint32_t {
     // Quit whenever the connection shutdowns.
-    kQuitOnExit,    // Values are "false" | "true"
+    kQuitOnExit,  // Values are "false" | "true"
 
     kLast,  // Not valid.
   };

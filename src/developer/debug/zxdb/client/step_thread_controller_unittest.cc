@@ -41,10 +41,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
   exception.thread.process_koid = process()->GetKoid();
   exception.thread.thread_koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  exception.thread.frames.resize(2);
-  exception.thread.frames[0].ip = kBeginAddr;
-  exception.thread.frames[0].sp = 0x5000;
-  exception.thread.frames[0].bp = 0x5000;
+  exception.thread.frames.emplace_back(kBeginAddr, 0x5000, 0x5000);
   InjectException(exception);
 
   // Continue the thread with the controller stepping in range.
@@ -192,10 +189,7 @@ void StepThreadControllerTest::DoSharedLibThunkTest(bool stop_on_no_symbols) {
   exception.thread.process_koid = process()->GetKoid();
   exception.thread.thread_koid = thread()->GetKoid();
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  exception.thread.frames.resize(2);
-  exception.thread.frames[0].ip = kAddrSrc;
-  exception.thread.frames[0].sp = 0x5000;
-  exception.thread.frames[0].bp = 0x5000;
+  exception.thread.frames.emplace_back(kAddrSrc, 0x5000, 0x5000);
   InjectException(exception);
 
   // Continue the thread with the controller stepping in range.
@@ -214,10 +208,8 @@ void StepThreadControllerTest::DoSharedLibThunkTest(bool stop_on_no_symbols) {
 
   // Stop on the thunk instruction with no line info. This is a separate
   // function so we push an entry on the stack.
-  exception.thread.frames.emplace(exception.thread.frames.begin());
-  exception.thread.frames[0].ip = kAddrThunk;
-  exception.thread.frames[0].sp = 0x4ff0;
-  exception.thread.frames[0].bp = 0x5000;
+  exception.thread.frames.emplace(exception.thread.frames.begin(),
+                                  kAddrThunk, 0x4ff0, 0x5000);
   InjectException(exception);
   if (stop_on_no_symbols) {
     // For this variant of the test, the unsymbolized thunk should have stopped
@@ -266,13 +258,8 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(
   src_exception.thread.process_koid = process()->GetKoid();
   src_exception.thread.thread_koid = thread()->GetKoid();
   src_exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  src_exception.thread.frames.resize(2);
-  src_exception.thread.frames[0].ip = kAddrSrc;
-  src_exception.thread.frames[0].sp = 0x5000;
-  src_exception.thread.frames[0].bp = 0x5000;
-  src_exception.thread.frames[1].ip = 0x10;
-  src_exception.thread.frames[1].sp = 0x5008;
-  src_exception.thread.frames[1].bp = 0x5008;
+  src_exception.thread.frames.emplace_back(kAddrSrc, 0x5000, 0x5000);
+  src_exception.thread.frames.emplace_back(0x10, 0x5008, 0x5008);
   InjectException(src_exception);
 
   // Continue the thread with the controller stepping in range.
@@ -291,13 +278,9 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(
 
   // Stop on the destination unsymbolized address.
   debug_ipc::NotifyException dest_exception(src_exception);
-  dest_exception.thread.frames.resize(2);
-  dest_exception.thread.frames[0].ip = kAddrDest;
-  dest_exception.thread.frames[0].sp = 0x4ff0;
-  dest_exception.thread.frames[0].bp = 0x4ff0;
-  dest_exception.thread.frames[1].ip = kAddrReturn;
-  dest_exception.thread.frames[1].sp = 0x5000;
-  dest_exception.thread.frames[1].bp = 0x5000;
+  dest_exception.thread.frames.clear();
+  dest_exception.thread.frames.emplace_back(kAddrDest, 0x4ff0, 0x4ff0);
+  dest_exception.thread.frames.emplace_back(kAddrReturn, 0x5000, 0x5000);
   InjectException(dest_exception);
   if (stop_on_no_symbols) {
     // For this variant of the test, the unsymbolized thunk should have stopped

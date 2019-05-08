@@ -162,16 +162,13 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
 void ThreadImpl::JumpTo(uint64_t new_address,
                         std::function<void(const Err&)> cb) {
   // The register to set.
-  debug_ipc::Register reg;
-  reg.id = GetSpecialRegisterID(session()->arch(),
-                                debug_ipc::SpecialRegisterType::kIP);
-  reg.data.resize(sizeof(new_address));
-  memcpy(&reg.data[0], &new_address, sizeof(new_address));
-
   debug_ipc::WriteRegistersRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
-  request.registers.push_back(std::move(reg));
+  request.registers.emplace_back(
+      GetSpecialRegisterID(session()->arch(),
+                           debug_ipc::SpecialRegisterType::kIP),
+      new_address);
 
   // The "jump" command updates the thread's location so we need to recompute
   // the stack. So once the jump is complete we re-request the thread's

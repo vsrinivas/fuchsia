@@ -486,13 +486,14 @@ TEST(Protocol, ThreadStatusReply) {
   initial.record.name = "Spartacus";
   initial.record.state = ThreadRecord::State::kRunning;
   initial.record.stack_amount = ThreadRecord::StackAmount::kFull;
-  initial.record.frames.resize(2);
-  initial.record.frames[0].ip = 1234;
-  initial.record.frames[0].sp = 9875;
-  initial.record.frames[0].bp = 6666;
-  initial.record.frames[1].ip = 71562341;
-  initial.record.frames[1].sp = 89236413;
-  initial.record.frames[1].bp = 777;
+  initial.record.frames.emplace_back(
+      1234, 6666, 9875,
+      std::vector<Register>{{RegisterID::kX64_rsi, 12},
+                            {RegisterID::kX64_rdi, 0}});
+  initial.record.frames.emplace_back(
+      71562341, 777, 89236413,
+      std::vector<Register>{{RegisterID::kX64_rsi, 11},
+                            {RegisterID::kX64_rdi, 1}});
 
   ThreadStatusReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -503,12 +504,8 @@ TEST(Protocol, ThreadStatusReply) {
   EXPECT_EQ(initial.record.name, second.record.name);
   EXPECT_EQ(initial.record.state, second.record.state);
   EXPECT_EQ(initial.record.stack_amount, second.record.stack_amount);
-  EXPECT_EQ(initial.record.frames[0].ip, second.record.frames[0].ip);
-  EXPECT_EQ(initial.record.frames[0].sp, second.record.frames[0].sp);
-  EXPECT_EQ(initial.record.frames[0].bp, second.record.frames[0].bp);
-  EXPECT_EQ(initial.record.frames[1].ip, second.record.frames[1].ip);
-  EXPECT_EQ(initial.record.frames[1].sp, second.record.frames[1].sp);
-  EXPECT_EQ(initial.record.frames[1].bp, second.record.frames[1].bp);
+  EXPECT_EQ(initial.record.frames[0], second.record.frames[0]);
+  EXPECT_EQ(initial.record.frames[1], second.record.frames[1]);
 }
 
 // Modules ---------------------------------------------------------------------
@@ -777,9 +774,7 @@ TEST(Protocol, NotifyException) {
   initial.thread.thread_koid = 23;
   initial.thread.name = "foo";
   initial.thread.stack_amount = ThreadRecord::StackAmount::kMinimal;
-  initial.thread.frames.resize(1);
-  initial.thread.frames[0].ip = 0x7647342634;
-  initial.thread.frames[0].sp = 0x9861238251;
+  initial.thread.frames.emplace_back(0x7647342634, 0, 0x9861238251);
   initial.type = NotifyException::Type::kHardware;
 
   initial.hit_breakpoints.emplace_back();
@@ -800,20 +795,17 @@ TEST(Protocol, NotifyException) {
   EXPECT_EQ(initial.thread.thread_koid, second.thread.thread_koid);
   EXPECT_EQ(initial.thread.name, second.thread.name);
   EXPECT_EQ(initial.thread.stack_amount, second.thread.stack_amount);
-  EXPECT_EQ(initial.thread.frames[0].ip, second.thread.frames[0].ip);
-  EXPECT_EQ(initial.thread.frames[0].sp, second.thread.frames[0].sp);
+  EXPECT_EQ(initial.thread.frames[0], second.thread.frames[0]);
   EXPECT_EQ(initial.type, second.type);
   ASSERT_EQ(initial.hit_breakpoints.size(), second.hit_breakpoints.size());
 
-  EXPECT_EQ(initial.hit_breakpoints[0].id,
-            second.hit_breakpoints[0].id);
+  EXPECT_EQ(initial.hit_breakpoints[0].id, second.hit_breakpoints[0].id);
   EXPECT_EQ(initial.hit_breakpoints[0].hit_count,
             second.hit_breakpoints[0].hit_count);
   EXPECT_EQ(initial.hit_breakpoints[0].should_delete,
             second.hit_breakpoints[0].should_delete);
 
-  EXPECT_EQ(initial.hit_breakpoints[1].id,
-            second.hit_breakpoints[1].id);
+  EXPECT_EQ(initial.hit_breakpoints[1].id, second.hit_breakpoints[1].id);
   EXPECT_EQ(initial.hit_breakpoints[1].hit_count,
             second.hit_breakpoints[1].hit_count);
   EXPECT_EQ(initial.hit_breakpoints[1].should_delete,
