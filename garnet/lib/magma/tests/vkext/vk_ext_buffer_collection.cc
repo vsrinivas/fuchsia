@@ -29,11 +29,16 @@ public:
     bool Initialize();
     bool Exec(VkFormat format, uint32_t width, bool direct, bool linear);
 
+    void set_use_protected_memory(bool use) { use_protected_memory_ = use; }
+    bool device_supports_protected_memory() const { return device_supports_protected_memory_; }
+
 private:
     bool InitVulkan();
     bool InitImage();
 
     bool is_initialized_ = false;
+    bool use_protected_memory_ = false;
+    bool device_supports_protected_memory_ = false;
     VkPhysicalDevice vk_physical_device_;
     VkDevice vk_device_;
     VkQueue vk_queue_;
@@ -62,12 +67,22 @@ bool VulkanTest::Initialize()
 
 bool VulkanTest::InitVulkan()
 {
+    VkApplicationInfo app_info = {
+        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        .pNext = nullptr,
+        .pApplicationName = "vkext",
+        .applicationVersion = 0,
+        .pEngineName = nullptr,
+        .engineVersion = 0,
+        .apiVersion = VK_API_VERSION_1_1,
+    };
+
     std::vector<const char*> enabled_extensions{};
     VkInstanceCreateInfo create_info{
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // VkStructureType             sType;
         nullptr,                                // const void*                 pNext;
         0,                                      // VkInstanceCreateFlags       flags;
-        nullptr,                                // const VkApplicationInfo*    pApplicationInfo;
+        &app_info,                              // const VkApplicationInfo*    pApplicationInfo;
         0,                                      // uint32_t                    enabledLayerCount;
         nullptr,                                // const char* const*          ppEnabledLayerNames;
         static_cast<uint32_t>(enabled_extensions.size()),
@@ -138,18 +153,37 @@ bool VulkanTest::InitVulkan()
                                                  .queueFamilyIndex = 0,
                                                  .queueCount = 1,
                                                  .pQueuePriorities = queue_priorities};
+
+    VkPhysicalDeviceProtectedMemoryFeatures protected_memory = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
+        .pNext = nullptr,
+        .protectedMemory = VK_TRUE,
+    };
+    {
+        VkPhysicalDeviceProperties properties;
+        vkGetPhysicalDeviceProperties(physical_devices[0], &properties);
+        if (VK_VERSION_MAJOR(properties.apiVersion) != 1 ||
+            VK_VERSION_MINOR(properties.apiVersion) > 0) {
+            VkPhysicalDeviceFeatures2 features = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &protected_memory};
+            vkGetPhysicalDeviceFeatures2(physical_devices[0], &features);
+            if (protected_memory.protectedMemory) {
+                device_supports_protected_memory_ = true;
+            }
+        }
+    }
     std::vector<const char*> enabled_device_extensions{VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME};
-    VkDeviceCreateInfo createInfo = {.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-                                     .pNext = nullptr,
-                                     .flags = 0,
-                                     .queueCreateInfoCount = 1,
-                                     .pQueueCreateInfos = &queue_create_info,
-                                     .enabledLayerCount = 0,
-                                     .ppEnabledLayerNames = nullptr,
-                                     .enabledExtensionCount =
-                                         static_cast<uint32_t>(enabled_device_extensions.size()),
-                                     .ppEnabledExtensionNames = enabled_device_extensions.data(),
-                                     .pEnabledFeatures = nullptr};
+    VkDeviceCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = device_supports_protected_memory_ ? &protected_memory : nullptr,
+        .flags = 0,
+        .queueCreateInfoCount = 1,
+        .pQueueCreateInfos = &queue_create_info,
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = nullptr,
+        .enabledExtensionCount = static_cast<uint32_t>(enabled_device_extensions.size()),
+        .ppEnabledExtensionNames = enabled_device_extensions.data(),
+        .pEnabledFeatures = nullptr};
     VkDevice vkdevice;
 
     if ((result = vkCreateDevice(physical_devices[0], &createInfo,
@@ -219,7 +253,7 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear)
     VkImageCreateInfo image_create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = nullptr,
-        .flags = 0u,
+        .flags = use_protected_memory_ ? VK_IMAGE_CREATE_PROTECTED_BIT : 0u,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = format,
         .extent = VkExtent3D{width, 64, 1},
@@ -277,8 +311,15 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear)
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
     status =
         sysmem_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-    if (status != ZX_OK || allocation_status != ZX_OK) {
-        return DRETF(false, "WaitForBuffersAllocated failed: %d %d", status, allocation_status);
+    if (status != ZX_OK) {
+        return DRETF(false, "WaitForBuffersAllocated failed: %d", status);
+    }
+    if (allocation_status != ZX_OK) {
+        if (use_protected_memory_) {
+            DLOG("Protected memory may not be availabe, skipping\n");
+            return true;
+        }
+        return DRETF(false, "WaitForBuffersAllocated failed: %d", allocation_status);
     }
     status = sysmem_collection->Close();
     if (status != ZX_OK) {
@@ -341,6 +382,10 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear)
         // Use first supported type
         uint32_t memory_type = __builtin_ctz(memory_reqs.memoryTypeBits);
 
+        // The driver may not have the right information to choose the correct
+        // heap for protected memory.
+        EXPECT_FALSE(use_protected_memory_);
+
         VkImportMemoryZirconHandleInfoFUCHSIA handle_info = {
             .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
             .pNext = nullptr,
@@ -377,6 +422,26 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear)
         uint32_t viable_memory_types = properties.memoryTypeBits & requirements.memoryTypeBits;
         EXPECT_NE(0u, viable_memory_types);
         uint32_t memory_type = __builtin_ctz(viable_memory_types);
+
+        VkPhysicalDeviceMemoryProperties memory_properties;
+        vkGetPhysicalDeviceMemoryProperties(vk_physical_device_, &memory_properties);
+
+        EXPECT_LT(memory_type, memory_properties.memoryTypeCount);
+        if (use_protected_memory_) {
+            for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i) {
+                if (properties.memoryTypeBits & (1 << i)) {
+                    // Based only on the buffer collection it should be possible to
+                    // determine that this is protected memory. viable_memory_types
+                    // is a subset of these bits, so that should be true for it as
+                    // well.
+                    EXPECT_TRUE(memory_properties.memoryTypes[i].propertyFlags &
+                                VK_MEMORY_PROPERTY_PROTECTED_BIT);
+                }
+            }
+        } else {
+            EXPECT_FALSE(memory_properties.memoryTypes[memory_type].propertyFlags &
+                         VK_MEMORY_PROPERTY_PROTECTED_BIT);
+        }
 
         VkImportMemoryBufferCollectionFUCHSIA import_info = {
             .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA};
@@ -445,6 +510,18 @@ TEST_P(VulkanExtensionTest, BufferCollectionDirectNV12)
     VulkanTest test;
     ASSERT_TRUE(test.Initialize());
     ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, true, GetParam()));
+}
+
+TEST_P(VulkanExtensionTest, BufferCollectionProtectedRGBA)
+{
+    VulkanTest test;
+    test.set_use_protected_memory(true);
+    ASSERT_TRUE(test.Initialize());
+    if (!test.device_supports_protected_memory()) {
+        DLOG("No protected memory support, skipping test");
+        return;
+    }
+    ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, true, GetParam()));
 }
 
 INSTANTIATE_TEST_SUITE_P(, VulkanExtensionTest, ::testing::Bool());
