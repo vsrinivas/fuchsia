@@ -509,10 +509,10 @@ async fn decode_media_stream(
     let end_time = zx::Time::get(zx::ClockId::Monotonic);
     // TODO (BT-818): determine codec metric dimension from encoding instead of hard-coding to sbc
     get_cobalt_logger().log_event_count(
-        metrics::A2DP_NUMBER_OF_SECONDS_STREAMED_METRIC_ID,
-        metrics::A2dpNumberOfSecondsStreamedMetricDimensionCodec::Sbc as u32,
+        metrics::A2DP_NUMBER_OF_MICROSECONDS_STREAMED_METRIC_ID,
+        metrics::A2dpNumberOfMicrosecondsStreamedMetricDimensionCodec::Sbc as u32,
         0,
-        (end_time - start_time).seconds(),
+        (end_time - start_time).micros(),
     );
 }
 
