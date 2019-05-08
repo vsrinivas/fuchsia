@@ -69,19 +69,19 @@ public:
     ~Mounter() {}
 
     // Mounts the given device.
-    zx_status_t Mount(unique_fd device, disk_format_t format, const mount_options_t& options,
+    zx_status_t Mount(zx::channel device, disk_format_t format, const mount_options_t& options,
                       LaunchCallback cb);
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Mounter);
 
 private:
-    zx_status_t PrepareHandles(unique_fd device);
+    zx_status_t PrepareHandles(zx::channel device);
     zx_status_t MakeDirAndMount(const mount_options_t& options);
     zx_status_t LaunchAndMount(LaunchCallback cb, const mount_options_t& options, const char** argv,
                                int argc);
-    zx_status_t MountNativeFs(const char* binary, unique_fd device, const mount_options_t& options,
-                              LaunchCallback cb);
-    zx_status_t MountFat(unique_fd device, const mount_options_t& options, LaunchCallback cb);
+    zx_status_t MountNativeFs(const char* binary, zx::channel device,
+                              const mount_options_t& options, LaunchCallback cb);
+    zx_status_t MountFat(zx::channel device, const mount_options_t& options, LaunchCallback cb);
 
     zx_handle_t root_ = ZX_HANDLE_INVALID;
     const char* path_;
@@ -93,18 +93,12 @@ private:
 };
 
 // Initializes 'handles_' and 'ids_' with the root handle and block device handle.
-zx_status_t Mounter::PrepareHandles(unique_fd device) {
+zx_status_t Mounter::PrepareHandles(zx::channel block_device) {
     zx::channel root_server, root_client;
     zx_status_t status = zx::channel::create(0, &root_server, &root_client);
     if (status != ZX_OK) {
         return status;
     }
-    zx::channel block_device;
-    status = fdio_get_service_handle(device.release(), block_device.reset_and_get_address());
-    if (status != ZX_OK) {
-        return status;
-    }
-
     handles_[0] = root_server.release();
     ids_[0] = FS_HANDLE_ROOT_ID;
     handles_[1] = block_device.release();
@@ -183,7 +177,7 @@ zx_status_t Mounter::LaunchAndMount(LaunchCallback cb, const mount_options_t& op
     return MountFs(fd_, root_);
 }
 
-zx_status_t Mounter::MountNativeFs(const char* binary, unique_fd device,
+zx_status_t Mounter::MountNativeFs(const char* binary, zx::channel device,
                                    const mount_options_t& options, LaunchCallback cb) {
     zx_status_t status = PrepareHandles(std::move(device));
     if (status != ZX_OK) {
@@ -218,7 +212,8 @@ zx_status_t Mounter::MountNativeFs(const char* binary, unique_fd device,
     return LaunchAndMount(cb, options, argv.get(), static_cast<int>(argv.size() - 1));
 }
 
-zx_status_t Mounter::MountFat(unique_fd device, const mount_options_t& options, LaunchCallback cb) {
+zx_status_t Mounter::MountFat(zx::channel device, const mount_options_t& options,
+                              LaunchCallback cb) {
     zx_status_t status = PrepareHandles(std::move(device));
     if (status != ZX_OK) {
         return status;
@@ -231,7 +226,7 @@ zx_status_t Mounter::MountFat(unique_fd device, const mount_options_t& options, 
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Mounter::Mount(unique_fd device, disk_format_t format, const mount_options_t& options,
+zx_status_t Mounter::Mount(zx::channel device, disk_format_t format, const mount_options_t& options,
                            LaunchCallback cb) {
     switch (format) {
     case DISK_FORMAT_MINFS:
@@ -331,7 +326,14 @@ disk_format_t detect_disk_format(int fd) {
 zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const mount_options_t* options,
                    LaunchCallback cb) {
     Mounter mounter(mount_fd);
-    return mounter.Mount(unique_fd(device_fd), df, *options, cb);
+
+    zx::channel block_device;
+    zx_status_t status = fdio_get_service_handle(device_fd, block_device.reset_and_get_address());
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return mounter.Mount(std::move(block_device), df, *options, cb);
 }
 
 zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
@@ -346,7 +348,13 @@ zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
     }
 
     Mounter mounter(mount_path);
-    return mounter.Mount(unique_fd(device_fd), df, *options, cb);
+
+    zx::channel block_device;
+    zx_status_t status = fdio_get_service_handle(device_fd, block_device.reset_and_get_address());
+    if (status != ZX_OK) {
+        return status;
+    }
+    return mounter.Mount(std::move(block_device), df, *options, cb);
 }
 
 zx_status_t fumount(int mount_fd) {
