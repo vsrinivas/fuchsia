@@ -11,6 +11,7 @@ pub mod fuchsia_boot_resolver;
 pub mod fuchsia_pkg_resolver;
 pub mod klog;
 pub mod model;
+pub mod startup;
 
 mod directory_broker;
 mod ns_util;

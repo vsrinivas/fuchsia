@@ -1067,6 +1067,7 @@ group("runtime") {
     "//src/sys/component_manager:component_manager_tests",
     "//src/sys/component_manager/tests:elf_runner_test",
     "//src/sys/component_manager/tests:routing_integration_test",
+    "//src/sys/component_manager/tests:no_pkg_resolver_test",
   ]
 }
 

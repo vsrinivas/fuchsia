@@ -127,3 +127,25 @@ test_package("elf_runner_test") {
     },
   ]
 }
+
+rustc_binary("no_pkg_resolver_test_bin") {
+  name = "no_pkg_resolver_test"
+  edition = "2018"
+  source_root = "no_pkg_resolver_test.rs"
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//src/sys/component_manager:lib",
+  ]
+}
+
+test_package("no_pkg_resolver_test") {
+  deps = [
+    ":no_pkg_resolver_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "no_pkg_resolver_test"
+    },
+  ]
+}

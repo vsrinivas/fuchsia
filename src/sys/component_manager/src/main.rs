@@ -7,15 +7,12 @@
 use {
     component_manager_lib::{
         elf_runner::ElfRunner,
-        fuchsia_boot_resolver::{self, FuchsiaBootResolver},
-        fuchsia_pkg_resolver::{self, FuchsiaPkgResolver},
         klog,
-        model::{AbsoluteMoniker, Model, ModelParams, ResolverRegistry},
+        model::{AbsoluteMoniker, Model, ModelParams},
+        startup,
     },
     failure::{self, Error, ResultExt},
-    fidl_fuchsia_pkg::PackageResolverMarker,
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
     futures::prelude::*,
     log::*,
     std::env,
@@ -46,16 +43,7 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
-    let mut resolver_registry = ResolverRegistry::new();
-    resolver_registry
-        .register(fuchsia_boot_resolver::SCHEME.to_string(), Box::new(FuchsiaBootResolver::new()));
-    let pkg_resolver = connect_to_service::<PackageResolverMarker>()
-        .context("error connecting to package resolver")?;
-    resolver_registry.register(
-        fuchsia_pkg_resolver::SCHEME.to_string(),
-        Box::new(FuchsiaPkgResolver::new(pkg_resolver)),
-    );
-
+    let resolver_registry = startup::available_resolvers()?;
     let params = ModelParams {
         root_component_uri: opt.root_component_uri,
         root_resolver_registry: resolver_registry,

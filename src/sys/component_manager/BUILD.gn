@@ -56,10 +56,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
