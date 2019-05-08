@@ -21,13 +21,18 @@ group("tests") {
 
 test_package("identity_lib_unittests") {
   deps = [
+    "account_common",
     "oauth:oauth_unittests",
-    "token_cache:token_cache",
-    "token_store:token_store",
-    "token_manager:token_manager",
+    "token_cache",
+    "token_store",
+    "token_manager",
   ]
 
   tests = [
+    {
+      name = "account_common_lib_test"
+      environments = basic_envs
+    },
     {
       name = "token_cache_lib_test"
       environments = basic_envs

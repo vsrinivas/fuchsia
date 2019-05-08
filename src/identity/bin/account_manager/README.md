@@ -21,9 +21,9 @@ fuchsia.auth.account.Persona or fuchsia.auth.TokenManager.
 
 ## Key Dependencies
 
-* */bin/auth/account_handler* - Account Manager launches a separate instance of
+* */identity/bin/account_handler* - Account Manager launches a separate instance of
   the Account Handler component to handle the request for each Fuchsia account
-* */lib/auth/account_common* - Account Manager uses error and identifier
+* */identity/lib/account_common* - Account Manager uses error and identifier
   definitions from this crate
 * */identity/lib/token_manager* - Account Manager uses the AuthProviderConnection
   struct to lazily launch and maintain connections to components implementing

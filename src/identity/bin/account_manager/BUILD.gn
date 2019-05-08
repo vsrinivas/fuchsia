@@ -11,7 +11,6 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/auth/account_common",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -21,6 +20,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/identity/fidl:account-rustc",
+    "//src/identity/lib/account_common",
     "//src/identity/lib/token_manager",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

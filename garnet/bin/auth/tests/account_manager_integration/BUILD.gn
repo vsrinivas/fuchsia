@@ -15,7 +15,6 @@ rustc_library("account_manager_integration") {
   source_root = "tests/lib.rs"
 
   deps = [
-    "//garnet/lib/auth/account_common",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -23,6 +22,7 @@ rustc_library("account_manager_integration") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
+    "//src/identity/lib/account_common",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",

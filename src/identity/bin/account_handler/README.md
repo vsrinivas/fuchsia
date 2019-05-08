@@ -20,7 +20,7 @@ Persona channels may only be obtained from an Account channel.
 
 ## Key Dependencies
 
-* */lib/auth/account_common* - Account Handler uses error and identifier
+* */identity/lib/account_common* - Account Handler uses error and identifier
   definitions from this crate
 * */identity/lib/token_manager* - Account Manager uses the TokenManager library
   to perform the authentication token management and implement the
