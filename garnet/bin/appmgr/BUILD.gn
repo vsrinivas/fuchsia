@@ -73,7 +73,6 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.sys",
     "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/fidl/fuchsia-kernel",
   ]
@@ -112,6 +111,14 @@ executable("bin") {
     ":lib",
     "//sdk/lib/sys/cpp",
   ]
+
+  # appmgr starts early in the boot sequence before shared libraries from
+  # packages are available, so it has to avoid dynamically linking against
+  # libraries outside of /boot/lib. These rules ensure that appmgr statically
+  # links against the C++ standard library and prevents dependencies on some
+  # shared library targets that are easy to pull in unintentionally.
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  assert_no_deps = [ "//garnet/public/lib/fostr/*" ]
 }
 
 executable("tests") {
@@ -161,8 +168,12 @@ package("appmgr") {
 
 config_data("appmgr_scheme_config") {
   for_pkg = "appmgr"
-  sources = [ "scheme_map.config" ]
-  outputs = [ "scheme_map/default.config" ]
+  sources = [
+    "scheme_map.config",
+  ]
+  outputs = [
+    "scheme_map/default.config",
+  ]
 }
 
 test_package("appmgr_unittests") {

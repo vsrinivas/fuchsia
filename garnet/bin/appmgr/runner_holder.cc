@@ -14,8 +14,8 @@
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/util.h"
-#include "garnet/public/lib/fostr/fidl/fuchsia/sys/formatting.h"
 #include "lib/fsl/vmo/file.h"
+#include "lib/sys/cpp/termination_reason.h"
 
 using fuchsia::sys::TerminationReason;
 
@@ -39,8 +39,9 @@ RunnerHolder::RunnerHolder(std::shared_ptr<sys::ServiceDirectory> services,
   controller_.events().OnTerminated =
       [this, url](int64_t return_code, TerminationReason termination_reason) {
         if (termination_reason != TerminationReason::EXITED) {
-          FXL_LOG(ERROR) << "Runner (" << url
-                         << ") terminating, reason: " << termination_reason;
+          FXL_LOG(ERROR) << "Runner (" << url << ") terminating, reason: "
+                         << sys::HumanReadableTerminationReason(
+                                termination_reason);
         }
         Cleanup();
 
