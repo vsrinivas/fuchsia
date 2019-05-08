@@ -61,6 +61,8 @@ pkg_archive_contents = [
 pkg_archive_manifest = "$target_gen_dir/package_archive_manifest"
 write_file(pkg_archive_manifest, pkg_archive_contents)
 
+# NOTE: This is consumed by the system OTA tests. Please check in with the
+# software delivery team if you need to change this.
 pkg_archive = "$root_build_dir/packages.tar.gz"
 compiled_action("package_archive") {
   testonly = true
