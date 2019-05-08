@@ -194,6 +194,32 @@ protocol Example {
     ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token \"error\"");
     END_TEST;
 }
+
+bool BadErrorUnexpectedEndOfFile() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+table ForgotTheSemicolon {}
+)FIDL");
+
+    ASSERT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_GE(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token EndOfFile, was expecting Semicolon");
+    END_TEST;
+}
+
+bool BadErrorEmptyFile() {
+    BEGIN_TEST;
+
+    TestLibrary library("");
+
+    ASSERT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_GE(errors.size(), 1);
+    END_TEST;
+}
 } // namespace
 
 BEGIN_TEST_CASE(errors_tests)

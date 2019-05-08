@@ -10,12 +10,11 @@ namespace fidl {
 
 std::string MakeSquiggle(const std::string& surrounding_line, int column) {
     std::string squiggle;
-    for (int i = 0; i < (column - 1); i++) {
-        switch (surrounding_line[i]) {
-        case '\t':
+    size_t line_size = surrounding_line.size();
+    for (size_t i = 0; i < (static_cast<size_t>(column) - 1); i++) {
+        if (i < line_size && surrounding_line[i] == '\t') {
             squiggle.push_back('\t');
-            break;
-        default:
+        } else {
             squiggle.push_back(' ');
         }
     }
@@ -35,17 +34,22 @@ std::string Format(std::string qualifier, const SourceLocation* maybe_location,
     const auto& location = *maybe_location;
     SourceFile::Position position;
     std::string surrounding_line = std::string(location.SourceLine(&position));
+    assert(surrounding_line.find('\n') == std::string::npos &&
+           "A single line should not contain a newline character");
 
     std::string squiggle = MakeSquiggle(surrounding_line, position.column);
     if (squiggle_size != 0u) {
         --squiggle_size;
     }
     squiggle += std::string(squiggle_size, '~');
-    // Some tokens (like string literals) can span multiple
-    // lines. Truncate the string to just one line at most. The
-    // containing line contains a newline, so drop it when
-    // comparing sizes.
-    size_t line_size = surrounding_line.size() - 1;
+
+    // Some tokens (like string literals) can span multiple lines. Truncate the
+    // string to just one line at most.
+    //
+    // The +1 allows for squiggles at the end of line, which is useful when
+    // referencing the bounds of a file or line (e.g. unexpected end of file,
+    // expected something on an empty line).
+    size_t line_size = surrounding_line.size() + 1;
     if (squiggle.size() > line_size) {
         squiggle.resize(line_size);
     }
@@ -59,6 +63,7 @@ std::string Format(std::string qualifier, const SourceLocation* maybe_location,
     error.append(message);
     error.push_back('\n');
     error.append(surrounding_line);
+    error.push_back('\n');
     error.append(squiggle);
     return error;
 }

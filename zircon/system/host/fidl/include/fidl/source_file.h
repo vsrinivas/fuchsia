@@ -27,6 +27,15 @@ public:
         int column;
     };
 
+    // Returns the line and `Position` containing a specified span.
+    //
+    // Parameters:
+    //  * view:          The span to search for.
+    //  * position_out:  Where to output the `Position` of the span within the `SourceFile`.
+    //
+    // Returns:
+    //  * A `std::string_view` of the encompassing line. This line will not contain a newline
+    //    character.
     virtual std::string_view LineContaining(std::string_view view, Position* position_out) const;
 
 private:
