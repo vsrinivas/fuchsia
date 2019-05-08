@@ -12,6 +12,7 @@
 #include "garnet/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
 #include "garnet/third_party/libunwindstack/fuchsia/RegsFuchsia.h"
 #include "garnet/third_party/libunwindstack/include/unwindstack/Unwinder.h"
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/process_info.h"
 
 namespace debug_agent {
@@ -25,7 +26,7 @@ UnwinderType unwinder_type = UnwinderType::kNgUnwind;
 
 zx_status_t UnwindStackAndroid(const zx::process& process,
                                uint64_t dl_debug_addr, const zx::thread& thread,
-                               uint64_t ip, uint64_t sp, uint64_t bp,
+                               const zx_thread_state_general_regs& regs,
                                size_t max_depth,
                                std::vector<debug_ipc::StackFrame>* stack) {
   // Ignore errors getting modules, the empty case can at least give the
@@ -33,9 +34,7 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
   ModuleVector modules;  // Sorted by load address.
   GetModulesForProcess(process, dl_debug_addr, &modules);
   std::sort(modules.begin(), modules.end(),
-            [](const debug_ipc::Module& a, const debug_ipc::Module& b) {
-              return a.base < b.base;
-            });
+            [](auto& a, auto& b) { return a.base < b.base; });
 
   unwindstack::Maps maps;
   for (size_t i = 0; i < modules.size(); i++) {
@@ -61,15 +60,12 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
     maps.Add(modules[i].base, end, offset, flags, modules[i].name, load_bias);
   }
 
-  unwindstack::RegsFuchsia regs;
-  zx_status_t status = regs.Read(thread.get());
-  if (status != ZX_OK)
-    return status;
+  unwindstack::RegsFuchsia unwind_regs;
+  unwind_regs.Set(regs);
 
   auto memory = std::make_shared<unwindstack::MemoryFuchsia>(process.get());
 
-  unwindstack::Unwinder unwinder(max_depth, &maps, &regs, std::move(memory));
-
+  unwindstack::Unwinder unwinder(max_depth, &maps, &unwind_regs, std::move(memory));
   unwinder.Unwind();
 
   stack->resize(unwinder.NumFrames());
@@ -83,7 +79,12 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
   // Add the base pointer for the top stack frame.
   // TODO(brettw) libstackunwind should be able to give us base pointers for
   // other frames when we're compiling with frame pointers.
-  (*stack)[0].bp = bp;
+  (*stack)[0].bp = *arch::ArchProvider::Get().BPInRegs(
+      const_cast<zx_thread_state_general_regs*>(&regs));
+
+  // Add all registers to the top stack frame.
+  arch::ArchProvider::Get().SaveGeneralRegs(regs,
+      arch::ArchProvider::SaveGeneralWhat::kNoIPSP, &(*stack)[0].regs);
 
   return 0;
 }
@@ -122,8 +123,9 @@ int LookupDso(void* context, unw_word_t pc, unw_word_t* base,
 
 zx_status_t UnwindStackNgUnwind(const zx::process& process,
                                 uint64_t dl_debug_addr,
-                                const zx::thread& thread, uint64_t ip,
-                                uint64_t sp, uint64_t bp, size_t max_depth,
+                                const zx::thread& thread,
+                                const zx_thread_state_general_regs& regs,
+                                size_t max_depth,
                                 std::vector<debug_ipc::StackFrame>* stack) {
   stack->clear();
 
@@ -132,9 +134,7 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process,
   ModuleVector modules;  // Sorted by load address.
   GetModulesForProcess(process, dl_debug_addr, &modules);
   std::sort(modules.begin(), modules.end(),
-            [](const debug_ipc::Module& a, const debug_ipc::Module& b) {
-              return a.base < b.base;
-            });
+            [](auto& a, auto& b) { return a.base < b.base; });
 
   unw_fuchsia_info_t* fuchsia =
       unw_create_fuchsia(process.get(), thread.get(), &modules, &LookupDso);
@@ -150,11 +150,16 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process,
   if (unw_init_remote(&cursor, remote_aspace, fuchsia) < 0)
     return ZX_ERR_INTERNAL;
 
+  // Top stack frame.
   debug_ipc::StackFrame frame;
-  frame.ip = ip;
-  frame.sp = sp;
-  frame.bp = bp;
-  stack->push_back(frame);
+  frame.ip = *arch::ArchProvider::Get().IPInRegs(
+      const_cast<zx_thread_state_general_regs*>(&regs));
+  frame.sp = *arch::ArchProvider::Get().SPInRegs(
+      const_cast<zx_thread_state_general_regs*>(&regs));
+  arch::ArchProvider::Get().SaveGeneralRegs(regs,
+      arch::ArchProvider::SaveGeneralWhat::kNoIPSP, &frame.regs);
+  stack->push_back(std::move(frame));
+
   while (frame.sp >= 0x1000000 && stack->size() < max_depth) {
     int ret = unw_step(&cursor);
     if (ret <= 0)
@@ -196,15 +201,16 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process,
 void SetUnwinderType(UnwinderType type) { unwinder_type = type; }
 
 zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
-                        const zx::thread& thread, uint64_t ip, uint64_t sp,
-                        uint64_t bp, size_t max_depth,
+                        const zx::thread& thread,
+                        const zx_thread_state_general_regs& regs,
+                        size_t max_depth,
                         std::vector<debug_ipc::StackFrame>* stack) {
   switch (unwinder_type) {
     case UnwinderType::kNgUnwind:
-      return UnwindStackNgUnwind(process, dl_debug_addr, thread, ip, sp, bp,
+      return UnwindStackNgUnwind(process, dl_debug_addr, thread, regs,
                                  max_depth, stack);
     case UnwinderType::kAndroid:
-      return UnwindStackAndroid(process, dl_debug_addr, thread, ip, sp, bp,
+      return UnwindStackAndroid(process, dl_debug_addr, thread, regs,
                                 max_depth, stack);
   }
   return ZX_ERR_NOT_SUPPORTED;

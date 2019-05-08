@@ -327,10 +327,7 @@ void DebuggedThread::FillThreadRecord(
                                                                          : 256;
 
       UnwindStack(process_->process(), process_->dl_debug_addr(), thread_,
-                  *arch::ArchProvider::Get().IPInRegs(regs),
-                  *arch::ArchProvider::Get().SPInRegs(regs),
-                  *arch::ArchProvider::Get().BPInRegs(regs), max_stack_depth,
-                  &record->frames);
+                  *regs, max_stack_depth, &record->frames);
     }
   } else {
     // Didn't bother querying the stack.

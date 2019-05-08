@@ -28,6 +28,44 @@ RegsFuchsia::~RegsFuchsia() = default;
 
 ArchEnum RegsFuchsia::Arch() { return ARCH_ARM64; }
 
+void RegsFuchsia::Set(const zx_thread_state_general_regs& input) {
+  regs_.resize(kUnwindStackRegCount);
+
+  regs_[ARM64_REG_R0] = input.r[0];
+  regs_[ARM64_REG_R1] = input.r[1];
+  regs_[ARM64_REG_R2] = input.r[2];
+  regs_[ARM64_REG_R3] = input.r[3];
+  regs_[ARM64_REG_R4] = input.r[4];
+  regs_[ARM64_REG_R5] = input.r[5];
+  regs_[ARM64_REG_R6] = input.r[6];
+  regs_[ARM64_REG_R7] = input.r[7];
+  regs_[ARM64_REG_R8] = input.r[8];
+  regs_[ARM64_REG_R9] = input.r[9];
+  regs_[ARM64_REG_R10] = input.r[10];
+  regs_[ARM64_REG_R11] = input.r[11];
+  regs_[ARM64_REG_R12] = input.r[12];
+  regs_[ARM64_REG_R13] = input.r[13];
+  regs_[ARM64_REG_R14] = input.r[14];
+  regs_[ARM64_REG_R15] = input.r[15];
+  regs_[ARM64_REG_R16] = input.r[16];
+  regs_[ARM64_REG_R17] = input.r[17];
+  regs_[ARM64_REG_R18] = input.r[18];
+  regs_[ARM64_REG_R19] = input.r[19];
+  regs_[ARM64_REG_R20] = input.r[20];
+  regs_[ARM64_REG_R21] = input.r[21];
+  regs_[ARM64_REG_R22] = input.r[22];
+  regs_[ARM64_REG_R23] = input.r[23];
+  regs_[ARM64_REG_R24] = input.r[24];
+  regs_[ARM64_REG_R25] = input.r[25];
+  regs_[ARM64_REG_R26] = input.r[26];
+  regs_[ARM64_REG_R27] = input.r[27];
+  regs_[ARM64_REG_R28] = input.r[28];
+  regs_[ARM64_REG_R29] = input.r[29];
+  regs_[ARM64_REG_LR] = input.lr;
+  regs_[ARM64_REG_SP] = input.sp;
+  regs_[ARM64_REG_PC] = input.pc;
+}
+
 zx_status_t RegsFuchsia::Read(zx_handle_t thread) {
   zx_thread_state_general_regs thread_regs;
   zx_status_t status = zx_thread_read_state(
@@ -35,42 +73,7 @@ zx_status_t RegsFuchsia::Read(zx_handle_t thread) {
   if (status != ZX_OK)
     return status;
 
-  regs_.resize(kUnwindStackRegCount);
-
-  regs_[ARM64_REG_R0] = thread_regs.r[0];
-  regs_[ARM64_REG_R1] = thread_regs.r[1];
-  regs_[ARM64_REG_R2] = thread_regs.r[2];
-  regs_[ARM64_REG_R3] = thread_regs.r[3];
-  regs_[ARM64_REG_R4] = thread_regs.r[4];
-  regs_[ARM64_REG_R5] = thread_regs.r[5];
-  regs_[ARM64_REG_R6] = thread_regs.r[6];
-  regs_[ARM64_REG_R7] = thread_regs.r[7];
-  regs_[ARM64_REG_R8] = thread_regs.r[8];
-  regs_[ARM64_REG_R9] = thread_regs.r[9];
-  regs_[ARM64_REG_R10] = thread_regs.r[10];
-  regs_[ARM64_REG_R11] = thread_regs.r[11];
-  regs_[ARM64_REG_R12] = thread_regs.r[12];
-  regs_[ARM64_REG_R13] = thread_regs.r[13];
-  regs_[ARM64_REG_R14] = thread_regs.r[14];
-  regs_[ARM64_REG_R15] = thread_regs.r[15];
-  regs_[ARM64_REG_R16] = thread_regs.r[16];
-  regs_[ARM64_REG_R17] = thread_regs.r[17];
-  regs_[ARM64_REG_R18] = thread_regs.r[18];
-  regs_[ARM64_REG_R19] = thread_regs.r[19];
-  regs_[ARM64_REG_R20] = thread_regs.r[20];
-  regs_[ARM64_REG_R21] = thread_regs.r[21];
-  regs_[ARM64_REG_R22] = thread_regs.r[22];
-  regs_[ARM64_REG_R23] = thread_regs.r[23];
-  regs_[ARM64_REG_R24] = thread_regs.r[24];
-  regs_[ARM64_REG_R25] = thread_regs.r[25];
-  regs_[ARM64_REG_R26] = thread_regs.r[26];
-  regs_[ARM64_REG_R27] = thread_regs.r[27];
-  regs_[ARM64_REG_R28] = thread_regs.r[28];
-  regs_[ARM64_REG_R29] = thread_regs.r[29];
-  regs_[ARM64_REG_LR] = thread_regs.lr;
-  regs_[ARM64_REG_SP] = thread_regs.sp;
-  regs_[ARM64_REG_PC] = thread_regs.pc;
-
+  Set(thread_regs);
   return ZX_OK;
 }
 

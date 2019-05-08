@@ -27,33 +27,35 @@ RegsFuchsia::~RegsFuchsia() = default;
 
 ArchEnum RegsFuchsia::Arch() { return ARCH_X86_64; }
 
+void RegsFuchsia::Set(const zx_thread_state_general_regs& input) {
+  regs_.resize(kUnwindStackRegCount);
+
+  regs_[X86_64_REG_RAX] = input.rax;
+  regs_[X86_64_REG_RBX] = input.rbx;
+  regs_[X86_64_REG_RCX] = input.rcx;
+  regs_[X86_64_REG_RDX] = input.rdx;
+  regs_[X86_64_REG_RSI] = input.rsi;
+  regs_[X86_64_REG_RDI] = input.rdi;
+  regs_[X86_64_REG_RBP] = input.rbp;
+  regs_[X86_64_REG_RSP] = input.rsp;
+  regs_[X86_64_REG_R8] = input.r8;
+  regs_[X86_64_REG_R9] = input.r9;
+  regs_[X86_64_REG_R10] = input.r10;
+  regs_[X86_64_REG_R11] = input.r11;
+  regs_[X86_64_REG_R12] = input.r12;
+  regs_[X86_64_REG_R13] = input.r13;
+  regs_[X86_64_REG_R14] = input.r14;
+  regs_[X86_64_REG_R15] = input.r15;
+  regs_[X86_64_REG_RIP] = input.rip;
+}
+
 zx_status_t RegsFuchsia::Read(zx_handle_t thread) {
   zx_thread_state_general_regs thread_regs;
   zx_status_t status = zx_thread_read_state(
       thread, ZX_THREAD_STATE_GENERAL_REGS, &thread_regs, sizeof(thread_regs));
   if (status != ZX_OK)
     return status;
-
-  regs_.resize(kUnwindStackRegCount);
-
-  regs_[X86_64_REG_RAX] = thread_regs.rax;
-  regs_[X86_64_REG_RBX] = thread_regs.rbx;
-  regs_[X86_64_REG_RCX] = thread_regs.rcx;
-  regs_[X86_64_REG_RDX] = thread_regs.rdx;
-  regs_[X86_64_REG_RSI] = thread_regs.rsi;
-  regs_[X86_64_REG_RDI] = thread_regs.rdi;
-  regs_[X86_64_REG_RBP] = thread_regs.rbp;
-  regs_[X86_64_REG_RSP] = thread_regs.rsp;
-  regs_[X86_64_REG_R8] = thread_regs.r8;
-  regs_[X86_64_REG_R9] = thread_regs.r9;
-  regs_[X86_64_REG_R10] = thread_regs.r10;
-  regs_[X86_64_REG_R11] = thread_regs.r11;
-  regs_[X86_64_REG_R12] = thread_regs.r12;
-  regs_[X86_64_REG_R13] = thread_regs.r13;
-  regs_[X86_64_REG_R14] = thread_regs.r14;
-  regs_[X86_64_REG_R15] = thread_regs.r15;
-  regs_[X86_64_REG_RIP] = thread_regs.rip;
-
+  Set(thread_regs);
   return ZX_OK;
 }
 

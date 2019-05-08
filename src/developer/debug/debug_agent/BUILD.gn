@@ -144,6 +144,7 @@ executable("unit_tests") {
     "process_breakpoint_unittest.cc",
     "process_watchpoint_unittest.cc",
     "system_info_unittests.cc",
+    "unwind_unittest.cc",
   ]
 
   if (current_cpu == "x64") {

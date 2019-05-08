@@ -6,6 +6,8 @@
 
 #include <lib/zx/thread.h>
 #include <stdint.h>
+#include <zircon/syscalls/debug.h>
+
 #include <vector>
 
 #include "src/developer/debug/ipc/records.h"
@@ -18,8 +20,9 @@ enum class UnwinderType { kNgUnwind, kAndroid };
 void SetUnwinderType(UnwinderType unwinder_type);
 
 zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
-                        const zx::thread& thread, uint64_t ip, uint64_t sp,
-                        uint64_t bp, size_t max_depth,
+                        const zx::thread& thread,
+                        const zx_thread_state_general_regs& regs,
+                        size_t max_depth,
                         std::vector<debug_ipc::StackFrame>* stack);
 
 }  // namespace debug_agent

@@ -17,78 +17,6 @@
 namespace debug_agent {
 namespace arch {
 
-const BreakInstructionType kBreakInstruction = 0xCC;
-
-uint64_t ArchProvider::BreakpointInstructionForSoftwareExceptionAddress(
-    uint64_t exception_addr) {
-  // An X86 exception is 1 byte and a breakpoint exception is triggered with
-  // RIP pointing to the following instruction.
-  return exception_addr - 1;
-}
-
-uint64_t ArchProvider::NextInstructionForSoftwareExceptionAddress(
-    uint64_t exception_addr) {
-  // Exception address is the one following the instruction that caused it,
-  // so nothing needs to be done.
-  return exception_addr;
-}
-
-bool ArchProvider::IsBreakpointInstruction(zx::process& process,
-                                           uint64_t address) {
-  uint8_t data;
-  size_t actual_read = 0;
-  if (process.read_memory(address, &data, 1, &actual_read) != ZX_OK ||
-      actual_read != 1)
-    return false;
-
-  // This handles the normal encoding of debug breakpoints (0xCC). It's also
-  // possible to cause an interrupt 3 to happen using the opcode sequence
-  // 0xCD 0x03 but this has slightly different semantics and no assemblers emit
-  // this. We can't easily check for that here since the computation for the
-  // instruction address that is passed in assumes a 1-byte instruction. It
-  // should be OK to ignore this case in practice.
-  return data == kBreakInstruction;
-}
-
-uint64_t ArchProvider::InstructionForWatchpointHit(
-    const DebuggedThread& thread) {
-  zx_thread_state_debug_regs_t debug_regs;
-  thread.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                             sizeof(debug_regs));
-  uint64_t exception_address = 0;
-  // HW breakpoints have priority over single-step.
-  if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0)) {
-    exception_address = debug_regs.dr[0];
-  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B1)) {
-    exception_address = debug_regs.dr[1];
-  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B2)) {
-    exception_address = debug_regs.dr[2];
-  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B3)) {
-    exception_address = debug_regs.dr[3];
-  } else {
-    FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
-  }
-
-  return exception_address;
-}
-
-uint64_t ArchProvider::NextInstructionForWatchpointHit(
-    uint64_t exception_addr) {
-  return exception_addr;
-}
-
-uint64_t* ArchProvider::IPInRegs(zx_thread_state_general_regs* regs) {
-  return &regs->rip;
-}
-uint64_t* ArchProvider::SPInRegs(zx_thread_state_general_regs* regs) {
-  return &regs->rsp;
-}
-uint64_t* ArchProvider::BPInRegs(zx_thread_state_general_regs* regs) {
-  return &regs->rbp;
-}
-
-::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kX64; }
-
 namespace {
 
 using debug_ipc::RegisterID;
@@ -102,39 +30,20 @@ inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length,
   return reg;
 }
 
-inline zx_status_t ReadGeneralRegs(const zx::thread& thread,
-                                   std::vector<debug_ipc::Register>* out) {
-  // We get the general state registers.
+zx_status_t ReadGeneralRegs(const zx::thread& thread,
+                            std::vector<debug_ipc::Register>* out) {
   zx_thread_state_general_regs gen_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS,
                                          &gen_regs, sizeof(gen_regs));
   if (status != ZX_OK)
     return status;
 
-  out->push_back(CreateRegister(RegisterID::kX64_rax, 8u, &gen_regs.rax));
-  out->push_back(CreateRegister(RegisterID::kX64_rbx, 8u, &gen_regs.rbx));
-  out->push_back(CreateRegister(RegisterID::kX64_rcx, 8u, &gen_regs.rcx));
-  out->push_back(CreateRegister(RegisterID::kX64_rdx, 8u, &gen_regs.rdx));
-  out->push_back(CreateRegister(RegisterID::kX64_rsi, 8u, &gen_regs.rsi));
-  out->push_back(CreateRegister(RegisterID::kX64_rdi, 8u, &gen_regs.rdi));
-  out->push_back(CreateRegister(RegisterID::kX64_rbp, 8u, &gen_regs.rbp));
-  out->push_back(CreateRegister(RegisterID::kX64_rsp, 8u, &gen_regs.rsp));
-  out->push_back(CreateRegister(RegisterID::kX64_r8, 8u, &gen_regs.r8));
-  out->push_back(CreateRegister(RegisterID::kX64_r9, 8u, &gen_regs.r9));
-  out->push_back(CreateRegister(RegisterID::kX64_r10, 8u, &gen_regs.r10));
-  out->push_back(CreateRegister(RegisterID::kX64_r11, 8u, &gen_regs.r11));
-  out->push_back(CreateRegister(RegisterID::kX64_r12, 8u, &gen_regs.r12));
-  out->push_back(CreateRegister(RegisterID::kX64_r13, 8u, &gen_regs.r13));
-  out->push_back(CreateRegister(RegisterID::kX64_r14, 8u, &gen_regs.r14));
-  out->push_back(CreateRegister(RegisterID::kX64_r15, 8u, &gen_regs.r15));
-  out->push_back(CreateRegister(RegisterID::kX64_rip, 8u, &gen_regs.rip));
-  out->push_back(CreateRegister(RegisterID::kX64_rflags, 8u, &gen_regs.rflags));
-
+  ArchProvider::SaveGeneralRegs(gen_regs, ArchProvider::SaveGeneralWhat::kAll, out);
   return ZX_OK;
 }
 
-inline zx_status_t ReadFPRegs(const zx::thread& thread,
-                              std::vector<debug_ipc::Register>* out) {
+zx_status_t ReadFPRegs(const zx::thread& thread,
+                       std::vector<debug_ipc::Register>* out) {
   zx_thread_state_fp_regs fp_regs;
   zx_status_t status =
       thread.read_state(ZX_THREAD_STATE_FP_REGS, &fp_regs, sizeof(fp_regs));
@@ -204,6 +113,104 @@ inline zx_status_t ReadDebugRegs(const zx::thread& thread,
 }
 
 }  // namespace
+
+
+const BreakInstructionType kBreakInstruction = 0xCC;
+
+uint64_t ArchProvider::BreakpointInstructionForSoftwareExceptionAddress(
+    uint64_t exception_addr) {
+  // An X86 exception is 1 byte and a breakpoint exception is triggered with
+  // RIP pointing to the following instruction.
+  return exception_addr - 1;
+}
+
+uint64_t ArchProvider::NextInstructionForSoftwareExceptionAddress(
+    uint64_t exception_addr) {
+  // Exception address is the one following the instruction that caused it,
+  // so nothing needs to be done.
+  return exception_addr;
+}
+
+bool ArchProvider::IsBreakpointInstruction(zx::process& process,
+                                           uint64_t address) {
+  uint8_t data;
+  size_t actual_read = 0;
+  if (process.read_memory(address, &data, 1, &actual_read) != ZX_OK ||
+      actual_read != 1)
+    return false;
+
+  // This handles the normal encoding of debug breakpoints (0xCC). It's also
+  // possible to cause an interrupt 3 to happen using the opcode sequence
+  // 0xCD 0x03 but this has slightly different semantics and no assemblers emit
+  // this. We can't easily check for that here since the computation for the
+  // instruction address that is passed in assumes a 1-byte instruction. It
+  // should be OK to ignore this case in practice.
+  return data == kBreakInstruction;
+}
+
+void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
+                                   SaveGeneralWhat what,
+                                   std::vector<debug_ipc::Register>* out) {
+  out->push_back(CreateRegister(RegisterID::kX64_rax, 8u, &input.rax));
+  out->push_back(CreateRegister(RegisterID::kX64_rbx, 8u, &input.rbx));
+  out->push_back(CreateRegister(RegisterID::kX64_rcx, 8u, &input.rcx));
+  out->push_back(CreateRegister(RegisterID::kX64_rdx, 8u, &input.rdx));
+  out->push_back(CreateRegister(RegisterID::kX64_rsi, 8u, &input.rsi));
+  out->push_back(CreateRegister(RegisterID::kX64_rdi, 8u, &input.rdi));
+  out->push_back(CreateRegister(RegisterID::kX64_rbp, 8u, &input.rbp));
+  if (what == SaveGeneralWhat::kAll)
+    out->push_back(CreateRegister(RegisterID::kX64_rsp, 8u, &input.rsp));
+  out->push_back(CreateRegister(RegisterID::kX64_r8, 8u, &input.r8));
+  out->push_back(CreateRegister(RegisterID::kX64_r9, 8u, &input.r9));
+  out->push_back(CreateRegister(RegisterID::kX64_r10, 8u, &input.r10));
+  out->push_back(CreateRegister(RegisterID::kX64_r11, 8u, &input.r11));
+  out->push_back(CreateRegister(RegisterID::kX64_r12, 8u, &input.r12));
+  out->push_back(CreateRegister(RegisterID::kX64_r13, 8u, &input.r13));
+  out->push_back(CreateRegister(RegisterID::kX64_r14, 8u, &input.r14));
+  out->push_back(CreateRegister(RegisterID::kX64_r15, 8u, &input.r15));
+  if (what == SaveGeneralWhat::kAll)
+    out->push_back(CreateRegister(RegisterID::kX64_rip, 8u, &input.rip));
+  out->push_back(CreateRegister(RegisterID::kX64_rflags, 8u, &input.rflags));
+}
+
+uint64_t ArchProvider::InstructionForWatchpointHit(
+    const DebuggedThread& thread) {
+  zx_thread_state_debug_regs_t debug_regs;
+  thread.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                             sizeof(debug_regs));
+  uint64_t exception_address = 0;
+  // HW breakpoints have priority over single-step.
+  if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0)) {
+    exception_address = debug_regs.dr[0];
+  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B1)) {
+    exception_address = debug_regs.dr[1];
+  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B2)) {
+    exception_address = debug_regs.dr[2];
+  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B3)) {
+    exception_address = debug_regs.dr[3];
+  } else {
+    FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
+  }
+
+  return exception_address;
+}
+
+uint64_t ArchProvider::NextInstructionForWatchpointHit(
+    uint64_t exception_addr) {
+  return exception_addr;
+}
+
+uint64_t* ArchProvider::IPInRegs(zx_thread_state_general_regs* regs) {
+  return &regs->rip;
+}
+uint64_t* ArchProvider::SPInRegs(zx_thread_state_general_regs* regs) {
+  return &regs->rsp;
+}
+uint64_t* ArchProvider::BPInRegs(zx_thread_state_general_regs* regs) {
+  return &regs->rbp;
+}
+
+::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kX64; }
 
 zx_status_t ArchProvider::ReadRegisters(
     const debug_ipc::RegisterCategory::Type& cat, const zx::thread& thread,

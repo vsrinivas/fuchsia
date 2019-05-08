@@ -9,12 +9,17 @@
 
 #include "unwindstack/Regs.h"
 
+struct zx_thread_state_general_regs;
+
 namespace unwindstack {
 
 class RegsFuchsia final : public RegsImpl<uint64_t> {
  public:
   RegsFuchsia();
   virtual ~RegsFuchsia();
+
+  // Sets the registers from the given OS structure.
+  void Set(const zx_thread_state_general_regs& input);
 
   // Populates this class with the registers from the given thread.
   zx_status_t Read(zx_handle_t thread);

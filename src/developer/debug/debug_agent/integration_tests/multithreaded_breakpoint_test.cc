@@ -136,12 +136,13 @@ GetBreakpointRequest(zx_koid_t process_koid, zx_koid_t thread_koid,
 
 }  // namespace
 
+#if defined(__x86_64__)
+// TODO(DX-1500): This is flaky on X64 for an unknown reason.
+TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
+#elif defined(__aarch64__)
 // TODO(DX-1448): Arm64 has an instruction cache that makes a thread sometimes
 //                hit a thread that has been removed, making this test flake.
 //                This has to be fixed in zircon.
-#if defined(__x86_64__)
-TEST(MultithreadedBreakpoint, SWBreakpoint) {
-#elif defined(__aarch64__)
 TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
 #endif
   // Uncomment these is the test is giving you trouble.

@@ -66,6 +66,14 @@ class ArchProvider {
   // have been written into the program.
   bool IsBreakpointInstruction(zx::process& process, uint64_t address);
 
+  // Converts the given register structure to a vector of debug_ipc registers.
+  // The frame vector omits the IP and SP, so there is a flag to control
+  // whether these are included or not.
+  enum class SaveGeneralWhat { kAll, kNoIPSP };
+  static void SaveGeneralRegs(const zx_thread_state_general_regs& input,
+                              SaveGeneralWhat what,
+                              std::vector<debug_ipc::Register>* out);
+
   virtual zx_status_t ReadRegisters(
       const debug_ipc::RegisterCategory::Type& cat, const zx::thread&,
       std::vector<debug_ipc::Register>* out);
