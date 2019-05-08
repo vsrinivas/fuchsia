@@ -9,6 +9,8 @@
 namespace harvester {
 
 DockyardProxyStatus DockyardProxyFake::Init() {
+  sent_values_.clear();
+  sent_strings_.clear();
   return DockyardProxyStatus::OK;
 }
 
@@ -24,23 +26,47 @@ DockyardProxyStatus DockyardProxyFake::SendSample(
 
 DockyardProxyStatus DockyardProxyFake::SendSampleList(const SampleList list) {
   EXPECT_TRUE(list.size() > 0);
-  bool found_sample_label = false;
   for (const auto& sample : list) {
-    // Current sample lists will be for cpu or memory. Check that one of these
-    // is in the list.
-    if (sample.first.compare("cpu:0:busy_time") == 0 ||
-        sample.first.compare("memory:device_free_bytes") == 0) {
-      found_sample_label = true;
-      break;
-    }
+#ifdef VERBOSE_OUTPUT
+    std::cout << "Sending " << sample.first << " " << sample.second
+              << std::endl;
+#endif  // VERBOSE_OUTPUT
+    sent_values_.emplace(sample.first, sample.second);
   }
-  EXPECT_TRUE(found_sample_label);
   return DockyardProxyStatus::OK;
 }
 
 DockyardProxyStatus DockyardProxyFake::SendStringSampleList(
     const StringSampleList list) {
+  EXPECT_TRUE(list.size() > 0);
+  for (const auto& sample : list) {
+#ifdef VERBOSE_OUTPUT
+    std::cout << "Sending " << sample.first << " " << sample.second
+              << std::endl;
+#endif  // VERBOSE_OUTPUT
+    sent_strings_.emplace(sample.first, sample.second);
+  }
   return DockyardProxyStatus::OK;
+}
+
+bool DockyardProxyFake::CheckValueSent(const std::string& dockyard_path,
+                                       dockyard::SampleValue* value) const {
+  const auto& iter = sent_values_.find(dockyard_path);
+  if (iter == sent_values_.end()) {
+    return false;
+  }
+  *value = iter->second;
+  return true;
+}
+
+bool DockyardProxyFake::CheckStringSent(const std::string& dockyard_path,
+                                        std::string* string) const {
+  const auto& iter = sent_strings_.find(dockyard_path);
+  if (iter == sent_strings_.end()) {
+    return false;
+  }
+  *string = iter->second;
+  return true;
 }
 
 }  // namespace harvester

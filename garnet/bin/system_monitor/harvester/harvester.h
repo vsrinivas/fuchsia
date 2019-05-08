@@ -15,6 +15,8 @@
 #include "dockyard_proxy.h"
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
 
+class SystemMonitorHarvesterTest;
+
 namespace harvester {
 
 class Harvester {
@@ -30,6 +32,7 @@ class Harvester {
   zx_handle_t root_resource_;
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy_;
+  friend class ::SystemMonitorHarvesterTest;
 
   // Gather Samples for a given subject. These are grouped to make the code more
   // manageable and enabling/disabling categories in the future.

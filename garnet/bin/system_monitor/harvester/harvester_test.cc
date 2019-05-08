@@ -9,6 +9,7 @@
 #include <lib/async-testutils/dispatcher_stub.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+#include <zircon/process.h>
 #include <zircon/status.h>
 
 #include "dockyard_proxy_fake.h"
@@ -49,20 +50,72 @@ class AsyncDispatcherFake : public async::DispatcherStub {
   zx::time current_time_;
 };
 
-TEST(SystemMonitorHarvesterCpuSampleCollection, True) {
-  std::unique_ptr<harvester::DockyardProxyFake> dockyard_proxy =
-      std::make_unique<harvester::DockyardProxyFake>();
+}  // namespace
 
-  zx_handle_t root_resource;
-  zx_status_t ret = get_root_resource(&root_resource);
-  EXPECT_EQ(ret, ZX_OK);
+class SystemMonitorHarvesterTest : public ::testing::Test {
+ public:
+  void SetUp() {
+    // Determine our KOID.
+    zx_info_handle_basic_t info;
+    zx_status_t status = zx_object_get_info(
+        zx_process_self(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+        /*actual=*/nullptr, /*available=*/nullptr);
+    ASSERT_EQ(status, ZX_OK);
+    self_koid_ = std::to_string(info.koid);
+
+    // Create a test harvester.
+    std::unique_ptr<harvester::DockyardProxyFake> dockyard_proxy =
+        std::make_unique<harvester::DockyardProxyFake>();
+
+    zx_handle_t root_resource;
+    zx_status_t ret = get_root_resource(&root_resource);
+    EXPECT_EQ(ret, ZX_OK);
+
+    test_harvester = std::make_unique<harvester::Harvester>(
+        zx::msec(1), root_resource, &dispatcher, std::move(dockyard_proxy));
+  }
+
+  bool CheckString(const std::string& path, std::string* value) {
+    return static_cast<harvester::DockyardProxyFake*>(
+               test_harvester->dockyard_proxy_.get())
+        ->CheckStringSent(path, value);
+  }
+
+  bool CheckValue(const std::string& path, dockyard::SampleValue* value) {
+    return static_cast<harvester::DockyardProxyFake*>(
+               test_harvester->dockyard_proxy_.get())
+        ->CheckValueSent(path, value);
+  }
+
+  // Get a dockyard path for our koid with the given |suffix| key.
+  std::string KoidPath(const std::string& suffix) {
+    std::ostringstream out;
+    out << "koid:" << self_koid_ << ":" << suffix;
+    return out.str();
+  }
+
+  std::unique_ptr<harvester::Harvester> test_harvester;
 
   AsyncDispatcherFake dispatcher;
 
-  harvester::Harvester test(zx::msec(4000), root_resource, &dispatcher,
-                            std::move(dockyard_proxy));
+ private:
+  std::string self_koid_;
+};
 
-  test.GatherData();
+TEST_F(SystemMonitorHarvesterTest, True) {
+  // Perform a data gathering pass. This will send samples to the
+  // dockyard_proxy.
+  test_harvester->GatherData();
+
+  // Check the results.
+  dockyard::SampleValue test_value;
+  EXPECT_TRUE(CheckValue("cpu:0:busy_time", &test_value));
+  EXPECT_TRUE(CheckValue("memory:device_free_bytes", &test_value));
+
+  std::string test_string;
+  EXPECT_TRUE(CheckString(KoidPath("name"), &test_string));
+  // This is the name of our generated test process. If the testing harness
+  // changes this may need to be updated. The intent is to test for a process
+  // that is running.
+  EXPECT_EQ("system_monitor_harvester_test.c", test_string);
 }
-
-}  // namespace

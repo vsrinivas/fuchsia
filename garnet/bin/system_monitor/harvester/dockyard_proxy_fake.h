@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_FAKE_H_
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_FAKE_H_
 
+#include <map>
 #include <string>
 
 #include "dockyard_proxy.h"
@@ -13,7 +14,8 @@ namespace harvester {
 
 class DockyardProxyFake : public DockyardProxy {
  public:
-  DockyardProxyFake() {}
+  DockyardProxyFake() = default;
+  ~DockyardProxyFake() = default;
 
   // |DockyardProxy|.
   DockyardProxyStatus Init() override;
@@ -32,6 +34,17 @@ class DockyardProxyFake : public DockyardProxy {
   // |DockyardProxy|.
   DockyardProxyStatus SendStringSampleList(
       const StringSampleList list) override;
+
+  // Get the value (or string) for a given dockyard path. Used for testing.
+  // Returns true if the value was sent at all; false if it wasn't sent.
+  bool CheckValueSent(const std::string& dockyard_path,
+                      dockyard::SampleValue* value) const;
+  bool CheckStringSent(const std::string& dockyard_path,
+                       std::string* string) const;
+
+ private:
+  std::map<std::string, dockyard::SampleValue> sent_values_;
+  std::map<std::string, std::string> sent_strings_;
 };
 
 }  // namespace harvester
