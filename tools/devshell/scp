@@ -12,7 +12,7 @@
 ##
 ## Example usage:
 ##
-##   fx scp "[$(fx netaddr --fuchsia)]:source_file" dest_file
+##   fx scp "[$(fx get-device-addr)]:source_file" dest_file
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
