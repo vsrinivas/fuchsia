@@ -11,9 +11,8 @@ pub const HEADER_SIZE_BYTES: usize = 8;
 /// Index of the root NODE block.
 pub const ROOT_PARENT_INDEX: u32 = 0;
 
-/// Invalid free index to indicate we either are out of space or we are out of
-/// free blocks.
-pub const INVALID_INDEX: u32 = 0;
+/// Index of the HEADER block.
+pub const HEADER_INDEX: u32 = 0;
 
 /// Magic number for the Header block. "INSP" in UTF-8.
 pub const HEADER_MAGIC_NUMBER: u32 = 0x494e5350;
@@ -35,3 +34,9 @@ pub const MAX_ORDER_SHIFT: usize = MIN_ORDER_SHIFT + NUM_ORDERS - 1;
 
 /// The size for order NUM_ORDERS-1 (the maximum order)
 pub const MAX_ORDER_SIZE: usize = 1 << MAX_ORDER_SHIFT;
+
+/// Property format flag for a bytevector.
+pub const PROPERTY_FLAG_BYTE_VECTOR: u8 = 1;
+
+/// Property format flag for a string.
+pub const PROPERTY_FLAG_STRING: u8 = 0;

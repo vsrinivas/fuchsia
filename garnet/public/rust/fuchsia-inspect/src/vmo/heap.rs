@@ -83,17 +83,24 @@ impl Heap {
         Ok(())
     }
 
-    pub fn get_block(&self, index: u32) -> Option<Block<Rc<Mapping>>> {
+    pub fn get_block(&self, index: u32) -> Result<Block<Rc<Mapping>>, Error> {
         // TODO(miguelfrde): validate index
         let offset = utils::offset_for_index(index);
         if offset >= self.current_size_bytes {
-            return None;
+            return Err(format_err!("invalid index"));
         }
         let block = Block::new(self.mapping.clone(), index);
         if self.current_size_bytes - offset < utils::order_to_size(block.order()) {
-            return None;
+            return Err(format_err!("invalid_index"));
         }
-        Some(block)
+        Ok(block)
+    }
+
+    /// The bytes in this heap.
+    pub fn bytes(&self) -> Vec<u8> {
+        let mut result = vec![0u8; self.current_size_bytes];
+        self.mapping.read(&mut result[..]);
+        result
     }
 
     fn grow_heap(&mut self, requested_size: usize) -> Result<(), Error> {
@@ -130,8 +137,8 @@ impl Heap {
             return false;
         }
         match self.get_block(index) {
-            None => false,
-            Some(block) => block.block_type() == BlockType::Free && block.order() == expected_order,
+            Err(_) => false,
+            Ok(block) => block.block_type() == BlockType::Free && block.order() == expected_order,
         }
     }
 
@@ -186,31 +193,7 @@ impl Heap {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // TODO(miguelfrde): we could move this out of the tests mod if needed.
-    struct HeapIterator<'h> {
-        offset: usize,
-        heap: &'h Heap,
-    }
-
-    impl<'h> HeapIterator<'h> {
-        fn iterate(heap: &'h Heap) -> Self {
-            HeapIterator { offset: 0, heap: heap }
-        }
-    }
-
-    impl<'h> Iterator for HeapIterator<'h> {
-        type Item = Block<Rc<Mapping>>;
-
-        fn next(&mut self) -> Option<Block<Rc<Mapping>>> {
-            let index = utils::index_for_offset(self.offset);
-            let result = self.heap.get_block(index);
-            if let Some(block) = &result {
-                self.offset += utils::order_to_size(block.order());
-            }
-            result
-        }
-    }
+    use crate::vmo::reader::BlockIterator;
 
     struct BlockDebug {
         index: u32,
@@ -219,7 +202,7 @@ mod tests {
     }
 
     fn validate(expected: &[BlockDebug], heap: &Heap) {
-        let actual: Vec<BlockDebug> = HeapIterator::iterate(&heap)
+        let actual: Vec<BlockDebug> = BlockIterator::new(&heap.bytes()[..])
             .map(|block| BlockDebug {
                 order: block.order(),
                 index: block.index(),
@@ -295,7 +278,9 @@ mod tests {
         ];
         validate(&expected, &heap);
         assert!(heap.free_head_per_order.iter().enumerate().skip(2).all(|(i, &j)| (1 << i) == j));
-        assert!(HeapIterator::iterate(&heap).skip(2).all(|b| b.free_next_index().unwrap() == 0));
+        assert!(BlockIterator::new(&heap.bytes()[..])
+            .skip(2)
+            .all(|b| b.free_next_index().unwrap() == 0));
 
         // Ensure a large block takes the first free large one.
         assert!(heap.free_block(heap.get_block(0).unwrap()).is_ok());
@@ -375,7 +360,9 @@ mod tests {
         ];
         validate(&expected, &heap);
         assert!(heap.free_head_per_order.iter().enumerate().skip(3).all(|(i, &j)| (1 << i) == j));
-        assert!(HeapIterator::iterate(&heap).skip(3).all(|b| b.free_next_index().unwrap() == 0));
+        assert!(BlockIterator::new(&heap.bytes()[..])
+            .skip(3)
+            .all(|b| b.free_next_index().unwrap() == 0));
         assert_eq!(heap.free_head_per_order[1], 0);
         assert_eq!(heap.free_head_per_order[0], 2);
         assert_eq!(heap.get_block(0).unwrap().free_next_index().unwrap(), 0);

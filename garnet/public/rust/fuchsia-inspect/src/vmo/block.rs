@@ -139,6 +139,15 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(self.read_header().extent_next_index())
     }
 
+    /// Returns the payload bytes value of an EXTENT block.
+    pub fn extent_contents(&self) -> Result<Vec<u8>, Error> {
+        self.check_type(BlockType::Extent)?;
+        let length = utils::payload_size_for_order(self.order());
+        let mut bytes = vec![0u8; length];
+        self.container.read_bytes(self.payload_offset(), &mut bytes);
+        Ok(bytes)
+    }
+
     /// Get the NAME block index of a *_VALUE block.
     pub fn name_index(&self) -> Result<u32, Error> {
         self.check_any_value()?;
@@ -186,7 +195,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Check that the block type is |block_type|
     fn check_type(&self, block_type: BlockType) -> Result<(), Error> {
         if self.block_type() != block_type {
-            Err(format_err!("Expected type {}, got type {}", self.block_type(), block_type))
+            Err(format_err!("Expected type {}, got type {}", block_type, self.block_type()))
         } else {
             Ok(())
         }
@@ -336,6 +345,37 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         self.write_header(header);
     }
 
+    /// Converts a block to an EXTENT block.
+    pub fn become_extent(&self, next_extent_index: u32) -> Result<(), Error> {
+        self.check_type(BlockType::Reserved)?;
+        let mut header = self.read_header();
+        header.set_block_type(BlockType::Extent.to_u8().unwrap());
+        header.set_extent_next_index(next_extent_index);
+        self.write_header(header);
+        Ok(())
+    }
+
+    /// Sets the index of the next EXTENT in the chain.
+    pub fn set_extent_next_index(&self, next_extent_index: u32) -> Result<(), Error> {
+        self.check_type(BlockType::Extent)?;
+        let mut header = self.read_header();
+        header.set_extent_next_index(next_extent_index);
+        self.write_header(header);
+        Ok(())
+    }
+
+    /// Set the payload of an EXTENT block. The bytes written will be returned.
+    pub fn extent_set_contents(&self, value: &[u8]) -> Result<usize, Error> {
+        self.check_type(BlockType::Extent)?;
+        let max_bytes = utils::payload_size_for_order(self.order());
+        let mut bytes = value;
+        if bytes.len() > max_bytes {
+            bytes = &bytes[..min(bytes.len(), max_bytes)];
+        }
+        self.write_payload_from_bytes(bytes);
+        Ok(bytes.len())
+    }
+
     /// Converts a RESERVED block into a DOUBLE_VALUE block.
     pub fn become_double_value(
         &self,
@@ -446,10 +486,9 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     pub fn become_name(&self, name: &str) -> Result<(), Error> {
         self.check_type(BlockType::Reserved)?;
         let mut bytes = name.as_bytes();
-        let max_len =
-            (1 << (self.order() + constants::MIN_ORDER_SHIFT)) - constants::HEADER_SIZE_BYTES;
+        let max_len = utils::payload_size_for_order(self.order());
         if bytes.len() > max_len {
-            bytes = &bytes[..min(bytes.len() + 1, max_len)];
+            bytes = &bytes[..min(bytes.len(), max_len)];
         }
         let mut header = self.read_header();
         header.set_block_type(BlockType::Name.to_u8().unwrap());
@@ -747,6 +786,39 @@ mod tests {
                 Ok(())
             },
             &BTreeSet::new(),
+        );
+    }
+
+    #[test]
+    fn test_extent() {
+        let container = [0u8; constants::MIN_ORDER_SIZE * 2];
+        let block = get_reserved(&container);
+        assert!(block.become_extent(3).is_ok());
+        assert_eq!(block.block_type(), BlockType::Extent);
+        assert_eq!(block.next_extent().unwrap(), 3);
+        assert_eq!(container[..8], [0x81, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+
+        assert_eq!(block.extent_set_contents(&"test-rust-inspect".as_bytes()).unwrap(), 17);
+        assert_eq!(
+            String::from_utf8(block.extent_contents().unwrap()).unwrap(),
+            "test-rust-inspect\0\0\0\0\0\0\0"
+        );
+        assert_eq!(&container[8..25], "test-rust-inspect".as_bytes());
+        assert_eq!(container[25..], [0, 0, 0, 0, 0, 0, 0]);
+
+        assert!(block.set_extent_next_index(4).is_ok());
+        assert_eq!(block.next_extent().unwrap(), 4);
+
+        test_ok_types(move |b| b.become_extent(1), &BTreeSet::from_iter(vec![BlockType::Reserved]));
+        test_ok_types(move |b| b.next_extent(), &BTreeSet::from_iter(vec![BlockType::Extent]));
+        test_ok_types(
+            move |b| b.set_extent_next_index(4),
+            &BTreeSet::from_iter(vec![BlockType::Extent]),
+        );
+        test_ok_types(
+            move |b| b.extent_set_contents(&"test".as_bytes()),
+            &BTreeSet::from_iter(vec![BlockType::Extent]),
         );
     }
 

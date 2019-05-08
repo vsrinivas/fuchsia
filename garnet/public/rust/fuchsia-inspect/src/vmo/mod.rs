@@ -10,4 +10,6 @@ mod block;
 mod block_type;
 mod constants;
 mod heap;
+mod reader;
+mod state;
 mod utils;
