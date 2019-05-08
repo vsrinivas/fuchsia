@@ -266,7 +266,7 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options,
     // GET/SET_PROPERTY so the user can set ZX_PROP_NAME on the new clone.
     zx_rights_t rights =
         in_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY;
-    if (options & ZX_VMO_CHILD_COPY_ON_WRITE) {
+    if (options & (ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_COPY_ON_WRITE2)) {
         rights &= ~ZX_RIGHT_EXECUTE;
         rights |= ZX_RIGHT_WRITE;
     }

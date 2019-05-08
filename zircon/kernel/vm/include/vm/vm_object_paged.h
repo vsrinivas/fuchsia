@@ -32,6 +32,7 @@ public:
     // |options_| is a bitmask of:
     static constexpr uint32_t kResizable = (1u << 0);
     static constexpr uint32_t kContiguous = (1u << 1);
+    static constexpr uint32_t kHidden = (1u << 2);
 
     static zx_status_t Create(uint32_t pmm_alloc_flags,
                               uint32_t options,
@@ -80,11 +81,15 @@ public:
         Guard<fbl::Mutex> guard{&lock_};
         return GetRootPageSourceLocked() != nullptr;
     }
+    bool is_hidden() const { return (options_ & kHidden); }
     ChildType child_type() const override {
         Guard<fbl::Mutex> guard{&lock_};
-        return parent_ ? ChildType::kCowClone : ChildType::kNotChild;
+        return (original_parent_user_id_ != 0) ? ChildType::kCowClone : ChildType::kNotChild;
     }
-    uint64_t parent_user_id() const override;
+    uint64_t parent_user_id() const override {
+        Guard<fbl::Mutex> guard{&lock_};
+        return original_parent_user_id_;
+    }
 
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 
@@ -117,9 +122,15 @@ public:
         // Calls a Locked method of the parent, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
-    zx_status_t CreateCowClone(bool resizable, uint64_t offset, uint64_t size, bool copy_name,
-                               fbl::RefPtr<VmObject>* child_vmo) override
-        // Calls a Locked method of the child, which confuses analysis.
+    zx_status_t CreateCowClone(Resizability resizable, CloneType type,
+                               uint64_t offset, uint64_t size,
+                               bool copy_name, fbl::RefPtr<VmObject>* child_vmo) override
+        // This function reaches into the created child, which confuses analysis.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
+    // Inserts |hidden_parent| as a hidden parent of |this|. This vmo and |hidden_parent|
+    // must have the same lock.
+    void InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden_parent)
+        // This accesses both |this| and |hidden_parent|, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
     void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len) override
@@ -128,6 +139,11 @@ public:
 
     uint32_t GetMappingCachePolicy() const override;
     zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
+
+    void OnChildRemoved(Guard<Mutex>&& guard) override
+        // Analysis doesn't know that the guard passed to this function is the vmo's lock.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
+    bool OnChildAddedLocked() override TA_REQ(lock_);
 
     void DetachSource() override {
         DEBUG_ASSERT(page_source_);
@@ -142,8 +158,13 @@ private:
     // private constructor (use Create())
     VmObjectPaged(
         uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
-        fbl::RefPtr<VmObject> parent, fbl::RefPtr<vm_lock_t> root_lock,
-        fbl::RefPtr<PageSource> page_source);
+        fbl::RefPtr<vm_lock_t> root_lock, fbl::RefPtr<PageSource> page_source);
+
+    // Initializes the original parent state of the vmo. This function should only be called
+    // at most once, even if the parent changes after initialization.
+    void InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent)
+        // Accesses both parent and child, which confuses analysis.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
 
     static zx_status_t CreateCommon(uint32_t pmm_alloc_flags,
                                     uint32_t options,
@@ -175,6 +196,10 @@ private:
 
     fbl::RefPtr<PageSource> GetRootPageSourceLocked() const
         // Walks the parent chain to get the root page source, which confuses analysis.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
+
+    bool IsBidirectionalClonable() const
+        // Walks the parent chain since the root determines clonability.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // internal check if any pages in a range are pinned
@@ -210,11 +235,14 @@ private:
     uint64_t parent_offset_ TA_GUARDED(lock_) = 0;
     // offset in *this object* where it stops referring to its parent
     uint64_t parent_limit_ TA_GUARDED(lock_) = 0;
-    uint32_t pmm_alloc_flags_ TA_GUARDED(lock_) = PMM_ALLOC_FLAG_ANY;
+    const uint32_t pmm_alloc_flags_ = PMM_ALLOC_FLAG_ANY;
     uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
 
     // parent pointer (may be null)
     fbl::RefPtr<VmObject> parent_ TA_GUARDED(lock_);
+    // Record the user_id_ of the original parent, in case we make
+    // a bidirectional clone and end up changing parent_.
+    uint64_t original_parent_user_id_ TA_GUARDED(lock_) = 0;
 
     // The page source, if any.
     const fbl::RefPtr<PageSource> page_source_;

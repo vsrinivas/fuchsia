@@ -200,6 +200,10 @@ typedef struct zx_wait_item {
 #define ZX_VMO_CLONE_NON_RESIZEABLE       ((uint32_t)1u << 1)
 #define ZX_VMO_CHILD_NON_RESIZEABLE       ((uint32_t)1u << 1)
 #define ZX_VMO_CHILD_RESIZABLE            ((uint32_t)1u << 2)
+// TODO(stevensd): COW2 is bidirectional. Once things are ready to
+// move away from unidirectional COW, remove this alternate flag
+// and change the semantics of ZX_VMO_CHILD_COPY_ON_WRITE
+#define ZX_VMO_CHILD_COPY_ON_WRITE2       ((uint32_t)1u << 3)
 
 typedef uint32_t zx_vm_option_t;
 // Mapping flags to vmar routines

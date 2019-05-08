@@ -41,6 +41,18 @@ typedef struct vm_lock : fbl::RefCounted<struct vm_lock> {
     DECLARE_MUTEX(struct vm_lock) lock;
 } vm_lock_t;
 
+// Typesafe enum for resizability arguments.
+enum class Resizability {
+    Resizable,
+    NonResizable,
+};
+
+// Argument which specifies the type of COW clone.
+enum class CloneType {
+    Unidirectional,
+    Bidirectional,
+};
+
 // The base vm object that holds a range of bytes of data
 //
 // Can be created without mapping and used as a container of data, or mappable
@@ -148,6 +160,7 @@ public:
     // Returns a user ID associated with this VMO, or zero.
     // Typically used to hold a zircon koid for Dispatcher-wrapped VMOs.
     uint64_t user_id() const;
+    uint64_t user_id_locked() const TA_REQ(lock_);
 
     // Returns the parent's user_id() if this VMO has a parent,
     // otherwise returns zero.
@@ -179,7 +192,7 @@ public:
 
     // create a copy-on-write clone vmo at the page-aligned offset and length
     // note: it's okay to start or extend past the size of the parent
-    virtual zx_status_t CreateCowClone(bool resizable,
+    virtual zx_status_t CreateCowClone(Resizability resizable, CloneType type,
                                        uint64_t offset, uint64_t size, bool copy_name,
                                        fbl::RefPtr<VmObject>* child_vmo) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -233,14 +246,33 @@ public:
     // is mapped into.
     uint32_t share_count() const;
 
-    // Returns the number of children post-add.
-    uint32_t AddChildLocked(VmObjectPaged* r) TA_REQ(lock_);
+    // Adds a child to this vmo and returns true if the dispatcher which matches
+    // user_id should be notified about the first child being added.
+    bool AddChildLocked(VmObjectPaged* r) TA_REQ(lock_);
 
     // Notifies the child observer that there is one child.
     void NotifyOneChild() TA_EXCL(lock_);
 
     void RemoveChild(VmObjectPaged* r);
+    void ReplaceChildLocked(VmObjectPaged* old, VmObjectPaged* new_child) TA_REQ(lock_);
+    uint32_t num_user_children() const;
     uint32_t num_children() const;
+
+    // Called by RemoveChild. VmObject::OnChildRemoved eventually needs to be invoked
+    // on the VmObject which is held by the dispatcher which matches |user_id|. Implementations
+    // should forward this call towards that VmObject and eventually call this class's
+    // implementation.
+    //
+    // The guard passed to this function is the vmo's lock.
+    virtual void OnChildRemoved(Guard<Mutex>&& guard)
+        // Analysis doesn't know |guard| is this vmo's lock.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
+
+    // Called by AddChildLocked. VmObject::OnChildAddedLocked eventually needs to be invoked
+    // on the VmObject which is held by the dispatcher which matches |user_id|. Implementations
+    // should forward this call towards that VmObject and eventually call this class's
+    // implementation.
+    virtual bool OnChildAddedLocked() TA_REQ(lock_);
 
     // Calls the provided |func(const VmObject&)| on every VMO in the system,
     // from oldest to newest. Stops if |func| returns an error, returning the
@@ -300,6 +332,10 @@ protected:
     uint32_t children_list_len_ TA_GUARDED(lock_) = 0;
 
     uint64_t user_id_ TA_GUARDED(lock_) = 0;
+    // The count of the number of children of this vmo as understood by userspace. This
+    // field only makes sense in VmObjects directly owned by dispatchers. In particular,
+    // it is not meaningful for hidden VmObjectPaged.
+    uint32_t user_child_count_ TA_GUARDED(lock_) = 0;
 
     // The user-friendly VMO name. For debug purposes only. That
     // is, there is no mechanism to get access to a VMO via this name.

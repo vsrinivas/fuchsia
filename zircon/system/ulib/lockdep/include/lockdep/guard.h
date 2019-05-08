@@ -137,6 +137,8 @@ public:
 
     // Returns true if the guard has an actively acquired lock.
     explicit operator bool() const { return lock_ != nullptr; }
+    // Returns true if this guard wraps |lock|.
+    bool wraps_lock(const LockType& lock) const { return &lock == lock_; }
 
     // Releases this scoped capability without releasing the underlying lock or
     // un-tracking the lock in the validator. Returns an rvalue reference to the

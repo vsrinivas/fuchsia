@@ -79,6 +79,10 @@ uint64_t VmObject::user_id() const {
     return user_id_;
 }
 
+uint64_t VmObject::user_id_locked() const {
+    return user_id_;
+}
+
 void VmObject::AddMappingLocked(VmMapping* r) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.lock().IsHeld());
@@ -162,12 +166,18 @@ void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {
     child_observer_ = child_observer;
 }
 
-uint32_t VmObject::AddChildLocked(VmObjectPaged* o) {
+bool VmObject::AddChildLocked(VmObjectPaged* o) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.lock().IsHeld());
     children_list_.push_front(o);
     children_list_len_++;
-    return children_list_len_;
+
+    return OnChildAddedLocked();
+}
+
+bool VmObject::OnChildAddedLocked() {
+    ++user_child_count_;
+    return user_child_count_ == 1;
 }
 
 void VmObject::NotifyOneChild() {
@@ -185,13 +195,27 @@ void VmObject::NotifyOneChild() {
     }
 }
 
+void VmObject::ReplaceChildLocked(VmObjectPaged* old, VmObjectPaged* new_child) {
+    canary_.Assert();
+    children_list_.replace(*old, new_child);
+}
+
 void VmObject::RemoveChild(VmObjectPaged* o) {
     canary_.Assert();
     Guard<fbl::Mutex> shared_guard{&lock_};
     children_list_.erase(*o);
     DEBUG_ASSERT(children_list_len_ > 0);
     children_list_len_--;
-    if (children_list_len_ != 0) {
+
+    OnChildRemoved(shared_guard.take());
+}
+
+void VmObject::OnChildRemoved(Guard<fbl::Mutex>&& adopt) {
+    DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
+    Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
+
+    --user_child_count_;
+    if (user_child_count_ != 0) {
         return;
     }
 
@@ -199,7 +223,7 @@ void VmObject::RemoveChild(VmObjectPaged* o) {
 
     // Drop shared lock before calling out to the observer to reduce the risk of self-deadlock in
     // case it calls back into this object.
-    shared_guard.Release();
+    guard.Release();
 
     // Signal the dispatcher that there are no more child VMOS
     if (child_observer_ != nullptr) {
@@ -211,6 +235,12 @@ uint32_t VmObject::num_children() const {
     canary_.Assert();
     Guard<fbl::Mutex> guard{&lock_};
     return children_list_len_;
+}
+
+uint32_t VmObject::num_user_children() const {
+    canary_.Assert();
+    Guard<fbl::Mutex> guard{&lock_};
+    return user_child_count_;
 }
 
 void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len) {

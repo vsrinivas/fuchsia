@@ -8,6 +8,8 @@ source_set("vmo") {
     "vmo-signal.c",
     "vmo.cpp",
     "vmo-clone.cpp",
+    # TODO(stevensd): Rename once the clone flag names are cleaned up
+    "vmo-clone2.cpp",
   ]
   deps = [
     "$zx/system/ulib/fbl",

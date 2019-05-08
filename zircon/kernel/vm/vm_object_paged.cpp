@@ -68,22 +68,28 @@ zx_status_t RoundSize(uint64_t size, uint64_t* out_size) {
 
 VmObjectPaged::VmObjectPaged(
     uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
-    fbl::RefPtr<VmObject> parent, fbl::RefPtr<vm_lock_t> root_lock,
-    fbl::RefPtr<PageSource> page_source)
+    fbl::RefPtr<vm_lock_t> root_lock, fbl::RefPtr<PageSource> page_source)
     : VmObject(ktl::move(root_lock)),
       options_(options),
       size_(size),
       pmm_alloc_flags_(pmm_alloc_flags),
-      parent_(ktl::move(parent)),
       page_source_(ktl::move(page_source)) {
     LTRACEF("%p\n", this);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
-    DEBUG_ASSERT(page_source_ == nullptr || parent_ == nullptr);
 
     // Adding to the global list needs to be done at the end of the ctor, since
     // calls can be made into this object as soon as it is in that list.
     AddToGlobalList();
+}
+
+void VmObjectPaged::InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent) {
+    DEBUG_ASSERT(lock_.lock().IsHeld());
+    DEBUG_ASSERT(parent_ == nullptr);
+    DEBUG_ASSERT(original_parent_user_id_ == 0);
+
+    original_parent_user_id_ = parent->user_id_locked();
+    parent_ = ktl::move(parent);
 }
 
 VmObjectPaged::~VmObjectPaged() {
@@ -136,7 +142,7 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags,
     }
 
     auto vmo = fbl::AdoptRef<VmObject>(
-        new (&ac) VmObjectPaged(options, pmm_alloc_flags, size, nullptr, ktl::move(lock), nullptr));
+        new (&ac) VmObjectPaged(options, pmm_alloc_flags, size, ktl::move(lock), nullptr));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -296,7 +302,7 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
     }
 
     auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(
-            options, PMM_ALLOC_FLAG_ANY, size, nullptr, ktl::move(lock), ktl::move(src)));
+            options, PMM_ALLOC_FLAG_ANY, size, ktl::move(lock), ktl::move(src)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -306,7 +312,34 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::CreateCowClone(bool resizable, uint64_t offset, uint64_t size,
+void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden_parent) {
+    // Insert the new VmObject |hidden_parent| between between |this| and |parent_|.
+    if (parent_) {
+        hidden_parent->InitializeOriginalParentLocked(parent_);
+        parent_->ReplaceChildLocked(this, hidden_parent.get());
+    }
+    hidden_parent->AddChildLocked(this);
+    parent_ = hidden_parent;
+
+    // We use the user_id to walk the tree looking for the right child observer. This
+    // is set after adding the hidden parent into the tree since that's not really
+    // a 'real' child.
+    hidden_parent->user_id_ = user_id_;
+
+    // The hidden parent should have the same view as we had into
+    // its parent, and this vmo has a full view into the hidden vmo
+    hidden_parent->parent_offset_ = parent_offset_;
+    hidden_parent->parent_limit_ = parent_limit_;
+    parent_offset_ = 0;
+    parent_limit_ = size_;
+
+    // Move everything into the hidden parent, for immutability
+    hidden_parent->page_list_ = std::move(page_list_);
+    hidden_parent->size_ = size_;
+}
+
+zx_status_t VmObjectPaged::CreateCowClone(Resizability resizable, CloneType type,
+                                          uint64_t offset, uint64_t size,
                                           bool copy_name, fbl::RefPtr<VmObject>* child_vmo) {
     LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
@@ -318,25 +351,49 @@ zx_status_t VmObjectPaged::CreateCowClone(bool resizable, uint64_t offset, uint6
         return status;
     }
 
-    auto options = resizable ? kResizable : 0u;
+    // TODO(stevensd): Add support for bidirectional contiguous clones.
+    if (type == CloneType::Bidirectional && is_contiguous()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
-    // allocate the clone up front outside of our lock to ensure that if we
-    // return early, destroying the new vmo, it'll happen after the lock has
-    // been released because we share the lock and the vmo's dtor may acquire it
+    auto options = resizable == Resizability::Resizable ? kResizable : 0u;
+    // There are two reasons for declaring/allocating the clones outside of the vmo's lock. First,
+    // the dtor might require taking the lock, so we need to ensure that it isn't called until
+    // after the lock is released. Second, diagnostics code makes calls into vmos while holding
+    // the global vmo lock. Since the VmObject ctor takes the global lock, we can't construct
+    // any vmos under any vmo lock.
     fbl::AllocChecker ac;
     auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(
-        options, pmm_alloc_flags_, size, fbl::WrapRefPtr(this), lock_ptr_, nullptr));
+        options, pmm_alloc_flags_, size, lock_ptr_, nullptr));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    uint32_t num_children;
+    fbl::RefPtr<VmObjectPaged> hidden_parent;
+    if (type == CloneType::Bidirectional) {
+        // To create a bidirectional clone, the kernel creates an artifical parent vmo
+        // called a 'hidden vmo'. The content of the original vmo is moved into the hidden
+        // vmo, and the original vmo becomes a child of the hidden vmo. Then a second child
+        // is created, which is the userspace visible clone.
+        //
+        // Hidden vmos are an implementation detail that are not exposed to userspace.
+
+        if (!IsBidirectionalClonable()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        // The initial size is 0. It will be initialized as part of the atomic
+        // insertion into the child tree.
+        hidden_parent = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(
+                kHidden, pmm_alloc_flags_, 0, lock_ptr_, nullptr));
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+    }
+
+    bool notify_one_child;
     {
         Guard<fbl::Mutex> guard{&lock_};
-
-        // add the new VMO as a child before we do anything, since its
-        // dtor expects to find it in its parent's child list
-        num_children = AddChildLocked(vmo.get());
 
         // check that we're not uncached in some way
         if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
@@ -348,16 +405,34 @@ zx_status_t VmObjectPaged::CreateCowClone(bool resizable, uint64_t offset, uint6
         if (status != ZX_OK) {
             return status;
         }
-        // The child shouldn't be able to see more pages if it grows or
-        // pages which are beyond this VMO's current size.
         vmo->parent_limit_ = fbl::min(size, size_ - vmo->parent_offset_);
+
+        VmObjectPaged* clone_parent;
+        if (type == CloneType::Bidirectional) {
+            clone_parent = hidden_parent.get();
+
+            InsertHiddenParentLocked(ktl::move(hidden_parent));
+
+            // Invalidate everything the clone will be able to see. They're COW pages now,
+            // so any existing mappings can no longer directly write to the pages.
+            // TODO: Just change the mappings to RO instead of fully unmapping.
+            RangeChangeUpdateLocked(vmo->parent_offset_, vmo->parent_offset_ + vmo->parent_limit_);
+        } else  {
+            clone_parent = this;
+        }
+
+        vmo->InitializeOriginalParentLocked(fbl::WrapRefPtr(clone_parent));
+
+        // add the new vmo as a child before we do anything, since its
+        // dtor expects to find it in its parent's child list
+        notify_one_child = clone_parent->AddChildLocked(vmo.get());
 
         if (copy_name) {
             vmo->name_ = name_;
         }
     }
 
-    if (num_children == 1) {
+    if (notify_one_child) {
         NotifyOneChild();
     }
 
@@ -366,19 +441,55 @@ zx_status_t VmObjectPaged::CreateCowClone(bool resizable, uint64_t offset, uint6
     return ZX_OK;
 }
 
-uint64_t VmObjectPaged::parent_user_id() const {
-    canary_.Assert();
-    // Don't hold both our lock and our parent's lock at the same time, because
-    // it's probably the same lock.
-    fbl::RefPtr<VmObject> parent;
-    {
-        Guard<fbl::Mutex> guard{&lock_};
-        if (parent_ == nullptr) {
-            return 0u;
-        }
-        parent = parent_;
+bool VmObjectPaged::OnChildAddedLocked() {
+    if (!is_hidden()) {
+        return VmObject::OnChildAddedLocked();
     }
-    return parent->user_id();
+
+    if (user_id_ == ZX_KOID_INVALID) {
+        // The original vmo is added as a child of the hidden vmo before setting
+        // the user id to prevent counting as its own child.
+        return false;
+    }
+
+    // After initialization, hidden vmos always have two children - the vmo on which
+    // zx_vmo_create_child was invoked and the vmo which that syscall created.
+    DEBUG_ASSERT(children_list_len_ == 2);
+
+    // We need to proxy the child add to the original vmo so that
+    // it can update it's clone count.
+    return [&]() TA_NO_THREAD_SAFETY_ANALYSIS -> bool {
+        // Reaching into the children confuses analysis
+        for (auto& c : children_list_) {
+            if (c.user_id_ == user_id_) {
+                return c.OnChildAddedLocked();
+            }
+        }
+        // One of the children should always have a matching user_id.
+        panic("no child with matching user_id: %" PRIx64 "\n", user_id_);
+    }();
+}
+
+void VmObjectPaged::OnChildRemoved(Guard<fbl::Mutex>&& adopt) {
+    DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
+    Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
+
+    if (!is_hidden()) {
+        VmObject::OnChildRemoved(guard.take());
+        return;
+    }
+
+    // TODO(stevensd): flatten hidden vmos with only one child.
+
+    // If there are multiple eager COW clones of one  vmo we need to proxy clone closure
+    // to the original vmo to update the userspace-visible child count. In this situation,
+    // we use user_id_ to walk the tree to find the original vmo.
+    for (auto& c : children_list_) {
+        if (c.user_id_ == user_id_) {
+            c.OnChildRemoved(guard.take());
+            return;
+        }
+    }
 }
 
 void VmObjectPaged::Dump(uint depth, bool verbose) {
@@ -1485,4 +1596,25 @@ fbl::RefPtr<PageSource> VmObjectPaged::GetRootPageSourceLocked() const {
         }
     }
     return vm_object->page_source_;
+}
+
+bool VmObjectPaged::IsBidirectionalClonable() const {
+    Guard<fbl::Mutex> guard{&lock_};
+
+    // Bidirectional clones of pager vmos aren't supported as we can't
+    // efficiently make an immutable snapshot.
+    if (page_source_) {
+        return false;
+    }
+
+    // vmos descended from paged/physical vmos can't be eager cloned.
+    auto parent = parent_;
+    while (parent) {
+        auto p = VmObjectPaged::AsVmObjectPaged(parent);
+        if (!p || p->page_source_) {
+            return false;
+        }
+        parent = p->parent_;
+    }
+    return true;
 }

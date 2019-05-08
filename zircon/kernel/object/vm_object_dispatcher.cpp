@@ -134,7 +134,7 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
     entry.size_bytes = vmo->size();
     entry.create_options = vmo->create_options();
     entry.parent_koid = vmo->parent_user_id();
-    entry.num_children = vmo->num_children();
+    entry.num_children = vmo->num_user_children();
     entry.num_mappings = vmo->num_mappings();
     entry.share_count = vmo->share_count();
     entry.flags =
@@ -233,15 +233,21 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
     LTRACEF("options 0x%x offset %#" PRIx64 " size %#" PRIx64 "\n",
             options, offset, size);
 
+    // Check for mutually-exclusive child type flags.
+    CloneType type;
     if (options & ZX_VMO_CHILD_COPY_ON_WRITE) {
         options &= ~ZX_VMO_CHILD_COPY_ON_WRITE;
+        type = CloneType::Unidirectional;
+    } else if (options & ZX_VMO_CHILD_COPY_ON_WRITE2) {
+        options &= ~ZX_VMO_CHILD_COPY_ON_WRITE2;
+        type = CloneType::Bidirectional;
     } else {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    bool resizable = true;
+    Resizability resizable = Resizability::Resizable;
     if (options & ZX_VMO_CHILD_NON_RESIZEABLE) {
-        resizable = false;
+        resizable = Resizability::NonResizable;
         options &= ~ZX_VMO_CHILD_NON_RESIZEABLE;
     } else {
         options &= ~ZX_VMO_CHILD_RESIZABLE;
@@ -250,5 +256,5 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
     if (options)
         return ZX_ERR_INVALID_ARGS;
 
-    return vmo_->CreateCowClone(resizable, offset, size, copy_name, child_vmo);
+    return vmo_->CreateCowClone(resizable, type, offset, size, copy_name, child_vmo);
 }

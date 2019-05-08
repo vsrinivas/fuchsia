@@ -125,7 +125,10 @@ public:
     VmPageList();
     ~VmPageList();
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VmPageList);
+    VmPageList& operator=(VmPageList&& other);
+    VmPageList(VmPageList&& other);
+
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(VmPageList);
 
     // walk the page tree, calling the passed in function on every tree node
     template <typename F>

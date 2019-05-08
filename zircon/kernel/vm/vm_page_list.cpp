@@ -92,9 +92,18 @@ VmPageList::VmPageList() {
     LTRACEF("%p\n", this);
 }
 
+VmPageList::VmPageList(VmPageList&& other) : list_(std::move(other.list_)) {
+    LTRACEF("%p\n", this);
+}
+
 VmPageList::~VmPageList() {
     LTRACEF("%p\n", this);
     DEBUG_ASSERT(list_.is_empty());
+}
+
+VmPageList& VmPageList::operator=(VmPageList&& other) {
+    list_ = std::move(other.list_);
+    return *this;
 }
 
 zx_status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
