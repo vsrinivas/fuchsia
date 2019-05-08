@@ -7,18 +7,15 @@ use {
     cm_rust::{self, Capability, ExposeDecl, ExposeSource, OfferDecl, OfferSource},
     failure::format_err,
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
-    fuchsia_zircon as zx,
-    futures::lock::Mutex,
-    io_util,
+    fuchsia_zircon as zx, io_util,
     std::sync::Arc,
 };
 
 /// Describes the source of a capability, as determined by `find_capability_source`
-#[derive(Debug)]
 enum CapabilitySource {
     /// This capability originates from the component instance for the given Realm.
     /// point.
-    Component(Capability, Arc<Mutex<Realm>>),
+    Component(Capability, Arc<Realm>),
     /// This capability originates from component manager's namespace.
     ComponentMgrNamespace(Capability),
 }
@@ -111,10 +108,10 @@ async fn find_capability_source<'a>(
     };
     // Walk offer chain
     'offerloop: loop {
-        let current_realm_mutex = await!(model.look_up_realm(&s.moniker))?;
-        let current_realm = await!(current_realm_mutex.lock());
+        let current_realm = await!(model.look_up_realm(&s.moniker))?;
+        let realm_state = await!(current_realm.instance.state.lock());
         // This unwrap is safe because look_up_realm populates this field
-        let decl = current_realm.instance.decl.as_ref().expect("missing offer decl");
+        let decl = realm_state.decl.as_ref().expect("missing offer decl");
 
         if let Some(offer) = decl.find_offer_source(&s.capability, &s.name.unwrap().name()) {
             let source = match offer {
@@ -142,7 +139,7 @@ async fn find_capability_source<'a>(
                     // return our current location in the tree.
                     return Ok(CapabilitySource::Component(
                         offer.clone().into(),
-                        current_realm_mutex.clone(),
+                        current_realm.clone(),
                     ));
                 }
                 OfferSource::Child(child_name) => {
@@ -163,10 +160,10 @@ async fn find_capability_source<'a>(
     }
     // Walk expose chain
     loop {
-        let current_realm_mutex = await!(model.look_up_realm(&s.moniker))?;
-        let current_realm = await!(current_realm_mutex.lock());
+        let current_realm = await!(model.look_up_realm(&s.moniker))?;
+        let realm_state = await!(current_realm.instance.state.lock());
         // This unwrap is safe because look_up_realm populates this field
-        let decl = current_realm.instance.decl.as_ref().expect("missing expose decl");
+        let decl = realm_state.decl.as_ref().expect("missing expose decl");
 
         if let Some(expose) = decl.find_expose_source(&s.capability) {
             let source = match expose {
@@ -179,7 +176,7 @@ async fn find_capability_source<'a>(
                     // current location in the tree.
                     return Ok(CapabilitySource::Component(
                         expose.clone().into(),
-                        current_realm_mutex.clone(),
+                        current_realm.clone(),
                     ));
                 }
                 ExposeSource::Child(child_name) => {

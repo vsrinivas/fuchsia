@@ -8,16 +8,17 @@ use {
     crate::model::*,
     cm_rust::{self, ChildDecl, ComponentDecl},
     fidl_fuchsia_sys2 as fsys,
-    futures::lock::Mutex,
     std::{collections::HashSet, sync::Arc},
 };
 
-fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
-    realm.instance.child_realms.as_ref().unwrap().keys().map(|m| m.clone()).collect()
+async fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
+    await!(realm.instance.state.lock()).child_realms.as_ref().unwrap().keys().cloned().collect()
 }
 
-fn get_child_realm(realm: &Realm, child: &str) -> Arc<Mutex<Realm>> {
-    realm.instance.child_realms.as_ref().unwrap()[&ChildMoniker::new(child.to_string())].clone()
+async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> {
+    await!(realm.instance.state.lock()).child_realms.as_ref().unwrap()
+        [&ChildMoniker::new(child.to_string())]
+        .clone()
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -39,8 +40,7 @@ async fn bind_instance_root() {
     let actual_uris = await!(uris_run.lock());
     let expected_uris = vec!["test:///root_resolved".to_string()];
     assert_eq!(*actual_uris, expected_uris);
-    let root_realm = await!(model.root_realm.lock());
-    let actual_children = get_children(&root_realm);
+    let actual_children = await!(get_children(&model.root_realm));
     assert!(actual_children.is_empty());
 }
 
@@ -108,17 +108,17 @@ async fn bind_instance_child() {
     assert_eq!(*await!(uris_run.lock()), expected_uris);
 
     // Validate children. system is resolved, but not echo.
-    let actual_children = get_children(&*await!(model.root_realm.lock()));
+    let actual_children = await!(get_children(&*model.root_realm));
     let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
     expected_children.insert(ChildMoniker::new("system".to_string()));
     expected_children.insert(ChildMoniker::new("echo".to_string()));
     assert_eq!(actual_children, expected_children);
 
-    let system_realm = get_child_realm(&*await!(model.root_realm.lock()), "system");
-    let echo_realm = get_child_realm(&*await!(model.root_realm.lock()), "echo");
-    let actual_children = get_children(&*await!(system_realm.lock()));
+    let system_realm = await!(get_child_realm(&*model.root_realm, "system"));
+    let echo_realm = await!(get_child_realm(&*model.root_realm, "echo"));
+    let actual_children = await!(get_children(&*system_realm));
     assert!(actual_children.is_empty());
-    assert!(await!(echo_realm.lock()).instance.child_realms.is_none());
+    assert!(await!(echo_realm.instance.state.lock()).child_realms.is_none());
     // bind to echo
     assert!(await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["echo"]))).is_ok());
     let expected_uris =
@@ -126,8 +126,8 @@ async fn bind_instance_child() {
     assert_eq!(*await!(uris_run.lock()), expected_uris);
 
     // Validate children. Now echo is resolved.
-    let echo_realm = get_child_realm(&*await!(model.root_realm.lock()), "echo");
-    let actual_children = get_children(&*await!(echo_realm.lock()));
+    let echo_realm = await!(get_child_realm(&*model.root_realm, "echo"));
+    let actual_children = await!(get_children(&*echo_realm));
     assert!(actual_children.is_empty());
 }
 
@@ -394,24 +394,24 @@ async fn bind_instance_recursive_child() {
     assert_eq!(*await!(uris_run.lock()), expected_uris);
 
     // validate children
-    let actual_children = get_children(&*await!(model.root_realm.lock()));
+    let actual_children = await!(get_children(&*model.root_realm));
     let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
     expected_children.insert(ChildMoniker::new("system".to_string()));
     assert_eq!(actual_children, expected_children);
 
-    let system_realm = get_child_realm(&*await!(model.root_realm.lock()), "system");
+    let system_realm = await!(get_child_realm(&*model.root_realm, "system"));
 
-    let actual_children = get_children(&*await!(system_realm.lock()));
+    let actual_children = await!(get_children(&*system_realm));
     let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
     expected_children.insert(ChildMoniker::new("logger".to_string()));
     expected_children.insert(ChildMoniker::new("netstack".to_string()));
     assert_eq!(actual_children, expected_children);
 
-    let logger_realm = get_child_realm(&*await!(system_realm.lock()), "logger");
-    let actual_children = get_children(&*await!(logger_realm.lock()));
+    let logger_realm = await!(get_child_realm(&*system_realm, "logger"));
+    let actual_children = await!(get_children(&*logger_realm));
     assert!(actual_children.is_empty());
 
-    let netstack_realm = get_child_realm(&*await!(system_realm.lock()), "netstack");
-    let actual_children = get_children(&*await!(netstack_realm.lock()));
+    let netstack_realm = await!(get_child_realm(&*system_realm, "netstack"));
+    let actual_children = await!(get_children(&*netstack_realm));
     assert!(actual_children.is_empty());
 }
