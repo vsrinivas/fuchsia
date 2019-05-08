@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "lib/media/audio_dfx/audio_device_fx.h"
+#include "lib/media/audio_dfx/cpp/audio_device_fx.h"
 #include "src/media/audio/audio_core/mixer/fx_loader.h"
 
 namespace media::audio {

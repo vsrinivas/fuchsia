@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/media/audio/perceived_level.h"
+#include "lib/media/audio/cpp/perceived_level.h"
+
+#include <fuchsia/media/cpp/fidl.h>
 
 #include <algorithm>
 #include <cmath>
-
-#include <fuchsia/media/cpp/fidl.h>
 
 #include "src/lib/fxl/logging.h"
 

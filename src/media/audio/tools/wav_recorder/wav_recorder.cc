@@ -9,7 +9,7 @@
 #include <poll.h>
 #include <unistd.h>
 
-#include "lib/media/audio/types.h"
+#include "lib/media/audio/cpp/types.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 

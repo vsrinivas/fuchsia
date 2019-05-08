@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/media/audio_dfx/lib/dfx_delay.h"
+#include "sdk/lib/media/audio_dfx/cpp/lib/dfx_delay.h"
 
 #include <fbl/algorithm.h>
+
 #include <cmath>
 
+#include "sdk/lib/media/audio_dfx/cpp/audio_device_fx.h"
 #include "src/lib/fxl/logging.h"
-#include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 
 namespace media::audio_dfx_test {
 

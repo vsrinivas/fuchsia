@@ -29,11 +29,11 @@ executable("vu_meter_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/audio",
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/lib/media/audio/cpp",
     "//third_party/skia",
     "//topaz/examples/ui/lib:skia_view",
     "//zircon/public/lib/async-loop-cpp",

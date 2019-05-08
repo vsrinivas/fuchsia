@@ -793,8 +793,6 @@ group("log_listener") {
 group("media") {
   testonly = true
   public_deps = [
-    "//src/media/audio/audio_core/mixer:audio_mixer_tests",
-    "//src/media/audio/audio_core/test:audio_fidl_tests",
     "//garnet/bin/media/codecs/sw:mpsc_queue_tests",
     "//garnet/bin/media/codecs/test:raw_frames_test",
     "//garnet/bin/media/codecs/test:timestamp_extrapolator_tests",
@@ -802,8 +800,10 @@ group("media") {
     "//garnet/packages/prod:media_audio",
     "//garnet/packages/testing:run_test_component",
     "//garnet/packages/tests:virtual_audio",
-    "//garnet/public/lib/media/audio_dfx:audio_dfx_tests",
     "//garnet/public/lib/media/timeline:media_lib_timeline_tests",
+    "//sdk/lib/media/audio_dfx/cpp:audio_dfx_tests",
+    "//src/media/audio/audio_core/mixer:audio_mixer_tests",
+    "//src/media/audio/audio_core/test:audio_fidl_tests",
   ]
 }
 

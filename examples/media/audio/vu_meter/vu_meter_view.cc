@@ -9,7 +9,7 @@
 #include <iomanip>
 
 #include "lib/component/cpp/connect.h"
-#include "lib/media/audio/types.h"
+#include "lib/media/audio/cpp/types.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"

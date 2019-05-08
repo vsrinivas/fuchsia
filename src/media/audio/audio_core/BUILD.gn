@@ -6,10 +6,13 @@ import("//build/package.gni")
 
 action_foreach("generate_schemas") {
   visibility = [ ":*" ]
+  
   script = "//src/media/audio/audio_core/schema/make_schema_header.py"
+
   outputs = [
     "$target_gen_dir/schema/{{source_name_part}}.inl",
   ]
+
   args = [
     "{{source}}",
     rebase_path("$target_gen_dir") + "/schema/{{source_name_part}}.inl",
@@ -104,9 +107,9 @@ executable("audio_core_bin") {
   deps = [
     ":generate_schemas",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/media/audio",
     "//garnet/public/lib/media/timeline:no_converters",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/media/audio/cpp",
     "//sdk/lib/sys/cpp:cpp",
     "//src/lib/fxl",
     "//src/media/audio/audio_core/mixer:audio_mixer_lib",
@@ -134,6 +137,6 @@ group("tests") {
   data_deps = [
     "mixer:audio_mixer_tests",
     "test",
-    "//garnet/public/lib/media/audio_dfx:audio_dfx_tests"
+    "//sdk/lib/media/audio_dfx/cpp:audio_dfx_tests"
   ]
 }

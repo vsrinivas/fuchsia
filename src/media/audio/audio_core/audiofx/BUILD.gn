@@ -6,8 +6,8 @@ import("//build/test.gni")
 
 loadable_module("audiofx") {
   sources = [
-    "//garnet/public/lib/media/audio_dfx/audio_device_fx.h",
     "audiofx.cc",
+    "//sdk/lib/media/audio_dfx/cpp/audio_device_fx.h",
   ]
 
   deps = [
