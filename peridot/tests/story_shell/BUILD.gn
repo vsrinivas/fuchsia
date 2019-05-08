@@ -47,8 +47,10 @@ executable_package("story_shell_test_story_shell") {
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
-    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
   ]
 }

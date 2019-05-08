@@ -5,14 +5,17 @@
 // Implementation of the fuchsia::modular::StoryShell service that just lays out
 // the views of all modules side by side.
 
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
+
+#include <memory>
 
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
@@ -47,6 +50,18 @@ class TestApp
   // |fuchsia::modular::StoryShell|
   void AddSurface(fuchsia::modular::ViewConnection view_connection,
                   fuchsia::modular::SurfaceInfo surface_info) override {
+    AddSurface2(
+        fuchsia::modular::ViewConnection2{
+            .surface_id = view_connection.surface_id,
+            .view_holder_token = scenic::ToViewHolderToken(
+                zx::eventpair(view_connection.owner.TakeChannel().release())),
+        },
+        std::move(surface_info));
+  }
+
+  // |fuchsia::modular::StoryShell|
+  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
+                   fuchsia::modular::SurfaceInfo surface_info) override {
     FXL_LOG(INFO) << "surface_id=" << view_connection.surface_id
                   << ", anchor_id=" << surface_info.parent_id;
     if (view_connection.surface_id == "root:child:child" &&
