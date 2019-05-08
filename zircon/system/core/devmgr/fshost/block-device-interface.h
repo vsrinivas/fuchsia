@@ -17,6 +17,7 @@ namespace devmgr {
 constexpr char kFVMDriverPath[] = "/boot/driver/fvm.so";
 constexpr char kGPTDriverPath[] = "/boot/driver/gpt.so";
 constexpr char kMBRDriverPath[] = "/boot/driver/mbr.so";
+constexpr char kZxcryptDriverPath[] = "/boot/driver/zxcrypt.so";
 constexpr char kBootpartDriverPath[] = "/boot/driver/bootpart.so";
 
 // An abstract class representing the operations which may be performed
@@ -57,6 +58,13 @@ private:
 
     // Unseals the underlying zxcrypt volume.
     virtual zx_status_t UnsealZxcrypt() = 0;
+
+    // Creates the zxcrypt partition.
+    virtual zx_status_t FormatZxcrypt() = 0;
+
+    // Determines if the underlying volume is unsealed zxcrypt. Assumes the device
+    // has the data GUID.
+    virtual zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) = 0;
 
     // Returns true if the consistency of filesystems should be validated before
     // mounting.

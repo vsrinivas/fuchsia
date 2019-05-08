@@ -189,6 +189,38 @@ zx_status_t BlockDevice::UnsealZxcrypt() {
     return ZX_OK;
 }
 
+zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
+    zx_status_t call_status;
+    fbl::StringBuffer<PATH_MAX> path;
+    path.Resize(path.capacity());
+    size_t path_len;
+    fzl::UnownedFdioCaller disk_connection(fd_.get());
+    // Both the zxcrypt and minfs partitions have the same gpt guid, so here we
+    // determine which it actually is. We do this by looking up the topological
+    // path.
+    if (fuchsia_device_ControllerGetTopologicalPath(disk_connection.borrow_channel(), &call_status,
+                                                    path.data(), path.capacity(),
+                                                    &path_len) != ZX_OK) {
+        return ZX_ERR_NOT_FOUND;
+    }
+    if (call_status != ZX_OK) {
+        return call_status;
+    }
+    const fbl::StringPiece kZxcryptPath("/zxcrypt/unsealed/block");
+    if (path_len < kZxcryptPath.length()) {
+        *is_unsealed_zxcrypt = false;
+    } else {
+        *is_unsealed_zxcrypt = fbl::StringPiece(path.begin() + path_len -
+                                                kZxcryptPath.length())
+                                   .compare(kZxcryptPath) == 0;
+    }
+    return ZX_OK;
+}
+
+zx_status_t BlockDevice::FormatZxcrypt() {
+  return zxcrypt::FdioVolume::CreateWithDeviceKey(fd_.duplicate(), nullptr);
+}
+
 bool BlockDevice::ShouldCheckFilesystems() {
     return mounter_->ShouldCheckFilesystems();
 }
@@ -418,6 +450,31 @@ zx_status_t BlockDeviceInterface::Add() {
         return ZX_OK;
     }
     default:
+        // If the disk format is unknown but we know it should be the data
+        // partition, format the disk properly.
+        if (gpt_is_data_guid(guid.value, GPT_GUID_LEN)) {
+            printf("fshost: Data partition has unknown format\n");
+            bool is_unsealed_zxcrypt;
+            if (IsUnsealedZxcrypt(&is_unsealed_zxcrypt) != ZX_OK) {
+                return ZX_ERR_NOT_SUPPORTED;
+            }
+            if (is_unsealed_zxcrypt) {
+                printf("fshost: Formatting as minfs partition\n");
+                SetFormat(DISK_FORMAT_MINFS);
+                status = FormatFilesystem();
+                if (status != ZX_OK) {
+                  return status;
+                }
+            } else {
+                printf("fshost: Formatting as zxcrypt partition\n");
+                SetFormat(DISK_FORMAT_ZXCRYPT);
+                status = FormatZxcrypt();
+                if (status != ZX_OK) {
+                  return status;
+                }
+            }
+            return Add();
+        }
         return ZX_ERR_NOT_SUPPORTED;
     }
 }

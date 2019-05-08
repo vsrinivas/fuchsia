@@ -119,6 +119,7 @@ if (current_cpu != "") {
       "fs",
       "fs-bench",
       "fs-management",
+      "fs-recovery",
       "fs-test-utils",
       "fs-vnode",
       "futex-ownership",

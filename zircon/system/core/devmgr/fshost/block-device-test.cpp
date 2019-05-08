@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 
+#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/namespace.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/assert.h>
@@ -16,6 +17,8 @@
 
 namespace devmgr {
 namespace {
+
+using devmgr_integration_test::IsolatedDevmgr;
 
 class BlockDeviceHarness : public zxtest::Test {
 public:
@@ -36,6 +39,18 @@ public:
         ASSERT_OK(fdio_ns_get_installed(&ns));
         ASSERT_OK(fdio_ns_bind(ns, "/fs", client.release()));
         manager_->WatchExit();
+
+        devmgr_launcher::Args args;
+        args.disable_block_watcher = true;
+        args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
+        args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+        args.driver_search_paths.push_back("/boot/driver");
+        ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
+        fbl::unique_fd ctl;
+        ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl",
+                                                                zx::deadline_after(zx::sec(5)),
+                                                                &ctl),
+                  ZX_OK);
     }
 
     void TearDown() override {
@@ -48,9 +63,14 @@ public:
         return std::move(manager_);
     }
 
+    fbl::unique_fd devfs_root() {
+        return devmgr_.devfs_root().duplicate();
+    }
+
 private:
     zx::event event_;
     std::unique_ptr<FsManager> manager_;
+    IsolatedDevmgr devmgr_;
 };
 
 TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
@@ -89,9 +109,12 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
     constexpr uint64_t kBlockSize = 512;
     constexpr uint64_t kBlockCount = 1 << 20;
     ramdisk_client_t* ramdisk;
-    ASSERT_OK(ramdisk_create(kBlockSize, kBlockCount, &ramdisk));
-    ASSERT_OK(wait_for_device(ramdisk_get_path(ramdisk), zx::sec(5).get()));
-    fbl::unique_fd fd(open(ramdisk_get_path(ramdisk), O_RDWR));
+    ASSERT_OK(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk));
+    fbl::unique_fd fd;
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
+                                                            ramdisk_get_path(ramdisk),
+                                                            zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
     ASSERT_TRUE(fd);
 
     BlockDevice device(&mounter, std::move(fd));
@@ -127,9 +150,12 @@ TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
     constexpr uint64_t kBlockSize = 512;
     constexpr uint64_t kBlockCount = 1 << 20;
     ramdisk_client_t* ramdisk;
-    ASSERT_OK(ramdisk_create(kBlockSize, kBlockCount, &ramdisk));
-    ASSERT_OK(wait_for_device(ramdisk_get_path(ramdisk), zx::sec(5).get()));
-    fbl::unique_fd fd(open(ramdisk_get_path(ramdisk), O_RDWR));
+    ASSERT_OK(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk));
+    fbl::unique_fd fd;
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
+                                                            ramdisk_get_path(ramdisk),
+                                                            zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
     ASSERT_TRUE(fd);
 
     // We started with an empty block device, but let's lie and say it
@@ -158,10 +184,13 @@ TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
     constexpr uint64_t kBlockCount = 1 << 20;
     ramdisk_client_t* ramdisk;
     const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
-    ASSERT_OK(ramdisk_create_with_guid(kBlockSize, kBlockCount, data_guid, sizeof(data_guid),
-                                       &ramdisk));
-    ASSERT_OK(wait_for_device(ramdisk_get_path(ramdisk), zx::sec(5).get()));
-    fbl::unique_fd fd(open(ramdisk_get_path(ramdisk), O_RDWR));
+    ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount,
+                                          data_guid, sizeof(data_guid), &ramdisk));
+    fbl::unique_fd fd;
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
+                                                            ramdisk_get_path(ramdisk),
+                                                            zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
     ASSERT_TRUE(fd);
 
     BlockDevice device(&mounter, std::move(fd));
@@ -187,10 +216,15 @@ TEST_F(BlockDeviceHarness, TestMinfsReformat) {
     constexpr uint64_t kBlockCount = 1 << 20;
     ramdisk_client_t* ramdisk;
     const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
-    ASSERT_OK(ramdisk_create_with_guid(kBlockSize, kBlockCount, data_guid, sizeof(data_guid),
-                                       &ramdisk));
-    ASSERT_OK(wait_for_device(ramdisk_get_path(ramdisk), zx::sec(5).get()));
-    fbl::unique_fd fd(open(ramdisk_get_path(ramdisk), O_RDWR));
+    ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount,
+                                          data_guid,
+                                          sizeof(data_guid), &ramdisk));
+    fbl::unique_fd fd;
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
+                                                            ramdisk_get_path(ramdisk),
+                                                            zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
+
     ASSERT_TRUE(fd);
 
     BlockDevice device(&mounter, std::move(fd));
@@ -222,10 +256,13 @@ TEST_F(BlockDeviceHarness, TestBlobfs) {
     constexpr uint64_t kBlockCount = 1 << 20;
     ramdisk_client_t* ramdisk;
     const uint8_t data_guid[GPT_GUID_LEN] = GUID_BLOB_VALUE;
-    ASSERT_OK(ramdisk_create_with_guid(kBlockSize, kBlockCount, data_guid, sizeof(data_guid),
-                                       &ramdisk));
-    ASSERT_OK(wait_for_device(ramdisk_get_path(ramdisk), zx::sec(5).get()));
-    fbl::unique_fd fd(open(ramdisk_get_path(ramdisk), O_RDWR));
+    ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount, data_guid,
+                                          sizeof(data_guid), &ramdisk));
+    fbl::unique_fd fd;
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
+                                                            ramdisk_get_path(ramdisk),
+                                                            zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
     ASSERT_TRUE(fd);
 
     BlockDevice device(&mounter, std::move(fd));

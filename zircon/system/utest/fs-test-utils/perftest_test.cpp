@@ -20,7 +20,7 @@ namespace fs_test_utils {
 namespace {
 
 // File used to dump libs stdout. Allows verifying certain options.
-constexpr char kFakeStdout[] = "/data/fake_stdout.txt";
+constexpr char kFakeStdout[] = "/tmp/fake_stdout.txt";
 
 bool ResultSetIsValid() {
     BEGIN_TEST;

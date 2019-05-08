@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/resource.gni")
+
+generated_resource("zxcrypt_config.txt") {
+  testonly = true
+  contents = "null"
+  outputs = [
+    "config/zxcrypt",
+  ]
+}
+
+
+test("fs-recovery") {
+  sources = [
+    "recovery.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/ramdevice-client",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zx",
+    ":zxcrypt_config.txt",
+  ]
+}
+

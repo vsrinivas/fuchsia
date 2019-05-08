@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <zircon/assert.h>
+#include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
 #include <zxtest/zxtest.h>
 
@@ -32,6 +33,12 @@ public:
         ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
     }
     zx_status_t UnsealZxcrypt() override {
+        ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
+    }
+    zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) override {
+        ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
+    }
+    zx_status_t FormatZxcrypt() override {
         ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
     }
     bool ShouldCheckFilesystems() override {
@@ -259,6 +266,132 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDevice) {
     EXPECT_TRUE(device.checked);
     EXPECT_TRUE(device.formatted);
     EXPECT_TRUE(device.mounted);
+}
+
+// Tests adding minfs with a valid type GUID and invalid format. Observe that
+// the filesystem reformats itself.
+TEST(AddDeviceTestCase, AddUnknownFormatMinfsDevice) {
+    class MinfsDevice : public MockBlockDevice {
+    public:
+        disk_format_t GetFormat() final {
+            return format;
+        }
+        zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+            const uint8_t expected[GPT_GUID_LEN] = GUID_DATA_VALUE;
+            memcpy(out_guid->value, expected, sizeof(expected));
+            return ZX_OK;
+        }
+        zx_status_t FormatFilesystem() final {
+            formatted = true;
+            return ZX_OK;
+        }
+        zx_status_t CheckFilesystem() final {
+            return ZX_OK;
+        }
+        zx_status_t MountFilesystem() final {
+            EXPECT_TRUE(formatted);
+            mounted = true;
+            return ZX_OK;
+        }
+        zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final {
+            *is_unsealed_zxcrypt = true;
+            return ZX_OK;
+        }
+        void SetFormat(disk_format_t f) final {
+            format = f;
+        }
+
+        disk_format_t format = DISK_FORMAT_UNKNOWN;
+        bool formatted = false;
+        bool mounted = false;
+    };
+    MinfsDevice device;
+    EXPECT_FALSE(device.formatted);
+    EXPECT_FALSE(device.mounted);
+    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_TRUE(device.formatted);
+    EXPECT_TRUE(device.mounted);
+}
+
+// Tests adding zxcrypt with a valid type GUID and invalid format. Observe that
+// the partition reformats itself.
+TEST(AddDeviceTestCase, AddUnknownFormatZxcryptDevice) {
+    class ZxcryptDevice : public MockBlockDevice {
+    public:
+        disk_format_t GetFormat() final {
+            return format;
+        }
+        zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+            const uint8_t expected[GPT_GUID_LEN] = GUID_DATA_VALUE;
+            memcpy(out_guid->value, expected, sizeof(expected));
+            return ZX_OK;
+        }
+        zx_status_t FormatZxcrypt() final {
+            formatted_zxcrypt = true;
+            return ZX_OK;
+        }
+        zx_status_t FormatFilesystem() final {
+            formatted_filesystem = true;
+            return ZX_OK;
+        }
+        zx_status_t CheckFilesystem() final {
+            return ZX_OK;
+        }
+        zx_status_t UnsealZxcrypt() final {
+            return ZX_OK;
+        }
+        zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final {
+            *is_unsealed_zxcrypt = false;
+            return ZX_OK;
+        }
+        void SetFormat(disk_format_t f) final {
+            format = f;
+        }
+        zx_status_t AttachDriver(const fbl::StringPiece& driver) final {
+            EXPECT_STR_EQ(devmgr::kZxcryptDriverPath, driver.data());
+            return ZX_OK;
+        }
+
+        disk_format_t format = DISK_FORMAT_UNKNOWN;
+        bool formatted_zxcrypt = false;
+        bool formatted_filesystem = false;
+    };
+    ZxcryptDevice device;
+    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_TRUE(device.formatted_zxcrypt);
+    EXPECT_FALSE(device.formatted_filesystem);
+}
+
+// Tests adding a boot partition device with unknown format can be added with
+// the correct driver.
+TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
+    class BootPartDevice : public MockBlockDevice {
+    public:
+        disk_format_t GetFormat() final {
+            return DISK_FORMAT_UNKNOWN;
+        }
+        zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) override {
+            fuchsia_hardware_block_BlockInfo info = {};
+            info.flags = BLOCK_FLAG_BOOTPART;
+            info.block_size = 512;
+            info.block_count = 1024;
+            *out_info = info;
+            return ZX_OK;
+        }
+        zx_status_t AttachDriver(const fbl::StringPiece& driver) final {
+            EXPECT_STR_EQ(devmgr::kBootpartDriverPath, driver.data());
+            return ZX_OK;
+        }
+        zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final {
+            *is_unsealed_zxcrypt = false;
+            checked_unsealed_zxcrypt = true;
+            return ZX_OK;
+        }
+        bool checked_unsealed_zxcrypt = false;
+    };
+    BootPartDevice device;
+    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_FALSE(device.checked_unsealed_zxcrypt);
 }
 
 } // namespace
