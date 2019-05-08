@@ -9,7 +9,7 @@
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
-#include "lib/escher/flib/fence.h"
+#include "src/ui/lib/escher/flib/fence.h"
 
 namespace scenic_impl {
 namespace gfx {

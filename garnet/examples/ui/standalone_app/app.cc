@@ -19,7 +19,7 @@
 #include <src/lib/fxl/logging.h>
 #include <string>
 
-#include "lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 
 using namespace scenic;
 

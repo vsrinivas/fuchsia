@@ -5,12 +5,12 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_RENDERER_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_RENDERER_H_
 
-#include "lib/escher/renderer/renderer.h"
+#include "src/ui/lib/escher/renderer/renderer.h"
 
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
-#include "lib/escher/geometry/types.h"
-#include "lib/escher/impl/descriptor_set_pool.h"
-#include "lib/escher/vk/texture.h"
+#include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/impl/descriptor_set_pool.h"
+#include "src/ui/lib/escher/vk/texture.h"
 
 namespace shadertoy {
 

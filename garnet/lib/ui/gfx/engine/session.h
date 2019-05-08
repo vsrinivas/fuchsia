@@ -20,7 +20,7 @@
 #include "garnet/lib/ui/gfx/resources/resource_context.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
-#include "lib/escher/flib/fence_set_listener.h"
+#include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {

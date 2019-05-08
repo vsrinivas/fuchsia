@@ -10,8 +10,8 @@
 #include "garnet/lib/ui/gfx/engine/hit.h"
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
-#include "lib/escher/geometry/types.h"
-#include "lib/escher/scene/viewing_volume.h"
+#include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/scene/viewing_volume.h"
 
 namespace scenic_impl {
 namespace gfx {

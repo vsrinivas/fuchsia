@@ -4,9 +4,9 @@
 
 #include "garnet/lib/ui/gfx/gfx_system.h"
 
-#include <lib/escher/escher_process_init.h>
-#include <lib/escher/fs/hack_filesystem.h>
-#include <lib/escher/util/check_vulkan_support.h>
+#include "src/ui/lib/escher/escher_process_init.h"
+#include "src/ui/lib/escher/fs/hack_filesystem.h"
+#include "src/ui/lib/escher/util/check_vulkan_support.h"
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/vfs/cpp/pseudo_file.h>

@@ -6,7 +6,7 @@
 #define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_DEMO_SCENE_H_
 
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
-#include "lib/escher/escher.h"
+#include "src/ui/lib/escher/escher.h"
 
 class DemoScene : public Scene {
  public:

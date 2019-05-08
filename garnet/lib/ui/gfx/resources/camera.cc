@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/gfx/resources/camera.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
-#include "garnet/public/lib/escher/util/type_utils.h"
+#include "src/ui/lib/escher/util/type_utils.h"
 
 namespace scenic_impl {
 namespace gfx {

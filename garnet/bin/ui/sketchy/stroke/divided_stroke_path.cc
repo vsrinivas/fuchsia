@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/sketchy/stroke/divided_stroke_path.h"
 
-#include "lib/escher/util/trace_macros.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/lib/fxl/logging.h"
 
 namespace sketchy_service {

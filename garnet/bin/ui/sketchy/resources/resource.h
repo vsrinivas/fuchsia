@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_SKETCHY_RESOURCES_RESOURCE_H_
 
 #include "garnet/bin/ui/sketchy/resources/types.h"
-#include "lib/escher/base/typed_reffable.h"
+#include "src/ui/lib/escher/base/typed_reffable.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
 namespace sketchy_service {

@@ -9,12 +9,12 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "lib/escher/fs/hack_filesystem.h"
-#include "lib/escher/resources/resource_manager.h"
-#include "lib/escher/vk/vulkan_context.h"
-#include "lib/escher/vk/vulkan_device_queues.h"
-#include "lib/escher/vk/vulkan_instance.h"
-#include "lib/escher/vk/vulkan_swapchain.h"
+#include "src/ui/lib/escher/fs/hack_filesystem.h"
+#include "src/ui/lib/escher/resources/resource_manager.h"
+#include "src/ui/lib/escher/vk/vulkan_context.h"
+#include "src/ui/lib/escher/vk/vulkan_device_queues.h"
+#include "src/ui/lib/escher/vk/vulkan_instance.h"
+#include "src/ui/lib/escher/vk/vulkan_swapchain.h"
 
 class Demo;
 

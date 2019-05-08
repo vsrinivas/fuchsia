@@ -10,7 +10,7 @@
 #include <fuchsia/ui/sketchy/cpp/fidl.h>
 
 #include "garnet/bin/ui/sketchy/stroke/cubic_bezier.h"
-#include "garnet/public/lib/escher/geometry/bounding_box.h"
+#include "src/ui/lib/escher/geometry/bounding_box.h"
 #include "src/lib/fxl/macros.h"
 
 namespace sketchy_service {

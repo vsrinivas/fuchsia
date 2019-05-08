@@ -14,16 +14,16 @@ executable("standalone_app") {
   deps = [
     "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/escher",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/ui/lib/escher",
   ]
 
   include_dirs = [
-    "//garnet/public/lib/escher",
+    "//src/ui/lib/escher",
     "//lib",
   ]
 

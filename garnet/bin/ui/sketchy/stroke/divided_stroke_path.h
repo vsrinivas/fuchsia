@@ -7,7 +7,7 @@
 
 #include <vector>
 #include "garnet/bin/ui/sketchy/stroke/stroke_path.h"
-#include "lib/escher/geometry/bounding_box.h"
+#include "src/ui/lib/escher/geometry/bounding_box.h"
 
 namespace sketchy_service {
 

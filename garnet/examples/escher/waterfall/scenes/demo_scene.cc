@@ -4,16 +4,16 @@
 
 #include "garnet/examples/escher/waterfall/scenes/demo_scene.h"
 
-#include "lib/escher/geometry/tessellation.h"
-#include "lib/escher/geometry/transform.h"
-#include "lib/escher/geometry/types.h"
-#include "lib/escher/material/material.h"
-#include "lib/escher/scene/model.h"
-#include "lib/escher/scene/stage.h"
-#include "lib/escher/shape/modifier_wobble.h"
-#include "lib/escher/util/stopwatch.h"
-#include "lib/escher/vk/image.h"
-#include "lib/escher/vk/vulkan_context.h"
+#include "src/ui/lib/escher/geometry/tessellation.h"
+#include "src/ui/lib/escher/geometry/transform.h"
+#include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/material/material.h"
+#include "src/ui/lib/escher/scene/model.h"
+#include "src/ui/lib/escher/scene/stage.h"
+#include "src/ui/lib/escher/shape/modifier_wobble.h"
+#include "src/ui/lib/escher/util/stopwatch.h"
+#include "src/ui/lib/escher/vk/image.h"
+#include "src/ui/lib/escher/vk/vulkan_context.h"
 
 using escher::MeshAttribute;
 using escher::MeshSpec;

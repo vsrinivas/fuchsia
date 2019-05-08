@@ -11,13 +11,13 @@
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
-#include "lib/escher/escher.h"
-#include "lib/escher/flib/fence.h"
-#include "lib/escher/impl/naive_image.h"
-#include "lib/escher/util/bit_ops.h"
-#include "lib/escher/util/fuchsia_utils.h"
-#include "lib/escher/util/image_utils.h"
-#include "lib/escher/vk/gpu_mem.h"
+#include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/flib/fence.h"
+#include "src/ui/lib/escher/impl/naive_image.h"
+#include "src/ui/lib/escher/util/bit_ops.h"
+#include "src/ui/lib/escher/util/fuchsia_utils.h"
+#include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/vk/gpu_mem.h"
 
 namespace scenic_impl {
 namespace gfx {

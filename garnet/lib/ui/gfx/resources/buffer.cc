@@ -5,7 +5,7 @@
 #include "garnet/lib/ui/gfx/resources/buffer.h"
 
 #include "garnet/lib/ui/gfx/engine/session.h"
-#include "garnet/public/lib/escher/impl/naive_buffer.h"
+#include "src/ui/lib/escher/impl/naive_buffer.h"
 
 namespace scenic_impl {
 namespace gfx {

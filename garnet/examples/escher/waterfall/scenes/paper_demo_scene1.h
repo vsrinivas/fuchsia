@@ -5,9 +5,9 @@
 #ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_
 #define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_
 
-#include "lib/escher/escher.h"
-#include "lib/escher/paper/paper_shape_cache.h"
-#include "lib/escher/shape/rounded_rect_factory.h"
+#include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/paper/paper_shape_cache.h"
+#include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
 

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/sketchy/buffer/appendable_buffer.h"
 
-#include "lib/escher/impl/command_buffer.h"
+#include "src/ui/lib/escher/impl/command_buffer.h"
 
 namespace {
 

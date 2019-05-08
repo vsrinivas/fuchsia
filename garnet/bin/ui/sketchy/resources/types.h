@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_SKETCHY_RESOURCES_TYPES_H_
 
 #include <cstdint>
-#include "lib/escher/base/type_info.h"
+#include "src/ui/lib/escher/base/type_info.h"
 
 namespace sketchy_service {
 

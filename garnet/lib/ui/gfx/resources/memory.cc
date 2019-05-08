@@ -7,8 +7,8 @@
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/session.h"
-#include "garnet/public/lib/escher/impl/vulkan_utils.h"
-#include "garnet/public/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 
 namespace {
 

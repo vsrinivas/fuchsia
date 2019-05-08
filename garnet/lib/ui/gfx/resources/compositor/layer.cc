@@ -9,7 +9,7 @@
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
-#include "garnet/public/lib/escher/util/type_utils.h"
+#include "src/ui/lib/escher/util/type_utils.h"
 
 namespace scenic_impl {
 namespace gfx {

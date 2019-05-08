@@ -6,7 +6,7 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_SERIALIZER_H_
 
 #include "garnet/lib/ui/gfx/resources/snapshot/snapshot_generated.h"
-#include "lib/escher/vk/buffer.h"
+#include "src/ui/lib/escher/vk/buffer.h"
 
 namespace scenic_impl {
 namespace gfx {

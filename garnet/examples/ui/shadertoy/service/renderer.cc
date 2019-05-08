@@ -7,15 +7,15 @@
 #include <trace/event.h>
 
 #include "garnet/examples/ui/shadertoy/service/compiler.h"
-#include "lib/escher/geometry/tessellation.h"
-#include "lib/escher/impl/command_buffer.h"
-#include "lib/escher/impl/mesh_manager.h"
-#include "lib/escher/renderer/batch_gpu_uploader.h"
-#include "lib/escher/util/image_utils.h"
-#include "lib/escher/vk/framebuffer.h"
-#include "lib/escher/vk/image.h"
-#include "lib/escher/vk/image_factory.h"
-#include "lib/escher/vk/texture.h"
+#include "src/ui/lib/escher/geometry/tessellation.h"
+#include "src/ui/lib/escher/impl/command_buffer.h"
+#include "src/ui/lib/escher/impl/mesh_manager.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/vk/framebuffer.h"
+#include "src/ui/lib/escher/vk/image.h"
+#include "src/ui/lib/escher/vk/image_factory.h"
+#include "src/ui/lib/escher/vk/texture.h"
 
 namespace shadertoy {
 

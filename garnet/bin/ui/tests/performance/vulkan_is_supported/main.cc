@@ -4,7 +4,7 @@
 
 #include <cstdio>
 
-#include "garnet/public/lib/escher/util/check_vulkan_support.h"
+#include "src/ui/lib/escher/util/check_vulkan_support.h"
 
 int main(int argc, const char** argv) {
   printf("%c\n", escher::VulkanIsSupported() ? '1' : '0');

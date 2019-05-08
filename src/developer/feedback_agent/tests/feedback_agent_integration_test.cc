@@ -4,7 +4,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/component/cpp/environment_services_helper.h>
-#include <lib/escher/test/gtest_vulkan.h>
+#include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include <zircon/errors.h>
 
 #include <ostream>

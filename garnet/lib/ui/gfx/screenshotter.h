@@ -9,7 +9,7 @@
 #include <string>
 
 #include "garnet/lib/ui/gfx/engine/engine.h"
-#include "lib/escher/vk/image.h"
+#include "src/ui/lib/escher/vk/image.h"
 #include "src/lib/fxl/macros.h"
 
 namespace scenic_impl {

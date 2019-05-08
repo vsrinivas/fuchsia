@@ -12,12 +12,12 @@ executable("waterfall") {
   deps = [
     ":scenes",
     "//garnet/examples/escher/common",
-    "//garnet/public/lib/escher:vulkan",
+    "//src/ui/lib/escher:vulkan",
   ]
 
   include_dirs = [
     "//lib",
-    "//garnet/public/lib/escher",
+    "//src/ui/lib/escher",
     "//third_party/glm",
   ]
 

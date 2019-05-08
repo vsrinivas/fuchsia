@@ -6,7 +6,7 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_MATERIAL_H_
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
-#include "lib/escher/material/material.h"
+#include "src/ui/lib/escher/material/material.h"
 
 namespace escher {
 class BatchGpuUploader;

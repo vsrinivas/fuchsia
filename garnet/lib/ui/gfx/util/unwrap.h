@@ -6,9 +6,9 @@
 #define GARNET_LIB_UI_GFX_UTIL_UNWRAP_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-#include "lib/escher/geometry/bounding_box.h"
-#include "lib/escher/geometry/transform.h"
-#include "lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/geometry/bounding_box.h"
+#include "src/ui/lib/escher/geometry/transform.h"
+#include "src/ui/lib/escher/geometry/types.h"
 #include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {

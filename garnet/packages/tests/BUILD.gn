@@ -234,8 +234,8 @@ group("process") {
 group("escher") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/escher:escher_tests",
-    "//garnet/public/lib/escher/test:escher_unittests($host_toolchain)",
+    "//src/ui/lib/escher:escher_tests",
+    "//src/ui/lib/escher/test:escher_unittests($host_toolchain)",
   ]
 }
 

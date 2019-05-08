@@ -6,7 +6,7 @@
 #define GARNET_LIB_UI_SCENIC_TESTS_SCENIC_GFX_TEST_H_
 
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
-#include "garnet/public/lib/escher/impl/command_buffer_sequencer.h"
+#include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 
 namespace scenic_impl {
 namespace test {

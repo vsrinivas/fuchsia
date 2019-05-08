@@ -8,7 +8,7 @@
 #include <lib/zx/time.h>
 #include <vector>
 
-#include "lib/escher/base/reffable.h"
+#include "src/ui/lib/escher/base/reffable.h"
 
 namespace scenic_impl {
 namespace gfx {

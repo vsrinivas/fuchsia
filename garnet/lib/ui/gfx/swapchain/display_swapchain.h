@@ -13,10 +13,10 @@
 
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
-#include "lib/escher/flib/fence_listener.h"
-#include "lib/escher/resources/resource_manager.h"
-#include "lib/escher/resources/resource_recycler.h"
-#include "lib/escher/vk/vulkan_device_queues.h"
+#include "src/ui/lib/escher/flib/fence_listener.h"
+#include "src/ui/lib/escher/resources/resource_manager.h"
+#include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {

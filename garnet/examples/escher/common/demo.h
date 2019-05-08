@@ -6,10 +6,10 @@
 #define GARNET_EXAMPLES_ESCHER_COMMON_DEMO_H_
 
 #include "garnet/examples/escher/common/demo_harness.h"
-#include "lib/escher/escher.h"
-#include "lib/escher/util/tracer.h"
-#include "lib/escher/vk/vulkan_context.h"
-#include "lib/escher/vk/vulkan_swapchain_helper.h"
+#include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/util/tracer.h"
+#include "src/ui/lib/escher/vk/vulkan_context.h"
+#include "src/ui/lib/escher/vk/vulkan_swapchain_helper.h"
 
 // Base class for Escher demos.
 class Demo {

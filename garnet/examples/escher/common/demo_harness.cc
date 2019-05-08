@@ -5,10 +5,10 @@
 #include "garnet/examples/escher/common/demo_harness.h"
 
 #include "garnet/examples/escher/common/demo.h"
-#include "lib/escher/escher_process_init.h"
-#include "lib/escher/vk/gpu_mem.h"
-#include "lib/escher/vk/image.h"
-#include "lib/escher/vk/vulkan_instance.h"
+#include "src/ui/lib/escher/escher_process_init.h"
+#include "src/ui/lib/escher/vk/gpu_mem.h"
+#include "src/ui/lib/escher/vk/image.h"
+#include "src/ui/lib/escher/vk/vulkan_instance.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 

@@ -6,12 +6,12 @@
 #define GARNET_LIB_UI_GFX_ENGINE_ENGINE_H_
 
 #include <fbl/ref_ptr.h>
-#include <lib/escher/escher.h>
-#include <lib/escher/flib/release_fence_signaller.h>
-#include <lib/escher/renderer/batch_gpu_uploader.h>
-#include <lib/escher/resources/resource_recycler.h>
-#include <lib/escher/shape/rounded_rect_factory.h>
-#include <lib/escher/vk/image_factory.h>
+#include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/flib/release_fence_signaller.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/shape/rounded_rect_factory.h"
+#include "src/ui/lib/escher/vk/image_factory.h"
 #include <lib/fit/function.h>
 #include <lib/inspect/inspect.h>
 #include <lib/sys/cpp/component_context.h>

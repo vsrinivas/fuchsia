@@ -8,8 +8,8 @@
 #include "garnet/lib/ui/gfx/tests/session_handler_test.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
 #include "gtest/gtest.h"
-#include "lib/escher/flib/fence.h"
-#include "lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/flib/fence.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic_impl {

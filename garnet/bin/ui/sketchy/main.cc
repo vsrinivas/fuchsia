@@ -7,8 +7,8 @@
 
 #include "garnet/bin/ui/sketchy/app.h"
 #include "lib/component/cpp/startup_context.h"
-#include "lib/escher/escher.h"
-#include "lib/escher/escher_process_init.h"
+#include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/escher_process_init.h"
 
 int main(int argc, const char** argv) {
   escher::GlslangInitializeProcess();

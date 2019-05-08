@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_SKETCHY_STROKE_STROKE_TESSELLATOR_H_
 #define GARNET_BIN_UI_SKETCHY_STROKE_STROKE_TESSELLATOR_H_
 
-#include "garnet/public/lib/escher/impl/compute_shader.h"
+#include "src/ui/lib/escher/impl/compute_shader.h"
 
 namespace sketchy_service {
 

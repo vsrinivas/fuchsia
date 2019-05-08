@@ -10,7 +10,7 @@
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 #include "garnet/lib/ui/gfx/resources/snapshot/serializer.h"
 #include "garnet/lib/ui/scenic/scenic.h"
-#include "lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 
 namespace scenic_impl {
 namespace gfx {

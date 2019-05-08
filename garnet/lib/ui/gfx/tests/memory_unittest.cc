@@ -4,11 +4,11 @@
 
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/gfx/tests/vk_session_test.h"
-#include "garnet/public/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "gtest/gtest.h"
-#include "lib/escher/test/gtest_vulkan.h"
-#include "lib/escher/vk/vulkan_context.h"
-#include "lib/escher/vk/vulkan_device_queues.h"
+#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/vk/vulkan_context.h"
+#include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 using namespace escher;

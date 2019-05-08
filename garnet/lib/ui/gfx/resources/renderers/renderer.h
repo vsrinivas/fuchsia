@@ -8,7 +8,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
-#include "lib/escher/scene/object.h"
+#include "src/ui/lib/escher/scene/object.h"
 
 namespace escher {
 class BatchGpuUploader;

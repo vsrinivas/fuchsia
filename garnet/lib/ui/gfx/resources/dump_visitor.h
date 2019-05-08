@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_DUMP_VISITOR_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_DUMP_VISITOR_H_
 
-#include <lib/escher/vk/image.h>
+#include "src/ui/lib/escher/vk/image.h"
 
 #include <cstdint>
 #include <iosfwd>

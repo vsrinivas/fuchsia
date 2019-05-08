@@ -7,7 +7,7 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 
-#include "lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 
 // Contains utilities for converting from various formats to BGRA_8, which is
 // what is needed to render.

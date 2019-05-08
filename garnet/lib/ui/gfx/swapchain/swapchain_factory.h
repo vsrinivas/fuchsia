@@ -9,7 +9,7 @@
 
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/swapchain/display_swapchain.h"
-#include "lib/escher/escher.h"
+#include "src/ui/lib/escher/escher.h"
 
 namespace scenic_impl {
 namespace gfx {

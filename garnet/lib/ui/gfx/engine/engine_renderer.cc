@@ -17,13 +17,13 @@
 #include "garnet/lib/ui/gfx/resources/lights/point_light.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
-#include "lib/escher/hmd/pose_buffer_latching_shader.h"
-#include "lib/escher/impl/image_cache.h"
-#include "lib/escher/paper/paper_scene.h"
-#include "lib/escher/renderer/batch_gpu_uploader.h"
-#include "lib/escher/scene/model.h"
-#include "lib/escher/scene/stage.h"
-#include "lib/escher/vk/image.h"
+#include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
+#include "src/ui/lib/escher/impl/image_cache.h"
+#include "src/ui/lib/escher/paper/paper_scene.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/scene/model.h"
+#include "src/ui/lib/escher/scene/stage.h"
+#include "src/ui/lib/escher/vk/image.h"
 
 // TODO(SCN-1113): Move this someplace.  PoseBufferLatchingShader assumes this,
 // but we can't put it there because it lives in a Zircon-ignorant part of

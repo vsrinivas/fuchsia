@@ -15,8 +15,8 @@
 #include <vulkan/vulkan.hpp>
 
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
-#include "lib/escher/escher.h"
-#include "lib/escher/impl/model_data.h"
+#include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/impl/model_data.h"
 
 namespace shadertoy {
 

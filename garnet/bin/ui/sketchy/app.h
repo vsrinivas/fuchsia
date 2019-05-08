@@ -10,7 +10,7 @@
 
 #include "garnet/bin/ui/sketchy/canvas.h"
 #include "lib/component/cpp/startup_context.h"
-#include "lib/escher/escher.h"
+#include "src/ui/lib/escher/escher.h"
 #include "lib/fidl/cpp/binding_set.h"
 
 namespace sketchy_service {

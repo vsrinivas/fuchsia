@@ -5,7 +5,7 @@
 #include "garnet/lib/ui/gfx/resources/shapes/mesh_shape.h"
 
 #include "garnet/lib/ui/gfx/engine/session.h"
-#include "lib/escher/geometry/intersection.h"
+#include "src/ui/lib/escher/geometry/intersection.h"
 
 namespace scenic_impl {
 namespace gfx {

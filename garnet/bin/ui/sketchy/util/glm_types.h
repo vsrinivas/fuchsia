@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_UI_SKETCHY_UTIL_GLM_TYPES_H_
 #define GARNET_BIN_UI_SKETCHY_UTIL_GLM_TYPES_H_
 
-#include "lib/escher/forward_declarations.h"
+#include "src/ui/lib/escher/forward_declarations.h"
 
 // Safely include <glm/glm.hpp> despite Zircon countof() macro.
-#include "lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/geometry/types.h"
 
 namespace sketchy_service {
 

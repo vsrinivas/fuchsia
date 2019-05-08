@@ -9,7 +9,7 @@
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
-#include "lib/escher/renderer/semaphore.h"
+#include "src/ui/lib/escher/renderer/semaphore.h"
 
 namespace scenic_impl {
 namespace gfx {

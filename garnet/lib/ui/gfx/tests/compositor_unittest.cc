@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 #include "lib/ui/gfx/util/time.h"
 #include "lib/ui/scenic/cpp/commands.h"
-#include "public/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/test/gtest_vulkan.h"
 
 namespace scenic_impl {
 namespace gfx {

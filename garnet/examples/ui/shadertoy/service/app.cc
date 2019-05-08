@@ -5,8 +5,8 @@
 #include "garnet/examples/ui/shadertoy/service/app.h"
 
 #include "lib/component/cpp/startup_context.h"
-#include "lib/escher/vk/vulkan_device_queues.h"
-#include "lib/escher/vk/vulkan_instance.h"
+#include "src/ui/lib/escher/vk/vulkan_device_queues.h"
+#include "src/ui/lib/escher/vk/vulkan_instance.h"
 
 namespace shadertoy {
 

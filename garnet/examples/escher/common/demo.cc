@@ -8,11 +8,11 @@
 #include <chrono>
 #include <thread>
 
-#include "lib/escher/impl/command_buffer_pool.h"
-#include "lib/escher/impl/image_cache.h"
-#include "lib/escher/renderer/frame.h"
-#include "lib/escher/util/stopwatch.h"
-#include "lib/escher/util/trace_macros.h"
+#include "src/ui/lib/escher/impl/command_buffer_pool.h"
+#include "src/ui/lib/escher/impl/image_cache.h"
+#include "src/ui/lib/escher/renderer/frame.h"
+#include "src/ui/lib/escher/util/stopwatch.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/lib/fxl/logging.h"
 
 static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;

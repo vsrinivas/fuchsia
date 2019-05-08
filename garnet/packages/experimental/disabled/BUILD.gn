@@ -8,7 +8,7 @@
 group("examples_escher_linux") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/escher/build_linux:examples",
+    "//src/ui/lib/escher/build_linux:examples",
   ]
 }
 
@@ -23,7 +23,7 @@ group("test_amlogic_video") {
 group("tests_escher_linux") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/escher/build_linux:tests",
+    "//src/ui/lib/escher/build_linux:tests",
   ]
 }
 
@@ -60,8 +60,8 @@ group("zircon_rust") {
 group("dev_escher_linux") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/escher/build_linux:examples",
-    "//garnet/public/lib/escher/build_linux:tests",
+    "//src/ui/lib/escher/build_linux:examples",
+    "//src/ui/lib/escher/build_linux:tests",
   ]
 }
 

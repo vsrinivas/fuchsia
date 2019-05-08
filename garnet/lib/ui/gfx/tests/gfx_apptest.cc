@@ -7,7 +7,7 @@
 #include "garnet/lib/ui/gfx/gfx_system.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
 #include "gtest/gtest.h"
-#include "lib/escher/flib/release_fence_signaller.h"
+#include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic_impl {

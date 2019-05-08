@@ -9,7 +9,7 @@
 #include "garnet/lib/ui/gfx/resources/buffer.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 
-#include "lib/escher/shape/mesh.h"
+#include "src/ui/lib/escher/shape/mesh.h"
 
 namespace scenic_impl {
 namespace gfx {

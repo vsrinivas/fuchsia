@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_CONTEXT_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_CONTEXT_H_
 
-#include "lib/escher/escher.h"
-#include "lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/resources/resource_recycler.h"
 
 namespace scenic_impl {
 namespace gfx {

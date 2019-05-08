@@ -6,8 +6,8 @@
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/escher/geometry/types.h>
-#include <lib/escher/util/type_utils.h>
+#include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/util/type_utils.h"
 #include <lib/fidl/cpp/clone.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/geometry/cpp/formatting.h>

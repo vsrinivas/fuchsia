@@ -12,7 +12,7 @@
 #include <memory>
 
 #include "garnet/examples/escher/common/demo.h"
-#include "lib/escher/util/trace_macros.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 #include "lib/vfs/cpp/pseudo_dir.h"
 
 namespace {

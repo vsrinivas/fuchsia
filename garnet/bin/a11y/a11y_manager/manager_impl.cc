@@ -5,7 +5,7 @@
 #include "garnet/bin/a11y/a11y_manager/manager_impl.h"
 
 #include "garnet/lib/ui/gfx/util/unwrap.h"
-#include "lib/escher/util/type_utils.h"
+#include "src/ui/lib/escher/util/type_utils.h"
 
 namespace a11y_manager {
 using ::fuchsia::math::Point3F;

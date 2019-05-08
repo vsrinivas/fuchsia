@@ -9,7 +9,7 @@
 #include "garnet/bin/ui/sketchy/frame.h"
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
-#include "lib/escher/util/fuchsia_utils.h"
+#include "src/ui/lib/escher/util/fuchsia_utils.h"
 
 namespace sketchy_service {
 

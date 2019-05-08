@@ -4,8 +4,8 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
 
-#include "lib/escher/shape/mesh.h"
-#include "lib/escher/shape/rounded_rect_factory.h"
+#include "src/ui/lib/escher/shape/mesh.h"
+#include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 
 namespace scenic_impl {
 namespace gfx {

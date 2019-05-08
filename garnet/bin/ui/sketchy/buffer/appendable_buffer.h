@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_UI_SKETCHY_BUFFER_APPENDABLE_BUFFER_H_
 #define GARNET_BIN_UI_SKETCHY_BUFFER_APPENDABLE_BUFFER_H_
 
-#include "garnet/public/lib/escher/vk/buffer.h"
-#include "garnet/public/lib/escher/vk/buffer_factory.h"
+#include "src/ui/lib/escher/vk/buffer.h"
+#include "src/ui/lib/escher/vk/buffer_factory.h"
 
 namespace sketchy_service {
 

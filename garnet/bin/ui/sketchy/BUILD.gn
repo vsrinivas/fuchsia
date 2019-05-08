@@ -60,9 +60,9 @@ executable("bin") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/escher",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.ui.sketchy",
+    "//src/ui/lib/escher",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

@@ -4,9 +4,9 @@
 
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
 
-#include "lib/escher/paper/paper_scene.h"
-#include "lib/escher/scene/model.h"
-#include "lib/escher/scene/stage.h"
+#include "src/ui/lib/escher/paper/paper_scene.h"
+#include "src/ui/lib/escher/scene/model.h"
+#include "src/ui/lib/escher/scene/stage.h"
 
 Scene::Scene(Demo* demo) : demo_(demo) {}
 

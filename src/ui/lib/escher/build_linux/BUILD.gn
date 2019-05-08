@@ -1,0 +1,26 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Escher can be developed for a Linux target only on a Linux host.  Putting
+# the following targets in //garnet/public/lib/escher/BUILD.gn caused problems on OS X hosts,
+# so they were moved into a separate file.
+
+group("examples") {
+  deps = [
+    "//garnet/examples/escher/waterfall($host_toolchain)",
+  ]
+}
+
+# This is not called by the usual "build host tests" flow.  This is used by
+# //garnet/packages/experimental/tests_escher_linux in order to build only
+# for host, not for target.
+#
+# Do not mess with this unless that you verify that it does not break the
+# Escher-on-Linux developer workflow.  See ../README.md
+group("tests") {
+  testonly = true
+  deps = [
+    "//src/ui/lib/escher/test:escher_unittests($host_toolchain)",
+  ]
+}

@@ -7,7 +7,7 @@
 
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 
-#include "lib/escher/paper/paper_readme.h"
+#include "src/ui/lib/escher/paper/paper_readme.h"
 
 namespace scenic_impl {
 namespace gfx {

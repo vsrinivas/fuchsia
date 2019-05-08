@@ -15,9 +15,9 @@
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
 #include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/scenic/scenic.h"
-#include "lib/escher/impl/command_buffer.h"
-#include "lib/escher/impl/command_buffer_pool.h"
-#include "lib/escher/impl/image_cache.h"
+#include "src/ui/lib/escher/impl/command_buffer.h"
+#include "src/ui/lib/escher/impl/command_buffer_pool.h"
+#include "src/ui/lib/escher/impl/image_cache.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/vector.h"
 

@@ -21,11 +21,11 @@
 #include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
-#include "lib/escher/hmd/pose_buffer.h"
-#include "lib/escher/renderer/batch_gpu_uploader.h"
-#include "lib/escher/shape/mesh.h"
-#include "lib/escher/shape/rounded_rect_factory.h"
-#include "lib/escher/util/type_utils.h"
+#include "src/ui/lib/escher/hmd/pose_buffer.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/shape/mesh.h"
+#include "src/ui/lib/escher/shape/rounded_rect_factory.h"
+#include "src/ui/lib/escher/util/type_utils.h"
 
 namespace scenic_impl {
 namespace gfx {

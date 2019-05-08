@@ -5,9 +5,9 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_ENGINE_RENDERER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_ENGINE_RENDERER_H_
 
-#include "lib/escher/escher.h"
-#include "lib/escher/paper/paper_renderer.h"
-#include "lib/escher/paper/paper_renderer_config.h"
+#include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/paper/paper_renderer.h"
+#include "src/ui/lib/escher/paper/paper_renderer_config.h"
 
 namespace scenic_impl {
 namespace gfx {

@@ -8,8 +8,8 @@
 #include <set>
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer.h"
-#include "lib/escher/flib/fence_listener.h"
-#include "lib/escher/vk/buffer_factory.h"
+#include "src/ui/lib/escher/flib/fence_listener.h"
+#include "src/ui/lib/escher/vk/buffer_factory.h"
 #include "lib/ui/scenic/cpp/session.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

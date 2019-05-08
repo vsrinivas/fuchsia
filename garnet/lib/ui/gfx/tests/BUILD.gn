@@ -39,8 +39,6 @@ source_set("testing_deps") {
     "//garnet/lib/ui/scenic/tests:testing_deps",
     "//garnet/lib/ui/scenic/util",
     "//garnet/lib/ui/util:glm_workaround",
-    "//garnet/public/lib/escher",
-    "//garnet/public/lib/escher/test:gtest_escher",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/inspect",
@@ -50,6 +48,8 @@ source_set("testing_deps") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/ui/lib/escher",
+    "//src/ui/lib/escher/test:gtest_escher",
     "//zircon/public/lib/zx",
   ]
 }
@@ -105,7 +105,7 @@ executable("unittests") {
     "//garnet/lib/ui/gfx:object_linker",
     "//garnet/lib/ui/util:glm_workaround",
   ]
-  include_dirs = [ "//garnet/public/lib/escher" ]
+  include_dirs = [ "//src/ui/lib/escher" ]
 }
 
 executable("apptests") {
@@ -127,11 +127,10 @@ executable("pixeltests") {
   sources = [
     "scenic_pixel_test.cc",
   ]
-  include_dirs = [ "//garnet/public/lib/escher" ]
+  include_dirs = [ "//src/ui/lib/escher" ]
   deps = [
     ":testing_deps",
     "//garnet/lib/ui/util:glm_workaround",
-    "//garnet/public/lib/escher",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/testing/views",
@@ -143,6 +142,7 @@ executable("pixeltests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
+    "//src/ui/lib/escher",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-cpp",
   ]
@@ -155,7 +155,7 @@ executable("viewstate_apptests") {
   sources = [
     "gfx_viewstate_apptest.cc",
   ]
-  include_dirs = [ "//garnet/public/lib/escher" ]
+  include_dirs = [ "//src/ui/lib/escher" ]
   deps = [
     "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/gtest",

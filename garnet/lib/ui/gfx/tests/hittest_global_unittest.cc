@@ -24,7 +24,7 @@
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/util/print_event.h"
 #include "gtest/gtest.h"
-#include "lib/escher/forward_declarations.h"
+#include "src/ui/lib/escher/forward_declarations.h"
 #include "lib/fostr/fidl/fuchsia/ui/scenic/formatting.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"

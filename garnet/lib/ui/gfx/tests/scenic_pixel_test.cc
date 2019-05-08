@@ -16,7 +16,6 @@
 #include <glm/gtx/string_cast.hpp>
 #include <gtest/gtest.h>
 #include <lib/async/cpp/task.h>
-#include <lib/escher/hmd/pose_buffer.h>
 #include <lib/fsl/vmo/vector.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -28,13 +27,14 @@
 #include <string>
 #include <vector>
 
+#include "garnet/lib/ui/gfx/tests/vk_session_test.h"
 #include "garnet/testing/views/background_view.h"
 #include "garnet/testing/views/coordinate_test_view.h"
 #include "garnet/testing/views/opacity_view.h"
 #include "garnet/testing/views/test_view.h"
-#include "garnet/public/lib/escher/impl/vulkan_utils.h"
-#include "garnet/lib/ui/gfx/tests/vk_session_test.h"
-#include "public/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/hmd/pose_buffer.h"
+#include "src/ui/lib/escher/test/gtest_vulkan.h"
 
 namespace {
 

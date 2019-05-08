@@ -13,12 +13,12 @@ source_set("input") {
   deps = [
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
-    "//garnet/public/lib/escher",
     "//garnet/public/lib/inspect",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/input/cpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/ui/lib/escher",
     "//zircon/public/lib/trace",
   ]
 }

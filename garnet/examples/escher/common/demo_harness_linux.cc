@@ -10,7 +10,7 @@
 #include <GLFW/glfw3.h>
 
 #include "garnet/examples/escher/common/demo.h"
-#include "lib/escher/util/trace_macros.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/lib/fxl/logging.h"
 
 static DemoHarness* g_harness = nullptr;

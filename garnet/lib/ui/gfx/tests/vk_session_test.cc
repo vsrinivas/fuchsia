@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/gfx/tests/vk_session_test.h"
 
-#include "garnet/public/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 
 using namespace escher;
 

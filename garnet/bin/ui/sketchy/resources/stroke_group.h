@@ -10,7 +10,7 @@
 #include "garnet/bin/ui/sketchy/frame.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
-#include "lib/escher/geometry/bounding_box.h"
+#include "src/ui/lib/escher/geometry/bounding_box.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 

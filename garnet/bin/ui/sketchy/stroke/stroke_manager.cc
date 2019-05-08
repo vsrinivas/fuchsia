@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/sketchy/stroke/stroke_manager.h"
-#include "lib/escher/profiling/timestamp_profiler.h"
+#include "src/ui/lib/escher/profiling/timestamp_profiler.h"
 
 namespace sketchy_service {
 

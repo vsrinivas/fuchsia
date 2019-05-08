@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
-#include "lib/escher/escher.h"
+#include "src/ui/lib/escher/escher.h"
 
 namespace {
 

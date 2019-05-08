@@ -5,8 +5,8 @@
 #ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_SHADOW_TEST_SCENE_H_
 #define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_SHADOW_TEST_SCENE_H_
 
-#include "lib/escher/scene/model.h"
-#include "lib/escher/scene/viewing_volume.h"
+#include "src/ui/lib/escher/scene/model.h"
+#include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/lib/fxl/macros.h"
 
 class ShadowTestScene {

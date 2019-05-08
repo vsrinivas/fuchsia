@@ -7,13 +7,13 @@
 #include <trace/event.h>
 
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
-#include "lib/escher/flib/fence.h"
-#include "lib/escher/resources/resource_recycler.h"
-#include "lib/escher/util/fuchsia_utils.h"
-#include "lib/escher/vk/framebuffer.h"
-#include "lib/escher/vk/gpu_mem.h"
-#include "lib/escher/vk/image.h"
-#include "lib/escher/vk/image_factory.h"
+#include "src/ui/lib/escher/flib/fence.h"
+#include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/util/fuchsia_utils.h"
+#include "src/ui/lib/escher/vk/framebuffer.h"
+#include "src/ui/lib/escher/vk/gpu_mem.h"
+#include "src/ui/lib/escher/vk/image.h"
+#include "src/ui/lib/escher/vk/image_factory.h"
 
 namespace shadertoy {
 

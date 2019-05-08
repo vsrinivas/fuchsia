@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_H_
 #define GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_H_
 
-#include "garnet/public/lib/escher/impl/compute_shader.h"
-#include "lib/escher/resources/resource_recycler.h"
-#include "lib/escher/vk/buffer_factory.h"
+#include "src/ui/lib/escher/impl/compute_shader.h"
+#include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/vk/buffer_factory.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 

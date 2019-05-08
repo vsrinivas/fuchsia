@@ -6,8 +6,8 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
-#include "lib/escher/impl/naive_image.h"
-#include "lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/impl/naive_image.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 
 namespace scenic_impl {
 namespace gfx {

@@ -23,8 +23,8 @@
 #include "garnet/lib/ui/gfx/resources/dump_visitor.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
 #include "garnet/lib/ui/scenic/session.h"
-#include "lib/escher/renderer/batch_gpu_uploader.h"
-#include "lib/escher/util/fuchsia_utils.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/util/fuchsia_utils.h"
 
 namespace scenic_impl {
 namespace gfx {

@@ -6,10 +6,10 @@
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
 #include "garnet/bin/ui/sketchy/frame.h"
-#include "lib/escher/escher.h"
-#include "lib/escher/impl/command_buffer_pool.h"
-#include "lib/escher/util/fuchsia_utils.h"
-#include "lib/escher/vk/gpu_mem.h"
+#include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/impl/command_buffer_pool.h"
+#include "src/ui/lib/escher/util/fuchsia_utils.h"
+#include "src/ui/lib/escher/vk/gpu_mem.h"
 
 namespace {
 

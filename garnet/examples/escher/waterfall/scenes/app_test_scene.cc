@@ -4,9 +4,9 @@
 
 #include "garnet/examples/escher/waterfall/scenes/app_test_scene.h"
 
-#include "lib/escher/geometry/tessellation.h"
-#include "lib/escher/gl/gles2/bindings.h"
-#include "lib/escher/renderer.h"
+#include "src/ui/lib/escher/geometry/tessellation.h"
+#include "src/ui/lib/escher/gl/gles2/bindings.h"
+#include "src/ui/lib/escher/renderer.h"
 #include "src/lib/fxl/arraysize.h"
 
 using namespace escher;

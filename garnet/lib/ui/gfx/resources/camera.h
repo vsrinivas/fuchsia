@@ -9,8 +9,8 @@
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 
-#include "lib/escher/scene/camera.h"
-#include "lib/escher/scene/stage.h"
+#include "src/ui/lib/escher/scene/camera.h"
+#include "src/ui/lib/escher/scene/stage.h"
 
 namespace scenic_impl {
 namespace gfx {

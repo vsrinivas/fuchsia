@@ -11,8 +11,8 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
-#include "lib/escher/geometry/transform.h"
-#include "lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/geometry/transform.h"
+#include "src/ui/lib/escher/geometry/types.h"
 
 namespace scenic_impl {
 namespace gfx {

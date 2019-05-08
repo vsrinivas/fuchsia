@@ -4,10 +4,10 @@
 
 #include "garnet/bin/ui/sketchy/stroke/stroke_tessellator.h"
 
-#include "lib/escher/impl/command_buffer.h"
-#include "lib/escher/profiling/timestamp_profiler.h"
-#include "lib/escher/vk/buffer.h"
-#include "lib/escher/vk/texture.h"
+#include "src/ui/lib/escher/impl/command_buffer.h"
+#include "src/ui/lib/escher/profiling/timestamp_profiler.h"
+#include "src/ui/lib/escher/vk/buffer.h"
+#include "src/ui/lib/escher/vk/texture.h"
 
 namespace {
 

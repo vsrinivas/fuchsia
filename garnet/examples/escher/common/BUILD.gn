@@ -33,7 +33,7 @@ static_library("common") {
   if (is_linux) {
     deps += [
       ":demo_harness_linux",
-      "//garnet/public/lib/escher/shaders:linux_shader_data",
+      "//src/ui/lib/escher/shaders:linux_shader_data",
     ]
   }
 }
@@ -85,6 +85,6 @@ source_set("headers") {
     "demo_harness.h",
   ]
   public_deps = [
-    "//garnet/public/lib/escher",
+    "//src/ui/lib/escher",
   ]
 }

@@ -10,7 +10,7 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/scenic/scenic.h"
-#include "lib/escher/flib/release_fence_signaller.h"
+#include "src/ui/lib/escher/flib/release_fence_signaller.h"
 
 namespace scenic_impl {
 namespace gfx {

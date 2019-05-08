@@ -8,8 +8,8 @@
 #include "garnet/lib/ui/gfx/resources/image.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
-#include "lib/escher/util/image_utils.h"
-#include "lib/escher/vk/image.h"
+#include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/vk/image.h"
 
 namespace scenic_impl {
 namespace gfx {

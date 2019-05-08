@@ -12,7 +12,7 @@
 #include "garnet/lib/ui/gfx/resources/nodes/variable_binding.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/variable.h"
-#include "lib/escher/geometry/transform.h"
+#include "src/ui/lib/escher/geometry/transform.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace scenic_impl {

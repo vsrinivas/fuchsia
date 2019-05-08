@@ -7,8 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/planar_shape.h"
 
-#include "lib/escher/forward_declarations.h"
-#include "lib/escher/shape/rounded_rect.h"
+#include "src/ui/lib/escher/forward_declarations.h"
+#include "src/ui/lib/escher/shape/rounded_rect.h"
 
 namespace scenic_impl {
 namespace gfx {

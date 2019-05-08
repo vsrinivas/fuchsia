@@ -12,7 +12,7 @@
 
 #include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
 #include "lib/component/cpp/startup_context.h"
-#include "lib/escher/escher.h"
+#include "src/ui/lib/escher/escher.h"
 #include "lib/fidl/cpp/binding_set.h"
 
 #include "garnet/examples/ui/shadertoy/service/compiler.h"

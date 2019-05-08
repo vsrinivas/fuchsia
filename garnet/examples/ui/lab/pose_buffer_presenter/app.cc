@@ -7,7 +7,7 @@
 // This header is intentionally out of order because it contains a workaround
 // for both glm and zircon defining countof(), and must be included before
 // the glm headers to work.
-#include "lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/geometry/types.h"
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -22,8 +22,8 @@
 #include <iostream>
 
 #include "lib/component/cpp/connect.h"
-#include "lib/escher/hmd/pose_buffer.h"
-#include "lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/hmd/pose_buffer.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/host_memory.h"
 #include "lib/ui/scenic/cpp/util/mesh_utils.h"

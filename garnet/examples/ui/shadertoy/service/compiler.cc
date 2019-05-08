@@ -8,8 +8,8 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
-#include "lib/escher/impl/glsl_compiler.h"
-#include "lib/escher/impl/mesh_shader_binding.h"
+#include "src/ui/lib/escher/impl/glsl_compiler.h"
+#include "src/ui/lib/escher/impl/mesh_shader_binding.h"
 
 namespace {
 

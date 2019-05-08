@@ -40,7 +40,7 @@ source_set("gfx_always_optimized") {
   ]
   public_configs = [ ":common_include_dirs" ]
   public_deps = [
-    "//garnet/public/lib/escher",
+    "//src/ui/lib/escher",
   ]
   deps = [
     "//garnet/lib/ui/yuv",
@@ -201,9 +201,9 @@ source_set("gfx") {
   deps = [
     ":object_linker",
     "//garnet/lib/ui/scenic/util",
-    "//garnet/public/lib/escher/util:check_vulkan_support",
     "//garnet/public/lib/inspect",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//src/ui/lib/escher/util:check_vulkan_support",
     "//zircon/public/fidl/fuchsia-sysmem",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
@@ -244,7 +244,6 @@ source_set("display") {
 
     # TODO(SCN-1398): For displayOwned/NotOwnedSignal.
     "//sdk/fidl/fuchsia.ui.scenic",
-
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
@@ -268,13 +267,12 @@ source_set("frame_scheduler") {
   ]
   deps = [
     ":display",
-
-    # TODO(SCN-1398): FrameTimings inherits from escher::Reffable.
-    "//garnet/public/lib/escher",
-
     "//garnet/public/lib/inspect",
     "//sdk/fidl/fuchsia.images",
     "//src/lib/fxl",
+
+    # TODO(SCN-1398): FrameTimings inherits from escher::Reffable.
+    "//src/ui/lib/escher",
   ]
 }
 
@@ -287,10 +285,10 @@ source_set("util") {
     "util/wrap.h",
   ]
   deps = [
-    # TODO(SCN-1398): Needed by wrap/unwrap.  Move to separate source_set?
-    "//garnet/public/lib/escher",
-
     "//src/lib/fxl",
+
+    # TODO(SCN-1398): Needed by wrap/unwrap.  Move to separate source_set?
+    "//src/ui/lib/escher",
 
     # TODO(SCN-1398): Needed by EventTimestamper.  Move to separate source_set?
     "//zircon/public/fidl/fuchsia-scheduler",

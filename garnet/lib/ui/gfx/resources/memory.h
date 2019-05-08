@@ -10,7 +10,7 @@
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
-#include "lib/escher/vk/gpu_mem.h"
+#include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "lib/fsl/vmo/shared_vmo.h"
 
 namespace scenic_impl {

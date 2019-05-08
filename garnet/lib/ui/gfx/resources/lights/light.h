@@ -6,7 +6,7 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_LIGHTS_LIGHT_H_
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
-#include "lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/geometry/types.h"
 
 namespace scenic_impl {
 namespace gfx {

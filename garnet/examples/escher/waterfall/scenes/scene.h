@@ -6,8 +6,8 @@
 #define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_SCENE_H_
 
 #include "garnet/examples/escher/common/demo.h"
-#include "lib/escher/escher.h"
-#include "lib/escher/paper/paper_renderer.h"
+#include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/paper/paper_renderer.h"
 
 namespace escher {
 class Stopwatch;

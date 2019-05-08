@@ -12,7 +12,7 @@
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
-#include "lib/escher/util/epsilon_compare.h"
+#include "src/ui/lib/escher/util/epsilon_compare.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic_impl {

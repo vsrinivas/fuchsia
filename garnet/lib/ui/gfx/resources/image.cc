@@ -8,7 +8,7 @@
 #include "garnet/lib/ui/gfx/resources/gpu_image.h"
 #include "garnet/lib/ui/gfx/resources/host_image.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
-#include "lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 
 namespace scenic_impl {
 namespace gfx {

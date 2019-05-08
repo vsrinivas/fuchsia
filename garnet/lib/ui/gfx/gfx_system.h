@@ -11,7 +11,7 @@
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/scenic/system.h"
-#include "lib/escher/escher.h"
+#include "src/ui/lib/escher/escher.h"
 
 namespace scenic_impl {
 namespace gfx {
