@@ -72,7 +72,8 @@ discussion.
 
 ## How to handle third-party code
 
-See the [guidelines](README.fuchsia.md) on writing README.fuchsia files.
+See the [guidelines](third_party-metadata.md) on writing the metadata for
+third-party code in README.fuchsia files.
 
 ## Troubleshooting
 
