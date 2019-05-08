@@ -1,5 +1,8 @@
 {
     "program": {
+        "args": [
+            "elf_runner_test"
+        ],
         "binary": "bin/mock_pkg_resolver"
     },
     "sandbox": {

@@ -15,38 +15,39 @@ use {
     fuchsia_uri::pkg_uri::PkgUri,
     fuchsia_zircon::{HandleBased, Status},
     futures::{StreamExt, TryStreamExt},
-    lazy_static::lazy_static,
     std::ffi::CString,
     std::ptr,
 };
 
-lazy_static! {
-    pub static ref PACKAGES_TO_MOCK: Vec<&'static str> =
-        vec!["routing_integration_test", "elf_runner_test"];
-}
-
 fn main() -> Result<(), Error> {
+    // Ignore argv[0] which is the program binary. Everything else is what
+    // needs to be mocked.
+    let packages_to_mock: Vec<String> = std::env::args().skip(1).collect();
+
     fuchsia_syslog::init_with_tags(&["mock_pkg_resolver"]).expect("can't init logger");
     fx_log_info!("starting mock resolver");
     let mut executor = fasync::Executor::new().context("error creating executor")?;
     let mut fs = ServiceFs::new_local();
     fs.dir("public").add_fidl_service(move |stream| {
-        fasync::spawn_local(
-            async move {
-                await!(run_resolver_service(stream)).expect("failed to run echo service")
-            },
-        );
+        let packages_to_mock = packages_to_mock.clone();
+        fasync::spawn_local(async move {
+            await!(run_resolver_service(stream, packages_to_mock))
+                .expect("failed to run echo service")
+        });
     });
     fs.take_and_serve_directory_handle()?;
     executor.run_singlethreaded(fs.collect::<()>());
     Ok(())
 }
 
-async fn run_resolver_service(mut stream: fpkg::PackageResolverRequestStream) -> Result<(), Error> {
+async fn run_resolver_service(
+    mut stream: fpkg::PackageResolverRequestStream,
+    packages_to_mock: Vec<String>,
+) -> Result<(), Error> {
     fx_log_info!("running mock resolver service");
     while let Some(event) = await!(stream.try_next())? {
         let fpkg::PackageResolverRequest::Resolve { package_uri, dir, responder, .. } = event;
-        let status = await!(resolve(package_uri, dir));
+        let status = await!(resolve(package_uri, dir, packages_to_mock.clone()));
         responder.send(Status::from(status).into_raw())?;
         if let Err(s) = status {
             fx_log_err!("request failed: {}", s);
@@ -55,10 +56,14 @@ async fn run_resolver_service(mut stream: fpkg::PackageResolverRequestStream) ->
     Ok(())
 }
 
-async fn resolve(package_uri: String, dir: ServerEnd<DirectoryMarker>) -> Result<(), Status> {
+async fn resolve(
+    package_uri: String,
+    dir: ServerEnd<DirectoryMarker>,
+    packages_to_mock: Vec<String>,
+) -> Result<(), Status> {
     let uri = PkgUri::parse(&package_uri).map_err(|_| Err(Status::INVALID_ARGS))?;
     let name = uri.name().ok_or_else(|| Err(Status::INVALID_ARGS))?;
-    if !PACKAGES_TO_MOCK.contains(&name) {
+    if !packages_to_mock.contains(&name.to_string()) {
         return Err(Status::NOT_FOUND);
     }
     open_in_namespace("/pkg", dir)

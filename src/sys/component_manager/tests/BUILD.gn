@@ -47,8 +47,19 @@ deprecated_fuchsia_component("echo_realm") {
   manifest = rebase_path("meta/echo_realm.cml")
 }
 
-deprecated_fuchsia_component("mock_pkg_resolver") {
-  manifest = rebase_path("meta/mock_pkg_resolver.cmx")
+deprecated_fuchsia_component("mock_pkg_resolver_for_routing_integration_test") {
+  manifest =
+      rebase_path("meta/mock_pkg_resolver_for_routing_integration_test.cmx")
+  manifest_dest = "meta/mock_pkg_resolver.cmx"
+  deps = [
+    ":mock_pkg_resolver_bin",
+  ]
+  binary = "mock_pkg_resolver"
+}
+
+deprecated_fuchsia_component("mock_pkg_resolver_for_elf_runner_test") {
+  manifest = rebase_path("meta/mock_pkg_resolver_for_elf_runner_test.cmx")
+  manifest_dest = "meta/mock_pkg_resolver.cmx"
   deps = [
     ":mock_pkg_resolver_bin",
   ]
@@ -61,7 +72,7 @@ test_package("routing_integration_test") {
   ]
   components = [
     ":echo_realm",
-    ":mock_pkg_resolver",
+    ":mock_pkg_resolver_for_routing_integration_test",
     "//src/sys/component_manager:component_manager_as_v1_component",
     "//src/sys/examples/topology:echo_server",
     "//src/sys/examples/topology:echo_client",
@@ -97,7 +108,7 @@ test_package("elf_runner_test") {
   components = [
     "//garnet/examples/components/v2:echo_args_component",
     "//src/sys/component_manager:component_manager_as_v1_component",
-    ":mock_pkg_resolver",
+    ":mock_pkg_resolver_for_elf_runner_test",
   ]
   tests = [
     {
