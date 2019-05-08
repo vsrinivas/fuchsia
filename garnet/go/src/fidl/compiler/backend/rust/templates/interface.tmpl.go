@@ -269,7 +269,7 @@ impl futures::Stream for {{ $interface.Name }}EventStream {
 	}
 }
 
-#[derive(Debug)]
+{{ $interface.EventDerives }}
 pub enum {{ $interface.Name }}Event {
 	{{ range $method := $interface.Methods }}
 	{{ if not $method.HasRequest }}
@@ -436,6 +436,7 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 {{- range .DocComments}}
 ///{{ . }}
 {{- end}}
+{{ $interface.RequestDerives }}
 pub enum {{ $interface.Name }}Request {
 	{{- range $method := $interface.Methods }}
         {{- if $method.HasRequest }}
@@ -522,7 +523,7 @@ impl {{ $interface.Name }}Encoder {
 	{{- end -}}
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct {{ $interface.Name }}ControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
@@ -581,6 +582,7 @@ impl {{ $interface.Name }}ControlHandle {
 {{- range $method := $interface.Methods }}
 {{- if and $method.HasRequest $method.HasResponse }}
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct {{ $interface.Name }}{{ $method.CamelName }}Responder {
 	control_handle: ::std::mem::ManuallyDrop<{{ $interface.Name }}ControlHandle>,
 	tx_id: u32,

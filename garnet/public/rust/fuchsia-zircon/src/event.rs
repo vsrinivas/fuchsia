@@ -12,7 +12,7 @@ use fuchsia_zircon_sys as sys;
 /// [event object](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/event.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Event(Handle);
 impl_handle_based!(Event);

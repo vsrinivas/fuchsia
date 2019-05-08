@@ -488,6 +488,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 		})
 	}
 }
+#[derive(Debug)]
 pub enum WithAndWithoutRequestResponseRequest {
 	NoRequestNoResponse {
 		control_handle: WithAndWithoutRequestResponseControlHandle,},
@@ -660,7 +661,7 @@ impl WithAndWithoutRequestResponseEncoder {
 		Ok(())
 	}}
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct WithAndWithoutRequestResponseControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
@@ -723,6 +724,7 @@ impl WithAndWithoutRequestResponseControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
 	tx_id: u32,
@@ -799,6 +801,7 @@ impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct WithAndWithoutRequestResponseNoRequestWithResponseResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
 	tx_id: u32,
@@ -875,6 +878,7 @@ impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
 	tx_id: u32,
@@ -951,6 +955,7 @@ impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct WithAndWithoutRequestResponseWithRequestWithResponseResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
 	tx_id: u32,
@@ -1298,6 +1303,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 		})
 	}
 }
+#[derive(Debug)]
 pub enum WithErrorSyntaxRequest {
 	ErrorAsPrimitive {
 		responder: WithErrorSyntaxErrorAsPrimitiveResponder,},
@@ -1360,7 +1366,7 @@ impl WithErrorSyntaxEncoder {
 		Ok(())
 	}}
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct WithErrorSyntaxControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
@@ -1380,6 +1386,7 @@ impl WithErrorSyntaxControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct WithErrorSyntaxErrorAsPrimitiveResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
 	tx_id: u32,
@@ -1456,6 +1463,7 @@ impl WithErrorSyntaxErrorAsPrimitiveResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct WithErrorSyntaxErrorAsEnumResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
 	tx_id: u32,
@@ -1880,6 +1888,7 @@ impl futures::Stream for OvernetInternalProtocolRequestStream {
 		})
 	}
 }
+#[derive(Debug)]
 pub enum OvernetInternalProtocolRequest {
 	MethodA {
 		
@@ -1976,7 +1985,7 @@ impl OvernetInternalProtocolEncoder {
 		Ok(())
 	}}
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct OvernetInternalProtocolControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
@@ -2019,6 +2028,7 @@ impl OvernetInternalProtocolControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct OvernetInternalProtocolMethodBResponder {
 	control_handle: ::std::mem::ManuallyDrop<OvernetInternalProtocolControlHandle>,
 	tx_id: u32,
@@ -2095,6 +2105,7 @@ impl OvernetInternalProtocolMethodBResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct OvernetInternalProtocolMutateSocketResponder {
 	control_handle: ::std::mem::ManuallyDrop<OvernetInternalProtocolControlHandle>,
 	tx_id: u32,
@@ -2519,6 +2530,7 @@ impl futures::Stream for SocketControlProtocolRequestStream {
 		})
 	}
 }
+#[derive(Debug)]
 pub enum SocketControlProtocolRequest {
 	MethodA {
 		
@@ -2615,7 +2627,7 @@ impl SocketControlProtocolEncoder {
 		Ok(())
 	}}
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct SocketControlProtocolControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
@@ -2658,6 +2670,7 @@ impl SocketControlProtocolControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct SocketControlProtocolMethodBResponder {
 	control_handle: ::std::mem::ManuallyDrop<SocketControlProtocolControlHandle>,
 	tx_id: u32,
@@ -2734,6 +2747,7 @@ impl SocketControlProtocolMethodBResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct SocketControlProtocolMutateSocketResponder {
 	control_handle: ::std::mem::ManuallyDrop<SocketControlProtocolControlHandle>,
 	tx_id: u32,
@@ -3158,6 +3172,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 		})
 	}
 }
+#[derive(Debug)]
 pub enum ChannelProtocolRequest {
 	MethodA {
 		
@@ -3254,7 +3269,7 @@ impl ChannelProtocolEncoder {
 		Ok(())
 	}}
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ChannelProtocolControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
@@ -3297,6 +3312,7 @@ impl ChannelProtocolControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct ChannelProtocolMethodBResponder {
 	control_handle: ::std::mem::ManuallyDrop<ChannelProtocolControlHandle>,
 	tx_id: u32,
@@ -3373,6 +3389,7 @@ impl ChannelProtocolMethodBResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct ChannelProtocolMutateSocketResponder {
 	control_handle: ::std::mem::ManuallyDrop<ChannelProtocolControlHandle>,
 	tx_id: u32,
@@ -3797,6 +3814,7 @@ impl futures::Stream for KitchenSinkRequestStream {
 		})
 	}
 }
+#[derive(Debug)]
 pub enum KitchenSinkRequest {
 	MethodA {
 		
@@ -3893,7 +3911,7 @@ impl KitchenSinkEncoder {
 		Ok(())
 	}}
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct KitchenSinkControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
@@ -3936,6 +3954,7 @@ impl KitchenSinkControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct KitchenSinkMethodBResponder {
 	control_handle: ::std::mem::ManuallyDrop<KitchenSinkControlHandle>,
 	tx_id: u32,
@@ -4012,6 +4031,7 @@ impl KitchenSinkMethodBResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
 pub struct KitchenSinkMutateSocketResponder {
 	control_handle: ::std::mem::ManuallyDrop<KitchenSinkControlHandle>,
 	tx_id: u32,

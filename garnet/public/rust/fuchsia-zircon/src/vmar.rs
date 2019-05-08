@@ -14,7 +14,7 @@ use fuchsia_zircon_sys as sys;
 /// [virtual memory address region](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_address_region.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Vmar(Handle);
 impl_handle_based!(Vmar);

@@ -9,7 +9,7 @@ use crate::{AsHandleRef, HandleBased, Handle, HandleRef};
 /// An object representing a Zircon interrupt.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Interrupt(Handle);
 impl_handle_based!(Interrupt);

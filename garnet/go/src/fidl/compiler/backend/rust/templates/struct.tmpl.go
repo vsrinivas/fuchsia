@@ -9,12 +9,10 @@ const Struct = `
 
 {{- if .Members }}
 
-{{- if not .LargeArrays }}
-#[derive(Debug, PartialEq)]
-{{- end }}
 {{- range .DocComments}}
 ///{{ . }}
 {{- end}}
+{{ .Derives }}
 pub struct {{ .Name }} {
   {{- range .Members }}
   {{- range .DocComments}}

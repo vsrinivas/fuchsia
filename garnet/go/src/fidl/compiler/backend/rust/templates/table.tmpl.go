@@ -9,7 +9,7 @@ const Table = `
 {{- range .DocComments}}
 ///{{ . }}
 {{- end}}
-#[derive(Debug, PartialEq)]
+{{ .Derives }}
 pub struct {{ .Name }} {
   {{- range .Members }}
   {{- range .DocComments}}

@@ -41,22 +41,6 @@ impl FIDLClone for AccountSettings {
     }
 }
 
-impl FIDLClone for IntlSettings {
-    fn clone(&self) -> Self {
-        return IntlSettings {
-            locales: self.locales.clone(),
-            hour_cycle: self.hour_cycle,
-            temperature_unit: self.temperature_unit,
-        };
-    }
-}
-
-impl FIDLClone for ConnectedState {
-    fn clone(&self) -> ConnectedState {
-        return ConnectedState { reachability: self.reachability };
-    }
-}
-
 impl<T: FIDLClone> FIDLClone for Vec<T> {
     fn clone(&self) -> Self {
         return self.into_iter().map(FIDLClone::clone).collect();
@@ -72,47 +56,12 @@ impl<T: FIDLClone> FIDLClone for Option<Box<T>> {
     }
 }
 
-impl FIDLClone for TimeZoneInfo {
-    fn clone(&self) -> TimeZoneInfo {
-        return TimeZoneInfo { current: self.current.clone(), available: self.available.clone() };
-    }
-}
-
 impl FIDLClone for TimeZone {
     fn clone(&self) -> Self {
         return TimeZone {
             id: self.id.clone(),
             name: self.name.clone(),
             region: self.region.clone(),
-        };
-    }
-}
-
-impl FIDLClone for WirelessState {
-    fn clone(&self) -> Self {
-        return WirelessState { wireless_networks: self.wireless_networks.clone() };
-    }
-}
-
-impl FIDLClone for WirelessNetwork {
-    fn clone(&self) -> Self {
-        return WirelessNetwork {
-            internal_id: self.internal_id,
-            ssid: self.ssid.clone(),
-            wpa_auth: self.wpa_auth,
-            wpa_cipher: self.wpa_cipher,
-            access_points: self.access_points.clone(),
-        };
-    }
-}
-
-impl FIDLClone for WirelessAccessPoint {
-    fn clone(&self) -> Self {
-        return WirelessAccessPoint {
-            bssid: self.bssid.clone(),
-            frequency: self.frequency,
-            rssi: self.rssi,
-            status: self.status,
         };
     }
 }

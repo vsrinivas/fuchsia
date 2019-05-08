@@ -6,7 +6,6 @@ use fidl_fuchsia_inspect::{Metric, MetricValue, Object, Property, PropertyValue}
 
 pub trait ObjectUtil {
     fn new(name: String) -> Self;
-    fn clone(&self) -> Self;
 
     fn add_property(&mut self, prop: Property) -> Option<Property>;
     fn get_property(&self, key: &str) -> Option<&Property>;
@@ -23,42 +22,6 @@ impl ObjectUtil for Object {
     /// Creates a new Object with the given name and no properties or metrics.
     fn new(name: String) -> Object {
         Object { name, properties: None, metrics: None }
-    }
-
-    /// clone will create a copy of the given Object. This is necessary because
-    /// fidl-generated structs don't derive the Clone trait.
-    fn clone(&self) -> Object {
-        let name = self.name.clone();
-        let mut properties = None;
-        let mut metrics = None;
-        if let Some(ps) = &self.properties {
-            let mut pvec = Vec::new();
-            for p in ps {
-                pvec.push(Property {
-                    key: p.key.clone(),
-                    value: match &p.value {
-                        PropertyValue::Str(s) => PropertyValue::Str(s.clone()),
-                        PropertyValue::Bytes(b) => PropertyValue::Bytes(b.clone()),
-                    },
-                });
-            }
-            properties = Some(pvec);
-        }
-        if let Some(ms) = &self.metrics {
-            let mut mvec = Vec::new();
-            for m in ms {
-                mvec.push(Metric {
-                    key: m.key.clone(),
-                    value: match m.value {
-                        MetricValue::IntValue(n) => MetricValue::IntValue(n),
-                        MetricValue::UintValue(n) => MetricValue::UintValue(n),
-                        MetricValue::DoubleValue(n) => MetricValue::DoubleValue(n),
-                    },
-                });
-            }
-            metrics = Some(mvec);
-        }
-        Object { name, properties, metrics }
     }
 
     /// Adds the given property to the given Object. If a property with this key already exists, it is

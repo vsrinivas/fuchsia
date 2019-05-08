@@ -27,6 +27,7 @@ use fidl::{
 pub const C: i32 = 4;
 
 fidl_union! {
+  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
   name: Union,
   members: [
     Field {
@@ -38,10 +39,10 @@ fidl_union! {
   align: 4,
 }
 
-#[derive(Debug, PartialEq)]
 /// struct comment #1
 ///
 /// struct comment #3
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Struct {
   /// struct member comment #1
   ///
@@ -346,6 +347,7 @@ impl futures::Stream for InterfaceRequestStream {
 /// interface comment #1
 ///
 /// interface comment #3
+#[derive(Debug)]
 pub enum InterfaceRequest {
 	/// method comment #1
 	///
@@ -379,7 +381,7 @@ impl InterfaceEncoder {
 		Ok(())
 	}}
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct InterfaceControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }

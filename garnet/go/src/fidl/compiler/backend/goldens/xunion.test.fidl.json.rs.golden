@@ -22,6 +22,7 @@ use fidl::{
 
 
 fidl_xunion! {
+	#[derive(Debug, PartialEq)]
 	name: OlderSimpleUnion,
 	members: [
 		I {
@@ -36,6 +37,7 @@ fidl_xunion! {
 }
 
 fidl_xunion! {
+	#[derive(Debug, PartialEq)]
 	name: NewerSimpleUnion,
 	members: [
 		I {

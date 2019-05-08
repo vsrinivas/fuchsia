@@ -10,6 +10,7 @@ fidl_xunion! {
 	{{- range .DocComments}}
 	///{{ . }}
 	{{- end}}
+	{{ .Derives }}
 	name: {{ .Name }},
 	members: [
 	{{- range .Members }}

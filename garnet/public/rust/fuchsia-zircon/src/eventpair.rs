@@ -12,7 +12,7 @@ use fuchsia_zircon_sys as sys;
 /// [event pair](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/concepts.md#Other-IPC_Events_Event-Pairs_and-User-Signals).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct EventPair(Handle);
 impl_handle_based!(EventPair);

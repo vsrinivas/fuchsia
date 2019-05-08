@@ -26,6 +26,7 @@ use {
 };
 
 /// A type used from the innards of server implementations
+#[derive(Debug)]
 pub struct ServeInner {
     waker: AtomicWaker,
     shutdown: AtomicBool,

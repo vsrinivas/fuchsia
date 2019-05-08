@@ -14,7 +14,7 @@ use fuchsia_zircon_sys as sys;
 /// [port](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/port.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Port(Handle);
 impl_handle_based!(Port);

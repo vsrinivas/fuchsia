@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::object::{MetricValueUtil, ObjectUtil, PropertyValueUtil};
+use crate::object::ObjectUtil;
 use fidl_fuchsia_inspect::{Metric, MetricValue, Object, Property, PropertyValue};
 use std::collections::HashMap;
 

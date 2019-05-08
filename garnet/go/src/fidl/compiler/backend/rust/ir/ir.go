@@ -13,10 +13,12 @@ import (
 	"strings"
 )
 
+type EncodedCompoundIdentifier = types.EncodedCompoundIdentifier
+
 type Type struct {
-	Decl       string
-	DeclType   types.DeclType
-	LargeArray bool
+	Decl     string
+	DeclType types.DeclType
+	Derives  derives
 }
 
 type Bits struct {
@@ -56,6 +58,8 @@ type EnumMember struct {
 
 type XUnion struct {
 	types.Attributes
+	Derives derives
+	ECI     EncodedCompoundIdentifier
 	Name    string
 	Members []XUnionMember
 }
@@ -63,14 +67,19 @@ type XUnion struct {
 type XUnionMember struct {
 	types.Attributes
 	Type    string
+	OGType  types.Type
 	Name    string
 	Ordinal int
 }
 
 type Result struct {
 	types.Attributes
+	ECI       EncodedCompoundIdentifier
+	Derives   derives
 	Name      string
+	OkOGTypes []types.Type
 	Ok        []string
+	ErrOGType types.Type
 	Err       UnionMember
 	Size      int
 	Alignment int
@@ -78,6 +87,8 @@ type Result struct {
 
 type Union struct {
 	types.Attributes
+	ECI       EncodedCompoundIdentifier
+	Derives   derives
 	Name      string
 	Members   []UnionMember
 	Size      int
@@ -86,38 +97,44 @@ type Union struct {
 
 type UnionMember struct {
 	types.Attributes
-	Type   Type
-	Name   string
-	Offset int
+	Derives derives
+	OGType  types.Type
+	Type    Type
+	Name    string
+	Offset  int
 }
 
 type Struct struct {
 	types.Attributes
-	Name        string
-	Members     []StructMember
-	Size        int
-	Alignment   int
-	LargeArrays bool
+	ECI       EncodedCompoundIdentifier
+	Derives   derives
+	Name      string
+	Members   []StructMember
+	Size      int
+	Alignment int
 }
 
 type StructMember struct {
 	types.Attributes
+	OGType       types.Type
 	Type         string
 	Name         string
 	Offset       int
 	HasDefault   bool
 	DefaultValue string
-	LargeArray   bool
 }
 
 type Table struct {
 	types.Attributes
+	Derives derives
+	ECI     EncodedCompoundIdentifier
 	Name    string
 	Members []TableMember
 }
 
 type TableMember struct {
 	types.Attributes
+	OGType  types.Type
 	Type    string
 	Name    string
 	Ordinal int
@@ -125,9 +142,12 @@ type TableMember struct {
 
 type Interface struct {
 	types.Attributes
-	Name        string
-	Methods     []Method
-	ServiceName string
+	RequestDerives derives
+	EventDerives   derives
+	ECI            EncodedCompoundIdentifier
+	Name           string
+	Methods        []Method
+	ServiceName    string
 }
 
 type Method struct {
@@ -144,6 +164,7 @@ type Method struct {
 }
 
 type Parameter struct {
+	OGType       types.Type
 	Type         string
 	BorrowedType string
 	Name         string
@@ -161,6 +182,60 @@ type Root struct {
 	Results      []Result
 	Tables       []Table
 	Interfaces   []Interface
+}
+
+func (r *Root) findInterface(eci EncodedCompoundIdentifier) *Interface {
+	for i := range r.Interfaces {
+		if r.Interfaces[i].ECI == eci {
+			return &r.Interfaces[i]
+		}
+	}
+	return nil
+}
+
+func (r *Root) findStruct(eci EncodedCompoundIdentifier) *Struct {
+	for i := range r.Structs {
+		if r.Structs[i].ECI == eci {
+			return &r.Structs[i]
+		}
+	}
+	return nil
+}
+
+func (r *Root) findTable(eci EncodedCompoundIdentifier) *Table {
+	for i := range r.Tables {
+		if r.Tables[i].ECI == eci {
+			return &r.Tables[i]
+		}
+	}
+	return nil
+}
+
+func (r *Root) findUnion(eci EncodedCompoundIdentifier) *Union {
+	for i := range r.Unions {
+		if r.Unions[i].ECI == eci {
+			return &r.Unions[i]
+		}
+	}
+	return nil
+}
+
+func (r *Root) findResult(eci EncodedCompoundIdentifier) *Result {
+	for i := range r.Results {
+		if r.Results[i].ECI == eci {
+			return &r.Results[i]
+		}
+	}
+	return nil
+}
+
+func (r *Root) findXUnion(eci EncodedCompoundIdentifier) *XUnion {
+	for i := range r.XUnions {
+		if r.XUnions[i].ECI == eci {
+			return &r.XUnions[i]
+		}
+	}
+	return nil
 }
 
 var reservedWords = map[string]bool{
@@ -312,7 +387,7 @@ var handleSubtypes = map[types.HandleSubtype]string{
 }
 
 type compiler struct {
-	decls        *types.DeclMap
+	decls        types.DeclMap
 	library      types.LibraryIdentifier
 	externCrates map[string]bool
 }
@@ -399,7 +474,7 @@ func compileLiteral(val types.Literal, typ types.Type) string {
 	case types.DefaultLiteral:
 		return "::Default::default()"
 	default:
-		log.Fatal("Unknown literal kind: ", val.Kind)
+		log.Panic("Unknown literal kind: ", val.Kind)
 		return ""
 	}
 }
@@ -411,7 +486,7 @@ func (c *compiler) compileConstant(val types.Constant, typ types.Type) string {
 	case types.LiteralConstant:
 		return compileLiteral(val.Literal, typ)
 	default:
-		log.Fatal("Unknown constant kind: ", val.Kind)
+		log.Panic("Unknown constant kind: ", val.Kind)
 		return ""
 	}
 }
@@ -441,7 +516,7 @@ func compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	if t, ok := primitiveTypes[val]; ok {
 		return t
 	}
-	log.Fatal("Unknown primitive type: ", val)
+	log.Panic("Unknown primitive type: ", val)
 	return ""
 }
 
@@ -449,14 +524,13 @@ func compileHandleSubtype(val types.HandleSubtype) string {
 	if t, ok := handleSubtypes[val]; ok {
 		return t
 	}
-	log.Fatal("Unknown handle type: ", val)
+	log.Panic("Unknown handle type: ", val)
 	return ""
 }
 
 func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 	var r string
 	var declType types.DeclType
-	largeArray := false
 	switch val.Kind {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType, borrowed)
@@ -464,7 +538,6 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		if borrowed {
 			r = fmt.Sprintf("&mut %s", r)
 		}
-		largeArray = t.LargeArray || *val.ElementCount > 32
 	case types.VectorType:
 		t := c.compileType(*val.ElementType, borrowed)
 		var inner string
@@ -478,7 +551,6 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		} else {
 			r = inner
 		}
-		largeArray = t.LargeArray
 	case types.StringType:
 		if borrowed {
 			if val.Nullable {
@@ -510,9 +582,9 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
 		t := c.compileCamelCompoundIdentifier(val.Identifier)
-		declType, ok := (*c.decls)[val.Identifier]
+		declType, ok := c.decls[val.Identifier]
 		if !ok {
-			log.Fatal("unknown identifier: ", val.Identifier)
+			log.Panic("unknown identifier: ", val.Identifier)
 		}
 		switch declType {
 		case types.BitsDeclType:
@@ -562,16 +634,15 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 				r = fmt.Sprintf("Option<%s>", r)
 			}
 		default:
-			log.Fatal("Unknown declaration type in interface: ", declType)
+			log.Panic("Unknown declaration type in interface: ", declType)
 		}
 	default:
-		log.Fatal("Unknown type kind: ", val.Kind)
+		log.Panic("Unknown type kind: ", val.Kind)
 	}
 
 	return Type{
-		Decl:       r,
-		DeclType:   declType,
-		LargeArray: largeArray,
+		Decl:     r,
+		DeclType: declType,
 	}
 }
 
@@ -621,10 +692,11 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 	for _, v := range val {
 		p := Parameter{
-			c.compileType(v.Type, false).Decl,
-			c.compileType(v.Type, true).Decl,
-			compileSnakeIdentifier(v.Name),
-			v.Offset,
+			OGType:       v.Type,
+			Type:         c.compileType(v.Type, false).Decl,
+			BorrowedType: c.compileType(v.Type, true).Decl,
+			Name:         compileSnakeIdentifier(v.Name),
+			Offset:       v.Offset,
 		}
 		r = append(r, p)
 	}
@@ -634,10 +706,11 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		val.Attributes,
-		c.compileCamelCompoundIdentifier(val.Name),
-		[]Method{},
-		strings.Trim(val.GetServiceName(), "\""),
+		Attributes:  val.Attributes,
+		ECI:         val.Name,
+		Name:        c.compileCamelCompoundIdentifier(val.Name),
+		Methods:     []Method{},
+		ServiceName: strings.Trim(val.GetServiceName(), "\""),
 	}
 
 	for _, v := range val.Methods {
@@ -668,29 +741,28 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	return StructMember{
 		Attributes:   val.Attributes,
 		Type:         memberType.Decl,
+		OGType:       val.Type,
 		Name:         compileSnakeIdentifier(val.Name),
 		Offset:       val.Offset,
 		HasDefault:   false,
 		DefaultValue: "", // TODO(cramertj) support defaults
-		LargeArray:   memberType.LargeArray,
 	}
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
-		Attributes:  val.Attributes,
-		Name:        name,
-		Members:     []StructMember{},
-		Size:        val.Size,
-		Alignment:   val.Alignment,
-		LargeArrays: false,
+		Attributes: val.Attributes,
+		ECI:        val.Name,
+		Name:       name,
+		Members:    []StructMember{},
+		Size:       val.Size,
+		Alignment:  val.Alignment,
 	}
 
 	for _, v := range val.Members {
 		member := c.compileStructMember(v)
 		r.Members = append(r.Members, member)
-		r.LargeArrays = r.LargeArrays || member.LargeArray
 	}
 
 	return r
@@ -700,6 +772,7 @@ func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 	return XUnionMember{
 		Attributes: val.Attributes,
 		Type:       c.compileType(val.Type, false).Decl,
+		OGType:     val.Type,
 		Name:       compileCamelIdentifier(val.Name),
 		Ordinal:    val.Ordinal,
 	}
@@ -708,6 +781,7 @@ func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	r := XUnion{
 		Attributes: val.Attributes,
+		ECI:        val.Name,
 		Name:       c.compileCamelCompoundIdentifier(val.Name),
 		Members:    []XUnionMember{},
 	}
@@ -722,6 +796,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		Attributes: val.Attributes,
+		OGType:     val.Type,
 		Type:       c.compileType(val.Type, false),
 		Name:       compileCamelIdentifier(val.Name),
 		Offset:     val.Offset,
@@ -731,8 +806,11 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 func (c *compiler) compileResult(val types.Union, root Root) Result {
 	r := Result{
 		Attributes: val.Attributes,
+		ECI:        val.Name,
 		Name:       c.compileCamelCompoundIdentifier(val.Name),
+		OkOGTypes:  []types.Type{},
 		Ok:         []string{},
+		ErrOGType:  val.Members[1].Type,
 		Err:        c.compileUnionMember(val.Members[1]),
 		Size:       val.Size,
 		Alignment:  val.Alignment,
@@ -745,6 +823,7 @@ func (c *compiler) compileResult(val types.Union, root Root) Result {
 	for _, v := range root.Structs {
 		if v.Name == ci {
 			for _, m := range v.Members {
+				r.OkOGTypes = append(r.OkOGTypes, m.OGType)
 				r.Ok = append(r.Ok, m.Type)
 			}
 		}
@@ -756,6 +835,7 @@ func (c *compiler) compileResult(val types.Union, root Root) Result {
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
 		Attributes: val.Attributes,
+		ECI:        val.Name,
 		Name:       c.compileCamelCompoundIdentifier(val.Name),
 		Members:    []UnionMember{},
 		Size:       val.Size,
@@ -777,6 +857,7 @@ func (c *compiler) compileTable(table types.Table) Table {
 		}
 		members = append(members, TableMember{
 			Attributes: member.Attributes,
+			OGType:     member.Type,
 			Type:       c.compileType(member.Type, false).Decl,
 			Name:       compileSnakeIdentifier(member.Name),
 			Ordinal:    member.Ordinal,
@@ -784,15 +865,404 @@ func (c *compiler) compileTable(table types.Table) Table {
 	}
 	return Table{
 		Attributes: table.Attributes,
+		ECI:        table.Name,
 		Name:       c.compileCamelCompoundIdentifier(table.Name),
 		Members:    members,
 	}
 }
 
+type derives uint16
+
+// FIXME(cramertj) remove `Debug`, `Hash`, and `PartialEq` when impl'd for large arrays
+const (
+	derivesDebug derives = 1 << iota
+	derivesCopy
+	derivesClone
+	derivesEq
+	derivesPartialEq
+	derivesOrd
+	derivesPartialOrd
+	derivesHash
+	derivesAll derives = (1 << iota) - 1
+	// note: ensure any new flags don't outnumber the number of bits in `derives`
+)
+
+func newDerives(values ...derives) derives {
+	var v derives
+	for i := 0; i < len(values); i++ {
+		v |= values[i]
+	}
+	return v
+}
+
+func (v derives) and(others derives) derives {
+	return v & others
+}
+
+func (v derives) remove(others derives) derives {
+	return v & ^others
+}
+
+func (v derives) andUnknown() derives {
+	// FIXME(cramertj): properly, this should set everything to false
+	// since e.g. a new table member could be added containing a large
+	// array, which would be a breaking change due to the removal of the
+	// `Debug` impl. However, soon enough every type will implement
+	// `Debug`, `PartialEq`, and `Hash` due to the automatic impls for arrays.
+	// In any case, not having `Debug` for all types containing non-strict
+	// tables or xunions would be *extremely* annoying and a massively breaking
+	// change, so we leave them as `true` for now.
+	return v.and(newDerives(derivesDebug, derivesPartialEq))
+}
+
+func (v derives) String() string {
+	deriveToName := map[derives]string{
+		derivesDebug:      "Debug",
+		derivesCopy:       "Copy",
+		derivesClone:      "Clone",
+		derivesEq:         "Eq",
+		derivesPartialEq:  "PartialEq",
+		derivesOrd:        "Ord",
+		derivesPartialOrd: "PartialOrd",
+		derivesHash:       "Hash",
+	}
+	var parts []string
+	for bit := derives(1); bit&derivesAll != 0; bit <<= 1 {
+		if v.and(bit) != derives(0) {
+			parts = append(parts, deriveToName[bit])
+		}
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("#[derive(%s)]", strings.Join(parts, ", "))
+}
+
+// The status of derive calculation for a particular type.
+type deriveStatus struct {
+	// recursing indicates whether or not we've passed through this type already
+	// on a recursive descent. This is used to prevent unbounded recursion on
+	// mutually-recursive types.
+	recursing bool
+	// complete indicates whether or not the derive for the given type has
+	// already been successfully calculated and stored in the IR.
+	complete bool
+}
+
+// The state of the current calculation of derives.
+type derivesCompiler struct {
+	*compiler
+	topMostCall                bool
+	didShortCircuitOnRecursion bool
+	statuses                   map[EncodedCompoundIdentifier]deriveStatus
+	root                       *Root
+}
+
+// Calculates what traits should be derived for each output type,
+// filling in all `*derives` in the IR.
+func (c *compiler) fillDerives(ir *Root) {
+	dc := &derivesCompiler{
+		compiler:                   c,
+		topMostCall:                true,
+		didShortCircuitOnRecursion: false,
+		statuses:                   make(map[EncodedCompoundIdentifier]deriveStatus),
+		root:                       ir,
+	}
+
+	// Bits and enums always derive all traits
+	for _, v := range ir.Interfaces {
+		dc.fillDerivesForECI(v.ECI)
+	}
+	for _, v := range ir.Structs {
+		dc.fillDerivesForECI(v.ECI)
+	}
+	for _, v := range ir.XUnions {
+		dc.fillDerivesForECI(v.ECI)
+	}
+	for _, v := range ir.Results {
+		dc.fillDerivesForECI(v.ECI)
+	}
+	for _, v := range ir.Unions {
+		dc.fillDerivesForECI(v.ECI)
+	}
+	for _, v := range ir.Tables {
+		dc.fillDerivesForECI(v.ECI)
+	}
+}
+
+func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) derives {
+	if dc.inExternalLibrary(types.ParseCompoundIdentifier(eci)) {
+		// Return the set of derives that we assume external types have.
+		// If an externally referenced type fails to have all of these derives
+		// present, we may fail compilation. However, `Debug` and `PartialEq`
+		// are so enormously valuable and only missing on large arrays, so we
+		// assume that they are present.
+		//
+		// FIXME(cramertj): this is a dirty hack that shouldn't exist-- instead,
+		// we should check the list of derives that are actually present
+		// for the external type.
+		return newDerives(derivesDebug, derivesPartialEq)
+	}
+
+	topMostCall := dc.topMostCall
+	if dc.topMostCall {
+		dc.topMostCall = false
+	}
+
+	deriveStatus := dc.statuses[eci]
+
+	if deriveStatus.recursing {
+		// If we've already seen the current type while recursing,
+		// the algorithm has already explored all of the other fields contained
+		// within the cycle, so we can return true for all derives, and the
+		// correct results will be bubbled up.
+		dc.didShortCircuitOnRecursion = true
+		return derivesAll
+	}
+
+	deriveStatus.recursing = true
+	dc.statuses[eci] = deriveStatus
+
+	declType := dc.decls[eci]
+	var derivesOut derives
+typeSwitch:
+	switch declType {
+	case types.ConstDeclType:
+		fallthrough
+	case types.BitsDeclType:
+		fallthrough
+	case types.EnumDeclType:
+		// Enums and bits are always simple, non-float primitives which
+		// implement all derivable traits.
+		derivesOut = derivesAll
+	case types.InterfaceDeclType:
+		// Derives output for interfaces is only used when talking about ClientEnds,
+		// which are neither Copy nor Clone. Note: this does *not* refer to the
+		// derives used in either the `Request` or `Event` enums, which are the
+		// values filled in by this function.
+		derivesOut = derivesAll.remove(newDerives(derivesCopy, derivesClone))
+
+		// Check if the derives have already been calculated
+		if deriveStatus.complete {
+			break typeSwitch
+		}
+
+		iface := dc.root.findInterface(eci)
+		if iface == nil {
+			log.Panic("interface not found: ", eci)
+		}
+		// Requests and events are at *most* ever Debug.
+		// FIXME(cramertj): all of the interface logic here can
+		// be removed once all types (large arrays) are Debug,
+		// since that's all we care about for interfaces
+		requestDerives := derivesDebug
+		eventDerives := derivesDebug
+		for _, method := range iface.Methods {
+			if method.HasRequest {
+				// Request enum object-- consider all request data
+				for _, requestParam := range method.Request {
+					d := dc.fillDerivesForType(requestParam.OGType)
+					requestDerives = requestDerives.and(d)
+				}
+			} else {
+				// Event enum object-- consider all response data
+				for _, responseParam := range method.Response {
+					d := dc.fillDerivesForType(responseParam.OGType)
+					eventDerives = eventDerives.and(d)
+				}
+			}
+		}
+		iface.RequestDerives = requestDerives
+		iface.EventDerives = eventDerives
+	case types.StructDeclType:
+		st := dc.root.findStruct(eci)
+		if st == nil {
+			log.Panic("struct not found: ", eci)
+		}
+		// Check if the derives have already been calculated
+		if deriveStatus.complete {
+			derivesOut = st.Derives
+			break typeSwitch
+		}
+		derivesOut = derivesAll
+		for _, member := range st.Members {
+			derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
+		}
+		st.Derives = derivesOut
+	case types.TableDeclType:
+		table := dc.root.findTable(eci)
+		if table == nil {
+			log.Panic("table not found: ", eci)
+		}
+		// Check if the derives have already been calculated
+		if deriveStatus.complete {
+			derivesOut = table.Derives
+			break typeSwitch
+		}
+		derivesOut = derivesAll
+		for _, member := range table.Members {
+			derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
+		}
+		// FIXME(cramertj) this should only happen on non-`strict` tables.
+		// Non-strict tables aren't Copy because of storing extra bits and handles in vecs.
+		// When large arrays are no longer an issue and we stop tracking
+		// Debug and PartialEq, this should set all values to false for
+		// non-strict tables.
+		derivesOut = derivesOut.remove(derivesCopy).andUnknown()
+		table.Derives = derivesOut
+	case types.UnionDeclType:
+		union := dc.root.findUnion(eci)
+		var result *Result
+		if union == nil {
+			result = dc.root.findResult(eci)
+		}
+		if union == nil && result == nil {
+			log.Panic("union not found: ", eci)
+		}
+		if union != nil {
+			// It's a union, not a result
+			// Check if the derives have already been calculated
+			if deriveStatus.complete {
+				derivesOut = union.Derives
+				break typeSwitch
+			}
+			derivesOut = derivesAll
+			for _, member := range union.Members {
+				derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
+			}
+			union.Derives = derivesOut
+		} else {
+			// It's a Result, not a union
+			// Check if the derives have already been calculated
+			if deriveStatus.complete {
+				derivesOut = result.Derives
+				break typeSwitch
+			}
+			derivesOut = derivesAll
+			for _, oktype := range result.OkOGTypes {
+				derivesOut = derivesOut.and(dc.fillDerivesForType(oktype))
+			}
+			derivesOut = derivesOut.and(dc.fillDerivesForType(result.ErrOGType))
+			result.Derives = derivesOut
+		}
+	case types.XUnionDeclType:
+		xunion := dc.root.findXUnion(eci)
+		if xunion == nil {
+			log.Panic("xunion not found: ", eci)
+		}
+		// Check if the derives have already been calculated
+		if deriveStatus.complete {
+			derivesOut = xunion.Derives
+			break typeSwitch
+		}
+		derivesOut = derivesAll
+		for _, member := range xunion.Members {
+			derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
+		}
+		// FIXME(cramertj) this should only happen on non-`strict` xunions.
+		// Non-strict xunions can't be Copy because of storing extra bits and handles in vecs.
+		// When large arrays are no longer an issue and we stop tracking
+		// Debug and PartialEq, this should set all values to false for
+		// non-strict xunions.
+		derivesOut = derivesOut.remove(derivesCopy).andUnknown()
+		xunion.Derives = derivesOut
+	default:
+		log.Panic("Unknown declaration type filling derives: ", declType)
+	}
+	if topMostCall || !dc.didShortCircuitOnRecursion {
+		// Our completed result is only valid if it's either at top-level
+		// (ensuring we've fully visited all child types in the recursive
+		// substructure at least once) or if we performed no recursion-based
+		// short-circuiting, in which case results are correct and absolute.
+		//
+		// Note that non-topMostCalls are invalid if we did short-circuit
+		// on recursion, because we might have short-circuited just beneath
+		// a type without having explored all of its children at least once
+		// beneath it.
+		//
+		// For example, imagine A -> B -> C -> A.
+		// When we start on A, we go to B, then go to C, then go to A, at which
+		// point we short-circuit. The intermediate result for C is invalid
+		// for anything except the computation of A and B above, as it does
+		// not take into account that C contains A and B, only that it contains
+		// its top-level fields (other than A). In order to get a correct
+		// idea of the shape of C, we have to start with C, following through
+		// every branch until we find C again.
+		deriveStatus.complete = true
+	}
+	if topMostCall {
+		// Reset intermediate state
+		dc.topMostCall = true
+		dc.didShortCircuitOnRecursion = false
+	}
+	deriveStatus.recursing = false
+	dc.statuses[eci] = deriveStatus
+	return derivesOut
+}
+
+func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
+	switch ogType.Kind {
+	case types.ArrayType:
+		if *ogType.ElementCount > 32 {
+			// Turn off *all* derives for large arrays
+			// FIXME(cramertj) remove when array derives are expanded
+			return newDerives()
+		} else {
+			return dc.fillDerivesForType(*ogType.ElementType)
+		}
+	case types.VectorType:
+		return derivesAll.remove(derivesCopy).and(dc.fillDerivesForType(*ogType.ElementType))
+	case types.StringType:
+		return derivesAll.remove(derivesCopy)
+	case types.HandleType:
+		fallthrough
+	case types.RequestType:
+		return derivesAll.remove(newDerives(derivesCopy, derivesClone))
+	case types.PrimitiveType:
+		switch ogType.PrimitiveSubtype {
+		case types.Bool:
+			fallthrough
+		case types.Int8:
+			fallthrough
+		case types.Int16:
+			fallthrough
+		case types.Int32:
+			fallthrough
+		case types.Int64:
+			fallthrough
+		case types.Uint8:
+			fallthrough
+		case types.Uint16:
+			fallthrough
+		case types.Uint32:
+			fallthrough
+		case types.Uint64:
+			return derivesAll
+		case types.Float32:
+			fallthrough
+		case types.Float64:
+			// Floats don't have a total ordering due to NAN and its multiple representations.
+			return derivesAll.remove(newDerives(derivesEq, derivesOrd, derivesHash))
+		}
+	case types.IdentifierType:
+		internalTypeDerives := dc.fillDerivesForECI(ogType.Identifier)
+		if ogType.Nullable {
+			// Nullable identifier types are put in an Option<Box<...>> and so aren't Copy
+			return internalTypeDerives.remove(derivesCopy)
+		} else {
+			return internalTypeDerives
+		}
+	default:
+		log.Panic("Unknown type kind in fillDerivesForType: ", ogType.Kind)
+	}
+	log.Panic("unreachable")
+	return newDerives()
+}
+
 func Compile(r types.Root) Root {
 	root := Root{}
 	thisLibParsed := types.ParseLibraryName(r.Name)
-	c := compiler{&r.Decls, thisLibParsed, map[string]bool{}}
+	c := compiler{r.Decls, thisLibParsed, map[string]bool{}}
 
 	for _, v := range r.Bits {
 		root.Bits = append(root.Bits, c.compileBits(v))
@@ -831,12 +1301,14 @@ func Compile(r types.Root) Root {
 		root.Tables = append(root.Tables, c.compileTable(v))
 	}
 
+	c.fillDerives(&root)
+
 	thisLibCompiled := compileLibraryName(thisLibParsed)
 
 	// Sort the extern crates to make sure the generated file is
 	// consistent across builds.
 	var externCrates []string
-	for k, _ := range c.externCrates {
+	for k := range c.externCrates {
 		externCrates = append(externCrates, k)
 	}
 	sort.Strings(externCrates)

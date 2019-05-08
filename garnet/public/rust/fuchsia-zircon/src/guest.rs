@@ -13,7 +13,7 @@ pub struct GPAddr(pub usize);
 /// An object representing a Zircon guest
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Guest(Handle);
 impl_handle_based!(Guest);

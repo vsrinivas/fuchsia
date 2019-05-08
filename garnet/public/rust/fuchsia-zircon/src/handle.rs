@@ -30,7 +30,7 @@ pub struct Koid(sys::zx_koid_t);
 /// enforced in the type system; attempting to use them will result in errors
 /// returned by the kernel. These conversions don't change the underlying
 /// representation, but do change the type and thus what operations are available.
-#[derive(Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Handle(sys::zx_handle_t);
 

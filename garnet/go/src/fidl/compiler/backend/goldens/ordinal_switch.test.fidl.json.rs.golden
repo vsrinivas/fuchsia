@@ -322,6 +322,7 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 		})
 	}
 }
+#[derive(Debug)]
 pub enum SwitchingOrdinalsRequest {
 	OrdinalFive {
 		control_handle: SwitchingOrdinalsControlHandle,},
@@ -376,7 +377,7 @@ impl SwitchingOrdinalsEncoder {
 		Ok(())
 	}}
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct SwitchingOrdinalsControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }

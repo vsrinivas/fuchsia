@@ -109,7 +109,7 @@ where
 }
 
 /// The `Client` end of a FIDL connection.
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ClientEnd<T> {
     inner: zx::Channel,
     phantom: PhantomData<T>,
@@ -169,7 +169,7 @@ impl<T: ServiceMarker> ::std::fmt::Debug for ClientEnd<T> {
 impl<T> zx::HandleBased for ClientEnd<T> {}
 
 /// The `Server` end of a FIDL connection.
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ServerEnd<T> {
     inner: zx::Channel,
     phantom: PhantomData<T>,

@@ -10,3 +10,12 @@ xunion TestXUnion {
 protocol TestInterface {
   TestMethod(TestXUnion test_x_union) -> (TestXUnion test_x_union);
 };
+
+struct HasBigArray {
+  array<uint8>:256 big_arr;
+};
+
+union HasStructWithBigArray {
+  HasBigArray variant;
+  uint8 variant2;
+};

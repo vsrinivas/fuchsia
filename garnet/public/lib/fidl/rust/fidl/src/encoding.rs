@@ -1650,7 +1650,7 @@ macro_rules! fidl_struct {
 macro_rules! fidl_empty_struct {
     ($(#[$attrs:meta])* $name:ident) => {
         $(#[$attrs])*
-        #[derive(Debug, Copy, Clone, PartialEq)]
+        #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
         pub struct $name;
 
         impl $crate::encoding::Encodable for $name {
@@ -1996,6 +1996,7 @@ where
 #[macro_export]
 macro_rules! fidl_union {
     (
+        $(#[$attrs:meta])*
         name: $name:ident,
         members: [$(
             $member_name:ident {
@@ -2006,7 +2007,7 @@ macro_rules! fidl_union {
         size: $size:expr,
         align: $align:expr,
     ) => {
-        #[derive(Debug, PartialEq)]
+        $( #[$attrs] )*
         pub enum $name {
             $(
                 $member_name ( $member_ty ),
@@ -2133,7 +2134,6 @@ macro_rules! fidl_xunion {
         )*],
     ) => {
         $( #[$attrs] )*
-        #[derive(Debug, PartialEq)]
         pub enum $name {
             $(
                 $(#[$member_docs])*
@@ -2686,6 +2686,7 @@ mod test {
     #[test]
     fn result_and_union_compat() {
         fidl_union! {
+            #[derive(Debug, Copy, Clone, Eq, PartialEq)]
             name: OkayOrError,
             members: [
                 Okay {
@@ -2717,6 +2718,7 @@ mod test {
     #[test]
     fn result_and_union_compat_smaller() {
         fidl_union! {
+            #[derive(Debug, Copy, Clone, Eq, PartialEq)]
             name: OkayOrError,
             members: [
                 Okay {
@@ -2775,6 +2777,7 @@ mod test {
     #[test]
     fn encode_decode_union() {
         fidl_union! {
+            #[derive(Debug, Clone, Eq, PartialEq)]
             name: NumOrStr,
             members: [
                 Num {
@@ -3193,6 +3196,7 @@ mod test {
     }
 
     fidl_union! {
+        #[derive(Debug, PartialEq)]
         name: SimpleUnion,
         members: [
             I32 {
@@ -3221,6 +3225,7 @@ mod test {
     }
 
     fidl_xunion! {
+        #[derive(Debug, PartialEq)]
         name: TestSampleXUnion,
         members: [
             U {
@@ -3239,6 +3244,7 @@ mod test {
     }
 
     fidl_xunion! {
+        #[derive(Debug, PartialEq)]
         name: TestSampleXUnionExpanded,
         members: [
             SomethinElse {
@@ -3359,6 +3365,7 @@ mod test {
     #[test]
     fn xunion_with_out_of_line_data() {
         fidl_xunion! {
+            #[derive(Debug, PartialEq)]
             name: XUnion,
             members: [
                 Variant {

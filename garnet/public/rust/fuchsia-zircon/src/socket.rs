@@ -16,7 +16,7 @@ use fuchsia_zircon_sys as sys;
 /// [socket](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/concepts.md#Message-Passing_Sockets-and-Channels).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Socket(Handle);
 impl_handle_based!(Socket);

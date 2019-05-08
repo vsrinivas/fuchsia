@@ -7,6 +7,7 @@ package templates
 const Union = `
 {{- define "UnionDeclaration" }}
 fidl_union! {
+  {{ .Derives }}
   name: {{ .Name }},
   members: [
   {{- range .Members }}

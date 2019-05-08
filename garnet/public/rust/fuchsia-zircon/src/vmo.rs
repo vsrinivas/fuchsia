@@ -14,7 +14,7 @@ use std::ptr;
 /// [virtual memory object](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_object.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Vmo(Handle);
 impl_handle_based!(Vmo);

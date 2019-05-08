@@ -22,6 +22,7 @@ use fidl::{
 
 
 fidl_union! {
+  #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
   name: Union,
   members: [
     Primitive {

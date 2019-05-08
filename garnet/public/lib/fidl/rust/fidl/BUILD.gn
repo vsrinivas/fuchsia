@@ -27,7 +27,7 @@ rustc_library("fidl") {
 # not actually used-- just to ensure successful compilation
 fidl("fidl.rust.test.compilation") {
   sources = [
-    "test_compilation.fidl",
+    "compilation.test.fidl",
   ]
 }
 

@@ -278,7 +278,7 @@ pub fn ticks_per_second() -> u64 {
 /// [zx_timer_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/timer_create.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Timer(Handle);
 impl_handle_based!(Timer);
