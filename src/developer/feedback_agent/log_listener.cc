@@ -74,6 +74,8 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
     done_->completer.complete_error();
     Reset();
   });
+  // Resets |log_many_called_| for the new call to DumpLogs().
+  log_many_called_ = false;
   logger->DumpLogs(std::move(log_listener_h), /*options=*/nullptr);
 
   // fit::promise does not have the notion of a timeout. So we post a delayed
@@ -102,6 +104,8 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
 }
 
 void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages) {
+  log_many_called_ = true;
+
   if (messages.empty()) {
     FX_LOGS(WARNING) << "LogMany() was called with no messages";
     return;
@@ -141,6 +145,10 @@ void LogListener::Log(fuchsia::logger::LogMessage message) {
 }
 
 void LogListener::Done() {
+  if (!log_many_called_) {
+    FX_LOGS(WARNING) << "Done() was called before any calls to LogMany()";
+  }
+
   if (logs_.empty()) {
     FX_LOGS(WARNING)
         << "Done() was called, but no logs have been collected yet";

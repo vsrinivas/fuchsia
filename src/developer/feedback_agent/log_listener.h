@@ -50,6 +50,10 @@ class LogListener : public fuchsia::logger::LogListener {
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   fidl::Binding<fuchsia::logger::LogListener> binding_;
 
+  // Wether LogMany() was called since the last call to CollectLogs().
+  // This is to help debug FLK-179.
+  bool log_many_called_ = false;
+
   std::string logs_;
 
   // We use a shared_ptr to share the bridge between this and the async loop on

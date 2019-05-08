@@ -59,6 +59,14 @@ void StubLoggerUnbindsAfterOneMessage::DumpLogs(
   log_listener_ptr.Unbind();
 }
 
+void StubLoggerNeverCallsLogManyBeforeDone::DumpLogs(
+    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+  fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
+  FXL_CHECK(log_listener_ptr.is_bound());
+  log_listener_ptr->Done();
+}
+
 void StubLoggerSleepsAfterOneMessage::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {

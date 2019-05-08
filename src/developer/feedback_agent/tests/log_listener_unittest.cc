@@ -207,6 +207,14 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
   ASSERT_TRUE(result.is_error());
 }
 
+TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
+  ResetStubLogger(std::make_unique<StubLoggerNeverCallsLogManyBeforeDone>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+
+  ASSERT_TRUE(result.is_error());
+}
+
 }  // namespace
 }  // namespace feedback
 

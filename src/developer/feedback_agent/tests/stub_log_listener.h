@@ -71,6 +71,13 @@ class StubLoggerUnbindsAfterOneMessage : public StubLogger {
       std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
+class StubLoggerNeverCallsLogManyBeforeDone : public StubLogger {
+ public:
+  void DumpLogs(
+      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+};
+
 class StubLoggerSleepsAfterOneMessage : public StubLogger {
  public:
   StubLoggerSleepsAfterOneMessage(zx::duration sleep) : sleep_(sleep) {}
