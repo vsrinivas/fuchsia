@@ -134,14 +134,17 @@ zx_status_t MtkPower::PowerImplGetPowerDomainStatus(uint32_t index,
     if (index >= kMt8167NumPowerDomains) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    std::optional<MtkRegulator>& domain = power_domains_[index];
-    *out_status = domain->enabled() ? POWER_DOMAIN_STATUS_ENABLED : POWER_DOMAIN_STATUS_DISABLED;
+    *out_status = power_domains_[index]->enabled() ? POWER_DOMAIN_STATUS_ENABLED :
+                                                     POWER_DOMAIN_STATUS_DISABLED;
     return ZX_OK;
 }
 
 zx_status_t MtkPower::PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t* min_voltage,
                                                         uint32_t* max_voltage) {
-    return ZX_ERR_NOT_SUPPORTED;
+    if (index >= kMt8167NumPowerDomains) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return power_domains_[index]->GetSupportedVoltageRange(min_voltage, max_voltage);
 }
 
 zx_status_t MtkPower::PowerImplRequestVoltage(uint32_t index, uint32_t voltage,
@@ -363,18 +366,20 @@ void MtkPower::InitializePowerDomains() {
     for (size_t i = 0; i < kMt8167NumPowerDomains; i++) {
         auto& reg_params = kMtkRegulatorParams[i];
         if (reg_params.type == BUCK) {
-            power_domains_[i].emplace(MtkBuckRegulator(
+            power_domains_[i] = std::make_unique<MtkBuckRegulator>(
                 pmic_mmio_.View(0), reg_params.enable_register, reg_params.enable_bit,
                 reg_params.select_register, reg_params.select_mask,
                 reg_params.buck_voltage_control_register, reg_params.buck_voltage_on_register,
-                reg_params.min_voltage, reg_params.max_voltage, reg_params.step_size));
+                reg_params.min_voltage, reg_params.max_voltage, reg_params.step_size);
         } else if (reg_params.type == FIXED) {
-            power_domains_[i].emplace(MtkFixedRegulator(pmic_mmio_.View(0), reg_params.default_voltage,
-                                      reg_params.enable_register, reg_params.enable_bit));
+            power_domains_[i] = std::make_unique<MtkFixedRegulator>(pmic_mmio_.View(0),
+                                      reg_params.default_voltage,
+                                      reg_params.enable_register, reg_params.enable_bit);
         } else if (reg_params.type == LDO) {
-            power_domains_[i].emplace(MtkLdoRegulator(pmic_mmio_.View(0), reg_params.enable_register,
-                                      reg_params.enable_bit, reg_params.select_register,
-                                      reg_params.select_mask, reg_params.supported_voltage));
+            power_domains_[i] = std::make_unique<MtkLdoRegulator>(pmic_mmio_.View(0),
+                                      reg_params.enable_register, reg_params.enable_bit,
+                                      reg_params.select_register, reg_params.select_mask,
+                                      reg_params.supported_voltage);
         }
     }
 }

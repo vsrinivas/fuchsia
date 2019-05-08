@@ -119,4 +119,27 @@ TEST(PowerTest, DisablePowerDomain) {
     ASSERT_EQ(domain.enabled(), false);
 }
 
+TEST(PowerTest, GetSupportedVoltageRange) {
+    ddk_mock::MockMmioReg pmic_reg_array[kPmicMmioRegCount];
+    ddk_mock::MockMmioRegRegion pmic_regs(pmic_reg_array, sizeof(uint32_t), kPmicMmioRegCount);
+    MtkPowerTest power_test(pmic_regs);
+    power_test.InitPowerRegulators();
+    uint32_t test_index = 0, min_voltage = 0, max_voltage = 0;
+
+    // Test Buck Regulator
+    ASSERT_EQ(power_test.PowerImplGetSupportedVoltageRange(test_index, &min_voltage, &max_voltage),
+              ZX_OK);
+    ASSERT_EQ(min_voltage, 700000);
+    ASSERT_EQ(max_voltage, 1493750);
+
+    // Test Ldo Regulator
+    ASSERT_EQ(power_test.PowerImplGetSupportedVoltageRange(4, &min_voltage, &max_voltage), ZX_OK);
+    ASSERT_EQ(min_voltage, 1800000);
+    ASSERT_EQ(max_voltage, 2200000);
+
+    //Test Fixed Regulator
+    ASSERT_EQ(power_test.PowerImplGetSupportedVoltageRange(3, &min_voltage, &max_voltage),
+              ZX_ERR_NOT_SUPPORTED);
+}
+
 } // namespace power

@@ -24,6 +24,7 @@ public:
         : default_voltage_(default_voltage), enable_register_(enable_reg), enable_bit_(enable_bit),
           cur_voltage_(default_voltage), pmic_mmio_(pmic_mmio) {}
 
+    virtual ~MtkRegulator() {}
     uint32_t enable_register() { return enable_register_; }
     uint8_t enable_bit() { return enable_bit_; }
     uint32_t cur_voltage() { return cur_voltage_; }
@@ -32,6 +33,8 @@ public:
 
     zx_status_t Enable();
     zx_status_t Disable();
+    virtual zx_status_t GetSupportedVoltageRange(uint32_t* min_voltage,
+                                                 uint32_t* max_voltage) const = 0;
 
 private:
     const uint32_t default_voltage_;
@@ -67,6 +70,12 @@ public:
     uint32_t min_voltage() { return min_voltage_; }
     uint32_t max_voltage() { return max_voltage_; }
     uint32_t step_size() { return step_size_; }
+    zx_status_t GetSupportedVoltageRange(uint32_t* min_voltage,
+                                         uint32_t* max_voltage) const override {
+        *min_voltage = min_voltage_;
+        *max_voltage = max_voltage_;
+        return ZX_OK;
+    }
 private:
     const uint32_t buck_voltage_ctrl_reg_;
     const uint32_t buck_voltage_on_reg_;
@@ -88,6 +97,15 @@ public:
     uint32_t voltage_sel_reg() { return voltage_sel_reg_; }
     uint32_t voltage_sel_mask() { return voltage_sel_mask_; }
     const fbl::Vector<uint32_t>& supported_voltages() { return supported_voltages_; }
+    zx_status_t GetSupportedVoltageRange(uint32_t* min_voltage,
+                                         uint32_t* max_voltage) const override {
+        if (supported_voltages_.is_empty()) {
+            return ZX_ERR_BAD_STATE;
+        }
+        *min_voltage = *(supported_voltages_.begin());
+        *max_voltage = supported_voltages_[supported_voltages_.size() - 1];
+        return ZX_OK;
+    }
 private:
     const uint32_t voltage_sel_reg_;
     const uint32_t voltage_sel_mask_;
@@ -99,6 +117,10 @@ public:
     MtkFixedRegulator(ddk::MmioView pmic_mmio, const uint32_t default_voltage,
                       const uint32_t enable_reg, const uint8_t enable_bit)
         : MtkRegulator(pmic_mmio, default_voltage, enable_reg, enable_bit) {}
+    zx_status_t GetSupportedVoltageRange(uint32_t* min_voltage,
+                                         uint32_t* max_voltage) const override {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 };
 
 class MtkPower;
@@ -127,7 +149,7 @@ public:
 
 protected:
     void InitializePowerDomains();
-    std::array<std::optional<MtkRegulator>, kMt8167NumPowerDomains> power_domains_;
+    std::array<std::unique_ptr<MtkRegulator>, kMt8167NumPowerDomains> power_domains_;
 
 private:
     ddk::MmioBuffer pmic_mmio_;
