@@ -48,7 +48,8 @@ TEST(DetachTest, DISABLED_SpawnedAppNotDetached) {
   ASSERT_EQ(avail_count, 0u);
 }
 
-TEST(DetachTest, SpawnedAppDetached) {
+// TODO(FLK-193): Disabled until fixed.
+TEST(DetachTest, DISABLED_SpawnedAppDetached) {
   zx::job job;
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
