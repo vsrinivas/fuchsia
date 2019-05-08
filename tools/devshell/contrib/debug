@@ -95,13 +95,6 @@ if [[ -z "${port}" ]]; then
   port=2345
 fi
 
-# Get the defaulted device address.
-target=$(get-fuchsia-device-addr)
-if [[ -z "${target}" ]]; then
-  fx-error "Could not find fuchsia device" "$(get-device-name)"
-  exit 1
-fi
-
 connect_ops=
 
 if [[ -z "${core}" ]]; then
@@ -109,6 +102,13 @@ if [[ -z "${core}" ]]; then
 
   fx_ssh_pid=""
   trap 'kill ${fx_ssh_pid}' EXIT
+
+# Get the defaulted device address.
+  target=$(get-fuchsia-device-addr)
+  if [[ -z "${target}" ]]; then
+    fx-error "Could not find fuchsia device" "$(get-device-name)"
+    exit 1
+  fi
 
 # Leave the SSH connection open. Will be closed on script end.
 # We branch out on whether the user used the verbose-agent flag. If so, we
