@@ -2,8 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod creation_manifest;
-pub use crate::creation_manifest::CreationManifest;
+#[cfg(test)]
+#[macro_use]
+mod test;
 
+mod creation_manifest;
 mod errors;
+mod meta_contents;
 mod path;
+
+pub use crate::creation_manifest::CreationManifest;
+pub use crate::meta_contents::MetaContents;

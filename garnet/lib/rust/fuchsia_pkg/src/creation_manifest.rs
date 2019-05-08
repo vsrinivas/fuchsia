@@ -103,21 +103,6 @@ mod tests {
     use maplit::btreemap;
     use serde_json::json;
 
-    /// Helper to assist asserting a single match branch.
-    ///
-    /// Ex:
-    ///
-    /// let arg = Arg::Uint(8);
-    /// assert_matches!(arg, Arg::Uint(x) => assert_eq!(x, 8));
-    macro_rules! assert_matches(
-        ($e:expr, $p:pat => $a:expr) => (
-            match $e {
-                $p => $a,
-                v => panic!("Failed to match '{:?}'", v),
-            }
-        )
-    );
-
     fn from_json_value(
         value: serde_json::Value,
     ) -> Result<CreationManifest, CreationManifestError> {

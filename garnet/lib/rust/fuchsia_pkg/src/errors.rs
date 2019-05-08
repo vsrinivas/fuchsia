@@ -52,3 +52,16 @@ impl From<serde_json::Error> for CreationManifestError {
         CreationManifestError::Json(err)
     }
 }
+
+#[derive(Debug, Fail)]
+pub enum MetaContentsError {
+    #[fail(display = "invalid package path '{}'", path)]
+    PackagePath {
+        #[cause]
+        cause: PackagePathError,
+        path: String,
+    },
+
+    #[fail(display = "package external content cannot be in 'meta/' directory: '{}'", path)]
+    ExternalContentInMetaDirectory { path: String },
+}

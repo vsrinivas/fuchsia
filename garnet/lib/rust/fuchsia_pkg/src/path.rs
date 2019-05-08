@@ -43,57 +43,14 @@ pub fn check_package_path(input: &str) -> Result<&str, PackagePathError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test::*;
     use proptest::prelude::*;
-    use proptest::{
-        prop_assert, prop_assert_eq, prop_assume, prop_compose, proptest, proptest_helper,
-    };
-
-    const ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT: &str = r"[^/\x00\.]";
+    use proptest::{prop_assert, prop_assert_eq, prop_assume, proptest, proptest_helper};
 
     // Tests for invalid paths
     #[test]
     fn test_empty_string() {
         assert_eq!(check_package_path(""), Err(PackagePathError::PathIsEmpty));
-    }
-
-    prop_compose! {
-        fn always_valid_char()(c in ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT) -> String {
-            c
-        }
-    }
-
-    prop_compose! {
-        fn always_valid_chars
-            (min: usize, max: usize)
-            (s in prop::collection::vec(always_valid_char(), min..max)) -> String {
-            s.join("")
-        }
-    }
-
-    prop_compose! {
-        fn path_with_regex_segment_string
-            (max_segments: usize, inner: String)
-            (vec in prop::collection::vec(
-                always_valid_chars(1, 3), 3..max_segments),
-             inner in prop::string::string_regex(inner.as_str()).unwrap())
-            (index in ..vec.len(),
-             inner in Just(inner),
-             vec in Just(vec))-> String
-        {
-            let mut vec = vec.clone();
-            vec[index] = inner.to_string();
-            vec.join("/")
-        }
-    }
-
-    prop_compose! {
-        fn path_with_regex_segment_str
-            (max_segments: usize, inner: &'static str)
-            (s in path_with_regex_segment_string(
-                max_segments, inner.to_string())) -> String
-        {
-            s
-        }
     }
 
     proptest! {
