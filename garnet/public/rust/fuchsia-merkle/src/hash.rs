@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate hex;
-
 use crate::util::HASH_SIZE;
 use failure::{format_err, Error};
+use hex::ToHex;
 use std::fmt;
 use std::str;
 
@@ -42,6 +41,23 @@ impl From<[u8; HASH_SIZE]> for Hash {
 
 impl fmt::Display for Hash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&hex::encode(self.0))
+        self.0.write_hex(f)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::{prop_assert, prop_assert_eq, proptest, proptest_helper};
+    use std::str::FromStr;
+
+    proptest! {
+        #[test]
+        fn test_from_str_display(
+            ref s in "[[:xdigit:]]{64}") {
+            let hash = Hash::from_str(s).unwrap();
+            let display = format!("{}", hash);
+            prop_assert_eq!(s.to_ascii_lowercase(), display);
+        }
     }
 }

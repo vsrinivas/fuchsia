@@ -12,6 +12,7 @@ pub const BLOCK_SIZE: usize = 8192;
 mod util;
 
 mod hash;
+pub use crate::hash::Hash;
 
 mod tree;
 pub use crate::tree::MerkleTree;

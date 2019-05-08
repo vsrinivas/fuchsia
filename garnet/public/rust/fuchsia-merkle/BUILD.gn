@@ -13,5 +13,6 @@ rustc_library("fuchsia-merkle") {
     "//garnet/public/rust/mundane",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:proptest",
   ]
 }
