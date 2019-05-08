@@ -10,22 +10,6 @@ group("auth") {
 
   public_deps = [
     ":auth_bin_tests",
-    ":token_manager_factory",
-  ]
-}
-
-package("token_manager_factory") {
-  deps = [
-    "//garnet/bin/auth/token_manager_factory",
-  ]
-
-  binary = "token_manager_factory"
-
-  meta = [
-    {
-      path = rebase_path("meta/token_manager_factory.cmx")
-      dest = "token_manager_factory.cmx"
-    },
   ]
 }
 
