@@ -45,6 +45,11 @@ public:
                                       .size = sizeof(mock_clock_gpu_registers_),
                                       .vmo = ZX_HANDLE_INVALID};
         clock_gpu_buffer_ = ddk::MmioBuffer(clock_buffer);
+        mmio_buffer_t top_buffer = {.vaddr = mock_top_gpu_registers_,
+                                    .offset = 0,
+                                    .size = sizeof(mock_top_gpu_registers_),
+                                    .vmo = ZX_HANDLE_INVALID};
+        gpu_buffer_ = ddk::MmioBuffer(top_buffer);
         for (uint32_t i = 0; i < clocks_.size(); ++i) {
             clock_protocol_t proto = {.ops = &fake_clock_ops, .ctx = &clocks_[i]};
             clks_[i] = ddk::ClockProtocolClient(&proto);
@@ -72,11 +77,27 @@ public:
         EXPECT_EQ(ZX_OK, PowerDownMfg2d());
     }
 
+    void TestPowerDownMfg()
+    {
+        clocks_[kClkMfgMmIndex].enabled = true;
+        constexpr uint32_t kRegOffset = 0x214;
+        constexpr uint32_t kClockGateOffset = 0x4;
+        constexpr uint32_t kClockGateValue = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3);
+        mock_power_gpu_registers_[kRegOffset / 4] = 0xffffffff;
+        EXPECT_EQ(ZX_OK, PowerDownMfg());
+        // The power register shouldn't be touched.
+        EXPECT_EQ(0xffffffffu, mock_power_gpu_registers_[kRegOffset / 4]);
+        EXPECT_EQ(kClockGateValue, mock_top_gpu_registers_[kClockGateOffset / 4]);
+        clocks_[kClkMfgMmIndex].enabled = false;
+    }
+
 private:
     static constexpr uint32_t kPowerRegionSize = 0x1000;
     static constexpr uint32_t kClockRegionSize = 0x2000;
+    static constexpr uint32_t kTopRegionSize = 0x1000;
     uint32_t mock_power_gpu_registers_[kPowerRegionSize / sizeof(uint32_t)] = {};
     uint32_t mock_clock_gpu_registers_[kClockRegionSize / sizeof(uint32_t)] = {};
+    uint32_t mock_top_gpu_registers_[kTopRegionSize / sizeof(uint32_t)] = {};
     std::array<fake_clock, kClockCount> clocks_;
 };
 
@@ -90,4 +111,10 @@ TEST(Mt8167Gpu, PowerDownMfg2d)
 {
     Mt8167GpuTest test_gpu;
     test_gpu.TestPowerDownMfg2d();
+};
+
+TEST(Mt8167Gpu, PowerDownMfg)
+{
+    Mt8167GpuTest test_gpu;
+    test_gpu.TestPowerDownMfg();
 };

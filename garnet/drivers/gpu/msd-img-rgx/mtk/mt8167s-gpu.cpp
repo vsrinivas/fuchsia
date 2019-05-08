@@ -129,15 +129,6 @@ static ComponentDescription Mfg2dComponent()
     return ComponentDescription{k2dPwrRegOffset, k2dPwrStatusBit, kSramPdMask, kSramPdAckMask};
 }
 
-static ComponentDescription MfgComponent()
-{
-    static constexpr uint32_t kMfg3dPwrCon = 0x214;
-    constexpr uint32_t kSramPdMask = 0xf << 8;
-    constexpr uint32_t kSramPdAckMask = 0xf << 12;
-    constexpr uint32_t k3dPwrStatusBit = 24;
-    return ComponentDescription{kMfg3dPwrCon, k3dPwrStatusBit, kSramPdMask, kSramPdAckMask};
-}
-
 } // namespace
 
 Mt8167sGpu::~Mt8167sGpu()
@@ -206,9 +197,8 @@ zx_status_t Mt8167sGpu::PowerOnMfg2d()
 zx_status_t Mt8167sGpu::PowerOnMfg()
 {
     clks_[kClkMfgMmIndex].Enable();
-    zx_status_t status = MfgComponent().PowerOn(&power_gpu_buffer_.value());
-    if (status != ZX_OK)
-        return status;
+    // The APM should handle actually powering up the MFG component as needed,
+    // so that doesn't need to be done here.
 
     // Enable clocks in MFG (using controls internal to MFG_TOP)
     constexpr uint32_t kMfgCgClr = 0x8;
@@ -258,9 +248,9 @@ zx_status_t Mt8167sGpu::PowerDownMfg()
     constexpr uint32_t kB26MClr = (1 << 3);
     gpu_buffer_->SetBits32(kBAxiClr | kBMemClr | kBG3dClr | kB26MClr, kMfgCgSet);
 
-    zx_status_t status = MfgComponent().PowerDown(&power_gpu_buffer_.value());
-    if (status != ZX_OK)
-        return status;
+    // The APM should handle actually powering down the MFG component as needed,
+    // so that doesn't need to be done here.
+
     // Disable MFG clock.
     clks_[kClkMfgMmIndex].Disable();
     return ZX_OK;
