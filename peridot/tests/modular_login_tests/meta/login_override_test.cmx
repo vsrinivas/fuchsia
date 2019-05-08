@@ -13,6 +13,8 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.auth.account.AccountManager",
+            "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.setui.SetUiService",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher"

@@ -4,11 +4,11 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.auth.account.AccountManager",
-            "fuchsia.devicesettings.DeviceSettingsManager",
-            "fuchsia.setui.SetUiService",
+            "fuchsia.net.SocketProvider",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.auth.account.AccountManager",
+            "fuchsia.devicesettings.DeviceSettingsManager"
         ]
     }
 }

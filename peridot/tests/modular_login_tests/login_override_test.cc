@@ -7,6 +7,7 @@
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <sdk/lib/sys/cpp/service_directory.h>
 #include <sdk/lib/sys/cpp/testing/test_with_environment.h>
+#include <src/lib/fxl/logging.h>
 
 class LoginOverrideTest : public modular::testing::TestHarnessFixture {
  public:
@@ -40,9 +41,9 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
       "single_user_base_shell.cmx";
 
   fuchsia::modular::testing::TestHarnessSpec spec;
-  std::vector<std::string> env_services;
-  env_services.push_back("fuchsia.setui.SetUiService");
-  spec.set_env_services_to_inherit(env_services);
+  spec.set_env_services_to_inherit(
+      {"fuchsia.setui.SetUiService", "fuchsia.auth.account.AccountManager",
+       "fuchsia.devicesettings.DeviceSettingsManager"});
 
   spec.mutable_basemgr_config()
       ->mutable_base_shell()
@@ -77,10 +78,9 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
 // Setting LoginOverride to AUTOLOGIN_GUEST should launch the session shell.
 TEST_F(LoginOverrideTest, AutoLoginGuestOverrideLaunchesSessionShell) {
   fuchsia::modular::testing::TestHarnessSpec spec;
-
-  std::vector<std::string> env_services;
-  env_services.push_back("fuchsia.setui.SetUiService");
-  spec.set_env_services_to_inherit(env_services);
+  spec.set_env_services_to_inherit(
+      {"fuchsia.setui.SetUiService", "fuchsia.auth.account.AccountManager",
+       "fuchsia.devicesettings.DeviceSettingsManager"});
 
   // Listen for session shell interception.
   auto intercepted_url = InterceptSessionShell(&spec);

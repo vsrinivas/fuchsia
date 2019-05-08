@@ -4,7 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.modular.SessionShellContext"
+            "fuchsia.modular.SessionShellContext",
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

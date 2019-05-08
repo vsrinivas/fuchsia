@@ -14,6 +14,7 @@
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
 #include <src/lib/fxl/strings/split_string.h>
+#include <src/lib/fxl/strings/substitute.h>
 
 #include <thread>
 
@@ -30,6 +31,16 @@ constexpr char kFakeModuleUrl[] =
 
 namespace modular {
 namespace testing {
+namespace {
+std::string GenerateFakeUrl() {
+  uint32_t random_number = 0;
+  zx_cprng_draw(&random_number, sizeof random_number);
+  constexpr char kFakeUrlSubstitutePattern[] =
+      "fuchsia-pkg://example.com/GENERATED_URL_$0#meta/GENERATED_URL_$0.cmx";
+  return fxl::Substitute(kFakeUrlSubstitutePattern,
+                         std::to_string(random_number));
+}
+};  // namespace
 
 class TestHarnessImplTest : public sys::testing::TestWithEnvironment {
  public:
@@ -101,6 +112,94 @@ TEST_F(TestHarnessImplTest, MakeBasemgrConfigDir) {
                                       .config()
                                       .app_config()
                                       .url());
+}
+
+// Test that additional injected services are made available, spin up the
+// associated component when requested. This test exercises overriding a default
+// injected service.
+TEST_F(TestHarnessImplTest, DefaultInjectedServices) {
+  fuchsia::modular::testing::TestHarnessSpec spec;
+
+  auto generated_accountmgr_url = GenerateFakeUrl();
+
+  spec.mutable_env_services_to_inject()->push_back(
+      fuchsia::modular::testing::InjectedService{
+          // Override the default injected AccountManager.
+          .name = fuchsia::auth::account::AccountManager::Name_,
+          .url = generated_accountmgr_url});
+
+  // Intercept the component URL which supplies AccountManager.
+  {
+    fuchsia::modular::testing::InterceptSpec intercept_spec;
+    intercept_spec.set_component_url(generated_accountmgr_url);
+    spec.mutable_components_to_intercept()->push_back(
+        std::move(intercept_spec));
+  }
+
+  bool intercepted_accountmgr = false;
+  test_harness().events().OnNewComponent =
+      [&](fuchsia::sys::StartupInfo startup_info,
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
+              component) {
+        if (startup_info.launch_info.url == generated_accountmgr_url) {
+          intercepted_accountmgr = true;
+        } else {
+          ASSERT_FALSE("Started for no reason.");
+        }
+      };
+
+  test_harness()->Run(std::move(spec));
+
+  fuchsia::auth::account::AccountManagerPtr accountmgr;
+  test_harness()->ConnectToEnvironmentService(
+      fuchsia::auth::account::AccountManager::Name_,
+      accountmgr.NewRequest().TakeChannel());
+
+  ASSERT_TRUE(RunLoopUntil([&] { return intercepted_accountmgr; }));
+}
+
+// Test that additional injected services are made available, spin up the
+// associated component when requested. This test exercises injecting a custom
+// service.
+TEST_F(TestHarnessImplTest, CustomInjectedServices) {
+  fuchsia::modular::testing::TestHarnessSpec spec;
+
+  auto generated_componentctx_url = GenerateFakeUrl();
+
+  spec.mutable_env_services_to_inject()->push_back(
+      fuchsia::modular::testing::InjectedService{
+          // Provide a custom injected service.
+          .name = fuchsia::modular::ComponentContext::Name_,
+          .url = generated_componentctx_url});
+
+  // Intercept the component URL which supplies ComponentContext.
+  {
+    fuchsia::modular::testing::InterceptSpec intercept_spec;
+    intercept_spec.set_component_url(generated_componentctx_url);
+    spec.mutable_components_to_intercept()->push_back(
+        std::move(intercept_spec));
+  }
+
+  bool intercepted_componentctx = false;
+  test_harness().events().OnNewComponent =
+      [&](fuchsia::sys::StartupInfo startup_info,
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
+              component) {
+        if (startup_info.launch_info.url == generated_componentctx_url) {
+          intercepted_componentctx = true;
+        } else {
+          ASSERT_FALSE("Started for no reason.");
+        }
+      };
+
+  test_harness()->Run(std::move(spec));
+
+  fuchsia::modular::ComponentContextPtr componentctx;
+  test_harness()->ConnectToEnvironmentService(
+      fuchsia::modular::ComponentContext::Name_,
+      componentctx.NewRequest().TakeChannel());
+
+  ASSERT_TRUE(RunLoopUntil([&] { return intercepted_componentctx; }));
 }
 
 TEST_F(TestHarnessImplTest, InterceptBaseShell) {

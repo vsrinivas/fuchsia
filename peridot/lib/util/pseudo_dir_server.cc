@@ -46,8 +46,8 @@ void PseudoDirServer::StartThread(
   thread_loop_ = &loop;
 
   // The owner's thread is currently blocked waiting for this thread to
-  // initialize a valid |thread_loop_|. Notify that thread that it's now safe
-  // manipulate this thread's run loop:
+  // initialize a valid |thread_loop_|. Notify the owner thread that it's now
+  // safe to manipulate this thread's run loop:
   thread_loop_ready_.notify_all();
 
   pseudo_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, request.TakeChannel());

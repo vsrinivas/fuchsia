@@ -13,9 +13,9 @@ executable("modular_test_harness_bin") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//sdk/lib/sys/cpp",
-    "//sdk/fidl/fuchsia.modular.testing",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_impl",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -49,10 +49,12 @@ executable("test_session_shell_bin") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/lib/testing:session_shell_base",
+    "//peridot/lib/fidl:view_host",
     "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -79,13 +81,15 @@ executable("test_story_shell_bin") {
 executable("modular_test_harness_test") {
   testonly = true
   output_name = "modular_test_harness_test"
-  sources = ["modular_test_harness_test.cc"]
+  sources = [
+    "modular_test_harness_test.cc",
+  ]
   deps = [
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -142,7 +146,7 @@ package("modular_test_harness") {
     ":modular_test_harness_bin",
     ":modular_test_harness_test",
     ":test_base_shell_bin",
-    ":test_story_shell_bin",
     ":test_session_shell_bin",
+    ":test_story_shell_bin",
   ]
 }

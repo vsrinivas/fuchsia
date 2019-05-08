@@ -139,8 +139,34 @@ void TestHarnessImpl::GetService(
       return;
     } break;
   }
+}
 
-  FlushBufferedSessionAgentServices();
+void TestHarnessImpl::ConnectToModularService(
+    fuchsia::modular::testing::ModularService service) {
+  switch (service.Which()) {
+    case fuchsia::modular::testing::ModularService::Tag::kPuppetMaster: {
+      BufferSessionAgentService(std::move(service.puppet_master()));
+    } break;
+
+    case fuchsia::modular::testing::ModularService::Tag::kComponentContext: {
+      BufferSessionAgentService(std::move(service.component_context()));
+    } break;
+
+    case fuchsia::modular::testing::ModularService::Tag::kAgentContext: {
+      BufferSessionAgentService(std::move(service.agent_context()));
+    } break;
+
+    case fuchsia::modular::testing::ModularService::Tag::Empty: {
+      FXL_LOG(ERROR) << "The given ModularService is empty.";
+      CloseBindingIfError(ZX_ERR_INVALID_ARGS);
+      return;
+    } break;
+  }
+}
+
+void TestHarnessImpl::ConnectToEnvironmentService(std::string service_name,
+                                                  zx::channel request) {
+  enclosing_env_->ConnectToService(service_name, std::move(request));
 }
 
 bool TestHarnessImpl::CloseBindingIfError(zx_status_t status) {
@@ -152,6 +178,39 @@ bool TestHarnessImpl::CloseBindingIfError(zx_status_t status) {
     return true;
   }
   return false;
+}
+
+void TestHarnessImpl::InjectServicesIntoEnvironment(
+    sys::testing::EnvironmentServices* env_services,
+    std::map<std::string, std::string>* default_injected_svcs) {
+  // Wire up client-specified injected services, and remove them from the
+  // default injected services.
+  if (spec_.has_env_services_to_inject()) {
+    for (const auto& injected_svc : spec_.env_services_to_inject()) {
+      default_injected_svcs->erase(injected_svc.name);
+
+      fuchsia::sys::LaunchInfo info;
+      info.url = injected_svc.url;
+      env_services->AddServiceWithLaunchInfo(std::move(info),
+                                             injected_svc.name);
+    }
+  }
+
+  // Wire up the remaining default injected services.
+  for (const auto& injected_svc : *default_injected_svcs) {
+    fuchsia::sys::LaunchInfo info;
+    info.url = injected_svc.second;
+    env_services->AddServiceWithLaunchInfo(std::move(info), injected_svc.first);
+  }
+}
+
+std::string MakeTestHarnessEnvironmentName() {
+  // Apply a random suffix to the environment name so that multiple hermetic
+  // test harness environments may coexist under the same parent env.
+  uint32_t random_env_suffix = 0;
+  zx_cprng_draw(&random_env_suffix, sizeof random_env_suffix);
+  return fxl::Substitute("modular_test_harness_$0",
+                         std::to_string(random_env_suffix));
 }
 
 void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
@@ -173,12 +232,24 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   std::unique_ptr<sys::testing::EnvironmentServices> env_services =
       interceptor_.MakeEnvironmentServices(parent_env_);
 
+  // The default injected services are all basemgr's hard dependencies.
+  // A map of service name => component URL serving it.
+  std::map<std::string, std::string> default_injected_svcs = {
+      {fuchsia::auth::account::AccountManager::Name_,
+       "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx"},
+      {fuchsia::devicesettings::DeviceSettingsManager::Name_,
+       "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
+       "device_settings_manager.cmx"}};
+
   // Allow services to be inherited from outside the test harness environment.
   if (spec_.has_env_services_to_inherit()) {
     for (auto& svc_name : spec_.env_services_to_inherit()) {
+      default_injected_svcs.erase(svc_name);
       env_services->AllowParentService(svc_name);
     }
   }
+
+  InjectServicesIntoEnvironment(env_services.get(), &default_injected_svcs);
 
   // Ledger configuration for tests by default:
   // * use a memory-backed FS for ledger.
@@ -193,16 +264,8 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
         fuchsia::modular::session::CloudProvider::NONE);
   }
 
-  // Allow the hard dependency services of basemgr to be specified by the
-  // parent environment:
-  // * AccountManager
-  // * DeviceSettingsManager
-  env_services->AllowParentService(
-      fuchsia::auth::account::AccountManager::Name_);
-  env_services->AllowParentService(
-      fuchsia::devicesettings::DeviceSettingsManager::Name_);
   enclosing_env_ = sys::testing::EnclosingEnvironment::Create(
-      "modular_test_harness", parent_env_, std::move(env_services));
+      MakeTestHarnessEnvironmentName(), parent_env_, std::move(env_services));
 
   zx::channel client;
   zx::channel request;

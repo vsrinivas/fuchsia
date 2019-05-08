@@ -81,6 +81,14 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
   void GetService(
       fuchsia::modular::testing::TestHarnessService service) override;
 
+  // |fuchsia::modular::testing::TestHarness|
+  void ConnectToModularService(
+      fuchsia::modular::testing::ModularService service) override;
+
+  // |fuchsia::modular::testing::TestHarness|
+  void ConnectToEnvironmentService(std::string service_name,
+                                   zx::channel request) override;
+
   [[nodiscard]] static std::unique_ptr<vfs::PseudoDir> MakeBasemgrConfigDir(
       const fuchsia::modular::testing::TestHarnessSpec& spec);
 
@@ -103,8 +111,18 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
 
   // Sets up interception for the session agent which is launched as part of the
   // modular runtime. This session agent provides the services for
-  // |TestHarness.GetServices()|.
+  // |TestHarness.ConnectToModularService()|.
   [[nodiscard]] zx_status_t SetupFakeSessionAgent();
+
+  // Sets up the enclosing environment with services specified in
+  // |TestHarnessSpec.injected_services|, and removes them from the supplied
+  // |default_injected_services|.
+  //
+  // |default_injected_services| maps service name => component URL which serves
+  // it.
+  void InjectServicesIntoEnvironment(
+      sys::testing::EnvironmentServices* env_services,
+      std::map<std::string, std::string>* default_injected_services);
 
   // Buffers service request from |GetService()|.
   // FlushBufferedSessionAgentServices() processes these services once the
@@ -114,6 +132,8 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
     intercepted_session_agent_info_.buffered_service_requests.push_back(
         InterceptedSessionAgentInfo::BufferedServiceRequest{
             Interface::Name_, request.TakeChannel()});
+
+    FlushBufferedSessionAgentServices();
   }
 
   // Processes the service requests which are buffered from |GetService()|.

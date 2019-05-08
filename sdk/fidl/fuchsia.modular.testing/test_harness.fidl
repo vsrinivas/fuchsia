@@ -4,7 +4,6 @@
 
 library fuchsia.modular.testing;
 
-using fuchsia.io;
 using fuchsia.mem;
 using fuchsia.modular;
 using fuchsia.modular.session;
@@ -13,13 +12,14 @@ using fuchsia.sys;
 /// The |TestHarness| service is used to run the modular runtime under a
 /// hermetic environment and drive integration tests under it. Tests may use
 /// this service to intercept components and assume their role. Additionally,
-/// tests may use |GetService()| to get capabilities to control stories (i.e.,
-/// using a PuppetMaster) and connect to Agents.
+/// tests may use |TestHarness/ConnectToModularService()| to get capabilities
+/// for controlling stories (using PuppetMaster) and connecting to agents
+/// (using ComponentContext).
 ///
 /// Closing the |TestHarness| connection will kill the |TestHarness| environment
 /// including the modular runtime running under it.
 ///
-/// This connection is closed with the following epitaphs possible epitaphs:
+/// On error, this connection is closed with the following epitaphs:
 /// * ZX_ERR_INVALID_ARGS: Run() failed to execute succesfully.
 /// * ZX_ERR_BAD_STATE: Other methods are called before Run() is called.
 /// * ZX_ERR_ALREADY_BOUND: Run() was already called.
@@ -42,19 +42,26 @@ protocol TestHarness {
                       InterceptedComponent intercepted_component);
 
     /// Tests may use this method to connect to services provided by the modular
-    /// runtime. These services share the component namespace for any
+    /// runtime. These services share the same component namespace for any
     /// resources they create (e.g., entities, message queues, and module
     /// names).
     ///
     /// This protocol connection is closed with the following epitaphs:
-    ///  * ZX_ERR_BAD_STATE: if |GetService()| is called before |Run()|.
+    ///  * ZX_ERR_BAD_STATE: if |ConnectToModularService()| is called before
+    ///   |Run()|.
     ///  * ZX_ERR_INVALID_ARGS: if |service| is not set to a value.
+    ConnectToModularService(ModularService service);
+
+    /// Connects to environment services injected into the TestHarness
+    /// environment.
+    ConnectToEnvironmentService(string service_name, handle<channel> request);
+
+    /// DEPRECATED. Use |ConnectToModularService()| instead, they are the same.
     GetService(TestHarnessService service);
 };
 
-/// Describes a service to get from the modular runtime under the test harness.
-/// All services here share a component namespace.
-xunion TestHarnessService {
+/// Describes which service to connect to using |ConnectToModularService()|.
+xunion ModularService {
     request<fuchsia.modular.PuppetMaster> puppet_master;
     request<fuchsia.modular.ComponentContext> component_context;
     request<fuchsia.modular.AgentContext> agent_context;
@@ -81,12 +88,22 @@ protocol InterceptedComponent {
 /// framework used for testing purposes. This table is supplied to
 /// |TestHarness.Run()|. A malformed |TestHarnessSpec| will cause |TestHarness|
 /// connection to close with an epitaph of ZX_ERR_INVALID_ARGS.
+///
+/// By default, the following services are made available to the hermetic
+/// environment:
+///  * fuchsia.auth.account.AccountManager
+///  * fuchsia.devicesettings.DeviceSettingsManager
+///
+/// Additional services may be supplied using using
+/// |TestHarnessSpec.env_services_to_inherit| and
+/// |TestHarnessSpec.injected_services|. Additional services override the
+/// default services listed above.
 table TestHarnessSpec {
     /// Configuration for basemgr. See |fuchsia.modular.session.BasemgrConfig|
     /// for a description of the defaults.
     ///
-    /// The test harness will use amend |basemgr_config| before passing it off
-    /// to the modular runtime in the following way:
+    /// The test harness will amend |basemgr_config| before passing it off to
+    /// the modular runtime in the following way:
     /// * If |basemgr_config.base_shell.app_config.url| is not set, the test
     ///   harness will use a base shell which automatically logs into the
     ///   session.
@@ -97,8 +114,9 @@ table TestHarnessSpec {
     ///   harness use a minimally functioning story shell which displays all
     ///   mods in a story.
     ///
-    /// To intercept and mock the shells, users may provide the shells fake URLs
-    /// and specify that they be intercepted using |components_to_intercept|.
+    /// To intercept and mock the shells, users may provide fake URLs for the
+    /// shells and specify that the fake URL be intercepted using
+    /// |components_to_intercept|.
     1: fuchsia.modular.session.BasemgrConfig basemgr_config;
 
     /// Configuration for sessionmgr. See
@@ -110,13 +128,32 @@ table TestHarnessSpec {
     /// which does not allow accessing services outside of the environment,
     /// unless the service names are specified in this list.
     ///
-    /// For example, adding "fuchsia.ui.policy.Presenter" to this list will
-    /// allow the modular runtime use the Presenter to display views; otherwise,
-    /// UI exposed by test code will not be shown on screen.
+    /// For example, adding "fuchsia.net.SocketProvider" here allows the
+    /// hermetic environment to inherit the test process' environment's instance
+    /// of the socket provider. This lets the test code, and the code under
+    /// test, to share the same SocketProvider.
     3: vector<string> env_services_to_inherit;
+
+    /// A list of services and their providers to inject into this environment,
+    /// along with components which provide them. Multiple services may be
+    /// provided by the same component, but only one instance of the component
+    /// is launched to serve its services. Components are started when one of
+    /// their services is requested, and are kept alive for the duration of the
+    /// test harness environment's life.
+    5: vector<InjectedService> env_services_to_inject;
 
     /// List of component URLs (and additional .cmx contents) to intercept.
     4: vector<InterceptSpec> components_to_intercept;
+};
+
+/// Describes a single injected service.
+struct InjectedService {
+    /// Name of the service.
+    string name;
+
+    /// URL of the component which will provide the service (denoted by |name|).
+    /// The service is retrieved from the component's /out/svc namespace.
+    fuchsia.sys.component_url url;
 };
 
 /// Describes a component to intercept. Malformed parameters result in closing
@@ -124,7 +161,7 @@ table TestHarnessSpec {
 table InterceptSpec {
     /// Required. Must be a valid component URL (e.g., fuchsia-pkg://..), or is
     /// considered malformed.
-    1: string:fuchsia.io.MAX_PATH component_url;
+    1: fuchsia.sys.component_url component_url;
 
     /// The .cmx contents of this component's manifest. A minimal manifest is
     /// constructed by default. If set, the contents of |extra_cmx_contents|
@@ -133,4 +170,11 @@ table InterceptSpec {
     ///
     /// |extra_cmx_contents| is considered malformed if it is not valid JSON.
     2: fuchsia.mem.Buffer extra_cmx_contents;
+};
+
+/// DEPRECATED. Use |ConnectToModularService| instead.
+xunion TestHarnessService {
+    request<fuchsia.modular.PuppetMaster> puppet_master;
+    request<fuchsia.modular.ComponentContext> component_context;
+    request<fuchsia.modular.AgentContext> agent_context;
 };
