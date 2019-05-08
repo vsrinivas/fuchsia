@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/auto_login_base_shell_bin"
+        "binary": "bin/auto_login_base_shell"
     },
     "sandbox": {
         "services": [

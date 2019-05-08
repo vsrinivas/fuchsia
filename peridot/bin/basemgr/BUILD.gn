@@ -172,7 +172,7 @@ executable_package("dev_base_shell") {
 }
 
 executable("auto_login_base_shell_bin") {
-  testonly = true
+  output_name = "auto_login_base_shell"
 
   sources = [
     "auto_login_base_shell.cc",
@@ -190,7 +190,26 @@ executable("auto_login_base_shell_bin") {
   ]
 }
 
-executable("auto_login_base_shell_test") {
+package("auto_login_base_shell") {
+  deps = [
+    ":auto_login_base_shell_bin",
+  ]
+
+  binaries = [
+    {
+      name = "auto_login_base_shell"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/auto_login_base_shell.cmx"
+      dest = "auto_login_base_shell.cmx"
+    },
+  ]
+}
+
+executable("auto_login_base_shell_test_bin") {
   testonly = true
 
   output_name = "auto_login_base_shell_test"
@@ -209,13 +228,12 @@ executable("auto_login_base_shell_test") {
   ]
 }
 
-package("auto_login_base_shell") {
+package("auto_login_base_shell_test") {
   testonly = true
 
-  binaries = [
-    {
-      name = "auto_login_base_shell_bin"
-    },
+  deps = [
+    ":auto_login_base_shell_bin",
+    ":auto_login_base_shell_test_bin",
   ]
 
   tests = [
@@ -227,26 +245,9 @@ package("auto_login_base_shell") {
 
   meta = [
     {
-      path = "meta/auto_login_base_shell.cmx"
-      dest = "auto_login_base_shell.cmx"
-    },
-    {
       path = "meta/auto_login_base_shell_test.cmx"
       dest = "auto_login_base_shell_test.cmx"
     },
-  ]
-
-  deps = [
-    ":auto_login_base_shell_bin",
-    ":auto_login_base_shell_test",
-    "//garnet/public/lib/callback",
-    "//peridot/lib/fidl:single_service_app",
-    "//peridot/public/lib/app_driver/cpp",
-    "//sdk/fidl/fuchsia.auth.account",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
