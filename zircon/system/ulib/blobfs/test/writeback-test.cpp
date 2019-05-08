@@ -186,28 +186,32 @@ TEST(FlushRequestsTest, FlushNoRequests) {
             ZX_ASSERT_MSG(false, "Zero requests should not invoke the Transaction operation");
         }
     } manager;
-    fbl::Vector<Operation> operations;
-    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations, 2));
+    fbl::Vector<BufferedOperation> operations;
+    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
 }
 
 constexpr uint32_t kDiskBlockRatio = kBlockSize / kDeviceBlockSize;
 
 TEST(FlushRequestsTest, FlushOneRequest) {
+    static constexpr vmoid_t kVmoid = 4;
     class TestTransactionManager : public MockTransactionManager {
         zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
             EXPECT_EQ(1, count);
             EXPECT_EQ(1 * kDiskBlockRatio, requests[0].vmo_offset);
             EXPECT_EQ(2 * kDiskBlockRatio, requests[0].dev_offset);
             EXPECT_EQ(3 * kDiskBlockRatio, requests[0].length);
+            EXPECT_EQ(kVmoid, requests[0].vmoid);
             return ZX_OK;
         }
     } manager;
-    fbl::Vector<Operation> operations;
-    operations.push_back(Operation { OperationType::kWrite, 1, 2, 3 });
-    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations, 2));
+    fbl::Vector<BufferedOperation> operations;
+    operations.push_back(BufferedOperation { kVmoid, Operation { OperationType::kWrite, 1, 2, 3 }});
+    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
 }
 
 TEST(FlushRequestsTest, FlushManyRequests) {
+    static constexpr vmoid_t kVmoidA = 7;
+    static constexpr vmoid_t kVmoidB = 8;
     class TestTransactionManager : public MockTransactionManager {
         zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
             EXPECT_EQ(2, count);
@@ -217,13 +221,21 @@ TEST(FlushRequestsTest, FlushManyRequests) {
             EXPECT_EQ(4 * kDiskBlockRatio, requests[1].vmo_offset);
             EXPECT_EQ(5 * kDiskBlockRatio, requests[1].dev_offset);
             EXPECT_EQ(6 * kDiskBlockRatio, requests[1].length);
+            EXPECT_EQ(kVmoidA, requests[0].vmoid);
+            EXPECT_EQ(kVmoidB, requests[1].vmoid);
             return ZX_OK;
         }
     } manager;
-    fbl::Vector<Operation> operations;
-    operations.push_back(Operation { OperationType::kWrite, 1, 2, 3 });
-    operations.push_back(Operation { OperationType::kWrite, 4, 5, 6 });
-    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations, 2));
+    fbl::Vector<BufferedOperation> operations;
+    operations.push_back(BufferedOperation {
+        kVmoidA,
+        Operation { OperationType::kWrite, 1, 2, 3 }
+    });
+    operations.push_back(BufferedOperation {
+        kVmoidB,
+        Operation { OperationType::kWrite, 4, 5, 6 }
+    });
+    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
 }
 
 TEST(FlushRequestsTest, BadFlush) {
@@ -232,9 +244,9 @@ TEST(FlushRequestsTest, BadFlush) {
             return ZX_ERR_NOT_SUPPORTED;
         }
     } manager;
-    fbl::Vector<Operation> operations;
-    operations.push_back(Operation { OperationType::kWrite, 1, 2, 3 });
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, FlushWriteRequests(&manager, operations, 2));
+    fbl::Vector<BufferedOperation> operations;
+    operations.push_back(BufferedOperation { 1, Operation { OperationType::kWrite, 1, 2, 3 }});
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, FlushWriteRequests(&manager, operations));
 }
 
 } // namespace

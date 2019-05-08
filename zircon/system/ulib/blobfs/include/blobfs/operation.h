@@ -9,6 +9,7 @@
 #endif
 
 #include <lib/zx/vmo.h>
+#include <zircon/device/block.h>
 
 namespace blobfs {
 
@@ -28,11 +29,22 @@ struct Operation {
     uint64_t length = 0;
 };
 
-// A mapping paired with a source VMO.
+// An operation paired with a source vmo.
+//
 // Used to indicate a request to move in-memory data to an on-disk location,
-// or vice versa.
+// or vice versa. To be transmitted to storage, the |vmo| must be later
+// converted to a "vmoid_t" object.
 struct UnbufferedOperation {
     zx::unowned_vmo vmo;
+    Operation op;
+};
+
+// An operation paired with a source vmoid.
+//
+// This vmoid is a token that represents a buffer that is attached to the
+// underlying storage device.
+struct BufferedOperation {
+    vmoid_t vmoid;
     Operation op;
 };
 

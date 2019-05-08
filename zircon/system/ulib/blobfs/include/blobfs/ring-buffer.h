@@ -134,7 +134,7 @@ public:
     //  - offset + BlockCount(in_requests) <= length()
     // - |Reserved()| must be true.
     zx_status_t CopyRequests(const fbl::Vector<UnbufferedOperation>& requests, size_t offset,
-                             fbl::Vector<Operation>* out);
+                             fbl::Vector<BufferedOperation>* out);
 
     // The first reservation block, relative to the start of |RingBuffer|.
     size_t start() const { return start_; }
@@ -209,18 +209,18 @@ private:
 class RingBufferRequests {
 public:
     RingBufferRequests() = default;
-    RingBufferRequests(fbl::Vector<Operation> requests, RingBufferReservation reservation);
+    RingBufferRequests(fbl::Vector<BufferedOperation> requests, RingBufferReservation reservation);
     RingBufferRequests(const RingBufferRequests&) = delete;
     RingBufferRequests& operator=(const RingBufferRequests&) = delete;
     RingBufferRequests(RingBufferRequests&& other) = default;
     RingBufferRequests& operator=(RingBufferRequests&& other) = default;
     ~RingBufferRequests() = default;
 
-    const fbl::Vector<Operation>& Operations() const { return requests_; }
+    const fbl::Vector<BufferedOperation>& Operations() const { return requests_; }
     RingBufferReservation* Reservation() { return &reservation_; }
 
 private:
-    fbl::Vector<Operation> requests_;
+    fbl::Vector<BufferedOperation> requests_;
     RingBufferReservation reservation_;
 };
 

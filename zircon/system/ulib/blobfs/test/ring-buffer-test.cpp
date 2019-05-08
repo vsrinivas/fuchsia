@@ -164,7 +164,7 @@ void ReserveAndCopyRequests(const fbl::unique_ptr<RingBuffer>& buffer,
                             fbl::Vector<UnbufferedOperation> requests, RingBufferRequests* out) {
     RingBufferReservation reservation;
     ASSERT_OK(buffer->Reserve(BlockCount(requests), &reservation));
-    fbl::Vector<Operation> buffer_request;
+    fbl::Vector<BufferedOperation> buffer_request;
     ASSERT_OK(reservation.CopyRequests(requests, 0, &buffer_request));
     *out = RingBufferRequests(std::move(buffer_request), std::move(reservation));
 }
@@ -196,11 +196,11 @@ TEST(RingBufferTest, OneRequestAtOffsetZero) {
     ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
     ASSERT_EQ(1, request.Operations().size());
     // Start of RingBuffer.
-    EXPECT_EQ(0, request.Operations()[0].vmo_offset);
+    EXPECT_EQ(0, request.Operations()[0].op.vmo_offset);
     // Same location on dev.
-    EXPECT_EQ(operation.op.dev_offset, request.Operations()[0].dev_offset);
+    EXPECT_EQ(operation.op.dev_offset, request.Operations()[0].op.dev_offset);
     // Same length.
-    EXPECT_EQ(operation.op.length, request.Operations()[0].length);
+    EXPECT_EQ(operation.op.length, request.Operations()[0].op.length);
 
     EXPECT_EQ(0, request.Reservation()->start());
     EXPECT_EQ(operation.op.length, request.Reservation()->length());
@@ -234,11 +234,11 @@ TEST(RingBufferTest, OneRequestAtNonZeroOffset) {
     ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
     ASSERT_EQ(1, request.Operations().size());
     // Start of RingBuffer.
-    EXPECT_EQ(0, request.Operations()[0].vmo_offset);
+    EXPECT_EQ(0, request.Operations()[0].op.vmo_offset);
     // Same location on dev.
-    EXPECT_EQ(operation.op.dev_offset, request.Operations()[0].dev_offset);
+    EXPECT_EQ(operation.op.dev_offset, request.Operations()[0].op.dev_offset);
     // Same length.
-    EXPECT_EQ(operation.op.length, request.Operations()[0].length);
+    EXPECT_EQ(operation.op.length, request.Operations()[0].op.length);
 
     EXPECT_EQ(0, request.Reservation()->start());
     EXPECT_EQ(operation.op.length, request.Reservation()->length());
@@ -279,14 +279,14 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoSameReservation) {
     ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
     ASSERT_EQ(2, request.Operations().size());
     // Start of RingBuffer, and then immediately following the previous request.
-    EXPECT_EQ(0, request.Operations()[0].vmo_offset);
-    EXPECT_EQ(operations[0].op.length, request.Operations()[1].vmo_offset);
+    EXPECT_EQ(0, request.Operations()[0].op.vmo_offset);
+    EXPECT_EQ(operations[0].op.length, request.Operations()[1].op.vmo_offset);
     // Same location on dev.
-    EXPECT_EQ(operations[0].op.dev_offset, request.Operations()[0].dev_offset);
-    EXPECT_EQ(operations[1].op.dev_offset, request.Operations()[1].dev_offset);
+    EXPECT_EQ(operations[0].op.dev_offset, request.Operations()[0].op.dev_offset);
+    EXPECT_EQ(operations[1].op.dev_offset, request.Operations()[1].op.dev_offset);
     // Same length.
-    EXPECT_EQ(operations[0].op.length, request.Operations()[0].length);
-    EXPECT_EQ(operations[1].op.length, request.Operations()[1].length);
+    EXPECT_EQ(operations[0].op.length, request.Operations()[0].op.length);
+    EXPECT_EQ(operations[1].op.length, request.Operations()[1].op.length);
 
     EXPECT_EQ(0, request.Reservation()->start());
     EXPECT_EQ(operations[0].op.length + operations[1].op.length, request.Reservation()->length());
@@ -335,14 +335,14 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoDifferentReservations) {
     ASSERT_EQ(1, requests[1].Operations().size());
 
     // Start of RingBuffer, and then immediately following the previous request.
-    EXPECT_EQ(0, requests[0].Operations()[0].vmo_offset);
-    EXPECT_EQ(operations[0].op.length, requests[1].Operations()[0].vmo_offset);
+    EXPECT_EQ(0, requests[0].Operations()[0].op.vmo_offset);
+    EXPECT_EQ(operations[0].op.length, requests[1].Operations()[0].op.vmo_offset);
     // Same location on dev.
-    EXPECT_EQ(operations[0].op.dev_offset, requests[0].Operations()[0].dev_offset);
-    EXPECT_EQ(operations[1].op.dev_offset, requests[1].Operations()[0].dev_offset);
+    EXPECT_EQ(operations[0].op.dev_offset, requests[0].Operations()[0].op.dev_offset);
+    EXPECT_EQ(operations[1].op.dev_offset, requests[1].Operations()[0].op.dev_offset);
     // Same length.
-    EXPECT_EQ(operations[0].op.length, requests[0].Operations()[0].length);
-    EXPECT_EQ(operations[1].op.length, requests[1].Operations()[0].length);
+    EXPECT_EQ(operations[0].op.length, requests[0].Operations()[0].op.length);
+    EXPECT_EQ(operations[1].op.length, requests[1].Operations()[0].op.length);
 
     EXPECT_EQ(0, requests[0].Reservation()->start());
     EXPECT_EQ(operations[0].op.length, requests[1].Reservation()->start());
@@ -380,11 +380,11 @@ TEST(RingBufferTest, OneRequestFullRingBuffer) {
     ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
     ASSERT_EQ(1, request.Operations().size());
     // Start of RingBuffer.
-    EXPECT_EQ(0, request.Operations()[0].vmo_offset);
+    EXPECT_EQ(0, request.Operations()[0].op.vmo_offset);
     // Same location on dev.
-    EXPECT_EQ(operation.op.dev_offset, request.Operations()[0].dev_offset);
+    EXPECT_EQ(operation.op.dev_offset, request.Operations()[0].op.dev_offset);
     // Same length.
-    EXPECT_EQ(operation.op.length, request.Operations()[0].length);
+    EXPECT_EQ(operation.op.length, request.Operations()[0].op.length);
 
     EXPECT_EQ(0, request.Reservation()->start());
     EXPECT_EQ(operation.op.length, request.Reservation()->length());
@@ -576,7 +576,7 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
     operations[0].op.dev_offset = 0;
     operations[0].op.length = 2;
     builder.Add(operations[0]);
-    fbl::Vector<Operation> buffer_operation;
+    fbl::Vector<BufferedOperation> buffer_operation;
     ASSERT_OK(reservations[0].CopyRequests(builder.TakeOperations(), 0, &buffer_operation));
 
     // "C"
@@ -651,12 +651,12 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
     operation.op.dev_offset = 1;
     operation.op.length = 1;
     builder.Add(operation);
-    fbl::Vector<Operation> buffer_operation;
+    fbl::Vector<BufferedOperation> buffer_operation;
     ASSERT_OK(reservation.CopyRequests(builder.TakeOperations(), 1, &buffer_operation));
     ASSERT_EQ(1, buffer_operation.size());
-    ASSERT_EQ(1, buffer_operation[0].vmo_offset);
-    ASSERT_EQ(1, buffer_operation[0].dev_offset);
-    ASSERT_EQ(1, buffer_operation[0].length);
+    ASSERT_EQ(1, buffer_operation[0].op.vmo_offset);
+    ASSERT_EQ(1, buffer_operation[0].op.dev_offset);
+    ASSERT_EQ(1, buffer_operation[0].op.length);
 
     ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_a, reservation.MutableData(0), 0, seed_a));
     ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_b, reservation.MutableData(1), 1, seed_b + 1));

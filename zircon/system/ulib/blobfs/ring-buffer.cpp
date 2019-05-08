@@ -127,9 +127,9 @@ void RingBufferReservation::Reset() {
 
 zx_status_t RingBufferReservation::CopyRequests(
         const fbl::Vector<UnbufferedOperation>& in_operations, size_t offset,
-        fbl::Vector<Operation>* out) {
+        fbl::Vector<BufferedOperation>* out) {
     ZX_DEBUG_ASSERT_MSG(Reserved(), "Copying to invalid reservation");
-    fbl::Vector<Operation> out_operations;
+    fbl::Vector<BufferedOperation> out_operations;
     out_operations.reserve(in_operations.size());
 
     ZX_DEBUG_ASSERT_MSG(offset + BlockCount(in_operations) <= length(),
@@ -167,12 +167,13 @@ zx_status_t RingBufferReservation::CopyRequests(
             return status;
         }
 
-        Operation op;
-        op.type = in_operations[i].op.type;
-        op.vmo_offset = ring_buffer_offset;
-        op.dev_offset = dev_offset;
-        op.length = buf_len;
-        out_operations.push_back(std::move(op));
+        BufferedOperation out_op;
+        out_op.vmoid = vmoid();
+        out_op.op.type = in_operations[i].op.type;
+        out_op.op.vmo_offset = ring_buffer_offset;
+        out_op.op.dev_offset = dev_offset;
+        out_op.op.length = buf_len;
+        out_operations.push_back(std::move(out_op));
 
         ring_buffer_offset = (ring_buffer_offset + buf_len) % capacity;
         reservation_offset += buf_len;
@@ -194,12 +195,13 @@ zx_status_t RingBufferReservation::CopyRequests(
             reservation_offset += buf_len;
 
             // Insert the "new" request, which is the latter half of the last request
-            Operation op;
-            op.type = in_operations[i].op.type;
-            op.vmo_offset = 0;
-            op.dev_offset = dev_offset;
-            op.length = buf_len;
-            out_operations.push_back(std::move(op));
+            BufferedOperation out_op;
+            out_op.vmoid = vmoid();
+            out_op.op.type = in_operations[i].op.type;
+            out_op.op.vmo_offset = 0;
+            out_op.op.dev_offset = dev_offset;
+            out_op.op.length = buf_len;
+            out_operations.push_back(std::move(out_op));
         }
     }
 
@@ -231,7 +233,7 @@ zx_status_t RingBuffer::Create(SpaceManager* space_manager, size_t blocks, const
     return ZX_OK;
 }
 
-RingBufferRequests::RingBufferRequests(fbl::Vector<Operation> requests,
+RingBufferRequests::RingBufferRequests(fbl::Vector<BufferedOperation> requests,
                                        RingBufferReservation reservation)
     : requests_(std::move(requests)), reservation_(std::move(reservation)) {}
 
