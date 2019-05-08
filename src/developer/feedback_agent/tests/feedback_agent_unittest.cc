@@ -197,12 +197,15 @@ TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   set_scenic_responses(std::move(scenic_responses));
 
   GetScreenshotResponse feedback_response;
-  agent_->GetScreenshot(
-      ImageEncoding::PNG,
-      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
-        feedback_response.screenshot = std::move(screenshot);
-      });
-  RunLoopUntilIdle();
+  bool has_feedback_response = false;
+  agent_->GetScreenshot(ImageEncoding::PNG,
+                        [&feedback_response, &has_feedback_response](
+                            std::unique_ptr<Screenshot> screenshot) {
+                          feedback_response.screenshot = std::move(screenshot);
+                          has_feedback_response = true;
+                        });
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&has_feedback_response] { return has_feedback_response; }));
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -230,12 +233,15 @@ TEST_F(FeedbackAgentTest, GetScreenshot_FailOnScenicReturningFailure) {
   set_scenic_responses(std::move(scenic_responses));
 
   GetScreenshotResponse feedback_response;
-  agent_->GetScreenshot(
-      ImageEncoding::PNG,
-      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
-        feedback_response.screenshot = std::move(screenshot);
-      });
-  RunLoopUntilIdle();
+  bool has_feedback_response = false;
+  agent_->GetScreenshot(ImageEncoding::PNG,
+                        [&feedback_response, &has_feedback_response](
+                            std::unique_ptr<Screenshot> screenshot) {
+                          feedback_response.screenshot = std::move(screenshot);
+                          has_feedback_response = true;
+                        });
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&has_feedback_response] { return has_feedback_response; }));
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -249,12 +255,15 @@ TEST_F(FeedbackAgentTest,
   set_scenic_responses(std::move(scenic_responses));
 
   GetScreenshotResponse feedback_response;
-  agent_->GetScreenshot(
-      ImageEncoding::PNG,
-      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
-        feedback_response.screenshot = std::move(screenshot);
-      });
-  RunLoopUntilIdle();
+  bool has_feedback_response = false;
+  agent_->GetScreenshot(ImageEncoding::PNG,
+                        [&feedback_response, &has_feedback_response](
+                            std::unique_ptr<Screenshot> screenshot) {
+                          feedback_response.screenshot = std::move(screenshot);
+                          has_feedback_response = true;
+                        });
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&has_feedback_response] { return has_feedback_response; }));
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -285,7 +294,9 @@ TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
           feedback_responses.push_back({std::move(screenshot)});
         });
   }
-  RunLoopUntilIdle();
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&feedback_responses, num_calls] {
+    return feedback_responses.size() == num_calls;
+  }));
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -326,10 +337,14 @@ TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
   });
 
   DataProvider_GetData_Result feedback_result;
-  agent_->GetData([&feedback_result](DataProvider_GetData_Result result) {
+  bool has_feedback_result = false;
+  agent_->GetData([&feedback_result,
+                   &has_feedback_result](DataProvider_GetData_Result result) {
     feedback_result = std::move(result);
+    has_feedback_result = true;
   });
-  RunLoopUntilIdle();
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&has_feedback_result] { return has_feedback_result; }));
 
   ASSERT_TRUE(feedback_result.is_response());
   // As we control the system log attachment, we can expect it to be present and
