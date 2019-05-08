@@ -88,6 +88,13 @@ protocol PCol
     Mandrel(int32 j, string k)
         -> (int32 y);
 
+    Skagra(int32 j,
+
+           // Weird comment in the middle
+
+           string k)
+        -> (int32 y);
+
     Cat(string? s) -> (bool b);
     Karfel(
         int32 x) -> (int y);

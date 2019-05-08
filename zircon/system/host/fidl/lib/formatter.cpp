@@ -56,8 +56,9 @@ void FormattingTreeVisitor::Segment::RemoveExtraBlankLines(bool respects_trailin
     // Make an exception if the previous line is blank - i.e., coalesce
     // multiple blank lines.  Work backwards so we don't screw up line
     // numbers.
-    for (auto i = blank_line_indices.rbegin();
-         i != blank_line_indices.rend();
+    auto unmodified_bli(blank_line_indices);
+    for (auto i = unmodified_bli.rbegin();
+         i != unmodified_bli.rend();
          ++i) {
         int line_num = *i;
         bool is_next_to_comment =
@@ -76,6 +77,11 @@ void FormattingTreeVisitor::Segment::RemoveExtraBlankLines(bool respects_trailin
                 next_newline = output_.size();
             }
             output_.erase(offset, next_newline - offset + 1);
+            // This line doesn't exist anymore.  Erase it from the various
+            // indices so that subsequent lines don't get confused about whether
+            // they need to coalesce with a line that isn't there anymore.
+            comment_line_indices.erase(line_num);
+            blank_line_indices.erase(line_num);
         }
     }
 }
@@ -393,6 +399,17 @@ void FormattingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& eleme
         fidl::SourceLocation(processed_file_start, real_start.previous_end().source_file()));
 
     DeclarationOrderTreeVisitor::OnFile(element);
+    // Remove EOF whitespace
+    size_t final_size = formatted_output_.size();
+    size_t last_char_index = final_size - 1;
+    if (formatted_output_.at(last_char_index) != '\n' ||
+        strchr(kWsCharacters, formatted_output_.at(last_char_index - 1)) != nullptr) {
+        while (strchr(kWsCharacters, formatted_output_.at(last_char_index)) != nullptr) {
+            last_char_index--;
+        }
+        formatted_output_ = formatted_output_.substr(0, last_char_index + 1);
+        formatted_output_.append("\n");
+    }
 }
 
 } // namespace raw
