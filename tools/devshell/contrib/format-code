@@ -18,7 +18,7 @@
 ##             Globs are dealt with by bash; fx format-code "--files=foo/*" will
 ##             work as expected.
 ##   --target  Allows the user to specify a gn target.
-##   --git     The default; it uses `git diff-index` against the newest parent
+##   --git     The default; it uses `git diff` against the newest parent
 ##             commit in the upstream branch (or against HEAD if no such commit
 ##             is found).  Files that are locally modified, staged or touched by
 ##             any commits introduced on the local branch are formatted.
@@ -127,7 +127,7 @@ GIT_FILTER=("$@")
 
 get_git_files() {
   FILES=$(canonicalize $(git rev-parse --show-toplevel) \
-    $(git diff-index --name-only $(get-diff-base) "${GIT_FILTER[@]}"))
+    $(git diff --name-only $(get-diff-base) "${GIT_FILTER[@]}"))
 }
 
 get_all_files() {
