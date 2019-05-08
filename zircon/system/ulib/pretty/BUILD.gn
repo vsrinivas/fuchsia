@@ -17,11 +17,6 @@ library("pretty") {
   if (!is_kernel) {
     sources += [ "hexdump.c" ]
   }
-  if (!is_kernel && is_fuchsia) {
-    deps = [
-      "$zx/system/ulib/fdio",
-    ]
-  }
 }
 
 test("pretty-test") {
@@ -30,6 +25,7 @@ test("pretty-test") {
   ]
   deps = [
     ":pretty",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
   ]
 }

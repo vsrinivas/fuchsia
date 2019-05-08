@@ -38,7 +38,7 @@ library("paver") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
-    "$zx/system/ulib/zxcrypt",
+    "$zx/system/ulib/zxcrypt:zxcrypt-fdio",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/uboringssl",

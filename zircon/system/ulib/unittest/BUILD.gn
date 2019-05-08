@@ -15,6 +15,7 @@ library("unittest") {
     "watchdog.cpp",
   ]
   deps = [
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
   ]
   if (is_fuchsia) {

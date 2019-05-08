@@ -28,7 +28,6 @@ library("uboringssl") {
 
     if (is_fuchsia) {
       deps = [
-        "$zx/system/ulib/fdio",
         "$zx/system/ulib/zircon",
       ]
     } else {

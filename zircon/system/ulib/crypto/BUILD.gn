@@ -33,7 +33,6 @@ library("zircon-crypto") {
   deps = [
     "$zx/system/ulib/explicit-memory",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxcpp",
