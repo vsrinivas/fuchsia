@@ -144,12 +144,20 @@ bool TestFileComponentInfoTest() {
     END_TEST;
 }
 
+static ScopedTestFile NewPublishFile(const fbl::String& test_name) {
+    char* root_dir = getenv("TEST_ROOT_DIR");
+    ZX_ASSERT(root_dir != nullptr);
+    const fbl::String path =
+        fbl::String::Concat({root_dir, "/bin/publish-data-helper"});
+    return ScopedTestFile(test_name.c_str(), path.c_str());
+}
+
 bool RunTestDontPublishData() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
     fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
-    ScopedTestFile file(test_name.c_str(), "/boot/bin/publish-data-helper");
+    auto file = NewPublishFile(test_name);
 
     const char* argv[] = {test_name.c_str(), nullptr};
     std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
@@ -166,7 +174,7 @@ bool RunTestsPublishData() {
 
     ScopedTestDir test_dir;
     fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
-    ScopedTestFile file(test_name.c_str(), "/boot/bin/publish-data-helper");
+    auto file = NewPublishFile(test_name);
     int num_failed = 0;
     fbl::Vector<std::unique_ptr<Result>> results;
     const signed char verbosity = 77;
@@ -188,7 +196,7 @@ bool RunAllTestsPublishData() {
 
     ScopedTestDir test_dir;
     fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
-    ScopedTestFile file(test_name.c_str(), "/boot/bin/publish-data-helper");
+    auto file = NewPublishFile(test_name);
 
     const fbl::String output_dir =
         JoinPath(test_dir.path(), "run-all-tests-output-1");
@@ -242,15 +250,63 @@ bool RunAllTestsPublishData() {
     END_TEST;
 }
 
+bool RunTestRootDir() {
+    BEGIN_TEST;
+
+    ScopedTestDir test_dir;
+    fbl::String test_name = JoinPath(test_dir.path(), "succeed.sh");
+    const char* argv[] = {test_name.c_str(), nullptr};
+
+    // This test should have gotten TEST_ROOT_DIR. Confirm that we can find our
+    // artifact in the "testdata/" directory under TEST_ROOT_DIR.
+    char* root_dir = getenv("TEST_ROOT_DIR");
+    ASSERT_TRUE(root_dir != nullptr);
+    {
+        const fbl::String testdata_path =
+            fbl::String::Concat({root_dir, "/testdata/runtests-utils/test-data"});
+        FILE* testdata_file = fopen(testdata_path.c_str(), "r");
+        ASSERT_TRUE(testdata_file);
+        char buf[1024];
+        memset(buf, 0, sizeof(buf));
+        EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), testdata_file));
+        fclose(testdata_file);
+        constexpr char kExpectedStr[] = "Hello world!\n";
+        EXPECT_STR_EQ(kExpectedStr, buf);
+    }
+
+    // Run a test and confirm TEST_ROOT_DIR gets passed along.
+    {
+        const char script_contents[] = "echo -n $TEST_ROOT_DIR";
+        ScopedScriptFile script(argv[0], script_contents);
+        fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
+        std::unique_ptr<Result> result =
+            PlatformRunTest(argv, nullptr, output_filename.c_str());
+
+        FILE* output_file = fopen(output_filename.c_str(), "r");
+        ASSERT_TRUE(output_file);
+        char buf[1024];
+        memset(buf, 0, sizeof(buf));
+        EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
+        fclose(output_file);
+        EXPECT_STR_EQ(root_dir, buf);
+        EXPECT_STR_EQ(argv[0], result->name.c_str());
+        EXPECT_EQ(SUCCESS, result->launch_status);
+        EXPECT_EQ(0, result->return_code);
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FuchsiaComponentInfo)
 RUN_TEST_SMALL(TestFileComponentInfoTest)
 END_TEST_CASE(FuchsiaComponentInfo)
 
-BEGIN_TEST_CASE(PublishDataTests)
+BEGIN_TEST_CASE(PlatformRunTests)
 RUN_TEST(RunTestDontPublishData)
 RUN_TEST_MEDIUM(RunTestsPublishData)
 RUN_TEST_MEDIUM(RunAllTestsPublishData)
-END_TEST_CASE(PublishDataTests)
+RUN_TEST_MEDIUM(RunTestRootDir)
+END_TEST_CASE(PlatformRunTests)
 
 } // namespace
 } // namespace runtests

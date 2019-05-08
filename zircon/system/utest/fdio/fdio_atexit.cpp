@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/string.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
-
 #include <unittest/unittest.h>
 
 static int64_t join(const zx::process& process) {
@@ -23,7 +23,10 @@ static bool exit_in_accept_test(void) {
     zx::process process;
     zx_status_t status;
 
-    const char* argv[] = {"/boot/bin/accept-child", nullptr};
+    char* root_dir = getenv("TEST_ROOT_DIR");
+    ASSERT_TRUE(root_dir != nullptr);
+    const fbl::String path = fbl::String::Concat({root_dir, "/bin/accept-child"});
+    const char* argv[] = {path.c_str(), nullptr};
     status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
                         argv[0], argv, process.reset_and_get_address());
     ASSERT_EQ(ZX_OK, status);

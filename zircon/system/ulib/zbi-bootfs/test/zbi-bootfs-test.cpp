@@ -5,8 +5,10 @@
 #include <cerrno>
 #include <fcntl.h>
 #include <getopt.h>
-#include <string>
+#include <stdlib.h>
 
+#include <fbl/string.h>
+#include <zircon/assert.h>
 #include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -18,14 +20,23 @@
 #include <unittest/unittest.h>
 #include <zbi-bootfs/zbi-bootfs.h>
 
-#define file_path "boot/testdata/zbi-bootfs/test-image.zbi"
 #define file_name "nand_image"
+
+static const char* image_path() {
+    static fbl::String path;
+    if (path.empty()) {
+        char* root_dir = getenv("TEST_ROOT_DIR");
+        ZX_ASSERT(root_dir != nullptr);
+        path = fbl::String::Concat({root_dir, "/testdata/zbi-bootfs/test-image.zbi"});
+    }
+    return path.c_str();
+}
 
 static bool ZbiInit(void) {
     BEGIN_TEST;
     zbi_bootfs::ZbiBootfsParser image;
     size_t byte_offset = 0;
-    const char* input = file_path;
+    const char* input = image_path();
 
     // Check good input
     zx::vmo vmo_out;
@@ -49,7 +60,7 @@ static bool ZbiInitBadInput(void) {
 static bool ZbiProcessSuccess(void) {
     BEGIN_TEST;
     zbi_bootfs::ZbiBootfsParser image;
-    const char* input = file_path;
+    const char* input = image_path();
     const char* filename = file_name;
     size_t byte_offset = 0;
 
@@ -66,7 +77,7 @@ static bool ZbiProcessSuccess(void) {
 static bool ZbiProcessBadOffset(void) {
     BEGIN_TEST;
     zbi_bootfs::ZbiBootfsParser image;
-    const char* input = file_path;
+    const char* input = image_path();
     const char* filename = file_name;
     zx::vmo vmo_out;
 
@@ -82,7 +93,7 @@ static bool ZbiProcessBadOffset(void) {
 static bool ZbiProcessBadFile(void) {
     BEGIN_TEST;
     zbi_bootfs::ZbiBootfsParser image;
-    const char* input = file_path;
+    const char* input = image_path();
     size_t byte_offset = 0;
     zx::vmo vmo_out;
 

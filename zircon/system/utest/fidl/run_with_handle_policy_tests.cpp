@@ -11,6 +11,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
@@ -108,14 +109,16 @@ bool LaunchHelper(const char* argv[]) {
     END_HELPER;
 }
 
-// This test app contains a subset of fidl-tests; refer to BUILD.gn
-static constexpr char kTestApp[] = "/boot/bin/fidl-handle-policy-test-app";
-
 bool TestWithStrictHandlePolicy() {
     BEGIN_TEST;
 
+    // This test app contains a subset of fidl-tests; refer to BUILD.gn
+    char* root_dir = getenv("TEST_ROOT_DIR");
+    ASSERT_TRUE(root_dir != nullptr);
+    const fbl::String test_app =
+        fbl::String::Concat({root_dir, "/bin/fidl-handle-policy-test-app"});
     const char* args[] = {
-        kTestApp,
+        test_app.c_str(),
         nullptr
     };
     ASSERT_TRUE(LaunchHelper(args));

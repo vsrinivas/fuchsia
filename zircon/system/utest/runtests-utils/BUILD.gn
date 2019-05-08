@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/resource.gni")
+
 test("runtests-utils") {
   sources = [
     "runtests-utils-test-utils.cpp",
@@ -21,6 +23,7 @@ test("runtests-utils") {
     deps += [ "$zx/system/ulib/memfs" ]
     data_deps = [
       ":publish-data-helper",
+      ":test-data",
     ]
   } else {
     sources += [ "posix-test-main.cpp" ]
@@ -44,4 +47,14 @@ if (is_fuchsia) {
     # from the inner runtests instance to the outer one so they make it
     # into summary.json.
   }
+
+  resource("test-data") {
+    sources = [
+      "test-data",
+    ]
+    outputs = [
+      "testdata/runtests-utils/test-data",
+    ]
+  }
 }
+

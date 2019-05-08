@@ -14,6 +14,7 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
+#include <stdlib.h>
 #include <utility>
 
 namespace {
@@ -106,7 +107,9 @@ bool TestFidlOpen() {
         ASSERT_EQ(zx::channel::create(0, &dev_client, &dev_server), ZX_OK);
         fdio_ns_t* ns;
         ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
-        ASSERT_EQ(fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
+        char* root_dir = getenv("TEST_ROOT_DIR");
+        ASSERT_TRUE(root_dir != nullptr);
+        ASSERT_EQ(fdio_ns_connect(ns, root_dir, ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
         ASSERT_TRUE(FidlOpenValidator(dev_client, "lib", fuchsia_io_NodeInfoTag_directory, 0));
         ASSERT_TRUE(FidlOpenErrorValidator(dev_client));
     }

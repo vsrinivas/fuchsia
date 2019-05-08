@@ -14,6 +14,7 @@ test("fdio") {
     "fdio_socketpair.c",
   ]
   deps = [
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
