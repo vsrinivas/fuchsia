@@ -53,6 +53,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/blobfs/test",
       "$zx/system/ulib/bootfs:bootfs-test",
       "$zx/system/ulib/c:tests",
+      "$zx/system/ulib/cobalt-client/test",
       "$zx/system/ulib/ddk:ddk-unittest",
       "$zx/system/ulib/disk-inspector/test",
       "$zx/system/ulib/driver-integration-test/test",

@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":cobalt-client-unit",
+  ]
+}
+
+test("cobalt-client-unit") {
+  sources = [
+    "in-memory-logger-test.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/zxtest",
+  ]
+}

@@ -45,3 +45,18 @@ library("cobalt-client") {
     "$zx/system/ulib/zxcpp",
   ]
 }
+
+
+# This library may only be imported from tests.
+library("in-memory-logger") {
+  testonly = true
+  sources = [ "in-memory-logger.cpp" ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-cobalt:c.headers",
+    "$zx/system/ulib/cobalt-client:headers",
+  ]
+  deps = [
+    ":cobalt-client",
+  ]
+}
