@@ -94,26 +94,24 @@ private:
 
 // Initializes 'handles_' and 'ids_' with the root handle and block device handle.
 zx_status_t Mounter::PrepareHandles(unique_fd device) {
-    zx_handle_t mountee_handle;
-    zx_status_t status = zx_channel_create(0, &mountee_handle, &root_);
+    zx::channel root_server, root_client;
+    zx_status_t status = zx::channel::create(0, &root_server, &root_client);
     if (status != ZX_OK) {
         return status;
     }
-    handles_[0] = mountee_handle;
-    ids_[0] = PA_USER0;
-    num_handles_ = 1;
+    zx::channel block_device;
+    status = fdio_get_service_handle(device.release(), block_device.reset_and_get_address());
+    if (status != ZX_OK) {
+        return status;
+    }
 
-    int device_fd = device.release();
-    status = fdio_fd_transfer(device_fd, &handles_[1]);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to access device handle\n");
-        zx_handle_close(mountee_handle);
-        zx_handle_close(root_);
-        device.reset(device_fd);
-        return status;
-    }
-    ids_[1] = PA_HND(PA_FD, FS_FD_BLOCKDEVICE);
+    handles_[0] = root_server.release();
+    ids_[0] = FS_HANDLE_ROOT_ID;
+    handles_[1] = block_device.release();
+    ids_[1] = FS_HANDLE_BLOCK_DEVICE_ID;
     num_handles_ = 2;
+
+    root_ = root_client.release();
     return ZX_OK;
 }
 

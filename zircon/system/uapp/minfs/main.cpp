@@ -18,6 +18,7 @@
 #include <fs/trace.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/fd.h>
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
 #include <trace-provider/provider.h>
@@ -34,8 +35,8 @@ int Fsck(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) 
 }
 
 int Mount(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
-    zx_handle_t h = zx_take_startup_handle(PA_HND(PA_USER0, 0));
-    if (h == ZX_HANDLE_INVALID) {
+    zx::channel root(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
+    if (!root) {
         FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
         return ZX_ERR_BAD_STATE;
     }
@@ -48,7 +49,7 @@ int Mount(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options)
         FS_TRACE_WARN("minfs: Unmounted\n");
     };
     zx_status_t status;
-    if ((status = MountAndServe(options, loop.dispatcher(), std::move(bc), zx::channel(h),
+    if ((status = MountAndServe(options, loop.dispatcher(), std::move(bc), std::move(root),
                                 std::move(loop_quit)) != ZX_OK)) {
         if (options.verbose) {
             fprintf(stderr, "minfs: Failed to mount: %d\n", status);
@@ -170,18 +171,24 @@ int main(int argc, char** argv) {
     argc -= optind;
     argv += optind;
 
-    // Block device passed by handle
     if (argc != 1) {
         return usage();
     }
     char* cmd = argv[0];
 
-    fbl::unique_fd fd;
-    fd.reset(FS_FD_BLOCKDEVICE);
+    // Block device passed by handle
+    zx::channel device = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
+    int device_fd = -1;
+    zx_status_t status = fdio_fd_create(device.release(), &device_fd);
+    if (status != ZX_OK) {
+        fprintf(stderr, "blobfs: Could not access block device\n");
+        return -1;
+    }
+    fbl::unique_fd fd(device_fd);
 
     off_t device_size = 0;
     bool block_readonly = false;
-    zx_status_t status = GetInfo(fd, &device_size, &block_readonly);
+    status = GetInfo(fd, &device_size, &block_readonly);
     if (status != ZX_OK) {
         return status;
     }

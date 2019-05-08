@@ -5,9 +5,10 @@
 #ifndef LIB_FDIO_VFS_H_
 #define LIB_FDIO_VFS_H_
 
-#include <zircon/types.h>
-#include <zircon/listnode.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
+#include <zircon/processargs.h>
+#include <zircon/types.h>
 
 #include <stdio.h>
 #include <unistd.h>  // ssize_t
@@ -17,7 +18,8 @@ __BEGIN_CDECLS
 // On Fuchsia, the Block Device is transmitted by file descriptor, rather than
 // by path. This can prevent some racy behavior relating to FS start-up.
 #ifdef __Fuchsia__
-#define FS_FD_BLOCKDEVICE 200
+#define FS_HANDLE_ROOT_ID PA_HND(PA_USER0, 0)
+#define FS_HANDLE_BLOCK_DEVICE_ID PA_HND(PA_USER0, 1)
 #endif
 
 // POSIX defines st_blocks to be the number of 512 byte blocks allocated

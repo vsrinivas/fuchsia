@@ -23,6 +23,7 @@
 #include <fs/vfs.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/fd.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <trace-provider/provider.h>
@@ -55,8 +56,8 @@ int Mount(fbl::unique_fd fd, blobfs::MountOptions* options) {
         }
     }
 
-    zx::channel root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
-    if (!root.is_valid()) {
+    zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
+    if (!root_server.is_valid()) {
         FS_TRACE_ERROR("blobfs: Could not access startup handle to mount point\n");
         return -1;
     }
@@ -67,7 +68,7 @@ int Mount(fbl::unique_fd fd, blobfs::MountOptions* options) {
         loop.Quit();
         FS_TRACE_WARN("blobfs: Unmounted\n");
     };
-    if (blobfs::Mount(loop.dispatcher(), std::move(fd), *options, std::move(root),
+    if (blobfs::Mount(loop.dispatcher(), std::move(fd), *options, std::move(root_server),
                       std::move(loop_quit)) != ZX_OK) {
         return -1;
     }
@@ -127,11 +128,11 @@ int usage() {
                 kCmds[n].name, kCmds[n].help);
     }
     fprintf(stderr, "\n");
-    return -1;
+    return ZX_ERR_INVALID_ARGS;
 }
 
-// Process options/commands and return open fd to device
-int ProcessArgs(int argc, char** argv, CommandFunction* func, blobfs::MountOptions* options) {
+zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
+                        blobfs::MountOptions* options) {
     while (1) {
         static struct option opts[] = {
             {"readonly", no_argument, nullptr, 'r'},
@@ -181,19 +182,24 @@ int ProcessArgs(int argc, char** argv, CommandFunction* func, blobfs::MountOptio
         return usage();
     }
 
-    // Block device passed by handle
-    return FS_FD_BLOCKDEVICE;
+    return ZX_OK;
 }
 } // namespace
 
 int main(int argc, char** argv) {
     CommandFunction func = nullptr;
     blobfs::MountOptions options;
-    fbl::unique_fd fd(ProcessArgs(argc, argv, &func, &options));
-
-    if (!fd) {
+    zx_status_t status = ProcessArgs(argc, argv, &func, &options);
+    if (status != ZX_OK) {
         return -1;
     }
 
-    return func(std::move(fd), &options);
+    zx::channel device = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
+    int device_fd = -1;
+    status = fdio_fd_create(device.release(), &device_fd);
+    if (status != ZX_OK) {
+        fprintf(stderr, "blobfs: Could not access block device\n");
+        return -1;
+    }
+    return func(fbl::unique_fd(device_fd), &options);
 }

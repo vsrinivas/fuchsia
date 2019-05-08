@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/fdio/limits.h>
@@ -17,6 +18,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
+#include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
@@ -26,16 +28,16 @@ namespace {
 
 zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options,
                          LaunchCallback cb, const char* cmd_path) {
-    zx_handle_t hnd = ZX_HANDLE_INVALID;
-    uint32_t id = PA_HND(PA_FD, FS_FD_BLOCKDEVICE);
-    int device_fd;
-    if ((device_fd = open(device_path, O_RDWR)) < 0) {
+    fbl::unique_fd device_fd;
+    device_fd.reset(open(device_path, O_RDWR));
+    if (!device_fd) {
         fprintf(stderr, "Failed to open device\n");
         return ZX_ERR_BAD_STATE;
     }
-    zx_status_t status = fdio_fd_transfer(device_fd, &hnd);
+    zx::channel block_device;
+    zx_status_t status = fdio_get_service_handle(device_fd.release(),
+                                                 block_device.reset_and_get_address());
     if (status != ZX_OK) {
-        fprintf(stderr, "Failed to access device handle\n");
         return status;
     }
 
@@ -52,6 +54,8 @@ zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options,
     argv.push_back("fsck");
     argv.push_back(nullptr);
 
+    zx_handle_t hnd = block_device.release();
+    uint32_t id = FS_HANDLE_BLOCK_DEVICE_ID;
     auto argc = static_cast<int>(argv.size() - 1);
     status = static_cast<zx_status_t>(cb(argc, argv.get(), &hnd, &id, 1));
     return status;
