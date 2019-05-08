@@ -28,66 +28,66 @@ impl From<stdtime::Duration> for Duration {
 impl ops::Add<Duration> for Time {
     type Output = Time;
     fn add(self, dur: Duration) -> Time {
-        Time::from_nanos(dur.nanos() + self.nanos())
+        Time::from_nanos(dur.into_nanos() + self.into_nanos())
     }
 }
 
 impl ops::Add<Time> for Duration {
     type Output = Time;
     fn add(self, time: Time) -> Time {
-        Time::from_nanos(self.nanos() + time.nanos())
+        Time::from_nanos(self.into_nanos() + time.into_nanos())
     }
 }
 
 impl ops::Add for Duration {
     type Output = Duration;
     fn add(self, dur: Duration) -> Duration {
-        Duration::from_nanos(self.nanos() + dur.nanos())
+        Duration::from_nanos(self.into_nanos() + dur.into_nanos())
     }
 }
 
 impl ops::Sub for Duration {
     type Output = Duration;
     fn sub(self, dur: Duration) -> Duration {
-        Duration::from_nanos(self.nanos() - dur.nanos())
+        Duration::from_nanos(self.into_nanos() - dur.into_nanos())
     }
 }
 
 impl ops::Sub<Duration> for Time {
     type Output = Time;
     fn sub(self, dur: Duration) -> Time {
-        Time::from_nanos(self.nanos() - dur.nanos())
+        Time::from_nanos(self.into_nanos() - dur.into_nanos())
     }
 }
 
 impl ops::Sub<Time> for Time {
     type Output = Duration;
     fn sub(self, other: Time) -> Duration {
-        Duration::from_nanos(self.nanos() - other.nanos())
+        Duration::from_nanos(self.into_nanos() - other.into_nanos())
     }
 }
 
 impl ops::AddAssign for Duration {
     fn add_assign(&mut self, dur: Duration) {
-        self.0 += dur.nanos()
+        self.0 += dur.into_nanos()
     }
 }
 
 impl ops::SubAssign for Duration {
     fn sub_assign(&mut self, dur: Duration) {
-        self.0 -= dur.nanos()
+        self.0 -= dur.into_nanos()
     }
 }
 
 impl ops::AddAssign<Duration> for Time {
     fn add_assign(&mut self, dur: Duration) {
-        self.0 += dur.nanos()
+        self.0 += dur.into_nanos()
     }
 }
 
 impl ops::SubAssign<Duration> for Time {
     fn sub_assign(&mut self, dur: Duration) {
-        self.0 -= dur.nanos()
+        self.0 -= dur.into_nanos()
     }
 }
 
@@ -115,28 +115,64 @@ impl Duration {
         Time::after(self).sleep()
     }
 
+    #[deprecated(note = "Users should instead use into_nanos")]
     pub fn nanos(self) -> i64 {
         self.0
     }
 
+    #[deprecated(note = "Users should instead use into_micros")]
     pub fn micros(self) -> i64 {
         self.0 / 1_000
     }
 
+    #[deprecated(note = "Users should instead use into_millis")]
     pub fn millis(self) -> i64 {
-        self.micros() / 1_000
+        self.into_micros() / 1_000
     }
 
+    #[deprecated(note = "Users should instead use into_seconds")]
     pub fn seconds(self) -> i64 {
-        self.millis() / 1_000
+        self.into_millis() / 1_000
     }
 
+    #[deprecated(note = "Users should instead use into_minutes")]
     pub fn minutes(self) -> i64 {
-        self.seconds() / 60
+        self.into_seconds() / 60
     }
 
+    #[deprecated(note = "Users should instead use into_hours")]
     pub fn hours(self) -> i64 {
-        self.minutes() / 60
+        self.into_minutes() / 60
+    }
+
+    /// Returns the number of nanoseconds contained by this `Duration`.
+    pub fn into_nanos(self) -> i64 {
+        self.0
+    }
+
+    /// Returns the total number of whole microseconds contained by this `Duration`.
+    pub fn into_micros(self) -> i64 {
+        self.0 / 1_000
+    }
+
+    /// Returns the total number of whole milliseconds contained by this `Duration`.
+    pub fn into_millis(self) -> i64 {
+        self.into_micros() / 1_000
+    }
+
+    /// Returns the total number of whole seconds contained by this `Duration`.
+    pub fn into_seconds(self) -> i64 {
+        self.into_millis() / 1_000
+    }
+
+    /// Returns the total number of whole minutes contained by this `Duration`.
+    pub fn into_minutes(self) -> i64 {
+        self.into_seconds() / 60
+    }
+
+    /// Returns the total number of whole hours contained by this `Duration`.
+    pub fn into_hours(self) -> i64 {
+        self.into_minutes() / 60
     }
 
     pub fn from_nanos(nanos: i64) -> Self {
@@ -245,7 +281,7 @@ impl Time {
         unsafe { sys::zx_nanosleep(self.0); }
     }
 
-    pub fn nanos(self) -> i64 {
+    pub fn into_nanos(self) -> i64 {
         self.0
     }
 
@@ -303,7 +339,7 @@ impl Timer {
     /// syscall.
     pub fn set(&self, deadline: Time, slack: Duration) -> Result<(), Status> {
         let status = unsafe {
-            sys::zx_timer_set(self.raw_handle(), deadline.nanos(), slack.nanos())
+            sys::zx_timer_set(self.raw_handle(), deadline.into_nanos(), slack.into_nanos())
         };
         ok(status)
     }
@@ -333,7 +369,7 @@ mod tests {
         let std_dur = stdtime::Duration::new(25, 25);
         let dur = Duration::from(std_dur);
         let std_dur_nanos = (1_000_000_000 * std_dur.as_secs()) + std_dur.subsec_nanos() as u64;
-        assert_eq!(std_dur_nanos as i64, dur.nanos());
+        assert_eq!(std_dur_nanos as i64, dur.into_nanos());
     }
 
     #[test]
@@ -342,9 +378,9 @@ mod tests {
         let dur_from_nanos = Duration::from_nanos(nanos_in_one_hour);
         let dur_from_hours = Duration::from_hours(1);
         assert_eq!(dur_from_nanos, dur_from_hours);
-        assert_eq!(dur_from_nanos.nanos(), dur_from_hours.nanos());
-        assert_eq!(dur_from_nanos.nanos(), nanos_in_one_hour);
-        assert_eq!(dur_from_nanos.hours(), 1);
+        assert_eq!(dur_from_nanos.into_nanos(), dur_from_hours.into_nanos());
+        assert_eq!(dur_from_nanos.into_nanos(), nanos_in_one_hour);
+        assert_eq!(dur_from_nanos.into_hours(), 1);
     }
 
     #[test]

@@ -137,7 +137,7 @@ async fn fetch_and_discard_url(http_service: HttpServiceProxy,
     let bytes_received = await!(socket.copy_into(&mut stdio_sink))?;
     let stop_time = zx::Time::get(zx::ClockId::Monotonic);
 
-    let time_nanos = (stop_time - start_time).nanos() as u64;
+    let time_nanos = (stop_time - start_time).into_nanos() as u64;
     let time_seconds = time_nanos as f64 * 1e-9;
 
     let bits_received = (bytes_received * 8) as f64;

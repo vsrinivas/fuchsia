@@ -35,7 +35,7 @@ struct BatteryStatusHelper {
 #[inline]
 fn get_current_time() -> i64 {
     let t = zx::Time::get(zx::ClockId::UTC);
-    (t.nanos() / 1000) as i64
+    (t.into_nanos() / 1000) as i64
 }
 
 #[derive(Debug)]

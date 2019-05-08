@@ -227,7 +227,8 @@ impl LocalOptions {
         // this may offset them from UTC time as set when logged in
         // case of UTC time adjustments since.
         let monotonic_zero_as_utc =
-            zx::Time::get(zx::ClockId::UTC).nanos() - zx::Time::get(zx::ClockId::Monotonic).nanos();
+            zx::Time::get(zx::ClockId::UTC).into_nanos() -
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos();
         let shifted_timestamp = monotonic_zero_as_utc + timestamp;
         let seconds = (shifted_timestamp / 1000000000) as i64;
         let nanos = (shifted_timestamp % 1000000000) as u32;

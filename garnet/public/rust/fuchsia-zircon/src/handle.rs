@@ -144,7 +144,7 @@ impl<'a, T: HandleBased> Unowned<'a, T> {
         let mut pending = Signals::empty().bits();
         let status = unsafe {
             sys::zx_object_wait_one(
-                self.raw_handle(), signals.bits(), deadline.nanos(), &mut pending)
+                self.raw_handle(), signals.bits(), deadline.into_nanos(), &mut pending)
         };
         ok(status).map(|()| Signals::from_bits_truncate(pending))
     }

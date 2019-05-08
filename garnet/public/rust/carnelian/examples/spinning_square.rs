@@ -119,7 +119,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         ));
         self.background_node.set_translation(center_x, center_y, BACKGROUND_Z);
         let square_size = context.size.width.min(context.size.height) * 0.6;
-        let t = ((context.presentation_time.nanos() - self.start.nanos()) as f32
+        let t = ((context.presentation_time.into_nanos() - self.start.into_nanos()) as f32
             * SECONDS_PER_NANOSECOND
             * SPEED)
             % 1.0;

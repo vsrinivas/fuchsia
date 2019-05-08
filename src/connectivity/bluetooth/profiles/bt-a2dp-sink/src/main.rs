@@ -512,7 +512,7 @@ async fn decode_media_stream(
         metrics::A2DP_NUMBER_OF_MICROSECONDS_STREAMED_METRIC_ID,
         metrics::A2dpNumberOfMicrosecondsStreamedMetricDimensionCodec::Sbc as u32,
         0,
-        (end_time - start_time).micros(),
+        (end_time - start_time).into_micros(),
     );
 }
 

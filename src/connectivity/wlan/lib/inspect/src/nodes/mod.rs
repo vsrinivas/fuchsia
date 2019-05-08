@@ -45,8 +45,8 @@ impl NodeExt for finspect::ObjectTreeNode {
     fn set_time_at(&mut self, timestamp: zx::Time) -> &mut Self {
         // TODO(WLAN-1010) - if we have something to post-process Inspect JSON dump, it would be
         //                   better to log the timestamp as MetricValue::UintValue.
-        let seconds = timestamp.nanos() / 1000_000_000;
-        let millis = (timestamp.nanos() % 1000_000_000) / 1000_000;
+        let seconds = timestamp.into_nanos() / 1000_000_000;
+        let millis = (timestamp.into_nanos() % 1000_000_000) / 1000_000;
         self.add_property(fidl_inspect::Property {
             key: "@time".to_string(),
             value: fidl_inspect::PropertyValue::Str(format!("{}.{}", seconds, millis)),

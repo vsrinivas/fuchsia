@@ -247,7 +247,7 @@ pub enum ClockId {
 pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, Status>
 {
     let items_ptr = items.as_mut_ptr() as *mut sys::zx_wait_item_t;
-    let status = unsafe { sys::zx_object_wait_many( items_ptr, items.len(), deadline.nanos()) };
+    let status = unsafe { sys::zx_object_wait_many( items_ptr, items.len(), deadline.into_nanos()) };
     if status == sys::ZX_ERR_CANCELED {
         return Ok(true)
     }
@@ -348,7 +348,7 @@ mod tests {
         let ticks2 = ticks_get();
 
         // The number of ticks should have increased by at least 1 ms worth
-        let sleep_ticks = (sleep_time.millis() as u64) * ticks_per_second() / 1000;
+        let sleep_ticks = (sleep_time.into_millis() as u64) * ticks_per_second() / 1000;
         assert!(ticks2 >= (ticks1 + sleep_ticks));
     }
 

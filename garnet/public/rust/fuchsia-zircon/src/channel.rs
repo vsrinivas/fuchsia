@@ -163,7 +163,7 @@ impl Channel {
         let status = unsafe {
             Status::from_raw(
                 sys::zx_channel_call(
-                    self.raw_handle(), options, timeout.nanos(), &args, &mut actual_read_bytes,
+                    self.raw_handle(), options, timeout.into_nanos(), &args, &mut actual_read_bytes,
                     &mut actual_read_handles))
         };
         unsafe {

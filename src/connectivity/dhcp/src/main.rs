@@ -45,7 +45,7 @@ fn main() -> Result<(), Error> {
     let udp_socket = UdpSocket::bind(&socket_addr).context("unable to bind socket")?;
     udp_socket.set_broadcast(true).context("unable to set broadcast")?;
     let server = Mutex::new(Server::from_config(config, || {
-        zx::Time::get(zx::ClockId::UTC).nanos() / 1_000_000_000
+        zx::Time::get(zx::ClockId::UTC).into_nanos() / 1_000_000_000
     }));
     let msg_handling_loop = define_msg_handling_loop_future(udp_socket, &server);
     let lease_expiration_handler = define_lease_expiration_handler_future(&server);

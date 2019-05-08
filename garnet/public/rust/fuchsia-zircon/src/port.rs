@@ -323,7 +323,7 @@ impl Port {
     pub fn wait(&self, deadline: Time) -> Result<Packet, Status> {
         let mut packet = Default::default();
         let status = unsafe {
-            sys::zx_port_wait(self.raw_handle(), deadline.nanos(),
+            sys::zx_port_wait(self.raw_handle(), deadline.into_nanos(),
                 &mut packet as *mut sys::zx_port_packet_t)
         };
         ok(status)?;

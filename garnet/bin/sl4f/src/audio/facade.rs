@@ -213,7 +213,7 @@ impl OutputWorker {
                             if last_notify > zx::Time::from_nanos(0) {
                                 let interval = now - last_notify;
                                 if  interval > zx::Duration::from_millis(150) {
-                                    fx_log_info!("Output position not updated for 150ms({:?}).  Expect glitches.", interval.millis());
+                                    fx_log_info!("Output position not updated for 150ms({:?}).  Expect glitches.", interval.into_millis());
                                 }
                             }
                             last_notify = now;
@@ -545,7 +545,7 @@ impl InputWorker {
                             if last_notify > zx::Time::from_nanos(0) {
                                 let interval = now - last_notify;
                                 if  interval > zx::Duration::from_millis(150) {
-                                    fx_log_info!("Input position not updated for 150ms({:?}).  Expect glitches.", interval.millis());
+                                    fx_log_info!("Input position not updated for 150ms({:?}).  Expect glitches.", interval.into_millis());
                                 }
                             }
                             last_notify = now;
