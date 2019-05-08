@@ -4,9 +4,8 @@
 
 #include <blobfs/writeback.h>
 #include <blobfs/writeback-queue.h>
-#include <unittest/unittest.h>
-
-#include "utils.h"
+#include <zircon/assert.h>
+#include <zxtest/zxtest.h>
 
 namespace blobfs {
 namespace {
@@ -24,10 +23,8 @@ public:
         }
     }
 
-    bool Init() {
-        BEGIN_HELPER;
-        ASSERT_EQ(ZX_OK, WritebackQueue::Create(this, kCapacity, &writeback_));
-        END_HELPER;
+    MockTransactionManager() {
+        EXPECT_EQ(ZX_OK, WritebackQueue::Create(this, kCapacity, &writeback_));
     }
 
     uint32_t FsBlockSize() const final {
@@ -42,7 +39,7 @@ public:
         return kDeviceBlockSize;
     }
 
-    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override {
         // TODO(smklein): Improve validation.
         return ZX_OK;
     }
@@ -76,7 +73,7 @@ public:
         return kCapacity;
     }
 
-    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) {
+    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final {
         ZX_ASSERT(out != nullptr);
         ZX_ASSERT(vnode == nullptr);
 
@@ -84,7 +81,7 @@ public:
         return ZX_OK;
     }
 
-    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) {
+    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final {
         ZX_ASSERT(type == EnqueueType::kData);
         return writeback_->Enqueue(std::move(work));
     }
@@ -96,11 +93,8 @@ private:
 };
 
 // Enqueue a request which fits within writeback buffer.
-bool EnqueuePaginatedSmallTest() {
-    BEGIN_TEST;
-
+TEST(EnqueuePaginated, EnqueueSmallRequests) {
     MockTransactionManager transaction_manager;
-    ASSERT_TRUE(transaction_manager.Init());
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
 
@@ -110,16 +104,11 @@ bool EnqueuePaginatedSmallTest() {
     ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr,
                                       vmo, 0, 0, kXferSize / kBlockSize));
     ASSERT_EQ(ZX_OK, transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
-
-    END_TEST;
 }
 
 // Enqueue a request which does not fit within writeback buffer.
-bool EnqueuePaginatedLargeTest() {
-    BEGIN_TEST;
-
+TEST(EnqueuePaginated, EnqueueLargeRequests) {
     MockTransactionManager transaction_manager;
-    ASSERT_TRUE(transaction_manager.Init());
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
 
@@ -129,16 +118,11 @@ bool EnqueuePaginatedLargeTest() {
     ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr,
                                       vmo, 0, 0, kXferSize / kBlockSize));
     ASSERT_EQ(ZX_OK, transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
-
-    END_TEST;
 }
 
 // Enqueue multiple requests at once, which combine to be larger than the writeback buffer.
-bool EnqueuePaginatedManyTest() {
-    BEGIN_TEST;
-
+TEST(EnqueuePaginatedTest, EnqueueMany) {
     MockTransactionManager transaction_manager;
-    ASSERT_TRUE(transaction_manager.Init());
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
 
@@ -157,16 +141,11 @@ bool EnqueuePaginatedManyTest() {
                                           kXferSize / kBlockSize));
     }
     ASSERT_EQ(ZX_OK, transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
-
-    END_TEST;
 }
 
 // Test that multiple completion callbacks may be added to a single WritebackWork.
-bool WritebackWorkOrderTest() {
-    BEGIN_TEST;
-
+TEST(WritebackWorkTest, WritebackWorkOrder) {
     MockTransactionManager transaction_manager;
-    ASSERT_TRUE(transaction_manager.Init());
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
 
@@ -199,16 +178,64 @@ bool WritebackWorkOrderTest() {
 
     ASSERT_TRUE(alpha_completion_done);
     ASSERT_TRUE(beta_completion_done);
+}
 
-    END_TEST;
+TEST(FlushRequestsTest, FlushNoRequests) {
+    class TestTransactionManager : public MockTransactionManager {
+        zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+            ZX_ASSERT_MSG(false, "Zero requests should not invoke the Transaction operation");
+        }
+    } manager;
+    fbl::Vector<Operation> operations;
+    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations, 2));
+}
+
+constexpr uint32_t kDiskBlockRatio = kBlockSize / kDeviceBlockSize;
+
+TEST(FlushRequestsTest, FlushOneRequest) {
+    class TestTransactionManager : public MockTransactionManager {
+        zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+            EXPECT_EQ(1, count);
+            EXPECT_EQ(1 * kDiskBlockRatio, requests[0].vmo_offset);
+            EXPECT_EQ(2 * kDiskBlockRatio, requests[0].dev_offset);
+            EXPECT_EQ(3 * kDiskBlockRatio, requests[0].length);
+            return ZX_OK;
+        }
+    } manager;
+    fbl::Vector<Operation> operations;
+    operations.push_back(Operation { OperationType::kWrite, 1, 2, 3 });
+    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations, 2));
+}
+
+TEST(FlushRequestsTest, FlushManyRequests) {
+    class TestTransactionManager : public MockTransactionManager {
+        zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+            EXPECT_EQ(2, count);
+            EXPECT_EQ(1 * kDiskBlockRatio, requests[0].vmo_offset);
+            EXPECT_EQ(2 * kDiskBlockRatio, requests[0].dev_offset);
+            EXPECT_EQ(3 * kDiskBlockRatio, requests[0].length);
+            EXPECT_EQ(4 * kDiskBlockRatio, requests[1].vmo_offset);
+            EXPECT_EQ(5 * kDiskBlockRatio, requests[1].dev_offset);
+            EXPECT_EQ(6 * kDiskBlockRatio, requests[1].length);
+            return ZX_OK;
+        }
+    } manager;
+    fbl::Vector<Operation> operations;
+    operations.push_back(Operation { OperationType::kWrite, 1, 2, 3 });
+    operations.push_back(Operation { OperationType::kWrite, 4, 5, 6 });
+    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations, 2));
+}
+
+TEST(FlushRequestsTest, BadFlush) {
+    class TestTransactionManager : public MockTransactionManager {
+        zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+    } manager;
+    fbl::Vector<Operation> operations;
+    operations.push_back(Operation { OperationType::kWrite, 1, 2, 3 });
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, FlushWriteRequests(&manager, operations, 2));
 }
 
 } // namespace
 } // namespace blobfs
-
-BEGIN_TEST_CASE(blobfsWritebackTests)
-RUN_TEST(blobfs::EnqueuePaginatedSmallTest)
-RUN_TEST(blobfs::EnqueuePaginatedLargeTest)
-RUN_TEST(blobfs::EnqueuePaginatedManyTest)
-RUN_TEST(blobfs::WritebackWorkOrderTest)
-END_TEST_CASE(blobfsWritebackTests)

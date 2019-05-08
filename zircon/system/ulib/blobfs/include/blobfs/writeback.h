@@ -11,6 +11,7 @@
 #include <utility>
 
 #include <blobfs/transaction-manager.h>
+#include <blobfs/unbuffered-operations-builder.h>
 #include <blobfs/writeback-work.h>
 #include <fbl/ref_ptr.h>
 #include <lib/zx/vmo.h>
@@ -44,5 +45,11 @@ zx_status_t EnqueuePaginated(std::unique_ptr<WritebackWork>* work,
                              TransactionManager* transaction_manager, Blob* vn,
                              const zx::vmo& vmo, uint64_t relative_block, uint64_t absolute_block,
                              uint64_t nblocks);
+
+// Flushes |operations| to persistent storage using a transaction created by |transaction_manager|,
+// sending through the disk-registered |vmoid| object.
+zx_status_t FlushWriteRequests(TransactionManager* transaction_manager,
+                               const fbl::Vector<Operation>& operations,
+                               vmoid_t vmoid);
 
 } // namespace blobfs
