@@ -425,19 +425,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master;
   auto puppet_master_request = puppet_master.NewRequest();
 
-  fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
-      visible_stories_provider;
-  auto visible_stories_provider_request = visible_stories_provider.NewRequest();
-
   user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
       startup_context_, std::move(context_engine),
-      [this](fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>
-                 request) {
-        if (terminating_) {
-          return;
-        }
-        visible_stories_handler_->AddProviderBinding(std::move(request));
-      },
       [this](fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
         if (terminating_) {
           return;
@@ -676,11 +665,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       std::move(focus_provider_request_story_provider));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_puppet_master));
-
   visible_stories_handler_ = std::make_unique<VisibleStoriesHandler>();
-  visible_stories_handler_->AddProviderBinding(
-      std::move(visible_stories_provider_request));
-
   AtEnd(Reset(&focus_handler_));
   AtEnd(Reset(&visible_stories_handler_));
 }

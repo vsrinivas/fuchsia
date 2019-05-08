@@ -9,10 +9,10 @@
 #include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
-#include "src/lib/files/file.h"
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/intelligence_services_impl.h"
+#include "src/lib/files/file.h"
 
 namespace modular {
 
@@ -53,9 +53,6 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     component::StartupContext* const context,
     fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
         context_engine_handle,
-    fit::function<
-        void(fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>)>
-        visible_stories_provider_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
         story_provider_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
@@ -63,8 +60,6 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
         puppet_master_connector)
     : context_(context),
-      visible_stories_provider_connector_(
-          std::move(visible_stories_provider_connector)),
       story_provider_connector_(std::move(story_provider_connector)),
       focus_provider_connector_(std::move(focus_provider_connector)),
       puppet_master_connector_(std::move(puppet_master_connector)) {

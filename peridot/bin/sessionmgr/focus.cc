@@ -124,31 +124,14 @@ VisibleStoriesHandler::VisibleStoriesHandler() {}
 
 VisibleStoriesHandler::~VisibleStoriesHandler() = default;
 
-void VisibleStoriesHandler::AddProviderBinding(
-    fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider> request) {
-  provider_bindings_.AddBinding(this, std::move(request));
-}
-
 void VisibleStoriesHandler::AddControllerBinding(
     fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
         request) {
   controller_bindings_.AddBinding(this, std::move(request));
 }
 
-void VisibleStoriesHandler::Query(QueryCallback callback) {
-  callback(visible_stories_);
-}
-
-void VisibleStoriesHandler::Watch(
-    fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesWatcher> watcher) {
-  change_watchers_.push_back(watcher.Bind());
-}
-
 void VisibleStoriesHandler::Set(fidl::VectorPtr<std::string> story_ids) {
   visible_stories_ = std::move(story_ids);
-  for (const auto& watcher : change_watchers_) {
-    watcher->OnVisibleStoriesChange(visible_stories_.Clone());
-  }
 }
 
 }  // namespace modular

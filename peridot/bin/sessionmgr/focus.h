@@ -5,16 +5,16 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_FOCUS_H_
 #define PERIDOT_BIN_SESSIONMGR_FOCUS_H_
 
-#include <array>
-#include <string>
-#include <vector>
-
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/string.h>
+
+#include <array>
+#include <string>
+#include <vector>
 
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
@@ -68,32 +68,21 @@ class FocusHandler : fuchsia::modular::FocusProvider,
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusHandler);
 };
 
-class VisibleStoriesHandler : fuchsia::modular::VisibleStoriesProvider,
-                              fuchsia::modular::VisibleStoriesController {
+class VisibleStoriesHandler : fuchsia::modular::VisibleStoriesController {
  public:
   VisibleStoriesHandler();
   ~VisibleStoriesHandler() override;
 
-  void AddProviderBinding(
-      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider> request);
   void AddControllerBinding(
       fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
           request);
 
  private:
-  // |fuchsia::modular::VisibleStoriesProvider|
-  void Query(QueryCallback callback) override;
-  void Watch(fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesWatcher>
-                 watcher) override;
-
   // |fuchsia::modular::VisibleStoriesController|
   void Set(fidl::VectorPtr<std::string> story_ids) override;
 
-  fidl::BindingSet<fuchsia::modular::VisibleStoriesProvider> provider_bindings_;
   fidl::BindingSet<fuchsia::modular::VisibleStoriesController>
       controller_bindings_;
-
-  std::vector<fuchsia::modular::VisibleStoriesWatcherPtr> change_watchers_;
 
   fidl::VectorPtr<std::string> visible_stories_;
 

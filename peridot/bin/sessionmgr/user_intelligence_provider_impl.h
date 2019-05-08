@@ -5,14 +5,14 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 
-#include <deque>
-#include <string>
-#include <vector>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/zx/channel.h>
+
+#include <deque>
+#include <string>
+#include <vector>
 
 #include "peridot/bin/sessionmgr/rate_limited_retry.h"
 
@@ -26,9 +26,6 @@ class UserIntelligenceProviderImpl
       component::StartupContext* context,
       fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
           context_engine_handle,
-      fit::function<void(
-          fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>)>
-          visible_stories_provider_connector,
       fit::function<
           void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
           story_provider_connector,
@@ -121,12 +118,7 @@ class UserIntelligenceProviderImpl
   fidl::InterfacePtr<fuchsia::modular::ComponentContext> component_context_;
   fidl::InterfacePtr<fuchsia::modular::StoryProvider> story_provider_;
   fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_;
-  fidl::InterfacePtr<fuchsia::modular::VisibleStoriesProvider>
-      visible_stories_provider_;
 
-  fit::function<void(
-      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>)>
-      visible_stories_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
       story_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
