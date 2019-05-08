@@ -50,13 +50,6 @@ static inline uint32_t lo32(uint64_t val) { return static_cast<uint32_t>(val); }
 
 //clang-format on
 
-// Calculate the physical base of a virtual address.
-static zx_paddr_t vtop(zx_paddr_t phys_base, void* virt_base, void* virt_addr) {
-    uintptr_t addr = reinterpret_cast<uintptr_t>(virt_addr);
-    uintptr_t base = reinterpret_cast<uintptr_t>(virt_base);
-    return phys_base + (addr - base);
-}
-
 static inline zx_status_t ahci_wait_for_clear(const volatile uint32_t* reg, uint32_t mask,
                                               zx_time_t timeout) {
     int i = 0;
@@ -95,7 +88,7 @@ static void ahci_port_disable(ahci_port_t* port) {
     if (!(cmd & AHCI_PORT_CMD_ST)) return;
     cmd &= ~AHCI_PORT_CMD_ST;
     ahci_write(&port->regs->cmd, cmd);
-    zx_status_t status = ahci_wait_for_clear(&port->regs->cmd, AHCI_PORT_CMD_CR, ZX_MSEC(500));
+    zx_status_t status = ahci_wait_for_clear(&port->regs->cmd, AHCI_PORT_CMD_CR, 500 * 1000 * 1000);
     if (status) {
         zxlogf(ERROR, "ahci.%u: port disable timed out\n", port->nr);
     }
@@ -108,7 +101,7 @@ static void ahci_port_enable(ahci_port_t* port) {
         zxlogf(ERROR, "ahci.%u: cannot enable port without FRE enabled\n", port->nr);
         return;
     }
-    zx_status_t status = ahci_wait_for_clear(&port->regs->cmd, AHCI_PORT_CMD_CR, ZX_MSEC(500));
+    zx_status_t status = ahci_wait_for_clear(&port->regs->cmd, AHCI_PORT_CMD_CR, 500 * 1000 * 1000);
     if (status) {
         zxlogf(ERROR, "ahci.%u: dma engine still running when enabling port\n", port->nr);
     }
@@ -252,15 +245,15 @@ zx_status_t AhciController::TxnBegin(ahci_port_t* port, uint32_t slot, sata_txn_
     }
 
     // build the command
-    ahci_cl_t* cl = &port->mem->cl[slot];
+    ahci_cl_t* cl = port->cl + slot;
     // don't clear the cl since we set up ctba/ctbau at init
     cl->prdtl_flags_cfl = 0;
     cl->cfl = 5; // 20 bytes
     cl->w = is_write ? 1 : 0;
     cl->prdbc = 0;
-    memset(&port->mem->tab[slot].ct, 0, sizeof(ahci_ct_t));
+    memset(port->ct[slot], 0, sizeof(ahci_ct_t));
 
-    uint8_t* cfis = port->mem->tab[slot].ct.cfis;
+    uint8_t* cfis = port->ct[slot]->cfis;
     cfis[0] = 0x27; // host-to-device
     cfis[1] = 0x80; // command
     cfis[2] = cmd;
@@ -291,9 +284,10 @@ zx_status_t AhciController::TxnBegin(ahci_port_t* port, uint32_t slot, sata_txn_
     }
 
     cl->prdtl = 0;
+    ahci_prd_t* prd = (ahci_prd_t*)((uintptr_t)port->ct[slot] + sizeof(ahci_ct_t));
     size_t length;
     zx_paddr_t paddr;
-    for (uint32_t i = 0; i < AHCI_MAX_PRDS; i++) {
+    for (;;) {
         length = phys_iter_next(&iter, &paddr);
         if (length == 0) {
             break;
@@ -306,11 +300,11 @@ zx_status_t AhciController::TxnBegin(ahci_port_t* port, uint32_t slot, sata_txn_
             return ZX_ERR_NOT_SUPPORTED;
         }
 
-        ahci_prd_t* prd = &port->mem->tab[slot].prd[i];
         prd->dba = lo32(paddr);
         prd->dbau = hi32(paddr);
         prd->dbc = ((length - 1) & (AHCI_PRD_MAX_SIZE - 1)); // 0-based byte count
         cl->prdtl++;
+        prd += 1;
     }
 
     port->running |= (1u << slot);
@@ -319,11 +313,12 @@ zx_status_t AhciController::TxnBegin(ahci_port_t* port, uint32_t slot, sata_txn_
     zxlogf(SPEW, "ahci.%u: do_txn txn %p (%c) offset 0x%" PRIx64 " length 0x%" PRIx64
                   " slot %d prdtl %u\n",
             port->nr, txn, cl->w ? 'w' : 'r', lba, count, slot, cl->prdtl);
+    prd = (ahci_prd_t*)((uintptr_t)port->ct[slot] + sizeof(ahci_ct_t));
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
-        for (uint32_t i = 0; i < cl->prdtl; i++) {
-            ahci_prd_t* prd = &port->mem->tab[slot].prd[i];
+        for (uint i = 0; i < cl->prdtl; i++) {
             zxlogf(SPEW, "%04u: dbau=0x%08x dba=0x%08x dbc=0x%x\n",
-                   i, prd->dbau, prd->dba, prd->dbc);
+                    i, prd->dbau, prd->dba, prd->dbc);
+            prd += 1;
         }
     }
 
@@ -347,37 +342,47 @@ zx_status_t AhciController::PortInit(ahci_port_t* port) {
         return ZX_ERR_UNAVAILABLE;
     }
 
-    // Allocate memory for the command list, FIS receive area, command table and PRDT.
-    zx_status_t status = io_buffer_init(&port->buffer, bti_handle_, sizeof(ahci_port_mem_t),
-                                        IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    if (status != ZX_OK) {
+    // allocate memory for the command list, FIS receive area, command table and PRDT
+    size_t ct_prd_sz = sizeof(ahci_ct_t) + sizeof(ahci_prd_t) * AHCI_MAX_PRDS;
+    size_t ct_prd_padding = 0x80 - (ct_prd_sz & (0x80 - 1)); // 128-byte aligned
+    size_t mem_sz = sizeof(ahci_fis_t) + sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS
+                    + (ct_prd_sz + ct_prd_padding) * AHCI_MAX_COMMANDS;
+    zx_status_t status = io_buffer_init(&port->buffer, bti_handle_,
+                                        mem_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (status < 0) {
         zxlogf(ERROR, "ahci.%u: error %d allocating dma memory\n", port->nr, status);
         return status;
     }
-    zx_paddr_t phys_base = io_buffer_phys(&port->buffer);
-    port->mem = static_cast<ahci_port_mem_t*>(io_buffer_virt(&port->buffer));
+    zx_paddr_t mem_phys = io_buffer_phys(&port->buffer);
+    uint8_t* mem = static_cast<uint8_t*>(io_buffer_virt(&port->buffer));
 
     // clear memory area
     // order is command list (1024-byte aligned)
     //          FIS receive area (256-byte aligned)
-    //          command table + PRDT (128-byte aligned)
-    memset(port->mem, 0, sizeof(*port->mem));
+    //          command table + PRDT (127-byte aligned)
+    memset(mem, 0, mem_sz);
 
-    // command list.
-    zx_paddr_t paddr = vtop(phys_base, port->mem, &port->mem->cl);
-    ahci_write(&port->regs->clb, lo32(paddr));
-    ahci_write(&port->regs->clbu, hi32(paddr));
+    // command list
+    ahci_write(&port->regs->clb, lo32(mem_phys));
+    ahci_write(&port->regs->clbu, hi32(mem_phys));
+    mem_phys += sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS;
+    port->cl = reinterpret_cast<ahci_cl_t*>(mem);
+    mem += sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS;
 
-    // FIS receive area.
-    paddr = vtop(phys_base, port->mem, &port->mem->fis);
-    ahci_write(&port->regs->fb, lo32(paddr));
-    ahci_write(&port->regs->fbu, hi32(paddr));
+    // FIS receive area
+    ahci_write(&port->regs->fb, lo32(mem_phys));
+    ahci_write(&port->regs->fbu, hi32(mem_phys));
+    mem_phys += sizeof(ahci_fis_t);
+    port->fis = reinterpret_cast<ahci_fis_t*>(mem);
+    mem += sizeof(ahci_fis_t);
 
-    // command table, followed by PRDT.
+    // command table, followed by PRDT
     for (int i = 0; i < AHCI_MAX_COMMANDS; i++) {
-        paddr = vtop(phys_base, port->mem, &port->mem->tab[i].ct);
-        port->mem->cl[i].ctba = lo32(paddr);
-        port->mem->cl[i].ctbau = hi32(paddr);
+        port->cl[i].ctba = lo32(mem_phys);
+        port->cl[i].ctbau = hi32(mem_phys);
+        mem_phys += ct_prd_sz + ct_prd_padding;
+        port->ct[i] = reinterpret_cast<ahci_ct_t*>(mem);
+        mem += ct_prd_sz + ct_prd_padding;
     }
 
     // clear port interrupts
