@@ -358,13 +358,24 @@ fn main() {
                     Defaults to no limit"
         )]
         truncate_payload: Option<usize>,
+        #[structopt(
+            parse(from_occurrences),
+            short = "v",
+            long = "verbose",
+            help = "Enable verbose log output. Additional occurrences of the flag will \
+                    raise verbosity."
+        )]
+        verbosity: u16,
     }
-    let Opt { log_size_kib, log_time_seconds, max_device_count, truncate_payload } =
+    let Opt { log_size_kib, log_time_seconds, max_device_count, truncate_payload, verbosity } =
         Opt::from_args();
     let log_size_bytes = log_size_kib * 1024;
     let log_time = Duration::from_secs(log_time_seconds);
 
     syslog::init_with_tags(&["bt-snoop"]).expect("Can't init logger");
+    if verbosity > 0 {
+        syslog::set_verbosity(verbosity);
+    }
     fx_log_info!("Starting bt-snoop.");
 
     let hci_dir = File::open(HCI_DEVICE_CLASS_PATH).expect("Failed to open hci dev directory");
