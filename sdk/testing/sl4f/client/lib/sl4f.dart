@@ -9,4 +9,5 @@ export 'src/audio.dart';
 export 'src/dump.dart';
 export 'src/exceptions.dart';
 export 'src/scenic.dart';
+export 'src/setui.dart';
 export 'src/sl4f_client.dart';

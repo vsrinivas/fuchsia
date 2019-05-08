@@ -15,6 +15,7 @@ dart_library("client") {
     "src/dump.dart",
     "src/exceptions.dart",
     "src/scenic.dart",
+    "src/setui.dart",
     "src/sl4f_client.dart",
   ]
 

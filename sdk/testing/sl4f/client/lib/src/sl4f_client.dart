@@ -110,7 +110,7 @@ class Sl4f {
   /// SSHs into the device and starts the SL4F server.
   ///
   /// If no ssh key path is given, it's taken from the FUCHSIA_SSH_KEY env var.
-  Future<void> stopServer({String sshKeyPath}) async {
+  Future<void> stopServer() async {
     if (!await ssh('killall $_sl4fComponentName')) {
       print('Could not stop sl4f. Continuing.');
     }
@@ -139,6 +139,24 @@ class Sl4f {
       return false;
     }
     return true;
+  }
+
+  /// Restarts the device under test.
+  ///
+  /// Throws an Sl4fException if it fails to reboot the device or if all the
+  /// attempts at restarting SL4F fail.
+  Future<void> reboot() async {
+    print('Initiating reboot sequence.');
+    // Kill SL4F first, we'll use it to try to guess when the reboot is done.
+    await stopServer();
+    // Issue a reboot command and wait.
+    if (!await ssh('dm reboot')) {
+      throw Sl4fException('Failed rebooting device.');
+    }
+    await Future.delayed(Duration(seconds: 20));
+
+    // Try to restart SL4F
+    return startServer();
   }
 
   /// Sends an empty http request to the server to verify if it's listening on
