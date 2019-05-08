@@ -42,7 +42,6 @@ class MockStreamLink {
         mock_->Emit(std::move(packet),
                     [cb](const Status& status) { (*cb)(status); });
       }
-      const LinkStats* GetStats() const override { return nullptr; }
 
      private:
       MockStreamLink* mock_;

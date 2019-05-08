@@ -15,6 +15,7 @@ class StreamLink : public Link {
   void Close(Callback<void> quiesced) override final;
   void Forward(Message message) override final;
   fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override final;
+  const LinkStats* GetStats() const override final { return &stats_; }
 
   void Process(TimeStamp received, Slice bytes);
   virtual void Emit(Slice bytes, Callback<Status> done) = 0;
@@ -30,6 +31,7 @@ class StreamLink : public Link {
   bool closed_ = false;
   Slice buffered_input_;
   Callback<void> on_quiesced_;
+  LinkStats stats_;
 };
 
 }  // namespace overnet
