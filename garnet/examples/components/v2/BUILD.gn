@@ -32,31 +32,28 @@ deprecated_fuchsia_component("echo_args_component") {
   binary = "echo_args"
 }
 
-package("hello_world_hippo") {
+deprecated_fuchsia_component("ls_root_pkg_component") {
+  manifest = rebase_path("meta/ls_root_pkg.cml")
   deps = [
-    ":hello_world_bin",
     ":ls_root_pkg_bin",
   ]
 
-  components = [ ":echo_args_component" ]
+  binary = "ls_root_pkg"
+}
 
-  binaries = [
-    {
-      name = "hello_world"
-    },
-    {
-      name = "ls_root_pkg"
-    },
+deprecated_fuchsia_component("hello_world_component") {
+  manifest = rebase_path("meta/hello_world.cml")
+  deps = [
+    ":hello_world_bin",
   ]
 
-  meta = [
-    {
-      path = rebase_path("meta/hello_world.cml")
-      dest = "meta/hello_world.cm"
-    },
-    {
-      path = rebase_path("meta/ls_root_pkg.cml")
-      dest = "meta/ls_root_pkg.cm"
-    },
+  binary = "hello_world"
+}
+
+package("hello_world_hippo") {
+  components = [
+    ":hello_world_component",
+    ":ls_root_pkg_component",
+    ":echo_args_component",
   ]
 }

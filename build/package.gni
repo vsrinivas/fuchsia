@@ -213,7 +213,7 @@ template("pm_build_package") {
       "$pkg_out_dir/blobs.manifest",
 
       # package output manifest
-      pkg_output_manifest,
+      pkg_output_manifest
     ]
 
     blobs_json_path = rebase_path("${pkg_out_dir}/blobs.json", root_build_dir)
@@ -247,7 +247,9 @@ template("pm_build_package") {
           [ "$package_name/$package_variant=" +
             rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir) ]
 
-      package_output_manifests = [ pkg_output_manifest ]
+      package_output_manifests = [
+        pkg_output_manifest,
+      ]
     }
 
     args = [
@@ -574,7 +576,6 @@ template("package") {
           deps = pkg.deps
           public_deps = pkg.public_deps
           extra_schemas = []
-
           # Remove this validation when the "deprecated-misc-storage" feature is removed.
           if (!defined(pkg.deprecated_misc_storage)) {
             extra_schemas += [
@@ -592,7 +593,7 @@ template("package") {
 
     # cmx_format will minify cmx files in non-debug builds, and pretty-print cmx
     # files in debug builds
-    formatted_manifest = []
+    meta_with_formatted_cmx = []
     component_indices = []
     foreach(meta, pkg.meta) {
       if (get_path_info(meta.dest, "extension") == "cmx") {
@@ -608,30 +609,15 @@ template("package") {
         formatted_outputs = get_target_outputs(":$format")
         meta.path = formatted_outputs[0]
         pkg.deps += [ ":$format" ]
-      } else if (get_path_info(meta.path, "extension") == "cml") {
-        component_indices += [ "fuchsia-pkg://fuchsia.com/" + pkg.package_name +
-                               "#meta/" + meta.dest ]
-        compiled = "compiled_" + pkg_target_name + "_" +
-                   get_path_info(meta.dest, "file")
-
-        cm_compile(compiled) {
-          data = rebase_path(meta.path)
-          deps = pkg.deps
-          public_deps = pkg.public_deps
-        }
-        pkg.deps += [ ":$compiled" ]
-        compiled_outputs = []
-        compiled_outputs = get_target_outputs(":$compiled")
-        meta.path = compiled_outputs[0]
       }
-      formatted_manifest += [ meta ]
+      meta_with_formatted_cmx += [ meta ]
     }
 
     # Collect the package's primary manifest.  For a system_image package,
     # this is its contributions to the /system manifest.  For an isolated
     # package, this is the manifest for the package's `pkg/` filesystem.
     pkg_manifest = []
-    foreach(meta, formatted_manifest) {
+    foreach(meta, meta_with_formatted_cmx) {
       pkg_manifest += [
         {
           dest = "meta/${meta.dest}"
@@ -916,9 +902,7 @@ template("package") {
         # Add the dep on the allowlist here rather than in pkg.deps earlier so that we can allow
         # specific targets by the package target's name using visibility.
         if (defined(pkg.deprecated_misc_storage)) {
-          deps += [
-            "${pkg.deprecated_misc_storage}:deprecated_misc_storage_allowlist",
-          ]
+          deps += [ "${pkg.deprecated_misc_storage}:deprecated_misc_storage_allowlist" ]
         }
       }
     }
