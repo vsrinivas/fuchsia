@@ -70,8 +70,6 @@ public:
     void OnUnionDeclaration(fit::function<void(const raw::UnionDeclaration&)> callback) {
         union_declaration_callbacks_.push_back(std::move(callback));
     }
-    // TODO(fxb/FIDL-554): Change fidlc code to spell the SnakeCase version of
-    // xunion like "Xunion" instead of "XUnion".
     void OnXUnionMember(fit::function<void(const raw::XUnionMember&)> callback) {
         xunion_member_callbacks_.push_back(std::move(callback));
     }

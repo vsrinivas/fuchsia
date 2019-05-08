@@ -132,7 +132,6 @@ private:
 };
 
 bool invalid_case_for_constant_checking_bitfield_member_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -265,7 +264,6 @@ xunion ${TEST} {
 }
 
 bool invalid_case_for_decl_member_checking_method_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -278,7 +276,6 @@ bool invalid_case_for_decl_member_checking_method_please_implement_me() {
 }
 
 bool invalid_case_for_decl_member_checking_parameter_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -426,7 +423,6 @@ library ${TEST}.subcomponent;
 }
 
 bool no_commonly_reserved_words_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -626,7 +622,6 @@ using foo as ${TEST};
 }
 
 bool too_many_nested_libraries_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -648,7 +643,6 @@ library ${TEST};
 }
 
 bool primitive_alias_name_repeats_library_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -672,7 +666,6 @@ using foo as ${TEST};
 }
 
 bool constant_name_repeats_library_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -696,7 +689,6 @@ const uint64 ${TEST} = 1234;
 }
 
 bool constant_should_use_common_prefix_suffix_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -782,7 +774,6 @@ const uint64 ${TEST} = 1234;
 }
 
 bool manager_protocols_are_discouraged_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -811,7 +802,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool disallowed_protocol_name_ends_in_service_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -842,7 +832,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool disallowed_protocol_name_includes_service_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -873,7 +862,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool method_name_repeats_protocol_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -901,7 +889,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool method_name_repeats_library_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -929,7 +916,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool member_name_repeats_enclosing_type_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -957,7 +943,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool member_name_repeats_library_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -985,7 +970,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool enum_member_name_repeats_enclosing_type_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1013,7 +997,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool enum_member_name_repeats_library_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1041,7 +1024,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool bitfield_name_repeats_enclosing_type_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1069,7 +1051,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool bitfield_name_repeats_library_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1097,7 +1078,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool bitfield_member_name_repeats_enclosing_type_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1125,7 +1105,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool bitfield_member_name_repeats_library_name_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1153,7 +1132,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool incorrect_line_indent_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1184,7 +1162,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool tabs_disallowed_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1214,7 +1191,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool trailing_whitespace_disallowed_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1244,7 +1220,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool incorrect_spacing_between_declarations_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1275,7 +1250,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool end_of_file_should_be_one_newline_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1307,7 +1281,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool note_comment_should_not_flow_through_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1337,7 +1310,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool deprecation_comment_should_not_flow_through_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1367,7 +1339,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool todo_comment_should_not_flow_through_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1397,7 +1368,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool copyright_notice_should_not_flow_through_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1425,7 +1395,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool discontiguous_comment_block_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1454,7 +1423,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool invalid_copyright_for_platform_source_library_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1483,7 +1451,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool library_name_does_not_match_file_path_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1512,7 +1479,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool inconsistent_type_for_recurring_file_concept_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1540,7 +1506,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool inconsistent_type_for_recurring_library_concept_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1568,7 +1533,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool string_bounds_not_specified_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1596,7 +1560,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool vector_bounds_not_specified_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1624,7 +1587,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool method_return_status_missing_ok_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1665,7 +1627,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool method_returns_status_with_non_optional_result_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1697,7 +1658,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool unexpected_type_for_well_known_string_concept_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1729,7 +1689,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool unexpected_type_for_well_known_bytes_concept_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1760,7 +1719,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool unexpected_type_for_well_known_buffer_concept_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1791,7 +1749,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool unexpected_type_for_well_known_socket_handle_concept_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1823,7 +1780,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool method_should_pipeline_protocols_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1856,7 +1812,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool service_hub_pattern_is_discouraged_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1886,7 +1841,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool excessive_number_of_separate_protocols_for_library_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -1921,7 +1875,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 }
 
 bool excessive_number_of_separate_protocols_for_file_please_implement_me() {
-    std::cerr << "  --  Not yet implemented...";
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
