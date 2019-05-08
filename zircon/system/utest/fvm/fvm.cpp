@@ -3343,6 +3343,7 @@ bool TestAbortDriverLoadSmallDevice() {
               ZX_OK);
     ASSERT_EQ(call_status, ZX_OK);
     ASSERT_EQ(wait_for_device(fvm_path, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(EndFVMTest(fvm_path), 0, "unmounting FVM");
 
     END_TEST;
 }
