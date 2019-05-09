@@ -10,9 +10,9 @@ test("zxcrypt") {
     "zxcrypt.cpp",
   ]
 
-  # This code does #include "crypto/foo.h" to reuse headers from
-  # $zx/system/utest/crypto.
-  include_dirs = [ "$zx/system/utest" ]
+  # This code does #include "crypto/test/foo.h" to reuse headers from
+  # $zx/system/ulib/crypto/test.
+  include_dirs = [ "$zx/system/ulib" ]
 
   deps = [
     "$zx/system/fidl/fuchsia-device:c",

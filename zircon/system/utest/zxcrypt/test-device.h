@@ -24,7 +24,7 @@
 #include <zircon/types.h>
 #include <zxcrypt/fdio-volume.h>
 
-#include "crypto/utils.h"
+#include "crypto/test/utils.h"
 
 #define DEFINE_EACH_DEVICE(Test)                                                                   \
     bool Test##Raw(Volume::Version version) { return Test(version, false /* not FVM */); }         \
