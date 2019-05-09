@@ -11,11 +11,31 @@ group("test") {
 
 test("cobalt-client-unit") {
   sources = [
+    "cobalt_logger_test.cpp",
+    "collector_test.cpp",
+    "counter_test.cpp",
+    "histogram_test.cpp",
     "in-memory-logger-test.cpp",
+    "main.cpp",
+    "metric_options_test.cpp",
+    "timer_test.cpp",
+    "types_internal_test.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-cobalt:c",
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-mem:c",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async:async-default",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/cobalt-client",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zxtest",
   ]
 }

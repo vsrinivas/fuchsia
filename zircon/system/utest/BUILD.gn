@@ -99,7 +99,6 @@ if (current_cpu != "") {
       "channel-fatal",
       "chromeos-disk-setup",
       "cleanup",
-      "cobalt-client",
       "compiler",
       "core",
       "cprng",
