@@ -32,11 +32,6 @@ void MockDevice::Open(HookInvocation record, uint32_t flags, OpenCallback callba
     hooks_->Open(record, flags, std::move(callback));
 }
 
-void MockDevice::OpenAt(HookInvocation record, std::string path, uint32_t flags,
-                        OpenAtCallback callback)  {
-    hooks_->OpenAt(record, path, flags, std::move(callback));
-}
-
 void MockDevice::Close(HookInvocation record, uint32_t flags, CloseCallback callback)  {
     hooks_->Close(record, flags, std::move(callback));
 }

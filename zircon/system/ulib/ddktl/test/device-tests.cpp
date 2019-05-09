@@ -250,7 +250,6 @@ public:
 
 DEFINE_FAIL_CASE(GetProtocolable)
 DEFINE_FAIL_CASE(Openable)
-DEFINE_FAIL_CASE(OpenAtable)
 DEFINE_FAIL_CASE(Closable)
 DEFINE_FAIL_CASE(Unbindable)
 DEFINE_FAIL_CASE(Readable)

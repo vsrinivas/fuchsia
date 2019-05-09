@@ -166,41 +166,6 @@ zx_status_t OpenHook(const zx::channel& c, const fuchsia_device_mock_HookInvocat
     return ParseActions<ResponseType>(kResponseTable, &response, actions_out);
 }
 
-zx_status_t OpenAtHook(const zx::channel& c, const fuchsia_device_mock_HookInvocation& record,
-                       const fbl::StringPiece& path, uint32_t flags,
-                       fbl::Array<const fuchsia_device_mock_Action>* actions_out) {
-    using RequestType = fuchsia_device_mock_MockDeviceOpenAtRequest;
-    using ResponseType = fuchsia_device_mock_MockDeviceOpenAtResponse;
-    const auto& kRequestOrdinal = fuchsia_device_mock_MockDeviceOpenAtOrdinal;
-    const fidl_type_t* kResponseTable = &fuchsia_device_mock_MockDeviceOpenAtResponseTable;
-
-    FIDL_ALIGNDECL char wr_bytes[sizeof(RequestType)];
-    fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
-
-    auto req = builder.New<RequestType>();
-    ZX_ASSERT(req != nullptr);
-    req->hdr.ordinal = kRequestOrdinal;
-    req->hdr.txid = 0;
-    req->record = record;
-    req->flags = flags;
-
-    req->path.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
-    req->path.size = path.size();
-    uint8_t* path_storage = builder.NewArray<uint8_t>(static_cast<uint32_t>(path.size()));
-    memcpy(path_storage, path.data(), path.size());
-
-    fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
-    FIDL_ALIGNDECL uint8_t response_buf[ZX_CHANNEL_MAX_MSG_BYTES];
-    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-    fidl::Message response(fidl::BytePart(response_buf, sizeof(response_buf)),
-                           fidl::HandlePart(handles, fbl::count_of(handles)));
-    zx_status_t status = msg.Call(c.get(), 0, ZX_TIME_INFINITE, &response);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return ParseActions<ResponseType>(kResponseTable, &response, actions_out);
-}
-
 zx_status_t CloseHook(const zx::channel& c, const fuchsia_device_mock_HookInvocation& record,
                       uint32_t flags, fbl::Array<const fuchsia_device_mock_Action>* actions_out) {
     using RequestType = fuchsia_device_mock_MockDeviceCloseRequest;

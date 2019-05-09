@@ -79,7 +79,6 @@ protocol MockDevice {
     Release(HookInvocation record);
     GetProtocol(HookInvocation record, uint32 protocol_id) -> (vector<Action>:MAX_ACTIONS actions);
     Open(HookInvocation record, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
-    OpenAt(HookInvocation record, string path, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
     Close(HookInvocation record, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
     Unbind(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
     Read(HookInvocation record, uint64 count, zx.off off) -> (vector<Action>:MAX_ACTIONS actions);

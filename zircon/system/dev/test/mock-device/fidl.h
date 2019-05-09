@@ -20,9 +20,6 @@ zx_status_t GetProtocolHook(const zx::channel& c, const fuchsia_device_mock_Hook
                             fbl::Array<const fuchsia_device_mock_Action>* actions_out);
 zx_status_t OpenHook(const zx::channel& c, const fuchsia_device_mock_HookInvocation& record,
                      uint32_t flags, fbl::Array<const fuchsia_device_mock_Action>* actions_out);
-zx_status_t OpenAtHook(const zx::channel& c, const fuchsia_device_mock_HookInvocation& record,
-                       const fbl::StringPiece& path, uint32_t flags,
-                       fbl::Array<const fuchsia_device_mock_Action>* actions_out);
 zx_status_t CloseHook(const zx::channel& c, const fuchsia_device_mock_HookInvocation& record,
                       uint32_t flags, fbl::Array<const fuchsia_device_mock_Action>* actions_out);
 zx_status_t UnbindHook(const zx::channel& c, const fuchsia_device_mock_HookInvocation& record,

@@ -47,16 +47,6 @@ void UnorderedHooks::Open(HookInvocation record, uint32_t flags, OpenCallback ca
     TryFinish();
 }
 
-void UnorderedHooks::OpenAt(HookInvocation record, std::string path, uint32_t flags,
-                            OpenAtCallback callback) {
-    if (!open_at_) {
-        return Fail(__FUNCTION__);
-    }
-    callback(action_list_finalizer_(open_at_(record, std::move(path), flags)));
-    open_at_ = nullptr;
-    TryFinish();
-}
-
 void UnorderedHooks::Close(HookInvocation record, uint32_t flags, CloseCallback callback) {
     if (!close_) {
         return Fail(__FUNCTION__);

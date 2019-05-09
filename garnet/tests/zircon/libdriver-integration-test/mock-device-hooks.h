@@ -44,11 +44,6 @@ public:
         Fail(__FUNCTION__);
     }
 
-    void OpenAt(HookInvocation record, std::string path, uint32_t flags,
-                OpenAtCallback callback) override {
-        Fail(__FUNCTION__);
-    }
-
     void Close(HookInvocation record, uint32_t flags, CloseCallback callback) override {
         Fail(__FUNCTION__);
     }
@@ -223,8 +218,6 @@ public:
     void GetProtocol(HookInvocation record, uint32_t protocol_id,
                      GetProtocolCallback callback) override;
     void Open(HookInvocation record, uint32_t flags, OpenCallback callback) override;
-    void OpenAt(HookInvocation record, std::string path, uint32_t flags,
-                OpenAtCallback callback) override;
     void Close(HookInvocation record, uint32_t flags, CloseCallback callback) override;
     void Unbind(HookInvocation record, UnbindCallback callback) override;
     void Read(HookInvocation record, uint64_t count, zx_off_t off,
