@@ -93,9 +93,8 @@ void VirtualAudioSystemGainTest::AddDeviceForSystemGainTesting(bool is_input) {
   bool system_mute = received_system_mute_;
 
   SetOnDeviceAddedEvent();
-  std::array<uint8_t, 16> unique_id;
-  unique_id[0] = (is_input ? 0xF1 : 0xF0);
-  unique_id[1] = sequential_devices_.Next();
+  std::array<uint8_t, 16> unique_id{0};
+  VirtualAudioDeviceTest::PopulateUniqueIdArr(is_input, unique_id.data());
 
   if (is_input) {
     input_->SetGainProperties(-160.0f, 24.0f, 0.25f, kInitialSystemGainDb, true,

@@ -129,6 +129,10 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   void GetDefaultInputDevice(GetDefaultInputDeviceCallback cbk) final;
   void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) final;
 
+  void EnableDeviceSettings(bool enabled) {
+    AudioDeviceSettings::EnableDeviceSettings(enabled);
+  }
+
  private:
   // KeyTraits we use to sort our AudioDeviceSettings set to ensure uniqueness.
   struct AudioDeviceSettingsKeyTraits {

@@ -79,13 +79,18 @@ class MediaApp {
     audio_policy_ = policy;
   }
 
+  void set_device_settings(bool settings_enabled) {
+    set_device_settings_ = true;
+    settings_enabled_ = settings_enabled;
+  }
+
   void Run(sys::ComponentContext* app_context);
 
  private:
   bool ParameterRangeChecks();
   void SetupPayloadCoefficients();
   void DisplayConfigurationSettings();
-  void AcquireAudioRenderer(sys::ComponentContext* app_context);
+  zx_status_t AcquireAudioRenderer(sys::ComponentContext* app_context);
   void SetStreamType();
 
   zx_status_t CreateMemoryMapping();
@@ -161,6 +166,9 @@ class MediaApp {
 
   bool set_policy_ = false;
   fuchsia::media::AudioOutputRoutingPolicy audio_policy_;
+
+  bool set_device_settings_ = false;
+  bool settings_enabled_ = true;
 };
 
 }  // namespace media::tools

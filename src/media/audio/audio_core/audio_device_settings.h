@@ -38,6 +38,7 @@ class AudioDeviceSettings
   }
 
   static void Initialize();
+  static void EnableDeviceSettings(bool enabled) { writes_enabled_ = enabled; }
 
   // Initialize the contents of this audio driver structure from persisted
   // settings on disk, or (if that fails) create a new settings file with the
@@ -121,6 +122,7 @@ class AudioDeviceSettings
   void CreateSettingsPath(const std::string& prefix, char* out_path,
                           size_t out_path_len);
 
+  static bool writes_enabled_;
   static bool initialized_;
   static std::unique_ptr<rapidjson::SchemaDocument> file_schema_;
 
@@ -143,8 +145,7 @@ class AudioDeviceSettings
   // Anytime a change is introduced, the timeouts are updated as follows.
   //
   // 1) If max is infinite, it gets set to now + MaxUpdateDelay, otherwise it
-  // is
-  //    unchanged.
+  //    is unchanged.
   // 2) next gets set to min(now + UpdateDelay, max_commit_time)
   //
   // When now >= next, it is time to commit.  The general idea here is to wait

@@ -13,9 +13,9 @@ class AtomicDeviceId {
  public:
   AtomicDeviceId() : id_(kInvalidDeviceId) {}
 
-  uint32_t get() const { return id_.load(); }
-  uint32_t Next() {
-    uint32_t ret;
+  uint64_t get() const { return id_.load(); }
+  uint64_t Next() {
+    uint64_t ret;
     do {
       ret = id_.fetch_add(1);
     } while (ret == kInvalidDeviceId);
@@ -23,9 +23,9 @@ class AtomicDeviceId {
   }
 
  private:
-  static constexpr uint16_t kInvalidDeviceId = 0;
+  static constexpr uint64_t kInvalidDeviceId = 0;
 
-  std::atomic<uint32_t> id_;
+  std::atomic<uint64_t> id_;
 };
 
 //

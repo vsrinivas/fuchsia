@@ -53,6 +53,9 @@ constexpr char kSystemMuteDefault[] = "1";
 constexpr char kPlayToLastSwitch[] = "last";
 constexpr char kPlayToAllSwitch[] = "all";
 
+constexpr char kDeviceSettingsSwitch[] = "settings";
+constexpr char kDeviceSettingsDefault[] = "0";
+
 constexpr char kHelpSwitch[] = "help";
 }  // namespace
 
@@ -151,6 +154,10 @@ void usage(const char* prog_name) {
          kPlayToLastSwitch);
   printf("\t--%s\t\t\tSet 'Play to All' routing policy\n", kPlayToAllSwitch);
   printf("\t\t\t\tNote: changes to routing policy persist after playback\n");
+
+  printf("\n\t  By default, changes to audio devices are persisted and read\n");
+  printf("\t--%s\t\t\tChange this (0=Disable or 1=Enable, %s is default)\n",
+         kDeviceSettingsSwitch, kDeviceSettingsDefault);
 
   printf("\n\t--%s, --?\t\tShow this message\n\n", kHelpSwitch);
 }
@@ -324,6 +331,17 @@ int main(int argc, const char** argv) {
         fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
   }
 
+  // Handle device settings
+  if (command_line.HasOption(kDeviceSettingsSwitch)) {
+    std::string device_settings_str;
+    command_line.GetOptionValue(kDeviceSettingsSwitch, &device_settings_str);
+    if (device_settings_str == "") {
+      device_settings_str = kDeviceSettingsDefault;
+    }
+
+    media_app.set_device_settings(
+        fxl::StringToNumber<uint32_t>(device_settings_str) != 0);
+  }
   // Handle "generate to file"
   if (command_line.HasOption(kSaveToFileSwitch)) {
     std::string save_file_str;

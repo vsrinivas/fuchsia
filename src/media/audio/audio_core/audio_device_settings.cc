@@ -76,7 +76,9 @@ std::ostream& operator<<(std::ostream& stream,
 
 }  // namespace
 
+bool AudioDeviceSettings::writes_enabled_ = true;
 bool AudioDeviceSettings::initialized_ = false;
+
 std::unique_ptr<rapidjson::SchemaDocument> AudioDeviceSettings::file_schema_;
 
 AudioDeviceSettings::AudioDeviceSettings(const AudioDriver& drv, bool is_input)
@@ -91,8 +93,14 @@ AudioDeviceSettings::AudioDeviceSettings(const AudioDriver& drv, bool is_input)
   gain_state_.agc_enabled = hw.can_agc && hw.cur_agc;
 }
 
+// static
 void AudioDeviceSettings::Initialize() {
   FXL_DCHECK(!initialized_);
+  if (!writes_enabled_) {
+    FXL_LOG(WARNING) << "Device settings persistence is disabled; so device "
+                        "settings files will be neither created nor updated.";
+  }
+
   if (!files::CreateDirectory(kSettingsPath)) {
     FXL_LOG(ERROR)
         << "Failed to ensure that \"" << kSettingsPath
@@ -117,7 +125,10 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
   // Don't bother to do any of this unless we were able to successfully
   // initialize our storage subsystem.
   if (!initialized_) {
-    return ZX_ERR_BAD_STATE;
+    Initialize();
+    if (!initialized_) {
+      return ZX_ERR_BAD_STATE;
+    }
   }
 
   static const struct {
@@ -150,7 +161,7 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
           break;
         }
 
-        // We successfully loaded out persisted settings.  Cancel and commit
+        // We successfully loaded out persisted settings.  Cancel our commit
         // timer, hold onto the FD and we should be good to go.
         CancelCommitTimeouts();
         storage_ = std::move(storage);
@@ -162,9 +173,17 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
                            << path << "\" (res " << res
                            << ").  Re-creating file from defaults.";
           ::unlink(path);
+        } else {
+          FXL_LOG(WARNING) << "Could not load default audio settings from \""
+                           << path << "\" (res " << res << ").";
         }
       }
     }
+  }
+
+  // If persisting of device settings is disabled, don't create a new file.
+  if (!writes_enabled_) {
+    return ZX_OK;
   }
 
   // We have failed to load our persisted settings for one reason or another.
@@ -175,6 +194,8 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
   storage_.reset(::open(path, O_RDWR | O_CREAT));
 
   if (!static_cast<bool>(storage_)) {
+    // TODO(mpuryear): define and enforce a limit for the number of settings
+    // files allowed to be created.
     FXL_LOG(ERROR) << "Failed to create new audio settings file \"" << path
                    << "\" (errno " << errno
                    << ").  Settings will not be persisted.";
@@ -235,7 +256,7 @@ bool AudioDeviceSettings::SetGainInfo(
         static_cast<audio_set_gain_flags_t>(dirtied | AUDIO_SGF_AGC_VALID);
   }
 
-  bool needs_wake = (!gain_state_dirty_flags_ && dirtied);
+  bool needs_wake = (!gain_state_dirty_flags_ && dirtied && writes_enabled_);
   gain_state_dirty_flags_ = dirtied;
 
   if (needs_wake) {
@@ -246,9 +267,9 @@ bool AudioDeviceSettings::SetGainInfo(
 }
 
 zx::time AudioDeviceSettings::Commit(bool force) {
-  // If we are not backed by storage, or the cache is clean, then there is
-  // nothing to commit.
-  if (!static_cast<bool>(storage_) ||
+  // If 1) we aren't backed by storage, or 2) device settings persistence is
+  // disabled, or 3) the cache is clean, then there is nothing to commit.
+  if (!static_cast<bool>(storage_ || !writes_enabled_) ||
       (next_commit_time_ == zx::time::infinite())) {
     return zx::time::infinite();
   }
@@ -312,6 +333,10 @@ audio_set_gain_flags_t AudioDeviceSettings::SnapshotGainState(
 
 zx_status_t AudioDeviceSettings::Deserialize(const fbl::unique_fd& storage) {
   FXL_DCHECK(static_cast<bool>(storage));
+
+  if (!writes_enabled_) {
+    FXL_LOG(INFO) << "Reading device settings (but writes are disabled).";
+  }
 
   // Figure out the size of the file, then allocate storage for reading the
   // whole thing.
@@ -379,6 +404,11 @@ zx_status_t AudioDeviceSettings::Deserialize(const fbl::unique_fd& storage) {
 zx_status_t AudioDeviceSettings::Serialize() {
   CancelCommitTimeouts();
 
+  if (!writes_enabled_) {
+    FXL_LOG(DFATAL) << "Device settings files disabled; not writing to file.";
+    return ZX_ERR_BAD_STATE;
+  }
+
   if (!static_cast<bool>(storage_)) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -426,6 +456,10 @@ zx_status_t AudioDeviceSettings::Serialize() {
 }
 
 void AudioDeviceSettings::UpdateCommitTimeouts() {
+  if (!writes_enabled_) {
+    FXL_LOG(DFATAL) << "Device settings files disabled; we should not be here.";
+  }
+
   constexpr zx::duration kMaxUpdateDelay(ZX_SEC(5));
   constexpr zx::duration kUpdateDelay(ZX_MSEC(500));
 

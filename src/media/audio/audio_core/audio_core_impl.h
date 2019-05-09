@@ -45,6 +45,8 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
 
   void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) final;
 
+  void EnableDeviceSettings(bool enabled) final;
+
   // Called (indirectly) by AudioOutputs to schedule the callback for a
   // packet was queued to an AudioRenderer.
   //

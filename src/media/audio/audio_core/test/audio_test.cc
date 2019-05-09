@@ -30,6 +30,9 @@ class AudioBase : public gtest::RealLoopFixture {
   bool error_occurred_ = false;
 };
 
+// TODO(mpuryear): Create tests to explicitly target the AudioCore protocol.
+// One of the first focus areas should be EnableDeviceSettings()
+
 //
 // AudioTest
 //

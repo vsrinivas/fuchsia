@@ -79,6 +79,12 @@ protocol AudioCore {
     -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
     SetRoutingPolicy(AudioOutputRoutingPolicy policy);
+
+    // By default, reading and writing device settings files is enabled. This
+    // method (which has impact across the entire audio subsystem) allows a test
+    // client to temporarily disable, then later enable, that reading/writing.
+    // TODO(mpuryear): Move this to the hub, instead of being a FIDL API.
+    EnableDeviceSettings(bool enabled);
 };
 
 // A placeholder for various types of simple routing policies. This should be

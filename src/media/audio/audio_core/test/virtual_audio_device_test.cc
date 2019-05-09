@@ -25,17 +25,23 @@ AtomicDeviceId VirtualAudioDeviceTest::sequential_devices_;
 //
 // Generate a unique id array for each virtual device created during the
 // lifetime of this binary. In the MSB (byte [0]), place F0 for output device or
-// F0 for input device. In bytes [1] thru [4], place a monotonically
+// F1 for input device. In bytes [8] thru [15], place a monotonically
 // incrementing atomic value, split into bytes. Thus, the very first device, if
-// an input, would have a unique_id of F0000000 01000000 00000000 00000000.
+// an input, would have a unique_id of F1000000 00000000 00000000 00000001.
 void VirtualAudioDeviceTest::PopulateUniqueIdArr(bool is_input,
                                                  uint8_t* unique_id_arr) {
-  uint32_t sequential_value = sequential_devices_.Next();
+  uint64_t sequential_value = sequential_devices_.Next();
+
   unique_id_arr[0] = (is_input ? 0xF1 : 0xF0);
-  unique_id_arr[1] = (sequential_value >> 24) & 0x0FF;
-  unique_id_arr[2] = (sequential_value >> 16) & 0x0FF;
-  unique_id_arr[3] = (sequential_value >> 8) & 0x0FF;
-  unique_id_arr[4] = sequential_value & 0x0FF;
+
+  unique_id_arr[8] = (sequential_value >> 56) & 0x0FF;
+  unique_id_arr[9] = (sequential_value >> 48) & 0x0FF;
+  unique_id_arr[10] = (sequential_value >> 40) & 0x0FF;
+  unique_id_arr[11] = (sequential_value >> 32) & 0x0FF;
+  unique_id_arr[12] = (sequential_value >> 24) & 0x0FF;
+  unique_id_arr[13] = (sequential_value >> 16) & 0x0FF;
+  unique_id_arr[14] = (sequential_value >> 8) & 0x0FF;
+  unique_id_arr[15] = sequential_value & 0x0FF;
 }
 
 //
@@ -81,7 +87,7 @@ void VirtualAudioDeviceTest::TearDown() {
 void VirtualAudioDeviceTest::TestGetDevicesAfterAdd(bool is_input) {
   std::string mfr = "Gemstone Testing";
   std::string product = "Virtual Delight";
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   char expected_unique_id[33];
   for (uint8_t i = 0; i < 16; ++i) {
     unique_id[i] = i * 0x11 + (is_input ? 1 : 0);
@@ -167,7 +173,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterAdd(bool is_input) {
 // Upon exit, received_default_token_ contains the newest device, and
 // received_old_token_ contains the second-newest device.
 void VirtualAudioDeviceTest::AddTwoDevices(bool is_input, bool is_plugged) {
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   zx_time_t now = zx_clock_get_monotonic();
   uint64_t old_token, new_token;
 
@@ -379,7 +385,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterUnplug(bool is_input,
 void VirtualAudioDeviceTest::TestGetDefaultDeviceUsingAddGetDevices(
     bool is_input) {
   SetOnDeviceAddedEvent();
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
 
   PopulateUniqueIdArr(is_input, unique_id.data());
   if (is_input) {
@@ -414,7 +420,7 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterAdd(bool is_input) {
   }
 
   SetOnDefaultDeviceChangedEvent();
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
   if (is_input) {
@@ -443,7 +449,7 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnpluggedAdd(
   }
 
   SetOnDeviceAddedEvent();
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
   zx_time_t now = zx_clock_get_monotonic();
@@ -538,7 +544,7 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnplug(bool is_input,
 // gain/mute/agc matches what was received by OnDeviceAdded?
 void VirtualAudioDeviceTest::TestGetDeviceGainAfterAdd(bool is_input) {
   SetOnDeviceAddedEvent();
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
   float min_gain_db, max_gain_db, gain_step_db, cur_gain_db;
@@ -616,7 +622,7 @@ void VirtualAudioDeviceTest::TestGetDeviceGainAfterAdd(bool is_input) {
 void VirtualAudioDeviceTest::TestGetDeviceGainAfterSetDeviceGain(
     bool is_input) {
   SetOnDeviceAddedEvent();
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
   float min_gain_db, max_gain_db, gain_step_db, cur_gain_db;
@@ -691,7 +697,7 @@ void VirtualAudioDeviceTest::TestGetDeviceGainAfterSetDeviceGain(
 // From GetDevices, does gain/mute/agc match what was set?
 void VirtualAudioDeviceTest::TestGetDevicesAfterSetDeviceGain(bool is_input) {
   SetOnDeviceAddedEvent();
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
   float min_gain_db, max_gain_db, gain_step_db, cur_gain_db;
@@ -790,7 +796,7 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input,
   uint32_t expect_flags =
       GainFlagsFromBools(can_mute, cur_mute, can_agc, cur_agc);
 
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   char expected_unique_id[33];
   PopulateUniqueIdArr(is_input, unique_id.data());
   for (uint8_t i = 0; i < 16; ++i) {
@@ -844,7 +850,7 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input,
 void VirtualAudioDeviceTest::TestOnDeviceAddedAfterPlug(bool is_input) {
   SetOnDeviceAddedEvent();
 
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
   zx_time_t now = zx_clock_get_monotonic();
@@ -874,7 +880,7 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterRemove(bool is_input,
                                                             bool is_plugged) {
   SetOnDeviceAddedEvent();
 
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
   if (is_input) {
@@ -912,7 +918,7 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterRemove(bool is_input,
 void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterUnplug(bool is_input) {
   SetOnDeviceAddedEvent();
 
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
   if (is_input) {
@@ -957,7 +963,7 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterAdd(bool is_input) {
   SetOnDeviceAddedEvent();
   SetOnDefaultDeviceChangedEvent();
 
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
   if (is_input) {
@@ -1107,7 +1113,7 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterUnplug(
 // From GetDevices, does gain/mute/agc match what was set?
 void VirtualAudioDeviceTest::TestOnDeviceGainChanged(bool is_input) {
   SetOnDeviceAddedEvent();
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
   float min_gain_db, max_gain_db, gain_step_db, cur_gain_db;
@@ -1304,7 +1310,7 @@ TEST_F(VirtualAudioDeviceTest, GetDeviceGainMatchesOutputSetDeviceGain) {
 
 TEST_F(VirtualAudioDeviceTest, GetDeviceGainOfRemovedOutput) {
   SetOnDeviceAddedEvent();
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(false, unique_id.data());
   output_->SetUniqueId(unique_id);
 
@@ -1326,7 +1332,7 @@ TEST_F(VirtualAudioDeviceTest, GetDeviceGainOfRemovedOutput) {
 // and set flags.
 TEST_F(VirtualAudioDeviceTest, SetDeviceGainOfBadValues) {
   SetOnDeviceAddedEvent();
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(false, unique_id.data());
   output_->SetUniqueId(unique_id);
   PopulateUniqueIdArr(true, unique_id.data());
@@ -1376,7 +1382,7 @@ TEST_F(VirtualAudioDeviceTest, SetDeviceGainOfBadValues) {
 // SetDeviceGain of previously-valid, removed dev should silently do nothing.
 TEST_F(VirtualAudioDeviceTest, SetDeviceGainOfRemovedInput) {
   SetOnDeviceAddedEvent();
-  std::array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(true, unique_id.data());
   input_->SetUniqueId(unique_id);
 

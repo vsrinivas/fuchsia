@@ -149,6 +149,10 @@ void AudioCoreImpl::SetRoutingPolicy(
   device_manager_.SetRoutingPolicy(policy);
 }
 
+void AudioCoreImpl::EnableDeviceSettings(bool enabled) {
+  device_manager_.EnableDeviceSettings(enabled);
+}
+
 void AudioCoreImpl::DoPacketCleanup() {
   // In order to minimize the time we spend in the lock we obtain the lock, swap
   // the contents of the cleanup queue with a local queue and clear the sched
