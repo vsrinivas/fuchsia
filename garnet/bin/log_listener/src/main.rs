@@ -186,6 +186,7 @@ struct LocalOptions {
     end: Vec<String>,
     only: Vec<String>,
     suppress: Vec<String>,
+    dump_logs: bool,
 }
 
 impl Default for LocalOptions {
@@ -202,6 +203,7 @@ impl Default for LocalOptions {
             end: vec![],
             only: vec![],
             suppress: vec![],
+            dump_logs: false,
         }
     }
 }
@@ -370,6 +372,9 @@ fn help(name: &str) -> String {
             See chrono::format::strftime for format specifiers.
             Defaults to "%Y-%m-%d %H:%M:%S".
 
+        --dump_logs yes:
+            Dump current logs in buffer and exit.
+
         --help | -h:
             Prints usage."#,
         name = name,
@@ -510,19 +515,17 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                     ));
                 }
             },
-            "--startup_sleep" => {
-                match args[i + 1].parse::<u64>() {
-                    Ok(n) => {
-                        options.local.startup_sleep = n;
-                    }
-                    Err(_) => {
-                        return Err(format!(
-                            "Invalid startup_sleep: '{}', should be a positive integer.",
-                            args[i + 1]
-                        ));
-                    }
+            "--startup_sleep" => match args[i + 1].parse::<u64>() {
+                Ok(n) => {
+                    options.local.startup_sleep = n;
                 }
-            }
+                Err(_) => {
+                    return Err(format!(
+                        "Invalid startup_sleep: '{}', should be a positive integer.",
+                        args[i + 1]
+                    ));
+                }
+            },
             "--clock" => match args[i + 1].to_lowercase().as_ref() {
                 "monotonic" => options.local.clock = Clock::Monotonic,
                 "utc" => options.local.clock = Clock::UTC,
@@ -531,6 +534,12 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
             },
             "--time_format" => {
                 options.local.time_format = args[i + 1].clone();
+            }
+            "--dump_logs" => {
+                let ans = &args[i + 1];
+                if ans.to_lowercase() == "yes" {
+                    options.local.dump_logs = true;
+                }
             }
             a => {
                 return Err(format!("Invalid option {}", a));
@@ -686,7 +695,7 @@ where
     }
 
     fn done(&mut self) {
-        // ignore as this is not called incase of listener.
+        // no need to do anything, caller will return after making this call.
     }
 }
 
@@ -735,9 +744,9 @@ fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Erro
         || (None, LocalOptions::default()),
         |o| (Some(&mut o.filter), o.local.clone()),
     );
-
+    let dump_logs = local_options.dump_logs;
     let l = new_listener(local_options)?;
-    let listener_fut = syslog_listener::run_log_listener(l, filter_options, false);
+    let listener_fut = syslog_listener::run_log_listener(l, filter_options, dump_logs);
     executor.run_singlethreaded(listener_fut)?;
     Ok(())
 }
@@ -1234,6 +1243,22 @@ mod tests {
             let args = vec!["--pretty".to_string(), "123".to_string()];
             let mut expected = LogListenerOptions::default();
             expected.local.is_pretty = false;
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn dump_logs() {
+            let args = vec!["--dump_logs".to_string(), "YeS".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.dump_logs = true;
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn dump_logs_fail() {
+            let args = vec!["--dump_logs".to_string(), "123".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.dump_logs = false;
             parse_flag_test_helper(&args, Some(&expected));
         }
 

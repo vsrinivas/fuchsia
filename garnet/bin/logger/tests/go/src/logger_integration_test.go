@@ -76,6 +76,10 @@ func TestFullStack(t *testing.T) {
 		testToStdout(t, tag, expected)
 	})
 
+	t.Run("LogListenerDumpLogs", func(t *testing.T) {
+		testDumpLogs(t, tag, expected)
+	})
+
 	t.Run("LogListenerToFileWithWarning", func(t *testing.T) {
 		testToFile(t, tag, expected)
 	})
@@ -108,6 +112,27 @@ func testToStdout(t *testing.T, tag, expected string) {
 	})
 
 	if !res {
+		t.Fatalf("expected suffix: %q, got: %q", expected, stdout.String())
+	}
+}
+
+// testDumpLogs runs log_listener to dump logs for the given tag and exit.
+// The stdout buffer is then checked for the expected string.
+func testDumpLogs(t *testing.T, tag, expected string) {
+	cmd := exec.Command(loglistener, "--tag", tag, "--dump_logs", "yes")
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	err := cmd.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := cmd.Wait(); err != nil {
+		log.Fatal(err)
+	}
+
+	has_suffix := strings.HasSuffix(stdout.String(), expected)
+
+	if !has_suffix {
 		t.Fatalf("expected suffix: %q, got: %q", expected, stdout.String())
 	}
 }

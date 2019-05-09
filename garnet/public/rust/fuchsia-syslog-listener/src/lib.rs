@@ -5,21 +5,16 @@
 //! Rust fuchsia logger library.
 
 #![feature(async_await, await_macro)]
-
 #![deny(missing_docs)]
 
 use failure::{Error, ResultExt};
-use futures::TryStreamExt;
-use fuchsia_component::client::connect_to_service;
-use fidl::encoding::OutOfLine;
 
+use fidl::encoding::OutOfLine;
+use fuchsia_component::client::connect_to_service;
+use futures::TryStreamExt;
 // Include the generated FIDL bindings for the `Logger` service.
 use fidl_fuchsia_logger::{
-    LogFilterOptions,
-    LogListenerRequest,
-    LogListenerRequestStream,
-    LogMarker,
-    LogMessage,
+    LogFilterOptions, LogListenerRequest, LogListenerRequestStream, LogMarker, LogMessage,
 };
 
 /// This trait is used to pass log message back to client.
@@ -49,7 +44,7 @@ async fn log_listener(
             }
             LogListenerRequest::Done { control_handle: _ } => {
                 processor.done();
-                return Ok(())
+                return Ok(());
             }
         }
     }
@@ -68,13 +63,9 @@ pub async fn run_log_listener<'a>(
 
     let options = options.map(OutOfLine);
     if dump_logs {
-        logger
-            .dump_logs(listener_ptr, options)
-            .context("failed to register log dumper")?;
+        logger.dump_logs(listener_ptr, options).context("failed to register log dumper")?;
     } else {
-        logger
-            .listen(listener_ptr, options)
-            .context("failed to register listener")?;
+        logger.listen(listener_ptr, options).context("failed to register listener")?;
     }
 
     await!(log_listener(processor, listener_stream))?;
