@@ -13,13 +13,14 @@ from lib.device import Device
 from lib.host import Host
 
 from device_mock import MockDevice
+from host_mock import MockHost
 
 
 class TestDevice(unittest.TestCase):
   """ Tests lib.Device. See MockDevice for additional details."""
 
   def test_from_args(self):
-    host = Host.from_build()
+    host = MockHost()
     parser = Args.make_parser('description', name_required=False)
     # netaddr should get called with 'just-four-random-words', and fail
     with self.assertRaises(RuntimeError):
@@ -39,7 +40,7 @@ class TestDevice(unittest.TestCase):
     mock.set_ssh_config(ssh_config)
     cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
     self.assertIn('ssh', cmd)
-    self.assertIn('-F ' + ssh_config, cmd)
+    self.assertIn(' -F ' + ssh_config, cmd)
 
   def test_set_ssh_identity(self):
     mock = MockDevice()
@@ -53,33 +54,33 @@ class TestDevice(unittest.TestCase):
     mock.set_ssh_identity(identity_file)
     cmd = ' '.join(mock.get_ssh_cmd(['scp']))
     self.assertIn('scp', cmd)
-    self.assertIn('-i ' + identity_file, cmd)
+    self.assertIn(' -i ' + identity_file, cmd)
 
   def test_set_ssh_option(self):
     mock = MockDevice()
     mock.set_ssh_option('StrictHostKeyChecking no')
     mock.set_ssh_option('UserKnownHostsFile=/dev/null')
     cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
-    self.assertIn('-o StrictHostKeyChecking no', cmd)
-    self.assertIn('-o UserKnownHostsFile=/dev/null', cmd)
+    self.assertIn(' -o StrictHostKeyChecking no', cmd)
+    self.assertIn(' -o UserKnownHostsFile=/dev/null', cmd)
 
   def test_init(self):
     mock = MockDevice(port=51823)
-    cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
-    self.assertIn('-p 51823', cmd)
+    cmd = ' '.join(mock.get_ssh_cmd(['ssh', '::1', 'some-command']))
+    self.assertIn(' -p 51823 ', cmd)
 
   def test_set_ssh_verbosity(self):
     mock = MockDevice()
     mock.set_ssh_verbosity(3)
-    cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
-    self.assertIn('-vvv', cmd)
+    cmd = ' '.join(mock.get_ssh_cmd(['ssh', '::1', 'some-command']))
+    self.assertIn(' -vvv ', cmd)
     mock.set_ssh_verbosity(1)
-    cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
-    self.assertIn('-v', cmd)
-    self.assertNotIn('-vvv', cmd)
+    cmd = ' '.join(mock.get_ssh_cmd(['ssh', '::1', 'some-command']))
+    self.assertIn(' -v ', cmd)
+    self.assertNotIn(' -vvv ', cmd)
     mock.set_ssh_verbosity(0)
-    cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
-    self.assertNotIn('-v', cmd)
+    cmd = ' '.join(mock.get_ssh_cmd(['ssh', '::1', 'some-command']))
+    self.assertNotIn(' -v ', cmd)
 
   def test_ssh(self):
     mock = MockDevice()

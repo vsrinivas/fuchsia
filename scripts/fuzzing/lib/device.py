@@ -49,7 +49,7 @@ class Device(object):
     """Sets the SSH arguments to use a config file."""
     if not os.path.exists(config_file):
       raise Host.ConfigError('Unable to find SSH configuration.')
-    self._ssh_opts['-F'] = [config_file]
+    self._ssh_opts['F'] = [config_file]
 
   def set_ssh_identity(self, identity_file):
     if not os.path.exists(identity_file):
