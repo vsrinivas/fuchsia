@@ -17,10 +17,12 @@ dart_library("client") {
     "src/scenic.dart",
     "src/setui.dart",
     "src/sl4f_client.dart",
+    "src/traceutil.dart",
   ]
 
   deps = [
     "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/image",
+    "//third_party/dart-pkg/pub/meta",
   ]
 }

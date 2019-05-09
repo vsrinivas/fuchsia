@@ -117,6 +117,7 @@ pub enum FacadeType {
     NetstackFacade,
     SetUiFacade,
     ScenicFacade,
+    TraceutilFacade,
     Wlan,
     Undefined,
 }
@@ -134,6 +135,7 @@ impl FacadeType {
             "netstack_facade" => FacadeType::NetstackFacade,
             "scenic_facade" => FacadeType::ScenicFacade,
             "setui_facade" => FacadeType::SetUiFacade,
+            "traceutil_facade" => FacadeType::TraceutilFacade,
             "wlan" => FacadeType::Wlan,
             _ => FacadeType::Undefined,
         }

@@ -44,6 +44,8 @@ use crate::scenic::facade::ScenicFacade;
 // SetUi related includes
 use crate::setui::facade::SetUiFacade;
 
+// Traceutil related includes
+use crate::traceutil::facade::TraceutilFacade;
 
 // Wlan related includes
 use crate::wlan::facade::WlanFacade;
@@ -95,6 +97,9 @@ pub struct Sl4f {
     // setui_facade: thread safe object for state for SetUi functions.
     setui_facade: Arc<SetUiFacade>,
 
+    // traceutil_facade: Thread safe object for state for Traceutil functions.
+    traceutil_facade: Arc<TraceutilFacade>,
+
     // wlan_facade: Thread safe object for state for wlan connectivity tests
     wlan_facade: Arc<WlanFacade>,
 
@@ -115,6 +120,7 @@ impl Sl4f {
         let netstack_facade = Arc::new(NetstackFacade::new());
         let scenic_facade = Arc::new(ScenicFacade::new());
         let setui_facade = Arc::new(SetUiFacade::new()?);
+        let traceutil_facade = Arc::new(TraceutilFacade::new());
         let wlan_facade = Arc::new(WlanFacade::new()?);
         Ok(Arc::new(RwLock::new(Sl4f {
             audio_facade,
@@ -127,6 +133,7 @@ impl Sl4f {
             netstack_facade,
             scenic_facade,
             setui_facade,
+            traceutil_facade,
             wlan_facade,
             clients: Arc::new(Mutex::new(HashMap::new())),
         })))
@@ -170,6 +177,10 @@ impl Sl4f {
 
     pub fn get_setui_facade(&self) -> Arc<SetUiFacade> {
         self.setui_facade.clone()
+    }
+
+    pub fn get_traceutil_facade(&self) -> Arc<TraceutilFacade> {
+        self.traceutil_facade.clone()
     }
 
     pub fn get_wlan_facade(&self) -> Arc<WlanFacade> {
