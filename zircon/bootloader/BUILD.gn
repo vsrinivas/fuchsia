@@ -46,6 +46,14 @@ if (current_toolchain == default_toolchain) {
       "-std=c99",
       "-fshort-wchar",
     ]
+
+    # The compiler predefines _MSC_VER for compatibility with the Windows
+    # compiler.  But then some compiler-provided headers like <stddef.h>
+    # test _MSC_VER and except some Windows API headers to exist if it's
+    # set.  We use the "windows-msvc" compiler target for EFI because it's
+    # right wrt calling conventions and object file format, but this EFI
+    # compilation environment does not use a Windows-style API.
+    cflags += [ "-U_MSC_VER" ]
   }
 
   executable("bootloader") {
