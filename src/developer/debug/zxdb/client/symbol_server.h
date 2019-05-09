@@ -11,6 +11,7 @@
 
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/debug_symbol_file_type.h"
 
 namespace zxdb {
 
@@ -54,7 +55,8 @@ class SymbolServer : public ClientObject {
   virtual std::string AuthInfo() const = 0;
   virtual void Authenticate(const std::string& data,
                             std::function<void(const Err&)> cb) = 0;
-  virtual void Fetch(const std::string& build_id, FetchCallback cb) = 0;
+  virtual void Fetch(const std::string& build_id, DebugSymbolFileType file_type,
+                     FetchCallback cb) = 0;
 
   // Query to see whether the server has symbols for the given build ID, but
   // don't actually download them. Callback receives a function which it can
@@ -63,6 +65,7 @@ class SymbolServer : public ClientObject {
   // was not found. The error supplied is only set if there was a problem with
   // the connection, not if the symbols were simply unavailable.
   virtual void CheckFetch(const std::string& build_id,
+                          DebugSymbolFileType file_type,
                           CheckFetchCallback cb) = 0;
 
  protected:

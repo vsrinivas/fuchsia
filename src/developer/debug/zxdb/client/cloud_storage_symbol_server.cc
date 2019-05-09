@@ -35,6 +35,15 @@ bool DocIsAuthInfo(const rapidjson::Document& document) {
          document.HasMember("access_token");
 }
 
+std::string ToDebugFileName(const std::string& name,
+                            DebugSymbolFileType file_type) {
+  if (file_type == DebugSymbolFileType::kDebugInfo) {
+    return name + ".debug";
+  }
+
+  return name;
+}
+
 std::filesystem::path GetCachePath() {
   static std::filesystem::path ret;
 
@@ -82,16 +91,18 @@ class CloudStorageSymbolServerImpl : public CloudStorageSymbolServer {
     DoInit();
   }
 
-  void Fetch(const std::string& build_id,
+  void Fetch(const std::string& build_id, DebugSymbolFileType file_type,
              SymbolServer::FetchCallback cb) override;
-  void CheckFetch(const std::string& build_id,
+  void CheckFetch(const std::string& build_id, DebugSymbolFileType file_type,
                   SymbolServer::CheckFetchCallback cb) override;
 
  private:
   void DoAuthenticate(const std::map<std::string, std::string>& data,
                       std::function<void(const Err&)> cb) override;
-  std::shared_ptr<Curl> PrepareCurl(const std::string& build_id);
-  void FetchWithCurl(const std::string& build_id, std::shared_ptr<Curl> curl,
+  std::shared_ptr<Curl> PrepareCurl(const std::string& build_id,
+                                    DebugSymbolFileType file_type);
+  void FetchWithCurl(const std::string& build_id, DebugSymbolFileType file_type,
+                     std::shared_ptr<Curl> curl,
                      SymbolServer::FetchCallback cb);
 };
 
@@ -293,13 +304,13 @@ void CloudStorageSymbolServer::LoadCachedAuth() {
 }
 
 std::shared_ptr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(
-    const std::string& build_id) {
+    const std::string& build_id, DebugSymbolFileType file_type) {
   if (state() != SymbolServer::State::kReady) {
     return nullptr;
   }
 
   std::string url = "https://storage.googleapis.com/";
-  url += bucket_ + build_id + ".debug";
+  url += bucket_ + ToDebugFileName(build_id, file_type);
 
   auto curl = Curl::MakeShared();
   FXL_DCHECK(curl);
@@ -312,8 +323,9 @@ std::shared_ptr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(
 }
 
 void CloudStorageSymbolServerImpl::CheckFetch(
-    const std::string& build_id, SymbolServer::CheckFetchCallback cb) {
-  auto curl = PrepareCurl(build_id);
+    const std::string& build_id, DebugSymbolFileType file_type,
+    SymbolServer::CheckFetchCallback cb) {
+  auto curl = PrepareCurl(build_id, file_type);
 
   if (!curl) {
     debug_ipc::MessageLoop::Current()->PostTask(
@@ -325,16 +337,17 @@ void CloudStorageSymbolServerImpl::CheckFetch(
 
   size_t previous_ready_count = ready_count_;
 
-  curl->Perform([this, build_id, curl, cb, previous_ready_count](
+  curl->Perform([this, build_id, file_type, curl, cb, previous_ready_count](
                     Curl*, Curl::Error result) {
     Err err;
     auto code = curl->ResponseCode();
 
     if (HandleRequestResult(result, code, previous_ready_count, &err)) {
       curl->get_body() = true;
-      cb(Err(), [this, build_id, curl](SymbolServer::FetchCallback fcb) {
-        FetchWithCurl(build_id, curl, fcb);
-      });
+      cb(Err(),
+         [this, build_id, file_type, curl](SymbolServer::FetchCallback fcb) {
+           FetchWithCurl(build_id, file_type, curl, fcb);
+         });
       return;
     }
 
@@ -343,8 +356,9 @@ void CloudStorageSymbolServerImpl::CheckFetch(
 }
 
 void CloudStorageSymbolServerImpl::Fetch(const std::string& build_id,
+                                         DebugSymbolFileType file_type,
                                          SymbolServer::FetchCallback cb) {
-  auto curl = PrepareCurl(build_id);
+  auto curl = PrepareCurl(build_id, file_type);
 
   if (!curl) {
     debug_ipc::MessageLoop::Current()->PostTask(
@@ -352,10 +366,11 @@ void CloudStorageSymbolServerImpl::Fetch(const std::string& build_id,
     return;
   }
 
-  FetchWithCurl(build_id, curl, cb);
+  FetchWithCurl(build_id, file_type, curl, cb);
 }
 
 void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
+                                                 DebugSymbolFileType file_type,
                                                  std::shared_ptr<Curl> curl,
                                                  FetchCallback cb) {
   auto cache_path = session()->system().settings().GetString(
@@ -370,7 +385,8 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
       // Download to a temporary file, so if we get cancelled (or we get sent
       // a 404 page instead of the real symbols) we don't pollute the build ID
       // folder.
-      std::string name = build_id + ".debug.part";
+      std::string name = ToDebugFileName(build_id, file_type) + ".part";
+
       path = path_obj / name;
     }
   }
@@ -398,7 +414,7 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
     return;
   }
 
-  auto cleanup = [file, path, cache_path, build_id](
+  auto cleanup = [file, path, cache_path, build_id, file_type](
                      bool valid, Err* result) -> std::string {
     fclose(file);
 
@@ -415,7 +431,7 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
 
     auto target_path =
         std::filesystem::path(cache_path) / ".build-id" / build_id.substr(0, 2);
-    auto target_name = build_id.substr(2) + ".debug";
+    auto target_name = ToDebugFileName(build_id.substr(2), file_type);
 
     std::filesystem::create_directory(target_path, ec);
     if (std::filesystem::is_directory(target_path, ec)) {

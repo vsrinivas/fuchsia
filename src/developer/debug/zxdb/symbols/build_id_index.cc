@@ -18,7 +18,7 @@ namespace {
 
 std::optional<std::string> FindInRepoFolder(const std::string& build_id,
                                             const std::filesystem::path& path,
-                                            BuildIDIndex::FileType file_type) {
+                                            DebugSymbolFileType file_type) {
   if (build_id.size() <= 2) {
     return std::nullopt;
   }
@@ -27,7 +27,7 @@ std::optional<std::string> FindInRepoFolder(const std::string& build_id,
   auto tail = build_id.substr(2);
   auto name = tail;
 
-  if (file_type == BuildIDIndex::FileType::kDebugInfo) {
+  if (file_type == DebugSymbolFileType::kDebugInfo) {
     name += ".debug";
   }
 
@@ -46,7 +46,7 @@ BuildIDIndex::BuildIDIndex() = default;
 BuildIDIndex::~BuildIDIndex() = default;
 
 std::string BuildIDIndex::FileForBuildID(const std::string& build_id,
-                                         BuildIDIndex::FileType file_type) {
+                                         DebugSymbolFileType file_type) {
   EnsureCacheClean();
 
   const std::string* to_find = &build_id;
@@ -58,7 +58,7 @@ std::string BuildIDIndex::FileForBuildID(const std::string& build_id,
 }
 
 std::string BuildIDIndex::SearchRepoSources(const std::string& build_id,
-                                            BuildIDIndex::FileType file_type) {
+                                            DebugSymbolFileType file_type) {
   for (const auto& source : repo_sources_) {
     const auto& path = std::filesystem::path(source) / ".build-id";
 
@@ -203,8 +203,7 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
 
   fclose(id_file);
 
-  int added =
-      ParseIDs(contents, containing_dir, &build_id_to_file_);
+  int added = ParseIDs(contents, containing_dir, &build_id_to_file_);
   status_.emplace_back(file_name, added);
   if (!added)
     LogMessage("No mappings found in build ID file: " + file_name);

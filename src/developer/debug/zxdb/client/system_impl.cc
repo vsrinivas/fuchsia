@@ -47,9 +47,7 @@ class Download {
                     SymbolServer::FetchCallback result_cb)
       : build_id_(build_id), result_cb_(std::move(result_cb)) {}
 
-  ~Download() {
-    Finish();
-  }
+  ~Download() { Finish(); }
 
   // Notify this download object that we have gotten the symbols if we're going
   // to get them.
@@ -96,9 +94,9 @@ void Download::AddServer(std::shared_ptr<Download> self, SymbolServer* server) {
     return;
 
   server->CheckFetch(
-      build_id_,
+      build_id_, DebugSymbolFileType::kDebugInfo,
       [self](const Err& err,
-                 std::function<void(SymbolServer::FetchCallback)> cb) {
+             std::function<void(SymbolServer::FetchCallback)> cb) {
         if (!cb)
           self->Error(self, err);
         else
@@ -269,7 +267,8 @@ std::vector<SymbolServer*> SystemImpl::GetSymbolServers() const {
   return result;
 }
 
-std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id, bool quiet) {
+std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
+                                                  bool quiet) {
   if (auto existing = downloads_[build_id].lock()) {
     return existing;
   }
@@ -488,8 +487,7 @@ void SystemImpl::DidConnect() {
     implicit_job = new_job.get();
     AddNewJobContext(std::move(new_job));
   }
-  implicit_job->AttachToSystemRoot(
-      [](fxl::WeakPtr<JobContext>, const Err&) {});
+  implicit_job->AttachToSystemRoot([](fxl::WeakPtr<JobContext>, const Err&) {});
 }
 
 void SystemImpl::DidDisconnect() {

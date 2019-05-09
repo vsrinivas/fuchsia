@@ -35,13 +35,12 @@ TEST(BuildIDIndex, IndexFile) {
   index.AddSymbolSource(test_file);
 
   // The known file should be found.
-  EXPECT_EQ(test_file,
-            index.FileForBuildID(kSmallTestBuildID,
-                                 BuildIDIndex::FileType::kDebugInfo));
+  EXPECT_EQ(test_file, index.FileForBuildID(kSmallTestBuildID,
+                                            DebugSymbolFileType::kDebugInfo));
 
   // Test some random build ID fails.
   EXPECT_EQ("", index.FileForBuildID("random build id",
-                                     BuildIDIndex::FileType::kDebugInfo));
+                                     DebugSymbolFileType::kDebugInfo));
 }
 
 // Index all files in a directory.
@@ -50,9 +49,9 @@ TEST(BuildIDIndex, IndexDir) {
   index.AddSymbolSource(GetTestDataDir());
 
   // It should have found the small test file and indexed it.
-  EXPECT_EQ(GetSmallTestFile(),
-            index.FileForBuildID(kSmallTestBuildID,
-                                 BuildIDIndex::FileType::kDebugInfo));
+  EXPECT_EQ(
+      GetSmallTestFile(),
+      index.FileForBuildID(kSmallTestBuildID, DebugSymbolFileType::kDebugInfo));
 }
 
 TEST(BuildIDIndex, ParseIDFile) {

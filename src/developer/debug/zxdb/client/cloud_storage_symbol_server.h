@@ -65,24 +65,24 @@ class MockCloudStorageSymbolServer : public CloudStorageSymbolServer {
 
   // The big IO methods are proxied to callbacks for the mock so tests can just
   // intercept them.
-  std::function<void(const std::string&, SymbolServer::FetchCallback)>
-      on_fetch = [](const std::string&, SymbolServer::FetchCallback) {};
-  std::function<void(const std::string&, SymbolServer::CheckFetchCallback)>
-      on_check_fetch =
-          [](const std::string&, SymbolServer::CheckFetchCallback) {};
+  std::function<void(const std::string&, DebugSymbolFileType,
+                     SymbolServer::FetchCallback)>
+      on_fetch = {};
+  std::function<void(const std::string&, DebugSymbolFileType,
+                     SymbolServer::CheckFetchCallback)>
+      on_check_fetch = {};
   std::function<void(const std::map<std::string, std::string>&,
                      std::function<void(const Err&)>)>
-      on_do_authenticate = [](const std::map<std::string, std::string>,
-                              std::function<void(const Err&)>) {};
+      on_do_authenticate = {};
 
   // Implementation of Symbol server.
-  void Fetch(const std::string& build_id,
+  void Fetch(const std::string& build_id, DebugSymbolFileType file_type,
              SymbolServer::FetchCallback cb) override {
-    on_fetch(build_id, cb);
+    on_fetch(build_id, file_type, cb);
   }
-  void CheckFetch(const std::string& build_id,
+  void CheckFetch(const std::string& build_id, DebugSymbolFileType file_type,
                   SymbolServer::CheckFetchCallback cb) override {
-    on_check_fetch(build_id, cb);
+    on_check_fetch(build_id, file_type, cb);
   }
 
  private:
