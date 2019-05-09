@@ -416,18 +416,6 @@ class OpacityNodeHACK final : public ContainerNode {
   void SetOpacity(float opacity);
 };
 
-// TODO: delete after soft-transition to OpacityNodeHACK.
-class OpacityNode final : public ContainerNode {
- public:
-  explicit OpacityNode(Session* session);
-  OpacityNode(OpacityNode&& moved);
-  ~OpacityNode();
-
-  // The opacity with which to render the contents of the hierarchy rooted at
-  // this node. The opacity values are clamped 0.0 to 1.0.
-  void SetOpacity(float opacity);
-};
-
 // A value that can be used in place of a constant value.
 class Variable final : public Resource {
  public:
