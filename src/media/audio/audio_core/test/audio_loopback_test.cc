@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/gtest/real_loop_fixture.h>
 
@@ -12,9 +13,94 @@
 
 namespace media::audio::test {
 
-constexpr int16_t kPlaybackData1 = 0x1000;
-constexpr int16_t kPlaybackData2 = 0xfff;
-constexpr int16_t kCaptureData1 = 0x7fff;
+// The AudioLoopbackEnvironment class allows us to make configuration changes
+// before any test case begins, and after all test cases complete.
+class AudioLoopbackEnvironment : public ::testing::Environment {
+ public:
+  // Before any test cases in this program, synchronously connect to the service
+  // to ensure that the audio and audio_core components are present and loaded,
+  // and that at least one (virtual) audio output device is present.
+  //
+  // On assert-false during this SetUp method, no test cases run, and they may
+  // display as passed. However, the overall binary returns non-zero (fail).
+  void SetUp() override {
+    // This is an unchanging input for the entire component; get it once here.
+    auto environment_services = component::GetEnvironmentServices();
+
+    // We need at least one active audio output, for loopback capture to work.
+    // So use this Control to enable virtualaudio and add a virtual audio output
+    // that will exist for the entirety of this binary's test cases. We will
+    // remove it and disable virtual_audio immediately afterward.
+    environment_services->ConnectToService(
+        virtual_audio_control_sync_.NewRequest());
+    zx_status_t status = virtual_audio_control_sync_->Enable();
+    ASSERT_EQ(status, ZX_OK) << "Failed to enable virtualaudio";
+
+    // Create an output device using default settings, save it while tests run.
+    environment_services->ConnectToService(
+        virtual_audio_output_sync_.NewRequest());
+    status = virtual_audio_output_sync_->Add();
+    ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio output";
+
+    // Ensure that the output is active before we proceed to running tests.
+    uint32_t num_inputs, num_outputs = 0, num_tries = 0;
+    do {
+      status =
+          virtual_audio_control_sync_->GetNumDevices(&num_inputs, &num_outputs);
+      ASSERT_EQ(status, ZX_OK) << "GetNumDevices failed";
+
+      ++num_tries;
+    } while (num_outputs == 0 && num_tries < 100);
+    ASSERT_GT(num_outputs, 0u)
+        << "Timed out trying to add virtual audio output";
+
+    // Synchronously calling a FIDL method with a callback guarantees that the
+    // service is loaded and running before the sync method itself returns.
+    //
+    // This is not the case for sync calls _without_ callback, nor async calls,
+    // because of pipelining inherent in FIDL's design.
+    environment_services->ConnectToService(audio_dev_enum_sync_.NewRequest());
+    // Ensure that the audio_core binary is resident.
+    uint64_t default_output;
+    bool connected_to_svc = (audio_dev_enum_sync_->GetDefaultOutputDevice(
+                                 &default_output) == ZX_OK);
+
+    ASSERT_TRUE(connected_to_svc) << "Failed in GetDefaultOutputDevice";
+  }
+
+  // Ensure that our virtual device is gone when our test bin exits.
+  void TearDown() override {
+    // Remove our virtual audio output device
+    zx_status_t status = virtual_audio_output_sync_->Remove();
+    ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio output";
+
+    // And ensure that virtualaudio is disabled, by the time we leave.
+    status = virtual_audio_control_sync_->Disable();
+    ASSERT_EQ(status, ZX_OK) << "Failed to disable virtualaudio";
+
+    // Wait for GetNumDevices(output) to equal zero before proceeding.
+    uint32_t num_inputs = 1, num_outputs = 1, num_tries = 0;
+    do {
+      status =
+          virtual_audio_control_sync_->GetNumDevices(&num_inputs, &num_outputs);
+      ASSERT_EQ(status, ZX_OK) << "GetNumDevices failed";
+
+      ++num_tries;
+    } while ((num_outputs != 0 || num_inputs != 0) && num_tries < 100);
+    ASSERT_EQ(num_outputs, 0u) << "Timed out while disabling virtualaudio";
+    ASSERT_EQ(num_inputs, 0u) << "Timed out while disabling virtualaudio";
+
+    virtual_audio_output_sync_.Unbind();
+    virtual_audio_control_sync_.Unbind();
+  }
+
+  // If needed, this (overriding) function would also need to be public.
+  // ~AudioLoopbackEnvironment() override {}
+
+  fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
+  fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync_;
+  fuchsia::media::AudioDeviceEnumeratorSyncPtr audio_dev_enum_sync_;
+};
 
 //
 // AudioLoopbackTest
@@ -22,9 +108,12 @@ constexpr int16_t kCaptureData1 = 0x7fff;
 // Base Class for testing simple playback and capture with loopback.
 class AudioLoopbackTest : public gtest::RealLoopFixture {
  public:
-  static const int32_t kSampleRate = 8000;
-  static const int kChannelCount = 1;
-  static const int kSampleSeconds = 1;
+  static constexpr int32_t kSampleRate = 8000;
+  static constexpr int kChannelCount = 1;
+  static constexpr int kSampleSeconds = 1;
+  static constexpr int16_t kPlaybackData1 = 0x1000;
+  static constexpr int16_t kPlaybackData2 = 0xfff;
+  static constexpr int16_t kCaptureData1 = 0x7fff;
 
  protected:
   void SetUp() override;
@@ -56,6 +145,9 @@ class AudioLoopbackTest : public gtest::RealLoopFixture {
     FXL_LOG(ERROR) << "Unexpected error: " << error;
   }
 };
+
+// AudioLoopbackTest implementation
+//
 
 // SetUpRenderer
 //
@@ -387,3 +479,15 @@ TEST_F(AudioLoopbackTest, DualStream) {
 }
 
 }  // namespace media::audio::test
+
+int main(int argc, char** argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+
+  // gtest takes ownership of registered environments: *do not delete them*
+  ::testing::AddGlobalTestEnvironment(
+      new ::media::audio::test::AudioLoopbackEnvironment);
+
+  int result = RUN_ALL_TESTS();
+
+  return result;
+}

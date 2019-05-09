@@ -85,7 +85,7 @@ executable("audio_loopback_tests_bin") {
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.virtualaudio",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
   ]
 }
