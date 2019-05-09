@@ -1,0 +1,114 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.virtualization;
+
+using fuchsia.io;
+using fuchsia.sys;
+
+// Mode of the file backing a block device.
+enum BlockMode {
+    // Reads and writes are allowed.
+    READ_WRITE = 0;
+    // Only reads are allowed.
+    READ_ONLY = 1;
+    // Writes are allowed, but are stored in memory, not to disk.
+    VOLATILE_WRITE = 2;
+};
+
+// Data format of the file backing a block device.
+enum BlockFormat {
+    // Raw IO. All reads and writes go directly to disk as a flat file.
+    RAW = 0;
+    // QCOW image. All reads and writes go to a QCOW image.
+    QCOW = 1;
+};
+
+const uint64 MAX_BLOCK_DEVICE_ID_SIZE = 20;
+
+// Properties describing a single block device in the system.
+struct BlockDevice {
+    // A label used to identify the block device.
+    string:MAX_BLOCK_DEVICE_ID_SIZE id;
+    // The access mode for the block backing file.
+    BlockMode mode;
+    // The data format of the backing file.
+    BlockFormat format;
+    // The underlying file that stores the drive contents.
+    fuchsia.io.File file;
+};
+
+// An interface that will receive channels for Wayland connections.
+[Discoverable]
+protocol WaylandDispatcher {
+    // Inform dispatcher of new connection.
+    //
+    // When a client opens a new connection to the virtio_wl device, a new
+    // zx::channel will be created for that connection. The virtio_wl device
+    // will retain one endpoint of that channel and the other endpoint will be
+    // provided to this method. The messages on the channel will be Wayland
+    // protocol messages as sent by the client. Each channel datagram will
+    // contain 1 or more complete Wayland messages.
+    OnNewConnection(handle<channel> channel);
+};
+
+// Properties describing a virtio_wl device.
+struct WaylandDevice {
+    // The amount of guest-physical address space to allocate for virtio_wl
+    // buffers.
+    //
+    // Default to a 1GB allocation.
+    uint64 memory = 1073741824;
+
+    // The dispatcher for new virtio_wl connections.
+    WaylandDispatcher dispatcher;
+};
+
+struct LaunchInfo {
+    // The URL of the package to launch.
+    string url;
+
+    // Arguments that will be passed to the VMM binary when launching this guest.
+    //
+    // See //garnet/bin/guest/vmm/guest_config.cc for valid options.
+    vector<string>? args;
+
+    // A diagnostic string to associate with this instance.
+    string? label;
+
+    // A flat namespace to be appended to the default namespace for the VMM
+    // process.
+    fuchsia.sys.FlatNamespace? flat_namespace;
+
+    // A set of block devices to add to the virtual machine.
+    vector<BlockDevice>? block_devices;
+
+    // An optional virtio_wl device.
+    //
+    // If not provided, no virtio_wl device will be created by the VMM.
+    WaylandDevice? wayland_device;
+};
+
+protocol Realm {
+    // Launch a new guest instance into this environment. The |cid| of the
+    // instance is returned so that it can be uniquely identified.
+    LaunchInstance(LaunchInfo launch_info,
+                   request<Guest> controller)
+        -> (uint32 cid);
+
+    // Query for guests running in this environment.
+    ListInstances() -> (vector<InstanceInfo> instances);
+
+    // Connect to a currently running guest instance identified by |cid|. The
+    // |cid| can be found via the return value of |LaunchInstance| or a call to
+    // |ListInstances|.
+    ConnectToInstance(uint32 cid, request<Guest> controller);
+
+    // Connect to the memory balloon of a currently running guest instance
+    // identified by |cid|.
+    ConnectToBalloon(uint32 cid, request<BalloonController> controller);
+
+    // Returns an interface that can be used to access the host vsock endpoint.
+    GetHostVsockEndpoint(request<HostVsockEndpoint> endpoint);
+};

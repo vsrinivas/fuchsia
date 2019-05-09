@@ -1,0 +1,14 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.virtualization;
+
+// A |Guest| provides access to services of a guest instance.
+[Discoverable]
+protocol Guest {
+    // Get the socket for the primary serial device of the guest. The details
+    // regarding what output is produced and what input is accepted are
+    // determined by each guest.
+    GetSerial() -> (handle<socket> socket);
+};

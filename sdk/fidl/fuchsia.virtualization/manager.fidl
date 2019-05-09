@@ -1,0 +1,46 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.virtualization;
+
+struct EnvironmentInfo {
+    // A globally unique identifier for this environment.
+    uint32 id;
+
+    // The string provided to |Manager.Create|.
+    string label;
+
+    // List of guests running in this environment.
+    vector<InstanceInfo> instances;
+};
+
+struct InstanceInfo {
+    // Context ID to use to address this guest for vsocket communications. This
+    // can also be used to uniquely identify a guest within an environment.
+    uint32 cid;
+
+    // The |label| string originally provided in the |LaunchInfo| structure
+    // or, if it was the null, the |url|
+    string label;
+};
+
+[Discoverable]
+protocol Manager {
+    // Create a new environment in which guests can be launched.
+    //
+    // The |label| is a string that is used for diagnostic purposes, such as
+    // naming resources and dumping debug info.
+    Create(string? label, request<Realm> env);
+
+    // Query for existing guest environments.
+    //
+    // This is intended for diagnostic purposes only.
+    List() -> (vector<EnvironmentInfo> env_infos);
+
+    // Connect to a currently running guest environment identified by |id|. The
+    // |id| can be found via a call to |List|.
+    //
+    // This is intended for diagnostic purposes only.
+    Connect(uint32 id, request<Realm> env);
+};
