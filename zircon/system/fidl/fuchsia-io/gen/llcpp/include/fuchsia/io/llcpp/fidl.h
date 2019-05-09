@@ -915,8 +915,11 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     zx_status_t Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -930,8 +933,11 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -946,8 +952,11 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Messages are encoded and decoded in-place.
     zx_status_t Clone(::fidl::DecodedMessage<CloneRequest> params);
 
@@ -1081,8 +1090,11 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     static zx_status_t Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -1096,8 +1108,11 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1112,8 +1127,11 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Messages are encoded and decoded in-place.
     static zx_status_t Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
@@ -1737,8 +1755,11 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     zx_status_t Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -1752,8 +1773,11 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1768,8 +1792,11 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Messages are encoded and decoded in-place.
     zx_status_t Clone(::fidl::DecodedMessage<CloneRequest> params);
 
@@ -2082,8 +2109,11 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     static zx_status_t Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -2097,8 +2127,11 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -2113,8 +2146,11 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Messages are encoded and decoded in-place.
     static zx_status_t Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
@@ -3003,8 +3039,11 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     zx_status_t Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -3018,8 +3057,11 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -3034,8 +3076,11 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Messages are encoded and decoded in-place.
     zx_status_t Clone(::fidl::DecodedMessage<CloneRequest> params);
 
@@ -3552,8 +3597,11 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     static zx_status_t Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -3567,8 +3615,11 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -3583,8 +3634,11 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Messages are encoded and decoded in-place.
     static zx_status_t Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
@@ -4756,8 +4810,11 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     zx_status_t Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -4771,8 +4828,11 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -4787,8 +4847,11 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Messages are encoded and decoded in-place.
     zx_status_t Clone(::fidl::DecodedMessage<CloneRequest> params);
 
@@ -5391,8 +5454,11 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     static zx_status_t Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -5406,8 +5472,11 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -5422,8 +5491,11 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // cloned object.
     // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     // Messages are encoded and decoded in-place.
     static zx_status_t Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
@@ -6371,7 +6443,7 @@ constexpr uint32_t DEVICE_SIGNAL_ERROR = 67108864u;
 
 // When used during clone, the new connection inherits the rights on the source connection,
 // regardless if it is a file or directory. Otherwise, clone attempts to use the requested rights.
-// It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAGS_SAME_RIGHTS.
+// It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
 constexpr uint32_t CLONE_FLAG_SAME_RIGHTS = 67108864u;
 
 }  // namespace io

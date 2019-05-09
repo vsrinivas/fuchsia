@@ -147,7 +147,7 @@ const uint32 OPEN_FLAG_POSIX = 0x01000000;
 const uint32 OPEN_FLAG_NOT_DIRECTORY = 0x02000000;
 /// When used during clone, the new connection inherits the rights on the source connection,
 /// regardless if it is a file or directory. Otherwise, clone attempts to use the requested rights.
-/// It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAGS_SAME_RIGHTS.
+/// It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
 const uint32 CLONE_FLAG_SAME_RIGHTS = 0x04000000;
 
 /// Node defines the minimal interface for entities which can be accessed in a filesystem.
@@ -164,8 +164,11 @@ protocol Node {
     ///
     /// All other flags are ignored.
     ///
-    /// TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
+    /// The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    /// cloned object.
     /// The cloned object must have rights less than or equal to the original object.
+    /// Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    /// It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
     Clone(uint32 flags, request<Node> object);
 
     /// Terminates connection with object.
