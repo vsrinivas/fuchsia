@@ -30,7 +30,6 @@ template("fidl_dart") {
   }
   root_dir = "$target_gen_dir/${library_name}_package"
   bindings_dir = "$root_dir/lib"
-  bindings_file = "$bindings_dir/fidl.dart"
   async_bindings_file = "$bindings_dir/fidl_async.dart"
   test_bindings_file = "$bindings_dir/fidl_test.dart"
 
@@ -48,7 +47,6 @@ template("fidl_dart") {
     ]
 
     outputs = [
-      bindings_file,
       async_bindings_file,
       test_bindings_file,
     ]
@@ -111,7 +109,6 @@ template("fidl_dart") {
     package_name = "fidl_" + string_replace(library_name, ".", "_")
 
     sources = [
-      rebase_path(bindings_file, bindings_dir),
       rebase_path(async_bindings_file, bindings_dir),
       rebase_path(test_bindings_file, bindings_dir),
     ]
