@@ -43,7 +43,7 @@ class Device(object):
     self._addr = addr
     self._ssh_opts = {}
     if port != 22:
-      self._ssh_opts['p'] = str(port)
+      self._ssh_opts['p'] = [str(port)]
 
   def set_ssh_config(self, config_file):
     """Sets the SSH arguments to use a config file."""
@@ -59,7 +59,7 @@ class Device(object):
   def set_ssh_option(self, option):
     """Sets SSH configuration options. Can be used multiple times."""
     if 'o' in self._ssh_opts:
-      self._ssh_opts.append(option)
+      self._ssh_opts['o'].append(option)
     else:
       self._ssh_opts['o'] = [option]
 

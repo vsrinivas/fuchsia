@@ -14,8 +14,8 @@ from host_mock import MockHost
 
 class MockDevice(Device):
 
-  def __init__(self):
-    super(MockDevice, self).__init__(MockHost(), '::1')
+  def __init__(self, port=22):
+    super(MockDevice, self).__init__(MockHost(), '::1', port)
     self.history = []
     self.toggle = False
 

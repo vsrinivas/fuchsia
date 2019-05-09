@@ -55,7 +55,7 @@ class TestDevice(unittest.TestCase):
     self.assertIn('scp', cmd)
     self.assertIn('-i ' + identity_file, cmd)
 
-  def test_set_ssh_identity(self):
+  def test_set_ssh_option(self):
     mock = MockDevice()
     mock.set_ssh_option('StrictHostKeyChecking no')
     mock.set_ssh_option('UserKnownHostsFile=/dev/null')
@@ -63,7 +63,12 @@ class TestDevice(unittest.TestCase):
     self.assertIn('-o StrictHostKeyChecking no', cmd)
     self.assertIn('-o UserKnownHostsFile=/dev/null', cmd)
 
-  def test_set_ssh_identity(self):
+  def test_init(self):
+    mock = MockDevice(port=51823)
+    cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
+    self.assertIn('-p 51823', cmd)
+
+  def test_set_ssh_verbosity(self):
     mock = MockDevice()
     mock.set_ssh_verbosity(3)
     cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
