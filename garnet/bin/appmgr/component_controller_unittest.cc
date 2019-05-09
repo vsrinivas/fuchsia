@@ -324,8 +324,8 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
-  // TODO(cpu) FLK-130: EXPECT_EQ(ZX_TASK_RETCODE_SYSCALL_KILL, return_code);
-  // is flaky.
+  EXPECT_EQ(ZX_TASK_RETCODE_SYSCALL_KILL, return_code);
+
   EXPECT_EQ(TerminationReason::EXITED, termination_reason);
   EXPECT_EQ(realm_.ComponentCount(), 0u);
 }
