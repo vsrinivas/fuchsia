@@ -86,6 +86,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/trace-vthread:tests",
       "$zx/system/ulib/zbi-bootfs/test",
       "$zx/system/ulib/zx/test",
+      "$zx/system/ulib/zxio/test",
       "$zx/system/ulib/zxtest/test",
       "abigen",
       "async-testutils",
@@ -193,7 +194,6 @@ if (current_cpu != "") {
       "vmo",
       "zbi",
       "zxcrypt",
-      "zxio",
 
       # disabled for now:
       #"bad-kernel-access",
