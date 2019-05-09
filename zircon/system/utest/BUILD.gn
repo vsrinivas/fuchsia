@@ -77,6 +77,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/fzl/test",
       "$zx/system/ulib/gpt/test",
       "$zx/system/ulib/id_allocator/test",
+      "$zx/system/ulib/libzbi/test",
       "$zx/system/ulib/kvstore:kvstore-test",
       "$zx/system/ulib/lazy_init:lazy_init-test",
       "$zx/system/ulib/minfs/allocator/test",
@@ -191,7 +192,6 @@ if (current_cpu != "") {
       "virtio",
       "virtual_camera",
       "vmo",
-      "zbi",
       "zxcrypt",
 
       # disabled for now:
@@ -222,6 +222,7 @@ if (current_cpu != "") {
     deps = [
       "$zx/system/ulib/fbl/test",
       "$zx/system/ulib/fvm/test",
+      "$zx/system/ulib/libzbi/test",
       "$zx/system/ulib/zxtest/test",
       "$zx/system/ulib/trace-reader:tests",
       "cmdline",
@@ -232,7 +233,6 @@ if (current_cpu != "") {
       "fvm-host",
       "runtests-utils",
       "util",
-      "zbi",
     ]
     if (current_os == "linux") {
       deps += [
