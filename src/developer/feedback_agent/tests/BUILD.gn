@@ -97,12 +97,11 @@ executable("feedback_agent_integration_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/feedback_agent:src",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/ui/lib/escher/test:gtest_escher",
+    "//src/ui/lib/escher/test:gtest_vulkan",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",

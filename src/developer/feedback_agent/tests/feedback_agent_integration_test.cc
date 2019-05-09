@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/component/cpp/environment_services_helper.h>
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include <lib/sys/cpp/service_directory.h>
 #include <zircon/errors.h>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
-#include "src/developer/feedback_agent/annotations.h"
+#include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -27,11 +26,11 @@ MATCHER_P(MatchesKey, expected_key,
 class FeedbackAgentIntegrationTest : public testing::Test {
  public:
   void SetUp() override {
-    environment_services_ = component::GetEnvironmentServices();
+    environment_services_ = ::sys::ServiceDirectory::CreateFromNamespace();
   }
 
  protected:
-  std::shared_ptr<component::Services> environment_services_;
+  std::shared_ptr<::sys::ServiceDirectory> environment_services_;
 };
 
 // We use VK_TEST instead of the regular TEST macro because Scenic needs Vulkan
@@ -40,7 +39,7 @@ class FeedbackAgentIntegrationTest : public testing::Test {
 // display like the other Scenic tests, see SCN-1281.
 VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
   DataProviderSyncPtr data_provider;
-  environment_services_->ConnectToService(data_provider.NewRequest());
+  environment_services_->Connect(data_provider.NewRequest());
 
   std::unique_ptr<Screenshot> out_screenshot;
   ASSERT_EQ(data_provider->GetScreenshot(ImageEncoding::PNG, &out_screenshot),
@@ -51,7 +50,7 @@ VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
 
 TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   DataProviderSyncPtr data_provider;
-  environment_services_->ConnectToService(data_provider.NewRequest());
+  environment_services_->Connect(data_provider.NewRequest());
 
   DataProvider_GetData_Result out_result;
   ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);

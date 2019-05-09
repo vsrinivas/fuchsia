@@ -143,12 +143,10 @@ executable("crashpad_agent_integration_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/gtest",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/sys/cpp",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
     "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/fidl/fuchsia-mem",
     "//zircon/public/lib/zx",

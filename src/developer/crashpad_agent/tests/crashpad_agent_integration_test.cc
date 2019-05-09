@@ -4,10 +4,8 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/component/cpp/environment_services_helper.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -20,8 +18,8 @@ namespace {
 // interface, connecting through FIDL.
 TEST(CrashpadAgentIntegrationTest, SmokeTest) {
   AnalyzerSyncPtr crash_analyzer;
-  auto environment_services = component::GetEnvironmentServices();
-  environment_services->ConnectToService(crash_analyzer.NewRequest());
+  auto environment_services = ::sys::ServiceDirectory::CreateFromNamespace();
+  environment_services->Connect(crash_analyzer.NewRequest());
 
   // We call OnKernelPanicCrashLog() to smoke test the service is up and
   // running because it is the easiest to call.
@@ -37,9 +35,3 @@ TEST(CrashpadAgentIntegrationTest, SmokeTest) {
 }  // namespace
 }  // namespace crash
 }  // namespace fuchsia
-
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::syslog::InitLogger({"crash", "test"});
-  return RUN_ALL_TESTS();
-}
