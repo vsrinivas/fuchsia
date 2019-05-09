@@ -4,12 +4,6 @@
 
 #include "garnet/bin/sysmgr/package_updating_loader.h"
 
-#include <memory>
-#include <string>
-#include <tuple>
-#include <utility>
-#include <vector>
-
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/pkg/cpp/fidl.h>
@@ -25,6 +19,12 @@
 #include <src/lib/fxl/logging.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include <memory>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 
@@ -166,8 +166,7 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   const std::string message = "component launched";
   fidl::StringPtr ret_msg = "";
   echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return std::string(ret_msg) == message; }, zx::sec(10)));
+  ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
 
   // Verify that Resolve was called with the expected arguments.
   fuchsia::pkg::UpdatePolicy policy;
@@ -199,8 +198,7 @@ TEST_F(PackageUpdatingLoaderTest, Failure) {
   fidl::StringPtr ret_msg = "";
   echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
   // Even though the update failed, the loader should load the component anyway.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return std::string(ret_msg) == message; }, zx::sec(10)));
+  ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
 }
 
 TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
@@ -227,8 +225,7 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
 
     echo->EchoString(message,
                      [&](fidl::StringPtr retval) { ret_msg = retval; });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&] { return std::string(ret_msg) == message; }, zx::sec(10)));
+    ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
   }
 
   // since the connection to the package resolver is initiated lazily, we need
@@ -253,8 +250,7 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
     FXL_LOG(INFO) << "sending echo message.";
     echo->EchoString(message,
                      [&](fidl::StringPtr retval) { ret_msg = retval; });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&] { return std::string(ret_msg) == message; }, zx::sec(10)));
+    ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
   }
 
   // an initial connection and a retry
@@ -280,8 +276,7 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
     FXL_LOG(INFO) << "sending echo message.";
     echo->EchoString(message,
                      [&](fidl::StringPtr retval) { ret_msg = retval; });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&] { return std::string(ret_msg) == message; }, zx::sec(10)));
+    ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
   }
 
   // one more connection

@@ -98,7 +98,7 @@ TEST_F(ReadTest, ReadLocations) {
               result = std::move(res);
             }));
 
-    RunLoopWithTimeoutOrUntil([&] { return !!result; });
+    RunLoopUntil([&] { return !!result; });
 
     ASSERT_TRUE(result.is_ok())
         << "for " << path << " error " << result.error().c_str();
@@ -127,7 +127,7 @@ TEST_F(ReadTest, ReadLocationsChild) {
               result = std::move(res);
             }));
 
-    RunLoopWithTimeoutOrUntil([&] { return !!result; });
+    RunLoopUntil([&] { return !!result; });
 
     ASSERT_TRUE(result.is_ok())
         << "for " << path << " error " << result.error().c_str();
@@ -154,7 +154,7 @@ TEST_F(ReadTest, ReadLocationsError) {
               result = std::move(res);
             }));
 
-    RunLoopWithTimeoutOrUntil([&] { return !!result; });
+    RunLoopUntil([&] { return !!result; });
 
     ASSERT_TRUE(result.is_error());
   }

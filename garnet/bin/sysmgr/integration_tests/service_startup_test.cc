@@ -6,9 +6,9 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/interface_ptr.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+#include <src/lib/fxl/logging.h>
 #include <test/sysmgr/cpp/fidl.h>
 
 #include "garnet/bin/appmgr/appmgr.h"
@@ -73,8 +73,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
     response = r;
   });
 
-  RunLoopWithTimeoutOrUntil([&received_response] { return received_response; },
-                            zx::sec(10));
+  RunLoopUntil([&received_response] { return received_response; });
   EXPECT_EQ("test_sysmgr_service_startup", response);
 }
 

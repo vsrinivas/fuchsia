@@ -42,7 +42,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
                                   controller_.NewRequest());
     bool ready = false;
     controller_.events().OnDirectoryReady = [&ready] { ready = true; };
-    RunLoopWithTimeoutOrUntil([&ready] { return ready; }, zx::sec(10));
+    RunLoopUntil([&ready] { return ready; });
     if (!ready) {
       printf("The output directory is not ready\n");
     }
@@ -57,8 +57,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
           ASSERT_EQ(fuchsia::sys::TerminationReason::EXITED, reason);
           done = true;
         };
-    ASSERT_TRUE(
-        RunLoopWithTimeoutOrUntil([&done] { return done; }, zx::sec(10)));
+    ASSERT_TRUE(RunLoopUntil([&done] { return done; }));
   }
 
   // Open the root object connection on the given sync pointer.

@@ -76,7 +76,7 @@ class SourceTestFidl : public TestFixture {
               result = std::move(res);
             }));
 
-    RunLoopWithTimeoutOrUntil([&result] { return !!result; });
+    RunLoopUntil([&result] { return !!result; });
 
     return result;
   }
@@ -112,7 +112,7 @@ class SourceTestVmo : public TestFixture {
               result = std::move(res);
             }));
 
-    RunLoopWithTimeoutOrUntil([&result] { return !!result; });
+    RunLoopUntil([&result] { return !!result; });
 
     return result;
   }

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
-
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
+
 #include <vector>
 
-#include <fuchsia/sys/cpp/fidl.h>
-#include <zircon/syscalls.h>
+#include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
 #include "gtest/gtest.h"
 
 // This test runs multiple components in the same environment, and checks that
@@ -40,7 +40,6 @@ TEST_F(NamespaceTest, MultipleComponents) {
     controllers.push_back(std::move(controller));
   }
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&num_running] { return num_running == 0; }, zx::sec(10)));
+  ASSERT_TRUE(RunLoopUntil([&num_running] { return num_running == 0; }));
   EXPECT_EQ(num_running, 0);
 }
