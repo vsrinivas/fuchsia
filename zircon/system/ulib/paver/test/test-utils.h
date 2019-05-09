@@ -5,9 +5,12 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/sysinfo/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <ramdevice-client/ramdisk.h>
 #include <ramdevice-client/ramnand.h>
+#include <zxtest/zxtest.h>
 
 constexpr uint64_t kBlockSize = 0x1000;
 constexpr uint64_t kBlockCount = 0x10;
@@ -58,3 +61,53 @@ private:
     fzl::VmoMapper mapper_;
 };
 
+class FakeSysinfo {
+public:
+    FakeSysinfo(async_dispatcher_t* dispatcher) {
+        zx::channel remote;
+        ASSERT_OK(zx::channel::create(0, &remote, &svc_chan_));
+        fidl_bind(dispatcher, remote.release(),
+                  reinterpret_cast<fidl_dispatch_t*>(fuchsia_sysinfo_Device_dispatch),
+                  this, &ops_);
+    }
+
+    zx_status_t GetRootJob(fidl_txn_t* txn) {
+        return fuchsia_sysinfo_DeviceGetRootJob_reply(txn, ZX_ERR_NOT_SUPPORTED, ZX_HANDLE_INVALID);
+    }
+
+    zx_status_t GetRootResource(fidl_txn_t* txn) {
+        return fuchsia_sysinfo_DeviceGetRootResource_reply(txn, ZX_ERR_NOT_SUPPORTED,
+                                                           ZX_HANDLE_INVALID);
+    }
+
+    zx_status_t GetHypervisorResource(fidl_txn_t* txn) {
+        return fuchsia_sysinfo_DeviceGetHypervisorResource_reply(txn, ZX_ERR_NOT_SUPPORTED,
+                                                                 ZX_HANDLE_INVALID);
+    }
+
+    zx_status_t GetBoardName(fidl_txn_t* txn) {
+        char board[32] = {};
+        strcpy(board, "vim2");
+        return fuchsia_sysinfo_DeviceGetBoardName_reply(txn, ZX_OK, board, 32);
+    }
+
+    zx_status_t GetInterruptControllerInfo(fidl_txn_t* txn) {
+        return fuchsia_sysinfo_DeviceGetInterruptControllerInfo_reply(txn, ZX_ERR_NOT_SUPPORTED,
+                                                                      nullptr);
+    }
+
+    zx::channel& svc_chan() { return svc_chan_; }
+
+private:
+    using Binder = fidl::Binder<FakeSysinfo>;
+
+    zx::channel svc_chan_;
+
+    static constexpr fuchsia_sysinfo_Device_ops_t ops_ = {
+        .GetRootJob = Binder::BindMember<&FakeSysinfo::GetRootJob>,
+        .GetRootResource = Binder::BindMember<&FakeSysinfo::GetRootResource>,
+        .GetHypervisorResource = Binder::BindMember<&FakeSysinfo::GetHypervisorResource>,
+        .GetBoardName = Binder::BindMember<&FakeSysinfo::GetBoardName>,
+        .GetInterruptControllerInfo = Binder::BindMember<&FakeSysinfo::GetInterruptControllerInfo>,
+    };
+};

@@ -141,7 +141,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
 class PaverServiceTest : public zxtest::Test {
 public:
     PaverServiceTest()
-        : loop_(&kAsyncLoopConfigAttachToThread) {
+        : loop_(&kAsyncLoopConfigAttachToThread), fake_sysinfo_(loop_.dispatcher()) {
         test_block_devices.reset();
         paver::TestBlockFilter = FilterRealBlockDevices;
 
@@ -165,6 +165,7 @@ protected:
         ASSERT_EQ(device_.get(), nullptr);
         SkipBlockDevice::Create(kNandInfo, &device_);
         static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
+        static_cast<paver::Paver*>(provider_ctx_)->set_sysinfo(std::move(fake_sysinfo_.svc_chan()));
     }
 
     void CreatePayload(size_t num_blocks, fuchsia_mem_Buffer* out) {
@@ -197,6 +198,7 @@ protected:
     fbl::unique_ptr<SkipBlockDevice> device_;
     zx::channel client_;
     async::Loop loop_;
+    FakeSysinfo fake_sysinfo_;
 };
 
 

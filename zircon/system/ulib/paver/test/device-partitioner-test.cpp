@@ -10,6 +10,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <zircon/boot/image.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/syscalls.h>
@@ -186,6 +187,22 @@ TEST(FixedDevicePartitionerTests, FinalizePartitionTest) {
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kFuchsiaVolumeManager), ZX_OK);
 }
 
+class AsyncLoop {
+public:
+    explicit AsyncLoop()
+        : loop_(&kAsyncLoopConfigNoAttachToThread), dispatcher_(loop_.dispatcher()),
+          fake_sysinfo_(dispatcher_) {
+        loop_.StartThread("device-partitioner-test-loop");
+    }
+
+    FakeSysinfo& fake_sysinfo() { return fake_sysinfo_; }
+
+private:
+    async::Loop loop_;
+    async_dispatcher_t* dispatcher_;
+    FakeSysinfo fake_sysinfo_;
+};
+
 TEST(FixedDevicePartitionerTests, FindPartitionTest) {
     ASSERT_TRUE(Initialize());
     fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b;
@@ -196,9 +213,11 @@ TEST(FixedDevicePartitionerTests, FindPartitionTest) {
     BlockDevice::Create(kVbMetaBType, &vbmeta_b);
     BlockDevice::Create(kFvmType, &fvm);
 
+    AsyncLoop loop;
     fbl::unique_fd devfs(open("/dev", O_RDWR));
-    fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
+    auto partitioner = paver::DevicePartitioner::Create(std::move(devfs),
+                                                        std::move(loop.fake_sysinfo().svc_chan()));
+    ASSERT_NE(partitioner.get(), nullptr);
 
     fbl::unique_fd fd;
     ASSERT_EQ(partitioner->FindPartition(paver::Partition::kZirconA, &fd), ZX_OK);
@@ -219,9 +238,11 @@ TEST(FixedDevicePartitionerTests, GetBlockSizeTest) {
     BlockDevice::Create(kVbMetaBType, &vbmeta_b);
     BlockDevice::Create(kFvmType, &fvm);
 
+    AsyncLoop loop;
     fbl::unique_fd devfs(open("/dev", O_RDWR));
-    fbl::unique_ptr<paver::DevicePartitioner> partitioner;
-    ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
+    auto partitioner = paver::DevicePartitioner::Create(std::move(devfs),
+                                                        std::move(loop.fake_sysinfo().svc_chan()));
+    ASSERT_NE(partitioner.get(), nullptr);
 
     fbl::unique_fd fd;
     uint32_t block_size;
@@ -263,7 +284,9 @@ TEST(SkipBlockDevicePartitionerTests, ChooseSkipBlockPartitioner) {
     fbl::unique_ptr<BlockDevice> zircon_a;
     BlockDevice::Create(kZirconAType, &zircon_a);
 
-    auto partitioner = paver::DevicePartitioner::Create(device->devfs_root());
+    AsyncLoop loop;
+    auto partitioner = paver::DevicePartitioner::Create(device->devfs_root(),
+                                                        std::move(loop.fake_sysinfo().svc_chan()));
     ASSERT_NE(partitioner.get(), nullptr);
     ASSERT_TRUE(partitioner->UseSkipBlockInterface());
 }

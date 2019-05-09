@@ -36,11 +36,17 @@ public:
         devfs_root_ = std::move(devfs_root);
     }
 
+    void set_sysinfo(zx::channel sysinfo) {
+        sysinfo_ = std::move(sysinfo);
+    }
+
 private:
     bool InitializePartitioner();
 
     // Used for test injection.
     fbl::unique_fd devfs_root_;
+    // Used for test injection.
+    zx::channel sysinfo_;
     // Lazily initialized to allow test to inject a fake devfs root after creating.
     std::unique_ptr<DevicePartitioner> partitioner_;
 };

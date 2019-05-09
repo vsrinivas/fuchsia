@@ -28,6 +28,7 @@
 #include <fvm/fvm-sparse.h>
 #include <fvm/sparse-reader.h>
 #include <lib/cksum.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -1046,7 +1047,21 @@ bool Paver::InitializePartitioner() {
         if (!devfs_root_) {
             devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
         }
-        partitioner_ = DevicePartitioner::Create(devfs_root_.duplicate());
+        if (!sysinfo_) {
+            zx::channel server, client;
+            auto status = zx::channel::create(0, &server, &client);
+            if (status != ZX_OK) {
+                ERROR("Unable to create channel.\n");
+                return false;
+            }
+            status = fdio_service_connect("/dev/misc/sysinfo", server.release());
+            if (status != ZX_OK) {
+                ERROR("Unable to open sysinfo.\n");
+                return false;
+            }
+            sysinfo_ = std::move(client);
+        }
+        partitioner_ = DevicePartitioner::Create(devfs_root_.duplicate(), std::move(sysinfo_));
         if (!partitioner_) {
             ERROR("Unable to initialize a partitioner.\n");
             return false;

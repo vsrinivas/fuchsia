@@ -16,6 +16,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <gpt/cros.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -265,16 +266,17 @@ const char* PartitionName(Partition type) {
     }
 }
 
-fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root) {
+fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root,
+                                                             zx::channel sysinfo) {
     // TODO(surajmalhotra): Only use injected devfs_root for skip-block until
     // ramdisks spawn in isolated devmgr.
     fbl::unique_fd block_devfs_root((open("/dev", O_RDONLY)));
     fbl::unique_ptr<DevicePartitioner> device_partitioner;
     if ((SkipBlockDevicePartitioner::Initialize(std::move(devfs_root),
                                                 &device_partitioner) == ZX_OK) ||
-        (CrosDevicePartitioner::Initialize(block_devfs_root.duplicate(),
+        (CrosDevicePartitioner::Initialize(block_devfs_root.duplicate(), sysinfo,
                                            &device_partitioner) == ZX_OK) ||
-        (EfiDevicePartitioner::Initialize(block_devfs_root.duplicate(),
+        (EfiDevicePartitioner::Initialize(block_devfs_root.duplicate(), sysinfo,
                                           &device_partitioner) == ZX_OK) ||
         (FixedDevicePartitioner::Initialize(std::move(block_devfs_root),
                                             &device_partitioner) == ZX_OK)) {
@@ -336,8 +338,7 @@ bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, f
         //
         // The GPT which will contain an FVM should be the first non-removable
         // block device that isn't a partition itself.
-        if (!(info.flags & BLOCK_FLAG_REMOVABLE) && !(info.flags & BLOCK_FLAG_BOOTPART) &&
-            strstr(out->c_str(), "part-") == nullptr) {
+        if (!(info.flags & BLOCK_FLAG_REMOVABLE) && strstr(out->c_str(), "part-") == nullptr) {
             return true;
         }
     }
@@ -346,8 +347,25 @@ bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, f
     return false;
 }
 
+bool GptDevicePartitioner::CheckValidBoard(const zx::channel& sysinfo) {
+    char real_board_name[ZX_MAX_NAME_LEN] = {};
+    zx_status_t status;
+    size_t actual_size;
+    zx_status_t io_status = fuchsia_sysinfo_DeviceGetBoardName(
+        sysinfo.get(), &status, real_board_name, sizeof(real_board_name), &actual_size);
+    if (io_status != ZX_OK || status != ZX_OK) {
+        return false;
+    }
+
+    return strcmp(real_board_name, "pc") == 0;
+}
+
 zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
+                                                const zx::channel& sysinfo,
                                                 fbl::unique_ptr<GptDevicePartitioner>* gpt_out) {
+    if (!CheckValidBoard(sysinfo)) {
+        return ZX_ERR_NOT_FOUND;
+    }
     fbl::String gpt_path;
     if (!FindTargetGptPath(devfs_root, &gpt_path)) {
         ERROR("Failed to find GPT\n");
@@ -643,11 +661,11 @@ zx_status_t GptDevicePartitioner::WipeFvm() const {
  *                 EFI SPECIFIC                       *
  *====================================================*/
 
-zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
+zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
                                              fbl::unique_ptr<DevicePartitioner>* partitioner) {
     fbl::unique_ptr<GptDevicePartitioner> gpt;
-    zx_status_t status;
-    if ((status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), &gpt)) != ZX_OK) {
+    zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), sysinfo, &gpt);
+    if (status != ZX_OK) {
         return status;
     }
     if (is_cros(gpt->GetGpt())) {
@@ -766,12 +784,12 @@ zx_status_t EfiDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
  *                CROS SPECIFIC                       *
  *====================================================*/
 
-zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
+zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
                                               fbl::unique_ptr<DevicePartitioner>* partitioner) {
     fbl::unique_ptr<GptDevicePartitioner> gpt_partitioner;
-    zx_status_t status;
-    if ((status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root),
-                                                      &gpt_partitioner)) != ZX_OK) {
+    zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), sysinfo,
+                                                             &gpt_partitioner);
+    if (status != ZX_OK) {
         return status;
     }
 
