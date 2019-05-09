@@ -44,9 +44,6 @@ void lk_main() {
     // serial prints to console based on compile time switch
     dlog_bypass_init_early();
 
-    // Init the boot percpu data.
-    percpu::Get(0).Init(0);
-
     // get us into some sort of thread context
     thread_init_early();
 

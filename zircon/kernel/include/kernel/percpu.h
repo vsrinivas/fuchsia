@@ -12,68 +12,17 @@
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
+#include <ktl/forward.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <list.h>
 #include <sys/types.h>
 #include <vm/page_state.h>
 #include <zircon/compiler.h>
 
-struct percpu;
-
-// Static collection of the percpu objects for each cpu on the system.
-class Percpus {
- public:
-    // Pure static class.
-    Percpus() = delete;
-
-    // Get the |cpu_num|th percpu entry.
-    static inline percpu& Get(cpu_num_t cpu_num) {
-        DEBUG_ASSERT_MSG(cpu_num < count_,
-                         "%u < %zu", cpu_num, count_);
-        return *index_[cpu_num];
-    }
-
-    // Number of percpu entries.
-    static size_t Count() {
-        return count_;
-    }
-
-    // Called once after the heap is up to initialize the secondary percpu
-    // entries.
-    // Unused argument is so this can be passed to LK_INIT_HOOK() directly.
-    static void HeapInit(uint32_t);
-
-    // Call |Func| with the current CPU's percpu struct with preemption disabled.
-    //
-    // |Func| should accept a |percpu*| and should not block.
-    template <typename Func>
-    static void WithCurrentPreemptDisable(Func&& func);
-
-    // Call |Func| once per CPU with each CPU's percpu struct with preemption disabled.
-    //
-    // |Func| should accept a |percpu*| and should not block.
-    template <typename Func>
-    static void ForEachPreemptDisable(Func&& func);
-
-private:
-    // Number of percpu entries.
-    static size_t count_;
-
-    // The percpu for the boot core, lives in static memory.
-    static percpu boot_percpu_ __CPU_ALIGN_EXCLUSIVE;
-
-    // Pointer to heap memory allocated for additional percpus.
-    static percpu* other_percpus_;
-
-    // Index that points to all available percpus by cpu_num.
-    static percpu** index_;
-
-    // Index used in early boot when only the boot core's percpu is available.
-    static percpu* boot_index_[1];
-};
-
 struct percpu {
-    percpu() = default;
-    percpu(const percpu &) = delete;
+    percpu(cpu_num_t cpu_num);
+
+    percpu(const percpu&) = delete;
     percpu operator=(const percpu&) = delete;
 
     // per cpu timer queue
@@ -128,21 +77,64 @@ struct percpu {
     // consistent snapshot of these counters, it should be good enough for diagnostic uses.
     vm_page_counts_t vm_page_counts;
 
-    // Initialize this percpu object, |cpu_num| will be used to initialize
-    // embedded objects.
-    void Init(cpu_num_t cpu_num);
-
-    // Get the |cpu_num|th percpu entry, this is a conveinence method for
-    // interfacing with Percpus directly.
-    static inline percpu& Get(cpu_num_t cpu_num) {
-        return Percpus::Get(cpu_num);
+    // Returns a reference to the percpu instance for given CPU number.
+    static percpu& Get(cpu_num_t cpu_num) {
+        DEBUG_ASSERT(cpu_num < processor_count());
+        return *processor_index_[cpu_num];
     }
 
+    // Returns the number of percpu instances.
+    static size_t processor_count() {
+        return processor_count_;
+    }
+
+    // Called once during early init to initalize the percpu data for the boot
+    // processor.
+    static void InitializeBoot();
+
+    // Called once after heap init to initialize the percpu data for the
+    // secondary processors.
+    static void InitializeSecondary(uint32_t init_level);
+
+    // Call |Func| with the current CPU's percpu struct with preemption disabled.
+    //
+    // |Func| should accept a |percpu*|.
+    template <typename Func>
+    static void WithCurrentPreemptDisable(Func&& func) {
+        thread_preempt_disable();
+        ktl::forward<Func>(func)(&Get(arch_curr_cpu_num()));
+        thread_preempt_reenable();
+    }
+
+    // Call |Func| once per CPU with each CPU's percpu struct with preemption disabled.
+    //
+    // |Func| should accept a |percpu*|.
+    template <typename Func>
+    static void ForEachPreemptDisable(Func&& func) {
+        thread_preempt_disable();
+        for (cpu_num_t cpu_num = 0; cpu_num < processor_count(); ++cpu_num) {
+            ktl::forward<Func>(func)(&Get(cpu_num));
+        }
+        thread_preempt_reenable();
+    }
+
+private:
     // Number of percpu entries.
-    static size_t Count() {
-        return Percpus::Count();
-    }
+    static size_t processor_count_;
 
+    // The percpu for the boot processor.
+    static lazy_init::LazyInit<percpu, lazy_init::CheckType::Basic>
+        boot_processor_ __CPU_ALIGN_EXCLUSIVE;
+
+    // Pointer to heap memory allocated for additional percpu instances.
+    static percpu* secondary_processors_;
+
+    // Translates from CPU number to percpu instance. Some or all instances
+    // of percpu may be discontiguous.
+    static percpu** processor_index_;
+
+    // Temporary translation table with one entry for use in early boot.
+    static percpu* boot_index_[1];
 } __CPU_ALIGN;
 
 // make sure the bitmap is large enough to cover our number of priorities
@@ -151,22 +143,5 @@ static_assert(NUM_PRIORITIES <= sizeof(((percpu*)0)->run_queue_bitmap) * CHAR_BI
 // TODO(edcoyne): rename this to c++, or wait for travis's work to integrate
 // into arch percpus.
 static inline struct percpu* get_local_percpu(void) {
-    return &Percpus::Get(arch_curr_cpu_num());
-}
-
-template <typename Func>
-void Percpus::WithCurrentPreemptDisable(Func&& func) {
-    thread_preempt_disable();
-    func(&Percpus::Get(arch_curr_cpu_num()));
-    thread_preempt_reenable();
-}
-
-template <typename Func>
-void Percpus::ForEachPreemptDisable(Func&& func) {
-    thread_preempt_disable();
-    const size_t count = Percpus::Count();
-    for (cpu_num_t cpu_num = 0; cpu_num < count; ++cpu_num) {
-        func(&Percpus::Get(cpu_num));
-    }
-    thread_preempt_reenable();
+    return &percpu::Get(arch_curr_cpu_num());
 }

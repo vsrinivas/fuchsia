@@ -13,14 +13,17 @@
 #include <lib/system-topology.h>
 #include <lk/init.h>
 
-percpu Percpus::boot_percpu_;
-percpu* Percpus::other_percpus_ = nullptr;
+#include <lockdep/lockdep.h>
 
-percpu* Percpus::boot_index_[1]{&Percpus::boot_percpu_};
-percpu** Percpus::index_ = Percpus::boot_index_;
-size_t Percpus::count_ = 1;
+decltype(percpu::boot_processor_) percpu::boot_processor_{};
+percpu* percpu::secondary_processors_{nullptr};
 
-void percpu::Init(cpu_num_t cpu_num) {
+percpu* percpu::boot_index_[1]{&percpu::boot_processor_};
+percpu** percpu::processor_index_{percpu::boot_index_};
+
+size_t percpu::processor_count_{1};
+
+percpu::percpu(cpu_num_t cpu_num) {
     list_initialize(&timer_queue);
     for (unsigned int i = 0; i < NUM_PRIORITIES; i++) {
         list_initialize(&run_queue[i]);
@@ -42,31 +45,34 @@ void percpu::Init(cpu_num_t cpu_num) {
     counters = CounterArena().CpuData(cpu_num);
 }
 
-void Percpus::HeapInit(uint32_t) {
-    count_ = system_topology::GetSystemTopology().logical_processor_count();
-    DEBUG_ASSERT(count_ != 0);
+void percpu::InitializeBoot() {
+    boot_processor_.Initialize(0);
+}
 
-    index_ = static_cast<percpu**>(memalign(MAX_CACHE_LINE, sizeof(percpu*) * count_));
-    index_[0] = &boot_percpu_;
+void percpu::InitializeSecondary(uint32_t /*init_level*/) {
+    processor_count_ = system_topology::GetSystemTopology().logical_processor_count();
+    DEBUG_ASSERT(processor_count_ != 0);
+
+    const size_t index_size = sizeof(percpu*) * processor_count_;
+    processor_index_ = static_cast<percpu**>(memalign(MAX_CACHE_LINE, index_size));
+    processor_index_[0] = &boot_processor_;
 
     static_assert((MAX_CACHE_LINE % alignof(struct percpu)) == 0);
 
-    const size_t bytes = sizeof(percpu) * (count_ - 1);
-    other_percpus_ = static_cast<percpu*>(memalign(MAX_CACHE_LINE, bytes));
+    const size_t bytes = sizeof(percpu) * (processor_count_ - 1);
+    secondary_processors_ = static_cast<percpu*>(memalign(MAX_CACHE_LINE, bytes));
 
-    // Zero memory out, this replicates the environment of BSS the boot_pecpu is
-    // in.
-    memset(other_percpus_, 0, bytes);
+    // TODO: Remove the need to zero memory by fully initializing all of percpu
+    // members in the constructor / default initializers.
+    memset(secondary_processors_, 0, bytes);
 
-    // Placement new the structs into the memory to construct embedded objects.
-    new (other_percpus_) percpu[count_ - 1];
-
-    for (cpu_num_t i = 1; i < count_; i++) {
-        index_[i] = &other_percpus_[i - 1];
-        index_[i]->Init(i);
+    // Construct the secondary percpu instances and add them to the index.
+    for (cpu_num_t i = 1; i < processor_count_; i++) {
+        processor_index_[i] = &secondary_processors_[i - 1];
+        new (&secondary_processors_[i - 1]) percpu{i};
     }
 }
 
-// We need to bring up the heap percpus before booting any other cores. We expect the vm to come
-// up before threading. The system_topology is initialized at VM + 2 so we will be after that.
-LK_INIT_HOOK(percpu_heap_init, Percpus::HeapInit, LK_INIT_LEVEL_VM + 3)
+// Allocate secondary percpu instances before booting other processors, after
+// vm and system topology are initialized.
+LK_INIT_HOOK(percpu_heap_init, percpu::InitializeSecondary, LK_INIT_LEVEL_VM + 3)

@@ -1051,6 +1051,9 @@ void thread_construct_first(thread_t* t, const char* name) {
 void thread_init_early(void) {
     DEBUG_ASSERT(arch_curr_cpu_num() == 0);
 
+    // Init the boot percpu data.
+    percpu::InitializeBoot();
+
     // create a thread to cover the current running state
     thread_t* t = &percpu::Get(0).idle_thread;
     thread_construct_first(t, "bootstrap");

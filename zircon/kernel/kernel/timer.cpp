@@ -499,7 +499,7 @@ static void dump_timer_queues(char* buf, size_t len) {
     zx_time_t now = current_time();
 
     Guard<spin_lock_t, IrqSave> guard{TimerLock::Get()};
-    for (uint i = 0; i < percpu::Count(); i++) {
+    for (uint i = 0; i < percpu::processor_count(); i++) {
         if (mp_is_cpu_online(i)) {
             ptr += snprintf(buf + ptr, len - ptr, "cpu %u:\n", i);
 
