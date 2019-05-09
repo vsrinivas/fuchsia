@@ -125,7 +125,6 @@ impl Registry {
         let mut active_session_subscriber = Subscriber::new(control_handle.clone());
         let should_keep = active_session_subscriber.send(ActiveSession {
             session_id: await!(self.active_session_queue.lock())
-                .deref()
                 .active_session()
                 .map(|registration| clone_session_id_handle(registration.id.deref()))
                 .transpose()?,
@@ -144,7 +143,6 @@ impl Registry {
     ) -> Result<Option<Subscriber>> {
         let sessions_change_subscriber = Subscriber::new(control_handle);
         let should_keep: bool = await!(self.session_list.lock())
-            .deref()
             .list()
             .map(|registration| -> Result<SessionsChange> {
                 Ok(SessionsChange {
