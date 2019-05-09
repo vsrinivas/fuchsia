@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
+
 #include "garnet/lib/system_monitor/dockyard/test_sample_generator.h"
 #include "gtest/gtest.h"
 
@@ -579,6 +580,51 @@ TEST_F(SystemMonitorDockyardTest, NegativeSlope) {
   EXPECT_EQ(500000ULL, response_.data_sets[0][3]);
   EXPECT_EQ(100000ULL, response_.data_sets[0][4]);
   EXPECT_EQ(900000ULL, response_.data_sets[0][5]);
+}
+
+TEST_F(SystemMonitorDockyardTest, DockyardStringToId) {
+  DockyardId apple_id = dockyard_.GetDockyardId("apple");
+  DockyardId banana_id = dockyard_.GetDockyardId("banana");
+  DockyardId carrot_id = dockyard_.GetDockyardId("carrot");
+  DockyardId dog_id = dockyard_.GetDockyardId("dog");
+  DockyardId elephant_id = dockyard_.GetDockyardId("elephant");
+  // None of the IDs should match
+  EXPECT_NE(apple_id, banana_id);
+  EXPECT_NE(apple_id, carrot_id);
+  EXPECT_NE(apple_id, dog_id);
+  EXPECT_NE(apple_id, elephant_id);
+  EXPECT_NE(banana_id, carrot_id);
+  EXPECT_NE(banana_id, dog_id);
+  EXPECT_NE(banana_id, elephant_id);
+  EXPECT_NE(carrot_id, dog_id);
+  EXPECT_NE(carrot_id, elephant_id);
+  EXPECT_NE(dog_id, elephant_id);
+  // The same ID should be returned for an equivalent string.
+  EXPECT_EQ(apple_id, dockyard_.GetDockyardId("apple"));
+  EXPECT_EQ(banana_id, dockyard_.GetDockyardId("banana"));
+  EXPECT_EQ(carrot_id, dockyard_.GetDockyardId("carrot"));
+  EXPECT_EQ(dog_id, dockyard_.GetDockyardId("dog"));
+  EXPECT_EQ(elephant_id, dockyard_.GetDockyardId("elephant"));
+}
+
+TEST_F(SystemMonitorDockyardTest, DockyardIdToString) {
+  DockyardId apple_id = dockyard_.GetDockyardId("apple");
+  DockyardId banana_id = dockyard_.GetDockyardId("banana");
+  DockyardId carrot_id = dockyard_.GetDockyardId("carrot");
+  DockyardId dog_id = dockyard_.GetDockyardId("dog");
+  DockyardId elephant_id = dockyard_.GetDockyardId("elephant");
+  // Check that the id will give the corresponding string.
+  std::string test;
+  EXPECT_TRUE(dockyard_.GetDockyardPath(apple_id, &test));
+  EXPECT_EQ("apple", test);
+  EXPECT_TRUE(dockyard_.GetDockyardPath(banana_id, &test));
+  EXPECT_EQ("banana", test);
+  EXPECT_TRUE(dockyard_.GetDockyardPath(carrot_id, &test));
+  EXPECT_EQ("carrot", test);
+  EXPECT_TRUE(dockyard_.GetDockyardPath(dog_id, &test));
+  EXPECT_EQ("dog", test);
+  EXPECT_TRUE(dockyard_.GetDockyardPath(elephant_id, &test));
+  EXPECT_EQ("elephant", test);
 }
 
 }  // namespace

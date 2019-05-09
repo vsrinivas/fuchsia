@@ -217,7 +217,9 @@ Dockyard::Dockyard()
 
 Dockyard::~Dockyard() {
   std::lock_guard<std::mutex> guard(mutex_);
+#ifdef VERBOSE_OUTPUT
   FXL_LOG(INFO) << "Stopping dockyard server";
+#endif  // VERBOSE_OUTPUT
   if (server_thread_.joinable()) {
     server_thread_.join();
   }
@@ -312,10 +314,23 @@ DockyardId Dockyard::GetDockyardId(const std::string& dockyard_path) {
   DockyardId id = dockyard_path_to_id_.size();
   dockyard_path_to_id_.emplace(dockyard_path, id);
   dockyard_id_to_path_.emplace(id, dockyard_path);
+#ifdef VERBOSE_OUTPUT
   FXL_LOG(INFO) << "Path " << dockyard_path << ": ID " << id;
+#endif  // VERBOSE_OUTPUT
   assert(dockyard_path_to_id_.find(dockyard_path) !=
          dockyard_path_to_id_.end());
   return id;
+}
+
+bool Dockyard::GetDockyardPath(DockyardId dockyard_id,
+                               std::string* dockyard_path) const {
+  std::lock_guard<std::mutex> guard(mutex_);
+  auto search = dockyard_id_to_path_.find(dockyard_id);
+  if (search != dockyard_id_to_path_.end()) {
+    *dockyard_path = search->second;
+    return true;
+  }
+  return false;
 }
 
 uint64_t Dockyard::GetStreamSets(StreamSetsRequest* request) {

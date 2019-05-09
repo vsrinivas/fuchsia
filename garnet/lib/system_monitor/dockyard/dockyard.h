@@ -235,6 +235,8 @@ class Dockyard {
   //
   // Returns a Dockyard ID that corresponds to |dockyard_path|.
   DockyardId GetDockyardId(const std::string& dockyard_path);
+  bool GetDockyardPath(DockyardId dockyard_id,
+                       std::string* dockyard_path) const;
 
   // Request graph data for time range |start_time..end_time| that has
   // |sample_count| values for each set. If the sample stream has more or less

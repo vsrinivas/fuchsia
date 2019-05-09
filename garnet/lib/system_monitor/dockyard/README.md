@@ -14,7 +14,7 @@ To get started with the Dockyard API, here's a brief overview for getting
 sample data for rendering in the GUI.
 
 If something is unclear or if you prefer examples, consider looking in
-./dockyard_unittests.cc to get an idea of how the pieces work together.
+./dockyard_test.cc to get an idea of how the pieces work together.
 
 - Create a Dockyard instance.
 - Add handlers for new dockyard paths and stream sets:

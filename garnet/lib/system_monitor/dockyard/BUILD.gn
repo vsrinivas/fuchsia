@@ -52,7 +52,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
-    "dockyard_unittests.cc",
+    "dockyard_test.cc",
   ]
 
   deps = [
