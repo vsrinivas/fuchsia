@@ -15,7 +15,7 @@
 #include <lib/zx/time.h>
 
 namespace wlan {
-namespace async {
+namespace common {
 
 template <typename I> class Dispatcher {
    public:
@@ -63,5 +63,5 @@ template <typename I> class Dispatcher {
     bool shutdown_initiated_ __TA_GUARDED(lock_){false};
 };
 
-}  // namespace async
+}  // namespace common
 }  // namespace wlan

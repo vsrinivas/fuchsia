@@ -45,7 +45,7 @@ PhyDevice::PhyDevice(zx_device_t* device) : parent_(device) {}
 zx_status_t PhyDevice::Bind() {
     zxlogf(INFO, "wlan::testing::phy::PhyDevice::Bind()\n");
 
-    dispatcher_ = std::make_unique<wlan::async::Dispatcher<wlan_device::Phy>>(wlanphy_async_t());
+    dispatcher_ = std::make_unique<wlan::common::Dispatcher<wlan_device::Phy>>(wlanphy_async_t());
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;

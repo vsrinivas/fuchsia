@@ -8,7 +8,7 @@
 #include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/tap/c/fidl.h>
-#include <wlan/async/dispatcher.h>
+#include <wlan/common/dispatcher.h>
 #include <wlan/protocol/mac.h>
 #include <wlan/protocol/phy-impl.h>
 #include <zircon/status.h>

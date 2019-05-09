@@ -23,7 +23,6 @@ driver_module("wlanif-test-driver") {
 
   deps = [
     "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/drivers/lib",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/zx",

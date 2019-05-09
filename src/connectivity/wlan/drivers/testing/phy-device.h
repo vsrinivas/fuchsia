@@ -6,7 +6,7 @@
 #define GARNET_DRIVERS_WLAN_TESTING_PHY_DEVICE_H
 
 #include <ddk/device.h>
-#include <wlan/async/dispatcher.h>
+#include <wlan/common/dispatcher.h>
 #include <zircon/types.h>
 
 #include <fuchsia/wlan/device/cpp/fidl.h>
@@ -45,7 +45,7 @@ class PhyDevice : public ::fuchsia::wlan::device::Phy {
     zx_device_t* parent_;
 
     std::mutex lock_;
-    std::unique_ptr<wlan::async::Dispatcher<::fuchsia::wlan::device::Phy>> dispatcher_;
+    std::unique_ptr<wlan::common::Dispatcher<::fuchsia::wlan::device::Phy>> dispatcher_;
     std::unordered_map<uint16_t, IfaceDevice*> ifaces_;
     // Next available Iface id. Must be checked against the map to prevent overwriting an existing
     // IfaceDevice pointer in the map.

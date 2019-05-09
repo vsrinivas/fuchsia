@@ -21,7 +21,6 @@ source_set("source") {
   public_deps = [
     "//garnet/lib/wlan/fidl",
     "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/drivers/lib",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",

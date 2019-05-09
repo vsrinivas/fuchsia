@@ -8,11 +8,11 @@
 #include <ddk/driver.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <wlan/common/channel.h>
-#include <wlan/wlanmac-ifc-proxy.h>
 
 #include <mutex>
 
 #include "utils.h"
+#include "wlanmac-ifc-proxy.h"
 
 namespace wlan {
 

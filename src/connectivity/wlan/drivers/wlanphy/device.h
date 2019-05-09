@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <wlan/async/dispatcher.h>
+#include <wlan/common/dispatcher.h>
 #include <wlan/protocol/phy-impl.h>
 
 #include <fuchsia/wlan/device/cpp/fidl.h>
@@ -40,7 +40,7 @@ class Device : public ::fuchsia::wlan::device::Phy {
 
     wlanphy_impl_protocol_t wlanphy_impl_;
 
-    wlan::async::Dispatcher<::fuchsia::wlan::device::Phy> dispatcher_;
+    wlan::common::Dispatcher<::fuchsia::wlan::device::Phy> dispatcher_;
 };
 
 }  // namespace wlanphy

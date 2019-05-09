@@ -19,7 +19,6 @@ driver_module("wlanphy_driver") {
     "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/lib/fxl",
-    "//src/connectivity/wlan/drivers/lib",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",

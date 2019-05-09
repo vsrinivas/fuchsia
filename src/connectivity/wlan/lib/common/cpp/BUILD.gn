@@ -20,6 +20,7 @@ source_set("common") {
     "include/wlan/common/buffer_writer.h",
     "include/wlan/common/channel.h",
     "include/wlan/common/cipher.h",
+    "include/wlan/common/dispatcher.h",
     "include/wlan/common/element.h",
     "include/wlan/common/element_id.h",
     "include/wlan/common/energy.h",
@@ -44,6 +45,8 @@ source_set("common") {
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.stats",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
