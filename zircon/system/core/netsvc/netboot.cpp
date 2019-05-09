@@ -276,6 +276,31 @@ static zx_status_t do_dmctl_mexec() {
     return ZX_ERR_INTERNAL;
 }
 
+static zx_status_t reboot() {
+    zx_handle_t local, remote;
+    zx_status_t status = zx_channel_create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    status = fdio_service_connect("/svc/fuchsia.device.manager.Administrator", remote);
+    if (status != ZX_OK) {
+        zx_handle_close(local);
+        return ZX_ERR_INTERNAL;
+    }
+
+    zx_status_t call_status;
+    status = fuchsia_device_manager_AdministratorSuspend(local,
+                                                         fuchsia_device_manager_SUSPEND_FLAG_REBOOT,
+                                                         &call_status);
+    zx_handle_close(local);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return call_status;
+}
+
 static void bootloader_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                             const ip6_addr_t* saddr, uint16_t sport) {
     nbmsg* msg = reinterpret_cast<nbmsg*>(data);
@@ -409,22 +434,20 @@ transmit:
     }
 
     if (do_boot) {
-        if (do_dmctl_mexec() != ZX_OK) {
+        zx_status_t status = do_dmctl_mexec();
+        if (status != ZX_OK) {
             // TODO: This will return before the system actually mexecs.
             // We can't pass an event to wait on here because fdio
             // has a limit of 3 handles, and we're already using
             // all 3 to pass boot parameters.
-            printf("netboot: Boot failed\n");
+            printf("netboot: Boot failed. status = %d\n", status);
         }
     }
 
     if (do_reboot) {
-        int fd = open("/dev/misc/dmctl", O_WRONLY);
-        if (fd < 0) {
-            printf("netboot: Reboot failed: %s\n", strerror(errno));
-        } else {
-            dprintf(fd, "reboot");
-            close(fd);
+        zx_status_t status = reboot();
+        if (status != ZX_OK) {
+            printf("netboot: Reboot failed. status = %d\n", status);
         }
     }
 }
