@@ -90,6 +90,7 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
   }
 
   if (auth_provider_mode_requested) {
+    FXL_LOG(INFO) << "Login Override: auth provider mode";
     // When auth provider mode is specified, we use single_user_base_shell.
     // The framework expects this package to be available in all product
     // configurations.
@@ -97,6 +98,7 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
     override_base_shell.set_url(kSingleUserBaseShellUrl);
     config.mutable_base_shell()->set_app_config(std::move(override_base_shell));
   } else if (guest_mode_requested) {
+    FXL_LOG(INFO) << "Login Override: Guest mode";
     // When guest mode is specified, we use auto_login_base_shell with
     // a persistent guest user. The framework expects this package to be
     // available in all product configurations.

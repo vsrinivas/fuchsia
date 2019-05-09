@@ -402,6 +402,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
                                   fuchsia::devicesettings::Status status) {
         if (status == fuchsia::devicesettings::Status::ok &&
             factory_reset_value > 0) {
+          FXL_LOG(INFO) << "Factory reset initiated";
           // Unset the factory reset flag.
           device_settings_manager_->SetInteger(
               kFactoryResetKey, 0, [](bool result) {
