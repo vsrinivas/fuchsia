@@ -19,6 +19,7 @@ fidl("fuchsia.sys2") {
     "decls/expose_decl.fidl",
     "decls/offer_decl.fidl",
     "decls/relative_id.fidl",
+    "decls/storage_decl.fidl",
     "decls/use_decl.fidl",
     "lifecycle_handler.fidl",
     "moniker.fidl",

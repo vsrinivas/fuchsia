@@ -67,6 +67,7 @@ fn main() {
             offers: Some(offers),
             children: Some(children),
             facets: Some(facets),
+            storage: None,
         }
     };
     assert_eq!(cm_decl, expected_decl);

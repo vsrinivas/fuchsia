@@ -104,6 +104,7 @@ mod tests {
                 offers: None,
                 facets: None,
                 children: None,
+                storage: None,
             };
             assert_eq!(component_decl, component.decl.unwrap());
             assert_eq!("fuchsia-boot:///pkg", component.package.unwrap().package_uri.unwrap());

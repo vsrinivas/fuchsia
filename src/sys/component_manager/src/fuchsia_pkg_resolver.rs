@@ -175,6 +175,7 @@ mod tests {
             offers: None,
             facets: None,
             children: None,
+            storage: None,
         };
         assert_eq!(decl.unwrap(), expected_decl);
 

@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+/// Declares a storage capability backed by a directory from which data, cache,
+/// or meta storage can be offered.
+table StorageDecl {
+    /// The name of this storage
+    1: string:MAX_STORAGE_NAME_LENGTH name;
+
+    /// The incoming path to the directory capability. If "source == SELF", this
+    /// is a path in the component's outgoing directory. Otherwise, it is the
+    /// path by which the capability was presented to the component.
+    2: string:MAX_PATH_LENGTH source_path;
+
+    /// The provider of the underlying directory capability relative to the
+    /// component itself.
+    3: OfferSource source;
+};

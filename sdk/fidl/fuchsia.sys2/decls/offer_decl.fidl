@@ -40,6 +40,48 @@ table OfferDirectoryDecl {
     3: vector<OfferTarget> targets;
 };
 
+
+/// Declares a storage capability offered by a component to one of its children,
+/// such as meta storage offered by the component's containing realm or cache
+/// storage offered by the component itself.
+table StorageOfferDecl {
+    /// The type of storage being offered.
+    1: StorageType storage_type;
+
+    /// The source of the storage capability.
+    2: StorageOfferSource source;
+
+    /// The list of children to which the capability should be offered.
+    3: vector<StorageOfferTarget> targets;
+};
+
+/// The type of storage offered by this component.
+enum StorageType {
+    /// General data storage.
+    DATA = 1;
+
+    /// Cache storage that may be deleted at any time by the system.
+    CACHE = 2;
+
+    /// Meta storage that will be used by component manager to provide
+    /// additional functionality for the component.
+    META = 3;
+};
+
+/// The source of an offered storage capability, which may be either the realm
+/// or the name of a storage section on the component itself.
+xunion StorageOfferSource {
+    RealmId realm;
+    StorageId storage_section;
+};
+
+/// Describes a target for the offering of a storage capability.
+table StorageOfferTarget {
+    /// The name of the child component to which this storage capability is
+    /// being offered.
+    1: string:MAX_CHILD_NAME_LENGTH child_name;
+};
+
 /// Identifies a source component of an OfferDecl.
 // TODO: Split OfferSource by capability type.
 xunion OfferSource {

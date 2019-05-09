@@ -60,4 +60,8 @@ table ComponentDecl {
     /// The component's statically instantiated children. The children must have
     /// unique names.
     6: vector<ChildDecl> children;
+
+    /// List of storage capabilities created by this component.
+    /// Storage capabilities can be offered to children.
+    7: vector<StorageDecl> storage;
 };

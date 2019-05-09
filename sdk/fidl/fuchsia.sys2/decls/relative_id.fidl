@@ -14,3 +14,8 @@ table SelfId {};
 table ChildId {
     1: string:MAX_CHILD_NAME_LENGTH name;
 };
+
+/// Represents one of the component's storage sections.
+table StorageId {
+    1: string:MAX_STORAGE_NAME_LENGTH name;
+};

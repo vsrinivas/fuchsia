@@ -78,6 +78,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
             offers: self.offers.cm_into()?,
             children: self.children.cm_into()?,
             facets: self.facets.cm_into()?,
+            storage: None,
         })
     }
 }
@@ -303,6 +304,7 @@ mod tests {
             offers: None,
             facets: None,
             children: None,
+            storage: None,
         }
     }
 
@@ -846,7 +848,8 @@ mod tests {
                     exposes: Some(exposes),
                     offers: Some(offers),
                     children: Some(children),
-                    facets: Some(facets)
+                    facets: Some(facets),
+                    storage: None,
                 }
             },
         },

@@ -140,6 +140,7 @@ mod tests {
                     offers: None,
                     facets: None,
                     children: None,
+                    storage: None,
                 }),
                 package: None,
             })))

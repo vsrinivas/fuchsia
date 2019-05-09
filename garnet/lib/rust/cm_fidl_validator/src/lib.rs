@@ -471,6 +471,7 @@ mod tests {
             exposes: None,
             offers: None,
             facets: None,
+            storage: None,
             children: None,
         }
     }

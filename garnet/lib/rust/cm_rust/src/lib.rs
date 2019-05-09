@@ -189,6 +189,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             offers: self.offers.native_into_fidl(),
             children: self.children.native_into_fidl(),
             facets: self.facets.native_into_fidl(),
+            storage: None,
         }
     }
 }
@@ -753,6 +754,7 @@ mod tests {
                 offers: None,
                 children: None,
                 facets: None,
+                storage: None,
             },
             result = ComponentDecl {
                 program: None,
@@ -839,6 +841,7 @@ mod tests {
                        value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),
                    },
                ]}),
+               storage: None,
             },
             result = {
                 ComponentDecl {
