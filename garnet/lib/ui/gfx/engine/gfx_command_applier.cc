@@ -1344,7 +1344,8 @@ bool GfxCommandApplier::ApplyCreateEntityNode(
 }
 
 bool GfxCommandApplier::ApplyCreateOpacityNode(
-    Session* session, ResourceId id, fuchsia::ui::gfx::OpacityNodeArgs args) {
+    Session* session, ResourceId id,
+    fuchsia::ui::gfx::OpacityNodeArgsHACK args) {
   auto node = CreateOpacityNode(session, id, args);
   return node ? session->resources()->AddResource(id, std::move(node)) : false;
 }
@@ -1538,7 +1539,8 @@ ResourcePtr GfxCommandApplier::CreateEntityNode(
 }
 
 ResourcePtr GfxCommandApplier::CreateOpacityNode(
-    Session* session, ResourceId id, fuchsia::ui::gfx::OpacityNodeArgs args) {
+    Session* session, ResourceId id,
+    fuchsia::ui::gfx::OpacityNodeArgsHACK args) {
   return fxl::MakeRefCounted<OpacityNode>(session, id);
 }
 

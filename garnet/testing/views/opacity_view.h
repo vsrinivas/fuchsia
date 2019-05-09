@@ -63,7 +63,7 @@ class OpacityView : public TestView,
 
   ShapeNode background_node_;
   Material background_material_;
-  OpacityNode opacity_node_;
+  OpacityNodeHACK opacity_node_;
   ShapeNode foreground_node_;
   Material foreground_material_;
 

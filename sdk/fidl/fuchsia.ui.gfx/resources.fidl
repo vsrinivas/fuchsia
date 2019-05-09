@@ -30,7 +30,7 @@ union ResourceArgs {
     ShapeNodeArgs shape_node;
     ClipNodeArgs clip_node;
     EntityNodeArgs entity_node;
-    OpacityNodeArgs opacity_node;
+    OpacityNodeArgsHACK opacity_node;
 
     // Materials.
     MaterialArgs material;

@@ -394,15 +394,28 @@ ClipNode::ClipNode(ClipNode&& moved) : ContainerNode(std::move(moved)) {}
 
 ClipNode::~ClipNode() = default;
 
-OpacityNode::OpacityNode(Session* session) : ContainerNode(session) {
-  session->Enqueue(NewCreateOpacityNodeCmd(id()));
+OpacityNodeHACK::OpacityNodeHACK(Session* session) : ContainerNode(session) {
+  session->Enqueue(NewCreateOpacityNodeCmdHACK(id()));
 }
 
+OpacityNodeHACK::OpacityNodeHACK(OpacityNodeHACK&& moved)
+    : ContainerNode(std::move(moved)) {}
+
+OpacityNodeHACK::~OpacityNodeHACK() = default;
+
+void OpacityNodeHACK::SetOpacity(float opacity) {
+  opacity = clamp(opacity, 0.f, 1.f);
+  session()->Enqueue(NewSetOpacityCmd(id(), opacity));
+}
+
+// TODO: delete after soft transition to OpacityNodeHACK
+OpacityNode::OpacityNode(Session* session) : ContainerNode(session) {
+  session->Enqueue(NewCreateOpacityNodeCmdHACK(id()));
+}
 OpacityNode::OpacityNode(OpacityNode&& moved)
     : ContainerNode(std::move(moved)) {}
 
 OpacityNode::~OpacityNode() = default;
-
 void OpacityNode::SetOpacity(float opacity) {
   opacity = clamp(opacity, 0.f, 1.f);
   session()->Enqueue(NewSetOpacityCmd(id(), opacity));
