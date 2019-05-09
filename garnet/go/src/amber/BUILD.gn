@@ -78,6 +78,7 @@ package("pkgfs") {
   ]
 }
 
+# FIXME: Until fuchsia_component exists again, ensure this and //garnet/tests/amberctl:amberctl-tests stay in sync
 package("amber") {
   deprecated_misc_storage = "//build"
 
@@ -130,6 +131,7 @@ package("amber") {
   ]
 }
 
+# FIXME: Until fuchsia_component exists again, ensure this and //garnet/tests/amberctl:amberctl-tests stay in sync
 package("amber_tools") {
   deps = [
     "//garnet/go/src/grand_unified_binary",
@@ -155,10 +157,6 @@ package("amber_tools") {
       name = "amberctl"
       source = "grand_unified_binary"
       shell = true
-    },
-    {
-      name = "grand_unified_binary"
-      dest = "amberctl"
     },
   ]
 }

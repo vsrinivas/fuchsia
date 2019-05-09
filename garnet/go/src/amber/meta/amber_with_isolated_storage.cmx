@@ -1,0 +1,19 @@
+{
+    "program": {
+        "binary": "bin/amber"
+    },
+    "sandbox": {
+        "features": [
+            "config-data",
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.amber.Control",
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.cobalt.SystemDataUpdater",
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "test",
+  "repoURL": "http://example.com",
+  "blobRepoURL": "http://example.com/blobs",
+  "ratePeriod": 60,
+  "auto": true,
+  "rootKeys": [
+    {
+      "type": "ed25519",
+      "value": "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307"
+    }
+  ],
+  "statusConfig": {
+   "enabled": true
+  }
+}
