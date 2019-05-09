@@ -12,17 +12,37 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"fuchsia.googlesource.com/tools/color"
 	"fuchsia.googlesource.com/tools/elflib"
 	"fuchsia.googlesource.com/tools/logger"
 )
 
+type entry struct {
+	suffix string
+	file   string
+}
+
+type entryList []entry
+
+func (a *entryList) String() string {
+	return fmt.Sprintf("%v", []entry(*a))
+}
+
+func (a *entryList) Set(value string) error {
+	args := strings.SplitN(value, "=", 2)
+	if len(args) != 2 {
+		return fmt.Errorf("'%s' is not a valid entry. Must be in format <suffix>=<file>", value)
+	}
+	*a = append(*a, entry{args[0], args[1]})
+	return nil
+}
+
 var (
 	buildIDDir string
 	stamp      string
-	depFile    string
-	extension  string
+	entries    entryList
 	colors     color.EnableColor
 	level      logger.LogLevel
 )
@@ -33,8 +53,7 @@ func init() {
 
 	flag.StringVar(&buildIDDir, "build-id-dir", "", "path to .build-id dirctory")
 	flag.StringVar(&stamp, "stamp", "", "path to stamp file which acts as a stand in for the .build-id file")
-	flag.StringVar(&depFile, "dep-file", "", "path to dep file which tells the build system about the .build-id file")
-	flag.StringVar(&extension, "extension", "", "suffix appended to the end of the file")
+	flag.Var(&entries, "entry", "supply <suffix>=<file> to link <file> into .build-id with the given suffix")
 	flag.Var(&colors, "color", "use color in output, can be never, auto, always")
 	flag.Var(&level, "level", "output verbosity, can be fatal, error, warning, info, debug or trace")
 }
@@ -89,7 +108,7 @@ func atomicWrite(file, fmtStr string, args ...interface{}) error {
 	return os.Rename(tmpFile, file)
 }
 
-func removeOldFile(newBuildID string) error {
+func removeOldFile(newBuildID, suffix string) error {
 	data, err := ioutil.ReadFile(stamp)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -102,13 +121,42 @@ func removeOldFile(newBuildID string) error {
 	if newBuildID == oldBuildID {
 		return nil
 	}
-	oldPath := filepath.Join(buildIDDir, oldBuildID[:2], oldBuildID[2:]) + extension
+	oldPath := filepath.Join(buildIDDir, oldBuildID[:2], oldBuildID[2:]) + suffix
 	// If the file has already been removed (perhaps by another process) then
 	// just keep going.
 	if err := os.Remove(oldPath); !os.IsNotExist(err) {
 		return err
 	}
 	return nil
+}
+
+type entryInfo struct {
+	ref    elflib.BinaryFileRef
+	suffix string
+}
+
+func getEntriesInfo() ([]entryInfo, error) {
+	var outs []entryInfo
+	for _, entry := range entries {
+		f, err := os.Open(entry.file)
+		if err != nil {
+			return nil, fmt.Errorf("opening %s to read build ID: %v", entry.file, err)
+		}
+		defer f.Close()
+		buildIDs, err := elflib.GetBuildIDs(entry.file, f)
+		if err != nil {
+			return nil, fmt.Errorf("reading build ID from %s: %v", entry.file, err)
+		}
+		if len(buildIDs) != 1 {
+			return nil, fmt.Errorf("unexpected number of build IDs in %s. Expected 1 but found %v", entry.file, buildIDs)
+		}
+		if len(buildIDs[0]) < 2 {
+			return nil, fmt.Errorf("build ID (%s) is too short in %s", buildIDs[0], entry.file)
+		}
+		buildID := hex.EncodeToString(buildIDs[0])
+		outs = append(outs, entryInfo{elflib.BinaryFileRef{BuildID: buildID, Filepath: entry.file}, entry.suffix})
+	}
+	return outs, nil
 }
 
 func main() {
@@ -121,52 +169,39 @@ func main() {
 	if stamp == "" {
 		l.Fatalf("-stamp file is required.")
 	}
-	if depFile == "" {
-		l.Fatalf("-dep-file is required.")
+	if len(entries) == 0 {
+		l.Fatalf("Need at least one -entry arg")
 	}
-	args := flag.Args()
-	if len(args) != 1 {
-		l.Fatalf("exactly one binary must be given. no more. no less.")
-	}
-	file := args[0]
 	// Get the build IDs
-	f, err := os.Open(file)
+	infos, err := getEntriesInfo()
 	if err != nil {
-		l.Fatalf("opening %s to read build id: %v", file, err)
+		l.Fatalf("Parsing entries: %v", err)
 	}
-	defer f.Close()
-	buildIDs, err := elflib.GetBuildIDs(file, f)
-	if err != nil {
-		l.Fatalf("reading build ID from %s: %v", file, err)
+	buildID := infos[0].ref.BuildID
+	for _, info := range infos {
+		if buildID != info.ref.BuildID {
+			l.Fatalf("%s and %s do not have the same build ID", info.ref.Filepath, infos[0].ref.Filepath)
+		}
+		if err := info.ref.Verify(); err != nil {
+			l.Fatalf("Could not verify build ID of %s: %v", info.ref.Filepath, err)
+		}
 	}
-	if len(buildIDs) != 1 {
-		l.Fatalf("unexpected number of build IDs")
+	// Now that we know all the build IDs are in order perform operations.
+	// Make sure to not output the stamp file until all of these operations are
+	// performed to ensure that this tool is re-run if it fails mid-run.
+	buildIDRunes := []rune(buildID)
+	buildIDPathPrefix := filepath.Join(buildIDDir, string(buildIDRunes[:2]), string(buildIDRunes[2:]))
+	for _, info := range infos {
+		buildIDPath := buildIDPathPrefix + info.suffix
+		if err = atomicLink(info.ref.Filepath, buildIDPath); err != nil {
+			l.Fatalf("atomically linking %s to %s: %v", info.ref.Filepath, buildIDPath, err)
+		}
+		if err = removeOldFile(buildID, info.suffix); err != nil {
+			l.Fatalf("removing old file referenced by %s: %v", stamp, err)
+		}
 	}
-	if len(buildIDs[0]) < 2 {
-		l.Fatalf("build ID is too short")
-	}
-	// Get the buildID string
-	buildID := []rune(hex.EncodeToString(buildIDs[0]))
-	buildIDPath := filepath.Join(buildIDDir, string(buildID[:2]), string(buildID[2:])) + extension
-	// Now perform the operations of the tool. The order in which these operations occur
-	// ensures that, from the perspective of the build system, all these operations occur
-	// atomically. This order is "valid" because unless the tool runs to the end
-	// then ninja will rerun the step and when the step is rerun once finished the end
-	// state will be valid. The order of the first 3 steps doesn't matter much but the
-	// stamp file must be emitted last.
-	if err = atomicLink(file, buildIDPath); err != nil {
-		l.Fatalf("atomically linking %s to %s: %v", file, buildIDPath, err)
-	}
-	buildIDString := string(buildID)
-	if err = removeOldFile(buildIDString); err != nil {
-		l.Fatalf("removing old file referenced by %s: %v", stamp, err)
-	}
-	// Emit the dep file
-	if err = atomicWrite(depFile, "%s: %s", stamp, buildIDPath); err != nil {
-		l.Fatalf("emitting dep file %s: %v", depFile, err)
-	}
-	// Update the stamp
-	if err = atomicWrite(stamp, buildIDString); err != nil {
+	// Update the stamp last atomically to commit all the above operations.
+	if err = atomicWrite(stamp, buildID); err != nil {
 		l.Fatalf("emitting final stamp %s: %v", stamp, err)
 	}
 }
