@@ -47,7 +47,7 @@ std::string GetUsage() {
 
   Usage:
 
-cat myconfig.json | fx shell basemgr_launcher &)";
+cat myconfig.json | fx shell basemgr_launcher)";
 }
 
 int main(int argc, const char** argv) {
@@ -62,8 +62,7 @@ int main(int argc, const char** argv) {
   bool exists = files::Glob(kBasemgrHubGlob).size() != 0;
   if (exists) {
     std::cerr << "basemgr is already running!" << std::endl
-              << "To kill: `fx shell killall basemgr.cmx && fx shell killall "
-                 "basemgr_launcher`";
+              << "To kill: `fx shell killall basemgr.cmx`" << std::endl;
     return 1;
   }
 
@@ -87,8 +86,16 @@ int main(int argc, const char** argv) {
       component::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::LauncherPtr launcher;
   context->ConnectToEnvironmentService(launcher.NewRequest());
-  fidl::InterfaceHandle<fuchsia::sys::ComponentController> controller;
+  fidl::InterfacePtr<fuchsia::sys::ComponentController> controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
+
+  async::PostDelayedTask(
+      loop.dispatcher(),
+      [&controller, &loop] {
+        controller->Detach();
+        loop.Quit();
+      },
+      zx::sec(5));
 
   loop.Run();
   return 0;
