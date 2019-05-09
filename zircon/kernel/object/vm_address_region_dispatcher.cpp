@@ -30,7 +30,8 @@ namespace {
 // Split out the syscall flags into vmar flags and mmu flags.  Note that this
 // does not validate that the requested protections in *flags* are valid.  For
 // that use is_valid_mapping_protection()
-zx_status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mmu_flags) {
+zx_status_t split_syscall_flags(
+    uint32_t flags, uint32_t* vmar_flags, uint* arch_mmu_flags, uint8_t* align_pow2) {
     // Figure out arch_mmu_flags
     uint mmu_flags = 0;
     switch (flags & (ZX_VM_PERM_READ | ZX_VM_PERM_WRITE)) {
@@ -84,11 +85,26 @@ zx_status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch
         flags &= ~ZX_VM_REQUIRE_NON_RESIZABLE;
     }
 
-    if (flags != 0)
+    if (flags & ((1u << ZX_VM_ALIGN_BASE) - 1u)) {
         return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Figure out alignment.
+    uint8_t alignment = static_cast<uint8_t>(flags >> ZX_VM_ALIGN_BASE);
+
+    if ((alignment > 0) && (vmar & VMAR_FLAG_COMPACT)) {
+        // TODO(ZX-3978): the semi-compact allocator does not support
+        // larger than 4KB alignments.
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (((alignment < 10) && (alignment != 0)) || (alignment > 32)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     *vmar_flags = vmar;
     *arch_mmu_flags |= mmu_flags;
+    *align_pow2 = alignment;
     return ZX_OK;
 }
 
@@ -142,7 +158,8 @@ zx_status_t VmAddressRegionDispatcher::Allocate(
 
     uint32_t vmar_flags;
     uint arch_mmu_flags = 0;
-    zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags);
+    uint8_t alignment = 0;
+    zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags, &alignment);
     if (status != ZX_OK)
         return status;
 
@@ -152,7 +169,7 @@ zx_status_t VmAddressRegionDispatcher::Allocate(
     }
 
     fbl::RefPtr<VmAddressRegion> new_vmar;
-    status = vmar_->CreateSubVmar(offset, size, /* align_pow2 */ 0 , vmar_flags,
+    status = vmar_->CreateSubVmar(offset, size, alignment , vmar_flags,
                                   "useralloc", &new_vmar);
     if (status != ZX_OK)
         return status;
@@ -178,7 +195,8 @@ zx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, fbl::RefPtr<VmObj
     // Split flags into vmar_flags and arch_mmu_flags
     uint32_t vmar_flags;
     uint arch_mmu_flags = base_arch_mmu_flags_;
-    zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags);
+    uint8_t alignment = 0;
+    zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags, &alignment);
     if (status != ZX_OK)
         return status;
 
@@ -189,7 +207,7 @@ zx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, fbl::RefPtr<VmObj
     }
 
     fbl::RefPtr<VmMapping> result(nullptr);
-    status = vmar_->CreateVmMapping(vmar_offset, len, /* align_pow2 */ 0,
+    status = vmar_->CreateVmMapping(vmar_offset, len, alignment,
                                     vmar_flags, ktl::move(vmo), vmo_offset,
                                     arch_mmu_flags, "useralloc",
                                     &result);
@@ -213,12 +231,13 @@ zx_status_t VmAddressRegionDispatcher::Protect(vaddr_t base, size_t len, uint32_
 
     uint32_t vmar_flags;
     uint arch_mmu_flags = base_arch_mmu_flags_;
-    zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags);
+    uint8_t alignment = 0;
+    zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags, &alignment);
     if (status != ZX_OK)
         return status;
 
-    // This request does not allow any VMAR flags to be set
-    if (vmar_flags)
+    // This request does not allow any VMAR flags or alignment flags to be set.
+    if (vmar_flags || (alignment != 0))
         return ZX_ERR_INVALID_ARGS;
 
     return vmar_->Protect(base, len, arch_mmu_flags);

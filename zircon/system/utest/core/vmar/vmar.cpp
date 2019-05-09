@@ -547,6 +547,181 @@ bool map_over_destroyed_test() {
     END_TEST;
 }
 
+struct AlignTestdata {
+    zx_vm_option_t aligment;
+    int zero_bits;
+};
+
+AlignTestdata align_data[] {
+    {ZX_VM_ALIGN_1KB,    10},
+    {ZX_VM_ALIGN_2KB,    11},
+    {ZX_VM_ALIGN_4KB,    12},
+    {ZX_VM_ALIGN_8KB,    13},
+    {ZX_VM_ALIGN_16KB,   14},
+    {ZX_VM_ALIGN_32KB,   15},
+    {ZX_VM_ALIGN_64KB,   16},
+    {ZX_VM_ALIGN_128KB,  17},
+    {ZX_VM_ALIGN_256KB,  18},
+    {ZX_VM_ALIGN_512KB,  19},
+    {ZX_VM_ALIGN_1MB,    20},
+    {ZX_VM_ALIGN_2MB,    21},
+    {ZX_VM_ALIGN_4MB,    22},
+    {ZX_VM_ALIGN_8MB,    23},
+    {ZX_VM_ALIGN_16MB,   24},
+    {ZX_VM_ALIGN_32MB,   25},
+    {ZX_VM_ALIGN_64MB,   26},
+    {ZX_VM_ALIGN_128MB,  27},
+    {ZX_VM_ALIGN_256MB,  28},
+    {ZX_VM_ALIGN_512MB,  29},
+    {ZX_VM_ALIGN_1GB,    30},
+    {ZX_VM_ALIGN_2GB,    31},
+    {ZX_VM_ALIGN_4GB,    32}
+};
+
+// Create a manually aligned |vmar| to |vmar_size|, this is needed only
+// needed when testing the alignment flags.
+zx_status_t MakeManualAlignedVmar(size_t vmar_size, zx_handle_t* vmar) {
+    zx_info_vmar_t vmar_info;
+    auto status = zx_object_get_info(zx_vmar_root_self(),
+        ZX_INFO_VMAR, &vmar_info, sizeof(vmar_info), NULL, NULL);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    const size_t root_vmar_end = vmar_info.base + vmar_info.len;
+    size_t start = fbl::round_up(vmar_info.base, vmar_size);
+
+    zx_vaddr_t root_addr = 0u;
+    for (; start < root_vmar_end; start += vmar_size) {
+        status = zx_vmar_allocate(
+            zx_vmar_root_self(),
+            ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC,
+            (start - vmar_info.base), vmar_size, vmar, &root_addr);
+        if (status == ZX_OK) {
+            break;
+        }
+    }
+    return status;
+}
+
+bool alignment_vmar_map_test() {
+    BEGIN_TEST;
+
+    const size_t size = PAGE_SIZE * 2;
+    const auto vmar_size = (8ull * 1024 * 1024 * 1024);
+
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(size, 0, &vmo), ZX_OK);
+    zx_handle_t vmar;
+    ASSERT_EQ(MakeManualAlignedVmar(vmar_size, &vmar), ZX_OK);
+
+    // Alignment cannot be used with "compact allocations". This is ZX-3978.
+    zx_vaddr_t dummy;
+    EXPECT_EQ(zx_vmar_map(vmar,
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_COMPACT,
+        0, vmo, 0, size, &dummy), ZX_ERR_INVALID_ARGS);
+
+    // Specific base + offset does not meet the alignment, so it fails.
+    EXPECT_EQ(zx_vmar_map(vmar,
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_SPECIFIC,
+        4096, vmo, 0, size, &dummy), ZX_ERR_INVALID_ARGS);
+
+    // Specific base + offset meets alignment, it should succeed.
+    EXPECT_EQ(zx_vmar_map(vmar,
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_SPECIFIC,
+        64 * 1024, vmo, 0, size, &dummy), ZX_OK);
+    ASSERT_EQ(zx_vmar_unmap(vmar, dummy, 64 * 1024), ZX_OK);
+
+    // Minimum supported alignments range is 2^10 to 2^32
+    zx_vm_option_t bad_align_low = (9u << ZX_VM_ALIGN_BASE);
+    zx_vm_option_t bad_align_high = (33u << ZX_VM_ALIGN_BASE);
+
+    EXPECT_EQ(zx_vmar_map(vmar,
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | bad_align_low,
+        0, vmo, 0, size, &dummy), ZX_ERR_INVALID_ARGS);
+
+    EXPECT_EQ(zx_vmar_map(vmar,
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | bad_align_high,
+        0, vmo, 0, size, &dummy), ZX_ERR_INVALID_ARGS);
+
+    // Test all supported alignments.
+    for (const auto& d: align_data) {
+        zx_vaddr_t mapping_addr = 0u;
+        ASSERT_EQ(zx_vmar_map(vmar,
+            ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | d.aligment,
+            0, vmo, 0, size, &mapping_addr), ZX_OK);
+
+        ASSERT_NE(mapping_addr, 0u);
+        EXPECT_GE(__builtin_ctzll(mapping_addr), d.zero_bits);
+        // touch memory and unmap.
+        reinterpret_cast<uint64_t*>(mapping_addr)[1] = 0x1234321;
+        ASSERT_EQ(zx_vmar_unmap(vmar, mapping_addr, size), ZX_OK);
+    }
+
+    ASSERT_EQ(zx_vmar_destroy(vmar), ZX_OK);
+    ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
+    ASSERT_EQ(zx_handle_close(vmo), ZX_OK);
+    END_TEST;
+}
+
+bool alignment_vmar_allocate_test() {
+    BEGIN_TEST;
+
+    const size_t size = PAGE_SIZE * 16;
+    const auto vmar_size = (8ull * 1024 * 1024 * 1024);
+
+    zx_handle_t vmar;
+    ASSERT_EQ(MakeManualAlignedVmar(vmar_size, &vmar), ZX_OK);
+
+    // Alignment cannot be used with "compact allocations". This is ZX-3978.
+    zx_vaddr_t dummy_a;
+    zx_handle_t dummy_h;
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_COMPACT,
+        0, size, &dummy_h, &dummy_a), ZX_ERR_INVALID_ARGS);
+
+    // Specific base + offset does not meet the alignment, so it fails.
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_SPECIFIC,
+        4096, size, &dummy_h, &dummy_a), ZX_ERR_INVALID_ARGS);
+
+    // Specific base + offset meets alignment, it should succeed.
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_SPECIFIC,
+        64 * 1024, size, &dummy_h, &dummy_a), ZX_OK);
+    ASSERT_EQ(zx_vmar_destroy(dummy_h), ZX_OK);
+    ASSERT_EQ(zx_handle_close(dummy_h), ZX_OK);
+
+    // Minimum supported alignments range is 2^10 to 2^32
+    const zx_vm_option_t bad_align_low = (9u << ZX_VM_ALIGN_BASE);
+    const zx_vm_option_t bad_align_high = (33u << ZX_VM_ALIGN_BASE);
+
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | bad_align_low,
+        0, size, &dummy_h, &dummy_a), ZX_ERR_INVALID_ARGS);
+
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | bad_align_high,
+        0, size, &dummy_h, &dummy_a), ZX_ERR_INVALID_ARGS);
+
+    // Test all supported alignments.
+    for (const auto& d: align_data) {
+        zx_handle_t child_vmar;
+        uintptr_t mapping_addr = 0u;
+        ASSERT_EQ(zx_vmar_allocate(vmar,
+            ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | d.aligment,
+            0, size, &child_vmar, &mapping_addr), ZX_OK);
+
+        ASSERT_NE(mapping_addr, 0u);
+        EXPECT_GE(__builtin_ctzll(mapping_addr), d.zero_bits);
+        ASSERT_EQ(zx_vmar_destroy(child_vmar), ZX_OK);
+        ASSERT_EQ(zx_handle_close(child_vmar), ZX_OK);
+    }
+
+    ASSERT_EQ(zx_vmar_destroy(vmar), ZX_OK);
+    ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
+    END_TEST;
+}
 
 // Attempt overmapping with FLAG_SPECIFIC to ensure it fails
 bool overmapping_test() {
@@ -2003,6 +2178,8 @@ RUN_TEST(allocate_oob_test);
 RUN_TEST(allocate_unsatisfiable_test);
 RUN_TEST(destroyed_vmar_test);
 RUN_TEST(map_over_destroyed_test);
+RUN_TEST(alignment_vmar_map_test);
+RUN_TEST(alignment_vmar_allocate_test);
 RUN_TEST(map_in_compact_test);
 RUN_TEST(overmapping_test);
 RUN_TEST(invalid_args_test);

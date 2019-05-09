@@ -64,6 +64,18 @@ allocator determined by policy set on the target VMAR).
 
 *len* must be page-aligned.
 
+In addition one of the following power-of-two alignment flags can added:
+- **ZX_VM_ALIGN_1KB** aligns *child_addr* to a power-of-2 at least 1K bytes.
+- **ZX_VM_ALIGN_2KB** aligns *child_addr* to a power-of-2 at least 2K bytes.
+- **ZX_VM_ALIGN_4KB** aligns *child_addr* to a power-of-2 at least 4K bytes.
+- **ZX_VM_ALIGN_8KB** aligns *child_addr* to a power-of-2 at least 8K bytes.
+and continues up to
+- **ZX_VM_ALIGN_4GB** aligns *child_addr* to a power-of-2 at least 4G bytes.
+
+Using **ZX_VM_ALIGN** flags with **ZX_VM_SPECIFIC** will fail if the vmar
+base address + *vmo_offset* are not aligned to the requested value.
+
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
@@ -109,6 +121,7 @@ The VMO that backs a memory mapping can be resized to a smaller size. This can c
 thread is reading or writing to the VMAR region to fault. To avoid this hazard, services
 that receive VMOs from clients should use **ZX_VM_REQUIRE_NON_RESIZABLE** when mapping
 the VMO.
+
 
 ## SEE ALSO
 

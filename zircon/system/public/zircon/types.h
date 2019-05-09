@@ -220,6 +220,30 @@ typedef uint32_t zx_vm_option_t;
 #define ZX_VM_MAP_RANGE             ((zx_vm_option_t)(1u << 10))
 #define ZX_VM_REQUIRE_NON_RESIZABLE ((zx_vm_option_t)(1u << 11))
 
+#define ZX_VM_ALIGN_BASE            24
+#define ZX_VM_ALIGN_1KB             ((zx_vm_option_t)(10u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_2KB             ((zx_vm_option_t)(11u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_4KB             ((zx_vm_option_t)(12u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_8KB             ((zx_vm_option_t)(13u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_16KB            ((zx_vm_option_t)(14u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_32KB            ((zx_vm_option_t)(15u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_64KB            ((zx_vm_option_t)(16u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_128KB           ((zx_vm_option_t)(17u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_256KB           ((zx_vm_option_t)(18u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_512KB           ((zx_vm_option_t)(19u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_1MB             ((zx_vm_option_t)(20u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_2MB             ((zx_vm_option_t)(21u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_4MB             ((zx_vm_option_t)(22u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_8MB             ((zx_vm_option_t)(23u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_16MB            ((zx_vm_option_t)(24u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_32MB            ((zx_vm_option_t)(25u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_64MB            ((zx_vm_option_t)(26u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_128MB           ((zx_vm_option_t)(27u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_256MB           ((zx_vm_option_t)(28u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_512MB           ((zx_vm_option_t)(29u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_1GB             ((zx_vm_option_t)(30u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_2GB             ((zx_vm_option_t)(31u << ZX_VM_ALIGN_BASE))
+#define ZX_VM_ALIGN_4GB             ((zx_vm_option_t)(32u << ZX_VM_ALIGN_BASE))
 
 // virtual address
 typedef uintptr_t zx_vaddr_t;
