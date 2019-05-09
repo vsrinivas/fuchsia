@@ -89,6 +89,9 @@ public:
     // Family of processors to which this chip belongs.
     uint16_t family() const;
 
+    // Return the full 32-bit identifier of this chip.
+    uint32_t signature() const;
+
     // APIC ID of the processor on which this object was generated. Note this
     // class uses a cached copy of registers so if this object was generated on
     // a differnet processor this value could be misleading.

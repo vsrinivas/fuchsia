@@ -163,6 +163,10 @@ uint16_t ProcessorId::family() const {
     }
 }
 
+uint32_t ProcessorId::signature() const {
+    return registers_.eax();
+}
+
 uint8_t ProcessorId::local_apic_id() const {
     return ExtractBits<uint8_t>(registers_.ebx(), 31, 24);
 }

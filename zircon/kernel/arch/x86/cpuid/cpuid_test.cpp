@@ -141,6 +141,22 @@ bool test_amd_manufacturer_info() {
     END_TEST;
 }
 
+bool test_eve_processor_id() {
+    BEGIN_TEST;
+
+    // Pulled from a Pixelbook 'Google Eve rev8'
+    Registers regs;
+    regs.reg[cpu_id::Registers::EAX] = 0x806e9u;
+    cpu_id::ProcessorId id(regs);
+
+    EXPECT_EQ(id.signature(), 0x806e9u, "");
+    EXPECT_EQ(id.family(), 6u, "");
+    EXPECT_EQ(id.model(), 0x8eu, "");
+    EXPECT_EQ(id.stepping(), 9u, "");
+
+    END_TEST;
+}
+
 bool test_intel_processor_id() {
     BEGIN_TEST;
 
