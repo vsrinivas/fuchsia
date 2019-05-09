@@ -16,10 +16,16 @@
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <lib/fzl/memory-probe.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/iommu.h>
+#include <lib/zx/vmo.h>
 #include <unittest/unittest.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/object.h>
+
+extern "C" __WEAK zx_handle_t get_root_resource(void);
 
 namespace {
 
@@ -405,52 +411,71 @@ bool vmo_no_resize_test() {
 
 bool vmo_info_test() {
     size_t len = PAGE_SIZE * 4;
-    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    zx::vmo vmo;
     zx_info_vmo_t info;
     zx_status_t status;
 
     // Create a non-resizeable VMO, query the INFO on it
     // and dump it.
-    status = zx_vmo_create(len, ZX_VMO_NON_RESIZABLE, &vmo);
+    status = zx::vmo::create(len, ZX_VMO_NON_RESIZABLE, &vmo);
     EXPECT_EQ(ZX_OK, status, "vm_info_test: vmo_create");
 
-    status = zx_object_get_info(vmo, ZX_INFO_VMO, &info,
-                                sizeof(info), nullptr, nullptr);
+    status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
     EXPECT_EQ(ZX_OK, status, "vm_info_test: info_vmo");
 
-    status = zx_handle_close(vmo);
-    EXPECT_EQ(ZX_OK, status, "vm_info_test: handle_close");
+    vmo.reset();
 
     EXPECT_EQ(info.size_bytes, len, "vm_info_test: info_vmo.size_bytes");
-    EXPECT_NE(info.create_options, (1u << 0),
-              "vm_info_test: info_vmo.create_options");
+    EXPECT_EQ(info.flags, ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_VIA_HANDLE,
+              "vm_info_test: info_vmo.flags");
     EXPECT_EQ(info.cache_policy,
               ZX_CACHE_POLICY_CACHED,
               "vm_info_test: info_vmo.cache_policy");
-//    printf("NON_Resizeable VMO, size = %lu, create_options = %ux\n",
-//           info.size_bytes, info.create_options);
 
     // Create a resizeable uncached VMO, query the INFO on it and dump it.
     len = PAGE_SIZE * 8;
-    zx_vmo_create(len, ZX_VMO_RESIZABLE, &vmo);
+    zx::vmo::create(len, ZX_VMO_RESIZABLE, &vmo);
     EXPECT_EQ(ZX_OK, status, "vm_info_test: vmo_create");
-    zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED);
+    vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED);
 
-    status = zx_object_get_info(vmo, ZX_INFO_VMO, &info,
-                                sizeof(info), nullptr, nullptr);
+    status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
     EXPECT_EQ(ZX_OK, status, "vm_info_test: info_vmo");
 
-    status = zx_handle_close(vmo);
-    EXPECT_EQ(ZX_OK, status, "vm_info_test: handle_close");
+    vmo.reset();
 
     EXPECT_EQ(info.size_bytes, len, "vm_info_test: info_vmo.size_bytes");
-    EXPECT_EQ(info.create_options, (1u << 0),
-              "vm_info_test: info_vmo.create_options");
+    EXPECT_EQ(info.flags, ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_VIA_HANDLE | ZX_INFO_VMO_RESIZABLE,
+              "vm_info_test: info_vmo.flags");
     EXPECT_EQ(info.cache_policy,
               ZX_CACHE_POLICY_UNCACHED,
               "vm_info_test: info_vmo.cache_policy");
-//    printf("Resizeable VMO, size = %lu, create_options = %ux\n",
-//           info.size_bytes, info.create_options);
+
+    if (get_root_resource) {
+        zx::iommu iommu;
+        zx::bti bti;
+
+        // Please do not use get_root_resource() in new code. See ZX-1497.
+        zx::unowned_resource root_res(get_root_resource());
+        zx_iommu_desc_dummy_t desc;
+        // Please do not use get_root_resource() in new code. See ZX-1497.
+        EXPECT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
+                                  &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
+        EXPECT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+        len = PAGE_SIZE * 12;
+        EXPECT_EQ(zx::vmo::create_contiguous(bti, len, 0, &vmo), ZX_OK);
+
+        status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+        EXPECT_EQ(ZX_OK, status, "vm_info_test: info_vmo");
+
+        EXPECT_EQ(info.size_bytes, len, "vm_info_test: info_vmo.size_bytes");
+        EXPECT_EQ(info.flags,
+                  ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_VIA_HANDLE | ZX_INFO_VMO_CONTIGUOUS,
+                  "vm_info_test: info_vmo.flags");
+        EXPECT_EQ(info.cache_policy,
+                  ZX_CACHE_POLICY_CACHED,
+                  "vm_info_test: info_vmo.cache_policy");
+    }
 
     END_TEST;
 }

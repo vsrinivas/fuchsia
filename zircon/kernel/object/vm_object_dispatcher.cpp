@@ -132,14 +132,15 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
     entry.koid = vmo->user_id();
     vmo->get_name(entry.name, sizeof(entry.name));
     entry.size_bytes = vmo->size();
-    entry.create_options = vmo->create_options();
     entry.parent_koid = vmo->parent_user_id();
     entry.num_children = vmo->num_user_children();
     entry.num_mappings = vmo->num_mappings();
     entry.share_count = vmo->share_count();
     entry.flags =
         (vmo->is_paged() ? ZX_INFO_VMO_TYPE_PAGED : ZX_INFO_VMO_TYPE_PHYSICAL) |
-        (vmo->is_pager_backed() ? ZX_INFO_VMO_PAGER_BACKED : 0);
+        (vmo->is_resizable() ? ZX_INFO_VMO_RESIZABLE : 0) |
+        (vmo->is_pager_backed() ? ZX_INFO_VMO_PAGER_BACKED : 0) |
+        (vmo->is_contiguous() ? ZX_INFO_VMO_CONTIGUOUS : 0);
     entry.committed_bytes = vmo->AllocatedPages() * PAGE_SIZE;
     entry.cache_policy = vmo->GetMappingCachePolicy();
     if (is_handle) {

@@ -281,6 +281,9 @@ typedef struct zx_info_maps {
 // if (ZX_INFO_VMO_TYPE(f) == ZX_INFO_VMO_TYPE_PAGED)
 #define ZX_INFO_VMO_TYPE(flags)             ((flags) & (1u<<0))
 
+// The VMO is resizable.
+#define ZX_INFO_VMO_RESIZABLE               (1u<<1)
+
 // The VMO is a child, and is a copy-on-write clone.
 #define ZX_INFO_VMO_IS_COW_CLONE            (1u<<2)
 
@@ -297,6 +300,9 @@ typedef struct zx_info_maps {
 // a clone of a VMO with this flag set. Will only be set on VMOs with
 // the ZX_INFO_VMO_TYPE_PAGED flag set.
 #define ZX_INFO_VMO_PAGER_BACKED            (1u<<5)
+
+// The VMO is contiguous
+#define ZX_INFO_VMO_CONTIGUOUS              (1u<<6)
 
 // Describes a VMO. For mapping information, see |zx_info_maps_t|.
 typedef struct zx_info_vmo {
@@ -339,11 +345,6 @@ typedef struct zx_info_vmo {
     // If |flags & ZX_INFO_VMO_VIA_HANDLE|, the handle rights.
     // Undefined otherwise.
     zx_rights_t handle_rights;
-
-    // VMO creation options. This is a bitmask of
-    // kResizable    = (1u << 0);
-    // kContiguous   = (1u << 1);
-    uint32_t create_options;
 
     // VMO mapping cache policy. One of ZX_CACHE_POLICY_*
     uint32_t cache_policy;

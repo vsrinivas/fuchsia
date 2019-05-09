@@ -153,17 +153,14 @@ bool info_test() {
     ASSERT_EQ(clone_info.parent_koid, orig_info.koid);
 
     // Check that flags are properly set.
-    constexpr uint32_t kOriginalFlags = ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_VIA_HANDLE;
+    constexpr uint32_t kOriginalFlags =
+            ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_VIA_HANDLE | ZX_INFO_VMO_RESIZABLE;
     constexpr uint32_t kCloneFlags =
-            ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_IS_COW_CLONE | ZX_INFO_VMO_VIA_HANDLE;
+            ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_IS_COW_CLONE |
+            ZX_INFO_VMO_VIA_HANDLE | ZX_INFO_VMO_RESIZABLE;
     ASSERT_EQ(orig_info.flags, kOriginalFlags);
     ASSERT_EQ(new_info.flags, kOriginalFlags);
     ASSERT_EQ(clone_info.flags, kCloneFlags);
-
-    // Check that nothing has incorrect create options (i.e. everything is resizable).
-    ASSERT_EQ(orig_info.create_options, 1);
-    ASSERT_EQ(new_info.create_options, 1);
-    ASSERT_EQ(clone_info.create_options, 1);
 
     END_TEST;
 }
