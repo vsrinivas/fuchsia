@@ -1411,7 +1411,7 @@ __EXPORT int device_host_main(int argc, char** argv) {
 
     root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
     if (root_resource_handle == ZX_HANDLE_INVALID) {
-        log(ERROR, "devhost: no root resource handle!\n");
+        log(TRACE, "devhost: no root resource handle!\n");
     }
 
     zx_status_t r;
