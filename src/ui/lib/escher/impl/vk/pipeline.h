@@ -7,9 +7,9 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/impl/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/impl/vk/pipeline_spec.h"
-#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {

@@ -7,10 +7,10 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/vk/texture.h"
-#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

@@ -4,9 +4,9 @@
 
 #include "src/ui/lib/escher/test/gtest_escher.h"
 
-#include "src/ui/lib/escher/escher_process_init.h"
-
 #include <vulkan/vulkan.hpp>
+
+#include "src/ui/lib/escher/escher_process_init.h"
 
 namespace escher {
 namespace test {

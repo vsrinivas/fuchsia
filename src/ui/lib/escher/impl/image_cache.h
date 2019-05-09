@@ -8,14 +8,14 @@
 #include <queue>
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
 #include "src/ui/lib/escher/util/hash_map.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/lib/escher/vk/image_factory.h"
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {

@@ -6,7 +6,6 @@
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDERER_CONFIG_H_
 
 #include "src/ui/lib/escher/paper/paper_readme.h"
-
 #include "src/ui/lib/escher/util/debug_print.h"
 
 namespace escher {

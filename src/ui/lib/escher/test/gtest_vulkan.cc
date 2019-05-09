@@ -4,9 +4,9 @@
 
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 
-#include "src/ui/lib/escher/test/gtest_vulkan_internal.h"
-
 #include <vulkan/vulkan.hpp>
+
+#include "src/ui/lib/escher/test/gtest_vulkan_internal.h"
 
 namespace testing {
 namespace internal {

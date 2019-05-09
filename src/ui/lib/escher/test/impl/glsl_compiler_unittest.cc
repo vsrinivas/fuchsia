@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/ui/lib/escher/impl/glsl_compiler.h"
+
 #include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
 

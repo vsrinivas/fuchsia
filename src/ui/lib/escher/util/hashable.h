@@ -7,8 +7,8 @@
 
 #include <stdlib.h>
 
-#include "src/ui/lib/escher/util/hash.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/util/hash.h"
 
 namespace escher {
 

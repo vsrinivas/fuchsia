@@ -4,12 +4,12 @@
 
 #include "src/ui/lib/escher/vk/vulkan_swapchain_helper.h"
 
+#include <chrono>
+#include <thread>
+
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/framebuffer.h"
-
-#include <chrono>
-#include <thread>
 
 namespace escher {
 

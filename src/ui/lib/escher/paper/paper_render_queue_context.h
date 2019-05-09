@@ -6,7 +6,6 @@
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDER_QUEUE_CONTEXT_H_
 
 #include "src/ui/lib/escher/paper/paper_readme.h"
-
 #include "src/ui/lib/escher/paper/paper_render_funcs.h"
 #include "src/ui/lib/escher/renderer/render_queue_context.h"
 

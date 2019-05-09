@@ -6,7 +6,6 @@
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_DRAW_CALL_H_
 
 #include "src/ui/lib/escher/paper/paper_readme.h"
-
 #include "src/ui/lib/escher/paper/paper_render_queue_flags.h"
 #include "src/ui/lib/escher/renderer/render_queue_item.h"
 

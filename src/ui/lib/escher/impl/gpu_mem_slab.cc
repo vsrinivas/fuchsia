@@ -4,10 +4,10 @@
 
 #include "src/ui/lib/escher/impl/gpu_mem_slab.h"
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/naive_gpu_allocator.h"
-#include "src/lib/fxl/logging.h"
 
 namespace {
 

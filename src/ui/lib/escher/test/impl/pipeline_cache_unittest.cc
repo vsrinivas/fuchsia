@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/lib/escher/impl/vk/pipeline_cache.h"
+
 #include <chrono>
 #include <queue>
 #include <vulkan/vulkan.hpp>
 
 #include "gtest/gtest.h"
-#include "src/ui/lib/escher/impl/vk/pipeline_cache.h"
-#include "src/ui/lib/escher/impl/vk/pipeline_factory.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/impl/vk/pipeline_factory.h"
 
 namespace escher {
 namespace impl {

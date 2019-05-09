@@ -4,11 +4,10 @@
 
 #include "src/ui/lib/escher/scene/camera.h"
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/math/rotations.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/ui/lib/escher/util/debug_print.h"
-
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

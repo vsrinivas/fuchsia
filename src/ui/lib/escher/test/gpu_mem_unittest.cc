@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 #include "src/ui/lib/escher/vk/gpu_mem.h"
+
+#include <iostream>
+
 #include "gtest/gtest.h"
 #include "src/ui/lib/escher/impl/gpu_mem_slab.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
-
-#include <iostream>
 
 namespace {
 using namespace escher;

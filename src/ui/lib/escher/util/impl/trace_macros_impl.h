@@ -5,8 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_UTIL_IMPL_TRACE_MACROS_IMPL_H_
 #define SRC_UI_LIB_ESCHER_UTIL_IMPL_TRACE_MACROS_IMPL_H_
 
-#include "src/ui/lib/escher/util/tracer.h"
 #include "src/lib/fxl/build_config.h"
+#include "src/ui/lib/escher/util/tracer.h"
 
 #ifdef OS_FUCHSIA
 #error Should only be included on Linux.

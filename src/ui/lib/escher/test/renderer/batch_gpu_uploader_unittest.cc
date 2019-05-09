@@ -6,9 +6,9 @@
 
 #include <thread>
 
+#include "gtest/gtest.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/test/vk/vulkan_tester.h"
-#include "gtest/gtest.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/buffer_factory.h"
 #include "src/ui/lib/escher/vk/image_factory.h"

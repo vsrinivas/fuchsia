@@ -5,12 +5,12 @@
 #ifndef SRC_UI_LIB_ESCHER_RENDERER_RENDERER_H_
 #define SRC_UI_LIB_ESCHER_RENDERER_RENDERER_H_
 
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/renderer/semaphore.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

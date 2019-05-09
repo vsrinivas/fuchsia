@@ -5,9 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_DRAWABLE_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_DRAWABLE_H_
 
-#include "src/ui/lib/escher/paper/paper_readme.h"
-
 #include "src/ui/lib/escher/paper/paper_drawable_flags.h"
+#include "src/ui/lib/escher/paper/paper_readme.h"
 
 namespace escher {
 

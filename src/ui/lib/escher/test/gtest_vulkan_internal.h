@@ -5,9 +5,9 @@
 #ifndef SRC_UI_LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
 #define SRC_UI_LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
 
-#include "gtest/gtest.h"
-
 #include <string>
+
+#include "gtest/gtest.h"
 
 namespace testing {
 namespace internal {

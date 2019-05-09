@@ -4,11 +4,10 @@
 
 #include "src/ui/lib/escher/shape/mesh_spec.h"
 
-#include "src/ui/lib/escher/geometry/types.h"
+#include <iostream>
 
 #include "gtest/gtest.h"
-
-#include <iostream>
+#include "src/ui/lib/escher/geometry/types.h"
 
 namespace {
 using namespace escher;

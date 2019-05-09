@@ -6,9 +6,10 @@
 #define SRC_UI_LIB_ESCHER_IMPL_GAUSSIAN_3X3F16_H_
 
 #include <memory>
+
+#include "src/lib/fxl/macros.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/impl/compute_shader.h"
-#include "src/lib/fxl/macros.h"
 #include "vulkan/vulkan.hpp"
 
 namespace escher {

@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/impl/image_cache.h"
 #include "src/ui/lib/escher/shape/mesh_builder_factory.h"
@@ -17,8 +19,6 @@
 #include "src/ui/lib/escher/vk/shader_program_factory.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 

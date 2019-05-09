@@ -11,6 +11,7 @@
 
 #ifdef OS_FUCHSIA
 #include <trace/event.h>
+
 #include "trace-vthread/event_vthread.h"
 #else
 #include "src/ui/lib/escher/util/impl/trace_macros_impl.h"

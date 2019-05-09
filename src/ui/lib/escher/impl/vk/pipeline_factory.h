@@ -7,8 +7,8 @@
 
 #include <future>
 
-#include "src/ui/lib/escher/impl/vk/pipeline.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/ui/lib/escher/impl/vk/pipeline.h"
 
 namespace escher {
 namespace impl {

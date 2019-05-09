@@ -4,13 +4,12 @@
 
 #include "src/ui/lib/escher/vk/shader_program.h"
 
-#include "src/ui/lib/escher/test/gtest_escher.h"
-#include "src/ui/lib/escher/test/vk/vulkan_tester.h"
-
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/geometry/clip_planes.h"
 #include "src/ui/lib/escher/geometry/tessellation.h"
 #include "src/ui/lib/escher/shape/mesh.h"
+#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/vk/vulkan_tester.h"
 #include "src/ui/lib/escher/util/string_utils.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
 #include "src/ui/lib/escher/vk/shader_module_template.h"

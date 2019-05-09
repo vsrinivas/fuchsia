@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cmath>
+#include "src/ui/lib/escher/geometry/transform.h"
 
+#include <cmath>
 #include <glm/glm.hpp>
 
 #include "gtest/gtest.h"
-#include "src/ui/lib/escher/geometry/transform.h"
 #include "src/lib/fxl/logging.h"
 
 namespace {

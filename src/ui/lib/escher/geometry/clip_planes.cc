@@ -6,8 +6,8 @@
 
 #include <cmath>
 
-#include "src/ui/lib/escher/geometry/bounding_box.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/geometry/bounding_box.h"
 
 namespace escher {
 

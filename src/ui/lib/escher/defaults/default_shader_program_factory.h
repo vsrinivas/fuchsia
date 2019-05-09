@@ -5,12 +5,12 @@
 #ifndef SRC_UI_LIB_ESCHER_DEFAULTS_DEFAULT_SHADER_PROGRAM_FACTORY_H_
 #define SRC_UI_LIB_ESCHER_DEFAULTS_DEFAULT_SHADER_PROGRAM_FACTORY_H_
 
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/util/hash_map.h"
 #include "src/ui/lib/escher/util/hasher.h"
 #include "src/ui/lib/escher/vk/shader_module_template.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/shader_program_factory.h"
-#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

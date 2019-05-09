@@ -7,10 +7,9 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "src/ui/lib/escher/paper/paper_readme.h"
-
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/paper/paper_drawable_flags.h"
+#include "src/ui/lib/escher/paper/paper_readme.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/renderer/uniform_binding.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"

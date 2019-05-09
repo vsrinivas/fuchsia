@@ -8,12 +8,12 @@
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/impl/uniform_buffer_pool.h"
 #include "src/ui/lib/escher/shape/modifier_wobble.h"
 #include "src/ui/lib/escher/util/hash_map.h"
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {

@@ -5,11 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_RENDERER_FRAME_H_
 #define SRC_UI_LIB_ESCHER_RENDERER_FRAME_H_
 
+#include <lib/fit/function.h>
+
 #include <cstdint>
 #include <functional>
 #include <vulkan/vulkan.hpp>
-
-#include <lib/fit/function.h>
 
 #include "src/ui/lib/escher/base/reffable.h"
 #include "src/ui/lib/escher/forward_declarations.h"

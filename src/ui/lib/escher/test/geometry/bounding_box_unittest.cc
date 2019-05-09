@@ -4,10 +4,9 @@
 
 #include "src/ui/lib/escher/geometry/bounding_box.h"
 
-#include "src/ui/lib/escher/geometry/types.h"
-#include "src/lib/fxl/logging.h"
-
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/geometry/types.h"
 
 namespace {
 

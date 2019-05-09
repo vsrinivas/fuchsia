@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/vk/shader_module_template.h"
 
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
-#include "src/ui/lib/escher/vk/shader_module_template.h"
+#include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/vk/shader_variant_args.h"
-
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
 
 namespace {

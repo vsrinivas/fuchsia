@@ -5,11 +5,12 @@
 #include "src/ui/lib/escher/geometry/tessellation.h"
 
 #include <math.h>
+
 #include <algorithm>
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/shape/mesh_builder.h"
 #include "src/ui/lib/escher/shape/mesh_builder_factory.h"
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

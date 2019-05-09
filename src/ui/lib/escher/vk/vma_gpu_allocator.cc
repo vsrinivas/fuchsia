@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/ui/lib/escher/vk/vma_gpu_allocator.h"
+
 #include "src/ui/lib/escher/util/image_utils.h"
 
 namespace {

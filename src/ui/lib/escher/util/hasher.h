@@ -7,9 +7,9 @@
 
 #include <cstdint>
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/util/hash.h"
 #include "src/ui/lib/escher/util/hash_fnv_1a.h"
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

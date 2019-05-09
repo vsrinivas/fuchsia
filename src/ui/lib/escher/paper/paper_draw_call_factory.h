@@ -5,10 +5,9 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_DRAW_CALL_FACTORY_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_DRAW_CALL_FACTORY_H_
 
-#include "src/ui/lib/escher/paper/paper_readme.h"
-
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/paper/paper_drawable_flags.h"
+#include "src/ui/lib/escher/paper/paper_readme.h"
 #include "src/ui/lib/escher/renderer/uniform_binding.h"
 #include "src/ui/lib/escher/util/hash_map.h"
 

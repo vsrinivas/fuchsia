@@ -8,10 +8,10 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
 #include "src/ui/lib/escher/vk/buffer.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 namespace impl {

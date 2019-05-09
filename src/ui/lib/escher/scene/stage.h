@@ -7,11 +7,11 @@
 
 #include <utility>
 
+#include "src/lib/fxl/macros.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/scene/ambient_light.h"
 #include "src/ui/lib/escher/scene/directional_light.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
-#include "src/lib/fxl/macros.h"
 
 namespace escher {
 

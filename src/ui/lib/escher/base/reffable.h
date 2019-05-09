@@ -7,9 +7,9 @@
 
 #include <cstdint>
 
-#include "src/ui/lib/escher/base/make.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/ui/lib/escher/base/make.h"
 
 namespace escher {
 

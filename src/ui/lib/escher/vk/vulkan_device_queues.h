@@ -9,9 +9,9 @@
 #include <string>
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
-#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

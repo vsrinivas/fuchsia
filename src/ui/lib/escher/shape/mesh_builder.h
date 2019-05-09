@@ -5,8 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_SHAPE_MESH_BUILDER_H_
 #define SRC_UI_LIB_ESCHER_SHAPE_MESH_BUILDER_H_
 
-#include "src/ui/lib/escher/shape/mesh.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/ui/lib/escher/shape/mesh.h"
 
 namespace escher {
 

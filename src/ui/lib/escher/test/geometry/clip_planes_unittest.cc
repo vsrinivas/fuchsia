@@ -4,9 +4,8 @@
 
 #include "src/ui/lib/escher/geometry/clip_planes.h"
 
-#include "src/ui/lib/escher/geometry/bounding_box.h"
-
 #include "gtest/gtest.h"
+#include "src/ui/lib/escher/geometry/bounding_box.h"
 
 namespace {
 

@@ -9,13 +9,13 @@
 #include <map>
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/time/time_point.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/gpu_allocator.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace escher {
 

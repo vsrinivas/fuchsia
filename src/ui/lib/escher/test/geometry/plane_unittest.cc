@@ -7,13 +7,11 @@
 #define GLM_FORCE_RADIANS
 #include <glm/gtc/quaternion.hpp>
 
-#include "src/ui/lib/escher/geometry/plane_ops.h"
-
+#include "gtest/gtest.h"
 #include "src/ui/lib/escher/geometry/intersection.h"
+#include "src/ui/lib/escher/geometry/plane_ops.h"
 #include "src/ui/lib/escher/geometry/transform.h"
 #include "src/ui/lib/escher/geometry/type_utils.h"
-
-#include "gtest/gtest.h"
 
 namespace {
 

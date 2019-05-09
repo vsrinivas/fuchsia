@@ -5,16 +5,16 @@
 #ifndef SRC_UI_LIB_ESCHER_IMPL_COMMAND_BUFFER_H_
 #define SRC_UI_LIB_ESCHER_IMPL_COMMAND_BUFFER_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <vector>
 
-#include <lib/fit/function.h>
-
+#include "src/lib/fxl/macros.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/renderer/semaphore.h"
 #include "src/ui/lib/escher/scene/camera.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
-#include "src/lib/fxl/macros.h"
 
 namespace escher {
 typedef fit::function<void()> CommandBufferFinishedCallback;

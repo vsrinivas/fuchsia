@@ -5,9 +5,9 @@
 #ifndef SRC_UI_LIB_ESCHER_RENDERER_BATCH_GPU_UPLOADER_H_
 #define SRC_UI_LIB_ESCHER_RENDERER_BATCH_GPU_UPLOADER_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include <lib/fit/function.h>
+
+#include <vulkan/vulkan.hpp>
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/renderer/buffer_cache.h"

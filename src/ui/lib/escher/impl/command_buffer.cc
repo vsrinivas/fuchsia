@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "src/ui/lib/escher/impl/command_buffer.h"
+
+#include "src/lib/fxl/macros.h"
 #include "src/ui/lib/escher/impl/descriptor_set_pool.h"
 #include "src/ui/lib/escher/impl/mesh_shader_binding.h"
 #include "src/ui/lib/escher/shape/mesh.h"
@@ -11,7 +13,6 @@
 #include "src/ui/lib/escher/vk/framebuffer.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/lib/escher/vk/render_pass.h"
-#include "src/lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {

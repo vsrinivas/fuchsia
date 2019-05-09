@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "src/ui/lib/escher/util/hashable.h"
-#include "src/ui/lib/escher/util/hash_map.h"
-#include "src/ui/lib/escher/util/hasher.h"
 
 #include "gtest/gtest.h"
+#include "src/ui/lib/escher/util/hash_map.h"
+#include "src/ui/lib/escher/util/hasher.h"
 
 namespace {
 using namespace escher;

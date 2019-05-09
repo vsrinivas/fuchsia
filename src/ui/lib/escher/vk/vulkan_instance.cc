@@ -6,13 +6,13 @@
 
 #include <set>
 
-#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 
 namespace escher {
 
 template <typename FuncT>
-static FuncT GetInstanceProcAddr(vk::Instance inst, const char* func_name) {
+static FuncT GetInstanceProcAddr(vk::Instance inst, const char *func_name) {
   FuncT func = reinterpret_cast<FuncT>(inst.getProcAddr(func_name));
   FXL_CHECK(func) << "Could not find Vulkan Instance ProcAddr: " << func_name;
   return func;

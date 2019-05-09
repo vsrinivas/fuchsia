@@ -7,9 +7,8 @@
 #include <glm/gtc/matrix_access.hpp>
 
 // TODO(ES-153): possibly delete.  See comment below about NUM_CLIP_PLANES.
-#include "src/ui/lib/escher/geometry/clip_planes.h"
-
 #include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/geometry/clip_planes.h"
 #include "src/ui/lib/escher/geometry/tessellation.h"
 #include "src/ui/lib/escher/paper/paper_legacy_drawable.h"
 #include "src/ui/lib/escher/paper/paper_render_queue_context.h"

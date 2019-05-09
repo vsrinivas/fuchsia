@@ -5,14 +5,14 @@
 #ifndef SRC_UI_LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_
 #define SRC_UI_LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_
 
+#include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
 
-#include <lib/async/cpp/wait.h>
-#include "src/ui/lib/escher/flib/fence.h"
 #include "lib/fidl/cpp/vector.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/time/time_delta.h"
+#include "src/ui/lib/escher/flib/fence.h"
 
 namespace escher {
 

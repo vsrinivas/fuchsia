@@ -4,11 +4,9 @@
 
 #include "src/ui/lib/escher/shape/rounded_rect.h"
 
-#include "src/ui/lib/escher/shape/mesh_spec.h"
-
 #include "gtest/gtest.h"
-
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/shape/mesh_spec.h"
 
 namespace {
 using namespace escher;

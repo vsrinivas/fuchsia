@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/ui/lib/escher/escher.h"
+
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/impl/command_buffer_pool.h"
 #include "src/ui/lib/escher/impl/frame_manager.h"

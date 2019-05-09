@@ -4,9 +4,8 @@
 
 #include "src/ui/lib/escher/util/block_allocator.h"
 
-#include "src/ui/lib/escher/util/align.h"
-
 #include "gtest/gtest.h"
+#include "src/ui/lib/escher/util/align.h"
 
 namespace {
 using namespace escher;

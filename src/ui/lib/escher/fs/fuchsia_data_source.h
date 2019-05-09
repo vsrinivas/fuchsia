@@ -5,10 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_FS_FUCHSIA_DATA_SOURCE_H_
 #define SRC_UI_LIB_ESCHER_FS_FUCHSIA_DATA_SOURCE_H_
 
-#include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include <lib/vfs/cpp/pseudo_dir.h>
 
 #include <memory>
+
+#include "src/ui/lib/escher/fs/hack_filesystem.h"
 
 namespace escher {
 

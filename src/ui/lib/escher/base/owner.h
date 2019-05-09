@@ -5,8 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_BASE_OWNER_H_
 #define SRC_UI_LIB_ESCHER_BASE_OWNER_H_
 
-#include "src/ui/lib/escher/base/ownable.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/ui/lib/escher/base/ownable.h"
 
 namespace escher {
 

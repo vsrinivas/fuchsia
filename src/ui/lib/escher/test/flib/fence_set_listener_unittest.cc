@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-
-#include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
+
+#include "gtest/gtest.h"
+#include "lib/gtest/test_loop_fixture.h"
+#include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 #include "src/ui/lib/escher/test/flib/util.h"
-#include "lib/gtest/test_loop_fixture.h"
 
 namespace escher {
 namespace test {

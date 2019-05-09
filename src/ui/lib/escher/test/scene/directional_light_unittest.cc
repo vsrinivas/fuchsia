@@ -5,6 +5,7 @@
 #include "src/ui/lib/escher/scene/directional_light.h"
 
 #include <glm/gtc/epsilon.hpp>
+
 #include "gtest/gtest.h"
 
 namespace {

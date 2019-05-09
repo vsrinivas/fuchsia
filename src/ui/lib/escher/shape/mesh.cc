@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/ui/lib/escher/shape/mesh.h"
+
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 

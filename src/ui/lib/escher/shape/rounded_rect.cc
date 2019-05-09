@@ -4,10 +4,10 @@
 
 #include "src/ui/lib/escher/shape/rounded_rect.h"
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/shape/mesh_spec.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

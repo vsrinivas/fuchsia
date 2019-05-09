@@ -6,8 +6,8 @@
 
 #include <set>
 
-#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 
 namespace escher {
 

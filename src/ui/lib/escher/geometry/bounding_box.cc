@@ -4,9 +4,9 @@
 
 #include "src/ui/lib/escher/geometry/bounding_box.h"
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/intersection.h"
 #include "src/ui/lib/escher/geometry/plane_ops.h"
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

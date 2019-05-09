@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/ui/lib/escher/paper/paper_legacy_drawable.h"
+
 #include "src/ui/lib/escher/paper/paper_draw_call_factory.h"
 #include "src/ui/lib/escher/paper/paper_shape_cache.h"
 #include "src/ui/lib/escher/paper/paper_transform_stack.h"

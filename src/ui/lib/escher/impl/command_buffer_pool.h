@@ -7,10 +7,10 @@
 
 #include <queue>
 
+#include "src/lib/fxl/macros.h"
 #include "src/ui/lib/escher/impl/command_buffer.h"
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
-#include "src/lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {

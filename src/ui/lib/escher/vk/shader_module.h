@@ -7,9 +7,9 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/third_party/granite/vk/shader_module_resource_layout.h"
 #include "src/ui/lib/escher/vk/shader_stage.h"
-#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

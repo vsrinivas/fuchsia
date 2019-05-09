@@ -3,10 +3,11 @@
 // found in the LICENSE file
 
 #include "src/ui/lib/escher/impl/image_cache.h"
+
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/test/fake_gpu_allocator.h"
 #include "src/ui/lib/escher/util/image_utils.h"
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {

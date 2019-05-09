@@ -10,9 +10,9 @@
 #include <lib/zx/event.h>
 #include <zircon/syscalls/port.h>
 
-#include "src/ui/lib/escher/flib/fence.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/time/time_delta.h"
+#include "src/ui/lib/escher/flib/fence.h"
 
 namespace escher {
 

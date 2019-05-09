@@ -5,11 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_SCENE_CAMERA_H_
 #define SRC_UI_LIB_ESCHER_SCENE_CAMERA_H_
 
+#include <vulkan/vulkan.hpp>
+
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
-
-#include <vulkan/vulkan.hpp>
 
 namespace escher {
 

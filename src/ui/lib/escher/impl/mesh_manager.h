@@ -9,14 +9,13 @@
 #include <list>
 #include <queue>
 #include <unordered_map>
-
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/lib/escher/impl/gpu_uploader.h"
 #include "src/ui/lib/escher/shape/mesh_builder.h"
 #include "src/ui/lib/escher/shape/mesh_builder_factory.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 namespace impl {

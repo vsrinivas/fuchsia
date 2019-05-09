@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
 
 #include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
-#include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
 #include "src/ui/lib/escher/vk/render_pass_info.h"
 #include "src/ui/lib/escher/vk/texture.h"
 

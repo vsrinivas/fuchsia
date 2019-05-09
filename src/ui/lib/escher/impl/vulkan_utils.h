@@ -5,9 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_IMPL_VULKAN_UTILS_H_
 #define SRC_UI_LIB_ESCHER_IMPL_VULKAN_UTILS_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
 #include "src/lib/fxl/logging.h"
 

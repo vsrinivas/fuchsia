@@ -5,18 +5,17 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDERER_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDERER_H_
 
-#include "src/ui/lib/escher/paper/paper_readme.h"
-
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/paper/paper_draw_call_factory.h"
 #include "src/ui/lib/escher/paper/paper_drawable.h"
 #include "src/ui/lib/escher/paper/paper_light.h"
+#include "src/ui/lib/escher/paper/paper_readme.h"
 #include "src/ui/lib/escher/paper/paper_render_queue.h"
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
 #include "src/ui/lib/escher/paper/paper_shape_cache.h"
 #include "src/ui/lib/escher/paper/paper_transform_stack.h"
 #include "src/ui/lib/escher/renderer/renderer.h"
 #include "src/ui/lib/escher/renderer/uniform_binding.h"
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 
@@ -137,7 +136,7 @@ class PaperRenderer final : public Renderer {
 
  private:
   explicit PaperRenderer(EscherWeakPtr escher,
-                          const PaperRendererConfig& config);
+                         const PaperRendererConfig& config);
   PaperRenderer(const PaperRenderer&) = delete;
 
   // Store relevant info from cameras passed to BeginFrame().

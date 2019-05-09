@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include "src/ui/lib/escher/base/ownable.h"
-#include "src/ui/lib/escher/base/owner.h"
-#include "src/ui/lib/escher/base/type_info.h"
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/ui/lib/escher/base/owner.h"
+#include "src/ui/lib/escher/base/type_info.h"
 
 namespace {
 

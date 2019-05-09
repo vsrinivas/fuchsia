@@ -8,11 +8,11 @@
 #include <zircon/syscalls.h>
 #endif
 
+#include "src/lib/fxl/macros.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/impl/frame_manager.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
-#include "src/lib/fxl/macros.h"
 
 namespace escher {
 

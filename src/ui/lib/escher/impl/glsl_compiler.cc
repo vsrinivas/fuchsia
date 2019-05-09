@@ -12,9 +12,8 @@
 #include "glslang/Public/ShaderLang.h"
 #include "spirv-tools/libspirv.hpp"
 #include "spirv-tools/optimizer.hpp"
-
-#include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 
 namespace escher {
 namespace impl {

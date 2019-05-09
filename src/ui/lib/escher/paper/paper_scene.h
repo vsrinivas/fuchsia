@@ -5,11 +5,10 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_SCENE_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_SCENE_H_
 
-#include "src/ui/lib/escher/paper/paper_readme.h"
-
 #include "src/ui/lib/escher/base/reffable.h"
 #include "src/ui/lib/escher/geometry/bounding_box.h"
 #include "src/ui/lib/escher/paper/paper_light.h"
+#include "src/ui/lib/escher/paper/paper_readme.h"
 
 namespace escher {
 

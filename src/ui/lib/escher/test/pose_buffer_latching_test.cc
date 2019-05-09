@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <glm/gtc/type_ptr.hpp>
+
+#include "gtest/gtest.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
@@ -12,9 +15,6 @@
 #include "src/ui/lib/escher/util/epsilon_compare.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/gpu_allocator.h"
-#include "gtest/gtest.h"
-
-#include <glm/gtc/type_ptr.hpp>
 
 namespace escher {
 namespace test {

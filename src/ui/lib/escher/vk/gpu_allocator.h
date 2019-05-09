@@ -7,10 +7,10 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 

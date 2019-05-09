@@ -8,13 +8,13 @@
 #include <string>
 #include <utility>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include "src/ui/lib/escher/util/hash_map.h"
 #include "src/ui/lib/escher/util/hashable.h"
 #include "src/ui/lib/escher/vk/shader_module.h"
 #include "src/ui/lib/escher/vk/shader_variant_args.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 

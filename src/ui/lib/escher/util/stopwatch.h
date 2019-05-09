@@ -6,6 +6,7 @@
 #define SRC_UI_LIB_ESCHER_UTIL_STOPWATCH_H_
 
 #include <chrono>
+
 #include "src/lib/fxl/macros.h"
 
 namespace escher {

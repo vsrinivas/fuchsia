@@ -6,9 +6,9 @@
 
 #include <lib/fit/function.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 
@@ -26,8 +26,7 @@ std::unique_ptr<BatchGpuUploader> BatchGpuUploader::New(
 
 BatchGpuUploader::Writer::Writer(CommandBufferPtr command_buffer,
                                  BufferPtr buffer)
-    : command_buffer_(std::move(command_buffer)),
-      buffer_(std::move(buffer)) {
+    : command_buffer_(std::move(command_buffer)), buffer_(std::move(buffer)) {
   FXL_DCHECK(command_buffer_ && buffer_);
 }
 
@@ -79,8 +78,7 @@ CommandBufferPtr BatchGpuUploader::Writer::TakeCommandsAndShutdown() {
 
 BatchGpuUploader::Reader::Reader(CommandBufferPtr command_buffer,
                                  BufferPtr buffer)
-    : command_buffer_(std::move(command_buffer)),
-      buffer_(std::move(buffer)) {
+    : command_buffer_(std::move(command_buffer)), buffer_(std::move(buffer)) {
   FXL_DCHECK(command_buffer_ && buffer_);
 }
 
@@ -192,8 +190,8 @@ std::unique_ptr<BatchGpuUploader::Writer> BatchGpuUploader::AcquireWriter(
   FXL_DCHECK(command_buffer) << "Error getting the frame's command buffer.";
 
   ++writer_count_;
-  return std::make_unique<BatchGpuUploader::Writer>(
-      std::move(command_buffer), std::move(buffer));
+  return std::make_unique<BatchGpuUploader::Writer>(std::move(command_buffer),
+                                                    std::move(buffer));
 }
 
 std::unique_ptr<BatchGpuUploader::Reader> BatchGpuUploader::AcquireReader(
@@ -218,8 +216,8 @@ std::unique_ptr<BatchGpuUploader::Reader> BatchGpuUploader::AcquireReader(
   FXL_DCHECK(command_buffer) << "Error getting the frame's command buffer.";
 
   ++reader_count_;
-  return std::make_unique<BatchGpuUploader::Reader>(
-      std::move(command_buffer), std::move(buffer));
+  return std::make_unique<BatchGpuUploader::Reader>(std::move(command_buffer),
+                                                    std::move(buffer));
 }
 
 void BatchGpuUploader::PostWriter(

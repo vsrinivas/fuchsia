@@ -7,9 +7,8 @@
 
 #include <math.h>
 
-#include "src/ui/lib/escher/util/debug_print.h"
-
 #include "src/ui/lib/escher/geometry/bounding_box.h"
+#include "src/ui/lib/escher/util/debug_print.h"
 
 namespace escher {
 

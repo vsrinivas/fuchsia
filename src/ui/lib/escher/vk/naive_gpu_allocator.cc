@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/ui/lib/escher/vk/naive_gpu_allocator.h"
+
 #include "src/ui/lib/escher/impl/gpu_mem_slab.h"
 #include "src/ui/lib/escher/impl/naive_buffer.h"
 #include "src/ui/lib/escher/impl/naive_image.h"

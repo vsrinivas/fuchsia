@@ -5,9 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDER_QUEUE_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDER_QUEUE_H_
 
-#include "src/ui/lib/escher/paper/paper_readme.h"
-
 #include "src/ui/lib/escher/paper/paper_draw_call.h"
+#include "src/ui/lib/escher/paper/paper_readme.h"
 #include "src/ui/lib/escher/renderer/render_queue.h"
 
 namespace escher {
