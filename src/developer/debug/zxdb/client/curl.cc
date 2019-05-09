@@ -4,8 +4,6 @@
 
 #include "src/developer/debug/zxdb/client/curl.h"
 
-#include <map>
-
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/lib/fxl/logging.h"
@@ -111,10 +109,27 @@ int SocketCallback(CURL* easy, curl_socket_t s, int what, void*, void*) {
 }
 
 // Callback given to CURL which it uses to inform us it would like to receive a
-// timer notification at a given time in the future.
+// timer notification at a given time in the future. If the callback is called
+// twice before the timer expires it is expected to re-schedule the existing
+// timer, not make a second timer. A timeout of -1 means to cancel the
+// outstanding timer.
 int TimerCallback(CURLM* multi, long timeout_ms, void*) {
+  static std::shared_ptr<bool> last_timer = std::make_shared<bool>();
+
+  *last_timer = false;
+
+  if (timeout_ms < 0) {
+    return 0;
+  }
+
+  last_timer = std::make_shared<bool>(true);
+
   debug_ipc::MessageLoop::Current()->PostTimer(
-      FROM_HERE, timeout_ms, [multi]() {
+      FROM_HERE, timeout_ms, [multi, valid = last_timer]() {
+        if (!*valid) {
+          return;
+        }
+
         int _ignore;
         auto result =
             curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_ignore);
