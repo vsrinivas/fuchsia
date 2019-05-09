@@ -2,26 +2,6 @@
 
 ## All builds
 
-### use_prebuilt_clang
-If $clang_tool_dir is "", then this controls how the Clang toolchain
-binaries are found.  If true, then the standard prebuilt is used.
-Otherwise the tools are just expected to be found by the shell via `PATH`.
-
-**Current value (from the default):** `true`
-
-From //public/gn/toolchain/clang.gni:9
-
-### goma_dir
-Absolute directory containing the Goma source code.
-
-**Current value (from the default):** `"/home/swarming/goma"`
-
-From //public/gn/toolchain/goma.gni:12
-
-### host_os
-
-**Current value (from the default):** `"linux"`
-
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version`.
 If set to the default "", a string is generated based on the
@@ -31,93 +11,16 @@ Zircon git revision of the checkout.
 
 From //kernel/lib/version/BUILD.gn:9
 
-### tests_in_image
-Whether to include all the Zircon tests in the main standalone ZBI.
-TODO(mcgrathr): This will be replaced by a more sophisticated plan for
-what images to build rather than a single "everything" image that needs
-to be pared down.
+### crash_diagnostics_dir
+Clang crash reports directory path. Use empty path to disable altogether.
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `"/b/s/w/ir/k/out/build-zircon/clang-crashreports"`
 
-From //BUILD.gn:16
-
-### symbol_level
-* 0 means no debugging information.
-* 1 means minimal debugging information sufficient to symbolize backtraces.
-* 2 means full debugging information for use with a symbolic debugger.
-
-**Current value (from the default):** `2`
-
-From //public/gn/config/levels.gni:20
-
-### use_goma
-Set to true to enable distributed compilation using Goma.
-
-**Current value (from the default):** `false`
-
-From //public/gn/toolchain/goma.gni:9
-
-### target_cpu
-
-**Current value (from the default):** `""`
-
-### asan_default_options
-Default [AddressSanitizer](https://llvm.org/docs/AddressSanitizer.html)
-options (before the `ASAN_OPTIONS` environment variable is read at
-runtime).  This can be set as a build argument to affect most "asan"
-variants in $variants (which see), or overridden in $toolchain_args in
-one of those variants.  Note that setting this nonempty may conflict
-with programs that define their own `__asan_default_options` C
-function.
-
-**Current value (from the default):** `""`
-
-From //public/gn/config/instrumentation/BUILD.gn:13
+From //public/gn/config/BUILD.gn:10
 
 ### current_os
 
 **Current value (from the default):** `""`
-
-### default_deps
-Defines the `//:default` target: what `ninja` with no arguments does.
-
-**Current value (from the default):** `[":ids", ":images", ":tools"]`
-
-From //BUILD.gn:19
-
-### kernel_extra_defines
-Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
-"ENABLE_KERNEL_LL_DEBUG".
-
-**Current value (from the default):** `[]`
-
-From //kernel/params.gni:46
-
-### toolchain
-*This must never be set as a build argument.*
-It exists only to be set via c_toolchain().
-See environment() for more information.
-
-**Current value (from the default):**
-```
-{
-  configs = []
-  environment = "stub"
-  globals = { }
-  label = "//public/gn/toolchain:stub"
-}
-```
-
-From //public/gn/BUILDCONFIG.gn:20
-
-### assert_level
-* 0 means no assertions, not even standard C `assert()`.
-* 1 means `ZX_ASSERT` but not `ZX_DEBUG_ASSERT`.
-* 2 means both `ZX_ASSERT` and  `ZX_DEBUG_ASSERT`.
-
-**Current value (from the default):** `2`
-
-From //public/gn/config/levels.gni:9
 
 ### enable_kernel_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -127,120 +30,26 @@ kernel or netsvc builds.
 
 From //public/gn/config/product_parameters.gni:12
 
-### enable_netsvc_debugging_features
+### goma_dir
+Absolute directory containing the Goma source code.
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `"/home/swarming/goma"`
 
-From //public/gn/config/product_parameters.gni:13
+From //public/gn/toolchain/goma.gni:12
 
-### kernel_aspace_base
+### kernel_base
 
-**Current value (from the default):** `"0xffffff8000000000UL"`
+**Current value (from the default):** `"0xffffffff80100000"`
 
-From //kernel/params.gni:28
+From //kernel/params.gni:20
 
-### host_cpu
+### kernel_extra_defines
+Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
+"ENABLE_KERNEL_LL_DEBUG".
 
-**Current value (from the default):** `"x64"`
+**Current value (from the default):** `[]`
 
-### smp_max_cpus
-Maximum number of CPUs the kernel will run on (others will be ignored).
-
-**Current value (from the default):** `32`
-
-From //kernel/params.gni:7
-
-### target_os
-
-**Current value (from the default):** `""`
-
-### use_prebuilt_gcc
-If $gcc_tool_dir is "", then this controls how the GCC toolchain
-binaries are found.  If true, the standard prebuilt is used.  If false,
-the tools are just expected to be found in PATH.
-
-**Current value (from the default):** `true`
-
-From //public/gn/toolchain/gcc.gni:9
-
-### build_id_dir
-Directory to populate with `xx/yyy` and `xx/yyy.debug` links to ELF
-files.  For every ELF binary built, with build ID `xxyyy` (lowercase
-hexadecimal of any length), `xx/yyy` is a hard link to the stripped
-file and `xx/yyy.debug` is a hard link to the unstripped file.
-Symbolization tools and debuggers find symbolic information this way.
-
-**Current value (from the default):** `"/b/s/w/ir/k/out/build-zircon/.build-id"`
-
-From //public/gn/toolchain/c_toolchain.gni:17
-
-### clang_tool_dir
-Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
-found.  If this is "", then the behavior depends on $use_prebuilt_clang.
-This toolchain is expected to support both Fuchsia targets and the host.
-
-**Current value (from the default):** `""`
-
-From //public/gn/toolchain/clang.gni:14
-
-### enable_acpi_debug
-Enable debug output in the ACPI library (used by the ACPI bus driver).
-
-**Current value (from the default):** `false`
-
-From //third_party/lib/acpica/BUILD.gn:9
-
-### enable_lock_dep
-Enable kernel lock dependency tracking.
-
-**Current value (from the default):** `false`
-
-From //kernel/params.gni:32
-
-### crash_diagnostics_dir
-Clang crash reports directory path. Use empty path to disable altogether.
-
-**Current value (from the default):** `"/b/s/w/ir/k/out/build-zircon/clang-crashreports"`
-
-From //public/gn/config/BUILD.gn:10
-
-### detailed_scheduler_tracing
-Enable detailed scheduler traces.
-
-**Current value (from the default):** `false`
-
-From //kernel/params.gni:39
-
-### sysroot
-The `--sysroot` directory for host compilations.
-This can be a string, which only applies to $host_os-$host_cpu.
-Or it can be a list of scopes containing `cpu`, `os`, and `sysroot`.
-The empty list (or empty string) means don't use `--sysroot` at all.
-
-**Current value (from the default):**
-```
-[{
-  cpu = "arm64"
-  os = "linux"
-  sysroot = "//prebuilt/downloads/sysroot/linux-arm64"
-}, {
-  cpu = "x64"
-  os = "linux"
-  sysroot = "//prebuilt/downloads/sysroot/linux-x64"
-}]
-```
-
-From //public/gn/config/BUILD.gn:16
-
-### opt_level
-* -1 means really unoptimized (-O0), usually only build-tested and not run.
-* 0 means "optimized for debugging" (-Og), light enough to avoid confusion.
-  1, 2, and 3 are increasing levels of optimization.
-* 4 is optimized for space rather than purely for speed.
-
-**Current value (from the default):** `2`
-
-From //public/gn/config/levels.gni:15
+From //kernel/params.gni:46
 
 ### variants
 List of "selectors" to request variant builds of certain targets.  Each
@@ -464,23 +273,47 @@ Variant scope parameters
 
 From //public/gn/toolchain/environment.gni:225
 
-### enable_fair_scheduler
-Disable fair scheduler by default on all architectures.
-ZX-3959: Disable by default until E2E tests stabilize.
+### clang_tool_dir
+Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
+found.  If this is "", then the behavior depends on $use_prebuilt_clang.
+This toolchain is expected to support both Fuchsia targets and the host.
+
+**Current value (from the default):** `""`
+
+From //public/gn/toolchain/clang.gni:14
+
+### enable_netsvc_debugging_features
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:36
+From //public/gn/config/product_parameters.gni:13
 
-### enable_lock_dep_tests
-Enable kernel lock dependency tracking tests.  By default this is
-enabled when tracking is enabled, but can also be eanbled independently
-to assess whether the tests build and *fail correctly* when lockdep is
-disabled.
+### smp_max_cpus
+Maximum number of CPUs the kernel will run on (others will be ignored).
+
+**Current value (from the default):** `32`
+
+From //kernel/params.gni:7
+
+### use_prebuilt_clang
+If $clang_tool_dir is "", then this controls how the Clang toolchain
+binaries are found.  If true, then the standard prebuilt is used.
+Otherwise the tools are just expected to be found by the shell via `PATH`.
+
+**Current value (from the default):** `true`
+
+From //public/gn/toolchain/clang.gni:9
+
+### current_cpu
+
+**Current value (from the default):** `""`
+
+### enable_lock_dep
+Enable kernel lock dependency tracking.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:54
+From //kernel/params.gni:32
 
 ### enable_user_pci
 Enable userspace PCI and disable kernel PCI.
@@ -489,11 +322,105 @@ Enable userspace PCI and disable kernel PCI.
 
 From //kernel/params.gni:42
 
-### kernel_base
+### kernel_aspace_base
 
-**Current value (from the default):** `"0xffffffff80100000"`
+**Current value (from the default):** `"0xffffff8000000000UL"`
 
-From //kernel/params.gni:20
+From //kernel/params.gni:28
+
+### opt_level
+* -1 means really unoptimized (-O0), usually only build-tested and not run.
+* 0 means "optimized for debugging" (-Og), light enough to avoid confusion.
+  1, 2, and 3 are increasing levels of optimization.
+* 4 is optimized for space rather than purely for speed.
+
+**Current value (from the default):** `2`
+
+From //public/gn/config/levels.gni:15
+
+### target_os
+
+**Current value (from the default):** `""`
+
+### enable_fair_scheduler
+Disable fair scheduler by default on all architectures.
+ZX-3959: Disable by default until E2E tests stabilize.
+
+**Current value (from the default):** `false`
+
+From //kernel/params.gni:36
+
+### gcc_tool_dir
+Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
+found.  If this is "", then the behavior depends on $use_prebuilt_gcc.
+This directory is expected to contain `aarch64-elf-*` and `x86_64-elf-*`
+tools used to build for the Fuchsia targets.  This directory will not
+be used for host tools; if GCC is selected for host builds, only the
+system-installed tools found by the shell via `PATH` will be used.
+
+**Current value (from the default):** `""`
+
+From //public/gn/toolchain/gcc.gni:17
+
+### sysroot
+The `--sysroot` directory for host compilations.
+This can be a string, which only applies to $host_os-$host_cpu.
+Or it can be a list of scopes containing `cpu`, `os`, and `sysroot`.
+The empty list (or empty string) means don't use `--sysroot` at all.
+
+**Current value (from the default):**
+```
+[{
+  cpu = "arm64"
+  os = "linux"
+  sysroot = "//prebuilt/downloads/sysroot/linux-arm64"
+}, {
+  cpu = "x64"
+  os = "linux"
+  sysroot = "//prebuilt/downloads/sysroot/linux-x64"
+}]
+```
+
+From //public/gn/config/BUILD.gn:16
+
+### asan_default_options
+Default [AddressSanitizer](https://llvm.org/docs/AddressSanitizer.html)
+options (before the `ASAN_OPTIONS` environment variable is read at
+runtime).  This can be set as a build argument to affect most "asan"
+variants in $variants (which see), or overridden in $toolchain_args in
+one of those variants.  Note that setting this nonempty may conflict
+with programs that define their own `__asan_default_options` C
+function.
+
+**Current value (from the default):** `""`
+
+From //public/gn/config/instrumentation/BUILD.gn:13
+
+### host_cpu
+
+**Current value (from the default):** `"x64"`
+
+### host_os
+
+**Current value (from the default):** `"linux"`
+
+### symbol_level
+* 0 means no debugging information.
+* 1 means minimal debugging information sufficient to symbolize backtraces.
+* 2 means full debugging information for use with a symbolic debugger.
+
+**Current value (from the default):** `2`
+
+From //public/gn/config/levels.gni:20
+
+### use_prebuilt_gcc
+If $gcc_tool_dir is "", then this controls how the GCC toolchain
+binaries are found.  If true, the standard prebuilt is used.  If false,
+the tools are just expected to be found in PATH.
+
+**Current value (from the default):** `true`
+
+From //public/gn/toolchain/gcc.gni:9
 
 ### zx
 *This must never be set as a build argument*.
@@ -508,21 +435,91 @@ file that uses `default_args` to set "$zx/" to "//zircon/".
 
 From //public/gn/BUILDCONFIG.gn:13
 
-### current_cpu
+### use_ccache
+Set to true to enable compiling with ccache.
+
+**Current value (from the default):** `false`
+
+From //public/gn/toolchain/ccache.gni:9
+
+### use_goma
+Set to true to enable distributed compilation using Goma.
+
+**Current value (from the default):** `false`
+
+From //public/gn/toolchain/goma.gni:9
+
+### assert_level
+* 0 means no assertions, not even standard C `assert()`.
+* 1 means `ZX_ASSERT` but not `ZX_DEBUG_ASSERT`.
+* 2 means both `ZX_ASSERT` and  `ZX_DEBUG_ASSERT`.
+
+**Current value (from the default):** `2`
+
+From //public/gn/config/levels.gni:9
+
+### build_id_dir
+Directory to populate with `xx/yyy` and `xx/yyy.debug` links to ELF
+files.  For every ELF binary built, with build ID `xxyyy` (lowercase
+hexadecimal of any length), `xx/yyy` is a hard link to the stripped
+file and `xx/yyy.debug` is a hard link to the unstripped file.
+Symbolization tools and debuggers find symbolic information this way.
+
+**Current value (from the default):** `"/b/s/w/ir/k/out/build-zircon/.build-id"`
+
+From //public/gn/toolchain/c_toolchain.gni:17
+
+### detailed_scheduler_tracing
+Enable detailed scheduler traces.
+
+**Current value (from the default):** `false`
+
+From //kernel/params.gni:39
+
+### enable_acpi_debug
+Enable debug output in the ACPI library (used by the ACPI bus driver).
+
+**Current value (from the default):** `false`
+
+From //third_party/lib/acpica/BUILD.gn:9
+
+### target_cpu
 
 **Current value (from the default):** `""`
 
-### gcc_tool_dir
-Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
-found.  If this is "", then the behavior depends on $use_prebuilt_gcc.
-This directory is expected to contain `aarch64-elf-*` and `x86_64-elf-*`
-tools used to build for the Fuchsia targets.  This directory will not
-be used for host tools; if GCC is selected for host builds, only the
-system-installed tools found by the shell via `PATH` will be used.
+### toolchain
+*This must never be set as a build argument.*
+It exists only to be set via c_toolchain().
+See environment() for more information.
 
-**Current value (from the default):** `""`
+**Current value (from the default):**
+```
+{
+  configs = []
+  environment = "stub"
+  globals = { }
+  label = "//public/gn/toolchain:stub"
+}
+```
 
-From //public/gn/toolchain/gcc.gni:17
+From //public/gn/BUILDCONFIG.gn:20
+
+### default_deps
+Defines the `//:default` target: what `ninja` with no arguments does.
+
+**Current value (from the default):** `[":ids", ":images", ":tools"]`
+
+From //BUILD.gn:19
+
+### enable_lock_dep_tests
+Enable kernel lock dependency tracking tests.  By default this is
+enabled when tracking is enabled, but can also be eanbled independently
+to assess whether the tests build and *fail correctly* when lockdep is
+disabled.
+
+**Current value (from the default):** `false`
+
+From //kernel/params.gni:54
 
 ### malloc
 
@@ -530,10 +527,13 @@ From //public/gn/toolchain/gcc.gni:17
 
 From //third_party/ulib/musl/BUILD.gn:6
 
-### use_ccache
-Set to true to enable compiling with ccache.
+### tests_in_image
+Whether to include all the Zircon tests in the main standalone ZBI.
+TODO(mcgrathr): This will be replaced by a more sophisticated plan for
+what images to build rather than a single "everything" image that needs
+to be pared down.
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
-From //public/gn/toolchain/ccache.gni:9
+From //BUILD.gn:16
 
