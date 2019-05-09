@@ -29,6 +29,9 @@ if (current_toolchain == default_toolchain) {
         # <malloc.h> has #include <lib/heap.h>.
         "$zx/kernel/lib/heap:headers.config",
 
+        # <kernel/percpu.h> has #include <lib/lazy_init/lazy_init.h>.
+        "$zx/system/ulib/lazy_init:headers.config",
+
         # <kernel/spinlock.h> has #include <lockdep/lock_policy.h>.
         "$zx/system/ulib/lockdep:headers.config",
 

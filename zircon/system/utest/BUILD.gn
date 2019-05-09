@@ -61,6 +61,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/gpt/test",
       "$zx/system/ulib/id_allocator/test",
       "$zx/system/ulib/kvstore:kvstore-test",
+      "$zx/system/ulib/lazy_init:lazy_init-test",
       "$zx/system/ulib/minfs/allocator/test",
       "$zx/system/ulib/minfs/test",
       "$zx/system/ulib/paver:paver-test",
