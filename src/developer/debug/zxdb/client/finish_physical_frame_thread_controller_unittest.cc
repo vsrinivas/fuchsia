@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/client/finish_physical_frame_thread_controller.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/inline_thread_controller_test.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -33,8 +34,8 @@ class FinishPhysicalFrameThreadControllerTest
     n.thread.thread_koid = thread()->GetKoid();
     n.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
     n.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
-    n.thread.frames.emplace_back(kInitialAddress, kInitialBase, kInitialBase);
-    n.thread.frames.emplace_back(kReturnAddress, kReturnBase, kReturnBase);
+    n.thread.frames.emplace_back(kInitialAddress, kInitialBase);
+    n.thread.frames.emplace_back(kReturnAddress, kReturnBase);
 
     return n;
   }
@@ -49,7 +50,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, Finish) {
   InjectException(break_notification);
 
   constexpr uint64_t kBottomBase = kReturnBase + 0x10;
-  debug_ipc::StackFrame bottom_frame(kReturnAddress, kBottomBase, kBottomBase);
+  debug_ipc::StackFrame bottom_frame(kReturnAddress, kBottomBase);
 
   // Supply three frames for when the thread requests them: the top one (of the
   // stop above), the one we'll return to, and the one before that (so the
@@ -87,7 +88,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, Finish) {
   // Simulate a hit of the breakpoint. This stack frame is a recursive call
   // above the frame we're returning to so it should not trigger.
   break_frames.emplace(break_frames.begin(), kReturnAddress,
-                       kInitialBase - 0x100, kInitialBase - 0x100);
+                       kInitialBase - 0x100);
   break_notification.hit_breakpoints.emplace_back();
   break_notification.hit_breakpoints[0].id =
       mock_remote_api()->last_breakpoint_id();
@@ -110,7 +111,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, BottomStackFrame) {
   // Notify of thread stop. Here we have the 0th frame of the current
   // location, and a null frame.
   auto break_notification = MakeBreakNotification();
-  break_notification.thread.frames[1] = debug_ipc::StackFrame(0, 0, 0);
+  break_notification.thread.frames[1] = debug_ipc::StackFrame(0, 0);
   InjectException(break_notification);
 
   // The backtrace reply gives the same two frames since that's all there is
@@ -197,9 +198,9 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
       mock_frames.begin(),
       std::make_unique<MockFrame>(
           nullptr, nullptr,
-          debug_ipc::StackFrame(second_inline_range.begin(), kMiddleSP,
-                                kMiddleSP),
-          second_inline_loc, mock_frames[0]->GetPhysicalFrame(), true));
+          debug_ipc::StackFrame(second_inline_range.begin(), kMiddleSP),
+          second_inline_loc, kMiddleSP, mock_frames[0]->GetPhysicalFrame(),
+          true));
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,

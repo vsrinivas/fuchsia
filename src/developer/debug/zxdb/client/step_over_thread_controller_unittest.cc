@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
+
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/inline_thread_controller_test.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -177,8 +178,8 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   mock_frames = GetStack();
   mock_frames[0] = std::make_unique<MockFrame>(
       nullptr, nullptr,
-      debug_ipc::StackFrame(second_inline_range.begin(), kTopSP, kTopSP),
-      second_inline_loc, mock_frames[1].get(), true);
+      debug_ipc::StackFrame(second_inline_range.begin(), kTopSP),
+      second_inline_loc, kTopSP, mock_frames[1].get(), true);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),

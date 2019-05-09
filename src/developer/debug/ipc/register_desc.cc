@@ -6,9 +6,9 @@
 
 #include <map>
 
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
-#include "src/developer/debug/ipc/protocol.h"
 
 namespace debug_ipc {
 namespace {
@@ -421,8 +421,6 @@ RegisterID GetSpecialRegisterID(Arch arch, SpecialRegisterType type) {
           return RegisterID::kX64_rip;
         case SpecialRegisterType::kSP:
           return RegisterID::kX64_rsp;
-        case SpecialRegisterType::kBP:
-          return RegisterID::kX64_rbp;
       }
       break;
 
@@ -434,8 +432,6 @@ RegisterID GetSpecialRegisterID(Arch arch, SpecialRegisterType type) {
           return RegisterID::kARMv8_pc;
         case SpecialRegisterType::kSP:
           return RegisterID::kARMv8_sp;
-        case SpecialRegisterType::kBP:
-          return RegisterID::kARMv8_x29;
       }
       break;
 
@@ -500,8 +496,6 @@ SpecialRegisterType GetSpecialRegisterType(RegisterID id) {
     case RegisterID::kARMv8_sp:
       return debug_ipc::SpecialRegisterType::kSP;
     case RegisterID::kX64_rbp:
-    case RegisterID::kARMv8_x29:
-      return debug_ipc::SpecialRegisterType::kBP;
     default:
       return debug_ipc::SpecialRegisterType::kNone;
   }

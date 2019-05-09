@@ -12,11 +12,12 @@ namespace zxdb {
 
 MockFrame::MockFrame(Session* session, Thread* thread,
                      const debug_ipc::StackFrame& stack_frame,
-                     const Location& location, const Frame* physical_frame,
-                     bool is_ambiguous_inline)
+                     const Location& location, uint64_t frame_base,
+                     const Frame* physical_frame, bool is_ambiguous_inline)
     : Frame(session),
       thread_(thread),
       stack_frame_(stack_frame),
+      frame_base_(frame_base),
       physical_frame_(physical_frame),
       location_(location),
       is_ambiguous_inline_(is_ambiguous_inline) {}
@@ -45,13 +46,12 @@ const Frame* MockFrame::GetPhysicalFrame() const {
 
 const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return stack_frame_.ip; }
-uint64_t MockFrame::GetBasePointerRegister() const { return stack_frame_.bp; }
 std::optional<uint64_t> MockFrame::GetBasePointer() const {
-  return stack_frame_.bp;
+  return frame_base_;
 }
-void MockFrame::GetBasePointerAsync(std::function<void(uint64_t bp)> cb) {
+void MockFrame::GetBasePointerAsync(std::function<void(uint64_t)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [bp = stack_frame_.bp, cb]() { cb(bp); });
+      FROM_HERE, [bp = frame_base_, cb]() { cb(bp); });
 }
 uint64_t MockFrame::GetStackPointer() const { return stack_frame_.sp; }
 

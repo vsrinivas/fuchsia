@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/console/format_frame.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
@@ -50,9 +51,10 @@ std::string SyncFormatFrameLong(const Frame* frame,
 }  // namespace
 
 TEST(FormatFrame, Unsymbolized) {
-  debug_ipc::StackFrame stack_frame(0x12345678, 0xdeadbeef, 0x567890);
+  debug_ipc::StackFrame stack_frame(0x12345678, 0x567890);
   MockFrame frame(nullptr, nullptr, stack_frame,
-                  Location(Location::State::kSymbolized, stack_frame.ip));
+                  Location(Location::State::kSymbolized, stack_frame.ip),
+                  0xdeadbeef);
 
   OutputBuffer out;
 
@@ -61,7 +63,7 @@ TEST(FormatFrame, Unsymbolized) {
   EXPECT_EQ("0x12345678", out.AsString());
 
   // Long version should do the same (not duplicate it).
-  EXPECT_EQ("\n      IP = 0x12345678, BP = 0xdeadbeef, SP = 0x567890",
+  EXPECT_EQ("\n      IP = 0x12345678, SP = 0x567890",
             SyncFormatFrameLong(&frame, FormatExprValueOptions()));
 
   // With index.
@@ -71,7 +73,7 @@ TEST(FormatFrame, Unsymbolized) {
 }
 
 TEST(FormatFrame, Inline) {
-  debug_ipc::StackFrame stack_frame(0x12345678, 0xdeadbeef, 0x567890);
+  debug_ipc::StackFrame stack_frame(0x12345678, 0x567890);
 
   // This is to have some place for the inline frame to refer to as the
   // underlying physical frame. The values are ignored.
@@ -87,11 +89,11 @@ TEST(FormatFrame, Inline) {
   MockFrame inline_frame(nullptr, nullptr, stack_frame,
                          Location(stack_frame.ip, FileLine("file.cc", 22), 0,
                                   symbol_context, LazySymbol(function)),
-                         &physical_frame);
+                         0xdeadbeef, &physical_frame);
 
   EXPECT_EQ(
       "Function() • file.cc:22 (inline)\n"
-      "      IP = 0x12345678, BP = 0xdeadbeef, SP = 0x567890",
+      "      IP = 0x12345678, SP = 0x567890",
       SyncFormatFrameLong(&inline_frame, FormatExprValueOptions()));
 }
 

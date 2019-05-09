@@ -135,15 +135,11 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
   if (frame->IsInline())
     out->Append(OutputBuffer(Syntax::kComment, " (inline)"));
 
-  // Long format includes the IP address.
-  uint64_t bp = 0;
-  if (auto optional_bp = frame->GetBasePointer())
-    bp = *optional_bp;
+  // Long format includes the IP address and stack pointer.
   out->Append(OutputBuffer(
       Syntax::kComment,
-      fxl::StringPrintf("\n      IP = 0x%" PRIx64 ", BP = 0x%" PRIx64
-                        ", SP = 0x%" PRIx64,
-                        frame->GetAddress(), bp, frame->GetStackPointer())));
+      fxl::StringPrintf("\n      IP = 0x%" PRIx64 ", SP = 0x%" PRIx64,
+                        frame->GetAddress(), frame->GetStackPointer())));
 
   if (location.symbol()) {
     const Function* func = location.symbol().Get()->AsFunction();

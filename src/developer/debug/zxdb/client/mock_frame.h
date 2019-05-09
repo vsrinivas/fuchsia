@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_FRAME_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_FRAME_H_
 
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 
@@ -27,7 +28,7 @@ class MockFrame : public Frame {
   // Stack). A null physical frame indicates that this is not inline.
   MockFrame(Session* session, Thread* thread,
             const debug_ipc::StackFrame& stack_frame, const Location& location,
-            const Frame* physical_frame = nullptr,
+            uint64_t frame_base = 0, const Frame* physical_frame = nullptr,
             bool is_ambiguous_inline = false);
 
   ~MockFrame() override;
@@ -56,7 +57,6 @@ class MockFrame : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  uint64_t GetBasePointerRegister() const override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
@@ -68,6 +68,7 @@ class MockFrame : public Frame {
   Thread* thread_;
 
   debug_ipc::StackFrame stack_frame_;
+  uint64_t frame_base_;
   const Frame* physical_frame_;  // Null if non-inlined.
   Location location_;
   mutable fxl::RefPtr<MockSymbolDataProvider> symbol_data_provider_;  // Lazy.
@@ -78,3 +79,5 @@ class MockFrame : public Frame {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_FRAME_H_

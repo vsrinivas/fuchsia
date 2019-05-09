@@ -7,7 +7,6 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol_helpers.h"
-
 #include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
@@ -95,8 +94,6 @@ bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat) {
 
 bool Deserialize(MessageReader* reader, StackFrame* frame) {
   if (!reader->ReadUint64(&frame->ip))
-    return false;
-  if (!reader->ReadUint64(&frame->bp))
     return false;
   if (!reader->ReadUint64(&frame->sp))
     return false;
@@ -454,8 +451,8 @@ bool ReadReply(MessageReader* reader, RemoveBreakpointReply* reply,
 
 // SysInfo ---------------------------------------------------------------------
 
-void WriteRequest(const SysInfoRequest& request,
-                  uint32_t transaction_id, MessageWriter* writer) {
+void WriteRequest(const SysInfoRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kSysInfo, transaction_id);
 }
 

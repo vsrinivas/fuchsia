@@ -98,7 +98,6 @@ void Serialize(const RegisterCategory& reg_cat, MessageWriter* writer) {
 
 void Serialize(const StackFrame& frame, MessageWriter* writer) {
   writer->WriteUint64(frame.ip);
-  writer->WriteUint64(frame.bp);
   writer->WriteUint64(frame.sp);
   Serialize(frame.regs, writer);
 }
@@ -556,7 +555,7 @@ bool ReadRequest(MessageReader* reader, ConfigAgentRequest* request,
 }
 
 void WriteReply(const ConfigAgentReply& reply, uint32_t transaction_id,
-    MessageWriter* writer) {
+                MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kConfigAgent, transaction_id);
   Serialize(reply.results, writer);
 }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/client/thread_impl.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -85,7 +86,7 @@ TEST_F(ThreadImplTest, Frames) {
   break_notification.thread.process_koid = kProcessKoid;
   break_notification.thread.thread_koid = kThreadKoid;
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  break_notification.thread.frames.emplace_back(kAddress1, kStack1, kStack1);
+  break_notification.thread.frames.emplace_back(kAddress1, kStack1);
   InjectException(break_notification);
 
   // There should be one frame with the address of the stop.
@@ -103,7 +104,7 @@ TEST_F(ThreadImplTest, Frames) {
   expected_reply.record = break_notification.thread;  // Copies existing frame.
   expected_reply.record.stack_amount =
       debug_ipc::ThreadRecord::StackAmount::kFull;
-  expected_reply.record.frames.emplace_back(kAddress2, 0, kStack2);
+  expected_reply.record.frames.emplace_back(kAddress2, kStack2);
   mock_remote_api().set_thread_status_reply(expected_reply);
 
   // Asynchronously request the frames.
@@ -153,7 +154,7 @@ TEST_F(ThreadImplTest, ControllersWithGeneralException) {
   notification.thread.process_koid = kProcessKoid;
   notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  notification.thread.frames.emplace_back(kAddress1, kStack1, kStack1);
+  notification.thread.frames.emplace_back(kAddress1, kStack1);
   InjectException(notification);
 
   // Set a controller that always says to continue.
@@ -193,7 +194,7 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
   notification.thread.process_koid = kProcessKoid;
   notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  notification.thread.frames.emplace_back(kAddress1, kStack1, kStack1);
+  notification.thread.frames.emplace_back(kAddress1, kStack1);
   InjectException(notification);
 
   // No controllers means the thread should report "stopped".
@@ -238,7 +239,7 @@ TEST_F(ThreadImplTest, JumpTo) {
   notification.thread.process_koid = kProcessKoid;
   notification.thread.thread_koid = kThreadKoid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  notification.thread.frames.emplace_back(kAddress1, kStack, kStack);
+  notification.thread.frames.emplace_back(kAddress1, kStack);
   InjectException(notification);
 
   // Canned response for thread status.

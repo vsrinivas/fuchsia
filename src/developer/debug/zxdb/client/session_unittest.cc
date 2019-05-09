@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/client/session.h"
+
 #include <set>
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
-#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
@@ -187,7 +188,7 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   notify.thread.thread_koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   // Don't need stack pointers for this test.
-  notify.thread.frames.emplace_back(kAddress, 0, 0);
+  notify.thread.frames.emplace_back(kAddress, 0);
   sink()->PopulateNotificationWithBreakpoints(&notify);
   InjectException(notify);
 
@@ -233,7 +234,7 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
   notify.thread.thread_koid = kThreadKoid;
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   // Don't need stack pointers for this test.
-  notify.thread.frames.emplace_back(kAddress, 0, 0);
+  notify.thread.frames.emplace_back(kAddress, 0);
   sink()->PopulateNotificationWithBreakpoints(&notify);
 
   // There should have been one breakpoint populated, mark deleted.

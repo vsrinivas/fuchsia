@@ -1000,10 +1000,6 @@ void MinidumpRemoteAPI::ThreadStatus(
     dest.sp = src.sp;
   }
 
-  if (!reply.record.frames.empty()) {
-    reply.record.frames[0].bp = bp;
-  }
-
   Succeed(cb, reply);
 }
 

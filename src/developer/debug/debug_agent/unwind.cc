@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <ngunwind/fuchsia.h>
 #include <ngunwind/libunwind.h>
+
 #include <algorithm>
 
 #include "garnet/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
@@ -65,7 +66,8 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
 
   auto memory = std::make_shared<unwindstack::MemoryFuchsia>(process.get());
 
-  unwindstack::Unwinder unwinder(max_depth, &maps, &unwind_regs, std::move(memory));
+  unwindstack::Unwinder unwinder(max_depth, &maps, &unwind_regs,
+                                 std::move(memory));
   unwinder.Unwind();
 
   stack->resize(unwinder.NumFrames());
@@ -76,28 +78,12 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
     dest->sp = src.sp;
   }
 
-  // Add the base pointer for the top stack frame.
-  // TODO(brettw) libstackunwind should be able to give us base pointers for
-  // other frames when we're compiling with frame pointers.
-  (*stack)[0].bp = *arch::ArchProvider::Get().BPInRegs(
-      const_cast<zx_thread_state_general_regs*>(&regs));
-
   // Add all registers to the top stack frame.
-  arch::ArchProvider::Get().SaveGeneralRegs(regs,
-      arch::ArchProvider::SaveGeneralWhat::kNoIPSP, &(*stack)[0].regs);
+  arch::ArchProvider::Get().SaveGeneralRegs(
+      regs, arch::ArchProvider::SaveGeneralWhat::kNoIPSP, &(*stack)[0].regs);
 
   return 0;
 }
-
-// Libunwind doesn't have a cross-platform typedef for the frame pointer
-// register so define one.
-#if defined(__x86_64__)
-#define LIBUNWIND_FRAME_POINTER_REGISTER UNW_X86_64_RBP
-#elif defined(__aarch64__)
-#define LIBUNWIND_FRAME_POINTER_REGISTER UNW_AARCH64_X29
-#else
-#error Need frame pointer.
-#endif
 
 using ModuleVector = std::vector<debug_ipc::Module>;
 
@@ -156,8 +142,8 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process,
       const_cast<zx_thread_state_general_regs*>(&regs));
   frame.sp = *arch::ArchProvider::Get().SPInRegs(
       const_cast<zx_thread_state_general_regs*>(&regs));
-  arch::ArchProvider::Get().SaveGeneralRegs(regs,
-      arch::ArchProvider::SaveGeneralWhat::kNoIPSP, &frame.regs);
+  arch::ArchProvider::Get().SaveGeneralRegs(
+      regs, arch::ArchProvider::SaveGeneralWhat::kNoIPSP, &frame.regs);
   stack->push_back(std::move(frame));
 
   while (frame.sp >= 0x1000000 && stack->size() < max_depth) {
@@ -173,9 +159,6 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process,
 
     unw_get_reg(&cursor, UNW_REG_SP, &val);
     frame.sp = val;
-
-    unw_get_reg(&cursor, LIBUNWIND_FRAME_POINTER_REGISTER, &val);
-    frame.bp = val;
 
     // Note that libunwind may theoretically be able to give us all
     // callee-saved register values for a given frame. Currently asking for any
@@ -210,8 +193,8 @@ zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
       return UnwindStackNgUnwind(process, dl_debug_addr, thread, regs,
                                  max_depth, stack);
     case UnwinderType::kAndroid:
-      return UnwindStackAndroid(process, dl_debug_addr, thread, regs,
-                                max_depth, stack);
+      return UnwindStackAndroid(process, dl_debug_addr, thread, regs, max_depth,
+                                stack);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

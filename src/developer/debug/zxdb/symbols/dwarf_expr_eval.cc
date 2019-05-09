@@ -254,7 +254,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_call4:     // 4-byte offset of DIE.
     case llvm::dwarf::DW_OP_call_ref:  // 4- or 8-byte offset of DIE.
     case llvm::dwarf::DW_OP_form_tls_address:
-    case llvm::dwarf::DW_OP_call_frame_cfa:
+    case llvm::dwarf::DW_OP_call_frame_cfa:  // TODO(DX-1510).
     case llvm::dwarf::DW_OP_bit_piece:       // ULEB128 size + ULEB128 offset.
     case llvm::dwarf::DW_OP_implicit_value:  // ULEB128 size + block of size.
       // TODO(brettw) implement these.

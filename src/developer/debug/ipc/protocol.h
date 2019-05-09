@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_DEBUG_IPC_PROTOCOL_H_
-#define GARNET_LIB_DEBUG_IPC_PROTOCOL_H_
+#ifndef SRC_DEVELOPER_DEBUG_IPC_PROTOCOL_H_
+#define SRC_DEVELOPER_DEBUG_IPC_PROTOCOL_H_
 
 #include "src/developer/debug/ipc/records.h"
 
@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 9;
+constexpr uint32_t kProtocolVersion = 10;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -459,4 +459,4 @@ struct NotifyIO {
 
 }  // namespace debug_ipc
 
-#endif  // GARNET_LIB_DEBUG_IPC_PROTOCOL_H_
+#endif  // SRC_DEVELOPER_DEBUG_IPC_PROTOCOL_H_

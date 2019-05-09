@@ -47,8 +47,6 @@ std::optional<uint64_t> FrameSymbolDataProvider::GetRegister(
       return frame_->GetAddress();
     case debug_ipc::SpecialRegisterType::kSP:
       return frame_->GetStackPointer();
-    case debug_ipc::SpecialRegisterType::kBP:
-      return frame_->GetBasePointerRegister();
     case debug_ipc::SpecialRegisterType::kNone:
       break;
   }

@@ -4,7 +4,6 @@
 
 #include "src/developer/debug/zxdb/client/frame_impl.h"
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
@@ -15,6 +14,7 @@
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/developer/debug/zxdb/symbols/variable_location.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -42,8 +42,6 @@ const Location& FrameImpl::GetLocation() const {
 }
 
 uint64_t FrameImpl::GetAddress() const { return location_.address(); }
-
-uint64_t FrameImpl::GetBasePointerRegister() const { return stack_frame_.bp; }
 
 std::optional<uint64_t> FrameImpl::GetBasePointer() const {
   // This function is logically const even though EnsureBasePointer does some
@@ -117,7 +115,7 @@ bool FrameImpl::EnsureBasePointer() {
   const Location& loc = GetLocation();
   if (!loc.symbol()) {
     // Unsymbolized.
-    computed_base_pointer_ = stack_frame_.bp;
+    computed_base_pointer_ = 0;
     return true;
   }
 
@@ -126,7 +124,7 @@ bool FrameImpl::EnsureBasePointer() {
   if (!function || !(location_entry = function->frame_base().EntryForIP(
                          loc.symbol_context(), GetAddress()))) {
     // No frame base declared for this function.
-    computed_base_pointer_ = stack_frame_.bp;
+    computed_base_pointer_ = 0;
     return true;
   }
 
@@ -144,7 +142,7 @@ bool FrameImpl::EnsureBasePointer() {
     } else {
       // We don't currently report errors for frame base requests, but instead
       // just fall back on what was computed by the backend.
-      computed_base_pointer_ = stack_frame_.bp;
+      computed_base_pointer_ = 0;
     }
 
     // Issue callbacks for everybody waiting. Moving to a local here prevents

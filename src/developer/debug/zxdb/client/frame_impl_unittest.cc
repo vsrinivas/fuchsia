@@ -101,7 +101,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   constexpr uint64_t kProcessKoid = 1234;
   Process* process = InjectProcess(kProcessKoid);
 
-  const debug_ipc::StackFrame stack(0x12345678, 0xabcdef, 0x7890);
+  const debug_ipc::StackFrame stack(0x12345678, 0x7890);
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
   // This describes the frame base location for the function.
@@ -134,10 +134,9 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   });
 
   // We didn't provide a "register 0" in the register reply which means the
-  // DWARF expression evaluation will fail. This should then fall back to the
-  // base pointer extracted by the backend.
+  // DWARF expression evaluation will fail.
   debug_ipc::MessageLoop::Current()->Run();
-  EXPECT_EQ(stack.bp, sync_base);
+  EXPECT_EQ(0u, sync_base);
 
   // Now set the registers. Need a new frame because the old computed base
   // pointer will be cached.

@@ -76,7 +76,7 @@ TEST(InputLocationParser, Parse) {
   EXPECT_TRUE(err.has_error());
 
   // Implicit file name and valid frame but the location has no file name.
-  debug_ipc::StackFrame stack_frame(0x1234, 0x12345678, 0x12345678);
+  debug_ipc::StackFrame stack_frame(0x1234, 0x12345678);
   MockFrame frame_no_file(
       nullptr, nullptr, stack_frame,
       Location(0x1234, FileLine(), 0, relative_context, LazySymbol()));

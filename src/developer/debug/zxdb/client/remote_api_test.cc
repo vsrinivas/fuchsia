@@ -78,7 +78,6 @@ void RemoteAPITest::InjectExceptionWithStack(
   modified.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
   modified.thread.frames.clear();
   modified.thread.frames.emplace_back(frames[0]->GetAddress(),
-                                      frames[0]->GetBasePointerRegister(),
                                       frames[0]->GetStackPointer());
 
   // To manually set the thread state, set the general metadata which will pick

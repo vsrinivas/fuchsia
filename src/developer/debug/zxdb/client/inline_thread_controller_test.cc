@@ -125,9 +125,9 @@ Location InlineThreadControllerTest::GetMiddleInline2Location(
 // static
 std::unique_ptr<MockFrame> InlineThreadControllerTest::GetTopFrame(
     uint64_t address) {
-  return std::make_unique<MockFrame>(
-      nullptr, nullptr, debug_ipc::StackFrame(address, kTopSP, kTopSP),
-      GetTopLocation(address));
+  return std::make_unique<MockFrame>(nullptr, nullptr,
+                                     debug_ipc::StackFrame(address, kTopSP),
+                                     GetTopLocation(address));
 }
 
 // static
@@ -135,25 +135,25 @@ std::unique_ptr<MockFrame> InlineThreadControllerTest::GetTopInlineFrame(
     uint64_t address, MockFrame* top) {
   // The location is ambiguous if the address is at the beginning of the range.
   return std::make_unique<MockFrame>(
-      nullptr, nullptr, debug_ipc::StackFrame(address, kTopSP, kTopSP),
-      GetTopInlineLocation(address), top,
+      nullptr, nullptr, debug_ipc::StackFrame(address, kTopSP),
+      GetTopInlineLocation(address), kTopSP, top,
       address == kTopInlineFunctionRange.begin());
 }
 
 // static
 std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleFrame(
     uint64_t address) {
-  return std::make_unique<MockFrame>(
-      nullptr, nullptr, debug_ipc::StackFrame(address, kMiddleSP, kMiddleSP),
-      GetMiddleLocation(address));
+  return std::make_unique<MockFrame>(nullptr, nullptr,
+                                     debug_ipc::StackFrame(address, kMiddleSP),
+                                     GetMiddleLocation(address), kMiddleSP);
 }
 
 // static
 std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleInline1Frame(
     uint64_t address, MockFrame* middle) {
   return std::make_unique<MockFrame>(
-      nullptr, nullptr, debug_ipc::StackFrame(address, kMiddleSP, kMiddleSP),
-      GetMiddleInline1Location(address), middle,
+      nullptr, nullptr, debug_ipc::StackFrame(address, kMiddleSP),
+      GetMiddleInline1Location(address), kMiddleSP, middle,
       address == kMiddleInline1FunctionRange.begin());
 }
 
@@ -161,8 +161,8 @@ std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleInline1Frame(
 std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleInline2Frame(
     uint64_t address, MockFrame* middle) {
   return std::make_unique<MockFrame>(
-      nullptr, nullptr, debug_ipc::StackFrame(address, kMiddleSP, kMiddleSP),
-      GetMiddleInline2Location(address), middle,
+      nullptr, nullptr, debug_ipc::StackFrame(address, kMiddleSP),
+      GetMiddleInline2Location(address), kMiddleSP, middle,
       address == kMiddleInline2FunctionRange.begin());
 }
 
@@ -170,7 +170,7 @@ std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleInline2Frame(
 std::unique_ptr<MockFrame> InlineThreadControllerTest::GetBottomFrame(
     uint64_t address) {
   return std::make_unique<MockFrame>(
-      nullptr, nullptr, debug_ipc::StackFrame(address, kBottomSP, kBottomSP),
+      nullptr, nullptr, debug_ipc::StackFrame(address, kBottomSP),
       Location(Location::State::kSymbolized, address));
 }
 

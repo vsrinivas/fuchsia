@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_IMPL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_IMPL_H_
 
 #include <memory>
 #include <optional>
 
-#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
 
@@ -32,7 +33,6 @@ class FrameImpl final : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  uint64_t GetBasePointerRegister() const override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
@@ -75,3 +75,5 @@ class FrameImpl final : public Frame {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_IMPL_H_

@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/client/stack.h"
+
 #include <map>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
-#include "src/developer/debug/zxdb/client/stack.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -76,11 +77,11 @@ constexpr uint64_t kBottomSP = 0x2040;
 //   [5] = physical frame at kBottomSP
 std::vector<std::unique_ptr<Frame>> MakeInlineStackFrames() {
   // Create three physical frames.
-  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP, kTopSP);
+  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP);
   Location top_location(Location::State::kSymbolized, phys_top_record.ip);
-  debug_ipc::StackFrame phys_middle_record(0x1010, kMiddleSP, kMiddleSP);
+  debug_ipc::StackFrame phys_middle_record(0x1010, kMiddleSP);
   Location middle_location(Location::State::kSymbolized, phys_middle_record.ip);
-  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP, kBottomSP);
+  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP);
   Location bottom_location(Location::State::kSymbolized, phys_bottom_record.ip);
 
   auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
@@ -95,17 +96,17 @@ std::vector<std::unique_ptr<Frame>> MakeInlineStackFrames() {
   // Top frame has two inline functions expanded on top of it. This uses the
   // same Location object for simplicity, in real life these will be different.
   frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_top_record, top_location, phys_top.get()));
+      nullptr, nullptr, phys_top_record, top_location, kTopSP, phys_top.get()));
   frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_top_record, top_location, phys_top.get()));
+      nullptr, nullptr, phys_top_record, top_location, kTopSP, phys_top.get()));
 
   // Physical top frame below those.
   frames.push_back(std::move(phys_top));
 
   // Middle frame has one inline function expanded on top of it.
-  frames.push_back(
-      std::make_unique<MockFrame>(nullptr, nullptr, phys_middle_record,
-                                  middle_location, phys_middle.get()));
+  frames.push_back(std::make_unique<MockFrame>(
+      nullptr, nullptr, phys_middle_record, middle_location, kMiddleSP,
+      phys_middle.get()));
   frames.push_back(std::move(phys_middle));
 
   // Bottom frame has no inline frame.
@@ -332,8 +333,8 @@ TEST_F(StackTest, InlineExpansion) {
 
   // Send IPs that will map to the bottom and top addresses.
   stack.SetFrames(debug_ipc::ThreadRecord::StackAmount::kFull,
-                  {debug_ipc::StackFrame(kTopAddr, 0x100, 0x100),
-                   debug_ipc::StackFrame(kBottomAddr, 0x200, 0x200)});
+                  {debug_ipc::StackFrame(kTopAddr, 0x100),
+                   debug_ipc::StackFrame(kBottomAddr, 0x200)});
 
   // This should expand to tree stack entries, the one in the middle should
   // be the inline function expanded from the "bottom".
@@ -379,9 +380,9 @@ TEST_F(StackTest, InlineHiding) {
   constexpr uint64_t kBottomSP = 0x2020;
 
   // Create two physical frames.
-  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP, kTopSP);
+  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP);
   Location top_location(Location::State::kSymbolized, phys_top_record.ip);
-  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP, kBottomSP);
+  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP);
   Location bottom_location(Location::State::kSymbolized, phys_bottom_record.ip);
 
   auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
@@ -392,10 +393,12 @@ TEST_F(StackTest, InlineHiding) {
   std::vector<std::unique_ptr<Frame>> frames;
 
   // Top frame has two inline functions expanded on top of it.
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_top_record, top_location, phys_top.get(), true));
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_top_record, top_location, phys_top.get(), true));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr,
+                                               phys_top_record, top_location,
+                                               kTopSP, phys_top.get(), true));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr,
+                                               phys_top_record, top_location,
+                                               kTopSP, phys_top.get(), true));
 
   // Physical top frame below those.
   frames.push_back(std::move(phys_top));
@@ -430,12 +433,13 @@ TEST_F(StackTest, UpdateExisting) {
   delegate.set_stack(&stack);
 
   // Make a stack with one physial frame and one inline frame above it.
-  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP, kTopSP);
+  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP);
   Location top_location(Location::State::kSymbolized, phys_top_record.ip);
   auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
-                                              top_location);
-  auto inline_top = std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_top_record, top_location, phys_top.get(), true);
+                                              top_location, kTopSP);
+  auto inline_top =
+      std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
+                                  top_location, kTopSP, phys_top.get(), true);
   inline_top->set_is_ambiguous_inline(true);
 
   // Save for verification later.
@@ -458,7 +462,7 @@ TEST_F(StackTest, UpdateExisting) {
   // preserve the frame objects that haven't changed.
   std::vector<debug_ipc::StackFrame> raw_frames;
   raw_frames.push_back(phys_top_record);
-  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP, kBottomSP);
+  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP);
   raw_frames.push_back(phys_bottom_record);
 
   stack.SetFrames(debug_ipc::ThreadRecord::StackAmount::kFull, raw_frames);

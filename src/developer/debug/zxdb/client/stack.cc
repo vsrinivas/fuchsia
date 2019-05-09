@@ -6,8 +6,6 @@
 
 #include <map>
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -15,6 +13,8 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace zxdb {
 
@@ -39,9 +39,6 @@ class InlineFrame final : public Frame {
   const Frame* GetPhysicalFrame() const override { return physical_frame_; }
   const Location& GetLocation() const override { return location_; }
   uint64_t GetAddress() const override { return location_.address(); }
-  uint64_t GetBasePointerRegister() const override {
-    return physical_frame_->GetBasePointerRegister();
-  }
   std::optional<uint64_t> GetBasePointer() const override {
     return physical_frame_->GetBasePointer();
   }
@@ -261,8 +258,7 @@ void Stack::SetFrames(debug_ipc::ThreadRecord::StackAmount amount,
 
     if (appending_from >= new_frames.size() ||
         frames_[i]->GetAddress() != new_frames[appending_from].ip ||
-        frames_[i]->GetStackPointer() != new_frames[appending_from].sp ||
-        frames_[i]->GetBasePointerRegister() != new_frames[appending_from].bp) {
+        frames_[i]->GetStackPointer() != new_frames[appending_from].sp) {
       // New frames are not a superset of our existing stack, replace
       // everything.
       hide_ambiguous_inline_frame_count_ = 0;

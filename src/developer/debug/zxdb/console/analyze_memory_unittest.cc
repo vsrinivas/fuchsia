@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/console/analyze_memory.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
@@ -89,11 +90,11 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   const uint64_t kStack0SP = kBegin;
   const uint64_t kStack1SP = kBegin + 8;
   frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, debug_ipc::StackFrame(0x100, kStack0SP, kStack0SP),
-      Location(Location::State::kSymbolized, 0x1234)));
+      nullptr, nullptr, debug_ipc::StackFrame(0x100, kStack0SP),
+      Location(Location::State::kSymbolized, 0x1234), kStack0SP));
   frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, debug_ipc::StackFrame(0x108, kStack1SP, kStack1SP),
-      Location(Location::State::kSymbolized, 0x1234)));
+      nullptr, nullptr, debug_ipc::StackFrame(0x108, kStack1SP),
+      Location(Location::State::kSymbolized, 0x1234), kStack1SP));
 
   // Stack to hold our mock frames. This stack doesn't need to do anything
   // other than return the frames again, so the delegate can be null.

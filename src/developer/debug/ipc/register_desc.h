@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_IPC_REGISTER_DESC_H_
+#define SRC_DEVELOPER_DEBUG_IPC_REGISTER_DESC_H_
 
 #include <stdint.h>
 
@@ -19,7 +20,7 @@ namespace debug_ipc {
 enum class Arch : uint32_t;        // Forward declaration
 enum class RegisterID : uint32_t;  // Forward declaration.
 
-enum class SpecialRegisterType { kNone, kIP, kSP, kBP };
+enum class SpecialRegisterType { kNone, kIP, kSP };
 
 const char* RegisterIDToString(debug_ipc::RegisterID);
 debug_ipc::RegisterID StringToRegisterID(const std::string&);
@@ -278,3 +279,5 @@ enum class RegisterID : uint32_t {
 };
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_IPC_REGISTER_DESC_H_

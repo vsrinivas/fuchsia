@@ -549,7 +549,7 @@ TEST_F(InterceptionWorkflowTest, ZxChannelRead) {
     notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
     notification.thread.stack_amount =
         debug_ipc::ThreadRecord::StackAmount::kMinimal;
-    debug_ipc::StackFrame frame(1, 2, 3);
+    debug_ipc::StackFrame frame(1, 3);
     notification.thread.frames.push_back(frame);
     mock_remote_api().PopulateBreakpointIds(
         DataForZxChannelTest::kReadElfSymbolAddress, notification);

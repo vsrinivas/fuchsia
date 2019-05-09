@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_H_
 
 #include <stdint.h>
 
@@ -47,13 +48,6 @@ class Frame : public ClientObject {
   // GetLocation().address() since it doesn't need to be symbolized.
   virtual uint64_t GetAddress() const = 0;
 
-  // Returns the value of the base pointer register computed by the backend.
-  // Most callers will want to use the GetBasePointer() call below which
-  // takes into account symbol information that may redirect the logical base
-  // pointer to somewhere else. This function specifically returns the CPU
-  // value.
-  virtual uint64_t GetBasePointerRegister() const = 0;
-
   // The frame base pointer.
   //
   // This is not necessarily the "BP" register. The symbols can specify
@@ -94,3 +88,5 @@ class Frame : public ClientObject {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_H_
