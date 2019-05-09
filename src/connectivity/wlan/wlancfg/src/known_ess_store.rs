@@ -221,7 +221,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Enable after change to devfs.
     fn bail_if_path_is_bad() {
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let store = KnownEssStore::new_with_paths(
