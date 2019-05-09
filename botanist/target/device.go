@@ -117,22 +117,6 @@ func (t *DeviceTarget) SSHKey() string {
 
 // Start starts the device target.
 func (t *DeviceTarget) Start(ctx context.Context, images build.Images, args []string) error {
-	if t.opts.Fastboot != "" {
-		zirconR := images.Get("zircon-r")
-		if zirconR == nil {
-			return fmt.Errorf("zircon-r not provided")
-		}
-		// If it can't find any fastboot device, the fastboot tool will hang
-		// waiting, so we add a timeout.  All fastboot operations take less
-		// than a second on a developer workstation, so two minutes to flash
-		// and continue is very generous.
-		ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
-		if err := botanist.FastbootToZedboot(ctx, t.opts.Fastboot, zirconR.Path); err != nil {
-			return fmt.Errorf("failed to fastboot to zedboot: %v", err)
-		}
-	}
-
 	// Set up log listener and dump kernel output to stdout.
 	l, err := netboot.NewLogListener(t.Nodename())
 	if err != nil {

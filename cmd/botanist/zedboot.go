@@ -59,10 +59,6 @@ type ZedbootCommand struct {
 	// CmdlineFile is the path to a file of additional kernel command-line arguments.
 	cmdlineFile string
 
-	// Fastboot is a path to the fastboot tool. If set, botanist will flash
-	// the device into zedboot.
-	fastboot string
-
 	// Host command to run after paving device
 	// TODO(IN-831): Remove when host-target-interaction infra is ready
 	hostCmd string
@@ -89,7 +85,6 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.DurationVar(&cmd.filePollInterval, "poll-interval", 1*time.Minute, "time between checking for summary.json on the target")
 	f.StringVar(&cmd.configFile, "config", "/etc/botanist/config.json", "path to file of device config")
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
-	f.StringVar(&cmd.fastboot, "fastboot", "", "path to the fastboot tool; if set, the device will be flashed into Zedboot. A zircon-r must be supplied via -images")
 	f.StringVar(&cmd.hostCmd, "hacky-host-cmd", "", "host command to run after paving. To be removed on completion of IN-831")
 }
 
@@ -201,7 +196,6 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	}
 	opts := target.Options{
 		Netboot:  cmd.netboot,
-		Fastboot: cmd.fastboot,
 	}
 
 	var devices []*target.DeviceTarget

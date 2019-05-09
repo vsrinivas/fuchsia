@@ -69,10 +69,6 @@ type RunCommand struct {
 	// Netboot tells botanist to netboot (and not to pave).
 	netboot bool
 
-	// Fastboot is a path to the fastboot tool. If set, botanist will flash
-	// the device into zedboot.
-	fastboot string
-
 	// ZirconArgs are kernel command-line arguments to pass on boot.
 	zirconArgs command.StringsFlag
 
@@ -115,7 +111,6 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.configFile, "config", "/etc/botanist/device.json", "path to file of device config")
 	f.Var(&r.imageManifests, "images", "paths to image manifests")
 	f.BoolVar(&r.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
-	f.StringVar(&r.fastboot, "fastboot", "", "path to the fastboot tool; if set, the device will be flashed into Zedboot. A zircon-r must be supplied via -images")
 	f.Var(&r.zirconArgs, "zircon-args", "kernel command-line arguments")
 	f.DurationVar(&r.timeout, "timeout", 10*time.Minute, "duration allowed for the command to finish execution.")
 	f.StringVar(&r.cmdStdout, "stdout", "", "file to redirect the command's stdout into; if unspecified, it will be redirected to the process' stdout")
@@ -207,7 +202,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	opts := target.Options{
 		Netboot:  r.netboot,
-		Fastboot: r.fastboot,
 		SSHKey:   r.sshKey,
 	}
 

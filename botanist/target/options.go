@@ -15,9 +15,4 @@ type Options struct {
 	// SSHKey is a private SSH key file, corresponding to an authorized key to be paved or
 	// to one baked into a boot image.
 	SSHKey string
-
-	// Fastboot is a path to the fastboot binary. If provided, it will be assumed that
-	// the device is waiting in fastboot mode, and it will be attempted to 'continue'
-	// it into zedboot. Ignored for QEMUTarget.
-	Fastboot string
 }
