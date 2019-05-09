@@ -1,13 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-//
-// This file is being moved to //sdk/lib/virtualization.
-// New users should prefer files there instead.
 
-#include "garnet/public/lib/guest/scenic_wayland_dispatcher.h"
+#include "sdk/lib/virtualization/scenic_wayland_dispatcher.h"
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -19,7 +16,7 @@ namespace guest {
 static constexpr const char* kWaylandDispatcherUrl =
     "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
 
-class FakeDispatcher : public fuchsia::guest::WaylandDispatcher,
+class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
                        public fuchsia::wayland::ViewProducer {
  public:
   FakeDispatcher() {
@@ -53,13 +50,13 @@ class FakeDispatcher : public fuchsia::guest::WaylandDispatcher,
   }
 
  private:
-  // |fuchsia::guest::WaylandDispatcher|
+  // |fuchsia::virtualization::WaylandDispatcher|
   void OnNewConnection(zx::channel channel) {
     connections_.push_back(std::move(channel));
   }
 
   sys::testing::FakeComponent component_;
-  fidl::BindingSet<fuchsia::guest::WaylandDispatcher> bindings_;
+  fidl::BindingSet<fuchsia::virtualization::WaylandDispatcher> bindings_;
   fidl::BindingSet<fuchsia::wayland::ViewProducer> view_producer_bindings_;
   std::vector<zx::channel> connections_;
   std::vector<zx::channel> new_view_channels_;

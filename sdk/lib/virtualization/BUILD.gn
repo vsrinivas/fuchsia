@@ -1,0 +1,49 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+source_set("virtualization") {
+  sources = [
+    "scenic_wayland_dispatcher.cc",
+    "scenic_wayland_dispatcher.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/fidl/fuchsia.wayland",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+  ]
+}
+
+executable("virtualization_lib_unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [
+    "scenic_wayland_dispatcher_unittest.cc",
+  ]
+
+  deps = [
+    ":virtualization",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("virtualization_lib_tests") {
+  deps = [
+    ":virtualization_lib_unittests",
+  ]
+
+  tests = [
+    {
+      name = "virtualization_lib_unittests"
+      environments = basic_envs
+    },
+  ]
+}

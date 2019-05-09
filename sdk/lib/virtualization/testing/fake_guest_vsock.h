@@ -1,14 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-//
-// This file is being moved to //sdk/lib/virtualization.
-// New users should prefer files there instead.
 
-#ifndef LIB_GUEST_TESTING_FAKE_GUEST_VSOCK_H_
-#define LIB_GUEST_TESTING_FAKE_GUEST_VSOCK_H_
+#ifndef LIB_VIRTUALIZATION_TESTING_FAKE_GUEST_VSOCK_H_
+#define LIB_VIRTUALIZATION_TESTING_FAKE_GUEST_VSOCK_H_
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 
 #include <unordered_map>
 
@@ -24,8 +21,9 @@ class FakeGuestVsock {
 
   // Attempts to establish a vsock connection to the host endpoint on the given
   // port. For this to succeed, some other component must have already setup
-  // a listener on that port using the |fuchsia::guest::HostVsockEndpoint|
-  // returned from the enclosing |fuchsia::guest::EnvironmentController|.
+  // a listener on that port using the
+  // |fuchsia::virtualization::HostVsockEndpoint| returned from the enclosing
+  // |fuchsia::virtualization::Realm|.
   using ConnectCallback = fit::function<void(zx::handle)>;
   zx_status_t ConnectToHost(uint32_t port, ConnectCallback callback);
 
@@ -42,7 +40,7 @@ class FakeGuestVsock {
   friend class FakeHostVsock;
   void AcceptConnectionFromHost(
       uint32_t port, zx::handle handle,
-      fuchsia::guest::HostVsockEndpoint::ConnectCallback callback);
+      fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback);
 
  private:
   FakeHostVsock* host_vsock_;
@@ -52,4 +50,4 @@ class FakeGuestVsock {
 }  // namespace testing
 }  // namespace guest
 
-#endif  // LIB_GUEST_TESTING_FAKE_GUEST_VSOCK_H_
+#endif  // LIB_VIRTUALIZATION_TESTING_FAKE_GUEST_VSOCK_H_

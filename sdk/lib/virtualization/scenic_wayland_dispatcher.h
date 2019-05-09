@@ -1,14 +1,11 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-//
-// This file is being moved to //sdk/lib/virtualization.
-// New users should prefer files there instead.
 
-#ifndef LIB_GUEST_SCENIC_WAYLAND_DISPATCHER_H_
-#define LIB_GUEST_SCENIC_WAYLAND_DISPATCHER_H_
+#ifndef LIB_VIRTUALIZATION_SCENIC_WAYLAND_DISPATCHER_H_
+#define LIB_VIRTUALIZATION_SCENIC_WAYLAND_DISPATCHER_H_
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/wayland/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
@@ -20,7 +17,8 @@ namespace guest {
 // wayland shell surface.
 //
 // This class is not thread-safe.
-class ScenicWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
+class ScenicWaylandDispatcher
+    : public fuchsia::virtualization::WaylandDispatcher {
  public:
   using ViewListener = fit::function<void(
       fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>)>;
@@ -29,10 +27,11 @@ class ScenicWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
                           ViewListener listener = nullptr)
       : context_(context), listener_(std::move(listener)){};
 
-  // |fuchsia::guest::WaylandDispatcher|
+  // |fuchsia::virtualization::WaylandDispatcher|
   void OnNewConnection(zx::channel channel);
 
-  fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> NewBinding() {
+  fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
+  NewBinding() {
     return bindings_.NewBinding();
   }
 
@@ -42,17 +41,17 @@ class ScenicWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
   void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
   void Reset(zx_status_t status);
 
-  fuchsia::guest::WaylandDispatcher* GetOrStartBridge();
+  fuchsia::virtualization::WaylandDispatcher* GetOrStartBridge();
 
   sys::ComponentContext* context_;
 
   ViewListener listener_;
-  fidl::Binding<fuchsia::guest::WaylandDispatcher> bindings_{this};
+  fidl::Binding<fuchsia::virtualization::WaylandDispatcher> bindings_{this};
   fuchsia::sys::ComponentControllerPtr bridge_;
-  fuchsia::guest::WaylandDispatcherPtr dispatcher_;
+  fuchsia::virtualization::WaylandDispatcherPtr dispatcher_;
   fuchsia::wayland::ViewProducerPtr view_producer_;
 };
 
 };  // namespace guest
 
-#endif  // LIB_GUEST_SCENIC_WAYLAND_DISPATCHER_H_
+#endif  // LIB_VIRTUALIZATION_SCENIC_WAYLAND_DISPATCHER_H_

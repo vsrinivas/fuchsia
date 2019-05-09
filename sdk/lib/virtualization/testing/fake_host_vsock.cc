@@ -1,20 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-//
-// This file is being moved to //sdk/lib/virtualization.
-// New users should prefer files there instead.
 
-#include <lib/guest/testing/fake_guest_vsock.h>
-#include <lib/guest/testing/fake_host_vsock.h>
-#include <lib/guest/testing/guest_cid.h>
+#include <lib/virtualization/testing/fake_guest_vsock.h>
+#include <lib/virtualization/testing/fake_host_vsock.h>
+#include <lib/virtualization/testing/guest_cid.h>
 
 namespace guest {
 namespace testing {
 
 void FakeHostVsock::Listen(
     uint32_t port,
-    fidl::InterfaceHandle<fuchsia::guest::HostVsockAcceptor> acceptor,
+    fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
     ListenCallback callback) {
   if (listeners_.find(port) != listeners_.end()) {
     callback(ZX_ERR_ALREADY_BOUND);

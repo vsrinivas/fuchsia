@@ -1,6 +1,9 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+//
+// This file is being moved to //sdk/lib/virtualization.
+// New users should prefer files there instead.
 
 #ifndef LIB_GUEST_TESTING_FAKE_ENVIRONMENT_MANAGER_H_
 #define LIB_GUEST_TESTING_FAKE_ENVIRONMENT_MANAGER_H_
