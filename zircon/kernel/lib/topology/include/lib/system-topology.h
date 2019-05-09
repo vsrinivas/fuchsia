@@ -7,6 +7,8 @@
 
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <ktl/move.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
 
@@ -39,15 +41,49 @@ typedef const fbl::Vector<Node*>& IterableProcessors;
 // system.
 class Graph {
 public:
-    // Takes the flat topology array, validates it, and sets it as the current topology. Returns an
-    // error if the topology is invalid.
+    // Initializes the system topology Graph instance from the given flat
+    // topology. Performs validation on the flat topology before updating the
+    // system graph with the unflattened data. If validation fails an error is
+    // returned the system graph is left unmodified in its original state.
     //
-    // This should only be called during early boot,  after that this data is considered static so
-    // no locks are used. If it is desired to set this later in operation than we MUST redesign
-    // this process to consider concurrent readers.
-    // Returns ZX_ERR_ALREADY_EXISTS if state already set or ZX_ERR_INVALID_ARGS if provided graph
-    // fails validation.
-    zx_status_t Update(const zbi_topology_node_t* nodes, size_t count);
+    // Note that there is no explicit synchronization protecting concurrent
+    // access to the system topology. It is expected to be initialized once at
+    // early boot and then remain static and read-only. Relaxing this constraint
+    // is possible by adding internal synchronization.
+    //
+    // Returns ZX_ERR_NO_MEMORY if dynamic memory allocation fails.
+    // Returns ZX_ERR_INVALID_ARGS if validation of the flat topology fails.
+    static zx_status_t InitializeSystemTopology(const zbi_topology_node_t* nodes, size_t count);
+
+    // Initializes the given topology Graph instance from the given flat
+    // topology. Performs validation on the flat topology before updating the
+    // |graph| with the unflattened data. If validation fails an error is
+    // returned and |graph| is left unmodified in its original state.
+    //
+    // Returns ZX_ERR_NO_MEMORY if dynamic memory allocation fails.
+    // Returns ZX_ERR_INVALID_ARGS if validation of the flat topology fails.
+    static zx_status_t Initialize(Graph* graph, const zbi_topology_node_t* nodes, size_t count);
+
+    // Graph instances are default constructible to empty.
+    Graph() = default;
+
+    // Constructs a Graph instance from the given unflattened topology data.
+    Graph(fbl::unique_ptr<Node[]> nodes,
+          fbl::Vector<Node*> processors,
+          size_t logical_processor_count,
+          fbl::Vector<Node*> processors_by_logical_id)
+        : nodes_{ktl::move(nodes)},
+          processors_{ktl::move(processors)},
+          logical_processor_count_{logical_processor_count},
+          processors_by_logical_id_{ktl::move(processors_by_logical_id)} {}
+
+    // Graph instances are not copyable.
+    Graph(const Graph&) = delete;
+    Graph& operator=(const Graph&) = delete;
+
+    // Graph instances are movable.
+    Graph(Graph&&) = default;
+    Graph& operator=(Graph&&) = default;
 
     // Provides iterable container of pointers to all processor nodes.
     IterableProcessors processors() const {
@@ -63,7 +99,7 @@ public:
     // Number of logical processors in system, this will be different from
     // processor_count() if the system supports SMT.
     size_t logical_processor_count() const {
-      return logical_processor_count_;
+        return logical_processor_count_;
     }
 
     // Finds the processor node that is assigned the given logical id.
@@ -77,37 +113,34 @@ public:
         return ZX_OK;
     }
 
+    // Returns an immutable reference to the system topology graph. This may be
+    // called after the graph is initialized by Graph::InitializeSystemTopology.
+    static const Graph& GetSystemTopology() {
+        return system_topology_.Get();
+    }
+
 private:
     // Validates that in the provided flat topology:
     //   - all processors are leaf nodes, and all leaf nodes are processors.
     //   - there are no cycles.
     //   - It is stored in a "depth first" ordering, with parents adjacent to
     //   their children.
-    bool Validate(const zbi_topology_node_t* nodes, int count) const;
+    static bool Validate(const zbi_topology_node_t* nodes, size_t count);
 
     fbl::unique_ptr<Node[]> nodes_;
     fbl::Vector<Node*> processors_;
-    size_t logical_processor_count_ = 0;
+    size_t logical_processor_count_{0};
 
     // This is in essence a map with logical ID being the index in the vector.
     // It will contain duplicates for SMT processors so we need it in addition to processors_.
     fbl::Vector<Node*> processors_by_logical_id_;
+
+    // The graph of the system topology. Initialized once during early boot.
+    static lazy_init::LazyInit<Graph, lazy_init::CheckType::Basic> system_topology_;
 };
 
-// Get the global instance of the SystemTopology. This will be updated in early boot to contain the
-// source of truth view of the system.
-// This should be called once before the platform becomes multithreaded. We don't use a raw global
-// because we can't ensure that it is initialized, if this is used in the initialization of other
-// global objects.
-inline Graph& GetMutableSystemTopology() {
-    static Graph graph;
-    return graph;
-}
-
-// The method of the above most things should use, only the platform init code needs the mutable
-// version.
 inline const Graph& GetSystemTopology() {
-    return GetMutableSystemTopology();
+    return Graph::GetSystemTopology();
 }
 
 } // namespace system_topology

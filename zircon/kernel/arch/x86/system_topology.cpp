@@ -17,7 +17,6 @@
 
 #define LOCAL_TRACE 0
 
-namespace x86 {
 namespace {
 
 using cpu_id::Topology;
@@ -417,7 +416,23 @@ zx_status_t FlattenTree(const fbl::Vector<ktl::unique_ptr<Die>>& dies,
     return ZX_OK;
 }
 
+void SystemTopologyInit(uint32_t) {
+    const AcpiTableProvider table_provider;
+    fbl::Vector<zbi_topology_node_t> topology;
+
+    const auto generate_status = x86::GenerateFlatTopology(cpu_id::CpuId(),
+                                                           AcpiTables(&table_provider),
+                                                           &topology);
+    ASSERT_MSG(generate_status == ZX_OK, "Failed to generate topology!");
+
+    const auto init_status =
+        system_topology::Graph::InitializeSystemTopology(topology.get(), topology.size());
+    ASSERT_MSG(init_status == ZX_OK, "Failed to load system topology!");
+}
+
 } // namespace
+
+namespace x86 {
 
 zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tables,
                                  fbl::Vector<zbi_topology_node_t>* topology) {
@@ -447,15 +462,4 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& a
 
 } // namespace x86
 
-void x86_system_topology_init(uint32_t) {
-    const AcpiTableProvider table_provider;
-    fbl::Vector<zbi_topology_node_t> topology;
-    auto status = x86::GenerateFlatTopology(cpu_id::CpuId(), AcpiTables(&table_provider),
-                                            &topology);
-    status = system_topology::GetMutableSystemTopology().Update(topology.get(), topology.size());
-    if (status != ZX_OK) {
-        panic("Failed to initialize system topology!");
-    }
-}
-
-LK_INIT_HOOK(system_topology_init, x86_system_topology_init, LK_INIT_LEVEL_VM + 2)
+LK_INIT_HOOK(system_topology_init, SystemTopologyInit, LK_INIT_LEVEL_VM + 2)

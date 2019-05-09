@@ -14,6 +14,8 @@
 #include <lib/system-topology.h>
 #include <lib/unittest/unittest.h>
 
+using system_topology::Graph;
+
 namespace {
 
 // Uses test data from a HP z840, dual socket Xeon E2690v4.
@@ -68,8 +70,8 @@ bool test_cpus_z840() {
     EXPECT_EQ(56, thread_count, "");
 
     // Ensure the format can be parsed and validated by the system topology library.
-    system_topology::Graph graph;
-    EXPECT_EQ(ZX_OK, graph.Update(flat_topology.get(), flat_topology.size()), "");
+    Graph graph;
+    EXPECT_EQ(ZX_OK, Graph::Initialize(&graph, flat_topology.get(), flat_topology.size()), "");
 
     END_TEST;
 }
@@ -124,8 +126,8 @@ bool test_cpus_2970wx_x399() {
     EXPECT_EQ(48, thread_count, "");
 
     // Ensure the format can be parsed and validated by the system topology library.
-    system_topology::Graph graph;
-    EXPECT_EQ(ZX_OK, graph.Update(flat_topology.get(), flat_topology.size()), "");
+    Graph graph;
+    EXPECT_EQ(ZX_OK, Graph::Initialize(&graph, flat_topology.get(), flat_topology.size()), "");
 
     END_TEST;
 }

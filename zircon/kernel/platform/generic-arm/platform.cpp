@@ -335,15 +335,12 @@ static constexpr zbi_topology_node_t fallback_topology = {
 };
 
 static void init_topology(zbi_topology_node_t* nodes, size_t node_count) {
-    auto result = system_topology::GetMutableSystemTopology()
-            .Update(nodes, node_count);
+    auto result = system_topology::Graph::InitializeSystemTopology(nodes, node_count);
     if (result != ZX_OK) {
-        printf("Failed to initialize system topology! error: %d \n",
-               result);
+        printf("Failed to initialize system topology! error: %d\n", result);
 
         // Try to fallback to a topology of just this processor.
-        result = system_topology::GetMutableSystemTopology()
-                .Update(&fallback_topology, 1);
+        result = system_topology::Graph::InitializeSystemTopology(&fallback_topology, 1);
         ASSERT(result == ZX_OK);
     }
 

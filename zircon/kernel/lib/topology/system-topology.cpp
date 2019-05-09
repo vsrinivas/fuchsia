@@ -1,12 +1,18 @@
 #include <lib/system-topology.h>
+
+#include <ktl/move.h>
 #include <zircon/errors.h>
 
 namespace system_topology {
+
+decltype(Graph::system_topology_) Graph::system_topology_;
+
 namespace {
+
 constexpr size_t kMaxTopologyDepth = 20;
 
-inline void ValidationError(int index, const char* message) {
-    printf("Error validating topology at node %d : %s \n", index, message);
+inline void ValidationError(size_t index, const char* message) {
+    printf("Error validating topology at node %zu : %s\n", index, message);
 }
 
 template <typename T>
@@ -22,12 +28,11 @@ zx_status_t GrowVector(size_t new_size, fbl::Vector<T>* vector, fbl::AllocChecke
 
 } // namespace
 
-zx_status_t Graph::Update(const zbi_topology_node_t* flat_nodes, size_t count) {
-    if (nodes_.get() != nullptr) {
-        return ZX_ERR_ALREADY_EXISTS;
-    }
+zx_status_t Graph::Initialize(Graph* graph, const zbi_topology_node_t* flat_nodes, size_t count) {
+    DEBUG_ASSERT(flat_nodes != nullptr);
+    DEBUG_ASSERT(count > 0);
 
-    if (flat_nodes == nullptr || count == 0 || !Validate(flat_nodes, static_cast<int>(count))) {
+    if (!Validate(flat_nodes, count)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -94,15 +99,28 @@ zx_status_t Graph::Update(const zbi_topology_node_t* flat_nodes, size_t count) {
         }
     }
 
-    nodes_.swap(nodes);
-    processors_ = std::move(processors);
-    processors_by_logical_id_ = std::move(processors_by_logical_id);
-    logical_processor_count_ = logical_processor_count;
-
+    *graph = Graph{ktl::move(nodes), ktl::move(processors),
+                   logical_processor_count,
+                   ktl::move(processors_by_logical_id)};
     return ZX_OK;
 }
 
-bool Graph::Validate(const zbi_topology_node_t* nodes, int count) const {
+zx_status_t Graph::InitializeSystemTopology(const zbi_topology_node_t* nodes, size_t count) {
+    Graph graph;
+    const auto status = Graph::Initialize(&graph, nodes, count);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Initialize the global system topology graph instance.
+    system_topology_.Initialize(ktl::move(graph));
+    return ZX_OK;
+}
+
+bool Graph::Validate(const zbi_topology_node_t* nodes, size_t count) {
+    DEBUG_ASSERT(nodes != nullptr);
+    DEBUG_ASSERT(count > 0);
+
     uint16_t parents[kMaxTopologyDepth];
     for (size_t i = 0; i < kMaxTopologyDepth; ++i) {
         parents[i] = ZBI_TOPOLOGY_NO_PARENT;
@@ -112,7 +130,10 @@ bool Graph::Validate(const zbi_topology_node_t* nodes, int count) const {
     int current_depth = 0;
 
     const zbi_topology_node_t* node;
-    for (int current_index = count - 1; current_index >= 0; current_index--) {
+    for (size_t index = 0; index < count; index++) {
+        // Traverse the nodes in reverse order.
+        const size_t current_index = count - index - 1;
+
         node = &nodes[current_index];
 
         if (current_type == ZBI_TOPOLOGY_ENTITY_UNDEFINED) {

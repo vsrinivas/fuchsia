@@ -7,6 +7,7 @@
 
 namespace {
 
+using system_topology::Graph;
 using system_topology::Node;
 
 // Should be larger than the largest topology used here.
@@ -32,8 +33,8 @@ bool test_flat_to_heap_simple() {
     BEGIN_TEST;
     FlatTopo topo = SimpleTopology();
 
-    system_topology::Graph graph;
-    ASSERT_EQ(ZX_OK, graph.Update(topo.nodes, topo.node_count), "");
+    Graph graph;
+    ASSERT_EQ(ZX_OK, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
     ASSERT_EQ(3u, graph.processors().size(), "");
 
     // Test lookup.
@@ -51,8 +52,8 @@ bool test_flat_to_heap_complex() {
     BEGIN_TEST;
     FlatTopo topo = ComplexTopology();
 
-    system_topology::Graph graph;
-    ASSERT_EQ(ZX_OK, graph.Update(topo.nodes, topo.node_count), "");
+    Graph graph;
+    ASSERT_EQ(ZX_OK, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
     ASSERT_EQ(32u, graph.processors().size(), "");
 
     END_TEST;
@@ -62,8 +63,8 @@ bool test_flat_to_heap_walk_result() {
     BEGIN_TEST;
     FlatTopo topo = ComplexTopology();
 
-    system_topology::Graph graph;
-    ASSERT_EQ(ZX_OK, graph.Update(topo.nodes, topo.node_count), "");
+    Graph graph;
+    ASSERT_EQ(ZX_OK, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
     ASSERT_EQ(32u, graph.processors().size(), "");
 
     // For each processor we walk all the way up the graph.
@@ -94,8 +95,8 @@ bool test_validate_processor_not_leaf() {
     // Replace a die node with a processor.
     topo.nodes[1].entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR;
 
-    system_topology::Graph graph;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count),"");
+    Graph graph;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
 
     END_TEST;
 }
@@ -107,8 +108,8 @@ bool test_validate_leaf_not_processor() {
     // Replace a processor node with a cluster.
     topo.nodes[4].entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER;
 
-    system_topology::Graph graph;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count), "");
+    Graph graph;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
 
     END_TEST;
 }
@@ -120,8 +121,8 @@ bool test_validate_cycle() {
     // Set the parent index of the die to a processor under it.
     topo.nodes[1].parent_index = 4;
 
-    system_topology::Graph graph;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count), "");
+    Graph graph;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
 
     END_TEST;
 }
@@ -135,8 +136,8 @@ bool test_validate_cycle_shared_parent() {
     // Set the parent index of the die to a processor under it.
     topo.nodes[2].parent_index = 4;
 
-    system_topology::Graph graph;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count), "");
+    Graph graph;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
 
     END_TEST;
 }
@@ -152,8 +153,8 @@ bool test_validate_hierarchical_storage() {
     // Set the parent index of the die to a processor under it.
     topo.nodes[2].parent_index = 4;
 
-    system_topology::Graph graph;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, graph.Update(topo.nodes, topo.node_count), "");
+    Graph graph;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
 
     END_TEST;
 }
