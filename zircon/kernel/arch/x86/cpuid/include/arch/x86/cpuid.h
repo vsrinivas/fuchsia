@@ -107,8 +107,8 @@ private:
 class Features {
 public:
     enum LeafIndex {
-        LEAF1,
-        LEAF7,
+        LEAF1,  // Feature Information
+        LEAF7,  // Structured Extended Feature Flags
         LEAF8_01,
         INVALID_SET = 254,
     };
@@ -179,6 +179,7 @@ public:
     static constexpr Feature AVX = {.leaf = LEAF1, .reg = Registers::ECX, .bit = 28};
     static constexpr Feature F16C = {.leaf = LEAF1, .reg = Registers::ECX, .bit = 29};
     static constexpr Feature RDRAND = {.leaf = LEAF1, .reg = Registers::ECX, .bit = 30};
+    static constexpr Feature HYPERVISOR = {.leaf = LEAF1, .reg = Registers::ECX, .bit = 31};
 
     static constexpr Feature FSGSBASE = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 0};
     static constexpr Feature SGX = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 2};
@@ -331,10 +332,12 @@ private:
 
 // Wraps the CPUID instruction on x86, provides helpers to parse the output and
 // allows unit testing of libraries reading it.
+// CpuId is uncached; every call results in one (or more) invocations of CPUID.
 class CpuId {
 public:
     virtual ~CpuId() = default;
     virtual ManufacturerInfo ReadManufacturerInfo() const;
+    // Return ProcessorId; provides (Extended) Family/Model/Stepping.
     virtual ProcessorId ReadProcessorId() const;
     virtual Features ReadFeatures() const;
     virtual Topology ReadTopology() const;
