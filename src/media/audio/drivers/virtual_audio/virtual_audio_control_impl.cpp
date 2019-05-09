@@ -182,6 +182,7 @@ void VirtualAudioControlImpl::Disable(DisableCallback disable_callback) {
     for (auto& binding : input_bindings_.bindings()) {
       binding->impl()->RemoveStream();
     }
+
     for (auto& binding : output_bindings_.bindings()) {
       binding->impl()->RemoveStream();
     }
@@ -190,6 +191,27 @@ void VirtualAudioControlImpl::Disable(DisableCallback disable_callback) {
   }
 
   disable_callback();
+}
+
+// Return the number of active input and output streams. The callback is used to
+// synchronize with other in-flight asynchronous operations.
+void VirtualAudioControlImpl::GetNumDevices(
+    GetNumDevicesCallback get_num_devices_callback) {
+  uint32_t num_inputs = 0, num_outputs = 0;
+
+  for (auto& binding : input_bindings_.bindings()) {
+    if (binding->impl()->IsActive()) {
+      ++num_inputs;
+    }
+  }
+
+  for (auto& binding : output_bindings_.bindings()) {
+    if (binding->impl()->IsActive()) {
+      ++num_outputs;
+    }
+  }
+
+  get_num_devices_callback(num_inputs, num_outputs);
 }
 
 }  // namespace virtual_audio

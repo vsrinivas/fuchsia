@@ -80,6 +80,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   virtual bool CreateStream(zx_device_t* devnode);
   void RemoveStream();
   void ClearStream();
+  bool IsActive() { return (stream_ != nullptr); }
 
   void Init();
 

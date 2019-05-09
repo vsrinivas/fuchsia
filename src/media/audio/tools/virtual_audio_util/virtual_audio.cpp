@@ -21,7 +21,7 @@ namespace virtual_audio {
 
 class VirtualAudioUtil {
  public:
-  VirtualAudioUtil(async::Loop* loop) : loop_(loop) {}
+  VirtualAudioUtil(async::Loop* loop) { VirtualAudioUtil::loop_ = loop; }
 
   void Run(fxl::CommandLine* cmdline);
 
@@ -29,6 +29,7 @@ class VirtualAudioUtil {
   enum class Command {
     ENABLE_VIRTUAL_AUDIO,
     DISABLE_VIRTUAL_AUDIO,
+    GET_NUM_VIRTUAL_DEVICES,
 
     SET_DEVICE_NAME,
     SET_MANUFACTURER,
@@ -65,6 +66,7 @@ class VirtualAudioUtil {
   } COMMANDS[] = {
       {"enable", Command::ENABLE_VIRTUAL_AUDIO},
       {"disable", Command::DISABLE_VIRTUAL_AUDIO},
+      {"num-devs", Command::GET_NUM_VIRTUAL_DEVICES},
 
       {"dev", Command::SET_DEVICE_NAME},
       {"mfg", Command::SET_MANUFACTURER},
@@ -112,6 +114,9 @@ class VirtualAudioUtil {
   static constexpr uint8_t kDefaultPlugPropsOption = 0;
   static constexpr uint32_t kDefaultNotificationFrequency = 4;
 
+  static ::async::Loop* loop_;
+  static bool received_callback_;
+
   void QuitLoop();
   bool RunLoopWithTimeout(zx::duration timeout);
   bool WaitForNoCallback();
@@ -120,7 +125,7 @@ class VirtualAudioUtil {
   void RegisterKeyWaiter();
   bool WaitForKey();
 
-  void ConnectToController();
+  bool ConnectToController();
   bool ConnectToDevice();
   bool ConnectToInput();
   bool ConnectToOutput();
@@ -131,6 +136,7 @@ class VirtualAudioUtil {
 
   // Methods using the FIDL Service interface
   bool Enable(bool enable);
+  bool GetNumDevices();
 
   // Methods using the FIDL Configuration interface
   bool SetDeviceName(const std::string& name);
@@ -158,38 +164,52 @@ class VirtualAudioUtil {
   bool SetNotificationFrequency(const std::string& override_notifs_str);
 
   std::unique_ptr<sys::ComponentContext> startup_context_;
-  ::async::Loop* loop_;
   fsl::FDWaiter keystroke_waiter_;
   bool key_quit_ = false;
 
-  fuchsia::virtualaudio::ControlSyncPtr controller_ = nullptr;
+  fuchsia::virtualaudio::ControlPtr controller_ = nullptr;
   fuchsia::virtualaudio::InputPtr input_ = nullptr;
   fuchsia::virtualaudio::OutputPtr output_ = nullptr;
 
   bool configuring_output_ = true;
+
+  static void CallbackReceived();
+  static void EnableCallback();
+  static void DisableCallback();
+  static void NumDevicesCallback(uint32_t num_inputs, uint32_t num_outputs);
+  template <bool is_out>
+  static void FormatNotification(uint32_t fps, uint32_t fmt, uint32_t chans,
+                                 zx_duration_t delay);
+  template <bool is_out>
+  static void FormatCallback(uint32_t fps, uint32_t fmt, uint32_t chans,
+                             zx_duration_t delay);
+
+  template <bool is_out>
+  static void GainNotification(bool current_mute, bool current_agc,
+                               float gain_db);
+  template <bool is_out>
+  static void GainCallback(bool current_mute, bool current_agc, float gain_db);
+
+  template <bool is_out>
+  static void BufferNotification(zx::vmo buff, uint32_t rb_frames,
+                                 uint32_t notifs);
+  template <bool is_out>
+  static void BufferCallback(zx::vmo buff, uint32_t rb_frames, uint32_t notifs);
+
+  template <bool is_out>
+  static void StartNotification(zx_time_t start_time);
+  template <bool is_out>
+  static void StopNotification(zx_time_t stop_time, uint32_t ring_position);
+
+  template <bool is_out>
+  static void PositionNotification(uint32_t ring_position,
+                                   zx_time_t clock_time);
+  template <bool is_out>
+  static void PositionCallback(uint32_t ring_position, zx_time_t clock_time);
 };
 
-void DisplayFormat(uint32_t fps, uint32_t fmt, uint32_t chans,
-                   zx_duration_t delay, bool out);
-void DisplayFormatOut(uint32_t fps, uint32_t fmt, uint32_t chans,
-                      zx_duration_t delay);
-void DisplayFormatIn(uint32_t fps, uint32_t fmt, uint32_t chans,
-                     zx_duration_t delay);
-void DisplayGain(bool current_mute, bool current_agc, float gain_db, bool out);
-void DisplayGainOut(bool current_mute, bool current_agc, float gain_db);
-void DisplayGainIn(bool current_mute, bool current_agc, float gain_db);
-void DisplayBuffer(zx::vmo buff, uint32_t rb_frames, uint32_t notifs, bool out);
-void DisplayBufferOut(zx::vmo buff, uint32_t rb_frames, uint32_t notifs);
-void DisplayBufferIn(zx::vmo buff, uint32_t rb_frames, uint32_t notifs);
-void DisplayStart(zx_time_t start_time, bool out);
-void DisplayStartOut(zx_time_t start_time);
-void DisplayStartIn(zx_time_t start_time);
-void DisplayStop(zx_time_t stop_time, uint32_t ring_position, bool out);
-void DisplayStopOut(zx_time_t stop_time, uint32_t ring_position);
-void DisplayStopIn(zx_time_t stop_time, uint32_t ring_position);
-void DisplayPosition(uint32_t ring_position, zx_time_t clock_time, bool out);
-void DisplayPositionOut(uint32_t ring_position, zx_time_t clock_time);
-void DisplayPositionIn(uint32_t ring_position, zx_time_t clock_time);
+::async::Loop* VirtualAudioUtil::loop_;
+bool VirtualAudioUtil::received_callback_;
 
 // VirtualAudioUtil implementation
 //
@@ -204,9 +224,8 @@ void VirtualAudioUtil::Run(fxl::CommandLine* cmdline) {
     output_.set_error_handler(nullptr);
   }
 
-  printf("\n");
   // If any lingering callbacks were queued, let them drain.
-  if (!RunLoopWithTimeout(zx::msec(50))) {
+  if (!WaitForNoCallback()) {
     printf("Received unexpected callback!\n");
   }
 }
@@ -221,12 +240,12 @@ bool VirtualAudioUtil::RunLoopWithTimeout(zx::duration timeout) {
   bool timed_out = false;
   async::PostDelayedTask(
       loop_->dispatcher(),
-      [this, canceled, &timed_out] {
+      [loop = loop_, canceled, &timed_out] {
         if (*canceled) {
           return;
         }
         timed_out = true;
-        loop_->Quit();
+        loop->Quit();
       },
       timeout);
   loop_->Run();
@@ -240,16 +259,24 @@ bool VirtualAudioUtil::RunLoopWithTimeout(zx::duration timeout) {
 // Above was borrowed from gtest, as-is
 
 bool VirtualAudioUtil::WaitForNoCallback() {
-  bool timed_out = RunLoopWithTimeout(zx::msec(10));
+  received_callback_ = false;
+  bool timed_out = RunLoopWithTimeout(zx::msec(5));
 
   // If all is well, we DIDN'T get a disconnect callback and are still bound.
-  return (timed_out);
+  if (received_callback_) {
+    printf("  ... received unexpected callback\n");
+  }
+  return (timed_out && !received_callback_);
 }
 
 bool VirtualAudioUtil::WaitForCallback() {
-  bool timed_out = RunLoopWithTimeout(zx::msec(100));
+  received_callback_ = false;
+  bool timed_out = RunLoopWithTimeout(zx::msec(2000));
 
-  return !timed_out;
+  if (!received_callback_) {
+    printf("  ... expected a callback; none was received\n");
+  }
+  return (!timed_out && received_callback_);
 }
 
 void VirtualAudioUtil::RegisterKeyWaiter() {
@@ -275,12 +302,25 @@ bool VirtualAudioUtil::WaitForKey() {
   return !key_quit_;
 }
 
-void VirtualAudioUtil::ConnectToController() {
+bool VirtualAudioUtil::ConnectToController() {
   if (controller_.is_bound()) {
-    return;
+    return true;
   }
 
   startup_context_->svc()->Connect(controller_.NewRequest());
+
+  controller_.set_error_handler([this](zx_status_t error) {
+    printf("controller_ disconnected (%d)!\n", error);
+    QuitLoop();
+  });
+
+  // let VirtualAudio disconnect if all is not well.
+  bool success = (WaitForNoCallback() && controller_.is_bound());
+
+  if (!success) {
+    printf("Failed to establish channel to async controller\n");
+  }
+  return success;
 }
 
 bool VirtualAudioUtil::ConnectToDevice() {
@@ -335,19 +375,19 @@ bool VirtualAudioUtil::ConnectToOutput() {
 
 void VirtualAudioUtil::SetUpEvents() {
   if (configuring_output_) {
-    output_.events().OnSetFormat = DisplayFormatOut;
-    output_.events().OnSetGain = DisplayGainOut;
-    output_.events().OnBufferCreated = DisplayBufferOut;
-    output_.events().OnStart = DisplayStartOut;
-    output_.events().OnStop = DisplayStopOut;
-    output_.events().OnPositionNotify = DisplayPositionOut;
+    output_.events().OnSetFormat = FormatNotification<true>;
+    output_.events().OnSetGain = GainNotification<true>;
+    output_.events().OnBufferCreated = BufferNotification<true>;
+    output_.events().OnStart = StartNotification<true>;
+    output_.events().OnStop = StopNotification<true>;
+    output_.events().OnPositionNotify = PositionNotification<true>;
   } else {
-    input_.events().OnSetFormat = DisplayFormatIn;
-    input_.events().OnSetGain = DisplayGainIn;
-    input_.events().OnBufferCreated = DisplayBufferIn;
-    input_.events().OnStart = DisplayStartIn;
-    input_.events().OnStop = DisplayStopIn;
-    input_.events().OnPositionNotify = DisplayPositionIn;
+    input_.events().OnSetFormat = FormatNotification<false>;
+    input_.events().OnSetGain = GainNotification<false>;
+    input_.events().OnBufferCreated = BufferNotification<false>;
+    input_.events().OnStart = StartNotification<false>;
+    input_.events().OnStop = StopNotification<false>;
+    input_.events().OnPositionNotify = PositionNotification<false>;
   }
 }
 
@@ -381,6 +421,7 @@ void VirtualAudioUtil::ParseAndExecute(fxl::CommandLine* cmdline) {
     printf("Executing `--%s' command...\n", option.name.c_str());
     success = ExecuteCommand(cmd, option.value);
     if (!success) {
+      printf("  ... `--%s' command was unsuccessful\n", option.name.c_str());
       return;
     }
   }  // while (cmdline args) without default
@@ -395,6 +436,9 @@ bool VirtualAudioUtil::ExecuteCommand(Command cmd, const std::string& value) {
       break;
     case Command::DISABLE_VIRTUAL_AUDIO:
       success = Enable(false);
+      break;
+    case Command::GET_NUM_VIRTUAL_DEVICES:
+      success = GetNumDevices();
       break;
 
     // FIDL Configuration/Device methods
@@ -485,16 +529,27 @@ bool VirtualAudioUtil::ExecuteCommand(Command cmd, const std::string& value) {
 }
 
 bool VirtualAudioUtil::Enable(bool enable) {
-  ConnectToController();
-
-  zx_status_t status =
-      (enable ? controller_->Enable() : controller_->Disable());
-  if (status != ZX_OK) {
-    printf("ControlSync::%s failed (%d)!\n", (enable ? "Enable" : "Disable"),
-           status);
+  if (!ConnectToController()) {
     return false;
   }
-  return true;
+
+  if (enable) {
+    controller_->Enable(EnableCallback);
+  } else {
+    controller_->Disable(DisableCallback);
+  }
+
+  return WaitForCallback();
+}
+
+bool VirtualAudioUtil::GetNumDevices() {
+  if (!ConnectToController()) {
+    return false;
+  }
+
+  controller_->GetNumDevices(NumDevicesCallback);
+
+  return WaitForCallback();
 }
 
 bool VirtualAudioUtil::SetDeviceName(const std::string& name) {
@@ -916,13 +971,12 @@ bool VirtualAudioUtil::GetFormat() {
   }
 
   if (configuring_output_) {
-    output_->GetFormat(DisplayFormatIn);
+    output_->GetFormat(FormatCallback<true>);
   } else {
-    input_->GetFormat(DisplayFormatIn);
+    input_->GetFormat(FormatCallback<false>);
   }
 
-  WaitForCallback();
-  return true;
+  return WaitForCallback();
 }
 
 bool VirtualAudioUtil::GetGain() {
@@ -931,13 +985,12 @@ bool VirtualAudioUtil::GetGain() {
   }
 
   if (configuring_output_) {
-    output_->GetGain(DisplayGainIn);
+    output_->GetGain(GainCallback<true>);
   } else {
-    input_->GetGain(DisplayGainIn);
+    input_->GetGain(GainCallback<false>);
   }
 
-  WaitForCallback();
-  return true;
+  return WaitForCallback();
 }
 
 bool VirtualAudioUtil::GetBuffer() {
@@ -946,13 +999,12 @@ bool VirtualAudioUtil::GetBuffer() {
   }
 
   if (configuring_output_) {
-    output_->GetBuffer(DisplayBufferIn);
+    output_->GetBuffer(BufferCallback<true>);
   } else {
-    input_->GetBuffer(DisplayBufferIn);
+    input_->GetBuffer(BufferCallback<false>);
   }
 
-  WaitForCallback();
-  return true;
+  return WaitForCallback();
 }
 
 bool VirtualAudioUtil::GetPosition() {
@@ -961,13 +1013,12 @@ bool VirtualAudioUtil::GetPosition() {
   }
 
   if (configuring_output_) {
-    output_->GetPosition(DisplayPositionIn);
+    output_->GetPosition(PositionCallback<true>);
   } else {
-    input_->GetPosition(DisplayPositionIn);
+    input_->GetPosition(PositionCallback<false>);
   }
 
-  WaitForCallback();
-  return true;
+  return WaitForCallback();
 }
 
 bool VirtualAudioUtil::SetNotificationFrequency(const std::string& notifs_str) {
@@ -987,33 +1038,59 @@ bool VirtualAudioUtil::SetNotificationFrequency(const std::string& notifs_str) {
   return WaitForNoCallback();
 }
 
-void DisplayFormat(uint32_t fps, uint32_t fmt, uint32_t chans,
-                   zx_duration_t delay, bool is_out) {
+void VirtualAudioUtil::CallbackReceived() {
+  VirtualAudioUtil::received_callback_ = true;
+  VirtualAudioUtil::loop_->Quit();
+}
+
+void VirtualAudioUtil::EnableCallback() {
+  VirtualAudioUtil::CallbackReceived();
+
+  printf("--Received Enable callback\n");
+}
+
+void VirtualAudioUtil::DisableCallback() {
+  VirtualAudioUtil::CallbackReceived();
+
+  printf("--Received Disable callback\n");
+}
+
+void VirtualAudioUtil::NumDevicesCallback(uint32_t num_inputs,
+                                          uint32_t num_outputs) {
+  VirtualAudioUtil::CallbackReceived();
+
+  printf("--Received NumDevices (%u inputs, %u outputs)\n", num_inputs,
+         num_outputs);
+}
+
+template <bool is_out>
+void VirtualAudioUtil::FormatNotification(uint32_t fps, uint32_t fmt,
+                                          uint32_t chans, zx_duration_t delay) {
   printf("--Received Format (%u fps, %x fmt, %u chan, %zu delay) for %s\n", fps,
          fmt, chans, delay, (is_out ? "output" : "input"));
 }
-void DisplayFormatOut(uint32_t fps, uint32_t fmt, uint32_t chans,
-                      zx_duration_t delay) {
-  DisplayFormat(fps, fmt, chans, delay, true);
-}
-void DisplayFormatIn(uint32_t fps, uint32_t fmt, uint32_t chans,
-                     zx_duration_t delay) {
-  DisplayFormat(fps, fmt, chans, delay, false);
+template <bool is_out>
+void VirtualAudioUtil::FormatCallback(uint32_t fps, uint32_t fmt,
+                                      uint32_t chans, zx_duration_t delay) {
+  VirtualAudioUtil::CallbackReceived();
+  VirtualAudioUtil::FormatNotification<is_out>(fps, fmt, chans, delay);
 }
 
-void DisplayGain(bool mute, bool agc, float gain_db, bool is_out) {
+template <bool is_out>
+void VirtualAudioUtil::GainNotification(bool mute, bool agc, float gain_db) {
   printf("--Received Gain (mute: %u, agc: %u, gain: %f dB) for %s\n", mute, agc,
          gain_db, (is_out ? "output" : "input"));
 }
-void DisplayGainOut(bool mute, bool agc, float gain_db) {
-  DisplayGain(mute, agc, gain_db, true);
-}
-void DisplayGainIn(bool mute, bool agc, float gain_db) {
-  DisplayGain(mute, agc, gain_db, false);
+template <bool is_out>
+void VirtualAudioUtil::GainCallback(bool mute, bool agc, float gain_db) {
+  VirtualAudioUtil::CallbackReceived();
+  VirtualAudioUtil::GainNotification<is_out>(mute, agc, gain_db);
 }
 
-void DisplayBuffer(zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
-                   uint32_t notifications_per_ring, bool is_out) {
+template <bool is_out>
+void VirtualAudioUtil::BufferNotification(zx::vmo ring_buffer_vmo,
+                                          uint32_t num_ring_buffer_frames,
+                                          uint32_t notifications_per_ring) {
   uint64_t vmo_size;
   ring_buffer_vmo.get_size(&vmo_size);
 
@@ -1021,40 +1098,37 @@ void DisplayBuffer(zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
          vmo_size, num_ring_buffer_frames, notifications_per_ring,
          (is_out ? "output" : "input"));
 }
-void DisplayBufferOut(zx::vmo buff, uint32_t rb_frames, uint32_t notifs) {
-  DisplayBuffer(std::move(buff), rb_frames, notifs, true);
-}
-void DisplayBufferIn(zx::vmo buff, uint32_t rb_frames, uint32_t notifs) {
-  DisplayBuffer(std::move(buff), rb_frames, notifs, false);
+template <bool is_out>
+void VirtualAudioUtil::BufferCallback(zx::vmo buff, uint32_t rb_frames,
+                                      uint32_t notifs) {
+  VirtualAudioUtil::CallbackReceived();
+  VirtualAudioUtil::BufferNotification<is_out>(std::move(buff), rb_frames,
+                                               notifs);
 }
 
-void DisplayStart(zx_time_t start_time, bool is_out) {
+template <bool is_out>
+void VirtualAudioUtil::StartNotification(zx_time_t start_time) {
   printf("--Received Start (time: %zu) for %s\n", start_time,
          (is_out ? "output" : "input"));
 }
-void DisplayStartOut(zx_time_t start_time) { DisplayStart(start_time, true); }
-void DisplayStartIn(zx_time_t start_time) { DisplayStart(start_time, false); }
 
-void DisplayStop(zx_time_t stop_time, uint32_t rb_pos, bool is_out) {
+template <bool is_out>
+void VirtualAudioUtil::StopNotification(zx_time_t stop_time, uint32_t rb_pos) {
   printf("--Received Stop (time: %zu, pos: %u) for %s\n", stop_time, rb_pos,
          (is_out ? "output" : "input"));
 }
-void DisplayStopOut(zx_time_t stop_time, uint32_t rb_pos) {
-  DisplayStop(stop_time, rb_pos, true);
-}
-void DisplayStopIn(zx_time_t stop_time, uint32_t rb_pos) {
-  DisplayStop(stop_time, rb_pos, false);
-}
 
-void DisplayPosition(uint32_t rb_pos, zx_time_t time_for_pos, bool is_out) {
+template <bool is_out>
+void VirtualAudioUtil::PositionNotification(uint32_t rb_pos,
+                                            zx_time_t time_for_pos) {
   printf("--Received Position (pos: %u, time: %zu) for %s\n", rb_pos,
          time_for_pos, (is_out ? "output" : "input"));
 }
-void DisplayPositionOut(uint32_t rb_pos, zx_time_t time_for_pos) {
-  DisplayPosition(rb_pos, time_for_pos, true);
-}
-void DisplayPositionIn(uint32_t rb_pos, zx_time_t time_for_pos) {
-  DisplayPosition(rb_pos, time_for_pos, false);
+template <bool is_out>
+void VirtualAudioUtil::PositionCallback(uint32_t rb_pos,
+                                        zx_time_t time_for_pos) {
+  VirtualAudioUtil::CallbackReceived();
+  VirtualAudioUtil::PositionNotification<is_out>(rb_pos, time_for_pos);
 }
 
 }  // namespace virtual_audio

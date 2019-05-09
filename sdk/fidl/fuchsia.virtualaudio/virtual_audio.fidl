@@ -41,6 +41,12 @@ protocol Control {
     /// This method's callback can be used as a mechanism to synchronize with
     /// other asynchronous in-flight virtualaudio FIDL operations.
     Disable() -> ();
+
+    /// Return the number of active input and output virtual devices.
+    /// This method's callback can be used as a mechanism to synchronize with
+    /// other asynchronous in-flight virtualaudio FIDL operations.
+    GetNumDevices() -> (uint32 num_input_devices,
+                        uint32 num_output_devices);
 };
 
 //

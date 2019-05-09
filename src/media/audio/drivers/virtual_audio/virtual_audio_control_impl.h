@@ -5,11 +5,10 @@
 #ifndef GARNET_DRIVERS_AUDIO_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
 #define GARNET_DRIVERS_AUDIO_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
 
-#include <fuchsia/virtualaudio/c/fidl.h>
-#include <fuchsia/virtualaudio/cpp/fidl.h>
-
 #include <ddk/device.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/virtualaudio/c/fidl.h>
+#include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
 namespace virtual_audio {
@@ -50,6 +49,7 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
   //
   void Enable(EnableCallback callback) override;
   void Disable(DisableCallback callback) override;
+  void GetNumDevices(GetNumDevicesCallback callback) override;
 
   void ReleaseBindings();
   bool enabled() const { return enabled_; }
