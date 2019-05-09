@@ -1,9 +1,9 @@
-checkout {
+checkout: <
   manifest: "flower"
   project: "integration"
   remote: "https://fuchsia.googlesource.com/integration"
-}
-build {
+>
+build: <
   build_type: "release"
   board: "boards/arm64.gni"
   packages: "//bundles/buildbot:core"
@@ -11,13 +11,12 @@ build {
   run_tests: true
   target: "arm64"
   variants: "host_asan"
-}
-test {
+>
+test: <
   device_type: "QEMU"
   pave: true
   pool: "fuchsia.tests"
   test_in_shards: true
   timeout_secs: 1800
-}
+>
 gcs_bucket: "fuchsia-build"
-
