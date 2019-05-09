@@ -233,5 +233,7 @@ RUN_TEST(BadErrorWrongPrimitive)
 RUN_TEST(BadErrorMissingType)
 RUN_TEST(BadErrorNotAType)
 RUN_TEST(BadErrorNoResponse)
+RUN_TEST(BadErrorUnexpectedEndOfFile)
+RUN_TEST(BadErrorEmptyFile)
 
 END_TEST_CASE(errors_tests)
