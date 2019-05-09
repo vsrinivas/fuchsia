@@ -14,7 +14,7 @@
 
 zx_status_t TestWithDevice::LaunchDevice(
     const std::string& url, size_t phys_mem_size,
-    fuchsia::guest::device::StartInfo* start_info,
+    fuchsia::virtualization::hardware::StartInfo* start_info,
     std::unique_ptr<sys::testing::EnvironmentServices> env_services) {
   if (!env_services) {
     env_services = CreateServices();

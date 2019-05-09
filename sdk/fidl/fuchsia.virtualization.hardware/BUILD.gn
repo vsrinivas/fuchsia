@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.guest.device") {
+fidl("fuchsia.virtualization.hardware") {
   sources = [
     "device.fidl",
   ]

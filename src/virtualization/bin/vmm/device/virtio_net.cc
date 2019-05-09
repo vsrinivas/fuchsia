@@ -144,7 +144,7 @@ class TxStream : public StreamBase {
 };
 
 class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
-                      public fuchsia::guest::device::VirtioNet,
+                      public fuchsia::virtualization::hardware::VirtioNet,
                       public GuestEthernetReceiver {
  public:
   VirtioNetImpl(component::StartupContext* context)
@@ -153,7 +153,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
         context_.ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
     switch (static_cast<Queue>(queue)) {
       case Queue::RECEIVE:
@@ -176,8 +176,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   }
 
  private:
-  // |fuchsia::guest::device::VirtioNet|
-  void Start(fuchsia::guest::device::StartInfo start_info,
+  // |fuchsia::virtualization::hardware::VirtioNet|
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
              StartCallback callback) override {
     PrepStart(std::move(start_info));
 
@@ -251,7 +251,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     return bridge.consumer.promise();
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                       zx_gpaddr_t avail, zx_gpaddr_t used,
                       ConfigureQueueCallback callback) override {
@@ -269,7 +269,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     }
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
     negotiated_features_ = negotiated_features;
     callback();

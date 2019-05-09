@@ -92,7 +92,7 @@ class VirtioNetTest : public TestWithDevice,
     ASSERT_EQ(ZX_OK, env_services->AddService(bindings_.GetHandler(this)));
 
     // Launch device process.
-    fuchsia::guest::device::StartInfo start_info;
+    fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status = LaunchDevice(kVirtioNetUrl, tx_queue_.end(),
                                       &start_info, std::move(env_services));
     ASSERT_EQ(ZX_OK, status);
@@ -141,7 +141,7 @@ class VirtioNetTest : public TestWithDevice,
     eth_device_->Start([](zx_status_t status) { ASSERT_EQ(ZX_OK, status); });
   }
 
-  fuchsia::guest::device::VirtioNetPtr net_;
+  fuchsia::virtualization::hardware::VirtioNetPtr net_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
   ::fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;

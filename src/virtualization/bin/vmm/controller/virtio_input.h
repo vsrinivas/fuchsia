@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_INPUT_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_INPUT_H_
 
-#include <fuchsia/guest/device/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <virtio/input.h>
 #include <virtio/virtio_ids.h>
 
@@ -20,16 +20,16 @@ class VirtioInput
  public:
   explicit VirtioInput(const PhysMem& phys_mem);
 
-  zx_status_t Start(const zx::guest& guest,
-                    fidl::InterfaceRequest<fuchsia::guest::device::ViewListener>
-                        view_listener_request,
-                    fuchsia::sys::Launcher* launcher,
-                    async_dispatcher_t* dispatcher);
+  zx_status_t Start(
+      const zx::guest& guest,
+      fidl::InterfaceRequest<fuchsia::virtualization::hardware::ViewListener>
+          view_listener_request,
+      fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
-  fuchsia::guest::device::VirtioInputSyncPtr input_;
+  fuchsia::virtualization::hardware::VirtioInputSyncPtr input_;
 
   zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                              zx_gpaddr_t avail, zx_gpaddr_t used);

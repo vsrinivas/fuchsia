@@ -32,7 +32,7 @@ class VirtioBlockTest : public TestWithDevice {
 
   void SetUp() override {
     // Launch device process.
-    fuchsia::guest::device::StartInfo start_info;
+    fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status =
         LaunchDevice(kVirtioBlockUrl, request_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
@@ -74,7 +74,7 @@ class VirtioBlockTest : public TestWithDevice {
   }
 
   fbl::unique_fd fd_;
-  fuchsia::guest::device::VirtioBlockSyncPtr block_;
+  fuchsia::virtualization::hardware::VirtioBlockSyncPtr block_;
   VirtioQueueFake request_queue_;
 
  private:

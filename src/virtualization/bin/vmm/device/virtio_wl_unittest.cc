@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <fuchsia/guest/cpp/fidl.h>
-#include <fuchsia/guest/device/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <virtio/wl.h>
 
 #include <fbl/algorithm.h>
@@ -62,7 +62,7 @@ class VirtioWlTest : public TestWithDevice {
     ASSERT_EQ(zx::vmar::root_self()->allocate(
                   0u, kVirtioWlVmarSize, kAllocateFlags, &vmar, &vmar_addr),
               ZX_OK);
-    fuchsia::guest::device::StartInfo start_info;
+    fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status =
         LaunchDevice(kVirtioWlUrl, out_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
@@ -193,7 +193,7 @@ class VirtioWlTest : public TestWithDevice {
 
  protected:
   TestWaylandDispatcher wl_dispatcher_;
-  fuchsia::guest::device::VirtioWaylandSyncPtr wl_;
+  fuchsia::virtualization::hardware::VirtioWaylandSyncPtr wl_;
   VirtioQueueFake in_queue_;
   VirtioQueueFake out_queue_;
   std::vector<zx::channel> channels_;

@@ -20,7 +20,7 @@ class VirtioInputTest : public TestWithDevice {
 
   void SetUp() override {
     // Launch device process.
-    fuchsia::guest::device::StartInfo start_info;
+    fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status =
         LaunchDevice(kVirtioInputUrl, event_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
@@ -42,8 +42,8 @@ class VirtioInputTest : public TestWithDevice {
     }
   }
 
-  fuchsia::guest::device::VirtioInputSyncPtr input_;
-  fuchsia::guest::device::ViewListenerSyncPtr view_listener_;
+  fuchsia::virtualization::hardware::VirtioInputSyncPtr input_;
+  fuchsia::virtualization::hardware::ViewListenerSyncPtr view_listener_;
   VirtioQueueFake event_queue_;
 };
 

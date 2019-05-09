@@ -22,7 +22,7 @@ class VirtioBalloonTest : public TestWithDevice {
 
   void SetUp() override {
     // Launch device process.
-    fuchsia::guest::device::StartInfo start_info;
+    fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status =
         LaunchDevice(kVirtioBalloonUrl, stats_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
@@ -47,7 +47,7 @@ class VirtioBalloonTest : public TestWithDevice {
   }
 
  public:
-  fuchsia::guest::device::VirtioBalloonSyncPtr balloon_;
+  fuchsia::virtualization::hardware::VirtioBalloonSyncPtr balloon_;
   VirtioQueueFake inflate_queue_;
   VirtioQueueFake deflate_queue_;
   VirtioQueueFake stats_queue_;

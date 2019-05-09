@@ -9,7 +9,8 @@
 
 GuestView::GuestView(
     scenic::ViewContext view_context,
-    fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
+        view_listener,
     GpuScanout* scanout)
     : BaseView(std::move(view_context), "Guest"),
       background_(session()),

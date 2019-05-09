@@ -30,7 +30,7 @@ class VirtioWl : public VirtioComponentDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
  private:
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
-  fuchsia::guest::device::VirtioWaylandSyncPtr wayland_;
+  fuchsia::virtualization::hardware::VirtioWaylandSyncPtr wayland_;
 
   zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                              zx_gpaddr_t avail, zx_gpaddr_t used);

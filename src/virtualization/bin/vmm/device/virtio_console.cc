@@ -67,12 +67,13 @@ class ConsoleStream : public StreamBase {
 };
 
 // Implementation of a virtio-console device.
-class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
-                          public fuchsia::guest::device::VirtioConsole {
+class VirtioConsoleImpl
+    : public DeviceBase<VirtioConsoleImpl>,
+      public fuchsia::virtualization::hardware::VirtioConsole {
  public:
   VirtioConsoleImpl(component::StartupContext* context) : DeviceBase(context) {}
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
     switch (static_cast<Queue>(queue)) {
       case Queue::RECEIVE:
@@ -88,9 +89,9 @@ class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
   }
 
  private:
-  // |fuchsia::guest::device::VirtioConsole|
-  void Start(fuchsia::guest::device::StartInfo start_info, zx::socket socket,
-             StartCallback callback) override {
+  // |fuchsia::virtualization::hardware::VirtioConsole|
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
+             zx::socket socket, StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
     socket_ = std::move(socket);
@@ -102,7 +103,7 @@ class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
                         this, &VirtioConsoleImpl::Interrupt));
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                       zx_gpaddr_t avail, zx_gpaddr_t used,
                       ConfigureQueueCallback callback) override {
@@ -120,7 +121,7 @@ class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
     }
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
     callback();
   }

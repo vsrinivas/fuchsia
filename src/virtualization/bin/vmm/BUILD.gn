@@ -97,7 +97,7 @@ source_set("lib") {
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.guest",
-    "//sdk/fidl/fuchsia.guest.device",
+    "//sdk/fidl/fuchsia.virtualization.hardware",
     "//src/virtualization/third_party/fdt",
     "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
@@ -107,7 +107,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/public/lib/component/cpp",
-    "//sdk/fidl/fuchsia.guest.vmm",
+    "//sdk/fidl/fuchsia.virtualization.vmm",
     "//src/virtualization/bin/vmm/device",
     "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet_c",
     "//zircon/public/fidl/fuchsia-sysinfo",

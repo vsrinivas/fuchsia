@@ -312,7 +312,7 @@ class CursorStream : public StreamBase {
 
 // Implementation of a virtio-gpu device.
 class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
-                      public fuchsia::guest::device::VirtioGpu {
+                      public fuchsia::virtualization::hardware::VirtioGpu {
  public:
   VirtioGpuImpl(component::StartupContext* context)
       : DeviceBase(context), context_(*context) {
@@ -320,7 +320,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
         fit::bind_member(this, &VirtioGpuImpl::OnConfigChanged));
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
     switch (static_cast<Queue>(queue)) {
       case Queue::CONTROL:
@@ -336,10 +336,11 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
   }
 
  private:
-  // |fuchsia::guest::device::VirtioGpu|
+  // |fuchsia::virtualization::hardware::VirtioGpu|
   void Start(
-      fuchsia::guest::device::StartInfo start_info,
-      fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
+      fuchsia::virtualization::hardware::StartInfo start_info,
+      fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
+          view_listener,
       StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
@@ -374,7 +375,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
                                        this, &VirtioGpuImpl::Interrupt));
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                       zx_gpaddr_t avail, zx_gpaddr_t used,
                       ConfigureQueueCallback callback) override {
@@ -392,7 +393,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
     }
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
     callback();
   }

@@ -200,10 +200,9 @@ class Pipe : public VirtioWl::Vfd {
 VirtioWl::VirtioWl(component::StartupContext* context) : DeviceBase(context) {}
 
 void VirtioWl::Start(
-    fuchsia::guest::device::StartInfo start_info, zx::vmar vmar,
+    fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
     fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher,
-    std::string device_path, std::string driver_path,
-    StartCallback callback) {
+    std::string device_path, std::string driver_path, StartCallback callback) {
   auto deferred = fit::defer(std::move(callback));
   PrepStart(std::move(start_info));
   vmar_ = std::move(vmar);

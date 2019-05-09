@@ -25,7 +25,7 @@ zx_status_t VirtioRng::Start(const zx::guest& guest,
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
   services.ConnectToService(rng_.NewRequest());
 
-  fuchsia::guest::device::StartInfo start_info;
+  fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;

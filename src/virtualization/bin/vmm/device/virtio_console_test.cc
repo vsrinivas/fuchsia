@@ -18,7 +18,7 @@ class VirtioConsoleTest : public TestWithDevice {
 
   void SetUp() override {
     // Launch device process.
-    fuchsia::guest::device::StartInfo start_info;
+    fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status =
         LaunchDevice(kVirtioConsoleUrl, tx_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
@@ -43,7 +43,7 @@ class VirtioConsoleTest : public TestWithDevice {
     }
   }
 
-  fuchsia::guest::device::VirtioConsoleSyncPtr console_;
+  fuchsia::virtualization::hardware::VirtioConsoleSyncPtr console_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
   zx::socket socket_;

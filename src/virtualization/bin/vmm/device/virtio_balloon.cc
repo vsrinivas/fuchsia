@@ -19,7 +19,7 @@ static constexpr uint32_t kPageSize = 4096;
 static constexpr size_t kCallbackLimit = 8;
 
 using GetMemStatsCallback =
-    fuchsia::guest::device::VirtioBalloon::GetMemStatsCallback;
+    fuchsia::virtualization::hardware::VirtioBalloon::GetMemStatsCallback;
 
 enum class Queue : uint16_t {
   INFLATE = 0,
@@ -141,12 +141,13 @@ class StatsStream : public StreamBase {
 };
 
 // Implementation of a virtio-balloon device.
-class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
-                          public fuchsia::guest::device::VirtioBalloon {
+class VirtioBalloonImpl
+    : public DeviceBase<VirtioBalloonImpl>,
+      public fuchsia::virtualization::hardware::VirtioBalloon {
  public:
   VirtioBalloonImpl(component::StartupContext* context) : DeviceBase(context) {}
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
     switch (static_cast<Queue>(queue)) {
       case Queue::INFLATE:
@@ -165,8 +166,8 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
   }
 
  private:
-  // |fuchsia::guest::device::VirtioBalloon|
-  void Start(fuchsia::guest::device::StartInfo start_info,
+  // |fuchsia::virtualization::hardware::VirtioBalloon|
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
              StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
@@ -178,7 +179,7 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
                                       this, &VirtioBalloonImpl::Interrupt));
   }
 
-  // |fuchsia::guest::device::VirtioBalloon|
+  // |fuchsia::virtualization::hardware::VirtioBalloon|
   void GetMemStats(GetMemStatsCallback callback) override {
     if (!(negotiated_features_ & VIRTIO_BALLOON_F_STATS_VQ)) {
       // If memory statistics are not supported, return.
@@ -188,7 +189,7 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
     }
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                       zx_gpaddr_t avail, zx_gpaddr_t used,
                       ConfigureQueueCallback callback) override {
@@ -209,7 +210,7 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
     }
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
     negotiated_features_ = negotiated_features;
     callback();

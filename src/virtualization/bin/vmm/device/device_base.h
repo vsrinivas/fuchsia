@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_DEVICE_BASE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_DEVICE_BASE_H_
 
-#include <fuchsia/guest/device/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/async/cpp/trap.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
@@ -44,7 +44,7 @@ class DeviceBase {
   }
 
   // Prepares a device to start.
-  void PrepStart(fuchsia::guest::device::StartInfo start_info) {
+  void PrepStart(fuchsia::virtualization::hardware::StartInfo start_info) {
     FXL_CHECK(!event_) << "Device has already been started";
 
     event_ = std::move(start_info.event);

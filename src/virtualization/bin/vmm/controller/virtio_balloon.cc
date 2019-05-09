@@ -33,7 +33,7 @@ zx_status_t VirtioBalloon::Start(const zx::guest& guest,
   services.ConnectToService(balloon_.NewRequest());
   services.ConnectToService(stats_.NewRequest());
 
-  fuchsia::guest::device::StartInfo start_info;
+  fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;

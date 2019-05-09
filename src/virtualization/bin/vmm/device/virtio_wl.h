@@ -30,7 +30,7 @@
 
 // Virtio wayland device.
 class VirtioWl : public DeviceBase<VirtioWl>,
-                 public fuchsia::guest::device::VirtioWayland {
+                 public fuchsia::virtualization::hardware::VirtioWayland {
  public:
   class Vfd {
    public:
@@ -94,16 +94,16 @@ class VirtioWl : public DeviceBase<VirtioWl>,
 
   zx::vmar* vmar() { return &vmar_; }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override;
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                       zx_gpaddr_t avail, zx_gpaddr_t used,
                       ConfigureQueueCallback callback) override;
   void NotifyQueue(uint16_t queue) override;
 
-  // |fuchsia::guest::device::VirtioWayland|
+  // |fuchsia::virtualization::hardware::VirtioWayland|
   void Start(
-      fuchsia::guest::device::StartInfo start_info, zx::vmar vmar,
+      fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
       fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher,
       std::string device_path, std::string driver_path,
       StartCallback callback) override;

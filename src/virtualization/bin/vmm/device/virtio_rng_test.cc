@@ -15,7 +15,7 @@ class VirtioRngTest : public TestWithDevice {
 
   void SetUp() override {
     // Launch device process.
-    fuchsia::guest::device::StartInfo start_info;
+    fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status = LaunchDevice(kVirtioRngUrl, queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
@@ -31,7 +31,7 @@ class VirtioRngTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
   }
 
-  fuchsia::guest::device::VirtioRngSyncPtr rng_;
+  fuchsia::virtualization::hardware::VirtioRngSyncPtr rng_;
   VirtioQueueFake queue_;
 };
 

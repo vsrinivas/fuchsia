@@ -8,7 +8,7 @@
             "misc"
         ],
         "services": [
-            "fuchsia.guest.vmm.LaunchInfoProvider",
+            "fuchsia.virtualization.vmm.LaunchInfoProvider",
             "fuchsia.sys.Environment",
             "fuchsia.tracelink.Registry"
         ]

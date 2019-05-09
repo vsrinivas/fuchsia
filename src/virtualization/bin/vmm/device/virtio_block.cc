@@ -214,11 +214,11 @@ class RequestStream : public StreamBase {
 
 // Implementation of a virtio-block device.
 class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
-                        public fuchsia::guest::device::VirtioBlock {
+                        public fuchsia::virtualization::hardware::VirtioBlock {
  public:
   VirtioBlockImpl(component::StartupContext* context) : DeviceBase(context) {}
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
     TRACE_DURATION("machina", "VirtioBlockImpl::NotifyQueue");
     switch (static_cast<Queue>(queue)) {
@@ -232,9 +232,10 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
   }
 
  private:
-  // |fuchsia::guest::device::VirtioBlock|
-  void Start(fuchsia::guest::device::StartInfo start_info, std::string id,
-             fuchsia::guest::BlockMode mode, fuchsia::guest::BlockFormat format,
+  // |fuchsia::virtualization::hardware::VirtioBlock|
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
+             std::string id, fuchsia::guest::BlockMode mode,
+             fuchsia::guest::BlockFormat format,
              fidl::InterfaceHandle<fuchsia::io::File> file,
              StartCallback callback) override {
     read_only_ = mode == fuchsia::guest::BlockMode::READ_ONLY;
@@ -271,7 +272,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     CreateRawBlockDispatcher(file.Bind(), vmo_flags, std::move(nested));
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                       zx_gpaddr_t avail, zx_gpaddr_t used,
                       ConfigureQueueCallback callback) override {
@@ -286,7 +287,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     }
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
     callback();
   }

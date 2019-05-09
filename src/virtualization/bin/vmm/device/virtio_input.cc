@@ -213,7 +213,7 @@ static uint32_t y_coordinate(float y, float height) {
 
 // Stream for event queue.
 class EventStream : public StreamBase,
-                    public fuchsia::guest::device::ViewListener {
+                    public fuchsia::virtualization::hardware::ViewListener {
  public:
   EventStream(component::StartupContext* context) {
     context->outgoing().AddPublicService(
@@ -316,7 +316,7 @@ class EventStream : public StreamBase,
     }
   }
 
-  // |fuchsia::guest::device::ViewListener|
+  // |fuchsia::virtualization::hardware::ViewListener|
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override {
     switch (event.Which()) {
       case fuchsia::ui::input::InputEvent::Tag::kKeyboard:
@@ -334,7 +334,7 @@ class EventStream : public StreamBase,
     DoEvent();
   }
 
-  // |fuchsia::guest::device::ViewListener|
+  // |fuchsia::virtualization::hardware::ViewListener|
   void OnSizeChanged(fuchsia::ui::gfx::vec3 size) override {
     view_size_ = size;
   }
@@ -363,12 +363,12 @@ class EventStream : public StreamBase,
 
 // Implementation of a virtio-input device.
 class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
-                        public fuchsia::guest::device::VirtioInput {
+                        public fuchsia::virtualization::hardware::VirtioInput {
  public:
   VirtioInputImpl(component::StartupContext* context)
       : DeviceBase(context), event_stream_(context) {}
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
     switch (static_cast<Queue>(queue)) {
       case Queue::EVENT:
@@ -383,8 +383,8 @@ class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
   }
 
  private:
-  // |fuchsia::guest::device::VirtioInput|
-  void Start(fuchsia::guest::device::StartInfo start_info,
+  // |fuchsia::virtualization::hardware::VirtioInput|
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
              StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
@@ -392,7 +392,7 @@ class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
                                       this, &VirtioInputImpl::Interrupt));
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                       zx_gpaddr_t avail, zx_gpaddr_t used,
                       ConfigureQueueCallback callback) override {
@@ -409,7 +409,7 @@ class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
     }
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
     callback();
   }

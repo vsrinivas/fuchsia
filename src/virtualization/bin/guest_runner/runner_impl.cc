@@ -6,7 +6,7 @@
 
 #include <fs/pseudo-dir.h>
 #include <fs/remote-dir.h>
-#include <fuchsia/guest/vmm/cpp/fidl.h>
+#include <fuchsia/virtualization/vmm/cpp/fidl.h>
 #include <lib/async/default.h>
 
 #include <memory>
@@ -74,7 +74,7 @@ void RunnerImpl::StartComponent(
       // any implementations here since the ServiceProviderBridge takes care
       // of that for us via the backing_dir, which is the above /svc directory.
       service_list->names.push_back(
-          fuchsia::guest::vmm::LaunchInfoProvider::Name_);
+          fuchsia::virtualization::vmm::LaunchInfoProvider::Name_);
       bridge->set_backing_dir(
           std::move(startup_info.flat_namespace.directories[i]));
       service_list->provider = bridge->AddBinding();

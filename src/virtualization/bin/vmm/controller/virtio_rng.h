@@ -5,8 +5,8 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_RNG_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_RNG_H_
 
-#include <fuchsia/guest/device/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <virtio/virtio_ids.h>
 
 #include "src/virtualization/bin/vmm/virtio_device.h"
@@ -28,7 +28,7 @@ class VirtioRng
  private:
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
-  fuchsia::guest::device::VirtioRngSyncPtr rng_;
+  fuchsia::virtualization::hardware::VirtioRngSyncPtr rng_;
 
   zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                              zx_gpaddr_t avail, zx_gpaddr_t used);

@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_VIRTIO_DEVICE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_VIRTIO_DEVICE_H_
 
-#include <fuchsia/guest/device/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/fsl/handles/object_info.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>
@@ -215,8 +215,9 @@ class VirtioComponentDevice
                               std::move(config_queue), noop_config_device,
                               std::move(ready_device)) {}
 
-  zx_status_t PrepStart(const zx::guest& guest, async_dispatcher_t* dispatcher,
-                        fuchsia::guest::device::StartInfo* start_info) {
+  zx_status_t PrepStart(
+      const zx::guest& guest, async_dispatcher_t* dispatcher,
+      fuchsia::virtualization::hardware::StartInfo* start_info) {
     zx_status_t status = wait_.Begin(dispatcher);
     if (status != ZX_OK) {
       return status;

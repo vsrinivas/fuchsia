@@ -24,19 +24,19 @@ class RngStream : public StreamBase {
 
 // Implementation of a virtio-rng device.
 class VirtioRngImpl : public DeviceBase<VirtioRngImpl>,
-                      public fuchsia::guest::device::VirtioRng {
+                      public fuchsia::virtualization::hardware::VirtioRng {
  public:
   VirtioRngImpl(component::StartupContext* context) : DeviceBase(context) {}
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
     FXL_CHECK(queue == 0) << "Queue index " << queue << " out of range";
     queue_.Notify();
   }
 
  private:
-  // |fuchsia::guest::device::VirtioRng|
-  void Start(fuchsia::guest::device::StartInfo start_info,
+  // |fuchsia::virtualization::hardware::VirtioRng|
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
              StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
@@ -44,7 +44,7 @@ class VirtioRngImpl : public DeviceBase<VirtioRngImpl>,
                                this, &VirtioRngImpl::Interrupt));
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                       zx_gpaddr_t avail, zx_gpaddr_t used,
                       ConfigureQueueCallback callback) override {
@@ -53,7 +53,7 @@ class VirtioRngImpl : public DeviceBase<VirtioRngImpl>,
     queue_.Configure(size, desc, avail, used);
   }
 
-  // |fuchsia::guest::device::VirtioDevice|
+  // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
     callback();
   }

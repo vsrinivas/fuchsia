@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GUEST_VIEW_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GUEST_VIEW_H_
 
-#include <fuchsia/guest/device/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 
 #include "src/virtualization/bin/vmm/device/gpu_scanout.h"
@@ -14,7 +14,8 @@ class GuestView : public scenic::BaseView {
  public:
   GuestView(
       scenic::ViewContext view_context,
-      fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
+      fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
+          view_listener,
       GpuScanout* scanout);
 
  private:
@@ -26,7 +27,7 @@ class GuestView : public scenic::BaseView {
   uint32_t scanout_source_height_;
 
   GpuScanout& scanout_;
-  fuchsia::guest::device::ViewListenerPtr view_listener_;
+  fuchsia::virtualization::hardware::ViewListenerPtr view_listener_;
 
   // |scenic::BaseView|
   void OnSceneInvalidated(

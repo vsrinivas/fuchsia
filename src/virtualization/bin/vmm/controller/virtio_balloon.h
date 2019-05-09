@@ -5,8 +5,8 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_BALLOON_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_BALLOON_H_
 
-#include <fuchsia/guest/device/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <virtio/balloon.h>
@@ -32,8 +32,8 @@ class VirtioBalloon
   fidl::BindingSet<fuchsia::guest::BalloonController> bindings_;
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
-  fuchsia::guest::device::VirtioBalloonSyncPtr balloon_;
-  fuchsia::guest::device::VirtioBalloonPtr stats_;
+  fuchsia::virtualization::hardware::VirtioBalloonSyncPtr balloon_;
+  fuchsia::virtualization::hardware::VirtioBalloonPtr stats_;
 
   zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                              zx_gpaddr_t avail, zx_gpaddr_t used);

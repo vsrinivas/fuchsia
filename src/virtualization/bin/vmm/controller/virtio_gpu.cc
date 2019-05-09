@@ -16,7 +16,8 @@ VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
 
 zx_status_t VirtioGpu::Start(
     const zx::guest& guest,
-    fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener,
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
+        view_listener,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info{
       .url = kVirtioGpuUrl,
@@ -28,7 +29,7 @@ zx_status_t VirtioGpu::Start(
   events_.events().OnConfigChanged =
       fit::bind_member(this, &VirtioGpu::OnConfigChanged);
 
-  fuchsia::guest::device::StartInfo start_info;
+  fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;

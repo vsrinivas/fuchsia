@@ -25,7 +25,7 @@ class VirtioGpuTest : public TestWithDevice {
 
   void SetUp() override {
     // Launch device process.
-    fuchsia::guest::device::StartInfo start_info;
+    fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status =
         LaunchDevice(kVirtioGpuUrl, cursor_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
@@ -118,7 +118,7 @@ class VirtioGpuTest : public TestWithDevice {
     EXPECT_EQ(response_type, response->type);
   }
 
-  fuchsia::guest::device::VirtioGpuSyncPtr gpu_;
+  fuchsia::virtualization::hardware::VirtioGpuSyncPtr gpu_;
   VirtioQueueFake control_queue_;
   VirtioQueueFake cursor_queue_;
 };

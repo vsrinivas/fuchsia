@@ -15,15 +15,15 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fuchsia/guest/vmm/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/virtualization/vmm/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fdio/namespace.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/namespace.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
       component::StartupContext::CreateFromStartupInfo();
 
   fuchsia::guest::LaunchInfo launch_info;
-  fuchsia::guest::vmm::LaunchInfoProviderSyncPtr launch_info_provider;
+  fuchsia::virtualization::vmm::LaunchInfoProviderSyncPtr launch_info_provider;
   context->ConnectToEnvironmentService(launch_info_provider.NewRequest());
   zx_status_t status = launch_info_provider->GetLaunchInfo(&launch_info);
   // NOTE: This isn't an error yet since only the guest_manager exposes the
@@ -288,7 +288,8 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    fidl::InterfaceHandle<fuchsia::guest::device::ViewListener> view_listener;
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
+        view_listener;
     status = input.Start(guest.object(), view_listener.NewRequest(),
                          launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {

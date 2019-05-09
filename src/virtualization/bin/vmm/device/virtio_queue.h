@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_QUEUE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_QUEUE_H_
 
-#include <fuchsia/guest/device/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
@@ -66,9 +66,9 @@ class VirtioQueue {
 
   // Sets the interrupt callback from the queue.
   enum InterruptAction : uint8_t {
-    SET_QUEUE = 1 << fuchsia::guest::device::EVENT_SET_QUEUE,
-    SET_CONFIG = 1 << fuchsia::guest::device::EVENT_SET_CONFIG,
-    TRY_INTERRUPT = 1 << fuchsia::guest::device::EVENT_SET_INTERRUPT,
+    SET_QUEUE = 1 << fuchsia::virtualization::hardware::EVENT_SET_QUEUE,
+    SET_CONFIG = 1 << fuchsia::virtualization::hardware::EVENT_SET_CONFIG,
+    TRY_INTERRUPT = 1 << fuchsia::virtualization::hardware::EVENT_SET_INTERRUPT,
   };
   using InterruptFn = fit::function<zx_status_t(uint8_t actions)>;
   void set_interrupt(InterruptFn fn) { interrupt_ = std::move(fn); }

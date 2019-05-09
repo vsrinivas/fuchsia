@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GPU_SCANOUT_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GPU_SCANOUT_H_
 
-#include <fuchsia/guest/device/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/zx/vmo.h>
 #include <virtio/gpu.h>
 
