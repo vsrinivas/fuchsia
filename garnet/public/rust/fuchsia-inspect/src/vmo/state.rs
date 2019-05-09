@@ -15,7 +15,7 @@ use crate::vmo::utils;
 
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
 pub struct State {
-    heap: Heap,
+    pub(in crate::vmo) heap: Heap,
     header: Block<Rc<Mapping>>,
 }
 
@@ -98,26 +98,29 @@ macro_rules! metric_fns {
                 })
             }
 
-            pub fn [<set_ $name _metric>](&self, block: &Block<Rc<Mapping>>, value: $type)
+            pub fn [<set_ $name _metric>](&self, block_index: u32, value: $type)
                 -> Result<(), Error> {
                 with_header_lock!(self, {
+                    let block = self.heap.get_block(block_index)?;
                     block.[<set_ $name _value>](value)?;
                     Ok(())
                 })
             }
 
-            pub fn [<add_ $name _metric>](&self, block: &Block<Rc<Mapping>>, value: $type)
+            pub fn [<add_ $name _metric>](&self, block_index: u32, value: $type)
                 -> Result<(), Error> {
                 with_header_lock!(self, {
+                    let block = self.heap.get_block(block_index)?;
                     let current_value = block.[<$name _value>]()?;
                     block.[<set_ $name _value>](current_value + value)?;
                     Ok(())
                 })
             }
 
-            pub fn [<subtract_ $name _metric>](&self, block: &Block<Rc<Mapping>>, value: $type)
+            pub fn [<subtract_ $name _metric>](&self, block_index: u32, value: $type)
                 -> Result<(), Error> {
                 with_header_lock!(self, {
+                    let block = self.heap.get_block(block_index)?;
                     let current_value = block.[<$name _value>]()?;
                     block.[<set_ $name _value>](current_value - value)?;
                     Ok(())
@@ -190,10 +193,11 @@ impl State {
     /// Set the |value| of a PROPERTY block.
     pub fn set_property<T: PropertyFormat>(
         &mut self,
-        block: &Block<Rc<Mapping>>,
+        block_index: u32,
         value: T,
     ) -> Result<(), Error> {
         with_header_lock!(self, {
+            let block = self.heap.get_block(block_index)?;
             self.inner_set_property_value(&block, &value)?;
             Ok(())
         })
@@ -424,13 +428,13 @@ mod tests {
         assert_eq!(blocks[2].block_type(), BlockType::Name);
         assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
 
-        assert!(state.add_int_metric(&block, 10).is_ok());
+        assert!(state.add_int_metric(block.index(), 10).is_ok());
         assert_eq!(block.int_value().unwrap(), 13);
 
-        assert!(state.subtract_int_metric(&block, 5).is_ok());
+        assert!(state.subtract_int_metric(block.index(), 5).is_ok());
         assert_eq!(block.int_value().unwrap(), 8);
 
-        assert!(state.set_int_metric(&block, -6).is_ok());
+        assert!(state.set_int_metric(block.index(), -6).is_ok());
         assert_eq!(block.int_value().unwrap(), -6);
 
         // Free metric.
@@ -465,13 +469,13 @@ mod tests {
         assert_eq!(blocks[2].block_type(), BlockType::Name);
         assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
 
-        assert!(state.add_uint_metric(&block, 10).is_ok());
+        assert!(state.add_uint_metric(block.index(), 10).is_ok());
         assert_eq!(block.uint_value().unwrap(), 13);
 
-        assert!(state.subtract_uint_metric(&block, 5).is_ok());
+        assert!(state.subtract_uint_metric(block.index(), 5).is_ok());
         assert_eq!(block.uint_value().unwrap(), 8);
 
-        assert!(state.set_uint_metric(&block, 6).is_ok());
+        assert!(state.set_uint_metric(block.index(), 6).is_ok());
         assert_eq!(block.uint_value().unwrap(), 6);
 
         // Free metric.
@@ -506,13 +510,13 @@ mod tests {
         assert_eq!(blocks[2].block_type(), BlockType::Name);
         assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
 
-        assert!(state.add_double_metric(&block, 10.5).is_ok());
+        assert!(state.add_double_metric(block.index(), 10.5).is_ok());
         assert_eq!(block.double_value().unwrap(), 13.5);
 
-        assert!(state.subtract_double_metric(&block, 5.1).is_ok());
+        assert!(state.subtract_double_metric(block.index(), 5.1).is_ok());
         assert_eq!(block.double_value().unwrap(), 8.4);
 
-        assert!(state.set_double_metric(&block, -6.0).is_ok());
+        assert!(state.set_double_metric(block.index(), -6.0).is_ok());
         assert_eq!(block.double_value().unwrap(), -6.0);
 
         // Free metric.

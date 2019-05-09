@@ -29,10 +29,6 @@ impl Heap {
         Ok(heap)
     }
 
-    pub fn size(&self) -> usize {
-        self.current_size_bytes
-    }
-
     pub fn allocate_block(&mut self, min_size: usize) -> Result<Block<Rc<Mapping>>, Error> {
         let min_fit_order = utils::fit_order(min_size);
         if min_fit_order >= constants::NUM_ORDERS {
@@ -97,7 +93,8 @@ impl Heap {
     }
 
     /// The bytes in this heap.
-    pub fn bytes(&self) -> Vec<u8> {
+    #[allow(dead_code)] // Used in testing.
+    pub(in crate::vmo) fn bytes(&self) -> Vec<u8> {
         let mut result = vec![0u8; self.current_size_bytes];
         self.mapping.read(&mut result[..]);
         result
