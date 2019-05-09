@@ -22,6 +22,9 @@ For more orientation, see
 - [System Architecture](/docs/the-book/bluetooth_architecture.md)
 - [Detailed Source Layout](/docs/the-book/bluetooth_source_layout.md)
 
+For a note on used (and avoided) vocabulary, see
+- [Bluetooth Vocabulary](docs/vocabulary.md)
+
 ## Getting Started
 
 ### API Examples
