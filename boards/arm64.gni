@@ -4,6 +4,8 @@
 
 target_cpu = "arm64"
 
+board_name = "qemu-arm64"
+
 board_packages = []
 
 board_package_labels = [
