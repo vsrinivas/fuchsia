@@ -65,10 +65,9 @@ bool FidlOpenValidator(const zx::channel& directory, const char* path,
 
 // Validate some size information and expected fields without fully decoding the
 // FIDL message, for opening a path from a directory where we expect to fail.
-bool FidlOpenErrorValidator(const zx::channel& directory) {
+bool FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
     BEGIN_HELPER;
 
-    const char* path = "this-path-better-not-actually-exist";
     zx::channel client;
     ASSERT_TRUE(OpenHelper(directory, path, &client));
 
@@ -99,7 +98,9 @@ bool TestFidlOpen() {
         ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
         ASSERT_EQ(fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
         ASSERT_TRUE(FidlOpenValidator(dev_client, "zero", fuchsia_io_NodeInfoTag_device, 1));
-        ASSERT_TRUE(FidlOpenErrorValidator(dev_client));
+        ASSERT_TRUE(FidlOpenValidator(dev_client, "class/block/000", fuchsia_io_NodeInfoTag_device, 1));
+        ASSERT_TRUE(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
+        ASSERT_TRUE(FidlOpenErrorValidator(dev_client, "zero/this-path-better-not-actually-exist"));
     }
 
     {
@@ -111,7 +112,7 @@ bool TestFidlOpen() {
         ASSERT_TRUE(root_dir != nullptr);
         ASSERT_EQ(fdio_ns_connect(ns, root_dir, ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
         ASSERT_TRUE(FidlOpenValidator(dev_client, "lib", fuchsia_io_NodeInfoTag_directory, 0));
-        ASSERT_TRUE(FidlOpenErrorValidator(dev_client));
+        ASSERT_TRUE(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
     }
 
     END_TEST;

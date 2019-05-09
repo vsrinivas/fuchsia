@@ -90,8 +90,8 @@ static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, fs::O
     return ZX_OK;
 }
 
-static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_device_t>& dev,
-                                       const char* path, uint32_t flags) {
+zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
+                                   zx::channel rh) {
     zx_status_t r;
     // detect response directives and discard all other
     // protocol flags
@@ -112,8 +112,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
     fbl::RefPtr<zx_device_t> new_dev;
     r = device_open(dev, &new_dev, flags);
     if (r != ZX_OK) {
-        fprintf(stderr, "devhost_get_handles(%p:%s) open path='%s', r=%d\n", dev.get(), dev->name,
-                path ? path : "", r);
+        fprintf(stderr, "devhost_device_connect(%p:%s) open r=%d\n", dev.get(), dev->name, r);
         goto fail;
     }
     newconn->dev = new_dev;
@@ -137,7 +136,7 @@ static zx_status_t devhost_get_handles(zx::channel rh, const fbl::RefPtr<zx_devi
     // If we can't add the new conn and handle to the dispatcher our only option
     // is to give up and tear down.  In practice, this should never happen.
     if ((r = devhost_start_connection(std::move(newconn), std::move(rh))) != ZX_OK) {
-        fprintf(stderr, "devhost_get_handles: failed to start iostate\n");
+        fprintf(stderr, "devhost_device_connect: failed to start iostate\n");
         // TODO(teisenbe/kulakowski): Should this be goto fail_open?
         goto fail;
     }
@@ -175,7 +174,7 @@ static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object
     auto conn = static_cast<DevfsConnection*>(ctx);
     zx::channel c(object);
     flags = conn->flags | (flags & ZX_FS_FLAG_DESCRIBE);
-    devhost_get_handles(std::move(c), conn->dev, nullptr, flags);
+    devhost_device_connect(conn->dev, flags, std::move(c));
     return ZX_OK;
 }
 
@@ -209,33 +208,11 @@ static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
     return fuchsia_io_NodeDescribe_reply(txn, &info);
 }
 
-zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
-                                   const char* path_data, size_t path_size, zx::channel c) {
-    if ((path_size < 1) || (path_size > 1024)) {
-        return ZX_OK;
-    }
-    // TODO(smklein): Avoid assuming paths are null-terminated; this is only
-    // safe because the path is the last secondary object in the DirectoryOpen
-    // request.
-    ((char*)path_data)[path_size] = 0;
-
-    if (!strcmp(path_data, ".")) {
-        path_data = nullptr;
-    }
-    devhost_get_handles(std::move(c), dev, path_data, flags);
-    return ZX_OK;
-}
-
-void devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, zx::channel c) {
-    devhost_get_handles(std::move(c), dev, nullptr /* path */, flags);
-}
-
 static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
                                        const char* path_data, size_t path_size,
                                        zx_handle_t object) {
-    auto conn = static_cast<DevfsConnection*>(ctx);
-    zx::channel c(object);
-    return devhost_device_connect(conn->dev, flags, path_data, path_size, std::move(c));
+    zx_handle_close(object);
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t fidl_directory_unlink(void* ctx, const char* path_data, size_t path_size,

@@ -357,7 +357,8 @@ static zx_status_t fidl_devcoord_connection_directory_open(void* ctx, uint32_t f
         return ZX_OK;
     }
     auto conn = static_cast<DeviceControllerConnection*>(ctx);
-    return devhost_device_connect(conn->dev, flags, path_data, path_size, std::move(c));
+    devhost_device_connect(conn->dev, flags, std::move(c));
+    return ZX_OK;
 }
 
 static const fuchsia_io_Directory_ops_t kDevcoordinatorConnectionDirectoryOps = []() {

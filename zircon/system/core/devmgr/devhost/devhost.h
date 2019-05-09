@@ -203,12 +203,8 @@ struct DevfsConnection : AsyncLoopOwnedRpcHandler<DevfsConnection> {
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
 
 // Attaches channel |c| to new state representing an open connection to |dev|.
-// |path_data| and |flags| are forwarded to the |dev|'s |open_at| hook.
 zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
-                                   const char* path_data, size_t path_size, zx::channel c);
-
-// Attaches channel |c| to new state representing an open connection to |dev|.
-void devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, zx::channel c);
+                                   zx::channel c);
 
 zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> ios, zx::channel h);
 

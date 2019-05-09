@@ -376,7 +376,7 @@ zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t l
     return static_cast<zx_status_t>(ptr - static_cast<char*>(data));
 }
 
-zx_status_t devfs_walk(Devnode** dn_inout, char* path, char** pathout) {
+zx_status_t devfs_walk(Devnode** dn_inout, char* path) {
     Devnode* dn = *dn_inout;
 
 again:
@@ -385,9 +385,7 @@ again:
         return ZX_OK;
     }
     char* name = path;
-    char* undo = nullptr;
     if ((path = strchr(path, '/')) != nullptr) {
-        undo = path;
         *path++ = 0;
     }
     if (name[0] == 0) {
@@ -402,15 +400,8 @@ again:
             goto again;
         }
     }
-    if (dn == *dn_inout) {
-        return ZX_ERR_NOT_FOUND;
-    }
-    if (undo) {
-        *undo = '/';
-    }
-    *dn_inout = dn;
-    *pathout = name;
-    return ZX_ERR_NEXT;
+    // The path only partially matched.
+    return ZX_ERR_NOT_FOUND;
 }
 
 void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, char* path,
@@ -423,31 +414,9 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
     }
 
     Devnode* dn = dirdn;
-    zx_status_t r = devfs_walk(&dn, path, &path);
+    zx_status_t r = devfs_walk(&dn, path);
 
     bool describe = flags & ZX_FS_FLAG_DESCRIBE;
-
-    bool no_remote = (dn->device == nullptr) || (!dn->device->channel()->is_valid());
-    bool local_required = devnode_is_local(dn);
-    bool local_requested = flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY);
-
-    if (r == ZX_ERR_NEXT) {
-        // We only partially matched -- there's more path to walk.
-        if (no_remote || local_required) {
-            // No remote to pass this on to.
-            r = ZX_ERR_NOT_FOUND;
-        } else if (local_requested) {
-            // Local requested, but this is remote only.
-            r = ZX_ERR_NOT_SUPPORTED;
-        } else {
-            // There is more path to walk, and this node can accept
-            // remote requests.
-            r = ZX_OK;
-        }
-    } else {
-        path = (char*)".";
-    }
-
     if (r != ZX_OK) {
         if (describe) {
             describe_error(std::move(ipc), r);
@@ -455,9 +424,9 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
         return;
     }
 
-    // If we are a local-only node, or we are asked to not go remote,
-    // or we are asked to open-as-a-directory, open locally:
-    if (local_requested || local_required) {
+    // If we are a local-only node, or we are asked to not go remote, or we are asked to
+    // open-as-a-directory, open locally:
+    if (devnode_is_local(dn) || flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY)) {
         zx::unowned_channel unowned_ipc(ipc);
         if ((r = DcIostate::Create(dn, dispatcher, &ipc)) != ZX_OK) {
             if (describe) {
@@ -481,8 +450,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
     }
 
     // Otherwise we will pass the request on to the remote.
-    fuchsia_io_DirectoryOpen(dn->device->channel()->get(), flags, 0, path, strlen(path),
-                             ipc.release());
+    fuchsia_io_DirectoryOpen(dn->device->channel()->get(), flags, 0, ".", 1, ipc.release());
 }
 
 void devfs_remove(Devnode* dn) {
@@ -877,7 +845,6 @@ void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatche
 
 zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* dev) {
     Devnode* inout = dn;
-    char* remainder = nullptr;
 
     char path_copy[PATH_MAX];
     if (strlen(path) + 1 > sizeof(path_copy)) {
@@ -885,7 +852,7 @@ zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* dev) 
     }
     strcpy(path_copy, path);
 
-    zx_status_t status = devfs_walk(&inout, path_copy, &remainder);
+    zx_status_t status = devfs_walk(&inout, path_copy);
     if (status != ZX_OK) {
         return status;
     }
