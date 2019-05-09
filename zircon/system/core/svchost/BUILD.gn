@@ -16,6 +16,7 @@ executable("svchost") {
     "$zx/system/fidl/fuchsia-logger:c",
     "$zx/system/fidl/fuchsia-mem:c",
     "$zx/system/fidl/fuchsia-net:c",
+    "$zx/system/fidl/fuchsia-paver:c",
     "$zx/system/fidl/fuchsia-process:c",
     "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/fidl/fuchsia-sysmem:c",

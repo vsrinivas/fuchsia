@@ -141,6 +141,7 @@ if (current_cpu != "") {
       "log",
       "logger",
       "memfs",
+      "miscsvc",
       "msd",
       "namespace",
       "perftest",
