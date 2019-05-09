@@ -46,6 +46,36 @@ sdk_documentation("open_source") {
   }
 }
 
+sdk_documentation("musl_license") {
+  name = "musl_license"
+
+  category = "public"
+
+  files = [
+    {
+      source = "//zircon/third_party/ulib/musl/COPYRIGHT"
+      dest = "COPYRIGHT.musl"
+    },
+  ]
+}
+
+sdk_documentation("vulkan_license") {
+  name = "vulkan_license"
+
+  category = "public"
+
+  files = [
+    {
+      source = "//third_party/vulkan_loader_and_validation_layers/COPYRIGHT.txt"
+      dest = "COPYRIGHT.vulkan"
+    },
+    {
+      source = "//third_party/vulkan_loader_and_validation_layers/LICENSE.txt"
+      dest = "LICENSE.vulkan"
+    },
+  ]
+}
+
 sdk("zircon_sysroot") {
   category = "partner"
 
@@ -146,7 +176,9 @@ sdk("core") {
   testonly = true
 
   deps = [
+    ":musl_license",
     ":open_source",
+    ":vulkan_license",
     "docs",
     "tools:dev_finder_sdk($host_toolchain)",
     "tools:symbolize_sdk($host_toolchain)",

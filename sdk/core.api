@@ -1,6 +1,8 @@
 sdk://docs/low_level
 sdk://docs/metadata_schemas
+sdk://docs/musl_license
 sdk://docs/open_source
+sdk://docs/vulkan_license
 sdk://fidl/fuchsia.auth.oldtokens
 sdk://fidl/fuchsia.bluetooth
 sdk://fidl/fuchsia.bluetooth.gatt
