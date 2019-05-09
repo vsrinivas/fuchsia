@@ -265,6 +265,46 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
   EXPECT_FALSE(sink_connection_closed_);
 }
 
+// Opens an AAC elementary stream using |ElementarySource|.
+TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
+  fuchsia::media::playback::ElementarySourcePtr elementary_source;
+  player_->CreateElementarySource(1, false, false, nullptr,
+                                  elementary_source.NewRequest());
+
+  fuchsia::media::AudioStreamType audio_stream_type;
+  audio_stream_type.sample_format =
+      fuchsia::media::AudioSampleFormat::SIGNED_16;
+  audio_stream_type.channels = kSamplesPerFrame;
+  audio_stream_type.frames_per_second = kFramesPerSecond;
+  fuchsia::media::StreamType stream_type;
+  stream_type.medium_specific.set_audio(std::move(audio_stream_type));
+  stream_type.encoding = fuchsia::media::AUDIO_ENCODING_AAC;
+
+  fuchsia::media::SimpleStreamSinkPtr sink;
+  elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1,
+                               sink.NewRequest());
+  sink.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
+    sink_connection_closed_ = true;
+    QuitLoop();
+  });
+
+  // Here we're upcasting from a
+  // |fidl::InterfaceHandle<fuchsia::media::playback::ElementarySource>| to a
+  // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
+  // currently can. The compiler has no way of knowing whether this is
+  // legit.
+  // TODO(FIDL-329): Do this safely once FIDL-329 is fixed.
+  player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
+      elementary_source.Unbind().TakeChannel()));
+
+  commands_.WaitForAudioConnected();
+  commands_.Invoke([this]() { QuitLoop(); });
+
+  Execute();
+  EXPECT_FALSE(sink_connection_closed_);
+}
+
 // Tries to open a bogus elementary stream using |ElementarySource|.
 TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
