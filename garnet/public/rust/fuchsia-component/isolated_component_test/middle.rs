@@ -8,16 +8,12 @@ use {
     failure::{Error, ResultExt},
     fidl_fuchsia_sys::{ComponentControllerEvent, TerminationReason},
     fidl_fuchsia_test_echos::{
-        EchoExposedByParentMarker,
-        EchoExposedByParentRequest,
-        EchoExposedByParentRequestStream,
-        EchoHiddenByParentMarker,
+        EchoExposedByParentMarker, EchoExposedByParentRequest, EchoExposedByParentRequestStream,
+        EchoExposedBySiblingMarker, EchoHiddenByParentMarker,
     },
     fuchsia_async as fasync,
     fuchsia_component::{
-        client::connect_to_service,
-        fuchsia_single_component_package_url,
-        server::ServiceFs,
+        client::connect_to_service, fuchsia_single_component_package_url, server::ServiceFs,
     },
     futures::prelude::*,
 };
@@ -37,9 +33,11 @@ const ENV_NAME: &str = "fuchsia_component_inner_test_environment";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    // Check that both services provided by the parent are available
+    // Check that all services provided by the parent are available
     let echo = connect_to_service::<EchoExposedByParentMarker>()?;
     assert_eq!(1, await!(echo.echo(1))?);
+    let echo = connect_to_service::<EchoExposedBySiblingMarker>()?;
+    assert_eq!(10, await!(echo.echo(5))?);
     let echo = connect_to_service::<EchoHiddenByParentMarker>()?;
     assert_eq!(2, await!(echo.echo(2))?);
 
@@ -50,8 +48,8 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.add_fidl_service(|stream| stream);
 
-    let (_new_env_controller, child_app) = fs
-        .launch_component_in_nested_environment(CHILD_URL.to_string(), None, ENV_NAME)?;
+    let (_new_env_controller, child_app) =
+        fs.launch_component_in_nested_environment(CHILD_URL.to_string(), None, ENV_NAME)?;
 
     // spawn server to respond to child component requests
     fasync::spawn(fs.for_each_concurrent(None, echo_exposed_server));
@@ -60,12 +58,13 @@ async fn main() -> Result<(), Error> {
     match await!(component_stream.next())
         .expect("component event stream ended before termination event")?
     {
-        ComponentControllerEvent::OnDirectoryReady {} =>
-            panic!("middle component unexpectedly exposed a directory"),
+        ComponentControllerEvent::OnDirectoryReady {} => {
+            panic!("middle component unexpectedly exposed a directory")
+        }
         ComponentControllerEvent::OnTerminated {
             return_code: 0,
             termination_reason: TerminationReason::Exited,
-        } => {},
+        } => {}
         ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
             panic!("Unexpected exit condition: {:?}", (return_code, termination_reason))
         }

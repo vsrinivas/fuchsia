@@ -346,8 +346,6 @@ group("all") {
     "//garnet/packages/tests:fostr",
     "//garnet/packages/tests:fsl",
     "//garnet/packages/tests:fuchsia_component_test",
-    "//garnet/packages/tests:fuchsia_component_test_inner",
-    "//garnet/packages/tests:fuchsia_component_test_middle",
     "//garnet/packages/tests:fxl",
     "//garnet/packages/tests:gfxlatency",
     "//garnet/packages/tests:go_benchmarking_tests",
@@ -686,8 +684,9 @@ group("uuid") {
 group("fuchsia_component_test") {
   testonly = true
   public_deps = [
-    "//garnet/packages/tests:fuchsia_component_test_inner",
-    "//garnet/packages/tests:fuchsia_component_test_middle",
+    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_inner",
+    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_middle",
+    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_middle_sibling",
     "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_outer",
   ]
 }
@@ -717,13 +716,6 @@ group("fidl_compatibility_test_server_rust") {
   testonly = true
   public_deps = [
     "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_rust",
-  ]
-}
-
-group("fuchsia_component_test_inner") {
-  testonly = true
-  public_deps = [
-    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_inner",
   ]
 }
 
@@ -1196,13 +1188,6 @@ group("mediasession") {
   testonly = true
   public_deps = [
     "//src/media/sessions:tests",
-  ]
-}
-
-group("fuchsia_component_test_middle") {
-  testonly = true
-  public_deps = [
-    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_middle",
   ]
 }
 

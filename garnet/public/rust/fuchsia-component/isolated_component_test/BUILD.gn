@@ -74,6 +74,37 @@ package("fuchsia_component_test_middle") {
   ]
 }
 
+rustc_binary("fuchsia_component_test_middle_sibling_bin") {
+  name = "fuchsia_component_test_middle_sibling"
+  edition = "2018"
+  deps = [
+    ":echos-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+  source_root = "middle_sibling.rs"
+}
+
+package("fuchsia_component_test_middle_sibling") {
+  deps = [
+    ":fuchsia_component_test_middle_sibling_bin",
+  ]
+
+  binary = "fuchsia_component_test_middle_sibling"
+
+  meta = [
+    {
+      path = rebase_path("meta/fuchsia_component_test_middle_sibling.cmx")
+      dest = "fuchsia_component_test_middle_sibling.cmx"
+    },
+  ]
+}
+
 rustc_binary("fuchsia_component_test_inner_bin") {
   name = "fuchsia_component_test_inner"
   edition = "2018"

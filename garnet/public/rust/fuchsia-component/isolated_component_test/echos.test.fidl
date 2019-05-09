@@ -5,6 +5,11 @@
 library fuchsia.test.echos;
 
 [Discoverable]
+protocol EchoExposedBySibling {
+    Echo(int64 value) -> (int64 response);
+};
+
+[Discoverable]
 protocol EchoExposedByParent {
     Echo(int64 value) -> (int64 response);
 };

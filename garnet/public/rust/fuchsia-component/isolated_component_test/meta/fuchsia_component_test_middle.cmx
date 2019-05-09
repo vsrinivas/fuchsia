@@ -7,6 +7,7 @@
       "fuchsia.sys.Environment",
       "fuchsia.sys.Loader",
       "fuchsia.test.echos.EchoExposedByParent",
+      "fuchsia.test.echos.EchoExposedBySibling",
       "fuchsia.test.echos.EchoHiddenByParent"
     ]
   }
