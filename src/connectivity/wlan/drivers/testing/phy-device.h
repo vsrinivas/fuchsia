@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_WLAN_TESTING_PHY_DEVICE_H
-#define GARNET_DRIVERS_WLAN_TESTING_PHY_DEVICE_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_PHY_DEVICE_H
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_PHY_DEVICE_H
 
 #include <ddk/device.h>
 #include <wlan/common/dispatcher.h>
@@ -55,4 +55,4 @@ class PhyDevice : public ::fuchsia::wlan::device::Phy {
 }  // namespace testing
 }  // namespace wlan
 
-#endif  // GARNET_DRIVERS_WLAN_TESTING_PHY_DEVICE_H
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_PHY_DEVICE_H

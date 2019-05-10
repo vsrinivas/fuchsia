@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_RALINK_H_
-#define GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_RALINK_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_RALINK_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_RALINK_H_
 
 #include "register.h"
 
@@ -1340,4 +1340,4 @@ struct BulkoutAggregation {
 
 }  // namespace ralink
 
-#endif  // GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_RALINK_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_RALINK_H_

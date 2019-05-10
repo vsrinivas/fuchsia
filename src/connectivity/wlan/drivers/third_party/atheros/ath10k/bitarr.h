@@ -14,8 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_BITARR_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_BITARR_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_BITARR_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_BITARR_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -44,4 +44,4 @@ bool bitarr_empty(const BITARR_TYPE* bitarr, size_t num_bits);
     for ((bit) = find_first_bit((bitarr), (num_bits)); (bit) < (num_bits); \
          (bit) = find_next_bit((bitarr), (num_bits), (bit) + 1))
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_BITARR_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_BITARR_H_

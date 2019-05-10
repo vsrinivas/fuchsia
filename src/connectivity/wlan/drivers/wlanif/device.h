@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_WLAN_WLANIF_DEVICE_H_
-#define GARNET_DRIVERS_WLAN_WLANIF_DEVICE_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DEVICE_H_
 
 #include <ddk/driver.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -124,4 +124,4 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
 
 }  // namespace wlanif
 
-#endif  // GARNET_DRIVERS_WLAN_WLANIF_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DEVICE_H_

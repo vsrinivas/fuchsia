@@ -14,8 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_SWAP_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_SWAP_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_SWAP_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_SWAP_H_
 
 #include <ddk/io-buffer.h>
 
@@ -69,4 +69,4 @@ zx_status_t ath10k_swap_code_seg_configure(struct ath10k* ar, const struct ath10
 void ath10k_swap_code_seg_release(struct ath10k* ar, struct ath10k_fw_file* fw_file);
 zx_status_t ath10k_swap_code_seg_init(struct ath10k* ar, struct ath10k_fw_file* fw_file);
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_SWAP_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_SWAP_H_

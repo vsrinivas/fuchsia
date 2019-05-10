@@ -14,8 +14,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TXRX_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TXRX_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_TXRX_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_TXRX_H_
 
 #include "htt.h"
 
@@ -29,4 +29,4 @@ int ath10k_wait_for_peer_deleted(struct ath10k* ar, uint32_t vdev_id, const uint
 void ath10k_peer_map_event(struct ath10k_htt* htt, struct htt_peer_map_event* ev);
 void ath10k_peer_unmap_event(struct ath10k_htt* htt, struct htt_peer_unmap_event* ev);
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_TXRX_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_TXRX_H_

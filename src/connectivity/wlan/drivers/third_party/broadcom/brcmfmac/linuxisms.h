@@ -21,8 +21,8 @@
 // code in this driver. Do not expect defines/enums to have correct values, or struct fields to have
 // correct types. Function prototypes are even less accurate.
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -580,4 +580,4 @@ struct netdev_hw_addr {
     uint8_t addr[ETH_ALEN];
 };
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_

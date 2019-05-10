@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_REGISTER_H_
-#define GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_REGISTER_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_REGISTER_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_REGISTER_H_
 
 #include <wlan/common/bitfield.h>
 
@@ -40,4 +40,4 @@ template <uint8_t A> class RfcsrRegister : public AddressableBitField<uint8_t, u
 
 }  // namespace ralink
 
-#endif  // GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_REGISTER_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_REGISTER_H_

@@ -15,8 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -6723,4 +6723,4 @@ zx_status_t ath10k_wmi_op_get_vdev_subtype(struct ath10k* ar, enum wmi_vdev_subt
                                            int* result);
 zx_status_t ath10k_wmi_barrier(struct ath10k* ar);
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_WMI_H_

@@ -15,8 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_HTT_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_HTT_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_HTT_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_HTT_H_
 
 #include <ddk/driver.h>
 
@@ -1872,4 +1872,4 @@ zx_status_t ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmod
 void ath10k_htt_rx_pktlog_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* buf);
 bool ath10k_htt_txrx_compl_task(struct ath10k* ar);
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_HTT_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_HTT_H_

@@ -14,8 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH_H_
 
 #include <linux/etherdevice.h>
 #include <linux/if_ether.h>
@@ -321,4 +321,4 @@ static inline const char* ath_bus_type_to_string(enum ath_bus_type bustype) {
     return ath_bus_type_strings[bustype];
 }
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH_H_

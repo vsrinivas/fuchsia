@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_DRIVER_H_
-#define GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_DRIVER_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_DRIVER_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_DRIVER_H_
 
 #include <lib/async/dispatcher.h>
 
@@ -14,4 +14,4 @@
 // async_dispatcher_t* is initialized and running.
 async_dispatcher_t* ralink_async_t();
 
-#endif  // GARNET_DRIVERS_WLAN_MEDIATEK_RALINK_DRIVER_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_DRIVER_H_

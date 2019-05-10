@@ -14,8 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MSG_BUF_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MSG_BUF_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MSG_BUF_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MSG_BUF_H_
 
 #include <stdlib.h>
 
@@ -155,4 +155,4 @@ void ath10k_msg_buf_purge(list_node_t* msg_buf_list);
 // Pop |n| buffers from the head of the list and free them
 void ath10k_msg_buf_pop_and_free_n(list_node_t* msg_buf_list, int n);
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_MSG_BUF_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MSG_BUF_H_

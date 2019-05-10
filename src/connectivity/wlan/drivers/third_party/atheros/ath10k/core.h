@@ -15,8 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_
 
 #include <stdatomic.h>
 #include <stdint.h>
@@ -1030,4 +1030,4 @@ zx_status_t ath10k_core_add_phy_interface(struct ath10k* ar, zx_device_t* dev);
 zx_status_t ath10k_core_register(struct ath10k* ar, uint32_t chip_id);
 void ath10k_core_unregister(struct ath10k* ar);
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_CORE_H_

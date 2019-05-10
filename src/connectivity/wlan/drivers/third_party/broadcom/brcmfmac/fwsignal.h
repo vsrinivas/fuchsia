@@ -14,8 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWSIGNAL_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWSIGNAL_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWSIGNAL_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWSIGNAL_H_
 
 #include <zircon/types.h>
 
@@ -37,4 +37,4 @@ void brcmf_fws_bustxfail(struct brcmf_fws_info* fws, struct brcmf_netbuf* netbuf
 void brcmf_fws_bus_blocked(struct brcmf_pub* drvr, bool flow_blocked);
 void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
 
-#endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWSIGNAL_H_ */
+#endif /* SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWSIGNAL_H_ */

@@ -13,8 +13,8 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_
 
 #include <lib/sync/completion.h>
 
@@ -161,4 +161,4 @@ zx_status_t brcmf_p2p_remain_on_channel(struct wiphy* wiphy, struct wireless_dev
                                         uint64_t* cookie);
 bool brcmf_p2p_scan_finding_common_channel(struct brcmf_cfg80211_info* cfg,
                                            struct brcmf_bss_info_le* bi);
-#endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_ */
+#endif /* SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_ */

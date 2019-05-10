@@ -14,8 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_
 
 #include <sys/types.h>
 #ifdef ZX_DEBUG_ASSERT // Allow redefining this for tests, since ZX has no death-test
@@ -373,4 +373,4 @@ static inline struct brcmf_netbuf* brcmf_netbuf_list_peek_tail(struct brcmf_netb
 #define brcmf_netbuf_list_for_every_safe(buf_list, entry, temp) \
     list_for_every_entry_safe(&((buf_list)->listnode), entry, temp, struct brcmf_netbuf, listnode)
 
-#endif // GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_
+#endif // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_

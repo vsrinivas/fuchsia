@@ -1,8 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_WLAN_REALTEK_RTL88XX_RTL8821C_DEVICE_H_
-#define GARNET_DRIVERS_WLAN_REALTEK_RTL88XX_RTL8821C_DEVICE_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_RTL8821C_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_RTL8821C_DEVICE_H_
 
 #include <memory>
 
@@ -38,4 +38,4 @@ class Rtl8821cDevice : public Device {
 }  // namespace rtl88xx
 }  // namespace wlan
 
-#endif  // GARNET_DRIVERS_WLAN_REALTEK_RTL88XX_RTL8821C_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_RTL8821C_DEVICE_H_

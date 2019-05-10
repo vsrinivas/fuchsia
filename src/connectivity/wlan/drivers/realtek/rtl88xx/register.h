@@ -1,8 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_WLAN_REALTEK_RTL88XX_REGISTER_H_
-#define GARNET_DRIVERS_WLAN_REALTEK_RTL88XX_REGISTER_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_REGISTER_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_REGISTER_H_
 
 #include <wlan/common/bitfield.h>
 
@@ -21,4 +21,4 @@ class Register : public common::AddressableBitField<uint16_t, ValueTypeT, Offset
 }  // namespace rtl88xx
 }  // namespace wlan
 
-#endif  // GARNET_DRIVERS_WLAN_REALTEK_RTL88XX_REGISTER_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_REGISTER_H_

@@ -14,8 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_P2P_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_P2P_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_P2P_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_P2P_H_
 
 struct ath10k_vif;
 struct wmi_p2p_noa_info;
@@ -24,4 +24,4 @@ void ath10k_p2p_noa_update(struct ath10k_vif* arvif, const struct wmi_p2p_noa_in
 void ath10k_p2p_noa_update_by_vdev_id(struct ath10k* ar, uint32_t vdev_id,
                                       const struct wmi_p2p_noa_info* noa);
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_ATHEROS_ATH10K_P2P_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_P2P_H_
