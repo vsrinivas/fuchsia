@@ -29,7 +29,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fs/handler.h>
-#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -37,7 +36,6 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/coding.h>
-#include <lib/fit/defer.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
@@ -549,32 +547,12 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
     return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, ZX_OK);
 }
 
-// Handles outstanding calls to fuchsia.device.Controller/Bind.
-static void BindReply(const fbl::RefPtr<zx_device_t>& dev) {
-    fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
-    if (dev->PopBindConn(&conn)) {
-        // TODO(DNO-492): additional logging for debugging what looks like a
-        // deadlock.  Remove once bug is resolved.
-        printf("DeviceControllerBind finished\n");
-        // TODO(ZX-3431): We ignore the status from device_bind() for
-        // bug-compatibility reasons.  Once this bug is resolved, we can
-        // return the actual status.
-        fuchsia_device_ControllerBind_reply(conn.Txn(), ZX_OK);
-    }
-}
-
 static zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
                                    size_t driver_path_size, zx_handle_t raw_driver_vmo,
                                    fidl_txn_t* txn) {
     auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
     zx::vmo driver_vmo(raw_driver_vmo);
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
-
-    // We can now reply to calls to fuchsia.device.Controller/Bind, as we have
-    // completed the request to bind the driver.
-    auto defer = fit::defer([dev = ctx->conn->dev] {
-        BindReply(dev);
-    });
 
     // TODO: added to help debug DNO-492, remove when done
     if (driver_path == "/boot/driver/zxcrypt.so") {

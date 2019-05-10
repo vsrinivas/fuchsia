@@ -113,7 +113,7 @@ if (is_fuchsia) {
   library("fs-for-driver") {
     visibility = [
       ":*",
-      "$zx/system/core/devmgr/*",
+      "$zx/system/core/devmgr/devhost:*",
     ]
     sources = [
       "block-txn.cpp",
