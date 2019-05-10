@@ -472,7 +472,8 @@ mod tests {
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{
             FileMarker, NodeAttributes, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
-            OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
         fuchsia_zircon::sys::ZX_OK,
@@ -490,6 +491,25 @@ mod tests {
             read_only(|| Ok(b"Read only test".to_vec())),
             async move |proxy| {
                 assert_read!(proxy, "Read only test");
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn read_only_ignore_posix_flag() {
+        run_server_client(
+            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
+            read_write(
+                || Ok(b"Content".to_vec()),
+                100,
+                |_content| {
+                    panic!("OPEN_FLAG_POSIX should be ignored for files");
+                },
+            ),
+            async move |proxy| {
+                assert_read!(proxy, "Content");
+                assert_write_err!(proxy, "Can write", Status::ACCESS_DENIED);
                 assert_close!(proxy);
             },
         );
@@ -753,6 +773,39 @@ mod tests {
                 assert_close!(proxy);
             },
         );
+    }
+
+    #[test]
+    fn read_write_ignore_posix_flag() {
+        let mut write_attempt = 0;
+
+        run_server_client(
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_POSIX,
+            read_write(
+                || Ok(b"Content".to_vec()),
+                100,
+                |content| {
+                    write_attempt += 1;
+                    match write_attempt {
+                        1 => {
+                            assert_eq!(*&content, b"Can write");
+                            Ok(())
+                        }
+                        _ => panic!("Second write() call.  Content: '{:?}'", content),
+                    }
+                },
+            ),
+            async move |proxy| {
+                assert_read!(proxy, "Content");
+                assert_seek!(proxy, 0, Start);
+                assert_write!(proxy, "Can write");
+                assert_seek!(proxy, 0, Start);
+                assert_read!(proxy, "Can write");
+                assert_close!(proxy);
+            },
+        );
+
+        assert_eq!(write_attempt, 1);
     }
 
     #[test]

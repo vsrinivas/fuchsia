@@ -533,9 +533,9 @@ mod tests {
         fidl_fuchsia_io::{
             DirectoryMarker, DirectoryObject, DirectoryProxy, FileMarker, NodeAttributes, NodeInfo,
             DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
-            MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE,
-            WATCH_MASK_REMOVED,
+            MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX,
+            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING,
+            WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
         },
         fuchsia_zircon::sys::ZX_OK,
         futures::SinkExt,
@@ -1113,6 +1113,92 @@ mod tests {
 
             assert_close!(file);
 
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn flag_posix_means_writable() {
+        let root = pseudo_directory! {
+            "nested" => pseudo_directory! {
+                "file" => read_write(
+                    || Ok(b"Content".to_vec()),
+                    20,
+                    |content| {
+                        assert_eq!(*&content, b"New content");
+                        Ok(())
+                    }),
+            },
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, async move |root| {
+            let nested = open_get_directory_proxy_assert_ok!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
+                "nested"
+            );
+
+            clone_get_directory_proxy_assert_ok!(
+                &nested,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE
+            );
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&nested, flags, "file");
+
+                assert_read!(file, "Content");
+                assert_seek!(file, 0, Start);
+                assert_write!(file, "New content");
+
+                assert_close!(file);
+            }
+
+            assert_close!(nested);
+            assert_close!(root);
+        });
+    }
+
+    #[test]
+    fn flag_posix_does_not_add_writable_to_read_only() {
+        let root = pseudo_directory! {
+            "nested" => pseudo_directory! {
+                "file" => read_write(
+                    || Ok(b"Content".to_vec()),
+                    100,
+                    |_content| {
+                        panic!("OPEN_FLAG_POSIX should not add OPEN_RIGHT_WRITABLE for directories");
+                    }),
+            },
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let nested = open_get_directory_proxy_assert_ok!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
+                "nested"
+            );
+
+            clone_as_directory_assert_err!(
+                &nested,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
+                Status::ACCESS_DENIED
+            );
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+                open_as_file_assert_err!(&nested, flags, "file", Status::ACCESS_DENIED);
+            }
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&nested, flags, "file");
+
+                assert_read!(file, "Content");
+                assert_close!(file);
+            }
+
+            assert_close!(nested);
             assert_close!(root);
         });
     }

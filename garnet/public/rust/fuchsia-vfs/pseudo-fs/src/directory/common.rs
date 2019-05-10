@@ -11,8 +11,8 @@ use {
     fidl_fuchsia_io::{
         MAX_FILENAME, MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
         OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
     static_assertions::assert_eq_size,
@@ -42,11 +42,20 @@ pub fn new_connection_validate_flags(
         flags &= OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
     }
 
+    // For directories OPEN_FLAG_POSIX means that WRITABLE permission need to be inherited from the
+    // parent connection.  As this method is only used for directories, here it applies always.
+    if flags & OPEN_FLAG_POSIX != 0 {
+        if parent_flags & OPEN_RIGHT_WRITABLE != 0 {
+            flags |= OPEN_RIGHT_WRITABLE;
+        }
+        flags &= !OPEN_FLAG_POSIX;
+    }
+
     let allowed_flags =
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
+        OPEN_FLAG_DESCRIBE | OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
 
     let prohibited_flags =
-        OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_FLAG_TRUNCATE | OPEN_FLAG_APPEND;
+        OPEN_FLAG_APPEND | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_FLAG_TRUNCATE;
 
     if !stricter_or_same_rights(flags, parent_flags) {
         return Err(Status::ACCESS_DENIED);
