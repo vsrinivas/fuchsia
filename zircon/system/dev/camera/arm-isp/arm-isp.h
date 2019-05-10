@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "arm-isp-test.h"
 #include "global_regs.h"
 #include "pingpong_regs.h"
 #include "stats-mgr.h"
@@ -73,6 +74,10 @@ public:
 private:
     zx_status_t InitIsp();
     zx_status_t IspContextInit();
+
+    // A skeleton function for testing the ISP with the ISPDeviceTester:
+    zx_status_t RunTests() { return ZX_OK; }
+
     void ShutDown();
     void PowerUpIsp();
     void IspHWReset(bool reset);
@@ -129,6 +134,8 @@ private:
     fbl::unique_ptr<camera::StatsManager> statsMgr_;
 
     sync_completion_t frame_processing_signal_;
+
+    friend class ArmIspDeviceTester;
 };
 
 } // namespace camera

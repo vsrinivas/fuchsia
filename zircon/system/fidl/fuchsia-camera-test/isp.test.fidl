@@ -1,0 +1,33 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.camera.test;
+
+using zx;
+
+// Currently, this interface exists as a placeholder for further
+// more complicated interfaces.  The interfaces in this file are
+// expected to be changing rapidly as tests are added to the ARM ISP.
+
+/// Returns the result summary of a test run
+struct TestReport {
+    /// Total number of tests
+    uint32 test_count;
+    /// Number of successful tests
+    uint32 success_count;
+    /// Number of failed tests
+    uint32 failure_count;
+};
+
+/// Interface for testing an ISP driver
+/// The sole purpose of this interface is to allow communication
+/// between the ArmIspDevice and the ArmIspDeviceTester.  No other usages
+/// of this interface will be supported!!
+[Layout = "Simple"]
+protocol IspTester {
+    /// Execute the tests for this device.  Tests will be run on the ISP.
+    /// Returns the status from the test.
+    RunTests() -> (zx.status status, TestReport report);
+};
+

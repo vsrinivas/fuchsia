@@ -327,6 +327,13 @@ zx_status_t ArmIspDevice::InitIsp() {
         .set_mcu_override_config_select(1)
         .WriteTo(&isp_mmio_);
 
+    // TODO(garratt): Enable this only under test.
+    status = ArmIspDeviceTester::Create(this);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to create ISP Tester\n", __func__);
+        return status;
+    }
+
     return ZX_OK;
 }
 
