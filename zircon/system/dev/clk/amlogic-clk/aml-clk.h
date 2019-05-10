@@ -32,8 +32,10 @@ class AmlClock : public DeviceType,
 
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlClock);
-    explicit AmlClock(zx_device_t* device)
-        : DeviceType(device){}
+    AmlClock(zx_device_t* device,
+             ddk::MmioBuffer hiu_mmio,
+             std::optional<ddk::MmioBuffer> msr_mmio,
+             uint32_t device_id);
     // Performs the object initialization.
     static zx_status_t Create(zx_device_t* device);
 
@@ -58,28 +60,23 @@ private:
     // Toggle clocks enable bit.
     zx_status_t ClkToggle(uint32_t clk, const bool enable);
     // Initialize platform device.
-    zx_status_t InitPdev(zx_device_t* parent);
+    zx_status_t Init(uint32_t did);
     // Clock measure helper API.
     zx_status_t ClkMeasureUtil(uint32_t clk, uint64_t* clk_freq);
-    // MMIO helper APIs.
-    zx_status_t InitHiuRegs(pdev_device_info_t* info);
-    zx_status_t InitMsrRegs(pdev_device_info_t* info);
-    // Platform device protocol.
-    pdev_protocol_t pdev_;
+
     // IO MMIO
-    std::optional<ddk::MmioBuffer> hiu_mmio_;
+    ddk::MmioBuffer hiu_mmio_;
     std::optional<ddk::MmioBuffer> msr_mmio_;
     // Protects clock gate registers.
-    fbl::Mutex lock_;
     // Clock gates.
-    fbl::Array<meson_clk_gate_t> gates_;
+    fbl::Mutex lock_;
+    const meson_clk_gate_t* gates_ = nullptr;
+    size_t gate_count_ = 0;
     // Clock Table
-    fbl::Array<const char* const> clk_table_;
+    const char* const* clk_table_ = nullptr;
+    size_t clk_table_count_ = 0;
     // MSR_CLK offsets/
     meson_clk_msr_t clk_msr_offsets_;
-    // Booleans for feature support
-    bool clk_gates_ = true;
-    bool clk_msr_ = true;
 };
 
 } // namespace amlogic_clock

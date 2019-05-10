@@ -27,6 +27,7 @@ if (current_cpu != "") {
       "$zx/system/dev/board/mt8167s_ref:mt8167s_ref-test",
       "$zx/system/dev/bus/pci:pci_tests",
       "$zx/system/dev/bus/virtio:virtio-test",
+      "$zx/system/dev/clk/amlogic-clk:amlogic-clk-test",
       "$zx/system/dev/clk/msm8x53-clk:msm8x53-clk-test",
       "$zx/system/dev/display/mt8167s-display:tests",
       "$zx/system/dev/gpio/as370-gpio:as370-gpio-test",

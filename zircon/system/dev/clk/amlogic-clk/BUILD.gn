@@ -24,3 +24,32 @@ driver("amlogic-clk") {
     "$zx/system/ulib/zxcpp",
   ]
 }
+
+
+test("amlogic-clk-test") {
+  testonly = true
+  output_name = "amlogic-clk-test"
+  sources = [
+    "aml-clk.cpp",
+    "aml-clk-test.cpp"
+  ]
+  deps = [
+    "$zx/system/dev/lib/aaa-mock-mmio-reg",
+    "$zx/system/banjo/ddk.protocol.clockimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/fidl/fuchsia-hardware-clock:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
+  ]
+}

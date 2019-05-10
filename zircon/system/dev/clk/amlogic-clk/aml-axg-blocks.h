@@ -14,7 +14,7 @@
 #define AXG_HHI_GCLK_AO                 (0x55 << 2)
 #define AXG_HHI_MPEG_CLK_CNTL           (0x5D << 2)
 
-static meson_clk_gate_t axg_clk_gates[] = {
+static constexpr meson_clk_gate_t axg_clk_gates[] = {
     // MPEG0 Clock Gates
     {.reg = AXG_HHI_GCLK_MPEG0, .bit = 0},  // CLK_AXG_DDR
     {.reg = AXG_HHI_GCLK_MPEG0, .bit = 2},  // CLK_AXG_AUDIO_LOCKER

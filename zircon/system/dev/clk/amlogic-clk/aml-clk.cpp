@@ -13,6 +13,7 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <ddktl/pdev.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -23,132 +24,58 @@ namespace amlogic_clock {
 
 // MMIO Indexes
 static constexpr uint32_t kHiuMmio = 0;
-static constexpr uint32_t kMsrClk = 1;
+static constexpr uint32_t kMsrMmio = 1;
 
 #define MSR_WAIT_BUSY_RETRIES 5
 #define MSR_WAIT_BUSY_TIMEOUT_US 10000
 
-zx_status_t AmlClock::InitHiuRegs(pdev_device_info_t* info) {
-    // Map the HIU registers.
-    mmio_buffer_t mmio;
-    zx_status_t status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                              &mmio);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
-        return status;
-    }
-    hiu_mmio_ = ddk::MmioBuffer(mmio);
-
-    return ZX_OK;
-}
-
-zx_status_t AmlClock::InitMsrRegs(pdev_device_info_t* info) {
-    // Map the MSR registers.
-    mmio_buffer_t mmio;
-    zx_status_t status = pdev_map_mmio_buffer(&pdev_, kMsrClk, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                              &mmio);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-clk: could not map periph mmio: %d\n", status);
-        return status;
-    }
-    msr_mmio_ = ddk::MmioBuffer(mmio);
-
-    return ZX_OK;
-}
-
-zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
-    zx_status_t status = device_get_protocol(parent,
-                                             ZX_PROTOCOL_PDEV,
-                                             &pdev_);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    // Get the device information.
-    pdev_device_info_t info;
-    status = pdev_get_device_info(&pdev_, &info);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-clk: pdev_get_device_info failed\n");
-        return status;
-    }
-
-    status = InitHiuRegs(&info);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    // If there are more than 1 MMIO range, then this board also
-    // has the clock measure hw block. So we check here if it's
-    // available and map it only if it exists.
-    if (info.mmio_count > 1) {
-        // Map the CLK MSR registers.
-        status = InitMsrRegs(&info);
-        if (status != ZX_OK) {
-            return status;
-        }
-    }
-
-    meson_clk_gate_t* clk_gates;
-
+AmlClock::AmlClock(zx_device_t* device,
+                   ddk::MmioBuffer hiu_mmio,
+                   std::optional<ddk::MmioBuffer> msr_mmio,
+                   uint32_t device_id)
+    : DeviceType(device)
+    , hiu_mmio_(std::move(hiu_mmio))
+    , msr_mmio_(std::move(msr_mmio)) {
     // Populate the correct register blocks.
-    switch (info.did) {
+    switch (device_id) {
     case PDEV_DID_AMLOGIC_AXG_CLK: {
-        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(axg_clk_gates),
-                                              sizeof(meson_clk_gate_t));
-        if (clk_gates == nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        memcpy(clk_gates, axg_clk_gates, sizeof(meson_clk_gate_t) * fbl::count_of(axg_clk_gates));
-
-        gates_.reset(clk_gates, fbl::count_of(axg_clk_gates));
-        clk_msr_ = false;
+        gates_ = axg_clk_gates;
+        gate_count_ = countof(axg_clk_gates);
         break;
     }
     case PDEV_DID_AMLOGIC_GXL_CLK: {
-        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(gxl_clk_gates),
-                                              sizeof(meson_clk_gate_t));
-        if (clk_gates == nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        memcpy(clk_gates, gxl_clk_gates, sizeof(meson_clk_gate_t) * fbl::count_of(axg_clk_gates));
-
-        gates_.reset(clk_gates, fbl::count_of(gxl_clk_gates));
-        clk_msr_ = false;
+        gates_ = gxl_clk_gates;
+        gate_count_ = countof(gxl_clk_gates);
         break;
     }
     case PDEV_DID_AMLOGIC_G12A_CLK: {
         clk_msr_offsets_ = g12a_clk_msr;
-        clk_table_.reset(g12a_clk_table, fbl::count_of(g12a_clk_table));
-        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(g12a_clk_gates),
-                                              sizeof(meson_clk_gate_t));
-        if (clk_gates == nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        memcpy(clk_gates, g12a_clk_gates, sizeof(meson_clk_gate_t) * fbl::count_of(g12a_clk_gates));
 
-        gates_.reset(clk_gates, fbl::count_of(g12a_clk_gates));
+        clk_table_ = static_cast<const char* const*>(g12a_clk_table);
+        clk_table_count_ = countof(g12a_clk_table);
+
+        gates_ = g12a_clk_gates;
+        gate_count_ = countof(g12a_clk_gates);
         break;
     }
     case PDEV_DID_AMLOGIC_G12B_CLK: {
         clk_msr_offsets_ = g12b_clk_msr;
-        clk_table_.reset(g12b_clk_table, fbl::count_of(g12b_clk_table));
-        clk_gates = (meson_clk_gate_t*)calloc(fbl::count_of(g12b_clk_gates),
-                                              sizeof(meson_clk_gate_t));
-        if (clk_gates == nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        memcpy(clk_gates, g12b_clk_gates, sizeof(meson_clk_gate_t) * fbl::count_of(g12b_clk_gates));
 
-        gates_.reset(clk_gates, fbl::count_of(g12b_clk_gates));
+        clk_table_ = static_cast<const char* const*>(g12b_clk_table);
+        clk_table_count_ = countof(g12b_clk_table);
+
+        gates_ = g12b_clk_gates;
+        gate_count_ = countof(g12b_clk_gates);
         break;
     }
     default:
-        zxlogf(ERROR, "aml-clk: Unsupported SOC DID %u\n", info.pid);
-        return ZX_ERR_INVALID_ARGS;
+        ZX_PANIC("aml-clk: Unsupported SOC DID %u\n", device_id);
     }
+}
 
+zx_status_t AmlClock::Init(uint32_t did) {
     pbus_protocol_t pbus;
-    status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
+    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-clk: failed to get ZX_PROTOCOL_PBUS, st = %d\n",
                status);
@@ -170,9 +97,52 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
 }
 
 zx_status_t AmlClock::Create(zx_device_t* parent) {
-    auto clock_device = std::make_unique<amlogic_clock::AmlClock>(parent);
+    zx_status_t status;
 
-    zx_status_t status = clock_device->InitPdev(parent);
+    // Get the platform device protocol and try to map all the MMIO regions.
+    ddk::PDev pdev(parent);
+    if (!pdev.is_valid()) {
+        zxlogf(ERROR, "aml-clk: failed to get pdev protocol\n");
+        return ZX_ERR_NO_RESOURCES;
+    }
+
+    std::optional<ddk::MmioBuffer> hiu_mmio = std::nullopt;
+    std::optional<ddk::MmioBuffer> msr_mmio = std::nullopt;
+
+    // All AML clocks have HIU regs but only some support MSR regs.
+    // Figure out which of the varieties we're dealing with.
+    status = pdev.MapMmio(kHiuMmio, &hiu_mmio);
+    if (status != ZX_OK || !hiu_mmio) {
+        zxlogf(ERROR, "aml-clk: failed to map HIU regs, status = %d\n", status);
+        return status;
+    }
+
+    // Use the Pdev Device Info to determine if we've been provided with two
+    // MMIO regions.
+    pdev_device_info_t info;
+    status = pdev.GetDeviceInfo(&info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-clk: failed to get pdev device info, status = %d\n", status);
+        return status;
+    }
+
+    if (info.mmio_count > 1) {
+        status = pdev.MapMmio(kMsrMmio, &msr_mmio);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "aml-clk: failed to map MSR regs, status = %d\n", status);
+            return status;
+        }
+    }
+
+    auto clock_device =
+        std::make_unique<amlogic_clock::AmlClock>(
+            parent,
+            std::move(*hiu_mmio),
+            *std::move(msr_mmio),
+            info.did
+        );
+
+    status = clock_device->Init(info.did);
     if (status != ZX_OK) {
         return status;
     }
@@ -189,36 +159,29 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
 }
 
 zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
-    if (clk >= gates_.size()) {
+    if (clk >= gate_count_) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    const meson_clk_gate_t* gate = &gates_[clk];
+    const meson_clk_gate_t* gate = &(gates_[clk]);
+
     fbl::AutoLock al(&lock_);
 
     if (enable) {
-        hiu_mmio_->SetBits32(1 << gate->bit, gate->reg);
+        hiu_mmio_.SetBits32(1 << gate->bit, gate->reg);
     } else {
-        hiu_mmio_->ClearBits32(1 << gate->bit, gate->reg);
+        hiu_mmio_.ClearBits32(1 << gate->bit, gate->reg);
     }
 
     return ZX_OK;
 }
 
 zx_status_t AmlClock::ClockImplEnable(uint32_t clk) {
-    if (clk_gates_) {
-        return ClkToggle(clk, true);
-    } else {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    return ClkToggle(clk, true);
 }
 
 zx_status_t AmlClock::ClockImplDisable(uint32_t clk) {
-    if (clk_gates_) {
-        return ClkToggle(clk, false);
-    } else {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    return ClkToggle(clk, false);
 }
 
 zx_status_t AmlClock::ClockImplRequestRate(uint32_t id, uint64_t hz) {
@@ -231,6 +194,10 @@ zx_status_t AmlClock::ClockImplRequestRate(uint32_t id, uint64_t hz) {
 // Following implementation is adopted from Amlogic SDK,
 // there is absolutely no documentation.
 zx_status_t AmlClock::ClkMeasureUtil(uint32_t clk, uint64_t* clk_freq) {
+    if (!msr_mmio_) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     // Set the measurement gate to 64uS.
     uint32_t value = 64 - 1;
     msr_mmio_->Write32(value, clk_msr_offsets_.reg0_offset);
@@ -267,7 +234,7 @@ zx_status_t AmlClock::ClkMeasureUtil(uint32_t clk, uint64_t* clk_freq) {
 }
 
 zx_status_t AmlClock::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info) {
-    if (clk >= clk_table_.size()) {
+    if (clk >= clk_table_count_) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -282,12 +249,15 @@ zx_status_t AmlClock::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyI
 }
 
 uint32_t AmlClock::GetClkCount() {
-    return static_cast<uint32_t>(clk_table_.size());
+    return static_cast<uint32_t>(clk_table_count_);
 }
 
 void AmlClock::ShutDown() {
     hiu_mmio_.reset();
-    msr_mmio_.reset();
+
+    if (msr_mmio_) {
+        msr_mmio_->reset();
+    }
 }
 
 zx_status_t fidl_clk_measure(void* ctx, uint32_t clk, fidl_txn_t* txn) {
@@ -336,6 +306,8 @@ static constexpr zx_driver_ops_t aml_clk_driver_ops = []() {
     return ops;
 }();
 
+
+// clang-format off
 ZIRCON_DRIVER_BEGIN(aml_clk, aml_clk_driver_ops, "zircon", "0.1", 6)
 BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
@@ -344,4 +316,4 @@ BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GXL_CLK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_G12A_CLK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_G12B_CLK),
-    ZIRCON_DRIVER_END(aml_clk)
+ZIRCON_DRIVER_END(aml_clk)

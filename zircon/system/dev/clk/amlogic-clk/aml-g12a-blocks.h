@@ -24,7 +24,7 @@
 
 // NOTE: This list only contains the clocks in use currently and
 //       not all available clocks.
-static meson_clk_gate_t g12a_clk_gates[] = {
+static constexpr meson_clk_gate_t g12a_clk_gates[] = {
     // SYS CPU Clock gates.
     {.reg = G12A_HHI_SYS_CPU_CLK_CNTL1, .bit = 24}, // CLK_SYS_PLL_DIV16
     {.reg = G12A_HHI_SYS_CPU_CLK_CNTL1, .bit = 1},  // CLK_SYS_CPU_CLK_DIV16
