@@ -33,8 +33,8 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
 
         uint32_t actual = 0u;
         uint32_t actual_handles = 0u;
-        zx_handle_t handle[2];
-        minip_ctx_t ctx;
+        zx_handle_t handle[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
+        minip_ctx_t ctx = {0};
 
         zx_status_t status = (*read_fn)(
                 channel, 0u, &ctx, handle, sizeof(ctx), 1, &actual, &actual_handles);
@@ -57,9 +57,12 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
             if (status != ZX_OK)
                 break;
 
-            minip_cmd_t cmd;
+            minip_cmd_t cmd = {0};
             status = ctx.channel_read(
                 channel, 0u, &cmd, NULL,  sizeof(cmd), 0u, &actual, &actual_handles);
+
+            if (status != ZX_OK)
+                break;
 
             // Execute one or more commands. After each we send a reply with the
             // result. If the command does not cause to crash or exit.
@@ -107,7 +110,7 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
 
                     // Test one case of using an invalid handle.  This
                     // tests a double-close of an event handle.
-                    zx_handle_t handle;
+                    zx_handle_t handle = ZX_HANDLE_INVALID;
                     if (ctx.event_create(0u, &handle) != ZX_OK ||
                         ctx.handle_close(handle) != ZX_OK)
                         __builtin_trap();
@@ -122,9 +125,9 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                     // out of the process (by writing it to a channel).  In
                     // this case, the Handle object still exists inside the
                     // kernel.
-                    zx_handle_t handle;
-                    zx_handle_t channel1;
-                    zx_handle_t channel2;
+                    zx_handle_t handle = ZX_HANDLE_INVALID;
+                    zx_handle_t channel1 = ZX_HANDLE_INVALID;
+                    zx_handle_t channel2 = ZX_HANDLE_INVALID;
                     if (ctx.event_create(0u, &handle) != ZX_OK ||
                         ctx.channel_create(0u, &channel1, &channel2) != ZX_OK ||
                         ctx.channel_write(channel1, 0, NULL, 0,
@@ -141,7 +144,7 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                 if (what & MINIP_CMD_VALIDATE_CLOSED_HANDLE) {
                     what &= ~MINIP_CMD_VALIDATE_CLOSED_HANDLE;
 
-                    zx_handle_t event;
+                    zx_handle_t event = ZX_HANDLE_INVALID;
                     if (ctx.event_create(0u, &event) != ZX_OK)
                         __builtin_trap();
                     ctx.handle_close(event);
@@ -152,10 +155,10 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                 if (what & MINIP_CMD_CREATE_PAGER_VMO) {
                     what &= ~MINIP_CMD_CREATE_PAGER_VMO;
 
-                    zx_handle_t pager;
+                    zx_handle_t pager = ZX_HANDLE_INVALID;
                     if (ctx.pager_create(0u, &pager) != ZX_OK)
                         __builtin_trap();
-                    zx_handle_t port;
+                    zx_handle_t port = ZX_HANDLE_INVALID;
                     if (ctx.port_create(0u, &port) != ZX_OK)
                         __builtin_trap();
                     cmd.status = ctx.pager_create_vmo(pager, 0u, port, 0u, 0u, &handle[0]);
