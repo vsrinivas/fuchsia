@@ -9,6 +9,7 @@
 #include <lib/zx/vmo.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 #include <zircon/types.h>
 
 #include "garnet/lib/perfmon/controller.h"

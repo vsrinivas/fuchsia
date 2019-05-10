@@ -38,6 +38,8 @@ static_library("perfmon") {
       "config_impl.h",
       "controller.cc",
       "controller.h",
+      "controller_impl.cc",
+      "controller_impl.h",
       "device_reader.cc",
       "device_reader.h",
       "properties.cc",

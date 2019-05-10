@@ -10,9 +10,6 @@
 #include <lib/zx/vmo.h>
 #include <zircon/syscalls.h>
 
-#include "garnet/lib/perfmon/controller.h"
-#include "garnet/lib/perfmon/properties_impl.h"
-
 namespace perfmon {
 namespace internal {
 

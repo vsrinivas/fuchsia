@@ -4,17 +4,16 @@
 
 #include "garnet/lib/perfmon/controller.h"
 
-#include <assert.h>
 #include <fcntl.h>
-#include <limits.h>
 #include <sys/stat.h>
 
 #include <fbl/algorithm.h>
+#include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <zircon/syscalls.h>
 
 #include "garnet/lib/perfmon/config_impl.h"
+#include "garnet/lib/perfmon/controller_impl.h"
 #include "garnet/lib/perfmon/device_reader.h"
 #include "garnet/lib/perfmon/properties_impl.h"
 
@@ -130,113 +129,13 @@ bool Controller::Create(uint32_t buffer_size_in_pages, const Config config,
   uint32_t actual_buffer_size_in_pages =
       GetBufferSizeInPages(mode, buffer_size_in_pages);
 
-  if (!Alloc(raw_fd, num_traces, actual_buffer_size_in_pages)) {
+  if (!Alloc(fd.get(), num_traces, actual_buffer_size_in_pages)) {
     return false;
   }
 
-  out_controller->reset(new Controller(std::move(fd), num_traces,
-                                       buffer_size_in_pages,
-                                       std::move(config)));
+  out_controller->reset(new internal::ControllerImpl(
+      std::move(fd), num_traces, buffer_size_in_pages, std::move(config)));
   return true;
-}
-
-Controller::Controller(fxl::UniqueFD fd, uint32_t num_traces,
-                       uint32_t buffer_size_in_pages, const Config config)
-    : fd_(std::move(fd)),
-      num_traces_(num_traces),
-      buffer_size_in_pages_(buffer_size_in_pages),
-      config_(std::move(config)),
-      weak_ptr_factory_(this) {
-}
-
-Controller::~Controller() {
-  Reset();
-}
-
-bool Controller::Start() {
-  if (started_) {
-    FXL_LOG(ERROR) << "already started";
-    return false;
-  }
-
-  if (!Stage()) {
-    return false;
-  }
-
-  auto status = ioctl_perfmon_start(fd_.get());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "ioctl_perfmon_start failed: status=" << status;
-  } else {
-    started_ = true;
-  }
-  return status == ZX_OK;
-}
-
-void Controller::Stop() {
-  auto status = ioctl_perfmon_stop(fd_.get());
-  if (status != ZX_OK) {
-    // This can get called while tracing is currently stopped.
-    if (!started_ && status == ZX_ERR_BAD_STATE) {
-      ;  // dont report an error in this case
-    } else {
-      FXL_LOG(ERROR) << "ioctl_perfmon_stop failed: status=" << status;
-    }
-  } else {
-    started_ = false;
-  }
-}
-
-bool Controller::Stage() {
-  FXL_DCHECK(!started_);
-
-  perfmon_ioctl_config_t ioctl_config;
-  internal::PerfmonToIoctlConfig(config_, &ioctl_config);
-
-  auto status = ioctl_perfmon_stage_config(fd_.get(), &ioctl_config);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "ioctl_perfmon_stage_config failed: status=" << status;
-  }
-  return status == ZX_OK;
-}
-
-void Controller::Free() {
-  auto status = ioctl_perfmon_free_trace(fd_.get());
-  if (status != ZX_OK) {
-    // This can get called while tracing is currently stopped.
-    if (!started_ && status == ZX_ERR_BAD_STATE) {
-      ;  // dont report an error in this case
-    } else {
-      FXL_LOG(ERROR) << "ioctl_perfmon_free_trace failed: status=" << status;
-    }
-  }
-}
-
-void Controller::Reset() {
-  Stop();
-  Free();
-}
-
-bool Controller::GetBufferHandle(const std::string& name, uint32_t trace_num,
-                                 zx::vmo* out_vmo) {
-  ioctl_perfmon_buffer_handle_req_t req;
-  req.descriptor = trace_num;
-  auto status = ioctl_perfmon_get_buffer_handle(
-      fd_.get(), &req, out_vmo->reset_and_get_address());
-  if (status < 0) {
-    FXL_LOG(ERROR) << name << ": ioctl_perfmon_get_buffer_handle failed: "
-                   << status;
-    return false;
-  }
-  return true;
-}
-
-std::unique_ptr<Reader> Controller::GetReader() {
-  std::unique_ptr<Reader> reader;
-  if (internal::DeviceReader::Create(weak_ptr_factory_.GetWeakPtr(),
-                                     buffer_size_in_pages_, &reader)) {
-    return reader;
-  }
-  return nullptr;
 }
 
 }  // namespace perfmon

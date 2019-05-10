@@ -11,9 +11,7 @@
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zx/vmo.h>
-#include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "garnet/lib/perfmon/config.h"
 #include "garnet/lib/perfmon/properties.h"
@@ -39,40 +37,33 @@ class Controller {
   static bool Create(uint32_t buffer_size_in_pages, const Config config,
                      std::unique_ptr<Controller>* out_controller);
 
-  ~Controller();
+  // Note: Virtual methods are used here to hide the implementation.
+  // There is no intent to provide polymorphism here.
 
-  bool Start();
+  virtual ~Controller() = default;
+
+  virtual bool Start() = 0;
+
   // It is ok to call this while stopped.
-  void Stop();
+  virtual void Stop() = 0;
 
-  bool started() const { return started_; }
+  virtual bool started() const = 0;
 
-  uint32_t num_traces() const { return num_traces_; }
+  virtual uint32_t num_traces() const = 0;
 
-  const Config& config() const { return config_; }
+  virtual const Config& config() const = 0;
 
-  bool GetBufferHandle(const std::string& name, uint32_t trace_num,
-                       zx::vmo* out_vmo);
+  virtual bool GetBufferHandle(const std::string& name, uint32_t trace_num,
+                               zx::vmo* out_vmo) = 0;
 
-  std::unique_ptr<Reader> GetReader();
+  virtual std::unique_ptr<Reader> GetReader() = 0;
+
+ protected:
+  Controller() = default;
 
  private:
   static bool Alloc(int fd, uint32_t num_traces, uint32_t buffer_size_in_pages);
-  Controller(fxl::UniqueFD fd, uint32_t num_traces, uint32_t buffer_size,
-             Config config);
-  bool Stage();
-  void Free();
-  void Reset();
 
-  fxl::UniqueFD fd_;
-  // The number of traces we will collect (== #cpus for now).
-  uint32_t num_traces_;
-  // This is the actual buffer size we use, in pages.
-  const uint32_t buffer_size_in_pages_;
-  const Config config_;
-  bool started_ = false;
-
-  fxl::WeakPtrFactory<Controller> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(Controller);
 };
 
