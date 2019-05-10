@@ -345,6 +345,14 @@ void MeasureFreqRespSinad(Mixer* mixer, uint32_t src_buf_size, double* level_db,
     // Calculate Frequency Response and Signal-to-Noise-And-Distortion (SINAD).
     level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
     sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
+
+    // After running each frequency, clear out any remained cached filter state.
+    // Currently, this is not strictly necessary since for each frequency test,
+    // our initial position is the exact beginning of the buffer (and hence for
+    // the Point and Linear resamplers, no previously-cached state is needed).
+    // However, this IS a requirement for upcoming resamplers with larger
+    // positive filter widths (they exposed the bug; thus addressing it now).
+    mixer->Reset();
   }
 }
 
@@ -643,7 +651,7 @@ TEST(Sinad, Point_MicroSRC) {
                        AudioResult::kPrevSinadPointMicro.data());
 }
 
-// Measure Freq Response for Point sampler, no rate conversion.
+// Measure Freq Response for Linear sampler, no rate conversion.
 TEST(FrequencyResponse, Linear_Unity) {
   TestUnitySampleRatio(Resampler::LinearInterpolation,
                        AudioResult::FreqRespLinearUnity.data(),
@@ -653,7 +661,7 @@ TEST(FrequencyResponse, Linear_Unity) {
                           AudioResult::kPrevFreqRespLinearUnity.data());
 }
 
-// Measure SINAD for Point sampler, no rate conversion.
+// Measure SINAD for Linear sampler, no rate conversion.
 TEST(Sinad, Linear_Unity) {
   TestUnitySampleRatio(Resampler::LinearInterpolation,
                        AudioResult::FreqRespLinearUnity.data(),

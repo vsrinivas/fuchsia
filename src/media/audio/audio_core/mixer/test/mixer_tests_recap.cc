@@ -15,8 +15,8 @@ namespace media::audio::test {
 TEST(Recap, FreqResp) {
   printf("\n Frequency Response");
   printf("\n   (in dB, with prior results)");
-
   uint32_t num_freqs;
+
   printf("\n\n   Point resampler\n       ");
 
   printf("                No SRC   ");
@@ -47,6 +47,7 @@ TEST(Recap, FreqResp) {
     } else {
       printf("                         ");
     }
+
     if (FrequencySet::UseFullFrequencySet) {
       if (AudioResult::kPrevFreqRespPointDown0[freq] !=
           -std::numeric_limits<double>::infinity()) {
@@ -56,6 +57,7 @@ TEST(Recap, FreqResp) {
         printf("                         ");
       }
     }
+
     if (AudioResult::kPrevFreqRespPointDown1[freq] !=
         -std::numeric_limits<double>::infinity()) {
       printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespPointDown1[freq],
@@ -72,6 +74,7 @@ TEST(Recap, FreqResp) {
       } else {
         printf("                         ");
       }
+
       if (AudioResult::kPrevFreqRespPointUp1[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespPointUp1[freq],
@@ -79,6 +82,7 @@ TEST(Recap, FreqResp) {
       } else {
         printf("                         ");
       }
+
       if (AudioResult::kPrevFreqRespPointUp2[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespPointUp2[freq],
@@ -86,6 +90,7 @@ TEST(Recap, FreqResp) {
       } else {
         printf("                         ");
       }
+
       if (AudioResult::kPrevFreqRespPointUp3[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespPointUp3[freq],
@@ -93,6 +98,7 @@ TEST(Recap, FreqResp) {
       } else {
         printf("                         ");
       }
+
       if (AudioResult::kPrevFreqRespPointMicro[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespPointMicro[freq],
@@ -130,6 +136,7 @@ TEST(Recap, FreqResp) {
       } else {
         printf("                         ");
       }
+
       if (AudioResult::kPrevFreqRespLinearDown0[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespLinearDown0[freq],
@@ -137,6 +144,7 @@ TEST(Recap, FreqResp) {
       } else {
         printf("                         ");
       }
+
       if (AudioResult::kPrevFreqRespLinearDown1[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespLinearDown1[freq],
@@ -153,6 +161,7 @@ TEST(Recap, FreqResp) {
     } else {
       printf("                         ");
     }
+
     if (AudioResult::kPrevFreqRespLinearUp1[freq] !=
         -std::numeric_limits<double>::infinity()) {
       printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespLinearUp1[freq],
@@ -169,6 +178,7 @@ TEST(Recap, FreqResp) {
       } else {
         printf("                         ");
       }
+
       if (AudioResult::kPrevFreqRespLinearUp3[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespLinearUp3[freq],
@@ -176,12 +186,11 @@ TEST(Recap, FreqResp) {
       } else {
         printf("                         ");
       }
+
       if (AudioResult::kPrevFreqRespLinearMicro[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespLinearMicro[freq],
                AudioResult::kPrevFreqRespLinearMicro[freq]);
-      } else {
-        printf("                         ");
       }
     }
   }
@@ -192,8 +201,8 @@ TEST(Recap, FreqResp) {
 TEST(Recap, SINAD) {
   printf("\n Signal-to-Noise-and-Distortion (SINAD)");
   printf("\n   (in dB, with prior results)");
-
   uint32_t num_freqs;
+
   printf("\n\n   Point resampler\n             ");
 
   printf("           No SRC   ");
@@ -224,6 +233,7 @@ TEST(Recap, SINAD) {
     } else {
       printf("                    ");
     }
+
     if (FrequencySet::UseFullFrequencySet) {
       if (AudioResult::kPrevSinadPointDown0[freq] !=
           -std::numeric_limits<double>::infinity()) {
@@ -233,6 +243,7 @@ TEST(Recap, SINAD) {
         printf("                    ");
       }
     }
+
     if (AudioResult::kPrevSinadPointDown1[freq] !=
         -std::numeric_limits<double>::infinity()) {
       printf("    %6.2lf  (%6.2lf)", AudioResult::SinadPointDown1[freq],
@@ -249,6 +260,7 @@ TEST(Recap, SINAD) {
       } else {
         printf("                    ");
       }
+
       if (AudioResult::kPrevSinadPointUp1[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("    %6.2lf  (%6.2lf)", AudioResult::SinadPointUp1[freq],
@@ -256,6 +268,7 @@ TEST(Recap, SINAD) {
       } else {
         printf("                    ");
       }
+
       if (AudioResult::kPrevSinadPointUp2[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("    %6.2lf  (%6.2lf)", AudioResult::SinadPointUp2[freq],
@@ -307,6 +320,7 @@ TEST(Recap, SINAD) {
       } else {
         printf("                    ");
       }
+
       if (AudioResult::kPrevSinadLinearDown0[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearDown0[freq],
@@ -314,6 +328,7 @@ TEST(Recap, SINAD) {
       } else {
         printf("                    ");
       }
+
       if (AudioResult::kPrevSinadLinearDown1[freq] !=
           -std::numeric_limits<double>::infinity()) {
         printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearDown1[freq],
@@ -330,6 +345,7 @@ TEST(Recap, SINAD) {
     } else {
       printf("                    ");
     }
+
     if (AudioResult::kPrevSinadLinearUp1[freq] !=
         -std::numeric_limits<double>::infinity()) {
       printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearUp1[freq],
@@ -376,38 +392,42 @@ TEST(Recap, NoiseFloor) {
   printf("\n   (in dB, with prior results)");
 
   printf("\n\n   Sources");
-  printf(
-      "\n\t     8-bit           16-bit            24-bit              Float");
-  printf(
-      "\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %6.2lf  (%6.2lf)   %6.2lf  "
-      "(%6.2lf)",
-      AudioResult::FloorSource8, AudioResult::kPrevFloorSource8,
-      AudioResult::FloorSource16, AudioResult::kPrevFloorSource16,
-      AudioResult::FloorSource24, AudioResult::kPrevFloorSource24,
-      AudioResult::FloorSourceFloat, AudioResult::kPrevFloorSourceFloat);
+  printf("\n\t      8-bit    ");
+  printf("         16-bit    ");
+  printf("         24-bit    ");
+  printf("          Float");
+  printf("\n\t %6.2lf  (%6.2lf)   %6.2lf  (%6.2lf)  ",
+         AudioResult::FloorSource8, AudioResult::kPrevFloorSource8,
+         AudioResult::FloorSource16, AudioResult::kPrevFloorSource16);
+  printf(" %6.2lf  (%6.2lf)   %6.2lf  (%6.2lf)", AudioResult::FloorSource24,
+         AudioResult::kPrevFloorSource24, AudioResult::FloorSourceFloat,
+         AudioResult::kPrevFloorSourceFloat);
 
   printf("\n\n   Mix Floor");
-  printf("\n\t     8-bit           16-bit            24-bit     ");
-  printf("         Float           Stereo->Mono");
-  printf(
-      "\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %6.2lf  (%6.2lf)   %6.2lf  "
-      "(%6.2lf)   %6.2lf  (%6.2lf)",
-      AudioResult::FloorMix8, AudioResult::kPrevFloorMix8,
-      AudioResult::FloorMix16, AudioResult::kPrevFloorMix16,
-      AudioResult::FloorMix24, AudioResult::kPrevFloorMix24,
-      AudioResult::FloorMixFloat, AudioResult::kPrevFloorMixFloat,
-      AudioResult::FloorStereoMono, AudioResult::kPrevFloorStereoMono);
+  printf("\n\t      8-bit    ");
+  printf("         16-bit    ");
+  printf("         24-bit    ");
+  printf("          Float    ");
+  printf("      Stereo->Mono");
+  printf("\n\t %6.2lf  (%6.2lf)   %6.2lf  (%6.2lf)   %6.2lf  (%6.2lf)  ",
+         AudioResult::FloorMix8, AudioResult::kPrevFloorMix8,
+         AudioResult::FloorMix16, AudioResult::kPrevFloorMix16,
+         AudioResult::FloorMix24, AudioResult::kPrevFloorMix24);
+  printf(" %6.2lf  (%6.2lf)   %6.2lf  (%6.2lf)", AudioResult::FloorMixFloat,
+         AudioResult::kPrevFloorMixFloat, AudioResult::FloorStereoMono,
+         AudioResult::kPrevFloorStereoMono);
 
   printf("\n\n   Outputs");
-  printf(
-      "\n\t     8-bit           16-bit            24-bit              Float");
-  printf(
-      "\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %6.2lf  (%6.2lf)   %6.2lf  "
-      "(%6.2lf)",
-      AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8,
-      AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16,
-      AudioResult::FloorOutput24, AudioResult::kPrevFloorOutput24,
-      AudioResult::FloorOutputFloat, AudioResult::kPrevFloorOutputFloat);
+  printf("\n\t      8-bit    ");
+  printf("         16-bit    ");
+  printf("         24-bit    ");
+  printf("          Float");
+  printf("\n\t %6.2lf  (%6.2lf)   %6.2lf  (%6.2lf)  ",
+         AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8,
+         AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16);
+  printf(" %6.2lf  (%6.2lf)   %6.2lf  (%6.2lf)", AudioResult::FloorOutput24,
+         AudioResult::kPrevFloorOutput24, AudioResult::FloorOutputFloat,
+         AudioResult::kPrevFloorOutputFloat);
 
   printf("\n\n");
 }
@@ -420,17 +440,17 @@ TEST(Recap, DynamicRange) {
   printf("\n   (in dB, with prior results)");
 
   printf("\n\n      Input Gain       Mixed Result          Usable Range\n");
-  printf("\n     %9.6lf  %10.6lf ( > %9.6lf)   %6.2lf (%5.2lf)",
+  printf("\n     %9.6lf  %10.6lf ( > %9.6lf)   %6.2lf (%6.2lf)",
          AudioResult::kMaxGainDbNonUnity, AudioResult::LevelEpsilonDown,
          AudioResult::kPrevLevelEpsilonDown, AudioResult::SinadEpsilonDown,
          AudioResult::kPrevSinadEpsilonDown);
-  printf("\n    -30.0000    %8.4lf   (+/- %6.4lf  )   %6.2lf (%5.2lf)",
+  printf("\n    -30.0000    %8.4lf   (+/- %6.4lf  )   %6.2lf (%6.2lf)",
          AudioResult::Level30Down, AudioResult::kPrevDynRangeTolerance,
          AudioResult::Sinad30Down, AudioResult::kPrevSinad30Down);
-  printf("\n    -60.0000    %8.4lf   (+/- %6.4lf  )   %6.2lf (%5.2lf)",
+  printf("\n    -60.0000    %8.4lf   (+/- %6.4lf  )   %6.2lf (%6.2lf)",
          AudioResult::Level60Down, AudioResult::kPrevDynRangeTolerance,
          AudioResult::Sinad60Down, AudioResult::kPrevSinad60Down);
-  printf("\n    -90.0000    %8.4lf   (+/- %6.4lf  )   %6.2lf (%5.2lf)",
+  printf("\n    -90.0000    %8.4lf   (+/- %6.4lf  )   %6.2lf (%6.2lf)",
          AudioResult::Level90Down, AudioResult::kPrevDynRangeTolerance,
          AudioResult::Sinad90Down, AudioResult::kPrevSinad90Down);
   printf("\n\n");

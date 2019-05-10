@@ -792,45 +792,35 @@ TEST(MixGain, Accumulator) {
 
 // Our mixer contains an optimization in which it skips mixing operations if it
 // detects that gain is below a certain threshold (regardless of "accumulate").
-TEST(MixGain, Accumulator_Clear) {
-  int16_t source[] = {-32768, 32767};
-  float accum[] = {-32768, 32767};
-  float expect[] = {-32768, 32767};
+void TestAccumulatorClear(Resampler sampler_type) {
+  int16_t source[] = {-32768, 32767, -16384, 16383};
+  float accum[] = {-32768, 32767, -16384, 16383};
+  float expect[] = {-32768, 32767, -16384, 16383};
 
-  // We will test both SampleAndHold and LinearInterpolation interpolators.
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
-                           48000, 1, 48000, Resampler::SampleAndHold);
-  // Use the gain guaranteed to silence all signals: Gain::kMinScale.
+                           48000, 1, 48000, sampler_type);
+  // Use a gain guaranteed to silence any signal -- Gain::kMinGainDb.
   DoMix(mixer.get(), source, accum, true, fbl::count_of(accum),
         Gain::kMinGainDb);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
-  // Try with the other sampler.
+  // When accumulate = false but gain is sufficiently low, overwriting previous
+  // contents is skipped. This should lead to the same results as above.
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
-                      48000, Resampler::LinearInterpolation);
-  DoMix(mixer.get(), source, accum, true, fbl::count_of(accum),
-        Gain::kMinGainDb);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
-
-  //
-  // When accumulate = false, this is overridden: it behaves identically.
-  //
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
-                      48000, Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum),
-        Gain::kMinGainDb);
-  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
-
-  // Ensure that both samplers behave identically in this regard.
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
-                      48000, Resampler::LinearInterpolation);
+                      48000, sampler_type);
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum),
         Gain::kMinGainDb);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
 
-// TODO(mpuryear): When we have a master gain stage that can take advantage of
-// the headroom inherent in a multi-stream accumulator, implement a test that
-// assesses our headroom for a post-SUM gain stage.
+// Validate the SampleAndHold interpolator for this behavior.
+TEST(MixGain, Accumulator_Clear_Point) {
+  TestAccumulatorClear(Resampler::SampleAndHold);
+}
+
+// Validate the same assertions, with LinearInterpolation interpolator.
+TEST(MixGain, Accumulator_Clear_Linear) {
+  TestAccumulatorClear(Resampler::LinearInterpolation);
+}
 
 }  // namespace media::audio::test

@@ -114,10 +114,12 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // That is: its "positive filter width" is zero.
   FXL_DCHECK(src_off >= 0) << std::hex << "src_off: 0x" << src_off;
 
-  // Source offset must also be within neg_filter_width of our last sample.
-  // Neg_filter_width is just shy of FRAC_ONE; src_off can't exceed the buf.
-  FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames))
-      << std::hex << "src_off: 0x" << src_off;
+  // src_off cannot exceed our last sampleable subframe. We define this as
+  // "Source end": the last subframe for which this Mix call can produce output.
+  // Otherwise, all these src samples are in the past and irrelevant here.
+  int32_t src_end = frac_src_frames - 1;
+  FXL_DCHECK(src_off <= src_end)
+      << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end;
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
@@ -127,8 +129,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       amplitude_scale = info->gain.GetGainScale();
     }
 
-    while ((dest_off < dest_frames) &&
-           (src_off < static_cast<int32_t>(frac_src_frames))) {
+    while ((dest_off < dest_frames) && (src_off <= src_end)) {
       if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
@@ -152,20 +153,36 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       }
     }
   } else {
-    if (dest_off < dest_frames) {
-      // Calc how much we would've produced; update src_off & dest_off.
-      uint32_t src_avail =
-          ((frac_src_frames - src_off) + step_size - 1) / step_size;
-      uint32_t dest_avail = (dest_frames - dest_off);
-      uint32_t avail = std::min(src_avail, dest_avail);
-
-      src_off += avail * step_size;
+    // We are muted. Don't mix, but figure out how many samples we WOULD have
+    // produced and update the src_off and dest_off values appropriately.
+    if ((dest_off < dest_frames) && (src_off <= src_end)) {
+      uint32_t dest_avail = dest_frames - dest_off;
+      uint32_t src_avail = ((src_end - src_off) / step_size) + 1;
+      uint32_t avail = std::min(dest_avail, src_avail);
       dest_off += avail;
+      src_off += (avail * step_size);
 
       if constexpr (HasModulo) {
-        src_pos_modulo += (rate_modulo * avail);
-        src_off += (src_pos_modulo / denominator);
-        src_pos_modulo %= denominator;
+        uint64_t total_mod = src_pos_modulo + (avail * rate_modulo);
+        src_off += (total_mod / denominator);
+        src_pos_modulo = total_mod % denominator;
+
+        int32_t prev_src_off = (src_pos_modulo < rate_modulo)
+                                   ? (src_off - step_size - 1)
+                                   : (src_off - step_size);
+        while (prev_src_off > src_end) {
+          if (src_pos_modulo < rate_modulo) {
+            src_pos_modulo += denominator;
+          }
+
+          --dest_off;
+          src_off = prev_src_off;
+          src_pos_modulo -= rate_modulo;
+
+          prev_src_off = (src_pos_modulo < rate_modulo)
+                             ? (src_off - step_size - 1)
+                             : (src_off - step_size);
+        }
       }
     }
   }
@@ -178,7 +195,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   }
 
   // If we passed the last valid source subframe, then we exhausted this source.
-  return (src_off >= static_cast<int32_t>(frac_src_frames));
+  return (src_off > src_end);
 }
 
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
@@ -303,10 +320,10 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
   // PointSampler has no memory: input frames only affect present/future output.
   // That is: its "positive filter width" is zero.
   FXL_DCHECK(src_off >= 0);
-  // Source offset must also be within neg_filter_width of our last sample.
-  // Neg_filter_width is less than FRAC_ONE, so src_off can't exceed the buf.
-  FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames));
 
+  int32_t src_end = frac_src_frames - 1;
+  FXL_DCHECK(src_off <= src_end)
+      << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end;
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
   if constexpr (ScaleType != ScalerType::MUTED) {
@@ -315,8 +332,7 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
       amplitude_scale = info->gain.GetGainScale();
     }
 
-    while ((dest_off < dest_frames) &&
-           (src_off < static_cast<int32_t>(frac_src_frames))) {
+    while ((dest_off < dest_frames) && (src_off <= src_end)) {
       if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
@@ -330,7 +346,7 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
         out[dest_iter] = DM::Mix(out[dest_iter], sample, amplitude_scale);
       }
 
-      dest_off += 1;
+      ++dest_off;
       src_off += step_size;
 
       if constexpr (HasModulo) {
@@ -342,20 +358,36 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
       }
     }
   } else {
-    if (dest_off < dest_frames) {
-      // Calc how many samples we would've produced; update src_off & dest_off.
-      uint32_t src_avail =
-          ((frac_src_frames - src_off) + step_size - 1) / step_size;
-      uint32_t dest_avail = (dest_frames - dest_off);
-      uint32_t avail = std::min(src_avail, dest_avail);
-
-      src_off += avail * step_size;
+    // We are muted. Don't mix, but figure out how many samples we WOULD have
+    // produced and update the src_off and dest_off values appropriately.
+    if ((dest_off < dest_frames) && (src_off <= src_end)) {
+      uint32_t dest_avail = dest_frames - dest_off;
+      uint32_t src_avail = ((src_end - src_off) / step_size) + 1;
+      uint32_t avail = std::min(dest_avail, src_avail);
       dest_off += avail;
+      src_off += (avail * step_size);
 
       if constexpr (HasModulo) {
-        src_pos_modulo += (rate_modulo * avail);
-        src_off += (src_pos_modulo / denominator);
-        src_pos_modulo %= denominator;
+        uint64_t total_mod = src_pos_modulo + (avail * rate_modulo);
+        src_off += (total_mod / denominator);
+        src_pos_modulo = total_mod % denominator;
+
+        int32_t prev_src_off = (src_pos_modulo < rate_modulo)
+                                   ? (src_off - step_size - 1)
+                                   : (src_off - step_size);
+        while (prev_src_off > src_end) {
+          if (src_pos_modulo < rate_modulo) {
+            src_pos_modulo += denominator;
+          }
+
+          --dest_off;
+          src_off = prev_src_off;
+          src_pos_modulo -= rate_modulo;
+
+          prev_src_off = (src_pos_modulo < rate_modulo)
+                             ? (src_off - step_size - 1)
+                             : (src_off - step_size);
+        }
       }
     }
   }
@@ -368,7 +400,7 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
   }
 
   // If we passed the last valid source subframe, then we exhausted this source.
-  return (src_off >= static_cast<int32_t>(frac_src_frames));
+  return (src_off > src_end);
 }
 
 template <typename SrcSampleType>

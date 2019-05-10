@@ -16,8 +16,8 @@ int main(int argc, char** argv) {
   //            This flag is used when updating AudioResult kPrev arrays.
   // --profile  Profile the performance of Mix() across numerous configurations.
   bool show_full_frequency_set = command_line.HasOption("full");
-  bool do_performance_profiling = command_line.HasOption("profile");
   bool dump_threshold_values = command_line.HasOption("dump");
+  bool do_performance_profiling = command_line.HasOption("profile");
 
   media::audio::test::FrequencySet::UseFullFrequencySet =
       (show_full_frequency_set || dump_threshold_values);

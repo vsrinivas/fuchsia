@@ -144,19 +144,19 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
   if (std::is_same<SampleType, uint8_t>::value) {
     sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
     amplitude = std::numeric_limits<int8_t>::max();
-    format = "un8";
+    format = "Un8";
   } else if (std::is_same<SampleType, int16_t>::value) {
     sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
     amplitude = std::numeric_limits<int16_t>::max();
-    format = "i16";
+    format = "I16";
   } else if (std::is_same<SampleType, int32_t>::value) {
     sample_format = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
     amplitude = std::numeric_limits<int32_t>::max() & ~0x0FF;
-    format = "i24";
+    format = "I24";
   } else if (std::is_same<SampleType, float>::value) {
     sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
     amplitude = 1.0;
-    format = "f32";
+    format = "F32";
   } else {
     ASSERT_TRUE(false) << "Unknown mix sample format for testing";
     return;
@@ -165,6 +165,9 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
   uint32_t dest_rate = 48000;
   auto mixer = SelectMixer(sample_format, num_input_chans, source_rate,
                            num_output_chans, dest_rate, sampler_type);
+  if (mixer == nullptr) {
+    return;
+  }
 
   uint32_t source_buffer_size = kFreqTestBufSize * dest_rate / source_rate;
   uint32_t source_frames = source_buffer_size + 1;
@@ -259,10 +262,22 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
   }
 
   auto mean = static_cast<double>(total_elapsed) / kNumMixerProfilerRuns;
-  printf("%c-%s.%u%u%c%c%u:",
-         (sampler_type == Resampler::SampleAndHold ? 'P' : 'L'), format.c_str(),
-         num_input_chans, num_output_chans, gain_char, (accumulate ? '+' : '-'),
-         source_rate);
+
+  char sampler_ch;
+  switch (sampler_type) {
+    case Resampler::SampleAndHold:
+      sampler_ch = 'P';
+      break;
+    case Resampler::LinearInterpolation:
+      sampler_ch = 'L';
+      break;
+    case Resampler::Default:
+      FXL_LOG(ERROR) << "Test should specify the Resampler exactly";
+      return;
+  }
+
+  printf("%c-%s.%u%u%c%c%u:", sampler_ch, format.c_str(), num_input_chans,
+         num_output_chans, gain_char, (accumulate ? '+' : '-'), source_rate);
 
   printf("\t%9.3lf\t%9.3lf\t%9.3lf\t%9.3lf\n", mean / 1000.0, first / 1000.0,
          best / 1000.0, worst / 1000.0);
@@ -277,7 +292,7 @@ void AudioPerformance::DisplayOutputConfigLegend() {
          kFreqTestBufSize);
   printf(
       "\n   For output configuration FFF-Rn, where:\n"
-      "\t   FFF: Format of source data - Un8, I16, I24, F32,\n"
+      "\t   FFF: Format of output data - Un8, I16, I24, F32,\n"
       "\t     R: Range of source data - [S]ilence, [O]ut-of-range, [N]ormal,\n"
       "\t     n: Number of output channels (one-digit number)\n\n");
 }

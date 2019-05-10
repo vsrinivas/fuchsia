@@ -198,7 +198,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     }
 
     // Now we are fully in the current buffer and need not rely on our cache.
-    while ((dest_off < dest_frames) && (src_off < src_end)) {
+    while ((dest_off < dest_frames) && (src_off <= src_end)) {
       uint32_t S = (src_off >> kPtsFractionalBits) * SrcChanCount;
       float* out = dest + (dest_off * DestChanCount);
       if constexpr (ScaleType == ScalerType::RAMPING) {
@@ -226,49 +226,35 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   } else {
     // We are muted. Don't mix, but figure out how many samples we WOULD have
     // produced and update the src_off and dest_off values appropriately.
-    if ((dest_off < dest_frames) && (src_off < src_end)) {
-      uint32_t src_avail = (((src_end - src_off) + step_size - 1) / step_size);
+    if ((dest_off < dest_frames) && (src_off <= src_end)) {
+      uint32_t src_avail = ((src_end - src_off) / step_size) + 1;
       uint32_t dest_avail = (dest_frames - dest_off);
       uint32_t avail = std::min(src_avail, dest_avail);
 
       dest_off += avail;
-      src_off += avail * step_size;
+      src_off += (avail * step_size);
 
       if constexpr (HasModulo) {
-        src_pos_modulo += (rate_modulo * avail);
-        src_off += (src_pos_modulo / denominator);
-        src_pos_modulo %= denominator;
-      }
-    }
-  }
+        uint64_t total_mod = src_pos_modulo + (avail * rate_modulo);
+        src_off += (total_mod / denominator);
+        src_pos_modulo = total_mod % denominator;
 
-  // If we have room for at least one more sample, and our sampling position
-  // hits the input buffer's final frame exactly ...
-  if ((dest_off < dest_frames) && (src_off == src_end)) {
-    // ... and if we are not muted, of course ...
-    if constexpr (ScaleType != ScalerType::MUTED) {
-      // ... then we can _point-sample_ one final frame into our output buffer.
-      // We need not _interpolate_ since fractional position is exactly zero.
-      uint32_t S = (src_off >> kPtsFractionalBits) * SrcChanCount;
-      float* out = dest + (dest_off * DestChanCount);
-      if constexpr (ScaleType == ScalerType::RAMPING) {
-        amplitude_scale = info->scale_arr[dest_off - dest_off_start];
-      }
+        int32_t prev_src_off = (src_pos_modulo < rate_modulo)
+                                   ? (src_off - step_size - 1)
+                                   : (src_off - step_size);
+        while (prev_src_off > src_end) {
+          if (src_pos_modulo < rate_modulo) {
+            src_pos_modulo += denominator;
+          }
 
-      for (size_t D = 0; D < DestChanCount; ++D) {
-        float sample = SR::Read(src + S + (D / SR::DestPerSrc));
-        out[D] = DM::Mix(out[D], sample, amplitude_scale);
-      }
-    }
+          --dest_off;
+          src_off = prev_src_off;
+          src_pos_modulo -= rate_modulo;
 
-    dest_off += 1;
-    src_off += step_size;
-
-    if constexpr (HasModulo) {
-      src_pos_modulo += rate_modulo;
-      if (src_pos_modulo >= denominator) {
-        ++src_off;
-        src_pos_modulo -= denominator;
+          prev_src_off = (src_pos_modulo < rate_modulo)
+                             ? (src_off - step_size - 1)
+                             : (src_off - step_size);
+        }
       }
     }
   }
@@ -511,49 +497,35 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   } else {
     // We are muted. Don't mix, but figure out how many samples we WOULD have
     // produced and update the src_off and dest_off values appropriately.
-    if ((dest_off < dest_frames) && (src_off < src_end)) {
-      uint32_t src_avail = (((src_end - src_off) + step_size - 1) / step_size);
+    if ((dest_off < dest_frames) && (src_off <= src_end)) {
+      uint32_t src_avail = ((src_end - src_off) / step_size) + 1;
       uint32_t dest_avail = (dest_frames - dest_off);
       uint32_t avail = std::min(src_avail, dest_avail);
 
       dest_off += avail;
-      src_off += avail * step_size;
+      src_off += (avail * step_size);
 
       if constexpr (HasModulo) {
-        src_pos_modulo += (rate_modulo * avail);
-        src_off += (src_pos_modulo / denominator);
-        src_pos_modulo %= denominator;
-      }
-    }
-  }
+        uint64_t total_mod = src_pos_modulo + (avail * rate_modulo);
+        src_off += (total_mod / denominator);
+        src_pos_modulo = total_mod % denominator;
 
-  // If we have room for at least one more sample, and our sampling position
-  // hits the input buffer's final frame exactly ...
-  if ((dest_off < dest_frames) && (src_off == src_end)) {
-    // ... and if we are not muted, of course ...
-    if constexpr (ScaleType != ScalerType::MUTED) {
-      // ... then we can _point-sample_ one final frame into our output buffer.
-      // We need not _interpolate_ since fractional position is exactly zero.
-      uint32_t S = (src_off >> kPtsFractionalBits) * chan_count;
-      float* out = dest + (dest_off * chan_count);
-      if constexpr (ScaleType == ScalerType::RAMPING) {
-        amplitude_scale = info->scale_arr[dest_off - dest_off_start];
-      }
+        int32_t prev_src_off = (src_pos_modulo < rate_modulo)
+                                   ? (src_off - step_size - 1)
+                                   : (src_off - step_size);
+        while (prev_src_off > src_end) {
+          if (src_pos_modulo < rate_modulo) {
+            src_pos_modulo += denominator;
+          }
 
-      for (size_t D = 0; D < chan_count; ++D) {
-        float sample = SampleNormalizer<SrcSampleType>::Read(src + S + D);
-        out[D] = DM::Mix(out[D], sample, amplitude_scale);
-      }
-    }
+          --dest_off;
+          src_off = prev_src_off;
+          src_pos_modulo -= rate_modulo;
 
-    dest_off += 1;
-    src_off += step_size;
-
-    if constexpr (HasModulo) {
-      src_pos_modulo += rate_modulo;
-      if (src_pos_modulo >= denominator) {
-        ++src_off;
-        src_pos_modulo -= denominator;
+          prev_src_off = (src_pos_modulo < rate_modulo)
+                             ? (src_off - step_size - 1)
+                             : (src_off - step_size);
+        }
       }
     }
   }
