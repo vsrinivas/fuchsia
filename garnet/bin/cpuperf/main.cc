@@ -124,7 +124,7 @@ static void PrintEventList(FILE* f,
 
 static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
                       perfmon::Controller* controller, size_t iter) {
-  std::unique_ptr<perfmon::DeviceReader> reader = controller->GetReader();
+  std::unique_ptr<perfmon::Reader> reader = controller->GetReader();
   if (!reader) {
     return;
   }
@@ -152,7 +152,7 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
 
   // Print a summary of this run.
   // In tally mode this is noise, but if verbosity is on sure.
-  if (controller->collection_mode() != perfmon::CollectionMode::kTally ||
+  if (controller->config().GetMode() != perfmon::CollectionMode::kTally ||
       FXL_VLOG_IS_ON(1)) {
     FXL_VLOG(1) << "Iteration " << iter << " summary";
     for (size_t trace = 0; trace < result_spec.num_traces; ++trace) {
@@ -191,7 +191,7 @@ static bool RunSession(const cpuperf::SessionSpec& spec,
       SaveTrace(result_spec, controller, iter);
     }
 
-    if (controller->collection_mode() == perfmon::CollectionMode::kTally) {
+    if (controller->config().GetMode() == perfmon::CollectionMode::kTally) {
       PrintTallyResults(stdout, spec, result_spec, model_event_manager,
                         controller);
     }

@@ -62,25 +62,14 @@ Importer::Importer(trace_context_t* context, const TraceConfig* trace_config,
 
 Importer::~Importer() = default;
 
-bool Importer::Import(perfmon::DeviceReader& reader) {
+bool Importer::Import(perfmon::Reader& reader,
+                      const perfmon::Config& perfmon_config) {
   trace_context_write_process_info_record(context_, kCpuProcess,
                                           &cpu_string_ref_);
 
   auto start = fxl::TimePoint::Now();
 
-  perfmon::Properties props;
-  if (!reader.GetProperties(&props)) {
-    FXL_LOG(ERROR) << "Error reading CPU performance properties";
-    return false;
-  }
-
-  perfmon_ioctl_config_t config;
-  if (!reader.GetConfig(&config)) {
-    FXL_LOG(ERROR) << "Error reading CPU performance config";
-    return false;
-  }
-
-  uint32_t record_count = ImportRecords(reader, props, config);
+  uint32_t record_count = ImportRecords(reader, perfmon_config);
 
   FXL_LOG(INFO) << "Import of " << record_count << " cpu perf records took "
                 << (fxl::TimePoint::Now() - start).ToMicroseconds() << " us";
@@ -88,9 +77,8 @@ bool Importer::Import(perfmon::DeviceReader& reader) {
   return true;
 }
 
-uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
-                                 const perfmon::Properties& props,
-                                 const perfmon_ioctl_config_t& config) {
+uint64_t Importer::ImportRecords(perfmon::Reader& reader,
+                                 const perfmon::Config& perfmon_config) {
   EventTracker event_data(start_time_);
   uint32_t record_count = 0;
   // Only print these warnings once, and then again at the end with
@@ -160,7 +148,7 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
           if (is_tally_mode) {
             event_data.AccumulateCount(cpu, event_id, sample_rate);
           } else {
-            ImportSampleRecord(cpu, config, record, prev_time, current_time,
+            ImportSampleRecord(cpu, record, prev_time, current_time,
                                ticks_per_second, sample_rate);
           }
           break;
@@ -168,7 +156,7 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
           if (is_tally_mode) {
             event_data.AccumulateCount(cpu, event_id, record.count->count);
           } else {
-            ImportSampleRecord(cpu, config, record, prev_time, current_time,
+            ImportSampleRecord(cpu, record, prev_time, current_time,
                                ticks_per_second, record.count->count);
           }
           break;
@@ -176,19 +164,19 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
           if (is_tally_mode) {
             event_data.UpdateValue(cpu, event_id, record.value->value);
           } else {
-            ImportSampleRecord(cpu, config, record, prev_time, current_time,
+            ImportSampleRecord(cpu, record, prev_time, current_time,
                                ticks_per_second, record.value->value);
           }
           break;
         case perfmon::kRecordTypePc:
           if (!is_tally_mode) {
-            ImportSampleRecord(cpu, config, record, prev_time, current_time,
+            ImportSampleRecord(cpu, record, prev_time, current_time,
                                ticks_per_second, sample_rate);
           }
           break;
         case perfmon::kRecordTypeLastBranch:
           if (!is_tally_mode) {
-            EmitLastBranchRecordBlob(cpu, config, record, current_time);
+            EmitLastBranchRecordBlob(cpu, record, current_time);
           }
           break;
         default:
@@ -203,7 +191,7 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
   }
 
   if (is_tally_mode) {
-    EmitTallyCounts(config, &event_data);
+    EmitTallyCounts(reader, perfmon_config, event_data);
   }
 
   if (printed_old_time_warning_count > 0) {
@@ -223,7 +211,6 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
 }
 
 void Importer::ImportSampleRecord(trace_cpu_number_t cpu,
-                                  const perfmon_ioctl_config_t& config,
                                   const perfmon::SampleRecord& record,
                                   trace_ticks_t previous_time,
                                   trace_ticks_t current_time,
@@ -334,7 +321,6 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
 }
 
 void Importer::EmitLastBranchRecordBlob(trace_cpu_number_t cpu,
-                                        const perfmon_ioctl_config_t& config,
                                         const perfmon::SampleRecord& record,
                                         trace_ticks_t time) {
   // Use the cpu's name as the blob's name.
@@ -369,25 +355,25 @@ void Importer::EmitLastBranchRecordBlob(trace_cpu_number_t cpu,
 // currently no other way to communicate the start time of the trace in a
 // json output file, and thus there would otherwise be no way for the
 // report printer to know the duration over which the count was collected.
-void Importer::EmitTallyCounts(const perfmon_ioctl_config_t& config,
-                               const EventTracker* event_data) {
+void Importer::EmitTallyCounts(perfmon::Reader& reader,
+                               const perfmon::Config& perfmon_config,
+                               const EventTracker& event_data) {
   unsigned num_cpus = zx_system_get_num_cpus();
 
   for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
-    for (unsigned ctr = 0; ctr < countof(config.events) &&
-                           config.events[ctr].event != perfmon::kEventIdNone;
-         ++ctr) {
-      perfmon::EventId event_id = config.events[ctr].event;
-      if (event_data->HaveValue(cpu, event_id)) {
-        uint64_t value = event_data->GetCountOrValue(cpu, event_id);
-        if (event_data->IsValue(cpu, event_id)) {
+    perfmon_config.IterateOverEvents([this, &event_data, &cpu](
+        const perfmon::Config::EventConfig& event) {
+      perfmon::EventId event_id = event.event;
+      if (event_data.HaveValue(cpu, event_id)) {
+        uint64_t value = event_data.GetCountOrValue(cpu, event_id);
+        if (event_data.IsValue(cpu, event_id)) {
           EmitTallyRecord(cpu, event_id, stop_time_, true, value);
         } else {
           EmitTallyRecord(cpu, event_id, start_time_, false, 0);
           EmitTallyRecord(cpu, event_id, stop_time_, false, value);
         }
       }
-    }
+    });
   }
 }
 

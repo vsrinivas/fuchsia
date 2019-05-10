@@ -15,6 +15,7 @@
 #include <zircon/syscalls.h>
 
 #include "garnet/lib/perfmon/config_impl.h"
+#include "garnet/lib/perfmon/device_reader.h"
 #include "garnet/lib/perfmon/properties_impl.h"
 
 namespace perfmon {
@@ -107,7 +108,7 @@ bool Controller::Alloc(int fd, uint32_t num_traces,
   return true;
 }
 
-bool Controller::Create(uint32_t buffer_size_in_pages, const Config& config,
+bool Controller::Create(uint32_t buffer_size_in_pages, const Config config,
                         std::unique_ptr<Controller>* out_controller) {
   int raw_fd = open(kPerfMonDev, O_WRONLY);
   if (raw_fd < 0) {
@@ -129,26 +130,23 @@ bool Controller::Create(uint32_t buffer_size_in_pages, const Config& config,
   uint32_t actual_buffer_size_in_pages =
       GetBufferSizeInPages(mode, buffer_size_in_pages);
 
-  perfmon_ioctl_config_t ioctl_config;
-  internal::PerfmonToIoctlConfig(config, &ioctl_config);
-
   if (!Alloc(raw_fd, num_traces, actual_buffer_size_in_pages)) {
     return false;
   }
 
-  out_controller->reset(new Controller(std::move(fd), mode, num_traces,
-                                       buffer_size_in_pages, ioctl_config));
+  out_controller->reset(new Controller(std::move(fd), num_traces,
+                                       buffer_size_in_pages,
+                                       std::move(config)));
   return true;
 }
 
-Controller::Controller(fxl::UniqueFD fd, CollectionMode collection_mode,
-                       uint32_t num_traces, uint32_t buffer_size_in_pages,
-                       const perfmon_ioctl_config_t& config)
+Controller::Controller(fxl::UniqueFD fd, uint32_t num_traces,
+                       uint32_t buffer_size_in_pages, const Config config)
     : fd_(std::move(fd)),
-      collection_mode_(collection_mode),
       num_traces_(num_traces),
       buffer_size_in_pages_(buffer_size_in_pages),
-      config_(config) {
+      config_(std::move(config)),
+      weak_ptr_factory_(this) {
 }
 
 Controller::~Controller() {
@@ -190,7 +188,11 @@ void Controller::Stop() {
 
 bool Controller::Stage() {
   FXL_DCHECK(!started_);
-  auto status = ioctl_perfmon_stage_config(fd_.get(), &config_);
+
+  perfmon_ioctl_config_t ioctl_config;
+  internal::PerfmonToIoctlConfig(config_, &ioctl_config);
+
+  auto status = ioctl_perfmon_stage_config(fd_.get(), &ioctl_config);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "ioctl_perfmon_stage_config failed: status=" << status;
   }
@@ -214,9 +216,24 @@ void Controller::Reset() {
   Free();
 }
 
-std::unique_ptr<DeviceReader> Controller::GetReader() {
-  std::unique_ptr<DeviceReader> reader;
-  if (DeviceReader::Create(fd_.get(), buffer_size_in_pages_, &reader)) {
+bool Controller::GetBufferHandle(const std::string& name, uint32_t trace_num,
+                                 zx::vmo* out_vmo) {
+  ioctl_perfmon_buffer_handle_req_t req;
+  req.descriptor = trace_num;
+  auto status = ioctl_perfmon_get_buffer_handle(
+      fd_.get(), &req, out_vmo->reset_and_get_address());
+  if (status < 0) {
+    FXL_LOG(ERROR) << name << ": ioctl_perfmon_get_buffer_handle failed: "
+                   << status;
+    return false;
+  }
+  return true;
+}
+
+std::unique_ptr<Reader> Controller::GetReader() {
+  std::unique_ptr<Reader> reader;
+  if (internal::DeviceReader::Create(weak_ptr_factory_.GetWeakPtr(),
+                                     buffer_size_in_pages_, &reader)) {
     return reader;
   }
   return nullptr;

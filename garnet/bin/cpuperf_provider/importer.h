@@ -16,7 +16,7 @@
 #include <trace-engine/context.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
-#include "garnet/lib/perfmon/device_reader.h"
+#include "garnet/lib/perfmon/reader.h"
 #include "garnet/lib/perfmon/events.h"
 
 namespace cpuperf_provider {
@@ -27,7 +27,7 @@ class Importer {
            trace_ticks_t start_time, trace_ticks_t stop_time);
   ~Importer();
 
-  bool Import(perfmon::DeviceReader& reader);
+  bool Import(perfmon::Reader& reader, const perfmon::Config& perfmon_config);
 
  private:
   static constexpr size_t kMaxNumCpus = 32;
@@ -108,12 +108,10 @@ class Importer {
     EventData data_;
   };
 
-  uint64_t ImportRecords(perfmon::DeviceReader& reader,
-                         const perfmon::Properties& props,
-                         const perfmon_ioctl_config_t& config);
+  uint64_t ImportRecords(perfmon::Reader& reader,
+                         const perfmon::Config& perfmon_config);
 
   void ImportSampleRecord(trace_cpu_number_t cpu,
-                          const perfmon_ioctl_config_t& config,
                           const perfmon::SampleRecord& record,
                           trace_ticks_t previous_time,
                           trace_ticks_t current_time, uint64_t ticks_per_second,
@@ -126,12 +124,12 @@ class Importer {
                         uint64_t ticks_per_second, uint64_t value);
 
   void EmitLastBranchRecordBlob(trace_cpu_number_t cpu,
-                                const perfmon_ioctl_config_t& config,
                                 const perfmon::SampleRecord& record,
                                 trace_ticks_t time);
 
-  void EmitTallyCounts(const perfmon_ioctl_config_t& config,
-                       const EventTracker* event_data);
+  void EmitTallyCounts(perfmon::Reader& reader,
+                       const perfmon::Config& perfmon_config,
+                       const EventTracker& event_data);
 
   void EmitTallyRecord(trace_cpu_number_t cpu, perfmon::EventId event_id,
                        trace_ticks_t time, bool is_value, uint64_t value);

@@ -5,37 +5,35 @@
 #ifndef GARNET_LIB_PERFMON_DEVICE_READER_H_
 #define GARNET_LIB_PERFMON_DEVICE_READER_H_
 
-#include <src/lib/fxl/macros.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <src/lib/fxl/macros.h>
 #include <zircon/types.h>
 
+#include "garnet/lib/perfmon/controller.h"
 #include "garnet/lib/perfmon/properties.h"
 #include "garnet/lib/perfmon/reader.h"
 
 namespace perfmon {
+namespace internal {
 
 class DeviceReader final : public Reader {
  public:
-  // |fd| is borrowed.
-  static bool Create(int fd, uint32_t buffer_size_in_pages,
-                     std::unique_ptr<DeviceReader>* out_reader);
+  static bool Create(fxl::WeakPtr<Controller> controller,
+                     uint32_t buffer_size_in_pages,
+                     std::unique_ptr<Reader>* out_reader);
 
   ~DeviceReader();
 
-  bool GetProperties(Properties* props);
-
-  bool GetConfig(perfmon_ioctl_config_t* config);
-
  private:
-  // |fd| is borrowed.
-  DeviceReader(int fd, uint32_t buffer_size_in_pages, zx::vmar vmar);
+  DeviceReader(fxl::WeakPtr<Controller> controller,
+               uint32_t buffer_size_in_pages, zx::vmar vmar);
 
   bool MapBuffer(const std::string& name, uint32_t trace_num) override;
   bool UnmapBuffer() override;
 
-  const int fd_;  // borrowed
+  fxl::WeakPtr<Controller> controller_;
   const size_t buffer_size_;
   zx::vmar vmar_;
 
@@ -45,6 +43,7 @@ class DeviceReader final : public Reader {
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceReader);
 };
 
+}  // namespace internal
 }  // namespace perfmon
 
 #endif  // GARNET_LIB_PERFMON_DEVICE_READER_H_

@@ -7,13 +7,17 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
-#include "src/lib/files/unique_fd.h"
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <lib/zx/vmo.h>
+#include <src/lib/files/unique_fd.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "garnet/lib/perfmon/config.h"
-#include "garnet/lib/perfmon/device_reader.h"
 #include "garnet/lib/perfmon/properties.h"
+#include "garnet/lib/perfmon/reader.h"
 
 namespace perfmon {
 
@@ -32,7 +36,7 @@ class Controller {
   // Fetch the properties of this device.
   static bool GetProperties(Properties* props);
 
-  static bool Create(uint32_t buffer_size_in_pages, const Config& config,
+  static bool Create(uint32_t buffer_size_in_pages, const Config config,
                      std::unique_ptr<Controller>* out_controller);
 
   ~Controller();
@@ -43,29 +47,33 @@ class Controller {
 
   bool started() const { return started_; }
 
-  CollectionMode collection_mode() const { return collection_mode_; }
-
   uint32_t num_traces() const { return num_traces_; }
 
-  std::unique_ptr<DeviceReader> GetReader();
+  const Config& config() const { return config_; }
+
+  bool GetBufferHandle(const std::string& name, uint32_t trace_num,
+                       zx::vmo* out_vmo);
+
+  std::unique_ptr<Reader> GetReader();
 
  private:
   static bool Alloc(int fd, uint32_t num_traces, uint32_t buffer_size_in_pages);
-  Controller(fxl::UniqueFD fd, CollectionMode collection_mode,
-             uint32_t num_traces, uint32_t buffer_size,
-             const perfmon_ioctl_config_t& config);
+  Controller(fxl::UniqueFD fd, uint32_t num_traces, uint32_t buffer_size,
+             Config config);
   bool Stage();
   void Free();
   void Reset();
 
   fxl::UniqueFD fd_;
-  const CollectionMode collection_mode_;
   // The number of traces we will collect (== #cpus for now).
   uint32_t num_traces_;
   // This is the actual buffer size we use, in pages.
   const uint32_t buffer_size_in_pages_;
-  const perfmon_ioctl_config_t config_;
+  const Config config_;
   bool started_ = false;
+
+  fxl::WeakPtrFactory<Controller> weak_ptr_factory_;
+  FXL_DISALLOW_COPY_AND_ASSIGN(Controller);
 };
 
 }  // namespace perfmon

@@ -175,7 +175,8 @@ void App::StopTracing() {
   if (reader) {
     Importer importer(buffer_context, trace_config_.get(),
                       start_time_, stop_time_);
-    if (!importer.Import(*reader)) {
+    const perfmon::Config& config = controller_->config();
+    if (!importer.Import(*reader, config)) {
       FXL_LOG(ERROR) << "Errors encountered while importing perfmon data";
     }
   } else {

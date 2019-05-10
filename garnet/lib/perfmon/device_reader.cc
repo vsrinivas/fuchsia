@@ -14,9 +14,11 @@
 #include "garnet/lib/perfmon/properties_impl.h"
 
 namespace perfmon {
+namespace internal {
 
-bool DeviceReader::Create(int fd, uint32_t buffer_size_in_pages,
-                          std::unique_ptr<DeviceReader>* out_reader) {
+bool DeviceReader::Create(fxl::WeakPtr<Controller> controller,
+                          uint32_t buffer_size_in_pages,
+                          std::unique_ptr<Reader>* out_reader) {
   zx::vmar vmar;
   uintptr_t addr;
   // The controller records the buffer size in pages, but internally the
@@ -30,54 +32,38 @@ bool DeviceReader::Create(int fd, uint32_t buffer_size_in_pages,
     return false;
   }
 
-  out_reader->reset(new DeviceReader(fd, buffer_size, std::move(vmar)));
+  out_reader->reset(new DeviceReader(std::move(controller), buffer_size,
+                                     std::move(vmar)));
   return true;
 }
 
-DeviceReader::DeviceReader(int fd, uint32_t buffer_size, zx::vmar vmar)
+DeviceReader::DeviceReader(fxl::WeakPtr<Controller> controller,
+                           uint32_t buffer_size, zx::vmar vmar)
     : Reader(zx_system_get_num_cpus()),
-      fd_(fd), buffer_size_(buffer_size), vmar_(std::move(vmar)) {
-  FXL_DCHECK(fd_ >= 0);
+      controller_(std::move(controller)),
+      buffer_size_(buffer_size),
+      vmar_(std::move(vmar)) {
+  FXL_DCHECK(controller_);
 }
 
 DeviceReader::~DeviceReader() {
   UnmapBuffer();
 }
 
-bool DeviceReader::GetProperties(Properties* props) {
-  perfmon_ioctl_properties_t properties;
-  auto status = ioctl_perfmon_get_properties(fd_, &properties);
-  if (status < 0) {
-    FXL_LOG(ERROR) << "Failed to get properties: " << status;
+bool DeviceReader::MapBuffer(const std::string& name, uint32_t trace_num) {
+  if (!controller_) {
+    FXL_LOG(ERROR) << name << ": unable to map buffer, controller is gone";
     return false;
   }
 
-  internal::IoctlToPerfmonProperties(properties, props);
-  return true;
-}
-
-bool DeviceReader::GetConfig(perfmon_ioctl_config_t* config) {
-  auto status = ioctl_perfmon_get_config(fd_, config);
-  if (status < 0)
-    FXL_LOG(ERROR) << "ioctl_perfmon_get_config failed: " << status;
-  return status >= 0;
-}
-
-bool DeviceReader::MapBuffer(const std::string& name, uint32_t trace_num) {
   if (!UnmapBuffer()) {
     return false;
   }
 
-  ioctl_perfmon_buffer_handle_req_t req;
-  req.descriptor = trace_num;
-  zx_handle_t raw_vmo;
-  auto ioctl_status = ioctl_perfmon_get_buffer_handle(fd_, &req, &raw_vmo);
-  if (ioctl_status < 0) {
-    FXL_LOG(ERROR) << name << ": ioctl_perfmon_get_buffer_handle failed: "
-                   << ioctl_status;
+  zx::vmo vmo;
+  if (!controller_->GetBufferHandle(name, trace_num, &vmo)) {
     return false;
   }
-  zx::vmo vmo(raw_vmo);
 
   uintptr_t addr;
   zx_status_t status = vmar_.map(0, vmo, 0, buffer_size_, ZX_VM_PERM_READ,
@@ -113,4 +99,5 @@ bool DeviceReader::UnmapBuffer() {
   return true;
 }
 
+}  // namespace internal
 }  // namespace perfmon
