@@ -11,6 +11,7 @@ driver("aml-rawnand") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.rawnand",
     "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

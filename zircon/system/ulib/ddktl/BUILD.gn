@@ -32,15 +32,13 @@ library("ddktl") {
 
     # <ddktl/protocol/display-controller.h> has #include <lib/zx/vmo.h>.
     "$zx/system/ulib/zx:headers",
-
-    # <ddktl/pdev.h> has #include <lib/mmio/mmio.h>.
-    "$zx/system/dev/lib/mmio:headers",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",

@@ -4,11 +4,10 @@
 
 #pragma once
 
-#include <fbl/mutex.h>
-
 #include <ddktl/device.h>
-#include <ddktl/pdev.h>
 #include <ddktl/protocol/clockimpl.h>
+#include <fbl/mutex.h>
+#include <lib/mmio/mmio.h>
 
 namespace hisi_clock {
 

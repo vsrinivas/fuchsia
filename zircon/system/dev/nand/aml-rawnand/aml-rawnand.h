@@ -4,29 +4,25 @@
 
 #pragma once
 
-#include <memory>
-#include <utility>
-
-#include <fbl/unique_ptr.h>
-
-#include <string.h>
-#include <unistd.h>
-
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddktl/device.h>
-#include <ddk/platform-defs.h>
-#include <ddktl/pdev.h>
-#include <ddk/protocol/platform-device-lib.h>
-#include <ddktl/protocol/rawnand.h>
-
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
-
+#include <ddktl/device.h>
+#include <ddktl/pdev.h>
+#include <ddktl/protocol/rawnand.h>
+#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
+#include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
+#include <memory>
 #include <soc/aml-common/aml-rawnand.h>
+#include <string.h>
+#include <unistd.h>
+#include <utility>
 #include <zircon/threads.h>
 #include <zircon/types.h>
 

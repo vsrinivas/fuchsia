@@ -5,6 +5,7 @@
 #include <ddktl/pdev.h>
 
 #include <ddk/debug.h>
+#include <lib/mmio/mmio.h>
 
 namespace ddk {
 

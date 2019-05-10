@@ -7,10 +7,10 @@
 #ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ECAM_H_
 #define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ECAM_H_
 
-#include <ddk/mmio-buffer.h>
 #include <ddktl/protocol/pciroot.h>
 #include <hwreg/bitfields.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/mmio/mmio.h>
 #include <zircon/hw/pci.h>
 
 struct IoBaseAddress {
