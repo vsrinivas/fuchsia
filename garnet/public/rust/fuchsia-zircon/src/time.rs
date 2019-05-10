@@ -260,7 +260,11 @@ impl Time {
     /// [zx_clock_get](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/clock_get.md)
     /// syscall.
     pub fn get(clock_id: ClockId) -> Time {
-        unsafe { Time(sys::zx_clock_get(clock_id as u32)) }
+        unsafe {
+            let mut now: sys::zx_time_t = 0;
+            sys::zx_clock_get_new(clock_id as u32, &mut now);
+            Time(now)
+        }
     }
 
     /// Compute a deadline for the time in the future that is the given `Duration` away.

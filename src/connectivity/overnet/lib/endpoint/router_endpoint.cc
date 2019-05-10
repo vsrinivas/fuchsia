@@ -359,7 +359,9 @@ void RouterEndpoint::ConnectionStream::Stub::ConnectToService(
 
 void RouterEndpoint::ConnectionStream::Stub::Ping(PingCallback callback) {
 #ifdef __Fuchsia__
-  callback(zx_clock_get(ZX_CLOCK_UTC));
+  zx_time_t now = 0;
+  zx_clock_get_new(ZX_CLOCK_UTC, &now);
+  callback(now);
 #else
   timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);

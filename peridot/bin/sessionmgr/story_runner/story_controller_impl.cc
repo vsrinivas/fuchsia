@@ -113,6 +113,12 @@ bool ShouldRestartModuleForNewIntent(
   return false;
 }
 
+zx_time_t GetNowUTC() {
+  zx_time_t now = 0u;
+  zx_clock_get_new(ZX_CLOCK_UTC, &now);
+  return now;
+}
+
 // Launches (brings up a running instance) of a module.
 //
 // If the module is to be composed into the story shell, notifies the story
@@ -132,7 +138,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         module_data_(std::move(module_data)),
         view_token_(std::move(view_token)),
         module_controller_request_(std::move(module_controller_request)),
-        start_time_(zx_clock_get(ZX_CLOCK_UTC)) {}
+        start_time_(GetNowUTC()) {}
 
  private:
   void Run() override {
@@ -226,9 +232,10 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       (*i)->OnModuleAdded(std::move(module_data));
     }
 
-    ReportModuleLaunchTime(
-        module_data_.module_url,
-        zx::duration(zx_clock_get(ZX_CLOCK_UTC) - start_time_));
+    zx_time_t now = 0;
+    zx_clock_get_new(ZX_CLOCK_UTC, &now);
+    ReportModuleLaunchTime(module_data_.module_url,
+                           zx::duration(now - start_time_));
   }
 
   // Connects to the module's intent handler and sends it the intent from

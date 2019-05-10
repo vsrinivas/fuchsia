@@ -158,7 +158,8 @@ static ACPI_STATUS thrd_status_to_acpi_status(int status) {
 }
 
 static void timeout_to_timespec(UINT16 Timeout, struct timespec* timespec) {
-    zx_time_t now = zx_clock_get(ZX_CLOCK_UTC);
+    zx_time_t now = 0;
+    zx_clock_get_new(ZX_CLOCK_UTC, &now);
     timespec->tv_sec = static_cast<time_t>(now / ZX_SEC(1)),
     timespec->tv_nsec = static_cast<long>(now % ZX_SEC(1)),
     timespec->tv_nsec += ZX_MSEC(Timeout);

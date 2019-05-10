@@ -1682,9 +1682,16 @@ static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2],
     uint32_t mask = 0;
 
     // Extract modify time.
-    attr.modification_time = (times == NULL || times[1].tv_nsec == UTIME_NOW)
-        ? zx_clock_get(ZX_CLOCK_UTC)
-        : zx_time_add_duration(ZX_SEC(times[1].tv_sec), times[1].tv_nsec);
+    if (times == NULL || times[1].tv_nsec == UTIME_NOW) {
+        zx_time_t now = 0;
+        zx_status_t status = zx_clock_get_new(ZX_CLOCK_UTC, &now);
+        if (status != ZX_OK) {
+            return status;
+        }
+        attr.modification_time = now;
+    } else {
+        attr.modification_time = zx_time_add_duration(ZX_SEC(times[1].tv_sec), times[1].tv_nsec);
+    }
 
     if (times == NULL || times[1].tv_nsec != UTIME_OMIT) {
         // For setattr, tell which fields are valid.

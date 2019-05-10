@@ -28,7 +28,8 @@ zx_time_t nstimespec(struct timespec ts) {
 
 bool test_attr(void) {
     BEGIN_TEST;
-    zx_time_t now = zx_clock_get(ZX_CLOCK_UTC);
+    zx_time_t now = 0;
+    ASSERT_EQ(ZX_OK, zx_clock_get_new(ZX_CLOCK_UTC, &now), "could not read clock");
     ASSERT_NE(now, 0u, "zx_clock_get only returns zero on error");
 
     int fd1 = open("::file.txt", O_CREAT | O_RDWR, 0644);
@@ -99,7 +100,8 @@ bool test_parent_directory_time(void) {
         return true;
     }
 
-    zx_time_t now = zx_clock_get(ZX_CLOCK_UTC);
+    zx_time_t now = 0;
+    ASSERT_EQ(ZX_OK, zx_clock_get_new(ZX_CLOCK_UTC, &now), "could not read clock");
     ASSERT_NE(now, 0u, "zx_clock_get only returns zero on error");
 
     // Create a parent directory to contain new contents

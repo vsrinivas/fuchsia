@@ -6,10 +6,10 @@
 
 #include <threads.h>
 
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #ifdef __cplusplus
 
@@ -41,7 +41,11 @@ public:
     // To be more specific: Is this vnode connected into the directory hierarchy?
     // VnodeDirs can be unlinked, and this method will subsequently return false.
     bool IsDirectory() const final { return dnode_ != nullptr; }
-    void UpdateModified() { modify_time_ = zx_clock_get(ZX_CLOCK_UTC); }
+    void UpdateModified() {
+        zx_time_t now = 0;
+        zx_clock_get_new(ZX_CLOCK_UTC, &now);
+        modify_time_ = now;
+    }
 
     ~VnodeMemfs() override;
 
@@ -179,11 +183,12 @@ private:
 class Vfs : public fs::ManagedVfs {
 public:
     // Creates a Vfs with practically unlimited pages upper bound.
-    Vfs(): fs::ManagedVfs(), pages_limit_(UINT64_MAX), num_allocated_pages_(0) { }
+    Vfs()
+        : fs::ManagedVfs(), pages_limit_(UINT64_MAX), num_allocated_pages_(0) {}
 
     // Creates a Vfs with the maximum |pages_limit| number of pages.
-    explicit Vfs(size_t pages_limit):
-        fs::ManagedVfs(), pages_limit_(pages_limit), num_allocated_pages_(0) { }
+    explicit Vfs(size_t pages_limit)
+        : fs::ManagedVfs(), pages_limit_(pages_limit), num_allocated_pages_(0) {}
 
     // Creates a VnodeVmo under |parent| with |name| which is backed by |vmo|.
     // N.B. The VMO will not be taken into account when calculating
@@ -241,4 +246,4 @@ zx_status_t CreateFilesystem(const char* name, memfs::Vfs* vfs, fbl::RefPtr<Vnod
 
 } // namespace memfs
 
-#endif  // ifdef __cplusplus
+#endif // ifdef __cplusplus

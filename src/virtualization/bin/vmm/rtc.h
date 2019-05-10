@@ -10,7 +10,9 @@
 
 // Returns the current time in seconds.
 static inline time_t rtc_time() {
-  return zx_clock_get(ZX_CLOCK_UTC) / ZX_SEC(1);
+  zx_time_t now = 0;
+  zx_clock_get_new(ZX_CLOCK_UTC, &now);
+  return now / ZX_SEC(1);
 }
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_RTC_H_
