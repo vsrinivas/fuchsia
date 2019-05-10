@@ -131,12 +131,12 @@ TEST_F(SystemDataUpdaterImplTests, SetChannel) {
 
   EXPECT_EQ(channel(), "<unset>");
 
-  system_data_updater->SetChannel(nullptr, nullptr, [](Status s) {});
+  system_data_updater->SetChannel("", [](Status s) {});
   RunLoopUntilIdle();
 
   EXPECT_EQ(channel(), "<unknown>");
 
-  system_data_updater->SetChannel("fishfood", nullptr, [](Status s) {});
+  system_data_updater->SetChannel("fishfood", [](Status s) {});
   RunLoopUntilIdle();
 
   EXPECT_EQ(channel(), "fishfood");

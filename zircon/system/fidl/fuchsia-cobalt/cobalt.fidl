@@ -208,6 +208,7 @@ protocol LoggerFactory {
 };
 
 /////////////////////////////////////////////////////////////////////
+
 /// LoggerBase Interface
 /////////////////////////////////////////////////////////////////////
 
@@ -461,6 +462,7 @@ protocol LoggerBase {
 };
 
 /////////////////////////////////////////////////////////////////////
+
 /// Logger Interface
 /////////////////////////////////////////////////////////////////////
 
@@ -619,6 +621,7 @@ protocol Logger {
 };
 
 /////////////////////////////////////////////////////////////////////
+
 /// LoggerSimple Interface
 /////////////////////////////////////////////////////////////////////
 
@@ -647,6 +650,7 @@ protocol LoggerSimple {
 };
 
 /////////////////////////////////////////////////////////////////////
+
 /// SystemProfileUpdater Interface
 /////////////////////////////////////////////////////////////////////
 
@@ -672,19 +676,9 @@ protocol SystemDataUpdater {
     SetExperimentState(vector<Experiment> experiments)
         -> (Status status);
 
-    // Sets Cobalt's view of the system-wide channel selections replacing the
-    // existing values.
+    // Sets Cobalt's view of the system-wide channel replacing the existing values.
     //
-    // |current_channel| The channel that the device last used as an update
-    // source. If a device has not updated since the last factory reset this
-    // value will be nil. A loss or corruption of storage could also cause this
-    // value to be nil.
-    //
-    // |target_channel| The channel that the device is configured to use to
-    // source new updates. If a device is freshly provisioned, this will be the
-    // default channel configured by the product. If a different channel is
-    // chosen in the UI, SetChannel will be called immediately with
-    // |target_channel| containing the newly selected value. |target_channel|
-    // is omitted if the device is booted without any channels.
-    SetChannel(string? current_channel, string? target_channel) -> (Status status);
+    // |current_channel| The channel that the device last used as an update source. This value may
+    // be empty to indicate that the device is not currently associated with any channel.
+    SetChannel(string current_channel) -> (Status status);
 };

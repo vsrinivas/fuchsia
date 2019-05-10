@@ -26,13 +26,12 @@ void SystemDataUpdaterImpl::SetExperimentState(
   callback(Status::OK);
 }
 
-void SystemDataUpdaterImpl::SetChannel(::fidl::StringPtr current_channel,
-                                       ::fidl::StringPtr ignored_target_channel,
+void SystemDataUpdaterImpl::SetChannel(std::string current_channel,
                                        SetChannelCallback callback) {
-  if (current_channel) {
-    system_data_->SetChannel(current_channel);
-  } else {
+  if (current_channel == "") {
     system_data_->SetChannel("<unknown>");
+  } else {
+    system_data_->SetChannel(current_channel);
   }
   callback(Status::OK);
 }

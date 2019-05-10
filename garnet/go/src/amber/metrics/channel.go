@@ -89,12 +89,16 @@ func (u *releaseChannelUpdater) sendAsync(targetChannel string) (result chan err
 }
 
 func (u *releaseChannelUpdater) sendSync(proxy *cobalt.SystemDataUpdaterInterface, targetChannel string) error {
+	var result cobalt.Status
+	var err error
 	if u.currentChannel == nil {
-		log.Printf("calling cobalt.SetChannel(nil, %q)", targetChannel)
+		log.Printf("calling cobalt.SetChannel(\"\")")
+		result, err = proxy.SetChannel("")
 	} else {
-		log.Printf("calling cobalt.SetChannel(%q, %q)", *u.currentChannel, targetChannel)
+		log.Printf("calling cobalt.SetChannel(%q)", *u.currentChannel)
+		result, err = proxy.SetChannel(*u.currentChannel)
 	}
-	result, err := proxy.SetChannel(u.currentChannel, &targetChannel)
+
 	if err != nil {
 		time.Sleep(5 * time.Second)
 		// channel broken, return error so we try to reconnect

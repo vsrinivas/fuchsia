@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_APP_SYSTEM_DATA_UPDATER_IMPL_H_
-#define GARNET_BIN_COBALT_APP_SYSTEM_DATA_UPDATER_IMPL_H_
+#ifndef SRC_COBALT_BIN_APP_SYSTEM_DATA_UPDATER_IMPL_H_
+#define SRC_COBALT_BIN_APP_SYSTEM_DATA_UPDATER_IMPL_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <stdlib.h>
@@ -27,8 +27,7 @@ class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
   void SetExperimentState(std::vector<fuchsia::cobalt::Experiment> experiments,
                           SetExperimentStateCallback callback) override;
 
-  void SetChannel(::fidl::StringPtr current_channel,
-                  ::fidl::StringPtr ignored_target_channel,
+  void SetChannel(std::string current_channel,
                   SetChannelCallback callback) override;
 
   encoder::SystemData* system_data_;  // Not owned.
@@ -38,4 +37,4 @@ class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_APP_SYSTEM_DATA_UPDATER_IMPL_H_
+#endif  // SRC_COBALT_BIN_APP_SYSTEM_DATA_UPDATER_IMPL_H_
