@@ -31,7 +31,7 @@ constexpr char kPkgPrefix[] = "/pkgfs/packages/";
 // Code which uses this url:
 // https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/appmgr/root_loader.cc
 //
-void TestFileComponentInfo(const fbl::String& path,
+void TestFileComponentInfo(const fbl::String path,
                            fbl::String* component_url_out,
                            fbl::String* cmx_file_path_out);
 

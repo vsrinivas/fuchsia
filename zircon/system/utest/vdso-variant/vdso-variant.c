@@ -2,16 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <launchpad/launchpad.h>
-#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/status.h>
 #include <lib/fdio/io.h>
-
-#include <fcntl.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #define VDSO_FILE "/boot/kernel/vdso/test1"
@@ -45,13 +41,7 @@ int main(void) {
     launchpad_create(ZX_HANDLE_INVALID, "vdso-variant-helper", &lp);
     launchpad_clone(lp, LP_CLONE_ALL);
     launchpad_set_args(lp, 1, (const char*[]){"vdso-variant-helper"});
-    char* root_dir = getenv("TEST_ROOT_DIR");
-    ZX_ASSERT(root_dir != NULL);
-    static const char kHelperPath[] = "/bin/vdso-variant-helper";
-    char path[strlen(root_dir) + strlen(kHelperPath) + 1];
-    strcpy(path, root_dir);
-    strcat(path, kHelperPath);
-    launchpad_load_from_file(lp, path);
+    launchpad_load_from_file(lp, "/boot/bin/vdso-variant-helper");
     zx_handle_t proc;
     const char* errmsg;
     status = launchpad_go(lp, &proc, &errmsg);
