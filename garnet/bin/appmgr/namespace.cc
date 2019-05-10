@@ -61,6 +61,39 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                       std::move(channel)));
         return ZX_OK;
       })));
+
+  if (additional_services) {
+    auto& names = additional_services->names;
+    service_provider_ = additional_services->provider.Bind();
+    service_host_directory_ = std::move(additional_services->host_directory);
+    for (auto& name : names) {
+      if (service_host_directory_) {
+        services_->AddService(
+            name,
+            fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
+              fdio_service_connect_at(service_host_directory_.get(),
+                                      name.c_str(), channel.release());
+              return ZX_OK;
+            })));
+      } else {
+        services_->AddService(
+            name,
+            fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
+              service_provider_->ConnectToService(name, std::move(channel));
+              return ZX_OK;
+            })));
+      }
+    }
+  }
+
+  // If any services in |parent| share a name with |additional_services|,
+  // |additional_services| takes priority.
+  if (parent) {
+    services_->set_parent(parent->services());
+  }
+
+  // If any of these services aren't in additional_services or the parent
+  // namespace, add them here directly. (AddService skips duplicate services)
   services_->AddService(
       fuchsia::scheduler::ProfileProvider::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
@@ -101,36 +134,6 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                 std::move(channel)));
         return ZX_OK;
       })));
-
-  if (additional_services) {
-    auto& names = additional_services->names;
-    service_provider_ = additional_services->provider.Bind();
-    service_host_directory_ = std::move(additional_services->host_directory);
-    for (auto& name : names) {
-      if (service_host_directory_) {
-        services_->AddService(
-            name,
-            fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
-              fdio_service_connect_at(service_host_directory_.get(),
-                                      name.c_str(), channel.release());
-              return ZX_OK;
-            })));
-      } else {
-        services_->AddService(
-            name,
-            fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
-              service_provider_->ConnectToService(name, std::move(channel));
-              return ZX_OK;
-            })));
-      }
-    }
-  }
-
-  // If any services in |parent| share a name with |additional_services|,
-  // |additional_services| takes priority.
-  if (parent) {
-    services_->set_parent(parent->services());
-  }
 }
 
 Namespace::~Namespace() {}
