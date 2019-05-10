@@ -189,16 +189,13 @@ func calculateFpsForEvents(fpsEvents []*benchmarking.Event) (fps float64, fpsPer
 	numFrames := 0.0
 
 	for _, event := range events {
-		if event.Start < windowEndTime {
-			numFramesInWindow++
-			numFrames++
-		} else {
-			for windowEndTime < event.Start {
-				fpsPerWindow = append(fpsPerWindow, numFramesInWindow)
-				windowEndTime += WindowLength
-				numFramesInWindow = 0
-			}
+		for windowEndTime <= event.Start {
+			fpsPerWindow = append(fpsPerWindow, numFramesInWindow)
+			windowEndTime += WindowLength
+			numFramesInWindow = 0
 		}
+		numFramesInWindow++
+		numFrames++
 	}
 	lastEventTime := events[len(events)-1].Start
 
