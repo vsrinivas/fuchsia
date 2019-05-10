@@ -30,6 +30,9 @@ protocol Coding {
     // Various trickery to avoid directly refering a xunion/table inline,
     // which is not supported in the C bindings.
     MyXUnion(MyXUnion? x);
+
+    // Ensuring support for multiple uses of the same nullable type.
+    MyXUnion2(MyXUnion? x);
     VectorOfMyTable(vector<MyTable> t);
     VectorOfMyXUnion(vector<MyXUnion> x);
 };

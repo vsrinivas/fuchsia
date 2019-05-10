@@ -253,6 +253,55 @@ xunion MyXUnion {
     END_TEST;
 }
 
+// This mostly exists to make sure that the same nullable objects aren't
+// represented more than once in the coding tables.
+bool CodedTypesOfNullablePointers() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+struct MyStruct {
+  bool foo;
+  int32 bar;
+};
+
+union MyUnion {
+  bool foo;
+  int32 bar;
+};
+
+xunion MyXUnion {
+  bool foo;
+  int32 bar;
+};
+
+struct Wrapper1 {
+  MyStruct? ms;
+  MyUnion? mu;
+  MyXUnion? xu;
+};
+
+// This ensures that MyXUnion? doesn't show up twice in the coded types.
+struct Wrapper2 {
+  MyStruct? ms;
+  MyUnion? mu;
+  MyXUnion? xu;
+};
+
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+    fidl::CodedTypesGenerator gen(library.library());
+    gen.CompileCodedTypes();
+
+    // 7 == size of {bool-outside-of-envelope, bool-inside-of-envelope,
+    // int32-outside-of-envelope, int32-inside-of-envelope, MyStruct?, MyUnion?,
+    // MyXUnion?}, which is all the coded types in the example.
+    ASSERT_EQ(7, gen.coded_types().size());
+
+    END_TEST;
+}
+
 bool CodedTypesOfNullableXUnions() {
     BEGIN_TEST;
 
@@ -264,7 +313,12 @@ xunion MyXUnion {
   int32 bar;
 };
 
-struct Wrapper {
+struct Wrapper1 {
+  MyXUnion? xu;
+};
+
+// This ensures that MyXUnion? doesn't show up twice in the coded types.
+struct Wrapper2 {
   MyXUnion? xu;
 };
 
@@ -273,6 +327,8 @@ struct Wrapper {
     fidl::CodedTypesGenerator gen(library.library());
     gen.CompileCodedTypes();
 
+    // 3 == size of {bool, int32, MyXUnion?}, which is all of the types used in
+    // the example.
     ASSERT_EQ(3, gen.coded_types().size());
 
     auto type0 = gen.coded_types().at(0).get();
@@ -403,6 +459,7 @@ RUN_TEST(CodedTypesOfVectors);
 RUN_TEST(CodedTypesOfInterface);
 RUN_TEST(CodedTypesOfRequestOfInterface);
 RUN_TEST(CodedTypesOfXUnions);
+RUN_TEST(CodedTypesOfNullablePointers);
 RUN_TEST(CodedTypesOfNullableXUnions);
 RUN_TEST(CodedTypesOfTables);
 

@@ -76,6 +76,9 @@ private:
     ContextTypeMap<flat::ArrayType, coded::ArrayType> array_type_map_;
     TypeMap<flat::VectorType, coded::VectorType> vector_type_map_;
     TypeMap<flat::StringType, coded::StringType> string_type_map_;
+    TypeMap<flat::IdentifierType, coded::XUnionType> xunion_type_map_;
+    TypeMap<flat::IdentifierType, coded::PointerType> struct_type_map_;
+    TypeMap<flat::IdentifierType, coded::PointerType> union_type_map_;
 
     std::map<const flat::Name*, std::unique_ptr<coded::Type>, flat::PtrCompare<flat::Name>>
         named_coded_types_;

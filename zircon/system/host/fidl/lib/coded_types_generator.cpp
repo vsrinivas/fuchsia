@@ -109,10 +109,15 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             // but we may now need to generate the StructPointer.
             if (identifier_type->nullability != types::Nullability::kNullable)
                 break;
+            auto iter = struct_type_map_.find(identifier_type);
+            if (iter != struct_type_map_.end()) {
+                return iter->second;
+            }
             auto coded_struct_type = static_cast<coded::StructType*>(coded_type);
             auto struct_pointer_type = std::make_unique<coded::PointerType>(
                 NamePointer(coded_struct_type->coded_name), coded_struct_type);
             coded_struct_type->maybe_reference_type = struct_pointer_type.get();
+            struct_type_map_[identifier_type] = struct_pointer_type.get();
             coded_types_.push_back(std::move(struct_pointer_type));
             return coded_types_.back().get();
         }
@@ -126,10 +131,15 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             // but we may now need to generate the UnionPointer.
             if (identifier_type->nullability != types::Nullability::kNullable)
                 break;
+            auto iter = union_type_map_.find(identifier_type);
+            if (iter != union_type_map_.end()) {
+                return iter->second;
+            }
             auto coded_union_type = static_cast<coded::UnionType*>(coded_type);
             auto union_pointer_type = std::make_unique<coded::PointerType>(
                 NamePointer(coded_union_type->coded_name), coded_union_type);
             coded_union_type->maybe_reference_type = union_pointer_type.get();
+            union_type_map_[identifier_type] = union_pointer_type.get();
             coded_types_.push_back(std::move(union_pointer_type));
             return coded_types_.back().get();
         }
@@ -140,12 +150,17 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
                 break;
             auto coded_xunion_type = static_cast<coded::XUnionType*>(coded_type);
             assert(coded_xunion_type->nullability != types::Nullability::kNullable);
+            auto iter = xunion_type_map_.find(identifier_type);
+            if (iter != xunion_type_map_.end()) {
+                return iter->second;
+            }
             auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
                 coded_xunion_type->coded_name + "NullableRef",
                 coded_xunion_type->fields,
                 coded_xunion_type->qname,
                 types::Nullability::kNullable);
             coded_xunion_type->maybe_reference_type = nullable_xunion_type.get();
+            xunion_type_map_[identifier_type] = nullable_xunion_type.get();
             coded_types_.push_back(std::move(nullable_xunion_type));
             return coded_types_.back().get();
         }
