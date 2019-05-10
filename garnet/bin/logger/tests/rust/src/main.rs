@@ -11,11 +11,12 @@ fn main() {}
 
 #[cfg(test)]
 mod tests {
+    use failure::Error;
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
     use fuchsia_async as fasync;
     use fuchsia_syslog::{self as syslog, fx_log_info};
     use fuchsia_syslog_listener::{self as syslog_listener, LogProcessor};
-    use fuchsia_zircon::DurationNum;
+    use fuchsia_zircon::{self as zx, DurationNum};
     use log::warn;
     use parking_lot::Mutex;
 
@@ -62,7 +63,7 @@ mod tests {
     }
 
     #[test]
-    fn test_full_stack() {
+    fn test_listen_for_syslog() {
         let mut executor = fasync::Executor::new().unwrap();
         let random = rand::random::<u16>();
         let tag = "logger_integration_rust".to_string() + &random.to_string();
@@ -88,5 +89,32 @@ mod tests {
         assert_eq!(logs[1].tags[0], tag.clone());
         assert_eq!(logs[1].severity, LogLevelFilter::Warn as i32);
         assert_eq!(logs[1].msg, "log crate: 20");
+    }
+
+    #[test]
+    fn test_listen_for_klog() -> Result<(), Error> {
+        let mut executor = fasync::Executor::new()?;
+        let logs = run_listener("klog".to_string());
+
+        let random = rand::random::<u64>();
+        let msg = format!("logger_integration_rust test_klog {}", random);
+
+        let debuglog = zx::DebugLog::create(zx::DebugLogOpts::empty())?;
+        debuglog.write(msg.as_bytes())?;
+
+        let tries = 50;
+        for _ in 0..tries {
+            let logs = logs.lock();
+            if logs.iter().find(|&m| m.msg == msg).is_some() {
+                return Ok(());
+            }
+            // Must release lock so the log listener started above with fasync::spawn can
+            // mutate it.
+            std::mem::drop(logs);
+
+            let timeout = fasync::Timer::new(100.millis().after_now());
+            executor.run_singlethreaded(timeout);
+        }
+        panic!("Failed to find klog");
     }
 }

@@ -15,7 +15,7 @@ const MAX_LOG_LEVEL: log::Level = log::Level::Info;
 /// KernelLogger is a logger implementation for the log crate. It attempts to use the kernel
 /// debuglog facility and automatically falls back to stderr if that fails.
 pub struct KernelLogger {
-    debuglog: zx::sys::zx_handle_t,
+    debuglog: zx::DebugLog,
 }
 
 lazy_static! {
@@ -24,18 +24,10 @@ lazy_static! {
 
 impl KernelLogger {
     fn new() -> KernelLogger {
-        // TODO: Create zx::DebugLog wrappers for zx_debuglog_* syscalls to avoid direct unsafe
-        // usage.
-        let mut log_handle = zx::sys::ZX_HANDLE_INVALID;
-        let status = unsafe {
-            zx::sys::zx_debuglog_create(
-                zx::sys::ZX_HANDLE_INVALID,
-                0,
-                &mut log_handle as *mut zx::sys::zx_handle_t,
-            )
-        };
-        zx::Status::ok(status).context("Failed to create debuglog object").unwrap();
-        KernelLogger{debuglog: log_handle}
+        let debuglog = zx::DebugLog::create(zx::DebugLogOpts::empty())
+            .context("Failed to create debuglog object")
+            .unwrap();
+        KernelLogger{debuglog}
     }
 
     /// Initialize the global logger to use KernelLogger.
@@ -73,20 +65,10 @@ impl KernelLogger {
     fn log_helper(&self, level: &str, args: &fmt::Arguments) {
         let msg = format!("[component_manager] {}: {}", level, args);
 
-        // TODO: Create zx::DebugLog wrappers for zx_debuglog_* syscalls to avoid direct unsafe
-        // usage.
-        // TODO: zx_debuglog_write also accepts options and the possible options include log
-        // levels, but they seem to be mostly unused and not displayed today, so we don't pass
+        // TODO(ZX-3187): zx_debuglog_write also accepts options and the possible options include
+        // log levels, but they seem to be mostly unused and not displayed today, so we don't pass
         // along log level yet.
-        let status = unsafe {
-            zx::sys::zx_debuglog_write(
-                self.debuglog,
-                0,
-                msg.as_ptr(),
-                msg.as_bytes().len(),
-            )
-        };
-        if let Err(s) = zx::Status::ok(status) {
+        if let Err(s) = self.debuglog.write(msg.as_bytes()) {
             eprintln!("failed to write log ({}): {}", s, msg);
         }
     }
@@ -110,13 +92,11 @@ impl log::Log for KernelLogger {
 mod tests {
     use {
         super::*,
-        byteorder::{ByteOrder, LittleEndian},
+        fuchsia_zircon::AsHandleRef,
         log::*,
         rand::Rng,
-        std::{panic, sync::Once, thread, time},
+        std::{panic, sync::Once},
     };
-
-    const ZX_LOG_FLAG_READABLE: u32 = 0x40000000;
 
     // KernelLogger::init/log::set_logger will fail if called more than once and there's no way to
     // reset.
@@ -127,42 +107,37 @@ mod tests {
         });
     }
 
-    // expect_message_in_debuglog will read the first 10000 messages in zircon's debuglog, looking
+    // expect_message_in_debuglog will read the last 10000 messages in zircon's debuglog, looking
     // for a message that equals `sent_msg`. If found, the function returns. If the first 10,000
     // messages doesn't contain `sent_msg`, it will panic.
     fn expect_message_in_debuglog(sent_msg: String) {
-        // TODO: Create zx::DebugLog wrappers for zx_debuglog_* syscalls to avoid direct unsafe
-        // usage.
-        let mut log_handle_for_reading = zx::sys::ZX_HANDLE_INVALID;
-        let status = unsafe {
-            zx::sys::zx_debuglog_create(
-                zx::sys::ZX_HANDLE_INVALID,
-                ZX_LOG_FLAG_READABLE,
-                &mut log_handle_for_reading as *mut zx::sys::zx_handle_t,
-            )
-        };
-        assert_eq!(zx::sys::ZX_OK, status);
-
+        let debuglog = zx::DebugLog::create(zx::DebugLogOpts::READABLE).unwrap();
+        let mut record = Vec::with_capacity(zx::sys::ZX_LOG_RECORD_MAX);
         for _ in 0..10000 {
-            let mut read_buffer = [0; 1024];
-            let status = unsafe {
-                zx::sys::zx_debuglog_read(log_handle_for_reading, 0, read_buffer.as_mut_ptr(), 1024)
-            };
-            if status <= 0 {
-                if status == zx::sys::ZX_ERR_SHOULD_WAIT {
-                    thread::sleep(time::Duration::from_millis(100));
+            match debuglog.read(&mut record) {
+                Ok(()) => {
+                    // TODO(ZX-3187): Manually unpack log record until zx::DebugLog::read returns
+                    // an wrapper type.
+                    let mut len_bytes = [0; 2];
+                    len_bytes.copy_from_slice(&record[4..6]);
+                    let data_len = u16::from_le_bytes(len_bytes) as usize;
+                    let log = &record[32..(32 + data_len)];
+                    if log == sent_msg.as_bytes() {
+                        // We found our log!
+                        return;
+                    }
+                }
+                Err(status) if status == zx::Status::SHOULD_WAIT => {
+                    debuglog
+                        .wait_handle(zx::Signals::LOG_READABLE, zx::Time::INFINITE)
+                        .expect("Failed to wait for log readable");
                     continue;
                 }
-                assert_eq!(zx::sys::ZX_OK, status);
+                Err(status) => {
+                    panic!("Unexpected error from zx_debuglog_read: {}", status);
+                }
             }
 
-            let data_len = LittleEndian::read_u16(&read_buffer[4..8]) as usize;
-            let log = String::from_utf8(read_buffer[32..(32 + data_len)].to_vec())
-                .expect("failed to read log buffer");
-            if log == sent_msg {
-                // We found our log!
-                return;
-            }
         }
         panic!("first 10000 log messages didn't include the one we sent!");
     }

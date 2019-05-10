@@ -582,4 +582,10 @@ multiconst!(zx_guest_trap_t, [
     ZX_GUEST_TRAP_IO   = 2;
 ]);
 
+pub const ZX_LOG_RECORD_MAX: usize = 256;
+
+multiconst!(u32, [
+    ZX_LOG_FLAG_READABLE = 0x40000000;
+]);
+
 include!("definitions.rs");

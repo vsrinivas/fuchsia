@@ -5,8 +5,6 @@
 //! Type-safe bindings for Zircon kernel
 //! [syscalls](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls.md).
 
-#![deny(warnings)]
-
 pub mod sys {
     pub use fuchsia_zircon_sys::*;
 }
@@ -140,6 +138,7 @@ macro_rules! assoc_values {
 
 mod channel;
 mod cprng;
+mod debuglog;
 mod event;
 mod eventpair;
 mod fifo;
@@ -164,6 +163,7 @@ mod vmo;
 
 pub use self::channel::*;
 pub use self::cprng::*;
+pub use self::debuglog::*;
 pub use self::event::*;
 pub use self::eventpair::*;
 pub use self::fifo::*;
