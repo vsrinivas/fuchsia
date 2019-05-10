@@ -112,11 +112,6 @@ public:
 
     void Dump(uint depth, bool verbose) override;
 
-    zx_status_t InvalidateCache(const uint64_t offset, const uint64_t len) override;
-    zx_status_t CleanCache(const uint64_t offset, const uint64_t len) override;
-    zx_status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) override;
-    zx_status_t SyncCache(const uint64_t offset, const uint64_t len) override;
-
     zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
                               PageRequest* page_request, vm_page_t**, paddr_t*) override
         // Calls a Locked method of the parent, which confuses analysis.
@@ -175,14 +170,6 @@ private:
     friend fbl::RefPtr<VmObjectPaged>;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPaged);
-
-    // perform a cache maintenance operation against the vmo.
-    enum class CacheOpType { Invalidate,
-                             Clean,
-                             CleanInvalidate,
-                             Sync
-    };
-    zx_status_t CacheOp(const uint64_t offset, const uint64_t len, const CacheOpType type);
 
     // add a page to the object
     zx_status_t AddPage(vm_page_t* p, uint64_t offset);

@@ -172,18 +172,10 @@ public:
     virtual void Dump(uint depth, bool verbose) = 0;
 
     // cache maintenance operations.
-    virtual zx_status_t InvalidateCache(const uint64_t offset, const uint64_t len) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    virtual zx_status_t CleanCache(const uint64_t offset, const uint64_t len) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    virtual zx_status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    virtual zx_status_t SyncCache(const uint64_t offset, const uint64_t len) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    zx_status_t InvalidateCache(const uint64_t offset, const uint64_t len);
+    zx_status_t CleanCache(const uint64_t offset, const uint64_t len);
+    zx_status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len);
+    zx_status_t SyncCache(const uint64_t offset, const uint64_t len);
 
     virtual uint32_t GetMappingCachePolicy() const = 0;
     virtual zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) {
@@ -342,6 +334,14 @@ protected:
     fbl::Name<ZX_MAX_NAME_LEN> name_;
 
 private:
+    // perform a cache maintenance operation against the vmo.
+    enum class CacheOpType { Invalidate,
+                             Clean,
+                             CleanInvalidate,
+                             Sync
+    };
+    zx_status_t CacheOp(const uint64_t offset, const uint64_t len, const CacheOpType type);
+
     mutable DECLARE_MUTEX(VmObject) child_observer_lock_;
 
     // This member, if not null, is used to signal the user facing Dispatcher.

@@ -20,6 +20,7 @@
 #include <string.h>
 #include <trace.h>
 
+#include <vm/physmap.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_object_paged.h>
@@ -260,6 +261,94 @@ void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len) {
     for (auto& child : children_list_) {
         child.RangeChangeUpdateFromParentLocked(offset, len);
     }
+}
+
+zx_status_t VmObject::InvalidateCache(const uint64_t offset, const uint64_t len) {
+    return CacheOp(offset, len, CacheOpType::Invalidate);
+}
+
+zx_status_t VmObject::CleanCache(const uint64_t offset, const uint64_t len) {
+    return CacheOp(offset, len, CacheOpType::Clean);
+}
+
+zx_status_t VmObject::CleanInvalidateCache(const uint64_t offset, const uint64_t len) {
+    return CacheOp(offset, len, CacheOpType::CleanInvalidate);
+}
+
+zx_status_t VmObject::SyncCache(const uint64_t offset, const uint64_t len) {
+    return CacheOp(offset, len, CacheOpType::Sync);
+}
+
+zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
+                              const CacheOpType type) {
+    canary_.Assert();
+
+    if (unlikely(len == 0)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    Guard<fbl::Mutex> guard{&lock_};
+
+    if (unlikely(!InRange(start_offset, len, size()))) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    const size_t end_offset = static_cast<size_t>(start_offset + len);
+    size_t op_start_offset = static_cast<size_t>(start_offset);
+
+    while (op_start_offset != end_offset) {
+        // Offset at the end of the current page.
+        const size_t page_end_offset = ROUNDUP(op_start_offset + 1, PAGE_SIZE);
+
+        // This cache op will either terminate at the end of the current page or
+        // at the end of the whole op range -- whichever comes first.
+        const size_t op_end_offset = MIN(page_end_offset, end_offset);
+
+        const size_t cache_op_len = op_end_offset - op_start_offset;
+
+        const size_t page_offset = op_start_offset % PAGE_SIZE;
+
+        // lookup the physical address of the page, careful not to fault in a new one
+        paddr_t pa;
+        auto status = GetPageLocked(op_start_offset, 0, nullptr, nullptr, nullptr, &pa);
+
+        if (likely(status == ZX_OK)) {
+            // This check is here for the benefit of VmObjectPhysical VMOs,
+            // which can potentially have pa(s) outside physmap, in contrast to
+            // VmObjectPaged whose pa(s) are always in physmap.
+            if (unlikely(!is_physmap_phys_addr(pa))) {
+                // TODO(ZX-4071): Consider whether to keep or remove op_range
+                // for cache ops for phsyical VMOs. If we keep, possibly we'd
+                // want to obtain a mapping somehow here instead of failing.
+                return ZX_ERR_NOT_SUPPORTED;
+            }
+            // Convert the page address to a Kernel virtual address.
+            const void* ptr = paddr_to_physmap(pa);
+            const addr_t cache_op_addr = reinterpret_cast<addr_t>(ptr) + page_offset;
+
+            LTRACEF("ptr %p op %d\n", ptr, (int)type);
+
+            // Perform the necessary cache op against this page.
+            switch (type) {
+            case CacheOpType::Invalidate:
+                arch_invalidate_cache_range(cache_op_addr, cache_op_len);
+                break;
+            case CacheOpType::Clean:
+                arch_clean_cache_range(cache_op_addr, cache_op_len);
+                break;
+            case CacheOpType::CleanInvalidate:
+                arch_clean_invalidate_cache_range(cache_op_addr, cache_op_len);
+                break;
+            case CacheOpType::Sync:
+                arch_sync_cache_range(cache_op_addr, cache_op_len);
+                break;
+            }
+        }
+
+        op_start_offset += cache_op_len;
+    }
+
+    return ZX_OK;
 }
 
 static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {
