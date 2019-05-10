@@ -19,21 +19,22 @@ import (
 )
 
 type Config struct {
-	OutputDir            string
-	FuchsiaDir           string
-	SshKeyFile           string
-	netaddrPath          string
-	localHostname        string
-	DeviceName           string
-	deviceHostname       string
-	LkgbPath             string
-	ArtifactsPath        string
-	PackagesPath         string
-	downgradeBuilderName string
-	downgradeBuildID     string
-	upgradeBuildID       string
-	upgradeAmberFilesDir string
-	archive              *artifacts.Archive
+	OutputDir              string
+	FuchsiaDir             string
+	SshKeyFile             string
+	netaddrPath            string
+	localHostname          string
+	DeviceName             string
+	deviceHostname         string
+	LkgbPath               string
+	ArtifactsPath          string
+	PackagesPath           string
+	downgradeBuilderName   string
+	downgradeBuildID       string
+	downgradeAmberFilesDir string
+	upgradeBuildID         string
+	upgradeAmberFilesDir   string
+	archive                *artifacts.Archive
 }
 
 func NewConfig(fs *flag.FlagSet) (*Config, error) {
@@ -57,23 +58,32 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.ArtifactsPath, "artifacts", filepath.Join(testDataPath, "artifacts"), "path to the artifacts binary, default is $FUCHSIA_DIR/prebuilt/tools/artifacts/artifacts")
 	fs.StringVar(&c.downgradeBuilderName, "downgrade-builder-name", "", "downgrade to the latest version of this builder")
 	fs.StringVar(&c.downgradeBuildID, "downgrade-build-id", "", "downgrade to this specific build id")
+	fs.StringVar(&c.downgradeAmberFilesDir, "downgrade-amber-files", "", "Path to the downgrade amber-files repository")
 	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
-	fs.StringVar(&c.upgradeAmberFilesDir, "upgrade-amber-files", "", "Path to the current build amber-files repository")
+	fs.StringVar(&c.upgradeAmberFilesDir, "upgrade-amber-files", "", "Path to the upgrade amber-files repository")
 
 	return c, nil
 }
 
 func (c *Config) Validate() error {
-	if c.downgradeBuilderName == "" && c.downgradeBuildID == "" {
-		return fmt.Errorf("-downgrade-builder-name or -downgrade-build-id must be specified")
-	} else if c.downgradeBuilderName != "" && c.downgradeBuildID != "" {
-		return fmt.Errorf("-downgrade-builder-name and -downgrade-build-id are incompatible")
+	defined := 0
+	for _, s := range []string{c.downgradeBuilderName, c.downgradeBuildID, c.downgradeAmberFilesDir} {
+		if s != "" {
+			defined += 1
+		}
+	}
+	if defined != 1 {
+		return fmt.Errorf("exactly one of -downgrade-builder-name, -downgrade-build-id, or -downgrade-amber-files must be specified")
 	}
 
-	if c.upgradeBuildID == "" && c.upgradeAmberFilesDir == "" {
-		return fmt.Errorf("-upgrade-builder-id or -upgrade-amber-files must be specified")
-	} else if c.upgradeBuildID != "" && c.upgradeAmberFilesDir != "" {
-		return fmt.Errorf("-upgrade-builder-id and -upgrade-amber-files are incompatible")
+	defined = 0
+	for _, s := range []string{c.upgradeBuildID, c.upgradeAmberFilesDir} {
+		if s != "" {
+			defined += 1
+		}
+	}
+	if defined != 1 {
+		return fmt.Errorf("exactly one of -upgrade-build-id or -upgrade-amber-files must be specified")
 	}
 
 	return nil
@@ -105,7 +115,7 @@ func (c *Config) BuildArchive() *artifacts.Archive {
 }
 
 func (c *Config) GetDowngradeRepository() (*packages.Repository, error) {
-	if c.downgradeBuildID == "" {
+	if c.downgradeBuilderName != "" && c.downgradeBuildID == "" {
 		a := c.BuildArchive()
 		id, err := a.LookupBuildID(c.downgradeBuilderName)
 		if err != nil {
@@ -114,12 +124,16 @@ func (c *Config) GetDowngradeRepository() (*packages.Repository, error) {
 		c.downgradeBuildID = id
 	}
 
-	build, err := c.BuildArchive().GetBuildByID(c.downgradeBuildID)
-	if err != nil {
-		return nil, err
+	if c.downgradeBuildID != "" {
+		build, err := c.BuildArchive().GetBuildByID(c.downgradeBuildID)
+		if err != nil {
+			return nil, err
+		}
+
+		return build.GetPackageRepository()
 	}
 
-	return build.GetPackageRepository()
+	return packages.NewRepository(c.downgradeAmberFilesDir)
 }
 
 func (c *Config) GetUpgradeRepository() (*packages.Repository, error) {
