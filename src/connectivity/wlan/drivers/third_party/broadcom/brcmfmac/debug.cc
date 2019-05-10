@@ -16,6 +16,10 @@
 
 #include "debug.h"
 
+#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
+#include <ddk/device.h>
+#endif
+
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
@@ -23,6 +27,9 @@
 #include "device.h"
 #include "linuxisms.h"
 #include "fweh.h"
+#if CONFIG_BRCMFMAC_SIM
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+#endif
 
 #define BRCMF_HEXDUMP_WIDTH 16
 
@@ -50,7 +57,7 @@ void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {
         } else if (n_printed > 0 && msg[n_printed - 1] == '\n') {
             msg[--n_printed] = 0;
         }
-        zxlogf(INFO, "brcmfmac (%s): %s\n", func, msg);
+        BRCMF_LOGF(INFO, "brcmfmac (%s): %s\n", func, msg);
     }
 }
 
@@ -70,16 +77,16 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
         snprintf(msg, 512, "(Formatting error from string '%s')", fmt);
     }
     __brcm_dbg_set_err();
-    zxlogf(ERROR, "brcmfmac (%s): %s", func, msg);
+    BRCMF_LOGF(ERROR, "brcmfmac (%s): %s", func, msg);
 }
 
 void brcmf_hexdump(const void* buf, size_t len) {
     if (len > 4096) {
-        zxlogf(INFO, "brcmfmac: Truncating hexdump to 4096 bytes\n");
+        BRCMF_LOGF(INFO, "brcmfmac: Truncating hexdump to 4096 bytes\n");
         len = 4096;
     }
     if (len == 0) {
-        zxlogf(INFO, "brcmfmac: Empty hexdump %p\n", buf);
+        BRCMF_LOGF(INFO, "brcmfmac: Empty hexdump %p\n", buf);
         return;
     }
     char output[64 + BRCMF_HEXDUMP_WIDTH * 3];
@@ -90,13 +97,13 @@ void brcmf_hexdump(const void* buf, size_t len) {
         next += sprintf(next, "%02x ", bytes[i % BRCMF_HEXDUMP_WIDTH]);
         if ((i % BRCMF_HEXDUMP_WIDTH) == (BRCMF_HEXDUMP_WIDTH - 1)) {
             // For larger dumps over serial, a delay may need to be added
-            zxlogf(INFO, "%p: %s\n", bytes, output);
+            BRCMF_LOGF(INFO, "%p: %s\n", bytes, output);
             next = output;
             bytes += BRCMF_HEXDUMP_WIDTH;
         }
     }
     if ((i % BRCMF_HEXDUMP_WIDTH) != 0) {
-        zxlogf(INFO, "%p: %s\n", bytes, output);
+        BRCMF_LOGF(INFO, "%p: %s\n", bytes, output);
     }
 }
 

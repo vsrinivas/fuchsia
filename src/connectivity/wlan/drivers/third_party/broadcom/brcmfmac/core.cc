@@ -16,7 +16,9 @@
 
 #include "core.h"
 
+#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
 #include <ddk/device.h>
+#endif
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/usb.h>
@@ -45,6 +47,9 @@
 #include "pcie.h"
 #include "pno.h"
 #include "proto.h"
+#if CONFIG_BRCMFMAC_SIM
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+#endif
 #include "workqueue.h"
 
 #define MAX_WAIT_FOR_8021X_TX_MSEC (950)
@@ -579,11 +584,21 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
     };
 
     struct brcmf_device* device = if_to_dev(ifp);
-    result = device_add(device->zxdev, &args, &device->phy_zxdev);
+
+#if CONFIG_BRCMFMAC_SIM
+    result = wlan_sim_device_add(device->zxdev, &args, &device->phy_zxdev);
     if (result != ZX_OK) {
-        brcmf_err("Failed to device_add: %s", zx_status_get_string(result));
+        brcmf_err("wlan_sim_device_add failed: %s", zx_status_get_string(result));
         goto fail;
     }
+#else
+    result = device_add(device->zxdev, &args, &device->phy_zxdev);
+    if (result != ZX_OK) {
+        brcmf_err("device_add failed: %s", zx_status_get_string(result));
+        goto fail;
+    }
+#endif
+
     brcmf_dbg(TEMP, "device_add() succeeded. Added phy hooks.");
 
     return ZX_OK;
@@ -1234,8 +1249,8 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
 }
 
 zx_status_t brcmf_core_init(zx_device_t* device) {
-    zx_status_t result;
     pthread_mutexattr_t pmutex_attributes;
+    zx_status_t result;
 
     brcmf_dbg(TEMP, "brcmfmac: core_init was called\n");
 
@@ -1243,7 +1258,15 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
     pthread_mutexattr_settype(&pmutex_attributes, PTHREAD_MUTEX_NORMAL | PTHREAD_MUTEX_RECURSIVE);
     pthread_mutex_init(&irq_callback_lock, &pmutex_attributes);
 
-#ifdef CONFIG_BRCMFMAC_PCIE
+#if CONFIG_BRCMFMAC_SIM
+    result = brcmf_sim_register(device);
+    if (result != ZX_OK) {
+        brcmf_err("Simulator driver registration failed: %s\n", zx_status_get_string(result));
+    }
+    return result;
+#endif // CONFIG_BRCMFMAC_SIM
+
+#if CONFIG_BRCMFMAC_PCIE
     pci_protocol_t pdev;
     result = device_get_protocol(device, ZX_PROTOCOL_PCI, &pdev);
     if (result == ZX_OK) {
@@ -1255,7 +1278,7 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
     }
 #endif // CONFIG_BRCMFMAC_PCIE
 
-#ifdef CONFIG_BRCMFMAC_USB
+#if CONFIG_BRCMFMAC_USB
     usb_protocol_t udev;
     result = device_get_protocol(device, ZX_PROTOCOL_USB, &udev);
     if (result == ZX_OK) {
@@ -1267,7 +1290,7 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
     }
 #endif // CONFIG_BRCMFMAC_USB
 
-#ifdef CONFIG_BRCMFMAC_SDIO
+#if CONFIG_BRCMFMAC_SDIO
     composite_protocol_t composite;
     result = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
     if (result == ZX_OK) {
@@ -1278,18 +1301,22 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
         return result;
     }
 #endif // CONFIG_BRCMFMAC_SDIO
+
     return ZX_ERR_INTERNAL;
 }
 
 void brcmf_core_exit(void) {
 
-#ifdef CONFIG_BRCMFMAC_SDIO
+#if CONFIG_BRCMFMAC_SDIO
     brcmf_sdio_exit();
 #endif
-#ifdef CONFIG_BRCMFMAC_USB
+#if CONFIG_BRCMFMAC_USB
     brcmf_usb_exit();
 #endif
-#ifdef CONFIG_BRCMFMAC_PCIE
+#if CONFIG_BRCMFMAC_PCIE
     brcmf_pcie_exit();
+#endif
+#if CONFIG_BRCMFMAC_SIM
+    brcmf_sim_exit();
 #endif
 }

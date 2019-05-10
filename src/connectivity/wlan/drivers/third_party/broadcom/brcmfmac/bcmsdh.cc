@@ -16,12 +16,15 @@
 /* ****************** SDIO CARD Interface Functions **************************/
 
 // TODO(cphoenix): Do we need sdio, completion, status, stdatomic, threads?
+#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
+#include <ddk/device.h>
+#endif
 #include <ddk/protocol/sdio.h>
 #include <ddk/metadata.h>
 #include <ddk/trace/event.h>
-#include <wifi/wifi-config.h>
 #include <ddk/protocol/gpio.h>
 #include <lib/sync/completion.h>
+#include <wifi/wifi-config.h>
 #include <zircon/status.h>
 
 #include <pthread.h>
@@ -46,6 +49,9 @@
 #include "netbuf.h"
 #include "sdio.h"
 #include "soc.h"
+#if CONFIG_BRCMFMAC_SIM
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+#endif
 
 #define SDIOH_API_ACCESS_RETRY_LIMIT 2
 
@@ -79,7 +85,7 @@ zx_status_t brcmf_sdiod_configure_oob_interrupt(struct brcmf_sdio_dev* sdiodev,
                                                 wifi_config_t *config) {
     zx_status_t ret = gpio_config_in(&sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX], GPIO_NO_PULL);
     if (ret != ZX_OK) {
-        zxlogf(ERROR, "brcmf_sdiod_intr_register: gpio_config failed: %d\n", ret);
+        BRCMF_LOGF(ERROR, "brcmf_sdiod_intr_register: gpio_config failed: %d\n", ret);
         return ret;
     }
 
@@ -87,7 +93,7 @@ zx_status_t brcmf_sdiod_configure_oob_interrupt(struct brcmf_sdio_dev* sdiodev,
                              config->oob_irq_mode,
                              &sdiodev->irq_handle);
     if (ret != ZX_OK) {
-        zxlogf(ERROR, "brcmf_sdiod_intr_register: gpio_get_interrupt failed: %d\n", ret);
+        BRCMF_LOGF(ERROR, "brcmf_sdiod_intr_register: gpio_get_interrupt failed: %d\n", ret);
         return ret;
     }
     return ZX_OK;
@@ -124,7 +130,7 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
                               &config, sizeof(wifi_config_t), &actual);
     if ((ret != ZX_OK && ret != ZX_ERR_NOT_FOUND) ||
         (ret == ZX_OK && actual != sizeof(wifi_config_t))) {
-        zxlogf(ERROR, "brcmf_sdiod_intr_register: device_get_metadata failed\n");
+        BRCMF_LOGF(ERROR, "brcmf_sdiod_intr_register: device_get_metadata failed\n");
         return ret;
     }
 

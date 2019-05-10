@@ -18,6 +18,9 @@
 
 #include "cfg80211.h"
 
+#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
+#include <ddk/device.h>
+#endif
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/if-impl.h>
 #include <zircon/status.h>
@@ -41,6 +44,9 @@
 #include "p2p.h"
 #include "pno.h"
 #include "proto.h"
+#if CONFIG_BRCMFMAC_SIM
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+#endif
 #include "workqueue.h"
 
 #define BRCMF_SCAN_IE_LEN_MAX 2048
@@ -3111,8 +3117,8 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
 }
 
 static void brcmf_dump_ht_caps(wlan_ht_caps_t* caps) {
-    zxlogf(INFO, "brcmfmac:     ht_capability_info: %#x\n", caps->ht_capability_info);
-    zxlogf(INFO, "brcmfmac:     ampdu_params: %#x\n", caps->ampdu_params);
+    BRCMF_LOGF(INFO, "brcmfmac:     ht_capability_info: %#x\n", caps->ht_capability_info);
+    BRCMF_LOGF(INFO, "brcmfmac:     ampdu_params: %#x\n", caps->ampdu_params);
 
     char mcs_set_str[countof(caps->supported_mcs_set) * 5 + 1];
     char* str = mcs_set_str;
@@ -3120,15 +3126,15 @@ static void brcmf_dump_ht_caps(wlan_ht_caps_t* caps) {
         str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set[i]);
     }
 
-    zxlogf(INFO, "brcmfmac:     mcs_set: %s\n", mcs_set_str);
-    zxlogf(INFO, "brcmfmac:     ht_ext_capabilities: %#x\n", caps->ht_ext_capabilities);
-    zxlogf(INFO, "brcmfmac:     asel_capabilities: %#x\n", caps->asel_capabilities);
+    BRCMF_LOGF(INFO, "brcmfmac:     mcs_set: %s\n", mcs_set_str);
+    BRCMF_LOGF(INFO, "brcmfmac:     ht_ext_capabilities: %#x\n", caps->ht_ext_capabilities);
+    BRCMF_LOGF(INFO, "brcmfmac:     asel_capabilities: %#x\n", caps->asel_capabilities);
 }
 
 static void brcmf_dump_vht_caps(wlan_vht_caps_t* caps) {
-    zxlogf(INFO, "brcmfmac:     vht_capability_info: %#x\n", caps->vht_capability_info);
-    zxlogf(INFO, "brcmfmac:     supported_vht_mcs_and_nss_set: %#" PRIx64 "\n",
-           caps->supported_vht_mcs_and_nss_set);
+    BRCMF_LOGF(INFO, "brcmfmac:     vht_capability_info: %#x\n", caps->vht_capability_info);
+    BRCMF_LOGF(INFO, "brcmfmac:     supported_vht_mcs_and_nss_set: %#" PRIx64 "\n",
+               caps->supported_vht_mcs_and_nss_set);
 }
 
 static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
@@ -3144,7 +3150,7 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
         sprintf(band_id_str, "unknown (%d)", band->band_id);
         break;
     }
-    zxlogf(INFO, "brcmfmac:   band_id: %s\n", band_id_str);
+    BRCMF_LOGF(INFO, "brcmfmac:   band_id: %s\n", band_id_str);
 
     ZX_ASSERT(band->num_basic_rates <= WLAN_BASIC_RATES_MAX_LEN);
     char basic_rates_str[WLAN_BASIC_RATES_MAX_LEN * 6 + 1];
@@ -3152,9 +3158,9 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
     for (unsigned i = 0; i < band->num_basic_rates; i++) {
         str += sprintf(str, "%s%d", i > 0 ? " " : "", band->basic_rates[i]);
     }
-    zxlogf(INFO, "brcmfmac:     basic_rates: %s\n", basic_rates_str);
+    BRCMF_LOGF(INFO, "brcmfmac:     basic_rates: %s\n", basic_rates_str);
 
-    zxlogf(INFO, "brcmfmac:     base_frequency: %d\n", band->base_frequency);
+    BRCMF_LOGF(INFO, "brcmfmac:     base_frequency: %d\n", band->base_frequency);
 
     ZX_ASSERT(band->num_channels <= WLAN_CHANNELS_MAX_LEN);
     char channels_str[WLAN_CHANNELS_MAX_LEN * 4 + 1];
@@ -3162,31 +3168,31 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
     for (unsigned i = 0; i < band->num_channels; i++) {
         str += sprintf(str, "%s%d", i > 0 ? " " : "", band->channels[i]);
     }
-    zxlogf(INFO, "brcmfmac:     channels: %s\n", channels_str);
+    BRCMF_LOGF(INFO, "brcmfmac:     channels: %s\n", channels_str);
 
-    zxlogf(INFO, "brcmfmac:     ht_supported: %s\n", band->ht_supported ? "true" : "false");
+    BRCMF_LOGF(INFO, "brcmfmac:     ht_supported: %s\n", band->ht_supported ? "true" : "false");
     if (band->ht_supported) {
         brcmf_dump_ht_caps(&band->ht_caps);
     }
 
-    zxlogf(INFO, "brcmfmac:     vht_supported: %s\n", band->vht_supported ? "true" : "false");
+    BRCMF_LOGF(INFO, "brcmfmac:     vht_supported: %s\n", band->vht_supported ? "true" : "false");
     if (band->vht_supported) {
         brcmf_dump_vht_caps(&band->vht_caps);
     }
 }
 
 static void brcmf_dump_query_info(wlanif_query_info_t* info) {
-    zxlogf(INFO, "brcmfmac: Device capabilities as reported to wlanif:\n");
-    zxlogf(INFO, "brcmfmac:   mac_addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
-           info->mac_addr[0], info->mac_addr[1], info->mac_addr[2],
-           info->mac_addr[3], info->mac_addr[4], info->mac_addr[5]);
-    zxlogf(INFO, "brcmfmac:   role(s): %s%s%s\n",
-           info->role & WLAN_MAC_ROLE_CLIENT ? "client " : "",
-           info->role & WLAN_MAC_ROLE_AP ? "ap " : "",
-           info->role & WLAN_MAC_ROLE_MESH ? "mesh " : "");
-    zxlogf(INFO, "brcmfmac:   feature(s): %s%s\n",
-           info->features & WLANIF_FEATURE_DMA ? "DMA " : "",
-           info->features & WLANIF_FEATURE_SYNTH ? "SYNTH " : "");
+    BRCMF_LOGF(INFO, "brcmfmac: Device capabilities as reported to wlanif:\n");
+    BRCMF_LOGF(INFO, "brcmfmac:   mac_addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
+               info->mac_addr[0], info->mac_addr[1], info->mac_addr[2],
+               info->mac_addr[3], info->mac_addr[4], info->mac_addr[5]);
+    BRCMF_LOGF(INFO, "brcmfmac:   role(s): %s%s%s\n",
+               info->role & WLAN_MAC_ROLE_CLIENT ? "client " : "",
+               info->role & WLAN_MAC_ROLE_AP ? "ap " : "",
+               info->role & WLAN_MAC_ROLE_MESH ? "mesh " : "");
+    BRCMF_LOGF(INFO, "brcmfmac:   feature(s): %s%s\n",
+               info->features & WLANIF_FEATURE_DMA ? "DMA " : "",
+               info->features & WLANIF_FEATURE_SYNTH ? "SYNTH " : "");
     for (unsigned i = 0; i < info->num_bands; i++) {
         brcmf_dump_band_caps(&info->bands[i]);
     }
@@ -3488,7 +3494,12 @@ zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req,
 
     struct brcmf_device* device = ifp->drvr->bus_if->dev;
     brcmf_dbg(TEMP, "About to add if_dev");
+#if CONFIG_BRCMFMAC_SIM
+    result = wlan_sim_device_add(device->phy_zxdev, &args, &device->if_zxdev);
+#endif
+#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
     result = device_add(device->phy_zxdev, &args, &device->if_zxdev);
+#endif
     if (result != ZX_OK) {
         brcmf_err("Failed to device_add: %s", zx_status_get_string(result));
         return result;

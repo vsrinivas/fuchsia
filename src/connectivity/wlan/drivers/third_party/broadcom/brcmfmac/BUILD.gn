@@ -18,19 +18,10 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 
-source_set("brcmfmac_srcs") {
-  defines = [
-    "CONFIG_BRCMFMAC_USB=1",
-    "CONFIG_BRCMFMAC_SDIO=1",
-    "CONFIG_BRCMFMAC_PCIE=1",
-    "CONFIG_BRCMFMAC_DBG=1",
-  ]
-
-  sources = [
+brcmf_core_srcs = [
     "bcdc.cc",
     "bcdc.h",
     "bcmsdh.cc",
-    "binding.cc",
     "btcoex.cc",
     "btcoex.h",
     "bus.h",
@@ -80,15 +71,15 @@ source_set("brcmfmac_srcs") {
     "proto.h",
     "sdio.cc",
     "sdio.h",
-    "usb.cc",
     "usb.h",
     "utils.cc",
     "workqueue.cc",
     "workqueue.h",
-  ]
+]
 
-  deps = [
+brcmf_core_deps = [
     "//garnet/lib/wlan/protocol",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device:simdevice",
     "//zircon/public/banjo/ddk.protocol.composite",
     "//zircon/public/banjo/ddk.protocol.ethernet",
     "//zircon/public/banjo/ddk.protocol.gpio",
@@ -102,17 +93,46 @@ source_set("brcmfmac_srcs") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
+]
+
+source_set("brcmfmac_drvr_srcs") {
+  defines = [
+    "CONFIG_BRCMFMAC_USB=1",
+    "CONFIG_BRCMFMAC_SDIO=1",
+    "CONFIG_BRCMFMAC_PCIE=1",
+    "CONFIG_BRCMFMAC_DBG=1",
   ]
+
+  sources = brcmf_core_srcs +
+          [ "binding.cc",
+            "usb.cc",
+          ]
+
+  deps = brcmf_core_deps +
+         [ "//zircon/public/lib/usb", ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+source_set("brcmfmac_test_srcs") {
+  defines = [
+    "CONFIG_BRCMFMAC_SIM=1",
+  ]
+
+  sources = brcmf_core_srcs +
+            [ "sim.cc", ]
+
+  deps = brcmf_core_deps
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 driver_module("brcmfmac_driver") {
   output_name = "brcmfmac"
+
   deps = [
-    ":brcmfmac_srcs",
+    ":brcmfmac_drvr_srcs",
   ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

@@ -147,10 +147,6 @@
 #define SDIOH_DATA_FIX 0 /* Fixed addressing */
 #define SDIOH_DATA_INC 1 /* Incremental addressing */
 
-/* internal return code */
-#define SUCCESS 0
-#define ERROR 1
-
 /* Packet alignment for most efficient SDIO (can change based on platform) */
 #define BRCMF_SDALIGN (1 << 6)
 

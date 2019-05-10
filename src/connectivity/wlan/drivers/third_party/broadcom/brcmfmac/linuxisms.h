@@ -25,7 +25,6 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
 
 #include <ddk/debug.h>
-#include <ddk/device.h>
 #include <netinet/if_ether.h>
 #include <pthread.h>
 #include <stdarg.h>
@@ -52,13 +51,13 @@ typedef uint64_t __be64;
 #define GENMASK1(val) ((1UL << (val)) - 1)
 #define GENMASK(start, end) ((GENMASK1((start) + 1) & ~GENMASK1(end)))
 
-#define WARN(cond, msg)                                                           \
-    ({  bool ret_cond = cond;                                                     \
-        if (ret_cond) {                                                           \
-            zxlogf(WARN, "brcmfmac: unexpected condition %s warns %s at %s:%d\n", \
-                #cond, msg, __FILE__, __LINE__);                                  \
-        }                                                                         \
-        ret_cond;                                                                 \
+#define WARN(cond, msg)                                                                 \
+    ({  bool ret_cond = cond;                                                           \
+        if (ret_cond) {                                                                 \
+            BRCMF_LOGF(WARN, "brcmfmac: unexpected condition %s warns %s at %s:%d\n",   \
+                       #cond, msg, __FILE__, __LINE__);                                 \
+        }                                                                               \
+        ret_cond;                                                                       \
     })
 
 // TODO(cphoenix): Looks like these evaluate cond multiple times. And maybe should
@@ -112,12 +111,12 @@ typedef uint64_t __be64;
 
 #define LINUX_FUNC(name, paramtype, rettype)                            \
     static inline rettype name(paramtype foo, ...) {                                           \
-        /*zxlogf(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);       */ \
+        /*BRCMF_LOGF(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);   */ \
         return (rettype)0;                                                                     \
     }
 #define LINUX_FUNCX(name)                                                                      \
     static inline int name() {                                                                 \
-        /*zxlogf(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);       */ \
+        /*BRCMF_LOGF(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);   */ \
         return 0;                                                                              \
     }
 

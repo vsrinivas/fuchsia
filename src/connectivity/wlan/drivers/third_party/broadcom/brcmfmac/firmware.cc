@@ -16,6 +16,9 @@
 
 #include "firmware.h"
 
+#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
+#include <ddk/device.h>
+#endif
 #include <zircon/syscalls.h>
 
 #include "common.h"
@@ -23,6 +26,9 @@
 #include "debug.h"
 #include "device.h"
 #include "linuxisms.h"
+#if CONFIG_BRCMFMAC_SIM
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+#endif
 
 #define BRCMF_FW_MAX_NVRAM_SIZE 64000
 #define BRCMF_FW_NVRAM_DEVPATH_LEN 19 /* devpath0=pcie/1/4/ */

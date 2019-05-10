@@ -47,6 +47,16 @@
 
 // clang-format on
 
+#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
+#define BRCMF_LOGF(level, msg, ...) zxlogf(level, msg, ##__VA_ARGS__)
+#else
+#define BRCMF_LOGF(level, msg, ...)  \
+    do {                             \
+        printf("%s: ", #level);      \
+        printf(msg, ##__VA_ARGS__);  \
+    } while (0)
+#endif
+
 /* set default print format */
 #undef pr_fmt
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -105,7 +115,7 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
 #define brcmf_dbg_hex_dump(test, data, len, fmt, ...)                \
     do {                                                             \
         if (test) {                                                  \
-            zxlogf(INFO, "brcmfmac: " fmt, ##__VA_ARGS__);           \
+            BRCMF_LOGF(INFO, "brcmfmac: " fmt, ##__VA_ARGS__);       \
             brcmf_hexdump(data, len);                                \
         }                                                            \
     } while (0)

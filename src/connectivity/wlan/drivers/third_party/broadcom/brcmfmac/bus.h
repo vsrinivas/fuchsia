@@ -262,13 +262,17 @@ zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, const char* name, voi
                                  uint32_t len);
 void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len);
 
-#ifdef CONFIG_BRCMFMAC_SDIO
+#if CONFIG_BRCMFMAC_SDIO
 void brcmf_sdio_exit(void);
 zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* composite_proto);
 #endif
-#ifdef CONFIG_BRCMFMAC_USB
+#if CONFIG_BRCMFMAC_USB
 void brcmf_usb_exit(void);
 zx_status_t brcmf_usb_register(zx_device_t* device, usb_protocol_t* usb_proto);
+#endif
+#if CONFIG_BRCMFMAC_SIM
+void brcmf_sim_exit(void);
+zx_status_t brcmf_sim_register(zx_device_t* device);
 #endif
 
 #endif /* BRCMFMAC_BUS_H */

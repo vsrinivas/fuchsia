@@ -16,6 +16,9 @@
 
 #include "sdio.h"
 
+#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
+#include <ddk/device.h>
+#endif
 #include <ddk/trace/event.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
@@ -39,6 +42,9 @@
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "soc.h"
+#if CONFIG_BRCMFMAC_SIM
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+#endif
 #include "workqueue.h"
 
 #define DCMD_RESP_TIMEOUT_MSEC (2500)
