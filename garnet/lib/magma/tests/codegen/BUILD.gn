@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The tests in this path are used for validating generated code, especially
+# for those files that are not otherwise automatically rebuilt.
+
+action("magma_header_compare") {
+    testonly = true
+    deps = [
+        "//garnet/lib/magma/include/magma_abi"
+    ]
+    script = "verify_identical.sh"
+    args = [
+        rebase_path("$root_gen_dir/garnet/lib/magma/include/magma_abi/magma.h", root_build_dir),
+        rebase_path("//garnet/lib/magma/include/magma_abi/magma.h", root_build_dir),
+        rebase_path("$target_gen_dir/magma.h.compare_out", root_build_dir)
+    ]
+    inputs = [
+        "$root_gen_dir/garnet/lib/magma/include/magma_abi/magma.h",
+        "//garnet/lib/magma/include/magma_abi/magma.h",
+    ]
+    outputs = [ "$target_gen_dir/magma.h.compare_out" ]
+}
+
+group("codegen") {
+    testonly = true
+    deps = [
+        ":magma_header_compare"
+    ]
+}

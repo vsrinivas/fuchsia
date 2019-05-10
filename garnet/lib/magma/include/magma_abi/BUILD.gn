@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+action("magma_header_gen") {
+    script = "magma.h.gen.py"
+    args = [
+        rebase_path("magma.json", root_build_dir),
+        rebase_path("$target_gen_dir/magma.h", root_build_dir)
+    ]
+    inputs = [ "magma.json" ]
+    outputs = [ "$target_gen_dir/magma.h" ]
+}
+
+group("magma_abi") {
+    public_deps = [
+        ":magma_header_gen"
+    ]
+}

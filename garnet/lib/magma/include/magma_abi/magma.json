@@ -1,0 +1,796 @@
+{
+  "magma-interface": {
+    "exports": [
+      {
+        "name": "magma_query",
+        "type": "magma_status_t",
+        "description": "Performs a query and returns a result synchronously.",
+        "arguments": [
+          {
+            "name": "file_descriptor",
+            "type": "int32_t",
+            "description": "An open device of class gpu."
+          },
+          {
+            "name": "id",
+            "type": "uint64_t",
+            "description": "Either MAGMA_QUERY_DEVICE_ID, or a vendor-specific id starting from MAGMA_QUERY_VENDOR_PARAM_0."
+          },
+          {
+            "name": "value_out",
+            "type": "uint64_t*",
+            "description": "Returned value."
+          }
+        ]
+      },
+      {
+        "name": "magma_create_connection",
+        "type": "magma_status_t",
+        "description": "Opens a connection to a device.",
+        "arguments": [
+          {
+            "name": "file_descriptor",
+            "type": "int32_t",
+            "description": "An open device of class gpu."
+          },
+          {
+            "name": "connection_out",
+            "type": "magma_connection_t*",
+            "description": "Returned connection."
+          }
+        ]
+      },
+      {
+        "name": "magma_release_connection",
+        "type": "void",
+        "description": "Releases the given connection.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          }
+        ]
+      },
+      {
+        "name": "magma_get_error",
+        "type": "magma_status_t",
+        "description": "Returns the first recorded error since the last time this function was called, and clears the recorded error. Incurs a round-trip to the system driver",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          }
+        ]
+      },
+      {
+        "name": "magma_create_context",
+        "type": "void",
+        "description": "Creates a context on the given connection.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "context_id_out",
+            "type": "uint32_t*",
+            "description": "The returned context id."
+          }
+        ]
+      },
+      {
+        "name": "magma_release_context",
+        "type": "void",
+        "description": "Releases the context associated with the given id.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "context_id",
+            "type": "uint32_t",
+            "description": "A valid context id."
+          }
+        ]
+      },
+      {
+        "name": "magma_create_buffer",
+        "type": "magma_status_t",
+        "description": "Creates a memory buffer of at least the given size.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "size",
+            "type": "uint64_t",
+            "description": "Requested buffer size."
+          },
+          {
+            "name": "size_out",
+            "type": "uint64_t*",
+            "description": "The returned buffer's actual size."
+          },
+          {
+            "name": "buffer_out",
+            "type": "magma_buffer_t*",
+            "description": "The returned buffer."
+          }
+        ]
+      },
+      {
+        "name": "magma_release_buffer",
+        "type": "void",
+        "description": "Releases the given memory buffer.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          }
+        ]
+      },
+      {
+        "name": "magma_duplicate_handle",
+        "type": "magma_status_t",
+        "description": "Duplicates the given handle, giving another handle that can be imported into a connection.",
+        "arguments": [
+          {
+            "name": "buffer_handle",
+            "type": "uint32_t",
+            "description": "A valid handle."
+          },
+          {
+            "name": "buffer_handle_out",
+            "type": "uint32_t*",
+            "description": "The returned duplicate handle."
+          }
+        ]
+      },
+      {
+        "name": "magma_release_buffer_handle",
+        "type": "magma_status_t",
+        "description": "Releases the given handle.",
+        "arguments": [
+          {
+            "name": "buffer_handle",
+            "type": "uint32_t",
+            "description": "A valid handle."
+          }
+        ]
+      },
+      {
+        "name": "magma_get_buffer_id",
+        "type": "uint64_t",
+        "description": "Returns a unique id for the given buffer.",
+        "arguments": [
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          }
+        ]
+      },
+      {
+        "name": "magma_get_buffer_size",
+        "type": "uint64_t",
+        "description": "Returns the actual size of the given buffer.",
+        "arguments": [
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          }
+        ]
+      },
+      {
+        "name": "magma_clean_cache",
+        "type": "magma_status_t",
+        "description": "Cleans, and optionally invalidates, the cache for the region of memory specified by the given buffer, offset, and size, and write the contents to ram.",
+        "arguments": [
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "offset",
+            "type": "uint64_t",
+            "description": "An offset into the buffer. Must be less than or equal to the buffer's size."
+          },
+          {
+            "name": "size",
+            "type": "uint64_t",
+            "description": "Size of region to be cleaned. Offset + size must be less than or equal to the buffer's size."
+          },
+          {
+            "name": "operation",
+            "type": "magma_cache_operation_t",
+            "description": "One of MAGMA_CACHE_OPERATION_CLEAN or MAGMA_CACHE_OPERATION_CLEAN_INVALIDATE."
+          }
+        ]
+      },
+      {
+        "name": "magma_set_cache_policy",
+        "type": "magma_status_t",
+        "description": "Configures the cache for the given buffer.",
+        "arguments": [
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "policy",
+            "type": "magma_cache_policy_t",
+            "description": "One of MAGMA_CACHE_POLICY_[CACHED|WRITE_COMBINING|UNCACHED]."
+          }
+        ]
+      },
+      {
+        "name": "magma_get_buffer_cache_policy",
+        "type": "magma_status_t",
+        "description": "Queries the cache policy for a buffer.",
+        "arguments": [
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "cache_policy_out",
+            "type": "magma_cache_policy_t*",
+            "description": "The returned cache policy."
+          }
+        ]
+      },
+      {
+        "name": "magma_get_buffer_is_mappable",
+        "type": "magma_status_t",
+        "description": "Queries whether a buffer is mappable with magma_map or magma_map_aligned",
+        "arguments": [
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "The given buffer."
+          },
+          {
+            "name": "flags",
+            "type": "uint32_t",
+            "description": "Reserved for future use. Must be 0."
+          },
+          {
+            "name": "is_mappable_out",
+            "type": "magma_bool_t*",
+            "description": "The returned mappability value."
+          }
+        ]
+      },
+      {
+        "name": "magma_map",
+        "type": "magma_status_t",
+        "description": "Maps the given buffer's memory into the calling process's address space.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "addr_out",
+            "type": "void**",
+            "description": "The returned CPU virtual address for the start of the buffer."
+          }
+        ]
+      },
+      {
+        "name": "magma_map_aligned",
+        "type": "magma_status_t",
+        "description": "Maps the given buffer's memory into the calling process's address space with a given alignment.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "alignment",
+            "type": "uint64_t",
+            "description": "The requested alignment. Must be a power of 2 and at least PAGE_SIZE."
+          },
+          {
+            "name": "addr_out",
+            "type": "void**",
+            "description": "The returned CPU virtual address for the start of the buffer."
+          }
+        ]
+      },
+      {
+        "name": "magma_map_specific",
+        "type": "magma_status_t",
+        "description": "Maps a region of the given buffer's memory at the given CPU virtual address. Fails if the buffer was previously mapped, or if the address range is unavailable.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "addr",
+            "type": "uint64_t",
+            "description": "A valid CPU virtual address."
+          },
+          {
+            "name": "offset",
+            "type": "uint64_t",
+            "description": "Offset into the buffer. Must be less than or equal to the buffer's size."
+          },
+          {
+            "name": "length",
+            "type": "uint64_t",
+            "description": "Size of region to be mapped. Offset + length must be less than or equal to the buffer's size."
+          }
+        ]
+      },
+      {
+        "name": "magma_unmap",
+        "type": "magma_status_t",
+        "description": "Releases a CPU mapping for the given buffer. Should be paired with each call to one of the mapping interfaces.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer with at least one active CPU mapping."
+          }
+        ]
+      },
+      {
+        "name": "magma_map_buffer_gpu",
+        "type": "void",
+        "description": "Maps a number of pages from the given buffer onto the GPU in the connection's address space at the given address.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "page_offset",
+            "type": "uint64_t",
+            "description": "Offset into the buffer in pages."
+          },
+          {
+            "name": "page_count",
+            "type": "uint64_t",
+            "description": "Number of pages to map."
+          },
+          {
+            "name": "gpu_va",
+            "type": "uint64_t",
+            "description": "Destination GPU virtual address for the mapping."
+          },
+          {
+            "name": "map_flags",
+            "type": "uint64_t",
+            "description": "A valid MAGMA_GPU_MAP_FLAGS value."
+          }
+        ]
+      },
+      {
+        "name": "magma_unmap_buffer_gpu",
+        "type": "void",
+        "description": "Releases the mapping at the given address from the GPU.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "gpu_va",
+            "type": "uint64_t",
+            "description": "A GPU virtual address associated with an existing mapping of the given buffer."
+          }
+        ]
+      },
+      {
+        "name": "magma_commit_buffer",
+        "type": "void",
+        "description": "Ensures that the given page range of a buffer is backed by physical memory.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "page_offset",
+            "type": "uint64_t",
+            "description": "Page offset into the buffer."
+          },
+          {
+            "name": "page_count",
+            "type": "uint64_t",
+            "description": "Number of pages to commit."
+          }
+        ]
+      },
+      {
+        "name": "magma_export",
+        "type": "magma_status_t",
+        "description": "Exports the given buffer, returning a handle that may be imported into another connection.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "buffer_handle_out",
+            "type": "uint32_t*",
+            "description": "The returned handle."
+          }
+        ]
+      },
+      {
+        "name": "magma_import",
+        "type": "magma_status_t",
+        "description": "Imports and takes ownership of the buffer referred to by the given handle.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer_handle",
+            "type": "uint32_t",
+            "description": "A valid handle."
+          },
+          {
+            "name": "buffer_out",
+            "type": "magma_buffer_t*",
+            "description": "The returned buffer."
+          }
+        ]
+      },
+      {
+        "name": "magma_create_command_buffer",
+        "type": "magma_status_t",
+        "description": "Creates a buffer of the given size that may be submitted as a command buffer.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "size",
+            "type": "uint64_t",
+            "description": "The requested size of the buffer."
+          },
+          {
+            "name": "buffer_out",
+            "type": "magma_buffer_t*",
+            "description": "The returned buffer."
+          }
+        ]
+      },
+      {
+        "name": "magma_release_command_buffer",
+        "type": "void",
+        "description": "Releases a command buffer without submitting it.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "command_buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid command buffer."
+          }
+        ]
+      },
+      {
+        "name": "magma_submit_command_buffer",
+        "type": "void",
+        "description": "Submits a command buffer for execution on the GPU, and transfers ownership to the given context.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "command_buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer containing valid magma_system_command_buffer structures."
+          },
+          {
+            "name": "context_id",
+            "type": "uint32_t",
+            "description": "A valid context ID."
+          }
+        ]
+      },
+      {
+        "name": "magma_execute_immediate_commands",
+        "type": "void",
+        "description": "Submits a series of commands for execution on the GPU without using a command buffer.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "context_id",
+            "type": "uint32_t",
+            "description": "A valid context ID."
+          },
+          {
+            "name": "command_count",
+            "type": "uint64_t",
+            "description": "The number of commands in the provided buffer."
+          },
+          {
+            "name": "command_buffers",
+            "type": "struct magma_system_inline_command_buffer*",
+            "description": "An array of command_count magma_system_inline_command_buffer structs."
+          }
+        ]
+      },
+      {
+        "name": "magma_create_semaphore",
+        "type": "magma_status_t",
+        "description": "Creates a semaphore.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "semaphore_out",
+            "type": "magma_semaphore_t*",
+            "description": "The returned semaphore."
+          }
+        ]
+      },
+      {
+        "name": "magma_release_semaphore",
+        "type": "void",
+        "description": "Releases the given semaphore.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "semaphore",
+            "type": "magma_semaphore_t",
+            "description": "A valid semaphore."
+          }
+        ]
+      },
+      {
+        "name": "magma_get_semaphore_id",
+        "type": "uint64_t",
+        "description": "Returnes a unique id for the given semaphore.",
+        "arguments": [
+          {
+            "name": "semaphore",
+            "type": "magma_semaphore_t",
+            "description": "A valid semaphore."
+          }
+        ]
+      },
+      {
+        "name": "magma_signal_semaphore",
+        "type": "void",
+        "description": "Signals the given semaphore.",
+        "arguments": [
+          {
+            "name": "semaphore",
+            "type": "magma_semaphore_t",
+            "description": "A valid semaphore."
+          }
+        ]
+      },
+      {
+        "name": "magma_reset_semaphore",
+        "type": "void",
+        "description": "Resets the given semaphore.",
+        "arguments": [
+          {
+            "name": "semaphore",
+            "type": "magma_semaphore_t",
+            "description": "A valid semaphore."
+          }
+        ]
+      },
+      {
+        "name": "magma_wait_semaphores",
+        "type": "magma_status_t",
+        "description": "Waits for one or all provided semaphores to be signaled. Does not reset any semaphores.",
+        "arguments": [
+          {
+            "name": "semaphores",
+            "type": "const magma_semaphore_t*",
+            "description": "Array of valid semaphores."
+          },
+          {
+            "name": "count",
+            "type": "uint32_t",
+            "description": "Number of semaphores in the array."
+          },
+          {
+            "name": "timeout_ms",
+            "type": "uint64_t",
+            "description": "Time to wait before returning MAGMA_STATUS_TIMED_OUT."
+          },
+          {
+            "name": "wait_all",
+            "type": "magma_bool_t",
+            "description": "If true, wait for all semaphores, otherwise wait for any semaphore."
+          }
+        ]
+      },
+      {
+        "name": "magma_export_semaphore",
+        "type": "magma_status_t",
+        "description": "Exports the given semaphore, returning a handle that may be imported into another connection",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "semaphore",
+            "type": "magma_semaphore_t",
+            "description": "A valid semaphore."
+          },
+          {
+            "name": "semaphore_handle_out",
+            "type": "uint32_t*",
+            "description": "The returned handle."
+          }
+        ]
+      },
+      {
+        "name": "magma_import_semaphore",
+        "type": "magma_status_t",
+        "description": "Imports and takes ownership of the semaphore referred to by the given handle.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "semaphore_handle",
+            "type": "uint32_t",
+            "description": "A valid semaphore handle."
+          },
+          {
+            "name": "semaphore_out",
+            "type": "magma_semaphore_t*",
+            "description": "The returned semaphore."
+          }
+        ]
+      },
+      {
+        "name": "magma_get_notification_channel_handle",
+        "type": "uint32_t",
+        "description": "Returns a uint32_t (zx_handle_t) that can be waited on to determine when the connection has data in the notification channel. This channel has the same lifetime as the connection and must not be closed by the client.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          }
+        ]
+      },
+      {
+        "name": "magma_wait_notification_channel",
+        "type": "magma_status_t",
+        "description": "Returns MAGMA_STATUS_OK if a message is available on the notification channel before the given timeout expires.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "timeout_ns",
+            "type": "int64_t",
+            "description": "Time to wait before returning MAGMA_STATUS_TIMED_OUT."
+          }
+        ]
+      },
+      {
+        "name": "magma_read_notification_channel",
+        "type": "magma_status_t",
+        "description": "Reads a notification from the channel into the given buffer.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "void*",
+            "description": "Buffer into which to read notification data."
+          },
+          {
+            "name": "buffer_size",
+            "type": "uint64_t",
+            "description": "Size of the given buffer."
+          },
+          {
+            "name": "buffer_size_out",
+            "type": "uint64_t*",
+            "description": "Returned size of the notification data written to the buffer, or 0 if there are no messages pending."
+          }
+        ]
+      }
+    ]
+  }
+}
