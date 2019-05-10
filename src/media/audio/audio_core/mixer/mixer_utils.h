@@ -138,6 +138,19 @@ class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
 };
 
 //
+// Interpolation variants
+//
+
+// We specify alpha in fixed-point 19.13: a max val of "1.0" is 0x00002000.
+constexpr float kFramesPerPtsSubframe = 1.0f / (1 << kPtsFractionalBits);
+
+// First-order Linear Interpolation formula (Position-fraction):
+//   out = Pf(S' - S) + S
+inline float LinearInterpolate(float A, float B, uint32_t alpha) {
+  return ((B - A) * kFramesPerPtsSubframe * alpha) + A;
+}
+
+//
 // DestMixer
 //
 // Template to mix normalized destination samples with normalized source samples

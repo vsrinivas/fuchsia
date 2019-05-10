@@ -13,13 +13,6 @@
 
 namespace media::audio::mixer {
 
-// We specify alpha in fixed-point 19.13: a max val of "1.0" is 0x00002000.
-constexpr float kFramesPerPtsSubframe = 1.0f / (1 << kPtsFractionalBits);
-
-inline float Interpolate(float A, float B, uint32_t alpha) {
-  return ((B - A) * kFramesPerPtsSubframe * alpha) + A;
-}
-
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 class LinearSamplerImpl : public LinearSampler {
  public:
@@ -38,7 +31,7 @@ class LinearSamplerImpl : public LinearSampler {
                   const void* src, uint32_t frac_src_frames,
                   int32_t* frac_src_offset, Bookkeeping* info);
 
-  float filter_data_[2 * DestChanCount] = {0.0f};
+  float filter_data_[DestChanCount] = {0.0f};
 };
 
 // TODO(mpuryear): MTWN-75 factor to minimize LinearSamplerImpl code duplication
@@ -47,10 +40,9 @@ class NxNLinearSamplerImpl : public LinearSampler {
  public:
   NxNLinearSamplerImpl(size_t channelCount)
       : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1), chan_count_(channelCount) {
-    filter_data_u_ = std::make_unique<float[]>(2 * chan_count_);
+    filter_data_u_ = std::make_unique<float[]>(chan_count_);
 
-    ::memset(filter_data_u_.get(), 0,
-             2 * chan_count_ * sizeof(filter_data_u_[0]));
+    ::memset(filter_data_u_.get(), 0, chan_count_ * sizeof(filter_data_u_[0]));
   }
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
@@ -59,8 +51,7 @@ class NxNLinearSamplerImpl : public LinearSampler {
 
   // If/when Bookkeeping is included in this class, clear src_pos_modulo here.
   void Reset() override {
-    ::memset(filter_data_u_.get(), 0,
-             2 * chan_count_ * sizeof(filter_data_u_[0]));
+    ::memset(filter_data_u_.get(), 0, chan_count_ * sizeof(filter_data_u_[0]));
   }
 
  private:
@@ -86,23 +77,41 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
 
-  // Although the number of source frames is expressed in fixed-point 19.13
-  // format, the actual number of frames must always be an integer.
+  // We express number-of-source-frames as fixed-point 19.13 (to align with
+  // src_offset) but the actual number of frames provided is always an integer.
   FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
-  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
   // Interpolation offset is int32, so even though frac_src_frames is a uint32,
   // callers should not exceed int32_t::max().
   FXL_DCHECK(frac_src_frames <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  // This method must always be provided at least one source frame.
+  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
 
-  using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  const auto* src = static_cast<const SrcSampleType*>(src_void);
-
   uint32_t dest_off = *dest_offset;
   uint32_t dest_off_start = dest_off;  // Only used when ramping.
 
+  // Location of first dest frame to produce must be within the provided buffer.
+  FXL_DCHECK(dest_off < dest_frames);
+
+  using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
   int32_t src_off = *frac_src_offset;
+  const auto* src = static_cast<const SrcSampleType*>(src_void);
+
+  // "Source offset" can be negative, but within the bounds of pos_filter_width.
+  // Otherwise, all these src samples are in the future and irrelevant here.
+  // Callers explicitly avoid calling Mix in this case, so we have detected an
+  // error. For linear_sampler, we require src_off > -FRAC_ONE.
+  FXL_DCHECK(src_off + static_cast<int32_t>(pos_filter_width()) >= 0)
+      << std::hex << "min allowed: 0x" << -pos_filter_width() << ", src_off: 0x"
+      << src_off;
+  // src_off cannot exceed our last sampleable subframe. We define this as
+  // "Source end": the last subframe for which this Mix call can produce output.
+  // Otherwise, all these src samples are in the past and irrelevant here.
+  auto src_end = static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
+  FXL_DCHECK(src_end >= 0);
+  FXL_DCHECK(src_off <= src_end)
+      << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end;
 
   // Cache these locally, in the template specialization that uses them.
   // Only src_pos_modulo needs to be written back before returning.
@@ -129,90 +138,68 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     }
   }
 
-  // "Source end" is the last valid input sub-frame that can be sampled.
-  auto src_end = static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
-
-  FXL_DCHECK(dest_off < dest_frames);
-  FXL_DCHECK(src_end >= 0);
-  FXL_DCHECK(frac_src_frames <=
-             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-  // "Source offset" can be negative, but within the bounds of pos_filter_width.
-  // Otherwise, all these samples are in the future and irrelevant here. Callers
-  // explicitly avoid calling Mix in this case, so we have detected an error.
-  // For linear_sampler it implies a requirement that src_off > -FRAC_ONE.
-  FXL_DCHECK(src_off + static_cast<int32_t>(pos_filter_width()) >= 0)
-      << std::hex << "min allowed: 0x" << -pos_filter_width() << ", src_off: 0x"
-      << src_off;
-  // Source offset must also be within neg_filter_width of our last sample.
-  // Otherwise, all these samples are in the past and irrelevant here. Callers
-  // explicitly avoid calling Mix in this case, so we have detected an error.
-  // For linear_sampler this implies that src_off < frac_src_frames.
-  FXL_DCHECK(src_off + FRAC_ONE <= frac_src_frames + neg_filter_width())
-      << std::hex << "max allowed: 0x"
-      << frac_src_frames + neg_filter_width() - FRAC_ONE << ", src_off: 0x"
-      << src_off;
-
-  Gain::AScale amplitude_scale;
-  if constexpr (ScaleType != ScalerType::RAMPING) {
-    amplitude_scale = info->gain.GetGainScale();
-  }
-
-  // TODO(mpuryear): optimize the logic below for common-case performance.
-
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets and hold onto
   // any relevant filter data from the end of the source.
   if constexpr (ScaleType != ScalerType::MUTED) {
+    Gain::AScale amplitude_scale;
+    if constexpr (ScaleType != ScalerType::RAMPING) {
+      amplitude_scale = info->gain.GetGainScale();
+    }
+
+    // TODO(mpuryear): optimize the logic below for common-case performance.
+
     // If src_off is negative, we must incorporate previously-cached samples.
     // Add a new sample, to complete the filter set, and compute the output.
-    if (src_off < 0) {
-      for (size_t D = 0; D < DestChanCount; ++D) {
-        filter_data_[DestChanCount + D] = SR::Read(src + (D / SR::DestPerSrc));
+    while ((dest_off < dest_frames) && (src_off < 0)) {
+      if constexpr (ScaleType == ScalerType::RAMPING) {
+        amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
-      while ((dest_off < dest_frames) && (src_off < 0)) {
-        if constexpr (ScaleType == ScalerType::RAMPING) {
-          amplitude_scale = info->scale_arr[dest_off - dest_off_start];
-        }
+      float* out = dest + (dest_off * DestChanCount);
 
-        float* out = dest + (dest_off * DestChanCount);
+      for (size_t D = 0; D < DestChanCount; ++D) {
+        float s0 = filter_data_[D];
+        float s1 = SR::Read(src + (D / SR::DestPerSrc));
 
-        for (size_t D = 0; D < DestChanCount; ++D) {
-          float sample =
-              Interpolate(filter_data_[D], filter_data_[DestChanCount + D],
-                          src_off + FRAC_ONE);
-          out[D] = DM::Mix(out[D], sample, amplitude_scale);
-        }
+        float sample = LinearInterpolate(s0, s1, src_off + FRAC_ONE);
+        out[D] = DM::Mix(out[D], sample, amplitude_scale);
+      }
 
-        dest_off += 1;
-        src_off += step_size;
+      ++dest_off;
+      src_off += step_size;
 
-        if constexpr (HasModulo) {
-          src_pos_modulo += rate_modulo;
-          if (src_pos_modulo >= denominator) {
-            ++src_off;
-            src_pos_modulo -= denominator;
-          }
+      if constexpr (HasModulo) {
+        src_pos_modulo += rate_modulo;
+        if (src_pos_modulo >= denominator) {
+          ++src_off;
+          src_pos_modulo -= denominator;
         }
       }
     }
 
     // Now we are fully in the current buffer and need not rely on our cache.
     while ((dest_off < dest_frames) && (src_off <= src_end)) {
-      uint32_t S = (src_off >> kPtsFractionalBits) * SrcChanCount;
-      float* out = dest + (dest_off * DestChanCount);
       if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
+      uint32_t S = (src_off >> kPtsFractionalBits) * SrcChanCount;
+      float* out = dest + (dest_off * DestChanCount);
+
       for (size_t D = 0; D < DestChanCount; ++D) {
-        float s1 = SR::Read(src + S + (D / SR::DestPerSrc));
-        float s2 = SR::Read(src + S + (D / SR::DestPerSrc) + SrcChanCount);
-        float sample = Interpolate(s1, s2, src_off & FRAC_MASK);
+        float sample;
+        float s0 = SR::Read(src + S + (D / SR::DestPerSrc));
+        if ((src_off & FRAC_MASK) == 0) {
+          sample = s0;
+        } else {
+          float s1 = SR::Read(src + S + (D / SR::DestPerSrc) + SrcChanCount);
+          sample = LinearInterpolate(s0, s1, src_off & FRAC_MASK);
+        }
         out[D] = DM::Mix(out[D], sample, amplitude_scale);
       }
 
-      dest_off += 1;
+      ++dest_off;
       src_off += step_size;
 
       if constexpr (HasModulo) {
@@ -228,11 +215,11 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     // produced and update the src_off and dest_off values appropriately.
     if ((dest_off < dest_frames) && (src_off <= src_end)) {
       uint32_t src_avail = ((src_end - src_off) / step_size) + 1;
-      uint32_t dest_avail = (dest_frames - dest_off);
+      uint32_t dest_avail = dest_frames - dest_off;
       uint32_t avail = std::min(src_avail, dest_avail);
 
-      dest_off += avail;
       src_off += (avail * step_size);
+      dest_off += avail;
 
       if constexpr (HasModulo) {
         uint64_t total_mod = src_pos_modulo + (avail * rate_modulo);
@@ -269,16 +256,13 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // If next source position to consume is beyond start of last frame ...
   if (src_off > src_end) {
     uint32_t S = (src_end >> kPtsFractionalBits) * SrcChanCount;
-    // ... and if we are not mute, of course...
-    if constexpr (ScaleType != ScalerType::MUTED) {
-      // ... cache our final frame for use in future interpolation ...
-      for (size_t D = 0; D < DestChanCount; ++D) {
-        filter_data_[D] = SR::Read(src + S + (D / SR::DestPerSrc));
-      }
-    } else {
-      // ... otherwise cache silence (which is what we actually produced).
-      for (size_t D = 0; D < DestChanCount; ++D) {
+    // ... cache our final frame for use in future interpolation ...
+    for (size_t D = 0; D < DestChanCount; ++D) {
+      if constexpr (ScaleType == ScalerType::MUTED) {
+        // ... which, if MUTE, is silence (what we actually produced).
         filter_data_[D] = 0;
+      } else {
+        filter_data_[D] = SR::Read(src + S + (D / SR::DestPerSrc));
       }
     }
 
@@ -367,25 +351,42 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
 
-  // Although the number of source frames is expressed in fixed-point 19.13
-  // format, the actual number of frames must always be an integer.
+  // We express number-of-source-frames as fixed-point 19.13 (to align with
+  // src_offset) but the actual number of frames provided is always an integer.
   FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
-  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
   // Interpolation offset is int32, so even though frac_src_frames is a uint32,
   // callers should not exceed int32_t::max().
   FXL_DCHECK(frac_src_frames <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  // This method must always be provided at least one source frame.
+  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  const auto* src = static_cast<const SrcSampleType*>(src_void);
-
   uint32_t dest_off = *dest_offset;
   uint32_t dest_off_start = dest_off;  // Only used when ramping
 
+  // Location of first dest frame to produce must be within the provided buffer.
+  FXL_DCHECK(dest_off < dest_frames);
+
   int32_t src_off = *frac_src_offset;
+  const auto* src = static_cast<const SrcSampleType*>(src_void);
+
+  // "Source offset" can be negative, but within the bounds of pos_filter_width.
+  // Otherwise, all these src samples are in the future and irrelevant here.
+  // Callers explicitly avoid calling Mix in this case, so we have detected an
+  // error. For linear_sampler, we require src_off > -FRAC_ONE.
+  FXL_DCHECK(src_off + static_cast<int32_t>(pos_filter_width()) >= 0)
+      << std::hex << "src_off: 0x" << src_off;
+  // src_off cannot exceed our last sampleable subframe. We define this as
+  // "Source end": the last subframe for which this Mix call can produce output.
+  // Otherwise, all these src samples are in the past and irrelevant here.
+  auto src_end = static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
+  FXL_DCHECK(src_end >= 0);
+  FXL_DCHECK(src_off <= src_end)
+      << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end;
 
   // Cache these locally, in the template specialization that uses them.
-  // Only src_pos_modulo needs to be written back before returning.
+  // Only src_pos_modulo must be written back before returning.
   uint32_t step_size = info->step_size;
   uint32_t rate_modulo, denominator, src_pos_modulo;
   if constexpr (HasModulo) {
@@ -409,81 +410,69 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
     }
   }
 
-  // This is the last sub-frame at which we can output without additional data.
-  auto src_end = static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
-
-  FXL_DCHECK(dest_off < dest_frames);
-  FXL_DCHECK(src_end >= 0);
-  FXL_DCHECK(frac_src_frames <=
-             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-
-  // "Source offset" can be negative, but within the bounds of pos_filter_width.
-  // For linear_sampler this means that src_off > -FRAC_ONE.
-  FXL_DCHECK(src_off + static_cast<int32_t>(pos_filter_width()) >= 0);
-  // Source offset must also be within neg_filter_width of our last sample.
-  FXL_DCHECK(src_off + FRAC_ONE <= frac_src_frames + neg_filter_width());
-
-  Gain::AScale amplitude_scale;
-  if constexpr (ScaleType != ScalerType::RAMPING) {
-    amplitude_scale = info->gain.GetGainScale();
-  }
-
-  // TODO(mpuryear): optimize the logic below for common-case performance.
-
-  // If we are not attenuated to the point of being muted, go ahead and perform
-  // the mix.  Otherwise, just update the source and dest offsets and hold onto
-  // any relevant filter data from the end of the source.
+  // If we are not attenuated to the point of being muted, perform the mix.
+  // Otherwise, just update the source and dest offsets and cache any relevant
+  // filter data from the end of the source.
   if constexpr (ScaleType != ScalerType::MUTED) {
-    // When starting "between buffers", we must rely on previously-cached vals.
-    if (src_off < 0) {
-      for (size_t D = 0; D < chan_count; ++D) {
-        filter_data_u_[chan_count + D] =
-            SampleNormalizer<SrcSampleType>::Read(src + D);
+    Gain::AScale amplitude_scale;
+    if constexpr (ScaleType != ScalerType::RAMPING) {
+      amplitude_scale = info->gain.GetGainScale();
+    }
+
+    // TODO(mpuryear): optimize the logic below for common-case performance.
+
+    // If src_off is negative, we must incorporate previously-cached samples.
+    // Add a new sample, to complete the filter set, and compute the output.
+    while ((dest_off < dest_frames) && (src_off < 0)) {
+      if constexpr (ScaleType == ScalerType::RAMPING) {
+        amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
-      while ((dest_off < dest_frames) && (src_off < 0)) {
-        if constexpr (ScaleType == ScalerType::RAMPING) {
-          amplitude_scale = info->scale_arr[dest_off - dest_off_start];
-        }
+      float* out = dest + (dest_off * chan_count);
 
-        float* out = dest + (dest_off * chan_count);
+      for (size_t D = 0; D < chan_count; ++D) {
+        float s0 = filter_data_u_[D];
+        float s1 = SampleNormalizer<SrcSampleType>::Read(src + D);
 
-        for (size_t D = 0; D < chan_count; ++D) {
-          float sample = Interpolate(filter_data_u_[chan_count + D],
-                                     filter_data_u_[D], -src_off);
-          out[D] = DM::Mix(out[D], sample, amplitude_scale);
-        }
+        float sample = LinearInterpolate(s0, s1, src_off + FRAC_ONE);
+        out[D] = DM::Mix(out[D], sample, amplitude_scale);
+      }
 
-        dest_off += 1;
-        src_off += step_size;
+      ++dest_off;
+      src_off += step_size;
 
-        if constexpr (HasModulo) {
-          src_pos_modulo += rate_modulo;
-          if (src_pos_modulo >= denominator) {
-            ++src_off;
-            src_pos_modulo -= denominator;
-          }
+      if constexpr (HasModulo) {
+        src_pos_modulo += rate_modulo;
+        if (src_pos_modulo >= denominator) {
+          ++src_off;
+          src_pos_modulo -= denominator;
         }
       }
     }
 
     // Now we are fully in the current buffer and need not rely on our cache.
-    while ((dest_off < dest_frames) && (src_off < src_end)) {
-      uint32_t S = (src_off >> kPtsFractionalBits) * chan_count;
-      float* out = dest + (dest_off * chan_count);
+    while ((dest_off < dest_frames) && (src_off <= src_end)) {
       if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
+      uint32_t S = (src_off >> kPtsFractionalBits) * chan_count;
+      float* out = dest + (dest_off * chan_count);
+
       for (size_t D = 0; D < chan_count; ++D) {
-        float s1 = SampleNormalizer<SrcSampleType>::Read(src + S + D);
-        float s2 =
-            SampleNormalizer<SrcSampleType>::Read(src + S + D + chan_count);
-        float sample = Interpolate(s1, s2, src_off & FRAC_MASK);
+        float sample;
+        float s0 = SampleNormalizer<SrcSampleType>::Read(src + S + D);
+        if ((src_off & FRAC_MASK) == 0) {
+          sample = s0;
+        } else {
+          float s1 =
+              SampleNormalizer<SrcSampleType>::Read(src + S + D + chan_count);
+          sample = LinearInterpolate(s0, s1, src_off & FRAC_MASK);
+        }
         out[D] = DM::Mix(out[D], sample, amplitude_scale);
       }
 
-      dest_off += 1;
+      ++dest_off;
       src_off += step_size;
 
       if constexpr (HasModulo) {
@@ -499,11 +488,11 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
     // produced and update the src_off and dest_off values appropriately.
     if ((dest_off < dest_frames) && (src_off <= src_end)) {
       uint32_t src_avail = ((src_end - src_off) / step_size) + 1;
-      uint32_t dest_avail = (dest_frames - dest_off);
+      uint32_t dest_avail = dest_frames - dest_off;
       uint32_t avail = std::min(src_avail, dest_avail);
 
-      dest_off += avail;
       src_off += (avail * step_size);
+      dest_off += avail;
 
       if constexpr (HasModulo) {
         uint64_t total_mod = src_pos_modulo + (avail * rate_modulo);
@@ -540,18 +529,16 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   // If next source position to consume is beyond start of last frame ...
   if (src_off > src_end) {
     uint32_t S = (src_end >> kPtsFractionalBits) * chan_count;
-    // ... and if we are not mute, of course...
-    if constexpr (ScaleType != ScalerType::MUTED) {
-      // ... cache our final frame for use in future interpolation ...
-      for (size_t D = 0; D < chan_count; ++D) {
+    // ... cache our final frame for use in future interpolation ...
+    for (size_t D = 0; D < chan_count; ++D) {
+      if constexpr (ScaleType == ScalerType::MUTED) {
+        // ... which, if MUTE, is silence (what we actually produced).
+        filter_data_u_[D] = 0;
+      } else {
         filter_data_u_[D] = SampleNormalizer<SrcSampleType>::Read(src + S + D);
       }
-    } else {
-      // ... otherwise cache silence (which is what we actually produced).
-      for (size_t D = 0; D < chan_count; ++D) {
-        filter_data_u_[D] = 0;
-      }
     }
+
     // At this point the source offset (src_off) is either somewhere within
     // the last source sample, or entirely beyond the end of the source buffer
     // (if frac_step_size is greater than unity).  Either way, we've extracted

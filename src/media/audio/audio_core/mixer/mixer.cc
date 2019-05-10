@@ -46,7 +46,7 @@ std::unique_ptr<Mixer> Mixer::Select(
   }
 
   // If source sample rate is an integer multiple of destination sample rate,
-  // just use the point sampler.  Otherwise, use the linear re-sampler.
+  // just use point sampler. Otherwise, use linear as a quality-cost compromise.
   TimelineRate src_to_dest(src_format.frames_per_second,
                            dest_format.frames_per_second);
   if (src_to_dest.reference_delta() == 1) {

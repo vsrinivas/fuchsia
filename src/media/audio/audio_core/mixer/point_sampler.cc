@@ -17,13 +17,17 @@ namespace media::audio::mixer {
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 class PointSamplerImpl : public PointSampler {
  public:
-  PointSamplerImpl() : PointSampler(0, FRAC_ONE - 1) {}
+  PointSamplerImpl()
+      : PointSampler(kPositiveFilterWidth, kNegativeFilterWidth) {}
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
            bool accumulate, Bookkeeping* info) override;
 
  private:
+  static constexpr uint32_t kPositiveFilterWidth = 0;
+  static constexpr uint32_t kNegativeFilterWidth = FRAC_ONE - 1;
+
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
   static inline bool Mix(float* dest, uint32_t dest_frames,
                          uint32_t* dest_offset, const void* src,
@@ -43,6 +47,9 @@ class NxNPointSamplerImpl : public PointSampler {
            bool accumulate, Bookkeeping* info) override;
 
  private:
+  static constexpr uint32_t kPositiveFilterWidth = 0;
+  static constexpr uint32_t kNegativeFilterWidth = FRAC_ONE - 1;
+
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
   static inline bool Mix(float* dest, uint32_t dest_frames,
                          uint32_t* dest_offset, const void* src,
@@ -63,25 +70,43 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
 
-  // Although the number of source frames is expressed in fixed-point 19.13
-  // format, the actual number of frames must always be an integer.
+  // We express number-of-source-frames as fixed-point 19.13 (to align with
+  // src_offset) but the actual number of frames provided is always an integer.
   FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
   // Interpolation offset is int32, so even though frac_src_frames is a uint32,
   // callers should not exceed int32_t::max().
   FXL_DCHECK(frac_src_frames <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  // This method must always be provided at least one source frame.
+  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
 
-  using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  const auto* src = static_cast<const SrcSampleType*>(src_void);
-
   uint32_t dest_off = *dest_offset;
   uint32_t dest_off_start = dest_off;  // Only used when ramping.
 
-  int32_t src_off = *frac_src_offset;
+  // Location of first dest frame to produce must be within the provided buffer.
+  FXL_DCHECK(dest_off < dest_frames);
 
-  // Cache these locally, in the template specialization that uses them.
-  // Only src_pos_modulo needs to be written back before returning.
+  using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
+  int32_t src_off = *frac_src_offset;
+  const auto* src = static_cast<const SrcSampleType*>(src_void);
+
+  // "Source offset" can be negative within the bounds of pos_filter_width.
+  // Here, PointSampler has no memory: input frames only affect present/future
+  // output. That is: its "positive filter width" is zero. Thus src_off must be
+  // non-negative. Callers explicitly avoid calling Mix in this error case.
+  FXL_DCHECK(src_off >= 0) << std::hex << "src_off: 0x" << src_off;
+  // src_off cannot exceed our last sampleable subframe. We define this as
+  // "Source end": the last subframe for which this Mix call can produce output.
+  // Otherwise, all these src samples are in the past and irrelevant here.
+  auto src_end = static_cast<int32_t>(
+      frac_src_frames - PointSamplerImpl::kPositiveFilterWidth - 1);
+  FXL_DCHECK(src_end >= 0);
+  FXL_DCHECK(src_off <= src_end)
+      << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end;
+
+  // Cache these locally, for the HasModulo specializations that use them.
+  // Only src_pos_modulo must be written back before returning.
   uint32_t step_size = info->step_size;
   uint32_t rate_modulo, denominator, src_pos_modulo;
   if constexpr (HasModulo) {
@@ -104,23 +129,6 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     }
   }
 
-  FXL_DCHECK(dest_off < dest_frames);
-  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
-  FXL_DCHECK(frac_src_frames <=
-             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-
-  // Source offset can be negative, but within the bounds of pos_filter_width.
-  // PointSampler has no memory: input frames only affect present/future output.
-  // That is: its "positive filter width" is zero.
-  FXL_DCHECK(src_off >= 0) << std::hex << "src_off: 0x" << src_off;
-
-  // src_off cannot exceed our last sampleable subframe. We define this as
-  // "Source end": the last subframe for which this Mix call can produce output.
-  // Otherwise, all these src samples are in the past and irrelevant here.
-  int32_t src_end = frac_src_frames - 1;
-  FXL_DCHECK(src_off <= src_end)
-      << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end;
-
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
   if constexpr (ScaleType != ScalerType::MUTED) {
@@ -133,6 +141,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       if constexpr (ScaleType == ScalerType::RAMPING) {
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
+
       uint32_t src_iter = (src_off >> kPtsFractionalBits) * SrcChanCount;
       float* out = dest + (dest_off * DestChanCount);
 
@@ -156,11 +165,12 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     // We are muted. Don't mix, but figure out how many samples we WOULD have
     // produced and update the src_off and dest_off values appropriately.
     if ((dest_off < dest_frames) && (src_off <= src_end)) {
-      uint32_t dest_avail = dest_frames - dest_off;
       uint32_t src_avail = ((src_end - src_off) / step_size) + 1;
+      uint32_t dest_avail = dest_frames - dest_off;
       uint32_t avail = std::min(dest_avail, src_avail);
-      dest_off += avail;
+
       src_off += (avail * step_size);
+      dest_off += avail;
 
       if constexpr (HasModulo) {
         uint64_t total_mod = src_pos_modulo + (avail * rate_modulo);
@@ -271,21 +281,42 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
 
-  // Although the number of source frames is expressed in fixed-point 19.13
-  // format, the actual number of frames must always be an integer.
+  // We express number-of-source-frames as fixed-point 19.13 (to align with
+  // src_offset) but the actual number of frames provided is always an integer.
   FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
   // Interpolation offset is int32, so even though frac_src_frames is a uint32,
   // callers should not exceed int32_t::max().
   FXL_DCHECK(frac_src_frames <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  // This method must always be provided at least one source frame.
+  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  const auto* src = static_cast<const SrcSampleType*>(src_void);
-
   uint32_t dest_off = *dest_offset;
   uint32_t dest_off_start = dest_off;  // Only used when ramping.
 
+  // Location of first dest frame to produce must be within the provided buffer.
+  FXL_DCHECK(dest_off < dest_frames);
+
   int32_t src_off = *frac_src_offset;
+  const auto* src = static_cast<const SrcSampleType*>(src_void);
+
+  // "Source offset" can be negative within the bounds of pos_filter_width.
+  // Here, PointSampler has no memory: input frames only affect present/future
+  // output. That is: its "positive filter width" is zero. Thus src_off must be
+  // non-negative. Callers explicitly avoid calling Mix in this error case.
+  FXL_DCHECK(src_off + static_cast<int32_t>(
+                           NxNPointSamplerImpl::kPositiveFilterWidth) >=
+             0)
+      << std::hex << "src_off: 0x" << src_off;
+  // src_off cannot exceed our last sampleable subframe. We define this as
+  // "Source end": the last subframe for which this Mix call can produce output.
+  // Otherwise, all these src samples are in the past and irrelevant here.
+  auto src_end = static_cast<int32_t>(
+      frac_src_frames - NxNPointSamplerImpl::kPositiveFilterWidth - 1);
+  FXL_DCHECK(src_end >= 0);
+  FXL_DCHECK(src_off <= src_end)
+      << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end;
 
   // Cache these locally, in the template specialization that uses them.
   // Only src_pos_modulo needs to be written back before returning.
@@ -311,21 +342,8 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
     }
   }
 
-  FXL_DCHECK(dest_off < dest_frames);
-  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
-  FXL_DCHECK(frac_src_frames <=
-             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-
-  // Source offset can be negative, but within the bounds of pos_filter_width.
-  // PointSampler has no memory: input frames only affect present/future output.
-  // That is: its "positive filter width" is zero.
-  FXL_DCHECK(src_off >= 0);
-
-  int32_t src_end = frac_src_frames - 1;
-  FXL_DCHECK(src_off <= src_end)
-      << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end;
-  // If we are not attenuated to the point of being muted, go ahead and perform
-  // the mix.  Otherwise, just update the source and dest offsets.
+  // If we are not attenuated to the point of being muted, perform the mix.
+  // Otherwise, just update the source and dest offsets.
   if constexpr (ScaleType != ScalerType::MUTED) {
     Gain::AScale amplitude_scale;
     if constexpr (ScaleType != ScalerType::RAMPING) {
@@ -361,11 +379,12 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
     // We are muted. Don't mix, but figure out how many samples we WOULD have
     // produced and update the src_off and dest_off values appropriately.
     if ((dest_off < dest_frames) && (src_off <= src_end)) {
-      uint32_t dest_avail = dest_frames - dest_off;
       uint32_t src_avail = ((src_end - src_off) / step_size) + 1;
-      uint32_t avail = std::min(dest_avail, src_avail);
-      dest_off += avail;
+      uint32_t dest_avail = dest_frames - dest_off;
+      uint32_t avail = std::min(src_avail, dest_avail);
+
       src_off += (avail * step_size);
+      dest_off += avail;
 
       if constexpr (HasModulo) {
         uint64_t total_mod = src_pos_modulo + (avail * rate_modulo);

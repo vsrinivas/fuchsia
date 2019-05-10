@@ -77,11 +77,10 @@ class Mixer {
   // destination buffer offset of the next frame to be mixed.
   //
   // @param src
-  // The pointer to the source buffer, containing input frames to be mixed into
-  // the destination buffer.
+  // Pointer to source buffer, containing frames to be mixed to the dest buffer.
   //
   // @param frac_src_frames
-  // The total number (in 19.13 fixed) of input frames within the source buffer.
+  // Total number (in 19.13 fixed) of incoming subframes in the source buffer.
   //
   // @param frac_src_offset
   // A pointer to the offset (in fractional input frames) from start of src
@@ -122,8 +121,8 @@ class Mixer {
   // Filter widths
   //
   // The positive and negative widths of the filter for this mixer, expressed in
-  // fractional input AudioRenderer units. These widths convey which input
-  // frames will be referenced by the filter, when producing output for a
+  // fractional (19.13 fixed) input subframe units. These widths convey which
+  // input frames will be referenced by the filter, when producing output for a
   // specific instant in time. Positive filter width refers to how far forward
   // (positively) the filter looks, from the PTS in question; negative filter
   // width refers to how far backward (negatively) the filter looks, from that
