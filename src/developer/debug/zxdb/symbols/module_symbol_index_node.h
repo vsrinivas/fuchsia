@@ -108,6 +108,10 @@ class ModuleSymbolIndexNode {
   // Makes a node pointing to one DIE.
   explicit ModuleSymbolIndexNode(const DieRef& ref);
 
+  // Move-only.
+  ModuleSymbolIndexNode(ModuleSymbolIndexNode&&) = default;
+  ModuleSymbolIndexNode(const ModuleSymbolIndexNode&) = delete;
+
   ~ModuleSymbolIndexNode();
 
   bool empty() const { return sub_.empty() && dies_.empty(); }
@@ -136,12 +140,12 @@ class ModuleSymbolIndexNode {
   // needed upon insertion is slightly faster than creating a std::string and
   // passing it in. Use the char* version if the source string is a
   // null-terminated C-string.
-  ModuleSymbolIndexNode* AddChild(std::string&& name);
+  ModuleSymbolIndexNode* AddChild(std::string name);
   ModuleSymbolIndexNode* AddChild(const char* name);
 
   // Adds a child to this node. If a node with this key already exists in this
   // node, they will be merged.
-  void AddChild(std::pair<std::string, ModuleSymbolIndexNode>&& child);
+  void AddChild(const std::string& name, ModuleSymbolIndexNode&& child);
 
   // Merges another node's children into this one. It's assumed there are no
   // duplicate DIEs so the lists are just appended.

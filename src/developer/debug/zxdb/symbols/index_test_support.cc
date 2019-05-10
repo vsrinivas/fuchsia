@@ -36,7 +36,7 @@ TestIndexedSymbol::TestIndexedSymbol(MockModuleSymbols* mod_sym,
                                      const std::string& name,
                                      fxl::RefPtr<Symbol> sym)
     : die_ref(RefTypeForSymbol(sym), next_die_ref++),
-      index_node(index_parent->AddChild(std::string(name))),
+      index_node(index_parent->AddChild(name)),
       symbol(std::move(sym)) {
   index_node->AddDie(die_ref);
   mod_sym->AddDieRef(die_ref, symbol);

@@ -109,11 +109,11 @@ TEST(ModuleSymbolIndexNode, AddChildMerge) {
 
   ModuleSymbolIndexNode node1;
   node1.AddDie(DieRef(RefType::kFunction, offset1));
-  node1.AddChild(std::make_pair(bar, std::move(node2)));
+  node1.AddChild(bar, std::move(node2));
 
   ModuleSymbolIndexNode root;
   EXPECT_TRUE(root.empty());
-  root.AddChild(std::make_pair(foo, std::move(node1)));
+  root.AddChild(foo, std::move(node1));
   EXPECT_FALSE(root.empty());
 
   // The merged one has the hierarchy:
@@ -124,10 +124,10 @@ TEST(ModuleSymbolIndexNode, AddChildMerge) {
 
   ModuleSymbolIndexNode merge1;
   merge1.AddDie(DieRef(RefType::kFunction, offset3));
-  merge1.AddChild(std::make_pair(bloop, std::move(merge2)));
+  merge1.AddChild(bloop, std::move(merge2));
 
   // Now merge in "merge1" as a child of the root.
-  root.AddChild(std::make_pair(foo, std::move(merge1)));
+  root.AddChild(foo, std::move(merge1));
 
   // This should merge the two to get:
   //   [root]

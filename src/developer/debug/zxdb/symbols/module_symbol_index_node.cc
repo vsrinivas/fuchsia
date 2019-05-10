@@ -78,7 +78,7 @@ void ModuleSymbolIndexNode::AddDie(const DieRef& ref) {
   dies_.push_back(ref);
 }
 
-ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(std::string&& name) {
+ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(std::string name) {
   return &sub_.emplace(std::piecewise_construct,
                        std::forward_as_tuple(std::move(name)),
                        std::forward_as_tuple())
@@ -92,13 +92,16 @@ ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(const char* name) {
               .first->second;
 }
 
-void ModuleSymbolIndexNode::AddChild(
-    std::pair<std::string, ModuleSymbolIndexNode>&& child) {
-  auto existing = sub_.find(child.first);
-  if (existing == sub_.end())
-    sub_.emplace(std::move(child));
-  else
-    existing->second.Merge(std::move(child.second));
+void ModuleSymbolIndexNode::AddChild(const std::string& name,
+                                     ModuleSymbolIndexNode&& child) {
+  auto existing = sub_.find(name);
+  if (existing == sub_.end()) {
+    sub_.emplace(std::piecewise_construct,
+                 std::forward_as_tuple(name),
+                 std::forward_as_tuple(std::move(child)));
+  } else {
+    existing->second.Merge(std::move(child));
+  }
 }
 
 void ModuleSymbolIndexNode::Merge(ModuleSymbolIndexNode&& other) {
