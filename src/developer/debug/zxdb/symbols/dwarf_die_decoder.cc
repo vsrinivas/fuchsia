@@ -200,13 +200,12 @@ bool DwarfDieDecoder::Decode(const llvm::DWARFDie& die) {
 }
 
 bool DwarfDieDecoder::Decode(const llvm::DWARFDebugInfoEntry& die) {
-  std::vector<llvm::dwarf::Attribute> seen_attrs;
-  return DecodeInternal(die, kMaxAbstractOriginRefsToFollow, &seen_attrs);
+  seen_attrs_.clear();
+  return DecodeInternal(die, kMaxAbstractOriginRefsToFollow);
 }
 
 bool DwarfDieDecoder::DecodeInternal(
-    const llvm::DWARFDebugInfoEntry& die, int abstract_origin_refs_to_follow,
-    std::vector<llvm::dwarf::Attribute>* seen_attrs) {
+    const llvm::DWARFDebugInfoEntry& die, int abstract_origin_refs_to_follow) {
   // This indicates the abbreviation. Each DIE starts with an abbreviation
   // code.  The is the number that the DWARFAbbreviationDeclaration was derived
   // from above. We have to read it again to skip the offset over the number.
@@ -263,11 +262,11 @@ bool DwarfDieDecoder::DecodeInternal(
       // because the typical number of attributes is small enough that this
       // should be more efficient than a set which requires per-element heap
       // allocations.
-      if (std::find(seen_attrs->begin(), seen_attrs->end(), spec.Attr) !=
-          seen_attrs->end())
+      if (std::find(seen_attrs_.begin(), seen_attrs_.end(), spec.Attr) !=
+          seen_attrs_.end())
         needs_dispatch = false;
       else
-        seen_attrs->push_back(spec.Attr);
+        seen_attrs_.push_back(spec.Attr);
     }
 
     if (needs_dispatch) {
@@ -297,7 +296,7 @@ bool DwarfDieDecoder::DecodeInternal(
   // DIE "underlay" any attributes present on the current one.
   if (abstract_origin.isValid() && abstract_origin_refs_to_follow > 0) {
     return DecodeInternal(*abstract_origin.getDebugInfoEntry(),
-                          abstract_origin_refs_to_follow - 1, seen_attrs);
+                          abstract_origin_refs_to_follow - 1);
   } else {
     // The deepest DIE in the abstract origin chain was found (which will be
     // the original DIE itself if there was no abstract origin).

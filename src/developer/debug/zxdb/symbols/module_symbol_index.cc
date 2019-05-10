@@ -266,12 +266,14 @@ class SymbolStorageIndexer {
         root_(root),
         decoder_(context, unit) {
     decoder_.AddCString(llvm::dwarf::DW_AT_name, &name_);
+
+    components_.reserve(8);
   }
 
   void AddDIE(const SymbolStorage& impl) {
     // Components of the name in reverse order (so "foo::Bar::Fn") would be {
     // "Fn", "Bar", "foo"}
-    std::vector<std::string> components;
+    components_.clear();
 
     // Find the declaration DIE function. Perf note: getDIEForOffset() is a
     // binary search.
@@ -280,7 +282,7 @@ class SymbolStorageIndexer {
       return;  // Invalid
     if (!FillName(die))
       return;
-    components.emplace_back(*name_);
+    components_.push_back(*name_);
 
     unsigned index = unit_->getDIEIndex(die);
     while (true) {
@@ -311,13 +313,13 @@ class SymbolStorageIndexer {
 
       if (!FillName(die))
         return;  // Likely corrupt, these nodes should have names.
-      components.emplace_back(*name_);
+      components_.push_back(*name_);
     }
 
     // Add the symbol to the index.
     ModuleSymbolIndexNode* cur = root_;
-    for (int i = static_cast<int>(components.size()) - 1; i >= 0; i--)
-      cur = cur->AddChild(std::move(components[i]));
+    for (int i = static_cast<int>(components_.size()) - 1; i >= 0; i--)
+      cur = cur->AddChild(components_[i]);
     cur->AddDie(
         ModuleSymbolIndexNode::DieRef(impl.ref_type, impl.entry->getOffset()));
   }
@@ -338,6 +340,10 @@ class SymbolStorageIndexer {
 
   DwarfDieDecoder decoder_;
   llvm::Optional<const char*> name_;  // Decoder writes into this.
+
+  // Variable used for indexing names by AddDIE. This is not needed as a class
+  // member but having it here prevents reallocation for every DIE indexed.
+  std::vector<const char*> components_;
 };
 
 }  // namespace

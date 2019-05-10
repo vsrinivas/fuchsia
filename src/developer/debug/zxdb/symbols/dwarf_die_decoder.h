@@ -143,19 +143,13 @@ class DwarfDieDecoder {
 
   // Backend for Decode() above.
   //
-  // This additionally takes a list of all attributes seen which will be added
-  // to (in/out var). Once seen, an attribute is not considered again. This is
-  // used to implement DW_AT_abstract_origin where a DIE can reference another
-  // one for attributes not specified.
-  //
   // Following abstract origins generates a recursive call. To prevent infinite
   // recursion for corrupt symbols, this function takes a maximum number of
   // abstract origin references to follow which is decremented each time a
   // recursive call is made. When this gets to 0, no more abstract origin
   // references will be followed.
   bool DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
-                      int abstract_origin_refs_to_follow,
-                      std::vector<llvm::dwarf::Attribute>* seen_attrs);
+                      int abstract_origin_refs_to_follow);
 
   llvm::DWARFContext* context_;
   llvm::DWARFUnit* unit_;
@@ -169,6 +163,13 @@ class DwarfDieDecoder {
   // AddAbstractParent() above) be computed. This variable will hold the
   // desired output location for the parent of the decoded DIE.
   llvm::DWARFDie* abstract_parent_ = nullptr;
+
+  // Used during decode. This should be cleared each time a new DIE is decoded
+  // and tracks which attributes have been seen across recursive calls of
+  // DecodeInternal (following abstract references). This prevents us from
+  // decoding the same attribute more than once across abstract origins (we
+  // always want the first one).
+  std::vector<llvm::dwarf::Attribute> seen_attrs_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DwarfDieDecoder);
 };

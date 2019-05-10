@@ -131,7 +131,13 @@ class ModuleSymbolIndexNode {
 
   // Adds a child node with the given name and returns it. If one already exits
   // with the name, returns the existing one.
+  //
+  // Even with move semantics, having the map construct the std::string as
+  // needed upon insertion is slightly faster than creating a std::string and
+  // passing it in. Use the char* version if the source string is a
+  // null-terminated C-string.
   ModuleSymbolIndexNode* AddChild(std::string&& name);
+  ModuleSymbolIndexNode* AddChild(const char* name);
 
   // Adds a child to this node. If a node with this key already exists in this
   // node, they will be merged.
@@ -161,7 +167,7 @@ class ModuleSymbolIndexNode {
   // Performance note: The strings are all null-terminated C strings that come
   // from the mapped DWARF data. We should use that in the map instead to avoid
   // copying all the strings again.
-  std::map<std::string, ModuleSymbolIndexNode> sub_;
+  Map sub_;
 
   // For any DIES matching this name, lists the DIEs that implement it.
   // If a function or static variable has the same name as a namespace, there

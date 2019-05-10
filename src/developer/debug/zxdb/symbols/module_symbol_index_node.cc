@@ -85,6 +85,13 @@ ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(std::string&& name) {
               .first->second;
 }
 
+ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(const char* name) {
+  return &sub_.emplace(std::piecewise_construct,
+                       std::forward_as_tuple(name),
+                       std::forward_as_tuple())
+              .first->second;
+}
+
 void ModuleSymbolIndexNode::AddChild(
     std::pair<std::string, ModuleSymbolIndexNode>&& child) {
   auto existing = sub_.find(child.first);
