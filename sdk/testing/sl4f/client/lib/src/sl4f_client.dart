@@ -61,7 +61,7 @@ class Sl4f {
     Map<String, dynamic> response = jsonDecode(httpResponse.body);
     final dynamic error = response['error'];
     if (error != null) {
-      throw JsonRpcException(error);
+      throw JsonRpcException(httpRequest.body, error);
     }
 
     return response['result'];

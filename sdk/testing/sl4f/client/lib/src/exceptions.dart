@@ -4,12 +4,14 @@
 
 /// Wraps the error field of a JSON RPC as an [Exception].
 class JsonRpcException implements Exception {
-  JsonRpcException(this.error);
+  final String request;
   final dynamic error;
+
+  JsonRpcException(this.request, this.error);
 
   @override
   String toString() {
-    return 'JSON RPC returned error: $error';
+    return 'JSON RPC returned error: $error\nRequest: $request';
   }
 }
 
