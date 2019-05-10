@@ -51,8 +51,7 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db,
 // increment possible, as well as the smallest increment detectable (the
 // closest-to-1.0 gain that actually causes incoming data values to change).
 TEST(DynamicRange, Epsilon) {
-  double unity_level_db, unity_sinad_db, level_db, sinad_db;
-
+  double unity_level_db, unity_sinad_db;
   MeasureSummaryDynamicRange(0.0f, &unity_level_db, &unity_sinad_db);
   EXPECT_NEAR(unity_level_db, 0.0, AudioResult::kPrevLevelToleranceSourceFloat);
   EXPECT_GE(unity_sinad_db, AudioResult::kPrevFloorSourceFloat);
@@ -62,10 +61,11 @@ TEST(DynamicRange, Epsilon) {
   // kMinGainDbUnity is the lowest (furthest-from-Unity) with no observable
   // attenuation on float32 (i.e. the smallest indistinguishable from Unity).
   // Just above the 'first detectable reduction' scale; should be same as unity.
-  MeasureSummaryDynamicRange(AudioResult::kMinGainDbUnity, &level_db,
-                             &sinad_db);
-  EXPECT_EQ(level_db, unity_level_db);
-  EXPECT_EQ(sinad_db, unity_sinad_db);
+  double near_unity_level_db, near_unity_sinad_db;
+  MeasureSummaryDynamicRange(AudioResult::kMinGainDbUnity, &near_unity_level_db,
+                             &near_unity_sinad_db);
+  EXPECT_EQ(near_unity_level_db, unity_level_db);
+  EXPECT_EQ(near_unity_sinad_db, unity_sinad_db);
 
   // kMaxGainDbNonUnity is the highest (closest-to-Unity) with observable effect
   // on full-scale (i.e. largest sub-Unity AScale distinguishable from Unity).
@@ -81,6 +81,13 @@ TEST(DynamicRange, Epsilon) {
 
   EXPECT_LT(AudioResult::LevelEpsilonDown, unity_level_db);
   EXPECT_GE(AudioResult::SinadEpsilonDown, AudioResult::kPrevSinadEpsilonDown);
+
+  // Update the min distinguishable gain value, for display later (if --dump).
+  if (near_unity_level_db < unity_level_db) {
+    AudioResult::ScaleEpsilon = AudioResult::kMinGainDbUnity;
+  } else if (AudioResult::LevelEpsilonDown < unity_level_db) {
+    AudioResult::ScaleEpsilon = AudioResult::kMaxGainDbNonUnity;
+  }
 }
 
 // Measure dynamic range (signal level, noise floor) when gain is -30dB.

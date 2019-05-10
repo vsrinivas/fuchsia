@@ -64,9 +64,9 @@ class AudioResult {
   // Related to the above, these constants store the previous measurements.
   // These are used as threshold limits -- if any current test EXCEEDS this
   // tolerance, it is considered an error and causes the test case to fail.
-  static constexpr double kPrevLevelToleranceSource8 = 6.7219077e-02;
-  static constexpr double kPrevLevelToleranceSource16 = 1.0548786e-06;
-  static constexpr double kPrevLevelToleranceSource24 = 3.0346074e-09;
+  static constexpr double kPrevLevelToleranceSource8 = 6.4082082e-04;
+  static constexpr double kPrevLevelToleranceSource16 = 6.8541681e-07;
+  static constexpr double kPrevLevelToleranceSource24 = 2.3196300e-09;
   static constexpr double kPrevLevelToleranceSourceFloat = 5.3282082e-10;
 
   // These variables store the specific result magnitude (in dBFS) for the input
@@ -103,7 +103,7 @@ class AudioResult {
   // measurement LESS than this threshold limit is considered a test failure.
   static constexpr double kPrevFloorSource8 = 49.952957;
   static constexpr double kPrevFloorSource16 = 98.104753;
-  static constexpr double kPrevFloorSource24 = 146.30926;
+  static constexpr double kPrevFloorSource24 = 153.71926;
   static constexpr double kPrevFloorSourceFloat = 153.74509;
 
   //
@@ -118,7 +118,7 @@ class AudioResult {
   static double LevelToleranceStereoMono;
   // Previously-cached tolerance. If difference between input magnitude and
   // result magnitude EXCEEDS this tolerance, then the test case fails.
-  static constexpr double kPrevLevelToleranceStereoMono = 2.9724227e-05;
+  static constexpr double kPrevLevelToleranceStereoMono = 6.0681545e-09;
 
   // Absolute output level measured in this test case.
   static double LevelStereoMono;
@@ -130,7 +130,7 @@ class AudioResult {
   static double FloorStereoMono;
   // Previously-cached noise floor that serves as a threshold limit. If result
   // magnitude is LESS than this value, then the test case fails.
-  static constexpr double kPrevFloorStereoMono = 93.607405;
+  static constexpr double kPrevFloorStereoMono = 152.09879;
 
   //
   //
@@ -184,10 +184,11 @@ class AudioResult {
       FreqRespPointDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUp2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUp3;
   static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespPointMicro;
 
-  // Same as the above section, but for LinearSampler instead of PointSampler
+  // Same as the above section, but for LinearSampler
   static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespLinearUnity;
   static std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -198,6 +199,7 @@ class AudioResult {
       FreqRespLinearDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp3;
   static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespLinearMicro;
 
@@ -226,9 +228,11 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespPointUp2;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespPointUp3;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespPointMicro;
 
-  // Same as the above section, but for LinearSampler instead of PointSampler
+  // Same as the above section, but for LinearSampler
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespLinearUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -241,6 +245,8 @@ class AudioResult {
       kPrevFreqRespLinearUp1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespLinearUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespLinearUp3;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespLinearMicro;
 
@@ -268,20 +274,21 @@ class AudioResult {
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp3;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointMicro;
 
-  // Same as the above section, but for LinearSampler instead of PointSampler
+  // Same as the above section, but for LinearSampler
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUnity;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown0;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp3;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearMicro;
 
-  // These are the previous-cached results for SINAD, for this sampler and this
-  // rate conversion, represented in dBr. If any current result magnitude is
-  // LESS than this value, then the test case fails.
+  // Previous-cached SINAD results for this sampler and rate conversion ratio,
+  // in dBr. If current result is LESS than this value, the test case fails.
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadPointUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -295,9 +302,11 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadPointUp2;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadPointUp3;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadPointMicro;
 
-  // Same as the above section, but for LinearSampler instead of PointSampler
+  // Same as the above section, but for LinearSampler
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadLinearUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -310,6 +319,8 @@ class AudioResult {
       kPrevSinadLinearUp1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadLinearUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadLinearUp3;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadLinearMicro;
 
@@ -394,17 +405,17 @@ class AudioResult {
   static double DynRangeTolerance;
   // The previous-cached worst-case tolerance value, for Dynamic range testing.
   // If a current tolerance EXCEEDS this value, then the test case fails.
-  static constexpr double kPrevDynRangeTolerance = 7.5380325e-03;
+  static constexpr double kPrevDynRangeTolerance = 4.6729294e-07;
 
   // Level and unwanted artifacts, applying the smallest-detectable gain change.
   static double LevelEpsilonDown;
   // If current value is LESS than this value, then the test case fails.
-  static constexpr double kPrevLevelEpsilonDown = -1.6807164e-04;
+  static constexpr double kPrevLevelEpsilonDown = -2.5886558e-07;
 
   // Previously-cached sinad when applying the smallest-detectable gain change.
   static double SinadEpsilonDown;
   // If current value is LESS than this value, then the test case fails.
-  static constexpr double kPrevSinadEpsilonDown = 91.3090642;
+  static constexpr double kPrevSinadEpsilonDown = 152.25480;
 
   // Level and unwanted artifacts -- as well as previously-cached threshold
   // limits for the same -- when applying -30dB gain (measures dynamic range).
@@ -417,17 +428,17 @@ class AudioResult {
   // Current measured SINAD at -30 gain.
   static double Sinad30Down;
   // If current value is LESS than this value, then the test case fails.
-  static constexpr double kPrevSinad30Down = 64.091308;
+  static constexpr double kPrevSinad30Down = 149.95967;
 
   // Current measured SINAD at -60 gain.
   static double Sinad60Down;
   // If current value is LESS than this value, then the test case fails.
-  static constexpr double kPrevSinad60Down = 34.196326;
+  static constexpr double kPrevSinad60Down = 149.69530;
 
   // Current measured SINAD at -90 gain.
   static double Sinad90Down;
   // If current value is LESS than this value, then the test case fails.
-  static constexpr double kPrevSinad90Down = 2.8879823;
+  static constexpr double kPrevSinad90Down = 149.58577;
 
   //
   //
@@ -444,9 +455,9 @@ class AudioResult {
   static double LevelToleranceMixFloat;
 
   // If current tolerance EXCEEDS this value, then the test case fails.
-  static constexpr double kPrevLevelToleranceMix8 = 6.7219077e-02;
-  static constexpr double kPrevLevelToleranceMix16 = 1.7031199e-04;
-  static constexpr double kPrevLevelToleranceMix24 = 3.0346074e-09;
+  static constexpr double kPrevLevelToleranceMix8 = 6.40820813e-04;
+  static constexpr double kPrevLevelToleranceMix16 = 6.85416802e-07;
+  static constexpr double kPrevLevelToleranceMix24 = 2.3196300e-09;
   static constexpr double kPrevLevelToleranceMixFloat = 5.3282082e-10;
 
   // Absolute output level (dBFS) measured in Mix tests for this input type.
@@ -469,8 +480,8 @@ class AudioResult {
 
   // If current value is LESS than this value, then the test case fails.
   static constexpr double kPrevFloorMix8 = 49.952317;
-  static constexpr double kPrevFloorMix16 = 90.677331;
-  static constexpr double kPrevFloorMix24 = 146.30926;
+  static constexpr double kPrevFloorMix16 = 98.104753;
+  static constexpr double kPrevFloorMix24 = 153.71927;
   static constexpr double kPrevFloorMixFloat = 153.74509;
 
   //
@@ -489,10 +500,10 @@ class AudioResult {
   static double LevelToleranceOutputFloat;
 
   // If current tolerance EXCEEDS this value, then the test case fails.
-  static constexpr double kPrevLevelToleranceOutput8 = 6.5638245e-02;
-  static constexpr double kPrevLevelToleranceOutput16 = 6.7860087e-02;
-  static constexpr double kPrevLevelToleranceOutput24 = 3.0250373e-07;
-  static constexpr double kPrevLevelToleranceOutputFloat = 6.8541681e-07;
+  static constexpr double kPrevLevelToleranceOutput8 = 6.4082082e-04;
+  static constexpr double kPrevLevelToleranceOutput16 = 9.9668031e-07;
+  static constexpr double kPrevLevelToleranceOutput24 = 2.5596549e-09;
+  static constexpr double kPrevLevelToleranceOutputFloat = 5.3282082e-10;
 
   // Absolute output level (dBFS) measured in Output tests for this type.
   static double LevelOutput8;
@@ -517,9 +528,9 @@ class AudioResult {
   static double FloorOutputFloat;
 
   // If current value is LESS than this value, then the test case fails.
-  static constexpr double kPrevFloorOutput8 = 45.920261;
-  static constexpr double kPrevFloorOutput16 = 97.944722;
-  static constexpr double kPrevFloorOutput24 = 146.22129;
+  static constexpr double kPrevFloorOutput8 = 49.952957;
+  static constexpr double kPrevFloorOutput16 = 98.104911;
+  static constexpr double kPrevFloorOutput24 = 153.72051;
   static constexpr double kPrevFloorOutputFloat = 153.74509;
 
   // class is static only - prevent attempts to instantiate it
@@ -533,13 +544,17 @@ class AudioResult {
   static void DumpThresholdValues();
 
  private:
-  static void DumpFreqRespValues(double* freq_resp_vals,
-                                 const std::string& arr_name);
-  static void DumpSinadValues(double* sinad_vals, const std::string& arr_name);
+  static void DumpFreqRespValues();
+  static void DumpSinadValues();
   static void DumpNoiseFloorValues();
   static void DumpLevelValues();
   static void DumpLevelToleranceValues();
   static void DumpDynamicRangeValues();
+
+  static void DumpFreqRespValueSet(double* freq_resp_vals,
+                                   const std::string& arr_name);
+  static void DumpSinadValueSet(double* sinad_vals,
+                                const std::string& arr_name);
 };
 
 }  // namespace media::audio::test

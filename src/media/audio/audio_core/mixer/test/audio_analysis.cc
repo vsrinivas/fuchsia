@@ -353,7 +353,12 @@ void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
 
   // Calculate magnitude of primary signal (even if out-of-range aliased back!)
   if (freq_out_of_range) {
-    freq = buf_size - freq;
+    while (freq > buf_size) {
+      freq -= buf_size;
+    }
+    while (freq > buf_sz_2) {
+      freq = buf_size - freq;
+    }
   }
   *magn_signal =
       std::sqrt(reals[freq] * reals[freq] + imags[freq] * imags[freq]);

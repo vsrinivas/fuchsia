@@ -403,14 +403,16 @@ void TestUnitySampleRatio(Resampler sampler_type, double* freq_resp_results,
                        sinad_results);
 }
 
-// For the given resampler, target a 3:1 downsampling ratio. We articulate this
-// by specifying a source buffer three times the length of the destination.
+// For the given resampler, target a 4:1 downsampling ratio. We articulate this
+// by specifying a source buffer almost 4x the length of the destination. We
+// need to subtract 2 (not 1) because the audio analysis module adds one to the
+// buffer length (in order to measure the Nyquist frequency bin).
 void TestDownSampleRatio0(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
-                           48000 * 3, 1, 48000, sampler_type);
+                           192000 - 2, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(mixer.get(), round(kFreqTestBufSize * 3.0),
+  MeasureFreqRespSinad(mixer.get(), round(kFreqTestBufSize * 4) - 2,
                        freq_resp_results, sinad_results);
 }
 
@@ -458,14 +460,27 @@ void TestUpSampleRatio2(Resampler sampler_type, double* freq_resp_results,
                        freq_resp_results, sinad_results);
 }
 
+// For this resampler, target the upsampling ratio "almost 1:4". We don't use
+// 1:4, as this (combined with the buffer size we have chosen, and the system
+// definition of STEP_SIZE), exactly exceeds MAX_INT for src_pos. We specify a
+// source buffer at just above 1/4 the length of the destination buffer.
+void TestUpSampleRatio3(Resampler sampler_type, double* freq_resp_results,
+                        double* sinad_results) {
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 12000,
+                           1, 48000, sampler_type);
+
+  MeasureFreqRespSinad(mixer.get(), (kFreqTestBufSize / 4), freq_resp_results,
+                       sinad_results);
+}
+
 // For the given resampler, target micro-sampling -- with a 47999:48000 ratio.
 void TestMicroSampleRatio(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 47999,
                            1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(mixer.get(), round(kFreqTestBufSize * 47999.0 / 48000.0),
-                       freq_resp_results, sinad_results);
+  MeasureFreqRespSinad(mixer.get(), kFreqTestBufSize - 1, freq_resp_results,
+                       sinad_results);
 }
 
 // Measure Freq Response for Point sampler, no rate conversion.
@@ -586,6 +601,26 @@ TEST(Sinad, Point_UpSamp2) {
 
   EvaluateSinadResults(AudioResult::SinadPointUp2.data(),
                        AudioResult::kPrevSinadPointUp2.data());
+}
+
+// Measure Freq Response for Point sampler for up-sampling ratio #3.
+TEST(FrequencyResponse, Point_UpSamp3) {
+  TestUpSampleRatio3(Resampler::SampleAndHold,
+                     AudioResult::FreqRespPointUp3.data(),
+                     AudioResult::SinadPointUp3.data());
+
+  EvaluateFreqRespResults(AudioResult::FreqRespPointUp3.data(),
+                          AudioResult::kPrevFreqRespPointUp3.data());
+}
+
+// Measure SINAD for Point sampler for up-sampling ratio #3.
+TEST(Sinad, Point_UpSamp3) {
+  TestUpSampleRatio3(Resampler::SampleAndHold,
+                     AudioResult::FreqRespPointUp3.data(),
+                     AudioResult::SinadPointUp3.data());
+
+  EvaluateSinadResults(AudioResult::SinadPointUp3.data(),
+                       AudioResult::kPrevSinadPointUp3.data());
 }
 
 // Measure Freq Response for Point sampler with minimum rate change.
@@ -726,6 +761,26 @@ TEST(Sinad, Linear_UpSamp2) {
 
   EvaluateSinadResults(AudioResult::SinadLinearUp2.data(),
                        AudioResult::kPrevSinadLinearUp2.data());
+}
+
+// Measure Freq Response for Linear sampler for up-sampling ratio #3.
+TEST(FrequencyResponse, Linear_UpSamp3) {
+  TestUpSampleRatio3(Resampler::LinearInterpolation,
+                     AudioResult::FreqRespLinearUp3.data(),
+                     AudioResult::SinadLinearUp3.data());
+
+  EvaluateFreqRespResults(AudioResult::FreqRespLinearUp3.data(),
+                          AudioResult::kPrevFreqRespLinearUp3.data());
+}
+
+// Measure SINAD for Linear sampler for up-sampling ratio #3.
+TEST(Sinad, Linear_UpSamp3) {
+  TestUpSampleRatio3(Resampler::LinearInterpolation,
+                     AudioResult::FreqRespLinearUp3.data(),
+                     AudioResult::SinadLinearUp3.data());
+
+  EvaluateSinadResults(AudioResult::SinadLinearUp3.data(),
+                       AudioResult::kPrevSinadLinearUp3.data());
 }
 
 // Measure Freq Response for Linear sampler with minimum rate change.
