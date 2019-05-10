@@ -9,8 +9,7 @@ namespace a11y_manager {
 App::App()
     : startup_context_(sys::ComponentContext::Create()),
       a11y_manager_(std::make_unique<ManagerImpl>()),
-      // TODO(MI4-1567): Re-add Settings Manager when re-design is complete.
-      // settings_manager_impl_(std::make_unique<SettingsManagerImpl>()),
+      settings_manager_impl_(std::make_unique<SettingsManagerImpl>()),
       semantics_manager_impl_(std::make_unique<SemanticsManagerImpl>()) {
   startup_context_->outgoing()
       ->AddPublicService<fuchsia::accessibility::Manager>(
@@ -19,15 +18,12 @@ App::App()
             a11y_manager_->AddBinding(std::move(request));
           });
 
-  // TODO(MI4-1567): Re-add Settings Manager when re-design is complete.
-  /*
   startup_context_->outgoing()
       ->AddPublicService<fuchsia::accessibility::SettingsManager>(
           [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager>
                      request) {
             settings_manager_impl_->AddBinding(std::move(request));
           });
-  */
 
   semantics_manager_impl_->SetDebugDirectory(
       startup_context_->outgoing()->debug_dir());

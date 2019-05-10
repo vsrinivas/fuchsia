@@ -5,7 +5,12 @@
 source_set("mocks") {
   testonly = true
 
-  sources = []
+  sources = [
+    "mock_settings_service.cc",
+    "mock_settings_service.h",
+    "mock_settings_watcher.cc",
+    "mock_settings_watcher.h",
+  ]
 
   deps = [
     "//garnet/public/lib/fsl",

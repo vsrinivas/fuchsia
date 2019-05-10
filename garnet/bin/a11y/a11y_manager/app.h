@@ -13,6 +13,7 @@
 
 #include "garnet/bin/a11y/a11y_manager/manager_impl.h"
 #include "garnet/bin/a11y/a11y_manager/semantics/semantics_manager_impl.h"
+#include "garnet/bin/a11y/a11y_manager/settings/settings_manager_impl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
@@ -29,8 +30,7 @@ class App {
   std::unique_ptr<sys::ComponentContext> startup_context_;
 
   std::unique_ptr<ManagerImpl> a11y_manager_;
-  // TODO(MI4-1567): Re-add Settings Manager when re-design is complete.
-  // std::unique_ptr<SettingsManagerImpl> settings_manager_impl_;
+  std::unique_ptr<SettingsManagerImpl> settings_manager_impl_;
   std::unique_ptr<SemanticsManagerImpl> semantics_manager_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

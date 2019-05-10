@@ -82,6 +82,8 @@ protocol SettingsManager {
     RegisterSettingProvider(request<SettingsProvider> settings_provider_request);
 
     // Registers a watcher to observe changes in accessibility settings.
+    // When a watcher is registered by calling Watch(), SettingsManager will send all the
+    // Settings as part of registration.
     Watch(SettingsWatcher watcher);
 };
 

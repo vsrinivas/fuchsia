@@ -51,6 +51,10 @@ source_set("lib") {
     "semantics/semantic_tree_impl.h",
     "semantics/semantics_manager_impl.cc",
     "semantics/semantics_manager_impl.h",
+    "settings/settings_manager_impl.cc",
+    "settings/settings_manager_impl.h",
+    "settings/settings_provider_impl.cc",
+    "settings/settings_provider_impl.h",
     "util.cc",
     "util.h",
   ]
