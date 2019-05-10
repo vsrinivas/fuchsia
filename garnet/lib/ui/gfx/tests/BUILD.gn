@@ -38,7 +38,6 @@ source_set("testing_deps") {
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic/tests:testing_deps",
     "//garnet/lib/ui/scenic/util",
-    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/inspect",
@@ -50,6 +49,7 @@ source_set("testing_deps") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/ui/lib/escher",
     "//src/ui/lib/escher/test:gtest_escher",
+    "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/zx",
   ]
 }
@@ -62,10 +62,10 @@ source_set("util") {
   ]
   public_deps = [
     "//garnet/lib/ui/scenic/util",
-    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//src/lib/fxl",
+    "//src/ui/lib/glm_workaround",
   ]
 }
 
@@ -105,7 +105,7 @@ executable("unittests") {
   deps = [
     ":testing_deps",
     "//garnet/lib/ui/gfx:object_linker",
-    "//garnet/lib/ui/util:glm_workaround",
+    "//src/ui/lib/glm_workaround",
   ]
   include_dirs = [ "//src/ui/lib/escher" ]
 }
@@ -132,7 +132,6 @@ executable("pixeltests") {
   include_dirs = [ "//src/ui/lib/escher" ]
   deps = [
     ":testing_deps",
-    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/testing/views",
@@ -145,6 +144,7 @@ executable("pixeltests") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/ui/lib/escher",
+    "//src/ui/lib/glm_workaround",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-cpp",
   ]
@@ -159,7 +159,6 @@ executable("viewstate_apptests") {
   ]
   include_dirs = [ "//src/ui/lib/escher" ]
   deps = [
-    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/testing/views",
@@ -170,6 +169,7 @@ executable("viewstate_apptests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
+    "//src/ui/lib/glm_workaround",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -183,10 +183,10 @@ executable("mock_pose_buffer_provider_cc") {
   ]
 
   deps = [
-    "//garnet/lib/ui/util:glm_workaround",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]

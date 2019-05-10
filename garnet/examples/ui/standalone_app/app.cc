@@ -5,7 +5,7 @@
 #include "garnet/examples/ui/standalone_app/app.h"
 
 // clang-format off
-#include "garnet/lib/ui/util/glm_workaround.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>

@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/root_presenter/perspective_demo_mode.h"
 
 // clang-format off
-#include "garnet/lib/ui/util/glm_workaround.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
 #include <array>

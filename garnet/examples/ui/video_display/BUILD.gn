@@ -13,7 +13,6 @@ executable("video_display") {
   ]
 
   deps = [
-    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/timeline:timeline",
@@ -22,6 +21,7 @@ executable("video_display") {
     "//sdk/fidl/fuchsia.simplecamera",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
+    "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",

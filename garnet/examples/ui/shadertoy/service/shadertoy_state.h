@@ -6,7 +6,7 @@
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 
 // clang-format off
-#include "garnet/lib/ui/util/glm_workaround.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>

@@ -6,7 +6,7 @@
 #define SRC_UI_LIB_ESCHER_GEOMETRY_TYPES_H_
 
 // clang-format off
-#include "garnet/lib/ui/util/glm_workaround.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
 #include <glm/gtc/matrix_transform.hpp>

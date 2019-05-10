@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_UI_UTIL_GLM_WORKAROUND_H_
-#define GARNET_LIB_UI_UTIL_GLM_WORKAROUND_H_
+#ifndef SRC_UI_LIB_GLM_WORKAROUND_GLM_WORKAROUND_H_
+#define SRC_UI_LIB_GLM_WORKAROUND_GLM_WORKAROUND_H_
 
 // TODO(SCN-666): Delete this file once ZX-377 is complete.
 #if defined(countof)
@@ -18,4 +18,4 @@
 #include <glm/glm.hpp>
 #endif
 
-#endif  // GARNET_LIB_UI_UTIL_GLM_WORKAROUND_H_
+#endif  // SRC_UI_LIB_GLM_WORKAROUND_GLM_WORKAROUND_H_

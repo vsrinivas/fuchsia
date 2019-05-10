@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_
 
 // clang-format off
-#include "garnet/lib/ui/util/glm_workaround.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
 #include <fuchsia/ui/input/cpp/fidl.h>

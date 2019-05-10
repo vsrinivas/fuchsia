@@ -5,7 +5,7 @@
 #include "garnet/examples/ui/video_display/simple_camera_view.h"
 
 // clang-format off
-#include "garnet/lib/ui/util/glm_workaround.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
 #include <lib/ui/scenic/cpp/commands.h>

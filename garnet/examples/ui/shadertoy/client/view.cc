@@ -5,7 +5,7 @@
 #include "garnet/examples/ui/shadertoy/client/view.h"
 
 // clang-format off
-#include "garnet/lib/ui/util/glm_workaround.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clag-format on
 
 #include <glm/gtc/type_ptr.hpp>
