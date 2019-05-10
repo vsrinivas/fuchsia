@@ -22,11 +22,19 @@
 
 namespace minfs {
 
+class InspectableInodeManager {
+public:
+    virtual ~InspectableInodeManager() {}
+
+    // Loads the inode from storage.
+    virtual void Load(ino_t inode_num, Inode* out) const = 0;
+};
+
 // InodeManager is responsible for owning the persistent storage for inodes.
 //
 // It can be used to Load and Update inodes on storage.
 // Additionally, it is responsible for allocating and freeing inodes.
-class InodeManager {
+class InodeManager : public InspectableInodeManager {
 public:
     InodeManager() = delete;
     DISALLOW_COPY_ASSIGN_AND_MOVE(InodeManager);
@@ -50,8 +58,8 @@ public:
     // Persist the inode to storage.
     void Update(WriteTxn* txn, ino_t ino, const Inode* inode);
 
-    // Load the inode from storage.
-    void Load(ino_t ino, Inode* out) const;
+    // InspectableInodeManager interface:
+    void Load(ino_t ino, Inode* out) const final;
 
     // Extend the number of inodes managed.
     //

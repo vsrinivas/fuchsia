@@ -1294,6 +1294,11 @@ zx_status_t Minfs::ReadDat(blk_t bno, void* data) {
 #endif
 }
 
+
+zx_status_t Minfs::ReadBlock(blk_t start_block_num,  void* out_data) const {
+    return bc_->Readblk(start_block_num, out_data);
+}
+
 #ifndef __Fuchsia__
 zx_status_t Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data) {
     if (bno >= hard_max) {

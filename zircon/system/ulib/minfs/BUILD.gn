@@ -15,6 +15,7 @@ library("minfs") {
     "directory.cpp",
     "file.cpp",
     "fsck.cpp",
+    "inspector.cpp",
     "metrics.cpp",
     "minfs.cpp",
     "superblock.cpp",
@@ -27,6 +28,7 @@ library("minfs") {
   }
   public_deps = [
     "$zx/system/ulib/bitmap:headers",
+    "$zx/system/ulib/disk-inspector:headers",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fs:headers",
     "$zx/system/ulib/storage-metrics:headers",
@@ -36,6 +38,7 @@ library("minfs") {
   ]
   deps = [
     "$zx/system/ulib/bitmap",
+    "$zx/system/ulib/disk-inspector",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/storage-metrics",

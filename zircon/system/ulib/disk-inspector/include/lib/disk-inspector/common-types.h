@@ -21,7 +21,7 @@ public:
     PrimitiveType& operator=(const PrimitiveType&) = delete;
     PrimitiveType& operator=(PrimitiveType&&) = delete;
 
-    PrimitiveType(fbl::String name, T* value);
+    PrimitiveType(fbl::String name, const T* value);
 
     // DiskObject interface:
     const char* GetName() const override {
@@ -44,7 +44,7 @@ private:
     fbl::String name_;
 
     // Pointer to memory location where the value is stored.
-    T* value_;
+    const T* value_;
 };
 
 using DiskObjectUint64 = PrimitiveType<uint64_t>;
@@ -60,7 +60,7 @@ public:
     PrimitiveTypeArray& operator=(const PrimitiveTypeArray&) = delete;
     PrimitiveTypeArray& operator=(PrimitiveTypeArray&&) = delete;
 
-    PrimitiveTypeArray(fbl::String name, T* value, size_t size);
+    PrimitiveTypeArray(fbl::String name, const T* value, size_t size);
 
     // DiskObject interface:
     const char* GetName() const override {
@@ -84,7 +84,7 @@ private:
     fbl::String name_;
 
     // Pointer to memory location where the value is stored.
-    T* value_;
+    const T* value_;
 
     size_t size_;
 };

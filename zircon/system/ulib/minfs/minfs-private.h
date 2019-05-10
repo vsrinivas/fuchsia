@@ -156,13 +156,27 @@ public:
     virtual Bcache* GetMutableBcache() = 0;
 };
 
+class InspectableFilesystem {
+public:
+   virtual ~InspectableFilesystem() {}
+
+   // Returns an immutable reference to the superblock.
+   virtual const Superblock& Info() const = 0;
+
+   // Gets an immutable reference to the InodeManager.
+   virtual const InspectableInodeManager* GetInodeManager() const = 0;
+
+   // Reads a block at the |start_block_num| location.
+   virtual zx_status_t ReadBlock(blk_t start_block_num, void* out_data) const = 0;
+};
+
 class Minfs :
 #ifdef __Fuchsia__
     public fs::ManagedVfs,
 #else
     public fs::Vfs,
 #endif
-    public fbl::RefCounted<Minfs>, public TransactionalFs {
+    public fbl::RefCounted<Minfs>, public TransactionalFs, public InspectableFilesystem {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
 
@@ -324,10 +338,16 @@ public:
     fbl::Vector<BlockRegion> GetAllocatedRegions() const;
 #endif
 
-    // Return an immutable reference to a copy of the internal info.
-    const Superblock& Info() const {
+    // InspectableFilesystem interface.
+    const Superblock& Info() const final {
         return sb_->Info();
     }
+
+    const InspectableInodeManager* GetInodeManager() const final {
+        return inodes_.get();
+    }
+
+    zx_status_t ReadBlock(blk_t start_block_num, void* data) const final;
 
     const TransactionLimits& Limits() const {
         return limits_;

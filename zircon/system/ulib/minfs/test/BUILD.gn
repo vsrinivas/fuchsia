@@ -6,6 +6,7 @@ group("test") {
   testonly = true
   deps = [
     ":minfs-format-unit",
+    ":minfs-inspector-unit",
     ":minfs-work-queue-unit",
   ]
 }
@@ -33,6 +34,23 @@ test("minfs-format-unit") {
   ]
   deps = [
     "$zx/system/ulib/minfs",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zxtest",
+  ]
+  include_dirs = [ "$zx/system/ulib/minfs" ]
+}
+
+test("minfs-inspector-unit") {
+  test_group = "fs"
+  sources = [
+    "inspector-test.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-minfs:c",
+    "$zx/system/ulib/block-client",
+    "$zx/system/ulib/disk-inspector",
+    "$zx/system/ulib/minfs",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxtest",
   ]
