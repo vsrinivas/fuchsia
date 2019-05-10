@@ -74,19 +74,6 @@ zx::suspend_token SyncSuspendThread(zx::thread& thread) {
   return token;
 }
 
-// Returns the closest IP in the given stack that's equal to or after the given
-// input. Returns kNoAddr if not found.
-constexpr uint64_t kNoAddr = static_cast<uint64_t>(-1);
-uint64_t ClosestAddressAfter(const std::vector<debug_ipc::StackFrame>& stack,
-                             uint64_t after) {
-  uint64_t best = kNoAddr;
-  for (const auto& frame : stack) {
-    if (frame.ip >= after && frame.ip < best)
-      best = frame.ip;
-  }
-  return best;
-}
-
 void DoUnwindTest() {
   ThreadData data;
   std::thread background(ThreadFunc1, &data);
@@ -134,29 +121,8 @@ void DoUnwindTest() {
   EXPECT_TRUE(stack[0].ip != 0);
   EXPECT_TRUE(stack[0].regs.size() >= 8);
 
-  // Expect the IP to be within this many bytes after the function beginning of
-  // the two frames we have.
-  constexpr uint64_t kThreshold = 1024;
-
-  // This checking makes the assumption that the two ThreadFunc* functions are
-  // reasonable in one block and that the instruction pointer of a backtrace
-  // that includes these functions is within a certain distance of the address
-  // of the function.
-  //
-  // If something like a toolchain roll causes this test to start failing, it
-  // could be because the code was scrambled more that we expected. This test
-  // can be disabled and a bug filed.
-  uint64_t func1_addr =
-      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&ThreadFunc1));
-  uint64_t func1_ip = ClosestAddressAfter(stack, func1_addr);
-  EXPECT_TRUE(func1_ip != kNoAddr);
-  EXPECT_TRUE(func1_ip - func1_addr <= kThreshold);
-
-  uint64_t func2_addr =
-      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&ThreadFunc2));
-  uint64_t func2_ip = ClosestAddressAfter(stack, func2_addr);
-  EXPECT_TRUE(func2_ip != kNoAddr);
-  EXPECT_TRUE(func2_ip - func2_addr <= kThreshold);
+  // TODO: It might be nice to write the thread functions in assembly so we can
+  // know what the addresses are supposed to be.
 }
 
 }  // namespace
