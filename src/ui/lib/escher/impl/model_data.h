@@ -61,7 +61,7 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
   // The VP matrix is put into its own binding in the PerModel DescriptorSet
   // in order to allow it to be bound to a separate buffer to allow late
   // latching view matrices from a PoseBuffer. For details see
-  // garnet/public/lib/escher/hmd/pose_buffer_latching_shader.h
+  // src/ui/lib/escher/hmd/pose_buffer_latching_shader.h
   struct ViewProjection {
     // layout(set = 0, binding = 2) uniform ViewProjection { ... }
     static constexpr uint32_t kDescriptorSetUniformBinding = 2;

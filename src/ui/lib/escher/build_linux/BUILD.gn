@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 # Escher can be developed for a Linux target only on a Linux host.  Putting
-# the following targets in //garnet/public/lib/escher/BUILD.gn caused problems on OS X hosts,
+# the following targets in //src/ui/lib/escher/BUILD.gn caused problems on OS X hosts,
 # so they were moved into a separate file.
 
 group("examples") {

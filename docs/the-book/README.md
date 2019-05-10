@@ -104,7 +104,7 @@ also provides core drivers and Fuchsia's libc implementation.
 [bluetooth]: /garnet/bin/bluetooth/README.md
 [telephony]: /src/connectivity/telephony/
 [magma]: /garnet/lib/magma/
-[escher]: /garnet/public/lib/escher/
+[escher]: /src/ui/lib/escher/README.md
 [scenic]: /garnet/docs/ui/scenic.md
 [input-manager]: /garnet/docs/ui/input.md
 [flutter]: https://flutter.io/

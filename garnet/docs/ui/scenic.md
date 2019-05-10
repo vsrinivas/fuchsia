@@ -61,7 +61,7 @@ which also involves coordinating gesture recognition across clients. _Anim_
 is a yet-to-be created system for coordinating transitions across clients
 as well as offloading animations to Scenic.
 
-[_Escher_](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/escher/README.md)
+[_Escher_](https://fuchsia.googlesource.com/fuchsia/+/master/src/ui/lib/escher/README.md)
 is a Vulkan-based rendering library used by the _Gfx_ system.
 
 _Root Presenter_ is an independent service which is responsible for
