@@ -1,0 +1,21 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/icd_load"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp",
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

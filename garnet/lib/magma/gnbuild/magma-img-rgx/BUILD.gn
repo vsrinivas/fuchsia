@@ -3,13 +3,26 @@
 # found in the LICENSE file.
 
 import("//build/cipd.gni")
+import("//build/config.gni")
 import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-package("magma-img-rgx-mtk") {
+group("magma-vulkan") {
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
+  public_deps = [
+    ":magma-img-rgx-mt8167",
+  ]
+  if (build_libvulkan_img_rgx != []) {
+    public_deps += [ ":magma-img-rgx-mt8167-config" ]
+  }
+}
+
+package("magma-img-rgx-mt8167") {
   deprecated_system_image = true
   deps = [
-    "//garnet/drivers/gpu/msd-img-rgx/mtk:msd_img_rgx_mtk",
+    "//garnet/drivers/gpu/msd-img-rgx/mtk:msd_img_rgx_mt8167",
   ]
 
   # internal access is needed to get the firmware.
@@ -23,11 +36,43 @@ package("magma-img-rgx-mtk") {
       },
     ]
   }
+  if (build_libvulkan_img_rgx != []) {
+    deps += build_libvulkan_img_rgx
+    libraries += [
+      {
+        name = "libvulkan_img_rgx_mt8167.so"
+      },
+    ]
+  }
   drivers = [
     {
-      name = "libmsd_img_rgx_mtk.so"
+      name = "libmsd_img_rgx_mt8167.so"
     },
   ]
+}
+
+if (build_libvulkan_img_rgx != []) {
+  # api_version must be present but is unused
+  icd_data = [
+    "{",
+    "\"file_format_version\": \"1.0.0\",",
+    "\"ICD\": {",
+    "\"library_path\": \"libvulkan_img_rgx_mt8167.so\",",
+    "\"api_version\": \"1.0.0\"",
+    "}",
+    "}",
+  ]
+  write_file("$target_gen_dir/vulkan/icd.d/libvulkan_img_rgx_mt8167.json",
+             icd_data)
+  config_data("magma-img-rgx-mt8167-config") {
+    for_pkg = "vulkan-icd"
+    sources = [
+      rebase_path("$target_gen_dir/vulkan/icd.d/libvulkan_img_rgx_mt8167.json"),
+    ]
+    outputs = [
+      "icd.d/{{source_file_part}}",
+    ]
+  }
 }
 
 copy("firmware") {

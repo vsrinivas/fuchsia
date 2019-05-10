@@ -19,6 +19,7 @@ group("tests") {
   if (have_libvulkan || use_vulkan_loader_for_tests) {
     deps += [
       "benchmark",
+      "icd_load",
       "vkext",
       "vkloop",
       "vkpriority",
@@ -79,6 +80,7 @@ package("vulkan-tests") {
   if (have_libvulkan || use_vulkan_loader_for_tests) {
     deps = [
       "benchmark",
+      "icd_load",
       "vkext",
       "vkloop",
       "vkpriority",
@@ -89,6 +91,10 @@ package("vulkan-tests") {
     public_deps = vulkan_validation_layers.public_deps
 
     tests = [
+      {
+        name = "icd_load"
+        environments = magma_hardware_envs
+      },
       {
         name = "magma_memcpy"
         environments = magma_hardware_envs
@@ -127,6 +133,10 @@ package("vulkan-tests") {
     ]
 
     meta = [
+      {
+        path = rebase_path("meta/icd_load.cmx")
+        dest = "icd_load.cmx"
+      },
       {
         path = rebase_path("meta/vkext.cmx")
         dest = "vkext.cmx"

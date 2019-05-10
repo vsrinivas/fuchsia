@@ -229,7 +229,7 @@ group("all") {
     "//garnet/packages/prod:log_listener",
     "//garnet/packages/prod:logger",
     "//garnet/packages/prod:magma-arm-mali",
-    "//garnet/packages/prod:magma-img-rgx-mtk",
+    "//garnet/packages/prod:magma-img-rgx-mt8167",
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:mdns",
     "//garnet/packages/prod:mdns-util",
@@ -1072,10 +1072,10 @@ if (target_cpu == "x64") {
   }
 }
 
-group("magma-img-rgx-mtk") {
+group("magma-img-rgx-mt8167") {
   testonly = true
   public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-img-rgx-mtk",
+    "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-vulkan",
   ]
 }
 

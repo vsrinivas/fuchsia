@@ -5,8 +5,8 @@
 import("//build/config/fuchsia/rules.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-driver_module("msd_img_rgx_mtk") {
-  output_name = "libmsd_img_rgx_mtk"
+driver_module("msd_img_rgx_mt8167") {
+  output_name = "libmsd_img_rgx_mt8167"
 
   deps = [
     ":driver_sources",
