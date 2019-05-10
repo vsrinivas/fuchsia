@@ -377,10 +377,10 @@ where
         match req {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                 match try_inherit_rights_for_clone(connection.flags, flags) {
-                    Ok(clone_flags) =>
-                        self.add_connection(connection.flags, clone_flags, 0, object),
-                    Err(status) =>
-                        send_on_open_with_error(flags, object, status),
+                    Ok(clone_flags) => {
+                        self.add_connection(connection.flags, clone_flags, 0, object)
+                    }
+                    Err(status) => send_on_open_with_error(flags, object, status),
                 }
             }
             DirectoryRequest::Close { responder } => {

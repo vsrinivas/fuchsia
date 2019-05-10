@@ -7,8 +7,8 @@
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        NodeMarker, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        OPEN_RIGHT_ADMIN, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_APPEND
+        NodeMarker, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
 };
@@ -17,10 +17,7 @@ use {
 const FS_RIGHTS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_ADMIN;
 
 /// Returns true if the rights flags in `flags_a` does not exceed those in `flags_b`.
-pub fn stricter_or_same_rights(
-    flags_a: u32,
-    flags_b: u32
-) -> bool {
+pub fn stricter_or_same_rights(flags_a: u32, flags_b: u32) -> bool {
     let rights_a = flags_a & FS_RIGHTS;
     let rights_b = flags_b & FS_RIGHTS;
     return (rights_a & !rights_b) == 0;
@@ -28,10 +25,7 @@ pub fn stricter_or_same_rights(
 
 /// Common logic for rights processing during cloning a node, shared by both file and directory
 /// implementations.
-pub fn try_inherit_rights_for_clone(
-    source_flags: u32,
-    mut flags: u32
-) -> Result<u32, Status> {
+pub fn try_inherit_rights_for_clone(source_flags: u32, mut flags: u32) -> Result<u32, Status> {
     if (flags & CLONE_FLAG_SAME_RIGHTS != 0) && (flags & FS_RIGHTS != 0) {
         return Err(Status::INVALID_ARGS);
     }
