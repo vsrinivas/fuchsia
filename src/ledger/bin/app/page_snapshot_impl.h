@@ -30,17 +30,7 @@ class PageSnapshotImpl
       fit::function<void(Status, IterationStatus, std::vector<Entry>,
                          std::unique_ptr<Token>)>
           callback) override;
-  void GetEntriesNew(
-      std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-      fit::function<void(Status, IterationStatus, std::vector<Entry>,
-                         std::unique_ptr<Token>)>
-          callback) override;
   void GetEntriesInline(
-      std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-      fit::function<void(Status, IterationStatus, std::vector<InlinedEntry>,
-                         std::unique_ptr<Token>)>
-          callback) override;
-  void GetEntriesInlineNew(
       std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
       fit::function<void(Status, IterationStatus, std::vector<InlinedEntry>,
                          std::unique_ptr<Token>)>
@@ -50,44 +40,21 @@ class PageSnapshotImpl
                                   std::vector<std::vector<uint8_t>>,
                                   std::unique_ptr<Token>)>
                    callback) override;
-  void GetKeysNew(std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-                  fit::function<void(Status, IterationStatus,
-                                     std::vector<std::vector<uint8_t>>,
-                                     std::unique_ptr<Token>)>
-                      callback) override;
   void Get(std::vector<uint8_t> key,
            fit::function<void(Status, fuchsia::ledger::PageSnapshot_Get_Result)>
                callback) override;
-  void GetNew(
-      std::vector<uint8_t> key,
-      fit::function<void(Status, fuchsia::ledger::PageSnapshot_GetNew_Result)>
-          callback) override;
   void GetInline(std::vector<uint8_t> key,
                  fit::function<void(
                      Status, fuchsia::ledger::PageSnapshot_GetInline_Result)>
                      callback) override;
-  void GetInlineNew(
-      std::vector<uint8_t> key,
-      fit::function<void(Status,
-                         fuchsia::ledger::PageSnapshot_GetInlineNew_Result)>
-          callback) override;
   void Fetch(
       std::vector<uint8_t> key,
       fit::function<void(Status, fuchsia::ledger::PageSnapshot_Fetch_Result)>
-          callback) override;
-  void FetchNew(
-      std::vector<uint8_t> key,
-      fit::function<void(Status, fuchsia::ledger::PageSnapshot_FetchNew_Result)>
           callback) override;
   void FetchPartial(
       std::vector<uint8_t> key, int64_t offset, int64_t max_size,
       fit::function<void(Status,
                          fuchsia::ledger::PageSnapshot_FetchPartial_Result)>
-          callback) override;
-  void FetchPartialNew(
-      std::vector<uint8_t> key, int64_t offset, int64_t max_size,
-      fit::function<void(Status,
-                         fuchsia::ledger::PageSnapshot_FetchPartialNew_Result)>
           callback) override;
 
   storage::PageStorage* page_storage_;

@@ -105,38 +105,6 @@ class FakeSnapshotImpl : public PageSnapshot {
                     FetchPartialCallback /*callback*/) override {
     FXL_NOTIMPLEMENTED();
   }
-
-  void GetEntriesInlineNew(std::vector<uint8_t> /*key_start*/,
-                           std::unique_ptr<Token> /*token*/,
-                           GetEntriesInlineNewCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void GetEntriesNew(std::vector<uint8_t> /*key_start*/,
-                     std::unique_ptr<Token> /*token*/,
-                     GetEntriesNewCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void GetKeysNew(std::vector<uint8_t> /*key_start*/,
-                  std::unique_ptr<Token> /*token*/,
-                  GetKeysNewCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void GetNew(std::vector<uint8_t> /*key*/, GetNewCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void GetInlineNew(std::vector<uint8_t> /*key*/,
-                    GetInlineNewCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void FetchNew(std::vector<uint8_t> /*key*/,
-                FetchNewCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void FetchPartialNew(std::vector<uint8_t> /*key*/, int64_t /*offset*/,
-                       int64_t /*max_size*/,
-                       FetchPartialNewCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
-  }
 };
 
 TEST_F(SerializationSizeTest, GetInline) {
