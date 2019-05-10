@@ -10,13 +10,11 @@
 // This is needed for the pseudo_directory nesting in crate::model::tests
 #![recursion_limit = "128"]
 
-#[macro_use]
-mod log;
-
 mod directory_broker;
 mod elf_runner;
 mod fuchsia_boot_resolver;
 mod fuchsia_pkg_resolver;
+mod klog;
 mod model;
 mod ns_util;
 
@@ -53,9 +51,10 @@ fn parse_args() -> Result<Opt, Error> {
 }
 
 fn main() -> Result<(), Error> {
+    klog::KernelLogger::init().expect("Failed to initialize logger");
     let opt = parse_args()?;
 
-    log_info!("Component manager is starting up...");
+    info!("Component manager is starting up...");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
@@ -91,7 +90,7 @@ async fn run_root(model: Arc<Model>) {
             await!(future::empty::<()>())
         }
         Err(error) => {
-            log_error!("Failed to bind to root component: {:?}", error);
+            error!("Failed to bind to root component: {:?}", error);
             process::exit(1)
         }
     }

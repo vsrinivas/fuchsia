@@ -99,7 +99,6 @@ impl Resolver for FuchsiaPkgResolver {
 mod tests {
     use {
         super::*,
-        crate::log::*,
         cm_fidl_translator,
         fidl::endpoints,
         fidl_fuchsia_data as fdata,
@@ -199,7 +198,7 @@ mod tests {
                 ResolverError::$resolver_error_expected { uri: u, .. } => {
                     assert_eq!(u, uri);
                 }
-                e => log_fatal!("unexpected error {:?}", e),
+                e => panic!("unexpected error {:?}", e),
             }
         };
     }

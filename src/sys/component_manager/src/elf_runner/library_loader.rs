@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::log::*,
     crate::ns_util::{self, PKG_PATH},
     failure::{err_msg, format_err, Error},
     fidl::endpoints::RequestStream,
@@ -12,6 +11,7 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
     io_util,
+    log::*,
     std::collections::HashMap,
     std::path::PathBuf,
 };
@@ -37,7 +37,7 @@ pub fn start(ns_map: HashMap<PathBuf, DirectoryProxy>, chan: zx::Channel) {
                         match await!(load_object(&ns_map, PathBuf::from(object_path))) {
                             Ok(b) => responder.send(zx::sys::ZX_OK, Some(b))?,
                             Err(e) => {
-                                log_warn!("failed to load object: {}", e);
+                                warn!("failed to load object: {}", e);
                                 responder.send(zx::sys::ZX_ERR_NOT_FOUND, None)?;
                             }
                         };
@@ -67,7 +67,7 @@ pub fn start(ns_map: HashMap<PathBuf, DirectoryProxy>, chan: zx::Channel) {
             }
             Ok(())
         }
-            .unwrap_or_else(|e: Error| log_warn!("couldn't run library loader service: {}", e)),
+            .unwrap_or_else(|e: Error| warn!("couldn't run library loader service: {}", e)),
     ); // TODO
 }
 

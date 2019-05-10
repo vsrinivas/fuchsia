@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::log::*,
     crate::model::*,
     crate::ns_util::PKG_PATH,
     crate::{directory_broker, io_util},
@@ -14,6 +13,7 @@ use {
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
     fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, FutureObj},
+    log::*,
     std::{collections::HashMap, iter},
 };
 
@@ -143,7 +143,7 @@ impl IncomingNamespace {
                 server_end_chan.into_zx_channel()
             ));
             if let Err(e) = res {
-                log_error!("failed to route directory for component {}: {:?}", abs_moniker, e);
+                error!("failed to route directory for component {}: {:?}", abs_moniker, e);
             }
         };
 
@@ -196,7 +196,7 @@ impl IncomingNamespace {
                     server_end.into_channel()
                 ));
                 if let Err(e) = res {
-                    log_error!("failed to route service for component {}: {:?}", abs_moniker, e);
+                    error!("failed to route service for component {}: {:?}", abs_moniker, e);
                 }
             });
         });
