@@ -9,7 +9,7 @@ use {
     failure::{bail, Error, Fail, ResultExt},
     fidl::{
         encoding::OutOfLine,
-        endpoints::{Proxy as _, RequestStream, ServiceMarker},
+        endpoints::{Proxy as _, RequestStream, ServerEnd, ServiceMarker},
     },
     fidl_fuchsia_io::{
         DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes, NodeInfo,
@@ -606,6 +606,42 @@ impl Future for ClientConnection {
 #[fail(display = "The startup handle on which the FIDL server attempted to start was missing.")]
 pub struct MissingStartupHandle;
 
+fn send_failed_on_open(
+    object: ServerEnd<NodeMarker>,
+    status: zx::sys::zx_status_t,
+) -> Result<(), Error> {
+    let (_stream, control_handle) = object
+        .into_stream_and_control_handle()
+        .context("fail to convert to stream and control handle")?;
+    control_handle.send_on_open_(status, None).context("fail sending OnOpenEvent")?;
+    Ok(())
+}
+
+fn maybe_send_error(
+    object: ServerEnd<NodeMarker>,
+    flags: u32,
+    error: zx::sys::zx_status_t,
+) -> Result<(), Error> {
+    if (flags & OPEN_FLAG_DESCRIBE) != 0 {
+        send_failed_on_open(object, error)?;
+    }
+    Ok(())
+}
+
+fn handle_potentially_unsupported_flags(
+    object: ServerEnd<NodeMarker>,
+    flags: u32,
+    supported_flags_bitmask: u32,
+) -> Result<ServerEnd<NodeMarker>, Error> {
+    let unsupported_flags = flags & !supported_flags_bitmask;
+    if unsupported_flags != 0 {
+        maybe_send_error(object, flags, zx::sys::ZX_ERR_NOT_SUPPORTED)?;
+        bail!("unsupported flags: {:b}", unsupported_flags);
+    } else {
+        Ok(object)
+    }
+}
+
 impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     /// Removes the `DirectoryRequest` startup handle for the current
     /// component and adds connects it to this `ServiceFs` as a client.
@@ -679,26 +715,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
         }
 
-        macro_rules! maybe_send_error {
-            ($object:ident, $flags:expr, $error:expr) => {
-                if ($flags & OPEN_FLAG_DESCRIBE) != 0 {
-                    self.send_failed_on_open($object, $error)?;
-                }
-            };
-        }
-
-        macro_rules! handle_potentially_unsupported_flags {
-            ($object:ident, $flags:expr, $supported_flags_bitmask:expr) => {
-                if has_unsupported_flags($flags, $supported_flags_bitmask) {
-                    maybe_send_error!($object, $flags, zx::sys::ZX_ERR_NOT_SUPPORTED);
-                    bail!("flags contains unsupported flags: {}", $flags);
-                }
-            };
-        }
-
         match request {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                handle_potentially_unsupported_flags!(object, flags, CLONE_REQ_SUPPORTED_FLAGS);
+                let object =
+                    handle_potentially_unsupported_flags(object, flags, CLONE_REQ_SUPPORTED_FLAGS)?;
 
                 if let Err(e) =
                     self.serve_connection_at(object.into_channel(), connection.position, flags)
@@ -711,7 +731,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 return Ok((None, ConnectionState::Closed));
             }
             DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _ } => {
-                handle_potentially_unsupported_flags!(object, flags, OPEN_REQ_SUPPORTED_FLAGS);
+                let object =
+                    handle_potentially_unsupported_flags(object, flags, OPEN_REQ_SUPPORTED_FLAGS)?;
 
                 if path == "." {
                     if let Err(e) =
@@ -721,7 +742,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     }
                     return Ok((None, ConnectionState::Open));
                 } else if path == "" {
-                    maybe_send_error!(object, flags, zx::sys::ZX_ERR_BAD_PATH);
+                    maybe_send_error(object, flags, zx::sys::ZX_ERR_BAD_PATH)?;
                     return Ok((None, ConnectionState::Open));
                 }
 
@@ -732,7 +753,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     Ok(children) => children,
                     Err(e) => {
                         eprintln!("invalid path {} - {}", path, e);
-                        maybe_send_error!(object, flags, zx::sys::ZX_ERR_BAD_PATH);
+                        maybe_send_error(object, flags, zx::sys::ZX_ERR_BAD_PATH)?;
                         return Ok((None, ConnectionState::Open));
                     }
                 };
@@ -750,7 +771,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                         }
                         ServiceFsNode::Service(service) => {
                             if flags & OPEN_FLAG_DIRECTORY != 0 {
-                                self.send_failed_on_open(object, zx::sys::ZX_ERR_NOT_DIR)?;
+                                send_failed_on_open(object, zx::sys::ZX_ERR_NOT_DIR)?;
                                 return Ok((None, ConnectionState::Open));
                             }
                             // Case 1: client opens node to get more metadata on it (by calling
@@ -776,7 +797,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                         }
                     }
                 } else {
-                    maybe_send_error!(object, flags, zx::sys::ZX_ERR_NOT_FOUND);
+                    maybe_send_error(object, flags, zx::sys::ZX_ERR_NOT_FOUND)?;
                     return Ok((None, ConnectionState::Open));
                 }
             }
@@ -840,18 +861,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         Ok((None, ConnectionState::Open))
     }
 
-    fn send_failed_on_open(
-        &self,
-        object: fidl::endpoints::ServerEnd<NodeMarker>,
-        status: zx::sys::zx_status_t,
-    ) -> Result<(), Error> {
-        let (_stream, control_handle) = object
-            .into_stream_and_control_handle()
-            .context("fail to convert to stream and control handle")?;
-        control_handle.send_on_open_(status, None).context("fail sending OnOpenEvent")?;
-        Ok(())
-    }
-
     fn describe_node(&self, pos: usize) -> Option<NodeInfo> {
         self.nodes.get(pos).map(|node| match node {
             ServiceFsNode::Directory { .. } => NodeInfo::Directory(DirectoryObject),
@@ -911,10 +920,6 @@ fn write_dirent_bytes(buf: &mut Vec<u8>, ino: u64, typ: u8, name: &str) -> Resul
     buf.write_u8(typ as u8).unwrap();
     buf.write(name.as_ref()).unwrap();
     Ok(())
-}
-
-fn has_unsupported_flags(flags: u32, supported_flags_bitmask: u32) -> bool {
-    (flags & !supported_flags_bitmask) != 0
 }
 
 impl<ServiceObjTy: ServiceObjTrait> Unpin for ServiceFs<ServiceObjTy> {}
