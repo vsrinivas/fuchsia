@@ -35,11 +35,6 @@ impl SourceConfigBuilder {
         }
     }
 
-    pub fn id(mut self, value: impl Into<String>) -> Self {
-        self.config.id = value.into();
-        self
-    }
-
     pub fn repo_url(mut self, value: impl Into<String>) -> Self {
         self.config.repo_url = value.into();
         self.config.blob_repo_url = format!("{}/blobs", self.config.repo_url);
@@ -97,9 +92,6 @@ pub struct SourceConfig {
 impl SourceConfig {
     pub fn id(&self) -> &str {
         self.id.as_str()
-    }
-    pub fn repo_url(&self) -> &str {
-        self.repo_url.as_str()
     }
 }
 
