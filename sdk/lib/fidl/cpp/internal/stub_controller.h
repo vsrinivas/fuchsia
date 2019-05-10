@@ -5,14 +5,14 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_STUB_CONTROLLER_H_
 #define LIB_FIDL_CPP_INTERNAL_STUB_CONTROLLER_H_
 
-#include <memory>
-
+#include <lib/fidl/cpp/internal/message_handler.h>
+#include <lib/fidl/cpp/internal/message_reader.h>
+#include <lib/fidl/cpp/internal/message_sender.h>
+#include <lib/fidl/cpp/internal/stub.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/zx/channel.h>
 
-#include "lib/fidl/cpp/internal/message_handler.h"
-#include "lib/fidl/cpp/internal/message_reader.h"
-#include "lib/fidl/cpp/internal/stub.h"
+#include <memory>
 
 namespace fidl {
 namespace internal {
@@ -24,7 +24,7 @@ class WeakStubController;
 // objects are used on the server endpoint of a FIDL channel to decode messages
 // received over the channel and dispatch them to an implementation of the
 // protocol.
-class StubController : public MessageHandler {
+class StubController final : public MessageHandler, public MessageSender {
  public:
   StubController();
   ~StubController() override;
@@ -49,7 +49,7 @@ class StubController : public MessageHandler {
   //
   // Returns an error if the message fails to encode properly or if the message
   // cannot be written to the channel.
-  zx_status_t Send(const fidl_type_t* type, Message message);
+  zx_status_t Send(const fidl_type_t* type, Message message) final;
 
  private:
   // Called by the |MessageReader| when a message arrives on the channel from

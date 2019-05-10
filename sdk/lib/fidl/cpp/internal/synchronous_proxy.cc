@@ -20,13 +20,7 @@ SynchronousProxy::~SynchronousProxy() = default;
 zx::channel SynchronousProxy::TakeChannel() { return std::move(channel_); }
 
 zx_status_t SynchronousProxy::Send(const fidl_type_t* type, Message message) {
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Validate(type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
-    return status;
-  }
-  return message.Write(channel_.get(), 0);
+  return fidl::internal::SendMessage(channel_, type, std::move(message));
 }
 
 zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,

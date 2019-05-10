@@ -63,14 +63,8 @@ zx_status_t PendingResponse::Send(const fidl_type_t* type, Message message) {
   if (!controller)
     return ZX_ERR_BAD_STATE;
   message.set_txid(txid_);
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Validate(type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
-    return status;
-  }
-  zx_handle_t channel = controller->reader().channel().get();
-  return message.Write(channel, 0);
+  return fidl::internal::SendMessage(controller->reader().channel(), type,
+                                     std::move(message));
 }
 
 }  // namespace internal

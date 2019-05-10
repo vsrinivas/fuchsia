@@ -5,14 +5,13 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_STUB_H_
 #define LIB_FIDL_CPP_INTERNAL_STUB_H_
 
+#include <lib/fidl/cpp/internal/pending_response.h>
 #include <lib/fidl/cpp/message.h>
 #include <zircon/types.h>
 
-#include "lib/fidl/cpp/internal/pending_response.h"
-
 namespace fidl {
 namespace internal {
-class StubController;
+class MessageSender;
 
 // An interface for dispatching FIDL messages to a protocol implementation.
 //
@@ -34,15 +33,15 @@ class Stub {
   // safe to transport to another thread.
   virtual zx_status_t Dispatch_(Message message, PendingResponse response) = 0;
 
-  // The protocol-agnostic object that listens for incoming messages.
+  // The protocol-agnostic object that can send messages.
   //
-  // The controller must be set to a non-null value before sending events
+  // The sender must be set to a non-null value before sending events
   // through this stub.
-  StubController* controller_() const { return stub_controller_; }
-  void set_controller(StubController* controller) { stub_controller_ = controller; }
+  MessageSender* sender_() const { return message_sender_; }
+  void set_sender(MessageSender* sender) { message_sender_ = sender; }
 
  private:
-  StubController* stub_controller_ = nullptr;
+  MessageSender* message_sender_ = nullptr;
 };
 
 }  // namespace internal

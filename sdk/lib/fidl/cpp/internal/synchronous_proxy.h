@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_SYNCHRONOUS_PROXY_H_
 #define LIB_FIDL_CPP_INTERNAL_SYNCHRONOUS_PROXY_H_
 
+#include <lib/fidl/cpp/internal/message_sender.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -19,7 +20,7 @@ namespace internal {
 // and (optionally) blocks until it receives a reply.
 //
 // Instances of this class are thread-safe.
-class SynchronousProxy final {
+class SynchronousProxy final : public MessageSender {
  public:
   // Creates a |SynchronousProxy| that wraps the given channel.
   explicit SynchronousProxy(zx::channel channel);
@@ -37,7 +38,7 @@ class SynchronousProxy final {
   // Does not block.
   //
   // Returns an error if validation or writing fails.
-  zx_status_t Send(const fidl_type_t* type, Message message);
+  zx_status_t Send(const fidl_type_t* type, Message message) final;
 
   // Validate that |request| matches the given |request_type| and sends
   // |request| through the underlying channel. Blocks until it receives a

@@ -16,13 +16,8 @@ StubController::StubController() : weak_(nullptr), reader_(this) {}
 StubController::~StubController() { InvalidateWeakIfNeeded(); }
 
 zx_status_t StubController::Send(const fidl_type_t* type, Message message) {
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Validate(type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
-    return status;
-  }
-  return message.Write(reader_.channel().get(), 0);
+  return fidl::internal::SendMessage(reader_.channel(), type,
+                                     std::move(message));
 }
 
 zx_status_t StubController::OnMessage(Message message) {

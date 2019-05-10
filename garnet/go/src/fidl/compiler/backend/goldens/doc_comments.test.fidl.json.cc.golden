@@ -323,7 +323,7 @@ zx_status_t Interface_Stub::Dispatch_(
 }
 void Interface_Stub::OnEvent() {
   ::fidl::Encoder _encoder(kInterface_OnEvent_Ordinal);
-  controller_()->Send(&test_name_InterfaceOnEventEventTable, _encoder.GetMessage());
+  sender_()->Send(&test_name_InterfaceOnEventEventTable, _encoder.GetMessage());
 }
 
 Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)

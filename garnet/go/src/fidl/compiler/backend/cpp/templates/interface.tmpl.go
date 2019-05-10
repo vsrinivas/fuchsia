@@ -414,7 +414,7 @@ void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
   ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
       {{- end }}
     {{- end }}
-  controller_()->Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
+  sender_()->Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
 }
     {{- end }}
   {{- end }}

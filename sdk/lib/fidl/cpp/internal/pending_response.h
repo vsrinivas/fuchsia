@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_PENDING_RESPONSE_H_
 #define LIB_FIDL_CPP_INTERNAL_PENDING_RESPONSE_H_
 
+#include <lib/fidl/cpp/internal/message_sender.h>
 #include <lib/fidl/cpp/message_builder.h>
 #include <zircon/types.h>
 
@@ -23,7 +24,7 @@ class WeakStubController;
 // unbound from the underlying channel (e.g., due to an error), the stub can
 // still safely call |Send|, but the response will not actually be sent to the
 // client.
-class PendingResponse final {
+class PendingResponse final : public MessageSender {
  public:
   // Creates a |PendingResponse| that does not need a response.
   //
@@ -73,7 +74,7 @@ class PendingResponse final {
   //
   // If the associated |WeakStubController| is no longer available (e.g., if it
   // has been destroyed), this function will return |ZX_ERR_BAD_STATE|.
-  zx_status_t Send(const fidl_type_t* type, Message message);
+  zx_status_t Send(const fidl_type_t* type, Message message) final;
 
  private:
   // This class should be small enough to fit into the inline storage for an

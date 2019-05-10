@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/c/fidl.h>
+#include <lib/fidl/cpp/event_sender.h>
 #include <lib/vfs/cpp/flags.h>
 #include <lib/vfs/cpp/internal/connection.h>
 #include <lib/vfs/cpp/internal/node.h>
@@ -216,11 +216,8 @@ void Node::SendOnOpenEventOnError(uint32_t flags, zx::channel request,
     return;
   }
 
-  fuchsia_io_NodeOnOpenEvent msg;
-  memset(&msg, 0, sizeof(msg));
-  msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
-  msg.s = status;
-  request.write(0, &msg, sizeof(msg), nullptr, 0);
+  fidl::EventSender<fuchsia::io::Node> sender(std::move(request));
+  sender.events().OnOpen(status, nullptr);
 }
 
 uint64_t Node::GetConnectionCount() const {

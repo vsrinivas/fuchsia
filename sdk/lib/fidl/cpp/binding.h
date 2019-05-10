@@ -6,17 +6,16 @@
 #define LIB_FIDL_CPP_BINDING_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/fidl/cpp/interface_handle.h>
+#include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fidl/cpp/internal/stub_controller.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 
 #include <memory>
 #include <utility>
-
-#include "lib/fidl/cpp/interface_handle.h"
-#include "lib/fidl/cpp/interface_ptr.h"
-#include "lib/fidl/cpp/interface_request.h"
-#include "lib/fidl/cpp/internal/stub_controller.h"
 
 namespace fidl {
 
@@ -58,9 +57,10 @@ namespace fidl {
 // See also:
 //
 //  * |InterfacePtr|, which is the client analog of a |Binding|.
+//  * |EventSender|, which can send messages from multiple threads safely.
 template <typename Interface, typename ImplPtr = Interface*>
 class Binding final {
-private:
+ private:
   template <class T>
   struct is_unique_ptr : std::false_type {};
 
@@ -74,8 +74,8 @@ private:
   struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
 
   static_assert(std::is_pointer<ImplPtr>::value ||
-                is_unique_ptr<ImplPtr>::value ||
-                is_shared_ptr<ImplPtr>::value,
+                    is_unique_ptr<ImplPtr>::value ||
+                    is_shared_ptr<ImplPtr>::value,
                 "Binding only supports ImplPtr which are pointers");
 
  public:
@@ -86,7 +86,7 @@ private:
   explicit Binding(ImplPtr impl)
       : impl_(std::forward<ImplPtr>(impl)), stub_(&*this->impl()) {
     controller_.set_stub(&stub_);
-    stub_.set_controller(&controller_);
+    stub_.set_sender(&controller_);
   }
 
   // Constructs a completed binding of |channel| to implementation |impl|.

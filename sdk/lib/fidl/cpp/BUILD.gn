@@ -17,6 +17,7 @@ sdk_source_set("cpp") {
     "binding.h",
     "binding_set.h",
     "enum.h",
+    "event_sender.h",
     "interface_ptr.h",
     "interface_ptr_set.h",
     "internal/header.h",
@@ -65,6 +66,8 @@ sdk_source_set("cpp_sync") {
   sources = [
     "interface_handle.h",
     "interface_request.h",
+    "internal/message_sender.cc",
+    "internal/message_sender.h",
     "internal/synchronous_proxy.cc",
     "internal/synchronous_proxy.h",
     "synchronous_interface_ptr.h",
@@ -157,8 +160,8 @@ source_set("host_test_sources") {
     "object_coding_unittest.cc",
     "roundtrip_test.cc",
     "string_unittest.cc",
-    "vector_unittest.cc",
     "table_unittest.cc",
+    "vector_unittest.cc",
   ]
 
   deps = [
@@ -178,6 +181,7 @@ source_set("test_sources") {
   sources = [
     "binding_set_unittest.cc",
     "binding_unittest.cc",
+    "event_sender_unittest.cc",
     "interface_handle_unittest.cc",
     "interface_ptr_set_unittest.cc",
     "interface_ptr_unittest.cc",
