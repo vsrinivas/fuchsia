@@ -7,6 +7,9 @@
 #include <hwreg/internal.h>
 #include <hwreg/mmio.h>
 
+#ifndef _KERNEL
+#include <lib/mmio/mmio.h>
+#endif
 #include <limits.h>
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -119,17 +122,27 @@ public:
         return *static_cast<SelfType*>(this);
     }
 
-    template <typename T>
-    SelfType& ReadFrom(T* reg_io) {
-        reg_value_ = reg_io->template Read<ValueType>(reg_addr_);
+    SelfType& ReadFrom(RegisterIo* reg_io) {
+        reg_value_ = reg_io->Read<ValueType>(reg_addr_);
         return *static_cast<SelfType*>(this);
     }
+#ifndef _KERNEL
+    SelfType& ReadFrom(ddk::MmioBuffer* mmio) {
+        reg_value_ = mmio->Read<ValueType>(reg_addr_);
+        return *static_cast<SelfType*>(this);
+    }
+#endif
 
-    template <typename T>
-    SelfType& WriteTo(T* mmio) {
+    SelfType& WriteTo(RegisterIo* reg_io) {
+        reg_io->Write(reg_addr_, static_cast<IntType>(reg_value_ & ~rsvdz_mask_));
+        return *static_cast<SelfType*>(this);
+    }
+#ifndef _KERNEL
+    SelfType& WriteTo(ddk::MmioBuffer* mmio) {
         mmio->Write(static_cast<IntType>(reg_value_ & ~rsvdz_mask_), reg_addr_);
         return *static_cast<SelfType*>(this);
     }
+#endif
 
     // Invokes print_fn(const char* buf) once for each field, including each
     // RsvdZ field, and one extra time if there are any undefined bits set.
@@ -187,13 +200,20 @@ public:
 
     // Instantiate a RegisterBase using the value of the register read from
     // MMIO.
-    template <typename T>
-    RegType ReadFrom(T* reg_io) {
+    RegType ReadFrom(RegisterIo* reg_io) {
         RegType reg;
         reg.set_reg_addr(reg_addr_);
         reg.ReadFrom(reg_io);
         return reg;
     }
+#ifndef _KERNEL
+    RegType ReadFrom(ddk::MmioBuffer* mmio) {
+        RegType reg;
+        reg.set_reg_addr(reg_addr_);
+        reg.ReadFrom(mmio);
+        return reg;
+    }
+#endif
 
     // Instantiate a RegisterBase using the given value for the register.
     RegType FromValue(typename RegType::ValueType value) {

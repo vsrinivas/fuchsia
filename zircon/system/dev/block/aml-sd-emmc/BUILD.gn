@@ -13,7 +13,6 @@ driver("aml-sd-emmc") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sdmmc",
     "$zx/system/dev/lib/amlogic",
-    "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/sync",

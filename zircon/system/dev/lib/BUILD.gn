@@ -8,6 +8,7 @@
 group("lib") {
   testonly = true
   deps = [
+    "aaa-mock-mmio-reg",
     "amlogic",
     "broadcom",
     "fake-bti",
@@ -18,7 +19,6 @@ group("lib") {
     "mock-gpio",
     "mock-hidbus-ifc",
     "mock-i2c",
-    "mock-mmio-reg",
     "mock-sdio",
     "msm8x53",
     "mt8167",

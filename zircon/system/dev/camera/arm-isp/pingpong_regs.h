@@ -5,7 +5,6 @@
 #pragma once
 
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
 #include <zircon/types.h>
 
 namespace camera {

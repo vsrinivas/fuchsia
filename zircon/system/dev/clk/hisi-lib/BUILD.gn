@@ -11,15 +11,10 @@ library("hisi-lib") {
   sources = [
     "hisi-clk.cpp",
   ]
-  public_deps = [
-    # <dev/clk/hisi-lib/hisi-clk.h> has #include <lib/mmio/mmio.h>.
-    "$zx/system/dev/lib/mmio:headers",
-  ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clockimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",

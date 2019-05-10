@@ -5,6 +5,9 @@
 #ifndef GARNET_DRIVERS_GPU_MSD_IMG_RGX_MTK_MT8167S_GPU_H_
 #define GARNET_DRIVERS_GPU_MSD_IMG_RGX_MTK_MT8167S_GPU_H_
 
+#include <memory>
+#include <mutex>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -12,6 +15,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
+
 #include <ddktl/device.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/clock.h>
@@ -19,9 +23,6 @@
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <hw/reg.h>
 #include <lib/fidl-utils/bind.h>
-#include <lib/mmio/mmio.h>
-#include <memory>
-#include <mutex>
 
 #include "img-sys-device.h"
 #include "magma_util/macros.h"

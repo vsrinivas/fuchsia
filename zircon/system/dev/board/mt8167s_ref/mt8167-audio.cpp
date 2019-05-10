@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -12,8 +14,6 @@
 #include <ddktl/protocol/clockimpl.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
-#include <limits.h>
 #include <soc/mt8167/mt8167-clk.h>
 #include <soc/mt8167/mt8167-gpio.h>
 #include <soc/mt8167/mt8167-hw.h>
@@ -247,7 +247,7 @@ zx_status_t Mt8167::AudioInit() {
     }
     clock.Enable(kClkRgAud1);
     clock.Enable(kClkRgAud2);
-
+    
     if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
         status = pbus_.CompositeDeviceAdd(&dev_out, mt8167s_ref_out_components,
                                           countof(mt8167s_ref_out_components), UINT32_MAX);

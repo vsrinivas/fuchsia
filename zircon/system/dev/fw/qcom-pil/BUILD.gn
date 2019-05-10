@@ -12,10 +12,10 @@ driver("qcom-pil") {
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/qcom",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/elfload",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon-internal",

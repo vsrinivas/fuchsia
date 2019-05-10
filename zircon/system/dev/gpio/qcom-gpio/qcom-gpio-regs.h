@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
 #include <zircon/types.h>
 
 namespace gpio {

@@ -134,50 +134,56 @@ private:
     mmio_pinned_buffer_t pinned_;
 };
 
-// Forward declaration.
-class MmioView;
+// Forward declaration
+template <typename ViewType>
+class MmioBase;
 
-// MmioBuffer is wrapper around mmio_block_t.
-class MmioBuffer {
+class MmioView;
+typedef MmioBase<MmioView> MmioBuffer;
+
+// MmioBase is wrapper around mmio_block_t.
+// Use MmioBuffer (defined below) instead of MmioBase.
+template <typename ViewType>
+class MmioBase {
 
 public:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioBuffer);
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioBase);
 
-    explicit MmioBuffer(mmio_buffer_t mmio)
+    explicit MmioBase(mmio_buffer_t mmio)
         : mmio_(mmio), ptr_(reinterpret_cast<uintptr_t>(mmio.vaddr)) {
         ZX_ASSERT(mmio_.vaddr != nullptr);
     }
 
-    virtual ~MmioBuffer() {
+    virtual ~MmioBase() {
         mmio_buffer_release(&mmio_);
     }
 
-    MmioBuffer(MmioBuffer&& other) {
+    MmioBase(MmioBase&& other) {
         transfer(std::move(other));
     }
 
-    MmioBuffer& operator=(MmioBuffer&& other) {
+    MmioBase& operator=(MmioBase&& other) {
         transfer(std::move(other));
         return *this;
     }
 
     static zx_status_t Create(zx_off_t offset, size_t size, zx::vmo vmo, uint32_t cache_policy,
-                              std::optional<MmioBuffer>* mmio_buffer) {
+                              std::optional<MmioBase>* mmio_buffer) {
         mmio_buffer_t mmio;
         zx_status_t status = mmio_buffer_init(&mmio, offset, size, vmo.release(), cache_policy);
         if (status == ZX_OK) {
-            *mmio_buffer = MmioBuffer(mmio);
+            *mmio_buffer = MmioBase(mmio);
         }
         return status;
     }
 
     static zx_status_t Create(zx_paddr_t base, size_t size, const zx::resource& resource,
-                              uint32_t cache_policy, std::optional<MmioBuffer>* mmio_buffer) {
+                              uint32_t cache_policy, std::optional<MmioBase>* mmio_buffer) {
         mmio_buffer_t mmio;
         zx_status_t status = mmio_buffer_init_physical(&mmio, base, size, resource.get(),
                                                        cache_policy);
         if (status == ZX_OK) {
-            *mmio_buffer = MmioBuffer(mmio);
+            *mmio_buffer = MmioBase(mmio);
         }
         return status;
     }
@@ -215,8 +221,12 @@ public:
 
     // Provides a slice view into the mmio.
     // The returned slice object must not outlive this object.
-    MmioView View(zx_off_t off) const;
-    MmioView View(zx_off_t off, size_t size) const;
+    ViewType View(zx_off_t off) const {
+        return ViewType(mmio_, off);
+    }
+    ViewType View(zx_off_t off, size_t size) const {
+        return ViewType(mmio_, off, size);
+    }
 
     uint32_t Read32(zx_off_t offs) const {
         return Read<uint32_t>(offs);
@@ -336,7 +346,7 @@ protected:
     mmio_buffer_t mmio_;
 
 private:
-    void transfer(MmioBuffer&& other) {
+    void transfer(MmioBase&& other) {
         mmio_ = other.mmio_;
         ptr_ = other.ptr_;
         other.reset();
@@ -351,21 +361,21 @@ class MmioView : public MmioBuffer {
 public:
     MmioView(const mmio_buffer_t& mmio, zx_off_t offset)
         : MmioBuffer(mmio_buffer_t{
-                .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
-                .offset = mmio.offset + offset,
-                .size = mmio.size - offset,
-                .vmo = mmio.vmo,
-            }) {
+              .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
+              .offset = mmio.offset + offset,
+              .size = mmio.size - offset,
+              .vmo = mmio.vmo,
+          }) {
         ZX_ASSERT(offset < mmio.size);
     }
 
     MmioView(const mmio_buffer_t& mmio, zx_off_t offset, size_t size)
         : MmioBuffer(mmio_buffer_t{
-                .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
-                .offset = mmio.offset + offset,
-                .size = size,
-                .vmo = mmio.vmo,
-            }) {
+              .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
+              .offset = mmio.offset + offset,
+              .size = size,
+              .vmo = mmio.vmo,
+          }) {
         ZX_ASSERT(size + offset <= mmio.size);
     }
 
@@ -377,17 +387,6 @@ public:
         mmio_.vmo = ZX_HANDLE_INVALID;
     }
 };
-
-// These can't be defined inside the class because they need MmioView
-// to be completely defined first.
-
-inline MmioView MmioBuffer::View(zx_off_t off) const {
-    return MmioView(mmio_, off);
-}
-
-inline MmioView MmioBuffer::View(zx_off_t off, size_t size) const {
-    return MmioView(mmio_, off, size);
-}
 
 } //namespace ddk
 

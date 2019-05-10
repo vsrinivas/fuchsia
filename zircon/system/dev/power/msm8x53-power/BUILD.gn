@@ -35,7 +35,7 @@ test("msm8x53-power-test") {
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.powerimpl",
-    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/dev/lib/aaa-mock-mmio-reg",
     "$zx/system/dev/lib/msm8x53",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

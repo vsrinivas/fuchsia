@@ -8,7 +8,6 @@ driver("goldfish-address-space") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.pci",
-    "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-goldfish-address-space:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

@@ -39,7 +39,7 @@ test("mtk-thermal-test") {
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.scpi",
-    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/dev/lib/aaa-mock-mmio-reg",
     "$zx/system/dev/lib/mt8167",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",

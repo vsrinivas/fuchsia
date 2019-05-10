@@ -10,7 +10,6 @@
 #include <ddk/protocol/platform/bus.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
 #include <soc/mt8167/mt8167-hw.h>
 #include <soc/mt8167/mt8167-sdmmc.h>
 

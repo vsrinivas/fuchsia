@@ -215,3 +215,4 @@ TEST(DsiHostTest, DsiHostPowerOn) {
 }
 
 } // namespace mt8167s_display
+

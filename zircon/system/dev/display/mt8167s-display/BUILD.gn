@@ -17,32 +17,33 @@ driver("mt8167s-display") {
     "ovl.cpp",
   ]
   deps = [
-    ":common",
     "$zx/system/dev/lib/mmio",
+    ":common",
   ]
 }
 
 source_set("common") {
-  visibility = [ ":*" ]
-  sources = []
-  public_deps = [
-    "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/banjo/ddk.protocol.display.controller",
-    "$zx/system/banjo/ddk.protocol.dsiimpl",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.power",
-    "$zx/system/banjo/ddk.protocol.sysmem",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/image-format",
-    "$zx/system/ulib/mipi-dsi",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
-  ]
+    visibility = [ ":*" ]
+    sources = [
+    ]
+    public_deps = [
+      "$zx/system/banjo/ddk.protocol.composite",
+      "$zx/system/banjo/ddk.protocol.display.controller",
+      "$zx/system/banjo/ddk.protocol.dsiimpl",
+      "$zx/system/banjo/ddk.protocol.platform.device",
+      "$zx/system/banjo/ddk.protocol.power",
+      "$zx/system/banjo/ddk.protocol.sysmem",
+      "$zx/system/fidl/fuchsia-sysmem:c",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/ddktl",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/hwreg",
+      "$zx/system/ulib/image-format",
+      "$zx/system/ulib/mipi-dsi",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxcpp",
+    ]
 }
 
 group("tests") {
@@ -68,10 +69,11 @@ test("dsi-host") {
     "ovl.cpp",
   ]
   deps = [
-    ":common",
+    "$zx/system/dev/lib/aaa-mock-mmio-reg",
     "$zx/system/dev/lib/fake-bti",
-    "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/zxtest",
+    ":common",
+
   ]
 }

@@ -22,7 +22,6 @@
 #include <ddk/protocol/clockimpl.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddktl/pdev.h>
 
 #include <ddktl/protocol/platform/bus.h>
 

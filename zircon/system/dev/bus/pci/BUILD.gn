@@ -36,11 +36,6 @@ source_set("user_pci") {
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxcpp",
-
-    # TODO(ZX-4062): This shouldn't be here if the mmio code is actually
-    # used in the test too.  Anything using that needs to be separately
-    # compiled for the test using the mock version.
-    "$zx/system/dev/lib/mmio",
   ]
 }
 

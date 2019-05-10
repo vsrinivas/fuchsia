@@ -23,7 +23,6 @@ driver("xhci") {
     "$zx/system/banjo/ddk.protocol.usb.hci",
     "$zx/system/banjo/ddk.protocol.usb.hub",
     "$zx/system/banjo/ddk.protocol.usb.request",
-    "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/usb",
     "$zx/system/fidl/fuchsia-usb-debug:c",
     "$zx/system/ulib/ddk",

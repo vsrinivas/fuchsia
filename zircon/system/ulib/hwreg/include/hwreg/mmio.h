@@ -19,7 +19,7 @@ public:
 
     // Write |val| to the |sizeof(IntType)| byte field located |offset| bytes from
     // |base()|.
-    template <class IntType> void Write(IntType val, uint32_t offset) {
+    template <class IntType> void Write(uint32_t offset, IntType val) {
         static_assert(internal::IsSupportedInt<IntType>::value,
                       "unsupported register access width");
         auto ptr = reinterpret_cast<volatile IntType*>(mmio_ + offset);
