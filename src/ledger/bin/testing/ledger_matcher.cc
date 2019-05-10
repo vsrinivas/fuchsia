@@ -87,7 +87,7 @@ ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(const Result& result) {
 // Specialize for GetInline that directly has a vector.
 template <>
 ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(
-    const fuchsia::ledger::PageSnapshot_GetInlineNew_Result& result) {
+    const fuchsia::ledger::PageSnapshot_GetInline_Result& result) {
   if (result.is_err()) {
     result_ = fit::error(std::make_pair(ZX_OK, result.err()));
     return;
@@ -98,11 +98,11 @@ ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(
 // Instantiate for all possible type, as the template implementation is in the
 // .cc file.
 template ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(
-    const fuchsia::ledger::PageSnapshot_GetNew_Result&);
+    const fuchsia::ledger::PageSnapshot_Get_Result&);
 template ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(
-    const fuchsia::ledger::PageSnapshot_FetchNew_Result&);
+    const fuchsia::ledger::PageSnapshot_Fetch_Result&);
 template ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(
-    const fuchsia::ledger::PageSnapshot_FetchPartialNew_Result&);
+    const fuchsia::ledger::PageSnapshot_FetchPartial_Result&);
 
 const fit::result<std::string, std::pair<zx_status_t, fuchsia::ledger::Error>>&
 ErrorOrStringResultAdapter::ToResult() const {

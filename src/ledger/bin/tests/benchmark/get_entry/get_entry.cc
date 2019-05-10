@@ -157,7 +157,7 @@ void GetEntryBenchmark::GetSnapshot() {
 }
 
 void GetEntryBenchmark::GetKeys(std::unique_ptr<Token> token) {
-  snapshot_->GetKeysNew(
+  snapshot_->GetKeys(
       fidl::VectorPtr<uint8_t>::New(0), std::move(token),
       [this](IterationStatus status, auto keys, auto next_token) {
         if (status == IterationStatus::PARTIAL_RESULT) {
@@ -183,9 +183,9 @@ void GetEntryBenchmark::GetNextEntry(size_t i) {
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "get_entry", i);
-  snapshot_->GetNew(
+  snapshot_->Get(
       std::move(keys_[i]),
-      [this, i](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+      [this, i](fuchsia::ledger::PageSnapshot_Get_Result result) {
         if (QuitOnError(QuitLoopClosure(), result, "PageShapshot::Get")) {
           return;
         }
@@ -201,9 +201,9 @@ void GetEntryBenchmark::GetNextEntryInline(size_t i) {
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "get_entry_inline", i);
-  snapshot_->GetInlineNew(
+  snapshot_->GetInline(
       std::move(keys_[i]),
-      [this, i](fuchsia::ledger::PageSnapshot_GetInlineNew_Result result) {
+      [this, i](fuchsia::ledger::PageSnapshot_GetInline_Result result) {
         if (QuitOnError(QuitLoopClosure(), result, "PageShapshot::GetInline")) {
           return;
         }

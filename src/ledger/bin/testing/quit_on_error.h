@@ -24,12 +24,12 @@ class StatusTranslater {
   StatusTranslater(Status status);
   StatusTranslater(CreateReferenceStatus status);
   StatusTranslater(zx_status_t status);
-  StatusTranslater(const fuchsia::ledger::PageSnapshot_GetNew_Result& result);
+  StatusTranslater(const fuchsia::ledger::PageSnapshot_Get_Result& result);
   StatusTranslater(
-      const fuchsia::ledger::PageSnapshot_GetInlineNew_Result& result);
-  StatusTranslater(const fuchsia::ledger::PageSnapshot_FetchNew_Result& result);
+      const fuchsia::ledger::PageSnapshot_GetInline_Result& result);
+  StatusTranslater(const fuchsia::ledger::PageSnapshot_Fetch_Result& result);
   StatusTranslater(
-      const fuchsia::ledger::PageSnapshot_FetchPartialNew_Result& result);
+      const fuchsia::ledger::PageSnapshot_FetchPartial_Result& result);
 
   bool ok() { return ok_; };
   const std::string& description() { return description_; }

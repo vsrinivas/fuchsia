@@ -132,9 +132,9 @@ class ReadDataCall : public PageOperation<DataPtr> {
 
     this->page()->GetSnapshot(page_snapshot_.NewRequest(),
                               fidl::VectorPtr<uint8_t>::New(0), nullptr);
-    page_snapshot_->GetNew(
+    page_snapshot_->Get(
         to_array(key_),
-        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+        [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
           if (result.is_err()) {
             if (result.err() != fuchsia::ledger::Error::KEY_NOT_FOUND ||
                 !not_found_is_ok_) {

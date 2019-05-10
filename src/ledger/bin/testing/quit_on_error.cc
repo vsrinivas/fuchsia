@@ -43,19 +43,19 @@ StatusTranslater::StatusTranslater(CreateReferenceStatus status)
       description_(FidlEnumToString(status)) {}
 
 StatusTranslater::StatusTranslater(
-    const fuchsia::ledger::PageSnapshot_GetNew_Result& result)
+    const fuchsia::ledger::PageSnapshot_Get_Result& result)
     : ok_(result.is_response()), description_(FidlResultToString(result)) {}
 
 StatusTranslater::StatusTranslater(
-    const fuchsia::ledger::PageSnapshot_GetInlineNew_Result& result)
+    const fuchsia::ledger::PageSnapshot_GetInline_Result& result)
     : ok_(result.is_response()), description_(FidlResultToString(result)) {}
 
 StatusTranslater::StatusTranslater(
-    const fuchsia::ledger::PageSnapshot_FetchNew_Result& result)
+    const fuchsia::ledger::PageSnapshot_Fetch_Result& result)
     : ok_(result.is_response()), description_(FidlResultToString(result)) {}
 
 StatusTranslater::StatusTranslater(
-    const fuchsia::ledger::PageSnapshot_FetchPartialNew_Result& result)
+    const fuchsia::ledger::PageSnapshot_FetchPartial_Result& result)
     : ok_(result.is_response()), description_(FidlResultToString(result)) {}
 }  // namespace internal
 

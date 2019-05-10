@@ -372,9 +372,9 @@ class ReadSnapshotCall : public Operation<fuchsia::mem::BufferPtr> {
     FlowToken flow{this, &snapshot_};
 
     page_snapshot_ = page_client_->NewSnapshot();
-    page_snapshot_->GetNew(
+    page_snapshot_->Get(
         to_array(key_),
-        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+        [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
           if (result.is_response()) {
             snapshot_ = fidl::MakeOptional(std::move(result.response().buffer));
             return;

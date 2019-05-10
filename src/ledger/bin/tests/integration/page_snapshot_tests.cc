@@ -57,7 +57,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
       IterationStatus status;
       std::vector<std::vector<uint8_t>> keys;
       auto waiter = NewWaiter();
-      (*snapshot)->GetKeysNew(
+      (*snapshot)->GetKeys(
           start, std::move(token),
           callback::Capture(waiter->GetCallback(), &status, &keys, &token));
       if (!waiter->RunUntilCalled()) {
@@ -77,9 +77,9 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
   std::string SnapshotFetchPartial(PageSnapshotPtr* snapshot,
                                    std::vector<uint8_t> key, int64_t offset,
                                    int64_t max_size) {
-    fuchsia::ledger::PageSnapshot_FetchPartialNew_Result result;
+    fuchsia::ledger::PageSnapshot_FetchPartial_Result result;
     auto waiter = NewWaiter();
-    (*snapshot)->FetchPartialNew(
+    (*snapshot)->FetchPartial(
         std::move(key), offset, max_size,
         callback::Capture(waiter->GetCallback(), &result));
     if (!waiter->RunUntilCalled()) {
@@ -103,17 +103,17 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  fuchsia::ledger::PageSnapshot_Get_Result result;
   auto waiter = NewWaiter();
-  snapshot->GetNew(convert::ToArray("name"),
-                   callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("name"),
+                callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   ASSERT_THAT(result, MatchesString("Alice"));
 
   // Attempt to get an entry that is not in the page.
   waiter = NewWaiter();
-  snapshot->GetNew(convert::ToArray("favorite book"),
-                   callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("favorite book"),
+                callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   // People don't read much these days.
   EXPECT_THAT(result, MatchesError(fuchsia::ledger::Error::KEY_NOT_FOUND));
@@ -128,10 +128,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
   page->Put(convert::ToArray("name"), convert::ToArray(expected_value));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  fuchsia::ledger::PageSnapshot_Get_Result result;
   auto waiter = NewWaiter();
-  snapshot->GetNew(convert::ToArray("name"),
-                   callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("name"),
+                callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   ASSERT_THAT(result, MatchesString(expected_value));
 }
@@ -148,10 +148,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
   page->Put(convert::ToArray("name"), convert::ToArray(value2));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  fuchsia::ledger::PageSnapshot_Get_Result result;
   auto waiter = NewWaiter();
-  snapshot->GetNew(convert::ToArray("name"),
-                   callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("name"),
+                callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   ASSERT_THAT(result, MatchesString(value2));
 }
@@ -186,10 +186,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
             SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -3, 1));
 
   // Attempt to get an entry that is not in the page.
-  fuchsia::ledger::PageSnapshot_FetchPartialNew_Result result;
+  fuchsia::ledger::PageSnapshot_FetchPartial_Result result;
   auto waiter = NewWaiter();
-  snapshot->FetchPartialNew(convert::ToArray("favorite book"), 0, -1,
-                            callback::Capture(waiter->GetCallback(), &result));
+  snapshot->FetchPartial(convert::ToArray("favorite book"), 0, -1,
+                         callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   // People don't read much these days.
   EXPECT_THAT(result, MatchesError(fuchsia::ledger::Error::KEY_NOT_FOUND));
@@ -550,10 +550,10 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
 
   // Get a snapshot and read the value.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  fuchsia::ledger::PageSnapshot_Get_Result result;
   waiter = NewWaiter();
-  snapshot->GetNew(convert::ToArray("big data"),
-                   callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("big data"),
+                callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString(big_data));
 }
@@ -583,10 +583,10 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
 
   // Get a snapshot and read the value.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  fuchsia::ledger::PageSnapshot_Get_Result result;
   waiter = NewWaiter();
-  snapshot->GetNew(convert::ToArray("big data"),
-                   callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("big data"),
+                callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString(big_data));
 }
@@ -601,17 +601,17 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   // Close the channel. PageSnapshotPtr should remain valid.
   page.Unbind();
 
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  fuchsia::ledger::PageSnapshot_Get_Result result;
   auto waiter = NewWaiter();
-  snapshot->GetNew(convert::ToArray("name"),
-                   callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("name"),
+                callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString("Alice"));
 
   // Attempt to get an entry that is not in the page.
   waiter = NewWaiter();
-  snapshot->GetNew(convert::ToArray("favorite book"),
-                   callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("favorite book"),
+                callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   // People don't read much these days.
   EXPECT_THAT(result, MatchesError(fuchsia::ledger::Error::KEY_NOT_FOUND));
@@ -642,10 +642,10 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   EXPECT_EQ(test_page_id.id, page_id.id);
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
+  fuchsia::ledger::PageSnapshot_Get_Result result;
   waiter = NewWaiter();
-  snapshot->GetNew(convert::ToArray("name"),
-                   callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("name"),
+                callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString("Alice"));
 }

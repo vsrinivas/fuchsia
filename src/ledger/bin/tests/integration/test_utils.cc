@@ -58,7 +58,7 @@ std::vector<Entry> SnapshotGetEntries(LoopController* loop_controller,
     IterationStatus status;
     std::vector<Entry> entries;
     auto waiter = loop_controller->NewWaiter();
-    (*snapshot)->GetEntriesNew(
+    (*snapshot)->GetEntries(
         start.Clone(), std::move(token),
         callback::Capture(waiter->GetCallback(), &status, &entries, &token));
     if (!waiter->RunUntilCalled()) {

@@ -1771,19 +1771,19 @@ TEST_P(MergingIntegrationTest,
                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   waiter = NewWaiter();
-  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result1;
-  snapshot3->GetInlineNew(convert::ToArray("name"),
-                          callback::Capture(waiter->GetCallback(), &result1));
+  fuchsia::ledger::PageSnapshot_GetInline_Result result1;
+  snapshot3->GetInline(convert::ToArray("name"),
+                       callback::Capture(waiter->GetCallback(), &result1));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot4;
   page_conn1->GetSnapshot(snapshot4.NewRequest(),
                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
-  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result2;
+  fuchsia::ledger::PageSnapshot_GetInline_Result result2;
   waiter = NewWaiter();
-  snapshot4->GetInlineNew(convert::ToArray("name"),
-                          callback::Capture(waiter->GetCallback(), &result2));
+  snapshot4->GetInline(convert::ToArray("name"),
+                       callback::Capture(waiter->GetCallback(), &result2));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   ASSERT_TRUE(result1.is_response());
@@ -1882,19 +1882,19 @@ TEST_P(MergingIntegrationTest,
                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   waiter = NewWaiter();
-  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result1;
-  snapshot3->GetInlineNew(convert::ToArray("name"),
-                          callback::Capture(waiter->GetCallback(), &result1));
+  fuchsia::ledger::PageSnapshot_GetInline_Result result1;
+  snapshot3->GetInline(convert::ToArray("name"),
+                       callback::Capture(waiter->GetCallback(), &result1));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot4;
   page_conn1->GetSnapshot(snapshot4.NewRequest(),
                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
-  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result2;
+  fuchsia::ledger::PageSnapshot_GetInline_Result result2;
   waiter = NewWaiter();
-  snapshot4->GetInlineNew(convert::ToArray("name"),
-                          callback::Capture(waiter->GetCallback(), &result2));
+  snapshot4->GetInline(convert::ToArray("name"),
+                       callback::Capture(waiter->GetCallback(), &result2));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   ASSERT_TRUE(result1.is_response());

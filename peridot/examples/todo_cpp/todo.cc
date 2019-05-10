@@ -61,7 +61,7 @@ void GetEntries(
     std::unique_ptr<fuchsia::ledger::Token> token,
     fit::function<void(std::vector<fuchsia::ledger::Entry>)> callback) {
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetEntriesNew(
+  snapshot_ptr->GetEntries(
       fidl::VectorPtr<uint8_t>::New(0), std::move(token),
       [snapshot = std::move(snapshot), entries = std::move(entries),
        callback = std::move(callback)](fuchsia::ledger::IterationStatus status,
@@ -143,7 +143,7 @@ void TodoApp::GetKeys(fit::function<void(std::vector<Key>)> callback) {
   page_->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
 
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetKeysNew(
+  snapshot_ptr->GetKeys(
       {}, nullptr,
       [snapshot = std::move(snapshot), callback = std::move(callback)](
           fuchsia::ledger::IterationStatus status, auto keys, auto next_token) {

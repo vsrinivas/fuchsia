@@ -51,10 +51,10 @@ class PageSnapshotPromise {
   static fit::promise<std::unique_ptr<std::vector<uint8_t>>> GetInline(
       fuchsia::ledger::PageSnapshot* snapshot, std::string key) {
     fit::bridge<std::unique_ptr<std::vector<uint8_t>>> bridge;
-    snapshot->GetInlineNew(
+    snapshot->GetInline(
         to_array(key),
         [completer = std::move(bridge.completer)](
-            fuchsia::ledger::PageSnapshot_GetInlineNew_Result result) mutable {
+            fuchsia::ledger::PageSnapshot_GetInline_Result result) mutable {
           if (result.is_response()) {
             completer.complete_ok(std::make_unique<std::vector<uint8_t>>(
                 std::move(result.response().value.value)));

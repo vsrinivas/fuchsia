@@ -267,9 +267,9 @@ class MessageQueueManager::GetQueueTokenCall
 
     key_ = MakeMessageQueueTokenKey(component_namespace_,
                                     component_instance_id_, queue_name_);
-    snapshot_->GetNew(
+    snapshot_->Get(
         to_array(key_),
-        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+        [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
           if (result.is_err() &&
               result.err() == fuchsia::ledger::Error::KEY_NOT_FOUND) {
             // Key wasn't found, that's not an error.
@@ -320,9 +320,9 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
     page()->GetSnapshot(snapshot_.NewRequest(), std::vector<uint8_t>(),
                         nullptr);
     std::string key = MakeMessageQueueKey(token_);
-    snapshot_->GetNew(
+    snapshot_->Get(
         to_array(key),
-        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+        [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
           if (result.is_err()) {
             if (result.err() != fuchsia::ledger::Error::KEY_NOT_FOUND) {
               // It's expected that the key is not found when the link

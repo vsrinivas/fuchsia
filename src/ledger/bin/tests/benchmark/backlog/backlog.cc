@@ -361,7 +361,7 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<Token> token,
   FXL_DCHECK(entries_left > 0);
   TRACE_ASYNC_BEGIN("benchmark", "get_entries_partial", entries_left);
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
-    reader_snapshot_->GetEntriesInlineNew(
+    reader_snapshot_->GetEntriesInline(
         std::vector<uint8_t>(), std::move(token),
         [this, entries_left](IterationStatus status, auto entries,
                              auto next_token) mutable {
@@ -370,7 +370,7 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<Token> token,
                                 std::move(next_token));
         });
   } else {
-    reader_snapshot_->GetEntriesInlineNew(
+    reader_snapshot_->GetEntriesInline(
         std::vector<uint8_t>(), std::move(token),
         [this, entries_left](IterationStatus status, auto entries,
                              auto next_token) mutable {

@@ -70,9 +70,9 @@ class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
     FlowToken flow{this, &text_};
     impl_->page()->GetSnapshot(snapshot_.NewRequest(),
                                fidl::VectorPtr<uint8_t>::New(0), nullptr);
-    snapshot_->GetNew(
+    snapshot_->Get(
         ToArray(kCurrentValueKey),
-        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+        [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
           if (result.is_response()) {
             text_ = ToString(std::move(result.response().buffer));
           }

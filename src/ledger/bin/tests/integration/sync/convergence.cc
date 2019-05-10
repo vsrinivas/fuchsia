@@ -69,17 +69,18 @@ class PageWatcherImpl : public PageWatcher {
   int changes = 0;
 
   void GetInlineOnLatestSnapshot(std::vector<uint8_t> key,
-                                 PageSnapshot::GetInlineNewCallback callback) {
+                                 PageSnapshot::GetInlineCallback callback) {
     // We need to make sure the PageSnapshotPtr used to make the |GetInline|
     // call survives as long as the call is active, even if a new snapshot
     // arrives in between.
     (*current_snapshot_)
-        ->GetInlineNew(
+        ->GetInline(
             std::move(key),
             [snapshot = current_snapshot_.Clone(),
              callback = std::move(callback)](
-                fuchsia::ledger::PageSnapshot_GetInlineNew_Result
-                    result) mutable { callback(std::move(result)); });
+                fuchsia::ledger::PageSnapshot_GetInline_Result result) mutable {
+              callback(std::move(result));
+            });
   }
 
  private:
@@ -277,7 +278,7 @@ class ConvergenceTest
     std::vector<InlinedValue> values;
     for (int i = 0; i < num_ledgers_; i++) {
       auto loop_waiter = NewWaiter();
-      fuchsia::ledger::PageSnapshot_GetInlineNew_Result result;
+      fuchsia::ledger::PageSnapshot_GetInline_Result result;
       watchers[i]->GetInlineOnLatestSnapshot(
           convert::ToArray(key),
           callback::Capture(loop_waiter->GetCallback(), &result));

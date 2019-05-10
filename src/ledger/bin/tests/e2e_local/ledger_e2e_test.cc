@@ -148,8 +148,8 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                     nullptr);
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
-  EXPECT_EQ(ZX_OK, snapshot->GetNew(TestArray(), &result));
+  fuchsia::ledger::PageSnapshot_Get_Result result;
+  EXPECT_EQ(ZX_OK, snapshot->Get(TestArray(), &result));
   EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
 }
 
@@ -374,8 +374,8 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                     nullptr);
   fuchsia::mem::BufferPtr value;
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
-  EXPECT_EQ(ZX_OK, snapshot->GetNew(TestArray(), &result));
+  fuchsia::ledger::PageSnapshot_Get_Result result;
+  EXPECT_EQ(ZX_OK, snapshot->Get(TestArray(), &result));
   EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
 
   // Verify that the Ledger app didn't crash or shut down.
@@ -419,8 +419,8 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                     nullptr);
   fuchsia::mem::BufferPtr value;
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
-  EXPECT_EQ(ZX_OK, snapshot->GetNew(TestArray(), &result));
+  fuchsia::ledger::PageSnapshot_Get_Result result;
+  EXPECT_EQ(ZX_OK, snapshot->Get(TestArray(), &result));
   EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
 
   // Verify that the Ledger app didn't crash or shut down.

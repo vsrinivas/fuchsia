@@ -698,7 +698,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   IterationStatus status;
   std::vector<Entry> actual_entries;
   std::unique_ptr<Token> next_token;
-  snapshot->GetEntriesNew(
+  snapshot->GetEntries(
       std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &next_token));
@@ -732,7 +732,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   IterationStatus status;
   std::unique_ptr<Token> next_token;
   std::vector<InlinedEntry> actual_entries;
-  snapshot->GetEntriesInlineNew(
+  snapshot->GetEntriesInline(
       fidl::VectorPtr<uint8_t>::New(0), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &next_token));
@@ -775,7 +775,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   IterationStatus status;
   std::vector<Entry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetEntriesNew(
+  snapshot->GetEntries(
       std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
@@ -786,7 +786,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
 
   // Call GetEntries with the previous token and receive the remaining results.
   std::vector<Entry> actual_next_entries;
-  snapshot->GetEntriesNew(
+  snapshot->GetEntries(
       std::vector<uint8_t>(), std::move(actual_next_token),
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_next_entries, &actual_next_token));
@@ -821,7 +821,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   IterationStatus status;
   std::vector<InlinedEntry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetEntriesInlineNew(
+  snapshot->GetEntriesInline(
       std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
@@ -833,7 +833,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   // Call GetEntries with the previous token and receive the remaining results.
   std::vector<InlinedEntry> actual_entries2;
   std::unique_ptr<Token> actual_next_token2;
-  snapshot->GetEntriesInlineNew(
+  snapshot->GetEntriesInline(
       std::vector<uint8_t>(), std::move(actual_next_token),
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries2, &actual_next_token2));
@@ -878,7 +878,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   IterationStatus status;
   std::vector<InlinedEntry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetEntriesInlineNew(
+  snapshot->GetEntriesInline(
       std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
@@ -890,7 +890,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   // Call GetEntries with the previous token and receive the remaining results.
   std::vector<InlinedEntry> actual_entries2;
   std::unique_ptr<Token> actual_next_token2;
-  snapshot->GetEntriesInlineNew(
+  snapshot->GetEntriesInline(
       std::vector<uint8_t>(), std::move(actual_next_token),
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries2, &actual_next_token2));
@@ -923,7 +923,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   IterationStatus status;
   std::vector<Entry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetEntriesNew(
+  snapshot->GetEntries(
       std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
@@ -934,7 +934,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
 
   // Call GetEntries with the previous token and receive the remaining results.
   std::vector<Entry> actual_next_entries;
-  snapshot->GetEntriesNew(
+  snapshot->GetEntries(
       std::vector<uint8_t>(), std::move(actual_next_token),
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_next_entries, &actual_next_token));
@@ -979,7 +979,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
   IterationStatus status;
   std::vector<Entry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetEntriesNew(
+  snapshot->GetEntries(
       std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
@@ -1012,7 +1012,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
   IterationStatus status;
   std::vector<Entry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetEntriesNew(
+  snapshot->GetEntries(
       std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
@@ -1024,7 +1024,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
   EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries.at(0).key));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
-  snapshot->GetEntriesNew(
+  snapshot->GetEntries(
       std::vector<uint8_t>(), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
@@ -1051,7 +1051,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   IterationStatus status;
   std::vector<Entry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetEntriesNew(
+  snapshot->GetEntries(
       convert::ToArray("002"), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
@@ -1062,7 +1062,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   ASSERT_EQ(1u, actual_entries.size());
   EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries.at(0).key));
 
-  snapshot->GetEntriesNew(
+  snapshot->GetEntries(
       convert::ToArray("001"), nullptr,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &actual_entries, &actual_next_token));
@@ -1092,10 +1092,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   IterationStatus status;
   std::vector<std::vector<uint8_t>> actual_keys;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetKeysNew(
-      std::vector<uint8_t>(), nullptr,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &actual_keys,
-                        &actual_next_token));
+  snapshot->GetKeys(std::vector<uint8_t>(), nullptr,
+                    callback::Capture(callback::SetWhenCalled(&called), &status,
+                                      &actual_keys, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(IterationStatus::OK, status);
@@ -1118,10 +1117,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   IterationStatus status;
   std::vector<std::vector<uint8_t>> actual_keys;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetKeysNew(
-      std::vector<uint8_t>(), nullptr,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &actual_keys,
-                        &actual_next_token));
+  snapshot->GetKeys(std::vector<uint8_t>(), nullptr,
+                    callback::Capture(callback::SetWhenCalled(&called), &status,
+                                      &actual_keys, &actual_next_token));
 
   DrainLoop();
   EXPECT_TRUE(called);
@@ -1130,10 +1128,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
 
   // Call GetKeys with the previous token and receive the remaining results.
   std::vector<std::vector<uint8_t>> actual_next_keys;
-  snapshot->GetKeysNew(
-      std::vector<uint8_t>(), std::move(actual_next_token),
-      callback::Capture(callback::SetWhenCalled(&called), &status,
-                        &actual_next_keys, &actual_next_token));
+  snapshot->GetKeys(std::vector<uint8_t>(), std::move(actual_next_token),
+                    callback::Capture(callback::SetWhenCalled(&called), &status,
+                                      &actual_next_keys, &actual_next_token));
 
   DrainLoop();
   EXPECT_TRUE(called);
@@ -1168,10 +1165,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
   IterationStatus status;
   std::vector<std::vector<uint8_t>> actual_keys;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetKeysNew(
-      std::vector<uint8_t>(), nullptr,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &actual_keys,
-                        &actual_next_token));
+  snapshot->GetKeys(std::vector<uint8_t>(), nullptr,
+                    callback::Capture(callback::SetWhenCalled(&called), &status,
+                                      &actual_keys, &actual_next_token));
 
   DrainLoop();
   EXPECT_TRUE(called);
@@ -1181,10 +1177,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
   EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys.at(0)));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
-  snapshot->GetKeysNew(
-      std::vector<uint8_t>(), nullptr,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &actual_keys,
-                        &actual_next_token));
+  snapshot->GetKeys(std::vector<uint8_t>(), nullptr,
+                    callback::Capture(callback::SetWhenCalled(&called), &status,
+                                      &actual_keys, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(IterationStatus::OK, status);
@@ -1211,10 +1206,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
   IterationStatus status;
   std::vector<std::vector<uint8_t>> actual_keys;
   std::unique_ptr<Token> actual_next_token;
-  snapshot->GetKeysNew(
-      convert::ToArray("002"), nullptr,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &actual_keys,
-                        &actual_next_token));
+  snapshot->GetKeys(convert::ToArray("002"), nullptr,
+                    callback::Capture(callback::SetWhenCalled(&called), &status,
+                                      &actual_keys, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(IterationStatus::OK, status);
@@ -1223,10 +1217,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
   EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys.at(0)));
 
   snapshot = GetSnapshot();
-  snapshot->GetKeysNew(
-      convert::ToArray("001"), nullptr,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &actual_keys,
-                        &actual_next_token));
+  snapshot->GetKeys(convert::ToArray("001"), nullptr,
+                    callback::Capture(callback::SetWhenCalled(&called), &status,
+                                      &actual_keys, &actual_next_token));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_EQ(IterationStatus::OK, status);
@@ -1245,18 +1238,18 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
   PageSnapshotPtr snapshot = GetSnapshot();
 
   bool called;
-  fuchsia::ledger::PageSnapshot_GetNew_Result actual_value;
-  snapshot->GetNew(
+  fuchsia::ledger::PageSnapshot_Get_Result actual_value;
+  snapshot->Get(
       convert::ToArray(key),
       callback::Capture(callback::SetWhenCalled(&called), &actual_value));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_THAT(actual_value, MatchesString(value));
 
-  fuchsia::ledger::PageSnapshot_GetInlineNew_Result actual_inlined_value;
-  snapshot->GetInlineNew(convert::ToArray(key),
-                         callback::Capture(callback::SetWhenCalled(&called),
-                                           &actual_inlined_value));
+  fuchsia::ledger::PageSnapshot_GetInline_Result actual_inlined_value;
+  snapshot->GetInline(convert::ToArray(key),
+                      callback::Capture(callback::SetWhenCalled(&called),
+                                        &actual_inlined_value));
   DrainLoop();
   EXPECT_TRUE(called);
   EXPECT_THAT(actual_inlined_value, MatchesString(value));
@@ -1285,8 +1278,8 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fuchsia::ledger::PageSnapshot_GetNew_Result actual_value;
-  snapshot->GetNew(
+  fuchsia::ledger::PageSnapshot_Get_Result actual_value;
+  snapshot->Get(
       convert::ExtendedStringView(key).ToArray(),
       callback::Capture(callback::SetWhenCalled(&called), &actual_value));
   DrainLoop();
@@ -1297,8 +1290,8 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   bool error_hander_called;
   snapshot.set_error_handler(callback::Capture(
       callback::SetWhenCalled(&error_hander_called), &zx_status));
-  fuchsia::ledger::PageSnapshot_GetInlineNew_Result inlined_value;
-  snapshot->GetInlineNew(
+  fuchsia::ledger::PageSnapshot_GetInline_Result inlined_value;
+  snapshot->GetInline(
       convert::ToArray(key),
       callback::Capture(callback::SetWhenCalled(&called), &inlined_value));
   DrainLoop();
@@ -1322,8 +1315,8 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   PageSnapshotPtr snapshot = GetSnapshot();
 
   bool called;
-  fuchsia::ledger::PageSnapshot_GetNew_Result actual_value;
-  snapshot->GetNew(
+  fuchsia::ledger::PageSnapshot_Get_Result actual_value;
+  snapshot->Get(
       convert::ToArray(key),
       ::callback::Capture(callback::SetWhenCalled(&called), &actual_value));
   DrainLoop();
@@ -1331,10 +1324,10 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   EXPECT_TRUE(called);
   EXPECT_THAT(actual_value, MatchesError(fuchsia::ledger::Error::NEEDS_FETCH));
 
-  fuchsia::ledger::PageSnapshot_GetInlineNew_Result actual_inlined_value;
-  snapshot->GetInlineNew(convert::ToArray(key),
-                         ::callback::Capture(callback::SetWhenCalled(&called),
-                                             &actual_inlined_value));
+  fuchsia::ledger::PageSnapshot_GetInline_Result actual_inlined_value;
+  snapshot->GetInline(convert::ToArray(key),
+                      ::callback::Capture(callback::SetWhenCalled(&called),
+                                          &actual_inlined_value));
   DrainLoop();
 
   EXPECT_TRUE(called);
@@ -1351,8 +1344,8 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
   PageSnapshotPtr snapshot = GetSnapshot();
 
   bool called;
-  fuchsia::ledger::PageSnapshot_FetchPartialNew_Result result;
-  snapshot->FetchPartialNew(
+  fuchsia::ledger::PageSnapshot_FetchPartial_Result result;
+  snapshot->FetchPartial(
       convert::ToArray(key), 2, 5,
       callback::Capture(callback::SetWhenCalled(&called), &result));
   DrainLoop();
@@ -1393,17 +1386,15 @@ TEST_F(PageImplTest, ParallelPut) {
   page_ptr2->GetSnapshot(snapshot2.NewRequest(),
                          fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
-  fuchsia::ledger::PageSnapshot_GetNew_Result result1;
-  snapshot1->GetNew(
-      convert::ToArray(key),
-      callback::Capture(callback::SetWhenCalled(&called), &result1));
+  fuchsia::ledger::PageSnapshot_Get_Result result1;
+  snapshot1->Get(convert::ToArray(key),
+                 callback::Capture(callback::SetWhenCalled(&called), &result1));
   DrainLoop();
   EXPECT_TRUE(called);
 
-  fuchsia::ledger::PageSnapshot_GetNew_Result result2;
-  snapshot2->GetNew(
-      convert::ToArray(key),
-      callback::Capture(callback::SetWhenCalled(&called), &result2));
+  fuchsia::ledger::PageSnapshot_Get_Result result2;
+  snapshot2->Get(convert::ToArray(key),
+                 callback::Capture(callback::SetWhenCalled(&called), &result2));
   DrainLoop();
   EXPECT_TRUE(called);
   //

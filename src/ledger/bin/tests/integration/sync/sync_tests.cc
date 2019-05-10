@@ -72,10 +72,9 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
                      nullptr);
 
   loop_waiter = NewWaiter();
-  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result;
-  snapshot->GetInlineNew(
-      convert::ToArray("Hello"),
-      callback::Capture(loop_waiter->GetCallback(), &result));
+  fuchsia::ledger::PageSnapshot_GetInline_Result result;
+  snapshot->GetInline(convert::ToArray("Hello"),
+                      callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString("World"));
 
@@ -128,10 +127,9 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
                      nullptr);
 
   loop_waiter = NewWaiter();
-  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result;
-  snapshot->GetInlineNew(
-      convert::ToArray("Hello"),
-      callback::Capture(loop_waiter->GetCallback(), &result));
+  fuchsia::ledger::PageSnapshot_GetInline_Result result;
+  snapshot->GetInline(convert::ToArray("Hello"),
+                      callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString("World"));
 
@@ -188,16 +186,16 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
 
   // Lazy value is not downloaded eagerly.
   loop_waiter = NewWaiter();
-  fuchsia::ledger::PageSnapshot_GetNew_Result result;
-  snapshot->GetNew(convert::ToArray("Hello"),
-                   callback::Capture(loop_waiter->GetCallback(), &result));
+  fuchsia::ledger::PageSnapshot_Get_Result result;
+  snapshot->Get(convert::ToArray("Hello"),
+                callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesError(fuchsia::ledger::Error::NEEDS_FETCH));
 
-  fuchsia::ledger::PageSnapshot_FetchPartialNew_Result fetch_result;
+  fuchsia::ledger::PageSnapshot_FetchPartial_Result fetch_result;
   loop_waiter = NewWaiter();
   // Fetch only a small part.
-  snapshot->FetchPartialNew(
+  snapshot->FetchPartial(
       convert::ToArray("Hello"), 0, 10,
       callback::Capture(loop_waiter->GetCallback(), &fetch_result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
@@ -212,8 +210,8 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
 
   // Now Get succeeds, as the value is no longer lazy.
   loop_waiter = NewWaiter();
-  snapshot->GetNew(convert::ToArray("Hello"),
-                   callback::Capture(loop_waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("Hello"),
+                callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString(convert::ToString(big_value)));
 }

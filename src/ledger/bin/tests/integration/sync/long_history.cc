@@ -65,9 +65,9 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
                      nullptr);
 
   waiter = NewWaiter();
-  fuchsia::ledger::PageSnapshot_GetInlineNew_Result result;
-  snapshot->GetInlineNew(convert::ToArray("iteration"),
-                         callback::Capture(waiter->GetCallback(), &result));
+  fuchsia::ledger::PageSnapshot_GetInline_Result result;
+  snapshot->GetInline(convert::ToArray("iteration"),
+                      callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   const int last_iteration = commit_history_length - 1;
   ASSERT_THAT(result, MatchesString(std::to_string(last_iteration)));

@@ -193,9 +193,9 @@ class ReadVmoCall
     FlowToken flow{this, &result_};
 
     page_snapshot_ = page_client_->NewSnapshot();
-    page_snapshot_->GetNew(
+    page_snapshot_->Get(
         to_array(key_),
-        [this, flow](fuchsia::ledger::PageSnapshot_GetNew_Result result) {
+        [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
           if (result.is_err()) {
             result_ = fit::error(result.err());
           } else {
