@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("bt-avctp") {
+  name = "bt_avctp"
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:slab",
+  ]
+}
+
+test_package("tests") {
+  package_name = "bt-avctp-tests"
+
+  deps = [
+    ":bt-avctp",
+  ]
+
+  tests = [
+    {
+      name = "bt_avctp_lib_test"
+      dest = "bt-avctp-unittests"
+      environments = basic_envs
+    },
+  ]
+}

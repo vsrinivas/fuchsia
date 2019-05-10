@@ -1137,6 +1137,7 @@ group("bluetooth") {
     "//src/connectivity/bluetooth/core/bt-gap:tests",
     "//src/connectivity/bluetooth/hci/fake",
     "//src/connectivity/bluetooth/lib/bt-avdtp:tests",
+    "//src/connectivity/bluetooth/lib/bt-avctp:tests",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth:tests",
     "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
     "//src/connectivity/bluetooth/tests",
