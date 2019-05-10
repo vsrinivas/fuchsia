@@ -86,8 +86,15 @@ class TestSessionShellApp : public modular::ViewApp,
   void AttachView(fuchsia::modular::ViewIdentifier view_id,
                   fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
                       view_owner) override {
-    view_->ConnectView(scenic::ToViewHolderToken(
-        zx::eventpair(view_owner.TakeChannel().release())));
+    AttachView2(view_id, scenic::ToViewHolderToken(zx::eventpair(
+                             view_owner.TakeChannel().release())));
+  }
+
+  // |SessionShell|
+  void AttachView2(
+      fuchsia::modular::ViewIdentifier view_id,
+      fuchsia::ui::views::ViewHolderToken view_holder_token) override {
+    view_->ConnectView(std::move(view_holder_token));
   }
 
   // |SessionShell|
