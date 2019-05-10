@@ -20,7 +20,6 @@ namespace scenic {
 struct ViewContext {
   scenic::SessionPtrAndListenerRequest session_and_listener_request;
   fuchsia::ui::views::ViewToken view_token;
-  fuchsia::ui::views::ViewToken view_token2;
   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services;
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services;
   component::StartupContext* startup_context;

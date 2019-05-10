@@ -4,8 +4,8 @@
 
 #include "garnet/public/lib/ui/base_view/cpp/view_provider_component.h"
 
-#include "src/lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
+#include "src/lib/fxl/logging.h"
 
 using fuchsia::ui::views::ViewToken;
 
@@ -65,8 +65,8 @@ void ViewProviderComponent::ViewImpl::Present2(
 
   ViewContext context = {
       .session_and_listener_request =
-      CreateScenicSessionPtrAndListenerRequest(scenic_),
-      .view_token2 = std::move(view_token),
+          CreateScenicSessionPtrAndListenerRequest(scenic_),
+      .view_token = std::move(view_token),
       .incoming_services = {},
       .outgoing_services = {},
       .startup_context = startup_context_,
