@@ -90,6 +90,8 @@ union Command {
     SceneAddPointLightCmd scene__add_point_light;
 
     SetDisplayColorConversionCmdHACK set_display_color_conversion;
+
+    SetDisplayRotationCmdHACK set_display_rotation;
 };
 
 // Instructs the compositor to create the specified |Resource|, and to register
@@ -803,4 +805,20 @@ struct SetDisplayColorConversionCmdHACK {
     array<float32>:3 preoffsets;
     array<float32>:9 matrix;
     array<float32>:3 postoffsets;
+};
+
+// Depending on the device, the display might be rotated
+// with respect to what the lower level device controller
+// considers the physical orientation of pixels. The
+// compositors and layers must be in alignment with the
+// underlying physical orientation which means that for
+// certain operations like screenshotting, they cannot
+// provide results with the accurate orientation unless
+// they have information about how the higher-level display
+// is orienting the screen. The only legal values for the
+// rotation are 0, 90, 180, and 270, which are each
+//  applied counterclockwise.
+struct SetDisplayRotationCmdHACK {
+    uint32 compositor_id;
+    uint32 rotation_degrees;
 };

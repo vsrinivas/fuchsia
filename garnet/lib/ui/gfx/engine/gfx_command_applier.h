@@ -12,8 +12,8 @@
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/resource_context.h"
-#include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/lib/escher/flib/fence_set_listener.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -228,6 +228,9 @@ class GfxCommandApplier {
   static bool ApplySetDisplayColorConversionCmd(
       Session* session,
       fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK command);
+
+  static bool ApplySetDisplayRotationCmd(
+      Session* session, fuchsia::ui::gfx::SetDisplayRotationCmdHACK command);
 
   // Actually create resources.
   static ResourcePtr CreateMemory(Session* session, ResourceId id,

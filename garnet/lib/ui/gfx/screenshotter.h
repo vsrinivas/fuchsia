@@ -6,11 +6,12 @@
 #define GARNET_LIB_UI_GFX_SCREENSHOTTER_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+
 #include <string>
 
 #include "garnet/lib/ui/gfx/engine/engine.h"
-#include "src/ui/lib/escher/vk/image.h"
 #include "src/lib/fxl/macros.h"
+#include "src/ui/lib/escher/vk/image.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -24,7 +25,7 @@ class Screenshotter {
  private:
   static void OnCommandBufferDone(
       const escher::ImagePtr& image, uint32_t width, uint32_t height,
-      vk::Device device,
+      uint32_t rotation, vk::Device device,
       fuchsia::ui::scenic::Scenic::TakeScreenshotCallback done_callback);
 };
 

@@ -577,6 +577,10 @@ void DisplayCompositor::SetColorConversion(
                                                          matrix, postoffsets));
 }
 
+void DisplayCompositor::SetLayoutRotation(uint32_t rotation_degrees) {
+  session()->Enqueue(NewSetDisplayRotationCmdHACK(id(), rotation_degrees));
+}
+
 Compositor::Compositor(Session* session) : Resource(session) {
   session->Enqueue(NewCreateCompositorCmd(id()));
 }
@@ -587,6 +591,10 @@ Compositor::~Compositor() = default;
 
 void Compositor::SetLayerStack(uint32_t layer_stack_id) {
   session()->Enqueue(NewSetLayerStackCmd(id(), layer_stack_id));
+}
+
+void Compositor::SetLayoutRotation(uint32_t rotation_degrees) {
+  session()->Enqueue(NewSetDisplayRotationCmdHACK(id(), rotation_degrees));
 }
 
 Light::Light(Session* session) : Resource(session) {}

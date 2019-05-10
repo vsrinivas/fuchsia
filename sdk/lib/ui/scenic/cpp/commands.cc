@@ -742,6 +742,18 @@ fuchsia::ui::gfx::Command NewSetDisplayColorConversionCmdHACK(
   return command;
 }
 
+fuchsia::ui::gfx::Command NewSetDisplayRotationCmdHACK(
+    uint32_t compositor_id, uint32_t rotation_degrees) {
+  fuchsia::ui::gfx::SetDisplayRotationCmdHACK display_rotation;
+  display_rotation.compositor_id = compositor_id;
+  display_rotation.rotation_degrees = rotation_degrees;
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_display_rotation(std::move(display_rotation));
+
+  return command;
+}
+
 fuchsia::ui::gfx::Command NewSendSizeChangeHintCmdHACK(
     uint32_t node_id, float width_change_factor, float height_change_factor) {
   fuchsia::ui::gfx::SendSizeChangeHintCmdHACK send_size_change_hint;

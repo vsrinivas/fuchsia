@@ -169,11 +169,15 @@ fuchsia::ui::gfx::Command NewSetHitTestBehaviorCmd(
 fuchsia::ui::gfx::Command NewTakeSnapshotCmdHACK(
     uint32_t id, fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback);
 
-// Display Commands
+// Display Commands.
+
 fuchsia::ui::gfx::Command NewSetDisplayColorConversionCmdHACK(
     uint32_t compositor_id, const std::array<float, 3>& preoffsets,
     const std::array<float, 9>& matrix,
     const std::array<float, 3>& postoffsets);
+
+fuchsia::ui::gfx::Command NewSetDisplayRotationCmdHACK(
+    uint32_t compositor_id, uint32_t rotation_degrees);
 
 // Camera and lighting operations.
 

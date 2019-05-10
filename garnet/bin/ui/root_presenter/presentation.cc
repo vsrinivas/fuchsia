@@ -104,6 +104,8 @@ Presentation::Presentation(
 
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
 
+  SetScenicDisplayRotation();
+
   // NOTE: This invokes Present(); all initial scene setup should happen before.
   OverrideRendererParams(renderer_params, false);
 
@@ -848,6 +850,15 @@ void Presentation::SetRendererParams(
     SetRendererParam(std::move(params[i]));
   }
   session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
+}
+
+void Presentation::SetScenicDisplayRotation() {
+  fuchsia::ui::gfx::Command command;
+  fuchsia::ui::gfx::SetDisplayRotationCmdHACK display_rotation_cmd;
+  display_rotation_cmd.compositor_id = compositor_id_;
+  display_rotation_cmd.rotation_degrees = display_startup_rotation_adjustment_;
+  command.set_set_display_rotation(std::move(display_rotation_cmd));
+  session_->Enqueue(std::move(command));
 }
 
 void Presentation::SetRendererParam(fuchsia::ui::gfx::RendererParam param) {

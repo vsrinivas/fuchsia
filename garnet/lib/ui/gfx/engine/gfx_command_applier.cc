@@ -38,6 +38,7 @@
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
+#include "garnet/lib/ui/gfx/screenshotter.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain_factory.h"
 #include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
@@ -228,6 +229,9 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
     case fuchsia::ui::gfx::Command::Tag::kSetDisplayColorConversion:
       return ApplySetDisplayColorConversionCmd(
           session, std::move(command.set_display_color_conversion()));
+    case fuchsia::ui::gfx::Command::Tag::kSetDisplayRotation:
+      return ApplySetDisplayRotationCmd(
+          session, std::move(command.set_display_rotation()));
     case fuchsia::ui::gfx::Command::Tag::Invalid:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
@@ -479,6 +483,32 @@ bool GfxCommandApplier::ApplyTakeSnapshotCmdHACK(
         });
       });
   return true;
+}
+
+bool GfxCommandApplier::ApplySetDisplayColorConversionCmd(
+    Session* session,
+    fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK command) {
+  if (auto compositor = session->resources()->FindResource<Compositor>(
+          command.compositor_id)) {
+    if (auto swapchain = compositor->swapchain()) {
+      ColorTransform transform;
+      transform.preoffsets = command.preoffsets;
+      transform.matrix = command.matrix;
+      transform.postoffsets = command.postoffsets;
+      swapchain->SetDisplayColorConversion(transform);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool GfxCommandApplier::ApplySetDisplayRotationCmd(
+    Session* session, fuchsia::ui::gfx::SetDisplayRotationCmdHACK command) {
+  if (auto compositor = session->resources()->FindResource<Compositor>(
+          command.compositor_id)) {
+    return compositor->SetLayoutRotation(command.rotation_degrees);
+  }
+  return false;
 }
 
 bool GfxCommandApplier::ApplyDetachCmd(Session* session,
@@ -1402,23 +1432,6 @@ bool GfxCommandApplier::ApplyCreateVariable(
   auto variable = CreateVariable(session, id, std::move(args));
   return variable ? session->resources()->AddResource(id, std::move(variable))
                   : false;
-}
-
-bool GfxCommandApplier::ApplySetDisplayColorConversionCmd(
-    Session* session,
-    fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK command) {
-  if (auto compositor = session->resources()->FindResource<Compositor>(
-          command.compositor_id)) {
-    if (auto swapchain = compositor->swapchain()) {
-      ColorTransform transform;
-      transform.preoffsets = command.preoffsets;
-      transform.matrix = command.matrix;
-      transform.postoffsets = command.postoffsets;
-      swapchain->SetDisplayColorConversion(transform);
-      return true;
-    }
-  }
-  return false;
 }
 
 ResourcePtr GfxCommandApplier::CreateMemory(Session* session, ResourceId id,

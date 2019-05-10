@@ -1,5 +1,5 @@
 {
-  "fidl/fuchsia.ui.gfx/commands.fidl": "31eb7f811fe8f99824ce545156779c1b",
+  "fidl/fuchsia.ui.gfx/commands.fidl": "e89498d6ed4568aafc33b72f54fd7f6c",
   "fidl/fuchsia.ui.gfx/display_info.fidl": "487789dbc460e85bee1a1093b8e41c83",
   "fidl/fuchsia.ui.gfx/events.fidl": "0f5bdac88fd68d128a58b135581e3911",
   "fidl/fuchsia.ui.gfx/hit.fidl": "1325603f149baaa07e3d9c6b1bafcec7",

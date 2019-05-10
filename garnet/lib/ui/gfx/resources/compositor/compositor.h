@@ -5,12 +5,12 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_COMPOSITOR_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_COMPOSITOR_H_
 
-#include "garnet/lib/ui/gfx/resources/resource.h"
-
 #include <lib/zx/time.h>
+
 #include <set>
 #include <utility>
 
+#include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -65,6 +65,12 @@ class Compositor : public Resource {
 
   Swapchain* swapchain() const { return swapchain_.get(); }
 
+  // Setter and getter for rotation in degrees, currently used for
+  // screenshotting.
+  bool SetLayoutRotation(uint32_t rotation);
+
+  const uint32_t& layout_rotation() const { return layout_rotation_; }
+
  protected:
   Compositor(Session* session, ResourceId id, const ResourceTypeInfo& type_info,
              SceneGraphWeakPtr scene_graph,
@@ -74,6 +80,9 @@ class Compositor : public Resource {
   SceneGraphWeakPtr scene_graph_;
   std::unique_ptr<Swapchain> swapchain_;
   LayerStackPtr layer_stack_;
+
+  // Rotation in degrees used for screenshotting.
+  uint32_t layout_rotation_ = 0;
 
   fxl::WeakPtrFactory<Compositor> weak_factory_;  // Must be last.
 

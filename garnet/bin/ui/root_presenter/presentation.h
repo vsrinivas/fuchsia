@@ -142,6 +142,9 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   // Set a single RendererParam, unless this value is overridden.
   void SetRendererParam(fuchsia::ui::gfx::RendererParam param);
 
+  // Passes the display rotation in degrees down to the scenic compositor.
+  void SetScenicDisplayRotation();
+
   void PresentScene();
 
   fuchsia::ui::scenic::Scenic* const scenic_;

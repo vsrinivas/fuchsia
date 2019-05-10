@@ -650,6 +650,8 @@ class DisplayCompositor final : public Resource {
   void SetColorConversion(const std::array<float, 3>& preoffsets,
                           const std::array<float, 9>& matrix,
                           const std::array<float, 3>& postoffsets);
+
+  void SetLayoutRotation(uint32_t rotation_degrees);
 };
 
 // Represents a display-less compositor resource in a session.
@@ -665,6 +667,8 @@ class Compositor final : public Resource {
     SetLayerStack(layer_stack.id());
   }
   void SetLayerStack(uint32_t layer_stack_id);
+
+  void SetLayoutRotation(uint32_t rotation_degrees);
 };
 
 }  // namespace scenic
