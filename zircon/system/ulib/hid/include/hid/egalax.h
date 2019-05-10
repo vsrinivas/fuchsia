@@ -32,6 +32,8 @@ typedef struct egalax_touchscreen {
 } __PACKED egalax_touch_t;
 
 bool is_egalax_touchscreen_report_desc(const uint8_t* data, size_t len);
+const uint8_t* get_egalax_touch_report_desc(size_t* len);
+
 zx_status_t setup_egalax_touchscreen(int fd);
 
 __END_CDECLS

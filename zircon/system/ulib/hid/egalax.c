@@ -179,6 +179,11 @@ bool is_egalax_touchscreen_report_desc(const uint8_t* data, size_t len) {
     return (memcmp(data, egalax_touch_report_desc, len) == 0);
 }
 
+const uint8_t* get_egalax_touch_report_desc(size_t* len) {
+    *len = sizeof(egalax_touch_report_desc);
+    return egalax_touch_report_desc;
+}
+
 zx_status_t setup_egalax_touchscreen(int fd) {
     if (fd < 0)
         return ZX_ERR_INVALID_ARGS;
