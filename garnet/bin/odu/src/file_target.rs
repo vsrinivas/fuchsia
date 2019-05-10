@@ -175,7 +175,7 @@ impl FileBlockingTarget {
         offset_range: Range<u64>,
         start_instant: Instant,
     ) -> TargetType {
-        let ops = TargetOps { write: Some(OperationType::Write), open: Some(OperationType::Open) };
+        let ops = TargetOps { write: true, open: true };
         let file = OpenOptions::new().write(true).append(false).open(&name).unwrap();
         Arc::new(Box::new(FileBlockingTarget {
             name,

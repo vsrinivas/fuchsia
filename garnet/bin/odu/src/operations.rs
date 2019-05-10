@@ -140,22 +140,22 @@ pub enum AvailableTargets {
 /// know what are valid operations for a given Target.
 #[derive(Clone)]
 pub struct TargetOps {
-    pub write: Option<OperationType>,
-    pub open: Option<OperationType>,
-    //    read: Option<OperationType>,
-    //    lseek: Option<OperationType>,
-    //    close: Option<OperationType>,
-    //    fsync: Option<OperationType>,
+    pub write: bool,
+    pub open: bool,
+    //    pub read: bool,
+    //    pub lseek: bool,
+    //    pub close: bool,
+    //    pub fsync: bool,
     //
     //
-    //    create: Option<OperationType>,
-    //    unlink: Option<OperationType>,
-    //    createdir: Option<OperationType>,
-    //    deletedir: Option<OperationType>,
-    //    readdir: Option<OperationType>,
-    //    opendir: Option<OperationType>,
-    //    link: Option<OperationType>,
+    //    pub create: bool,
+    //    pub unlink: bool,
+    //    pub createdir: bool,
+    //    pub deletedir: bool,
+    //    pub readdir: bool,
+    //    pub opendir: bool,
+    //    pub link: bool,
     //
-    //    mount: Option<OperationType>,
-    //    unmount: Option<OperationType>,
+    //    pub mount: bool,
+    //    pub unmount: bool,
 }
