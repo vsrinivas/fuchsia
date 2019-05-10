@@ -663,7 +663,7 @@ fn process_eapol_ind(
             // ESS Security Association derived a new key.
             // Configure key in MLME.
             SecAssocUpdate::Key(key) => {
-                inspect_log!(context.inspect.rsn_events, derived_key: key.name());
+                inspect_log_key(context, &key);
                 send_keys(&context.mlme_sink, bssid, key)
             }
             // Received a status update.
@@ -689,6 +689,19 @@ fn process_eapol_ind(
     }
 
     RsnaStatus::Progressed { new_resp_timeout }
+}
+
+fn inspect_log_key(context: &mut Context, key: &Key) {
+    let (cipher, key_index) = match key {
+        Key::Ptk(ptk) => (Some(&ptk.cipher), None),
+        Key::Gtk(gtk) => (Some(&gtk.cipher), Some(gtk.key_id())),
+        _ => (None, None)
+    };
+    inspect_log!(context.inspect.rsn_events, {
+        derived_key: key.name(),
+        cipher: cipher.map(|c| format!("{:?}", c)),
+        key_index: key_index,
+    });
 }
 
 fn send_eapol_frame(
