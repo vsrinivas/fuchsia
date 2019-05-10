@@ -320,7 +320,7 @@ impl State {
             inspect_log!(context.inspect.states, {
                 from: start_state,
                 to: new_state.state_name(),
-                ctx: state_change_msg,
+                ctx?: state_change_msg,
             });
         }
         new_state
@@ -409,7 +409,7 @@ impl State {
             inspect_log!(context.inspect.states, {
                 from: start_state,
                 to: new_state.state_name(),
-                ctx: state_change_msg,
+                ctx?: state_change_msg,
             });
         }
         new_state

@@ -412,7 +412,7 @@ fn inspect_log_join_scan(
             .insert("rsni_db", bss.rsni_dbh / 2)
             .insert("rssi_dbm", bss.rssi_dbm);
     });
-    inspect_log!(node, bss_list: inspect_bss, result: result_msg);
+    inspect_log!(node, bss_list: inspect_bss, result?: result_msg);
 }
 
 fn report_connect_finished(
