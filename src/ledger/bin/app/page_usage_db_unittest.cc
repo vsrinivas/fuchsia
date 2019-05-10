@@ -47,9 +47,9 @@ TEST_F(PageUsageDbTest, GetPagesEmpty) {
     std::string page_id(::fuchsia::ledger::PAGE_ID_SIZE, 'p');
 
     std::unique_ptr<storage::Iterator<const PageInfo>> pages;
-    EXPECT_EQ(storage::Status::OK, db_.GetPages(handler, &pages));
+    EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
 
-    EXPECT_EQ(storage::Status::OK, pages->GetStatus());
+    EXPECT_EQ(Status::OK, pages->GetStatus());
     EXPECT_FALSE(pages->Valid());
   });
 }
@@ -60,21 +60,20 @@ TEST_F(PageUsageDbTest, MarkPageOpened) {
     std::string page_id(::fuchsia::ledger::PAGE_ID_SIZE, 'p');
 
     // Open the same page.
-    EXPECT_EQ(storage::Status::OK,
-              db_.MarkPageOpened(handler, ledger_name, page_id));
+    EXPECT_EQ(Status::OK, db_.MarkPageOpened(handler, ledger_name, page_id));
 
     // Expect to find a single entry with the opened page marker timestamp.
     std::unique_ptr<storage::Iterator<const PageInfo>> pages;
-    EXPECT_EQ(storage::Status::OK, db_.GetPages(handler, &pages));
+    EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
 
-    EXPECT_EQ(storage::Status::OK, pages->GetStatus());
+    EXPECT_EQ(Status::OK, pages->GetStatus());
     EXPECT_TRUE(pages->Valid());
     EXPECT_EQ(ledger_name, (*pages)->ledger_name);
     EXPECT_EQ(page_id, (*pages)->page_id);
     EXPECT_EQ(PageInfo::kOpenedPageTimestamp, (*pages)->timestamp);
 
     pages->Next();
-    EXPECT_EQ(storage::Status::OK, pages->GetStatus());
+    EXPECT_EQ(Status::OK, pages->GetStatus());
     EXPECT_FALSE(pages->Valid());
   });
 }
@@ -85,24 +84,22 @@ TEST_F(PageUsageDbTest, MarkPageOpenedAndClosed) {
     std::string page_id(::fuchsia::ledger::PAGE_ID_SIZE, 'p');
 
     // Open and close the same page.
-    EXPECT_EQ(storage::Status::OK,
-              db_.MarkPageOpened(handler, ledger_name, page_id));
-    EXPECT_EQ(storage::Status::OK,
-              db_.MarkPageClosed(handler, ledger_name, page_id));
+    EXPECT_EQ(Status::OK, db_.MarkPageOpened(handler, ledger_name, page_id));
+    EXPECT_EQ(Status::OK, db_.MarkPageClosed(handler, ledger_name, page_id));
 
     // Expect to find a single entry with timestamp != the opened page marker
     // timestamp.
     std::unique_ptr<storage::Iterator<const PageInfo>> pages;
-    EXPECT_EQ(storage::Status::OK, db_.GetPages(handler, &pages));
+    EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
 
-    EXPECT_EQ(storage::Status::OK, pages->GetStatus());
+    EXPECT_EQ(Status::OK, pages->GetStatus());
     EXPECT_TRUE(pages->Valid());
     EXPECT_EQ(ledger_name, (*pages)->ledger_name);
     EXPECT_EQ(page_id, (*pages)->page_id);
     EXPECT_NE(PageInfo::kOpenedPageTimestamp, (*pages)->timestamp);
 
     pages->Next();
-    EXPECT_EQ(storage::Status::OK, pages->GetStatus());
+    EXPECT_EQ(Status::OK, pages->GetStatus());
     EXPECT_FALSE(pages->Valid());
   });
 }
@@ -118,23 +115,23 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
 
     // Open 5 pages.
     for (int i = 0; i < N; ++i) {
-      EXPECT_EQ(storage::Status::OK,
+      EXPECT_EQ(Status::OK,
                 db_.MarkPageOpened(handler, ledger_name, page_ids[i]));
     }
 
     // Close 1 of them.
-    EXPECT_EQ(storage::Status::OK,
+    EXPECT_EQ(Status::OK,
               db_.MarkPageClosed(handler, ledger_name, page_ids[0]));
 
     // Expect to find 4 entries with timestamp equal to the opened page marker
     // timestamp.
     std::unique_ptr<storage::Iterator<const PageInfo>> pages;
-    EXPECT_EQ(storage::Status::OK, db_.GetPages(handler, &pages));
+    EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
 
     int open_pages_count = 0;
     zx::time_utc page_0_timestamp(0);
     for (int i = 0; i < N; ++i) {
-      EXPECT_EQ(storage::Status::OK, pages->GetStatus());
+      EXPECT_EQ(Status::OK, pages->GetStatus());
       ASSERT_TRUE(pages->Valid());
       EXPECT_EQ(ledger_name, (*pages)->ledger_name);
       if ((*pages)->page_id == page_ids[0]) {
@@ -148,17 +145,17 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
     }
     EXPECT_EQ(N - 1, open_pages_count);
 
-    EXPECT_EQ(storage::Status::OK, pages->GetStatus());
+    EXPECT_EQ(Status::OK, pages->GetStatus());
     EXPECT_FALSE(pages->Valid());
 
     // Call MarkAllPagesClosed and expect all 5 pages to be closed, 4 with the
     // same value.
-    EXPECT_EQ(storage::Status::OK, db_.MarkAllPagesClosed(handler));
+    EXPECT_EQ(Status::OK, db_.MarkAllPagesClosed(handler));
 
-    EXPECT_EQ(storage::Status::OK, db_.GetPages(handler, &pages));
+    EXPECT_EQ(Status::OK, db_.GetPages(handler, &pages));
     zx::time_utc timestamp(PageInfo::kOpenedPageTimestamp);
     for (int i = 0; i < N; ++i) {
-      EXPECT_EQ(storage::Status::OK, pages->GetStatus());
+      EXPECT_EQ(Status::OK, pages->GetStatus());
       ASSERT_TRUE(pages->Valid());
       EXPECT_EQ(ledger_name, (*pages)->ledger_name);
       if ((*pages)->page_id == page_ids[0]) {

@@ -31,8 +31,7 @@ void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
                              fit::function<void(Status)> callback) {
   delegate_->GetPage(
       kRootPageId, Delegate::PageState::NAMED, std::move(page_request),
-      TRACE_CALLBACK(PageUtils::AdaptStatusCallback(std::move(callback)),
-                     "ledger", "ledger_get_root_page"));
+      TRACE_CALLBACK(std::move(callback), "ledger", "ledger_get_root_page"));
 }
 
 void LedgerImpl::GetPage(PageIdPtr id,
@@ -46,8 +45,7 @@ void LedgerImpl::GetPage(PageIdPtr id,
   }
   delegate_->GetPage(
       id->id, page_state, std::move(page_request),
-      TRACE_CALLBACK(PageUtils::AdaptStatusCallback(std::move(callback)),
-                     "ledger", "ledger_get_page"));
+      TRACE_CALLBACK(std::move(callback), "ledger", "ledger_get_page"));
 }
 
 void LedgerImpl::SetConflictResolverFactory(

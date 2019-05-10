@@ -16,7 +16,7 @@ base protocol that delegates to it.
 When one wants to implement an protocol extending ledger.ErrorNotifier, one
 therefore only need to implement the generated delegate protocol. For each
 method in the initial protocol, the delegate will have a corresponding method
-with an additional callback taking a ::fuchsia::ledger::Status. The implementor
+with an additional callback taking a ::ledger::Status. The implementor
 must call this additional callback when the call is finished, with either
 Status::OK if the call is successful, or with any error status if it is not.
 

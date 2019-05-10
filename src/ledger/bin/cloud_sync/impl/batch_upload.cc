@@ -52,9 +52,9 @@ void BatchUpload::Start() {
   started_ = true;
   storage_->GetUnsyncedPieces(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
-      [this](storage::Status status,
+      [this](ledger::Status status,
              std::vector<storage::ObjectIdentifier> object_identifiers) {
-        if (status != storage::Status::OK) {
+        if (status != ledger::Status::OK) {
           errored_ = true;
           on_error_(ErrorType::PERMANENT);
           return;
@@ -123,9 +123,9 @@ void BatchUpload::GetObjectContentAndUpload(
       callback::MakeScoped(
           weak_ptr_factory_.GetWeakPtr(),
           [this, object_identifier, object_name = std::move(object_name)](
-              storage::Status storage_status,
+              ledger::Status storage_status,
               std::unique_ptr<const storage::Piece> piece) mutable {
-            FXL_DCHECK(storage_status == storage::Status::OK);
+            FXL_DCHECK(storage_status == ledger::Status::OK);
             UploadObject(std::move(object_identifier), std::move(object_name),
                          std::move(piece));
           }));
@@ -181,11 +181,11 @@ void BatchUpload::UploadEncryptedObject(
                     std::move(object_identifier),
                     callback::MakeScoped(
                         weak_ptr_factory_.GetWeakPtr(),
-                        [this](storage::Status status) {
+                        [this](ledger::Status status) {
                           FXL_DCHECK(current_objects_handled_ > 0);
                           current_objects_handled_--;
 
-                          if (status != storage::Status::OK) {
+                          if (status != ledger::Status::OK) {
                             errored_ = true;
                             error_type_ = ErrorType::PERMANENT;
                           }
@@ -219,7 +219,7 @@ void BatchUpload::FilterAndUploadCommits() {
   // same time.
   storage_->GetUnsyncedCommits(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
-      [this](storage::Status status,
+      [this](ledger::Status status,
              std::vector<std::unique_ptr<const storage::Commit>> commits) {
         std::set<storage::CommitId> commit_ids;
         std::transform(
@@ -300,16 +300,16 @@ void BatchUpload::UploadCommits() {
                         return;
                       }
                       auto waiter = fxl::MakeRefCounted<
-                          callback::StatusWaiter<storage::Status>>(
-                          storage::Status::OK);
+                          callback::StatusWaiter<ledger::Status>>(
+                          ledger::Status::OK);
 
                       for (auto& id : commit_ids) {
                         storage_->MarkCommitSynced(id, waiter->NewCallback());
                       }
                       waiter->Finalize(callback::MakeScoped(
                           weak_ptr_factory_.GetWeakPtr(),
-                          [this](storage::Status status) {
-                            if (status != storage::Status::OK) {
+                          [this](ledger::Status status) {
+                            if (status != ledger::Status::OK) {
                               errored_ = true;
                               on_error_(ErrorType::PERMANENT);
                               return;

@@ -25,19 +25,19 @@ class AutoMergeStrategy::AutoMerger {
              std::unique_ptr<const storage::Commit> left,
              std::unique_ptr<const storage::Commit> right,
              std::unique_ptr<const storage::Commit> ancestor,
-             fit::function<void(storage::Status)> callback);
+             fit::function<void(Status)> callback);
   ~AutoMerger();
 
   void Start();
   void Cancel();
-  void Done(storage::Status status);
+  void Done(Status status);
 
  private:
   void OnRightChangeReady(
-      storage::Status status,
+      Status status,
       std::unique_ptr<std::vector<storage::EntryChange>> right_change);
   void OnComparisonDone(
-      storage::Status status,
+      Status status,
       std::unique_ptr<std::vector<storage::EntryChange>> right_changes,
       bool distinct);
   void ApplyDiffOnJournal(
@@ -54,7 +54,7 @@ class AutoMergeStrategy::AutoMerger {
 
   std::unique_ptr<ConflictResolverClient> delegated_merge_;
 
-  fit::function<void(storage::Status)> callback_;
+  fit::function<void(Status)> callback_;
 
   bool cancelled_ = false;
 
@@ -68,7 +68,7 @@ AutoMergeStrategy::AutoMerger::AutoMerger(
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
     std::unique_ptr<const storage::Commit> ancestor,
-    fit::function<void(storage::Status)> callback)
+    fit::function<void(Status)> callback)
     : storage_(storage),
       manager_(page_manager),
       conflict_resolver_(conflict_resolver),
@@ -100,9 +100,9 @@ void AutoMergeStrategy::AutoMerger::Start() {
 
   auto callback = callback::MakeScoped(
       weak_factory_.GetWeakPtr(),
-      [this, changes = std::move(changes)](storage::Status status) mutable {
+      [this, changes = std::move(changes)](Status status) mutable {
         if (cancelled_) {
-          Done(storage::Status::INTERNAL_ERROR);
+          Done(Status::INTERNAL_ERROR);
           return;
         }
         OnRightChangeReady(status, std::move(changes));
@@ -113,14 +113,14 @@ void AutoMergeStrategy::AutoMerger::Start() {
 }
 
 void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
-    storage::Status status,
+    Status status,
     std::unique_ptr<std::vector<storage::EntryChange>> right_change) {
   if (cancelled_) {
-    Done(storage::Status::INTERNAL_ERROR);
+    Done(Status::INTERNAL_ERROR);
     return;
   }
 
-  if (status != storage::Status::OK) {
+  if (status != Status::OK) {
     FXL_LOG(ERROR) << "Unable to compute right diff due to error " << status
                    << ", aborting.";
     Done(status);
@@ -128,7 +128,7 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
   }
 
   if (right_change->empty()) {
-    OnComparisonDone(storage::Status::OK, std::move(right_change), true);
+    OnComparisonDone(Status::OK, std::move(right_change), true);
     return;
   }
 
@@ -166,9 +166,9 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
   auto callback = callback::MakeScoped(
       weak_factory_.GetWeakPtr(),
       [this, right_change = std::move(right_change),
-       index = std::move(index)](storage::Status status) mutable {
+       index = std::move(index)](Status status) mutable {
         if (cancelled_) {
-          Done(storage::Status::INTERNAL_ERROR);
+          Done(Status::INTERNAL_ERROR);
           return;
         }
         OnComparisonDone(status, std::move(right_change), index->distinct);
@@ -179,15 +179,15 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
 }
 
 void AutoMergeStrategy::AutoMerger::OnComparisonDone(
-    storage::Status status,
+    Status status,
     std::unique_ptr<std::vector<storage::EntryChange>> right_changes,
     bool distinct) {
   if (cancelled_) {
-    Done(storage::Status::INTERNAL_ERROR);
+    Done(Status::INTERNAL_ERROR);
     return;
   }
 
-  if (status != storage::Status::OK) {
+  if (status != Status::OK) {
     FXL_LOG(ERROR) << "Unable to compute left diff due to error " << status
                    << ", aborting.";
     Done(status);
@@ -201,14 +201,13 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
     delegated_merge_ = std::make_unique<ConflictResolverClient>(
         storage_, manager_, conflict_resolver_, std::move(left_),
         std::move(right_), std::move(ancestor_),
-        callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                             [this](storage::Status status) {
-                               if (cancelled_) {
-                                 Done(storage::Status::INTERNAL_ERROR);
-                                 return;
-                               }
-                               Done(status);
-                             }));
+        callback::MakeScoped(weak_factory_.GetWeakPtr(), [this](Status status) {
+          if (cancelled_) {
+            Done(Status::INTERNAL_ERROR);
+            return;
+          }
+          Done(status);
+        }));
 
     delegated_merge_->Start();
     return;
@@ -237,9 +236,8 @@ void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
   storage_->CommitJournal(
       std::move(journal),
       [weak_this = weak_factory_.GetWeakPtr()](
-          storage::Status s,
-          std::unique_ptr<const storage::Commit> /*commit*/) {
-        if (s != storage::Status::OK) {
+          Status s, std::unique_ptr<const storage::Commit> /*commit*/) {
+        if (s != Status::OK) {
           FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
         }
         if (weak_this) {
@@ -255,7 +253,7 @@ void AutoMergeStrategy::AutoMerger::Cancel() {
   }
 }
 
-void AutoMergeStrategy::AutoMerger::Done(storage::Status status) {
+void AutoMergeStrategy::AutoMerger::Done(Status status) {
   delegated_merge_.reset();
   auto callback = std::move(callback_);
   callback_ = nullptr;
@@ -290,14 +288,14 @@ void AutoMergeStrategy::Merge(storage::PageStorage* storage,
                               std::unique_ptr<const storage::Commit> head_1,
                               std::unique_ptr<const storage::Commit> head_2,
                               std::unique_ptr<const storage::Commit> ancestor,
-                              fit::function<void(storage::Status)> callback) {
+                              fit::function<void(Status)> callback) {
   FXL_DCHECK(storage::Commit::TimestampOrdered(head_1, head_2));
   FXL_DCHECK(!in_progress_merge_);
 
   in_progress_merge_ = std::make_unique<AutoMergeStrategy::AutoMerger>(
       storage, page_manager, conflict_resolver_.get(), std::move(head_2),
       std::move(head_1), std::move(ancestor),
-      [this, callback = std::move(callback)](storage::Status status) {
+      [this, callback = std::move(callback)](Status status) {
         in_progress_merge_.reset();
         callback(status);
       });

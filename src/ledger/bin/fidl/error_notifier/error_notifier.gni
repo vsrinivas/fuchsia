@@ -49,6 +49,7 @@ template("error_notifier_fidl") {
       "$fidl_target",
       "//sdk/lib/fidl/cpp",
       "//src/ledger/bin/fidl/error_notifier",
+      "//src/ledger/bin/public",
     ]
 
     if (defined(invoker.public_deps)) {

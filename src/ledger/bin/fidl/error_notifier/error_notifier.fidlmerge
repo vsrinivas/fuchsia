@@ -110,7 +110,7 @@
 
 // Produces the type of the callback associated with the current response and an additional Status.
 {{- define "CallbackTypeWithStatus" -}}
-::fit::function<void(::fuchsia::ledger::Status{{ if .Response}}, {{end}}{{ template "ParamTypes" .Response }})>
+::fit::function<void(::ledger::Status{{ if .Response}}, {{end}}{{ template "ParamTypes" .Response }})>
 {{- end }}
 
 
@@ -137,7 +137,7 @@
   {{- if .HasResponse -}}
 {{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "CallbackTypeWithStatus" . }} callback)
   {{- else -}}
-{{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}::fit::function<void(::fuchsia::ledger::Status)> callback)
+{{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}::fit::function<void(::ledger::Status)> callback)
   {{- end -}}
 {{ end -}}
 
@@ -160,6 +160,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 
 #include "src/ledger/bin/fidl/error_notifier/error_notifier_binding.h"
+#include "src/ledger/bin/public/status.h"
 
 {{/* keep the newline */}}
     {{- range .Name.Parts }}

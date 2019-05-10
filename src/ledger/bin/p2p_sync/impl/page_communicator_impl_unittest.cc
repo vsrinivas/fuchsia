@@ -80,13 +80,13 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
   storage::PageId GetId() override { return page_id_; }
 
-  storage::Status GetHeadCommits(
+  ledger::Status GetHeadCommits(
       std::vector<std::unique_ptr<const storage::Commit>>* head_commits)
       override {
     *head_commits = std::vector<std::unique_ptr<const storage::Commit>>();
     head_commits->push_back(
         std::make_unique<const FakeCommit>("commit_id", "data"));
-    return storage::Status::OK;
+    return ledger::Status::OK;
   }
 
   const FakeCommit& AddCommit(std::string id, std::string data) {
@@ -97,30 +97,30 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   }
 
   void GetCommit(storage::CommitIdView commit_id,
-                 fit::function<void(storage::Status,
+                 fit::function<void(ledger::Status,
                                     std::unique_ptr<const storage::Commit>)>
                      callback) override {
     auto it = commits_.find(commit_id);
     if (it == commits_.end()) {
-      callback(storage::Status::INTERNAL_NOT_FOUND, nullptr);
+      callback(ledger::Status::INTERNAL_NOT_FOUND, nullptr);
       return;
     }
-    callback(storage::Status::OK, it->second.Clone());
+    callback(ledger::Status::OK, it->second.Clone());
   }
 
-  void GetPiece(storage::ObjectIdentifier object_identifier,
-                fit::function<void(storage::Status,
-                                   std::unique_ptr<const storage::Piece>)>
-                    callback) override {
+  void GetPiece(
+      storage::ObjectIdentifier object_identifier,
+      fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>)>
+          callback) override {
     async::PostTask(dispatcher_, [this, object_identifier,
                                   callback = std::move(callback)]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
-        callback(storage::Status::INTERNAL_NOT_FOUND, nullptr);
+        callback(ledger::Status::INTERNAL_NOT_FOUND, nullptr);
         return;
       }
-      callback(storage::Status::OK, std::make_unique<storage::fake::FakePiece>(
-                                        object_identifier, it->second));
+      callback(ledger::Status::OK, std::make_unique<storage::fake::FakePiece>(
+                                       object_identifier, it->second));
     });
   }
 
@@ -134,23 +134,23 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
   void IsPieceSynced(
       storage::ObjectIdentifier object_identifier,
-      fit::function<void(storage::Status, bool)> callback) override {
+      fit::function<void(ledger::Status, bool)> callback) override {
     async::PostTask(dispatcher_, [this, object_identifier,
                                   callback = std::move(callback)]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
-        callback(storage::Status::INTERNAL_NOT_FOUND, false);
+        callback(ledger::Status::INTERNAL_NOT_FOUND, false);
         return;
       }
-      callback(storage::Status::OK, synced_objects_.find(object_identifier) !=
-                                        synced_objects_.end());
+      callback(ledger::Status::OK, synced_objects_.find(object_identifier) !=
+                                       synced_objects_.end());
     });
   }
 
   void AddCommitsFromSync(
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
       const storage::ChangeSource /*source*/,
-      fit::function<void(storage::Status, std::vector<storage::CommitId>)>
+      fit::function<void(ledger::Status, std::vector<storage::CommitId>)>
           callback) override {
     commits_from_sync_.emplace_back(
         std::piecewise_construct,
@@ -163,17 +163,16 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
     watcher_ = watcher;
   }
 
-  void MarkSyncedToPeer(
-      fit::function<void(storage::Status)> callback) override {
+  void MarkSyncedToPeer(fit::function<void(ledger::Status)> callback) override {
     callback(mark_synced_to_peer_status);
   }
 
   storage::CommitWatcher* watcher_ = nullptr;
   std::vector<std::pair<
       std::vector<storage::PageStorage::CommitIdAndBytes>,
-      fit::function<void(storage::Status, std::vector<storage::CommitId>)>>>
+      fit::function<void(ledger::Status, std::vector<storage::CommitId>)>>>
       commits_from_sync_;
-  storage::Status mark_synced_to_peer_status = storage::Status::OK;
+  ledger::Status mark_synced_to_peer_status = ledger::Status::OK;
 
  private:
   async_dispatcher_t* const dispatcher_;
@@ -442,7 +441,7 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
   ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called;
-  storage::Status status;
+  ledger::Status status;
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
@@ -488,11 +487,11 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
 
   // If storage fails to mark the page as synced to a peer, the mesh should not
   // be updated.
-  storage.mark_synced_to_peer_status = storage::Status::IO_ERROR;
+  storage.mark_synced_to_peer_status = ledger::Status::IO_ERROR;
   ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called;
-  storage::Status status;
+  ledger::Status status;
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
@@ -625,7 +624,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called;
-  storage::Status status;
+  ledger::Status status;
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
@@ -653,7 +652,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
                      }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ("foo_data", data->Get());
   EXPECT_EQ(storage::IsObjectSynced::NO, is_object_synced);
 }
@@ -668,7 +667,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called;
-  storage::Status status;
+  ledger::Status status;
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
@@ -695,7 +694,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
                      }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ("foo_data", data->Get());
   EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced);
 }
@@ -710,7 +709,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called;
-  storage::Status status;
+  ledger::Status status;
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
@@ -737,7 +736,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
                      }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status);
+  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
   EXPECT_FALSE(data);
 }
 
@@ -752,7 +751,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   ConnectToDevice(&page_communicator, "device3", "ledger", "page");
 
   bool called;
-  storage::Status status;
+  ledger::Status status;
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
@@ -790,7 +789,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
       }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ("foo_data", data->Get());
   EXPECT_EQ(storage::ChangeSource::P2P, source);
   EXPECT_EQ(storage::IsObjectSynced::NO, is_object_synced);
@@ -807,7 +806,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   ConnectToDevice(&page_communicator, "device3", "ledger", "page");
 
   bool called;
-  storage::Status status;
+  ledger::Status status;
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
@@ -845,7 +844,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
       }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status);
+  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
   EXPECT_FALSE(data);
 }
 
@@ -976,7 +975,7 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   EXPECT_EQ("data 2", storage_2.commits_from_sync_[0].first[1].bytes);
 
   // Verify we don't crash on response from storage
-  storage_2.commits_from_sync_[0].second(storage::Status::OK, {});
+  storage_2.commits_from_sync_[0].second(ledger::Status::OK, {});
   RunLoopUntilIdle();
 }
 
@@ -990,7 +989,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
   ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called1, called2, called3, called4;
-  storage::Status status1, status2, status3, status4;
+  ledger::Status status1, status2, status3, status4;
   storage::ChangeSource source1, source2, source3, source4;
   storage::IsObjectSynced is_object_synced1, is_object_synced2,
       is_object_synced3, is_object_synced4;
@@ -1031,22 +1030,22 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
 
   // All requests are terminated with a not found status.
   EXPECT_TRUE(called1);
-  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status1);
+  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status1);
   EXPECT_EQ(storage::ChangeSource::P2P, source1);
   EXPECT_FALSE(data1);
 
   EXPECT_TRUE(called2);
-  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status2);
+  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status2);
   EXPECT_EQ(storage::ChangeSource::P2P, source2);
   EXPECT_FALSE(data2);
 
   EXPECT_TRUE(called3);
-  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status3);
+  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status3);
   EXPECT_EQ(storage::ChangeSource::P2P, source3);
   EXPECT_FALSE(data3);
 
   EXPECT_TRUE(called4);
-  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status4);
+  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status4);
   EXPECT_EQ(storage::ChangeSource::P2P, source4);
   EXPECT_FALSE(data4);
 }
@@ -1164,7 +1163,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   ASSERT_EQ(1u, storage_2.commits_from_sync_.size());
   EXPECT_EQ(2u, storage_2.commits_from_sync_[0].first.size());
   // Return that we miss one commit
-  storage_2.commits_from_sync_[0].second(storage::Status::INTERNAL_NOT_FOUND,
+  storage_2.commits_from_sync_[0].second(ledger::Status::INTERNAL_NOT_FOUND,
                                          {"id 0"});
 
   // |page_communicator_2| should ask for the base, "id 0" commit.
@@ -1230,7 +1229,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   EXPECT_EQ("data 2", storage_2.commits_from_sync_[1].first[2].bytes);
 
   // Verify we don't crash on response from storage
-  storage_2.commits_from_sync_[1].second(storage::Status::OK, {});
+  storage_2.commits_from_sync_[1].second(ledger::Status::OK, {});
 }
 
 // Removes a device while we are performing the GetObject call.

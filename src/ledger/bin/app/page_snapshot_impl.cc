@@ -64,27 +64,26 @@ size_t ComputeEntrySize(const InlinedEntry& entry) {
 }
 
 // Fills an Entry from the content of object.
-storage::Status FillSingleEntry(const storage::Object& object, Entry* entry) {
+Status FillSingleEntry(const storage::Object& object, Entry* entry) {
   fsl::SizedVmo vmo;
-  storage::Status status = object.GetVmo(&vmo);
-  if (status != storage::Status::OK) {
+  Status status = object.GetVmo(&vmo);
+  if (status != Status::OK) {
     return status;
   }
   entry->value = fidl::MakeOptional(std::move(vmo).ToTransport());
-  return storage::Status::OK;
+  return Status::OK;
 }
 
 // Fills an InlinedEntry from the content of object.
-storage::Status FillSingleEntry(const storage::Object& object,
-                                InlinedEntry* entry) {
+Status FillSingleEntry(const storage::Object& object, InlinedEntry* entry) {
   fxl::StringView data;
-  storage::Status status = object.GetData(&data);
-  if (status != storage::Status::OK) {
+  Status status = object.GetData(&data);
+  if (status != Status::OK) {
     return status;
   }
   entry->inlined_value = std::make_unique<InlinedValue>();
   entry->inlined_value->value = convert::ToArray(data);
-  return storage::Status::OK;
+  return Status::OK;
 }
 
 // Calls |callback| with filled entries of the provided type per
@@ -125,9 +124,9 @@ void FillEntries(
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_entries");
 
-  auto waiter = fxl::MakeRefCounted<callback::Waiter<
-      storage::Status, std::unique_ptr<const storage::Object>>>(
-      storage::Status::OK);
+  auto waiter = fxl::MakeRefCounted<
+      callback::Waiter<Status, std::unique_ptr<const storage::Object>>>(
+      Status::OK);
 
   auto context = std::make_unique<Context>();
   // Use |token| for the first key if present.
@@ -152,11 +151,10 @@ void FillEntries(
     page_storage->GetObject(
         entry.object_identifier, storage::PageStorage::Location::LOCAL,
         [priority = entry.priority, waiter_callback = waiter->NewCallback()](
-            storage::Status status,
-            std::unique_ptr<const storage::Object> object) {
-          if (status == storage::Status::INTERNAL_NOT_FOUND &&
+            Status status, std::unique_ptr<const storage::Object> object) {
+          if (status == Status::INTERNAL_NOT_FOUND &&
               priority == storage::KeyPriority::LAZY) {
-            waiter_callback(storage::Status::OK, nullptr);
+            waiter_callback(Status::OK, nullptr);
           } else {
             waiter_callback(status, std::move(object));
           }
@@ -164,107 +162,91 @@ void FillEntries(
     return true;
   };
 
-  auto on_done =
-      [waiter, context = std::move(context),
-       callback = std::move(timed_callback)](storage::Status status) mutable {
-        if (status != storage::Status::OK) {
-          FXL_LOG(ERROR) << "Error while reading: " << status;
-          callback(Status::IO_ERROR, IterationStatus::OK,
-                   std::vector<EntryType>(), nullptr);
-          return;
-        }
-        fit::function<void(storage::Status,
-                           std::vector<std::unique_ptr<const storage::Object>>)>
-            result_callback =
-                [callback = std::move(callback), context = std::move(context)](
-                    storage::Status status,
-                    std::vector<std::unique_ptr<const storage::Object>>
-                        results) mutable {
-                  if (status != storage::Status::OK) {
-                    FXL_LOG(ERROR) << "Error while reading: " << status;
-                    callback(Status::IO_ERROR, IterationStatus::OK,
-                             std::vector<EntryType>(), nullptr);
-                    return;
+  auto on_done = [waiter, context = std::move(context),
+                  callback = std::move(timed_callback)](Status status) mutable {
+    if (status != Status::OK) {
+      FXL_LOG(ERROR) << "Error while reading: " << status;
+      callback(Status::IO_ERROR, IterationStatus::OK, std::vector<EntryType>(),
+               nullptr);
+      return;
+    }
+    fit::function<void(Status,
+                       std::vector<std::unique_ptr<const storage::Object>>)>
+        result_callback =
+            [callback = std::move(callback), context = std::move(context)](
+                Status status,
+                std::vector<std::unique_ptr<const storage::Object>>
+                    results) mutable {
+              if (status != Status::OK) {
+                FXL_LOG(ERROR) << "Error while reading: " << status;
+                callback(Status::IO_ERROR, IterationStatus::OK,
+                         std::vector<EntryType>(), nullptr);
+                return;
+              }
+              FXL_DCHECK(context->entries.size() == results.size());
+              size_t real_size = 0;
+              size_t i = 0;
+              for (; i < results.size(); i++) {
+                EntryType& entry = context->entries.at(i);
+                size_t next_token_size =
+                    i + 1 >= results.size()
+                        ? 0
+                        : fidl_serialization::GetByteVectorSize(
+                              context->entries.at(i + 1).key.size());
+                if (!results[i]) {
+                  size_t entry_size = ComputeEntrySize(entry);
+                  if (real_size + entry_size + next_token_size >
+                      fidl_serialization::kMaxInlineDataSize) {
+                    break;
                   }
-                  FXL_DCHECK(context->entries.size() == results.size());
-                  size_t real_size = 0;
-                  size_t i = 0;
-                  for (; i < results.size(); i++) {
-                    EntryType& entry = context->entries.at(i);
-                    size_t next_token_size =
-                        i + 1 >= results.size()
-                            ? 0
-                            : fidl_serialization::GetByteVectorSize(
-                                  context->entries.at(i + 1).key.size());
-                    if (!results[i]) {
-                      size_t entry_size = ComputeEntrySize(entry);
-                      if (real_size + entry_size + next_token_size >
-                          fidl_serialization::kMaxInlineDataSize) {
-                        break;
-                      }
-                      real_size += entry_size;
-                      // We don't have the object locally, but we decided not to
-                      // abort. This means this object is a value of a lazy key
-                      // and the client should ask to retrieve it over the
-                      // network if they need it. Here, we just leave the value
-                      // part of the entry null.
-                      continue;
-                    }
+                  real_size += entry_size;
+                  // We don't have the object locally, but we decided not to
+                  // abort. This means this object is a value of a lazy key
+                  // and the client should ask to retrieve it over the
+                  // network if they need it. Here, we just leave the value
+                  // part of the entry null.
+                  continue;
+                }
 
-                    storage::Status read_status =
-                        FillSingleEntry(*results[i], &entry);
-                    if (read_status != storage::Status::OK) {
-                      callback(PageUtils::ConvertStatus(read_status),
-                               IterationStatus::OK, std::vector<EntryType>(),
-                               nullptr);
-                      return;
-                    }
-                    size_t entry_size = ComputeEntrySize(entry);
-                    if (real_size + entry_size + next_token_size >
-                        fidl_serialization::kMaxInlineDataSize) {
-                      break;
-                    }
-                    real_size += entry_size;
-                  }
-                  if (i != results.size()) {
-                    if (i == 0) {
-                      callback(Status::VALUE_TOO_LARGE, IterationStatus::OK,
-                               std::vector<EntryType>(), nullptr);
-                      return;
-                    }
-                    // We had to bail out early because the result would be too
-                    // big otherwise.
-                    context->next_token = std::make_unique<Token>();
-                    context->next_token->opaque_id =
-                        std::move(context->entries.at(i).key);
-                    context->entries.resize(i);
-                  }
-                  if (context->next_token) {
-                    callback(Status::OK, IterationStatus::PARTIAL_RESULT,
-                             std::move(context->entries),
-                             std::move(context->next_token));
-                    return;
-                  }
-                  callback(Status::OK, IterationStatus::OK,
-                           std::move(context->entries), nullptr);
-                };
-        waiter->Finalize(std::move(result_callback));
-      };
+                Status read_status = FillSingleEntry(*results[i], &entry);
+                if (read_status != Status::OK) {
+                  callback(read_status, IterationStatus::OK,
+                           std::vector<EntryType>(), nullptr);
+                  return;
+                }
+                size_t entry_size = ComputeEntrySize(entry);
+                if (real_size + entry_size + next_token_size >
+                    fidl_serialization::kMaxInlineDataSize) {
+                  break;
+                }
+                real_size += entry_size;
+              }
+              if (i != results.size()) {
+                if (i == 0) {
+                  callback(Status::ILLEGAL_STATE, IterationStatus::OK,
+                           std::vector<EntryType>(), nullptr);
+                  return;
+                }
+                // We had to bail out early because the result would be too
+                // big otherwise.
+                context->next_token = std::make_unique<Token>();
+                context->next_token->opaque_id =
+                    std::move(context->entries.at(i).key);
+                context->entries.resize(i);
+              }
+              if (context->next_token) {
+                callback(Status::OK, IterationStatus::PARTIAL_RESULT,
+                         std::move(context->entries),
+                         std::move(context->next_token));
+                return;
+              }
+              callback(Status::OK, IterationStatus::OK,
+                       std::move(context->entries), nullptr);
+            };
+    waiter->Finalize(std::move(result_callback));
+  };
   page_storage->GetCommitContents(*commit, std::move(start), std::move(on_next),
                                   std::move(on_done));
-}
-
-// Adapt callback for the error notifier API.
-template <typename... A>
-fit::function<void(Status, IterationStatus, A...)> AdaptCallback(
-    fit::function<void(Status, Status, A...)> callback) {
-  return [callback = std::move(callback)](
-             Status status, IterationStatus iteration_status, A... args) {
-    callback(status,
-             iteration_status == IterationStatus::OK ? Status::OK
-                                                     : Status::PARTIAL_RESULT,
-             std::forward<A>(args)...);
-  };
 }
 
 template <typename Result>
@@ -341,9 +323,8 @@ void PageSnapshotImpl::GetKeys(
     return true;
   };
   auto on_done = [context = std::move(context),
-                  callback =
-                      std::move(timed_callback)](storage::Status status) {
-    if (status != storage::Status::OK) {
+                  callback = std::move(timed_callback)](Status status) {
+    if (status != Status::OK) {
       FXL_LOG(ERROR) << "Error while reading: " << status;
       callback(Status::IO_ERROR, IterationStatus::OK,
                std::vector<std::vector<uint8_t>>(), nullptr);
@@ -378,34 +359,32 @@ void PageSnapshotImpl::Get(
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
       [this, callback = std::move(timed_callback)](
-          storage::Status status, storage::Entry entry) mutable {
-        if (status == storage::Status::KEY_NOT_FOUND) {
+          Status status, storage::Entry entry) mutable {
+        if (status == Status::KEY_NOT_FOUND) {
           callback(Status::OK,
                    ToErrorResult<fuchsia::ledger::PageSnapshot_Get_Result>(
                        fuchsia::ledger::Error::KEY_NOT_FOUND));
           return;
         }
-        if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status),
-                   fuchsia::ledger::PageSnapshot_Get_Result());
+        if (status != Status::OK) {
+          callback(status, fuchsia::ledger::PageSnapshot_Get_Result());
           return;
         }
         PageUtils::ResolveObjectIdentifierAsBuffer(
             page_storage_, entry.object_identifier, 0u,
             std::numeric_limits<int64_t>::max(),
             storage::PageStorage::Location::LOCAL,
-            [callback = std::move(callback)](storage::Status status,
+            [callback = std::move(callback)](Status status,
                                              fsl::SizedVmo data) {
-              if (status == storage::Status::INTERNAL_NOT_FOUND) {
+              if (status == Status::INTERNAL_NOT_FOUND) {
                 callback(
                     Status::OK,
                     ToErrorResult<fuchsia::ledger::PageSnapshot_Get_Result>(
                         fuchsia::ledger::Error::NEEDS_FETCH));
                 return;
               }
-              if (status != storage::Status::OK) {
-                callback(PageUtils::ConvertStatus(status),
-                         fuchsia::ledger::PageSnapshot_Get_Result());
+              if (status != Status::OK) {
+                callback(status, fuchsia::ledger::PageSnapshot_Get_Result());
                 return;
               }
               fuchsia::ledger::PageSnapshot_Get_Result result;
@@ -425,40 +404,39 @@ void PageSnapshotImpl::GetInline(
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
       [this, callback = std::move(timed_callback)](
-          storage::Status status, storage::Entry entry) mutable {
-        if (status == storage::Status::KEY_NOT_FOUND) {
+          Status status, storage::Entry entry) mutable {
+        if (status == Status::KEY_NOT_FOUND) {
           callback(
               Status::OK,
               ToErrorResult<fuchsia::ledger::PageSnapshot_GetInline_Result>(
                   fuchsia::ledger::Error::KEY_NOT_FOUND));
           return;
         }
-        if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status),
-                   fuchsia::ledger::PageSnapshot_GetInline_Result());
+        if (status != Status::OK) {
+          callback(status, fuchsia::ledger::PageSnapshot_GetInline_Result());
           return;
         }
         PageUtils::ResolveObjectIdentifierAsStringView(
             page_storage_, entry.object_identifier,
             storage::PageStorage::Location::LOCAL,
-            [callback = std::move(callback)](storage::Status status,
+            [callback = std::move(callback)](Status status,
                                              fxl::StringView data_view) {
-              if (status == storage::Status::INTERNAL_NOT_FOUND) {
+              if (status == Status::INTERNAL_NOT_FOUND) {
                 callback(Status::OK,
                          ToErrorResult<
                              fuchsia::ledger::PageSnapshot_GetInline_Result>(
                              fuchsia::ledger::Error::NEEDS_FETCH));
                 return;
               }
-              if (status != storage::Status::OK) {
-                callback(PageUtils::ConvertStatus(status),
+              if (status != Status::OK) {
+                callback(status,
                          fuchsia::ledger::PageSnapshot_GetInline_Result());
                 return;
               }
               if (fidl_serialization::GetByteVectorSize(data_view.size()) +
                       fidl_serialization::kStatusEnumSize >
                   fidl_serialization::kMaxInlineDataSize) {
-                callback(Status::VALUE_TOO_LARGE,
+                callback(Status::ILLEGAL_STATE,
                          fuchsia::ledger::PageSnapshot_GetInline_Result());
                 return;
               }
@@ -503,34 +481,33 @@ void PageSnapshotImpl::FetchPartial(
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
       [this, offset, max_size, callback = std::move(timed_callback)](
-          storage::Status status, storage::Entry entry) mutable {
-        if (status == storage::Status::KEY_NOT_FOUND) {
+          Status status, storage::Entry entry) mutable {
+        if (status == Status::KEY_NOT_FOUND) {
           callback(
               Status::OK,
               ToErrorResult<fuchsia::ledger::PageSnapshot_FetchPartial_Result>(
                   fuchsia::ledger::Error::KEY_NOT_FOUND));
           return;
         }
-        if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status),
-                   fuchsia::ledger::PageSnapshot_FetchPartial_Result());
+        if (status != Status::OK) {
+          callback(status, fuchsia::ledger::PageSnapshot_FetchPartial_Result());
           return;
         }
 
         PageUtils::ResolveObjectIdentifierAsBuffer(
             page_storage_, entry.object_identifier, offset, max_size,
             storage::PageStorage::Location::NETWORK,
-            [callback = std::move(callback)](storage::Status status,
+            [callback = std::move(callback)](Status status,
                                              fsl::SizedVmo data) {
-              if (status == storage::Status::NETWORK_ERROR) {
+              if (status == Status::NETWORK_ERROR) {
                 callback(Status::OK,
                          ToErrorResult<
                              fuchsia::ledger::PageSnapshot_FetchPartial_Result>(
                              fuchsia::ledger::Error::NETWORK_ERROR));
                 return;
               }
-              if (status != storage::Status::OK) {
-                callback(PageUtils::ConvertStatus(status),
+              if (status != Status::OK) {
+                callback(status,
                          fuchsia::ledger::PageSnapshot_FetchPartial_Result());
                 return;
               }

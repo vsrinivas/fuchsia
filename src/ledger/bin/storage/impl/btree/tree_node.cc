@@ -88,7 +88,7 @@ Status TreeNode::FromObject(const Object& object,
   std::vector<Entry> entries;
   std::map<size_t, ObjectIdentifier> children;
   if (!DecodeNode(data, &level, &entries, &children)) {
-    return Status::FORMAT_ERROR;
+    return Status::DATA_INTEGRITY_ERROR;
   }
   node->reset(new TreeNode(object.GetIdentifier(), level, std::move(entries),
                            std::move(children)));

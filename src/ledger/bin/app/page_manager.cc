@@ -62,13 +62,13 @@ PageManager::PageManager(Environment* environment,
 
 PageManager::~PageManager() {
   for (const auto& [page_impl, on_done] : page_impls_) {
-    on_done(storage::Status::INTERNAL_ERROR);
+    on_done(Status::INTERNAL_ERROR);
   }
   page_impls_.clear();
 }
 
 void PageManager::AddPageImpl(std::unique_ptr<PageImpl> page_impl,
-                              fit::function<void(storage::Status)> on_done) {
+                              fit::function<void(Status)> on_done) {
   auto traced_on_done = TRACE_CALLBACK(std::move(on_done), "ledger",
                                        "page_manager_add_page_impl");
   if (!sync_backlog_downloaded_) {
@@ -99,38 +99,37 @@ Reference PageManager::CreateReference(
   return reference;
 }
 
-storage::Status PageManager::ResolveReference(
+Status PageManager::ResolveReference(
     Reference reference, storage::ObjectIdentifier* object_identifier) {
   if (reference.opaque_id.size() != sizeof(uint64_t)) {
-    return storage::Status::REFERENCE_NOT_FOUND;
+    return Status::INVALID_ARGUMENT;
   }
   uint64_t index = storage::DeserializeData<uint64_t>(
       convert::ToStringView(reference.opaque_id));
   auto iterator = references_.find(index);
   if (iterator == references_.end()) {
-    return storage::Status::REFERENCE_NOT_FOUND;
+    return Status::INVALID_ARGUMENT;
   }
   *object_identifier = iterator->second;
-  return storage::Status::OK;
+  return Status::OK;
 }
 
-void PageManager::IsSynced(
-    fit::function<void(storage::Status, bool)> callback) {
+void PageManager::IsSynced(fit::function<void(Status, bool)> callback) {
   page_storage_->IsSynced(
-      [callback = std::move(callback)](storage::Status status, bool is_synced) {
+      [callback = std::move(callback)](Status status, bool is_synced) {
         callback(status, is_synced);
       });
 }
 
 void PageManager::IsOfflineAndEmpty(
-    fit::function<void(storage::Status, bool)> callback) {
+    fit::function<void(Status, bool)> callback) {
   if (page_storage_->IsOnline()) {
-    callback(storage::Status::OK, false);
+    callback(Status::OK, false);
     return;
   }
   // The page is offline. Check and return if it's also empty.
   page_storage_->IsEmpty(
-      [callback = std::move(callback)](storage::Status status, bool is_empty) {
+      [callback = std::move(callback)](Status status, bool is_empty) {
         callback(status, is_empty);
       });
 }

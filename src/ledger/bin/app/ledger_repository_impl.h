@@ -61,15 +61,13 @@ class LedgerRepositoryImpl
   // PageEvictionManager::Delegate:
   void PageIsClosedAndSynced(
       fxl::StringView ledger_name, storage::PageIdView page_id,
-      fit::function<void(storage::Status, PagePredicateResult)> callback)
-      override;
+      fit::function<void(Status, PagePredicateResult)> callback) override;
   void PageIsClosedOfflineAndEmpty(
       fxl::StringView ledger_name, storage::PageIdView page_id,
-      fit::function<void(storage::Status, PagePredicateResult)> callback)
-      override;
-  void DeletePageStorage(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
-      fit::function<void(storage::Status)> callback) override;
+      fit::function<void(Status, PagePredicateResult)> callback) override;
+  void DeletePageStorage(fxl::StringView ledger_name,
+                         storage::PageIdView page_id,
+                         fit::function<void(Status)> callback) override;
 
   // LedgerRepository:
   void GetLedger(std::vector<uint8_t> ledger_name,
@@ -85,8 +83,8 @@ class LedgerRepositoryImpl
  private:
   // Retrieves the existing, or creates a new LedgerManager object with the
   // given |ledger_name|.
-  storage::Status GetLedgerManager(convert::ExtendedStringView ledger_name,
-                                   LedgerManager** ledger_manager);
+  Status GetLedgerManager(convert::ExtendedStringView ledger_name,
+                          LedgerManager** ledger_manager);
 
   void CheckEmpty();
 

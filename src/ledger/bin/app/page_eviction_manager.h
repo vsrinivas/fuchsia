@@ -48,7 +48,7 @@ class PageEvictionManager {
     // or |NO| depending on whether the page is synced.
     virtual void PageIsClosedAndSynced(
         fxl::StringView ledger_name, storage::PageIdView page_id,
-        fit::function<void(storage::Status, PagePredicateResult)> callback) = 0;
+        fit::function<void(Status, PagePredicateResult)> callback) = 0;
 
     // Checks whether the given page is closed, offline and empty. The result
     // returned in the callback will be |PAGE_OPENED| if the page is opened
@@ -56,12 +56,12 @@ class PageEvictionManager {
     // will be |YES| or |NO| depending on whether the page is offline and empty.
     virtual void PageIsClosedOfflineAndEmpty(
         fxl::StringView ledger_name, storage::PageIdView page_id,
-        fit::function<void(storage::Status, PagePredicateResult)> callback) = 0;
+        fit::function<void(Status, PagePredicateResult)> callback) = 0;
 
     // Deletes the local copy of the given page from storage.
-    virtual void DeletePageStorage(
-        fxl::StringView ledger_name, storage::PageIdView page_id,
-        fit::function<void(storage::Status)> callback) = 0;
+    virtual void DeletePageStorage(fxl::StringView ledger_name,
+                                   storage::PageIdView page_id,
+                                   fit::function<void(Status)> callback) = 0;
   };
 
   PageEvictionManager() {}
@@ -80,7 +80,7 @@ class PageEvictionManager {
   // when trying to evict a given page; |OK| otherwise. It is not an error if
   // there is no page fulfilling the requirements.
   virtual void TryEvictPages(PageEvictionPolicy* policy,
-                             fit::function<void(storage::Status)> callback) = 0;
+                             fit::function<void(Status)> callback) = 0;
 
   // Marks the page as open.
   virtual void MarkPageOpened(fxl::StringView ledger_name,

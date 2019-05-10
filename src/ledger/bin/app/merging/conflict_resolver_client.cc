@@ -19,6 +19,7 @@
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -30,7 +31,7 @@ ConflictResolverClient::ConflictResolverClient(
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
     std::unique_ptr<const storage::Commit> ancestor,
-    fit::function<void(storage::Status)> callback)
+    fit::function<void(Status)> callback)
     : storage_(storage),
       manager_(page_manager),
       conflict_resolver_(conflict_resolver),
@@ -72,13 +73,13 @@ void ConflictResolverClient::Start() {
 void ConflictResolverClient::Cancel() {
   cancelled_ = true;
   if (in_client_request_) {
-    Finalize(storage::Status::OK);
+    Finalize(Status::OK);
   }
 }
 
 void ConflictResolverClient::GetOrCreateObjectIdentifier(
     const MergedValue& merged_value,
-    fit::function<void(storage::Status, storage::ObjectIdentifier)> callback) {
+    fit::function<void(Status, storage::ObjectIdentifier)> callback) {
   FXL_DCHECK(merged_value.source == ValueSource::RIGHT ||
              merged_value.source == ValueSource::NEW);
   switch (merged_value.source) {
@@ -86,18 +87,18 @@ void ConflictResolverClient::GetOrCreateObjectIdentifier(
       std::string key = convert::ToString(merged_value.key);
       storage_->GetEntryFromCommit(
           *right_, key,
-          [key, callback = std::move(callback)](storage::Status status,
+          [key, callback = std::move(callback)](Status status,
                                                 storage::Entry entry) {
-            if (status != storage::Status::OK) {
-              if (status == storage::Status::KEY_NOT_FOUND) {
+            if (status != Status::OK) {
+              if (status == Status::KEY_NOT_FOUND) {
                 FXL_LOG(ERROR)
                     << "Key " << key
                     << " is not present in the right change. Unable to proceed";
               }
-              callback(status, {});
+              callback(Status::INVALID_ARGUMENT, {});
               return;
             }
-            callback(storage::Status::OK, entry.object_identifier);
+            callback(Status::OK, entry.object_identifier);
           });
       break;
     }
@@ -109,13 +110,13 @@ void ConflictResolverClient::GetOrCreateObjectIdentifier(
                                      {}, std::move(callback));
       } else {
         storage::ObjectIdentifier object_identifier;
-        storage::Status status = manager_->ResolveReference(
+        Status status = manager_->ResolveReference(
             std::move(merged_value.new_value->reference()), &object_identifier);
-        if (status != storage::Status::OK) {
-          callback(storage::Status::REFERENCE_NOT_FOUND, {});
+        if (status != Status::OK) {
+          callback(Status::INVALID_ARGUMENT, {});
           return;
         }
-        callback(storage::Status::OK, std::move(object_identifier));
+        callback(Status::OK, std::move(object_identifier));
       }
       break;
     }
@@ -125,12 +126,16 @@ void ConflictResolverClient::GetOrCreateObjectIdentifier(
   }
 }
 
-void ConflictResolverClient::Finalize(storage::Status status) {
+void ConflictResolverClient::Finalize(Status status) {
   FXL_DCHECK(callback_) << "Finalize must only be called once.";
   if (journal_) {
     journal_.reset();
   }
-  merge_result_provider_binding_.Close(PageUtils::ConvertStatus(status));
+  zx_status_t zx_status = ZX_OK;
+  if (status != Status::OK) {
+    zx_status = ConvertToEpitaph(status);
+  }
+  merge_result_provider_binding_.Close(zx_status);
   auto callback = std::move(callback_);
   callback_ = nullptr;
   callback(status);
@@ -141,8 +146,7 @@ void ConflictResolverClient::GetFullDiff(
     fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                        std::unique_ptr<Token>)>
         callback) {
-  GetDiff(diff_utils::DiffType::FULL, std::move(token),
-          PageUtils::AdaptStatusCallback(std::move(callback)));
+  GetDiff(diff_utils::DiffType::FULL, std::move(token), std::move(callback));
 }
 
 void ConflictResolverClient::GetConflictingDiff(
@@ -151,12 +155,12 @@ void ConflictResolverClient::GetConflictingDiff(
                        std::unique_ptr<Token>)>
         callback) {
   GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token),
-          PageUtils::AdaptStatusCallback(std::move(callback)));
+          std::move(callback));
 }
 
 void ConflictResolverClient::GetDiff(
     diff_utils::DiffType type, std::unique_ptr<Token> token,
-    fit::function<void(storage::Status, IterationStatus, std::vector<DiffEntry>,
+    fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                        std::unique_ptr<Token>)>
         callback) {
   diff_utils::ComputeThreeWayDiff(
@@ -165,15 +169,15 @@ void ConflictResolverClient::GetDiff(
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this, callback = std::move(callback)](
-              storage::Status status,
+              Status status,
               std::pair<std::vector<DiffEntry>, std::string> page_change) {
             if (cancelled_) {
-              callback(storage::Status::INTERNAL_ERROR, IterationStatus::OK, {},
+              callback(Status::INTERNAL_ERROR, IterationStatus::OK, {},
                        nullptr);
-              Finalize(storage::Status::INTERNAL_ERROR);
+              Finalize(Status::INTERNAL_ERROR);
               return;
             }
-            if (status != storage::Status::OK) {
+            if (status != Status::OK) {
               FXL_LOG(ERROR) << "Unable to compute diff due to error "
                              << fidl::ToUnderlying(status) << ", aborting.";
               callback(status, IterationStatus::OK, {}, nullptr);
@@ -190,25 +194,23 @@ void ConflictResolverClient::GetDiff(
               token = std::make_unique<Token>();
               token->opaque_id = convert::ToArray(next_token);
             }
-            callback(storage::Status::OK, diff_status,
-                     std::move(page_change.first), std::move(token));
+            callback(Status::OK, diff_status, std::move(page_change.first),
+                     std::move(token));
           }));
 }
 
 void ConflictResolverClient::Merge(std::vector<MergedValue> merged_values,
                                    fit::function<void(Status)> callback) {
   has_merged_values_ = true;
-  operation_serializer_.Serialize<storage::Status>(
-      PageUtils::AdaptStatusCallback(std::move(callback)),
-      [this, weak_this = weak_factory_.GetWeakPtr(),
-       merged_values = std::move(merged_values)](
-          fit::function<void(storage::Status)> callback) mutable {
+  operation_serializer_.Serialize<Status>(
+      std::move(callback), [this, weak_this = weak_factory_.GetWeakPtr(),
+                            merged_values = std::move(merged_values)](
+                               fit::function<void(Status)> callback) mutable {
         if (!IsInValidStateAndNotify(weak_this, callback)) {
           return;
         }
         auto waiter = fxl::MakeRefCounted<
-            callback::Waiter<storage::Status, storage::ObjectIdentifier>>(
-            storage::Status::OK);
+            callback::Waiter<Status, storage::ObjectIdentifier>>(Status::OK);
         for (const MergedValue& merged_value : merged_values) {
           if (merged_value.source != ValueSource::DELETE) {
             GetOrCreateObjectIdentifier(merged_value, waiter->NewCallback());
@@ -217,8 +219,8 @@ void ConflictResolverClient::Merge(std::vector<MergedValue> merged_values,
         waiter->Finalize(
             [this, weak_this, merged_values = std::move(merged_values),
              callback = std::move(callback)](
-                storage::Status status, std::vector<storage::ObjectIdentifier>
-                                            object_identifiers) mutable {
+                Status status, std::vector<storage::ObjectIdentifier>
+                                   object_identifiers) mutable {
               if (!IsInValidStateAndNotify(weak_this, callback, status)) {
                 return;
               }
@@ -238,17 +240,16 @@ void ConflictResolverClient::Merge(std::vector<MergedValue> merged_values,
                 }
               }
               FXL_DCHECK(i == object_identifiers.size());
-              callback(storage::Status::OK);
+              callback(Status::OK);
             });
       });
 }
 
 void ConflictResolverClient::MergeNonConflictingEntries(
     fit::function<void(Status)> callback) {
-  operation_serializer_.Serialize<storage::Status>(
-      PageUtils::AdaptStatusCallback(std::move(callback)),
-      [this, weak_this = weak_factory_.GetWeakPtr()](
-          fit::function<void(storage::Status)> callback) mutable {
+  operation_serializer_.Serialize<Status>(
+      std::move(callback), [this, weak_this = weak_factory_.GetWeakPtr()](
+                               fit::function<void(Status)> callback) mutable {
         if (!IsInValidStateAndNotify(weak_this, callback)) {
           return;
         }
@@ -288,10 +289,9 @@ void ConflictResolverClient::MergeNonConflictingEntries(
 }
 
 void ConflictResolverClient::Done(fit::function<void(Status)> callback) {
-  operation_serializer_.Serialize<storage::Status>(
-      PageUtils::AdaptStatusCallback(std::move(callback)),
-      [this, weak_this = weak_factory_.GetWeakPtr()](
-          fit::function<void(storage::Status)> callback) mutable {
+  operation_serializer_.Serialize<Status>(
+      std::move(callback), [this, weak_this = weak_factory_.GetWeakPtr()](
+                               fit::function<void(Status)> callback) mutable {
         if (!IsInValidStateAndNotify(weak_this, callback)) {
           return;
         }
@@ -304,30 +304,28 @@ void ConflictResolverClient::Done(fit::function<void(Status)> callback) {
             callback::MakeScoped(
                 weak_factory_.GetWeakPtr(),
                 [this, weak_this, callback = std::move(callback)](
-                    storage::Status status,
-                    std::unique_ptr<const storage::Commit>) {
+                    Status status, std::unique_ptr<const storage::Commit>) {
                   if (!IsInValidStateAndNotify(weak_this, callback, status)) {
                     return;
                   }
-                  callback(storage::Status::OK);
-                  Finalize(storage::Status::OK);
+                  callback(Status::OK);
+                  Finalize(Status::OK);
                 }));
       });
 }
 
 bool ConflictResolverClient::IsInValidStateAndNotify(
     const fxl::WeakPtr<ConflictResolverClient>& weak_this,
-    const fit::function<void(storage::Status)>& callback,
-    storage::Status status) {
+    const fit::function<void(Status)>& callback, Status status) {
   if (!weak_this) {
-    callback(storage::Status::INTERNAL_ERROR);
+    callback(Status::INTERNAL_ERROR);
     return false;
   }
-  if (!weak_this->cancelled_ && status == storage::Status::OK) {
+  if (!weak_this->cancelled_ && status == Status::OK) {
     return true;
   }
-  storage::Status ledger_status =
-      weak_this->cancelled_ ? storage::Status::INTERNAL_ERROR : status;
+  Status ledger_status =
+      weak_this->cancelled_ ? Status::INTERNAL_ERROR : status;
   // An eventual error was logged before, no need to do it again here.
   callback(ledger_status);
   // Finalize destroys this object; we need to do it after executing

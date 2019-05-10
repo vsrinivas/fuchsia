@@ -18,7 +18,7 @@ bool FileIndexSerialization::CheckValidFileIndexSerialization(
 Status FileIndexSerialization::ParseFileIndex(fxl::StringView content,
                                               const FileIndex** file_index) {
   if (!CheckValidFileIndexSerialization(content)) {
-    return Status::FORMAT_ERROR;
+    return Status::DATA_INTEGRITY_ERROR;
   }
   *file_index = GetFileIndex(content.data());
   return Status::OK;

@@ -120,7 +120,7 @@ Status CommitImpl::FromStorageBytes(PageStorage* page_storage, CommitId id,
   FXL_DCHECK(id != kFirstPageCommitId);
 
   if (!CheckValidSerialization(storage_bytes)) {
-    return Status::FORMAT_ERROR;
+    return Status::DATA_INTEGRITY_ERROR;
   }
 
   auto storage_ptr =

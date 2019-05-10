@@ -217,7 +217,7 @@ Status PageDbImpl::GetUnsyncedPieces(
   ObjectIdentifier object_identifier;
   for (auto& encoded_identifier : encoded_identifiers) {
     if (!DecodeObjectIdentifier(encoded_identifier, &object_identifier)) {
-      return Status::FORMAT_ERROR;
+      return Status::DATA_INTEGRITY_ERROR;
     }
     object_identifiers->emplace_back(std::move(object_identifier));
   }

@@ -13,6 +13,7 @@ source_set("error_notifier") {
   public_deps = [
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/fidl/include",
+    "//src/ledger/bin/public",
     "//src/ledger/bin/sync_helper",
     "//zircon/public/lib/fit",
   ]

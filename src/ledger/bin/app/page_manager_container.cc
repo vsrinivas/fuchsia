@@ -35,12 +35,11 @@ void PageManagerContainer::set_on_empty(fit::closure on_empty_callback) {
   }
 }
 
-void PageManagerContainer::BindPage(
-    fidl::InterfaceRequest<Page> page_request,
-    fit::function<void(storage::Status)> callback) {
+void PageManagerContainer::BindPage(fidl::InterfaceRequest<Page> page_request,
+                                    fit::function<void(Status)> callback) {
   connection_notifier_.RegisterExternalRequest();
 
-  if (status_ != storage::Status::OK) {
+  if (status_ != Status::OK) {
     callback(status_);
     return;
   }
@@ -54,9 +53,8 @@ void PageManagerContainer::BindPage(
 }
 
 void PageManagerContainer::NewInternalRequest(
-    fit::function<void(storage::Status, ExpiringToken, PageManager*)>
-        callback) {
-  if (status_ != storage::Status::OK) {
+    fit::function<void(Status, ExpiringToken, PageManager*)> callback) {
+  if (status_ != Status::OK) {
     callback(status_, fit::defer<fit::closure>([] {}), nullptr);
     return;
   }
@@ -71,12 +69,12 @@ void PageManagerContainer::NewInternalRequest(
 }
 
 void PageManagerContainer::SetPageManager(
-    storage::Status status, std::unique_ptr<PageManager> page_manager) {
+    Status status, std::unique_ptr<PageManager> page_manager) {
   auto token = connection_notifier_.NewInternalRequestToken();
   TRACE_DURATION("ledger", "page_manager_container_set_page_manager");
 
   FXL_DCHECK(!page_manager_is_set_);
-  FXL_DCHECK((status != storage::Status::OK) == !page_manager);
+  FXL_DCHECK((status != Status::OK) == !page_manager);
   status_ = status;
   page_manager_ = std::move(page_manager);
   page_manager_is_set_ = true;

@@ -14,6 +14,7 @@
 #include <utility>
 
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/sync_helper/sync_helper.h"
 #include "src/lib/fxl/logging.h"
 
@@ -78,8 +79,6 @@ class ErrorNotifierBinding {
 
   void Close(zx_status_t status) { binding_.Close(status); }
 
-  void Close(ledger::Status status) { Close(static_cast<zx_status_t>(status)); }
-
  private:
   friend typename D::Impl;
 
@@ -94,16 +93,16 @@ class ErrorNotifierBinding {
                      fit::function<void(Args...)> callback) {
     return sync_helper_.WrapOperation(
         [this, function_name, callback = std::move(callback)](
-            ::fuchsia::ledger::Status status, Args&&... args) {
-          if (status == ::fuchsia::ledger::Status::OK) {
+            ::ledger::Status status, Args&&... args) {
+          if (status == ::ledger::Status::OK) {
             callback(std::forward<Args>(args)...);
             return;
           }
           FXL_LOG(INFO) << "FIDL call " << D::Impl::kInterfaceName
                         << "::" << function_name
-                        << " failed with status: " << fidl::ToUnderlying(status)
+                        << " failed with status: " << status
                         << ". Sending the epitaph and closing the connection.";
-          Close(status);
+          Close(ConvertToEpitaph(status));
         });
   }
 

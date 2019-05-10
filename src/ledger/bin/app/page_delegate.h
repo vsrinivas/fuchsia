@@ -44,7 +44,7 @@ class PageDelegate {
                std::unique_ptr<PageImpl> page_impl);
   ~PageDelegate();
 
-  void Init(fit::function<void(storage::Status)> on_done);
+  void Init(fit::function<void(Status)> on_done);
 
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
@@ -88,7 +88,7 @@ class PageDelegate {
       fit::function<void(Status, ConflictResolutionWaitStatus)> callback);
 
  private:
-  using StatusCallback = fit::function<void(storage::Status)>;
+  using StatusCallback = fit::function<void(Status)>;
 
   void PutInCommit(std::vector<uint8_t> key,
                    storage::ObjectIdentifier object_identifier,
@@ -101,10 +101,10 @@ class PageDelegate {
   void RunInTransaction(fit::function<void(storage::Journal*)> runnable,
                         StatusCallback callback);
 
-  void CommitJournal(std::unique_ptr<storage::Journal> journal,
-                     fit::function<void(storage::Status,
-                                        std::unique_ptr<const storage::Commit>)>
-                         callback);
+  void CommitJournal(
+      std::unique_ptr<storage::Journal> journal,
+      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
+          callback);
 
   void CheckEmpty();
 

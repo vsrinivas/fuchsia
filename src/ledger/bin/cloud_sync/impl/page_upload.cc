@@ -91,9 +91,9 @@ void PageUpload::UploadUnsyncedCommits() {
   // commits can be possibly very big.
   storage_->GetUnsyncedCommits(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
-      [this](storage::Status status,
+      [this](ledger::Status status,
              std::vector<std::unique_ptr<const storage::Commit>> commits) {
-        if (status != storage::Status::OK) {
+        if (status != ledger::Status::OK) {
           SetState(UPLOAD_PERMANENT_ERROR);
           HandleError("Failed to retrieve the unsynced commits");
           return;
@@ -113,8 +113,8 @@ void PageUpload::VerifyUnsyncedCommits(
   }
 
   std::vector<std::unique_ptr<const storage::Commit>> heads;
-  storage::Status status = storage_->GetHeadCommits(&heads);
-  if (status != storage::Status::OK) {
+  ledger::Status status = storage_->GetHeadCommits(&heads);
+  if (status != ledger::Status::OK) {
     HandleError("Failed to retrieve the current heads");
     return;
   }

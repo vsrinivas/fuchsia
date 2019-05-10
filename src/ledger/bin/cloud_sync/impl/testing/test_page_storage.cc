@@ -39,27 +39,27 @@ void TestPageStorage::SetSyncDelegate(
   page_sync_delegate_ = page_sync_delegate;
 }
 
-storage::Status TestPageStorage::GetHeadCommits(
+ledger::Status TestPageStorage::GetHeadCommits(
     std::vector<std::unique_ptr<const storage::Commit>>* head_commits) {
   *head_commits =
       std::vector<std::unique_ptr<const storage::Commit>>(head_count);
-  return storage::Status::OK;
+  return ledger::Status::OK;
 }
 
 void TestPageStorage::GetCommit(
     storage::CommitIdView commit_id,
-    fit::function<void(storage::Status, std::unique_ptr<const storage::Commit>)>
+    fit::function<void(ledger::Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   if (should_fail_get_commit) {
     async::PostTask(dispatcher_, [callback = std::move(callback)] {
-      callback(storage::Status::IO_ERROR, nullptr);
+      callback(ledger::Status::IO_ERROR, nullptr);
     });
     return;
   }
 
   async::PostTask(dispatcher_, [this, commit_id = commit_id.ToString(),
                                 callback = std::move(callback)] {
-    callback(storage::Status::OK, std::move(new_commits_to_return[commit_id]));
+    callback(ledger::Status::OK, std::move(new_commits_to_return[commit_id]));
   });
   new_commits_to_return.erase(commit_id.ToString());
 }
@@ -67,13 +67,13 @@ void TestPageStorage::GetCommit(
 void TestPageStorage::AddCommitsFromSync(
     std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
     storage::ChangeSource /*source*/,
-    fit::function<void(storage::Status, std::vector<storage::CommitId>)>
+    fit::function<void(ledger::Status, std::vector<storage::CommitId>)>
         callback) {
   add_commits_from_sync_calls++;
 
   if (should_fail_add_commit_from_sync) {
     async::PostTask(dispatcher_, [callback = std::move(callback)]() {
-      callback(storage::Status::IO_ERROR, {});
+      callback(ledger::Status::IO_ERROR, {});
     });
     return;
   }
@@ -93,7 +93,7 @@ void TestPageStorage::AddCommitsFromSync(
           unsynced_commits_to_return.end());
     }
     async::PostTask(dispatcher_, [callback = std::move(callback)] {
-      callback(storage::Status::OK, {});
+      callback(ledger::Status::OK, {});
     });
   };
   if (should_delay_add_commit_confirmation) {
@@ -104,10 +104,10 @@ void TestPageStorage::AddCommitsFromSync(
 }
 
 void TestPageStorage::GetUnsyncedPieces(
-    fit::function<void(storage::Status, std::vector<storage::ObjectIdentifier>)>
+    fit::function<void(ledger::Status, std::vector<storage::ObjectIdentifier>)>
         callback) {
   async::PostTask(dispatcher_, [callback = std::move(callback)] {
-    callback(storage::Status::OK, std::vector<storage::ObjectIdentifier>());
+    callback(ledger::Status::OK, std::vector<storage::ObjectIdentifier>());
   });
 }
 
@@ -122,12 +122,12 @@ void TestPageStorage::RemoveCommitWatcher(storage::CommitWatcher* watcher) {
 }
 
 void TestPageStorage::GetUnsyncedCommits(
-    fit::function<void(storage::Status,
+    fit::function<void(ledger::Status,
                        std::vector<std::unique_ptr<const storage::Commit>>)>
         callback) {
   if (should_fail_get_unsynced_commits) {
     async::PostTask(dispatcher_, [callback = std::move(callback)] {
-      callback(storage::Status::IO_ERROR, {});
+      callback(ledger::Status::IO_ERROR, {});
     });
     return;
   }
@@ -140,13 +140,13 @@ void TestPageStorage::GetUnsyncedCommits(
                  });
   async::PostTask(dispatcher_, [results = std::move(results),
                                 callback = std::move(callback)]() mutable {
-    callback(storage::Status::OK, std::move(results));
+    callback(ledger::Status::OK, std::move(results));
   });
 }
 
 void TestPageStorage::MarkCommitSynced(
     const storage::CommitId& commit_id,
-    fit::function<void(storage::Status)> callback) {
+    fit::function<void(ledger::Status)> callback) {
   unsynced_commits_to_return.erase(
       std::remove_if(
           unsynced_commits_to_return.begin(), unsynced_commits_to_return.end(),
@@ -156,32 +156,32 @@ void TestPageStorage::MarkCommitSynced(
       unsynced_commits_to_return.end());
   commits_marked_as_synced.insert(commit_id);
   async::PostTask(dispatcher_, [callback = std::move(callback)] {
-    callback(storage::Status::OK);
+    callback(ledger::Status::OK);
   });
 }
 
 void TestPageStorage::SetSyncMetadata(
     fxl::StringView key, fxl::StringView value,
-    fit::function<void(storage::Status)> callback) {
+    fit::function<void(ledger::Status)> callback) {
   sync_metadata[key.ToString()] = value.ToString();
   async::PostTask(dispatcher_, [callback = std::move(callback)] {
-    callback(storage::Status::OK);
+    callback(ledger::Status::OK);
   });
 }
 
 void TestPageStorage::GetSyncMetadata(
     fxl::StringView key,
-    fit::function<void(storage::Status, std::string)> callback) {
+    fit::function<void(ledger::Status, std::string)> callback) {
   auto it = sync_metadata.find(key.ToString());
   if (it == sync_metadata.end()) {
     async::PostTask(dispatcher_, [callback = std::move(callback)] {
-      callback(storage::Status::INTERNAL_NOT_FOUND, "");
+      callback(ledger::Status::INTERNAL_NOT_FOUND, "");
     });
     return;
   }
   async::PostTask(dispatcher_,
                   [callback = std::move(callback), metadata = it->second] {
-                    callback(storage::Status::OK, metadata);
+                    callback(ledger::Status::OK, metadata);
                   });
 }
 

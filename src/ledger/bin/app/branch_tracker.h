@@ -30,7 +30,7 @@ class BranchTracker : public storage::CommitWatcher {
                 PageManager* manager, storage::PageStorage* storage);
   ~BranchTracker() override;
 
-  storage::Status Init();
+  Status Init();
 
   void set_on_empty(fit::closure on_empty_callback);
 

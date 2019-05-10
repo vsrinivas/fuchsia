@@ -42,12 +42,12 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   void AddCommitsFromSync(
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
       storage::ChangeSource source,
-      fit::function<void(storage::Status, std::vector<storage::CommitId>)>
+      fit::function<void(ledger::Status, std::vector<storage::CommitId>)>
           callback) override {
     ASSERT_EQ(storage::ChangeSource::CLOUD, source);
     if (should_fail_add_commit_from_sync) {
       async::PostTask(dispatcher_, [callback = std::move(callback)]() {
-        callback(storage::Status::IO_ERROR, {});
+        callback(ledger::Status::IO_ERROR, {});
       });
       return;
     }
@@ -57,15 +57,15 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
           for (auto& commit : ids_and_bytes) {
             received_commits[std::move(commit.id)] = std::move(commit.bytes);
           }
-          callback(storage::Status::OK, {});
+          callback(ledger::Status::OK, {});
         });
   }
 
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
-                       fit::function<void(storage::Status)> callback) override {
+                       fit::function<void(ledger::Status)> callback) override {
     sync_metadata[key.ToString()] = value.ToString();
     async::PostTask(dispatcher_, [callback = std::move(callback)]() {
-      callback(storage::Status::OK);
+      callback(ledger::Status::OK);
     });
   }
 

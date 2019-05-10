@@ -24,6 +24,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/filesystem/directory_reader.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"

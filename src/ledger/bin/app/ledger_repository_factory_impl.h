@@ -63,7 +63,7 @@ class LedgerRepositoryFactoryImpl
       std::string user_id,
       fidl::InterfaceRequest<ledger_internal::LedgerRepository>
           repository_request,
-      fit::function<void(storage::Status)> callback);
+      fit::function<void(Status)> callback);
   std::unique_ptr<sync_coordinator::UserSyncImpl> CreateUserSync(
       const RepositoryInformation& repository_information,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,

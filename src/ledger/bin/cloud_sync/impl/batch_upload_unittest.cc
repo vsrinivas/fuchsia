@@ -60,7 +60,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   ~TestPageStorage() override = default;
 
   void GetUnsyncedCommits(
-      fit::function<void(storage::Status,
+      fit::function<void(ledger::Status,
                          std::vector<std::unique_ptr<const storage::Commit>>)>
           callback) override {
     std::vector<std::unique_ptr<const storage::Commit>> results;
@@ -69,48 +69,47 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
                    [](const std::unique_ptr<const storage::Commit>& commit) {
                      return commit->Clone();
                    });
-    callback(storage::Status::OK, std::move(results));
+    callback(ledger::Status::OK, std::move(results));
   }
 
   void GetUnsyncedPieces(
-      fit::function<void(storage::Status,
+      fit::function<void(ledger::Status,
                          std::vector<storage::ObjectIdentifier>)>
           callback) override {
     std::vector<storage::ObjectIdentifier> object_identifiers;
     for (auto& digest_object_pair : unsynced_objects_to_return) {
       object_identifiers.push_back(digest_object_pair.first);
     }
-    callback(storage::Status::OK, std::move(object_identifiers));
+    callback(ledger::Status::OK, std::move(object_identifiers));
   }
 
   void GetObject(storage::ObjectIdentifier object_identifier,
                  Location /*location*/,
-                 fit::function<void(storage::Status,
+                 fit::function<void(ledger::Status,
                                     std::unique_ptr<const storage::Object>)>
                      callback) override {
-    callback(storage::Status::OK,
+    callback(ledger::Status::OK,
              std::make_unique<FakeObject>(std::move(
                  unsynced_objects_to_return[std::move(object_identifier)])));
   }
 
-  void GetPiece(storage::ObjectIdentifier object_identifier,
-                fit::function<void(storage::Status,
-                                   std::unique_ptr<const storage::Piece>)>
-                    callback) override {
+  void GetPiece(
+      storage::ObjectIdentifier object_identifier,
+      fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>)>
+          callback) override {
     callback(
-        storage::Status::OK,
+        ledger::Status::OK,
         std::move(unsynced_objects_to_return[std::move(object_identifier)]));
   }
 
   void MarkPieceSynced(storage::ObjectIdentifier object_identifier,
-                       fit::function<void(storage::Status)> callback) override {
+                       fit::function<void(ledger::Status)> callback) override {
     objects_marked_as_synced.insert(object_identifier);
-    callback(storage::Status::OK);
+    callback(ledger::Status::OK);
   }
 
-  void MarkCommitSynced(
-      const storage::CommitId& commit_id,
-      fit::function<void(storage::Status)> callback) override {
+  void MarkCommitSynced(const storage::CommitId& commit_id,
+                        fit::function<void(ledger::Status)> callback) override {
     commits_marked_as_synced.insert(commit_id);
     unsynced_commits.erase(
         std::remove_if(
@@ -119,7 +118,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
               return commit->GetId() == commit_id;
             }),
         unsynced_commits.end());
-    callback(storage::Status::OK);
+    callback(ledger::Status::OK);
   }
 
   std::unique_ptr<TestCommit> NewCommit(std::string id, std::string content) {
@@ -142,8 +141,8 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 class TestPageStorageFailingToMarkPieces : public TestPageStorage {
  public:
   void MarkPieceSynced(storage::ObjectIdentifier /*object_identifier*/,
-                       fit::function<void(storage::Status)> callback) override {
-    callback(storage::Status::NOT_IMPLEMENTED);
+                       fit::function<void(ledger::Status)> callback) override {
+    callback(ledger::Status::NOT_IMPLEMENTED);
   }
 };
 
@@ -622,11 +621,11 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
 
   // Mark commit as synced.
-  storage::Status status;
+  ledger::Status status;
   storage_.MarkCommitSynced("id",
                             callback::Capture(QuitLoopClosure(), &status));
   RunLoopUntilIdle();
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ(0u, storage_.unsynced_commits.size());
 
   // Retry.

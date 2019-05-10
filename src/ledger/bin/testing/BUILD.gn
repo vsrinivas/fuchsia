@@ -56,6 +56,7 @@ source_set("lib") {
     "//src/ledger/bin/app:lib",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/fidl/include",
+    "//src/ledger/bin/public",
     "//src/ledger/bin/storage/public:public",
     "//src/ledger/lib/firebase_auth/testing:service_account",
     "//src/lib/fxl",
@@ -136,6 +137,7 @@ source_set("get_ledger") {
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/filesystem",
+    "//src/ledger/bin/public",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]

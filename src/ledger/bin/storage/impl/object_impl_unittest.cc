@@ -290,7 +290,8 @@ TEST_F(ObjectImplTest, ObjectReferences) {
       CreateObjectIdentifier(
           ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, "")),
       DataSource::DataChunk::Create("")));
-  ASSERT_EQ(Status::FORMAT_ERROR, invalid_object.AppendReferences(&references));
+  ASSERT_EQ(Status::DATA_INTEGRITY_ERROR,
+            invalid_object.AppendReferences(&references));
 }
 
 }  // namespace

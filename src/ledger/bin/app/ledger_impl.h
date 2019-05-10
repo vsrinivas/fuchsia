@@ -42,7 +42,7 @@ class LedgerImpl : public fuchsia::ledger::LedgerErrorNotifierDelegate {
     virtual void GetPage(convert::ExtendedStringView page_id,
                          PageState page_state,
                          fidl::InterfaceRequest<Page> page_request,
-                         fit::function<void(storage::Status)> callback) = 0;
+                         fit::function<void(Status)> callback) = 0;
 
     virtual void SetConflictResolverFactory(
         fidl::InterfaceHandle<ConflictResolverFactory> factory) = 0;

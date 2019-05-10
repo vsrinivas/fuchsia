@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/public/status.h"
 
 namespace ledger {
 // Determines whether calling the |GetPageEnsureInitialized| callback should be

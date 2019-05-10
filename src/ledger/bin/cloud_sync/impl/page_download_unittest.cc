@@ -363,7 +363,7 @@ TEST_F(PageDownloadTest, GetObject) {
   page_download_->StartDownload();
 
   bool called;
-  storage::Status status;
+  ledger::Status status;
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
@@ -376,7 +376,7 @@ TEST_F(PageDownloadTest, GetObject) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ(storage::ChangeSource::CLOUD, source);
   EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced);
   EXPECT_EQ("content", data_chunk->Get().ToString());
@@ -401,7 +401,7 @@ TEST_F(PageDownloadTest, RetryGetObject) {
   page_download_->StartDownload();
 
   bool called;
-  storage::Status status;
+  ledger::Status status;
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
@@ -419,7 +419,7 @@ TEST_F(PageDownloadTest, RetryGetObject) {
 
   ASSERT_TRUE(called);
   EXPECT_EQ(6u, page_cloud_.get_object_calls);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ(storage::ChangeSource::CLOUD, source);
   EXPECT_EQ("content", data_chunk->Get().ToString());
   EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced);
@@ -500,7 +500,7 @@ TYPED_TEST(FailingPageDownloadTest, Fail) {
   this->page_download_->StartDownload();
 
   bool called;
-  storage::Status status;
+  ledger::Status status;
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
@@ -511,7 +511,7 @@ TYPED_TEST(FailingPageDownloadTest, Fail) {
   this->RunLoopUntilIdle();
 
   ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::IO_ERROR, status);
+  EXPECT_EQ(ledger::Status::IO_ERROR, status);
   EXPECT_EQ(storage::ChangeSource::CLOUD, source);
 }
 

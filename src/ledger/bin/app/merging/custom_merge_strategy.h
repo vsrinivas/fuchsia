@@ -30,7 +30,7 @@ class CustomMergeStrategy : public MergeStrategy {
              std::unique_ptr<const storage::Commit> head_1,
              std::unique_ptr<const storage::Commit> head_2,
              std::unique_ptr<const storage::Commit> ancestor,
-             fit::function<void(storage::Status)> callback) override;
+             fit::function<void(Status)> callback) override;
 
   void Cancel() override;
 

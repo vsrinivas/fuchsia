@@ -32,7 +32,7 @@ class DiskCleanupManagerImpl : public DiskCleanupManager,
   // DiskCleanupManager:
   void set_on_empty(fit::closure on_empty_callback) override;
   bool IsEmpty() override;
-  void TryCleanUp(fit::function<void(storage::Status)> callback) override;
+  void TryCleanUp(fit::function<void(Status)> callback) override;
 
   // PageUsageListener:
   void OnPageOpened(fxl::StringView ledger_name,

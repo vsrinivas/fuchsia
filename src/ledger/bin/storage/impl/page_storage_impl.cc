@@ -801,7 +801,7 @@ void PageStorageImpl::GetIndexObject(
   const FileIndex* file_index;
   Status status = FileIndexSerialization::ParseFileIndex(content, &file_index);
   if (status != Status::OK) {
-    callback(Status::FORMAT_ERROR, nullptr);
+    callback(Status::DATA_INTEGRITY_ERROR, nullptr);
     return;
   }
 
@@ -895,7 +895,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
                      << piece->GetIdentifier()
                      << " to have size: " << object_size
                      << ", but found an object of size: " << content.size();
-      callback(Status::FORMAT_ERROR);
+      callback(Status::DATA_INTEGRITY_ERROR);
       return;
     }
     // Distance is negative if the offset is ahead and positive if behind.
@@ -926,7 +926,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
   const FileIndex* file_index;
   Status status = FileIndexSerialization::ParseFileIndex(content, &file_index);
   if (status != Status::OK) {
-    callback(Status::FORMAT_ERROR);
+    callback(Status::DATA_INTEGRITY_ERROR);
     return;
   }
   if (static_cast<int64_t>(file_index->size()) != object_size) {
@@ -934,7 +934,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
                    << piece->GetIdentifier() << " to have size " << object_size
                    << ", but found an index object of size: "
                    << file_index->size();
-    callback(Status::FORMAT_ERROR);
+    callback(Status::DATA_INTEGRITY_ERROR);
     return;
   }
 
@@ -942,7 +942,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (const auto* child : *file_index->children()) {
     if (sub_offset + child->size() > file_index->size()) {
-      callback(Status::FORMAT_ERROR);
+      callback(Status::DATA_INTEGRITY_ERROR);
       return;
     }
     int64_t child_position = current_position + sub_offset;
@@ -1022,7 +1022,7 @@ void PageStorageImpl::DownloadObjectPart(ObjectIdentifier object_identifier,
         if (object_identifier.object_digest() !=
             ComputeObjectDigest(digest_info.piece_type, digest_info.object_type,
                                 chunk->Get())) {
-          callback(Status::OBJECT_DIGEST_MISMATCH);
+          callback(Status::DATA_INTEGRITY_ERROR);
           return;
         }
 
@@ -1042,7 +1042,7 @@ void PageStorageImpl::DownloadObjectPart(ObjectIdentifier object_identifier,
         status =
             FileIndexSerialization::ParseFileIndex(chunk->Get(), &file_index);
         if (status != Status::OK) {
-          callback(Status::FORMAT_ERROR);
+          callback(Status::DATA_INTEGRITY_ERROR);
           return;
         }
 
@@ -1063,7 +1063,7 @@ void PageStorageImpl::DownloadObjectPart(ObjectIdentifier object_identifier,
           // Recursively download the children of this index that we are
           // interested in.
           if (sub_offset + child->size() > file_index->size()) {
-            callback(Status::FORMAT_ERROR);
+            callback(Status::DATA_INTEGRITY_ERROR);
             return;
           }
           int64_t child_position = current_position + sub_offset;

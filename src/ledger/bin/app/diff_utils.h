@@ -42,7 +42,7 @@ void ComputePageChange(
     storage::PageStorage* storage, const storage::Commit& base,
     const storage::Commit& other, std::string prefix_key, std::string min_key,
     PaginationBehavior pagination_behavior,
-    fit::function<void(storage::Status, std::pair<PageChangePtr, std::string>)>
+    fit::function<void(Status, std::pair<PageChangePtr, std::string>)>
         callback);
 
 // Asynchronously computes the three-way diff between a base commit and two
@@ -51,8 +51,7 @@ void ComputeThreeWayDiff(
     storage::PageStorage* storage, const storage::Commit& base,
     const storage::Commit& left, const storage::Commit& right,
     std::string prefix_key, std::string min_key, DiffType diff_type,
-    fit::function<void(storage::Status,
-                       std::pair<std::vector<DiffEntry>, std::string>)>
+    fit::function<void(Status, std::pair<std::vector<DiffEntry>, std::string>)>
         callback);
 
 }  // namespace diff_utils

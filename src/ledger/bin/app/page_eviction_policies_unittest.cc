@@ -32,7 +32,7 @@ class VectorIterator : public storage::Iterator<T> {
 
   bool Valid() const override { return it_ != end_; }
 
-  storage::Status GetStatus() const override { return storage::Status::OK; }
+  Status GetStatus() const override { return Status::OK; }
 
   T& operator*() const override { return *it_; }
 
@@ -51,21 +51,20 @@ class FakePageEvictionDelegate : public PageEvictionDelegate {
   FakePageEvictionDelegate() {}
   ~FakePageEvictionDelegate() {}
 
-  void TryEvictPage(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
-      PageEvictionCondition condition,
-      fit::function<void(storage::Status, PageWasEvicted)> callback) {
-    if (try_evict_page_status_ != storage::Status::OK) {
+  void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
+                    PageEvictionCondition condition,
+                    fit::function<void(Status, PageWasEvicted)> callback) {
+    if (try_evict_page_status_ != Status::OK) {
       callback(try_evict_page_status_, PageWasEvicted(false));
       return;
     }
     if (pages_not_to_evict_.find(page_id.ToString()) !=
         pages_not_to_evict_.end()) {
-      callback(storage::Status::OK, PageWasEvicted(false));
+      callback(Status::OK, PageWasEvicted(false));
       return;
     }
     evicted_pages_.push_back(page_id.ToString());
-    callback(storage::Status::OK, PageWasEvicted(true));
+    callback(Status::OK, PageWasEvicted(true));
   }
 
   const std::vector<storage::PageId>& GetEvictedPages() {
@@ -76,9 +75,7 @@ class FakePageEvictionDelegate : public PageEvictionDelegate {
     pages_not_to_evict_ = std::move(pages_not_to_evict);
   }
 
-  void SetTryEvictPageStatus(storage::Status status) {
-    try_evict_page_status_ = status;
-  }
+  void SetTryEvictPageStatus(Status status) { try_evict_page_status_ = status; }
 
  private:
   // The vector of pages for which |TryEvictPage| returned PageWasEvicted(true).
@@ -87,7 +84,7 @@ class FakePageEvictionDelegate : public PageEvictionDelegate {
   // called on them.
   std::set<storage::PageId> pages_not_to_evict_;
   // The status to be returned by |TryEvictPage|.
-  storage::Status try_evict_page_status_ = storage::Status::OK;
+  Status try_evict_page_status_ = Status::OK;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakePageEvictionDelegate);
 };
@@ -109,12 +106,12 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsed) {
 
   // Expect to only evict the least recently used page, i.e. "page1".
   bool called;
-  storage::Status status;
+  Status status;
   policy->SelectAndEvict(
       std::make_unique<VectorIterator<const PageInfo>>(pages),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page1"));
 }
 
@@ -134,12 +131,12 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedWithOpenPages) {
   // "page1" should not be evicted as it is marked as open. Expect to only evict
   // the least recently used page, i.e. "page2".
   bool called;
-  storage::Status status;
+  Status status;
   policy->SelectAndEvict(
       std::make_unique<VectorIterator<const PageInfo>>(pages),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page2"));
 }
 
@@ -161,12 +158,12 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedNoPagesToEvict) {
   // "page1" is marked as open, and pages 2-4 will fail to be evicted. The
   // returned status should be ok, and not pages will be evicted.
   bool called;
-  storage::Status status;
+  Status status;
   policy->SelectAndEvict(
       std::make_unique<VectorIterator<const PageInfo>>(pages),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate.GetEvictedPages(), IsEmpty());
 }
 
@@ -179,19 +176,19 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedErrorWhileEvicting) {
       {ledger_name, "page3", zx::time_utc(3)},
       {ledger_name, "page4", zx::time_utc(4)},
   };
-  delegate.SetTryEvictPageStatus(storage::Status::INTERNAL_ERROR);
+  delegate.SetTryEvictPageStatus(Status::INTERNAL_ERROR);
 
   // If |TryEvictPage| fails, so should |SelectAndEvict|. Expect to find the
   // same error status.
   std::unique_ptr<PageEvictionPolicy> policy =
       NewLeastRecentyUsedPolicy(environment_.coroutine_service(), &delegate);
   bool called;
-  storage::Status status;
+  Status status;
   policy->SelectAndEvict(
       std::make_unique<VectorIterator<const PageInfo>>(pages),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::INTERNAL_ERROR, status);
+  EXPECT_EQ(Status::INTERNAL_ERROR, status);
 }
 
 }  // namespace

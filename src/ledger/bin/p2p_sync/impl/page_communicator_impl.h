@@ -59,7 +59,7 @@ class PageCommunicatorImpl : public PageCommunicator,
   // storage::PageSyncDelegate:
   void GetObject(
       storage::ObjectIdentifier object_identifier,
-      fit::function<void(storage::Status, storage::ChangeSource,
+      fit::function<void(ledger::Status, storage::ChangeSource,
                          storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
@@ -110,7 +110,7 @@ class PageCommunicatorImpl : public PageCommunicator,
 
   // Marks the PageStorage as synced to a peer. If successful, on the following
   // call to MarkSyncedToPeer, the given |callback| will be called immediately.
-  void MarkSyncedToPeer(fit::function<void(storage::Status)> callback);
+  void MarkSyncedToPeer(fit::function<void(ledger::Status)> callback);
 
   // Sends a single message to all interested devices.
   void SendToInterestedDevices(convert::ExtendedStringView data);

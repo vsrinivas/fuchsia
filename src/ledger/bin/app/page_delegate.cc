@@ -38,11 +38,11 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
       page_impl_(std::move(page_impl)),
       weak_factory_(this) {
   page_impl_->set_on_binding_unbound([this] {
-    operation_serializer_.Serialize<storage::Status>(
-        [](storage::Status status) {},
-        [this](fit::function<void(storage::Status)> callback) {
+    operation_serializer_.Serialize<Status>(
+        [](Status status) {},
+        [this](fit::function<void(Status)> callback) {
           branch_tracker_.StopTransaction(nullptr);
-          callback(storage::Status::OK);
+          callback(Status::OK);
         });
   });
   branch_tracker_.set_on_empty([this] { CheckEmpty(); });
@@ -51,14 +51,14 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
 
 PageDelegate::~PageDelegate() {}
 
-void PageDelegate::Init(fit::function<void(storage::Status)> on_done) {
-  storage::Status status = branch_tracker_.Init();
-  if (status != storage::Status::OK) {
+void PageDelegate::Init(fit::function<void(Status)> on_done) {
+  Status status = branch_tracker_.Init();
+  if (status != Status::OK) {
     on_done(status);
     return;
   }
   page_impl_->SetPageDelegate(this);
-  on_done(storage::Status::OK);
+  on_done(Status::OK);
 }
 
 void PageDelegate::GetSnapshot(
@@ -67,11 +67,11 @@ void PageDelegate::GetSnapshot(
     fit::function<void(Status)> callback) {
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
   // operation serializer.
-  operation_serializer_.Serialize<storage::Status>(
-      PageUtils::AdaptStatusCallback(std::move(callback)),
+  operation_serializer_.Serialize<Status>(
+      std::move(callback),
       [this, snapshot_request = std::move(snapshot_request),
        key_prefix = std::move(key_prefix), watcher = std::move(watcher)](
-          fit::function<void(storage::Status)> callback) mutable {
+          fit::function<void(Status)> callback) mutable {
         std::unique_ptr<const storage::Commit> commit =
             branch_tracker_.GetBranchHead();
         std::string prefix = convert::ToString(key_prefix);
@@ -82,7 +82,7 @@ void PageDelegate::GetSnapshot(
         }
         manager_->BindPageSnapshot(
             std::move(commit), std::move(snapshot_request), std::move(prefix));
-        callback(storage::Status::OK);
+        callback(Status::OK);
       });
 }
 
@@ -97,24 +97,24 @@ void PageDelegate::PutWithPriority(std::vector<uint8_t> key,
                                    Priority priority,
                                    fit::function<void(Status)> callback) {
   FXL_DCHECK(key.size() <= kMaxKeySize);
-  auto promise = fxl::MakeRefCounted<
-      callback::Promise<storage::Status, storage::ObjectIdentifier>>(
-      storage::Status::ILLEGAL_STATE);
+  auto promise =
+      fxl::MakeRefCounted<callback::Promise<Status, storage::ObjectIdentifier>>(
+          Status::ILLEGAL_STATE);
   storage_->AddObjectFromLocal(storage::ObjectType::BLOB,
                                storage::DataSource::Create(std::move(value)),
                                {}, promise->NewCallback());
 
-  operation_serializer_.Serialize<storage::Status>(
-      PageUtils::AdaptStatusCallback(std::move(callback)),
+  operation_serializer_.Serialize<Status>(
+      std::move(callback),
       [this, promise = std::move(promise), key = std::move(key),
-       priority](fit::function<void(storage::Status)> callback) mutable {
+       priority](fit::function<void(Status)> callback) mutable {
         promise->Finalize(callback::MakeScoped(
             weak_factory_.GetWeakPtr(),
             [this, key = std::move(key), priority,
              callback = std::move(callback)](
-                storage::Status status,
+                Status status,
                 storage::ObjectIdentifier object_identifier) mutable {
-              if (status != storage::Status::OK) {
+              if (status != Status::OK) {
                 callback(status);
                 return;
               }
@@ -135,18 +135,18 @@ void PageDelegate::PutReference(std::vector<uint8_t> key, Reference reference,
   // |ResolveReference| also makes sure that the reference was created for this
   // page.
   storage::ObjectIdentifier object_identifier;
-  storage::Status status =
+  Status status =
       manager_->ResolveReference(std::move(reference), &object_identifier);
-  if (status != storage::Status::OK) {
-    callback(PageUtils::ConvertStatus(status));
+  if (status != Status::OK) {
+    callback(status);
     return;
   }
 
-  operation_serializer_.Serialize<storage::Status>(
-      PageUtils::AdaptStatusCallback(std::move(callback)),
+  operation_serializer_.Serialize<Status>(
+      std::move(callback),
       [this, key = std::move(key),
        object_identifier = std::move(object_identifier),
-       priority](fit::function<void(storage::Status)> callback) mutable {
+       priority](fit::function<void(Status)> callback) mutable {
         PutInCommit(std::move(key), std::move(object_identifier),
                     priority == Priority::EAGER ? storage::KeyPriority::EAGER
                                                 : storage::KeyPriority::LAZY,
@@ -156,10 +156,9 @@ void PageDelegate::PutReference(std::vector<uint8_t> key, Reference reference,
 
 void PageDelegate::Delete(std::vector<uint8_t> key,
                           fit::function<void(Status)> callback) {
-  operation_serializer_.Serialize<storage::Status>(
-      PageUtils::AdaptStatusCallback(std::move(callback)),
-      [this, key = std::move(key)](
-          fit::function<void(storage::Status)> callback) mutable {
+  operation_serializer_.Serialize<Status>(
+      std::move(callback), [this, key = std::move(key)](
+                               fit::function<void(Status)> callback) mutable {
         RunInTransaction(
             [key = std::move(key)](storage::Journal* journal) {
               journal->Delete(key);
@@ -169,9 +168,9 @@ void PageDelegate::Delete(std::vector<uint8_t> key,
 }
 
 void PageDelegate::Clear(fit::function<void(Status)> callback) {
-  operation_serializer_.Serialize<storage::Status>(
-      PageUtils::AdaptStatusCallback(std::move(callback)),
-      [this](fit::function<void(storage::Status)> callback) mutable {
+  operation_serializer_.Serialize<Status>(
+      std::move(callback),
+      [this](fit::function<void(Status)> callback) mutable {
         RunInTransaction([](storage::Journal* journal) { journal->Clear(); },
                          std::move(callback));
       });
@@ -185,12 +184,9 @@ void PageDelegate::CreateReference(
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this, callback = std::move(callback)](
-              storage::Status status,
-              storage::ObjectIdentifier object_identifier) {
-            if (status != storage::Status::OK &&
-                status != storage::Status::IO_ERROR) {
-              callback(PageUtils::ConvertStatus(status),
-                       CreateReferenceStatus::OK, nullptr);
+              Status status, storage::ObjectIdentifier object_identifier) {
+            if (status != Status::OK && status != Status::IO_ERROR) {
+              callback(status, CreateReferenceStatus::OK, nullptr);
               return;
             }
 
@@ -200,7 +196,7 @@ void PageDelegate::CreateReference(
             // distinguished.
             // An INVALID_ARGUMENT should not cause the page to get
             // disconnected, so use OK as status.
-            if (status == storage::Status::IO_ERROR) {
+            if (status == Status::IO_ERROR) {
               callback(Status::OK, CreateReferenceStatus::INVALID_ARGUMENT,
                        nullptr);
               return;
@@ -217,7 +213,7 @@ void PageDelegate::StartTransaction(fit::function<void(Status)> callback) {
       std::move(callback),
       [this](fit::function<void(ledger::Status)> callback) {
         if (journal_) {
-          callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
+          callback(Status::ILLEGAL_STATE);
           return;
         }
         std::unique_ptr<const storage::Commit> commit =
@@ -234,17 +230,17 @@ void PageDelegate::Commit(fit::function<void(Status)> callback) {
       std::move(callback),
       [this](fit::function<void(ledger::Status)> callback) {
         if (!journal_) {
-          callback(Status::NO_TRANSACTION_IN_PROGRESS);
+          callback(Status::ILLEGAL_STATE);
           return;
         }
         CommitJournal(std::move(journal_),
                       callback::MakeScoped(
                           weak_factory_.GetWeakPtr(),
                           [this, callback = std::move(callback)](
-                              storage::Status status,
+                              Status status,
                               std::unique_ptr<const storage::Commit> commit) {
                             branch_tracker_.StopTransaction(std::move(commit));
-                            callback(PageUtils::ConvertStatus(status));
+                            callback(status);
                           }));
       });
 }
@@ -254,7 +250,7 @@ void PageDelegate::Rollback(fit::function<void(Status)> callback) {
       std::move(callback),
       [this](fit::function<void(ledger::Status)> callback) {
         if (!journal_) {
-          callback(Status::NO_TRANSACTION_IN_PROGRESS);
+          callback(Status::ILLEGAL_STATE);
           return;
         }
         journal_.reset();
@@ -286,7 +282,7 @@ void PageDelegate::WaitForConflictResolution(
 void PageDelegate::PutInCommit(std::vector<uint8_t> key,
                                storage::ObjectIdentifier object_identifier,
                                storage::KeyPriority priority,
-                               fit::function<void(storage::Status)> callback) {
+                               fit::function<void(Status)> callback) {
   RunInTransaction(
       [key = std::move(key), object_identifier = std::move(object_identifier),
        priority](storage::Journal* journal) mutable {
@@ -297,11 +293,11 @@ void PageDelegate::PutInCommit(std::vector<uint8_t> key,
 
 void PageDelegate::RunInTransaction(
     fit::function<void(storage::Journal*)> runnable,
-    fit::function<void(storage::Status)> callback) {
+    fit::function<void(Status)> callback) {
   if (journal_) {
     // A transaction is in progress; add this change to it.
     runnable(journal_.get());
-    callback(storage::Status::OK);
+    callback(Status::OK);
     return;
   }
   // No transaction is in progress; create one just for this change.
@@ -319,24 +315,23 @@ void PageDelegate::RunInTransaction(
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this, callback = std::move(callback)](
-              storage::Status status,
-              std::unique_ptr<const storage::Commit> commit) {
+              Status status, std::unique_ptr<const storage::Commit> commit) {
             branch_tracker_.StopTransaction(
-                status == storage::Status::OK ? std::move(commit) : nullptr);
+                status == Status::OK ? std::move(commit) : nullptr);
             callback(status);
           }));
 }
 
 void PageDelegate::CommitJournal(
     std::unique_ptr<storage::Journal> journal,
-    fit::function<void(storage::Status, std::unique_ptr<const storage::Commit>)>
+    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  storage_->CommitJournal(std::move(journal),
-                          [callback = std::move(callback)](
-                              storage::Status status,
-                              std::unique_ptr<const storage::Commit> commit) {
-                            callback(status, std::move(commit));
-                          });
+  storage_->CommitJournal(
+      std::move(journal),
+      [callback = std::move(callback)](
+          Status status, std::unique_ptr<const storage::Commit> commit) {
+        callback(status, std::move(commit));
+      });
 }
 
 void PageDelegate::CheckEmpty() {

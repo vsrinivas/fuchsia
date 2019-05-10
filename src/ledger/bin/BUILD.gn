@@ -39,6 +39,7 @@ executable("ledger_unittests") {
     "//src/ledger/bin/lock:unittests",
     "//src/ledger/bin/p2p_provider/impl:unittests",
     "//src/ledger/bin/p2p_sync/impl:unittests",
+    "//src/ledger/bin/public:unittests",
     "//src/ledger/bin/storage/impl:unittests",
     "//src/ledger/bin/storage/impl/btree:unittests",
     "//src/ledger/bin/storage/public:unittests",

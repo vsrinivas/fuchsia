@@ -10,6 +10,7 @@
 #include <string>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/fxl/strings/string_view.h"
 
@@ -153,30 +154,7 @@ enum class IsObjectSynced : bool { NO, YES };
 
 enum class JournalContainsClearOperation { NO, YES };
 
-enum class FXL_WARN_UNUSED_RESULT Status {
-  // User visible status.
-  OK,
-  IO_ERROR,
-  PAGE_NOT_FOUND,
-  KEY_NOT_FOUND,
-  REFERENCE_NOT_FOUND,
-
-  // Internal status.
-  FORMAT_ERROR,
-  ILLEGAL_STATE,
-  INTERNAL_NOT_FOUND,
-  INTERNAL_ERROR,
-  INTERRUPTED,
-  NETWORK_ERROR,
-  NO_SUCH_CHILD,
-  OBJECT_DIGEST_MISMATCH,
-
-  // Temporary status or status for tests.
-  NOT_IMPLEMENTED,
-};
-
-fxl::StringView StatusToString(Status status);
-std::ostream& operator<<(std::ostream& os, Status status);
+using Status = ledger::Status;
 
 }  // namespace storage
 #endif  // SRC_LEDGER_BIN_STORAGE_PUBLIC_TYPES_H_

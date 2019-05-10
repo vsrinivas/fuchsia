@@ -43,15 +43,15 @@ void CommitBatch::AddToBatch(
       std::move(out), storage::ChangeSource::P2P,
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
-          [this](storage::Status status,
+          [this](ledger::Status status,
                  std::vector<storage::CommitId> missing_ids) {
-            if (status == storage::Status::OK) {
+            if (status == ledger::Status::OK) {
               if (on_empty_) {
                 on_empty_();
               }
               return;
             }
-            if (status == storage::Status::INTERNAL_NOT_FOUND &&
+            if (status == ledger::Status::INTERNAL_NOT_FOUND &&
                 !missing_ids.empty()) {
               delegate_->RequestCommits(device_, std::move(missing_ids));
               return;

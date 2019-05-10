@@ -59,7 +59,7 @@ class PageInfoIterator final : public storage::Iterator<const PageInfo> {
 
   bool Valid() const override { return it_->Valid(); }
 
-  storage::Status GetStatus() const override { return it_->GetStatus(); }
+  Status GetStatus() const override { return it_->GetStatus(); }
 
   const PageInfo& operator*() const override { return *(page_.get()); }
 
@@ -97,111 +97,108 @@ PageUsageDb::PageUsageDb(timekeeper::Clock* clock,
 
 PageUsageDb::~PageUsageDb() {}
 
-storage::Status PageUsageDb::MarkPageOpened(
-    coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
-    storage::PageIdView page_id) {
+Status PageUsageDb::MarkPageOpened(coroutine::CoroutineHandler* handler,
+                                   fxl::StringView ledger_name,
+                                   storage::PageIdView page_id) {
   return Put(handler, GetKeyForOpenedPage(ledger_name, page_id),
              storage::SerializeData(PageInfo::kOpenedPageTimestamp));
 }
 
-storage::Status PageUsageDb::MarkPageClosed(
-    coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
-    storage::PageIdView page_id) {
+Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
+                                   fxl::StringView ledger_name,
+                                   storage::PageIdView page_id) {
   FXL_DCHECK(page_id.size() == ::fuchsia::ledger::PAGE_ID_SIZE);
   zx::time_utc now;
   if (clock_->Now(&now) != ZX_OK) {
-    return storage::Status::IO_ERROR;
+    return Status::IO_ERROR;
   }
   return Put(handler, GetKeyForOpenedPage(ledger_name, page_id),
              storage::SerializeData(now));
 }
 
-storage::Status PageUsageDb::MarkPageEvicted(
-    coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
-    storage::PageIdView page_id) {
+Status PageUsageDb::MarkPageEvicted(coroutine::CoroutineHandler* handler,
+                                    fxl::StringView ledger_name,
+                                    storage::PageIdView page_id) {
   return Delete(handler, GetKeyForOpenedPage(ledger_name, page_id));
 }
 
-storage::Status PageUsageDb::MarkAllPagesClosed(
-    coroutine::CoroutineHandler* handler) {
+Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
   zx::time_utc now;
   if (clock_->Now(&now) != ZX_OK) {
-    return storage::Status::IO_ERROR;
+    return Status::IO_ERROR;
   }
 
   std::unique_ptr<storage::Iterator<const std::pair<
       convert::ExtendedStringView, convert::ExtendedStringView>>>
       rows;
-  storage::Status db_status =
+  Status db_status =
       db_->GetIteratorAtPrefix(handler, kOpenedPagePrefix, &rows);
-  if (db_status != storage::Status::OK) {
+  if (db_status != Status::OK) {
     return db_status;
   }
   while (rows->Valid()) {
     if (storage::DeserializeData<zx::time_utc>((*rows)->second) ==
         PageInfo::kOpenedPageTimestamp) {
       // No need to deserialize the key.
-      storage::Status status =
-          Put(handler, (*rows)->first, storage::SerializeData(now));
-      if (status != storage::Status::OK) {
+      Status status = Put(handler, (*rows)->first, storage::SerializeData(now));
+      if (status != Status::OK) {
         return status;
       }
     }
     rows->Next();
   }
-  return storage::Status::OK;
+  return Status::OK;
 }
 
-storage::Status PageUsageDb::GetPages(
+Status PageUsageDb::GetPages(
     coroutine::CoroutineHandler* handler,
     std::unique_ptr<storage::Iterator<const PageInfo>>* pages) {
   std::unique_ptr<storage::Iterator<const std::pair<
       convert::ExtendedStringView, convert::ExtendedStringView>>>
       it;
-  storage::Status status =
-      db_->GetIteratorAtPrefix(handler, kOpenedPagePrefix, &it);
-  if (status != storage::Status::OK) {
+  Status status = db_->GetIteratorAtPrefix(handler, kOpenedPagePrefix, &it);
+  if (status != Status::OK) {
     return status;
   }
   *pages = std::make_unique<PageInfoIterator>(std::move(it));
-  return storage::Status::OK;
+  return Status::OK;
 }
 
-storage::Status PageUsageDb::Put(coroutine::CoroutineHandler* handler,
-                                 fxl::StringView key, fxl::StringView value) {
+Status PageUsageDb::Put(coroutine::CoroutineHandler* handler,
+                        fxl::StringView key, fxl::StringView value) {
   std::unique_ptr<storage::Db::Batch> batch;
   std::unique_ptr<lock::Lock> lock;
   // Used for serializing Put and Delete operations.
   if (lock::AcquireLock(handler, &serializer_, &lock) ==
       coroutine::ContinuationStatus::INTERRUPTED) {
-    return storage::Status::INTERNAL_ERROR;
+    return Status::INTERNAL_ERROR;
   }
-  storage::Status status = db_->StartBatch(handler, &batch);
-  if (status != storage::Status::OK) {
+  Status status = db_->StartBatch(handler, &batch);
+  if (status != Status::OK) {
     return status;
   }
   status = batch->Put(handler, key, value);
-  if (status != storage::Status::OK) {
+  if (status != Status::OK) {
     return status;
   }
   return batch->Execute(handler);
 }
 
-storage::Status PageUsageDb::Delete(coroutine::CoroutineHandler* handler,
-                                    fxl::StringView key) {
+Status PageUsageDb::Delete(coroutine::CoroutineHandler* handler,
+                           fxl::StringView key) {
   std::unique_ptr<storage::Db::Batch> batch;
   // Used for serializing Put and Delete operations.
   std::unique_ptr<lock::Lock> lock;
   if (lock::AcquireLock(handler, &serializer_, &lock) ==
       coroutine::ContinuationStatus::INTERRUPTED) {
-    return storage::Status::INTERNAL_ERROR;
+    return Status::INTERNAL_ERROR;
   }
-  storage::Status status = db_->StartBatch(handler, &batch);
-  if (status != storage::Status::OK) {
+  Status status = db_->StartBatch(handler, &batch);
+  if (status != Status::OK) {
     return status;
   }
   status = batch->Delete(handler, key);
-  if (status != storage::Status::OK) {
+  if (status != Status::OK) {
     return status;
   }
   return batch->Execute(handler);

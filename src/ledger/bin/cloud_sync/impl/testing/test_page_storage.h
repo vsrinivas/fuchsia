@@ -35,24 +35,23 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync_delegate) override;
 
-  storage::Status GetHeadCommits(
+  ledger::Status GetHeadCommits(
       std::vector<std::unique_ptr<const storage::Commit>>* head_commits)
       override;
 
   void GetCommit(storage::CommitIdView commit_id,
-                 fit::function<void(storage::Status,
+                 fit::function<void(ledger::Status,
                                     std::unique_ptr<const storage::Commit>)>
                      callback) override;
 
   void AddCommitsFromSync(
       std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
       storage::ChangeSource source,
-      fit::function<void(storage::Status status,
-                         std::vector<storage::CommitId>)>
+      fit::function<void(ledger::Status status, std::vector<storage::CommitId>)>
           callback) override;
 
   void GetUnsyncedPieces(
-      fit::function<void(storage::Status,
+      fit::function<void(ledger::Status,
                          std::vector<storage::ObjectIdentifier>)>
           callback) override;
 
@@ -61,19 +60,19 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   void RemoveCommitWatcher(storage::CommitWatcher* watcher) override;
 
   void GetUnsyncedCommits(
-      fit::function<void(storage::Status,
+      fit::function<void(ledger::Status,
                          std::vector<std::unique_ptr<const storage::Commit>>)>
           callback) override;
 
   void MarkCommitSynced(const storage::CommitId& commit_id,
-                        fit::function<void(storage::Status)> callback) override;
+                        fit::function<void(ledger::Status)> callback) override;
 
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
-                       fit::function<void(storage::Status)> callback) override;
+                       fit::function<void(ledger::Status)> callback) override;
 
   void GetSyncMetadata(
       fxl::StringView key,
-      fit::function<void(storage::Status, std::string)> callback) override;
+      fit::function<void(ledger::Status, std::string)> callback) override;
 
   storage::PageId page_id_to_return;
   // Commits to be returned from GetUnsyncedCommits calls.

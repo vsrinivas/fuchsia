@@ -1580,7 +1580,7 @@ TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
   storage_->SetSyncDelegate(&sync);
 
   TryGetObject(data.object_identifier, PageStorage::Location::NETWORK,
-               Status::OBJECT_DIGEST_MISMATCH);
+               Status::DATA_INTEGRITY_ERROR);
 }
 
 TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {

@@ -63,7 +63,6 @@ using Priority = fuchsia::ledger::Priority;
 using Reference = fuchsia::ledger::Reference;
 using ReferencePtr = fuchsia::ledger::ReferencePtr;
 using ResultState = fuchsia::ledger::ResultState;
-using Status = fuchsia::ledger::Status;
 using SyncState = fuchsia::ledger::SyncState;
 using SyncWatcher = fuchsia::ledger::SyncWatcher;
 using SyncWatcherPtr = fuchsia::ledger::SyncWatcherPtr;

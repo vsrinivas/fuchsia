@@ -111,7 +111,7 @@ TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
   std::unique_ptr<storage::Object> object =
       std::make_unique<storage::fake::FakeObject>(identifier, content);
   fxl::StringView content_data;
-  ASSERT_EQ(storage::Status::OK, object->GetData(&content_data));
+  ASSERT_EQ(ledger::Status::OK, object->GetData(&content_data));
 
   Status status;
   std::string encrypted_bytes;

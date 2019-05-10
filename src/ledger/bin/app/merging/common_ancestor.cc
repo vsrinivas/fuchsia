@@ -81,7 +81,7 @@ class CommitWalkMap {
 
 }  // namespace
 
-storage::Status FindCommonAncestors(
+Status FindCommonAncestors(
     coroutine::CoroutineHandler* handler, storage::PageStorage* storage,
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right, CommitComparison* comparison,
@@ -108,9 +108,8 @@ storage::Status FindCommonAncestors(
   while (walk_state.interesting_size() > 0) {
     uint64_t expected_generation = walk_state.NextGeneration();
     auto waiter = fxl::MakeRefCounted<callback::Waiter<
-        storage::Status,
-        std::pair<std::unique_ptr<const storage::Commit>, WalkFlags>>>(
-        storage::Status::OK);
+        Status, std::pair<std::unique_ptr<const storage::Commit>, WalkFlags>>>(
+        Status::OK);
     while (walk_state.interesting_size() > 0 &&
            expected_generation == walk_state.NextGeneration()) {
       auto [commit, flags] = walk_state.Pop();
@@ -125,9 +124,9 @@ storage::Status FindCommonAncestors(
       }
       for (const auto& parent_id : commit->GetParentIds()) {
         storage->GetCommit(
-            parent_id, [callback = waiter->NewCallback(), flags = parent_flags](
-                           storage::Status status,
-                           std::unique_ptr<const storage::Commit> result) {
+            parent_id,
+            [callback = waiter->NewCallback(), flags = parent_flags](
+                Status status, std::unique_ptr<const storage::Commit> result) {
               callback(status, make_pair(std::move(result), flags));
             });
       }
@@ -146,14 +145,14 @@ storage::Status FindCommonAncestors(
         right_has_changes |= flags.test(WalkFlag::kAncestorOfRight);
       }
     }
-    storage::Status status;
+    Status status;
     std::vector<std::pair<std::unique_ptr<const storage::Commit>, WalkFlags>>
         parents;
     if (coroutine::Wait(handler, std::move(waiter), &status, &parents) ==
         coroutine::ContinuationStatus::INTERRUPTED) {
-      return storage::Status::INTERRUPTED;
+      return Status::INTERRUPTED;
     }
-    if (status != storage::Status::OK) {
+    if (status != Status::OK) {
       return status;
     }
     // Add the parents in the map of commits to be visited.
@@ -176,7 +175,7 @@ storage::Status FindCommonAncestors(
     *comparison = CommitComparison::UNORDERED;
   }
 
-  return storage::Status::OK;
+  return Status::OK;
 }
 
 bool GenerationComparator::operator()(

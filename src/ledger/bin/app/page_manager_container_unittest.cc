@@ -26,7 +26,7 @@ TEST_F(PageManagerContainerTest, OneEarlyBindingNoPageManager) {
   FakeDiskCleanupManager page_usage_listener;
   PagePtr page;
   bool callback_called;
-  storage::Status status;
+  Status status;
   bool on_empty_called;
 
   PageManagerContainer page_manager_container(kLedgerName, page_id,
@@ -40,10 +40,10 @@ TEST_F(PageManagerContainerTest, OneEarlyBindingNoPageManager) {
   EXPECT_FALSE(callback_called);
   EXPECT_FALSE(on_empty_called);
 
-  page_manager_container.SetPageManager(storage::Status::IO_ERROR, nullptr);
+  page_manager_container.SetPageManager(Status::IO_ERROR, nullptr);
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
-  EXPECT_EQ(storage::Status::IO_ERROR, status);
+  EXPECT_EQ(Status::IO_ERROR, status);
   EXPECT_TRUE(on_empty_called);
 
   // We expect that the page unbinding will have no further effect.
@@ -67,7 +67,7 @@ TEST_F(PageManagerContainerTest, BindBeforePageManager) {
       std::move(merge_resolver), PageManager::PageStorageState::AVAILABLE);
   PagePtr page;
   bool callback_called;
-  storage::Status status;
+  Status status;
   bool on_empty_called;
 
   PageManagerContainer page_manager_container(kLedgerName, page_id,
@@ -79,11 +79,10 @@ TEST_F(PageManagerContainerTest, BindBeforePageManager) {
       callback::Capture(callback::SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
-  page_manager_container.SetPageManager(storage::Status::OK,
-                                        std::move(page_manager));
+  page_manager_container.SetPageManager(Status::OK, std::move(page_manager));
 
   EXPECT_TRUE(callback_called);
-  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(on_empty_called);
 
   // We expect that the page unbinding will empty the PageManagerContainer but

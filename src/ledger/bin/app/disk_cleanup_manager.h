@@ -29,7 +29,7 @@ class DiskCleanupManager {
   virtual bool IsEmpty() = 0;
 
   // Tries to free up disk space.
-  virtual void TryCleanUp(fit::function<void(storage::Status)> callback) = 0;
+  virtual void TryCleanUp(fit::function<void(Status)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(DiskCleanupManager);

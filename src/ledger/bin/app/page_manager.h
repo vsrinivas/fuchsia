@@ -61,7 +61,7 @@ class PageManager {
   // Creates a new PageDelegate managed by this PageManager, and binds it to the
   // given PageImpl.
   void AddPageImpl(std::unique_ptr<PageImpl> page_impl,
-                   fit::function<void(storage::Status)> on_done);
+                   fit::function<void(Status)> on_done);
 
   // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
   // the request.
@@ -73,14 +73,14 @@ class PageManager {
   Reference CreateReference(storage::ObjectIdentifier object_identifier);
 
   // Retrieve an object identifier from a Reference.
-  storage::Status ResolveReference(
-      Reference reference, storage::ObjectIdentifier* object_identifier);
+  Status ResolveReference(Reference reference,
+                          storage::ObjectIdentifier* object_identifier);
 
   // Checks whether there are any unsynced commits or pieces in this page.
-  void IsSynced(fit::function<void(storage::Status, bool)> callback);
+  void IsSynced(fit::function<void(Status, bool)> callback);
 
   // Checks whether the page is offline and has no entries.
-  void IsOfflineAndEmpty(fit::function<void(storage::Status, bool)> callback);
+  void IsOfflineAndEmpty(fit::function<void(Status, bool)> callback);
 
   // Returns true if this PageManager can be deleted without interrupting
   // syncing, merging, or requests related to this page.
@@ -107,8 +107,7 @@ class PageManager {
   fit::closure on_empty_callback_;
 
   bool sync_backlog_downloaded_ = false;
-  std::vector<std::pair<std::unique_ptr<PageImpl>,
-                        fit::function<void(storage::Status)>>>
+  std::vector<std::pair<std::unique_ptr<PageImpl>, fit::function<void(Status)>>>
       page_impls_;
 
   SyncWatcherSet watchers_;

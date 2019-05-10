@@ -231,7 +231,7 @@ class ConvergenceTest
       ledger_instances_.push_back(std::move(ledger_instance));
       pages_.emplace_back();
       LedgerPtr ledger_ptr = ledger_instances_[i]->GetTestLedger();
-      Status status = Status::UNKNOWN_ERROR;
+      Status status;
       auto loop_waiter = NewWaiter();
       GetPageEnsureInitialized(
           &ledger_ptr,

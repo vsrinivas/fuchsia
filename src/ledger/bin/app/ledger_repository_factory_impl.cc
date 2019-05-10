@@ -134,7 +134,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
   ~LedgerRepositoryContainer() {
     for (const auto& request : requests_) {
-      request.second(storage::Status::INTERNAL_ERROR);
+      request.second(Status::INTERNAL_ERROR);
     }
   }
 
@@ -146,8 +146,8 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   // |callback| when the repository is available or an error occurs.
   void BindRepository(
       fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
-      fit::function<void(storage::Status)> callback) {
-    if (status_ != storage::Status::OK) {
+      fit::function<void(Status)> callback) {
+    if (status_ != Status::OK) {
       callback(status_);
       return;
     }
@@ -161,10 +161,10 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
   // Sets the implementation or the error status for the container. This
   // notifies all awaiting callbacks and binds all pages in case of success.
-  void SetRepository(storage::Status status,
+  void SetRepository(Status status,
                      std::unique_ptr<LedgerRepositoryImpl> ledger_repository) {
     FXL_DCHECK(!ledger_repository_);
-    FXL_DCHECK(status != storage::Status::OK || ledger_repository);
+    FXL_DCHECK(status != Status::OK || ledger_repository);
     status_ = status;
     ledger_repository_ = std::move(ledger_repository);
     for (auto& request : requests_) {
@@ -194,7 +194,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
     // TODO(ppi): rather than failing all already pending and future requests,
     // we should stash them and fulfill them once the deletion is finished.
-    status_ = storage::Status::INTERNAL_ERROR;
+    status_ = Status::INTERNAL_ERROR;
   }
 
  private:
@@ -208,10 +208,10 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   zx::channel fd_chan_;
   std::unique_ptr<async::Wait> fd_wait_;
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
-  storage::Status status_ = storage::Status::OK;
+  Status status_ = Status::OK;
   std::vector<
       std::pair<fidl::InterfaceRequest<ledger_internal::LedgerRepository>,
-                fit::function<void(storage::Status)>>>
+                fit::function<void(Status)>>>
       requests_;
   fit::closure on_empty_callback_;
   std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
@@ -273,8 +273,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     return;
   }
   GetRepositoryByFD(std::move(root_fd), std::move(cloud_provider), user_id,
-                    std::move(repository_request),
-                    PageUtils::AdaptStatusCallback(std::move(callback)));
+                    std::move(repository_request), std::move(callback));
 }
 
 void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
@@ -283,13 +282,13 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
     std::string user_id,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request,
-    fit::function<void(storage::Status)> callback) {
+    fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
 
   RepositoryInformation repository_information(root_fd.get(),
                                                std::move(user_id));
   if (!repository_information.Init(environment_->random())) {
-    callback(storage::Status::IO_ERROR);
+    callback(Status::IO_ERROR);
     return;
   }
 
@@ -332,7 +331,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
       std::move(disk_cleanup_manager), disk_cleanup_manager_ptr,
       inspect_node_.CreateChild(convert::ToHex(repository_information.name)));
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
-  container->SetRepository(storage::Status::OK, std::move(repository));
+  container->SetRepository(Status::OK, std::move(repository));
 }
 
 std::unique_ptr<sync_coordinator::UserSyncImpl>

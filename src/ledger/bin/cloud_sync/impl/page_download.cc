@@ -67,13 +67,13 @@ void PageDownload::StartDownload() {
   // Retrieve the server-side timestamp of the last commit we received.
   storage_->GetSyncMetadata(
       kTimestampKey,
-      task_runner_->MakeScoped([this](storage::Status status,
+      task_runner_->MakeScoped([this](ledger::Status status,
                                       std::string last_commit_token_id) {
         // NOT_FOUND means that we haven't persisted the state yet, e.g. because
         // we haven't received any remote commits yet. In this case an empty
         // timestamp is the right value.
-        if (status != storage::Status::OK &&
-            status != storage::Status::INTERNAL_NOT_FOUND) {
+        if (status != ledger::Status::OK &&
+            status != ledger::Status::INTERNAL_NOT_FOUND) {
           HandleDownloadCommitError("Failed to retrieve the sync metadata.");
           return;
         }
@@ -179,10 +179,10 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
   storage_->GetSyncMetadata(
       kTimestampKey,
       task_runner_->MakeScoped([this, is_retry](
-                                   storage::Status status,
+                                   ledger::Status status,
                                    std::string last_commit_token_id) {
-        if (status != storage::Status::OK &&
-            status != storage::Status::INTERNAL_NOT_FOUND) {
+        if (status != ledger::Status::OK &&
+            status != ledger::Status::INTERNAL_NOT_FOUND) {
           HandleDownloadCommitError("Failed to retrieve the sync metadata.");
           return;
         }
@@ -307,7 +307,7 @@ void PageDownload::DownloadBatch(
 
 void PageDownload::GetObject(
     storage::ObjectIdentifier object_identifier,
-    fit::function<void(storage::Status, storage::ChangeSource,
+    fit::function<void(ledger::Status, storage::ChangeSource,
                        storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
@@ -358,7 +358,7 @@ void PageDownload::GetObject(
 void PageDownload::DecryptObject(
     storage::ObjectIdentifier object_identifier,
     std::unique_ptr<storage::DataSource> content,
-    fit::function<void(storage::Status, storage::ChangeSource,
+    fit::function<void(ledger::Status, storage::ChangeSource,
                        storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
@@ -366,9 +366,9 @@ void PageDownload::DecryptObject(
       &managed_container_, std::move(content),
       [this, object_identifier = std::move(object_identifier),
        callback = std::move(callback)](
-          storage::Status status,
+          ledger::Status status,
           std::unique_ptr<storage::DataSource::DataChunk> content) mutable {
-        if (status != storage::Status::OK) {
+        if (status != ledger::Status::OK) {
           HandleGetObjectError(std::move(object_identifier), true, "io",
                                std::move(callback));
           return;
@@ -385,7 +385,7 @@ void PageDownload::DecryptObject(
               }
               backoff_->Reset();
               callback(
-                  storage::Status::OK, storage::ChangeSource::CLOUD,
+                  ledger::Status::OK, storage::ChangeSource::CLOUD,
                   storage::IsObjectSynced::YES,
                   storage::DataSource::DataChunk::Create(std::move(content)));
               current_get_object_calls_--;
@@ -397,7 +397,7 @@ void PageDownload::DecryptObject(
 void PageDownload::HandleGetObjectError(
     storage::ObjectIdentifier object_identifier, bool is_permanent,
     const char error_name[],
-    fit::function<void(storage::Status, storage::ChangeSource,
+    fit::function<void(ledger::Status, storage::ChangeSource,
                        storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
@@ -405,7 +405,7 @@ void PageDownload::HandleGetObjectError(
     backoff_->Reset();
     FXL_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a permanent "
                      << error_name << " error.";
-    callback(storage::Status::IO_ERROR, storage::ChangeSource::CLOUD,
+    callback(ledger::Status::IO_ERROR, storage::ChangeSource::CLOUD,
              storage::IsObjectSynced::YES, nullptr);
     current_get_object_calls_--;
     UpdateDownloadState();

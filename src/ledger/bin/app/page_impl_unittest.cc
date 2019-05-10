@@ -13,6 +13,7 @@
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <zircon/errors.h>
 
 #include <algorithm>
 #include <map>
@@ -77,14 +78,14 @@ class PageImplTest : public TestWithEnvironment {
         &environment_, std::move(fake_storage), nullptr, std::move(resolver),
         PageManager::PageStorageState::NEEDS_SYNC);
     bool called;
-    storage::Status status;
+    Status status;
     auto page_impl =
         std::make_unique<PageImpl>(page_id1_, page_ptr_.NewRequest());
     manager_->AddPageImpl(
         std::move(page_impl),
         callback::Capture(callback::SetWhenCalled(&called), &status));
     EXPECT_TRUE(called);
-    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
     DrainLoop();
   }
 
@@ -100,7 +101,7 @@ class PageImplTest : public TestWithEnvironment {
     for (const auto& journal_pair : journals) {
       const auto& journal = journal_pair.second;
       if (!journal->IsCommitted()) {
-        journal->ResolvePendingCommit(storage::Status::OK);
+        journal->ResolvePendingCommit(Status::OK);
         return;
       }
     }
@@ -108,7 +109,7 @@ class PageImplTest : public TestWithEnvironment {
 
   storage::ObjectIdentifier AddObjectToStorage(std::string value_string) {
     bool called;
-    storage::Status status;
+    Status status;
     storage::ObjectIdentifier object_identifier;
     fake_storage_->AddObjectFromLocal(
         storage::ObjectType::BLOB,
@@ -117,7 +118,7 @@ class PageImplTest : public TestWithEnvironment {
                           &object_identifier));
     DrainLoop();
     EXPECT_TRUE(called);
-    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
     return object_identifier;
   }
 
@@ -125,14 +126,14 @@ class PageImplTest : public TestWithEnvironment {
     storage::ObjectIdentifier object_identifier = AddObjectToStorage(value);
 
     bool called;
-    storage::Status status;
+    Status status;
     std::unique_ptr<const storage::Object> object;
     fake_storage_->GetObject(
         object_identifier, storage::PageStorage::Location::LOCAL,
         callback::Capture(callback::SetWhenCalled(&called), &status, &object));
     DrainLoop();
     EXPECT_TRUE(called);
-    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
     return object;
   }
 
@@ -263,7 +264,7 @@ TEST_F(PageImplTest, PutUnknownReference) {
                           Priority::LAZY);
   DrainLoop();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::REFERENCE_NOT_FOUND, static_cast<Status>(status));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
   auto objects = fake_storage_->GetObjects();
   // No object should have been added.
   EXPECT_EQ(0u, objects.size());
@@ -609,8 +610,7 @@ TEST_F(PageImplTest, NoTwoTransactions) {
 
   DrainLoop();
   EXPECT_TRUE(error_called);
-  EXPECT_EQ(Status::TRANSACTION_ALREADY_IN_PROGRESS,
-            static_cast<Status>(error_status));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, error_status);
 }
 
 TEST_F(PageImplTest, NoTransactionCommit) {
@@ -625,8 +625,7 @@ TEST_F(PageImplTest, NoTransactionCommit) {
 
   DrainLoop();
   EXPECT_TRUE(error_called);
-  EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS,
-            static_cast<Status>(error_status));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, error_status);
 }
 
 TEST_F(PageImplTest, NoTransactionRollback) {
@@ -641,8 +640,7 @@ TEST_F(PageImplTest, NoTransactionRollback) {
 
   DrainLoop();
   EXPECT_TRUE(error_called);
-  EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS,
-            static_cast<Status>(error_status));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, error_status);
 }
 
 TEST_F(PageImplTest, CreateReferenceFromSocket) {
@@ -1297,7 +1295,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   DrainLoop();
   EXPECT_FALSE(called);
   EXPECT_TRUE(error_hander_called);
-  EXPECT_EQ(Status::VALUE_TOO_LARGE, static_cast<Status>(zx_status));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, zx_status);
 }
 
 TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
@@ -1355,7 +1353,7 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
 
 TEST_F(PageImplTest, ParallelPut) {
   bool called;
-  storage::Status storage_status;
+  Status storage_status;
   PagePtr page_ptr2;
   auto page_impl =
       std::make_unique<PageImpl>(page_id1_, page_ptr2.NewRequest());
@@ -1364,7 +1362,7 @@ TEST_F(PageImplTest, ParallelPut) {
       callback::Capture(callback::SetWhenCalled(&called), &storage_status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(storage::Status::OK, storage_status);
+  ASSERT_EQ(Status::OK, storage_status);
 
   std::string key("some_key");
   std::string value1("a small value");

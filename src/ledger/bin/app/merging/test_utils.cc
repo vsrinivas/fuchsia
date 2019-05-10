@@ -28,7 +28,7 @@ TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
                                           std::string value) {
   return
       [this, key, value = std::move(value)](storage::Journal* journal) mutable {
-        storage::Status status;
+        Status status;
         storage::ObjectIdentifier object_identifier;
         bool called;
         page_storage()->AddObjectFromLocal(
@@ -38,7 +38,7 @@ TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
                               &object_identifier));
         RunLoopUntilIdle();
         EXPECT_TRUE(called);
-        EXPECT_EQ(storage::Status::OK, status);
+        EXPECT_EQ(Status::OK, status);
 
         journal->Put(key, object_identifier, storage::KeyPriority::EAGER);
       };
@@ -51,7 +51,7 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
 
 ::testing::AssertionResult TestWithPageStorage::GetValue(
     storage::ObjectIdentifier object_identifier, std::string* value) {
-  storage::Status status;
+  Status status;
   std::unique_ptr<const storage::Object> object;
   bool called;
   page_storage()->GetObject(
@@ -62,14 +62,14 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
     return ::testing::AssertionFailure()
            << "PageStorage::GetObject never called the callback.";
   }
-  if (status != storage::Status::OK) {
+  if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "PageStorage::GetObject returned status: " << status;
   }
 
   fxl::StringView data;
   status = object->GetData(&data);
-  if (status != storage::Status::OK) {
+  if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "Object::GetData returned status: " << status;
   }
@@ -82,8 +82,8 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
     std::unique_ptr<storage::PageStorage>* page_storage) {
   auto db = std::make_unique<storage::LevelDb>(environment_.dispatcher(),
                                                DetachedPath(tmpfs_.root_fd()));
-  storage::Status status = db->Init();
-  if (status != storage::Status::OK) {
+  Status status = db->Init();
+  if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "LevelDb::Init failed with status " << status;
   }
@@ -100,7 +100,7 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
            << "PageStorage::Init never called the callback.";
   }
 
-  if (status != storage::Status::OK) {
+  if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "PageStorageImpl::Init returned status: " << status;
   }

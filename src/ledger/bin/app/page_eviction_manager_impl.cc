@@ -27,17 +27,15 @@ namespace ledger {
 namespace {
 
 // Logs an error message if the given |status| is not |OK| or |INTERRUPTED|.
-void LogOnPageUpdateError(fxl::StringView operation_description,
-                          storage::Status status, fxl::StringView ledger_name,
+void LogOnPageUpdateError(fxl::StringView operation_description, Status status,
+                          fxl::StringView ledger_name,
                           storage::PageIdView page_id) {
   // Don't print an error on |INTERRUPED|: it means that the operation was
   // interrupted, because PageEvictionManagerImpl was destroyed before being
   // empty.
-  if (status != storage::Status::OK &&
-      status != storage::Status::INTERRUPTED) {
+  if (status != Status::OK && status != Status::INTERRUPTED) {
     FXL_LOG(ERROR) << "Failed to " << operation_description
-                   << " in PageUsage DB. storage::Status: "
-                   << fidl::ToUnderlying(status)
+                   << " in PageUsage DB. Status: " << fidl::ToUnderlying(status)
                    << ". Ledger name: " << ledger_name
                    << ". Page ID: " << convert::ToHex(page_id);
   }
@@ -46,9 +44,9 @@ void LogOnPageUpdateError(fxl::StringView operation_description,
 // If the given |status| is not |OK| or |INTERRUPTED|, logs an error message on
 // failure to initialize. Returns true in case of error; false otherwise.
 bool LogOnInitializationError(fxl::StringView operation_description,
-                              storage::Status status) {
-  if (status != storage::Status::OK) {
-    if (status != storage::Status::INTERRUPTED) {
+                              Status status) {
+  if (status != Status::OK) {
+    if (status != Status::INTERRUPTED) {
       FXL_LOG(ERROR) << operation_description
                      << " failed because of initialization error: "
                      << fidl::ToUnderlying(status);
@@ -67,15 +65,15 @@ PageEvictionManagerImpl::Completer::~Completer() {
   // drop them the caller will receive |INTERRUPTED|.
 }
 
-void PageEvictionManagerImpl::Completer::Complete(storage::Status status) {
+void PageEvictionManagerImpl::Completer::Complete(Status status) {
   FXL_DCHECK(!completed_);
   // If we get |INTERRUPTED| here, it means the caller did not return as soon as
   // it received |INTERRUPTED|.
-  FXL_DCHECK(status != storage::Status::INTERRUPTED);
+  FXL_DCHECK(status != Status::INTERRUPTED);
   CallCallbacks(status);
 }
 
-storage::Status PageEvictionManagerImpl::Completer::WaitUntilDone(
+Status PageEvictionManagerImpl::Completer::WaitUntilDone(
     coroutine::CoroutineHandler* handler) {
   if (completed_) {
     return status_;
@@ -91,12 +89,12 @@ storage::Status PageEvictionManagerImpl::Completer::WaitUntilDone(
         callbacks_.push_back(std::move(callback));
       });
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
-    return storage::Status::INTERRUPTED;
+    return Status::INTERRUPTED;
   }
   return status_;
 }
 
-void PageEvictionManagerImpl::Completer::CallCallbacks(storage::Status status) {
+void PageEvictionManagerImpl::Completer::CallCallbacks(Status status) {
   if (completed_) {
     return;
   }
@@ -114,7 +112,7 @@ void PageEvictionManagerImpl::Completer::CallCallbacks(storage::Status status) {
 void PageEvictionManagerImpl::Completer::Cancel() {
   FXL_DCHECK(!completed_);
   completed_ = true;
-  status_ = storage::Status::INTERRUPTED;
+  status_ = Status::INTERRUPTED;
   callbacks_.clear();
 }
 
@@ -137,15 +135,14 @@ void PageEvictionManagerImpl::Init() {
                                         coroutine::CoroutineHandler* handler) {
     ExpiringToken token = NewExpiringToken();
     if (!files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path())) {
-      initialization_completer_.Complete(storage::Status::IO_ERROR);
+      initialization_completer_.Complete(Status::IO_ERROR);
       return;
     }
-    storage::Status status;
+    Status status;
     std::unique_ptr<storage::Db> db_instance;
     if (coroutine::SyncCall(
             handler,
-            [this](fit::function<void(storage::Status,
-                                      std::unique_ptr<storage::Db>)>
+            [this](fit::function<void(Status, std::unique_ptr<storage::Db>)>
                        callback) {
               db_factory_->GetOrCreateDb(
                   std::move(db_path_), storage::DbFactory::OnDbNotFound::CREATE,
@@ -156,14 +153,14 @@ void PageEvictionManagerImpl::Init() {
       initialization_completer_.Cancel();
       return;
     }
-    if (status != storage::Status::OK) {
+    if (status != Status::OK) {
       initialization_completer_.Complete(status);
       return;
     }
     db_ = std::make_unique<PageUsageDb>(environment_->clock(),
                                         std::move(db_instance));
     status = db_->MarkAllPagesClosed(handler);
-    if (status == storage::Status::INTERRUPTED) {
+    if (status == Status::INTERRUPTED) {
       initialization_completer_.Cancel();
       return;
     }
@@ -185,21 +182,20 @@ void PageEvictionManagerImpl::set_on_empty(fit::closure on_empty_callback) {
 bool PageEvictionManagerImpl::IsEmpty() { return pending_operations_ == 0; }
 
 void PageEvictionManagerImpl::TryEvictPages(
-    PageEvictionPolicy* policy, fit::function<void(storage::Status)> callback) {
+    PageEvictionPolicy* policy, fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, policy](coroutine::CoroutineHandler* handler,
-                     fit::function<void(storage::Status)> callback) mutable {
+                     fit::function<void(Status)> callback) mutable {
         ExpiringToken token = NewExpiringToken();
-        storage::Status status =
-            initialization_completer_.WaitUntilDone(handler);
+        Status status = initialization_completer_.WaitUntilDone(handler);
         if (LogOnInitializationError("TryEvictPages", status)) {
           callback(status);
           return;
         }
         std::unique_ptr<storage::Iterator<const PageInfo>> pages_it;
         status = db_->GetPages(handler, &pages_it);
-        if (status != storage::Status::OK) {
+        if (status != Status::OK) {
           callback(status);
           return;
         }
@@ -213,7 +209,7 @@ void PageEvictionManagerImpl::MarkPageOpened(fxl::StringView ledger_name,
                                      page_id = page_id.ToString()](
                                         coroutine::CoroutineHandler* handler) {
     ExpiringToken token = NewExpiringToken();
-    storage::Status status = initialization_completer_.WaitUntilDone(handler);
+    Status status = initialization_completer_.WaitUntilDone(handler);
     if (LogOnInitializationError("MarkPageOpened", status)) {
       return;
     }
@@ -228,7 +224,7 @@ void PageEvictionManagerImpl::MarkPageClosed(fxl::StringView ledger_name,
                                      page_id = page_id.ToString()](
                                         coroutine::CoroutineHandler* handler) {
     ExpiringToken token = NewExpiringToken();
-    storage::Status status = initialization_completer_.WaitUntilDone(handler);
+    Status status = initialization_completer_.WaitUntilDone(handler);
     if (LogOnInitializationError("MarkPageClosed", status)) {
       return;
     }
@@ -240,16 +236,15 @@ void PageEvictionManagerImpl::MarkPageClosed(fxl::StringView ledger_name,
 void PageEvictionManagerImpl::TryEvictPage(
     fxl::StringView ledger_name, storage::PageIdView page_id,
     PageEvictionCondition condition,
-    fit::function<void(storage::Status, PageWasEvicted)> callback) {
+    fit::function<void(Status, PageWasEvicted)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
-       condition](coroutine::CoroutineHandler* handler,
-                  fit::function<void(storage::Status, PageWasEvicted)>
-                      callback) mutable {
+       condition](
+          coroutine::CoroutineHandler* handler,
+          fit::function<void(Status, PageWasEvicted)> callback) mutable {
         ExpiringToken token = NewExpiringToken();
-        storage::Status status =
-            initialization_completer_.WaitUntilDone(handler);
+        Status status = initialization_completer_.WaitUntilDone(handler);
         if (LogOnInitializationError("TryEvictPage", status)) {
           callback(status, PageWasEvicted(false));
           return;
@@ -261,47 +256,47 @@ void PageEvictionManagerImpl::TryEvictPage(
       });
 }
 
-void PageEvictionManagerImpl::EvictPage(
-    fxl::StringView ledger_name, storage::PageIdView page_id,
-    fit::function<void(storage::Status)> callback) {
+void PageEvictionManagerImpl::EvictPage(fxl::StringView ledger_name,
+                                        storage::PageIdView page_id,
+                                        fit::function<void(Status)> callback) {
   FXL_DCHECK(delegate_);
   // We cannot delete the page storage and mark the deletion atomically. We thus
   // delete the page first, and then mark it as evicted in Page Usage DB.
   delegate_->DeletePageStorage(
       ledger_name, page_id,
       [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
-       callback = std::move(callback)](storage::Status status) mutable {
+       callback = std::move(callback)](Status status) mutable {
         // |PAGE_NOT_FOUND| is not an error, but it must have been handled
         // before we try to evict the page.
-        FXL_DCHECK(status != storage::Status::PAGE_NOT_FOUND);
-        if (status == storage::Status::OK) {
+        FXL_DCHECK(status != Status::PAGE_NOT_FOUND);
+        if (status == Status::OK) {
           MarkPageEvicted(std::move(ledger_name), std::move(page_id));
         }
         callback(status);
       });
 }
 
-storage::Status PageEvictionManagerImpl::CanEvictPage(
+Status PageEvictionManagerImpl::CanEvictPage(
     coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
     storage::PageIdView page_id, bool* can_evict) {
   FXL_DCHECK(delegate_);
 
-  auto waiter = fxl::MakeRefCounted<
-      callback::Waiter<storage::Status, PagePredicateResult>>(
-      storage::Status::OK);
+  auto waiter =
+      fxl::MakeRefCounted<callback::Waiter<Status, PagePredicateResult>>(
+          Status::OK);
 
   delegate_->PageIsClosedAndSynced(ledger_name, page_id, waiter->NewCallback());
   delegate_->PageIsClosedOfflineAndEmpty(ledger_name, page_id,
                                          waiter->NewCallback());
 
-  storage::Status status;
+  Status status;
   std::vector<PagePredicateResult> can_evict_states;
   auto sync_call_status =
       coroutine::Wait(handler, std::move(waiter), &status, &can_evict_states);
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
-    return storage::Status::INTERRUPTED;
+    return Status::INTERRUPTED;
   }
-  if (status != storage::Status::OK) {
+  if (status != Status::OK) {
     return status;
   }
   FXL_DCHECK(can_evict_states.size() == 2);
@@ -317,15 +312,15 @@ storage::Status PageEvictionManagerImpl::CanEvictPage(
                               return result == PagePredicateResult::PAGE_OPENED;
                             });
 
-  return storage::Status::OK;
+  return Status::OK;
 }
 
-storage::Status PageEvictionManagerImpl::CanEvictEmptyPage(
+Status PageEvictionManagerImpl::CanEvictEmptyPage(
     coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
     storage::PageIdView page_id, bool* can_evict) {
   FXL_DCHECK(delegate_);
 
-  storage::Status status;
+  Status status;
   PagePredicateResult empty_state;
   auto sync_call_status = coroutine::SyncCall(
       handler,
@@ -336,7 +331,7 @@ storage::Status PageEvictionManagerImpl::CanEvictEmptyPage(
       },
       &status, &empty_state);
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
-    return storage::Status::INTERRUPTED;
+    return Status::INTERRUPTED;
   }
   *can_evict = (empty_state == PagePredicateResult::YES);
   return status;
@@ -347,18 +342,17 @@ void PageEvictionManagerImpl::MarkPageEvicted(std::string ledger_name,
   coroutine_manager_.StartCoroutine([this, ledger_name = std::move(ledger_name),
                                      page_id = std::move(page_id)](
                                         coroutine::CoroutineHandler* handler) {
-    storage::Status status =
-        db_->MarkPageEvicted(handler, ledger_name, page_id);
+    Status status = db_->MarkPageEvicted(handler, ledger_name, page_id);
     LogOnPageUpdateError("mark page as evicted", status, ledger_name, page_id);
   });
 }
 
-storage::Status PageEvictionManagerImpl::SynchronousTryEvictPage(
+Status PageEvictionManagerImpl::SynchronousTryEvictPage(
     coroutine::CoroutineHandler* handler, std::string ledger_name,
     storage::PageId page_id, PageEvictionCondition condition,
     PageWasEvicted* was_evicted) {
   bool can_evict;
-  storage::Status status;
+  Status status;
   switch (condition) {
     case IF_EMPTY:
       status = CanEvictEmptyPage(handler, ledger_name, page_id, &can_evict);
@@ -366,7 +360,7 @@ storage::Status PageEvictionManagerImpl::SynchronousTryEvictPage(
     case IF_POSSIBLE:
       status = CanEvictPage(handler, ledger_name, page_id, &can_evict);
   }
-  if (status == storage::Status::PAGE_NOT_FOUND) {
+  if (status == Status::PAGE_NOT_FOUND) {
     // |PAGE_NOT_FOUND| is not an error: It is possible that the page was
     // removed in a previous run, but for some reason marking failed (e.g.
     // Ledger was shut down before the operation finished). Mark the page as
@@ -374,9 +368,9 @@ storage::Status PageEvictionManagerImpl::SynchronousTryEvictPage(
     // was not actually evicted here.
     MarkPageEvicted(ledger_name, page_id);
     *was_evicted = PageWasEvicted(false);
-    return storage::Status::OK;
+    return Status::OK;
   }
-  if (status != storage::Status::OK || !can_evict) {
+  if (status != Status::OK || !can_evict) {
     *was_evicted = PageWasEvicted(false);
     return status;
   }
@@ -391,9 +385,9 @@ storage::Status PageEvictionManagerImpl::SynchronousTryEvictPage(
       },
       &status);
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
-    return storage::Status::INTERRUPTED;
+    return Status::INTERRUPTED;
   }
-  *was_evicted = PageWasEvicted(status == storage::Status::OK);
+  *was_evicted = PageWasEvicted(status == Status::OK);
   return status;
 }
 

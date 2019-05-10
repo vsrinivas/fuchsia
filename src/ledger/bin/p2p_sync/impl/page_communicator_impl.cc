@@ -37,7 +37,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
 
   // Registers this additional callback for the request.
   void AddCallback(
-      fit::function<void(storage::Status, storage::ChangeSource,
+      fit::function<void(ledger::Status, storage::ChangeSource,
                          storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) {
@@ -62,7 +62,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
       }
       // All requests have returned and none is valid: return an error.
       for (auto& callback : callbacks_) {
-        callback(storage::Status::INTERNAL_NOT_FOUND,
+        callback(ledger::Status::INTERNAL_NOT_FOUND,
                  storage::ChangeSource::P2P, storage::IsObjectSynced::NO,
                  nullptr);
       }
@@ -85,7 +85,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
       std::unique_ptr<storage::DataSource::DataChunk> chunk =
           storage::DataSource::DataChunk::Create(
               convert::ToString(object->data()->bytes()));
-      callback(storage::Status::OK, storage::ChangeSource::P2P,
+      callback(ledger::Status::OK, storage::ChangeSource::P2P,
                is_object_synced, std::move(chunk));
     }
     if (on_empty_) {
@@ -95,7 +95,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
 
  private:
   std::vector<fit::function<void(
-      storage::Status, storage::ChangeSource, storage::IsObjectSynced,
+      ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
       std::unique_ptr<storage::DataSource::DataChunk>)>>
       callbacks_;
   // Set of devices for which we are waiting an answer.
@@ -204,8 +204,8 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
   switch (message->request_type()) {
     case RequestMessage_WatchStartRequest: {
       MarkSyncedToPeer(
-          [this, source = source.ToString()](storage::Status status) {
-            if (status != storage::Status::OK) {
+          [this, source = source.ToString()](ledger::Status status) {
+            if (status != ledger::Status::OK) {
               // If we fail to mark the page storage as synced to a peer, we
               // might end up in a situation of deleting from disk a partially
               // synced page. Log an error and return.
@@ -323,7 +323,7 @@ void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
 
 void PageCommunicatorImpl::GetObject(
     storage::ObjectIdentifier object_identifier,
-    fit::function<void(storage::Status, storage::ChangeSource,
+    fit::function<void(ledger::Status, storage::ChangeSource,
                        storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
@@ -355,8 +355,8 @@ void PageCommunicatorImpl::OnNewCommits(
   }
   // We need to check if we need to merge first.
   std::vector<std::unique_ptr<const storage::Commit>> head_commits;
-  storage::Status status = storage_->GetHeadCommits(&head_commits);
-  if (status != storage::Status::OK) {
+  ledger::Status status = storage_->GetHeadCommits(&head_commits);
+  if (status != ledger::Status::OK) {
     return;
   }
   if (head_commits.size() != 1) {
@@ -524,20 +524,20 @@ void PageCommunicatorImpl::ProcessCommitRequest(
                                      request = std::move(request)](
                                         coroutine::CoroutineHandler* handler) {
     auto commit_waiter = fxl::MakeRefCounted<callback::Waiter<
-        storage::Status,
+        ledger::Status,
         std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>>(
-        storage::Status::OK);
+        ledger::Status::OK);
     for (const CommitId* id : *request->commit_ids()) {
       storage_->GetCommit(
           id->id(), [commit_id = convert::ToString(id->id()),
                      callback = commit_waiter->NewCallback()](
-                        storage::Status status,
+                        ledger::Status status,
                         std::unique_ptr<const storage::Commit> commit) mutable {
-            if (status == storage::Status::INTERNAL_NOT_FOUND) {
+            if (status == ledger::Status::INTERNAL_NOT_FOUND) {
               // Not finding an commit is okay in this context: we'll just
               // reply we don't have it. There is not need to abort
               // processing the request.
-              callback(storage::Status::OK,
+              callback(ledger::Status::OK,
                        std::make_pair(std::move(commit_id), nullptr));
               return;
             }
@@ -545,7 +545,7 @@ void PageCommunicatorImpl::ProcessCommitRequest(
                      std::make_pair(std::move(commit_id), std::move(commit)));
           });
     }
-    storage::Status status;
+    ledger::Status status;
     std::vector<
         std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>
         commits;
@@ -554,7 +554,7 @@ void PageCommunicatorImpl::ProcessCommitRequest(
       return;
     }
 
-    if (status != storage::Status::OK) {
+    if (status != ledger::Status::OK) {
       return;
     }
 
@@ -573,8 +573,8 @@ void PageCommunicatorImpl::ProcessObjectRequest(
     // while adding new items.
     std::list<ObjectResponseHolder> object_responses;
     auto response_waiter =
-        fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
-            storage::Status::OK);
+        fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
+            ledger::Status::OK);
     for (const ObjectId* object_id : *request->object_ids()) {
       storage::ObjectIdentifier identifier{
           object_id->key_index(), object_id->deletion_scope_id(),
@@ -583,13 +583,13 @@ void PageCommunicatorImpl::ProcessObjectRequest(
       auto& response = object_responses.back();
       storage_->GetPiece(
           identifier, [callback = response_waiter->NewCallback(), &response](
-                          storage::Status status,
+                          ledger::Status status,
                           std::unique_ptr<const storage::Piece> piece) mutable {
-            if (status == storage::Status::INTERNAL_NOT_FOUND) {
+            if (status == ledger::Status::INTERNAL_NOT_FOUND) {
               // Not finding an object is okay in this context: we'll just
               // reply we don't have it. There is not need to abort
               // processing the request.
-              callback(storage::Status::OK);
+              callback(ledger::Status::OK);
               return;
             }
             response.piece = std::move(piece);
@@ -598,12 +598,12 @@ void PageCommunicatorImpl::ProcessObjectRequest(
       storage_->IsPieceSynced(
           std::move(identifier),
           [callback = response_waiter->NewCallback(), &response](
-              storage::Status status, bool is_synced) {
-            if (status == storage::Status::INTERNAL_NOT_FOUND) {
+              ledger::Status status, bool is_synced) {
+            if (status == ledger::Status::INTERNAL_NOT_FOUND) {
               // Not finding an object is okay in this context: we'll just
               // reply we don't have it. There is not need to abort
               // processing the request.
-              callback(storage::Status::OK);
+              callback(ledger::Status::OK);
               return;
             }
             response.is_synced = is_synced;
@@ -611,13 +611,13 @@ void PageCommunicatorImpl::ProcessObjectRequest(
           });
     }
 
-    storage::Status status;
+    ledger::Status status;
     if (coroutine::Wait(handler, response_waiter, &status) ==
         coroutine::ContinuationStatus::INTERRUPTED) {
       return;
     }
 
-    if (status != storage::Status::OK) {
+    if (status != ledger::Status::OK) {
       FXL_LOG(WARNING) << "Error while retrieving objects: " << status;
       return;
     }
@@ -668,14 +668,14 @@ void PageCommunicatorImpl::BuildObjectResponseBuffer(
 }
 
 void PageCommunicatorImpl::MarkSyncedToPeer(
-    fit::function<void(storage::Status)> callback) {
+    fit::function<void(ledger::Status)> callback) {
   if (marked_as_synced_to_peer_) {
-    callback(storage::Status::OK);
+    callback(ledger::Status::OK);
     return;
   }
   storage_->MarkSyncedToPeer(
-      [this, callback = std::move(callback)](storage::Status status) {
-        if (status == storage::Status::OK) {
+      [this, callback = std::move(callback)](ledger::Status status) {
+        if (status == ledger::Status::OK) {
           marked_as_synced_to_peer_ = true;
         }
         callback(status);

@@ -62,7 +62,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   // |NO| depending on whether the page is synced or not.
   void PageIsClosedAndSynced(
       storage::PageIdView page_id,
-      fit::function<void(storage::Status, PagePredicateResult)> callback);
+      fit::function<void(Status, PagePredicateResult)> callback);
 
   // Checks whether the given page is closed, offline and empty. The result
   // returned in the callback will be |PAGE_OPENED| if the page is opened after
@@ -70,17 +70,17 @@ class LedgerManager : public LedgerImpl::Delegate {
   // |YES| or |NO| depending on whether the page is offline and empty or not.
   void PageIsClosedOfflineAndEmpty(
       storage::PageIdView page_id,
-      fit::function<void(storage::Status, PagePredicateResult)> callback);
+      fit::function<void(Status, PagePredicateResult)> callback);
 
   // Deletes the local copy of the page. If the page is currently open, the
   // callback will be called with |ILLEGAL_STATE|.
   void DeletePageStorage(convert::ExtendedStringView page_id,
-                         fit::function<void(storage::Status)> callback);
+                         fit::function<void(Status)> callback);
 
   // LedgerImpl::Delegate:
   void GetPage(convert::ExtendedStringView page_id, PageState page_state,
                fidl::InterfaceRequest<Page> page_request,
-               fit::function<void(storage::Status)> callback) override;
+               fit::function<void(Status)> callback) override;
   void SetConflictResolverFactory(
       fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
 
@@ -95,7 +95,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   // locally available, the |callback| is called with |PAGE_NOT_FOUND|.
   void InitPageManagerContainer(PageManagerContainer* container,
                                 convert::ExtendedStringView page_id,
-                                fit::function<void(storage::Status)> callback);
+                                fit::function<void(Status)> callback);
 
   // Creates a page storage for the given |page_id| and completes the
   // PageManagerContainer.
@@ -119,10 +119,9 @@ class LedgerManager : public LedgerImpl::Delegate {
   // predicate is satisfied.
   void PageIsClosedAndSatisfiesPredicate(
       storage::PageIdView page_id,
-      fit::function<void(PageManager*,
-                         fit::function<void(storage::Status, bool)>)>
+      fit::function<void(PageManager*, fit::function<void(Status, bool)>)>
           predicate,
-      fit::function<void(storage::Status, PagePredicateResult)> callback);
+      fit::function<void(Status, PagePredicateResult)> callback);
 
   // Returns a tracking Callable object for the given page. When called, returns
   // |true| if the page has not been opened until now, and stops tracking the

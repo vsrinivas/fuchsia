@@ -67,9 +67,9 @@ void BatchDownload::Start() {
             std::move(commits), storage::ChangeSource::CLOUD,
             callback::MakeScoped(
                 weak_ptr_factory_.GetWeakPtr(),
-                [this](storage::Status status,
+                [this](ledger::Status status,
                        std::vector<storage::CommitId> /*commit_ids*/) {
-                  if (status != storage::Status::OK) {
+                  if (status != ledger::Status::OK) {
                     on_error_();
                     return;
                   }
@@ -89,8 +89,8 @@ void BatchDownload::UpdateTimestampAndQuit() {
   storage_->SetSyncMetadata(
       kTimestampKey, convert::ToString(position_token_->opaque_id),
       callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                           [this](storage::Status status) {
-                             if (status != storage::Status::OK) {
+                           [this](ledger::Status status) {
+                             if (status != ledger::Status::OK) {
                                on_error_();
                                return;
                              }

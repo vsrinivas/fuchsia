@@ -36,7 +36,7 @@ class MergeStrategy {
                      std::unique_ptr<const storage::Commit> head_1,
                      std::unique_ptr<const storage::Commit> head_2,
                      std::unique_ptr<const storage::Commit> ancestor,
-                     fit::function<void(storage::Status)> callback) = 0;
+                     fit::function<void(Status)> callback) = 0;
 
   // Cancel an in-progress merge. This must be called after |Merge| has been
   // called, and before the |on_done| callback.

@@ -310,7 +310,7 @@ class Waiter : public BaseWaiter<internal::ResultAccumulator<S, T>,
 
 // StatusWaiter can be used to collate the results of many asynchronous calls
 // into one callback. It is different from Waiter in that the callbacks only use
-// S (e.g. storage::Status) as an argument.
+// S (e.g. Status) as an argument.
 template <class S>
 class StatusWaiter : public BaseWaiter<internal::StatusAccumulator<S>, S, S> {
  private:

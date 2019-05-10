@@ -11,6 +11,7 @@
 #include <string>
 
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {

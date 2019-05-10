@@ -44,7 +44,7 @@ struct PageId {
 /// Base interface for all services offered by the Ledger.
 ///
 /// In case of an unexpected error on one of the service offered by the Ledger,
-/// the service will close the connected channel, sending a |ledger.Status| as an epitaph.
+/// the service will close the connected channel, sending a |zx.status| as an epitaph.
 ///
 /// If a client needs to ensure a sequence of operation has been processed by
 /// the service, it can issue a |Sync| command. The response will be send once
@@ -305,8 +305,8 @@ protocol PageSnapshot {
     GetEntries(Key key_start, Token? token)
         -> (IterationStatus status, vector<Entry> entries, Token? next_token);
 
-    /// Same as |GetEntries()|. The connection will be closed if a value does
-    /// not fit in a FIDL message.
+    /// Same as |GetEntries()|. The connection will be closed with a
+    /// ZX_ERR_BAD_STATE epitaph if a value does not fit in a FIDL message.
     GetEntriesInline(Key key_start, Token? token)
         -> (IterationStatus status, vector<InlinedEntry> entries,
             Token? next_token);
@@ -332,7 +332,8 @@ protocol PageSnapshot {
     Get(Key key) -> (fuchsia.mem.Buffer buffer) error Error;
 
     /// Returns the value of a given key if it fits in a FIDL message.
-    /// The connection will be closed if the value does not fit in a FIDL message.
+    /// The connection will be closed with a ZX_ERR_BAD_STATE epitaph if the
+    /// value does not fit in a FIDL message.
     /// See |Get()| for additional information.
     GetInline(Key key) -> (InlinedValue value) error Error;
 

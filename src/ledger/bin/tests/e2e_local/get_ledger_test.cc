@@ -48,7 +48,7 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
 
   ASSERT_EQ(Status::OK, status);
 
-  status = Status::UNKNOWN_ERROR;
+  status = Status::INTERNAL_ERROR;
   PagePtr page;
   PageId page_id;
 

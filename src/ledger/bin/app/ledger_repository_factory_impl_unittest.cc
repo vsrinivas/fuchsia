@@ -83,7 +83,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
   }
 
   bool callback_called;
-  Status status = Status::UNKNOWN_ERROR;
+  Status status;
 
   repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(fd.get()), nullptr, kUserID,
@@ -210,7 +210,7 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseOnFilesystemUnavailable) {
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
 
   bool get_repository_called;
-  Status status = Status::UNKNOWN_ERROR;
+  Status status;
 
   repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs->root_fd()), nullptr, "",

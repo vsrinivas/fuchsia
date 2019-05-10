@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/ledger/*" ]
+
+source_set("public") {
+  sources = [
+    "status.cc",
+    "status.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "status_unittest.cc",
+  ]
+
+  deps = [
+    ":public",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}

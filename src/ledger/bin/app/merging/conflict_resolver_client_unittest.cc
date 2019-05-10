@@ -7,6 +7,7 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
+#include <zircon/errors.h>
 
 #include <memory>
 #include <string>
@@ -54,7 +55,7 @@ class ConflictResolverClientTest : public TestWithPageStorage {
   storage::CommitId CreateCommit(
       storage::CommitIdView parent_id,
       fit::function<void(storage::Journal*)> contents) {
-    storage::Status status;
+    Status status;
     bool called;
     std::unique_ptr<const storage::Commit> base;
     page_storage_->GetCommit(
@@ -62,7 +63,7 @@ class ConflictResolverClientTest : public TestWithPageStorage {
         callback::Capture(callback::SetWhenCalled(&called), &status, &base));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
-    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
 
     std::unique_ptr<storage::Journal> journal =
         page_storage_->StartCommit(std::move(base));
@@ -74,7 +75,7 @@ class ConflictResolverClientTest : public TestWithPageStorage {
         callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
-    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
     return commit->GetId();
   }
 
@@ -163,8 +164,8 @@ TEST_F(ConflictResolverClientTest, Error) {
 
   merge_resolver_->SetMergeStrategy(std::move(custom_merge_strategy));
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  storage::Status status = page_storage_->GetHeadCommits(&commits);
-  EXPECT_EQ(storage::Status::OK, status);
+  Status status = page_storage_->GetHeadCommits(&commits);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(2u, commits.size());
 
   RunLoopUntilIdle();
@@ -185,9 +186,8 @@ TEST_F(ConflictResolverClientTest, Error) {
       std::move(merged_values));
   RunLoopUntilIdle();
 
-  EXPECT_EQ(Status::KEY_NOT_FOUND,
-            static_cast<Status>(
-                conflict_resolver_impl.requests[0]->result_provider_status));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            conflict_resolver_impl.requests[0]->result_provider_status);
   EXPECT_EQ(2u, conflict_resolver_impl.requests.size());
 }
 
@@ -220,8 +220,8 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   EXPECT_EQ(ZX_OK, conflict_resolver_impl.requests[0]->result_provider_status);
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  storage::Status storage_status = page_storage_->GetHeadCommits(&commits);
-  EXPECT_EQ(storage::Status::OK, storage_status);
+  Status storage_status = page_storage_->GetHeadCommits(&commits);
+  EXPECT_EQ(Status::OK, storage_status);
   // The merge happened.
   EXPECT_EQ(1u, commits.size());
 
@@ -236,7 +236,7 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
                         &key1_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, storage_status);
+  EXPECT_EQ(Status::OK, storage_status);
 
   page_storage_->GetEntryFromCommit(
       *commit, "key2",
@@ -244,7 +244,7 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
                         &key2_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, storage_status);
+  EXPECT_EQ(Status::OK, storage_status);
 
   std::string value1, value2;
   GetValue(key1_entry.object_identifier, &value1);
@@ -292,8 +292,8 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   EXPECT_EQ(ZX_OK, conflict_resolver_impl.requests[0]->result_provider_status);
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  storage::Status storage_status = page_storage_->GetHeadCommits(&commits);
-  EXPECT_EQ(storage::Status::OK, storage_status);
+  Status storage_status = page_storage_->GetHeadCommits(&commits);
+  EXPECT_EQ(Status::OK, storage_status);
   // The merge happened.
   EXPECT_EQ(1u, commits.size());
 
@@ -307,7 +307,7 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
                         &key1_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, storage_status);
+  EXPECT_EQ(Status::OK, storage_status);
 
   page_storage_->GetEntryFromCommit(
       *commit, "key2",
@@ -315,7 +315,7 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
                         &key2_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, storage_status);
+  EXPECT_EQ(Status::OK, storage_status);
 
   std::string value1, value2;
   GetValue(key1_entry.object_identifier, &value1);

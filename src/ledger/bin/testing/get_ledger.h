@@ -15,6 +15,7 @@
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/public/status.h"
 
 namespace ledger {
 
