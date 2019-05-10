@@ -167,7 +167,7 @@ void VirtualAudioSystemGainTest::ChangeAndVerifySystemMute() {
 void VirtualAudioSystemGainTest::TestDeviceGainAfterChangeSystemGainMute(
     bool use_get_devices, bool is_input, bool set_gain) {
   if (HasPreExistingDevices()) {
-    FXL_LOG(INFO) << "Test case requires an environment with no audio devices";
+    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
   }
 
@@ -199,7 +199,7 @@ void VirtualAudioSystemGainTest::
     TestOnDeviceGainChangedAfterChangeSystemGainMute(bool is_input,
                                                      bool set_gain) {
   if (HasPreExistingDevices()) {
-    FXL_LOG(INFO) << "Test case requires an environment with no audio devices";
+    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
   }
 

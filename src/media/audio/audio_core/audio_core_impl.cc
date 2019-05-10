@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
+#include "src/lib/fxl/log_settings.h"
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
@@ -19,6 +20,16 @@ constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 AudioCoreImpl::AudioCoreImpl(
     std::unique_ptr<sys::ComponentContext> startup_context)
     : device_manager_(this), ctx_(std::move(startup_context)) {
+  fxl::LogSettings settings;
+
+#ifdef NDEBUG
+  settings.min_log_level = fxl::LOG_WARNING;
+#else
+  settings.min_log_level = fxl::LOG_INFO;
+#endif
+
+  fxl::SetLogSettings(settings);
+
   // Stash a pointer to our async object.
   dispatcher_ = async_get_default_dispatcher();
   FXL_DCHECK(dispatcher_);

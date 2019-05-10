@@ -34,14 +34,14 @@ zx_status_t AudioDeviceManager::Init() {
   // Instantiate and initialize the default throttle output.
   auto throttle_output = ThrottleOutput::Create(this);
   if (throttle_output == nullptr) {
-    FXL_LOG(WARNING)
+    FXL_LOG(ERROR)
         << "AudioDeviceManager failed to create default throttle output!";
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t res = throttle_output->Startup();
   if (res != ZX_OK) {
-    FXL_LOG(WARNING)
+    FXL_LOG(ERROR)
         << "AudioDeviceManager failed to initialize the throttle output (res "
         << res << ")";
     throttle_output->Shutdown();
@@ -51,8 +51,8 @@ zx_status_t AudioDeviceManager::Init() {
   // Start monitoring for plug/unplug events of pluggable audio output devices.
   res = plug_detector_.Start(this);
   if (res != ZX_OK) {
-    FXL_LOG(WARNING) << "AudioDeviceManager failed to start plug detector (res "
-                     << res << ")";
+    FXL_LOG(ERROR) << "AudioDeviceManager failed to start plug detector (res "
+                   << res << ")";
     return res;
   }
 
@@ -347,8 +347,8 @@ void AudioDeviceManager::SetDeviceGain(
   // allowed gain range. NAN is undefined (signless); handle it here and exit.
   if ((set_flags & ::fuchsia::media::SetAudioGainFlag_GainValid) &&
       isnan(gain_info.gain_db)) {
-    FXL_LOG(ERROR) << "Invalid device gain " << gain_info.gain_db
-                   << " dB -- making no change";
+    FXL_DLOG(WARNING) << "Invalid device gain " << gain_info.gain_db
+                      << " dB -- making no change";
     return;
   }
 

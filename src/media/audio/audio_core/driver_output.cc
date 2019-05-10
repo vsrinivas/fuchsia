@@ -295,8 +295,8 @@ void DriverOutput::OnDriverInfoFetched() {
   });
 
   if (state_ != State::FetchingFormats) {
-    FXL_LOG(WARNING) << "Unexpected GetFormatsComplete while in state "
-                     << static_cast<uint32_t>(state_);
+    FXL_LOG(ERROR) << "Unexpected GetFormatsComplete while in state "
+                   << static_cast<uint32_t>(state_);
     return;
   }
 

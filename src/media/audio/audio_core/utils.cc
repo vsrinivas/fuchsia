@@ -120,10 +120,10 @@ zx_status_t SelectBestFormat(
     //
     if (range.min_frames_per_second > range.max_frames_per_second) {
       // Skip this frame rate range entirely if it is empty.
-      FXL_DLOG(WARNING) << "Skipping empty frame rate range ["
-                        << range.min_frames_per_second << ", "
-                        << range.max_frames_per_second
-                        << "] while searching for best format in driver list.";
+      FXL_LOG(INFO) << "Skipping empty frame rate range ["
+                    << range.min_frames_per_second << ", "
+                    << range.max_frames_per_second
+                    << "] while searching for best format in driver list.";
       continue;
     }
 
@@ -194,10 +194,10 @@ zx_status_t SelectBestFormat(
     // though min was <= max as it should be)  Debug log a warning, then skip
     // the range entirely.
     if (frame_rate_score == 0) {
-      FXL_DLOG(WARNING) << "Skipping empty discrete frame rate range ["
-                        << range.min_frames_per_second << ", "
-                        << range.max_frames_per_second << "] (flags "
-                        << range.flags << ") while searching for best format";
+      FXL_LOG(INFO) << "Skipping empty discrete frame rate range ["
+                    << range.min_frames_per_second << ", "
+                    << range.max_frames_per_second << "] (flags " << range.flags
+                    << ") while searching for best format";
       continue;
     }
 

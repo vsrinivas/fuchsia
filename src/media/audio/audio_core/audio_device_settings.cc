@@ -143,7 +143,7 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
 
   for (const auto& cfg_src : kConfigSources) {
     // Start by attempting to open a pre-existing file which has our settings in
-    // it.  If we cannot find such a file, or if the file exists but is invalid,
+    // it. If we cannot find such a file, or if the file exists but is invalid,
     // simply create a new file and write out our current settings.
     char path[256];
     fbl::unique_fd storage;
@@ -156,26 +156,25 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
       if (res == ZX_OK) {
         if (cfg_src.is_default) {
           // If we just loaded and deserialized the fallback default config,
-          // then break out of the for loop and fall thru to the serialization
-          // code.
+          // break out of the loop and fall thru to serialization code.
           break;
         }
 
-        // We successfully loaded out persisted settings.  Cancel our commit
-        // timer, hold onto the FD and we should be good to go.
+        // We successfully loaded our persisted settings. Cancel our commit
+        // timer, hold onto the FD, and we should be good to go.
         CancelCommitTimeouts();
         storage_ = std::move(storage);
         return ZX_OK;
       } else {
         storage_.reset();
         if (!cfg_src.is_default) {
-          FXL_LOG(WARNING) << "Failed to deserialize audio settings file \""
-                           << path << "\" (res " << res
-                           << ").  Re-creating file from defaults.";
+          FXL_LOG(INFO) << "Failed to read device settings at \"" << path
+                        << "\" (err " << res
+                        << "). Re-creating file from defaults.";
           ::unlink(path);
         } else {
-          FXL_LOG(WARNING) << "Could not load default audio settings from \""
-                           << path << "\" (res " << res << ").";
+          FXL_LOG(INFO) << "Could not load default audio settings file \""
+                        << path << "\" (err " << res << ").";
         }
       }
     }
@@ -186,8 +185,8 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
     return ZX_OK;
   }
 
-  // We have failed to load our persisted settings for one reason or another.
-  // Try to create a settings file and persist our defaults to that instead.
+  // We failed to load persisted settings for one reason or another.
+  // Create a new settings file for this device; persist our defaults there.
   char path[256];
   CreateSettingsPath(kSettingsPath, path, sizeof(path));
   FXL_DCHECK(static_cast<bool>(storage_) == false);
@@ -196,17 +195,17 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
   if (!static_cast<bool>(storage_)) {
     // TODO(mpuryear): define and enforce a limit for the number of settings
     // files allowed to be created.
-    FXL_LOG(ERROR) << "Failed to create new audio settings file \"" << path
-                   << "\" (errno " << errno
-                   << ").  Settings will not be persisted.";
+    FXL_LOG(WARNING) << "Failed to create new audio settings file \"" << path
+                     << "\" (err " << errno
+                     << "). Settings for this device will not be persisted.";
     return ZX_ERR_IO;
   }
 
   zx_status_t res = Serialize();
   if (res != ZX_OK) {
-    FXL_LOG(WARNING) << "Failed to serialize audio settings file \"" << path
-                     << "\" (res " << res
-                     << ").  Settings will not be persisted.";
+    FXL_LOG(WARNING) << "Failed to write new settings file at \"" << path
+                     << "\" (err " << res
+                     << "). Settings for this device will not be persisted.";
     storage_.reset();
     ::unlink(path);
   }

@@ -47,7 +47,7 @@ zx_status_t AudioPlugDetector::Start(AudioDeviceManager* manager) {
   // If we are already running, we cannot start again.  Cancel the cleanup
   // operation and report that things are successfully started.
   if (manager_ != nullptr) {
-    FXL_DLOG(WARNING) << "Attempted to start the AudioPlugDetector twice!";
+    FXL_LOG(INFO) << "Attempted to start the AudioPlugDetector twice!";
     error_cleanup.cancel();
     return ZX_OK;
   }
@@ -104,8 +104,8 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
   res = fdio_get_service_handle(dev_node.release(),
                                 dev_channel.reset_and_get_address());
   if (res != ZX_OK) {
-    FXL_LOG(WARNING) << "Failed to obtain FDIO service channel to AudioOutput "
-                     << "(res " << res << ")";
+    FXL_LOG(ERROR) << "Failed to obtain FDIO service channel to AudioOutput "
+                   << "(res " << res << ")";
     return;
   }
 
@@ -115,8 +115,8 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
 
   res = dev.GetChannel(&channel);
   if (res != ZX_OK) {
-    FXL_LOG(WARNING) << "Failed to open channel to AudioOutput (res " << res
-                     << ")";
+    FXL_LOG(ERROR) << "Failed to open channel to AudioOutput (res " << res
+                   << ")";
     return;
   }
 

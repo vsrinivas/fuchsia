@@ -335,7 +335,7 @@ TEST_F(AudioDeviceTest, ReceivesGetDevicesCallback) {
 
 TEST_F(AudioDeviceTest, GetDevicesHandlesLackOfDevices) {
   if (HasPreExistingDevices()) {
-    FXL_LOG(INFO) << "Test case requires an environment with no audio devices";
+    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
   }
 
@@ -353,7 +353,7 @@ TEST_F(AudioDeviceTest, GetDevicesHandlesLackOfDevices) {
 
 TEST_F(AudioDeviceTest, GetDefaultInputDeviceHandlesLackOfDevices) {
   if (HasPreExistingDevices()) {
-    FXL_LOG(INFO) << "Test case requires an environment with no audio devices";
+    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
   }
   RetrieveTokenUsingGetDefault(true);
@@ -362,7 +362,7 @@ TEST_F(AudioDeviceTest, GetDefaultInputDeviceHandlesLackOfDevices) {
 
 TEST_F(AudioDeviceTest, GetDefaultOutputDeviceHandlesLackOfDevices) {
   if (HasPreExistingDevices()) {
-    FXL_LOG(INFO) << "Test case requires an environment with no audio devices";
+    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
   }
   RetrieveTokenUsingGetDefault(false);

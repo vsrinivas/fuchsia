@@ -144,8 +144,8 @@ class AudioDeviceSettings
   // When settings are clean (in sync with storage), both will be infinite.
   // Anytime a change is introduced, the timeouts are updated as follows.
   //
-  // 1) If max is infinite, it gets set to now + MaxUpdateDelay, otherwise it
-  //    is unchanged.
+  // 1) If max is infinite, it is set to now + MaxUpdateDelay, otherwise it is
+  //    unchanged.
   // 2) next gets set to min(now + UpdateDelay, max_commit_time)
   //
   // When now >= next, it is time to commit.  The general idea here is to wait

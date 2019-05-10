@@ -409,7 +409,7 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   uint64_t start = packet.payload_offset;
   uint64_t end = start + packet.payload_size;
   uint64_t pb_size = payload_buffer_->size();
-  if ((start >= payload_buffer_->size()) || (end > payload_buffer_->size())) {
+  if ((start >= pb_size) || (end > pb_size)) {
     FXL_LOG(ERROR) << "Bad packet range [" << start << ", " << end
                    << "). Payload buffer size is " << pb_size;
     return;

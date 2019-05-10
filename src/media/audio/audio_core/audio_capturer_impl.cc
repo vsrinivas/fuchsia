@@ -1335,8 +1335,8 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
   FXL_DCHECK(source);
 
   if (!source->is_input() && !source->is_output()) {
-    FXL_LOG(WARNING) << "Failed to find mixer for source of type "
-                     << static_cast<uint32_t>(source->type());
+    FXL_LOG(ERROR) << "Failed to find mixer for source of type "
+                   << static_cast<uint32_t>(source->type());
     return ZX_ERR_INVALID_ARGS;
   }
 

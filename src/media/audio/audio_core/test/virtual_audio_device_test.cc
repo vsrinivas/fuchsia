@@ -415,7 +415,7 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceUsingAddGetDevices(
 // From no-devices, GetDefault should recognize an added device as new default.
 void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterAdd(bool is_input) {
   if (HasPreExistingDevices()) {
-    FXL_LOG(INFO) << "Test case requires an environment with no audio devices";
+    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
   }
 
@@ -444,7 +444,7 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterAdd(bool is_input) {
 void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnpluggedAdd(
     bool is_input) {
   if (HasPreExistingDevices()) {
-    FXL_LOG(INFO) << "Test case requires an environment with no audio devices";
+    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
   }
 
@@ -956,7 +956,7 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterUnplug(bool is_input) {
 // unimportant Remove, Add(unplugged), plug change
 void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterAdd(bool is_input) {
   if (HasPreExistingDevices()) {
-    FXL_LOG(INFO) << "Test case requires an environment with no audio devices";
+    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
   }
 
