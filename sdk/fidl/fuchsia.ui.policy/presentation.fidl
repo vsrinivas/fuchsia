@@ -71,7 +71,6 @@ protocol Presentation {
     SetPresentationModeListener(PresentationModeListener listener);
 
     // Registers a listener for media buttons events.
-    [Transitional]
     RegisterMediaButtonsListener(MediaButtonsListener listener);
 
     // EXPERIMENTAL. Inject pointer events into input stream. This WILL go
