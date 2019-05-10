@@ -62,30 +62,20 @@ which retrieves the page with id `[0, 0 ... , 0]`.
 
 ``` cpp
 fuchsia::ledger::PagePtr page;
-ledger->GetRootPage(page.NewRequest(),
-    [] (fuchsia::ledger::Status status) {
-  if (status != fuchsia::ledger::Status::OK) {
-    // Handle errors.
-  }
-});
 page.set_error_handler([] (zx_status_t status) {
-  // Handle connection errors.
+  // Handle ledger and connection errors.
 });
+ledger->GetRootPage(page.NewRequest());
 ```
 
 #### Dart
 
 ``` dart
 final PageProxy page = new PageProxy();
-_ledger.getRootPage(
-    page.ctrl.request(), (Status status) {  
-  if (status != Status.ok) {
-    // Handle errors.
-  }
-});
 page.ctrl.error.then((ProxyError error) {
-  // Handle connection errors.
-}
+  // Handle ledger and connection errors.
+});
+_ledger.getRootPage(page.ctrl.request());
 ```
 |||---|||
 
