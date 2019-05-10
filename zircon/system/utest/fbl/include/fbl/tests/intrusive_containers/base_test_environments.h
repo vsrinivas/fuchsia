@@ -1157,6 +1157,176 @@ public:
         END_TEST;
     }
 
+    bool ThreeContainerHelper() {
+        BEGIN_TEST;
+        // Start by populating the internal container.  We should end up with
+        // OBJ_COUNT objects, but we may not be holding internal references to
+        // all of them.
+        ASSERT_TRUE(Populate(container()), "");
+
+        // Create the other types of containers that ObjType can exist on and populate
+        // them using the default operation for the container type.
+        typename ContainerTraits::TaggedType1 tagged1;
+        typename ContainerTraits::TaggedType2 tagged2;
+        typename ContainerTraits::TaggedType3 tagged3;
+        for (auto iter = container().begin(); iter != container().end(); ++iter) {
+            ContainerUtils<typename ContainerTraits::TaggedType1>::MoveInto(tagged1,
+                                                  iter.CopyPointer());
+            ContainerUtils<typename ContainerTraits::TaggedType2>::MoveInto(tagged2,
+                                                  iter.CopyPointer());
+            ContainerUtils<typename ContainerTraits::TaggedType3>::MoveInto(tagged3,
+                                                  iter.CopyPointer());
+        }
+
+        // The three containers should be the same length, and nothing should have
+        // changed about the live object count.
+        EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(tagged1), "");
+        EXPECT_EQ(OBJ_COUNT, Size(tagged2), "");
+        EXPECT_EQ(OBJ_COUNT, Size(tagged3), "");
+
+        // Make sure that none of the members of container() or other_container
+        // have been visited.  Then visit every member of the other containers,
+        // and make sure that all of the members of container() have been
+        // visited once.
+        for (auto& obj : tagged1) ASSERT_EQ(0u, obj.visited_count(), "");
+        for (auto& obj : tagged2) ASSERT_EQ(0u, obj.visited_count(), "");
+        for (auto& obj : tagged3) ASSERT_EQ(0u, obj.visited_count(), "");
+
+        for (auto& obj : tagged1) {
+            obj.Visit();
+            EXPECT_EQ(1u, obj.visited_count(), "");
+        }
+
+        for (auto& obj : tagged2) {
+            obj.Visit();
+            EXPECT_EQ(2u, obj.visited_count(), "");
+        }
+
+        for (auto& obj : tagged3) {
+            obj.Visit();
+            EXPECT_EQ(3u, obj.visited_count(), "");
+        }
+
+        // If this is a sequenced container, then the other containers should be in
+        // the reverse order of container()
+        if constexpr (ContainerTraits::TaggedType1::IsSequenced &&
+                      ContainerTraits::TaggedType2::IsSequenced &&
+                      ContainerTraits::TaggedType3::IsSequenced) {
+            auto iter1 = tagged1.begin();
+            for (const auto& obj : container()) {
+                ASSERT_FALSE(iter1 == tagged1.end(), "");
+                EXPECT_EQ(OBJ_COUNT - obj.value() - 1, iter1->value(), "");
+                ++iter1;
+            }
+            EXPECT_TRUE(iter1 == tagged1.end(), "");
+
+            auto iter2 = tagged2.begin();
+            for (const auto& obj : container()) {
+                ASSERT_FALSE(iter2 == tagged2.end(), "");
+                EXPECT_EQ(OBJ_COUNT - obj.value() - 1, iter2->value(), "");
+                ++iter2;
+            }
+            EXPECT_TRUE(iter2 == tagged2.end(), "");
+
+            auto iter3 = tagged3.begin();
+            for (const auto& obj : container()) {
+                ASSERT_FALSE(iter3 == tagged3.end(), "");
+                EXPECT_EQ(OBJ_COUNT - obj.value() - 1, iter3->value(), "");
+                ++iter3;
+            }
+            EXPECT_TRUE(iter3 == tagged3.end(), "");
+        }
+
+        EXPECT_TRUE(ContainerChecker::SanityCheck(tagged1), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(tagged2), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(tagged3), "");
+
+        // Clear the internal container.  No objects should go away and the other
+        // containers should be un-affected
+        container().clear();
+
+        EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+        EXPECT_EQ(0u, Size(container()), "");
+        EXPECT_EQ(OBJ_COUNT, Size(tagged1), "");
+        EXPECT_EQ(OBJ_COUNT, Size(tagged2), "");
+        EXPECT_EQ(OBJ_COUNT, Size(tagged3), "");
+
+        for (auto& obj : tagged1) {
+            EXPECT_EQ(3u, obj.visited_count(), "");
+        }
+        for (auto& obj : tagged2) {
+            EXPECT_EQ(3u, obj.visited_count(), "");
+        }
+        for (auto& obj : tagged3) {
+            EXPECT_EQ(3u, obj.visited_count(), "");
+        }
+
+        if constexpr (ContainerTraits::TaggedType1::IsSequenced &&
+                      ContainerTraits::TaggedType2::IsSequenced &&
+                      ContainerTraits::TaggedType3::IsSequenced) {
+            auto iter1 = tagged1.begin();
+            for (size_t i = 0; i < OBJ_COUNT; ++i) {
+                ASSERT_FALSE(iter1 == tagged1.end(), "");
+                EXPECT_EQ(OBJ_COUNT - i - 1, iter1->value(), "");
+                ++iter1;
+            }
+            EXPECT_TRUE(iter1 == tagged1.end(), "");
+
+            auto iter2 = tagged2.begin();
+            for (size_t i = 0; i < OBJ_COUNT; ++i) {
+                ASSERT_FALSE(iter2 == tagged2.end(), "");
+                EXPECT_EQ(OBJ_COUNT - i - 1, iter2->value(), "");
+                ++iter2;
+            }
+            EXPECT_TRUE(iter2 == tagged2.end(), "");
+
+            auto iter3 = tagged3.begin();
+            for (size_t i = 0; i < OBJ_COUNT; ++i) {
+                ASSERT_FALSE(iter3 == tagged3.end(), "");
+                EXPECT_EQ(OBJ_COUNT - i - 1, iter3->value(), "");
+                ++iter3;
+            }
+            EXPECT_TRUE(iter3 == tagged3.end(), "");
+        }
+
+        // If we are testing a container of managed pointers, release our internal
+        // references.  Again, no objects should go away (as they are being
+        // referenced by other_container.  Note: Don't try this with an unmanaged
+        // pointer.  "releasing" an unmanaged pointer in the context of the
+        // TestEnvironment class means to return it to the heap, which is a Very
+        // Bad thing if we still have a container referring to the objects which were
+        // returned to the heap.
+        if (PtrTraits::IsManaged) {
+            for (size_t i = 0; i < OBJ_COUNT; ++i)
+                ReleaseObject(i);
+
+            EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+            EXPECT_EQ(0u, refs_held(), "");
+            EXPECT_EQ(OBJ_COUNT, Size(tagged1), "");
+            EXPECT_EQ(OBJ_COUNT, Size(tagged2), "");
+            EXPECT_EQ(OBJ_COUNT, Size(tagged3), "");
+        }
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(0));
+
+        // Finally, clear() the other other_containers and reset the internal state. At this
+        // point, all objects should have gone away.
+        tagged1.clear();
+        tagged2.clear();
+        tagged3.clear();
+        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
+        EXPECT_TRUE(Reset(), "");
+
+        EXPECT_EQ(0u, ObjType::live_obj_count(), "");
+        EXPECT_EQ(0u, refs_held(), "");
+        EXPECT_EQ(0u, Size(container()), "");
+        EXPECT_EQ(0u, Size(tagged1), "");
+        EXPECT_EQ(0u, Size(tagged2), "");
+        EXPECT_EQ(0u, Size(tagged3), "");
+
+        END_TEST;
+    }
+
     bool IterCopyPointer() {
         BEGIN_TEST;
         PtrType ptr;

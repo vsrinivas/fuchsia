@@ -52,6 +52,8 @@ struct DefaultWAVLTreeObserver {
 }  // namespace tests
 }  // namespace intrusive_containers
 
+using DefaultWAVLTreeRankType = bool;
+
 // Prototypes for the WAVL tree node state.  By default, we just use a bool to
 // record the rank parity of a node.  During testing, however, we actually use a
 // specialized version of the node state in which the rank is stored as an
@@ -64,8 +66,10 @@ struct DefaultWAVLTreeObserver {
 // which include a WAVLTreeNodeState<> to be standard layout types, provided
 // that they follow all of the other the rules as well.
 //
-template <typename PtrType, typename RankType> struct WAVLTreeNodeStateBase;    // Fwd decl
-template <typename PtrType, typename RankType = bool> struct WAVLTreeNodeState; // Partial spec
+template <typename PtrType, typename RankType>                            // Fwd decl
+struct WAVLTreeNodeStateBase;
+template <typename PtrType, typename RankType = DefaultWAVLTreeRankType>  // Partial spec
+struct WAVLTreeNodeState;
 
 template <typename PtrType>
 struct WAVLTreeNodeState<PtrType, int32_t> : public WAVLTreeNodeStateBase<PtrType, int32_t> {

@@ -35,6 +35,7 @@ struct TestThunks {
     MAKE_TEST_THUNK(RvalueOps)
     MAKE_TEST_THUNK(Scope)
     MAKE_TEST_THUNK(TwoContainer)
+    MAKE_TEST_THUNK(ThreeContainerHelper)
     MAKE_TEST_THUNK(IterCopyPointer)
     MAKE_TEST_THUNK(EraseIf)
     MAKE_TEST_THUNK(FindIf)
@@ -74,7 +75,7 @@ struct TestThunks {
 // Macros used to define test object types, test environments, and test thunk
 // structs used for exercising various containers and managed/unmanaged pointer
 // types.
-#define DEFINE_TEST_OBJECT(_container_type, _ptr_type, _base_type) \
+#define DEFINE_TEST_OBJECT(_container_type, _ptr_type, _base_type)                           \
 class _ptr_type ## _container_type ## TestObj :                                              \
     public _base_type<_container_type ## Traits<                                             \
         typename ptr_type::_ptr_type<_ptr_type ## _container_type ## TestObj>::type>> {      \

@@ -89,16 +89,25 @@ private:
 //    containable (SinglyLinkedListable for SinglyLinkedList, etc...)
 // 5) Have storage of the appropriate type to exist in another version of the
 //    container being exercised.
-template <typename _ContainerTraits>
-class TestObj : public _ContainerTraits::TestObjBaseType,
-                public _ContainerTraits::ContainableBaseClass {
+template <typename... ContainerTraits>
+class TestObj;
+
+class WAVLTreeChecker;
+
+template <typename ContainerTraits_>
+class TestObj<ContainerTraits_> :
+    public ContainerTraits_::TestObjBaseType,
+    public ContainerTraits_::ContainableBaseClass,
+    public std::conditional_t<ContainerTraits_::ContainerType::PtrTraits::CanCopy,
+                              typename ContainerTraits_::TaggedContainableBaseClasses,
+                              fbl::DefaultObjectTag> { // just an empty struct otherwise
 public:
-    using ContainerTraits    = _ContainerTraits;
+    using ContainerTraits    = ContainerTraits_;
     using ContainerStateType = typename ContainerTraits::ContainerStateType;
     using PtrTraits          = typename ContainerStateType::PtrTraits;
 
     explicit TestObj(size_t val)
-        : _ContainerTraits::TestObjBaseType(val),
+        : ContainerTraits_::TestObjBaseType(val),
           val_(val) { }
 
     size_t value() const { return val_; }

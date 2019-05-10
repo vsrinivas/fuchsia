@@ -32,6 +32,12 @@ public:
     using OtherContainerStateType = ContainerStateType;
     using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
     using OtherContainerType      = SinglyLinkedList<PtrType, OtherContainerTraits>;
+
+    /* TODO(schottm): this is a temporary hack so
+     * this will compile; to be changed in the next CL
+     * in this series which adds support for SLLs and
+     * DLLs. */
+    using TaggedContainableBaseClasses = fbl::DefaultObjectTag;
 };
 
 DEFINE_TEST_OBJECTS(SLL);

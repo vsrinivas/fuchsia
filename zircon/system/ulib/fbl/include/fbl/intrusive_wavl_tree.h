@@ -10,7 +10,6 @@
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree_internal.h>
-#include <fbl/macros.h>
 
 #include <utility>
 
@@ -79,7 +78,7 @@ struct WAVLTreeNodeStateBase {
     bool InContainer() const { return (parent_ != nullptr); }
 
 protected:
-    template <typename, typename, typename, typename, typename> friend class WAVLTree;
+    template <typename, typename, typename, typename, typename, typename> friend class WAVLTree;
     friend class tests::intrusive_containers::WAVLTreeChecker;
     friend class tests::intrusive_containers::WAVLBalanceTestObserver;
 
@@ -90,7 +89,8 @@ protected:
 };
 
 template <typename PtrType>
-struct WAVLTreeNodeState<PtrType, bool> : public WAVLTreeNodeStateBase<PtrType, bool> {
+struct WAVLTreeNodeState<PtrType, DefaultWAVLTreeRankType>
+       : public WAVLTreeNodeStateBase<PtrType, DefaultWAVLTreeRankType> {
     bool rank_parity() const   { return this->rank_; }
     void promote_rank()        { this->rank_ = !this->rank_; }
     void double_promote_rank() { }
@@ -98,31 +98,58 @@ struct WAVLTreeNodeState<PtrType, bool> : public WAVLTreeNodeStateBase<PtrType, 
     void double_demote_rank()  { }
 };
 
-template <typename PtrType, typename RankType = bool>
+template <typename PtrType, typename TagType>
+struct WAVLTreeContainable;
+
+template <typename PtrType, typename RankType = DefaultWAVLTreeRankType>
 struct DefaultWAVLTreeTraits {
+private:
+    using ValueType = typename internal::ContainerPtrTraits<PtrType>::ValueType;
+
+    template <typename TagType>
+    using NodeType = std::conditional_t<internal::has_tag_types_v<ValueType>,
+                                        WAVLTreeContainable<PtrType, TagType>,
+                                        ValueType>;
+
+public:
     using PtrTraits = internal::ContainerPtrTraits<PtrType>;
+    template <typename TagType = DefaultObjectTag>
     static WAVLTreeNodeState<PtrType, RankType>& node_state(typename PtrTraits::RefType obj) {
-        return obj.wavl_node_state_;
+        using Node [[maybe_unused]] = NodeType<TagType>;
+        return obj.Node::wavl_node_state_;
     }
 };
 
-template <typename PtrType>
+template <typename PtrType, typename TagType_ = DefaultObjectTag>
 struct WAVLTreeContainable {
 public:
-    bool InContainer() const { return wavl_node_state_.InContainer(); }
+    using TagType = TagType_;
+    template <typename TagType = TagType_>
+    bool InContainer() const {
+        using Node = NodeType<TagType>;
+        return Node::wavl_node_state_.InContainer();
+    }
 
 private:
-    friend DefaultWAVLTreeTraits<PtrType, bool>;
-    WAVLTreeNodeState<PtrType, bool> wavl_node_state_;
+    friend DefaultWAVLTreeTraits<PtrType, DefaultWAVLTreeRankType>;
+    WAVLTreeNodeState<PtrType, DefaultWAVLTreeRankType> wavl_node_state_;
+
+    using ValueType = typename internal::ContainerPtrTraits<PtrType>::ValueType;
+
+    template <typename TagType>
+    using NodeType = std::conditional_t<std::is_same_v<TagType, DefaultObjectTag>,
+                                        WAVLTreeContainable<PtrType, TagType>,
+                                        ValueType>;
 };
 
-template <typename _KeyType,
-          typename _PtrType,
-          typename _KeyTraits  = DefaultKeyedObjectTraits<
-                                    _KeyType,
-                                    typename internal::ContainerPtrTraits<_PtrType>::ValueType>,
-          typename _NodeTraits = DefaultWAVLTreeTraits<_PtrType>,
-          typename _Observer   = tests::intrusive_containers::DefaultWAVLTreeObserver>
+template <typename KeyType_,
+          typename PtrType_,
+          typename KeyTraits_  = DefaultKeyedObjectTraits<
+                                    KeyType_,
+                                    typename internal::ContainerPtrTraits<PtrType_>::ValueType>,
+          typename NodeTraits_ = DefaultWAVLTreeTraits<PtrType_>,
+          typename TagType_    = DefaultObjectTag,
+          typename Observer_   = tests::intrusive_containers::DefaultWAVLTreeObserver>
 class WAVLTree {
 private:
     // Private fwd decls of the iterator implementation.
@@ -130,17 +157,21 @@ private:
     struct iterator_traits;
     struct const_iterator_traits;
 
+    template <typename NodeTraits, typename = void>
+    struct AddGenericNodeState;
+
 public:
     // Aliases used to reduce verbosity and expose types/traits to tests
-    using KeyType       = _KeyType;
-    using PtrType       = _PtrType;
-    using KeyTraits     = _KeyTraits;
-    using NodeTraits    = _NodeTraits;
-    using Observer      = _Observer;
+    using KeyType       = KeyType_;
+    using PtrType       = PtrType_;
+    using KeyTraits     = KeyTraits_;
+    using NodeTraits    = AddGenericNodeState<NodeTraits_>;
+    using TagType       = TagType_;
+    using Observer      = Observer_;
     using PtrTraits     = internal::ContainerPtrTraits<PtrType>;
     using RawPtrType    = typename PtrTraits::RawPtrType;
     using ValueType     = typename PtrTraits::ValueType;
-    using ContainerType = WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, Observer>;
+    using ContainerType = WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits_, TagType, Observer>;
     using CheckerType   = ::fbl::tests::intrusive_containers::WAVLTreeChecker;
 
     // Declarations of the standard iterator types.
@@ -681,6 +712,28 @@ private:
 
         typename PtrTraits::RawPtrType node_ = nullptr;
     };  // class iterator_impl
+
+    template <typename BaseNodeTraits>
+    struct AddGenericNodeState<
+               BaseNodeTraits,
+               std::enable_if_t<internal::has_node_state_v<BaseNodeTraits>>>
+        : public BaseNodeTraits {};
+
+    template <typename BaseNodeTraits>
+    struct AddGenericNodeState<
+               BaseNodeTraits,
+               std::enable_if_t<!internal::has_node_state_v<BaseNodeTraits>>>
+        : public BaseNodeTraits {
+    private:
+        using RankType = decltype(std::remove_reference_t<
+            decltype(BaseNodeTraits::node_state(
+                     *std::declval<typename PtrTraits::RawPtrType>()))>::rank_);
+
+    public:
+        static WAVLTreeNodeState<PtrType, RankType>& node_state(typename PtrTraits::RefType obj) {
+            return DefaultWAVLTreeTraits<PtrType, RankType>::template node_state<TagType>(obj);
+        }
+    };
 
     // The test framework's 'checker' class is our friend.
     friend CheckerType;
@@ -1791,14 +1844,43 @@ private:
     size_t     count_      = 0;
 };
 
-template <typename KeyType, typename PtrType, typename KeyTraits, typename NodeTraits, typename Obs>
-constexpr bool WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, Obs>::SupportsConstantOrderErase;
-template <typename KeyType, typename PtrType, typename KeyTraits, typename NodeTraits, typename Obs>
-constexpr bool WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, Obs>::SupportsConstantOrderSize;
-template <typename KeyType, typename PtrType, typename KeyTraits, typename NodeTraits, typename Obs>
-constexpr bool WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, Obs>::IsAssociative;
-template <typename KeyType, typename PtrType, typename KeyTraits, typename NodeTraits, typename Obs>
-constexpr bool WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, Obs>::IsSequenced;
+// TaggedWAVLTree<> is intended for use with ContainableBaseClasses<>.
+//
+// For an easy way to allow instances of your class to live in multiple
+// intrusive containers at once, simply derive from
+// ContainableBaseClasses<YourContainables<PtrType, TagType>...> and then use
+// this template instead of WAVLTree<> as the container, passing the same tag
+// type you used earlier as the third parameter.
+//
+// See comments on ContainableBaseClasses<> in fbl/intrusive_container_utils.h
+// for more details.
+//
+template <typename KeyType,
+          typename PtrType,
+          typename TagType,
+          typename KeyTraits = DefaultKeyedObjectTraits<
+                                  KeyType,
+                                  typename internal::ContainerPtrTraits<PtrType>::ValueType>,
+          typename NodeTraits = DefaultWAVLTreeTraits<PtrType>,
+          typename Observer = tests::intrusive_containers::DefaultWAVLTreeObserver>
+using TaggedWAVLTree = WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, TagType, Observer>;
+
+template <typename KeyType, typename PtrType, typename KeyTraits,
+          typename NodeTraits, typename TagType, typename Obs>
+constexpr bool WAVLTree<KeyType, PtrType, KeyTraits,
+                        NodeTraits, TagType, Obs>::SupportsConstantOrderErase;
+template <typename KeyType, typename PtrType, typename KeyTraits,
+          typename NodeTraits, typename TagType, typename Obs>
+constexpr bool WAVLTree<KeyType, PtrType, KeyTraits,
+                        NodeTraits, TagType, Obs>::SupportsConstantOrderSize;
+template <typename KeyType, typename PtrType, typename KeyTraits,
+          typename NodeTraits, typename TagType, typename Obs>
+constexpr bool WAVLTree<KeyType, PtrType, KeyTraits,
+                        NodeTraits, TagType, Obs>::IsAssociative;
+template <typename KeyType, typename PtrType, typename KeyTraits,
+          typename NodeTraits, typename TagType, typename Obs>
+constexpr bool WAVLTree<KeyType, PtrType, KeyTraits,
+                        NodeTraits, TagType, Obs>::IsSequenced;
 
 }  // namespace fbl
 

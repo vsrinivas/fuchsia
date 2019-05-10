@@ -85,6 +85,12 @@ public:
     using TestObjBaseType  = HashedTestObjBase<typename ContainerType::KeyType,
                                                typename ContainerType::HashType,
                                                ContainerType::kNumBuckets>;
+
+    /* TODO(schottm): this is a temporary hack so
+     * this will compile; to be changed in the next CL
+     * in this series which adds support for SLLs and
+     * DLLs. */
+    using TaggedContainableBaseClasses = fbl::DefaultObjectTag;
 };
 
 DEFINE_TEST_OBJECTS(HTSLL);
