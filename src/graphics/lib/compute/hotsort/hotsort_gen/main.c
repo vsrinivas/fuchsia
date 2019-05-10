@@ -6,12 +6,13 @@
 //
 //
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <getopt.h>
 #include <ctype.h>
+#include <getopt.h>
 #include <inttypes.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 //
@@ -143,14 +144,14 @@ struct hsg_config hsg_config =
       .lo         = 1,
       .hi         = 1
     },
-    .half =  {
+    .half = {
       .warps      = 1,
       .lo         = 1,
       .hi         = 1
     },
   },
 
-  .block  = {
+  .block = {
     .warps_min    = 1,
     .warps_max    = UINT32_MAX,
     .warps_mod    = 2,
@@ -162,7 +163,7 @@ struct hsg_config hsg_config =
     .smem_bc      = UINT32_MAX
   },
 
-  .warp   = {
+  .warp = {
     .lanes        = 32,
     .lanes_log2   = 5,
   },
@@ -172,8 +173,19 @@ struct hsg_config hsg_config =
     .xtra         = 0
   },
 
-  .type   = {
+  .type = {
     .dwords       = 2
+  },
+
+  .glsl = {
+    .in = {
+      .set        = 0,
+      .binding    = 1
+    },
+    .out = {
+      .set        = 0,
+      .binding    = 0
+    }
   }
 };
 
@@ -1464,7 +1476,7 @@ main(int argc, char * argv[])
 
   struct hsg_target target;
 
-  while ((opt = getopt(argc,argv,"hvzo:a:g:G:s:S:w:b:B:m:M:k:r:x:t:f:F:c:C:p:P:D:")) != EOF)
+  while ((opt = getopt(argc,argv,"hvzo:a:g:G:s:S:w:b:B:m:M:k:r:x:t:f:F:c:C:p:P:D:L:")) != EOF)
     {
       switch (opt)
         {
@@ -1613,6 +1625,33 @@ main(int argc, char * argv[])
                   hsg_optarg(optarg),
                   HSG_CONFIG_DEFINE_LEN_SIZE-1);
           break;
+
+        case 'L':
+          {
+            // expects 4 concatenated and comma-separated unsigned integers
+            char * str = optarg;
+
+            if ((hsg_config.glsl.in.set      = (uint32_t)strtoul(str,&str,10)) == (uint32_t)ULONG_MAX)
+              return EXIT_FAILURE;
+
+            if (*str++ != ',')
+              return EXIT_FAILURE;
+
+            if ((hsg_config.glsl.in.binding  = (uint32_t)strtoul(str,&str,10)) == (uint32_t)ULONG_MAX)
+              return EXIT_FAILURE;
+
+            if (*str++ != ',')
+              return EXIT_FAILURE;
+
+            if ((hsg_config.glsl.out.set     = (uint32_t)strtoul(str,&str,10)) == (uint32_t)ULONG_MAX)
+              return EXIT_FAILURE;
+
+            if (*str++ != ',')
+              return EXIT_FAILURE;
+
+            if ((hsg_config.glsl.out.binding = (uint32_t)strtoul(str,&str,10)) == (uint32_t)ULONG_MAX)
+              return EXIT_FAILURE;
+          }
         }
     }
 

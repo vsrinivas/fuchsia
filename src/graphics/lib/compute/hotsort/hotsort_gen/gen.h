@@ -70,6 +70,17 @@ struct hsg_config
   struct {
     uint32_t    dwords;                             // number of dwords in a key -- .type will be extended to support key-vals
   } type;
+
+  struct {                                          // This provides GLSL-specific support for specifying the set and binding
+    struct {                                        // locations for the input and output buffers.  Note that this will be
+      uint32_t    set;                              // removed once supported Vulkan targets support GLSL_EXT_buffer_reference.
+      uint32_t    binding;
+    } in;
+    struct {
+      uint32_t    set;
+      uint32_t    binding;
+    } out;
+  } glsl;
 };
 
 //

@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/hotsort/platforms/vk/targets/hotsort_target.gni")
+
+#
+# configuration
+#
+# $HS_GEN -v -a "glsl" -D HS_AMD_GCN3 -t 1 -w 64 -r 16 -s 32768 -S 32768 -b 16 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
+#
+
+hotsort_target("generate")
+{
+  hotsort_target_vendor_dir = "//src/graphics/lib/compute/hotsort/platforms/vk/targets/vendors/amd"
+  hotsort_target_name = "hs_amd_gcn3_u32"
+  hotsort_target_args = [
+    # "-v",
+    "-o" , rebase_path(target_gen_dir,root_build_dir),
+    "-a" , "glsl",
+    "-t" , "1",
+    "-w" , "64",
+    "-r" , "16",
+    "-s" , "32768",
+    "-S" , "32768",
+    "-b" , "16",
+    "-m" , "1",
+    "-M" , "1",
+    "-f" , "1",
+    "-F" , "1",
+    "-c" , "1",
+    "-C" , "1",
+    "-L" , "0,1,0,0",
+    "-z"
+  ]
+}

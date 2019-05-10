@@ -1,0 +1,75 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
+
+#
+# Generate and build several HotSort targets
+#
+
+group("targets") {
+  public_deps = [
+    "targets/amd/gcn3/u32:generate",
+    "targets/amd/gcn3/u64:generate",
+    "targets/intel/gen8/u32:generate",
+    "targets/intel/gen8/u64:generate",
+    "targets/nvidia/sm35/u32:generate",
+    "targets/nvidia/sm35/u64:generate",
+  ]
+}
+
+#
+# hotsort_vk_bench: benchmark HotSort
+#
+
+package_name = "hotsort_vk_bench"
+
+executable("bin") {
+  output_name = package_name
+  sources = [
+    "main.c",
+    "sort.cpp"
+  ]
+  include_dirs = [
+    "$target_gen_dir",
+    "//src/graphics/lib/compute",
+    "//src/graphics/lib/compute/hotsort/platforms/vk"
+  ]
+  deps = [
+    ":targets",
+    "//src/graphics/lib/compute/common",
+    "//src/graphics/lib/compute/common/vk",
+    "//src/graphics/lib/compute/hotsort/platforms/vk",
+    "//third_party/vulkan_loader_and_validation_layers:vulkan"
+  ]
+}
+
+#
+#
+#
+
+package(package_name) {
+  deps = [
+    ":bin",
+    "//third_party/vulkan_loader_and_validation_layers/layers"
+  ]
+
+  binary = package_name
+
+  meta = [
+    {
+      path = rebase_path("meta/$package_name.cmx")
+      dest = "$package_name.cmx"
+    },
+  ]
+
+  public_deps      = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources        = vulkan_validation_layers.resources
+}
+
+#
+#
+#

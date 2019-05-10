@@ -2,15 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("hotsort") {
-  deps = [
-    "platforms/vk",
-  ]
-}
-
 group("tests") {
-  testonly = true
   public_deps = [
-    "platforms/vk/tests",
+    "hotsort_vk_bench"
   ]
 }

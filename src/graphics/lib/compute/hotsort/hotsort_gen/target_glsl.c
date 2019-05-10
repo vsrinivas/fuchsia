@@ -93,8 +93,8 @@ hsg_macros(struct hsg_config const * const config, FILE * file)
           "// target-specific config                       \n"
           "#include \"hs_config.h\"                        \n"
           "                                                \n"
-          "// arch/target-specific macros                  \n"
-          "#include \"hs_glsl_macros.h\"                   \n"
+          "// vendor<arch<target-specific macros           \n"
+          "#include \"hs_glsl_macros_vendor.h\"            \n"
           "                                                \n"
           "//                                              \n"
           "//                                              \n"
@@ -187,7 +187,7 @@ hsg_target_header_and_module(struct hsg_config const * const config)
             "  }                                                  \n"
             "};                                                   \n"
             "                                                     \n"
-            "#include \"hs_target_modules_init.inl\"              \n"
+            "#include \"hs_target_modules_dump.inl\"              \n"
             "                                                     \n"
             "//                                                   \n"
             "//                                                   \n"
@@ -288,9 +288,14 @@ hsg_target_glsl(struct hsg_target       * const target,
                 "#define HS_HM_BLOCK_HEIGHT      %u                              \n"
                 "#define HS_HM_SCALE_MIN         %u                              \n"
                 "#define HS_HM_SCALE_MAX         %u                              \n"
-                "#define HS_EMPTY                                                \n\n",
-                config->warp.lanes_log2, // FIXME -- this matters for SIMD
-                config->warp.lanes_log2,
+                "#define HS_EMPTY                                                \n"
+                "#define HS_KV_IN_SET            %u                              \n"
+                "#define HS_KV_IN_BINDING        %u                              \n"
+                "#define HS_KV_OUT_SET           %u                              \n"
+                "#define HS_KV_OUT_BINDING       %u                              \n"
+                "#define HS_IS_IN_PLACE          ((HS_KV_IN_SET == HS_KV_OUT_SET) && (HS_KV_IN_BINDING == HS_KV_OUT_BINDING))\n\n",
+                config->warp.lanes_log2, // NOTE: the number of slab threads might
+                config->warp.lanes_log2, // NOTE: not always equal slab width
                 config->thread.regs,
                 config->thread.regs,
                 config->type.dwords,
@@ -302,7 +307,11 @@ hsg_target_glsl(struct hsg_target       * const target,
                 config->merge.flip.hi,
                 config->merge.half.warps,
                 config->merge.half.lo,
-                config->merge.half.hi);
+                config->merge.half.hi,
+                config->glsl.in.set,
+                config->glsl.in.binding,
+                config->glsl.out.set,
+                config->glsl.out.binding);
 
         fprintf(target->state->header,
                 "#define HS_SLAB_ROWS()    \\\n");

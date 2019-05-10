@@ -1,0 +1,249 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+#
+# Generates a HotSort target
+#
+template("hotsort_target") {
+  #
+  # Expects:
+  #
+  #   $hotsort_target_vendor_dir:
+  #
+  #   The directory of the vendor and arch-specific includes.
+  #
+  #   $hotsort_target_name:
+  #
+  #   A name that approximately conveys the configuration of the
+  #   generated HotSort algorithm.
+  #
+  #   $hotsort_target_args:
+  #
+  #   The arguments passed to the 'hotsort_gen' HotSort algorithm code
+  #   generator.
+  #
+  #   $hotsort_target_dump:
+  #
+  #   If defined the target is group that references a target binary
+  #   produced by the host toolchain.  Otherwise, a source set is
+  #   produced on the current toolchain.
+  #
+  # The hotsort target name and args are passed to 'hotsort_gen' as
+  # follows:
+  #
+  #   'hotsort_gen -D $hotsort_target_name $hotsort_target_args'
+  #
+  # Validation of the args will be performed by 'hotsort_gen'.
+  #
+  # Note that $hotsort_target_name is split from the args list as it
+  # serves a dual role of providing the name of files as well as being
+  # a symbol in the GLSL source and C include files.
+  #
+  assert(defined(invoker.hotsort_target_vendor_dir),"vendor directory must be defined for hotsort_target")
+  assert(defined(invoker.hotsort_target_name),      "name must be defined for hotsort_target")
+  assert(defined(invoker.hotsort_target_args),      "args must be defined for hotsort_target")
+
+  #
+  # Either dump a binary or produce a source set
+  #
+  _hs_target_dump = false
+
+  if (defined(invoker.hotsort_target_dump)) {
+    _hs_target_dump = invoker.hotsort_target_dump
+  }
+
+  #
+  # define sources, includes and deps
+  #
+  _hs_target_gen_includes_public = [
+    "$target_gen_dir/hs_target.h"
+  ]
+
+  _hs_target_gen_includes = [
+    "$target_gen_dir/hs_config.h",
+  ] + _hs_target_gen_includes_public
+
+  _hs_target_includes = [
+    invoker.hotsort_target_vendor_dir,
+    "//src/graphics/lib/compute/hotsort/platforms/vk/targets"
+  ] + _hs_target_gen_includes
+
+  _hs_target_gen_sources = [
+    "$target_gen_dir/" + invoker.hotsort_target_name + ".c",
+  ]
+
+  _hs_target_gen_inlines = [
+    "$target_gen_dir/hs_modules.inl",
+  ]
+
+  _hs_target_include_dirs = [
+    "$target_gen_dir",
+    "//src/graphics/lib/compute/hotsort/platforms/vk/targets",
+    "//src/graphics/lib/compute/hotsort/platforms/vk",
+  ]
+
+  _hs_target_sources = _hs_target_includes + _hs_target_gen_sources + _hs_target_gen_inlines
+
+  #
+  # generated compute shaders
+  #
+  _hs_comp_names = exec_script("//src/graphics/lib/compute/hotsort/platforms/vk/targets/hotsort_comp_names.py",
+                               invoker.hotsort_target_args,
+                               "list lines")
+  _hs_comp_sources = process_file_template(_hs_comp_names,"$target_gen_dir/comp/{{source_file_part}}")
+
+  #
+  # generate the .comp shaders
+  #
+  # Note that hs_modules.txt should match names returned by script
+  #
+  compiled_action("gen_comp") {
+    tool    = "//src/graphics/lib/compute/hotsort/hotsort_gen"
+    outputs = _hs_comp_sources + _hs_target_gen_sources + _hs_target_gen_includes
+    args    = [
+      "-D" , invoker.hotsort_target_name
+    ] + invoker.hotsort_target_args
+  }
+
+  #
+  # compile the .comp shaders to SPIR-V modules
+  #
+  compiled_action_foreach("gen_spv") {
+    tool = "//third_party/shaderc/third_party/glslang:glslangValidator"
+    sources = _hs_comp_sources
+    inputs  = _hs_target_includes
+    outputs = [
+      "$target_gen_dir/spv/{{source_name_part}}.spv"
+    ]
+    args = [
+      "-s", # Note: '-s' silences glslangValidator printing filename
+            # but detailed error messages are also silenced
+      "--target-env", "vulkan1.1",
+      "-I" + rebase_path(target_gen_dir,root_build_dir),                                            # <target>
+      "-I" + rebase_path(invoker.hotsort_target_vendor_dir,root_build_dir),                         # <vendor>
+      "-I" + rebase_path("//src/graphics/lib/compute/hotsort/platforms/vk/targets",root_build_dir), # <default>
+      "-o",
+      rebase_path(outputs[0],root_build_dir),
+      "{{source}}"
+    ]
+    public_deps = [
+      ":gen_comp"
+    ]
+  }
+
+  #
+  # optimize the modules
+  #
+  compiled_action_foreach("gen_opt") {
+    tool = "//third_party/shaderc/third_party/spirv-tools:spirv-opt"
+    sources = get_target_outputs(":gen_spv")
+    outputs = [
+      "$target_gen_dir/opt/{{source_name_part}}.spv"
+    ]
+    args = [
+      "-O",
+      "{{source}}",
+      "-o",
+      rebase_path(outputs[0],root_build_dir),
+    ]
+    public_deps = [
+      ":gen_spv"
+    ]
+  }
+
+  #
+  # remap the optimized modules
+  #
+  compiled_action_foreach("gen_remap") {
+    tool = "//third_party/shaderc/third_party/glslang:spirv-remap"
+    sources = get_target_outputs(":gen_opt")
+    outputs = [
+      "$target_gen_dir/remap/{{source_name_part}}.spv"
+    ]
+    args = [
+      "--do-everything",
+      "--input",
+      "{{source}}",
+      "--output",
+      rebase_path(target_gen_dir,root_build_dir) + "/remap"
+    ]
+    public_deps = [
+      ":gen_opt"
+    ]
+  }
+
+  #
+  # dump the modules as uint32_t literals
+  #
+  compiled_action("gen_modules") {
+    tool = "//src/graphics/lib/compute/hotsort/platforms/vk/targets:hotsort_modules_to_literals"
+    sources = get_target_outputs(":gen_remap")
+    outputs = _hs_target_gen_inlines
+    args = rebase_path(outputs,root_build_dir) + rebase_path(sources,root_build_dir)
+    public_deps = [
+      ":gen_remap"
+    ]
+  }
+
+  #
+  # either dump a binary or return a source set
+  #
+  if (_hs_target_dump) {
+    #
+    # executable for dumping a binary image of target
+    #
+    _hs_target_dump_name = "hotsort_dump_" + invoker.hotsort_target_name
+
+    executable(_hs_target_dump_name) {
+      defines = [ "HS_DUMP" ]
+      sources = _hs_target_gen_sources
+      include_dirs = _hs_target_include_dirs
+      public_deps = [
+        ":gen_modules"
+      ]
+    }
+
+    #
+    # dump a binary image of target
+    #
+    compiled_action("gen_bin") {
+      tool = ":$_hs_target_dump_name"
+      sources = _hs_target_sources
+      outputs = [
+        "$target_gen_dir/hs_target.bin"
+      ]
+      args = rebase_path(outputs,root_build_dir)
+      public_deps = [
+        ":$_hs_target_dump_name"
+      ]
+    }
+
+    #
+    # dummy group invokes $host_toolchain
+    #
+    group(target_name) {
+      public_deps = [
+        ":gen_bin($host_toolchain)"
+      ]
+    }
+  } else {
+    #
+    # target is a source set
+    #
+    source_set(target_name) {
+      public = [ "$target_gen_dir/hs_target.h" ]
+      sources = _hs_target_sources
+      include_dirs = _hs_target_include_dirs
+      public_deps = [
+        ":gen_modules",
+      ]
+    }
+  }
+}
+
+#
+#
+#
