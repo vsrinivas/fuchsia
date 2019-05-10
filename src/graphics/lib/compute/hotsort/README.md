@@ -24,26 +24,26 @@ implementations when sorting arrays of smaller than 500K-2M keys.
 Here is a throughput plot for HotSort sorting 32-bit and 64-bit keys
 with a 640-core Quadro M1200:
 
-![](docs/images/hs_nvidia_sm35_u32_mkeys.svg)
-![](docs/images/hs_nvidia_sm35_u64_mkeys.svg)
+![NVIDIA throughput for 32-bit keys](docs/images/hs_nvidia_sm35_u32_mkeys.png)
+![NVIDIA throughput for 64-bit keys](docs/images/hs_nvidia_sm35_u64_mkeys.png)
 
 HotSort throughput on Vulkan (Mesa) with a 704-core AMD V1807B APU:
 
-![](docs/images/hs_amd_gcn_mkeys.svg)
+![AMD throughput](docs/images/hs_amd_gcn_mkeys.png)
 
 HotSort throughput on Vulkan with a 192-core Intel HD 630:
 
-![](docs/images/hs_intel_gen8_mkeys.svg)
+![Intel throughput](docs/images/hs_intel_gen8_mkeys.png)
 
 ### Execution time
 
 Note that these sorting rates translate to sub-millisecond to
 multi-millisecond execution times on small GPUs:
 
-![](docs/images/hs_nvidia_sm35_u32_msecs.svg)
-![](docs/images/hs_nvidia_sm35_u64_msecs.svg)
-![](docs/images/hs_amd_gcn_msecs.svg)
-![](docs/images/hs_intel_gen8_msecs.svg)
+![NVIDIA duration for 32-bit keys](docs/images/hs_nvidia_sm35_u32_msecs.png)
+![NVIDIA duration for 64-bit keys](docs/images/hs_nvidia_sm35_u64_msecs.png)
+![AMD duration](docs/images/hs_amd_gcn_msecs.png)
+![Intel duration](docs/images/hs_intel_gen8_msecs.png)
 
 # Usage
 
@@ -64,11 +64,11 @@ The following architectures are supported:
 
 Vendor | Architecture                              | 32‑bit             | 64‑bit             | 32+32‑bit   | Notes
 -------|-------------------------------------------|:------------------:|:------------------:|:-----------:|------
-NVIDIA | sm_35,sm_37,sm_50,sm_52,sm_60,sm_61,sm_70 | :white_check_mark: | :white_check_mark: | :x:         | Not tested on all architectures
-NVIDIA | sm_30,sm_32,sm_53,sm_62                   | :x:                | :x:                | :x:         | Need to generate properly shaped kernels
-AMD    | GCN                                       | :white_check_mark: | :white_check_mark: | :x:         | Tested on Linux MESA 18.2
-Intel  | GEN8+                                     | :white_check_mark: | :white_check_mark: | :x:         | Good but the assumed *best-shaped* kernels aren't being used due to a compiler issue
-Intel  | APL/GLK using a 2x9 or 1x12 thread pool   | :x:                | :x:                | :x:         | Need to generate properly shaped kernels
+NVIDIA | sm_35,sm_37,sm_50,sm_52,sm_60,sm_61,sm_70 | ✔                 | ✔                 | ❌          | Not tested on all architectures
+NVIDIA | sm_30,sm_32,sm_53,sm_62                   | ❌                 | ❌                  | ❌          | Need to generate properly shaped kernels
+AMD    | GCN                                       | ✔                 | ✔                 | ❌          | Tested on Linux MESA 18.2
+Intel  | GEN8+                                     | ✔                 | ✔                 | ❌          | Good but the assumed *best-shaped* kernels aren't being used due to a compiler issue
+Intel  | APL/GLK using a 2x9 or 1x12 thread pool   | ❌                  | ❌                 | ❌          | Need to generate properly shaped kernels
 
 An architecture-specific instance of the HotSort algorithm is referred to as a "target".
 
@@ -163,7 +163,7 @@ In the slab sorting phase, each lane of a subgroup executes a bitonic
 sorting network on its registers and successively merges lanes until
 the slab of registers is sorted in serpentine order.
 
-![](docs/images/hs_sorted_slab.svg)
+![Slab layout](docs/images/hs_sorted_slab.png)
 
 ## Merging
 
@@ -179,7 +179,7 @@ sequences.  This property also holds for non-power-of-two sequences.
 
 As an example, the *Streaming Flip Merge* kernel is illustrated below:
 
-![](docs/images/hs_flip_merge.svg)
+![Flip merge algorithm](docs/images/hs_flip_merge.png)
 
 # Future Enhancements
 

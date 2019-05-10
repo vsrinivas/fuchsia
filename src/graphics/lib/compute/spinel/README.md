@@ -48,7 +48,7 @@ These two capabilities can enable significant work reuse.
 
 # Benchmarks
 
-:construction:
+🚧
 
 # Usage
 
@@ -60,26 +60,26 @@ The following architectures are under development:
 
 Vendor | Architecture                              | Status         | Notes
 -------|-------------------------------------------|:--------------:|------
-AMD    | GCN3+                                     | :construction: | Under construction
-ARM    | Bifrost (4-wide)                          | :construction: | Under construction
-ARM    | Bifrost (8-wide)                          | :construction: | Under construction
-NVIDIA | sm_35,sm_37,sm_50,sm_52,sm_60,sm_61,sm_70 | :construction: | Under construction
-NVIDIA | sm_30,sm_32,sm_53,sm_62                   | :x:            |
-Intel  | GEN8+                                     | :construction: | Under construction
-Intel  | APL/GLK using a 2x9 or 1x12 thread pool   | :x:            |
+AMD    | GCN3+                                     | 🚧             | Under construction
+ARM    | Bifrost (4-wide)                          | 🚧             | Under construction
+ARM    | Bifrost (8-wide)                          | 🚧             | Under construction
+NVIDIA | sm_35,sm_37,sm_50,sm_52,sm_60,sm_61,sm_70 | 🚧             | Under construction
+NVIDIA | sm_30,sm_32,sm_53,sm_62                   | ❌              |
+Intel  | GEN8+                                     | 🚧             | Under construction
+Intel  | APL/GLK using a 2x9 or 1x12 thread pool   | ❌              |
 
 # Programming Idioms
 
-:construction:
+🚧
 
-![](images/spinel_api.svg)
+![Spinel API blocks](docs/images/spinel_api.png)
 
 # Architecture
 
-:construction:
+🚧
 
-![](images/spinel_pipeline.svg)
+![Spinel pipeline diagram](docs/images/spinel_pipeline.png)
 
 # Future Enhancements
 
-:construction:
+🚧
