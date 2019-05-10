@@ -355,7 +355,7 @@ zx_status_t Pciroot::PcirootGetAddressSpace(size_t size,
     // Craft a resource handle for the other end. This handle will be held
     // within the Root allocation in the pci bus driver will encompass the
     // entirety of the address space it requested.
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     status = zx_resource_create(get_root_resource(), rsrc_kind | ZX_RSRC_FLAG_EXCLUSIVE,
                                 region_uptr->base, region_uptr->size, name, sizeof(name),
                                 out_resource->reset_and_get_address());

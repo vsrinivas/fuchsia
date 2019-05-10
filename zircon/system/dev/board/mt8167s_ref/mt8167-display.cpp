@@ -228,7 +228,7 @@ zx_status_t Mt8167::DisplayInit() {
     }
     constexpr uint32_t kDigLdoCon29 = 0x0532;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource root_resource(get_root_resource());
     std::optional<ddk::MmioBuffer> pmic_mmio;
     auto status = ddk::MmioBuffer::Create(MT8167_PMIC_WRAP_BASE, MT8167_PMIC_WRAP_SIZE,

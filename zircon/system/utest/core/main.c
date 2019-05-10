@@ -102,7 +102,7 @@ int isatty(int fd) {
 }
 
 int main(int argc, char** argv) {
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     if (get_root_resource() == ZX_HANDLE_INVALID) {
         // If the root resource isn't available, printf will go nowhere. Put a
         // message on the stack and crash. This will show up in the standard
@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
         abort();
     }
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     if (zx_debuglog_create(get_root_resource(), 0, &log_handle) < 0) {
         return -2;
     }

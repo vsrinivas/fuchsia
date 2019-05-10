@@ -148,7 +148,7 @@ static zx_status_t aml_sd_emmc_configure_portB(aml_bus_t* bus) {
 
     zx_status_t status;
     mmio_buffer_t gpio_base, hiu_base;
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
 
     const uint64_t aligned_gpio_base = ROUNDDOWN(S905D2_GPIO_BASE, PAGE_SIZE);

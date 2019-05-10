@@ -54,7 +54,7 @@ static int debug_reader(void* arg) {
     char ch;
     for (;;) {
         size_t length = 1;
-        // Please do not use get_root_resource() in new code. See ZX-1497.
+        // Please do not use get_root_resource() in new code. See ZX-1467.
         zx_status_t status = zx_debug_read(get_root_resource(), &ch, &length);
         if (status == ZX_OK && length == 1) {
             mtx_lock(&fifo.lock);
@@ -179,7 +179,7 @@ static zx_protocol_device_t console_device_proto = {
 static zx_status_t console_bind(void* ctx, zx_device_t* parent) {
     // If we're in an isolated devmgr, we won't have the root resource.  In that
     // case, just don't bind this driver.
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     if (get_root_resource() == ZX_HANDLE_INVALID) {
         return ZX_ERR_NOT_SUPPORTED;
     }

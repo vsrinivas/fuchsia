@@ -36,7 +36,7 @@ static void thread_entry(uintptr_t arg1, uintptr_t arg2) {
 static bool interrupt_port_non_bindable_test() {
     BEGIN_TEST;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource resource(get_root_resource());
     zx::interrupt interrupt;
     zx::port port;
@@ -54,7 +54,7 @@ static bool interrupt_port_non_bindable_test() {
 static bool interrupt_port_bound_test() {
     BEGIN_TEST;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource resource(get_root_resource());
     zx::interrupt interrupt;
     zx::port port;
@@ -105,7 +105,7 @@ static bool interrupt_port_bound_test() {
 static bool interrupt_test() {
     BEGIN_TEST;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource resource(get_root_resource());
     zx::interrupt interrupt;
     zx::interrupt interrupt_cancelled;
@@ -137,7 +137,7 @@ static bool interrupt_test() {
 static bool interrupt_suspend_test() {
     BEGIN_TEST;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource resource(get_root_resource());
     zx::interrupt interrupt;
     zx::thread thread;
@@ -179,7 +179,7 @@ static bool interrupt_suspend_test() {
 static bool interrupt_bind_vcpu_test() {
     BEGIN_TEST;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource resource(get_root_resource());
     zx::interrupt interrupt;
     zx::guest guest;
@@ -208,7 +208,7 @@ static bool interrupt_bind_vcpu_test() {
 static bool interrupt_bind_vcpu_not_supported_test() {
     BEGIN_TEST;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource resource(get_root_resource());
     zx::interrupt interrupt;
     zx::port port;
@@ -237,7 +237,7 @@ static bool interrupt_bind_vcpu_not_supported_test() {
 static bool interrupt_bind_vcpu_already_bound_test() {
     BEGIN_TEST;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource resource(get_root_resource());
     zx::interrupt interrupt;
     zx::port port;
@@ -266,7 +266,7 @@ static bool interrupt_bind_vcpu_already_bound_test() {
 static bool interrupt_bind_vcpu_multiple_guests_test() {
     BEGIN_TEST;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource resource(get_root_resource());
     zx::interrupt interrupt;
     zx::guest guest1;

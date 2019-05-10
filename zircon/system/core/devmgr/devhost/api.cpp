@@ -197,7 +197,7 @@ namespace devmgr {
 extern zx_handle_t root_resource_handle;
 } // namespace devmgr
 
-// Please do not use get_root_resource() in new code. See ZX-1497.
+// Please do not use get_root_resource() in new code. See ZX-1467.
 __EXPORT zx_handle_t get_root_resource() {
     return root_resource_handle;
 }

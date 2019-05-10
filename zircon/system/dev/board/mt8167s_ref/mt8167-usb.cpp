@@ -143,7 +143,7 @@ zx_status_t Mt8167::UsbInit() {
     usb_config_ = config;
 
     // TODO: move to clock driver when we have one
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource root_resource(get_root_resource());
     std::optional<ddk::MmioBuffer> xo_base;
     auto status = ddk::MmioBuffer::Create(MT8167_XO_BASE, MT8167_XO_SIZE, *root_resource,

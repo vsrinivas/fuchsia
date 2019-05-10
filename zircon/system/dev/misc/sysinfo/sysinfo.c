@@ -56,7 +56,7 @@ static zx_status_t fidl_get_root_job(void* ctx, fidl_txn_t* txn) {
 }
 
 static zx_status_t fidl_get_root_resource(void* ctx, fidl_txn_t* txn) {
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t h = get_root_resource();
     if (h == ZX_HANDLE_INVALID) {
         return fuchsia_sysinfo_DeviceGetRootResource_reply(txn, ZX_ERR_NOT_SUPPORTED, h);
@@ -69,7 +69,7 @@ static zx_status_t fidl_get_root_resource(void* ctx, fidl_txn_t* txn) {
 static zx_status_t fidl_get_hypervisor_resource(void* ctx, fidl_txn_t* txn) {
     zx_handle_t h;
     const char name[] = "hypervisor";
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_status_t status = zx_resource_create(get_root_resource(),
                                             ZX_RSRC_KIND_HYPERVISOR,
                                             0, 0, name, sizeof(name), &h);

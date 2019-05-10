@@ -21,7 +21,7 @@ static const size_t mmio_test_size = (PAGE_SIZE * 4);
 static uint64_t mmio_test_base;
 
 const zx::unowned_resource root() {
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     static zx_handle_t root = get_root_resource();
     return zx::unowned_resource(root);
 }

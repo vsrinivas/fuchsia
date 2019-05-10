@@ -84,7 +84,7 @@ static zx_status_t aml_enable_wifi_32K(aml_bus_t* bus) {
         return status;
     }
     mmio_buffer_t buffer;
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     status = mmio_buffer_init_physical(&buffer, S905D2_PWM_BASE, 0x1a000, get_root_resource(),
                                        ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {

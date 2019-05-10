@@ -175,7 +175,7 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
     hikey->parent = parent;
 
     // TODO(voydanoff) get from platform bus driver somehow
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
     status = hikey960_init(hikey, resource);
     if (status != ZX_OK) {

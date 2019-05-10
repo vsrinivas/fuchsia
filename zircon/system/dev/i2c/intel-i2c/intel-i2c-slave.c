@@ -384,7 +384,7 @@ zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* 
                                              zx_handle_t* out) {
     if (slave->chip_address == 0xa) {
         zx_handle_t irq;
-        // Please do not use get_root_resource() in new code. See ZX-1497.
+        // Please do not use get_root_resource() in new code. See ZX-1467.
         zx_status_t status = zx_interrupt_create(get_root_resource(), 0x1f,
                             ZX_INTERRUPT_MODE_LEVEL_LOW, &irq);
         if (status != ZX_OK) {
@@ -394,7 +394,7 @@ zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* 
         return ZX_OK;
     } else if (slave->chip_address == 0x49) {
         zx_handle_t irq;
-        // Please do not use get_root_resource() in new code. See ZX-1497.
+        // Please do not use get_root_resource() in new code. See ZX-1467.
         zx_status_t status = zx_interrupt_create(get_root_resource(), 0x33,
                             ZX_INTERRUPT_MODE_LEVEL_LOW, &irq);
         if (status != ZX_OK) {
@@ -405,7 +405,7 @@ zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* 
     } else if (slave->chip_address == 0x10) {
         // Acer12
         zx_handle_t irq;
-        // Please do not use get_root_resource() in new code. See ZX-1497.
+        // Please do not use get_root_resource() in new code. See ZX-1467.
         zx_status_t status = zx_interrupt_create(get_root_resource(), 0x1f,
                             ZX_INTERRUPT_MODE_LEVEL_LOW, &irq);
         if (status != ZX_OK) {
@@ -415,7 +415,7 @@ zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* 
         return ZX_OK;
     } else if (slave->chip_address == 0x50) {
         zx_handle_t irq;
-        // Please do not use get_root_resource() in new code. See ZX-1497.
+        // Please do not use get_root_resource() in new code. See ZX-1467.
         zx_status_t status = zx_interrupt_create(get_root_resource(), 0x18,
                             ZX_INTERRUPT_MODE_EDGE_LOW, &irq);
         if (status != ZX_OK) {

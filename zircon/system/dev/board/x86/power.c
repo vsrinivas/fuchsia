@@ -24,7 +24,7 @@ zx_status_t suspend_to_ram(void) {
 
     acpica_enable_noncontested_mode();
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     status = zx_system_powerctl(get_root_resource(),
                                 ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY, NULL);
     if (status != ZX_OK) {
@@ -62,7 +62,7 @@ zx_status_t suspend_to_ram(void) {
 
     zx_status_t status2;
 cleanup:
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     status2 = zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS, NULL);
     if (status2 != ZX_OK) {
         zxlogf(ERROR, "acpi: Re-enabling all cpus failed: %d\n", status2);

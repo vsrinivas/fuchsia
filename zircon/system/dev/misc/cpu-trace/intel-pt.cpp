@@ -738,7 +738,7 @@ zx_status_t InsntraceDevice::IptAllocTrace(const void* cmd, size_t cmdlen) {
     }
     per_trace_state_.reset(per_trace_state);
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
         zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE, MTRACE_INSNTRACE_ALLOC_TRACE, 0,
@@ -769,7 +769,7 @@ zx_status_t InsntraceDevice::IptFreeTrace() {
             X86PtFreeBuffer1(per_trace);
     }
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
         zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE, MTRACE_INSNTRACE_FREE_TRACE, 0, nullptr, 0);
@@ -961,7 +961,7 @@ zx_status_t InsntraceDevice::IptStart() {
     if (mode_ != IPT_TRACE_CPUS)
         return ZX_ERR_BAD_STATE;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
     zx_status_t status;
 
@@ -1008,7 +1008,7 @@ zx_status_t InsntraceDevice::IptStop() {
     if (!active_)
         return ZX_ERR_BAD_STATE;
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
 
     zx_status_t status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,

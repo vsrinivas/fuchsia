@@ -90,7 +90,7 @@ zx_status_t BuildEventMap(const EventDetails* events, size_t count,
 
 zx_status_t PerfmonDevice::GetHwProperties() {
     PmuHwProperties props;
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
         zx_mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_GET_PROPERTIES,
@@ -473,7 +473,7 @@ zx_status_t PerfmonDevice::PmuStart() {
     assert(per_trace->config.global_ctrl != 0);
 #endif
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
 
     zx_status_t status =
@@ -535,7 +535,7 @@ zx_status_t PerfmonDevice::PmuStop() {
         return ZX_ERR_BAD_STATE;
     }
 
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
         zx_mtrace_control(resource, MTRACE_KIND_PERFMON,

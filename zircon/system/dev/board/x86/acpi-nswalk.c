@@ -257,7 +257,7 @@ static zx_status_t acpi_op_get_mmio(void* ctx, uint32_t index, acpi_mmio_t* out_
 
     zx_handle_t vmo;
     size_t size = res->address_length;
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     st = zx_vmo_create_physical(get_root_resource(), res->base_address, size, &vmo);
     if (st != ZX_OK) {
         goto unlock;
@@ -327,7 +327,7 @@ static zx_status_t acpi_op_map_interrupt(void* ctx, int64_t which_irq, zx_handle
         goto unlock;
     }
     zx_handle_t handle;
-    // Please do not use get_root_resource() in new code. See ZX-1497.
+    // Please do not use get_root_resource() in new code. See ZX-1467.
     st = zx_interrupt_create(get_root_resource(), irq->pin, ZX_INTERRUPT_REMAP_IRQ | mode, &handle);
     if (st != ZX_OK) {
         goto unlock;
