@@ -160,8 +160,8 @@ TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsAfterOneMessage) {
 TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   // The logger will sleep after the first message and longer than the log
   // collection timeout, resulting in partial logs.
-  const zx::duration logger_sleep = zx::msec(200);
-  const zx::duration log_collection_timeout = zx::msec(100);
+  const zx::duration logger_sleep = zx::sec(1);
+  const zx::duration log_collection_timeout = zx::msec(500);
 
   std::unique_ptr<StubLogger> stub_logger =
       std::make_unique<StubLoggerSleepsAfterOneMessage>(logger_sleep);

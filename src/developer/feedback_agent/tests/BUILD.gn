@@ -115,6 +115,7 @@ source_set("stub_log_listener") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/zx",

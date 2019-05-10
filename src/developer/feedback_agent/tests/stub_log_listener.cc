@@ -5,6 +5,7 @@
 #include "src/developer/feedback_agent/tests/stub_log_listener.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
+#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 
@@ -78,6 +79,7 @@ void StubLoggerSleepsAfterOneMessage::DumpLogs(
   log_listener_ptr->LogMany(std::vector<fuchsia::logger::LogMessage>(
       messages_.begin(), messages_.begin() + 1));
 
+  FX_LOGS(INFO) << "Stub logger sleeping for " << sleep_.to_msecs() << "ms";
   zx::nanosleep(zx::deadline_after(sleep_));
 
   log_listener_ptr->LogMany(std::vector<fuchsia::logger::LogMessage>(
