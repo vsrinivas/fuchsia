@@ -91,7 +91,7 @@ zx_status_t VmoFile::WriteAt(std::vector<uint8_t> data, uint64_t offset,
 
 zx_status_t VmoFile::Truncate(uint64_t length) { return ZX_ERR_NOT_SUPPORTED; }
 
-size_t VmoFile::GetCapacity() { return length_; };
+size_t VmoFile::GetCapacity() { return length_; }
 
 size_t VmoFile::GetLength() { return length_; }
 

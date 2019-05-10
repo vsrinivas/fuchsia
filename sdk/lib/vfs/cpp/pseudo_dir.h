@@ -126,7 +126,7 @@ class PseudoDir : public vfs::internal::Directory {
 
   mutable std::mutex mutex_;
 
-  std::atomic_uint64_t next_node_id_ = kDotId + 1;
+  std::atomic_uint64_t next_node_id_ = 2; // which is kDotId +1
 
   // for enumeration
   std::map<uint64_t, std::unique_ptr<Entry>> entries_by_id_

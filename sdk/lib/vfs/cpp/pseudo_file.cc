@@ -83,7 +83,7 @@ PseudoFile::Content::Content(PseudoFile* file, uint32_t flags,
   SetInputLength(buffer_.size());
 }
 
-PseudoFile::Content::~Content() { TryFlushIfRequired(); };
+PseudoFile::Content::~Content() { TryFlushIfRequired(); }
 
 zx_status_t PseudoFile::Content::TryFlushIfRequired() {
   if (!dirty_) {
