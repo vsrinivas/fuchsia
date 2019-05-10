@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+
 source_set("cpp") {
   sources = [
     "math.cc",
@@ -28,5 +30,34 @@ source_set("formatting") {
   public_deps = [
     "//sdk/fidl/fuchsia.ui.gfx",
     "//src/lib/fxl",
+  ]
+}
+
+test_package("math_unittests") {
+  tests = [
+    {
+      name = "math_unittests"
+      environments = basic_envs
+    },
+  ]
+
+  deps = [
+    ":unittests",
+  ]
+}
+
+executable("unittests") {
+  output_name = "math_unittests"
+
+  testonly = true
+
+  sources = [
+    "math_unittests.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 }

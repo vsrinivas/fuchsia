@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_SCENIC_CPP_FIDL_MATH_H_
-#define LIB_UI_SCENIC_CPP_FIDL_MATH_H_
+#ifndef LIB_UI_GFX_CPP_MATH_H_
+#define LIB_UI_GFX_CPP_MATH_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+
+#include <cmath>
 
 // TODO(SCN-811): add tests.
 
@@ -66,11 +68,29 @@ inline fuchsia::ui::gfx::vec3 Min(const fuchsia::ui::gfx::vec3& v,
           .z = std::min(v.z, max_val)};
 }
 
+inline float Length(const fuchsia::ui::gfx::vec2& v) {
+  return sqrt(v.x * v.x + v.y * v.y);
+}
+
+inline float Distance2(const fuchsia::ui::gfx::vec2& a,
+                       const fuchsia::ui::gfx::vec2& b) {
+  const float dx = a.x - b.x, dy = a.y - b.y;
+  return dx * dx + dy * dy;
+}
+
 }  // namespace scenic
 
 namespace fuchsia {
 namespace ui {
 namespace gfx {
+
+inline vec2 operator-(const vec2& v) { return {.x = -v.x, .y = -v.y}; }
+
+inline vec2& operator+=(vec2& a, const vec2& b) {
+  a.x += b.x;
+  a.y += b.y;
+  return a;
+}
 
 // Return a vec2 consisting of the component-wise sum of the two arguments.
 inline vec2 operator+(const vec2& a, const vec2& b) {
@@ -80,6 +100,20 @@ inline vec2 operator+(const vec2& a, const vec2& b) {
 // Return a vec2 consisting of the component-wise difference of the two args.
 inline vec2 operator-(const vec2& a, const vec2& b) {
   return {.x = a.x - b.x, .y = a.y - b.y};
+}
+
+inline vec2 operator*(const vec2& v, float s) {
+  return {.x = v.x * s, .y = v.y * s};
+}
+
+inline vec2& operator/=(vec2& v, float s) {
+  v.x /= s;
+  v.y /= s;
+  return v;
+}
+
+inline vec2 operator/(const vec2& v, float s) {
+  return {.x = v.x / s, .y = v.y / s};
 }
 
 // Return a vec3 consisting of the component-wise sum of the two arguments.
@@ -106,4 +140,4 @@ inline vec4 operator-(const vec4& a, const vec4& b) {
 }  // namespace ui
 }  // namespace fuchsia
 
-#endif  // LIB_UI_SCENIC_CPP_FIDL_MATH_H_
+#endif  // LIB_UI_GFX_CPP_MATH_H_
