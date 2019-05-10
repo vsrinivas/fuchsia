@@ -164,14 +164,30 @@ template("environment_redirect") {
   if (!defined(variant) && (!defined(toolchain.environment_label) ||
                             toolchain.environment_label != environment_label ||
                             current_cpu != cpu || current_os != os)) {
-    # If the caller didn't request a specific variant, then use the default
-    # most likely to be selected for an arbitrary target in the selected
-    # environment.  Then redirect to this target in that toolchain, which
-    # will have enough information to use _variant_target() below to do
-    # the final redirect.
-    # **NOTE:** environment() has special-case code
-    # based on this logic; see the comments there that mention redirects.
-    foreach(default, variants + default_variants) {
+    # If the caller didn't request a specific variant, then use some variant
+    # known to exist.  Then redirect to this target in that toolchain, which
+    # will have enough information to use _variant_target() below to do the
+    # final redirect.  We could try here to find the default most likely to be
+    # selected for an arbitrary target in the selected environment in hopes of
+    # reducing the likelihood that a second redirect will actually be needed
+    # (and thus reducing the number of extra toolchains in which any targets
+    # might need to be instantiated that will never be built).  Most
+    # environments select from `variants + default_variants`, so we could
+    # guess based on that list.  However, we can't be sure that the target
+    # environment actually uses $variants at all, so we could select a variant
+    # from a catch-all selector in $variants that doesn't exist at all in the
+    # target environment (let alone it being the actual correct default for
+    # that environment, which we can't know).  But any such guessing would
+    # never be perfect--if we could determine that correctly with the
+    # information available to us, then we'd never need a second redirect in
+    # the first place.  So rather than using $variants, we just take the first
+    # plausible selector from $default_variants.  In the common environments
+    # and when $variants is not set, this will be the right default.  In case
+    # the target environment didn't even include $default_variants in its
+    # selector list at all, environment() has special-case code to add a dummy
+    # toolchain named for the "plausible" variant this logic will select.
+    # **NOTE:** See the comments there that mention redirects.
+    foreach(default, default_variants) {
       if (!defined(variant)) {
         if (default == "$default") {
           foreach(shorthand, variant_shorthands) {

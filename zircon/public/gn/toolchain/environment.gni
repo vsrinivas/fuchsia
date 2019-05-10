@@ -336,10 +336,9 @@ declare_args() {
 #     match anything.  Each `variant` scope can have its own $configs,
 #     $implicit_deps, $globals, $toolchain_args, and $toolchain_vars that
 #     are merged with the environment's (potentially overriding their
-#     individual elements).  Note: environment_redirect() with
-#     `environment_label` set to this environment may not work if this does
-#     not include $default_variants.  Default: $variants +
-#     $default_variants + $standard_variants
+#     individual elements).
+#     - Type: list(scope)
+#     - Default: $variants + $default_variants + $standard_variants
 #
 #   * exclude_variant_tags
 #     - Optional: A list of strings that might appear in the .tags list of a
@@ -620,87 +619,94 @@ template("environment") {
   } else {
     exclude_variant_tags += [ "kernel" ]
   }
-  if (exclude_variant_tags != []) {
-    # Weed out the variants that this environment silently excludes.
-    excluded_variants = []
-    foreach(variant, toolchain_variants) {
-      if (exclude_variant_tags + variant.tags - variant.tags !=
-          exclude_variant_tags) {
-        excluded_variants += [ variant.name ]
-        toolchain_variants -= [ variant ]
-      }
-    }
-    if (excluded_variants != []) {
-      # Weed out the selectors that would choose an excluded variant.
-      excluded_selectors = []
-      foreach(selector, variant_selectors) {
-        if (excluded_variants + [ selector.variant ] - [ selector.variant ] !=
-            excluded_variants) {
-          excluded_selectors += [ selector ]
-          excluded_selectors -= [ selector ]
-          excluded_selectors += [ selector ]
-        }
-      }
-      variant_selectors -= excluded_selectors
+
+  # Weed out the variants that this environment silently excludes.
+  excluded_variants = []
+  included_variants = []
+  foreach(variant, toolchain_variants) {
+    if (exclude_variant_tags + variant.tags - variant.tags !=
+        exclude_variant_tags) {
+      excluded_variants += [ variant.name ]
+      toolchain_variants -= [ variant ]
+    } else {
+      included_variants += [ variant.name ]
     }
   }
   if (excluded_variants != []) {
-    # Now excluded_variants lists toolchain names we know we never actually
-    # want to compile anything in.  However, environment_redirect() has to
-    # pick a default to redirect through even though it has no way to see
-    # exclude_variant_tags or the other factors that make this environment
-    # actually exclude a variant.  So, the first likely-looking one in
-    # variants + default_variants has to exist so it can redirect to the
-    # right one.  When the one it would choose is in excluded_variants, we
-    # need to make that toolchain exist as a dummy for those redirects.
-    redirect_default = ""
-
-    # This must be kept in synch with the loop in environment_redirect().
-    foreach(default, variants + default_variants) {
-      if (redirect_default == "") {
-        if (default == "$default") {
-          foreach(shorthand, variant_shorthands) {
-            if (default != "" &&
-                (default == shorthand.name ||
-                 get_path_info(default, "dir") == shorthand.name)) {
-              default = ""
-            }
-          }
-          if (default != "") {
-            default = {
-              variant = default
-            }
-          }
-        }
-        if (default != "" &&
-            (!defined(default.environment) || default.environment == [] ||
-             default.environment + [ environment ] - [ environment ] !=
-             default.environment ||
-             default.environment + [ base_environment ] -
-             [ base_environment ] != default.environment)) {
-          redirect_default = default.variant
-        }
+    # Weed out the selectors that would choose an excluded variant.
+    excluded_selectors = []
+    foreach(selector, variant_selectors) {
+      if (excluded_variants + [ selector.variant ] - [ selector.variant ] !=
+          excluded_variants) {
+        excluded_selectors += [ selector ]
+        excluded_selectors -= [ selector ]
+        excluded_selectors += [ selector ]
       }
     }
-    if (redirect_default != "" && excluded_variants + [ redirect_default ] -
-                                  [ redirect_default ] == excluded_variants) {
-      # It's not excluded, so we don't have to do anything.
-      redirect_default = ""
+    variant_selectors -= excluded_selectors
+  }
+
+  # Now excluded_variants lists toolchain names we know we never actually
+  # want to compile anything in.  However, environment_redirect() has to
+  # pick a default to redirect through even though it has no way to see
+  # exclude_variant_tags or the other factors that make this environment
+  # actually exclude a variant.  So, the first likely-looking one in
+  # $default_variants has to exist so it can redirect to the right one.
+  # When the one it would choose is in excluded_variants, we need to make
+  # that toolchain exist as a dummy for those redirects.
+  #
+  # Furthermore, in case $variant_selectors for this environment()
+  # doesn't include $default_variants, we need to treat that "first
+  # likely-looking one" the same way so environment_redirect() works.
+  redirect_default = ""
+
+  # **NOTE:** This code must be kept in synch with the corresponding loop
+  # in environment_redirect().
+  foreach(default, default_variants) {
+    if (redirect_default == "") {
+      if (default == "$default") {
+        foreach(shorthand, variant_shorthands) {
+          if (default != "" &&
+              (default == shorthand.name ||
+               get_path_info(default, "dir") == shorthand.name)) {
+            default = ""
+          }
+        }
+        if (default != "") {
+          default = {
+            variant = default
+          }
+        }
+      }
+      if (default != "" &&
+          (!defined(default.environment) || default.environment == [] ||
+           default.environment + [ environment ] - [ environment ] !=
+           default.environment ||
+           default.environment + [ base_environment ] - [ base_environment ] !=
+           default.environment)) {
+        redirect_default = default.variant
+      }
     }
-    if (redirect_default != "") {
-      # Define an additional toolchain under the expected name.  It may wind
-      # up instantiating a lot of targets, which is unfortunate since its
-      # only purpose is to resolve redirect group() targets.  But to make
-      # sure nothing goes awry because the code evaluated is confused by
-      # wrong toolchain definitions, make it a copy in all by name of a
-      # variant where we actually do expect to instantiate and build targets.
-      toolchain_variants += [
-        {
-          forward_variables_from(toolchain_variants[0], "*", [ "name" ])
-          name = redirect_default
-        },
-      ]
-    }
+  }
+  assert(redirect_default != "",
+         "BUG: failed to deduce a default variant!" +
+             " check this code against environment_redirect() ???")
+
+  # If it's included we don't have to do anything.
+  if (included_variants + [ redirect_default ] - [ redirect_default ] ==
+      included_variants) {
+    # Define an additional toolchain under the expected name.  It may wind
+    # up instantiating a lot of targets, which is unfortunate since its
+    # only purpose is to resolve redirect group() targets.  But to make
+    # sure nothing goes awry because the code evaluated is confused by
+    # wrong toolchain definitions, make it a copy in all but name of a
+    # variant where we actually do expect to instantiate and build targets.
+    toolchain_variants += [
+      {
+        forward_variables_from(toolchain_variants[0], "*", [ "name" ])
+        name = redirect_default
+      },
+    ]
   }
 
   # Reuse the selectors local so we can shadow variant_selectors below.
@@ -711,11 +717,15 @@ template("environment") {
     selectors += [
       {
         forward_variables_from(selector, "*")
+        assert(!defined(tags))
         foreach(variant, toolchain_variants) {
           if (variant.name == selector.variant) {
             tags = env_tags + variant.tags
           }
         }
+        assert(defined(tags),
+               "environment(\"$target_name\") variant_selectors element" +
+                   " references undefined variant \"${selector.variant}\"")
       },
     ]
   }
