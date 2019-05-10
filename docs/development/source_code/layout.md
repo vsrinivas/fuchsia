@@ -68,6 +68,11 @@ pattern:
     * In some cases, an area might have internal FIDL interfaces that are not
       exposed to other areas or to end-developers. Rather than put those
       interfaces in the SDK, an area can put those interfaces in this directory.
+ * `tests/` (optional)
+    * This directory contains integration tests that span multiple source code
+      directories within the area
+    * Unit tests that cover a single binary or library are better placed
+      alongside the code they test
  * `third_party/` (optional)
     * Most third_party dependencies should be in separate repositories
     * Include third_party dependencies in an area only if all of the following:
