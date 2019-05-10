@@ -105,6 +105,15 @@ void do_one_test(const IsolatedDevmgr& devmgr, const zx::channel& test_root,
         return;
     }
 
+    // Check that Bind was synchronous by looking for the child device.
+    char child_devpath[fuchsia_device_test_MAX_DEVICE_PATH_LEN+1];
+    snprintf(child_devpath, sizeof(child_devpath), "%s/child", relative_devpath);
+    fd.reset(openat(devmgr.devfs_root().get(), child_devpath, O_RDWR));
+    if (!fd.is_valid()) {
+        printf("driver-tests: error binding device %s %s\n", devpath, relative_devpath);
+        return;
+    }
+
     zx::socket output_copy;
     status = output.duplicate(ZX_RIGHT_SAME_RIGHTS, &output_copy);
     if (status != ZX_OK) {

@@ -42,6 +42,7 @@ library("driver") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/fs:fs-for-driver",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace:trace-driver",
