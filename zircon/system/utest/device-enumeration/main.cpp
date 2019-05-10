@@ -104,34 +104,27 @@ bool qemu_enumeration_test() {
 bool vim2_enumeration_test() {
     BEGIN_TEST;
     static const char* kDevicePaths[] = {
-        "sys/platform/vim-bus",
-        "sys/platform/05:03:1/aml-gxl-gpio",
+        "sys/platform/vim",
+        "sys/platform/00:00:1b/sysmem",
+        "sys/platform/05:02:1/aml-gxl-gpio",
+#if USE_GPIO_TEST
         "sys/platform/00:00:8/gpio-test",
+#endif
         "sys/platform/05:00:2/aml-i2c",
-        "sys/platform/05:03:4/clocks",
-        "sys/platform/05:00:e/aml-canvas",
-        //"sys/platform/05:00:3/aml-uart/serial/bt-transport-uart/bcm-hci",
-        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-000/block",
-        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-001/block",
-        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-002/block",
-        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-003/block",
-        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-004/block",
-        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-005/block",
-        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-006/block/fvm/blobfs-p-1/block",
-        "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-006/block/fvm/minfs-p-2/block/zxcrypt/unsealed/block",
-        //"sys/platform/05:00:6/aml-sd-emmc/sdio",
-        "sys/platform/04:02:7/aml-ethernet/eth_phy/phy_null_device",
-        "sys/platform/04:02:7/aml-ethernet/Designware MAC/ethernet",
-        "sys/platform/00:00:2/xhci/usb",
-        "sys/platform/05:03:d/aml-gpu",
-        "sys/platform/04:02:9/aml-mailbox/aml-scpi/vim-thermal",
-        "sys/platform/04:02:1/ProxyClient[7043414e]/aml-canvas-proxy",
-        "sys/platform/04:02:1/display/vim2-display/display-controller",
-        "sys/platform/05:03:c/ProxyClient[7043414e]/aml-canvas-proxy",
-        "sys/platform/05:03:c/video",
-        "sys/platform/00:00:b/led2472g",
-        "sys/platform/00:00:e",
-        "sys/platform/09:00:5/rtc",
+        "sys/platform/05:02:4/clocks",
+        "sys/platform/05:00:10/aml-canvas",
+        // TODO(ZX-4069): Test SDMMC binding.
+        // "sys/platform/05:00:3/aml-uart/serial/bt-transport-uart/bcm-hci",
+        // "sys/platform/05:00:6/aml-sd-emmc/sdio",
+        "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-81/rtc",
+        "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-70/led2472g",
+        "sys/platform/00:00:2/xhci/usb-bus",
+        "sys/platform/05:02:17/aml-gpu",
+        "dwmac/eth_phy/phy_null_device",
+        "dwmac/Designware MAC/ethernet",
+        "display/vim2-display/display-controller",
+        "vim-thermal/vim-thermal",
+        "wifi",
     };
 
     ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
