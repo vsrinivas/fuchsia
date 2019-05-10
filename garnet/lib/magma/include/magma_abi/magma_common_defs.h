@@ -156,6 +156,7 @@ typedef struct {
     magma_bool_t secure_required;
     magma_bool_t ram_domain_supported;
     magma_bool_t cpu_domain_supported;
+    uint32_t min_size_bytes;
 } magma_buffer_format_constraints_t;
 
 #if defined(__cplusplus)
