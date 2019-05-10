@@ -123,7 +123,7 @@ config("vulkan_config") {
   # Specify the include/lib dirs and linked libraries for use with the
   # downloaded LunarG Vulkan SDK.
   if (is_linux) {
-    vulkan_sdk = "//src/ui/lib/escher/third_party/vulkansdk/x86_64"
+    vulkan_sdk = "//prebuilt/third_party/vulkansdk/linux/x86_64"
     include_dirs = [ "$vulkan_sdk/include" ]
     lib_dirs = [ "$vulkan_sdk/lib" ]
     libs = [ "vulkan" ]
