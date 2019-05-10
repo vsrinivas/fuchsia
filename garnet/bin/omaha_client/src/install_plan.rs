@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use failure::Fail;
 use fuchsia_uri::pkg_uri::PkgUri;
-use log::{error, info, warn};
-use omaha_client::install_plan::InstallPlan;
+use log::{error, warn};
+use omaha_client::installer::Plan;
 use omaha_client::protocol::response::{OmahaStatus, Response};
 
 #[derive(Debug, PartialEq)]
@@ -13,13 +14,21 @@ pub struct FuchsiaInstallPlan {
     pub uri: PkgUri,
 }
 
-impl InstallPlan for FuchsiaInstallPlan {
-    fn from_response(resp: &Response) -> Option<Self> {
+#[derive(Debug, Fail, PartialEq)]
+pub enum InstallPlanErrors {
+    #[fail(display = "Fuchsia Install Plan could not be created from response")]
+    Failed,
+}
+
+impl Plan for FuchsiaInstallPlan {
+    type Error = InstallPlanErrors;
+
+    fn try_create_from(resp: &Response) -> Result<Self, Self::Error> {
         let (app, rest) = if let Some((app, rest)) = resp.apps.split_first() {
             (app, rest)
         } else {
             error!("No app in Omaha response.");
-            return None;
+            return Err(InstallPlanErrors::Failed);
         };
 
         if !rest.is_empty() {
@@ -28,14 +37,14 @@ impl InstallPlan for FuchsiaInstallPlan {
 
         if app.status != OmahaStatus::Ok {
             error!("Found non-ok app status: {:?}", app.status);
-            return None;
+            return Err(InstallPlanErrors::Failed);
         }
 
         let update_check = if let Some(update_check) = &app.update_check {
             update_check
         } else {
             error!("No update_check in Omaha response.");
-            return None;
+            return Err(InstallPlanErrors::Failed);
         };
 
         let urls = match update_check.status {
@@ -44,26 +53,26 @@ impl InstallPlan for FuchsiaInstallPlan {
                     &urls.url
                 } else {
                     error!("No urls in Omaha response.");
-                    return None;
+                    return Err(InstallPlanErrors::Failed);
                 }
             }
             OmahaStatus::NoUpdate => {
-                info!("Omaha returned that there is no update available at this time.");
-                return None;
+                error!("Was asked to create an install plan for a NoUpdate Omaha response");
+                return Err(InstallPlanErrors::Failed);
             }
             _ => {
                 warn!("Unexpected update check status: {:?}", update_check.status);
                 if let Some(info) = &update_check.info {
                     warn!("update check status info: {}", info);
                 }
-                return None;
+                return Err(InstallPlanErrors::Failed);
             }
         };
         let (url, rest) = if let Some((url, rest)) = urls.split_first() {
             (url, rest)
         } else {
             error!("No url in Omaha response.");
-            return None;
+            return Err(InstallPlanErrors::Failed);
         };
 
         if !rest.is_empty() {
@@ -71,10 +80,10 @@ impl InstallPlan for FuchsiaInstallPlan {
         }
 
         match PkgUri::parse(&url.codebase) {
-            Ok(uri) => Some(FuchsiaInstallPlan { uri: uri }),
+            Ok(uri) => Ok(FuchsiaInstallPlan { uri: uri }),
             Err(err) => {
                 error!("Failed to parse {} to PkgUri: {}", url.codebase, err);
-                None
+                Err(InstallPlanErrors::Failed)
             }
         }
     }
@@ -97,7 +106,7 @@ mod tests {
             ..Response::default()
         };
 
-        let install_plan = FuchsiaInstallPlan::from_response(&response).unwrap();
+        let install_plan = FuchsiaInstallPlan::try_create_from(&response).unwrap();
         assert_eq!(install_plan.uri.to_string(), TEST_URI);
     }
 
@@ -105,7 +114,7 @@ mod tests {
     fn test_no_app() {
         let response = Response::default();
 
-        assert_eq!(FuchsiaInstallPlan::from_response(&response), None);
+        assert_eq!(FuchsiaInstallPlan::try_create_from(&response), Err(InstallPlanErrors::Failed));
     }
 
     #[test]
@@ -121,7 +130,7 @@ mod tests {
             ..Response::default()
         };
 
-        let install_plan = FuchsiaInstallPlan::from_response(&response).unwrap();
+        let install_plan = FuchsiaInstallPlan::try_create_from(&response).unwrap();
         assert_eq!(install_plan.uri.to_string(), TEST_URI);
     }
 
@@ -129,7 +138,7 @@ mod tests {
     fn test_no_update_check() {
         let response = Response { apps: vec![App::default()], ..Response::default() };
 
-        assert_eq!(FuchsiaInstallPlan::from_response(&response), None);
+        assert_eq!(FuchsiaInstallPlan::try_create_from(&response), Err(InstallPlanErrors::Failed));
     }
 
     #[test]
@@ -139,7 +148,7 @@ mod tests {
             ..Response::default()
         };
 
-        assert_eq!(FuchsiaInstallPlan::from_response(&response), None);
+        assert_eq!(FuchsiaInstallPlan::try_create_from(&response), Err(InstallPlanErrors::Failed));
     }
 
     #[test]
@@ -152,7 +161,7 @@ mod tests {
             ..Response::default()
         };
 
-        assert_eq!(FuchsiaInstallPlan::from_response(&response), None);
+        assert_eq!(FuchsiaInstallPlan::try_create_from(&response), Err(InstallPlanErrors::Failed));
     }
 
     #[test]
@@ -162,7 +171,7 @@ mod tests {
             ..Response::default()
         };
 
-        assert_eq!(FuchsiaInstallPlan::from_response(&response), None);
+        assert_eq!(FuchsiaInstallPlan::try_create_from(&response), Err(InstallPlanErrors::Failed));
     }
 
     #[test]
@@ -174,7 +183,7 @@ mod tests {
             }],
             ..Response::default()
         };
-        assert_eq!(FuchsiaInstallPlan::from_response(&response), None);
+        assert_eq!(FuchsiaInstallPlan::try_create_from(&response), Err(InstallPlanErrors::Failed));
     }
 
 }

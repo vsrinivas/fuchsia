@@ -4,7 +4,7 @@
 
 use crate::{
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
-    install_plan::InstallPlan,
+    installer::Plan,
     request_builder::RequestParams,
 };
 use std::time::SystemTime;
@@ -70,6 +70,6 @@ trait Policy {
     /// be executed at this time.
     fn update_can_start(
         policy_data: &PolicyData,
-        proposed_install_plan: &impl InstallPlan,
+        proposed_install_plan: &impl Plan,
     ) -> UpdateDecision;
 }

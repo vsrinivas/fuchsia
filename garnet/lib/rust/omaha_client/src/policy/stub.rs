@@ -4,7 +4,7 @@
 
 use crate::{
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
-    install_plan::InstallPlan,
+    installer::Plan,
     policy::{CheckDecision, Policy, PolicyData, UpdateDecision},
     request_builder::RequestParams,
 };
@@ -41,7 +41,7 @@ impl Policy for StubPolicy {
 
     fn update_can_start(
         _policy_data: &PolicyData,
-        _proposed_install_plan: &impl InstallPlan,
+        _proposed_install_plan: &impl Plan,
     ) -> UpdateDecision {
         UpdateDecision::Ok
     }
@@ -50,7 +50,7 @@ impl Policy for StubPolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{install_plan::StubInstallPlan, protocol::request::InstallSource};
+    use crate::{installer::stub::StubPlan, protocol::request::InstallSource};
     use std::time::SystemTime;
 
     const SCHEDULING: UpdateCheckSchedule = UpdateCheckSchedule {
@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn test_update_can_start() {
         let policy_data = PolicyData { current_time: SystemTime::now() };
-        let result = StubPolicy::update_can_start(&policy_data, &StubInstallPlan);
+        let result = StubPolicy::update_can_start(&policy_data, &StubPlan);
         assert_eq!(result, UpdateDecision::Ok);
     }
 }
