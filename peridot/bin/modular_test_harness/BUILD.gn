@@ -74,7 +74,7 @@ executable("test_story_shell_bin") {
     "//peridot/lib/fidl:view_host",
     "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.views",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

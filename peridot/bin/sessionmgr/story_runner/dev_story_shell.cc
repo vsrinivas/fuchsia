@@ -6,8 +6,6 @@
 // Implementation of the fuchsia::modular::StoryShell service that just lays out
 // the views of all modules side by side.
 
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -20,10 +18,14 @@
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 
+#include <memory>
+
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
 
 namespace {
+
+// STOP SUBMISSION DO NOT SUBMIT
 
 class DevStoryShellApp
     : public modular::SingleServiceApp<fuchsia::modular::StoryShell> {
@@ -41,6 +43,7 @@ class DevStoryShellApp
       fidl::InterfaceHandle<
           fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
     view_token_.value = std::move(view_token);
+
     Connect();
   }
 
@@ -48,19 +51,30 @@ class DevStoryShellApp
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryShellContext>
                       story_shell_context) override {
     story_shell_context_.Bind(std::move(story_shell_context));
+
     Connect();
   }
 
   // |fuchsia::modular::StoryShell|
   void AddSurface(fuchsia::modular::ViewConnection view_connection,
-                  fuchsia::modular::SurfaceInfo /*surface_info*/) override {
-    auto view_holder_token = scenic::ToViewHolderToken(
-        zx::eventpair(view_connection.owner.TakeChannel().release()));
+                  fuchsia::modular::SurfaceInfo surface_info) override {
+    AddSurface2(
+        fuchsia::modular::ViewConnection2{
+            .surface_id = view_connection.surface_id,
+            .view_holder_token = scenic::ToViewHolderToken(
+                zx::eventpair(view_connection.owner.TakeChannel().release())),
+        },
+        std::move(surface_info));
+  }
 
+  // |fuchsia::modular::StoryShell|
+  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
+                   fuchsia::modular::SurfaceInfo /*surface_info*/) override {
     if (view_) {
-      view_->ConnectView(std::move(view_holder_token));
+      view_->ConnectView(std::move(view_connection.view_holder_token));
     } else {
-      child_view_holder_tokens_.push_back(std::move(view_holder_token));
+      child_view_holder_tokens_.push_back(
+          std::move(view_connection.view_holder_token));
     }
   }
 
