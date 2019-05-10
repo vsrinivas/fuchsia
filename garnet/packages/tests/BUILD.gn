@@ -168,6 +168,13 @@ group("netcfg_tests") {
   ]
 }
 
+group("odu_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/odu:odu_tests",
+  ]
+}
+
 group("fostr") {
   testonly = true
   public_deps = [
@@ -382,6 +389,7 @@ group("all") {
     "//garnet/packages/tests:netstack3",
     "//garnet/packages/tests:network",
     "//garnet/packages/tests:network_time",
+    "//garnet/packages/tests:odu_tests",
     "//garnet/packages/tests:omaha_client",
     "//garnet/packages/tests:overnet",
     "//garnet/packages/tests:pkg_cache",

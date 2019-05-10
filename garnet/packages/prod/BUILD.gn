@@ -249,6 +249,7 @@ group("all") {
     "//garnet/packages/prod:network",
     "//garnet/packages/prod:network-speed-test",
     "//garnet/packages/prod:network_time",
+    "//garnet/packages/prod:odu",
     "//garnet/packages/prod:omaha_client",
     "//garnet/packages/prod:openssh",
     "//garnet/packages/prod:overnetstack",
@@ -534,6 +535,13 @@ group("net_ctl") {
   testonly = true
   public_deps = [
     "//garnet/bin/net_ctl",
+  ]
+}
+
+group("odu") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/odu",
   ]
 }
 

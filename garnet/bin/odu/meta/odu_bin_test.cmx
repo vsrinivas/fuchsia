@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/odu_bin_test"
+    },
+    "sandbox": {
+        "features": [ "system-temp" ]
+    }
+}
