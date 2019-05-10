@@ -75,6 +75,7 @@ impl BlockType {
         }
     }
 
+    #[cfg(test)]
     pub fn all() -> [BlockType; 11] {
         [
             BlockType::Free,

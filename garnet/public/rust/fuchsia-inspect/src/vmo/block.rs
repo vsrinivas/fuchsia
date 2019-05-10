@@ -86,12 +86,14 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Returns the magic number in a HEADER block.
+    #[cfg(test)]
     pub fn header_magic(&self) -> Result<u32, Error> {
         self.check_type(BlockType::Header)?;
         Ok(self.read_header().header_magic())
     }
 
     /// Returns the version of a HEADER block.
+    #[cfg(test)]
     pub fn header_version(&self) -> Result<u32, Error> {
         self.check_type(BlockType::Header)?;
         Ok(self.read_header().header_version())
@@ -122,6 +124,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Get the total length of the PROPERTY block.
+    #[cfg(test)]
     pub fn property_total_length(&self) -> Result<u32, Error> {
         self.check_type(BlockType::PropertyValue)?;
         Ok(self.read_payload().property_total_length())
@@ -140,6 +143,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Returns the payload bytes value of an EXTENT block.
+    #[cfg(test)]
     pub fn extent_contents(&self) -> Result<Vec<u8>, Error> {
         self.check_type(BlockType::Extent)?;
         let length = utils::payload_size_for_order(self.order());
@@ -173,12 +177,14 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Get the length of the name of a NAME block
+    #[cfg(test)]
     pub fn name_length(&self) -> Result<usize, Error> {
         self.check_type(BlockType::Name)?;
         Ok(self.read_header().name_length().to_usize().unwrap())
     }
 
     /// Returns the contents of a NAME block.
+    #[cfg(test)]
     pub fn name_contents(&self) -> Result<String, Error> {
         self.check_type(BlockType::Name)?;
         let length = self.name_length()?;

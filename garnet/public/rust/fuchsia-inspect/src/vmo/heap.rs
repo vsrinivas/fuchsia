@@ -93,7 +93,7 @@ impl Heap {
     }
 
     /// The bytes in this heap.
-    #[allow(dead_code)] // Used in testing.
+    #[cfg(test)]
     pub(in crate::vmo) fn bytes(&self) -> Vec<u8> {
         let mut result = vec![0u8; self.current_size_bytes];
         self.mapping.read(&mut result[..]);

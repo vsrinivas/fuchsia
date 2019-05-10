@@ -12,63 +12,12 @@ use crate::vmo::block_type::BlockType;
 use crate::vmo::constants;
 use crate::vmo::heap::Heap;
 use crate::vmo::utils;
+use crate::vmo::PropertyFormat;
 
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
 pub struct State {
     pub(in crate::vmo) heap: Heap,
     header: Block<Rc<Mapping>>,
-}
-
-/// Provides functions required to implement formats for a property.
-pub trait PropertyFormat {
-    fn bytes(&self) -> &[u8];
-    fn flag(&self) -> u8;
-    fn length_in_bytes(&self) -> u32;
-}
-
-/// Implementation of property for a byte vector.
-impl PropertyFormat for &[u8] {
-    fn bytes(&self) -> &[u8] {
-        &self
-    }
-
-    fn flag(&self) -> u8 {
-        constants::PROPERTY_FLAG_BYTE_VECTOR
-    }
-
-    fn length_in_bytes(&self) -> u32 {
-        self.len().to_u32().unwrap()
-    }
-}
-
-/// Implementation of property for a string.
-impl PropertyFormat for &str {
-    fn bytes(&self) -> &[u8] {
-        self.as_bytes()
-    }
-
-    fn flag(&self) -> u8 {
-        constants::PROPERTY_FLAG_STRING
-    }
-
-    fn length_in_bytes(&self) -> u32 {
-        self.bytes().len().to_u32().unwrap()
-    }
-}
-
-/// Implementation of property for a string.
-impl PropertyFormat for String {
-    fn bytes(&self) -> &[u8] {
-        self.as_bytes()
-    }
-
-    fn flag(&self) -> u8 {
-        constants::PROPERTY_FLAG_STRING
-    }
-
-    fn length_in_bytes(&self) -> u32 {
-        self.bytes().len().to_u32().unwrap()
-    }
 }
 
 /// Locks the VMO Header blcok, executes the given codeblock and unblocks it.
