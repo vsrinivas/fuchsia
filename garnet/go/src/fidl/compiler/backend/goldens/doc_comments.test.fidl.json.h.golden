@@ -126,13 +126,14 @@ class Table  {
     }
     return &Field_value_.value;
   }
-  void set_Field(int32_t _value) {
+  Table& set_Field(int32_t _value) {
     if (!has_Field_) {
       has_Field_ = true;
       Construct(&Field_value_.value, std::move(_value));
     } else {
       Field_value_.value = std::move(_value);
     }
+    return *this;
   }
   void clear_Field() {
     if (!has_Field_) {

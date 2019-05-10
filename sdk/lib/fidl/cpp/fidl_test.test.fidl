@@ -72,6 +72,12 @@ table NewerSimpleTable {
     7: reserved;
 };
 
+table ComplexTable {
+    1: SimpleTable simple;
+    2: SampleXUnion u;
+    3: vector<string> strings;
+};
+
 xunion SampleXUnion {
     int32 i;
     SimpleUnion su;

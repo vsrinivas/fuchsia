@@ -34,13 +34,14 @@ class SimpleTable  {
     }
     return &x_value_.value;
   }
-  void set_x(int64_t _value) {
+  SimpleTable& set_x(int64_t _value) {
     if (!has_x_) {
       has_x_ = true;
       Construct(&x_value_.value, std::move(_value));
     } else {
       x_value_.value = std::move(_value);
     }
+    return *this;
   }
   void clear_x() {
     if (!has_x_) {
@@ -65,13 +66,14 @@ class SimpleTable  {
     }
     return &y_value_.value;
   }
-  void set_y(int64_t _value) {
+  SimpleTable& set_y(int64_t _value) {
     if (!has_y_) {
       has_y_ = true;
       Construct(&y_value_.value, std::move(_value));
     } else {
       y_value_.value = std::move(_value);
     }
+    return *this;
   }
   void clear_y() {
     if (!has_y_) {
@@ -150,13 +152,14 @@ class OlderSimpleTable  {
     }
     return &x_value_.value;
   }
-  void set_x(int64_t _value) {
+  OlderSimpleTable& set_x(int64_t _value) {
     if (!has_x_) {
       has_x_ = true;
       Construct(&x_value_.value, std::move(_value));
     } else {
       x_value_.value = std::move(_value);
     }
+    return *this;
   }
   void clear_x() {
     if (!has_x_) {
@@ -227,13 +230,14 @@ class NewerSimpleTable  {
     }
     return &x_value_.value;
   }
-  void set_x(int64_t _value) {
+  NewerSimpleTable& set_x(int64_t _value) {
     if (!has_x_) {
       has_x_ = true;
       Construct(&x_value_.value, std::move(_value));
     } else {
       x_value_.value = std::move(_value);
     }
+    return *this;
   }
   void clear_x() {
     if (!has_x_) {
@@ -258,13 +262,14 @@ class NewerSimpleTable  {
     }
     return &y_value_.value;
   }
-  void set_y(int64_t _value) {
+  NewerSimpleTable& set_y(int64_t _value) {
     if (!has_y_) {
       has_y_ = true;
       Construct(&y_value_.value, std::move(_value));
     } else {
       y_value_.value = std::move(_value);
     }
+    return *this;
   }
   void clear_y() {
     if (!has_y_) {
@@ -289,13 +294,14 @@ class NewerSimpleTable  {
     }
     return &z_value_.value;
   }
-  void set_z(int64_t _value) {
+  NewerSimpleTable& set_z(int64_t _value) {
     if (!has_z_) {
       has_z_ = true;
       Construct(&z_value_.value, std::move(_value));
     } else {
       z_value_.value = std::move(_value);
     }
+    return *this;
   }
   void clear_z() {
     if (!has_z_) {

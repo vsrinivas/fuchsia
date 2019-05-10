@@ -39,13 +39,14 @@ class {{ .Name }}  {
     }
     return &{{ .FieldDataName }}.value;
   }
-  void set_{{ .Name }}({{ .Type.Decl }} _value) {
+  {{$.Name}}& set_{{ .Name }}({{ .Type.Decl }} _value) {
     if (!{{ .FieldPresenceName }}) {
       {{ .FieldPresenceName }} = true;
       Construct(&{{ .FieldDataName }}.value, std::move(_value));
     } else {
       {{ .FieldDataName }}.value = std::move(_value);
     }
+    return *this;
   }
   void {{ .MethodClearName }}() {
     if (!{{ .FieldPresenceName }}) {
