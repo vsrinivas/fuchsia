@@ -5,9 +5,7 @@
 //! The `Service` trait and its trait-object wrappers.
 
 use {
-    fidl::endpoints::RequestStream,
-    fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fidl::endpoints::RequestStream, fuchsia_async as fasync, fuchsia_zircon as zx,
     std::marker::PhantomData,
 };
 

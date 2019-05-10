@@ -8,8 +8,7 @@ use {
     failure::{Error, ResultExt},
     fidl::endpoints::{Proxy, ServiceMarker},
     fidl_fuchsia_sys::{
-        ComponentControllerEvent, ComponentControllerProxy,
-        FileDescriptor, FlatNamespace,
+        ComponentControllerEvent, ComponentControllerProxy, FileDescriptor, FlatNamespace,
         LaunchInfo, LauncherMarker, LauncherProxy, TerminationReason,
     },
     fuchsia_async as fasync,
@@ -20,10 +19,7 @@ use {
         stream::{StreamExt, TryStreamExt},
         Future,
     },
-    std::{
-        fs::File,
-        sync::Arc,
-    },
+    std::{fs::File, sync::Arc},
 };
 
 /// Connect to a FIDL service using the provided channel and namespace prefix.
@@ -38,16 +34,12 @@ pub fn connect_channel_to_service_at<S: ServiceMarker>(
 }
 
 /// Connect to a FIDL service using the provided channel.
-pub fn connect_channel_to_service<S: ServiceMarker>(
-    server_end: zx::Channel,
-) -> Result<(), Error> {
+pub fn connect_channel_to_service<S: ServiceMarker>(server_end: zx::Channel) -> Result<(), Error> {
     connect_channel_to_service_at::<S>(server_end, "/svc")
 }
 
 /// Connect to a FIDL service using the provided namespace prefix.
-pub fn connect_to_service_at<S: ServiceMarker>(
-    service_prefix: &str,
-) -> Result<S::Proxy, Error> {
+pub fn connect_to_service_at<S: ServiceMarker>(service_prefix: &str) -> Result<S::Proxy, Error> {
     let (proxy, server) = zx::Channel::create()?;
     connect_channel_to_service_at::<S>(server, service_prefix)?;
     let proxy = fasync::Channel::from_channel(proxy)?;
@@ -99,15 +91,11 @@ impl LaunchOptions {
     }
 
     /// Adds a new directory to the namespace for the new process.
-    pub fn add_dir_to_namespace(
-        &mut self,
-        path: String,
-        dir: File,
-    ) -> Result<&mut Self, Error> {
+    pub fn add_dir_to_namespace(&mut self, path: String, dir: File) -> Result<&mut Self, Error> {
         let handle = fdio::transfer_fd(dir)?;
-        let namespace = self.namespace.get_or_insert_with(|| {
-            Box::new(FlatNamespace { paths: vec![], directories: vec![] })
-        });
+        let namespace = self
+            .namespace
+            .get_or_insert_with(|| Box::new(FlatNamespace { paths: vec![], directories: vec![] }));
         namespace.paths.push(path);
         namespace.directories.push(zx::Channel::from(handle));
 
@@ -213,10 +201,9 @@ impl App {
             .take_event_stream()
             .try_filter_map(|event| {
                 future::ready(match event {
-                    ComponentControllerEvent::OnTerminated {
-                        return_code,
-                        termination_reason,
-                    } => Ok(Some(ExitStatus { return_code, termination_reason })),
+                    ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
+                        Ok(Some(ExitStatus { return_code, termination_reason }))
+                    }
                     _ => Ok(None),
                 })
             })
@@ -322,9 +309,10 @@ impl AppBuilder {
     /// Mounts an opened directory in the namespace of the component.
     pub fn add_dir_to_namespace(mut self, path: String, dir: File) -> Result<Self, Error> {
         let handle = fdio::transfer_fd(dir)?;
-        let namespace = self.launch_info.flat_namespace.get_or_insert_with(|| {
-            Box::new(FlatNamespace { paths: vec![], directories: vec![] })
-        });
+        let namespace = self
+            .launch_info
+            .flat_namespace
+            .get_or_insert_with(|| Box::new(FlatNamespace { paths: vec![], directories: vec![] }));
         namespace.paths.push(path);
         namespace.directories.push(zx::Channel::from(handle));
 

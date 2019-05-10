@@ -17,9 +17,8 @@ use {
         OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys::{
-        EnvironmentControllerProxy,
-        EnvironmentMarker, EnvironmentOptions,
-        LauncherProxy, LoaderMarker, ServiceList,
+        EnvironmentControllerProxy, EnvironmentMarker, EnvironmentOptions, LauncherProxy,
+        LoaderMarker, ServiceList,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Peered, Signals},
@@ -39,13 +38,7 @@ use {
 };
 
 mod service;
-pub use service::{
-    FidlService,
-    Service,
-    ServiceObj,
-    ServiceObjLocal,
-    ServiceObjTrait,
-};
+pub use service::{FidlService, Service, ServiceObj, ServiceObjLocal, ServiceObjTrait};
 
 enum ServiceFsNode<ServiceObjTy: ServiceObjTrait> {
     Directory {
@@ -476,9 +469,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         )
         .context("creating isolated environment")?;
 
-        new_env
-            .get_launcher(launcher_server_end)
-            .context("getting nested environment launcher")?;
+        new_env.get_launcher(launcher_server_end).context("getting nested environment launcher")?;
         self.serve_connection(directory_server_end)?;
 
         Ok(NestedEnvironment { controller, launcher, directory_request })
@@ -654,14 +645,13 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             })
             .context("ServiceFs signal_peer failed")?;
 
-        let chan = fasync::Channel::from_channel(chan)
-            .context("failure to convert to async channel")?;
+        let chan =
+            fasync::Channel::from_channel(chan).context("failure to convert to async channel")?;
 
         let stream = DirectoryRequestStream::from_channel(chan);
         if (flags & OPEN_FLAG_DESCRIBE) != 0 {
-            let mut info = self
-                .describe_node(position)
-                .expect("error serving connection for missing node");
+            let mut info =
+                self.describe_node(position).expect("error serving connection for missing node");
             stream
                 .control_handle()
                 .send_on_open_(zx::sys::ZX_OK, Some(OutOfLine(&mut info)))
@@ -724,11 +714,9 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 handle_potentially_unsupported_flags!(object, flags, OPEN_REQ_SUPPORTED_FLAGS);
 
                 if path == "." {
-                    if let Err(e) = self.serve_connection_at(
-                        object.into_channel(),
-                        connection.position,
-                        flags,
-                    ) {
+                    if let Err(e) =
+                        self.serve_connection_at(object.into_channel(), connection.position, flags)
+                    {
                         eprintln!("ServiceFS failed to open '.': {:?}", e);
                     }
                     return Ok((None, ConnectionState::Open));
@@ -793,9 +781,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 }
             }
             DirectoryRequest::Describe { responder } => {
-                let mut info = self
-                    .describe_node(connection.position)
-                    .expect("node missing for Describe req");
+                let mut info =
+                    self.describe_node(connection.position).expect("node missing for Describe req");
                 responder.send(&mut info)?;
             }
             DirectoryRequest::GetAttr { responder } => {
@@ -833,8 +820,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 if *offset >= dirents_buf.len() {
                     responder.send(zx::sys::ZX_OK, &mut std::iter::empty())?;
                 } else {
-                    let new_offset =
-                        std::cmp::min(dirents_buf.len(), *offset + max_bytes as usize);
+                    let new_offset = std::cmp::min(dirents_buf.len(), *offset + max_bytes as usize);
                     responder.send(
                         zx::sys::ZX_OK,
                         &mut dirents_buf[*offset..new_offset].iter().cloned(),
