@@ -364,8 +364,9 @@ HubInfo Realm::HubInfo() {
 
 zx::job Realm::DuplicateJobForHub() const {
   zx::job duplicate_job;
-  // As htis only goes inside /hub, it is fine to give destoy rights
-  auto flags = ZX_RIGHTS_BASIC | ZX_RIGHT_DESTROY;
+  // As this only goes inside /hub, it is fine to give destoy rights
+  auto flags = ZX_RIGHTS_BASIC | ZX_RIGHT_DESTROY | ZX_RIGHT_GET_PROPERTY |
+               ZX_RIGHT_ENUMERATE;
   zx_status_t status = job_.duplicate(flags | ZX_RIGHT_WRITE, &duplicate_job);
   if (status == ZX_ERR_INVALID_ARGS) {
     // In the process of removing WRITE for processes; if duplicate with WRITE

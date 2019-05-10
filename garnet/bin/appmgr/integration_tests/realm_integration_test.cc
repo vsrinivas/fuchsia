@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <test/appmgr/integration/cpp/fidl.h>
 #include <unistd.h>
+#include <zircon/rights.h>
 
 #include <fstream>
 #include <memory>
@@ -281,6 +282,30 @@ TEST_F(RealmTest, EnvironmentLabelMustBeUnique) {
   EXPECT_TRUE(RunLoopUntil([&] { return env_status == ZX_ERR_BAD_STATE; }));
   EXPECT_TRUE(
       RunLoopUntil([&] { return env_controller_status == ZX_ERR_BAD_STATE; }));
+}
+
+TEST_F(RealmTest, RealmJobProvider) {
+  fuchsia::sys::JobProviderSyncPtr ptr;
+  fdio_service_connect("/hub/job", ptr.NewRequest().TakeChannel().release());
+
+  zx::job job;
+  ASSERT_EQ(ZX_OK, ptr->GetJob(&job));
+
+  // check that we can get properties.
+  char name[ZX_MAX_NAME_LEN];
+  ASSERT_EQ(ZX_OK, job.get_property(ZX_PROP_NAME, name, sizeof(name)));
+
+  EXPECT_THAT(name, ::testing::StartsWith("env_for_test"));
+  zx_koid_t koid;
+  size_t actual;
+  size_t avail_count;
+  ASSERT_EQ(ZX_OK, job.get_info(ZX_INFO_JOB_CHILDREN, &koid, sizeof(zx_koid_t),
+                                &actual, &avail_count));
+  ASSERT_EQ(1u, actual);
+
+  // check that we can get children
+  zx::job child_job;
+  ASSERT_EQ(ZX_OK, job.get_child(koid, ZX_RIGHT_SAME_RIGHTS, &child_job));
 }
 
 TEST_F(RealmTest, RealmDiesWhenItsJobDies) {
