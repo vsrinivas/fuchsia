@@ -23,7 +23,7 @@ namespace media::audio::test {
 //
 std::shared_ptr<const ::component::Services>
     AudioDeviceTest::environment_services_;
-fuchsia::virtualaudio::ControlSyncPtr AudioDeviceTest::control_;
+fuchsia::virtualaudio::ControlSyncPtr AudioDeviceTest::control_sync_;
 
 uint16_t AudioDeviceTest::initial_input_device_count_ = kInvalidDeviceCount;
 uint16_t AudioDeviceTest::initial_output_device_count_ = kInvalidDeviceCount;
@@ -37,6 +37,45 @@ uint32_t AudioDeviceTest::initial_output_gain_flags_ = 0;
 //
 // AudioDeviceTest implementation
 //
+
+// static
+void AudioDeviceTest::SetEnvironmentServices(
+    std::shared_ptr<const ::component::Services> environment_services) {
+  environment_services_ = environment_services;
+}
+
+// static
+void AudioDeviceTest::SetControl(
+    fuchsia::virtualaudio::ControlSyncPtr control_sync) {
+  AudioDeviceTest::control_sync_ = std::move(control_sync);
+}
+
+// static
+void AudioDeviceTest::ResetVirtualDevices() {
+  DisableVirtualDevices();
+  zx_status_t status = control_sync_->Enable();
+  ASSERT_EQ(status, ZX_OK);
+}
+
+// static
+void AudioDeviceTest::DisableVirtualDevices() {
+  zx_status_t status = control_sync_->Disable();
+  ASSERT_EQ(status, ZX_OK);
+
+  uint32_t num_inputs = -1, num_outputs = -1, num_tries = 0;
+  do {
+    status = control_sync_->GetNumDevices(&num_inputs, &num_outputs);
+    ASSERT_EQ(status, ZX_OK);
+
+    ++num_tries;
+  } while ((num_inputs != 0 || num_outputs != 0) && num_tries < 100);
+  ASSERT_EQ(num_inputs, 0u);
+  ASSERT_EQ(num_outputs, 0u);
+}
+
+// static
+void AudioDeviceTest::TearDownTestSuite() { DisableVirtualDevices(); }
+
 void AudioDeviceTest::SetUp() {
   ::gtest::RealLoopFixture::SetUp();
 

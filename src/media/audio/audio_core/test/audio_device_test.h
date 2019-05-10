@@ -24,6 +24,7 @@ constexpr uint32_t kSetFlagMask = fuchsia::media::SetAudioGainFlag_GainValid |
                                   fuchsia::media::SetAudioGainFlag_MuteValid |
                                   fuchsia::media::SetAudioGainFlag_AgcValid;
 
+// We set vars to these values before async callbacks, to detect no-response.
 constexpr uint16_t kInvalidDeviceCount = -1;
 constexpr uint64_t kInvalidDeviceToken = -1;
 constexpr fuchsia::media::AudioGainInfo kInvalidGainInfo = {
@@ -39,26 +40,19 @@ const fuchsia::media::AudioDeviceInfo kInvalidDeviceInfo = {
 class AudioDeviceTest : public gtest::RealLoopFixture {
  public:
   static void SetEnvironmentServices(
-      std::shared_ptr<const ::component::Services> environment_services) {
-    environment_services_ = environment_services;
-  }
+      std::shared_ptr<const ::component::Services> environment_services);
 
   // Set up once when binary loaded; this is used at start/end of each suite.
-  static void SetControl(fuchsia::virtualaudio::ControlSyncPtr control) {
-    AudioDeviceTest::control_ = std::move(control);
-  }
-  static void ResetVirtualDevices() {
-    control_->Disable();
-    control_->Enable();
-  }
-  static void DisableVirtualDevices() { control_->Disable(); }
+  static void SetControl(fuchsia::virtualaudio::ControlSyncPtr control_sync);
+  static void ResetVirtualDevices();
+  static void DisableVirtualDevices();
 
  protected:
   // "Regional" per-test-suite set-up. Called before first test in this suite.
-  static void SetUpTestSuite() { DisableVirtualDevices(); }
+  // static void SetUpTestSuite();
 
   // Per-test-suite tear-down. Called after last test in this suite.
-  static void TearDownTestSuite() { DisableVirtualDevices(); }
+  static void TearDownTestSuite();
 
   void SetUp() override;
   void TearDown() override;
@@ -93,7 +87,7 @@ class AudioDeviceTest : public gtest::RealLoopFixture {
   static uint32_t initial_output_gain_flags_;
 
   static std::shared_ptr<const ::component::Services> environment_services_;
-  static fuchsia::virtualaudio::ControlSyncPtr control_;
+  static fuchsia::virtualaudio::ControlSyncPtr control_sync_;
 
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
 

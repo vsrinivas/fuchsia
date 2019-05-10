@@ -9,25 +9,31 @@
 
 namespace media::audio::test {
 
-// For operations expected to complete, wait five seconds to avoid flaky test
-// behavior in high-load (high-latency) test environments. For reference, today
-// on highly-loaded QEMU instances we see timeouts if we wait 20 ms, but not if
-// we wait 50 ms. This value is a full 100x that value, so shouldn't be flaky.
+// For operations expected to generate a response, wait __5 minutes__.
+//      We do this to avoid flaky results when testing on high-load
+//      (high-latency) environments. For reference, in mid-2018 when observing
+//      highly-loaded local QEMU instances running code that correctly generated
+//      completion responses, we observed timeouts if waiting 20 ms, but not
+//      when waiting 50 ms. This value will be 15000x that (!), and WELL beyond
+//      the limit of any human acceptability, so shouldn't exhibit flakiness.
 //
-// Conversely, when we DO expect a timeout, wait 50 ms (normal response is <5
-// ms, usually <1). These values codify the following ordered priorities:
-// 1) False-positive test failures are expensive and must be eliminated;
-// 2) Having satisfying #1, streamline test-run-time (time=resources=cost);
-// 3) Minimize false-negative test outcomes (undetected regressions).
+// Conversely, when we DO expect a timeout, wait only __50 ms__.
+//      Normal response is <5 ms, usually <1 ms on well-performing systems.
+//
+// These two values codify the following ordered priorities:
+//      1) False-positive test failures are expensive and must be eliminated.
+//      2) Having done that, streamline test run-time (time=resources=cost);
+//      2a) Also, avoid false-negatives (minimize undetected regressions).
 //
 // Finally, when waiting for a timeout, our granularity (how frequently we check
-// for response) can be coarse, but when expecting a response we can save time
-// by checking more frequently than the default 10 ms. The kDurationGranularity
-// constant should only be used in conjunction with kDurationResponseExpected.
+// for response) can be coarse (the default is every 10 ms). However, when
+// expecting a response we can save time by checking more frequently. Restated,
+// kDurationResponseExpected should ALWAYS use kDurationGranularity, and
+// kDurationTimeoutExpected need NEVER do so.
 //
 // TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
-constexpr zx::duration kDurationResponseExpected = zx::sec(5);
-constexpr zx::duration kDurationTimeoutExpected = zx::msec(100);
+constexpr zx::duration kDurationResponseExpected = zx::sec(300);
+constexpr zx::duration kDurationTimeoutExpected = zx::msec(50);
 constexpr zx::duration kDurationGranularity = zx::msec(1);
 
 constexpr char kConnectionErr[] =

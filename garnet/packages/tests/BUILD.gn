@@ -796,6 +796,7 @@ group("media") {
     "//garnet/public/lib/media/timeline:media_lib_timeline_tests",
     "//sdk/lib/media/audio_dfx/cpp:audio_dfx_tests",
     "//src/media/audio/audio_core/mixer:audio_mixer_tests",
+    "//src/media/audio/audio_core/test:audio_device_tests",
     "//src/media/audio/audio_core/test:audio_fidl_tests",
   ]
 }
