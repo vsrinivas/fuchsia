@@ -5,8 +5,6 @@
 library fuchsia.modular;
 
 using fuchsia.modular.auth;
-using fuchsia.ui.viewsv1token;
-using fuchsia.sys;
 
 // Given by the |Basemgr| to the |BaseShell| at Initialize() so the
 // |BaseShell| can get information about the users of this device from the
@@ -37,9 +35,8 @@ protocol UserProvider {
     // shell with all of the user's stories.
     // TODO(alhaad): In the future, we want to protect Login() with a password,
     // Android lock pattern, etc.
-    // DEPRECATED: For transitional purposes only.
-    [Transitional]
     Login(UserLoginParams user_login_params);
+    // DEPRECATED: For transitional purposes only.
     [Transitional]
     Login2(UserLoginParams2 user_login_params);
 
@@ -47,22 +44,14 @@ protocol UserProvider {
     PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
 };
 
-// DEPRECATED, for backwards compatibility only
+// Used to specify arguments to log into a user session.
 struct UserLoginParams {
     // |account_id| is received from either AddUser() or PreviousUsers(). It
-    // can be NULL which means logging-in in an incognito mode.
+    // can be NULL which means logging-in using incognito mode.
     string? account_id;
-
-    // |view_owner| is the view given to the |SessionShell| started for the
-    // newly logged-in user.
-    request<fuchsia.ui.viewsv1token.ViewOwner> view_owner;
-
-    // Services provided by the |BaseShell| that can be offered to the
-    // |SessionShell| that is being logged into.
-    fuchsia.sys.ServiceProvider? services;
 };
 
-// Used to specify arguments to log into a user session.
+// DEPRECATED, for backwards compatibility only
 struct UserLoginParams2 {
     // |account_id| is received from either AddUser() or PreviousUsers(). It
     // can be NULL which means logging-in in an incognito mode.
