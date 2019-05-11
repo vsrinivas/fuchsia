@@ -1,0 +1,21 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tee.Device": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/optee_test"
+    },
+    "sandbox": {
+        "dev": [],
+        "features": [],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader",
+            "fuchsia.tee.Device"
+        ]
+    }
+}

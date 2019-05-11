@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include <atomic>
+#include <filesystem>
 #include <optional>
+#include <string_view>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -69,6 +72,17 @@ private:
     };
     using OpenSessionsTable = fbl::HashTable<uint32_t, fbl::unique_ptr<OpteeSession>>;
 
+    // TODO(godtamit): Move to `std::unordered_map` when BLD-413 is complete
+    struct FileSystemObject : fbl::SinglyLinkedListable<std::unique_ptr<FileSystemObject>> {
+        FileSystemObject(uint64_t id, zx::channel&& channel)
+            : id(id), channel(std::move(channel)) {}
+        uint64_t GetKey() const { return id; }
+        static size_t GetHash(uint64_t key) { return static_cast<size_t>(key); }
+        uint64_t id;
+        zx::channel channel;
+    };
+    using FileSystemObjectTable = fbl::HashTable<uint64_t, std::unique_ptr<FileSystemObject>>;
+
     zx_status_t CloseSession(uint32_t session_id);
 
     // Attempts to allocate a block of SharedMemory from a designated memory pool.
@@ -104,6 +118,75 @@ private:
     //  * If the block was found, an iterator object pointing to the SharedMemory block.
     //  * Otherwise, an iterator object pointing to the end of allocated_shared_memory_.
     SharedMemoryList::iterator FindSharedMemory(uint64_t mem_id);
+
+    // Attempts to get a slice of `SharedMemory` representing an OP-TEE memory reference.
+    //
+    // Parameters:
+    //  * mem_iter:   The `SharedMemoryList::iterator` object pointing to the `SharedMemory`.
+    //                This may point to the end of `allocated_shared_memory_`.
+    //  * base_paddr: The starting base physical address of the slice.
+    //  * size:       The size of the slice.
+    //
+    // Returns:
+    //  * If `mem_iter` is valid and the slice bounds are valid, an initialized `std::optional` with
+    //    the `SharedMemoryView`.
+    //  * Otherwise, an uninitialized `std::optional`.
+    std::optional<SharedMemoryView> GetMemoryReference(SharedMemoryList::iterator mem_iter,
+                                                       zx_paddr_t base_paddr,
+                                                       size_t size);
+
+    // Requests the root storage channel from the `ServiceProvider` and caches it in
+    // `root_storage_channel_`.
+    //
+    // Subsequent calls to the function will return the cached channel.
+    //
+    // Returns:
+    //  * ZX_OK:                The operation was successful.
+    //  * ZX_ERR_UNAVAILABLE:   The current client does not have access to a `ServiceProvider`.
+    //  * `zx_status_t` codes from `zx::channel::create` or requesting the `ServiceProvider` over
+    //    FIDL.
+    zx_status_t GetRootStorageChannel(zx::unowned_channel* out_root_channel);
+
+    // Requests a connection to the storage directory pointed to by the path.
+    //
+    // Parameters:
+    //  * path:                 The path of the directory, relative to the root storage directory.
+    //  * create:               Flag specifying whether to create directories if they don't exist.
+    //  * out_storage_channel:  Where to output the `fuchsia.io.Directory` client end channel.
+    zx_status_t GetStorageDirectory(std::filesystem::path path, bool create,
+                                    zx::channel* out_storage_channel);
+
+    // Tracks a new file system object associated with the current client.
+    //
+    // This occurs when the trusted world creates or opens a file system object.
+    //
+    // Parameters:
+    //  * io_node_channel:  The channel to the `fuchsia.io.Node` file system object.
+    //
+    // Returns:
+    //  * The identifier for the trusted world to refer to the object.
+    __WARN_UNUSED_RESULT uint64_t TrackFileSystemObject(zx::channel io_node_channel);
+
+    // Gets the channel to the file system object associated with the given identifier.
+    //
+    // Parameters:
+    //  * identifier: The identifier to find the file system object by.
+    //
+    // Returns:
+    //  * A `std::optional` containing a reference to the `zx::channel`, if it was found.
+    std::optional<zx::unowned_channel>
+    GetFileSystemObjectChannel(uint64_t identifier);
+
+    // Untracks a file system object associated with the current client.
+    //
+    // This occurs when the trusted world closes a previously open file system object.
+    //
+    // Parameters:
+    //  * identifier:  The identifier to refer to the object.
+    //
+    // Returns:
+    //  * Whether a file system object associated with the identifier was untracked.
+    bool UntrackFileSystemObject(uint64_t identifier);
 
     //
     // OP-TEE RPC Function Handlers
@@ -144,18 +227,35 @@ private:
     zx_status_t HandleRpcCommandGetTime(GetTimeRpcMessage* message);
     zx_status_t HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage* message);
     zx_status_t HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message);
-    zx_status_t HandleRpcCommandFileSystem(FileSystemRpcMessage* message);
 
+    // Move in the FileSystemRpcMessage since it'll be moved into a sub-type in this function.
+    zx_status_t HandleRpcCommandFileSystem(FileSystemRpcMessage&& message);
+    zx_status_t HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRpcMessage* message);
+    zx_status_t HandleRpcCommandFileSystemCreateFile(CreateFileFileSystemRpcMessage* message);
+    zx_status_t HandleRpcCommandFileSystemCloseFile(CloseFileFileSystemRpcMessage* message);
+    zx_status_t HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRpcMessage* message);
+    zx_status_t HandleRpcCommandFileSystemWriteFile(WriteFileFileSystemRpcMessage* message);
+    zx_status_t HandleRpcCommandFileSystemTruncateFile(TruncateFileFileSystemRpcMessage* message);
+    zx_status_t HandleRpcCommandFileSystemRemoveFile(RemoveFileFileSystemRpcMessage* message);
+    zx_status_t HandleRpcCommandFileSystemRenameFile(RenameFileFileSystemRpcMessage* message);
     static fuchsia_tee_Device_ops_t kFidlOps;
 
     OpteeController* controller_;
     bool needs_to_close_ = false;
     SharedMemoryList allocated_shared_memory_;
     OpenSessionsTable open_sessions_;
+    std::atomic<uint64_t> next_file_system_object_id_{1};
+
+    // TODO(godtamit): Move to `std::unordered_map` when BLD-413 is complete
+    FileSystemObjectTable open_file_system_objects_;
 
     // The client end of a channel to the `fuchsia.tee.manager.ServiceProvider` protocol.
     // This may be an invalid channel, which indicates the client has no service provider support.
     zx::channel service_provider_channel_;
+
+    // A lazily-initialized, cached channel to the root storage channel.
+    // This may be an invalid channel, which indicates it has not been initialized yet.
+    zx::channel root_storage_channel_;
 };
 
 } // namespace optee

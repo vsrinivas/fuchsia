@@ -2,13 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+#include <libgen.h>
+#include <string>
 #include <utility>
 
 #include <ddk/debug.h>
 #include <fbl/string_buffer.h>
-#include <fbl/string_piece.h>
 #include <fbl/vector.h>
+#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/tee/manager/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/fidl/coding.h>
+#include <lib/zx/handle.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <tee-client-api/tee-client-types.h>
@@ -120,6 +126,227 @@ static zx_status_t ConvertOpteeToZxResult(uint32_t optee_return_code, uint32_t o
         return ZX_ERR_INTERNAL;
     }
     return ZX_OK;
+}
+
+static std::filesystem::path GetPathFromRawMemory(void* mem, size_t max_size) {
+    ZX_DEBUG_ASSERT(mem != nullptr);
+    ZX_DEBUG_ASSERT(max_size > 0);
+
+    auto path = static_cast<char*>(mem);
+
+    // Copy the string out from raw memory first
+    std::string result(path, max_size);
+
+    // Trim string to first null terminating character
+    auto null_pos = result.find('\0');
+    if (null_pos != std::string::npos) {
+        result.resize(null_pos);
+    }
+
+    return std::filesystem::path(std::move(result)).lexically_relative("/");
+}
+
+// Awaits the `fuchsia.io.Node/OnOpen` event that is fired when opening with
+// `fuchsia.io.OPEN_FLAG_DESCRIBE` flag and returns the status contained in the event.
+//
+// This is useful for synchronously awaiting the result of an `Open` request.
+//
+// TODO(godtamit): Transition to receiving an event normally once this client code can use FIDL C++
+// generated bindings that support events directly.
+static zx_status_t AwaitIoOnOpenStatus(const zx::channel& channel) {
+    zx_signals_t observed_signals = 0;
+    zx_status_t status = channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                          zx::time::infinite(), &observed_signals);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee::%s: failed to wait on channel (status: %d)\n", __FUNCTION__, status);
+        return status;
+    }
+
+    // Intentionally allow `ZX_CHANNEL_PEER_CLOSED` to take precedence over `ZX_CHANNEL_READABLE`
+    // since it indicates an error occurred.
+    if ((observed_signals & ZX_CHANNEL_PEER_CLOSED) == ZX_CHANNEL_PEER_CLOSED) {
+        zxlogf(ERROR, "optee::%s: channel closed\n", __FUNCTION__);
+
+        // TODO(godtamit): check for an epitaph here once `fuchsia.io` supports it
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    // Sanity check to make sure `ZX_CHANNEL_READABLE` was the signal observed
+    ZX_DEBUG_ASSERT((observed_signals & ZX_CHANNEL_READABLE) == ZX_CHANNEL_READABLE);
+
+    // Test to see how big the message is
+    uint32_t actual_bytes;
+    zx::handle handle;
+    status = channel.read(0,             // flags
+                          nullptr,       // bytes
+                          nullptr,       // handles
+                          0,             // num_bytes
+                          0,             // num_handles
+                          &actual_bytes, // actual_bytes
+                          nullptr);      // actual_handles
+    if (status != ZX_ERR_BUFFER_TOO_SMALL) {
+        zxlogf(ERROR,
+               "optee::%s: received unexpecting error while testing for channel message size "
+               "(status: %d)\n",
+               __FUNCTION__, status);
+        return status == ZX_OK ? ZX_ERR_INTERNAL : status;
+    }
+
+    uint32_t buffer_size = actual_bytes;
+    std::unique_ptr<uint8_t[]> buffer(new uint8_t[static_cast<size_t>(buffer_size)]);
+    status = channel.read(0,                              // flags
+                          buffer.get(),                   // bytes
+                          handle.reset_and_get_address(), // handles
+                          buffer_size,                    // num_bytes
+                          1,                              // num_handles
+                          &actual_bytes,                  // actual_bytes
+                          nullptr);                       // actual_handles
+    if (status != ZX_OK) {
+        zxlogf(ERROR,
+               "optee::%s: received unexpecting error while reading channel message (status: %d)\n",
+               __FUNCTION__, status);
+        return status;
+    }
+
+    auto header = reinterpret_cast<fidl_message_header_t*>(buffer.get());
+    if (header->ordinal != fuchsia_io_NodeOnOpenOrdinal) {
+        // The `OnOpen` event should be the first event fired. See the function description for
+        // preconditions and details.
+        zxlogf(ERROR, "optee::%s: received unexpected message ordinal %x\n",
+               __FUNCTION__, header->ordinal);
+        return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+    }
+
+    const char* err = nullptr;
+    status =
+        fidl_decode(&fuchsia_io_NodeOnOpenEventTable, buffer.get(), actual_bytes, nullptr, 0, &err);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee::%s: failed to decode fuchsia.io.Node/OnOpen event: %s (status: %d)\n",
+               __FUNCTION__, err != nullptr ? err : "", status);
+        return status;
+    }
+
+    auto on_open_event = reinterpret_cast<fuchsia_io_NodeOnOpenEvent*>(buffer.get());
+    return on_open_event->s;
+}
+
+// Calls `fuchsia.io.Directory/Open` on a channel and awaits the result.
+static zx_status_t OpenObjectInDirectory(const zx::channel& root_channel,
+                                         uint32_t flags,
+                                         uint32_t mode,
+                                         std::string path,
+                                         zx::channel* out_channel_node) {
+    ZX_DEBUG_ASSERT(out_channel_node != nullptr);
+
+    // Ensure `OPEN_FLAG_DESCRIBE` is passed
+    flags |= fuchsia_io_OPEN_FLAG_DESCRIBE;
+
+    // Create temporary channel ends to make FIDL call
+    zx::channel channel_client_end;
+    zx::channel channel_server_end;
+    zx_status_t status = zx::channel::create(0, &channel_client_end, &channel_server_end);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee::%s: failed to create channel pair (status: %d)\n",
+               __FUNCTION__, status);
+        return status;
+    }
+
+    status = fuchsia_io_DirectoryOpen(root_channel.get(),            // _channel
+                                      flags,                         // flags
+                                      mode,                          // mode
+                                      path.data(),                   // path_data
+                                      path.size(),                   // path_size
+                                      channel_server_end.release()); // object
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee::%s: could not call fuchsia.io.Directory/Open (status: %d)\n",
+               __FUNCTION__, status);
+        return status;
+    }
+
+    status = AwaitIoOnOpenStatus(channel_client_end);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    *out_channel_node = std::move(channel_client_end);
+    return ZX_OK;
+}
+
+// Recursively walks down a multi-part path, opening and outputting the final destination.
+//
+// Template Parameters:
+//  * kOpenFlags: The flags to call `fuchsia.io.Directory/Open` with. This must not contain
+//               `OPEN_FLAG_NOT_DIRECTORY`.
+// Parameters:
+//  * root_channel:     The channel to the directory to start the walk from.
+//  * path:             The path relative to `root_channel` to open.
+//  * out_node_channel: Where to store the resulting `fuchsia.io.Node` channel opened.
+template <uint32_t kOpenFlags>
+static zx_status_t RecursivelyWalkPath(const zx::unowned_channel& root_channel,
+                                       std::filesystem::path path,
+                                       zx::channel* out_node_channel) {
+    static_assert((kOpenFlags & fuchsia_io_OPEN_FLAG_NOT_DIRECTORY) == 0,
+                  "kOpenFlags must not include fuchsia_io_OPEN_FLAG_NOT_DIRECTORY");
+    ZX_DEBUG_ASSERT(root_channel->is_valid());
+    ZX_DEBUG_ASSERT(!path.empty());
+    ZX_DEBUG_ASSERT(out_node_channel != nullptr);
+
+    zx_status_t status;
+    zx::channel result_channel;
+
+    if (path == std::filesystem::path(".")) {
+        // If the path is lexicographically equivalent to the (relative) root directory, clone the
+        // root channel instead of opening the path
+        zx::channel server_channel;
+        status = zx::channel::create(0, &result_channel, &server_channel);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status = fuchsia_io_DirectoryClone(root_channel->get(),
+                                           fuchsia_io_CLONE_FLAG_SAME_RIGHTS,
+                                           server_channel.release());
+        if (status != ZX_OK) {
+            return status;
+        }
+    } else {
+        zx::unowned_channel current_channel(root_channel);
+        for (const auto& component : path) {
+            zx::channel temporary_channel;
+            static constexpr uint32_t kOpenMode = fuchsia_io_MODE_TYPE_DIRECTORY;
+            status = OpenObjectInDirectory(*current_channel,
+                                           kOpenFlags,
+                                           kOpenMode,
+                                           component.string(),
+                                           &temporary_channel);
+            if (status != ZX_OK) {
+                return status;
+            }
+
+            result_channel = std::move(temporary_channel);
+            current_channel = zx::unowned(result_channel);
+        }
+    }
+
+    *out_node_channel = std::move(result_channel);
+    return ZX_OK;
+}
+
+template <typename... Args>
+static inline zx_status_t CreateDirectory(Args&&... args) {
+    static constexpr uint32_t kCreateFlags = fuchsia_io_OPEN_RIGHT_READABLE |
+                                             fuchsia_io_OPEN_RIGHT_WRITABLE |
+                                             fuchsia_io_OPEN_FLAG_CREATE |
+                                             fuchsia_io_OPEN_FLAG_DIRECTORY;
+    return RecursivelyWalkPath<kCreateFlags>(std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+static inline zx_status_t OpenDirectory(Args&&... args) {
+    static constexpr uint32_t kOpenFlags = fuchsia_io_OPEN_RIGHT_READABLE |
+                                           fuchsia_io_OPEN_RIGHT_WRITABLE |
+                                           fuchsia_io_OPEN_FLAG_DIRECTORY;
+    return RecursivelyWalkPath<kOpenFlags>(std::forward<Args>(args)...);
 }
 
 } // namespace
@@ -373,6 +600,97 @@ OpteeClient::SharedMemoryList::iterator OpteeClient::FindSharedMemory(uint64_t m
         });
 }
 
+std::optional<SharedMemoryView> OpteeClient::GetMemoryReference(SharedMemoryList::iterator mem_iter,
+                                                                zx_paddr_t base_paddr,
+                                                                size_t size) {
+
+    std::optional<SharedMemoryView> result;
+    if (!mem_iter.IsValid() ||
+        !(result = mem_iter->SliceByPaddr(base_paddr, base_paddr + size)).has_value()) {
+        zxlogf(ERROR, "optee: received invalid shared memory region reference\n");
+    }
+    return result;
+}
+
+zx_status_t OpteeClient::GetRootStorageChannel(zx::unowned_channel* out_root_channel) {
+    ZX_DEBUG_ASSERT(out_root_channel != nullptr);
+
+    if (!service_provider_channel_.is_valid()) {
+        return ZX_ERR_UNAVAILABLE;
+    }
+    if (root_storage_channel_.is_valid()) {
+        *out_root_channel = zx::unowned_channel(root_storage_channel_);
+        return ZX_OK;
+    }
+
+    zx::channel client_channel;
+    zx::channel server_channel;
+    zx_status_t status = zx::channel::create(0, &client_channel, &server_channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = fuchsia_tee_manager_ServiceProviderRequestPersistentStorage(
+        service_provider_channel_.get(),
+        server_channel.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    root_storage_channel_ = std::move(client_channel);
+    *out_root_channel = zx::unowned_channel(root_storage_channel_);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::GetStorageDirectory(std::filesystem::path path,
+                                             bool create,
+                                             zx::channel* out_storage_channel) {
+    ZX_DEBUG_ASSERT(out_storage_channel != nullptr);
+
+    zx::unowned_channel root_channel;
+    zx_status_t status = GetRootStorageChannel(&root_channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx::channel storage_channel;
+
+    if (create) {
+        status = CreateDirectory(root_channel, path, &storage_channel);
+    } else {
+        status = OpenDirectory(root_channel, path, &storage_channel);
+    }
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    *out_storage_channel = std::move(storage_channel);
+    return ZX_OK;
+}
+
+uint64_t OpteeClient::TrackFileSystemObject(zx::channel io_node_channel) {
+    uint64_t object_id = next_file_system_object_id_.fetch_add(1, std::memory_order_relaxed);
+    // TODO(godtamit): Move to `std::unordered_map` when BLD-413 is complete
+    open_file_system_objects_.insert(
+        std::make_unique<FileSystemObject>(object_id, std::move(io_node_channel)));
+
+    return object_id;
+}
+
+std::optional<zx::unowned_channel>
+OpteeClient::GetFileSystemObjectChannel(uint64_t identifier) {
+    auto iter = open_file_system_objects_.find(identifier);
+    if (iter == open_file_system_objects_.end()) {
+        return std::nullopt;
+    }
+    return zx::unowned_channel(iter->channel);
+}
+
+bool OpteeClient::UntrackFileSystemObject(uint64_t identifier) {
+    std::unique_ptr<FileSystemObject> erased_object = open_file_system_objects_.erase(identifier);
+    return erased_object != nullptr;
+}
+
 zx_status_t OpteeClient::HandleRpc(const RpcFunctionArgs& args, RpcFunctionResult* out_result) {
     zx_status_t status;
     uint32_t func_code = GetRpcFunctionCode(args.generic.status);
@@ -474,7 +792,7 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
         if (!fs_msg.is_valid()) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return HandleRpcCommandFileSystem(&fs_msg);
+        return HandleRpcCommandFileSystem(std::move(fs_msg));
     }
     case RpcMessage::Command::kGetTime: {
         GetTimeRpcMessage get_time_msg(std::move(message));
@@ -530,12 +848,10 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
     std::optional<SharedMemoryView> out_ta_mem; // Where to write the TA in memory
 
     if (message->memory_reference_id() != 0) {
-        SharedMemoryList::iterator mem_iter = FindSharedMemory(message->memory_reference_id());
-        zx_paddr_t lower_paddr = message->memory_reference_paddr();
-        zx_paddr_t upper_paddr = lower_paddr + message->memory_reference_size();
-        if (!mem_iter.IsValid() ||
-            !(out_ta_mem = mem_iter->SliceByPaddr(lower_paddr, upper_paddr)).has_value()) {
-            zxlogf(ERROR, "optee: received invalid shared memory region reference\n");
+        out_ta_mem = GetMemoryReference(FindSharedMemory(message->memory_reference_id()),
+                                        message->memory_reference_paddr(),
+                                        message->memory_reference_size());
+        if (!out_ta_mem.has_value()) {
             message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
             return ZX_ERR_INVALID_ARGS;
         }
@@ -614,8 +930,8 @@ zx_status_t OpteeClient::HandleRpcCommandGetTime(GetTimeRpcMessage* message) {
         return status;
     }
 
-    static constexpr const zx::duration kDurationSecond = zx::duration(zx_duration_from_sec(1));
-    static constexpr const zx::time_utc kUtcEpoch = zx::time_utc(0);
+    static constexpr zx::duration kDurationSecond = zx::sec(1);
+    static constexpr zx::time_utc kUtcEpoch = zx::time_utc(0);
 
     zx::duration now_since_epoch = now - kUtcEpoch;
     auto seconds = static_cast<uint64_t>(now_since_epoch / kDurationSecond);
@@ -686,35 +1002,75 @@ zx_status_t OpteeClient::HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* messag
     return status;
 }
 
-zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage* message) {
-    ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
+zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& message) {
+    ZX_DEBUG_ASSERT(message.is_valid());
 
-    switch (message->command()) {
-    case FileSystemRpcMessage::FileSystemCommand::kOpenFile:
-        zxlogf(ERROR, "optee: RPC command to open file recognized but not implemented\n");
-        break;
-    case FileSystemRpcMessage::FileSystemCommand::kCreateFile:
-        zxlogf(ERROR, "optee: RPC command to create file recognized but not implemented\n");
-        break;
-    case FileSystemRpcMessage::FileSystemCommand::kCloseFile:
-        zxlogf(ERROR, "optee: RPC command to close file recognized but not implemented\n");
-        break;
-    case FileSystemRpcMessage::FileSystemCommand::kReadFile:
-        zxlogf(ERROR, "optee: RPC command to read file recognized but not implemented\n");
-        break;
-    case FileSystemRpcMessage::FileSystemCommand::kWriteFile:
-        zxlogf(ERROR, "optee: RPC command to write file recognized but not implemented\n");
-        break;
-    case FileSystemRpcMessage::FileSystemCommand::kTruncateFile:
-        zxlogf(ERROR, "optee: RPC command to truncate file recognized but not implemented\n");
-        break;
-    case FileSystemRpcMessage::FileSystemCommand::kRemoveFile:
-        zxlogf(ERROR, "optee: RPC command to remove file recognized but not implemented\n");
-        break;
-    case FileSystemRpcMessage::FileSystemCommand::kRenameFile:
-        zxlogf(ERROR, "optee: RPC command to rename file recognized but not implemented\n");
-        break;
+    // Mark that the return code will originate from driver
+    message.set_return_origin(TEEC_ORIGIN_COMMS);
+
+    if (!service_provider_channel_.is_valid()) {
+        // Client did not connect with a ServiceProvider so none of these RPCs can be serviced
+        message.set_return_code(TEEC_ERROR_BAD_STATE);
+        return ZX_ERR_UNAVAILABLE;
+    }
+
+    switch (message.file_system_command()) {
+    case FileSystemRpcMessage::FileSystemCommand::kOpenFile: {
+        OpenFileFileSystemRpcMessage open_file_msg(std::move(message));
+        if (!open_file_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandFileSystemOpenFile(&open_file_msg);
+    }
+    case FileSystemRpcMessage::FileSystemCommand::kCreateFile: {
+        CreateFileFileSystemRpcMessage create_file_msg(std::move(message));
+        if (!create_file_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandFileSystemCreateFile(&create_file_msg);
+    }
+    case FileSystemRpcMessage::FileSystemCommand::kCloseFile: {
+        CloseFileFileSystemRpcMessage close_file_msg(std::move(message));
+        if (!close_file_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandFileSystemCloseFile(&close_file_msg);
+    }
+    case FileSystemRpcMessage::FileSystemCommand::kReadFile: {
+        ReadFileFileSystemRpcMessage read_file_msg(std::move(message));
+        if (!read_file_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandFileSystemReadFile(&read_file_msg);
+    }
+    case FileSystemRpcMessage::FileSystemCommand::kWriteFile: {
+        WriteFileFileSystemRpcMessage write_file_msg(std::move(message));
+        if (!write_file_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandFileSystemWriteFile(&write_file_msg);
+    }
+    case FileSystemRpcMessage::FileSystemCommand::kTruncateFile: {
+        TruncateFileFileSystemRpcMessage truncate_file_msg(std::move(message));
+        if (!truncate_file_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandFileSystemTruncateFile(&truncate_file_msg);
+    }
+    case FileSystemRpcMessage::FileSystemCommand::kRemoveFile: {
+        RemoveFileFileSystemRpcMessage remove_file_msg(std::move(message));
+        if (!remove_file_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandFileSystemRemoveFile(&remove_file_msg);
+    }
+    case FileSystemRpcMessage::FileSystemCommand::kRenameFile: {
+        RenameFileFileSystemRpcMessage rename_file_msg(std::move(message));
+        if (!rename_file_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandFileSystemRenameFile(&rename_file_msg);
+    }
     case FileSystemRpcMessage::FileSystemCommand::kOpenDirectory:
         zxlogf(ERROR, "optee: RPC command to open directory recognized but not implemented\n");
         break;
@@ -727,7 +1083,419 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage* messag
         break;
     }
 
-    message->set_return_code(TEEC_ERROR_NOT_SUPPORTED);
+    message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
+    ZX_DEBUG_ASSERT(message->is_valid());
+    ZX_DEBUG_ASSERT(service_provider_channel_.is_valid());
+
+    zxlogf(SPEW, "optee: received RPC to open file\n");
+
+    SharedMemoryList::iterator mem_iter = FindSharedMemory(message->path_memory_identifier());
+    std::optional<SharedMemoryView> path_mem = GetMemoryReference(mem_iter,
+                                                                  message->path_memory_paddr(),
+                                                                  message->path_memory_size());
+    if (!path_mem.has_value()) {
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    std::filesystem::path path = GetPathFromRawMemory(reinterpret_cast<void*>(path_mem->vaddr()),
+                                                      message->path_memory_size());
+
+    zx::channel storage_channel;
+    constexpr bool kNoCreate = false;
+    zx_status_t status = GetStorageDirectory(path.parent_path(), kNoCreate, &storage_channel);
+    if (status != ZX_OK) {
+        message->set_return_code(TEEC_ERROR_BAD_STATE);
+        return status;
+    }
+
+    zx::channel file_channel;
+    static constexpr uint32_t kOpenFlags = fuchsia_io_OPEN_RIGHT_READABLE |
+                                           fuchsia_io_OPEN_RIGHT_WRITABLE |
+                                           fuchsia_io_OPEN_FLAG_NOT_DIRECTORY |
+                                           fuchsia_io_OPEN_FLAG_DESCRIBE;
+    static constexpr uint32_t kOpenMode = fuchsia_io_MODE_TYPE_FILE;
+    status = OpenObjectInDirectory(storage_channel, kOpenFlags, kOpenMode, path.filename().string(),
+                                   &file_channel);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee::%s: unable to open file (status: %d)\n", __FUNCTION__, status);
+        message->set_return_code(TEEC_ERROR_GENERIC);
+        return status;
+    }
+
+    uint64_t object_id = TrackFileSystemObject(std::move(file_channel));
+
+    message->set_output_file_system_object_identifier(object_id);
+    message->set_return_code(TEEC_SUCCESS);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
+    CreateFileFileSystemRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
+    ZX_DEBUG_ASSERT(message->is_valid());
+
+    zxlogf(SPEW, "optee: received RPC to create file\n");
+
+    std::optional<SharedMemoryView> path_mem = GetMemoryReference(
+        FindSharedMemory(message->path_memory_identifier()),
+        message->path_memory_paddr(),
+        message->path_memory_size());
+    if (!path_mem.has_value()) {
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    std::filesystem::path path = GetPathFromRawMemory(reinterpret_cast<void*>(path_mem->vaddr()),
+                                                      message->path_memory_size());
+
+    zx::channel storage_channel;
+    constexpr bool kCreate = true;
+    zx_status_t status = GetStorageDirectory(path.parent_path(), kCreate, &storage_channel);
+    if (status != ZX_OK) {
+        message->set_return_code(TEEC_ERROR_BAD_STATE);
+        return status;
+    }
+
+    zx::channel file_channel;
+    static constexpr uint32_t kCreateFlags = fuchsia_io_OPEN_RIGHT_READABLE |
+                                             fuchsia_io_OPEN_RIGHT_WRITABLE |
+                                             fuchsia_io_OPEN_FLAG_CREATE |
+                                             fuchsia_io_OPEN_FLAG_CREATE_IF_ABSENT |
+                                             fuchsia_io_OPEN_FLAG_DESCRIBE;
+    static constexpr uint32_t kCreateMode = fuchsia_io_MODE_TYPE_FILE;
+    status = OpenObjectInDirectory(storage_channel, kCreateFlags, kCreateMode,
+                                   path.filename().string(), &file_channel);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee::%s: unable to create file (status: %d)\n", __FUNCTION__, status);
+        message->set_return_code(status == ZX_ERR_ALREADY_EXISTS ? TEEC_ERROR_ACCESS_CONFLICT
+                                                                 : TEEC_ERROR_GENERIC);
+        return status;
+    }
+
+    uint64_t object_id = TrackFileSystemObject(std::move(file_channel));
+
+    message->set_output_file_system_object_identifier(object_id);
+    message->set_return_code(TEEC_SUCCESS);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandFileSystemCloseFile(
+    CloseFileFileSystemRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
+    ZX_DEBUG_ASSERT(message->is_valid());
+
+    zxlogf(SPEW, "optee: received RPC to close file\n");
+
+    if (!UntrackFileSystemObject(message->file_system_object_identifier())) {
+        zxlogf(ERROR, "optee: could not find the requested file to close\n");
+        message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    message->set_return_code(TEEC_SUCCESS);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
+    ZX_DEBUG_ASSERT(message->is_valid());
+
+    zxlogf(SPEW, "optee: received RPC to read from file\n");
+
+    auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
+    if (!maybe_file_channel.has_value()) {
+        message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    zx::unowned_channel file_channel(std::move(*maybe_file_channel));
+
+    std::optional<SharedMemoryView> buffer_mem = GetMemoryReference(
+        FindSharedMemory(message->file_contents_memory_identifier()),
+        message->file_contents_memory_paddr(),
+        message->file_contents_memory_size());
+    if (!buffer_mem.has_value()) {
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status = ZX_OK;
+    zx_status_t io_status = ZX_OK;
+    uint8_t* buffer = reinterpret_cast<uint8_t*>(buffer_mem->vaddr());
+    uint64_t offset = message->file_offset();
+    size_t bytes_left = buffer_mem->size();
+    size_t bytes_read = 0;
+    while (bytes_left > 0) {
+        uint64_t read_chunk_request = std::min(bytes_left, fuchsia_io_MAX_BUF);
+        uint64_t read_chunk_actual = 0;
+        status = fuchsia_io_FileReadAt(file_channel->get(), // _channel
+                                       read_chunk_request,  // count
+                                       offset,              // offset
+                                       &io_status,          // out_s
+                                       buffer,              // data_buffer
+                                       read_chunk_request,  // data_capacity
+                                       &read_chunk_actual); // out_actual
+        buffer += read_chunk_actual;
+        offset += read_chunk_actual;
+        bytes_left -= read_chunk_actual;
+        bytes_read += read_chunk_actual;
+
+        if (status != ZX_OK || io_status != ZX_OK) {
+            zxlogf(ERROR, "optee::%s failed to read from file (FIDL status: %d, IO status: %d)\n",
+                   __FUNCTION__, status, io_status);
+            message->set_return_code(TEEC_ERROR_GENERIC);
+            return status;
+        }
+
+        if (read_chunk_actual == 0) {
+            break;
+        }
+    }
+
+    message->set_output_file_contents_size(bytes_read);
+    message->set_return_code(TEEC_SUCCESS);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
+    WriteFileFileSystemRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
+    ZX_DEBUG_ASSERT(message->is_valid());
+
+    zxlogf(SPEW, "optee: received RPC to write file\n");
+
+    auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
+    if (!maybe_file_channel.has_value()) {
+        message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    zx::unowned_channel file_channel(std::move(*maybe_file_channel));
+
+    std::optional<SharedMemoryView> buffer_mem = GetMemoryReference(
+        FindSharedMemory(message->file_contents_memory_identifier()),
+        message->file_contents_memory_paddr(),
+        message->file_contents_memory_size());
+    if (!buffer_mem.has_value()) {
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status = ZX_OK;
+    zx_status_t io_status = ZX_OK;
+    uint8_t* buffer = reinterpret_cast<uint8_t*>(buffer_mem->vaddr());
+    uint64_t offset = message->file_offset();
+    size_t bytes_left = message->file_contents_memory_size();
+    while (bytes_left > 0) {
+        uint64_t write_chunk_request = std::min(bytes_left, fuchsia_io_MAX_BUF);
+        uint64_t write_chunk_actual = 0;
+        status = fuchsia_io_FileWriteAt(file_channel->get(),  // _channel
+                                        buffer,               // data_data
+                                        write_chunk_request,  // data_count
+                                        offset,               // offset
+                                        &io_status,           // out_s
+                                        &write_chunk_actual); // out_actual
+        buffer += write_chunk_actual;
+        offset += write_chunk_actual;
+        bytes_left -= write_chunk_actual;
+
+        if (status != ZX_OK || io_status != ZX_OK) {
+            zxlogf(ERROR, "optee::%s failed to write to file (FIDL status: %d, IO status: %d)\n",
+                   __FUNCTION__, status, io_status);
+            message->set_return_code(TEEC_ERROR_GENERIC);
+            return status;
+        }
+    }
+
+    message->set_return_code(TEEC_SUCCESS);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
+    TruncateFileFileSystemRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
+    ZX_DEBUG_ASSERT(message->is_valid());
+
+    zxlogf(SPEW, "optee: received RPC to truncate file\n");
+
+    auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
+    if (!maybe_file_channel.has_value()) {
+        message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    zx::unowned_channel file_channel(std::move(*maybe_file_channel));
+
+    zx_status_t io_status = ZX_OK;
+    zx_status_t status = fuchsia_io_FileTruncate(file_channel->get(),         // _channel
+                                                 message->target_file_size(), // length
+                                                 &io_status);                 // out_s
+    if (status != ZX_OK || io_status != ZX_OK) {
+        zxlogf(ERROR, "optee::%s failed to truncate file (FIDL status: %d, IO status: %d)\n",
+               __FUNCTION__, status, io_status);
+        message->set_return_code(TEEC_ERROR_GENERIC);
+        return status;
+    }
+
+    message->set_return_code(TEEC_SUCCESS);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
+    RemoveFileFileSystemRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
+    ZX_DEBUG_ASSERT(message->is_valid());
+
+    zxlogf(SPEW, "optee: received RPC to remove file\n");
+
+    std::optional<SharedMemoryView> path_mem = GetMemoryReference(
+        FindSharedMemory(message->path_memory_identifier()),
+        message->path_memory_paddr(),
+        message->path_memory_size());
+    if (!path_mem.has_value()) {
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    std::filesystem::path path = GetPathFromRawMemory(reinterpret_cast<void*>(path_mem->vaddr()),
+                                                      message->path_memory_size());
+
+    zx::channel storage_channel;
+    constexpr bool kNoCreate = false;
+    zx_status_t status = GetStorageDirectory(path.parent_path(), kNoCreate, &storage_channel);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee::%s: failed to get storage directory (status %d)\n",
+               __FUNCTION__, status);
+        message->set_return_code(TEEC_ERROR_BAD_STATE);
+        return status;
+    }
+
+    zx_status_t io_status;
+    std::string filename = path.filename().string();
+    status = fuchsia_io_DirectoryUnlink(storage_channel.get(), filename.data(), filename.length(),
+                                        &io_status);
+    if (status != ZX_OK || io_status != ZX_OK) {
+        zxlogf(ERROR, "optee::%s failed to remove file (FIDL status: %d, IO status: %d)\n",
+               __FUNCTION__, status, io_status);
+        message->set_return_code(TEEC_ERROR_GENERIC);
+        return status;
+    }
+
+    message->set_return_code(TEEC_SUCCESS);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
+    RenameFileFileSystemRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message != nullptr);
+    ZX_DEBUG_ASSERT(message->is_valid());
+
+    zxlogf(SPEW, "optee: received RPC to rename file\n");
+
+    std::optional<SharedMemoryView> old_path_mem = GetMemoryReference(
+        FindSharedMemory(message->old_file_name_memory_identifier()),
+        message->old_file_name_memory_paddr(),
+        message->old_file_name_memory_size());
+    if (!old_path_mem.has_value()) {
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    std::filesystem::path old_path = GetPathFromRawMemory(
+        reinterpret_cast<void*>(old_path_mem->vaddr()), message->old_file_name_memory_size());
+    std::string old_name = old_path.filename().string();
+
+    std::optional<SharedMemoryView> new_path_mem = GetMemoryReference(
+        FindSharedMemory(message->new_file_name_memory_identifier()),
+        message->new_file_name_memory_paddr(),
+        message->new_file_name_memory_size());
+    if (!new_path_mem.has_value()) {
+        message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    std::filesystem::path new_path = GetPathFromRawMemory(
+        reinterpret_cast<void*>(new_path_mem->vaddr()), message->new_file_name_memory_size());
+    std::string new_name = new_path.filename().string();
+
+    zx::channel new_storage_channel;
+    constexpr bool kNoCreate = false;
+    zx_status_t status = GetStorageDirectory(new_path.parent_path(), kNoCreate,
+                                             &new_storage_channel);
+    if (status != ZX_OK) {
+        message->set_return_code(TEEC_ERROR_BAD_STATE);
+        return status;
+    }
+
+    if (!message->should_overwrite()) {
+        zx::channel destination_channel;
+        static constexpr uint32_t kCheckRenameFlags = fuchsia_io_OPEN_RIGHT_READABLE |
+                                                      fuchsia_io_OPEN_FLAG_DESCRIBE;
+        static constexpr uint32_t kCheckRenameMode = fuchsia_io_MODE_TYPE_FILE |
+                                                     fuchsia_io_MODE_TYPE_DIRECTORY;
+        status = OpenObjectInDirectory(new_storage_channel,
+                                       kCheckRenameFlags,
+                                       kCheckRenameMode,
+                                       new_name,
+                                       &destination_channel);
+        if (status == ZX_OK) {
+            // The file exists but shouldn't be overwritten
+            zxlogf(INFO,
+                   "optee::%s: refusing to rename file to path that already exists with overwrite "
+                   "set to false\n",
+                   __FUNCTION__);
+            message->set_return_code(TEEC_ERROR_ACCESS_CONFLICT);
+            return ZX_OK;
+        } else if (status != ZX_ERR_NOT_FOUND) {
+            zxlogf(ERROR, "optee::%s: could not check file existence before renaming (status %d)\n",
+                   __FUNCTION__, status);
+            message->set_return_code(TEEC_ERROR_GENERIC);
+            return status;
+        }
+    }
+
+    zx::channel old_storage_channel;
+    status = GetStorageDirectory(old_path.parent_path(), kNoCreate, &old_storage_channel);
+    if (status != ZX_OK) {
+        message->set_return_code(TEEC_ERROR_BAD_STATE);
+        return status;
+    }
+
+    zx_status_t io_status = ZX_OK;
+    zx::handle new_storage_token;
+    status = fuchsia_io_DirectoryGetToken(new_storage_channel.get(),
+                                          &io_status,
+                                          new_storage_token.reset_and_get_address());
+    if (status != ZX_OK || io_status != ZX_OK) {
+        zxlogf(ERROR,
+               "optee::%s: could not get destination directory's storage token "
+               "(FIDL status: %d, IO status: %d)\n",
+               __FUNCTION__, status, io_status);
+        message->set_return_code(TEEC_ERROR_GENERIC);
+        return status;
+    }
+
+    status = fuchsia_io_DirectoryRename(old_storage_channel.get(),   // _channel
+                                        old_name.data(),             // src_data
+                                        old_name.length(),           // src_size
+                                        new_storage_token.release(), // dst_parent_token
+                                        new_name.data(),             // dst_data
+                                        new_name.length(),           // dst_size
+                                        &io_status);                 // out_s
+    if (status != ZX_OK || io_status != ZX_OK) {
+        zxlogf(ERROR, "optee::%s failed to rename file (FIDL status: %d, IO status: %d)\n",
+               __FUNCTION__, status, io_status);
+        message->set_return_code(TEEC_ERROR_GENERIC);
+        return status;
+    }
+
+    message->set_return_code(TEEC_SUCCESS);
     return ZX_OK;
 }
 

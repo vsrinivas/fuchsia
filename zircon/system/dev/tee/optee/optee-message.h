@@ -95,7 +95,12 @@ struct MessageParam {
         } free_memory_specs;
         struct {
             uint64_t command_number;
+            uint64_t object_identifier;
+            uint64_t object_offset;
         } file_system_command;
+        struct {
+            uint64_t identifier;
+        } file_system_object;
     };
 
     uint64_t attribute;
@@ -632,7 +637,7 @@ public:
 
     // FileSystemRpcMessage
     //
-    // Move constructor for FileSystemRpcMessage. Uses the default implicit implementation.
+    // Move constructor for `FileSystemRpcMessage`. Uses the default implicit implementation.
     FileSystemRpcMessage(FileSystemRpcMessage&&) = default;
 
     // FileSystemRpcMessage
@@ -657,6 +662,467 @@ protected:
     static constexpr size_t kFileSystemCommandParamIndex = 0;
 
     FileSystemCommand fs_command_;
+
+private:
+    bool TryInitializeMembers();
+};
+
+// OpenFileFileSystemRpcMessage
+//
+// A `FileSystemRpcMessage` that should be interpreted with the command of opening a file.
+// A `FileSystemRpcMessage` can be converted into a `OpenFileFileSystemRpcMessage` via a
+// constructor.
+class OpenFileFileSystemRpcMessage : public FileSystemRpcMessage {
+public:
+    // OpenFileFileSystemRpcMessage
+    //
+    // Move constructor for `OpenFileFileSystemRpcMessage`. Uses the default implicit
+    // implementation.
+    OpenFileFileSystemRpcMessage(OpenFileFileSystemRpcMessage&&) = default;
+
+    // OpenFileFileSystemRpcMessage
+    //
+    // Constructs a `OpenFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
+    explicit OpenFileFileSystemRpcMessage(FileSystemRpcMessage&& fs_message)
+        : FileSystemRpcMessage(std::move(fs_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The file system message passed in should've been valid
+        ZX_DEBUG_ASSERT(file_system_command() == FileSystemCommand::kOpenFile);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    uint64_t path_memory_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return path_mem_id_;
+    }
+
+    size_t path_memory_size() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return path_mem_size_;
+    }
+
+    zx_paddr_t path_memory_paddr() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return path_mem_paddr_;
+    }
+
+    void set_output_file_system_object_identifier(uint64_t object_id) {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        ZX_DEBUG_ASSERT(out_fs_object_id_ != nullptr);
+        *out_fs_object_id_ = object_id;
+    }
+
+protected:
+    static constexpr size_t kNumParams = 3;
+    static constexpr size_t kPathParamIndex = 1;
+    static constexpr size_t kOutFileSystemObjectIdParamIndex = 2;
+
+    uint64_t path_mem_id_;
+    size_t path_mem_size_;
+    zx_paddr_t path_mem_paddr_;
+    uint64_t* out_fs_object_id_;
+
+private:
+    bool TryInitializeMembers();
+};
+
+// CreateFileFileSystemRpcMessage
+//
+// A `FileSystemRpcMessage` that should be interpreted with the command of creating a file.
+// A `FileSystemRpcMessage` can be converted into a `CreateFileFileSystemRpcMessage` via a
+// constructor.
+class CreateFileFileSystemRpcMessage : public FileSystemRpcMessage {
+public:
+    // CreateFileFileSystemRpcMessage
+    //
+    // Move constructor for `CreateFileFileSystemRpcMessage`. Uses the default implicit
+    // implementation.
+    CreateFileFileSystemRpcMessage(CreateFileFileSystemRpcMessage&&) = default;
+
+    // CreateFileFileSystemRpcMessage
+    //
+    // Constructs a `CreateFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
+    explicit CreateFileFileSystemRpcMessage(FileSystemRpcMessage&& fs_message)
+        : FileSystemRpcMessage(std::move(fs_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The file system message passed in should've been valid
+        ZX_DEBUG_ASSERT(file_system_command() == FileSystemCommand::kCreateFile);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    uint64_t path_memory_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return path_mem_id_;
+    }
+
+    size_t path_memory_size() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return path_mem_size_;
+    }
+
+    zx_paddr_t path_memory_paddr() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return path_mem_paddr_;
+    }
+
+    void set_output_file_system_object_identifier(uint64_t object_id) {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        ZX_DEBUG_ASSERT(out_fs_object_id_ != nullptr);
+        *out_fs_object_id_ = object_id;
+    }
+
+protected:
+    static constexpr size_t kNumParams = 3;
+    static constexpr size_t kPathParamIndex = 1;
+    static constexpr size_t kOutFileSystemObjectIdParamIndex = 2;
+
+    uint64_t path_mem_id_;
+    size_t path_mem_size_;
+    zx_paddr_t path_mem_paddr_;
+    uint64_t* out_fs_object_id_;
+
+private:
+    bool TryInitializeMembers();
+};
+
+// CloseFileFileSystemRpcMessage
+//
+// A `FileSystemRpcMessage` that should be interpreted with the command of closing a file.
+// A `FileSystemRpcMessage` can be converted into a `CloseFileFileSystemRpcMessage` via a
+// constructor.
+class CloseFileFileSystemRpcMessage : public FileSystemRpcMessage {
+public:
+    // CloseFileFileSystemRpcMessage
+    //
+    // Move constructor for `CloseFileFileSystemRpcMessage`. Uses the default implicit
+    // implementation.
+    CloseFileFileSystemRpcMessage(CloseFileFileSystemRpcMessage&&) = default;
+
+    // CloseFileFileSystemRpcMessage
+    //
+    // Constructs a `CloseFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
+    explicit CloseFileFileSystemRpcMessage(FileSystemRpcMessage&& fs_message)
+        : FileSystemRpcMessage(std::move(fs_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The file system message passed in should've been valid
+        ZX_DEBUG_ASSERT(file_system_command() == FileSystemCommand::kCloseFile);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    uint64_t file_system_object_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return fs_object_id_;
+    }
+
+protected:
+    static constexpr size_t kNumParams = 1;
+
+    uint64_t fs_object_id_;
+
+private:
+    bool TryInitializeMembers();
+};
+
+// ReadFileFileSystemRpcMessage
+//
+// A `FileSystemRpcMessage` that should be interpreted with the command of reading an open file.
+// A `FileSystemRpcMessage` can be converted into a `ReadFileFileSystemRpcMessage` via a
+// constructor.
+class ReadFileFileSystemRpcMessage : public FileSystemRpcMessage {
+public:
+    // ReadFileFileSystemRpcMessage
+    //
+    // Move constructor for `ReadFileFileSystemRpcMessage`. Uses the default implicit
+    // implementation.
+    ReadFileFileSystemRpcMessage(ReadFileFileSystemRpcMessage&&) = default;
+
+    // ReadFileFileSystemRpcMessage
+    //
+    // Constructs a `ReadFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
+    explicit ReadFileFileSystemRpcMessage(FileSystemRpcMessage&& fs_message)
+        : FileSystemRpcMessage(std::move(fs_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The file system message passed in should've been valid
+        ZX_DEBUG_ASSERT(file_system_command() == FileSystemCommand::kReadFile);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    uint64_t file_system_object_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return fs_object_id_;
+    }
+
+    uint64_t file_offset() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return file_offset_;
+    }
+
+    uint64_t file_contents_memory_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return file_contents_memory_identifier_;
+    }
+
+    size_t file_contents_memory_size() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return file_contents_memory_size_;
+    }
+
+    zx_paddr_t file_contents_memory_paddr() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return file_contents_memory_paddr_;
+    }
+
+    void set_output_file_contents_size(size_t size) const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        ZX_DEBUG_ASSERT(out_file_contents_size_ != nullptr);
+
+        *out_file_contents_size_ = static_cast<uint64_t>(size);
+    }
+
+protected:
+    static constexpr size_t kNumParams = 2;
+    static constexpr size_t kOutReadBufferMemoryParamIndex = 1;
+
+    uint64_t fs_object_id_;
+    uint64_t file_offset_;
+    uint64_t file_contents_memory_identifier_;
+    size_t file_contents_memory_size_;
+    zx_paddr_t file_contents_memory_paddr_;
+    uint64_t* out_file_contents_size_;
+
+private:
+    bool TryInitializeMembers();
+};
+
+// WriteFileFileSystemRpcMessage
+//
+// A `FileSystemRpcMessage` that should be interpreted with the command of writing to an open file.
+// A `FileSystemRpcMessage` can be converted into a `WriteFileFileSystemRpcMessage` via a
+// constructor.
+class WriteFileFileSystemRpcMessage : public FileSystemRpcMessage {
+public:
+    // WriteFileFileSystemRpcMessage
+    //
+    // Move constructor for `WriteFileFileSystemRpcMessage`. Uses the default implicit
+    // implementation.
+    WriteFileFileSystemRpcMessage(WriteFileFileSystemRpcMessage&&) = default;
+
+    // WriteFileFileSystemRpcMessage
+    //
+    // Constructs a `WriteFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
+    explicit WriteFileFileSystemRpcMessage(FileSystemRpcMessage&& fs_message)
+        : FileSystemRpcMessage(std::move(fs_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The file system message passed in should've been valid
+        ZX_DEBUG_ASSERT(file_system_command() == FileSystemCommand::kWriteFile);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    uint64_t file_system_object_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return fs_object_id_;
+    }
+
+    zx_off_t file_offset() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return file_offset_;
+    }
+
+    uint64_t file_contents_memory_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return file_contents_memory_identifier_;
+    }
+
+    size_t file_contents_memory_size() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return file_contents_memory_size_;
+    }
+
+    zx_paddr_t file_contents_memory_paddr() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return file_contents_memory_paddr_;
+    }
+
+protected:
+    static constexpr size_t kNumParams = 2;
+    static constexpr size_t kWriteBufferMemoryParam = 1;
+
+    uint64_t fs_object_id_;
+    zx_off_t file_offset_;
+    uint64_t file_contents_memory_identifier_;
+    size_t file_contents_memory_size_;
+    zx_paddr_t file_contents_memory_paddr_;
+
+private:
+    bool TryInitializeMembers();
+};
+
+// TruncateFileFileSystemRpcMessage
+//
+// A `FileSystemRpcMessage` that should be interpreted with the command of truncating a file.
+// A `FileSystemRpcMessage` can be converted into a `TruncateFileFileSystemRpcMessage` via a
+// constructor.
+class TruncateFileFileSystemRpcMessage : public FileSystemRpcMessage {
+public:
+    // TruncateFileFileSystemRpcMessage
+    //
+    // Move constructor for `TruncateFileFileSystemRpcMessage`. Uses the default implicit
+    // implementation.
+    TruncateFileFileSystemRpcMessage(TruncateFileFileSystemRpcMessage&&) = default;
+
+    // TruncateFileFileSystemRpcMessage
+    //
+    // Constructs a `TruncateFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
+    explicit TruncateFileFileSystemRpcMessage(FileSystemRpcMessage&& fs_message)
+        : FileSystemRpcMessage(std::move(fs_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The file system message passed in should've been valid
+        ZX_DEBUG_ASSERT(file_system_command() == FileSystemCommand::kTruncateFile);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    uint64_t file_system_object_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return fs_object_id_;
+    }
+
+    uint64_t target_file_size() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return target_file_size_;
+    }
+
+protected:
+    static constexpr size_t kNumParams = 1;
+
+    uint64_t fs_object_id_;
+    uint64_t target_file_size_;
+
+private:
+    bool TryInitializeMembers();
+};
+
+// RemoveFileFileSystemRpcMessage
+//
+// A `FileSystemRpcMessage` that should be interpreted with the command of removing a file.
+// A `FileSystemRpcMessage` can be converted into a `RemoveFileFileSystemRpcMessage` via a
+// constructor.
+class RemoveFileFileSystemRpcMessage : public FileSystemRpcMessage {
+public:
+    // RemoveFileFileSystemRpcMessage
+    //
+    // Move constructor for `RemoveFileFileSystemRpcMessage`. Uses the default implicit
+    // implementation.
+    RemoveFileFileSystemRpcMessage(RemoveFileFileSystemRpcMessage&&) = default;
+
+    // RemoveFileFileSystemRpcMessage
+    //
+    // Constructs a `RemoveFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
+    explicit RemoveFileFileSystemRpcMessage(FileSystemRpcMessage&& fs_message)
+        : FileSystemRpcMessage(std::move(fs_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The file system message passed in should've been valid
+        ZX_DEBUG_ASSERT(file_system_command() == FileSystemCommand::kRemoveFile);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    uint64_t path_memory_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return path_mem_id_;
+    }
+
+    size_t path_memory_size() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return path_mem_size_;
+    }
+
+    zx_paddr_t path_memory_paddr() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return path_mem_paddr_;
+    }
+
+protected:
+    static constexpr size_t kNumParams = 2;
+    static constexpr size_t kFileNameParamIndex = 1;
+
+    uint64_t path_mem_id_;
+    size_t path_mem_size_;
+    zx_paddr_t path_mem_paddr_;
+
+private:
+    bool TryInitializeMembers();
+};
+
+// RenameFileFileSystemRpcMessage
+//
+// A `FileSystemRpcMessage` that should be interpreted with the command of renaming a file.
+// A `FileSystemRpcMessage` can be converted into a `RenameFileFileSystemRpcMessage` via a
+// constructor.
+class RenameFileFileSystemRpcMessage : public FileSystemRpcMessage {
+public:
+    // RenameFileFileSystemRpcMessage
+    //
+    // Move constructor for `RenameFileFileSystemRpcMessage`. Uses the default implicit
+    // implementation.
+    RenameFileFileSystemRpcMessage(RenameFileFileSystemRpcMessage&&) = default;
+
+    // RenameFileFileSystemRpcMessage
+    //
+    // Constructs a `RenameFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
+    explicit RenameFileFileSystemRpcMessage(FileSystemRpcMessage&& fs_message)
+        : FileSystemRpcMessage(std::move(fs_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The file system message passed in should've been valid
+        ZX_DEBUG_ASSERT(file_system_command() == FileSystemCommand::kRenameFile);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    bool should_overwrite() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return should_overwrite_;
+    }
+
+    uint64_t old_file_name_memory_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return old_file_name_mem_id_;
+    }
+
+    size_t old_file_name_memory_size() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return old_file_name_mem_size_;
+    }
+
+    zx_paddr_t old_file_name_memory_paddr() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return old_file_name_mem_paddr_;
+    }
+
+    uint64_t new_file_name_memory_identifier() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return new_file_name_mem_id_;
+    }
+
+    size_t new_file_name_memory_size() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return new_file_name_mem_size_;
+    }
+
+    zx_paddr_t new_file_name_memory_paddr() const {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        return new_file_name_mem_paddr_;
+    }
+
+protected:
+    static constexpr size_t kNumParams = 3;
+    static constexpr size_t kOldFileNameParamIndex = 1;
+    static constexpr size_t kNewFileNameParamIndex = 2;
+
+    bool should_overwrite_;
+    uint64_t old_file_name_mem_id_;
+    size_t old_file_name_mem_size_;
+    zx_paddr_t old_file_name_mem_paddr_;
+    uint64_t new_file_name_mem_id_;
+    size_t new_file_name_mem_size_;
+    zx_paddr_t new_file_name_mem_paddr_;
 
 private:
     bool TryInitializeMembers();
