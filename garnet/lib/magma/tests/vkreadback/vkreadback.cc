@@ -253,8 +253,10 @@ bool VkReadbackTest::InitImage()
     // Add an offset to all operations that's correctly aligned and at least a
     // page in size, to ensure rounding the VMO down to a page offset will
     // cause it to point to a separate page.
-    bind_offset_ =
-        memory_reqs.alignment ? memory_reqs.alignment * (PAGE_SIZE + 1) : (PAGE_SIZE + 128);
+    bind_offset_ = PAGE_SIZE + 128;
+    if (memory_reqs.alignment) {
+        bind_offset_ = magma::round_up(bind_offset_, memory_reqs.alignment);
+    }
 
     VkPhysicalDeviceMemoryProperties memory_props;
     vkGetPhysicalDeviceMemoryProperties(vk_physical_device_, &memory_props);
