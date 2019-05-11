@@ -9,7 +9,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 sdk_source_set("cpp") {
-  category = "internal"
+  category = "partner"
 
   sdk_name = "vfs_cpp"
 

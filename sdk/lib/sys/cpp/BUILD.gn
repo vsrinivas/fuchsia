@@ -5,9 +5,9 @@
 import("//build/cpp/sdk_source_set.gni")
 
 sdk_source_set("cpp") {
-  category = "internal"
+  category = "partner"
 
-  sdk_name = "component_cpp"
+  sdk_name = "sys_cpp"
 
   include_base = "//sdk"
   sources = [

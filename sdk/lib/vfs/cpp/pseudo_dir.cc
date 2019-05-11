@@ -10,7 +10,7 @@
 
 namespace vfs {
 
-PseudoDir::PseudoDir() = default;
+PseudoDir::PseudoDir() : next_node_id_(kDotId + 1) {}
 
 PseudoDir::~PseudoDir() = default;
 
