@@ -10,8 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/system_ota_tests/packages"
-	"fuchsia.googlesource.com/system_ota_tests/util"
+	"fuchsia.googlesource.com/host_target_testing/packages"
+	"fuchsia.googlesource.com/host_target_testing/util"
 )
 
 type Build struct {

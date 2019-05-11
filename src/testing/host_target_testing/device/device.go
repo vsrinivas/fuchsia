@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/system_ota_tests/packages"
-	"fuchsia.googlesource.com/system_ota_tests/sshclient"
+	"fuchsia.googlesource.com/host_target_testing/packages"
+	"fuchsia.googlesource.com/host_target_testing/sshclient"
 
 	"golang.org/x/crypto/ssh"
 )

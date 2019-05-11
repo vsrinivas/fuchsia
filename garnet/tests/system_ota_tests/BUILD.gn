@@ -24,10 +24,7 @@ go_library("system_ota_tests_lib") {
   testonly = true
   name = "fuchsia.googlesource.com/system_ota_tests"
   deps = [
-    "//garnet/go/src/far:far",
-    "//garnet/go/src/pm:pm_lib",
-    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
-    "//garnet/public/go/third_party:golang.org/x/crypto",
+    "//src/testing/host_target_testing",
   ]
   non_go_deps = [ ":copy" ]
   metadata = {

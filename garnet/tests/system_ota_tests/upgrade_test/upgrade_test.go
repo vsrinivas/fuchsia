@@ -12,15 +12,14 @@ import (
 	"os"
 	"testing"
 
-	"fuchsia.googlesource.com/system_ota_tests/config"
-	"fuchsia.googlesource.com/system_ota_tests/packages"
+	"fuchsia.googlesource.com/host_target_testing/packages"
 )
 
-var c *config.Config
+var c *Config
 
 func TestMain(m *testing.M) {
 	var err error
-	c, err = config.NewConfig(flag.CommandLine)
+	c, err = NewConfig(flag.CommandLine)
 	if err != nil {
 		log.Fatalf("failed to create config: %s", err)
 	}

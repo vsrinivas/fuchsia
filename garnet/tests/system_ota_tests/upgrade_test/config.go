@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package config
+package upgrade
 
 import (
 	"flag"
@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"fuchsia.googlesource.com/system_ota_tests/artifacts"
-	"fuchsia.googlesource.com/system_ota_tests/device"
-	"fuchsia.googlesource.com/system_ota_tests/packages"
-	"fuchsia.googlesource.com/system_ota_tests/util"
+	"fuchsia.googlesource.com/host_target_testing/artifacts"
+	"fuchsia.googlesource.com/host_target_testing/device"
+	"fuchsia.googlesource.com/host_target_testing/packages"
+	"fuchsia.googlesource.com/host_target_testing/util"
 )
 
 type Config struct {

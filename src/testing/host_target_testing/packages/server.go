@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -34,13 +33,18 @@ func newServer(dir string, localHostname string) (*Server, error) {
 	port := listener.Addr().(*net.TCPAddr).Port
 	log.Printf("Serving %s on :%d", dir, port)
 
-	configURL, configHash, err := writeConfig(dir, localHostname, port)
+	configURL, configHash, config, err := genConfig(dir, localHostname, port)
 	if err != nil {
 		listener.Close()
 		return nil, err
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/host_target_testing/config.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		w.Write(config)
+	})
 	mux.Handle("/", http.FileServer(http.Dir(dir)))
 
 	server := &http.Server{
@@ -81,7 +85,7 @@ func (lw *loggingWriter) WriteHeader(status int) {
 }
 
 // writeConfig writes the source config to the repository.
-func writeConfig(dir string, localHostname string, port int) (configURL string, configHash string, err error) {
+func genConfig(dir string, localHostname string, port int) (configURL string, configHash string, config []byte, err error) {
 	type keyConfig struct {
 		Type  string
 		Value string
@@ -101,18 +105,18 @@ func writeConfig(dir string, localHostname string, port int) (configURL string, 
 
 	f, err := os.Open(filepath.Join(dir, "root.json"))
 	if err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 	defer f.Close()
 
 	var signed tuf_data.Signed
 	if err := json.NewDecoder(f).Decode(&signed); err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 
 	var root tuf_data.Root
 	if err := json.Unmarshal(signed.Signed, &root); err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 
 	var rootKeys []keyConfig
@@ -127,10 +131,10 @@ func writeConfig(dir string, localHostname string, port int) (configURL string, 
 
 	hostname := strings.SplitN(localHostname, "%", 2)[0]
 	repoURL := fmt.Sprintf("http://[%s]:%d", hostname, port)
-	configURL = fmt.Sprintf("%s/system_ota_tests/config.json", repoURL)
+	configURL = fmt.Sprintf("%s/host_target_testing/config.json", repoURL)
 
-	config, err := json.Marshal(&sourceConfig{
-		ID:          "system_ota_tests",
+	config, err = json.Marshal(&sourceConfig{
+		ID:          "host_target_testing",
 		RepoURL:     repoURL,
 		BlobRepoURL: fmt.Sprintf("%s/blobs", repoURL),
 		RootKeys:    rootKeys,
@@ -139,21 +143,10 @@ func writeConfig(dir string, localHostname string, port int) (configURL string, 
 		},
 	})
 	if err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 	h := sha256.Sum256(config)
 	configHash = hex.EncodeToString(h[:])
 
-	configDir := filepath.Join(dir, "system_ota_tests")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return "", "", err
-	}
-
-	configPath := filepath.Join(configDir, "config.json")
-	log.Printf("writing %q", configPath)
-	if err := ioutil.WriteFile(configPath, config, 0644); err != nil {
-		return "", "", err
-	}
-
-	return configURL, configHash, nil
+	return configURL, configHash, config, nil
 }

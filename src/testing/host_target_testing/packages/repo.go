@@ -11,8 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"fuchsia.googlesource.com/host_target_testing/util"
 	"fuchsia.googlesource.com/pm/repo"
-	"fuchsia.googlesource.com/system_ota_tests/util"
 )
 
 type Repository struct {

@@ -6,6 +6,7 @@ group("testing") {
   testonly = true
   deps = [
     ":tests",
+    "host_target_testing",
     "sl4f",
   ]
 }

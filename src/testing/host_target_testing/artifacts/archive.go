@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"fuchsia.googlesource.com/system_ota_tests/util"
+	"fuchsia.googlesource.com/host_target_testing/util"
 )
 
 // Archive allows interacting with the build artifact repository.
