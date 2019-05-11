@@ -131,6 +131,667 @@ private:
     Substitutions substitutions_;
 };
 
+bool bitfield_member_name_repeats_enclosing_type_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("bitfield-member-name-repeats-enclosing-type-name")
+        .message("Bitfield members must not repeat names from the enclosing type")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool bitfield_member_name_repeats_library_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("bitfield-member-name-repeats-library-name")
+        .message("Bitfield members must not repeat names from the enclosing type (or library)")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool bitfield_name_repeats_enclosing_type_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("bitfield-name-repeats-enclosing-type-name")
+        .message("Bitfield names must not repeat names from the enclosing type")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool bitfield_name_repeats_library_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("bitfield-name-repeats-library-name")
+        .message("Bitfield names must not repeat names from the enclosing type (or library)")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool constant_name_repeats_library_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("constant-name-repeats-library-name")
+        .message("Constant names must not repeat names from the enclosing library")
+        .source_template(R"FIDL(
+library fidl.bandwidth;
+
+const uint64 ${TEST} = 1234;
+)FIDL");
+
+    test.substitute("TEST", "RATE");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "BANDWIDTH");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool constant_should_use_common_prefix_suffix_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Warning for "MINIMUM_..." or "MAXIMUM...", or maybe(?) "..._CAP" Also for instance
+    // "SET_CLIENT_NAME_MAX_LEN" -> "MAX_CLIENT_NAME_LEN" or MAX_LEN_CLIENT_NAME", so detect
+    // "_MAX" or "_MIN" as separate words in middle or at end of identifier.
+
+    LintTest test;
+    test.check_id("constant-should-use-common-prefix-suffix")
+        .message("Constants should use the standard prefix and/or suffix for common concept, "
+                 "such as MIN and MAX, rather than MINIMUM and MAXIMUM, respectively.")
+        .source_template(R"FIDL(
+library fidl.a;
+
+const uint64 ${TEST} = 1234;
+)FIDL");
+
+    test.substitute("TEST", "MIN_HEIGHT");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "MAX_HEIGHT");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "NAME_MIN_LEN");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "NAME_MAX_LEN");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    // Not yet determined if the standard should be LEN or LENGTH, or both
+    // test.substitute("TEST", "BYTES_LEN");
+    // ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "THRESHOLD_MIN");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "THRESHOLD_MAX");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "MINIMUM_HEIGHT")
+        .suggestion("change 'MINIMUM_HEIGHT' to 'MIN_HEIGHT'")
+        .replacement("MIN_HEIGHT");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    test.substitute("TEST", "MAXIMUM_HEIGHT")
+        .suggestion("change 'MAXIMUM_HEIGHT' to 'MAX_HEIGHT'")
+        .replacement("MAX_HEIGHT");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    test.substitute("TEST", "NAME_MINIMUM_LEN")
+        .suggestion("change 'NAME_MINIMUM_LEN' to 'NAME_MIN_LEN'")
+        .replacement("NAME_MIN_LEN");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    test.substitute("TEST", "NAME_MAXIMUM_LEN")
+        .suggestion("change 'NAME_MAXIMUM_LEN' to 'NAME_MAX_LEN'")
+        .replacement("NAME_MAX_LEN");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    // Not yet determined if the standard should be LEN or LENGTH, or both
+    // test.substitute("TEST", "BYTES_LENGTH")
+    //     .suggestion("change 'BYTES_LENGTH' to 'BYTES_LEN'")
+    //     .replacement("BYTES_LEN");
+    // ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    test.substitute("TEST", "THRESHOLD_MINIMUM")
+        .suggestion("change 'THRESHOLD_MINIMUM' to 'THRESHOLD_MIN'")
+        .replacement("THRESHOLD_MIN");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    test.substitute("TEST", "THRESHOLD_MAXIMUM")
+        .suggestion("change 'THRESHOLD_MAXIMUM' to 'THRESHOLD_MAX'")
+        .replacement("THRESHOLD_MAX");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    test.substitute("TEST", "THRESHOLD_CAP")
+        .suggestion("change 'THRESHOLD_CAP' to 'THRESHOLD_MAX'")
+        .replacement("THRESHOLD_MAX");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool copyright_notice_should_not_flow_through_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("copyright-notice-should-not-flow-through")
+        .message("Copyright notice should not flow through")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool deprecation_comment_should_not_flow_through_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Warning on DEPRECATED comments.
+
+    LintTest test;
+    test.check_id("deprecation-comment-should-not-flow-through")
+        .message("DEPRECATED comments should not flow through")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool disallowed_library_name_component() {
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("disallowed-library-name-component")
+        .message("Library names must not contain the following components: common, service, util, "
+                 "base, f<letter>l, zx<word>")
+        .source_template(R"FIDL(
+library fidl.${TEST};
+)FIDL");
+
+    test.substitute("TEST", "display");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    // Bad test: zx<word>
+    test.substitute("TEST", "zxsocket");
+    // no suggestion
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    // Bad test: f<letter>l
+    test.substitute("TEST", "ful");
+    // no suggestion
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    // Bad test: banned words like "common"
+    test.substitute("TEST", "common");
+    // no suggestion
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool disallowed_protocol_name_ends_in_service_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Error if ends in "Service", warning if includes "Service" as a word, but "Serviceability"
+    // ("Service" is only part of a word) is OK.
+
+    LintTest test;
+    test.check_id("disallowed-protocol-name-ends-in-service")
+        .message("Protocols must not include the name 'service.'")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool disallowed_protocol_name_includes_service_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Error if ends in "Service", warning if includes "Service" as a word, but "Serviceability"
+    // ("Service" is only part of a word) is OK.
+
+    LintTest test;
+    test.check_id("disallowed-protocol-name-includes-service")
+        .message("Protocols must not include the name 'service.'")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool discontiguous_comment_block_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("discontiguous-comment-block")
+        .message("Multi-line comments should be in a single contiguous comment block, with all "
+                 "lines prefixed by comment markers")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool end_of_file_should_be_one_newline_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Use formatter.
+    //
+    // Warning: often hard to get right depending on the editor.
+
+    LintTest test;
+    test.check_id("end-of-file-should-be-one-newline")
+        .message("End files with exactly one newline character")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool enum_member_name_repeats_enclosing_type_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("enum-member-name-repeats-enclosing-type-name")
+        .message("Enum member names must not repeat names from the enclosing type")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool enum_member_name_repeats_library_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("enum-member-name-repeats-library-name")
+        .message("Enum member names must not repeat names from the enclosing type (or library)")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool excessive_number_of_separate_protocols_for_file_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Warning(?) if a fidl file contains more than some tolerance cap number of protocols.
+    //
+    // Or if a directory of fidl files contains more than some tolerance number of files AND any
+    // fidl file(s) in that directory contains more than some smaller cap number of protocols per
+    // fidl file. The fuchsia.ledger would be a good one to look at since it defines many protocols.
+    // We do not have public vs private visibility yet, and the cap may only be needed for public
+    // things.
+
+    LintTest test;
+    test.check_id("excessive-number-of-separate-protocols-for-file")
+        .message("Some libraries create separate protocol instances for every logical object in "
+                 "the protocol, but this approach has a number of disadvantages:")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool excessive_number_of_separate_protocols_for_library_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Or if a directory of fidl files contains more than some tolerance number of files AND any
+    // fidl file(s) in that directory contains more than some smaller cap number of protocols per
+    // fidl file. The fuchsia.ledger would be a good one to look at since it defines many protocols.
+    // We do not have public vs private visibility yet, and the cap may only be needed for public
+    // things.
+
+    LintTest test;
+    test.check_id("excessive-number-of-separate-protocols-for-library")
+        .message("Some libraries create separate protocol instances for every logical object in "
+                 "the protocol, but this approach has a number of disadvantages:")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool inconsistent_type_for_recurring_file_concept_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("inconsistent-type-for-recurring-file-concept")
+        .message("Use consistent types for the same concept")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool inconsistent_type_for_recurring_library_concept_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("inconsistent-type-for-recurring-library-concept")
+        .message("Ideally, types would be used consistently across library boundaries")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool incorrect_line_indent_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Use formatter: It can handle all checks in this section ("Syntax"), but linter can run the
+    // formatter and diff results to see if the file needs to be formatted.
+
+    LintTest test;
+    test.check_id("incorrect-line-indent")
+        .message("Use 4 space indents")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool incorrect_spacing_between_declarations_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Use formatter.
+
+    LintTest test;
+    test.check_id("incorrect-spacing-between-declarations")
+        .message("Separate declarations for struct, union, enum, and protocol constructs from "
+                 "other declarations with one blank line (two consecutive newline characters)")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
 bool invalid_case_for_constant() {
     BEGIN_TEST;
 
@@ -147,7 +808,7 @@ enum Int8Enum : int8 {
     ${TEST} = -1;
 };
 )FIDL"},
-        {"bitfield members", R"FIDL(
+        {"bitfield members", R"FIDL(  // CHECK NOT YET IMPLEMENTED!
 library fidl.a;
 
 bits Uint32Bitfield : uint32 {
@@ -173,6 +834,65 @@ bits Uint32Bitfield : uint32 {
         test.substitute("TEST", "kSomeConst")
             .suggestion("change 'kSomeConst' to 'SOME_CONST'")
             .replacement("SOME_CONST");
+        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    }
+
+    END_TEST;
+}
+
+bool invalid_case_for_decl_member() {
+    BEGIN_TEST;
+
+    std::map<std::string, std::string> named_templates = {
+        {"parameters", R"FIDL(
+library fidl.a;
+
+protocol TestProtocol {
+    TestMethod(string ${TEST});
+};
+)FIDL"},
+        {"struct members", R"FIDL(
+library fidl.a;
+
+struct DeclName {
+    string ${TEST};
+};
+)FIDL"},
+        {"table members", R"FIDL(
+library fidl.a;
+
+table DeclName {
+    1: string ${TEST};
+};
+)FIDL"},
+        {"union members", R"FIDL(
+library fidl.a;
+
+union DeclName {
+    string ${TEST};
+};
+)FIDL"},
+        {"xunion members", R"FIDL(
+library fidl.a;
+
+xunion DeclName {
+    string ${TEST};
+};
+)FIDL"},
+    };
+
+    for (auto const& named_template : named_templates) {
+        LintTest test;
+        test.check_id("invalid-case-for-decl-member")
+            .message(named_template.first + " must be named in lower_snake_case")
+            .source_template(named_template.second);
+
+        test.substitute("TEST", "agent_request_count");
+        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+        test.substitute("TEST", "agentRequestCount")
+            .suggestion("change 'agentRequestCount' to 'agent_request_count'")
+            .replacement("agent_request_count");
         ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
     }
 
@@ -264,65 +984,6 @@ xunion ${TEST} {
     END_TEST;
 }
 
-bool invalid_case_for_decl_member() {
-    BEGIN_TEST;
-
-    std::map<std::string, std::string> named_templates = {
-        {"parameters", R"FIDL(
-library fidl.a;
-
-protocol TestProtocol {
-    TestMethod(string ${TEST});
-};
-)FIDL"},
-        {"struct members", R"FIDL(
-library fidl.a;
-
-struct DeclName {
-    string ${TEST};
-};
-)FIDL"},
-        {"table members", R"FIDL(
-library fidl.a;
-
-table DeclName {
-    1: string ${TEST};
-};
-)FIDL"},
-        {"union members", R"FIDL(
-library fidl.a;
-
-union DeclName {
-    string ${TEST};
-};
-)FIDL"},
-        {"xunion members", R"FIDL(
-library fidl.a;
-
-xunion DeclName {
-    string ${TEST};
-};
-)FIDL"},
-    };
-
-    for (auto const& named_template : named_templates) {
-        LintTest test;
-        test.check_id("invalid-case-for-decl-member")
-            .message(named_template.first + " must be named in lower_snake_case")
-            .source_template(named_template.second);
-
-        test.substitute("TEST", "agent_request_count");
-        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-        test.substitute("TEST", "agentRequestCount")
-            .suggestion("change 'agentRequestCount' to 'agent_request_count'")
-            .replacement("agent_request_count");
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-    }
-
-    END_TEST;
-}
-
 bool invalid_case_for_primitive_alias() {
     BEGIN_TEST;
 
@@ -347,60 +1008,296 @@ using bar as baz;
     END_TEST;
 }
 
-bool disallowed_library_name_component() {
+bool invalid_copyright_for_platform_source_library_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
     BEGIN_TEST;
 
     LintTest test;
-    test.check_id("disallowed-library-name-component")
-        .message("Library names must not contain the following components: common, service, util, "
-                 "base, f<letter>l, zx<word>")
+    test.check_id("invalid-copyright-for-platform-source-library")
+        .message("FIDL files defined in the Platform Source Tree (i.e., defined in "
+                 "fuchsia.googlesource.com) must begin with the standard copyright notice")
         .source_template(R"FIDL(
-library fidl.${TEST};
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
-    test.substitute("TEST", "display");
+    test.substitute("TEST", "!GOOD_VALUE!");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    // Bad test: zx<word>
-    test.substitute("TEST", "zxsocket");
-    // no suggestion
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    // Bad test: f<letter>l
-    test.substitute("TEST", "ful");
-    // no suggestion
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    // Bad test: banned words like "common"
-    test.substitute("TEST", "common");
-    // no suggestion
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
     ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
 
     END_TEST;
 }
 
-bool wrong_prefix_for_platform_source_library() {
+bool library_name_does_not_match_file_path_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
     BEGIN_TEST;
 
     LintTest test;
-    test.check_id("wrong-prefix-for-platform-source-library")
-        .message("FIDL library name is not currently allowed")
+    test.check_id("library-name-does-not-match-file-path")
+        .message("The <library> directory is named using the dot-separated name of the FIDL "
+                 "library")
         .source_template(R"FIDL(
-library ${TEST}.subcomponent;
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
-    test.substitute("TEST", "fuchsia");
+    test.substitute("TEST", "!GOOD_VALUE!");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    test.substitute("TEST", "fidl");
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool manager_protocols_are_discouraged_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("manager-protocols-are-discouraged")
+        .message("The name Manager may be used as a name of last resort for a protocol with broad "
+                 "scope")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    test.substitute("TEST", "test");
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool member_name_repeats_enclosing_type_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("member-name-repeats-enclosing-type-name")
+        .message("Member names must not repeat names from the enclosing type")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    test.substitute("TEST", "mylibs")
-        .suggestion("change 'mylibs' to fuchsia, perhaps?")
-        .replacement("fuchsia, perhaps?");
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool member_name_repeats_library_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("member-name-repeats-library-name")
+        .message("Member names must not repeat names from the enclosing type (or library)")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool method_name_repeats_library_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("method-name-repeats-library-name")
+        .message("Method names must not repeat names from the enclosing protocol (or library)")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool method_name_repeats_protocol_name_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("method-name-repeats-protocol-name")
+        .message("Method names must not repeat names from the enclosing protocol")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool method_return_status_missing_ok_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Warning or error(?) if returning a "status" enum that does not have an OK value. Note there
+    // will be (or is) new guidance here.
+    //
+    // From the rubric:
+    //
+    //   If a method can return either an error or a result, use the following pattern:
+    //
+    //     enum MyStatus { OK; FOO; BAR; ... };
+    //
+    //     protocol Frobinator {
+    //         1: Frobinate(...) -> (MyStatus status, FrobinateResult? result);
+    //     };
+
+    LintTest test;
+    test.check_id("method-return-status-missing-ok")
+        .message("") // TBD
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool method_returns_status_with_non_optional_result_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Warning if return a status and a non-optional result? we now have another more expressive
+    // pattern for this, this section should be updated. Specifically, see:
+    // https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-014.md.
+
+    LintTest test;
+    test.check_id("method-returns-status-with-non-optional-result")
+        .message("") // TBD
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool method_should_pipeline_protocols_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // Error(?) if the return tuple contains one value of another FIDL protocol type. Returning a
+    // protocol is better done by sending a request for pipelining. This will be hard to lint at the
+    // raw level, because you do not know to differentiate Bar from a protocol vs a message vs a bad
+    // name since resolution is done later. This may call for linting to be done on the JSON IR.
+
+    LintTest test;
+    test.check_id("method-should-pipeline-protocols")
+        .message("") // TBD
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
     ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
 
     END_TEST;
@@ -605,22 +1502,30 @@ using foo as ${TEST};
     END_TEST;
 }
 
-bool too_many_nested_libraries_please_implement_me() {
+bool note_comment_should_not_flow_through_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
 
+    // Warning on NOTE comments.
+
     LintTest test;
-    test.check_id("too-many-nested-libraries")
-        .message("Avoid library names with more than two dots")
+    test.check_id("note-comment-should-not-flow-through")
+        .message("NOTE comments should not flow through")
         .source_template(R"FIDL(
-library ${TEST};
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
-    test.substitute("TEST", "fidl.a");
+    test.substitute("TEST", "!GOOD_VALUE!");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    test.substitute("TEST", "fuchsia.foo.bar.baz");
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
     ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
 
     END_TEST;
@@ -649,123 +1554,16 @@ using foo as ${TEST};
     END_TEST;
 }
 
-bool constant_name_repeats_library_name_please_implement_me() {
+bool service_hub_pattern_is_discouraged_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
 
-    LintTest test;
-    test.check_id("constant-name-repeats-library-name")
-        .message("Constant names must not repeat names from the enclosing library")
-        .source_template(R"FIDL(
-library fidl.bandwidth;
-
-const uint64 ${TEST} = 1234;
-)FIDL");
-
-    test.substitute("TEST", "RATE");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "BANDWIDTH");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool constant_should_use_common_prefix_suffix_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Warning for "MINIMUM_..." or "MAXIMUM...", or maybe(?) "..._CAP" Also for instance
-    // "SET_CLIENT_NAME_MAX_LEN" -> "MAX_CLIENT_NAME_LEN" or MAX_LEN_CLIENT_NAME", so detect
-    // "_MAX" or "_MIN" as separate words in middle or at end of identifier.
+    // Warning(?) Note this is a low-priority check.
 
     LintTest test;
-    test.check_id("constant-should-use-common-prefix-suffix")
-        .message("Constants should use the standard prefix and/or suffix for common concept, "
-                 "such as MIN and MAX, rather than MINIMUM and MAXIMUM, respectively.")
-        .source_template(R"FIDL(
-library fidl.a;
-
-const uint64 ${TEST} = 1234;
-)FIDL");
-
-    test.substitute("TEST", "MIN_HEIGHT");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "MAX_HEIGHT");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "NAME_MIN_LEN");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "NAME_MAX_LEN");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    // Not yet determined if the standard should be LEN or LENGTH, or both
-    // test.substitute("TEST", "BYTES_LEN");
-    // ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "THRESHOLD_MIN");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "THRESHOLD_MAX");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "MINIMUM_HEIGHT")
-        .suggestion("change 'MINIMUM_HEIGHT' to 'MIN_HEIGHT'")
-        .replacement("MIN_HEIGHT");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    test.substitute("TEST", "MAXIMUM_HEIGHT")
-        .suggestion("change 'MAXIMUM_HEIGHT' to 'MAX_HEIGHT'")
-        .replacement("MAX_HEIGHT");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    test.substitute("TEST", "NAME_MINIMUM_LEN")
-        .suggestion("change 'NAME_MINIMUM_LEN' to 'NAME_MIN_LEN'")
-        .replacement("NAME_MIN_LEN");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    test.substitute("TEST", "NAME_MAXIMUM_LEN")
-        .suggestion("change 'NAME_MAXIMUM_LEN' to 'NAME_MAX_LEN'")
-        .replacement("NAME_MAX_LEN");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    // Not yet determined if the standard should be LEN or LENGTH, or both
-    // test.substitute("TEST", "BYTES_LENGTH")
-    //     .suggestion("change 'BYTES_LENGTH' to 'BYTES_LEN'")
-    //     .replacement("BYTES_LEN");
-    // ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    test.substitute("TEST", "THRESHOLD_MINIMUM")
-        .suggestion("change 'THRESHOLD_MINIMUM' to 'THRESHOLD_MIN'")
-        .replacement("THRESHOLD_MIN");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    test.substitute("TEST", "THRESHOLD_MAXIMUM")
-        .suggestion("change 'THRESHOLD_MAXIMUM' to 'THRESHOLD_MAX'")
-        .replacement("THRESHOLD_MAX");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    test.substitute("TEST", "THRESHOLD_CAP")
-        .suggestion("change 'THRESHOLD_CAP' to 'THRESHOLD_MAX'")
-        .replacement("THRESHOLD_MAX");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool manager_protocols_are_discouraged_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("manager-protocols-are-discouraged")
-        .message("The name Manager may be used as a name of last resort for a protocol with broad "
-                 "scope")
+    test.check_id("service-hub-pattern-is-discouraged")
+        .message("") // TBD
         .source_template(R"FIDL(
 library fidl.a;
 
@@ -785,347 +1583,14 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool disallowed_protocol_name_ends_in_service_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Error if ends in "Service", warning if includes "Service" as a word, but "Serviceability"
-    // ("Service" is only part of a word) is OK.
-
-    LintTest test;
-    test.check_id("disallowed-protocol-name-ends-in-service")
-        .message("Protocols must not include the name 'service.'")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool disallowed_protocol_name_includes_service_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Error if ends in "Service", warning if includes "Service" as a word, but "Serviceability"
-    // ("Service" is only part of a word) is OK.
-
-    LintTest test;
-    test.check_id("disallowed-protocol-name-includes-service")
-        .message("Protocols must not include the name 'service.'")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool method_name_repeats_protocol_name_please_implement_me() {
+bool string_bounds_not_specified_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
 
     LintTest test;
-    test.check_id("method-name-repeats-protocol-name")
-        .message("Method names must not repeat names from the enclosing protocol")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool method_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("method-name-repeats-library-name")
-        .message("Method names must not repeat names from the enclosing protocol (or library)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool member_name_repeats_enclosing_type_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("member-name-repeats-enclosing-type-name")
-        .message("Member names must not repeat names from the enclosing type")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool member_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("member-name-repeats-library-name")
-        .message("Member names must not repeat names from the enclosing type (or library)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool enum_member_name_repeats_enclosing_type_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("enum-member-name-repeats-enclosing-type-name")
-        .message("Enum member names must not repeat names from the enclosing type")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool enum_member_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("enum-member-name-repeats-library-name")
-        .message("Enum member names must not repeat names from the enclosing type (or library)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool bitfield_name_repeats_enclosing_type_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("bitfield-name-repeats-enclosing-type-name")
-        .message("Bitfield names must not repeat names from the enclosing type")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool bitfield_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("bitfield-name-repeats-library-name")
-        .message("Bitfield names must not repeat names from the enclosing type (or library)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool bitfield_member_name_repeats_enclosing_type_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("bitfield-member-name-repeats-enclosing-type-name")
-        .message("Bitfield members must not repeat names from the enclosing type")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool bitfield_member_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("bitfield-member-name-repeats-library-name")
-        .message("Bitfield members must not repeat names from the enclosing type (or library)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool incorrect_line_indent_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Use formatter: It can handle all checks in this section ("Syntax"), but linter can run the
-    // formatter and diff results to see if the file needs to be formatted.
-
-    LintTest test;
-    test.check_id("incorrect-line-indent")
-        .message("Use 4 space indents")
+    test.check_id("string-bounds-not-specified")
+        .message("Specify bounds for string")
         .source_template(R"FIDL(
 library fidl.a;
 
@@ -1174,154 +1639,6 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool trailing_whitespace_disallowed_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Use formatter.
-
-    LintTest test;
-    test.check_id("trailing-whitespace-disallowed")
-        .message("Avoid trailing whitespace")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool incorrect_spacing_between_declarations_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Use formatter.
-
-    LintTest test;
-    test.check_id("incorrect-spacing-between-declarations")
-        .message("Separate declarations for struct, union, enum, and protocol constructs from "
-                 "other declarations with one blank line (two consecutive newline characters)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool end_of_file_should_be_one_newline_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Use formatter.
-    //
-    // Warning: often hard to get right depending on the editor.
-
-    LintTest test;
-    test.check_id("end-of-file-should-be-one-newline")
-        .message("End files with exactly one newline character")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool note_comment_should_not_flow_through_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Warning on NOTE comments.
-
-    LintTest test;
-    test.check_id("note-comment-should-not-flow-through")
-        .message("NOTE comments should not flow through")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool deprecation_comment_should_not_flow_through_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Warning on DEPRECATED comments.
-
-    LintTest test;
-    test.check_id("deprecation-comment-should-not-flow-through")
-        .message("DEPRECATED comments should not flow through")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
 bool todo_comment_should_not_flow_through_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
@@ -1351,338 +1668,37 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool copyright_notice_should_not_flow_through_please_implement_me() {
+bool too_many_nested_libraries_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
 
     LintTest test;
-    test.check_id("copyright-notice-should-not-flow-through")
-        .message("Copyright notice should not flow through")
+    test.check_id("too-many-nested-libraries")
+        .message("Avoid library names with more than two dots")
         .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+library ${TEST};
 )FIDL");
 
-    test.substitute("TEST", "!GOOD_VALUE!");
+    test.substitute("TEST", "fidl.a");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.substitute("TEST", "fuchsia.foo.bar.baz");
     ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
 
     END_TEST;
 }
 
-bool discontiguous_comment_block_please_implement_me() {
+bool trailing_whitespace_disallowed_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
 
-    LintTest test;
-    test.check_id("discontiguous-comment-block")
-        .message("Multi-line comments should be in a single contiguous comment block, with all "
-                 "lines prefixed by comment markers")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool invalid_copyright_for_platform_source_library_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
+    // Use formatter.
 
     LintTest test;
-    test.check_id("invalid-copyright-for-platform-source-library")
-        .message("FIDL files defined in the Platform Source Tree (i.e., defined in "
-                 "fuchsia.googlesource.com) must begin with the standard copyright notice")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool library_name_does_not_match_file_path_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("library-name-does-not-match-file-path")
-        .message("The <library> directory is named using the dot-separated name of the FIDL "
-                 "library")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool inconsistent_type_for_recurring_file_concept_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("inconsistent-type-for-recurring-file-concept")
-        .message("Use consistent types for the same concept")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool inconsistent_type_for_recurring_library_concept_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("inconsistent-type-for-recurring-library-concept")
-        .message("Ideally, types would be used consistently across library boundaries")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool string_bounds_not_specified_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("string-bounds-not-specified")
-        .message("Specify bounds for string")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool vector_bounds_not_specified_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("vector-bounds-not-specified")
-        .message("Specify bounds for vector")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool method_return_status_missing_ok_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Warning or error(?) if returning a "status" enum that does not have an OK value. Note there
-    // will be (or is) new guidance here.
-    //
-    // From the rubric:
-    //
-    //   If a method can return either an error or a result, use the following pattern:
-    //
-    //     enum MyStatus { OK; FOO; BAR; ... };
-    //
-    //     protocol Frobinator {
-    //         1: Frobinate(...) -> (MyStatus status, FrobinateResult? result);
-    //     };
-
-    LintTest test;
-    test.check_id("method-return-status-missing-ok")
-        .message("") // TBD
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool method_returns_status_with_non_optional_result_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Warning if return a status and a non-optional result? we now have another more expressive
-    // pattern for this, this section should be updated. Specifically, see:
-    // https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-014.md.
-
-    LintTest test;
-    test.check_id("method-returns-status-with-non-optional-result")
-        .message("") // TBD
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool unexpected_type_for_well_known_string_concept_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Warning on struct, union, and table members that include certain well-known concepts (like
-    // "filename" and "file_name") but their types don't match the type recommended (e.g., string,
-    // in this case).
-
-    LintTest test;
-    test.check_id("unexpected-type-for-well-known-string-concept")
-        .message("Use string for text data:")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool unexpected_type_for_well_known_bytes_concept_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // (two suggestions) recommend either bytes or array<uint8>. warning on struct, union, and table
-    // member name patterns.
-
-    LintTest test;
-    test.check_id("unexpected-type-for-well-known-bytes-concept")
-        .message("Use bytes or array<uint8> for small non-text data:")
+    test.check_id("trailing-whitespace-disallowed")
+        .message("Avoid trailing whitespace")
         .source_template(R"FIDL(
 library fidl.a;
 
@@ -1713,6 +1729,36 @@ bool unexpected_type_for_well_known_buffer_concept_please_implement_me() {
     test.check_id("unexpected-type-for-well-known-buffer-concept")
         .message("Use fuchsia.mem.Buffer for images and (large) protobufs, when it makes sense to "
                  "buffer the data completely")
+        .source_template(R"FIDL(
+library fidl.a;
+
+PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
+    ${TEST}
+TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+)FIDL");
+
+    test.substitute("TEST", "!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "!BAD_VALUE!")
+        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
+        .replacement("!GOOD_VALUE!");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+
+    END_TEST;
+}
+
+bool unexpected_type_for_well_known_bytes_concept_please_implement_me() {
+    if (true)
+        return true; // disabled pending feature implementation
+    BEGIN_TEST;
+
+    // (two suggestions) recommend either bytes or array<uint8>. warning on struct, union, and table
+    // member name patterns.
+
+    LintTest test;
+    test.check_id("unexpected-type-for-well-known-bytes-concept")
+        .message("Use bytes or array<uint8> for small non-text data:")
         .source_template(R"FIDL(
 library fidl.a;
 
@@ -1763,19 +1809,18 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool method_should_pipeline_protocols_please_implement_me() {
+bool unexpected_type_for_well_known_string_concept_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
 
-    // Error(?) if the return tuple contains one value of another FIDL protocol type. Returning a
-    // protocol is better done by sending a request for pipelining. This will be hard to lint at the
-    // raw level, because you do not know to differentiate Bar from a protocol vs a message vs a bad
-    // name since resolution is done later. This may call for linting to be done on the JSON IR.
+    // Warning on struct, union, and table members that include certain well-known concepts (like
+    // "filename" and "file_name") but their types don't match the type recommended (e.g., string,
+    // in this case).
 
     LintTest test;
-    test.check_id("method-should-pipeline-protocols")
-        .message("") // TBD
+    test.check_id("unexpected-type-for-well-known-string-concept")
+        .message("Use string for text data:")
         .source_template(R"FIDL(
 library fidl.a;
 
@@ -1795,16 +1840,14 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool service_hub_pattern_is_discouraged_please_implement_me() {
+bool vector_bounds_not_specified_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
 
-    // Warning(?) Note this is a low-priority check.
-
     LintTest test;
-    test.check_id("service-hub-pattern-is-discouraged")
-        .message("") // TBD
+    test.check_id("vector-bounds-not-specified")
+        .message("Specify bounds for vector")
         .source_template(R"FIDL(
 library fidl.a;
 
@@ -1824,71 +1867,28 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool excessive_number_of_separate_protocols_for_library_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool wrong_prefix_for_platform_source_library() {
     BEGIN_TEST;
 
-    // Or if a directory of fidl files contains more than some tolerance number of files AND any
-    // fidl file(s) in that directory contains more than some smaller cap number of protocols per
-    // fidl file. The fuchsia.ledger would be a good one to look at since it defines many protocols.
-    // We do not have public vs private visibility yet, and the cap may only be needed for public
-    // things.
-
     LintTest test;
-    test.check_id("excessive-number-of-separate-protocols-for-library")
-        .message("Some libraries create separate protocol instances for every logical object in "
-                 "the protocol, but this approach has a number of disadvantages:")
+    test.check_id("wrong-prefix-for-platform-source-library")
+        .message("FIDL library name is not currently allowed")
         .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+library ${TEST}.subcomponent;
 )FIDL");
 
-    test.substitute("TEST", "!GOOD_VALUE!");
+    test.substitute("TEST", "fuchsia");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool excessive_number_of_separate_protocols_for_file_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Warning(?) if a fidl file contains more than some tolerance cap number of protocols.
-    //
-    // Or if a directory of fidl files contains more than some tolerance number of files AND any
-    // fidl file(s) in that directory contains more than some smaller cap number of protocols per
-    // fidl file. The fuchsia.ledger would be a good one to look at since it defines many protocols.
-    // We do not have public vs private visibility yet, and the cap may only be needed for public
-    // things.
-
-    LintTest test;
-    test.check_id("excessive-number-of-separate-protocols-for-file")
-        .message("Some libraries create separate protocol instances for every logical object in "
-                 "the protocol, but this approach has a number of disadvantages:")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
+    test.substitute("TEST", "fidl");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.substitute("TEST", "test");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "mylibs")
+        .suggestion("change 'mylibs' to fuchsia, perhaps?")
+        .replacement("fuchsia, perhaps?");
     ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
 
     END_TEST;
