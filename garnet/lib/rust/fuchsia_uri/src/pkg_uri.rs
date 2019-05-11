@@ -5,12 +5,11 @@
 pub use crate::errors::ParseError;
 pub use crate::parse::{check_resource, HASH_RE, NAME_RE};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_derive::Serialize;
 use std::convert::TryFrom;
 use std::fmt;
 use std::str;
 use url::percent_encoding::percent_decode;
-use url::Url;
+use url::{Host, Url};
 
 /// Decoded representation of a fuchsia-pkg URI.
 ///
@@ -34,7 +33,7 @@ use url::Url;
 /// - fuchsia-pkg://example.com/some-package/some-variant/<some-hash>#path/to/resource (obsolete)
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PkgUri {
-    host: String,
+    repo: RepoUri,
     path: String,
     hash: Option<String>,
     resource: Option<String>,
@@ -94,11 +93,11 @@ impl PkgUri {
             None
         };
 
-        Ok(PkgUri { host, path, hash, resource })
+        Ok(PkgUri { repo: RepoUri { host }, path, hash, resource })
     }
 
     pub fn host(&self) -> &str {
-        &self.host
+        &self.repo.host()
     }
 
     pub fn name(&self) -> Option<&str> {
@@ -130,10 +129,15 @@ impl PkgUri {
         self.path == "/" && self.hash.is_none() && self.resource.is_none()
     }
 
+    /// Returns the [RepoUri] that corresponds to this package URI.
+    pub fn repo(&self) -> &RepoUri {
+        &self.repo
+    }
+
     /// Produce a new [PkgUri] with any resource fragment stripped off.
     pub fn root_uri(&self) -> PkgUri {
         PkgUri {
-            host: self.host.clone(),
+            repo: self.repo.clone(),
             path: self.path.clone(),
             hash: self.hash.clone(),
             resource: None,
@@ -141,11 +145,7 @@ impl PkgUri {
     }
 
     pub fn new_repository(host: String) -> Result<PkgUri, ParseError> {
-        if host.is_empty() {
-            return Err(ParseError::InvalidHost);
-        }
-
-        Ok(PkgUri { host: host.to_string(), path: "/".to_string(), hash: None, resource: None })
+        Ok(PkgUri { repo: RepoUri::new(host)?, path: "/".to_string(), hash: None, resource: None })
     }
 
     pub fn new_package(
@@ -153,7 +153,7 @@ impl PkgUri {
         path: String,
         hash: Option<String>,
     ) -> Result<PkgUri, ParseError> {
-        let mut uri = PkgUri::new_repository(host)?;
+        let repo = RepoUri::new(host)?;
 
         let (name, variant) = parse_path(path.as_str())?;
 
@@ -169,9 +169,8 @@ impl PkgUri {
                 return Err(ParseError::InvalidHash);
             }
         }
-        uri.path = path;
-        uri.hash = hash;
-        Ok(uri)
+
+        Ok(PkgUri { repo, path, hash, resource: None })
     }
 
     pub fn new_resource(
@@ -191,7 +190,7 @@ impl PkgUri {
 
 impl fmt::Display for PkgUri {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "fuchsia-pkg://{}", self.host)?;
+        write!(f, "{}", self.repo)?;
         if self.path != "/" {
             write!(f, "{}", self.path)?;
         }
@@ -246,15 +245,20 @@ impl<'de> Deserialize<'de> for PkgUri {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
-#[serde(transparent)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RepoUri {
-    uri: PkgUri,
+    host: String,
 }
 
 impl RepoUri {
     pub fn new(host: String) -> Result<Self, ParseError> {
-        Ok(RepoUri { uri: PkgUri::new_repository(host)? })
+        if host.is_empty() {
+            return Err(ParseError::InvalidHost);
+        }
+
+        Host::parse(&host)?;
+
+        Ok(RepoUri { host })
     }
 
     pub fn parse(input: &str) -> Result<Self, ParseError> {
@@ -263,7 +267,7 @@ impl RepoUri {
     }
 
     pub fn host(&self) -> &str {
-        self.uri.host()
+        &self.host
     }
 }
 
@@ -288,7 +292,7 @@ impl TryFrom<PkgUri> for RepoUri {
 
     fn try_from(uri: PkgUri) -> Result<Self, Self::Error> {
         if uri.is_repository() {
-            Ok(RepoUri { uri })
+            Ok(uri.repo)
         } else {
             Err(ParseError::InvalidRepository)
         }
@@ -297,13 +301,19 @@ impl TryFrom<PkgUri> for RepoUri {
 
 impl From<RepoUri> for PkgUri {
     fn from(uri: RepoUri) -> Self {
-        uri.uri
+        PkgUri { repo: uri, path: "/".to_string(), hash: None, resource: None }
     }
 }
 
 impl fmt::Display for RepoUri {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.uri.fmt(f)
+        write!(f, "fuchsia-pkg://{}", self.host)
+    }
+}
+
+impl Serialize for RepoUri {
+    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        self.to_string().serialize(ser)
     }
 }
 
@@ -399,7 +409,9 @@ mod tests {
                         assert_eq!(
                             uri,
                             Ok(PkgUri {
-                                host: $pkg_host.to_string(),
+                                repo: RepoUri {
+                                    host: $pkg_host.to_string(),
+                                },
                                 path: $pkg_path.to_string(),
                                 hash: $pkg_hash.map(|s: &str| s.to_string()),
                                 resource: $pkg_resource.map(|s: &str| s.to_string()),
