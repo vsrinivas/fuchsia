@@ -6,7 +6,7 @@ use {
     failure::{err_msg, Error},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys, io_util,
+    fidl_fuchsia_sys2 as fsys,
     lazy_static::lazy_static,
     std::collections::HashMap,
     std::path::PathBuf,

@@ -324,6 +324,8 @@ template("rustc_artifact") {
   extra_inputs = [ zircon_lib_dirs_file ]
   generated_file("${build_target_name}_zircon_libs") {
     forward_variables_from(invoker, [ "testonly" ])
+    # Clear possibly inherited visibility before setting our own.
+    visibility = []
     visibility = [ ":$build_target_name" ]
     deps = [
       third_party_build,

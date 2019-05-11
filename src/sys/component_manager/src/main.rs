@@ -3,33 +3,21 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-#![deny(warnings)]
-// Temporarily allow dead code during early development since not all
-// features are fully exercised.
-#![allow(dead_code)]
-// This is needed for the pseudo_directory nesting in crate::model::tests
-#![recursion_limit = "128"]
-
-mod directory_broker;
-mod elf_runner;
-mod fuchsia_boot_resolver;
-mod fuchsia_pkg_resolver;
-mod klog;
-mod model;
-mod ns_util;
 
 use {
-    elf_runner::ElfRunner,
+    component_manager_lib::{
+        elf_runner::ElfRunner,
+        fuchsia_boot_resolver::{self, FuchsiaBootResolver},
+        fuchsia_pkg_resolver::{self, FuchsiaPkgResolver},
+        klog,
+        model::{AbsoluteMoniker, Model, ModelParams, ResolverRegistry},
+    },
     failure::{self, Error, ResultExt},
     fidl_fuchsia_pkg::PackageResolverMarker,
     fuchsia_async as fasync,
-    fuchsia_boot_resolver::FuchsiaBootResolver,
     fuchsia_component::client::connect_to_service,
-    fuchsia_pkg_resolver::FuchsiaPkgResolver,
     futures::prelude::*,
-    io_util,
     log::*,
-    model::{AbsoluteMoniker, Model, ModelParams, ResolverRegistry},
     std::env,
     std::process,
     std::sync::Arc,

@@ -5,7 +5,7 @@
 use {
     crate::model::*,
     crate::ns_util::PKG_PATH,
-    crate::{directory_broker, io_util},
+    crate::directory_broker,
     cm_rust::{self, ComponentDecl, UseDirectoryDecl, UseServiceDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},

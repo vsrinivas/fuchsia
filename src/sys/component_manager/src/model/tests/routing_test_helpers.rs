@@ -23,7 +23,6 @@ use {
     fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
     futures::TryStreamExt,
-    io_util,
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,

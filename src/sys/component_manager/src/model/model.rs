@@ -14,7 +14,6 @@ use {
         future::{join_all, FutureObj},
         lock::Mutex,
     },
-    io_util,
     std::sync::Arc,
 };
 

@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_sys2 as fsys,
     fuchsia_uri::boot_uri::BootUri,
     futures::future::FutureObj,
-    io_util,
     std::path::PathBuf,
 };
 

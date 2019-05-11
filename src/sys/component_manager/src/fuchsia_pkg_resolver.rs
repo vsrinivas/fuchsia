@@ -13,7 +13,6 @@ use {
     fuchsia_uri::pkg_uri::PkgUri,
     fuchsia_zircon as zx,
     futures::future::FutureObj,
-    io_util,
     std::path::PathBuf,
 };
 

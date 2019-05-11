@@ -10,7 +10,6 @@ use {
     fidl_fuchsia_ldsvc::{LoaderRequest, LoaderRequestStream},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
-    io_util,
     log::*,
     std::collections::HashMap,
     std::path::PathBuf,

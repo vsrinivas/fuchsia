@@ -4,13 +4,17 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_binary("bin") {
-  name = "component_manager"
+rustc_library("lib") {
+  name = "component_manager_lib"
   with_unit_tests = true
   edition = "2018"
+
+  # Only for internal use.
+  visibility = [ "//src/sys/component_manager/*" ]
 
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
@@ -42,6 +46,23 @@ rustc_binary("bin") {
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/public/fidl/fuchsia-ldsvc:fuchsia-ldsvc-rustc",
     "//zircon/public/fidl/fuchsia-process:fuchsia-process-rustc",
+  ]
+}
+
+rustc_binary("bin") {
+  name = "component_manager"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
   ]
 }
 

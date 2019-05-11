@@ -7,7 +7,7 @@ use {
     cm_rust::{self, Capability, ExposeDecl, ExposeSource, OfferDecl, OfferSource},
     failure::format_err,
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
-    fuchsia_zircon as zx, io_util,
+    fuchsia_zircon as zx,
     std::sync::Arc,
 };
 
