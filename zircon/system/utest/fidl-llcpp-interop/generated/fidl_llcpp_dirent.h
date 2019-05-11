@@ -22,9 +22,9 @@ namespace dirent {
 struct DirEnt;
 class DirEntTestInterface;
 
-constexpr uint32_t TEST_MAX_PATH = 10;
+constexpr uint32_t TEST_MAX_PATH = 10u;
 
-constexpr uint32_t SMALL_DIR_VECTOR_SIZE = 3;
+constexpr uint32_t SMALL_DIR_VECTOR_SIZE = 3u;
 
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTable;
 

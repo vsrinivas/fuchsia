@@ -10,6 +10,7 @@ struct {{ .Name }};
 {{- end }}
 
 {{- define "UnionDeclaration" }}
+{{- $union := . }}
 
 extern "C" const fidl_type_t {{ .TableType }};
 {{range .DocComments}}
@@ -27,6 +28,13 @@ struct {{ .Name }} {
   ~{{ .Name }}();
 
   {{ .Name }}({{ .Name }}&& other) {
+    tag_ = Tag::Invalid;
+  {{- range $index, $member := .Members }}
+    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
+           0,
+           offsetof({{ $union.Name }}, {{ .StorageName }}) - sizeof(tag_));
+    {{- break }}
+  {{- end }}
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -48,13 +56,7 @@ struct {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  {{ .Type.LLDecl }}& mutable_{{ .Name }}() {
-    if (which() != Tag::{{ .TagName }}) {
-      Destroy();
-    }
-    tag_ = Tag::{{ .TagName }};
-    return {{ .StorageName }};
-  }
+  {{ .Type.LLDecl }}& mutable_{{ .Name }}();
 {{ "" }}
   {{- range .DocComments }}
   //{{ . }}
@@ -104,10 +106,16 @@ struct {{ .Name }} {
 {{- end }}
 
 {{- define "UnionDefinition" }}
+{{- $union := . }}
 
 {{ .Namespace }}::{{ .Name }}::{{ .Name }}() {
-  memset(this, 0, sizeof({{ .Name }}));
   tag_ = Tag::Invalid;
+{{- range $index, $member := .Members }}
+  memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
+         0,
+         offsetof({{ $union.Name }}, {{ .StorageName }}) - sizeof(tag_));
+  {{- break }}
+{{- end }}
 }
 
 {{ .Namespace }}::{{ .Name }}::~{{ .Name }}() {
@@ -126,6 +134,7 @@ void {{ .Namespace }}::{{ .Name }}::Destroy() {
   default:
     break;
   }
+  tag_ = Tag::Invalid;
 }
 
 void {{ .Namespace }}::{{ .Name }}::MoveImpl_({{ .Name }}&& other) {
@@ -138,16 +147,31 @@ void {{ .Namespace }}::{{ .Name }}::MoveImpl_({{ .Name }}&& other) {
   default:
     break;
   }
-  other.tag_ = Tag::Invalid;
+  other.Destroy();
 }
 
 void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
-  {{- $union := . -}}
   {{- range .Members }}
   static_assert(offsetof({{ $union.Namespace }}::{{ $union.Name }}, {{ .StorageName }}) == {{ .Offset }});
   {{- end }}
   static_assert(sizeof({{ $union.Namespace }}::{{ $union.Name }}) == {{ $union.Namespace }}::{{ $union.Name }}::PrimarySize);
 }
+
+{{ range $index, $member := .Members }}
+{{ .Type.LLDecl }}& {{ $union.Namespace }}::{{ $union.Name }}::mutable_{{ .Name }}() {
+  if (which() != Tag::{{ .TagName }}) {
+    Destroy();
+    new (&{{ .StorageName }}) {{ .Type.LLDecl }};
+    memset(reinterpret_cast<uint8_t*>(&{{ .StorageName }}) + sizeof({{ .Type.LLDecl }}),
+           0,
+           sizeof({{ $union.Name }}) - offsetof({{ $union.Name }}, {{ .StorageName }}) - sizeof({{ .Type.LLDecl }}));
+  }
+  tag_ = Tag::{{ .TagName }};
+  return {{ .StorageName }};
+}
+{{ "" }}
+{{- end }}
+
 {{- end }}
 
 {{- define "UnionTraits" }}

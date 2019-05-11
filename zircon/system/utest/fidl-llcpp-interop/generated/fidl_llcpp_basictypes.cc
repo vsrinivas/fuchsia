@@ -9,8 +9,10 @@ namespace llcpp {
 namespace basictypes {
 
 ::fidl::test::llcpp::basictypes::SimpleUnion::SimpleUnion() {
-  memset(this, 0, sizeof(SimpleUnion));
   tag_ = Tag::Invalid;
+  memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
+         0,
+         offsetof(SimpleUnion, field_a_) - sizeof(tag_));
 }
 
 ::fidl::test::llcpp::basictypes::SimpleUnion::~SimpleUnion() {
@@ -22,6 +24,7 @@ void ::fidl::test::llcpp::basictypes::SimpleUnion::Destroy() {
   default:
     break;
   }
+  tag_ = Tag::Invalid;
 }
 
 void ::fidl::test::llcpp::basictypes::SimpleUnion::MoveImpl_(SimpleUnion&& other) {
@@ -35,7 +38,7 @@ void ::fidl::test::llcpp::basictypes::SimpleUnion::MoveImpl_(SimpleUnion&& other
   default:
     break;
   }
-  other.tag_ = Tag::Invalid;
+  other.Destroy();
 }
 
 void ::fidl::test::llcpp::basictypes::SimpleUnion::SizeAndOffsetAssertionHelper() {
@@ -43,6 +46,32 @@ void ::fidl::test::llcpp::basictypes::SimpleUnion::SizeAndOffsetAssertionHelper(
   static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleUnion, field_b_) == 4);
   static_assert(sizeof(::fidl::test::llcpp::basictypes::SimpleUnion) == ::fidl::test::llcpp::basictypes::SimpleUnion::PrimarySize);
 }
+
+
+int32_t& ::fidl::test::llcpp::basictypes::SimpleUnion::mutable_field_a() {
+  if (which() != Tag::kFieldA) {
+    Destroy();
+    new (&field_a_) int32_t;
+    memset(reinterpret_cast<uint8_t*>(&field_a_) + sizeof(int32_t),
+           0,
+           sizeof(SimpleUnion) - offsetof(SimpleUnion, field_a_) - sizeof(int32_t));
+  }
+  tag_ = Tag::kFieldA;
+  return field_a_;
+}
+
+int32_t& ::fidl::test::llcpp::basictypes::SimpleUnion::mutable_field_b() {
+  if (which() != Tag::kFieldB) {
+    Destroy();
+    new (&field_b_) int32_t;
+    memset(reinterpret_cast<uint8_t*>(&field_b_) + sizeof(int32_t),
+           0,
+           sizeof(SimpleUnion) - offsetof(SimpleUnion, field_b_) - sizeof(int32_t));
+  }
+  tag_ = Tag::kFieldB;
+  return field_b_;
+}
+
 
 namespace {
 

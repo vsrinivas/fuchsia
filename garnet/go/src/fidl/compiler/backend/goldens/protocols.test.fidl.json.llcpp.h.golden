@@ -59,6 +59,10 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
   ~WithErrorSyntax_ErrorAsPrimitive_Result();
 
   WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
+    tag_ = Tag::Invalid;
+    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
+           0,
+           offsetof(WithErrorSyntax_ErrorAsPrimitive_Result, response_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -75,13 +79,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response() {
-    if (which() != Tag::kResponse) {
-      Destroy();
-    }
-    tag_ = Tag::kResponse;
-    return response_;
-  }
+  WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_copy_assignable<T>::value>
@@ -99,13 +97,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
-  uint32_t& mutable_err() {
-    if (which() != Tag::kErr) {
-      Destroy();
-    }
-    tag_ = Tag::kErr;
-    return err_;
-  }
+  uint32_t& mutable_err();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
@@ -1383,6 +1375,10 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
   ~WithErrorSyntax_ErrorAsEnum_Result();
 
   WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&& other) {
+    tag_ = Tag::Invalid;
+    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
+           0,
+           offsetof(WithErrorSyntax_ErrorAsEnum_Result, response_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1399,13 +1395,7 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  WithErrorSyntax_ErrorAsEnum_Response& mutable_response() {
-    if (which() != Tag::kResponse) {
-      Destroy();
-    }
-    tag_ = Tag::kResponse;
-    return response_;
-  }
+  WithErrorSyntax_ErrorAsEnum_Response& mutable_response();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_copy_assignable<T>::value>
@@ -1423,13 +1413,7 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
-  ErrorEnun& mutable_err() {
-    if (which() != Tag::kErr) {
-      Destroy();
-    }
-    tag_ = Tag::kErr;
-    return err_;
-  }
+  ErrorEnun& mutable_err();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ErrorEnun>::value && std::is_copy_assignable<T>::value>

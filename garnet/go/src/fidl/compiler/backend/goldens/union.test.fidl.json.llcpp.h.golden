@@ -31,6 +31,10 @@ struct Union {
   ~Union();
 
   Union(Union&& other) {
+    tag_ = Tag::Invalid;
+    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
+           0,
+           offsetof(Union, Primitive_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -47,13 +51,7 @@ struct Union {
 
   bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
 
-  int32_t& mutable_Primitive() {
-    if (which() != Tag::kPrimitive) {
-      Destroy();
-    }
-    tag_ = Tag::kPrimitive;
-    return Primitive_;
-  }
+  int32_t& mutable_Primitive();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
@@ -71,13 +69,7 @@ struct Union {
 
   bool is_StringNeedsConstructor() const { return tag_ == Tag::kStringNeedsConstructor; }
 
-  ::fidl::StringView& mutable_StringNeedsConstructor() {
-    if (which() != Tag::kStringNeedsConstructor) {
-      Destroy();
-    }
-    tag_ = Tag::kStringNeedsConstructor;
-    return StringNeedsConstructor_;
-  }
+  ::fidl::StringView& mutable_StringNeedsConstructor();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
@@ -95,13 +87,7 @@ struct Union {
 
   bool is_VectorStringAlsoNeedsConstructor() const { return tag_ == Tag::kVectorStringAlsoNeedsConstructor; }
 
-  ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
-    if (which() != Tag::kVectorStringAlsoNeedsConstructor) {
-      Destroy();
-    }
-    tag_ = Tag::kVectorStringAlsoNeedsConstructor;
-    return VectorStringAlsoNeedsConstructor_;
-  }
+  ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::fidl::StringView>>::value && std::is_copy_assignable<T>::value>

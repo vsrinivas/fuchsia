@@ -36,6 +36,10 @@ struct SimpleUnion {
   ~SimpleUnion();
 
   SimpleUnion(SimpleUnion&& other) {
+    tag_ = Tag::Invalid;
+    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
+           0,
+           offsetof(SimpleUnion, field_a_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -52,13 +56,7 @@ struct SimpleUnion {
 
   bool is_field_a() const { return tag_ == Tag::kFieldA; }
 
-  int32_t& mutable_field_a() {
-    if (which() != Tag::kFieldA) {
-      Destroy();
-    }
-    tag_ = Tag::kFieldA;
-    return field_a_;
-  }
+  int32_t& mutable_field_a();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
@@ -76,13 +74,7 @@ struct SimpleUnion {
 
   bool is_field_b() const { return tag_ == Tag::kFieldB; }
 
-  int32_t& mutable_field_b() {
-    if (which() != Tag::kFieldB) {
-      Destroy();
-    }
-    tag_ = Tag::kFieldB;
-    return field_b_;
-  }
+  int32_t& mutable_field_b();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>

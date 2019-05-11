@@ -36,6 +36,10 @@ struct Union {
   ~Union();
 
   Union(Union&& other) {
+    tag_ = Tag::Invalid;
+    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
+           0,
+           offsetof(Union, Field_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -55,13 +59,7 @@ struct Union {
   // union member comment #1
   //
   // union member comment #3
-  int32_t& mutable_Field() {
-    if (which() != Tag::kField) {
-      Destroy();
-    }
-    tag_ = Tag::kField;
-    return Field_;
-  }
+  int32_t& mutable_Field();
 
   // union member comment #1
   //

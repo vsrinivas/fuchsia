@@ -112,8 +112,10 @@ bool DirectoryWatcher::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
 
 
 ::fuchsia::io::NodeInfo::NodeInfo() {
-  memset(this, 0, sizeof(NodeInfo));
   tag_ = Tag::Invalid;
+  memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
+         0,
+         offsetof(NodeInfo, service_) - sizeof(tag_));
 }
 
 ::fuchsia::io::NodeInfo::~NodeInfo() {
@@ -146,6 +148,7 @@ void ::fuchsia::io::NodeInfo::Destroy() {
   default:
     break;
   }
+  tag_ = Tag::Invalid;
 }
 
 void ::fuchsia::io::NodeInfo::MoveImpl_(NodeInfo&& other) {
@@ -174,7 +177,7 @@ void ::fuchsia::io::NodeInfo::MoveImpl_(NodeInfo&& other) {
   default:
     break;
   }
-  other.tag_ = Tag::Invalid;
+  other.Destroy();
 }
 
 void ::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
@@ -187,6 +190,92 @@ void ::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(::fuchsia::io::NodeInfo, tty_) == 8);
   static_assert(sizeof(::fuchsia::io::NodeInfo) == ::fuchsia::io::NodeInfo::PrimarySize);
 }
+
+
+Service& ::fuchsia::io::NodeInfo::mutable_service() {
+  if (which() != Tag::kService) {
+    Destroy();
+    new (&service_) Service;
+    memset(reinterpret_cast<uint8_t*>(&service_) + sizeof(Service),
+           0,
+           sizeof(NodeInfo) - offsetof(NodeInfo, service_) - sizeof(Service));
+  }
+  tag_ = Tag::kService;
+  return service_;
+}
+
+FileObject& ::fuchsia::io::NodeInfo::mutable_file() {
+  if (which() != Tag::kFile) {
+    Destroy();
+    new (&file_) FileObject;
+    memset(reinterpret_cast<uint8_t*>(&file_) + sizeof(FileObject),
+           0,
+           sizeof(NodeInfo) - offsetof(NodeInfo, file_) - sizeof(FileObject));
+  }
+  tag_ = Tag::kFile;
+  return file_;
+}
+
+DirectoryObject& ::fuchsia::io::NodeInfo::mutable_directory() {
+  if (which() != Tag::kDirectory) {
+    Destroy();
+    new (&directory_) DirectoryObject;
+    memset(reinterpret_cast<uint8_t*>(&directory_) + sizeof(DirectoryObject),
+           0,
+           sizeof(NodeInfo) - offsetof(NodeInfo, directory_) - sizeof(DirectoryObject));
+  }
+  tag_ = Tag::kDirectory;
+  return directory_;
+}
+
+Pipe& ::fuchsia::io::NodeInfo::mutable_pipe() {
+  if (which() != Tag::kPipe) {
+    Destroy();
+    new (&pipe_) Pipe;
+    memset(reinterpret_cast<uint8_t*>(&pipe_) + sizeof(Pipe),
+           0,
+           sizeof(NodeInfo) - offsetof(NodeInfo, pipe_) - sizeof(Pipe));
+  }
+  tag_ = Tag::kPipe;
+  return pipe_;
+}
+
+Vmofile& ::fuchsia::io::NodeInfo::mutable_vmofile() {
+  if (which() != Tag::kVmofile) {
+    Destroy();
+    new (&vmofile_) Vmofile;
+    memset(reinterpret_cast<uint8_t*>(&vmofile_) + sizeof(Vmofile),
+           0,
+           sizeof(NodeInfo) - offsetof(NodeInfo, vmofile_) - sizeof(Vmofile));
+  }
+  tag_ = Tag::kVmofile;
+  return vmofile_;
+}
+
+Device& ::fuchsia::io::NodeInfo::mutable_device() {
+  if (which() != Tag::kDevice) {
+    Destroy();
+    new (&device_) Device;
+    memset(reinterpret_cast<uint8_t*>(&device_) + sizeof(Device),
+           0,
+           sizeof(NodeInfo) - offsetof(NodeInfo, device_) - sizeof(Device));
+  }
+  tag_ = Tag::kDevice;
+  return device_;
+}
+
+Tty& ::fuchsia::io::NodeInfo::mutable_tty() {
+  if (which() != Tag::kTty) {
+    Destroy();
+    new (&tty_) Tty;
+    memset(reinterpret_cast<uint8_t*>(&tty_) + sizeof(Tty),
+           0,
+           sizeof(NodeInfo) - offsetof(NodeInfo, tty_) - sizeof(Tty));
+  }
+  tag_ = Tag::kTty;
+  return tty_;
+}
+
 
 namespace {
 

@@ -546,6 +546,10 @@ struct NodeInfo {
   ~NodeInfo();
 
   NodeInfo(NodeInfo&& other) {
+    tag_ = Tag::Invalid;
+    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
+           0,
+           offsetof(NodeInfo, service_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -562,13 +566,7 @@ struct NodeInfo {
 
   bool is_service() const { return tag_ == Tag::kService; }
 
-  Service& mutable_service() {
-    if (which() != Tag::kService) {
-      Destroy();
-    }
-    tag_ = Tag::kService;
-    return service_;
-  }
+  Service& mutable_service();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, Service>::value && std::is_copy_assignable<T>::value>
@@ -586,13 +584,7 @@ struct NodeInfo {
 
   bool is_file() const { return tag_ == Tag::kFile; }
 
-  FileObject& mutable_file() {
-    if (which() != Tag::kFile) {
-      Destroy();
-    }
-    tag_ = Tag::kFile;
-    return file_;
-  }
+  FileObject& mutable_file();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, FileObject>::value && std::is_copy_assignable<T>::value>
@@ -610,13 +602,7 @@ struct NodeInfo {
 
   bool is_directory() const { return tag_ == Tag::kDirectory; }
 
-  DirectoryObject& mutable_directory() {
-    if (which() != Tag::kDirectory) {
-      Destroy();
-    }
-    tag_ = Tag::kDirectory;
-    return directory_;
-  }
+  DirectoryObject& mutable_directory();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, DirectoryObject>::value && std::is_copy_assignable<T>::value>
@@ -634,13 +620,7 @@ struct NodeInfo {
 
   bool is_pipe() const { return tag_ == Tag::kPipe; }
 
-  Pipe& mutable_pipe() {
-    if (which() != Tag::kPipe) {
-      Destroy();
-    }
-    tag_ = Tag::kPipe;
-    return pipe_;
-  }
+  Pipe& mutable_pipe();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, Pipe>::value && std::is_copy_assignable<T>::value>
@@ -658,13 +638,7 @@ struct NodeInfo {
 
   bool is_vmofile() const { return tag_ == Tag::kVmofile; }
 
-  Vmofile& mutable_vmofile() {
-    if (which() != Tag::kVmofile) {
-      Destroy();
-    }
-    tag_ = Tag::kVmofile;
-    return vmofile_;
-  }
+  Vmofile& mutable_vmofile();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, Vmofile>::value && std::is_copy_assignable<T>::value>
@@ -682,13 +656,7 @@ struct NodeInfo {
 
   bool is_device() const { return tag_ == Tag::kDevice; }
 
-  Device& mutable_device() {
-    if (which() != Tag::kDevice) {
-      Destroy();
-    }
-    tag_ = Tag::kDevice;
-    return device_;
-  }
+  Device& mutable_device();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, Device>::value && std::is_copy_assignable<T>::value>
@@ -706,13 +674,7 @@ struct NodeInfo {
 
   bool is_tty() const { return tag_ == Tag::kTty; }
 
-  Tty& mutable_tty() {
-    if (which() != Tag::kTty) {
-      Destroy();
-    }
-    tag_ = Tag::kTty;
-    return tty_;
-  }
+  Tty& mutable_tty();
 
   template <typename T>
   std::enable_if_t<std::is_convertible<T, Tty>::value && std::is_copy_assignable<T>::value>
