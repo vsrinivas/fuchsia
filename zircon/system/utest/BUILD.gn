@@ -74,6 +74,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/simplehid/test",
       "$zx/system/ulib/storage-metrics/test",
       "$zx/system/ulib/tftp:tftp-test",
+      "$zx/system/ulib/trace-reader:tests",
       "$zx/system/ulib/trace-vthread:tests",
       "$zx/system/ulib/zbi-bootfs/test:test",
       "$zx/system/ulib/zxtest/test",
@@ -175,7 +176,6 @@ if (current_cpu != "") {
       "time",
       "timers",
       "trace",
-      "trace-reader",
       "usb",
       "usb-virtual-bus",
       "utf_conversion",
@@ -218,6 +218,7 @@ if (current_cpu != "") {
     deps = [
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/zxtest/test",
+      "$zx/system/ulib/trace-reader:tests",
       "cmdline",
       "fbl",
       "ffl",
@@ -226,7 +227,6 @@ if (current_cpu != "") {
       "fs-host",
       "fvm-host",
       "runtests-utils",
-      "trace-reader",
       "util",
       "zbi",
     ]

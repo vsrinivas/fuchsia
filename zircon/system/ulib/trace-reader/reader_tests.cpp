@@ -8,10 +8,11 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/vector.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include <utility>
 
+namespace trace {
 namespace {
 
 template <typename T>
@@ -32,9 +33,7 @@ trace::TraceReader::ErrorHandler MakeErrorHandler(fbl::String* out_error) {
     };
 }
 
-bool empty_chunk_test() {
-    BEGIN_TEST;
-
+TEST(TraceReader, EmptyChunk) {
     uint64_t value;
     int64_t int64_value;
     double double_value;
@@ -57,13 +56,9 @@ bool empty_chunk_test() {
     EXPECT_TRUE(empty.ReadChunk(0u, &subchunk));
     EXPECT_EQ(0u, subchunk.remaining_words());
     EXPECT_FALSE(empty.ReadChunk(1u, &subchunk));
-
-    END_TEST;
 }
 
-bool non_empty_chunk_test() {
-    BEGIN_TEST;
-
+TEST(TraceReader, NonEmptyChunk) {
     uint64_t value;
     int64_t int64_value;
     double double_value;
@@ -145,13 +140,9 @@ bool non_empty_chunk_test() {
 
     EXPECT_FALSE(subchunk.ReadUint64(&value));
     EXPECT_FALSE(chunk.ReadUint64(&value));
-
-    END_TEST;
 }
 
-bool initial_state_test() {
-    BEGIN_TEST;
-
+TEST(TraceReader, InitialState) {
     fbl::Vector<trace::Record> records;
     fbl::String error;
     trace::TraceReader reader(MakeRecordConsumer(&records), MakeErrorHandler(&error));
@@ -161,13 +152,9 @@ bool initial_state_test() {
     EXPECT_TRUE(reader.GetProviderName(0) == "");
     EXPECT_EQ(0, records.size());
     EXPECT_TRUE(error.empty());
-
-    END_TEST;
 }
 
-bool empty_buffer_test() {
-    BEGIN_TEST;
-
+TEST(TraceReader, EmptyBuffer) {
     fbl::Vector<trace::Record> records;
     fbl::String error;
     trace::TraceReader reader(MakeRecordConsumer(&records), MakeErrorHandler(&error));
@@ -176,17 +163,9 @@ bool empty_buffer_test() {
     EXPECT_TRUE(reader.ReadRecords(empty));
     EXPECT_EQ(0, records.size());
     EXPECT_TRUE(error.empty());
-
-    END_TEST;
 }
 
 // NOTE: Most of the reader is covered by the libtrace tests.
 
 } // namespace
-
-BEGIN_TEST_CASE(reader_tests)
-RUN_TEST(empty_chunk_test)
-RUN_TEST(non_empty_chunk_test)
-RUN_TEST(initial_state_test)
-RUN_TEST(empty_buffer_test)
-END_TEST_CASE(reader_tests)
+} // namespace trace

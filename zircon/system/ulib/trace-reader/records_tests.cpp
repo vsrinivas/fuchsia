@@ -8,10 +8,11 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include <utility>
 
+namespace trace {
 namespace {
 
 template <typename T>
@@ -19,9 +20,7 @@ uint64_t ToWord(const T& value) {
     return *reinterpret_cast<const uint64_t*>(&value);
 }
 
-bool process_thread_test() {
-    BEGIN_TEST;
-
+TEST(TraceRecords, ProcessThread) {
     trace::ProcessThread pt;
     EXPECT_EQ(ZX_KOID_INVALID, pt.process_koid());
     EXPECT_EQ(ZX_KOID_INVALID, pt.thread_koid());
@@ -63,13 +62,9 @@ bool process_thread_test() {
     EXPECT_FALSE(trace::ProcessThread(1, 2) < trace::ProcessThread());
 
     EXPECT_STR_EQ("1/2", trace::ProcessThread(1, 2).ToString().c_str());
-
-    END_TEST;
 }
 
-bool argument_value_test() {
-    BEGIN_TEST;
-
+TEST(TraceRecords, ArgumentValue) {
     // null
 
     trace::ArgumentValue av = trace::ArgumentValue::MakeNull();
@@ -294,13 +289,9 @@ bool argument_value_test() {
     }
 
     EXPECT_STR_EQ("koid(18446744073709551615)", av.ToString().c_str());
-
-    END_TEST;
 }
 
-bool argument_test() {
-    BEGIN_TEST;
-
+TEST(TraceRecords, Argument) {
     trace::Argument a("name", trace::ArgumentValue::MakeInt32(123));
     EXPECT_TRUE(a.name() == "name");
     EXPECT_EQ(123, a.value().GetInt32());
@@ -318,13 +309,9 @@ bool argument_test() {
     EXPECT_EQ(123, a.value().GetInt32());
 
     EXPECT_STR_EQ("name: int32(123)", a.ToString().c_str());
-
-    END_TEST;
 }
 
-bool metadata_data_test() {
-    BEGIN_TEST;
-
+TEST(TraceRecords, MetadataData) {
     // provider info
 
     {
@@ -363,13 +350,9 @@ bool metadata_data_test() {
 
         EXPECT_STR_EQ("ProviderSection(id: 1)", d.ToString().c_str());
     }
-
-    END_TEST;
 }
 
-bool event_data_test() {
-    BEGIN_TEST;
-
+TEST(TraceRecords, EventData) {
     // instant
 
     {
@@ -411,15 +394,15 @@ bool event_data_test() {
     {
         trace::EventData d(trace::EventData::DurationBegin{});
         EXPECT_EQ(trace::EventType::kDurationBegin, d.type());
-        EXPECT_NONNULL(&d.GetDurationBegin());
+        EXPECT_NOT_NULL(&d.GetDurationBegin());
 
         trace::EventData m(std::move(d));
         EXPECT_EQ(trace::EventType::kDurationBegin, m.type());
-        EXPECT_NONNULL(&m.GetDurationBegin());
+        EXPECT_NOT_NULL(&m.GetDurationBegin());
 
         d = std::move(m);
         EXPECT_EQ(trace::EventType::kDurationBegin, d.type());
-        EXPECT_NONNULL(&d.GetDurationBegin());
+        EXPECT_NOT_NULL(&d.GetDurationBegin());
 
         EXPECT_STR_EQ("DurationBegin", d.ToString().c_str());
     }
@@ -429,15 +412,15 @@ bool event_data_test() {
     {
         trace::EventData d(trace::EventData::DurationEnd{});
         EXPECT_EQ(trace::EventType::kDurationEnd, d.type());
-        EXPECT_NONNULL(&d.GetDurationEnd());
+        EXPECT_NOT_NULL(&d.GetDurationEnd());
 
         trace::EventData m(std::move(d));
         EXPECT_EQ(trace::EventType::kDurationEnd, m.type());
-        EXPECT_NONNULL(&m.GetDurationEnd());
+        EXPECT_NOT_NULL(&m.GetDurationEnd());
 
         d = std::move(m);
         EXPECT_EQ(trace::EventType::kDurationEnd, d.type());
-        EXPECT_NONNULL(&d.GetDurationEnd());
+        EXPECT_NOT_NULL(&d.GetDurationEnd());
 
         EXPECT_STR_EQ("DurationEnd", d.ToString().c_str());
     }
@@ -567,13 +550,9 @@ bool event_data_test() {
 
         EXPECT_STR_EQ("FlowEnd(id: 123)", d.ToString().c_str());
     }
-
-    END_TEST;
 }
 
-bool record_test() {
-    BEGIN_TEST;
-
+TEST(TraceRecords, Record) {
     // metadata
 
     {
@@ -866,17 +845,7 @@ bool record_test() {
 
         EXPECT_STR_EQ("Log(ts: 123, pt: 4/5, \"log message\")", r.ToString().c_str());
     }
-
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(types_tests)
-RUN_TEST(process_thread_test)
-RUN_TEST(argument_value_test)
-RUN_TEST(argument_test)
-RUN_TEST(metadata_data_test)
-RUN_TEST(event_data_test)
-RUN_TEST(record_test)
-END_TEST_CASE(types_tests)
+} // namespace trace
