@@ -1,0 +1,46 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/toolchain/environment.gni")
+
+# Fuzzer environments: These add libFuzzer instrumentation and hooks. These
+# hooks will be undefined in shared libraries, and provided by the compiler
+# runtime, which itself has an implicit dependency on libzircon.
+standard_environments(".fuzzer") {
+  # Everything is compiled with the fuzzer instrumentation.
+  # Each variant can add additional bug-detection instrumentation.
+  configs = [
+    "$zx/public/gn/config/instrumentation:fuzzer",
+    {
+      # libFuzzer can only be statically linked into each executable.
+      # Instrumented shared library code has dangling references to runtime
+      # symbols that will only be defined in the executable.
+      shlib = true
+      remove = [ "$zx/public/gn/config:no_undefined_symbols" ]
+    },
+  ]
+  implicit_deps = [
+    {
+      types = [ "executable" ]
+      add = [ "$zx/public/gn/config/instrumentation:fuzzer_deps" ]
+    },
+  ]
+
+  # Required by the above. See $zx/public/gn/config/instrumentation:fuzzer.
+  tags = [ "sancov" ]
+
+  toolchain_vars = {
+    # Trailing dot will get "$variant/" appended to locate shared libraries.
+    libprefix = "fuzzer."
+  }
+  variant_libprefix = true
+
+  # Support all the sanitizers plus the baseline variant (i.e. a fuzzer
+  # that only detects explicit failure reports in the code, or crashes).
+  variant_selectors = standard_sanitizer_variants + standard_base_variants
+
+  # GCC doesn't support the fuzzer config always added here, so prune
+  # it from the baseline list.
+  exclude_variant_tags = [ "gcc" ]
+}

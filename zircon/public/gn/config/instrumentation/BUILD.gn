@@ -122,6 +122,28 @@ if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
     cflags = compiler_flags
     ldflags = compiler_flags
   }
+
+  # fuzzer instrumentation is a superset of the sancov instrumentation.
+  config("fuzzer") {
+    compiler_flags = [ "-fsanitize=fuzzer" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+
+    # TODO(TC-458): Include libunwind in libclang_rt.fuzzer.a
+    libs = [ "unwind" ]
+  }
+
+  group("fuzzer_deps") {
+    if (is_fuchsia) {
+      # The statically-linked libFuzzer runtime depends on libfdio and
+      # libzircon.
+      deps = [
+        "$zx/system/ulib/fdio",
+        "$zx/system/ulib/zircon",
+      ]
+    }
+  }
 }
 
 config("profile") {
@@ -137,22 +159,6 @@ config("profile") {
 group("profile_deps") {
   if (is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
-    deps = [
-      "$zx/system/ulib/zircon",
-    ]
-  }
-}
-
-config("fuzzer") {
-  compiler_flags = [ "-fsanitize=fuzzer" ]
-  asmflags = compiler_flags
-  cflags = compiler_flags
-  ldflags = compiler_flags
-}
-
-group("fuzzer_deps") {
-  if (is_fuchsia) {
-    # The statically-linked libFuzzer runtime depends on libzircon.
     deps = [
       "$zx/system/ulib/zircon",
     ]
