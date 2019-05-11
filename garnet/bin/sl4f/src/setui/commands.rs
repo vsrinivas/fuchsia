@@ -7,8 +7,8 @@ use failure::Error;
 use serde_json::Value;
 use std::sync::Arc;
 
-use crate::setui::types::{SetUiMethod};
 use crate::setui::facade::SetUiFacade;
+use crate::setui::types::SetUiMethod;
 
 /// Takes JSON-RPC method command and forwards to corresponding SetUi FIDL method.
 pub async fn setui_method_to_fidl(

@@ -6,33 +6,30 @@ use failure::Error;
 
 use serde_json::{from_value, to_value, Value};
 
-use crate::setui::types::{JsonMutation, SetUiResult, LoginOverrideMode,};
+use crate::setui::types::{JsonMutation, LoginOverrideMode, SetUiResult};
 use fidl_fuchsia_setui::*;
 use fuchsia_component::client::connect_to_service;
 
 /// Facade providing access to SetUi interfaces.
 #[derive(Debug)]
 pub struct SetUiFacade {
-    setui_svc: SetUiServiceProxy
+    setui_svc: SetUiServiceProxy,
 }
 
 impl SetUiFacade {
     pub fn new() -> Result<SetUiFacade, Error> {
-        let setui_svc = connect_to_service::<SetUiServiceMarker>()
-            .expect("Failed to connect to SetUi");
+        let setui_svc =
+            connect_to_service::<SetUiServiceMarker>().expect("Failed to connect to SetUi");
         Ok(SetUiFacade { setui_svc })
     }
 
     /// Sets the value of a given settings object. Returns once operation has completed.
-    pub async fn mutate(
-        &self,
-        args: Value,
-    ) -> Result<Value, Error> {
+    pub async fn mutate(&self, args: Value) -> Result<Value, Error> {
         let json_mutation: JsonMutation = from_value(args)?;
         print!("{:?}", json_mutation);
 
-        let mut mutation : Mutation;
-        let setting_type : SettingType;
+        let mut mutation: Mutation;
+        let setting_type: SettingType;
         match json_mutation {
             JsonMutation::Account { operation: _, login_override } => {
                 // TODO(isma): Is there a way to just use the fidl enum?
@@ -46,7 +43,7 @@ impl SetUiFacade {
                     login_override: Some(login_override),
                 });
                 setting_type = SettingType::Account;
-            },
+            }
         }
         match await!(self.setui_svc.mutate(setting_type, &mut mutation))?.return_code {
             ReturnCode::Ok => Ok(to_value(SetUiResult::Success)?),

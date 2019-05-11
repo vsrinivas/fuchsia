@@ -50,8 +50,7 @@ impl AuthFacade {
     fn discover_injection_service(
         &self,
     ) -> Result<Option<LegacyAuthCredentialInjectorSynchronousProxy>, Error> {
-        let glob_path =
-            "/hub/c/google_auth_provider.cmx/*/out/debug/LegacyAuthCredentialInjector";
+        let glob_path = "/hub/c/google_auth_provider.cmx/*/out/debug/LegacyAuthCredentialInjector";
         let found_path = glob(glob_path)?.filter_map(|entry| entry.ok()).next();
         match found_path {
             Some(path) => {
