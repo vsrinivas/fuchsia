@@ -8,6 +8,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/bridge.h>
+#include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -262,14 +263,6 @@ fit::promise<Data> CrashpadAgent::GetFeedbackData() {
 
 namespace {
 
-std::string GetPackageName(const zx::process& process) {
-  char name[ZX_MAX_NAME_LEN];
-  if (process.get_property(ZX_PROP_NAME, name, sizeof(name)) == ZX_OK) {
-    return std::string(name);
-  }
-  return std::string("unknown-package");
-}
-
 std::map<std::string, fuchsia::mem::Buffer> MakeAttachments(
     Data* feedback_data) {
   std::map<std::string, fuchsia::mem::Buffer> attachments;
@@ -286,21 +279,21 @@ std::map<std::string, fuchsia::mem::Buffer> MakeAttachments(
 fit::promise<void> CrashpadAgent::OnNativeException(zx::process process,
                                                     zx::thread thread,
                                                     zx::port exception_port) {
-  const std::string package_name = GetPackageName(process);
+  const std::string process_name = fsl::GetObjectName(process.get());
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
-                << package_name;
+                << process_name;
 
   // Prepare annotations and attachments.
   return GetFeedbackData().then(
       [this, process = std::move(process), thread = std::move(thread),
        exception_port = std::move(exception_port),
-       package_name](fit::result<Data>& result) mutable -> fit::result<void> {
+       process_name](fit::result<Data>& result) mutable -> fit::result<void> {
         Data feedback_data;
         if (result.is_ok()) {
           feedback_data = result.take_value();
         }
         const std::map<std::string, std::string> annotations =
-            MakeDefaultAnnotations(feedback_data, package_name);
+            MakeDefaultAnnotations(feedback_data, process_name);
         const std::map<std::string, fuchsia::mem::Buffer> attachments =
             MakeAttachments(&feedback_data);
 

@@ -78,6 +78,7 @@ source_set("src") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/syslog/cpp",
     "//third_party/crashpad/handler",
     "//third_party/crashpad/minidump",
