@@ -69,14 +69,6 @@ particular interface's code generation and use of machine and OS facilities.
 These can be thought of as widening concentric circles of the API from the
 most minimal C-like subset out to the full C++ 17 API.
 
-**NOTE: TODO([ZX-1751](https://fuchsia.atlassian.net/browse/ZX-1751))**
-Currently **Zircon userspace code is restricted to header-only library APIs**
-from the standard C++ library.  This limitation **will be lifted** by
-forthcoming fixes (or overhauls) to the C++ standard library runtime build and
-the build system.  There are no limitations on host-only C++ code.  If you're
-not sure whether an API is header-only, try using it in userspace code in the
-Zircon tree and if you get a link-time error then it's not header-only.
-
 #### Context Matters
 
 This section gives guidelines for how to think about the impact of using a
@@ -313,25 +305,62 @@ Zircon syscalls, the code should go in FBL instead.
 
 FZL not available outside the Platform Source Tree.
 
-## ZXCPP
+## Hermetic C++
 
-Some of our code runs in an environment which cannot include the
-standard C++ runtime environment. This environment includes symbols
-like __cxa_pure_virtual that are defined by the ABI and that the
-compiler expects to be ambient. [The zxcpp
-library](../system/ulib/zxcpp) provides that dependency. It also
-includes the placement operator new overloads and, in userspace, the
-standard new and delete operators. Note that it does not include the
-similarly named __cxa_atexit, which in userspace must be provided by
-the libc. See extensive comments in musl's atexit implementation if
-you are curious.
+We encourage using C++ rather than C as the implementation language throughout
+Fuchsia.  However, in many instances we require a narrow ABI bottleneck to
+simplify the problem of preventing, tracking, or adapting to ABI drift.  The
+first key way to keep the ABI simple is to base it on a pure C API (which can
+be used directly from C++, and via foreign-function interfaces from many other
+languages) rather than a C++ API.  When we link together a body of code into a
+module with a pure C external API and ABI but using C++ internally for its
+implementation, we call that _hermetic C++_.
 
-*This library is mutually exclusive of the standard C++ library.*
+ * The kernel itself could be said to be implemented in hermetic C++.
+ * The [vDSO](vdso.md) is a shared library implemented in hermetic C++.
+ * Fuchsia's [standard C library](../system/ulib/c), while largely implemented
+   in C, also uses hermetic C++ in its implementation.
+ * Most Fuchsia device drivers are implemented in hermetic C++.
 
-**NOTE: TODO([ZX-1751](https://fuchsia.atlassian.net/browse/ZX-1751))** The
-ZXCPP library will be removed in favor of hermetic static linking for the
-standard C++ library.  Closed-world C++ modules such as drivers or shared
-libraries with a pure C ABI can use the standard C++ library internally
-without affecting their outward ABIs.  Current users of ZXCPP will become
-users of the hermetic static standard C++ library that link in only the
-minimal ABI symbols that ZXCPP used to provide.
+It's a hard and fast rule for binaries exported in the Fuchsia's public SDK
+that **shared libraries must have a pure C API and ABI**.  Such libraries can
+_and should_ use C++ rather than C in their implementations, and they can use
+other *statically-linked* libraries with C++ APIs as long as ABI aspects of
+those internal C++ APIs don't leak out into the shared library's public ABI.
+
+A "loadable module" (sometimes called a "plug-in" module) is very similar to a
+shared library.  The same rules about pure a C ABI bottleneck apply for
+loadable module ABIs.  Fuchsia device drivers are just such loadable modules
+that must meet the driver (pure C) ABI.  Hence, every driver implemented in
+C++ must use hermetic C++.
+
+The Fuchsia C++ toolchain provides the full C++17 standard library using the
+[libc++](https://libcxx.llvm.org/) implementation.  In C++ executables (and
+shared libraries with a C++ ABI) this is usually dynamically linked, and
+that's the default behavior of the compiler.  The toolchain also provides
+`libc++` for *hermetic static linking* via the `-static-libstdc++` switch to
+the compiler (`clang++`).  In the Zircon GN build system, a linking target
+such as `executable()`, `test()`, or `library()` (with `shared = true`), uses
+this line to request the hermetic C++ standard library:
+
+```gn
+    configs += [ "$zx/public/gn/config:static-libc++" ]
+```
+
+This is **required** in each `library()` that is exported to the public SDK
+_in binary form_ via `sdk = "shared"`.
+
+Every `driver()` automatically uses hermetic C++ and so this line is not
+required for them.  (Drivers cannot depend on their own shared libraries, only
+the dynamic linking environment provided by the driver ABI.)
+
+For executables and non-exported shared libraries, it's a judgment call
+whether to use static linking or dynamic linking for the standard C++ library.
+In Fuchsia's package deployment model, there is no particular updatability
+improvement to using shared libraries as in many other systems.  The primary
+trade-off is between the savings in memory and storage from many stored
+packages and running processes on the system using exactly the same shared
+library binary and compactness and (sometimes performance) of the individual
+package.  Since many packages in the system build will all use the same shared
+`libc++` library, that's usually the right thing to do unless there are
+special circumstances.  It's the default in the compiler and build system.
