@@ -67,6 +67,10 @@ class ElfLib {
   std::optional<std::vector<uint8_t>> GetNote(const std::string& name,
                                               uint64_t type);
 
+  // Get the NT_GNU_BUILD_ID note as a hex string. Return empty string if we
+  // don't have that note.
+  std::string GetGNUBuildID();
+
   // Get a symbol from the symbol table. Return nullptr if there is no such
   // symbol. Pointer should live as long as the memory accessor.
   const Elf64_Sym* GetSymbol(const std::string& name);

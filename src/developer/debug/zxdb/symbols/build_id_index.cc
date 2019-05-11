@@ -6,8 +6,8 @@
 
 #include <algorithm>
 
-#include "src/developer/debug/shared/elf.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/lib/elflib/elflib.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/fxl/strings/trim.h"
@@ -242,12 +242,11 @@ void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
 }
 
 bool BuildIDIndex::IndexOneSourceFile(const std::string& file_path) {
-  FILE* file = fopen(file_path.c_str(), "rb");
-  if (!file)
+  auto elf = elflib::ElfLib::Create(file_path);
+  if (!elf)
     return false;
-  std::string build_id = debug_ipc::ExtractBuildID(file);
-  fclose(file);
 
+  std::string build_id = elf->GetGNUBuildID();
   if (!build_id.empty()) {
     build_id_to_file_[build_id] = file_path;
     return true;

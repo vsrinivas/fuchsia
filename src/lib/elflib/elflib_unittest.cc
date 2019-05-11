@@ -283,6 +283,9 @@ TEST(ElfLib, GetNote) {
   for (size_t i = 0; i < 32; i++) {
     EXPECT_EQ(i % 8, data[i]);
   }
+
+  EXPECT_EQ("0001020304050607000102030405060700010203040506070001020304050607",
+            elf->GetGNUBuildID());
 }
 
 TEST(ElfLib, MissingSections) {

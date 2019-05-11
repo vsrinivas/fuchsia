@@ -4,6 +4,9 @@
 
 #include "src/developer/debug/debug_agent/process_info.h"
 
+// Included early because of conflicts.
+#include "src/lib/elflib/elflib.h"
+
 #include <inttypes.h>
 #include <lib/zx/thread.h>
 #include <link.h>
@@ -16,7 +19,6 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/object_util.h"
-#include "src/developer/debug/shared/elf.h"
 #include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
@@ -142,7 +144,22 @@ zx_status_t GetModulesForProcess(const zx::process& process,
         if (ReadNullTerminatedString(process, str_addr, &module.name) != ZX_OK)
           return false;
 
-        module.build_id = debug_ipc::ExtractBuildID(process, module.base);
+        auto elf = elflib::ElfLib::Create(
+            [&process, base = module.base](uint64_t offset,
+                                           std::vector<uint8_t>* buf) {
+              size_t num_read = 0;
+
+              if (process.read_memory(base + offset, buf->data(), buf->size(),
+                                      &num_read) != ZX_OK) {
+                return false;
+              }
+
+              return num_read == buf->size();
+            });
+
+        if (elf) {
+          module.build_id = elf->GetGNUBuildID();
+        }
 
         modules->push_back(std::move(module));
         return true;

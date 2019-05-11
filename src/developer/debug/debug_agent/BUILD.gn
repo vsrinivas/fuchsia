@@ -72,6 +72,10 @@ static_library("lib") {
     assert(false, "Un-supported CPU: ${current_cpu}")
   }
 
+  deps = [
+    "//src/lib/elflib",
+  ]
+
   public_deps = [
     "//garnet/lib/process",
     "//garnet/public/lib/svc/cpp",

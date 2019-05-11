@@ -12,6 +12,9 @@
 namespace elflib {
 namespace {
 
+// NT_GNU_BUILD_ID identifier.
+constexpr uint64_t kNoteGnuBuildId = 3;
+
 // Pull a null-terminated string out of an array of bytes at an offset. Returns
 // empty string if there is no null terminator.
 std::string GetNullTerminatedStringAt(const uint8_t* data, size_t data_length,
@@ -440,6 +443,23 @@ std::optional<std::vector<uint8_t>> ElfLib::GetNote(const std::string& name,
   }
 
   return std::nullopt;
+}
+
+std::string ElfLib::GetGNUBuildID() {
+  auto note = GetNote("GNU", kNoteGnuBuildId);
+  if (!note) {
+    return std::string();
+  }
+
+  std::string ret;
+
+  for (const auto& byte : *note) {
+    char buf[3];
+    snprintf(buf, 3, "%02x", byte);
+    ret += buf;
+  }
+
+  return ret;
 }
 
 ElfLib::MemoryRegion ElfLib::GetSectionData(size_t section) {

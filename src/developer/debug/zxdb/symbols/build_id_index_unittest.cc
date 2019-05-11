@@ -18,7 +18,7 @@ const char kSmallTestBuildID[] = "763feb38b0e37a89964c330c5cf7f7af2ce79e54";
 std::filesystem::path GetTestDataDir() {
   std::filesystem::path path(GetSelfPath());
   path.remove_filename();
-  path.append("test_data/debug_ipc/");
+  path.append("test_data/zxdb/");
   return path;
 }
 
