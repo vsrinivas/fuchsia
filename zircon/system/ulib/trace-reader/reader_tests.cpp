@@ -12,26 +12,10 @@
 
 #include <utility>
 
+#include "reader_tests.h"
+
 namespace trace {
 namespace {
-
-template <typename T>
-uint64_t ToWord(const T& value) {
-    return *reinterpret_cast<const uint64_t*>(&value);
-}
-
-trace::TraceReader::RecordConsumer MakeRecordConsumer(
-    fbl::Vector<trace::Record>* out_records) {
-    return [out_records](trace::Record record) {
-        out_records->push_back(std::move(record));
-    };
-}
-
-trace::TraceReader::ErrorHandler MakeErrorHandler(fbl::String* out_error) {
-    return [out_error](fbl::String error) {
-        *out_error = std::move(error);
-    };
-}
 
 TEST(TraceReader, EmptyChunk) {
     uint64_t value;
@@ -70,11 +54,11 @@ TEST(TraceReader, NonEmptyChunk) {
         0,
         UINT64_MAX,
         // int64 values
-        ToWord(INT64_MIN),
-        ToWord(INT64_MAX),
+        test::ToWord(INT64_MIN),
+        test::ToWord(INT64_MAX),
         // double values
-        ToWord(1.5),
-        ToWord(-3.14),
+        test::ToWord(1.5),
+        test::ToWord(-3.14),
         // string values (will be filled in)
         0,
         0,
@@ -145,7 +129,8 @@ TEST(TraceReader, NonEmptyChunk) {
 TEST(TraceReader, InitialState) {
     fbl::Vector<trace::Record> records;
     fbl::String error;
-    trace::TraceReader reader(MakeRecordConsumer(&records), MakeErrorHandler(&error));
+    trace::TraceReader reader(
+        test::MakeRecordConsumer(&records), test::MakeErrorHandler(&error));
 
     EXPECT_EQ(0, reader.current_provider_id());
     EXPECT_TRUE(reader.current_provider_name() == "");
@@ -157,7 +142,8 @@ TEST(TraceReader, InitialState) {
 TEST(TraceReader, EmptyBuffer) {
     fbl::Vector<trace::Record> records;
     fbl::String error;
-    trace::TraceReader reader(MakeRecordConsumer(&records), MakeErrorHandler(&error));
+    trace::TraceReader reader(
+        test::MakeRecordConsumer(&records), test::MakeErrorHandler(&error));
 
     trace::Chunk empty;
     EXPECT_TRUE(reader.ReadRecords(empty));

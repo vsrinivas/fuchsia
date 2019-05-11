@@ -5,12 +5,14 @@
 library("trace-reader") {
   sdk = "source"
   sdk_headers = [
+    "trace-reader/file_reader.h",
     "trace-reader/reader.h",
     "trace-reader/reader_internal.h",
     "trace-reader/records.h",
   ]
   host = true
   sources = [
+    "file_reader.cpp",
     "reader.cpp",
     "reader_internal.cpp",
     "records.cpp",
@@ -30,6 +32,7 @@ library("trace-reader") {
 
 test("trace-reader-test") {
   sources = [
+    "file_reader_tests.cpp",
     "reader_tests.cpp",
     "records_tests.cpp",
   ]

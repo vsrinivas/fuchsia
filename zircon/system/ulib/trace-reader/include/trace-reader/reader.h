@@ -70,6 +70,9 @@ public:
 
     const ErrorHandler& error_handler() const { return error_handler_; }
 
+protected:
+    void ReportError(fbl::String error) const;
+
 private:
     bool ReadMetadataRecord(Chunk& record,
                             RecordHeader header);
@@ -101,8 +104,6 @@ private:
     bool DecodeThreadRef(Chunk& chunk,
                          trace_encoded_thread_ref_t thread_ref,
                          ProcessThread* out_process_thread) const;
-
-    void ReportError(fbl::String error) const;
 
     RecordConsumer const record_consumer_;
     ErrorHandler const error_handler_;
