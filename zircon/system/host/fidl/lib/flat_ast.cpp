@@ -1764,7 +1764,8 @@ bool Library::ConsumeInterfaceDeclaration(
         methods.emplace_back(std::move(attributes),
                              std::move(generated_ordinal),
                              std::move(ordinal_literal),
-                             std::move(method_name), std::move(maybe_request),
+                             std::move(method_name),
+                             std::move(maybe_request),
                              std::move(maybe_response));
     }
 

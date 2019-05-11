@@ -743,6 +743,37 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
     });
 }
 
+namespace {
+
+struct LibraryComparator {
+    bool operator()(const flat::Library* lhs, const flat::Library* rhs) const {
+        assert(!lhs->name().empty());
+        assert(!rhs->name().empty());
+        return lhs->name() < rhs->name();
+    }
+};
+
+std::set<const flat::Library*, LibraryComparator>
+TransitiveDependencies(const flat::Library* library) {
+    std::set<const flat::Library*, LibraryComparator> dependencies;
+    for (const auto& dep_library : library->dependencies()) {
+        if (!dep_library->HasAttribute("Internal")) {
+            dependencies.insert(dep_library);
+        }
+    }
+    // Discover additional dependencies that are required to support
+    // cross-library protocol composition.
+    for (const auto& interface : library->interface_declarations_) {
+        for (const auto method : interface->all_methods) {
+            dependencies.insert(method->owning_interface->name.library());
+        }
+    }
+    dependencies.erase(library);
+    return dependencies;
+}
+
+} // namespace
+
 std::ostringstream JSONGenerator::Produce() {
     indent_level_ = 0;
     GenerateObject([&]() {
@@ -752,14 +783,7 @@ std::ostringstream JSONGenerator::Produce() {
 
         GenerateObjectPunctuation(Position::kSubsequent);
         EmitObjectKey(&json_file_, indent_level_, "library_dependencies");
-        std::vector<flat::Library*> dependencies;
-        for (const auto& dep_library : library_->dependencies()) {
-            if (dep_library->HasAttribute("Internal"))
-                continue;
-            dependencies.push_back(dep_library);
-        }
-
-        GenerateArray(dependencies.begin(), dependencies.end());
+        GenerateArray(TransitiveDependencies(library_));
 
         GenerateObjectMember("bits_declarations", library_->bits_declarations_);
         GenerateObjectMember("const_declarations", library_->const_declarations_);

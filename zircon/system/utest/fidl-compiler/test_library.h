@@ -12,11 +12,12 @@
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 
-static fidl::SourceFile MakeSourceFile(const std::string& filename, const std::string& raw_source_code) {
+static std::unique_ptr<fidl::SourceFile> MakeSourceFile(const std::string& filename,
+                                                        const std::string& raw_source_code) {
     std::string source_code(raw_source_code);
     // NUL terminate the string.
     source_code.resize(source_code.size() + 1);
-    return fidl::SourceFile(filename, source_code);
+    return std::make_unique<fidl::SourceFile>(filename, source_code);
 }
 
 class SharedAmongstLibraries {
@@ -27,11 +28,12 @@ public:
     fidl::ErrorReporter error_reporter;
     fidl::flat::Typespace typespace;
     fidl::flat::Libraries all_libraries;
+    std::set<std::unique_ptr<fidl::SourceFile>> all_sources;
 };
 
 class TestLibrary {
 public:
-    TestLibrary(const std::string& raw_source_code)
+    explicit TestLibrary(const std::string& raw_source_code)
         : TestLibrary("example.fidl", raw_source_code) {}
 
     TestLibrary(const std::string& filename, const std::string& raw_source_code)
@@ -42,11 +44,13 @@ public:
         : error_reporter_(&shared->error_reporter),
           typespace_(&shared->typespace),
           all_libraries_(&shared->all_libraries),
-          source_file_(MakeSourceFile(filename, raw_source_code)),
-          lexer_(source_file_, error_reporter_),
-          parser_(&lexer_, error_reporter_),
+          all_sources_(&shared->all_sources),
           library_(std::make_unique<fidl::flat::Library>(
-              all_libraries_, error_reporter_, typespace_)) {}
+              all_libraries_, error_reporter_, typespace_)) {
+        auto source_file = MakeSourceFile(filename, raw_source_code);
+        source_file_ = source_file.get();
+        all_sources_->insert(std::move(source_file));
+    }
 
     bool AddDependentLibrary(TestLibrary dependent_library) {
         return all_libraries_->Insert(std::move(dependent_library.library_));
@@ -57,22 +61,28 @@ public:
     }
 
     bool Parse(std::unique_ptr<fidl::raw::File>& ast_ptr) {
-        ast_ptr.reset(parser_.Parse().release());
-        return parser_.Ok();
+        fidl::Lexer lexer(*source_file_, error_reporter_);
+        fidl::Parser parser(&lexer, error_reporter_);
+        ast_ptr.reset(parser.Parse().release());
+        return parser.Ok();
     }
 
     bool Compile() {
-        auto ast = parser_.Parse();
-        return parser_.Ok() &&
+        fidl::Lexer lexer(*source_file_, error_reporter_);
+        fidl::Parser parser(&lexer, error_reporter_);
+        auto ast = parser.Parse();
+        return parser.Ok() &&
                library_->ConsumeFile(std::move(ast)) &&
                library_->Compile();
     }
 
     bool Lint(fidl::Findings* findings) {
-        auto ast = parser_.Parse();
-        if (!parser_.Ok()) {
-            std::string_view beginning(source_file_.data().data(), 0);
-            fidl::SourceLocation source_location(beginning, source_file_);
+        fidl::Lexer lexer(*source_file_, error_reporter_);
+        fidl::Parser parser(&lexer, error_reporter_);
+        auto ast = parser.Parse();
+        if (!parser.Ok()) {
+            std::string_view beginning(source_file_->data().data(), 0);
+            fidl::SourceLocation source_location(beginning, *source_file_);
             findings->emplace_back(source_location, "parser-error",
                                    error_reporter_->errors().front() + "\n");
             return false;
@@ -96,7 +106,7 @@ public:
 
     bool AddSourceFile(const std::string& filename, const std::string& raw_source_code) {
         auto source_file = MakeSourceFile(filename, raw_source_code);
-        fidl::Lexer lexer(source_file, error_reporter_);
+        fidl::Lexer lexer(*source_file, error_reporter_);
         fidl::Parser parser(&lexer, error_reporter_);
         auto ast = parser.Parse();
         return parser.Ok() &&
@@ -175,8 +185,8 @@ public:
         return library_.get();
     }
 
-    fidl::SourceFile source_file() const {
-        return source_file_;
+    const fidl::SourceFile& source_file() const {
+        return *source_file_;
     }
 
     std::string filename() const {
@@ -225,9 +235,8 @@ protected:
     fidl::ErrorReporter* error_reporter_;
     fidl::flat::Typespace* typespace_;
     fidl::flat::Libraries* all_libraries_;
-    fidl::SourceFile source_file_;
-    fidl::Lexer lexer_;
-    fidl::Parser parser_;
+    std::set<std::unique_ptr<fidl::SourceFile>>* all_sources_;
+    fidl::SourceFile* source_file_;
     std::unique_ptr<fidl::flat::Library> library_;
 };
 

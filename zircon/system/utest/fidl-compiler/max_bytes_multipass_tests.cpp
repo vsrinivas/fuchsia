@@ -24,9 +24,12 @@ public:
             MakeSourceFile("max_bytes_multipass_extern_defs.fidl", multipass_extern_defs_file));
     }
 
+    MaxBytesMultiPassLibrary(MaxBytesMultiPassLibrary&) = delete;
+    MaxBytesMultiPassLibrary& operator=(MaxBytesMultiPassLibrary&) = delete;
+
     bool Compile() {
         for (auto& file : source_files_) {
-            fidl::Lexer lexer(file, error_reporter_);
+            fidl::Lexer lexer(*file, error_reporter_);
             fidl::Parser parser(&lexer, error_reporter_);
 
             auto ast = parser.Parse();
@@ -106,7 +109,7 @@ struct ExternalSimpleStruct {
 };
 
 )FIDL";
-    std::vector<fidl::SourceFile> source_files_;
+    std::vector<std::unique_ptr<fidl::SourceFile>> source_files_;
 };
 
 static bool simple_struct_array(void) {

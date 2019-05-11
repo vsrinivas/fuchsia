@@ -877,17 +877,24 @@ struct Interface : public TypeDecl {
         SourceLocation name;
         Struct* maybe_request;
         Struct* maybe_response;
+        // This is set to the |Interface| instance that owns this |Method|,
+        // when the |Interface| is constructed.
+        Interface* owning_interface = nullptr;
     };
 
     Interface(std::unique_ptr<raw::AttributeList> attributes, Name name,
               std::set<Name> superinterfaces, std::vector<Method> methods)
         : TypeDecl(Kind::kInterface, std::move(attributes), std::move(name)),
-          superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {}
+          superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {
+        for (auto& method : this->methods) {
+            method.owning_interface = this;
+        }
+    }
 
     std::set<Name> superinterfaces;
     std::vector<Method> methods;
     // Pointers here are set after superinterfaces are compiled, and
-    // are owned by the correspending superinterface.
+    // are owned by the corresponding superinterface.
     std::vector<const Method*> all_methods;
 };
 

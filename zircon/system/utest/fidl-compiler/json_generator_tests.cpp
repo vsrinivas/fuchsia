@@ -31,8 +31,8 @@ static inline void trim(std::string& s) {
             s.end());
 }
 
-bool checkJSONGenerator(std::string raw_source_code, std::string expected_json) {
-    TestLibrary library("json.fidl", raw_source_code);
+bool checkJSONGenerator(TestLibrary library,
+                        std::string expected_json) {
     ASSERT_TRUE(library.Compile());
 
     // actual
@@ -58,6 +58,11 @@ bool checkJSONGenerator(std::string raw_source_code, std::string expected_json) 
     output_expected.close();
 
     return false;
+}
+
+bool checkJSONGenerator(std::string raw_source_code, std::string expected_json) {
+    return checkJSONGenerator(TestLibrary("json.fidl", raw_source_code),
+                              std::move(expected_json));
 }
 
 bool json_generator_test_struct() {
@@ -1946,6 +1951,245 @@ struct Struct {
     END_TEST;
 }
 
+bool json_generator_transitive_dependencies() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        SharedAmongstLibraries shared;
+        TestLibrary bottom_dep("bottom.fidl", R"FIDL(
+library bottom;
+
+struct Foo {
+  int32 a;
+};
+
+)FIDL", &shared);
+        ASSERT_TRUE(bottom_dep.Compile());
+        TestLibrary middle_dep("middle.fidl", R"FIDL(
+library middle;
+
+using bottom;
+
+struct Bar {
+  bottom.Foo f;
+};
+
+)FIDL", &shared);
+        ASSERT_TRUE(middle_dep.AddDependentLibrary(std::move(bottom_dep)));
+        ASSERT_TRUE(middle_dep.Compile());
+
+        TestLibrary library("top.fidl", R"FIDL(
+library top;
+
+using middle;
+
+struct Baz {
+  middle.Bar g;
+};
+
+)FIDL", &shared);
+        ASSERT_TRUE(library.AddDependentLibrary(std::move(middle_dep)));
+        EXPECT_TRUE(checkJSONGenerator(std::move(library),
+                                       R"JSON(
+{
+  "version": "0.0.1",
+  "name": "top",
+  "library_dependencies": [
+    {
+      "name": "middle",
+      "declarations": {
+        "middle/Bar": "struct"
+      }
+    }
+  ],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "top/Baz",
+      "location": {
+        "filename": "top.fidl",
+        "line": 6,
+        "column": 8
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "middle/Bar",
+            "nullable": false
+          },
+          "name": "g",
+          "location": {
+            "filename": "top.fidl",
+            "line": 7,
+            "column": 14
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0,
+          "max_handles": 0
+        }
+      ],
+      "size": 4,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "top/Baz"
+  ],
+  "declarations": {
+    "top/Baz": "struct"
+  }
+}
+)JSON"));
+    }
+
+    END_TEST;
+}
+
+bool json_generator_transitive_dependencies_compose() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        SharedAmongstLibraries shared;
+        TestLibrary bottom_dep("bottom.fidl", R"FIDL(
+library bottom;
+
+struct Foo {
+  int32 a;
+};
+
+[FragileBase]
+protocol Bottom {
+  GetFoo() -> (Foo foo);
+};
+
+)FIDL", &shared);
+        ASSERT_TRUE(bottom_dep.Compile());
+        TestLibrary middle_dep("middle.fidl", R"FIDL(
+library middle;
+
+using bottom;
+
+[FragileBase]
+protocol Middle {
+  compose bottom.Bottom;
+};
+
+)FIDL", &shared);
+        ASSERT_TRUE(middle_dep.AddDependentLibrary(std::move(bottom_dep)));
+        ASSERT_TRUE(middle_dep.Compile());
+
+        TestLibrary library("top.fidl", R"FIDL(
+library top;
+
+using middle;
+
+protocol Top {
+  compose middle.Middle;
+};
+
+)FIDL", &shared);
+        ASSERT_TRUE(library.AddDependentLibrary(std::move(middle_dep)));
+        EXPECT_TRUE(checkJSONGenerator(std::move(library),
+                                       R"JSON(
+{
+  "version": "0.0.1",
+  "name": "top",
+  "library_dependencies": [
+    {
+      "name": "bottom",
+      "declarations": {
+        "bottom/Bottom": "interface",
+        "bottom/Foo": "struct"
+      }
+    },
+    {
+      "name": "middle",
+      "declarations": {
+        "middle/Middle": "interface"
+      }
+    }
+  ],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "top/Top",
+      "location": {
+        "filename": "top.fidl",
+        "line": 6,
+        "column": 10
+      },
+      "methods": [
+        {
+          "ordinal": 961142572,
+          "generated_ordinal": 961142572,
+          "name": "GetFoo",
+          "location": {
+            "filename": "bottom.fidl",
+            "line": 10,
+            "column": 3
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_size": 16,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "bottom/Foo",
+                "nullable": false
+              },
+              "name": "foo",
+              "location": {
+                "filename": "bottom.fidl",
+                "line": 10,
+                "column": 20
+              },
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "top/Top"
+  ],
+  "declarations": {
+    "top/Top": "interface"
+  }
+}
+)JSON"));
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(json_generator_tests)
@@ -1961,4 +2205,6 @@ RUN_TEST(json_generator_test_byte_and_bytes)
 RUN_TEST(json_generator_test_bits)
 RUN_TEST(json_generator_check_escaping)
 RUN_TEST(json_generator_constants)
+RUN_TEST(json_generator_transitive_dependencies)
+RUN_TEST(json_generator_transitive_dependencies_compose)
 END_TEST_CASE(json_generator_tests)
