@@ -735,13 +735,13 @@ void DevfsConnection::HandleRpc(fbl::unique_ptr<DevfsConnection> conn,
     log(TRACE, "devhost: destroying devfs conn %p\n", conn.get());
 }
 
+
 static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
     fbl::AutoLock guard(&dev->proxy_ios_lock);
 
     if (dev->proxy_ios) {
-        dev->proxy_ios->Cancel(DevhostAsyncLoop()->dispatcher());
+        dev->proxy_ios->CancelLocked(DevhostAsyncLoop()->dispatcher());
     }
-    dev->proxy_ios = nullptr;
 }
 
 #define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))

@@ -13,23 +13,35 @@ namespace devmgr {
 
 ProxyIostate::~ProxyIostate() {
     fbl::AutoLock guard(&dev->proxy_ios_lock);
-    if (dev->proxy_ios == this) {
-        dev->proxy_ios = nullptr;
-    }
+    ZX_ASSERT(dev->proxy_ios != this);
 }
 
 // Handling RPC From Proxy Devices to BusDevs
 void ProxyIostate::HandleRpc(fbl::unique_ptr<ProxyIostate> conn, async_dispatcher_t* dispatcher,
                              async::WaitBase* wait, zx_status_t status,
                              const zx_packet_signal_t* signal) {
+    auto handle_destroy = [&conn]() {
+        fbl::AutoLock guard(&conn->dev->proxy_ios_lock);
+        // If proxy_ios is not |conn|, then it's had a packet queued already to
+        // destroy it, so we should let the queued destruction handle things.
+        // Otherwise we should destroy it.
+        if (conn->dev->proxy_ios == conn.get()) {
+            // Mark proxy_ios as disconnected, so that CancelLocked doesn't try to
+            // destroy it too
+            conn->dev->proxy_ios = nullptr;
+            // The actual destruction will happen when |conn| goes out of scope.
+        } else {
+            __UNUSED auto ptr = conn.release();
+        }
+    };
     if (status != ZX_OK) {
-        return;
+        return handle_destroy();
     }
 
     if (conn->dev == nullptr) {
         log(RPC_SDW, "proxy-rpc: stale rpc? (ios=%p)\n", conn.get());
         // Do not re-issue the wait here
-        return;
+        return handle_destroy();
     }
     if (signal->observed & ZX_CHANNEL_READABLE) {
         log(RPC_SDW, "proxy-rpc: rpc readable (ios=%p,dev=%p)\n", conn.get(), conn->dev.get());
@@ -37,16 +49,14 @@ void ProxyIostate::HandleRpc(fbl::unique_ptr<ProxyIostate> conn, async_dispatche
         if (r != ZX_OK) {
             log(RPC_SDW, "proxy-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, conn.get(),
                 conn->dev.get());
-            // Let |conn| be destroyed
-            return;
+            return handle_destroy();
         }
         BeginWait(std::move(conn), dispatcher);
         return;
     }
     if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
         log(RPC_SDW, "proxy-rpc: peer closed (ios=%p,dev=%p)\n", conn.get(), conn->dev.get());
-        // Let |conn| be destroyed
-        return;
+        return handle_destroy();
     }
     log(ERROR, "devhost: no work? %08x\n", signal->observed);
     BeginWait(std::move(conn), dispatcher);
@@ -59,16 +69,14 @@ zx_status_t ProxyIostate::Create(const fbl::RefPtr<zx_device_t>& dev, zx::channe
     fbl::AutoLock guard(&dev->proxy_ios_lock);
 
     if (dev->proxy_ios) {
-        dev->proxy_ios->Cancel(dispatcher);
-        dev->proxy_ios = nullptr;
+        dev->proxy_ios->CancelLocked(dispatcher);
     }
 
-    auto ios = std::make_unique<ProxyIostate>();
+    auto ios = std::make_unique<ProxyIostate>(dev);
     if (ios == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    ios->dev = dev;
     ios->set_channel(std::move(rpc));
 
     // |ios| is will be owned by the async loop.  |dev| holds a reference that will be
@@ -84,9 +92,9 @@ zx_status_t ProxyIostate::Create(const fbl::RefPtr<zx_device_t>& dev, zx::channe
     return ZX_OK;
 }
 
-// The device for which ProxyIostate is currently attached to should have
-// its proxy_ios_lock held across Cancel().
-void ProxyIostate::Cancel(async_dispatcher_t* dispatcher) {
+void ProxyIostate::CancelLocked(async_dispatcher_t* dispatcher) {
+    ZX_ASSERT(this->dev->proxy_ios == this);
+    this->dev->proxy_ios = nullptr;
     // TODO(teisenbe): We should probably check the return code in case the
     // queue was full
     ConnectionDestroyer::Get()->QueueProxyConnection(dispatcher, this);
