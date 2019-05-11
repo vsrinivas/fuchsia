@@ -215,62 +215,64 @@ bool TestMemfsInstall() {
 bool TestMemfsCloseDuringAccess() {
     BEGIN_TEST;
 
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    ASSERT_EQ(loop.StartThread(), ZX_OK);
+    for (int i = 0; i < 100; i++) {
+        async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+        ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-    // Create a memfs filesystem, acquire a file descriptor
-    memfs_filesystem_t* vfs;
-    zx_handle_t root;
-    ASSERT_EQ(memfs_create_filesystem(loop.dispatcher(), &vfs, &root), ZX_OK);
-    int fd = -1;
-    ASSERT_EQ(fdio_fd_create(root, &fd), ZX_OK);
+        // Create a memfs filesystem, acquire a file descriptor
+        memfs_filesystem_t* vfs;
+        zx_handle_t root;
+        ASSERT_EQ(memfs_create_filesystem(loop.dispatcher(), &vfs, &root), ZX_OK);
+        int fd = -1;
+        ASSERT_EQ(fdio_fd_create(root, &fd), ZX_OK);
 
-    // Access files within the filesystem.
-    DIR* d = fdopendir(fd);
-    ASSERT_NONNULL(d);
-    thrd_t worker;
+        // Access files within the filesystem.
+        DIR* d = fdopendir(fd);
+        ASSERT_NONNULL(d);
+        thrd_t worker;
 
-    struct thread_args {
-        DIR* d;
-        sync_completion_t spinning{};
-    } args {
-        .d = d,
-    };
+        struct thread_args {
+            DIR* d;
+            sync_completion_t spinning{};
+        } args{
+            .d = d,
+        };
 
-    ASSERT_EQ(thrd_create(&worker, [](void* arg) {
-        thread_args* args = reinterpret_cast<thread_args*>(arg);
-        DIR* d = args->d;
-        int fd = openat(dirfd(d), "foo", O_CREAT | O_RDWR);
-        while (true) {
-            if (close(fd)) {
-                return errno == EPIPE ? 0 : -1;
+        ASSERT_EQ(thrd_create(&worker, [](void* arg) {
+            thread_args* args = reinterpret_cast<thread_args*>(arg);
+            DIR* d = args->d;
+            int fd = openat(dirfd(d), "foo", O_CREAT | O_RDWR);
+            while (true) {
+                if (close(fd)) {
+                    return errno == EPIPE ? 0 : -1;
+                }
+
+                if ((fd = openat(dirfd(d), "foo", O_RDWR)) < 0) {
+                    return errno == EPIPE ? 0 : -1;
+                }
+                sync_completion_signal(&args->spinning);
             }
+        }, &args), thrd_success);
 
-            if ((fd = openat(dirfd(d), "foo", O_RDWR)) < 0) {
-                return errno == EPIPE ? 0 : -1;
-            }
-            sync_completion_signal(&args->spinning);
-        }
-    }, &args), thrd_success);
+        ASSERT_EQ(sync_completion_wait(&args.spinning, ZX_SEC(3)), ZX_OK);
 
-    ASSERT_EQ(sync_completion_wait(&args.spinning, ZX_SEC(3)), ZX_OK);
+        sync_completion_t unmounted;
+        memfs_free_filesystem(vfs, &unmounted);
+        ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
 
-    sync_completion_t unmounted;
-    memfs_free_filesystem(vfs, &unmounted);
-    ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
+        int result;
+        ASSERT_EQ(thrd_join(worker, &result), thrd_success);
+        ASSERT_EQ(result, 0);
 
-    int result;
-    ASSERT_EQ(thrd_join(worker, &result), thrd_success);
-    ASSERT_EQ(result, 0);
+        // Now that the filesystem has terminated, we should be
+        // unable to access it.
+        ASSERT_LT(openat(dirfd(d), "foo", O_CREAT | O_RDWR), 0);
+        ASSERT_EQ(errno, EPIPE, "Expected connection to remote server to be closed");
 
-    // Now that the filesystem has terminated, we should be
-    // unable to access it.
-    ASSERT_LT(openat(dirfd(d), "foo", O_CREAT | O_RDWR), 0);
-    ASSERT_EQ(errno, EPIPE, "Expected connection to remote server to be closed");
-
-    // Since the filesystem has terminated, this will
-    // only close the client side of the connection.
-    ASSERT_EQ(closedir(d), 0);
+        // Since the filesystem has terminated, this will
+        // only close the client side of the connection.
+        ASSERT_EQ(closedir(d), 0);
+    }
 
     END_TEST;
 }
