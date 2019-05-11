@@ -53,7 +53,6 @@ source_set("common") {
     "$zx/system/ulib/virtio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
@@ -67,4 +66,5 @@ test("virtio-test") {
     "$zx/system/ulib/driver",
     "$zx/system/ulib/unittest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

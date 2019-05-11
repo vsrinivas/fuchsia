@@ -12,6 +12,6 @@ test("region-alloc") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

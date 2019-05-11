@@ -38,11 +38,11 @@ driver("sdmmc") {
 test("sdmmc-test") {
   output_name = "sdmmc-test"
   sources = [
-    "sdio-controller-device.cpp",
     "sdio-controller-device-test.cpp",
+    "sdio-controller-device.cpp",
     "sdio-function-device.cpp",
-    "sdmmc-block-device.cpp",
     "sdmmc-block-device-test.cpp",
+    "sdmmc-block-device.cpp",
     "sdmmc-device.cpp",
   ]
   deps = [
@@ -63,4 +63,5 @@ test("sdmmc-test") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

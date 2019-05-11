@@ -17,6 +17,6 @@ executable("biotime") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

@@ -14,7 +14,6 @@ driver("as370") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
   data_deps = [
     "$zx/kernel/target/arm64/boot-shim:as370",

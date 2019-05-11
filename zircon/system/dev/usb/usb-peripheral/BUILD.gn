@@ -20,7 +20,6 @@ driver("usb-peripheral") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
   ]
 
   # Set default configuration here, rather than relying on usbctl to do it.

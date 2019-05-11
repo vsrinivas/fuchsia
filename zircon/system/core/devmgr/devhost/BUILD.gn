@@ -49,10 +49,10 @@ library("driver") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxio",
     "../shared:env",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 
   # Since the tracing support is brought in via an archive, we need explicit
   # references to ensure everything is present.

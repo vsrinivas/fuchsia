@@ -14,7 +14,7 @@ executable("gpt") {
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/cksum",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

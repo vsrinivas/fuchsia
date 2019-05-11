@@ -25,6 +25,5 @@ driver("optee") {
     "$zx/system/ulib/tee-client-api",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }

@@ -17,6 +17,5 @@ driver("msm8x53-sdhci") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }

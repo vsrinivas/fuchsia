@@ -152,31 +152,41 @@ template("c_toolchain") {
         clangxx_exec_command =
             rebase_path(clangxx_exec_inputs[0], root_build_dir)
       }
+      clangxx_args = [
+        clangxx_exec_command,
+        "--target=$tc_target",
+
+        # This affects the multilib selection so that we get the right
+        # libc++.a binary.  It's not really proper that we have to encode here
+        # the multilib-affecting switches we presume all configs actually will
+        # use in the toolchain being defined.  But since everything in this
+        # codebase (certainly everything we support being compiled by GCC) is
+        # definitely compiled with -fno-exceptions, we can live with it.  An
+        # alternative would be to add the lib_dirs in a config() instead and
+        # then somehow tie it to exceptions vs no-exceptions configs, but we
+        # have no present need for any such complexity.
+        "-fno-exceptions",
+      ]
+
       tc = {
         tool_dir = gcc_tool_dir
         tool_prefix = "${tc_cpu}-elf-"
         version_string = gcc_version_string
-        include_dirs =
-            [ rebase_path(exec_script("/usr/bin/env",
-                                      [
-                                        clangxx_exec_command,
-                                        "--target=$tc_target",
-                                        "-print-file-name=include/c++/v1",
-                                      ],
-                                      "trim string",
-                                      clangxx_exec_inputs),
-                          "",
-                          root_build_dir) ]
+        include_dirs = [ rebase_path(
+                exec_script(
+                    "/usr/bin/env",
+                    clangxx_args + [ "-print-file-name=include/c++/v1" ],
+                    "trim string",
+                    clangxx_exec_inputs),
+                "",
+                root_build_dir) ]
         lib_dirs = [ rebase_path(
-                get_path_info(exec_script("/usr/bin/env",
-                                          [
-                                            clangxx_exec_command,
-                                            "--target=$tc_target",
-                                            "-print-file-name=libc++.a",
-                                          ],
-                                          "trim string",
-                                          clangxx_exec_inputs),
-                              "dir"),
+                get_path_info(
+                    exec_script("/usr/bin/env",
+                                clangxx_args + [ "-print-file-name=libc++.a" ],
+                                "trim string",
+                                clangxx_exec_inputs),
+                    "dir"),
                 "",
                 root_build_dir) ]
       }

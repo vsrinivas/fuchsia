@@ -15,6 +15,5 @@ driver("hikey-usb") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }

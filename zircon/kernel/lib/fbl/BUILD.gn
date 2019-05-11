@@ -13,9 +13,6 @@ library("fbl") {
   ]
   public_deps = [
     "$zx/system/ulib/fbl",
-
-    # <fbl/arena.h> has #include <zxcpp/new.h>.
-    "$zx/system/ulib/zxcpp",
   ]
 }
 

@@ -24,7 +24,6 @@ source_set("fshost-registry") {
     "$zx/system/ulib/memfs:memfs-cpp",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
@@ -62,11 +61,9 @@ source_set("block-watcher") {
     "$zx/system/ulib/trace-engine",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxcrypt:zxcrypt-fdio",
   ]
 }
-
 
 executable("fshost") {
   sources = [
@@ -80,6 +77,7 @@ executable("fshost") {
     "$zx/system/ulib/loader-service",
     "$zx/system/ulib/ramdevice-client",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("fshost-test") {
@@ -91,6 +89,7 @@ test("fshost-test") {
     ":fshost-registry",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("block-watcher-test") {
@@ -105,4 +104,5 @@ test("block-watcher-test") {
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

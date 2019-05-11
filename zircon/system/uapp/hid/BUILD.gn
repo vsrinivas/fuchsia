@@ -15,6 +15,6 @@ executable("hid") {
     "$zx/system/ulib/hid-parser",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

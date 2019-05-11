@@ -383,6 +383,7 @@ if (toolchain.tool_dir == "") {
     sources = [
       "noop-test.cpp",
     ]
+    configs += [ "$zx/public/gn/config:static-libc++" ]
   }
 }
 

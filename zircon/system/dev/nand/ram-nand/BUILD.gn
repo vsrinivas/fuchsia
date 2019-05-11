@@ -18,7 +18,6 @@ driver("ram-nand") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
@@ -60,7 +59,7 @@ test("ram-nand-test") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

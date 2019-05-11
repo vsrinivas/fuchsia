@@ -2,18 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("zxcpp") {
-  kernel = true
-  static = true
-  sdk = "source"
-  sdk_headers = []
-  sources = [
-    "new.cpp",
-    "pure_virtual.cpp",
-    "thread_atexit.cpp",
-  ]
-  if (toolchain.base_environment == "kernel") {
-    # Avoid circularity.
-    configs -= [ "$zx/kernel/vm:headers.config" ]
+if (is_kernel) {
+  # TODO(ZX-1751): Transitional.
+  source_set("zxcpp") {
+    sources = [
+      "new.cpp",
+      "pure_virtual.cpp",
+    ]
+    if (toolchain.environment == "kernel") {
+      # Avoid circularity.
+      configs -= [ "$zx/kernel/vm:headers.config" ]
+    }
   }
 }

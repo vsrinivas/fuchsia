@@ -33,7 +33,6 @@ source_set("block") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
@@ -58,6 +57,7 @@ test("ums-block") {
     "$zx/system/ulib/fit",
     "$zx/system/ulib/unittest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("ums") {
@@ -75,4 +75,5 @@ test("ums") {
     "$zx/system/ulib/fit",
     "$zx/system/ulib/unittest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

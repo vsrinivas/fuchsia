@@ -30,7 +30,6 @@ driver("zxcrypt") {
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxcrypt:zxcrypt-dev.static",
   ]
 
@@ -39,10 +38,12 @@ driver("zxcrypt") {
   assert_no_deps = [
     "$zx/system/ulib/trace-engine",
     "$zx/system/ulib/crypto:zircon-crypto",
+
     # Some day, we'd also like to be able to assert we don't pull in fdio here,
     # but it is pulled in transitively by //$zx/system/ulib/driver, which is
     # needed by //$zx/system/ulib/zxcrypt-dev for the symbol
     # |device_get_protocol|.
     #"$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxcrypt",
   ]
 }

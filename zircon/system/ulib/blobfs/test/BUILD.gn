@@ -34,4 +34,5 @@ test("blobfs-unit") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

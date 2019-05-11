@@ -25,6 +25,8 @@ executable("devcoordinator") {
     "$zx/system/core/virtcon:virtual-console",
     "$zx/system/core/pwrbtn-monitor",
   ]
+
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 source_set("internal-drivers") {
@@ -79,8 +81,8 @@ source_set("common") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
+
   deps = [
     "$zx/system/ulib/fidl-async",
   ]
@@ -100,4 +102,5 @@ test("devcoordinator-test") {
     "$zx/system/ulib/zxtest",
     "../shared:env",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

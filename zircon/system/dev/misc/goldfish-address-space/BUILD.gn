@@ -19,6 +19,5 @@ driver("goldfish-address-space") {
     "$zx/system/ulib/trace:headers",
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }

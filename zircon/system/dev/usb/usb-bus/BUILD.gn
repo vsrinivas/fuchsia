@@ -22,6 +22,5 @@ driver("usb-bus") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/utf_conversion",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
   ]
 }

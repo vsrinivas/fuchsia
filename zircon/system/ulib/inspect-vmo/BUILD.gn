@@ -35,6 +35,5 @@ library("inspect-vmo") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/syslog",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }

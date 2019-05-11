@@ -94,7 +94,7 @@ test("fs") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/uboringssl",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

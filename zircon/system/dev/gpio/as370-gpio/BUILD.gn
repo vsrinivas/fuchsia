@@ -15,7 +15,6 @@ driver("as370-gpio") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
@@ -36,7 +35,7 @@ test("as370-gpio-test") {
     "$zx/system/ulib/mock-function",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

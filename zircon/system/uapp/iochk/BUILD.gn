@@ -17,6 +17,6 @@ executable("iochk") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

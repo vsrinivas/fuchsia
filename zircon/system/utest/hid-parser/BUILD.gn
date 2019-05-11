@@ -14,8 +14,8 @@ test("hid-parser") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/hid-parser",
     "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 # TODO(BLD-356): hid-parser-fuzzer
 # sources=["hid-parser-fuzztest.cpp"]

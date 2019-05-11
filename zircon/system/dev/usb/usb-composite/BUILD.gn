@@ -17,6 +17,5 @@ driver("usb-composite") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
   ]
 }

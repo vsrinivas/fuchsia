@@ -12,7 +12,6 @@ library("region-alloc") {
   if (!is_kernel) {
     deps = [
       "$zx/system/ulib/fbl",
-      "$zx/system/ulib/zxcpp",
     ]
   }
 }

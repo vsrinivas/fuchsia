@@ -14,8 +14,8 @@ executable("xdc-test") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 host_tool("xdc-test-host") {

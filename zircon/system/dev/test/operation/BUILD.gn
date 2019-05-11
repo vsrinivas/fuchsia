@@ -17,6 +17,6 @@ test("operation") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

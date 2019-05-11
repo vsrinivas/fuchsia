@@ -20,15 +20,14 @@ driver("mt8167-i2c") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
 test("mt8167-i2c-test") {
   output_name = "mt8167-i2c-test"
   sources = [
-    "mt8167-i2c.cpp",
     "mt8167-i2c-test.cpp",
+    "mt8167-i2c.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",
@@ -48,7 +47,7 @@ test("mt8167-i2c-test") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

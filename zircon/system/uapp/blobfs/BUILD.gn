@@ -25,8 +25,8 @@ executable("blobfs") {
     "$zx/system/ulib/trace-provider",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/uboringssl",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

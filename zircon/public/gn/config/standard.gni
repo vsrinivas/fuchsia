@@ -122,9 +122,15 @@ standard_environments = [
         add = [ "$zx/public/gn/config:user_executable" ]
       },
       {
-        # All drivers use hidden visibility.
-        types = [ "driver" ]
-        add = [ "$zx/public/gn/config:visibility_hidden" ]
+        # All drivers use hidden visibility and the static standard C++ library.
+        types = [
+          "driver",
+          "test_driver",
+        ]
+        add = [
+          "$zx/public/gn/config:visibility_hidden",
+          "$zx/public/gn/config:static-libc++",
+        ]
       },
     ]
     implicit_deps = [
@@ -147,7 +153,10 @@ standard_environments = [
         # vanilla (or configured) environment.  Variants can remove this
         # and add a different variant driver_deps label that represents the
         # execution environment those drivers should get.
-        types = [ "driver" ]
+        types = [
+          "driver",
+          "test_driver",
+        ]
         add = [ "$zx/system/core/devmgr:driver_deps" ]
       },
     ]

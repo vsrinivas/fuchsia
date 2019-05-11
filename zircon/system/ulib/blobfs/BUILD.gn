@@ -93,7 +93,6 @@ library("blobfs") {
       "$zx/system/ulib/trace-engine",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxcpp",
     ]
   } else {
     sources += [ "host.cpp" ]

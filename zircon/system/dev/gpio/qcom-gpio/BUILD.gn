@@ -41,4 +41,5 @@ test("qcom-gpio-test") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

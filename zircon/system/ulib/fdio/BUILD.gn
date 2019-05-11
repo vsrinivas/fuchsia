@@ -51,8 +51,8 @@ library("fdio") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxio",
     "$zx/system/ulib/zxs",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

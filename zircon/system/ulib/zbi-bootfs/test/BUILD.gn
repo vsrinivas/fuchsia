@@ -38,8 +38,8 @@ test("zbi-bootfs-test") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zbi-bootfs",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 
   data_deps = [
     ":test-zbi",

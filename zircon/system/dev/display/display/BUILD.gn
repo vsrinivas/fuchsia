@@ -29,7 +29,6 @@ driver("display") {
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
 
     # TODO(BLD-353): This is actually a transitive dependency of the ddk
     # library, but the library doesn't express it properly because of

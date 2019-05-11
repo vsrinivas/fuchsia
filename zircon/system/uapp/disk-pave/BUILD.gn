@@ -22,8 +22,8 @@ executable("install-disk-image") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/paver",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("install-disk-image-test") {
@@ -44,7 +44,7 @@ test("install-disk-image-test") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

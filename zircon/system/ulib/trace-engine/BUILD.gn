@@ -30,7 +30,6 @@ common_pieces = {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
@@ -41,6 +40,8 @@ library("trace-engine") {
 
   shared = true
   static = false
+  configs += [ "$zx/public/gn/config:static-libc++" ]
+
   sdk = "shared"
   sdk_headers = []
 }

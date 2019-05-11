@@ -29,14 +29,14 @@ library("zxcrypt-dev") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fs-management:headers", # only used for zxcrypt_magic
+    "$zx/system/ulib/fs-management:headers",  # only used for zxcrypt_magic
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/uboringssl",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 library("zxcrypt-fdio") {
@@ -58,7 +58,7 @@ library("zxcrypt-fdio") {
     "$zx/system/ulib/crypto",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs-management:headers", # only used for zxcrypt_magic
+    "$zx/system/ulib/fs-management:headers",  # only used for zxcrypt_magic
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/kms-stateless",
     "$zx/system/ulib/ramdevice-client:static",
@@ -66,7 +66,7 @@ library("zxcrypt-fdio") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/uboringssl",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

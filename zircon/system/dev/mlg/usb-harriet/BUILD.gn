@@ -17,6 +17,5 @@ driver("usb-harriet") {
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }

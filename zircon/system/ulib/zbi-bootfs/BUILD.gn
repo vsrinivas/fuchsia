@@ -18,6 +18,5 @@ library("zbi-bootfs") {
     "$zx/system/ulib/bootfs",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
-    "$zx/system/ulib/zxcpp",
   ]
 }

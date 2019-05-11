@@ -17,10 +17,8 @@ test("fit") {
   configs += [ ":config" ]
   if (is_fuchsia) {
     defines = [ "FIT_NO_STD_FOR_ZIRCON_USERSPACE" ]
-    deps += [
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zxcpp",
-    ]
+    deps += [ "$zx/system/ulib/fdio" ]
+    configs += [ "$zx/public/gn/config:static-libc++" ]
   } else {
     sources += [
       "bridge_tests.cpp",

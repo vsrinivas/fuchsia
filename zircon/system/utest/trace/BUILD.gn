@@ -31,7 +31,6 @@ source_set("common") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
 
     # fdio is here so that things like printf work.
     # Otherwise they silently fail (output is dropped).
@@ -45,6 +44,7 @@ test("trace") {
     ":common",
     "$zx/system/ulib/trace-engine",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
   data_deps = [
     ":trace-static-engine",
   ]
@@ -56,4 +56,5 @@ test("trace-static-engine") {
     ":common",
     "$zx/system/ulib/trace-engine:trace-engine-static",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

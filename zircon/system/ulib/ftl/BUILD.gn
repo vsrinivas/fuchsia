@@ -28,7 +28,6 @@ library("ftl") {
     "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxcpp",
   ]
 
   if (is_fuchsia) {

@@ -24,12 +24,11 @@ source_set("common") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
   public_deps = [
-    "$zx/system/dev/lib/operation",
     "$zx/system/banjo/ddk.protocol.badblock",
     "$zx/system/banjo/ddk.protocol.nand",
+    "$zx/system/dev/lib/operation",
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -40,8 +39,8 @@ source_set("common") {
 test("skip-block-test") {
   output_name = "skip-block-test"
   sources = [
-    "test/skip-block-test.cpp",
     "test/logical-to-physical-map-test.cpp",
+    "test/skip-block-test.cpp",
   ]
   include_dirs = [ "." ]
   deps = [
@@ -51,8 +50,7 @@ test("skip-block-test") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
-    "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

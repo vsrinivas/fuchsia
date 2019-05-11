@@ -13,6 +13,6 @@ test("utf_conversion") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/utf_conversion",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

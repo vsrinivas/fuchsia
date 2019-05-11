@@ -31,7 +31,6 @@ source_set("common") {
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxtest",
   ]
 }
@@ -43,6 +42,7 @@ test("nand-broker") {
   deps = [
     ":common",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("nandpart-broker") {
@@ -52,4 +52,5 @@ test("nandpart-broker") {
   deps = [
     ":common",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

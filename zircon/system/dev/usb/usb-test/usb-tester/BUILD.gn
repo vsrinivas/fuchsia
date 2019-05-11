@@ -16,6 +16,5 @@ driver("usb-tester") {  # TODO: test_driver?
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
   ]
 }

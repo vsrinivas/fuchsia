@@ -28,10 +28,10 @@ library("inspector") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/backtrace",
     "$zx/third_party/ulib/ngunwind",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 
   # Compile this with frame pointers so that if we crash
   # the simplistic unwinder will work.

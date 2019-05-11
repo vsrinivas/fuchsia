@@ -4,9 +4,7 @@
 
 library("lazy_init") {
   sdk = "source"
-  sdk_headers = [
-    "lib/lazy_init/lazy_init.h",
-  ]
+  sdk_headers = [ "lib/lazy_init/lazy_init.h" ]
   sources = []
   kernel = true
   static = true
@@ -32,14 +30,12 @@ test("lazy_init-test") {
     # in program termination, which is not currently supported in the
     # host test environment.
     # See: TODO(ZX-1053)
-    sources += [
-      "lazy_init_tests.cpp",
-    ]
+    sources += [ "lazy_init_tests.cpp" ]
     deps += [
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxcpp",
     ]
   }
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

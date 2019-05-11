@@ -40,8 +40,8 @@ executable("netsvc") {
     "$zx/system/ulib/tftp",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
   data_deps = [
     # netsvc launches /boot/bin/install-disk-image under --netboot.
     "$zx/system/uapp/disk-pave",

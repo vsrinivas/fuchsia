@@ -33,7 +33,6 @@ driver("usb-audio") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/uboringssl",
   ]
 }

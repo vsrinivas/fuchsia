@@ -16,6 +16,5 @@ driver("hidctl") {
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }

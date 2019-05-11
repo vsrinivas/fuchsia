@@ -102,7 +102,6 @@ library("fs") {
       "$zx/system/ulib/trace",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxcpp",
     ]
   }
 }
@@ -173,7 +172,6 @@ if (is_fuchsia) {
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zircon-internal",
       "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxcpp",
     ]
   }
 }

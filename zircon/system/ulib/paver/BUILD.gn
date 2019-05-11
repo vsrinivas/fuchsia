@@ -5,8 +5,8 @@
 library("paver") {
   sources = [
     "device-partitioner.cpp",
-    "paver.cpp",
     "pave-utils.cpp",
+    "paver.cpp",
     "provider.cpp",
     "stream-reader.cpp",
   ]
@@ -28,6 +28,7 @@ library("paver") {
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fvm",
@@ -38,7 +39,6 @@ library("paver") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxcrypt:zxcrypt-fdio",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/lz4",
@@ -79,4 +79,5 @@ test("paver-test") {
     "$zx/system/ulib/svc",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

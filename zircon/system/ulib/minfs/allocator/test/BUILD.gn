@@ -21,6 +21,7 @@ test("minfs-allocator-unit") {
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 
   include_dirs = [ ".." ]
 }

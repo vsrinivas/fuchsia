@@ -34,9 +34,10 @@ executable("bootsvc") {
     "$zx/system/ulib/trace-engine",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/lz4",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
+
   data_deps = [
     "$zx/system/core/devmgr/devcoordinator",
   ]
@@ -44,8 +45,8 @@ executable("bootsvc") {
 
 source_set("util") {
   sources = [
-    "util.h",
     "util.cpp",
+    "util.h",
   ]
   deps = [
     "$zx/third_party/ulib/safemath",
@@ -75,6 +76,7 @@ test("bootsvc-unit-test") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/unittest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 executable("bootsvc-integration-test") {
@@ -90,6 +92,7 @@ executable("bootsvc-integration-test") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
+    "$zx/third_party/ulib/safemath",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

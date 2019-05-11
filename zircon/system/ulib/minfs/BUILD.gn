@@ -72,7 +72,6 @@ library("minfs") {
       "$zx/system/ulib/trace-engine",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxcpp",
     ]
     sources += [
       "vnode-allocation.cpp",

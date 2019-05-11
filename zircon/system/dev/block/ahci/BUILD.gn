@@ -21,10 +21,11 @@ test("ahci-unittest") {
     "test/main.cpp",
   ]
   deps = [
+    ":shared",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/zxtest",
-    ":shared",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 source_set("shared") {
@@ -41,6 +42,5 @@ source_set("shared") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }

@@ -22,7 +22,6 @@ driver("flash-programmer") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
   ]
   data_deps = [
     ":fx3-firmware",

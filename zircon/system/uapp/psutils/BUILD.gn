@@ -107,8 +107,8 @@ executable("memgraph") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/task-utils",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 # Generate an include file that contains the schema JSON.
@@ -149,9 +149,9 @@ executable("threads") {
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/task-utils",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/backtrace",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 executable("signal") {

@@ -10,8 +10,8 @@ test("ctor") {
     ":dso-ctor",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 library("dso-ctor") {
@@ -23,6 +23,6 @@ library("dso-ctor") {
   ]
   deps = [
     "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

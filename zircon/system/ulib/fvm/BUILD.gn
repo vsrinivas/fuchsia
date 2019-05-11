@@ -35,7 +35,6 @@ library("fvm") {
       "$zx/system/ulib/sync",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxcpp",
     ]
   } else {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.

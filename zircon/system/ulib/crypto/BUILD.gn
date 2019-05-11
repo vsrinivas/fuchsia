@@ -35,7 +35,7 @@ library("zircon-crypto") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/uboringssl",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

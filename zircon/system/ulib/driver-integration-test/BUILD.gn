@@ -16,6 +16,6 @@ library("driver-integration-test") {
     "$zx/system/ulib/libzbi",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

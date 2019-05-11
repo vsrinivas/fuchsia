@@ -78,7 +78,6 @@ driver("platform-bus-x86") {
     "$zx/system/ulib/pci",
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/chromiumos-platform-ec",
   ]

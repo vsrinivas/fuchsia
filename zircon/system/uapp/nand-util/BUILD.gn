@@ -18,9 +18,9 @@ executable("nand-util") {
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/cksum",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 source_set("common") {
@@ -31,7 +31,6 @@ source_set("common") {
   ]
   deps = [
     "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zxcpp",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-device:c",
@@ -43,7 +42,7 @@ source_set("common") {
 }
 
 test("nand-util-test") {
-output_name = "nand-util-test"
+  output_name = "nand-util-test"
   sources = [
     "test/ftl_internal_test.cpp",
   ]
@@ -51,7 +50,7 @@ output_name = "nand-util-test"
   deps = [
     ":common",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

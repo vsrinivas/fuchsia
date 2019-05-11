@@ -41,7 +41,6 @@ source_set("common") {
     "$zx/system/ulib/mipi-dsi",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
@@ -74,4 +73,5 @@ test("dsi-host") {
     "$zx/system/ulib/driver",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

@@ -19,6 +19,5 @@ library("hid-parser") {
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxcpp",
   ]
 }

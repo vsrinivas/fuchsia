@@ -26,6 +26,7 @@ test("nand-unittest") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/unittest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 # TODO(mcgrathr): This really should be in ..:common and actually shared
@@ -50,6 +51,5 @@ source_set("common") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }

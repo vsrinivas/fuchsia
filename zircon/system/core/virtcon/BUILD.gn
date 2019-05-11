@@ -40,7 +40,6 @@ group("common") {
     "$zx/system/ulib/port",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
@@ -52,6 +51,7 @@ executable("virtual-console") {
   deps = [
     ":common",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("virtual-console-test") {
@@ -65,4 +65,5 @@ test("virtual-console-test") {
     ":common",
     "$zx/system/ulib/unittest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

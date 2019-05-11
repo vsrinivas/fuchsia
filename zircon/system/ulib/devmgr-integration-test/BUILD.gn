@@ -27,6 +27,6 @@ library("devmgr-integration-test") {
     "$zx/system/ulib/fs",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

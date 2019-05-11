@@ -30,9 +30,10 @@ library("fs-management") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/uboringssl",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
+
   data_deps = [
     "$zx/system/uapp/minfs",
     "$zx/system/uapp/blobfs",

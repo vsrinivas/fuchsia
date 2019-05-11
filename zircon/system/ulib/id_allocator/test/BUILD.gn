@@ -19,4 +19,5 @@ test("id_allocator") {
     "$zx/system/ulib/id_allocator",
     "$zx/system/ulib/unittest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

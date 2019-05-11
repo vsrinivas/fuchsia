@@ -135,7 +135,6 @@ group("ulib") {
     "zircon",
     "zircon-internal",
     "zx",
-    "zxcpp",
     "zxcrypt:zxcrypt-dev",
     "zxcrypt:zxcrypt-fdio",
     "zxio",

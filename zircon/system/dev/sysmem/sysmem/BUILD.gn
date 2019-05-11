@@ -34,7 +34,6 @@ driver("sysmem") {
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
   ]
 }
 
@@ -64,7 +63,7 @@ test("sysmem-unittest") {
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxtest",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

@@ -18,7 +18,7 @@ executable("lsblk") {
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/cksum",
   ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
