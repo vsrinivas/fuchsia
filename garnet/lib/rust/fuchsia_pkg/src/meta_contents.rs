@@ -9,7 +9,7 @@ use std::io;
 
 /// A `MetaContents` represents the "meta/contents" file of a Fuchsia archive
 /// file of a Fuchsia package.
-/// It validates that all package paths are valid and that none of them start
+/// It validates that all resource paths are valid and that none of them start
 /// with "meta/".
 #[derive(Debug)]
 pub struct MetaContents {
@@ -17,9 +17,9 @@ pub struct MetaContents {
 }
 
 impl MetaContents {
-    /// Creates a `MetaContents` from a `map` from package paths to Merkle roots.
-    /// Validates that all package paths are valid Fuchsia package paths, and
-    /// that none of the package paths start with "meta/".
+    /// Creates a `MetaContents` from a `map` from resource paths to Merkle roots.
+    /// Validates that all resource paths are valid Fuchsia package resource paths,
+    /// and that none of the resource paths start with "meta/".
     ///
     /// # Examples
     /// ```
@@ -39,13 +39,13 @@ impl MetaContents {
     /// };
     /// let meta_contents = MetaContents::from_map(map).unwrap();
     pub fn from_map(map: BTreeMap<String, Hash>) -> Result<Self, MetaContentsError> {
-        for package_path in map.keys() {
-            crate::path::check_package_path(&package_path).map_err(|e| {
-                MetaContentsError::PackagePath { cause: e, path: package_path.to_string() }
+        for resource_path in map.keys() {
+            crate::path::check_resource_path(&resource_path).map_err(|e| {
+                MetaContentsError::ResourcePath { cause: e, path: resource_path.to_string() }
             })?;
-            if package_path.starts_with("meta/") {
+            if resource_path.starts_with("meta/") {
                 return Err(MetaContentsError::ExternalContentInMetaDirectory {
-                    path: package_path.to_string(),
+                    path: resource_path.to_string(),
                 });
             }
         }
@@ -88,7 +88,7 @@ impl MetaContents {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::PackagePathError;
+    use crate::errors::ResourcePathError;
     use crate::test::*;
     use maplit::btreemap;
     use proptest::{prop_assert, prop_assert_eq, prop_assume, proptest, proptest_helper};
@@ -96,7 +96,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_reject_invalid_package_path(
+        fn test_reject_invalid_resource_path(
             ref path in valid_path(1, 3),
             ref hex in merkle_hex())
         {
@@ -108,8 +108,8 @@ mod tests {
             };
             assert_matches!(
                 MetaContents::from_map(map),
-                Err(MetaContentsError::PackagePath {
-                    cause: PackagePathError::PathEndsWithSlash,
+                Err(MetaContentsError::ResourcePath {
+                    cause: ResourcePathError::PathEndsWithSlash,
                     path })
                     => prop_assert_eq!(path, invalid_path));
         }

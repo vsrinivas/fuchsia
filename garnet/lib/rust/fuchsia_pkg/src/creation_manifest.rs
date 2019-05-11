@@ -8,9 +8,9 @@ use std::collections::BTreeMap;
 use std::io;
 
 /// A `CreationManifest` lists the files that should be included in a Fuchsia package.
-/// Both `external_contents` and `far_contents` are maps from package relative paths in
+/// Both `external_contents` and `far_contents` are maps from package resource paths in
 /// the to-be-created package to paths on the local filesystem.
-/// Package relative paths start with "meta/" if and only if they are in `far_contents`.
+/// Package resource paths start with "meta/" if and only if they are in `far_contents`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CreationManifest {
     external_contents: BTreeMap<String, String>,
@@ -54,8 +54,8 @@ impl CreationManifest {
 
     fn from_v1(v1: CreationManifestV1) -> Self {
         let mut far_contents = BTreeMap::new();
-        for (package_path, host_path) in v1.far_contents.into_iter() {
-            far_contents.insert(format!("meta/{}", package_path), host_path);
+        for (resource_path, host_path) in v1.far_contents.into_iter() {
+            far_contents.insert(format!("meta/{}", resource_path), host_path);
         }
         CreationManifest { external_contents: v1.external_contents, far_contents }
     }
@@ -77,18 +77,18 @@ struct CreationManifestV1 {
 }
 
 impl CreationManifestV1 {
-    // Validate all package relative paths and make sure no external contents are in the
+    // Validate all package resource paths and make sure no external contents are in the
     // "meta/" package directory.
     fn check(self) -> Result<Self, CreationManifestError> {
-        for (package_path, _) in self.external_contents.iter().chain(self.far_contents.iter()) {
-            crate::path::check_package_path(&package_path).map_err(|e| {
-                CreationManifestError::PackagePath { cause: e, path: package_path.clone() }
+        for (resource_path, _) in self.external_contents.iter().chain(self.far_contents.iter()) {
+            crate::path::check_resource_path(&resource_path).map_err(|e| {
+                CreationManifestError::ResourcePath { cause: e, path: resource_path.clone() }
             })?;
         }
-        for (package_path, _) in self.external_contents.iter() {
-            if package_path.starts_with("meta/") {
+        for (resource_path, _) in self.external_contents.iter() {
+            if resource_path.starts_with("meta/") {
                 return Err(CreationManifestError::ExternalContentInMetaDirectory {
-                    path: package_path.to_string(),
+                    path: resource_path.to_string(),
                 });
             }
         }
@@ -99,7 +99,7 @@ impl CreationManifestV1 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::PackagePathError::PathStartsWithSlash;
+    use crate::errors::ResourcePathError::PathStartsWithSlash;
     use maplit::btreemap;
     use serde_json::json;
 
@@ -125,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_package_path() {
+    fn test_invalid_resource_path() {
         assert_matches!(
             from_json_value(
                 json!(
@@ -139,7 +139,7 @@ mod tests {
                     }
                 )
             ),
-            Err(CreationManifestError::PackagePath {
+            Err(CreationManifestError::ResourcePath {
                 cause: PathStartsWithSlash,
                 path: s
             })

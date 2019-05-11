@@ -5,7 +5,7 @@
 use failure::Fail;
 
 #[derive(Clone, Debug, PartialEq, Eq, Fail)]
-pub enum PackagePathError {
+pub enum ResourcePathError {
     #[fail(display = "object names must be at least 1 byte")]
     NameEmpty,
 
@@ -33,10 +33,10 @@ pub enum PackagePathError {
 
 #[derive(Debug, Fail)]
 pub enum CreationManifestError {
-    #[fail(display = "manifest contains an invalid package path '{}'. {}", path, cause)]
-    PackagePath {
+    #[fail(display = "manifest contains an invalid resource path '{}'. {}", path, cause)]
+    ResourcePath {
         #[cause]
-        cause: PackagePathError,
+        cause: ResourcePathError,
         path: String,
     },
 
@@ -55,10 +55,10 @@ impl From<serde_json::Error> for CreationManifestError {
 
 #[derive(Debug, Fail)]
 pub enum MetaContentsError {
-    #[fail(display = "invalid package path '{}'", path)]
-    PackagePath {
+    #[fail(display = "invalid resource path '{}'", path)]
+    ResourcePath {
         #[cause]
-        cause: PackagePathError,
+        cause: ResourcePathError,
         path: String,
     },
 
