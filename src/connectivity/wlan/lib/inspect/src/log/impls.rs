@@ -68,6 +68,16 @@ impl<V: WriteInspect + ?Sized> WriteInspect for &V {
     }
 }
 
+/// `Option<T>` does not write an inspect value in the `None` case
+impl<T: WriteInspect> WriteInspect for Option<T> {
+    fn write_inspect(&self, node: &mut finspect::ObjectTreeNode, key: &str) {
+        match self {
+            Some(val) => val.write_inspect(node, key),
+            None => (),
+        }
+    }
+}
+
 // --- Implementations for WLAN types ---
 
 impl_write_inspect!(Str, self => format!("{:?}", self), fidl_common::Cbw, fidl_mlme::BssTypes);

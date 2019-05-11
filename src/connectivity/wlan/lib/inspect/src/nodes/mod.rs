@@ -27,7 +27,6 @@ pub trait NodeExt {
     fn insert_str<S: Into<String>>(&mut self, key: &str, value: S) -> &mut Self;
     fn insert_debug<D: std::fmt::Debug>(&mut self, key: &str, value: D) -> &mut Self;
     fn insert<V: WriteInspect>(&mut self, key: &str, value: V) -> &mut Self;
-    fn insert_maybe<V: WriteInspect>(&mut self, key: &str, value: Option<V>) -> &mut Self;
 }
 
 impl NodeExt for finspect::ObjectTreeNode {
@@ -69,13 +68,6 @@ impl NodeExt for finspect::ObjectTreeNode {
 
     fn insert<V: WriteInspect>(&mut self, key: &str, value: V) -> &mut Self {
         value.write_inspect(self, key);
-        self
-    }
-
-    fn insert_maybe<V: WriteInspect>(&mut self, key: &str, value: Option<V>) -> &mut Self {
-        if let Some(ref value) = value {
-            value.write_inspect(self, key);
-        }
         self
     }
 }

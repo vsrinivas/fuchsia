@@ -35,17 +35,7 @@ pub trait WriteInspect {
 ///        subkey2: 2,
 ///     }
 /// })
-/// inspect_log!(bounded_list_node, {   // logging optional value (only "some" is logged)
-///     some?: Some(1),
-///     none?: Option::<String>::None
-/// }
 /// ```
-///
-/// Note that `inspect_log` will always append a new node. Thus, the following snippet
-/// ```
-/// inspect_log!(bounded_list_node, none?: Option::<String>::None);
-/// ```
-/// would create a node with only a timestamp.
 #[macro_export]
 macro_rules! inspect_log {
     // internal-only shared implementation, should not be used outside
@@ -72,7 +62,6 @@ macro_rules! inspect_log {
 #[macro_export]
 macro_rules! inspect_insert {
     ($node:expr,) => {};
-    // inserting a nested tree
     ($node:expr, $key:ident: { $($sub:tt)+ }) => {
         {
             let child = $node.create_child(stringify!($key));
@@ -85,16 +74,6 @@ macro_rules! inspect_insert {
         inspect_insert!($node, $($rest)*);
     };
 
-    // inserting an optional value
-    ($node:expr, $key:ident?: $val:expr) => {
-        $node.insert_maybe(stringify!($key), $val);
-    };
-    ($node:expr, $key:ident?: $val:expr, $($rest:tt)*) => {
-        inspect_insert!($node, $key?: $val);
-        inspect_insert!($node, $($rest)*);
-    };
-
-    // inserting a value that implements WriteInspect
     ($node:expr, $key:ident: $val:expr) => {
         $node.insert(stringify!($key), &$val);
     };
@@ -178,17 +157,6 @@ mod tests {
     }
 
     #[test]
-    fn test_inspect_log_optional_value() {
-        let mut node = BoundedListNode::new(finspect::ObjectTreeNode::new_root(), 10);
-
-        inspect_log!(node, some?: Some("a"), none?: Option::<String>::None);
-        let node0 = node.inner().lock().get_child("0").expect("expect node entry 0");
-        let obj0 = node0.lock().evaluate();
-        test_utils::assert_str_prop(&obj0, "some", "a");
-        assert!(obj0.get_property("none").is_none());
-    }
-
-    #[test]
     fn test_inspect_log_parsing() {
         // if this test compiles, it's considered as succeeded
         let mut node = BoundedListNode::new(finspect::ObjectTreeNode::new_root(), 10);
@@ -217,12 +185,25 @@ mod tests {
         // if this test compiles, it's considered as succeeded
         let mut node = BoundedListNode::new(finspect::ObjectTreeNode::new_root(), 10);
         let s = String::from("s");
-        let opt = Some(1);
-        inspect_log!(node, s: s, opt?: opt);
+        inspect_log!(node, s: s);
 
         // Should not cause compiler error since value is not moved
         println!("{}", s);
-        println!("{:?}", opt);
+    }
+
+    #[test]
+    fn test_log_option() {
+        let mut node = BoundedListNode::new(finspect::ObjectTreeNode::new_root(), 10);
+
+        inspect_log!(node, some: Some("a"));
+        let node0 = node.inner().lock().get_child("0").expect("expect node entry 0");
+        let obj0 = node0.lock().evaluate();
+        test_utils::assert_str_prop(&obj0, "some", "a");
+
+        inspect_log!(node, none: None as Option<String>);
+        let node1 = node.inner().lock().get_child("1").expect("expect node entry 1");
+        let obj1 = node1.lock().evaluate();
+        assert!(obj1.get_property("none").is_none());
     }
 
     #[test]
