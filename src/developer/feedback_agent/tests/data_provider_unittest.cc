@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback_agent/feedback_agent.h"
+#include "src/developer/feedback_agent/data_provider.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
@@ -153,7 +153,7 @@ MATCHER_P2(MatchesAttachment, expected_key, expected_value,
 //
 // This does not test the environment service. It directly instantiates the
 // class, without connecting through FIDL.
-class FeedbackAgentTest : public gtest::RealLoopFixture {
+class DataProviderImplTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
     stub_scenic_.reset(new StubScenic());
@@ -163,7 +163,7 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
     FXL_CHECK(service_directory_provider_.AddService(
                   stub_logger_->GetHandler(dispatcher())) == ZX_OK);
 
-    agent_.reset(new FeedbackAgent(
+    agent_.reset(new DataProviderImpl(
         dispatcher(), service_directory_provider_.service_directory()));
   }
 
@@ -180,7 +180,7 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
     stub_logger_->set_messages(messages);
   }
 
-  std::unique_ptr<FeedbackAgent> agent_;
+  std::unique_ptr<DataProviderImpl> agent_;
 
  private:
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
@@ -189,7 +189,7 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
   std::unique_ptr<StubLogger> stub_logger_;
 };
 
-TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
+TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   const size_t image_dim_in_px = 100;
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px),
@@ -227,7 +227,7 @@ TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   EXPECT_EQ(actual_pixels, expected_pixels);
 }
 
-TEST_F(FeedbackAgentTest, GetScreenshot_FailOnScenicReturningFailure) {
+TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningFailure) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
   set_scenic_responses(std::move(scenic_responses));
@@ -248,7 +248,7 @@ TEST_F(FeedbackAgentTest, GetScreenshot_FailOnScenicReturningFailure) {
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
-TEST_F(FeedbackAgentTest,
+TEST_F(DataProviderImplTest,
        GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateNonBGRA8Screenshot(), kSuccess);
@@ -270,8 +270,8 @@ TEST_F(FeedbackAgentTest,
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
-TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
-  // We simulate three calls to FeedbackAgent::GetScreenshot(): one for which
+TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
+  // We simulate three calls to DataProviderImpl::GetScreenshot(): one for which
   // the stub Scenic will return a checkerboard 10x10, one for a 20x20 and one
   // failure.
   const size_t num_calls = 3u;
@@ -300,7 +300,7 @@ TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
-  // We cannot assume that the order of the FeedbackAgent::GetScreenshot()
+  // We cannot assume that the order of the DataProviderImpl::GetScreenshot()
   // calls match the order of the Scenic::TakeScreenshot() callbacks because of
   // the async message loop. Thus we need to match them as sets.
   //
@@ -328,7 +328,7 @@ TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
   }
 }
 
-TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
+TEST_F(DataProviderImplTest, GetData_SmokeTest) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log
   // message here to check that we are attaching the logs.
   set_logger_messages({

@@ -149,19 +149,31 @@ void CheckNumberOfDataProviderProcesses(
   EXPECT_EQ(num_feedback_agents, 1u);
 }
 
-// This test case isn't super useful in itself. This is just to demonstrate how
-// to use the utility helper that will be needed to check the number of spawned
-// data providers, cf. DX-1497.
-TEST_F(FeedbackAgentIntegrationTest, CheckFeedbackAgentSpawned) {
-  DataProviderSyncPtr data_provider;
-  environment_services_->Connect(data_provider.NewRequest());
+TEST_F(FeedbackAgentIntegrationTest, OneDataProviderPerRequest) {
+  DataProviderSyncPtr data_provider_1;
+  environment_services_->Connect(data_provider_1.NewRequest());
   // As the connection is asynchronous, we make a call with the SyncPtr to make
   // sure the connection is established and the process for the service spawned
   // before checking its existence.
   DataProvider_GetData_Result out_result;
-  ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
+  ASSERT_EQ(data_provider_1->GetData(&out_result), ZX_OK);
+  CheckNumberOfDataProviderProcesses(1u);
 
-  CheckNumberOfDataProviderProcesses(0u);
+  DataProviderSyncPtr data_provider_2;
+  environment_services_->Connect(data_provider_2.NewRequest());
+  ASSERT_EQ(data_provider_2->GetData(&out_result), ZX_OK);
+  CheckNumberOfDataProviderProcesses(2u);
+
+  DataProviderSyncPtr data_provider_3;
+  environment_services_->Connect(data_provider_3.NewRequest());
+  ASSERT_EQ(data_provider_3->GetData(&out_result), ZX_OK);
+  CheckNumberOfDataProviderProcesses(3u);
+
+  data_provider_1.Unbind();
+  data_provider_2.Unbind();
+  data_provider_3.Unbind();
+  // Ideally we would check after each Unbind() that there is one less
+  // data_provider process, but the process clean up is asynchronous.
 }
 
 }  // namespace

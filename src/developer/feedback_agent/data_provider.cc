@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback_agent/feedback_agent.h"
+#include "src/developer/feedback_agent/data_provider.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -18,11 +18,12 @@
 namespace fuchsia {
 namespace feedback {
 
-FeedbackAgent::FeedbackAgent(async_dispatcher_t* dispatcher,
-                             std::shared_ptr<::sys::ServiceDirectory> services)
+DataProviderImpl::DataProviderImpl(
+    async_dispatcher_t* dispatcher,
+    std::shared_ptr<::sys::ServiceDirectory> services)
     : executor_(dispatcher), services_(services) {}
 
-void FeedbackAgent::GetData(GetDataCallback callback) {
+void DataProviderImpl::GetData(GetDataCallback callback) {
   // Today attachments are fetched asynchronously, but annotations are not.
   // In the future, we can use fit::join_promises() if annotations need to be
   // fetched asynchronously as well.
@@ -54,8 +55,8 @@ void FeedbackAgent::GetData(GetDataCallback callback) {
   executor_.schedule_task(std::move(promise));
 }
 
-void FeedbackAgent::GetScreenshot(ImageEncoding encoding,
-                                  GetScreenshotCallback callback) {
+void DataProviderImpl::GetScreenshot(ImageEncoding encoding,
+                                     GetScreenshotCallback callback) {
   // We add the provided callback to the vector of pending callbacks we maintain
   // and save a reference to pass to the Scenic callback.
   auto& saved_callback = get_png_screenshot_callbacks_.emplace_back(
@@ -95,7 +96,7 @@ void FeedbackAgent::GetScreenshot(ImageEncoding encoding,
       });
 }
 
-void FeedbackAgent::ConnectToScenic() {
+void DataProviderImpl::ConnectToScenic() {
   scenic_ = services_->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
     FX_LOGS(ERROR) << "Lost connection to Scenic service";
@@ -103,7 +104,7 @@ void FeedbackAgent::ConnectToScenic() {
   });
 }
 
-void FeedbackAgent::TerminateAllGetScreenshotCallbacks() {
+void DataProviderImpl::TerminateAllGetScreenshotCallbacks() {
   for (const auto& callback : get_png_screenshot_callbacks_) {
     (*callback)(/*screenshot=*/nullptr);
   }

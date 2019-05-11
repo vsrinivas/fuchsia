@@ -12,6 +12,7 @@
         "services": [
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
             "fuchsia.ui.scenic.Scenic"
         ]
     }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_AGENT_FEEDBACK_AGENT_H_
-#define SRC_DEVELOPER_FEEDBACK_AGENT_FEEDBACK_AGENT_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_AGENT_DATA_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_AGENT_DATA_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -19,16 +19,13 @@ namespace fuchsia {
 namespace feedback {
 
 // Provides data useful to attach in feedback reports (crash or user feedback).
-class FeedbackAgent : public DataProvider {
+class DataProviderImpl : public DataProvider {
  public:
-  FeedbackAgent(async_dispatcher_t* dispatcher,
-                std::shared_ptr<::sys::ServiceDirectory> services);
+  DataProviderImpl(async_dispatcher_t* dispatcher,
+                   std::shared_ptr<::sys::ServiceDirectory> services);
 
-  // Returns all the feedback data except the screenshot, which is provided
-  // separately.
+  // |fuchsia.feedback.DataProvider|
   void GetData(GetDataCallback callback) override;
-
-  // Returns an image of the current view encoded in the provided |encoding|.
   void GetScreenshot(ImageEncoding encoding,
                      GetScreenshotCallback callback) override;
 
@@ -44,6 +41,8 @@ class FeedbackAgent : public DataProvider {
   async::Executor executor_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
 
+  // TODO(DX-1499): we should have a connection to Scenic per GetScreenshot()
+  // call, not a single one overall.
   fuchsia::ui::scenic::ScenicPtr scenic_;
   // We keep track of the pending GetScreenshot callbacks so we can terminate
   // all of them when we lose the connection with Scenic.
@@ -54,4 +53,4 @@ class FeedbackAgent : public DataProvider {
 }  // namespace feedback
 }  // namespace fuchsia
 
-#endif  // SRC_DEVELOPER_FEEDBACK_AGENT_FEEDBACK_AGENT_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_AGENT_DATA_PROVIDER_H_

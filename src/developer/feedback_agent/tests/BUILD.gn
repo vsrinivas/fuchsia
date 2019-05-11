@@ -8,7 +8,7 @@ import("//build/testing/environments.gni")
 test_package("feedback_agent_tests") {
   tests = [
     {
-      name = "feedback_agent_unittest"
+      name = "data_provider_unittest"
     },
     {
       name = "log_listener_unittest"
@@ -29,17 +29,17 @@ test_package("feedback_agent_tests") {
   ]
 
   deps = [
+    ":data_provider_unittest",
     ":feedback_agent_integration_test",
-    ":feedback_agent_unittest",
     ":log_listener_unittest",
   ]
 }
 
-executable("feedback_agent_unittest") {
+executable("data_provider_unittest") {
   testonly = true
 
   sources = [
-    "feedback_agent_unittest.cc",
+    "data_provider_unittest.cc",
     "stub_scenic.cc",
     "stub_scenic.h",
   ]

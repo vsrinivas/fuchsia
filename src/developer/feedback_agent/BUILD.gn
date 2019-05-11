@@ -7,6 +7,7 @@ import("//build/package/component.gni")
 
 package("feedback_agent") {
   deps = [
+    ":data_provider",
     ":main",
   ]
 
@@ -14,11 +15,14 @@ package("feedback_agent") {
     {
       name = "feedback_agent"
     },
+    {
+      name = "data_provider"
+    },
   ]
 
   meta = [
     {
-      path = rebase_path("meta/feedback_agent.cmx")
+      path = "meta/feedback_agent.cmx"
       dest = "feedback_agent.cmx"
     },
   ]
@@ -32,12 +36,30 @@ executable("main") {
   ]
 
   deps = [
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("data_provider") {
+  sources = [
+    "data_provider_main.cc",
+  ]
+
+  deps = [
     ":src",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -47,8 +69,8 @@ source_set("src") {
     "annotations.h",
     "attachments.cc",
     "attachments.h",
-    "feedback_agent.cc",
-    "feedback_agent.h",
+    "data_provider.cc",
+    "data_provider.h",
     "image_conversion.cc",
     "image_conversion.h",
     "log_listener.cc",

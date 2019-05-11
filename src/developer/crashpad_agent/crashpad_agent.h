@@ -94,6 +94,8 @@ class CrashpadAgent : public Analyzer {
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
   const std::unique_ptr<CrashServer> crash_server_;
 
+  // TODO(DX-1499): we should have a connection to fuchsia.feedback.DataProvider
+  // per GetData() call, not a single one overall.
   fuchsia::feedback::DataProviderPtr feedback_data_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/feedback_agent_unittest"
+        "binary": "test/data_provider_unittest"
     },
     "sandbox": {
         "dev": [
