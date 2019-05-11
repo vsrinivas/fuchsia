@@ -271,11 +271,17 @@ practical (single-word names render more consistently across target languages).
 However, do not be afraid to use multiple words if a single word would be
 ambiguous or confusing.
 
-Member names must not repeat names from the enclosing type (or library).  For
-example, the `KeyboardEvent` member that contains the time the event was
-delivered should be named `time` rather than `event_time` because the name
-`event` already appears in the name of the enclosing type.  In all target
+Member names must not repeat names from the enclosing type (or library) unless
+the member name is ambiguous without a name from the enclosing type.  For
+example, a member of type `KeyboardEvent` that contains the time the event was
+delivered should be named `time`, rather than `event_time`, because the name
+`event` already appears in the name of the enclosing type. In all target
 languages, member names are scoped by their enclosing type.
+
+However, a type `DeviceToRoom`--that associates a smart device with the room
+it's located in--may need to have members `device_id` and `room_name`, because
+`id` and `name` are ambiguous; they could refer to either the device or
+the room.
 
 ### Enums
 
