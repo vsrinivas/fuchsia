@@ -19,6 +19,5 @@ test("trace-reader") {
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
     ]
-    configs += [ "$zx/public/gn/config:static-libc++" ]
   }
 }

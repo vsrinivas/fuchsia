@@ -47,5 +47,4 @@ test("ltr-578als-test") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

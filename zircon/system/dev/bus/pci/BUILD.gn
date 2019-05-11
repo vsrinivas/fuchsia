@@ -95,5 +95,4 @@ test("pci_tests") {
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

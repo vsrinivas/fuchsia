@@ -34,5 +34,4 @@ executable("svchost") {
     "$zx/system/ulib/sysmem-connector",
     "$zx/system/ulib/zircon",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

@@ -42,5 +42,4 @@ test("scsilib-disk-test") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

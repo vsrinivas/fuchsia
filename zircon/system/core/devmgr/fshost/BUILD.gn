@@ -77,7 +77,6 @@ executable("fshost") {
     "$zx/system/ulib/loader-service",
     "$zx/system/ulib/ramdevice-client",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("fshost-test") {
@@ -89,7 +88,6 @@ test("fshost-test") {
     ":fshost-registry",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("block-watcher-test") {
@@ -104,5 +102,4 @@ test("block-watcher-test") {
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

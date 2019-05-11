@@ -36,7 +36,6 @@ executable("bootsvc") {
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/lz4",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 
   data_deps = [
     "$zx/system/core/devmgr/devcoordinator",
@@ -76,7 +75,6 @@ test("bootsvc-unit-test") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/unittest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 executable("bootsvc-integration-test") {
@@ -94,5 +92,4 @@ executable("bootsvc-integration-test") {
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/safemath",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

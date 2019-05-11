@@ -8,17 +8,33 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 # The vDSO can't be built with instrumentation.
 exclude_tags = [ "instrumented" ]
 
-if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
-    toolchain.base_environment != "user") {
-  # References from other toolchains just redirect.  This prevents extra
-  # abigen runs in other toolchains just to get identical generated headers.
+if (toolchain.environment != "user") {
+  # References from other environments only get the headers.
+  group("zircon") {
+    public_deps = [
+      ":headers",
+    ]
+  }
+  environment_redirect("headers") {
+    environment_label = "$zx/public/gn/toolchain:user"
+    direct = true
+    shlib = true
+    exclude_variant_tags = exclude_tags
+    deps = [
+      ":headers",
+    ]
+  }
+} else if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags) {
+  # References from instrumented variants just redirect.  This prevents
+  # extra abigen runs in other toolchains just to get identical generated
+  # headers.
   foreach(target,
           [
             "zircon",
             "headers",
           ]) {
     environment_redirect(target) {
-      environment_label = "$zx/public/gn/toolchain:user"
+      direct = true
       shlib = true
       exclude_variant_tags = exclude_tags
       deps = [
@@ -79,6 +95,13 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
 
     # This doesn't get normal default deps on libc.
     no_implicit_deps = true
+
+    # This doesn't actually use libc++ at all, really (only header-only use
+    # would be safe).  But the compiler driver implicitly links it in, and by
+    # default with dynamic linking.  So it's crucial to tell it to link it in
+    # statically instead even though really we shouldn't get it at all.  We
+    # don't just use `-nostdlib++` because we still want the header access.
+    configs += [ "$zx/public/gn/config:static-libc++" ]
 
     # TODO(BLD-353): The SDK exports this as part of the sysroot rather
     # than as an independent library.  Legacy integration likewise does not

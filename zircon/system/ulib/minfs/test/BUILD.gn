@@ -25,7 +25,6 @@ test("minfs-work-queue-unit") {
     "$zx/system/ulib/zxtest",
   ]
   include_dirs = [ "$zx/system/ulib/minfs" ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("minfs-format-unit") {
@@ -39,7 +38,6 @@ test("minfs-format-unit") {
     "$zx/system/ulib/zxtest",
   ]
   include_dirs = [ "$zx/system/ulib/minfs" ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("minfs-inspector-unit") {

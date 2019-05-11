@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/toolchain/clang.gni")
+
 declare_args() {
   # Default [AddressSanitizer](https://llvm.org/docs/AddressSanitizer.html)
   # options (before the `ASAN_OPTIONS` environment variable is read at
@@ -11,52 +13,6 @@ declare_args() {
   # with programs that define their own `__asan_default_options` C
   # function.
   asan_default_options = ""
-}
-
-# Define a group() to be used in implicit_deps for a variant with runtime DSOs.
-#
-# Parameters
-#
-#   args
-#     - Required: List of regexps to match in the toolchain manifest file.
-#     - Type: list(string)
-#
-template("clang_runtime_deps") {
-  if (is_fuchsia) {
-    deps_target = target_name
-    manifest_target = "_clang_runtime_deps.$target_name.manifest"
-    manifest_file = "$target_gen_dir/$target_name.manifest"
-
-    # TODO(TC-366): Ideally we'd get JSON from the toolchain that we could
-    # massage directly here into a resource() target or the like.
-    action(manifest_target) {
-      visibility = [ ":$deps_target" ]
-      script = "runtime-manifest.sh"
-      outputs = [
-        manifest_file,
-      ]
-      sources = [
-        "${toolchain.tool_dir}/../lib/${toolchain.target_tuple}.manifest",
-      ]
-      args = rebase_path(sources + outputs, root_build_dir) + invoker.args
-    }
-  } else {
-    not_needed(invoker, [ "args" ])
-  }
-
-  group(target_name) {
-    if (is_fuchsia) {
-      deps = [
-        ":$manifest_target",
-      ]
-      metadata = {
-        zbi_input_args = [
-          "--files",
-          rebase_path(manifest_file, root_build_dir),
-        ]
-      }
-    }
-  }
 }
 
 config("asan") {
@@ -82,8 +38,18 @@ source_set("asan_default_options") {
 
 # This is included in ${toolchain.implicit_deps} for asan variants.  It
 # ensures that the runtime library is visible in the filesystem image.
-clang_runtime_deps("asan_deps") {
-  args = [ "asan" ]
+if (is_fuchsia) {
+  toolchain_manifest("asan_deps") {
+    # TODO(TC-366): Ideally we'd get JSON from the toolchain that we could
+    # massage directly here into a resource() target or the like.
+    args = [ "lib/libclang_rt.asan.so" ]
+    foreach(soname, libcxxabi_dt_needed) {
+      args += [ "lib/asan/${soname}" ]
+    }
+  }
+} else {
+  group("asan_deps") {
+  }
 }
 
 config("ubsan") {
@@ -95,12 +61,18 @@ config("ubsan") {
 
 # This is included in ${toolchain.implicit_deps} for ubsan variants.  It
 # ensures that the runtime library is visible in the filesystem image.
-clang_runtime_deps("ubsan_deps") {
-  args = [
-    "ubsan",
-    "lib[/]libc[+][+]abi[.]so",
-    "lib[/]libunwind[.]so",
-  ]
+if (is_fuchsia) {
+  toolchain_manifest("ubsan_deps") {
+    # TODO(TC-366): Ideally we'd get JSON from the toolchain that we could
+    # massage directly here into a resource() target or the like.
+    args = [ "lib/libclang_rt.ubsan_standalone.so" ]
+    foreach(soname, libcxxabi_dt_needed) {
+      args += [ "lib/${soname}" ]
+    }
+  }
+} else {
+  group("ubsan_deps") {
+  }
 }
 
 # NOTE: Every variant that includes any sancov configs must have "sancov"

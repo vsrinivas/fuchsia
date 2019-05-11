@@ -35,8 +35,9 @@ if (current_toolchain == default_toolchain) {
   # Everything in userboot gets compiled this way.
   config("userboot_config") {
     configs = [
-      "$zx/public/gn/config:no_sanitizers",
       "$zx/public/gn/config:user",
+      "$zx/public/gn/config:static-libc++",
+      "$zx/public/gn/config:no_sanitizers",
     ]
 
     cflags = [

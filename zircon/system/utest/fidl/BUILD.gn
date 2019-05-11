@@ -35,7 +35,6 @@ executable("fidl-handle-policy-test-app") {
   deps = [
     ":common",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("fidl") {
@@ -53,5 +52,4 @@ test("fidl") {
     ":common",
     ":fidl-handle-policy-test-app",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

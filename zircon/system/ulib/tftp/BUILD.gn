@@ -37,7 +37,6 @@ if (!is_kernel) {
       "$zx/system/ulib/tftp",
       "$zx/system/ulib/unittest",
     ]
-    configs += [ "$zx/public/gn/config:static-libc++" ]
   }
 
   host_tool("tftp-example") {

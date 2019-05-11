@@ -1,4 +1,0 @@
-/*
- * This is an empty input linker script just to be found as -lc++.
- * See $zx/public/gn/config/BUILD.gn:nostdlib.
- */

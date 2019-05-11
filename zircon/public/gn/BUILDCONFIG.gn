@@ -131,8 +131,15 @@ template("_shlib_toolchain_target") {
         # and mutators.  See environment().
         if (dep == "$dep") {
           deps += [ dep ]
-        } else if (!defined(dep.types) || dep.types + [ invoker.match ] -
-                                          [ invoker.match ] != dep.types) {
+        } else if (defined(dep.types) && dep.types + [ invoker.match ] -
+                                         [ invoker.match ] == dep.types) {
+          # The types list doesn't include this target's type, so skip this
+          # element.
+        } else if (defined(dep.unless_configs) && configs + dep.unless_configs -
+                                                  dep.unless_configs != configs) {
+          # Something in the unless_configs list is in this target's configs,
+          # so skip this element.
+        } else {
           deps += dep.add
           deps -= dep.remove
         }

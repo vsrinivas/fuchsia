@@ -39,5 +39,4 @@ test("zxcrypt") {
     "$zx/third_party/ulib/cryptolib",
     "$zx/third_party/ulib/uboringssl",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

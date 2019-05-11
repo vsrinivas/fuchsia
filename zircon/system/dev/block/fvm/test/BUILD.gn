@@ -19,5 +19,4 @@ test("fvm-driver-unittests") {
     "$zx/system/ulib/zxtest",
     "..:shared",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

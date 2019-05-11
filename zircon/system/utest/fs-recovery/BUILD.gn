@@ -28,5 +28,4 @@ test("fs-recovery") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zx",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

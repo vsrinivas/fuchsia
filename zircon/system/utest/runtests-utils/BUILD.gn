@@ -12,7 +12,6 @@ test("runtests-utils") {
     "$zx/system/ulib/runtests-utils",
     "$zx/system/ulib/unittest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
   if (is_fuchsia) {
     sources += [
       "fuchsia-run-test.cpp",

@@ -20,5 +20,4 @@ executable("runtests") {
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

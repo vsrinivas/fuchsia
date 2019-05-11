@@ -46,5 +46,4 @@ test("msm8x53-power-test") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

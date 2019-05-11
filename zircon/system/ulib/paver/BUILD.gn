@@ -79,5 +79,4 @@ test("paver-test") {
     "$zx/system/ulib/svc",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

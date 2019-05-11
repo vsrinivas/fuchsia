@@ -28,5 +28,4 @@ test("io-scheduler-test") {
     "$zx/system/ulib/io-scheduler",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

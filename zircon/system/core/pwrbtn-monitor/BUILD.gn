@@ -16,5 +16,4 @@ executable("pwrbtn-monitor") {
     "$zx/system/ulib/hid-parser",
     "$zx/system/ulib/zircon",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

@@ -18,5 +18,4 @@ test("operation") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

@@ -88,10 +88,7 @@ standard_configs = [
 ]
 
 # Additional configs apply to code built for Fuchsia but not to host code.
-standard_fuchsia_configs = [
-  "$zx/public/gn/config:nostdlib",
-  "$zx/public/gn/config:werror",
-]
+standard_fuchsia_configs = [ "$zx/public/gn/config:werror" ]
 
 # See environment().  These are the environments that are
 # vanilla bases to make derived environments from.
@@ -158,6 +155,13 @@ standard_environments = [
           "test_driver",
         ]
         add = [ "$zx/system/core/devmgr:driver_deps" ]
+      },
+      {
+        # Unless we're statically linking the C++ standard library, we have
+        # to assume there will be some link-time references that turn into
+        # runtime dependencies on the shared libraries.
+        unless_configs = [ "$zx/public/gn/config:static-libc++" ]
+        add = [ "$zx/public/gn/config:shared-libcxx-deps" ]
       },
     ]
     shlib = true

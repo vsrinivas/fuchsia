@@ -42,7 +42,6 @@ test("nand-broker") {
   deps = [
     ":common",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("nandpart-broker") {
@@ -52,5 +51,4 @@ test("nandpart-broker") {
   deps = [
     ":common",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

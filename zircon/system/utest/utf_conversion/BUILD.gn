@@ -14,5 +14,4 @@ test("utf_conversion") {
     "$zx/system/ulib/utf_conversion",
     "$zx/system/ulib/zircon",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

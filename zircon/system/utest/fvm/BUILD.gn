@@ -38,5 +38,4 @@ test("fvm") {
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/uboringssl",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

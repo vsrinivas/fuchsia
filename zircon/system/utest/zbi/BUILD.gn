@@ -12,7 +12,6 @@ test("zbi") {
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/unittest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 
   if (is_fuchsia) {
     deps += [ "$zx/system/ulib/fdio" ]

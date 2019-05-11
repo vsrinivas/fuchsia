@@ -23,7 +23,6 @@ executable("install-disk-image") {
     "$zx/system/ulib/paver",
     "$zx/system/ulib/zx",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("install-disk-image-test") {
@@ -46,5 +45,4 @@ test("install-disk-image-test") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

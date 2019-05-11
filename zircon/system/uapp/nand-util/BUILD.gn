@@ -20,7 +20,6 @@ executable("nand-util") {
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/cksum",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 source_set("common") {
@@ -52,5 +51,4 @@ test("nand-util-test") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

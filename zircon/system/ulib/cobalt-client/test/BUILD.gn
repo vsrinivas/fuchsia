@@ -18,5 +18,4 @@ test("cobalt-client-unit") {
     "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

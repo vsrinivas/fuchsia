@@ -102,7 +102,6 @@ test("trace-vthread-test") {
     ":test-common",
     "$zx/system/ulib/trace-engine",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 # The unittest with a static trace-engine.
@@ -111,5 +110,4 @@ test("trace-vthread-with-static-engine-test") {
     ":test-common",
     "$zx/system/ulib/trace-engine:trace-engine-static",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

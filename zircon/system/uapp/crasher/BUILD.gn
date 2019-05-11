@@ -12,5 +12,4 @@ executable("crasher") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

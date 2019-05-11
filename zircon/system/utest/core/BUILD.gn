@@ -75,7 +75,6 @@ executable("core-tests") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 # Next, build each into its own standalone test binary.
@@ -85,6 +84,5 @@ foreach(test_name, core_tests) {
     deps = [
       test_name,
     ]
-    configs += [ "$zx/public/gn/config:static-libc++" ]
   }
 }

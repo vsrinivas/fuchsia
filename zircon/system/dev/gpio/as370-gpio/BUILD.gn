@@ -37,5 +37,4 @@ test("as370-gpio-test") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

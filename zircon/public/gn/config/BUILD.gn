@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/toolchain/clang.gni")
 import("levels.gni")
 
 declare_args() {
@@ -226,16 +227,23 @@ config("relative_paths") {
   ldflags = compiler_flags
 }
 
-config("nostdlib") {
-  # Don't actually use -nostdlib, because the builtins (or libgcc) are what
-  # we want and are otherwise annoying to find and specify.  It's just the
-  # -lc (and -lc++) that we really want to defeat, and that's handled by
-  # giving a -L that will find exactly nothing but a dummy libc.so.
+config("nolibc") {
   ldflags = [ "-nostartfiles" ]
+
+  # Don't use -nostdlib, because the builtins (or libgcc) are what we want
+  # and are otherwise annoying to find and specify.  It's just the -lc that
+  # we really want to defeat, and that's handled by giving a -L that will
+  # find exactly nothing but a dummy libc.so.  Clang has -nolibc to kill
+  # the -lc, but for C++ it still uses -lm under -nolibc.  So this is still
+  # needed to make -lm into a dummy, though for -lc only GCC needs it.
   lib_dirs = [ "libc-dummy" ]
+
   if (is_gcc) {
     # Include this in every link.
     libs = [ "$zx/scripts/dso_handle.ld" ]
+  } else {
+    # TODO(mcgrathr): GCC 9 has -nolibc, so use it when we get that toolchain.
+    ldflags += [ "-nolibc" ]
   }
 }
 
@@ -517,7 +525,10 @@ config("machine") {
 
 config("user") {
   defines = [ "_ALL_SOURCE" ]
-  configs = [ "$zx/third_party/ulib/musl:headers" ]
+  configs = [
+    ":nolibc",
+    "$zx/third_party/ulib/musl:headers",
+  ]
 }
 
 config("user_executable") {
@@ -567,6 +578,15 @@ config("static-libc++") {
         "dl",
         "pthread",
       ]
+    }
+  }
+}
+
+if (is_fuchsia) {
+  toolchain_manifest("shared-libcxx-deps") {
+    args = []
+    foreach(soname, libcxx_dt_needed) {
+      args += [ "lib/${toolchain.libprefix}${soname}" ]
     }
   }
 }

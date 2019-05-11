@@ -30,3 +30,67 @@ if (clang_tool_dir == "" && use_prebuilt_clang) {
       read_file("$_prebuilt_dir/.versions/clang.cipd_version", "json")
   clang_version_string = _prebuilt_cipd_version.instance_id
 }
+
+# TODO(TC-366): Ideally the toolchain itself would emit this info in
+# a readable (JSON) form.
+libcxxabi_dt_needed = [
+  "libc++abi.so.1",
+  "libunwind.so.1",
+]
+libcxx_dt_needed = [ "libc++.so.2" ] + libcxxabi_dt_needed
+
+# Generate a manifest file extracted from the Clang toolchain manifest.
+#
+# This acts like a manifest_file() target in the dependency graph of
+# another manifest_file() target (or a zbi() or zbi_input() target).
+# Its contents are extracted from the manifest file supplied by the
+# Clang toolchain.
+#
+# TODO(TC-366): Ideally the toolchain itself would emit this info in a
+# GN-readable (i.e. JSON) form.  Then this could be a resource() target
+# that extracted the file names at gen time.  Also it could be keyed by
+# things like compiler options (-fsanitize=foo, -stdlib++) to make this
+# more generic and e.g. get rid of libcxx_dt_needed.
+#
+# Parameters
+#
+#   args
+#     Required: Patterns to match (like sh `case`) in the lhs of the manifest.
+#     Type: list(string)
+#
+template("toolchain_manifest") {
+  if (defined(toolchain.shlib) && current_toolchain != toolchain.shlib) {
+    not_needed(invoker, [ "args" ])
+    group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      public_deps = [
+        ":$target_name(${toolchain.shlib})",
+      ]
+    }
+  } else {
+    action(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [
+        # Note: Not ${toolchain.tool_dir} here because this might be GCC.
+        "$clang_tool_dir/../lib/${toolchain.target_tuple}.manifest",
+      ]
+      outputs = [
+        "$target_gen_dir/$target_name.manifest",
+      ]
+      script = "$zx/public/gn/toolchain/toolchain-manifest.sh"
+      args = rebase_path(sources + outputs, root_build_dir) + invoker.args
+      metadata = {
+        # This tells manifest_file() to fold this manifest in.
+        manifest_files = rebase_path(outputs, root_build_dir)
+      }
+    }
+  }
+}

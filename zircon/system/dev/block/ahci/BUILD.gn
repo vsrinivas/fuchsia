@@ -25,7 +25,6 @@ test("ahci-unittest") {
     "$zx/system/ulib/driver",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 source_set("shared") {

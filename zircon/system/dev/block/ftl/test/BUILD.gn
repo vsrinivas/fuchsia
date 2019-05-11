@@ -28,7 +28,6 @@ test("ftl") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
 test("ftl-integration") {
@@ -53,5 +52,4 @@ test("ftl-integration") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

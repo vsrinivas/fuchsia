@@ -20,5 +20,4 @@ executable("lsblk") {
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/cksum",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

@@ -36,5 +36,4 @@ test("blobfs-bench") {
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/uboringssl",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
 }
