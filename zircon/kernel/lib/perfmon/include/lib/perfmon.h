@@ -83,11 +83,13 @@ zx_status_t arch_perfmon_start();
 
 // Perform MTRACE_PERFMON_STOP: Stop data collection, including collecting
 // the final values of the counters and unmapping the VMOs.
-zx_status_t arch_perfmon_stop();
+// It's ok to call this multiple times.
+void arch_perfmon_stop();
 
 // Perform MTRACE_PERFMON_FINI: Terminate data collection, reset all PMU
-// registers.
-zx_status_t arch_perfmon_fini();
+// registers. Data collection is stopped first if necessary.
+// It's ok to call this multiple times.
+void arch_perfmon_fini();
 
 
 // This section contains helper routines to write perfmon records.

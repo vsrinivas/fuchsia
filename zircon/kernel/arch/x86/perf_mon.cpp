@@ -1673,16 +1673,19 @@ static void x86_perfmon_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANA
     x86_perfmon_clear_overflow_indicators();
 }
 
-// Stop collecting data.
-// It's ok to call this multiple times.
-// Returns an error if called before ALLOC or after FREE.
-zx_status_t arch_perfmon_stop() {
-    Guard<Mutex> guard(PerfmonLock::Get());
-
-    if (!perfmon_supported)
-        return ZX_ERR_NOT_SUPPORTED;
-    if (!perfmon_state)
-        return ZX_ERR_BAD_STATE;
+void arch_perfmon_stop_locked() TA_REQ(PerfmonLock::Get()) {
+    if (!perfmon_supported) {
+        // Nothing to do.
+        return;
+    }
+    if (!perfmon_state) {
+        // Nothing to do.
+        return;
+    }
+    if (!atomic_load(&perfmon_active)) {
+        // Nothing to do.
+        return;
+    }
 
     TRACEF("Disabling perfmon\n");
 
@@ -1700,8 +1703,12 @@ zx_status_t arch_perfmon_stop() {
     // Make sure to do this after we've turned everything off so that we
     // don't get another PMI after this.
     x86_perfmon_unmap_buffers_locked(state);
+}
 
-    return ZX_OK;
+// Stop collecting data.
+void arch_perfmon_stop() {
+    Guard<Mutex> guard(PerfmonLock::Get());
+    arch_perfmon_stop_locked();
 }
 
 // Worker for x86_perfmon_fini to be executed on all cpus.
@@ -1730,21 +1737,22 @@ static void x86_perfmon_reset_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
 
 // Finish data collection, reset h/w back to initial state and undo
 // everything x86_perfmon_init did.
-// Must be called while tracing is stopped.
-// It's ok to call this multiple times.
-zx_status_t arch_perfmon_fini() {
+void arch_perfmon_fini() {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!perfmon_supported)
-        return ZX_ERR_NOT_SUPPORTED;
-    if (atomic_load(&perfmon_active))
-        return ZX_ERR_BAD_STATE;
+    if (!perfmon_supported) {
+        // Nothing to do.
+        return;
+    }
+
+    if (atomic_load(&perfmon_active)) {
+        arch_perfmon_stop_locked();
+        DEBUG_ASSERT(!atomic_load(&perfmon_active));
+    }
 
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_perfmon_reset_task, nullptr);
 
     perfmon_state.reset();
-
-    return ZX_OK;
 }
 
 // Interrupt handling.

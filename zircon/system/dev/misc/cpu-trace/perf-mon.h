@@ -143,7 +143,7 @@ class PerfmonDevice : public DeviceType {
     zx_status_t PmuStageConfig(const void* cmd, size_t cmdlen);
     zx_status_t PmuGetConfig(void* reply, size_t replymax, size_t* out_actual);
     zx_status_t PmuStart();
-    zx_status_t PmuStop();
+    void PmuStop();
 
     zx_status_t IoctlWorker(uint32_t op, const void* cmd, size_t cmdlen,
                             void* reply, size_t replymax, size_t* out_actual);

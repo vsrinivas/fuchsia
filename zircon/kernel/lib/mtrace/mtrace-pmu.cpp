@@ -95,12 +95,14 @@ zx_status_t mtrace_perfmon_control(uint32_t action, uint32_t options,
     case MTRACE_PERFMON_STOP:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return arch_perfmon_stop();
+        arch_perfmon_stop();
+        return ZX_OK;
 
     case MTRACE_PERFMON_FINI:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
-        return arch_perfmon_fini();
+        arch_perfmon_fini();
+        return ZX_OK;
 
     default:
         return ZX_ERR_INVALID_ARGS;

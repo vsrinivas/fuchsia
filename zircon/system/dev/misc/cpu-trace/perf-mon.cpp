@@ -516,36 +516,32 @@ zx_status_t PerfmonDevice::PmuStart() {
 
   fail:
     {
-        zx_status_t status2 =
+        [[maybe_unused]] zx_status_t status2 =
             zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
                               MTRACE_PERFMON_FINI, 0, nullptr, 0);
-        if (status2 != ZX_OK) {
-            zxlogf(TRACE, "%s: MTRACE_PERFMON_FINI failed: %d\n", __func__, status2);
-        }
         assert(status2 == ZX_OK);
         return status;
     }
 }
 
-zx_status_t PerfmonDevice::PmuStop() {
+void PerfmonDevice::PmuStop() {
     zxlogf(TRACE, "%s called\n", __func__);
 
     PmuPerTraceState* per_trace = per_trace_state_.get();
     if (!per_trace) {
-        return ZX_ERR_BAD_STATE;
+        return;
     }
 
     // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_handle_t resource = get_root_resource();
-    zx_status_t status =
+    [[maybe_unused]] zx_status_t status =
         zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
                           MTRACE_PERFMON_STOP, 0, nullptr, 0);
-    if (status == ZX_OK) {
-        active_ = false;
-        status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
-                                   MTRACE_PERFMON_FINI, 0, nullptr, 0);
-    }
-    return status;
+    assert(status == ZX_OK);
+    active_ = false;
+    status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
+                               MTRACE_PERFMON_FINI, 0, nullptr, 0);
+    assert(status == ZX_OK);
 }
 
 // Dispatch the various kinds of requests.
@@ -603,7 +599,8 @@ zx_status_t PerfmonDevice::IoctlWorker(uint32_t op,
         if (cmdlen != 0 || replymax != 0) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return PmuStop();
+        PmuStop();
+        return ZX_OK;
 
     default:
         return ZX_ERR_INVALID_ARGS;
