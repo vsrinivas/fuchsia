@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include "vendor_hci.h"
-#include "logging.h"
 
 #include <fbl/algorithm.h>
 #include <lib/zx/object.h>
 #include <lib/zx/time.h>
-
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include "logging.h"
 
 namespace btintel {
 
@@ -96,7 +96,7 @@ void VendorHci::SendVendorReset() const {
 }
 
 bool VendorHci::SendSecureSend(uint8_t type,
-                               const bt::common::BufferView& bytes) const {
+                               const bt::BufferView& bytes) const {
   size_t left = bytes.size();
   while (left > 0) {
     size_t frag_len = fbl::min(left, kMaxSecureSendArgLen);
@@ -139,8 +139,8 @@ bool VendorHci::SendSecureSend(uint8_t type,
 }
 
 bool VendorHci::SendAndExpect(
-    const bt::common::PacketView<bt::hci::CommandHeader>& command,
-    std::deque<bt::common::BufferView> events) const {
+    const bt::PacketView<bt::hci::CommandHeader>& command,
+    std::deque<bt::BufferView> events) const {
   SendCommand(command);
 
   while (events.size() > 0) {
@@ -208,7 +208,7 @@ bool VendorHci::ExitManufacturerMode(MfgDisableMode mode) {
 }
 
 void VendorHci::SendCommand(
-    const bt::common::PacketView<bt::hci::CommandHeader>& command) const {
+    const bt::PacketView<bt::hci::CommandHeader>& command) const {
   zx_status_t status =
       ctrl_->write(0, command.data().data(), command.size(), nullptr, 0);
   if (status < 0) {

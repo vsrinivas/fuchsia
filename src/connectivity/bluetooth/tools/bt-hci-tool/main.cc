@@ -2,29 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdio>
-#include <iostream>
-
-#include <fcntl.h>
-#include <sys/stat.h>
-
 #include <ddk/driver.h>
 #include <fbl/unique_fd.h>
+#include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <sys/stat.h>
 
+#include <cstdio>
+#include <iostream>
+
+#include "commands.h"
+#include "lib/fit/defer.h"
 #include "src/connectivity/bluetooth/core/bt-host/common/byte_buffer.h"
 #include "src/connectivity/bluetooth/core/bt-host/common/log.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/device_wrapper.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/hci.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/transport.h"
-#include "lib/fit/defer.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/connectivity/bluetooth/tools/lib/command_dispatcher.h"
 #include "src/lib/files/unique_fd.h"
-
-#include "commands.h"
+#include "src/lib/fxl/command_line.h"
 
 namespace {
 
@@ -48,11 +46,11 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
 
-  auto severity = bt::common::LogSeverity::ERROR;
+  auto severity = bt::LogSeverity::ERROR;
   if (cl.HasOption("verbose", nullptr)) {
-    severity = bt::common::LogSeverity::TRACE;
+    severity = bt::LogSeverity::TRACE;
   }
-  bt::common::UsePrintf(severity);
+  bt::UsePrintf(severity);
 
   std::string hci_dev_path = kDefaultHCIDev;
   if (cl.GetOptionValue("dev", &hci_dev_path) && hci_dev_path.empty()) {

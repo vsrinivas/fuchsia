@@ -42,7 +42,7 @@ struct IntelReadBootParamsReturnParams {
   ::bt::hci::GenericEnableParam otp_lock;
   ::bt::hci::GenericEnableParam api_lock;
   ::bt::hci::GenericEnableParam debug_lock;
-  ::bt::common::DeviceAddressBytes otp_bdaddr;
+  ::bt::DeviceAddressBytes otp_bdaddr;
   uint8_t min_fw_build_num;
   uint8_t min_fw_build_week;
   uint8_t min_fw_build_year;

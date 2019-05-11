@@ -9,9 +9,8 @@
 
 #include <deque>
 
-#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
-
 #include "command_channel.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
 
 namespace bt_intel {
 
@@ -51,8 +50,8 @@ class IntelFirmwareLoader {
   // Returns true if the events returned matched the expected |event_bytes|,
   // false otherwise.
   bool RunCommandAndExpect(
-      const ::bt::common::PacketView<::bt::hci::CommandHeader>& command,
-      std::deque<::bt::common::BufferView>& event_bytes);
+      const ::bt::PacketView<::bt::hci::CommandHeader>& command,
+      std::deque<::bt::BufferView>& event_bytes);
 
   // The command channel to use
   CommandChannel* channel_;

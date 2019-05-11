@@ -5,22 +5,21 @@
 #include "device.h"
 
 #include <ddk/protocol/usb.h>
-#include <usb/usb.h>
-#include <usb/usb-request.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <lib/zx/vmo.h>
 #include <usb/usb-request.h>
+#include <usb/usb.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
-#include <fuchsia/hardware/bluetooth/c/fidl.h>
 
 #include "logging.h"
 
 namespace btatheros {
 
-using ::bt::common::BufferView;
-using ::bt::common::PacketView;
+using ::bt::BufferView;
+using ::bt::PacketView;
 
 // hard coded for Qualcomm Atheros chipset 0CF3:E300
 static constexpr size_t GET_TARGET_VERSION = 0x09;
@@ -84,9 +83,9 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
   size_t size = std::min(count, NVM_HDR);
   size_t sent = 0;
 
-  result = usb_control_out(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
-                           ZX_TIME_INFINITE,
-                           (void*)file.view(0, size).data(), size);
+  result =
+      usb_control_out(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
+                      ZX_TIME_INFINITE, (void*)file.view(0, size).data(), size);
   if (result != ZX_OK) {
     return result;
   }
@@ -94,8 +93,8 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
   usb_request_t* req;
   result = usb_request_alloc(&req, size, bulk_out_addr_, parent_req_size_);
   if (result != ZX_OK) {
-      zxlogf(ERROR, "LoadNVM: Failed to allocate usb request: %d\n", result);
-      return result;
+    zxlogf(ERROR, "LoadNVM: Failed to allocate usb request: %d\n", result);
+    return result;
   }
 
   count -= size;
@@ -145,14 +144,14 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
 
   BufferView file(reinterpret_cast<void*>(fw_addr), fw_size);
 
-  result = usb_control_out(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
-                           ZX_TIME_INFINITE,
-                           (void*)file.view(0, size).data(), size);
+  result =
+      usb_control_out(&usb_, USB_TYPE_VENDOR, DFU_DOWNLOAD, 0, 0,
+                      ZX_TIME_INFINITE, (void*)file.view(0, size).data(), size);
   usb_request_t* req;
   result = usb_request_alloc(&req, size, bulk_out_addr_, parent_req_size_);
   if (result != ZX_OK) {
-      zxlogf(ERROR, "LoadRAM: Failed to allocate usb request: %d\n", result);
-      return result;
+    zxlogf(ERROR, "LoadRAM: Failed to allocate usb request: %d\n", result);
+    return result;
   }
 
   count -= size;
@@ -195,8 +194,9 @@ zx_status_t Device::LoadFirmware() {
 
   struct qca_version ver;
   size_t actual_read;
-  result = usb_control_in(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_TARGET_VERSION,
-                          0, 0, ZX_TIME_INFINITE, &ver, sizeof(ver), &actual_read);
+  result =
+      usb_control_in(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_TARGET_VERSION, 0,
+                     0, ZX_TIME_INFINITE, &ver, sizeof(ver), &actual_read);
 
   if (result != ZX_OK) {
     errorf("couldn't get version");
@@ -204,8 +204,9 @@ zx_status_t Device::LoadFirmware() {
   }
 
   uint8_t status;
-  result = usb_control_in(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_STATUS, 0, 0,
-                          ZX_TIME_INFINITE, &status, sizeof(status), &actual_read);
+  result =
+      usb_control_in(&usb_, USB_TYPE_VENDOR | USB_DIR_IN, GET_STATUS, 0, 0,
+                     ZX_TIME_INFINITE, &status, sizeof(status), &actual_read);
 
   usb_desc_iter_t iter;
   result = usb_desc_iter_init(&usb_, &iter);

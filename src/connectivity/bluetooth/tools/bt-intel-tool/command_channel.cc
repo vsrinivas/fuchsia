@@ -5,9 +5,6 @@
 #include "command_channel.h"
 
 #include <fcntl.h>
-
-#include <iostream>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/zx/event.h>
@@ -15,11 +12,11 @@
 #include <lib/zx/timer.h>
 #include <zircon/status.h>
 
+#include <iostream>
+
 #include "bt_intel.h"
-
-#include "src/lib/fxl/strings/string_printf.h"
-
 #include "src/connectivity/bluetooth/core/bt-host/hci/slab_allocators.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace {
 
@@ -36,7 +33,7 @@ zx::channel GetCommandChannel(int fd) {
   }
 
   status = fuchsia_hardware_bluetooth_HciOpenCommandChannel(
-    fdio_unsafe_borrow_channel(hci_io), theirs.release());
+      fdio_unsafe_borrow_channel(hci_io), theirs.release());
   fdio_unsafe_release(hci_io);
 
   if (status != ZX_OK) {
@@ -60,7 +57,7 @@ zx::channel GetAclChannel(int fd) {
   }
 
   status = fuchsia_hardware_bluetooth_HciOpenAclDataChannel(
-    fdio_unsafe_borrow_channel(hci_io), theirs.release());
+      fdio_unsafe_borrow_channel(hci_io), theirs.release());
   fdio_unsafe_release(hci_io);
 
   if (status != ZX_OK) {
@@ -113,7 +110,7 @@ void CommandChannel::SetEventCallback(EventCallback callback) {
 }
 
 void CommandChannel::SendCommand(
-    const ::bt::common::PacketView<::bt::hci::CommandHeader>& command) {
+    const ::bt::PacketView<::bt::hci::CommandHeader>& command) {
   zx::channel* channel = &cmd_channel_;
   // Bootloader Secure Send commands are sent and responded to via the bulk
   // endpoint (ACL channel)
@@ -130,7 +127,7 @@ void CommandChannel::SendCommand(
 }
 
 void CommandChannel::SendCommandSync(
-    const ::bt::common::PacketView<::bt::hci::CommandHeader>& command,
+    const ::bt::PacketView<::bt::hci::CommandHeader>& command,
     EventCallback callback) {
   bool received = false;
   auto previous_cb = std::move(event_callback_);

@@ -36,14 +36,13 @@ class CommandChannel {
 
   // Sends the command in |command| to the controller. The channel must
   // be Ready when this is called.
-  void SendCommand(
-      const ::bt::common::PacketView<::bt::hci::CommandHeader>& command);
+  void SendCommand(const ::bt::PacketView<::bt::hci::CommandHeader>& command);
 
   // Sends the command in |command| to the controller and waits for
   // an Event, which is delivered to |callback| before this function
   // returns.
   void SendCommandSync(
-      const ::bt::common::PacketView<::bt::hci::CommandHeader>& command,
+      const ::bt::PacketView<::bt::hci::CommandHeader>& command,
       EventCallback callback);
 
  private:

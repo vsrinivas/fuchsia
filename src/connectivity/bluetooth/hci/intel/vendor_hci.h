@@ -52,7 +52,7 @@ struct ReadBootParamsReturnParams {
   bt::hci::GenericEnableParam otp_lock;
   bt::hci::GenericEnableParam api_lock;
   bt::hci::GenericEnableParam debug_lock;
-  bt::common::DeviceAddressBytes otp_bdaddr;
+  bt::DeviceAddressBytes otp_bdaddr;
   uint8_t min_fw_build_num;
   uint8_t min_fw_build_week;
   uint8_t min_fw_build_year;
@@ -110,11 +110,10 @@ class VendorHci {
 
   void SendVendorReset() const;
 
-  bool SendSecureSend(uint8_t type, const bt::common::BufferView& bytes) const;
+  bool SendSecureSend(uint8_t type, const bt::BufferView& bytes) const;
 
-  bool SendAndExpect(
-      const bt::common::PacketView<bt::hci::CommandHeader>& command,
-      std::deque<bt::common::BufferView> events) const;
+  bool SendAndExpect(const bt::PacketView<bt::hci::CommandHeader>& command,
+                     std::deque<bt::BufferView> events) const;
 
   void EnterManufacturerMode();
 
@@ -131,8 +130,7 @@ class VendorHci {
   // True when we are in Manufacturer Mode
   bool manufacturer_;
 
-  void SendCommand(
-      const bt::common::PacketView<bt::hci::CommandHeader>& command) const;
+  void SendCommand(const bt::PacketView<bt::hci::CommandHeader>& command) const;
 
   std::unique_ptr<bt::hci::EventPacket> WaitForEventPacket(
       zx::duration timeout = zx::sec(5),

@@ -3,28 +3,27 @@
 // found in the LICENSE file.
 
 #include "firmware_loader.h"
-#include "logging.h"
 
 #include <endian.h>
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/status.h>
 
 #include <iostream>
 #include <limits>
 
+#include "logging.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
-
-#include <fbl/string_printf.h>
-#include <fbl/unique_fd.h>
-#include <zircon/status.h>
 
 namespace btintel {
 
-using ::bt::common::BufferView;
-using ::bt::common::PacketView;
+using ::bt::BufferView;
+using ::bt::PacketView;
 
 FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
                                                     const size_t& len) {

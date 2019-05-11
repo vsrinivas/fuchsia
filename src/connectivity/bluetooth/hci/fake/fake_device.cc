@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdio>
-#include <future>
-#include <thread>
+#include "fake_device.h"
 
 #include <ddk/protocol/bt/hci.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <cstdio>
+#include <future>
+#include <thread>
+
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
 
-#include "fake_device.h"
-
-using ::bt::common::DeviceAddress;
+using ::bt::DeviceAddress;
 using ::bt::testing::FakeController;
 using ::bt::testing::FakePeer;
 
@@ -37,10 +37,8 @@ static zx_protocol_device_t bthci_fake_device_ops = {
         -> zx_status_t { return DEV(ctx)->GetProtocol(proto_id, out_proto); },
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-      return DEV(ctx)->Message(msg, txn);
-    }
-};
+    .message = [](void* ctx, fidl_msg_t* msg,
+                  fidl_txn_t* txn) { return DEV(ctx)->Message(msg, txn); }};
 
 static bt_hci_protocol_ops_t hci_protocol_ops = {
     .open_command_channel = [](void* ctx, zx_handle_t chan) -> zx_status_t {
@@ -77,7 +75,7 @@ zx_status_t Device::Bind() {
 
   // A Sample LE remote peer for le-scan to pick up.
   // TODO(BT-229): add tooling for adding/removing fake devices
-  const auto kAdvData0 = bt::common::CreateStaticByteBuffer(
+  const auto kAdvData0 = bt::CreateStaticByteBuffer(
       // Flags
       0x02, 0x01, 0x02,
 
@@ -93,7 +91,7 @@ zx_status_t Device::Bind() {
   // A Sample BR/EDR remote peer to interact with.
   peer = std::make_unique<FakePeer>(kAddress1, false, false);
   // A Toy Game
-  peer->set_class_of_device(bt::common::DeviceClass({0x14, 0x08, 0x00}));
+  peer->set_class_of_device(bt::DeviceClass({0x14, 0x08, 0x00}));
   fake_device_->AddPeer(std::move(peer));
 
   // Add a LE peer that always fails to connect.

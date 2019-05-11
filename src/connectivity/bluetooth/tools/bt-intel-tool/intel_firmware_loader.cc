@@ -5,30 +5,28 @@
 #include "intel_firmware_loader.h"
 
 #include <endian.h>
-#include <fcntl.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-#include <iostream>
-#include <limits>
-
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
+#include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <zircon/status.h>
 
-#include "bt_intel.h"
+#include <iostream>
+#include <limits>
 
+#include "bt_intel.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-using ::bt::common::BufferView;
-using ::bt::common::PacketView;
+using ::bt::BufferView;
+using ::bt::PacketView;
 
 namespace bt_intel {
 
