@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_
+#define SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_
+
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -76,3 +79,5 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
 
 }  // namespace feedback
 }  // namespace fuchsia
+
+#endif  // SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_

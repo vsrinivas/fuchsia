@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_LOG_LISTENER_H_
+#define SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_LOG_LISTENER_H_
+
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -92,3 +95,5 @@ class StubLoggerSleepsAfterOneMessage : public StubLogger {
 
 }  // namespace feedback
 }  // namespace fuchsia
+
+#endif  // SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_LOG_LISTENER_H_

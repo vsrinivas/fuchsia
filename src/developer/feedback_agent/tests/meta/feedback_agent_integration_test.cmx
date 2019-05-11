@@ -15,6 +15,7 @@
     },
     "sandbox": {
         "features": [
+            "shell",
             "vulkan"
         ],
         "services": [

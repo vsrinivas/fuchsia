@@ -97,13 +97,17 @@ executable("feedback_agent_integration_test") {
   ]
 
   deps = [
+    ":zx_object_util",
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
+    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/lib/escher/test:gtest_vulkan",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
 }
@@ -118,6 +122,18 @@ source_set("stub_log_listener") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/fidl/fuchsia-logger",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("zx_object_util") {
+  sources = [
+    "zx_object_util.cc",
+    "zx_object_util.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
 }

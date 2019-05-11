@@ -3,10 +3,17 @@
 // found in the LICENSE file.
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fsl/handles/object_info.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/zx/job.h>
+#include <lib/zx/process.h>
+#include <stdint.h>
 #include <zircon/errors.h>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
+#include "src/developer/feedback_agent/tests/zx_object_util.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -77,6 +84,84 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                   MatchesKey("log.kernel"),
                   MatchesKey("log.system"),
               }));
+}
+
+// EXPECTs that there is a feedback_agent.cmx process running in a child job of
+// the test environment job and that this process has
+// |expected_num_data_providers| sibling processes.
+void CheckNumberOfDataProviderProcesses(
+    const uint32_t expected_num_data_providers) {
+  // We want to check how many data_provider subprocesses feedback_agent has
+  // spawned.
+  //
+  // The job and process hierarchy looks like this under the test environment:
+  // j: 109762 env_for_test_42bc5f2a
+  //   j: 109993
+  //     p: 109998 feedback_agent_integration_test
+  //   j: 112299
+  //     p: 112304 vulkan_loader.cmx
+  //   j: 115016
+  //     p: 115021 feedback_agent.cmx
+  //     p: 115022 /pkg/bin/data_provider
+  //     p: 115023 /pkg/bin/data_provider
+  //     p: 115024 /pkg/bin/data_provider
+  //   j: 116540
+  //     p: 116545 logger.cmx
+  //
+  // There is basically a job the for the test component and a job for each
+  // injected service. The one of interest is feedback_agent.cmx and we check
+  // the number of sibling processes named /pkg/bin/data_provider.
+
+  fuchsia::sys::JobProviderSyncPtr job_provider;
+  ASSERT_EQ(fdio_service_connect(
+                "/hub/job", job_provider.NewRequest().TakeChannel().release()),
+            ZX_OK);
+  zx::job env_for_test_job;
+  ASSERT_EQ(job_provider->GetJob(&env_for_test_job), ZX_OK);
+  ASSERT_THAT(fsl::GetObjectName(env_for_test_job.get()),
+              testing::StartsWith("env_for_test"));
+
+  // Child jobs are for the test component and each injected service.
+  auto child_jobs = GetChildJobs(env_for_test_job.get());
+  ASSERT_GE(child_jobs.size(), 1u);
+
+  uint32_t num_feedback_agents = 0u;
+  for (const auto& child_job : child_jobs) {
+    auto processes = GetChildProcesses(child_job.get());
+    ASSERT_GE(processes.size(), 1u);
+
+    bool contains_feedback_agent = false;
+    uint32_t num_data_providers = 0u;
+    for (const auto& process : processes) {
+      const std::string process_name = fsl::GetObjectName(process.get());
+      if (process_name == "feedback_agent.cmx") {
+        contains_feedback_agent = true;
+        num_feedback_agents++;
+      } else if (process_name == "/pkg/bin/data_provider") {
+        num_data_providers++;
+      }
+    }
+
+    if (contains_feedback_agent) {
+      EXPECT_EQ(num_data_providers, expected_num_data_providers);
+    }
+  }
+  EXPECT_EQ(num_feedback_agents, 1u);
+}
+
+// This test case isn't super useful in itself. This is just to demonstrate how
+// to use the utility helper that will be needed to check the number of spawned
+// data providers, cf. DX-1497.
+TEST_F(FeedbackAgentIntegrationTest, CheckFeedbackAgentSpawned) {
+  DataProviderSyncPtr data_provider;
+  environment_services_->Connect(data_provider.NewRequest());
+  // As the connection is asynchronous, we make a call with the SyncPtr to make
+  // sure the connection is established and the process for the service spawned
+  // before checking its existence.
+  DataProvider_GetData_Result out_result;
+  ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
+
+  CheckNumberOfDataProviderProcesses(0u);
 }
 
 }  // namespace
