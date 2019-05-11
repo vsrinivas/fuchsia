@@ -199,8 +199,9 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
   // calls until this point are applied to the next Scenic frame.
   delegate_.session_updater->RatchetPresentCallbacks();
 
-  auto frame_timings =
-      fxl::MakeRefCounted<FrameTimings>(this, frame_number_, presentation_time);
+  const zx_time_t frame_render_start_time = async_now(dispatcher_);
+  auto frame_timings = fxl::MakeRefCounted<FrameTimings>(
+      this, frame_number_, presentation_time, frame_render_start_time);
   inspect_frame_number_.Set(frame_number_);
 
   // Render the frame.

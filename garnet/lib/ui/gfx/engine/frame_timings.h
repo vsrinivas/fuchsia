@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_GFX_ENGINE_FRAME_TIMINGS_H_
 
 #include <lib/zx/time.h>
+
 #include <vector>
 
 #include "src/ui/lib/escher/base/reffable.h"
@@ -24,9 +25,9 @@ using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 // FrameScheduler is notified via OnFramePresented().
 class FrameTimings : public escher::Reffable {
  public:
-  FrameTimings();
   FrameTimings(FrameScheduler* frame_scheduler, uint64_t frame_number,
-               zx_time_t target_presentation_time);
+               zx_time_t target_presentation_time,
+               zx_time_t rendering_started_time);
 
   // Add a swapchain that is used as a render target this frame.  Return an
   // index that can be used to indicate when rendering for that swapchain is
@@ -61,6 +62,8 @@ class FrameTimings : public escher::Reffable {
     return actual_presentation_time_;
   }
 
+  zx_time_t rendering_started_time() const { return rendering_started_time_; }
+
   zx_time_t rendering_finished_time() const { return rendering_finished_time_; }
 
  private:
@@ -85,6 +88,7 @@ class FrameTimings : public escher::Reffable {
   FrameScheduler* const frame_scheduler_;
   const uint64_t frame_number_;
   const zx_time_t target_presentation_time_;
+  const zx_time_t rendering_started_time_;
   zx_time_t actual_presentation_time_ = 0;
   zx_time_t rendering_finished_time_ = 0;
   size_t frame_rendered_count_ = 0;

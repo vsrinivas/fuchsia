@@ -9,14 +9,14 @@
 namespace scenic_impl {
 namespace gfx {
 
-FrameTimings::FrameTimings() : FrameTimings(nullptr, 0, 0) {}
-
 FrameTimings::FrameTimings(FrameScheduler* frame_scheduler,
                            uint64_t frame_number,
-                           zx_time_t target_presentation_time)
+                           zx_time_t target_presentation_time,
+                           zx_time_t rendering_started_time)
     : frame_scheduler_(frame_scheduler),
       frame_number_(frame_number),
-      target_presentation_time_(target_presentation_time) {}
+      target_presentation_time_(target_presentation_time),
+      rendering_started_time_(rendering_started_time) {}
 
 size_t FrameTimings::AddSwapchain(Swapchain* swapchain) {
   // All swapchains that we are timing must be added before any of them finish.

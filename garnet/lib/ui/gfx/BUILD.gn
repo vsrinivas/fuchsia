@@ -254,9 +254,13 @@ source_set("display") {
 source_set("frame_scheduler") {
   sources = [
     # TODO(SCN-1398): Move files out of engine/.
+    "engine/duration_predictor.cc",
+    "engine/duration_predictor.h",
     "engine/default_frame_scheduler.cc",
     "engine/default_frame_scheduler.h",
     "engine/frame_scheduler.h",
+    "engine/frame_predictor.cc",
+    "engine/frame_predictor.h",
     "engine/frame_timings.cc",
     "engine/frame_timings.h",
 

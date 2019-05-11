@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
-
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
+
+#include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
 #include "garnet/lib/ui/gfx/tests/frame_scheduler_mocks.h"
 
 namespace scenic_impl {
@@ -19,7 +19,8 @@ class FrameTimingsTest : public ErrorReportingTest {
     frame_timings_ =
         fxl::MakeRefCounted<FrameTimings>(frame_scheduler_.get(),
                                           /* frame number */ 1,
-                                          /* target presentation time*/ 1);
+                                          /* target presentation time*/ 1,
+                                          /* render started time */ 0);
     frame_timings_->AddSwapchain(nullptr);
   }
   void TearDown() override { frame_scheduler_.reset(); }

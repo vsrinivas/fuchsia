@@ -76,8 +76,10 @@ executable("unittests") {
   sources = [
     "compositor_unittest.cc",
     "default_frame_scheduler_unittest.cc",
+    "duration_predictor_unittest.cc",
     "escher_vulkan_smoke_test.cc",
     "event_timestamper_unittest.cc",
+    "frame_predictor_unittest.cc",
     "frame_timings_unittest.cc",
     "gfx_command_applier_unittest.cc",
     "hardware_layer_assignment_unittest.cc",
