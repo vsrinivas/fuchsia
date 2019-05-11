@@ -119,6 +119,7 @@ group("ulib") {
     "trace-engine:trace-engine-headers-for-reader",
     "trace-engine:trace-engine-static",
     "trace-provider",
+    "trace-provider:trace-handler",
     "trace-provider:trace-provider-fdio-connect",
     "trace-provider:trace-provider-with-static-engine",
     "trace-reader",

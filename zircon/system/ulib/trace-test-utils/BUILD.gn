@@ -18,6 +18,7 @@ library("trace-test-utils") {
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/trace-provider:trace-handler",
     "$zx/system/ulib/trace-reader",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",

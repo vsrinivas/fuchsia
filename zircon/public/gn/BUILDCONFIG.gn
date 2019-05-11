@@ -467,7 +467,7 @@ template("library") {
                 deps += [ "//zircon/public/lib/$dep" ]
               } else {
                 dep = get_path_info(get_label_info(dep, "name"), "name")
-                if (dep != "common") {
+                if (dep != "common" && dep != "handler") {
                   deps += [ "//zircon/public/lib/$dep" ]
                 }
               }
