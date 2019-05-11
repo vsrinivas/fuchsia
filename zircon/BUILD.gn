@@ -17,6 +17,7 @@ declare_args() {
 
   # Defines the `//:default` target: what `ninja` with no arguments does.
   default_deps = [
+    ":build-tests",
     ":ids",
     ":images",
     ":tools",
@@ -212,6 +213,13 @@ group("all-cpu") {
       ":core-tests-$cpu",
     ]
   }
+}
+
+group("build-tests") {
+  testonly = true
+  deps = [
+    "$zx/public/gn/toolchain:noop-test",
+  ]
 }
 
 foreach(cpu, standard_fuchsia_cpus) {

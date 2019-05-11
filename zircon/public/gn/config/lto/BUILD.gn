@@ -9,6 +9,9 @@ config("lto") {
     # Enable whole-program devirtualization and virtual constant propagation.
     "-fwhole-program-vtables",
   ]
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
 }
 
 declare_args() {
@@ -21,7 +24,10 @@ declare_args() {
 
 config("thinlto") {
   compiler_flags = [ "-flto=thin" ]
-  ldflags = [
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+  ldflags += [
     # The ThinLTO driver launches a number of threads in parallel whose
     # number is by default equivalent to the number of cores.  We need
     # to limit the parallelism to avoid aggressive competition between

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/config/standard.gni")
-import("$zx/public/gn/toolchain/environment.gni")
+import("$zx/public/gn/toolchain/variants.gni")
 
 # Redirect dependents to dependencies in another environment (toolchain).
 #

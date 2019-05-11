@@ -203,6 +203,10 @@ template("c_toolchain") {
 
   if (tc.tool_dir == "") {
     dir_prefix = ""
+    if (use_goma) {
+      # GOMA requires an absolute path to the compiler.
+      compiler_prefix = ""
+    }
   } else {
     dir_prefix = rebase_path(tc.tool_dir, root_build_dir) + "/"
   }

@@ -370,13 +370,23 @@ source_set("crt1") {
 
 # This is just a basic test that program loading and libc startup works.
 # It's "hello world" without the ostentation.
-test("noop") {
-  sources = [
-    "noop-test.cpp",
-  ]
+if (toolchain.tool_dir == "") {
+  # Don't test random host compilers that might not actually work just
+  # because variants like gcc exist.  If it's configured as the primary
+  # host compiler via $variants, then you'll know if it works or not.
+  # We can't just avoid the dependency below easily, because tool_dir
+  # is only decided inside the c_toolchain() instantiation itself.
+  group("noop.${toolchain.variant}") {
+  }
+} else {
+  test("noop") {
+    sources = [
+      "noop-test.cpp",
+    ]
+  }
 }
 
-group("tests") {
+group("noop-tests.instrumented") {
   testonly = true
   deps = [
     ":noop",
@@ -393,5 +403,23 @@ group("tests") {
         selector.tags) {
       deps += [ ":noop.${selector.variant}" ]
     }
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":noop-tests.instrumented",
+  ]
+}
+
+group("noop-tests") {
+  testonly = true
+  deps = [
+    ":noop",
+  ]
+
+  foreach(selector, toolchain.variant_selectors) {
+    deps += [ ":noop.${selector.variant}" ]
   }
 }
