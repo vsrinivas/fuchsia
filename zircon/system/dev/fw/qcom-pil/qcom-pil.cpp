@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 #include <algorithm>
-#include <limits>
-
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <elfload/elfload.h>
+#include <elf.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_ptr.h>
+#include <lib/mmio/mmio.h>
+#include <limits>
 #include <qcom/smc.h>
 
 #include "qcom-pil.h"

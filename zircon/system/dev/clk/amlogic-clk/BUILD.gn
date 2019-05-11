@@ -25,21 +25,19 @@ driver("amlogic-clk") {
   ]
 }
 
-
 test("amlogic-clk-test") {
   testonly = true
   output_name = "amlogic-clk-test"
   sources = [
+    "aml-clk-test.cpp",
     "aml-clk.cpp",
-    "aml-clk-test.cpp"
   ]
   deps = [
-    "$zx/system/dev/lib/aaa-mock-mmio-reg",
     "$zx/system/banjo/ddk.protocol.clockimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/amlogic",
-    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/fidl/fuchsia-hardware-clock:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

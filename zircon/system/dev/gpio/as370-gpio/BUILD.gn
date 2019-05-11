@@ -22,13 +22,13 @@ driver("as370-gpio") {
 test("as370-gpio-test") {
   output_name = "as370-gpio-test"
   sources = [
-    "as370-gpio.cpp",
     "as370-gpio-test.cpp",
+    "as370-gpio.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/dev/lib/aaa-mock-mmio-reg",
+    "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",

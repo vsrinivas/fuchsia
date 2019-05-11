@@ -37,7 +37,7 @@ test("mtk-power-test") {
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.powerimpl",
-    "$zx/system/dev/lib/aaa-mock-mmio-reg",
+    "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/dev/lib/mt8167",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

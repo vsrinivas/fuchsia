@@ -9,7 +9,6 @@
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
-#include <lib/mmio/mmio.h>
 
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
@@ -17,6 +16,8 @@
 #include <zircon/types.h>
 
 namespace ddk {
+
+class MmioBuffer;
 
 class PDev : public PDevProtocolClient {
 

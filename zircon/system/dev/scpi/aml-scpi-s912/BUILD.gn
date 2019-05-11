@@ -38,6 +38,7 @@ driver("scpi") {
   deps = [
     "$zx/system/banjo/ddk.protocol.mailbox",
     "$zx/system/banjo/ddk.protocol.scpi",
+    "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

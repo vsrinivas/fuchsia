@@ -61,24 +61,24 @@ private:
     mmio_pinned_buffer_t pinned_;
 };
 
-// MmioBase is wrapper around mmio_block_t.
-// Use MmioBuffer (defined below) instead of MmioBase.
-template <typename ViewType>
-class MmioBase {
+// Forward declaration.
+class MmioView;
 
+// MmioBuffer is wrapper around mmio_block_t.
+class MmioBuffer {
 public:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioBase);
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioBuffer);
 
-    explicit MmioBase(mmio_buffer_t mmio)
+    explicit MmioBuffer(mmio_buffer_t mmio)
         : mmio_(mmio), ptr_(reinterpret_cast<uintptr_t>(mmio.vaddr)) {}
 
-    virtual ~MmioBase() {}
+    virtual ~MmioBuffer() {}
 
-    MmioBase(MmioBase&& other) {
+    MmioBuffer(MmioBuffer&& other) {
         transfer(std::move(other));
     }
 
-    MmioBase& operator=(MmioBase&& other) {
+    MmioBuffer& operator=(MmioBuffer&& other) {
         transfer(std::move(other));
         return *this;
     }
@@ -102,12 +102,8 @@ public:
         return zx::unowned_vmo(mmio_.vmo);
     }
 
-    ViewType View(zx_off_t off) const {
-        return ViewType(mmio_, off);
-    }
-    ViewType View(zx_off_t off, size_t size) const {
-        return ViewType(mmio_, off, size);
-    }
+    MmioView View(zx_off_t off) const;
+    MmioView View(zx_off_t off, size_t size) const;
 
     uint32_t Read32(zx_off_t offs) const {
         return Read<uint32_t>(offs);
@@ -217,7 +213,7 @@ protected:
     mmio_buffer_t mmio_;
 
 private:
-    void transfer(MmioBase&& other) {
+    void transfer(MmioBuffer&& other) {
         mmio_ = other.mmio_;
         ptr_ = other.ptr_;
         other.reset();
@@ -225,9 +221,6 @@ private:
 
     uintptr_t ptr_;
 };
-
-class MmioView;
-typedef MmioBase<MmioView> MmioBuffer;
 
 class MmioView : public MmioBuffer {
 public:
@@ -259,5 +252,16 @@ public:
         mmio_.vmo = ZX_HANDLE_INVALID;
     }
 };
+
+// These can't be defined inside the class because they need MmioView
+// to be completely defined first.
+
+inline MmioView MmioBuffer::View(zx_off_t off) const {
+    return MmioView(mmio_, off);
+}
+
+inline MmioView MmioBuffer::View(zx_off_t off, size_t size) const {
+    return MmioView(mmio_, off, size);
+}
 
 } //namespace ddk

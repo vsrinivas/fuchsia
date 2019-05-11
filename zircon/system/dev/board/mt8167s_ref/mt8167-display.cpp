@@ -5,13 +5,15 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/platform-defs.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <hwreg/bitfields.h>
+#include <lib/mmio/mmio.h>
 #include <soc/mt8167/mt8167-gpio.h>
 #include <soc/mt8167/mt8167-hw.h>
-#include <hwreg/bitfields.h>
+
 #include "mt8167.h"
 
 namespace board_mt8167 {
