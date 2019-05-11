@@ -22,7 +22,7 @@ constexpr char kSessionUserProviderAppUrl[] = "session_user_provider_url";
 // Dev auth provider configuration
 constexpr char kDevAuthProviderType[] = "dev";
 constexpr char kDevAuthProviderUrl[] =
-    "fuchsia-pkg://fuchsia.com/dev_auth_providers#meta/"
+    "fuchsia-pkg://fuchsia.com/dev_auth_provider#meta/"
     "dev_auth_provider.cmx";
 
 // Google auth provider configuration

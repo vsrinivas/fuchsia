@@ -7,7 +7,6 @@ group("bin") {
   deps = [
     "a11y",
     "appmgr",
-    "auth",
     "catapult_converter",
     "chrealm",
     "cmc",

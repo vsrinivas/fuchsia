@@ -47,12 +47,12 @@ const bool kForce = true;
 
 const TestComponentParam kTestComponentParams[] = {
     {{kDevIdp,
-      "fuchsia-pkg://fuchsia.com/dev_auth_providers#"
+      "fuchsia-pkg://fuchsia.com/dev_auth_provider#"
       "meta/dev_auth_provider.cmx"},
      "fuchsia-pkg://fuchsia.com/token_manager_factory#"
      "meta/token_manager_factory.cmx"},
     {{kDevIotIDIdp,
-      "fuchsia-pkg://fuchsia.com/dev_auth_providers#"
+      "fuchsia-pkg://fuchsia.com/dev_auth_provider_iotid#"
       "meta/dev_auth_provider_iotid.cmx"},
      "fuchsia-pkg://fuchsia.com/token_manager_factory#"
      "meta/token_manager_factory.cmx"}};

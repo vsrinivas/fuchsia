@@ -203,11 +203,11 @@ group("feedback_agent") {
 group("auth") {
   testonly = true
   public_deps = [
-    "//garnet/bin/auth:auth_bin_tests",
-    "//garnet/bin/auth/testing:dev_auth_providers",
     "//garnet/bin/auth/tests/account_manager_integration:account_manager_integration_test_pkg",
     "//garnet/bin/auth/tests/token_manager_integration:token_manager_integration_tests",
     "//garnet/packages/prod:auth",
+    "//src/identity/bin/dev_auth_provider",
+    "//src/identity/bin/dev_auth_provider_iotid",
   ]
 }
 
