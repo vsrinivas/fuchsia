@@ -1696,8 +1696,7 @@ __NO_SAFESTACK static void update_tls_size(void) {
 static dl_start_return_t __dls3(void* start_arg);
 
 __NO_SAFESTACK NO_ASAN __attribute__((__visibility__("hidden")))
-dl_start_return_t __dls2(
-    void* start_arg, void* vdso_map) {
+dl_start_return_t __dls2(void* start_arg, void* vdso_map) {
     ldso.l_map.l_addr = (uintptr_t)__ehdr_start;
 
     Ehdr* ehdr = (void*)ldso.l_map.l_addr;
@@ -2702,26 +2701,39 @@ zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len,
 // directly to our definition.  The trampoline checks the 'runtime' flag to
 // distinguish calls before final relocation is complete, and only calls
 // into the sanitizer runtime once it's actually up.  Because of the
-// .weakref chicanery, _dynlink_sancov_trace_pc_guard must be in a separate
+// .weakref chicanery, the _dynlink_sancov_* symbols must be in a separate
 // assembly file.
-__asm__(".weakref __sanitizer_cov_trace_pc_guard, _dynlink_sancov_trampoline");
-__asm__(".hidden _dynlink_sancov_trace_pc_guard");
-__asm__(".pushsection .text._dynlink_sancov_trampoline,\"ax\",%progbits\n"
-        ".local _dynlink_sancov_trampoline\n"
-        ".type _dynlink_sancov_trampoline,%function\n"
-        "_dynlink_sancov_trampoline:\n"
+
+# include "sancov-stubs.h"
+
+# define SANCOV_STUB(name) SANCOV_STUB_ASM(#name)
+# define SANCOV_STUB_ASM(name) \
+    __asm__( \
+    ".weakref __sanitizer_cov_" name ", _dynlink_sancov_trampoline_" name "\n" \
+    ".hidden _dynlink_sancov_" name "\n" \
+    ".pushsection .text._dynlink_sancov_trampoline_" name ",\"ax\",%progbits\n"\
+    ".local _dynlink_sancov_trampoline_" name "\n" \
+    ".type _dynlink_sancov_trampoline_" name ",%function\n" \
+    "_dynlink_sancov_trampoline_" name ":\n" \
+     SANCOV_STUB_ASM_BODY(name) \
+    ".size _dynlink_sancov_trampoline_" name ", . - _dynlink_sancov_trampoline_" name "\n" \
+    ".popsection");
+
 # ifdef __x86_64__
-        "cmpl $0, _dynlink_runtime(%rip)\n"
-        "jne _dynlink_sancov_trace_pc_guard\n"
+#  define SANCOV_STUB_ASM_BODY(name) \
+        "cmpl $0, _dynlink_runtime(%rip)\n" \
+        "jne _dynlink_sancov_" name "\n" \
         "ret\n"
 # elif defined(__aarch64__)
-        "adrp x16, _dynlink_runtime\n"
-        "ldr w16, [x16, #:lo12:_dynlink_runtime]\n"
-        "cbnz w16, _dynlink_sancov_trace_pc_guard\n"
+#  define SANCOV_STUB_ASM_BODY(name) \
+        "adrp x16, _dynlink_runtime\n" \
+        "ldr w16, [x16, #:lo12:_dynlink_runtime]\n" \
+        "cbnz w16, _dynlink_sancov_" name "\n" \
         "ret\n"
 # else
 #  error unsupported architecture
 # endif
-        ".size _dynlink_sancov_trampoline, . - _dynlink_sancov_trampoline\n"
-        ".popsection");
+
+SANCOV_STUBS
+
 #endif

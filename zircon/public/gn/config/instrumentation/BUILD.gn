@@ -113,6 +113,15 @@ if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
     cflags = compiler_flags
     ldflags = compiler_flags
   }
+
+  # This enables all the different kinds of sancov callbacks, not just
+  # the basic ones actually implemented by the canonical runtime.
+  config("sancov-full") {
+    compiler_flags = [ "-fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep,trace-pc-guard,inline-8bit-counters,pc-table" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+  }
 }
 
 config("profile") {

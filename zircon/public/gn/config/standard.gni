@@ -293,6 +293,16 @@ standard_variants += [
       tags = [ "sancov" ]
     }
   },
+  {
+    variant = {
+      name = "ubsan-sancov-full"
+      bases = [ "ubsan" ]
+
+      # The "sancov" tag is important: see $zx/system/ulib/c/sanitizers.
+      configs = [ "$zx/public/gn/config/instrumentation:sancov-full" ]
+      tags = [ "sancov" ]
+    }
+  },
 ]
 
 # This list is appended to the $variants list for the build.  It provides

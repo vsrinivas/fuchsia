@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "sancov-stubs.h"
+
 // This file defines all the entry points that -fsanitize-coverage=...
 // instrumentation calls.  Unfortunately, LLVM does not publish any header
 // file declaring those signatures, though they are all given in
@@ -33,3 +35,13 @@
         __builtin_trap();
     }
 }
+
+// There are many hooks that are called a lot but can always safely
+// just do nothing.
+
+#define SANCOV_STUB(name) \
+    [[gnu::weak]] extern "C" void __sanitizer_cov_##name() {}
+
+SANCOV_NOOP_STUBS
+
+#undef SANCOV_STUB

@@ -4,15 +4,19 @@
 
 source_set("ldso") {
   deps = [
+    ":dlstart",
     "$zx/system/ulib/ldmsg",
     "$zx/third_party/ulib/musl:musl_internal",
   ]
   sources = [
     "$zx/third_party/ulib/musl/arch/${toolchain.cpu}/dl-entry.S",
-    "dlstart.c",
     "dynlink-sancov.S",
     "dynlink.c",
   ]
+
+  # This is needed by dynlink-sancov.S and dynlink.c for "sancov-stubs.h".
+  include_dirs = [ "$zx/system/ulib/c/sanitizers" ]
+
   if (toolchain.libprefix != "") {
     # The libprefix always ends with a / but that's not part of the
     # "config" string in the loader-service protocol.
@@ -20,4 +24,15 @@ source_set("ldso") {
     assert(ldsvc_config != "" && ldsvc_config != ".")
     defines = [ "DYNLINK_LDSVC_CONFIG=\"$ldsvc_config\"" ]
   }
+}
+
+source_set("dlstart") {
+  visibility = [ ":*" ]
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "dlstart.c",
+  ]
+  configs += [ "$zx/public/gn/config:no_sanitizers" ]
 }

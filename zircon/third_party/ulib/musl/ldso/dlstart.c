@@ -5,20 +5,7 @@
 #include <stdatomic.h>
 #include <stddef.h>
 
-#ifdef __clang__
-// TODO(mcgrathr): Really we want to compile just this file without
-// -fsanitize-coverage, but this works around the issue for now.
-__asm__(".weakref __sanitizer_cov_trace_pc_guard, _dlstart_sancov_dummy");
-__asm__(".pushsection .text._dlstart_sancov_dummy,\"ax\",%progbits\n"
-        ".local _dlstart_sancov_dummy\n"
-        ".type _dlstart_sancov_dummy,%function\n"
-        "_dlstart_sancov_dummy: ret\n"
-        ".size _dlstart_sancov_dummy, . - _dlstart_sancov_dummy\n"
-        ".popsection");
-#endif
-
-__LOCAL __NO_SAFESTACK NO_ASAN dl_start_return_t _dl_start(void* start_arg,
-                                                           void* vdso) {
+__LOCAL dl_start_return_t _dl_start(void* start_arg, void* vdso) {
     ElfW(Addr) base = (uintptr_t)__ehdr_start;
     const ElfW(Rel)* rel = NULL;
     const ElfW(Rela)* rela = NULL;
