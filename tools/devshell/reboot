@@ -54,4 +54,7 @@ if [[ -z ${device} ]] &&
 else
   echo "Rebooting ${device}..."
 fi
+
 "${ZIRCON_TOOLS_DIR}/netruncmd" "${timeout_flag}" "${device}" "dm ${reboot_type}"
+
+fx-command-exec shell dm "${reboot_type}"
