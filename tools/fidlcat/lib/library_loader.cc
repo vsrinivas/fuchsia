@@ -113,16 +113,17 @@ InterfaceMethod::InterfaceMethod(const Interface& interface,
                                  const rapidjson::Value& value)
     : enclosing_interface_(interface),
       ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10)),
-      name_(value["name"].GetString()), value_(value) {
+      name_(value["name"].GetString()),
+      value_(value) {
   if (value_["has_request"].GetBool()) {
     request_ = std::make_unique<Struct>(interface.enclosing_library(), value,
                                         "maybe_request_size", "maybe_request");
   }
 
   if (value_["has_response"].GetBool()) {
-    response_ = std::make_unique<Struct>(interface.enclosing_library(), value,
-                                         "maybe_response_size",
-                                         "maybe_response");
+    response_ =
+        std::make_unique<Struct>(interface.enclosing_library(), value,
+                                 "maybe_response_size", "maybe_response");
   }
 }
 
@@ -173,6 +174,11 @@ Library::Library(const LibraryLoader& enclosing, rapidjson::Document& document)
                     std::forward_as_tuple(uni["name"].GetString()),
                     std::forward_as_tuple(*this, uni));
   }
+  for (auto& xuni : backing_document_["xunion_declarations"].GetArray()) {
+    xunions_.emplace(std::piecewise_construct,
+                     std::forward_as_tuple(xuni["name"].GetString()),
+                     std::forward_as_tuple(*this, xuni));
+  }
 }
 
 std::unique_ptr<Type> Library::TypeFromIdentifier(
@@ -202,7 +208,11 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(
     }
     return type;
   }
-  // And probably for tables.
+  auto xuni = xunions_.find(identifier);
+  if (xuni != xunions_.end()) {
+    // Note: XUnion and nullable XUnion are encoded in the same way
+    return std::make_unique<XUnionType>(std::ref(xuni->second), is_nullable);
+  }
   return Type::get_illegal();
 }
 

@@ -454,37 +454,39 @@ TEST_WIRE_TO_JSON(NullableStructAndInt, NullableStructAndInt,
 // struct{uint8 f1; uint32 f2;}
 // struct{struct{uint8 f1; uint32 f2;} inner; uint8 f3;}
 
-// Union tests
+// Union and XUnion tests
 
 namespace {
 
-test::fidlcat::examples::int_struct_union GetIntUnion(int32_t i) {
-  test::fidlcat::examples::int_struct_union u;
+using isu = test::fidlcat::examples::int_struct_union;
+using xisu = test::fidlcat::examples::int_struct_xunion;
+
+template <class T>
+T GetIntUnion(int32_t i) {
+  T u;
   u.set_variant_i(i);
   return u;
 }
 
-test::fidlcat::examples::int_struct_union GetStructUnion(std::string v1,
-                                                         std::string v2) {
-  test::fidlcat::examples::int_struct_union u;
+template <class T>
+T GetStructUnion(std::string v1, std::string v2) {
+  T u;
   test::fidlcat::examples::two_string_struct tss =
       TwoStringStructFromVals(v1, v2);
   u.set_variant_tss(tss);
   return u;
 }
 
-std::unique_ptr<test::fidlcat::examples::int_struct_union> GetIntUnionPtr(
-    int32_t i) {
-  std::unique_ptr<test::fidlcat::examples::int_struct_union> ptr(
-      new test::fidlcat::examples::int_struct_union());
+template <class T>
+std::unique_ptr<T> GetIntUnionPtr(int32_t i) {
+  std::unique_ptr<T> ptr(new T());
   ptr->set_variant_i(i);
   return ptr;
 }
 
-std::unique_ptr<test::fidlcat::examples::int_struct_union> GetStructUnionPtr(
-    std::string v1, std::string v2) {
-  std::unique_ptr<test::fidlcat::examples::int_struct_union> ptr(
-      new test::fidlcat::examples::int_struct_union());
+template <class T>
+std::unique_ptr<T> GetStructUnionPtr(std::string v1, std::string v2) {
+  std::unique_ptr<T> ptr(new T());
   test::fidlcat::examples::two_string_struct tss =
       TwoStringStructFromVals(v1, v2);
   ptr->set_variant_tss(tss);
@@ -494,38 +496,72 @@ std::unique_ptr<test::fidlcat::examples::int_struct_union> GetStructUnionPtr(
 }  // namespace
 
 TEST_WIRE_TO_JSON(UnionInt, Union, R"({"isu":{"variant_i":"42"}, "i" : "1"})",
-                  GetIntUnion(42), 1);
+                  GetIntUnion<isu>(42), 1);
+
 TEST_WIRE_TO_JSON(
     UnionStruct, Union,
     R"({"isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}, "i":"1"})",
-    GetStructUnion("harpo", "chico"), 1);
+    GetStructUnion<isu>("harpo", "chico"), 1);
 
 TEST_WIRE_TO_JSON(NullableUnionInt, NullableUnion,
                   R"({"isu":{"variant_i":"42"}, "i" : "1"})",
-                  GetIntUnionPtr(42), 1);
+                  GetIntUnionPtr<isu>(42), 1);
+
 TEST_WIRE_TO_JSON(
     NullableUnionStruct, NullableUnion,
     R"({"isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}, "i":"1"})",
-    GetStructUnionPtr("harpo", "chico"), 1);
+    GetStructUnionPtr<isu>("harpo", "chico"), 1);
 
 TEST_WIRE_TO_JSON(NullableUnionIntFirstInt, NullableUnionIntFirst,
                   R"({"i" : "1", "isu":{"variant_i":"42"}})", 1,
-                  GetIntUnionPtr(42));
+                  GetIntUnionPtr<isu>(42));
+
 TEST_WIRE_TO_JSON(
     NullableUnionIntFirstStruct, NullableUnionIntFirst,
     R"({"i": "1", "isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}})",
-    1, GetStructUnionPtr("harpo", "chico"));
+    1, GetStructUnionPtr<isu>("harpo", "chico"));
+
+TEST_WIRE_TO_JSON(XUnionInt, XUnion, R"({"isu":{"variant_i":"42"}, "i" : "1"})",
+                  GetIntUnion<xisu>(42), 1);
+
+TEST_WIRE_TO_JSON(
+    XUnionStruct, XUnion,
+    R"({"isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}, "i":"1"})",
+    GetStructUnion<xisu>("harpo", "chico"), 1);
+
+TEST_WIRE_TO_JSON(NullableXUnionInt, NullableXUnion,
+                  R"({"isu":{"variant_i":"42"}, "i" : "1"})",
+                  GetIntUnionPtr<xisu>(42), 1);
+
+TEST_WIRE_TO_JSON(
+    NullableXUnionStruct, NullableXUnion,
+    R"({"isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}, "i":"1"})",
+    GetStructUnionPtr<xisu>("harpo", "chico"), 1);
+
+TEST_WIRE_TO_JSON(NullableXUnionIntFirstInt, NullableXUnionIntFirst,
+                  R"({"i" : "1", "isu":{"variant_i":"42"}})", 1,
+                  GetIntUnionPtr<xisu>(42));
+
+TEST_WIRE_TO_JSON(
+    NullableXUnionIntFirstStruct, NullableXUnionIntFirst,
+    R"({"i": "1", "isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}})",
+    1, GetStructUnionPtr<xisu>("harpo", "chico"));
 
 namespace {
 
-test::fidlcat::examples::u8_u16_union GetUInt8Union(uint8_t i) {
-  test::fidlcat::examples::u8_u16_union u;
+using uuu = test::fidlcat::examples::u8_u16_union;
+using uux = test::fidlcat::examples::u8_u16_xunion;
+
+template <class T>
+T GetUInt8Union(uint8_t i) {
+  T u;
   u.set_variant_u8(i);
   return u;
 }
 
-test::fidlcat::examples::u8_u16_union GetUInt16Union(uint16_t i) {
-  test::fidlcat::examples::u8_u16_union u;
+template <class T>
+T GetUInt16Union(uint16_t i) {
+  T u;
   u.set_variant_u16(i);
   return u;
 }
@@ -533,12 +569,20 @@ test::fidlcat::examples::u8_u16_union GetUInt16Union(uint16_t i) {
 }  // namespace
 
 TEST_WIRE_TO_JSON(ShortUnion8, ShortUnion,
-                  R"({"u":{"variant_u8":"16"}, "i":"1"})", GetUInt8Union(16),
-                  1);
+                  R"({"u":{"variant_u8":"16"}, "i":"1"})",
+                  GetUInt8Union<uuu>(16), 1);
 
 TEST_WIRE_TO_JSON(ShortUnion16, ShortUnion,
                   R"({"u":{"variant_u16":"1024"}, "i":"1"})",
-                  GetUInt16Union(1024), 1);
+                  GetUInt16Union<uuu>(1024), 1);
+
+TEST_WIRE_TO_JSON(ShortXUnion8, ShortXUnion,
+                  R"({"u":{"variant_u8":"16"}, "i":"1"})",
+                  GetUInt8Union<uux>(16), 1);
+
+TEST_WIRE_TO_JSON(ShortXUnion16, ShortXUnion,
+                  R"({"u":{"variant_u16":"1024"}, "i":"1"})",
+                  GetUInt16Union<uux>(1024), 1);
 
 // Enum Tests
 

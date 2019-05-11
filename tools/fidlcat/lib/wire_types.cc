@@ -278,6 +278,9 @@ class Envelope {
     return oss.str();
   }
 
+  static constexpr size_t INLINE_SIZE =
+      sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint64_t);
+
  private:
   const uint8_t* ptr_;
 };
@@ -326,7 +329,7 @@ class EnvelopeType : public Type {
   }
 
   virtual size_t InlineSize() const override {
-    return sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint64_t);
+    return Envelope::INLINE_SIZE;
   }
 
  private:
@@ -443,6 +446,73 @@ Marker UnionType::GetValueCallback(Marker marker, size_t length,
 }
 
 size_t UnionType::InlineSize() const { return union_.size(); }
+
+XUnionType::XUnionType(const XUnion& uni, bool is_nullable)
+    : xunion_(uni), is_nullable_(is_nullable) {}
+
+Marker XUnionType::GetValueCallback(Marker marker, size_t length,
+                                    ObjectTracker* tracker,
+                                    ValueGeneratingCallback& callback) const {
+  const uint8_t* bytes = marker.byte_pos();
+  // Advance by the size of the ordinal + padding.
+  marker.AdvanceBytesBy(sizeof(uint64_t));
+  if (!marker.is_valid()) {
+    return marker;
+  }
+
+  uint32_t ordinal = internal::MemoryFrom<uint32_t>(bytes);
+  if (ordinal == 0) {
+    if (!is_nullable_) {
+      FXL_LOG(WARNING) << "Encoding error: found null value in non-nullable "
+                          "xunion.  This is likely a bug in the FIDL binding, "
+                          "so contact the FIDL binding authors.";
+    }
+    Envelope envelope(marker.byte_pos());
+    FXL_CHECK(envelope.num_bytes() == 0 && envelope.num_handles() == 0 &&
+              envelope.pointer() == 0)
+        << "Undefined ordinal in xunion without empty envelope.";
+    callback = NullCallback(true);
+    marker.AdvanceBytesBy(Envelope::INLINE_SIZE);
+    return marker;
+  }
+  std::unique_ptr<Type> target_type;
+  std::string member_name;
+  for (auto& member : xunion_.members()) {
+    std::optional<Ordinal> maybe_target_ordinal = member.ordinal();
+    if (!maybe_target_ordinal) {
+      continue;
+    }
+    Ordinal target_ordinal = *maybe_target_ordinal;
+    if (target_ordinal == ordinal) {
+      target_type = member.GetType();
+      member_name = member.name();
+      break;
+    }
+  }
+  if (target_type == nullptr) {
+    // Need to figure out what to do with this...
+    member_name = "unknown$";
+    member_name.append(std::to_string(ordinal));
+  }
+
+  EnvelopeType type(target_type.release());
+  ValueGeneratingCallback value_callback;
+  marker =
+      type.GetValueCallback(marker, type.InlineSize(), tracker, value_callback);
+  callback = [member_name, value_callback = std::move(value_callback)](
+                 ObjectTracker* tracker, Marker& marker,
+                 rapidjson::Value& value,
+                 rapidjson::Document::AllocatorType& allocator) mutable {
+    value.SetObject();
+    tracker->ObjectEnqueue(member_name, std::move(value_callback), value,
+                           allocator);
+    return true;
+  };
+
+  return marker;
+}
+
+size_t XUnionType::InlineSize() const { return xunion_.size(); }
 
 PointerType::PointerType(Type* target_type, bool keep_null)
     : target_type_(target_type), keep_null_(keep_null) {}

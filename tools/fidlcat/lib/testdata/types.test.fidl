@@ -42,6 +42,11 @@ protocol this_is_an_interface {
     NullableUnionIntFirst(int32 i, int_struct_union? isu);
     ShortUnion(u8_u16_union u, int32 i);
 
+    XUnion(int_struct_xunion isu, int32 i);
+    NullableXUnion(int_struct_xunion? isu, int32 i);
+    NullableXUnionIntFirst(int32 i, int_struct_xunion? isu);
+    ShortXUnion(u8_u16_xunion u, int32 i);
+
     Table(value_table table, int32 i);
 };
 
@@ -88,6 +93,16 @@ union int_struct_union {
 };
 
 union u8_u16_union {
+    uint8 variant_u8;
+    uint16 variant_u16;
+};
+
+xunion int_struct_xunion {
+    int32 variant_i;
+    two_string_struct variant_tss;
+};
+
+xunion u8_u16_xunion {
     uint8 variant_u8;
     uint16 variant_u16;
 };

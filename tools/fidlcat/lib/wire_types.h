@@ -112,9 +112,9 @@ class ObjectTracker {
   // constructor) + the given offset.
   bool RunCallbacksFrom(Marker& marker);
 
-  void MessageEnqueue(
-      ValueGeneratingCallback&& callback, rapidjson::Value& target_object,
-      rapidjson::Document::AllocatorType& allocator);
+  void MessageEnqueue(ValueGeneratingCallback&& callback,
+                      rapidjson::Value& target_object,
+                      rapidjson::Document::AllocatorType& allocator);
 
   // Enqueues a callback to be executed when running RunCallbacksFrom.
   // |key| is the JSON key it will construct.
@@ -375,6 +375,21 @@ class UnionType : public Type {
 
  private:
   const Union& union_;
+};
+
+class XUnionType : public Type {
+ public:
+  XUnionType(const XUnion& uni, bool is_nullable);
+
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+
+  virtual size_t InlineSize() const override;
+
+ private:
+  const XUnion& xunion_;
+  const bool is_nullable_;
 };
 
 // A type that can be used to express that this is a pointer to an instance of

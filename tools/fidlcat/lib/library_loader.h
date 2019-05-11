@@ -59,6 +59,7 @@ class Enum;
 class Struct;
 class Table;
 class Union;
+class XUnion;
 
 class Enum {
  public:
@@ -88,7 +89,7 @@ class Enum {
   const rapidjson::Value& value_;
 };
 
-// TODO: Consider whether this is duplicative of Struct / Table / XUnion member.
+// TODO: Consider whether this is duplicative of Struct / Table member.
 class UnionMember {
  public:
   UnionMember(const Union& enclosing_union, const rapidjson::Value& value)
@@ -109,6 +110,16 @@ class UnionMember {
   }
 
   virtual const Union& enclosing_union() const { return enclosing_union_; }
+
+  // Only valid for xunions.  TODO: clean this up when unions go away - at that
+  // point, there is no value in this method's being optional.
+  std::optional<Ordinal> ordinal() const {
+    if (value_.HasMember("ordinal")) {
+      return std::optional<Ordinal>(
+          std::strtoll(value_["ordinal"].GetString(), nullptr, 10));
+    }
+    return {};
+  }
 
   virtual ~UnionMember() {}
 
@@ -148,13 +159,26 @@ class Union {
     return std::strtoll(value_["size"].GetString(), nullptr, 10);
   }
 
+ protected:
+  const Library& enclosing_library_;
+  const rapidjson::Value& value_;
+
  private:
   const UnionMember& get_illegal_member() const;
 
-  const Library& enclosing_library_;
-  const rapidjson::Value& value_;
   std::vector<UnionMember> members_;
   mutable std::unique_ptr<UnionMember> illegal_;
+};
+
+class XUnion : public Union {
+  friend class Library;
+
+ public:
+  XUnion(const Library& enclosing_library, const rapidjson::Value& value)
+      : Union(enclosing_library, value) {}
+
+  XUnion(const XUnion& other)
+      : XUnion(other.enclosing_library_, other.value_) {}
 };
 
 class StructMember {
@@ -187,7 +211,8 @@ class Struct {
  public:
   Struct(const Library& enclosing_library, const rapidjson::Value& value,
          std::string size_name, std::string member_name)
-      : enclosing_library_(enclosing_library), value_(value),
+      : enclosing_library_(enclosing_library),
+        value_(value),
         size_(std::strtoll(value_[size_name].GetString(), nullptr, 10)) {
     auto member_arr = value[member_name].GetArray();
     members_.reserve(member_arr.Size());
@@ -309,7 +334,8 @@ class InterfaceMethod {
 class Interface {
  public:
   Interface(const Library& library, const rapidjson::Value& value)
-      : value_(value), enclosing_library_(library),
+      : value_(value),
+        enclosing_library_(library),
         name_(value_["name"].GetString()) {
     for (auto& method : value["methods"].GetArray()) {
       interface_methods_.emplace_back(*this, method);
@@ -388,6 +414,7 @@ class Library {
   std::map<std::string, Struct> structs_;
   std::map<std::string, Table> tables_;
   std::map<std::string, Union> unions_;
+  std::map<std::string, XUnion> xunions_;
 };
 
 // An indexed collection of libraries.
