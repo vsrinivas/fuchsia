@@ -280,6 +280,42 @@ template("fidl_library") {
               }
             },
           ]
+
+          # TODO(ZX-3365): During soft transition, export both proper
+          # . names and legacy - names.
+          legacy_dirs += [ "fidl/$fidl_name" ]
+          legacy_targets += [
+            {
+              import = "//build/fidl/fidl.gni"
+              target_type = "fidl"
+              target_name = fidl_name
+
+              # These all become the parameters to fidl().
+              name = fidl_name
+              if (defined(invoker.sdk) && invoker.sdk) {
+                sdk_category = "partner"
+                api = "//sdk/fidl/$fidl_name/$fidl_name.api"
+              }
+              sources = []
+              foreach(file, invoker.sources) {
+                # Make file names source-absolute in the Fuchsia GN.
+                file = rebase_path(file, "$zx/")
+                sources += [ "//zircon/$file" ]
+              }
+              public_deps = []
+              if (defined(invoker.public_deps)) {
+                foreach(label, invoker.public_deps) {
+                  assert(
+                      get_label_info(label, "name") ==
+                          get_path_info(get_label_info(label, "dir"), "name"),
+                      "fidl_library(\"$fidl_target\") deps " +
+                          get_label_info(label, "label_no_toolchain"))
+                  public_deps += [ "//zircon/public/fidl/" +
+                                   get_label_info(label, "name") ]
+                }
+              }
+            },
+          ]
         }
       }
     }

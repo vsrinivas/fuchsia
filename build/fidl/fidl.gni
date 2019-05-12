@@ -45,7 +45,73 @@ template("fidl") {
     not_needed(invoker, [ "api" ])
   }
 
-  if (current_toolchain == dart_toolchain) {
+  # TODO(ZX-3365): Hack for - compat names during soft transition.
+  # Remove whole conditional block when final conversion to . names is done.
+  if (get_label_info("..", "dir") == "//zircon/public/fidl" &&
+      string_replace(target_name, ".", "-") != target_name) {
+    not_needed(invoker, "*")
+    compat_name = string_replace(target_name, ".", "-")
+    if (current_toolchain == dart_toolchain) {
+      foreach(suffix, [ "" ]) {
+        group(target_name + suffix) {
+          forward_variables_from(invoker, [ "testonly" ])
+          public_deps = [
+            "//zircon/public/fidl/$compat_name:$compat_name$suffix",
+          ]
+        }
+      }
+      copy("${target_name}_dot_packages") {
+        forward_variables_from(invoker, [ "testonly" ])
+        deps = [
+          "//zircon/public/fidl/$compat_name:${compat_name}_dot_packages",
+        ]
+        sources = [
+          get_label_info(deps[0], "target_gen_dir") + "/$compat_name.packages",
+        ]
+        outputs = [
+          "$target_gen_dir/$target_name.packages",
+        ]
+      }
+      if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+        import("//build/sdk/sdk_atom_alias.gni")
+        sdk_atom_alias("${target_name}_sdk") {
+          atom = "//zircon/public/fidl/$compat_name:${compat_name}_sdk($fidl_toolchain)"
+        }
+      }
+    } else if (current_toolchain == fidl_toolchain) {
+      copy(target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        deps = [
+          "//zircon/public/fidl/$compat_name:${compat_name}",
+        ]
+        sources = [
+          get_label_info(deps[0], "target_gen_dir") + "/$compat_name.libraries",
+        ]
+        outputs = [
+          "$target_gen_dir/$target_name.libraries",
+        ]
+      }
+    } else {
+      foreach(suffix,
+              [
+                "",
+                "-rustc",
+                "_c",
+                "_c_client",
+                "_c_server",
+                "_llcpp",
+                "_overnet_embedded",
+                "_overnet_internal",
+              ]) {
+        group(target_name + suffix) {
+          forward_variables_from(invoker, [ "testonly" ])
+          public_deps = [
+            "//zircon/public/fidl/$compat_name:$compat_name$suffix",
+          ]
+        }
+      }
+    }
+  } else if (current_toolchain == dart_toolchain) {
     import("//build/dart/fidl_dart.gni")
 
     fidl_dart(target_name) {
