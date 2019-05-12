@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/tracing_test_utils_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

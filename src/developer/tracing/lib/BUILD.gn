@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("lib") {
+  testonly = true
+  deps = [
+    ":tests",
+    "test_utils",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  data_deps = [
+    "test_utils:tracing_test_utils_tests",
+  ]
+}

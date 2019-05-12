@@ -10,6 +10,7 @@ group("developer") {
     "debug",
     "feedback_agent",
     "kernel_crash_checker",
+    "tracing",
   ]
 }
 
@@ -19,5 +20,6 @@ group("tests") {
   data_deps = [
     "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
     "//src/developer/feedback_agent/tests:feedback_agent_tests",
+    "//src/developer/tracing:tests",
   ]
 }

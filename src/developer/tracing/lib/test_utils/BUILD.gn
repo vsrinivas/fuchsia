@@ -1,0 +1,81 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("test_utils") {
+  testonly = true
+
+  sources = [
+    "spawn_and_wait.cc",
+    "spawn_and_wait.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("tracing_test_utils_tests_app") {
+  testonly = true
+  output_name = "tracing_test_utils_tests"
+
+  sources = [
+    "spawn_and_wait_unittest.cc",
+  ]
+
+  deps = [
+    ":test_utils",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+executable("tracing_test_utils_return_1234") {
+  testonly = true
+
+  sources = [
+    "return_1234.cc"
+  ]
+}
+
+executable("tracing_test_utils_signal_peer") {
+  testonly = true
+
+  sources = [
+    "signal_peer.cc"
+  ]
+
+  deps = [
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test_package("tracing_test_utils_tests") {
+  deps = [
+    ":tracing_test_utils_tests_app",
+    ":tracing_test_utils_return_1234",
+    ":tracing_test_utils_signal_peer",
+  ]
+
+  binaries = [
+    {
+      name = "tracing_test_utils_return_1234"
+      dest = "return_1234"
+    },
+    {
+      name = "tracing_test_utils_signal_peer"
+      dest = "signal_peer"
+    },
+  ]
+
+  tests = [
+    {
+      name = "tracing_test_utils_tests"
+      environments = basic_envs
+    },
+  ]
+}
