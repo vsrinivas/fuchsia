@@ -1,10 +1,27 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 library conformance;
 
-struct Empty {};
+struct EmptyStruct {};
+
+struct EmptyStructSandwich {
+    string before;
+    EmptyStruct es;
+    string after;
+};
 
 struct Uint8Uint16Uint32Uint64 {
     uint8 f1;
     uint16 f2;
     uint32 f3;
     uint64 f4;
+};
+
+struct Uint64Uint32Uint16Uint8 {
+    uint64 f1;
+    uint32 f2;
+    uint16 f3;
+    uint8 f4;
 };

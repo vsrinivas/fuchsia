@@ -1,0 +1,403 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("EmptyStruct") {
+	value = EmptyStruct {
+	}
+	bytes = {
+		0x00, // one byte
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+	}
+}
+
+success("EmptyStructSandwich") {
+	value = EmptyStructSandwich {
+		before: "before",
+		es: EmptyStruct {},
+		after: "after",
+	}
+	bytes = {
+		6, 0, 0, 0, 0, 0, 0, 0, // length of "before"
+		255, 255, 255, 255, 255, 255, 255, 255, // "before" is present
+		0,                   // empty struct zero field
+		0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after empty struct, to align to 64 bits
+		5, 0, 0, 0, 0, 0, 0, 0, // length of "after"
+		255, 255, 255, 255, 255, 255, 255, 255, // "after" is present
+		'b', 'e', 'f', 'o', 'r', 'e',
+		0, 0, // 2 bytes of padding after "before", to align to 64 bits
+		'a', 'f', 't', 'e', 'r', // "after" string
+		0, 0, 0, // 3 bytes of padding after "after", to align to 64 bits
+	}
+}
+
+success("Uint8Uint16Uint32Uint64") {
+	value = Uint8Uint16Uint32Uint64 {
+		f1: 0x01,
+		f2: 0x0203,
+		f3: 0x04050607,
+		f4: 0x08090a0b0c0d0e0f,
+	}
+	bytes = {
+		0x01, // f1
+		0x00, // padding
+		0x03, 0x02, // f2
+		0x07, 0x06, 0x05, 0x04, // f3
+		0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, // f4
+	}
+}
+
+success("Uint64Uint32Uint16Uint8") {
+	value = Uint64Uint32Uint16Uint8 {
+		f1: 0x08090a0b0c0d0e0f,
+		f2: 0x04050607,
+		f3: 0x0203,
+		f4: 0x01,
+	}
+	bytes = {
+		0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, // f1
+		0x07, 0x06, 0x05, 0x04, // f2
+		0x03, 0x02, // f3
+		0x01, // f4
+		0x00, // padding
+	}
+}
+
+success("SimpleTableEmpty") {
+	value = StructOfSimpleTable {
+		table: SimpleTable {},
+	}
+	bytes = {
+		0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+	}
+}
+
+success("SimpleTableXAndY") {
+	value = StructOfSimpleTable {
+		table: SimpleTable {
+			x: 42,
+			y: 67,
+		},
+	}
+	bytes = {
+		5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+		0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+		0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+		0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+		0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+		0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+		8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		42, 0, 0, 0, 0, 0, 0, 0, // field X
+		67, 0, 0, 0, 0, 0, 0, 0, // field Y
+	}
+}
+
+success("SimpleTableJustY") {
+	value = StructOfSimpleTable {
+		table: SimpleTable {
+			y: 67,
+		},
+	}
+	bytes = {
+		5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		0, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+		0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+		0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+		0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+		0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+		0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+		0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+		0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+		8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		67, 0, 0, 0, 0, 0, 0, 0, // field Y
+	}
+}
+
+success("TableWithStringAndVectorNoVectorContent") {
+	value = StructOfTableWithStringAndVector {
+		table: TableWithStringAndVector {
+			foo: "hello",
+			bar: 27,
+		},
+	}
+	bytes = {
+		2, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		24, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+		255, 255, 255, 255, 255, 255, 255, 255, // envelope 1: alloc present
+		8, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+		255, 255, 255, 255, 255, 255, 255, 255, // envelope 2: alloc present
+		5, 0, 0, 0, 0, 0, 0, 0, // element 1: length
+		255, 255, 255, 255, 255, 255, 255, 255, // element 1: alloc present
+		104, 101, 108, 108, 111, 0, 0, 0, // element 1: hello
+		27, 0, 0, 0, 0, 0, 0, 0, // element 2: value
+	}
+}
+
+// TODO(FIDL-626): Create test with TableWithStringAndVectorHasVectorContent.
+
+success("SimpleTableThenUint64") {
+	value = SimpleTableThenUint64 {
+		table: SimpleTable {
+			x: 42,
+			y: 67,
+		},
+		number: 0xdeadbeefdeadbeef,
+	}
+	bytes = {
+		5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		0xef, 0xbe, 0xad, 0xde, 0xef, 0xbe, 0xad, 0xde, // uint64 number
+		8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+		0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+		0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+		0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+		0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+		0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+		8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		42, 0, 0, 0, 0, 0, 0, 0, // field X
+		67, 0, 0, 0, 0, 0, 0, 0, // field Y
+	}
+}
+
+success("InlineXunionInStruct") {
+	value = TestInlineXUnionInStruct {
+		before: "before",
+		xu: SampleXUnion {
+			u: 0xdeadbeef,
+		},
+		after: "after",
+	}
+	bytes = {
+		0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
+
+		0xb2, 0x56, 0x9c, 0x38, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
+		0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // envelope data is present
+
+		0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
+
+		// secondary object 1: "before"
+		'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00,
+
+		// secondary object 2: xunion content
+		0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // xunion envelope content (0xdeadbeef) + padding
+
+		// secondary object 3: "after"
+		'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00,
+	}
+}
+
+success("OptionalXunionInStructAbsent") {
+	value = TestOptionalXUnionInStruct {
+		before: "before",
+		// no SampleXUnion
+		after: "after",
+	}
+	bytes = {
+		0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
+
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // envelope data is absent
+
+		0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
+
+		// secondary object 1: "before"
+		'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00,
+
+		// secondary object 2: "after"
+		'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00,
+	}
+}
+
+success("OptionalXunionInStructAbsent") {
+	value = TestOptionalXUnionInStruct {
+		before: "before",
+		xu: SampleXUnion {
+			u: 0xdeadbeef,
+		},
+		after: "after",
+	}
+	bytes = {
+		0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
+
+		0xb2, 0x56, 0x9c, 0x38, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
+		0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // envelope data is present
+
+		0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" presence
+
+		// secondary object 1: "before"
+		'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00,
+
+		// secondary object 2: xunion content
+		0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // xunion envelope content (0xdeadbeef) + padding
+
+		// secondary object 3: "after"
+		'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00,
+	}
+}
+
+success("XunionInTableXunionAbsent") {
+	value = TestXUnionInTable {
+		value: XUnionInTable {
+			before: "before",
+			// no SampleXUnion
+			after: "after",
+		},
+	}
+	bytes = {
+		// primary object
+		0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // vector<envelope> element count
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // vector<envelope> present
+
+		// secondary object 1: vector data
+		// vector[0]: envelope<string before>
+		0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" is present
+		// vector[1]: envelope<SampleXUnion xu>
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion is absent
+		// vector[2]: envelope<string after>
+		0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" is present
+
+		// secondary object 2: "before" length + pointer
+		0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" present
+
+		// secondary object 3: "before"
+		'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00, // "before"
+
+		// secondary object 4: "after" length + pointer
+		0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" present
+
+		// secondary object 5: "before"
+		'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00, // "after"
+	}
+}
+
+success("XunionInTableXunionPresent") {
+	value = TestXUnionInTable {
+		value: XUnionInTable {
+			before: "before",
+			xu: SampleXUnion {
+				u: 0xdeadbeef,
+			},
+			after: "after",
+		},
+	}
+	bytes = {
+		// primary object
+		0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // vector<envelope> element count
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // vector<envelope> present
+
+		// secondary object 1: vector data
+		// vector[0]: envelope<string before>
+		0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" is present
+		// vector[1]: envelope<SampleXUnion xu>
+		0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // xunion is present
+		// vector[2]: envelope<string after>
+		0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" is present
+
+		// secondary object 2: "before" length + pointer
+		0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" present
+
+		// secondary object 3: "before"
+		'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00, // "before"
+
+		// secondary object 4: xunion
+		0xb2, 0x56, 0x9c, 0x38, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
+		0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // envelope data is present
+
+		// secondary object 5: xunion content
+		0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // 0xdeadbeef + padding
+
+		// secondary object 6: "after" length + pointer
+		0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" present
+
+		// secondary object 7: "before"
+		'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00, // "after"
+	}
+}
+
+success("AddEthernetDeviceRequest") {
+	value = TestAddEthernetDeviceRequest {
+		topological_path: "@/dev/sys/pci/00:03.0/e1000/ethernet",
+		config: InterfaceConfig {
+			name: "ethp0003",
+			ip_address_config: IpAddressConfig {
+				dhcp: true,
+			},
+		},
+		// TODO(FIDL-625): This should be a handle.
+		this_should_be_a_handle: 0xffffffff,
+	}
+	bytes = {
+		0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // topological_path
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // topological_path
+		0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // name
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // name
+		0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // subnet (dhcp variant)
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+		0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, // device (handle present)
+		0x40, 0x2f, 0x64, 0x65, 0x76, 0x2f, 0x73, 0x79, // @/dev/sy
+		0x73, 0x2f, 0x70, 0x63, 0x69, 0x2f, 0x30, 0x30, // s/pci/00
+		0x3a, 0x30, 0x33, 0x2e, 0x30, 0x2f, 0x65, 0x31, // :03.0/e1
+		0x30, 0x30, 0x30, 0x2f, 0x65, 0x74, 0x68, 0x65, // 000/ethe
+		0x72, 0x6e, 0x65, 0x74, 0x00, 0x00, 0x00, 0x00, // rnet
+		0x65, 0x74, 0x68, 0x70, 0x30, 0x30, 0x30, 0x33, // ethp0003
+	}
+}
+
+success("FileGetAttrResponse") {
+	value = FileGetAttrResponse {
+		s: 0x7eadbeaf,
+		attributes: NodeAttributes {
+			mode: 0x962381a4,
+			id: 1,
+			content_size: 231,
+			storage_size: 231,
+			link_count: 1,
+			creation_time: 0x8877665544332211,
+			modification_time: 0x00ffeeddccbbaa99,
+		},
+	}
+	bytes = {
+		0xaf, 0xbe, 0xad, 0x7e, 0x00, 0x00, 0x00, 0x00,
+		0xa4, 0x81, 0x23, 0x96, 0x00, 0x00, 0x00, 0x00,
+		1, 0, 0, 0, 0, 0, 0, 0,
+		231, 0, 0, 0, 0, 0, 0, 0,
+		231, 0, 0, 0, 0, 0, 0, 0,
+		1, 0, 0, 0, 0, 0, 0, 0,
+		0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+		0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00,
+	}
+}

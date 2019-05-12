@@ -1,0 +1,32 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library conformance;
+
+table SimpleTable {
+    1: int64 x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: int64 y;
+};
+
+struct StructOfSimpleTable {
+    SimpleTable table;
+};
+
+struct SimpleTableThenUint64 {
+    SimpleTable table;
+    uint64 number;
+};
+
+table TableWithStringAndVector {
+    1: string foo;
+    2: int32 bar;
+    3: vector<uint8> baz;
+};
+
+struct StructOfTableWithStringAndVector {
+    TableWithStringAndVector table;
+};

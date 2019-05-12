@@ -41,6 +41,7 @@ type ValueVisitor interface {
 	OnStruct(value gidlir.Object, decl *StructDecl)
 	OnTable(value gidlir.Object, decl *TableDecl)
 	OnXUnion(value gidlir.Object, decl *XUnionDecl)
+	OnUnion(value gidlir.Object, decl *UnionDecl)
 }
 
 // Visit is the entry point into visiting a value, it dispatches appropriately
@@ -63,6 +64,8 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 			visitor.OnTable(value, decl)
 		case *XUnionDecl:
 			visitor.OnXUnion(value, decl)
+		case *UnionDecl:
+			visitor.OnUnion(value, decl)
 		default:
 			panic(fmt.Sprintf("not implemented: %T", decl))
 		}
@@ -150,7 +153,7 @@ func (decl *numberDecl) conforms(value interface{}) error {
 
 type stringDecl struct {
 	hasNoKey
-	bound int
+	bound *int
 }
 
 func (decl *stringDecl) conforms(value interface{}) error {
@@ -158,10 +161,13 @@ func (decl *stringDecl) conforms(value interface{}) error {
 	default:
 		return fmt.Errorf("expecting string, found %T (%s)", value, value)
 	case string:
-		if decl.bound < len(value) {
+		if decl.bound == nil {
+			return nil
+		}
+		if bound := *decl.bound; bound < len(value) {
 			return fmt.Errorf(
 				"string '%s' is over bounds, expecting %d but was %d", value,
-				decl.bound, len(value))
+				bound, len(value))
 		}
 		return nil
 	}
@@ -181,6 +187,17 @@ func (decl *StructDecl) ForKey(key string) (Declaration, bool) {
 		}
 	}
 	return nil, false
+}
+
+// IsKeyNullable indicates whether this key is optional, i.e. whether it
+// represents an optional field.
+func (decl *StructDecl) IsKeyNullable(key string) bool {
+	for _, member := range decl.Members {
+		if string(member.Name) == key {
+			return member.Type.Nullable
+		}
+	}
+	return false
 }
 
 func (decl *StructDecl) conforms(value interface{}) error {
@@ -266,6 +283,41 @@ func (decl XUnionDecl) conforms(untypedValue interface{}) error {
 	}
 }
 
+// UnionDecl describes a xunion declaration.
+type UnionDecl struct {
+	fidlir.Union
+	schema schema
+}
+
+// ForKey retrieves a declaration for a key.
+func (decl UnionDecl) ForKey(key string) (Declaration, bool) {
+	for _, member := range decl.Members {
+		if string(member.Name) == key {
+			return decl.schema.LookupDeclByType(member.Type)
+		}
+	}
+	return nil, false
+}
+
+func (decl UnionDecl) conforms(untypedValue interface{}) error {
+	switch value := untypedValue.(type) {
+	default:
+		return fmt.Errorf("expecting object, found %T (%v)", untypedValue, untypedValue)
+	case gidlir.Object:
+		if num := len(value.Fields); num != 1 {
+			return fmt.Errorf("must have one field, found %d", num)
+		}
+		for key, field := range value.Fields {
+			if fieldDecl, ok := decl.ForKey(key); !ok {
+				return fmt.Errorf("field %s: unknown", key)
+			} else if err := fieldDecl.conforms(field); err != nil {
+				return fmt.Errorf("field %s: %s", key, err)
+			}
+		}
+		return nil
+	}
+}
+
 type schema fidlir.Root
 
 // LookupDeclByName looks up a message declaration by name.
@@ -294,6 +346,14 @@ func (s schema) LookupDeclByName(name string) (Declaration, bool) {
 			}, true
 		}
 	}
+	for _, decl := range s.Unions {
+		if decl.Name == s.name(name) {
+			return &UnionDecl{
+				Union:  decl,
+				schema: s,
+			}, true
+		}
+	}
 	// TODO(pascallouis): add support missing declarations (e.g. xunions)
 	return nil, false
 }
@@ -303,7 +363,7 @@ func (s schema) LookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 	switch typ.Kind {
 	case fidlir.StringType:
 		return &stringDecl{
-			bound: *typ.ElementCount,
+			bound: typ.ElementCount,
 		}, true
 	case fidlir.PrimitiveType:
 		switch typ.PrimitiveSubtype {

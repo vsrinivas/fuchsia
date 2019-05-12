@@ -135,6 +135,9 @@ func (b *goValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDec
 		fieldDecl, _ := decl.ForKey(key)
 		gidlmixer.Visit(b, field, fieldDecl)
 		fieldVar := b.lastVar
+		if decl.IsKeyNullable(key) {
+			fieldVar = "&" + fieldVar
+		}
 		b.Builder.WriteString(fmt.Sprintf(
 			"%s.%s = %s\n", containerVar, fidlcommon.ToUpperCamelCase(key), fieldVar))
 	}
@@ -156,6 +159,20 @@ func (b *goValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl)
 }
 
 func (b *goValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnionDecl) {
+	containerVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"var %s conformance.%s\n", containerVar, value.Name))
+	for key, field := range value.Fields {
+		fieldDecl, _ := decl.ForKey(key)
+		gidlmixer.Visit(b, field, fieldDecl)
+		fieldVar := b.lastVar
+		b.Builder.WriteString(fmt.Sprintf(
+			"%s.Set%s(%s)\n", containerVar, fidlcommon.ToUpperCamelCase(key), fieldVar))
+	}
+	b.lastVar = containerVar
+}
+
+func (b *goValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
 	containerVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
 		"var %s conformance.%s\n", containerVar, value.Name))

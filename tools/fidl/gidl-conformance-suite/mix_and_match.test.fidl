@@ -1,0 +1,51 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library conformance;
+
+using zx;
+
+table XUnionInTable {
+    1: string before;
+    2: SampleXUnion xu;
+    3: string after;
+};
+
+struct TestXUnionInTable {
+    XUnionInTable value;
+};
+
+protocol EthernetDevice {};
+
+union IpAddressConfig {
+    array<uint32>:6 padding_size_24_align_4;
+    bool dhcp;
+};
+
+struct InterfaceConfig {
+    string name;
+    IpAddressConfig ip_address_config;
+};
+
+struct TestAddEthernetDeviceRequest {
+    string topological_path;
+    InterfaceConfig config;
+    // TODO(FIDL-625): Use 'EthernetDevice device;' instead.
+    uint32 this_should_be_a_handle;
+};
+
+struct NodeAttributes {
+    uint32 mode;
+    uint64 id;
+    uint64 content_size;
+    uint64 storage_size;
+    uint64 link_count;
+    uint64 creation_time;
+    uint64 modification_time;
+};
+
+struct FileGetAttrResponse {
+    zx.status s;
+    NodeAttributes attributes;
+};

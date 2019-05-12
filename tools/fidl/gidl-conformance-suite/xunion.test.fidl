@@ -1,0 +1,37 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library conformance;
+
+// TODO(FIDL-622): Do not rely on unions in xunion conformance tests.
+
+struct Int64Struct {
+    int64 x;
+};
+
+union SimpleUnion {
+    int32 i32;
+    int64 i64;
+    Int64Struct s;
+    Int64Struct? os;
+    string str;
+};
+
+xunion SampleXUnion {
+    uint32 u;
+    SimpleUnion su;
+    SimpleTable st;
+};
+
+struct TestInlineXUnionInStruct {
+    string before;
+    SampleXUnion xu;
+    string after;
+};
+
+struct TestOptionalXUnionInStruct {
+    string before;
+    SampleXUnion? xu;
+    string after;
+};
