@@ -49,6 +49,9 @@ fbl::RefPtr<fs::Service> CreateArgumentsService(async_dispatcher_t* dispatcher, 
 fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
                                             ItemMap map);
 
+// Create a service to provide the root job.
+fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher);
+
 // Create a service to provide the root resource.
 fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher);
 

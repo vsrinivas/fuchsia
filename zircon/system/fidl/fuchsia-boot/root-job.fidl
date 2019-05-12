@@ -1,0 +1,14 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.boot;
+
+/// Protocol for providing the root job.
+///
+/// TODO(ZX-4072): Do not use this without first consulting the Zircon team.
+[Discoverable, Layout = "Simple"]
+protocol RootJob {
+    /// Get the root |job|.
+    Get() -> (handle<job> job);
+};

@@ -6,6 +6,7 @@
 
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/fidl-async/bind.h>
+#include <lib/zx/job.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -80,6 +81,20 @@ zx_status_t RootResourceGet(void* ctx, fidl_txn_t* txn) {
     return fuchsia_boot_RootResourceGet_reply(txn, resource.release());
 }
 
+zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
+    zx::job dup;
+    zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+    if (status != ZX_OK) {
+        printf("bootsvc: Failed to duplicate root job: %s\n", zx_status_get_string(status));
+        return status;
+    }
+    return fuchsia_boot_RootJobGet_reply(txn, dup.release());
+}
+
+constexpr fuchsia_boot_RootJob_ops kRootJobOps = {
+    .Get = RootJobGet,
+};
+
 constexpr fuchsia_boot_RootResource_ops kRootResourceOps = {
     .Get = RootResourceGet,
 };
@@ -121,6 +136,13 @@ fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::
             auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
             return fidl_bind(dispatcher, channel.release(), dispatch, &data, &kItemsOps);
         });
+}
+
+fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher) {
+    return fbl::MakeRefCounted<fs::Service>([dispatcher](zx::channel channel) {
+        auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootJob_dispatch);
+        return fidl_bind(dispatcher, channel.release(), dispatch, nullptr, &kRootJobOps);
+    });
 }
 
 fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher) {

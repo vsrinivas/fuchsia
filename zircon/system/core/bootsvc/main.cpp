@@ -246,6 +246,8 @@ int main(int argc, char** argv) {
     svcfs_svc->AddService(fuchsia_boot_Items_Name,
                           bootsvc::CreateItemsService(loop.dispatcher(), std::move(image_vmo),
                                                       std::move(item_map)));
+    svcfs_svc->AddService(fuchsia_boot_RootJob_Name,
+                          bootsvc::CreateRootJobService(loop.dispatcher()));
     svcfs_svc->AddService(fuchsia_boot_RootResource_Name,
                           bootsvc::CreateRootResourceService(loop.dispatcher()));
 

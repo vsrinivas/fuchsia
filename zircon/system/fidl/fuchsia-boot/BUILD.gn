@@ -8,6 +8,7 @@ fidl_library("fuchsia-boot") {
   sources = [
     "arguments.fidl",
     "items.fidl",
+    "root-job.fidl",
     "root-resource.fidl",
   ]
 }

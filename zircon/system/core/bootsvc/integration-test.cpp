@@ -42,6 +42,7 @@ namespace {
 
 constexpr char kArgumentsPath[] = "/bootsvc/" fuchsia_boot_Arguments_Name;
 constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
+constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
 constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
 
 // Make sure the loader works
@@ -166,6 +167,27 @@ bool TestBootItems() {
     END_TEST;
 }
 
+// Make sure the fuchsia.boot.RootJob service works
+bool TestBootRootJob() {
+    BEGIN_TEST;
+
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    ASSERT_EQ(ZX_OK, status);
+
+    // Check that we can open the fuchsia.boot.RootJob service.
+    status = fdio_service_connect(kRootJobPath, remote.release());
+    ASSERT_EQ(ZX_OK, status);
+
+    // Check that we received a job from the service.
+    zx::job root_job;
+    status = fuchsia_boot_RootJobGet(local.get(), root_job.reset_and_get_address());
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_TRUE(root_job.is_valid());
+
+    END_TEST;
+}
+
 // Make sure the fuchsia.boot.RootResource service works
 bool TestBootRootResource() {
     BEGIN_TEST;
@@ -222,6 +244,7 @@ RUN_TEST(TestNamespace)
 RUN_TEST(TestArguments)
 RUN_TEST(TestBootArguments)
 RUN_TEST(TestBootItems)
+RUN_TEST(TestBootRootJob)
 RUN_TEST(TestBootRootResource)
 RUN_TEST(TestVdsosPresent)
 END_TEST_CASE(bootsvc_integration_tests)
