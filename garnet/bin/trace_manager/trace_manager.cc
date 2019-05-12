@@ -5,7 +5,6 @@
 #include "garnet/bin/trace_manager/trace_manager.h"
 
 #include <lib/zx/time.h>
-#include <src/lib/fxl/log_settings_command_line.h>
 
 #include <algorithm>
 #include <iostream>
@@ -200,26 +199,19 @@ void TraceManager::LaunchConfiguredProviders() {
     // TODO(jeffbrown): Only do this if the provider isn't already running.
     // Also keep track of the provider so we can kill it when the trace
     // manager exits or restart it if needed.
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = pair.second->url;
-    fidl::Clone(pair.second->arguments, &launch_info.arguments);
-
-    // Transfer our log settings to the provider.
-    for (auto arg : fxl::LogSettingsToArgv(fxl::GetLogSettings())) {
-      launch_info.arguments.push_back(arg);
-    }
-
     FXL_VLOG(1) << "Starting configured provider: " << pair.first;
     FXL_VLOG(2) << "URL: " << pair.second->url;
     if (FXL_VLOG_IS_ON(2)) {
       std::string args;
-      for (const auto& arg : *launch_info.arguments) {
+      for (const auto& arg : *pair.second->arguments) {
         args += " ";
         args += arg;
       }
       FXL_VLOG(2) << "Args:" << args;
     }
-
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = pair.second->url;
+    fidl::Clone(pair.second->arguments, &launch_info.arguments);
     launcher->CreateComponent(std::move(launch_info), nullptr);
   }
 }

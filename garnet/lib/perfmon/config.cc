@@ -74,29 +74,22 @@ std::string Config::ToString() {
 
 static void ToIoctlEvent(const Config::EventConfig& event, size_t index,
                          perfmon_ioctl_config_t* out_config) {
-  perfmon_ioctl_event_config_t& out_event = out_config->events[index];
-  out_event.event = event.event;
-  out_event.rate = event.rate;
+  out_config->events[index].event = event.event;
+  out_config->events[index].rate = event.rate;
   if (event.flags & Config::kFlagOs) {
-    out_event.flags |= PERFMON_CONFIG_FLAG_OS;
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_OS;
   }
   if (event.flags & Config::kFlagUser) {
-    out_event.flags |= PERFMON_CONFIG_FLAG_USER;
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_USER;
   }
   if (event.flags & Config::kFlagPc) {
-    out_event.flags |= PERFMON_CONFIG_FLAG_PC;
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_PC;
   }
   if (event.flags & Config::kFlagTimebase) {
-    out_event.flags |= PERFMON_CONFIG_FLAG_TIMEBASE;
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_TIMEBASE;
   }
   if (event.flags & Config::kFlagLastBranch) {
-    out_event.flags |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
-  }
-
-  if (FXL_VLOG_IS_ON(3)) {
-    FXL_VLOG(3) << fxl::StringPrintf(
-        "Converted event: 0x%x, rate %u, flags 0x%x", out_event.event,
-        out_event.rate, out_event.flags);
+    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
   }
 }
 
