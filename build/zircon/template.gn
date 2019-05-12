@@ -9,10 +9,11 @@
 import("//build/config/fuchsia/zircon.gni")
 
 dir = get_label_info(".", "name")
+zircon_public = get_label_info("..", "name")
 
 dir_target = false
 foreach(target, zircon_legacy_targets) {
-  if (target.target_name == dir) {
+  if (target.target_name == dir && target._zircon_public == zircon_public) {
     assert(dir_target == false,
            "$dir appears twice in Zircon legacy_targets metadata:" +
                " $dir_target vs $target")

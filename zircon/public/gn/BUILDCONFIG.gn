@@ -413,6 +413,7 @@ template("library") {
       legacy_targets = [
         {
           _label = get_label_info(":$_library_name", "label_with_toolchain")
+          _zircon_public = "lib"
           forward_variables_from(invoker, [ "testonly" ])
           import = "//build/zircon/zircon_library.gni"
           target_type = "zircon_library"
@@ -1458,6 +1459,8 @@ template("host_tool") {
         legacy_dirs = [ "tool/$target_name" ]
         legacy_targets = [
           {
+            _label = get_label_info(":$target_name", "label_with_toolchain")
+            _zircon_public = "tool"
             import = "//build/zircon/zircon_host_tool.gni"
             target_type = "zircon_host_tool"
             target_name = target_name

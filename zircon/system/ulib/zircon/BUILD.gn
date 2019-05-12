@@ -173,6 +173,8 @@ if (toolchain.environment != "user") {
       legacy_barrier = []
       legacy_targets = [
         {
+          _label = get_label_info(":$target_name", "label_with_toolchain")
+          _zircon_public = "lib"
           target_name = "zircon"
           libs = []
           libs = [ rebase_path(link_file, root_build_dir) ]

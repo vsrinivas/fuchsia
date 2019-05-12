@@ -142,6 +142,8 @@ template("banjo_library") {
         legacy_dirs = [ "banjo/$banjo_target" ]
         legacy_targets = [
           {
+            _label = get_label_info(":$target_name", "label_with_toolchain")
+            _zircon_public = "banjo"
             import = "//build/banjo/banjo.gni"
             target_name = banjo_target
             target_type = target_type
