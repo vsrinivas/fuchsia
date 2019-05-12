@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_CALLBACK_TREE_VISITOR_H_
-#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_CALLBACK_TREE_VISITOR_H_
+#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTING_TREE_CALLBACKS_H_
+#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTING_TREE_CALLBACKS_H_
 
 #include <vector>
 
@@ -40,6 +40,9 @@ public:
     void OnBitsDeclaration(fit::function<void(const raw::BitsDeclaration&)> callback) {
         bits_declaration_callbacks_.push_back(std::move(callback));
     }
+    void OnBitsMember(fit::function<void(const raw::BitsMember&)> callback) {
+        bits_member_callbacks_.push_back(std::move(callback));
+    }
     void OnConstDeclaration(fit::function<void(const raw::ConstDeclaration&)> callback) {
         const_declaration_callbacks_.push_back(std::move(callback));
     }
@@ -51,6 +54,15 @@ public:
     }
     void OnInterfaceDeclaration(fit::function<void(const raw::InterfaceDeclaration&)> callback) {
         interface_declaration_callbacks_.push_back(std::move(callback));
+    }
+    void OnMethod(fit::function<void(const raw::InterfaceMethod&)> callback) {
+        method_callbacks_.push_back(std::move(callback));
+    }
+    void OnEvent(fit::function<void(const raw::InterfaceMethod&)> callback) {
+        event_callbacks_.push_back(std::move(callback));
+    }
+    void OnParameter(fit::function<void(const raw::Parameter&)> callback) {
+        parameter_callbacks_.push_back(std::move(callback));
     }
     void OnStructMember(fit::function<void(const raw::StructMember&)> callback) {
         struct_member_callbacks_.push_back(std::move(callback));
@@ -93,10 +105,14 @@ private:
     std::vector<fit::function<void(const raw::File&)>> file_callbacks_;
     std::vector<fit::function<void(const raw::Using&)>> using_callbacks_;
     std::vector<fit::function<void(const raw::BitsDeclaration&)>> bits_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::BitsMember&)>> bits_member_callbacks_;
     std::vector<fit::function<void(const raw::ConstDeclaration&)>> const_declaration_callbacks_;
     std::vector<fit::function<void(const raw::EnumDeclaration&)>> enum_declaration_callbacks_;
     std::vector<fit::function<void(const raw::EnumMember&)>> enum_member_callbacks_;
     std::vector<fit::function<void(const raw::InterfaceDeclaration&)>> interface_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::InterfaceMethod&)>> method_callbacks_;
+    std::vector<fit::function<void(const raw::InterfaceMethod&)>> event_callbacks_;
+    std::vector<fit::function<void(const raw::Parameter&)>> parameter_callbacks_;
     std::vector<fit::function<void(const raw::StructMember&)>> struct_member_callbacks_;
     std::vector<fit::function<void(const raw::StructDeclaration&)>> struct_declaration_callbacks_;
     std::vector<fit::function<void(const raw::TableMember&)>> table_member_callbacks_;
@@ -110,4 +126,4 @@ private:
 } // namespace linter
 } // namespace fidl
 
-#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_CALLBACK_TREE_VISITOR_H_
+#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTING_TREE_CALLBACKS_H_

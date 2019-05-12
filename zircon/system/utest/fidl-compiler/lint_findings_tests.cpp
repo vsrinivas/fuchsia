@@ -131,24 +131,11 @@ private:
     Substitutions substitutions_;
 };
 
-bool invalid_case_for_constant_checking_bitfield_member_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Implement the check, then
-    // UNCOMMENT BITFIELD CONSTANT CHECK TESTS IN:
-    //   invalid_case_for_constant()
-    // And remove this test function.
-
-    END_TEST;
-}
-
 bool invalid_case_for_constant() {
     BEGIN_TEST;
 
     std::map<std::string, std::string> named_templates = {
-        {"Constants", R"FIDL(
+        {"constants", R"FIDL(
 library fidl.a;
 
 const uint64 ${TEST} = 1234;
@@ -160,13 +147,13 @@ enum Int8Enum : int8 {
     ${TEST} = -1;
 };
 )FIDL"},
-        //         {"Bitfield members", R"FIDL(  // CHECK NOT YET IMPLEMENTED!
-        // library fidl.a;
+        {"bitfield members", R"FIDL(
+library fidl.a;
 
-        // bits Uint32Bitfield : uint32 {
-        //   ${TEST} = 0x00000004;
-        // };
-        // )FIDL"},
+bits Uint32Bitfield : uint32 {
+  ${TEST} = 0x00000004;
+};
+)FIDL"},
     };
 
     for (auto const& named_template : named_templates) {
@@ -196,47 +183,61 @@ bool invalid_case_for_decl_name() {
     BEGIN_TEST;
 
     std::map<std::string, std::string> named_templates = {
-        {"Protocols", R"FIDL(
+        {"protocols", R"FIDL(
 library fidl.a;
 
 protocol ${TEST} {};
 )FIDL"},
-        {"Enums", R"FIDL(
+        {"methods", R"FIDL(
+library fidl.a;
+
+protocol TestProtocol {
+  ${TEST}();
+};
+)FIDL"},
+        {"events", R"FIDL(
+library fidl.a;
+
+protocol TestProtocol {
+  -> ${TEST}();
+};
+)FIDL"},
+        {"enums", R"FIDL(
 library fidl.a;
 
 enum ${TEST} : int8 {
     SOME_CONST = -1;
 };
 )FIDL"},
-        {"Bitfields", R"FIDL(
+        {"bitfields", R"FIDL(
 library fidl.a;
 
 bits ${TEST} : uint32 {
   SOME_BIT = 0x00000004;
 };
 )FIDL"},
-        {"Structs", R"FIDL(
+        {"structs", R"FIDL(
 library fidl.a;
 
 struct ${TEST} {
     string decl_member;
 };
 )FIDL"},
-        {"Tables", R"FIDL(
+        {"tables", R"FIDL(
 library fidl.a;
 
 table ${TEST} {
     1: string decl_member;
 };
 )FIDL"},
-        {"Unions", R"FIDL(
+        {"unions", R"FIDL(
 library fidl.a;
 
 union ${TEST} {
     string decl_member;
 };
 )FIDL"},
-        {"XUnions", R"FIDL(
+        {"xunions", R"FIDL(
 library fidl.a;
 
 xunion ${TEST} {
@@ -263,56 +264,39 @@ xunion ${TEST} {
     END_TEST;
 }
 
-bool invalid_case_for_decl_member_checking_method_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Implement the check and then add test templates to
-    //   invalid_case_for_decl_member()
-    // And remove this test function.
-
-    END_TEST;
-}
-
-bool invalid_case_for_decl_member_checking_parameter_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Implement the check and then add test templates to
-    //   invalid_case_for_decl_member()
-    // And remove this test function.
-
-    END_TEST;
-}
-
 bool invalid_case_for_decl_member() {
     BEGIN_TEST;
 
     std::map<std::string, std::string> named_templates = {
-        {"struct", R"FIDL(
+        {"parameters", R"FIDL(
+library fidl.a;
+
+protocol TestProtocol {
+    TestMethod(string ${TEST});
+};
+)FIDL"},
+        {"struct members", R"FIDL(
 library fidl.a;
 
 struct DeclName {
     string ${TEST};
 };
 )FIDL"},
-        {"table", R"FIDL(
+        {"table members", R"FIDL(
 library fidl.a;
 
 table DeclName {
     1: string ${TEST};
 };
 )FIDL"},
-        {"union", R"FIDL(
+        {"union members", R"FIDL(
 library fidl.a;
 
 union DeclName {
     string ${TEST};
 };
 )FIDL"},
-        {"xunion", R"FIDL(
+        {"xunion members", R"FIDL(
 library fidl.a;
 
 xunion DeclName {
@@ -324,7 +308,7 @@ xunion DeclName {
     for (auto const& named_template : named_templates) {
         LintTest test;
         test.check_id("invalid-case-for-decl-member")
-            .message(named_template.first + " members must be named in lower_snake_case")
+            .message(named_template.first + " must be named in lower_snake_case")
             .source_template(named_template.second);
 
         test.substitute("TEST", "agent_request_count");
@@ -1934,10 +1918,7 @@ RUN_TEST(inconsistent_type_for_recurring_library_concept_please_implement_me)
 RUN_TEST(incorrect_line_indent_please_implement_me)
 RUN_TEST(incorrect_spacing_between_declarations_please_implement_me)
 RUN_TEST(invalid_case_for_constant)
-RUN_TEST(invalid_case_for_constant_checking_bitfield_member_please_implement_me) // TO MERGE
 RUN_TEST(invalid_case_for_decl_member)
-RUN_TEST(invalid_case_for_decl_member_checking_method_please_implement_me)    // TO MERGE
-RUN_TEST(invalid_case_for_decl_member_checking_parameter_please_implement_me) // TO MERGE
 RUN_TEST(invalid_case_for_decl_name)
 RUN_TEST(invalid_case_for_primitive_alias)
 RUN_TEST(invalid_copyright_for_platform_source_library_please_implement_me)

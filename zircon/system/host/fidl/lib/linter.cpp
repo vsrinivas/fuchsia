@@ -194,7 +194,7 @@ Linter::Linter()
         //
         (const raw::Using& element) {
             if (element.maybe_alias != nullptr) {
-                CHECK_CASE("Primitive alias", lower_snake, element.maybe_alias)
+                CHECK_CASE("primitive alias", lower_snake, element.maybe_alias)
             }
         });
 
@@ -207,7 +207,7 @@ Linter::Linter()
          check = invalid_case_for_constant]
         //
         (const raw::ConstDeclaration& element) {
-            CHECK_CASE("Constants", upper_snake, element.identifier)
+            CHECK_CASE("constants", upper_snake, element.identifier)
         });
 
     callbacks_.OnEnumMember(
@@ -216,6 +216,14 @@ Linter::Linter()
         //
         (const raw::EnumMember& element) {
             CHECK_CASE("enum members", upper_snake, element.identifier)
+        });
+
+    callbacks_.OnBitsMember(
+        [& linter = *this,
+         check = invalid_case_for_constant]
+        //
+        (const raw::BitsMember& element) {
+            CHECK_CASE("bitfield members", upper_snake, element.identifier)
         });
 
     auto& invalid_case_for_decl_name = DefineCheck(
@@ -227,7 +235,23 @@ Linter::Linter()
          check = invalid_case_for_decl_name]
         //
         (const raw::InterfaceDeclaration& element) {
-            CHECK_CASE("Protocols", upper_camel, element.identifier)
+            CHECK_CASE("protocols", upper_camel, element.identifier)
+        });
+
+    callbacks_.OnMethod(
+        [& linter = *this,
+         check = invalid_case_for_decl_name]
+        //
+        (const raw::InterfaceMethod& element) {
+            CHECK_CASE("methods", upper_camel, element.identifier)
+        });
+
+    callbacks_.OnEvent(
+        [& linter = *this,
+         check = invalid_case_for_decl_name]
+        //
+        (const raw::InterfaceMethod& element) {
+            CHECK_CASE("events", upper_camel, element.identifier)
         });
 
     callbacks_.OnEnumDeclaration(
@@ -235,7 +259,7 @@ Linter::Linter()
          check = invalid_case_for_decl_name]
         //
         (const raw::EnumDeclaration& element) {
-            CHECK_CASE("Enums", upper_camel, element.identifier)
+            CHECK_CASE("enums", upper_camel, element.identifier)
         });
 
     callbacks_.OnBitsDeclaration(
@@ -243,7 +267,7 @@ Linter::Linter()
          check = invalid_case_for_decl_name]
         //
         (const raw::BitsDeclaration& element) {
-            CHECK_CASE("Bitfields", upper_camel, element.identifier)
+            CHECK_CASE("bitfields", upper_camel, element.identifier)
         });
 
     callbacks_.OnStructDeclaration(
@@ -251,7 +275,7 @@ Linter::Linter()
          check = invalid_case_for_decl_name]
         //
         (const raw::StructDeclaration& element) {
-            CHECK_CASE("Structs", upper_camel, element.identifier)
+            CHECK_CASE("structs", upper_camel, element.identifier)
         });
 
     callbacks_.OnTableDeclaration(
@@ -259,7 +283,7 @@ Linter::Linter()
          check = invalid_case_for_decl_name]
         //
         (const raw::TableDeclaration& element) {
-            CHECK_CASE("Tables", upper_camel, element.identifier)
+            CHECK_CASE("tables", upper_camel, element.identifier)
         });
 
     callbacks_.OnUnionDeclaration(
@@ -267,7 +291,7 @@ Linter::Linter()
          check = invalid_case_for_decl_name]
         //
         (const raw::UnionDeclaration& element) {
-            CHECK_CASE("Unions", upper_camel, element.identifier)
+            CHECK_CASE("unions", upper_camel, element.identifier)
         });
 
     callbacks_.OnXUnionDeclaration(
@@ -275,7 +299,7 @@ Linter::Linter()
          check = invalid_case_for_decl_name]
         //
         (const raw::XUnionDeclaration& element) {
-            CHECK_CASE("XUnions", upper_camel, element.identifier)
+            CHECK_CASE("xunions", upper_camel, element.identifier)
         });
 
     callbacks_.OnFile(
@@ -325,14 +349,21 @@ Linter::Linter()
 
     auto& invalid_case_for_decl_member = DefineCheck(
         "invalid-case-for-decl-member",
-        "${CHECK_SUBTYPE} members must be named in lower_snake_case");
+        "${CHECK_SUBTYPE} must be named in lower_snake_case");
 
+    callbacks_.OnParameter(
+        [& linter = *this,
+         check = invalid_case_for_decl_member]
+        //
+        (const raw::Parameter& element) {
+            CHECK_CASE("parameters", lower_snake, element.identifier)
+        });
     callbacks_.OnStructMember(
         [& linter = *this,
          check = invalid_case_for_decl_member]
         //
         (const raw::StructMember& element) {
-            CHECK_CASE("struct", lower_snake, element.identifier)
+            CHECK_CASE("struct members", lower_snake, element.identifier)
         });
     callbacks_.OnTableMember(
         [& linter = *this,
@@ -340,7 +371,7 @@ Linter::Linter()
         //
         (const raw::TableMember& element) {
             if (element.maybe_used != nullptr) {
-                CHECK_CASE("table", lower_snake, element.maybe_used->identifier)
+                CHECK_CASE("table members", lower_snake, element.maybe_used->identifier)
             }
         });
     callbacks_.OnUnionMember(
@@ -348,14 +379,14 @@ Linter::Linter()
          check = invalid_case_for_decl_member]
         //
         (const raw::UnionMember& element) {
-            CHECK_CASE("union", lower_snake, element.identifier)
+            CHECK_CASE("union members", lower_snake, element.identifier)
         });
     callbacks_.OnXUnionMember(
         [& linter = *this,
          check = invalid_case_for_decl_member]
         //
         (const raw::XUnionMember& element) {
-            CHECK_CASE("xunion", lower_snake, element.identifier)
+            CHECK_CASE("xunion members", lower_snake, element.identifier)
         });
 }
 

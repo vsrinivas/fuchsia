@@ -42,6 +42,12 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
             }
             DeclarationOrderTreeVisitor::OnBitsDeclaration(element);
         }
+        void OnBitsMember(std::unique_ptr<raw::BitsMember> const& element) override {
+            for (auto& callback : callbacks_.bits_member_callbacks_) {
+                callback(*element.get());
+            }
+            DeclarationOrderTreeVisitor::OnBitsMember(element);
+        }
         void OnEnumMember(std::unique_ptr<raw::EnumMember> const& element) override {
             for (auto& callback : callbacks_.enum_member_callbacks_) {
                 callback(*element.get());
@@ -59,6 +65,24 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnInterfaceDeclaration(element);
+        }
+        void OnInterfaceMethod(std::unique_ptr<raw::InterfaceMethod> const& element) override {
+            if (element->maybe_request != nullptr) {
+                for (auto& callback : callbacks_.method_callbacks_) {
+                    callback(*element.get());
+                }
+            } else {
+                for (auto& callback : callbacks_.event_callbacks_) {
+                    callback(*element.get());
+                }
+            }
+            DeclarationOrderTreeVisitor::OnInterfaceMethod(element);
+        }
+        void OnParameter(std::unique_ptr<raw::Parameter> const& element) override {
+            for (auto& callback : callbacks_.parameter_callbacks_) {
+                callback(*element.get());
+            }
+            DeclarationOrderTreeVisitor::OnParameter(element);
         }
         void OnStructMember(std::unique_ptr<raw::StructMember> const& element) override {
             for (auto& callback : callbacks_.struct_member_callbacks_) {
