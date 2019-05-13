@@ -15,6 +15,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
@@ -124,6 +125,7 @@ ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
 }
 
 Err ModuleSymbolsImpl::Load() {
+  TIME_BLOCK() << "Loading " << binary_name_ << " (" << name_ << ").";
   if (auto elf = elflib::ElfLib::Create(binary_name_)) {
     if (auto debug = elflib::ElfLib::Create(name_)) {
       if (elf->SetDebugData(std::move(debug))) {

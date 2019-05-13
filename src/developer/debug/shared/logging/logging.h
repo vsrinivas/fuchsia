@@ -4,13 +4,16 @@
 
 #pragma once
 
+// This header is meant to be the hub of debug logging: timers, logging, etc.
+// There is no need to include the other headers directly.
+
 #include <sstream>
 
+#include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
 
 namespace debug_ipc {
-
 
 // Normally you would use this macro to create logging statements.
 // Example:

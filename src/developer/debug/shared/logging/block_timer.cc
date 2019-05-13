@@ -6,6 +6,7 @@
 
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_ipc {
 
@@ -16,15 +17,15 @@ BlockTimer::BlockTimer(FileLineFunction origin)
 
 BlockTimer::~BlockTimer() { EndTimer(); }
 
-void BlockTimer::EndTimer() {
+double BlockTimer::EndTimer() {
   if (!should_log_)
-    return;
+    return 0;
 
   // The timer won't trigger again.
   should_log_ = false;
 
   if (!IsLogCategoryActive(LogCategory::kTiming))
-    return;
+    return 0;
 
   const char* unit = "ms";
   double time = timer_.Elapsed().ToMillisecondsF();
@@ -37,8 +38,17 @@ void BlockTimer::EndTimer() {
   }
 
   auto preamble = LogPreamble(LogCategory::kTiming, origin_);
-  printf("\r%s Took %.3f %s.\r\n", preamble.c_str(), time, unit);
+  auto context = stream_.str();
+
+  std::stringstream ss;
+  ss << "\r" << preamble;
+  if (!context.empty())
+    ss << "[" << context << "] ";
+  ss << fxl::StringPrintf("Took %.3f %s.\r\n", time, unit);
+  printf("%s", ss.str().c_str());
   fflush(stdout);
+
+  return time;
 }
 
 }  // namespace debug_ipc
