@@ -6,6 +6,6 @@ import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia-camera-test") {
   sources = [
-    "isp.test.fidl",
+    "isp.fidl",
   ]
 }
