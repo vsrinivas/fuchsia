@@ -39,7 +39,7 @@ function main {
 
   if [[ $ZIRCON -eq 1 ]]; then
     host_test_dir="${ZIRCON_BUILDROOT}/host_tests"
-    fx-command-run build-zircon "-v"
+    fx-command-run build "-v"
     runtests_cmd=("${ZIRCON_TOOLS_DIR}/runtests")
 
     if [[ -n "$TEST_NAMES" ]]; then
