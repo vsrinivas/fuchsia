@@ -25,6 +25,9 @@ library("c") {
   # Suppress the ${toolchain.implicit_deps} that points back to here.
   no_implicit_deps = true
 
+  # Don't link against the shared libc++.
+  configs += [ "$zx/public/gn/config:static-libc++" ]
+
   # TODO(BLD-353): temporary kludges; see //zircon/public/sysroot
   metadata = {
     legacy_sysroot = [

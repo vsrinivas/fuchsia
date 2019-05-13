@@ -13,3 +13,4 @@ Modifications:
 - The no-neon directory is taken from an earlier revision of the same repo:
   bc654e7a594385071b42db3c9c94bd0fd5fe0da5
   It contains only a subset of src/aarch64 from that revision.
+- Added ".Lmemcpy" branch veneer to src/aarch64/memmove.S

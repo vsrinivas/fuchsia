@@ -93,7 +93,11 @@ def_fn memmove, 6
 	sub	tmp1, dstin, src
 	cmp	count, 96
 	ccmp	tmp1, count, 2, hi
-	b.hs	memcpy
+	// The linker doesn't generate a veneer for a conditional branch
+	// whose target is too far away, so we need to use our own "veneer".
+	// Unfortunately that introduces the extra jump even when the
+	// distance would allow removing it, because only the linker knows.
+	b.hs	.Lmemcpy
 
 	cbz	tmp1, 3f
 	add	dstend, dstin, count
@@ -146,5 +150,8 @@ def_fn memmove, 6
 	stp	B_l, B_h, [dstin, 16]
 	stp	C_l, C_h, [dstin]
 3:	ret
+
+.Lmemcpy:
+	b	memcpy
 
 	.size	memmove, . - memmove
