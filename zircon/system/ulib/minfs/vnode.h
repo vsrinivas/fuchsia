@@ -199,9 +199,6 @@ public:
     // of "File + Directory + Vnode" being a single class. They should be transitioned to
     // private.
 protected:
-    // Fsck can introspect Minfs
-    friend class MinfsChecker;
-
     VnodeMinfs(Minfs* fs);
 
     // fs::Vnode interface.

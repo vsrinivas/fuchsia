@@ -12,7 +12,12 @@
 namespace minfs {
 
 InodeManager::InodeManager(Bcache* bc, blk_t start_block) :
-    bc_(bc), start_block_(start_block) {}
+    start_block_(start_block) {
+#ifndef __Fuchsia__
+    bc_ = bc;
+#endif
+}
+
 InodeManager::~InodeManager() = default;
 
 zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
@@ -72,6 +77,10 @@ void InodeManager::Update(WriteTxn* txn, ino_t ino, const Inode* inode) {
     memcpy((void*)((uintptr_t)inodata + off_of_ino), inode, kMinfsInodeSize);
     bc_->Writeblk(inoblock_abs, inodata);
 #endif
+}
+
+const Allocator* InodeManager::GetInodeAllocator() const {
+    return inode_allocator_.get();
 }
 
 void InodeManager::Load(ino_t ino, Inode* out) const {

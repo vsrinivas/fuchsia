@@ -23,11 +23,16 @@ public:
     MockInodeManager& operator=(MockInodeManager&&) = delete;
 
     void Load(ino_t inode_num, Inode* out) const final;
+    const Allocator* GetInodeAllocator() const final;
 };
 
 MockInodeManager::MockInodeManager() {}
 
 void MockInodeManager::Load(ino_t inode_num, Inode* out) const {}
+
+const Allocator* MockInodeManager::GetInodeAllocator() const {
+    return nullptr;
+}
 
 constexpr Superblock superblock = {};
 
@@ -45,6 +50,10 @@ public:
     }
 
     const InspectableInodeManager* GetInodeManager() const final {
+        return nullptr;
+    }
+
+    const Allocator* GetBlockAllocator() const final {
         return nullptr;
     }
 

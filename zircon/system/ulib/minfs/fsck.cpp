@@ -70,7 +70,7 @@ zx_status_t MinfsChecker::GetInode(Inode* inode, ino_t ino) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    fs_->inodes_->Load(ino, inode);
+    fs_->GetInodeManager()->Load(ino, inode);
     if ((inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
         FS_TRACE_ERROR("check: ino %u has bad magic %#x\n", ino, inode->magic);
         return ZX_ERR_IO_DATA_INTEGRITY;
@@ -217,7 +217,8 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino,
             bool dot_or_dotdot = false;
 
             if ((de->namelen == 0) || (de->namelen > (rlen - MINFS_DIRENT_SIZE))) {
-                FS_TRACE_ERROR("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno, de->namelen);
+                FS_TRACE_ERROR("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno,
+                               de->namelen);
                 return ZX_ERR_IO_DATA_INTEGRITY;
             }
             if ((de->namelen == 1) && (de->name[0] == '.')) {
@@ -227,7 +228,8 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino,
                 dot_or_dotdot = true;
                 dot = true;
                 if (de->ino != ino) {
-                    FS_TRACE_ERROR("check: ino#%u: de[%u]: '.' ino=%u (not self!)\n", ino, eno, de->ino);
+                    FS_TRACE_ERROR("check: ino#%u: de[%u]: '.' ino=%u (not self!)\n", ino, eno,
+                                   de->ino);
                 }
             }
             if ((de->namelen == 2) && (de->name[0] == '.') && (de->name[1] == '.')) {
@@ -237,13 +239,14 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino,
                 dot_or_dotdot = true;
                 dotdot = true;
                 if (de->ino != parent) {
-                    FS_TRACE_ERROR("check: ino#%u: de[%u]: '..' ino=%u (not parent!)\n", ino, eno, de->ino);
+                    FS_TRACE_ERROR("check: ino#%u: de[%u]: '..' ino=%u (not parent!)\n", ino, eno,
+                                   de->ino);
                 }
             }
             //TODO: check for cycles (non-dot/dotdot dir ref already in checked bitmap)
             if (flags & CD_DUMP) {
-                FS_TRACE_DEBUG("ino#%u: de[%u]: ino=%u type=%u '%.*s' %s\n", ino, eno, de->ino, de->type,
-                        de->namelen, de->name, is_last ? "[last]" : "");
+                FS_TRACE_DEBUG("ino#%u: de[%u]: ino=%u type=%u '%.*s' %s\n", ino, eno, de->ino,
+                               de->type, de->namelen, de->name, is_last ? "[last]" : "");
             }
 
             if (flags & CD_RECURSE) {
@@ -280,7 +283,7 @@ const char* MinfsChecker::CheckDataBlock(blk_t bno) {
     if (bno >= fs_->Info().block_count) {
         return "out of range";
     }
-    if (!fs_->block_allocator_->CheckAllocated(bno)) {
+    if (!fs_->GetBlockAllocator()->CheckAllocated(bno)) {
         return "not allocated";
     }
     if (checked_blocks_.Get(bno, bno + 1)) {
@@ -393,7 +396,7 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
 
 void MinfsChecker::CheckReserved() {
     // Check reserved inode '0'.
-    if (fs_->inodes_->inode_allocator_->CheckAllocated(0)) {
+    if (fs_->GetInodeManager()->GetInodeAllocator()->CheckAllocated(0)) {
         checked_inodes_.Set(0, 1);
         alloc_inodes_++;
     } else {
@@ -402,7 +405,7 @@ void MinfsChecker::CheckReserved() {
     }
 
     // Check reserved data block '0'.
-    if (fs_->block_allocator_->CheckAllocated(0)) {
+    if (fs_->GetBlockAllocator()->CheckAllocated(0)) {
         checked_blocks_.Set(0, 1);
         alloc_blocks_++;
     } else {
@@ -438,7 +441,7 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
     checked_inodes_.Set(ino, ino + 1);
     alloc_inodes_++;
 
-    if (!fs_->inodes_->inode_allocator_->CheckAllocated(ino)) {
+    if (!fs_->GetInodeManager()->GetInodeAllocator()->CheckAllocated(ino)) {
        FS_TRACE_WARN("check: ino#%u: not marked in-use\n", ino);
         conforming_ = false;
     }
@@ -455,8 +458,8 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
             return status;
         }
     } else {
-        FS_TRACE_DEBUG("ino#%u: FILE blks=%u links=%u size=%u\n", ino, inode.block_count, inode.link_count,
-                inode.size);
+        FS_TRACE_DEBUG("ino#%u: FILE blks=%u links=%u size=%u\n", ino, inode.block_count,
+                       inode.link_count, inode.size);
         if ((status = CheckFile(&inode, ino)) < 0) {
             return status;
         }
@@ -516,7 +519,7 @@ zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
     unsigned missing = 0;
 
     for (unsigned n = 0; n < fs_->Info().block_count; n++) {
-        if (fs_->block_allocator_->CheckAllocated(n)) {
+        if (fs_->GetBlockAllocator()->CheckAllocated(n)) {
             if (!checked_blocks_.Get(n, n + 1)) {
                 missing++;
             }
@@ -533,7 +536,7 @@ zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
 zx_status_t MinfsChecker::CheckForUnusedInodes() const {
     unsigned missing = 0;
     for (unsigned n = 0; n < fs_->Info().inode_count; n++) {
-        if (fs_->inodes_->inode_allocator_->CheckAllocated(n)) {
+        if (fs_->GetInodeManager()->GetInodeAllocator()->CheckAllocated(n)) {
             if (!checked_inodes_.Get(n, n + 1)) {
                 missing++;
             }
@@ -587,7 +590,7 @@ zx_status_t MinfsChecker::CheckJournal() const {
 #ifdef __Fuchsia__
     journal_block = fs_->Info().journal_start_block;
 #else
-    journal_block = fs_->offsets_.JournalStartBlock();
+    journal_block = fs_->GetBlockOffsets().JournalStartBlock();
 #endif
 
     if (fs_->bc_->Readblk(journal_block, data) < 0) {

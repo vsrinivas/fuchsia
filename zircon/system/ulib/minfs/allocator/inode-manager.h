@@ -26,6 +26,9 @@ class InspectableInodeManager {
 public:
     virtual ~InspectableInodeManager() {}
 
+    // Gets immutable reference to the inode allocator.
+    virtual const Allocator* GetInodeAllocator() const = 0;
+
     // Loads the inode from storage.
     virtual void Load(ino_t inode_num, Inode* out) const = 0;
 };
@@ -59,6 +62,8 @@ public:
     void Update(WriteTxn* txn, ino_t ino, const Inode* inode);
 
     // InspectableInodeManager interface:
+    const Allocator* GetInodeAllocator() const final;
+
     void Load(ino_t ino, Inode* out) const final;
 
     // Extend the number of inodes managed.
@@ -68,11 +73,10 @@ public:
     zx_status_t Grow(size_t inodes);
 
 private:
-    friend class MinfsChecker;
-
     InodeManager(Bcache* bc, blk_t start_block);
-
+#ifndef __Fuchsia__
     Bcache* bc_;
+#endif
     blk_t start_block_;
     fbl::unique_ptr<Allocator> inode_allocator_;
 #ifdef __Fuchsia__

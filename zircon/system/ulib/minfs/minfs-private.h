@@ -166,8 +166,16 @@ public:
    // Gets an immutable reference to the InodeManager.
    virtual const InspectableInodeManager* GetInodeManager() const = 0;
 
+   // Gets an immutable reference to the block_allocator.
+   virtual const Allocator* GetBlockAllocator() const = 0;
+
    // Reads a block at the |start_block_num| location.
    virtual zx_status_t ReadBlock(blk_t start_block_num, void* out_data) const = 0;
+
+#ifndef __Fuchsia__
+   // Gets an immutable copy of offsets_.
+   virtual const BlockOffsets GetBlockOffsets() const = 0;
+#endif
 };
 
 class Minfs :
@@ -347,6 +355,16 @@ public:
         return inodes_.get();
     }
 
+    const Allocator* GetBlockAllocator() const final {
+        return block_allocator_.get();
+    }
+
+#ifndef __Fuchsia__
+    const BlockOffsets GetBlockOffsets() const final {
+        return offsets_;
+    }
+#endif
+
     zx_status_t ReadBlock(blk_t start_block_num, void* data) const final;
 
     const TransactionLimits& Limits() const {
@@ -363,8 +381,6 @@ public:
     fbl::unique_ptr<Bcache> bc_;
 
 private:
-    // Fsck can introspect Minfs
-    friend class MinfsChecker;
     using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;
 
 #ifdef __Fuchsia__
