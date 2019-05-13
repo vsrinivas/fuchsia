@@ -13,7 +13,7 @@
 
 #include <trace/event.h>
 #include <trace/event_args.h>
-
+#include <trace-test-utils/fixture.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
@@ -22,7 +22,7 @@
 #include <fbl/string_piece.h>
 #endif // __cplusplus
 
-#include "fixture.h"
+#include "fixture_macros.h"
 
 #define I32_ARGS1 "k1", TA_INT32(1)
 #define I32_ARGS2 "k1", TA_INT32(1), "k2", TA_INT32(2)

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fixture.h"
-
 #include <threads.h>
 
 #include <atomic>
@@ -15,8 +13,11 @@
 #include <fbl/vector.h>
 #include <lib/zx/event.h>
 #include <trace/event.h>
-#include <trace-provider/handler.h>
+#include <trace-engine/handler.h>
+#include <trace-test-utils/fixture.h>
 #include <trace-test-utils/squelch.h>
+
+#include "fixture_macros.h"
 
 namespace {
 

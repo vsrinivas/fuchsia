@@ -2,25 +2,40 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Note: The appearance of "sdk" does not mean this will or is intended to be
+# in the sdk. It's just the way we export from zircon for use elsewhere.
 library("trace-test-utils") {
   sdk = "source"
   sdk_headers = [
     "trace-test-utils/compare_records.h",
+    "trace-test-utils/fixture.h",
     "trace-test-utils/read_records.h",
     "trace-test-utils/squelch.h",
   ]
   testonly = true
   sources = [
     "compare_records.cpp",
+    "fixture.cpp",
     "read_records.cpp",
     "squelch.cpp",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    # <trace-test-utils/fixture.h> needs these
+    "$zx/system/ulib/async-loop:headers",
+    "$zx/system/ulib/fbl:headers",
+    "$zx/system/ulib/trace-engine:headers",
+    "$zx/system/ulib/trace-reader:headers",
+  ]
   deps = [
+    # The kind of engine to use is up to the client, so we don't provide any
+    # trace-engine dependency here.
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/trace-provider:trace-handler",
     "$zx/system/ulib/trace-reader",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
   ]
 }

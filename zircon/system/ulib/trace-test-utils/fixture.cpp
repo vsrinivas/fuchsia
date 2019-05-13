@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fixture.h"
+#include "trace-test-utils/fixture.h"
 
 #include <regex.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
+#include <utility>
 
 #include <zircon/assert.h>
 
@@ -23,9 +24,6 @@
 #include <trace-reader/reader_internal.h>
 #include <trace-test-utils/compare_records.h>
 #include <trace-test-utils/read_records.h>
-#include <unittest/unittest.h>
-
-#include <utility>
 
 namespace {
 
@@ -289,32 +287,31 @@ void fixture_reset_buffer_full_notification() {
     g_fixture->ResetBufferFullNotification();
 }
 
+bool fixture_read_records(fbl::Vector<trace::Record>* out_records) {
+    return g_fixture->ReadRecords(out_records);
+}
+
 bool fixture_compare_raw_records(const fbl::Vector<trace::Record>& records,
                                  size_t start_record, size_t max_num_records,
                                  const char* expected) {
-    BEGIN_HELPER;
-
-    ASSERT_TRUE(trace_testing::CompareRecords(records, start_record,
-                                              max_num_records, expected));
-
-    END_HELPER;
+    return trace_testing::CompareRecords(records, start_record,
+                                         max_num_records, expected);
 }
 
 bool fixture_compare_n_records(size_t max_num_records, const char* expected,
                                fbl::Vector<trace::Record>* out_records,
                                size_t* out_leading_to_skip) {
     ZX_DEBUG_ASSERT(g_fixture);
-    BEGIN_HELPER;
 
     g_fixture->StopTracing(false);
 
-    ASSERT_TRUE(g_fixture->ReadRecords(out_records), "read error");
+    if (!fixture_read_records(out_records)) {
+        return false;
+    }
 
-    ASSERT_TRUE(trace_testing::ComparePartialBuffer(*out_records,
-                                                    max_num_records, expected,
-                                                    out_leading_to_skip));
-
-    END_HELPER;
+    return trace_testing::ComparePartialBuffer(*out_records,
+                                               max_num_records, expected,
+                                               out_leading_to_skip);
 }
 
 bool fixture_compare_records(const char* expected) {

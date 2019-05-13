@@ -125,11 +125,15 @@ library("trace-provider-with-static-engine") {
 # Normal apps are not expected to use this.
 library("trace-handler") {
   sdk = "static"
-  sdk_headers = []
+  sdk_headers = [
+    "trace-provider/handler.h",
+  ]
   sources = []
   deps = [
     ":handler",
-    "$zx/system/ulib/trace-engine",
+    # It is up to the client to choose which engine (shared, static),
+    # just reference the headers here.
+    "$zx/system/ulib/trace-engine:headers",
   ]
 }
 

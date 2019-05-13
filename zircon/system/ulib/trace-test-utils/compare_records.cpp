@@ -15,7 +15,6 @@
 #include <fbl/string_buffer.h>
 #include <trace-reader/reader.h>
 #include <trace-reader/reader_internal.h>
-#include <unittest/unittest.h>
 
 #include "trace-test-utils/read_records.h"
 #include "trace-test-utils/squelch.h"
@@ -44,9 +43,6 @@ bool CompareRecords(const fbl::Vector<trace::Record>& records,
         const auto& record = records[i];
         fbl::String from_str = record.ToString();
         fbl::String to_str = squelcher->Squelch(from_str.c_str());
-
-        UNITTEST_TRACEF(2, "Squelch from: %s\n", from_str.c_str());
-        UNITTEST_TRACEF(2, "Squelch to:   %s\n", to_str.c_str());
 
         buf.Append(to_str);
         buf.Append('\n');

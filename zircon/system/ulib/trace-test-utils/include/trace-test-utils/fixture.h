@@ -21,7 +21,6 @@
 
 #include <lib/async-loop/loop.h>
 #include <trace-engine/types.h>
-#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 
 // Specifies whether the trace engine async loop uses the same thread as the
@@ -34,6 +33,8 @@ typedef enum {
 } attach_to_thread_t;
 
 #ifdef __cplusplus
+
+bool fixture_read_records(fbl::Vector<trace::Record>* out_records);
 
 bool fixture_compare_raw_records(const fbl::Vector<trace::Record>& records,
                                  size_t start_record, size_t max_num_records,
@@ -82,50 +83,5 @@ bool fixture_compare_records(const char* expected);
 static inline void fixture_scope_cleanup(bool* scope) {
     fixture_tear_down();
 }
-
-#define DEFAULT_BUFFER_SIZE_BYTES (1024u * 1024u)
-
-// This isn't a do-while because of the cleanup.
-#define BEGIN_TRACE_TEST_ETC(attach_to_thread, mode, buffer_size) \
-    BEGIN_TEST;                                                   \
-    __attribute__((cleanup(fixture_scope_cleanup))) bool __scope; \
-    (void)__scope;                                                \
-    fixture_set_up((attach_to_thread), (mode), (buffer_size))
-
-#define BEGIN_TRACE_TEST \
-    BEGIN_TRACE_TEST_ETC(kNoAttachToThread, TRACE_BUFFERING_MODE_ONESHOT, \
-                         DEFAULT_BUFFER_SIZE_BYTES)
-
-#define END_TRACE_TEST \
-    END_TEST;
-
-#ifndef NTRACE
-
-#ifdef __cplusplus
-#define ASSERT_RECORDS(expected_c, expected_cpp) \
-    ASSERT_TRUE(fixture_compare_records(expected_c expected_cpp), \
-                "record mismatch")
-#define ASSERT_N_RECORDS(max_num_recs, expected_c, expected_cpp, \
-                         records, skip_count)                      \
-    ASSERT_TRUE(fixture_compare_n_records((max_num_recs),          \
-                expected_c expected_cpp, (records), (skip_count)), \
-                "record mismatch")
-#else
-#define ASSERT_RECORDS(expected_c, expected_cpp) \
-    ASSERT_TRUE(fixture_compare_records(expected_c), "record mismatch")
-#endif // __cplusplus
-
-#else // NTRACE
-
-#define ASSERT_RECORDS(expected_c, expected_cpp) \
-    ASSERT_TRUE(fixture_compare_records(""), "record mismatch")
-#ifdef __cplusplus
-#define ASSERT_N_RECORDS(max_num_recs, expected_c, expected_cpp, \
-                         records, skip_count)                    \
-    ASSERT_TRUE(fixture_compare_records((max_num_recs), "",      \
-                (records), (skip_count)), "record mismatch")
-#endif
-
-#endif // NTRACE
 
 __END_CDECLS
