@@ -11,6 +11,14 @@
 #include <stdint.h>
 
 //
+//
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//
 // This structure packages target-specific HotSort parameters and
 // SPIR-V modules.
 //
@@ -61,6 +69,14 @@ struct hotsort_vk_target
   struct hotsort_vk_target_config config;
   uint32_t                        modules[];
 };
+
+//
+//
+//
+
+#ifdef __cplusplus
+}
+#endif
 
 //
 //

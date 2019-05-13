@@ -22,6 +22,14 @@
 //
 //
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//
+//
+//
+
 #include "hotsort_vk_target.h"
 
 //
@@ -147,6 +155,14 @@ hotsort_vk_sort(VkCommandBuffer                            cb,
                 uint32_t                             const padded_in,
                 uint32_t                             const padded_out,
                 bool                                 const linearize);
+
+//
+//
+//
+
+#ifdef __cplusplus
+}
+#endif
 
 //
 //
