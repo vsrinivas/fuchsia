@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_SPINEL_TYPES_VK
-#define SPN_ONCE_SPINEL_TYPES_VK
+#pragma once
 
 //
 //
@@ -12,6 +11,8 @@
 #include <vulkan/vulkan_core.h>
 
 #include "spinel_types.h"
+
+
 
 //
 // VK RENDER EXTENSIONS
@@ -52,4 +53,10 @@ struct spn_render_submit_ext_vk_image
 //
 //
 
+#ifdef __cplusplus
+}
 #endif
+
+//
+//
+//

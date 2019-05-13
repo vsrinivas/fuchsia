@@ -288,6 +288,8 @@ spn_si_release(struct spn_styling_impl * const impl)
 //
 //
 
+#ifdef SPN_DISABLED_UNTIL_INTEGRATED
+
 static
 void
 spn_si_retain_and_lock(struct spn_styling_impl * const impl)
@@ -305,6 +307,8 @@ spn_styling_unlock_and_release(struct spn_styling_impl * const impl)
 
   spn_si_release(impl);
 }
+
+#endif
 
 //
 //

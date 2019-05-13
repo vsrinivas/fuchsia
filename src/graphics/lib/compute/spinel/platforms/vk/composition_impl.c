@@ -607,6 +607,8 @@ spn_ci_block_until_unsealed_and_reseal(struct spn_composition_impl * const impl)
 //
 //
 
+#ifdef SPN_DISABLE_UNTIL_INTEGRATED
+
 static
 void
 spn_ci_complete_p_3(void * pfn_payload)
@@ -634,6 +636,8 @@ spn_ci_complete_p_3(void * pfn_payload)
   // move to sealed state
   impl->state = SPN_CI_STATE_SEALED;
 }
+
+#endif
 
 //
 //
@@ -1187,6 +1191,8 @@ spn_ci_release(struct spn_composition_impl * const impl)
 //
 //
 
+#ifdef SPN_DISABLE_UNTIL_INTEGRATED
+
 static
 void
 spn_ci_retain_and_lock(struct spn_composition_impl * const impl)
@@ -1204,6 +1210,8 @@ spn_composition_unlock_and_release(struct spn_composition_impl * const impl)
 
   spn_ci_release(impl);
 }
+
+#endif
 
 //
 //

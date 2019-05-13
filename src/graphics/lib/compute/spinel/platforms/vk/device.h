@@ -92,20 +92,9 @@ struct spn_device
 //
 
 //
-// Creation and disposal intitializes context and may rely on other
-// context resources like the scheduler
+// Creation and disposal intitializes the context and may rely on
+// other context resources like the scheduler
 //
-
-//
-// this is exposed here temporarily
-//
-
-spn_result
-spn_context_create_vk(struct spn_context *          * const context_p,
-                      struct spn_device_vk          * const device_vk,
-                      struct spn_target_image const * const target_image,
-                      uint64_t                        const block_pool_size,
-                      uint32_t                        const handle_count);
 
 //
 // Disable device because of a fatal error

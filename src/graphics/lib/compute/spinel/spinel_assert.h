@@ -14,6 +14,14 @@
 //
 //
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//
+//
+//
+
 char const *
 spn_result_to_string(spn_result const result);
 
@@ -46,6 +54,14 @@ spn_assert_n(char const * const file,
   spn_assert_n(__FILE__,__LINE__,true,_result,                                  \
                sizeof((const spn_result[]){__VA_ARGS__})/sizeof(spn_result),    \
                (const spn_result[]){__VA_ARGS__})
+
+//
+//
+//
+
+#ifdef __cplusplus
+}
+#endif
 
 //
 //

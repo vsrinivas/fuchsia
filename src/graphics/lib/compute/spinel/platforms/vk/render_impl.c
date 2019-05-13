@@ -6,11 +6,9 @@
 //
 //
 
-#include <string.h>
-
 #include "render_impl.h"
 #include "spinel.h"
-#include "spinel_types_vk.h"
+#include "spinel_vk_types.h"
 #include "device.h"
 #include "target.h"
 #include "block_pool.h"
@@ -19,6 +17,12 @@
 #include "queue_pool.h"
 
 #include "common/vk/vk_assert.h"
+
+//
+//
+//
+
+#include <string.h>
 
 //
 //

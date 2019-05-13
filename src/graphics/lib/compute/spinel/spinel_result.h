@@ -2,8 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_SPINEL_RESULT
-#define SPN_ONCE_SPINEL_RESULT
+#pragma once
+
+//
+//
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //
 // FIXME -- harvest error codes that are no longer used
@@ -52,6 +59,8 @@ typedef enum spn_result {
 //
 //
 
+#ifdef __cplusplus
+}
 #endif
 
 //

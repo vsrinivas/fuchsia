@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_SPINEL_TYPES
-#define SPN_ONCE_SPINEL_TYPES
+#pragma once
 
 //
 //
@@ -11,6 +10,14 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+
+//
+//
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //
 //
@@ -75,4 +82,10 @@ typedef struct spn_render_submit
 //
 //
 
+#ifdef __cplusplus
+}
 #endif
+
+//
+//
+//

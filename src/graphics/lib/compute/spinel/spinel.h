@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_SPINEL
-#define SPN_ONCE_SPINEL
+#pragma once
 
 //
 //
@@ -11,6 +10,14 @@
 
 #include "spinel_result.h"
 #include "spinel_types.h"
+
+//
+//
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //
 // CONTEXT
@@ -222,7 +229,7 @@ spn_composition_reset(spn_composition_t composition);
 spn_result
 spn_composition_get_bounds(spn_composition_t composition, int32_t bounds[4]);
 
-#if 0
+#ifdef SPN_TODO
 // let's switch to a per place bounds using weakrefs -- clip 0 will be largest clip
 spn_result
 spn_composition_set_clip(spn_composition_t composition, int32_t const clip[4]);
@@ -326,11 +333,11 @@ spn_styling_group_layer(spn_styling_t               styling,
                         uint32_t              const n,
                         spn_styling_cmd_t * * const cmds);
 
-#if 0
-
 //
 // FIXME -- styling command encoders will be opaque
 //
+
+#ifdef SPN_DISABLE_UNTIL_INTEGRATED
 
 void
 spn_styling_layer_fill_rgba_encoder(spn_styling_cmd_t * cmds, float const rgba[4]);
@@ -376,6 +383,8 @@ spn_render(spn_context_t context, spn_render_submit_t const * const submit);
 //
 //
 
+#ifdef __cplusplus
+}
 #endif
 
 //

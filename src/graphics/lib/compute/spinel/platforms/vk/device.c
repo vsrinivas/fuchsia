@@ -225,7 +225,7 @@ spn_device_lost(struct spn_device * const device)
 //
 
 spn_result
-spn_context_create_vk(struct spn_context *          * const context_p,
+spn_context_create_vk(spn_context_t                 * const context_p,
                       struct spn_device_vk          * const device_vk,
                       struct spn_target_image const * const target_image,
                       uint64_t                        const block_pool_size,

@@ -29,7 +29,7 @@
 //
 //
 
-#include "spinel.h"
+#include "spinel_vk.h"
 #include "spinel_assert.h"
 
 //

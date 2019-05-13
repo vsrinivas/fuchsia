@@ -867,10 +867,6 @@ spn_device_handle_pool_release_d(struct spn_device              * const device,
       refcnt.d   -= 1;
       *refcnt_ptr = refcnt;
 
-#if 0
-      printf("%8u = { %u, %u }\n",handle,refcnt.h,refcnt.d);
-#endif
-
       if (refcnt.hd == 0) {
         spn_device_handle_pool_reclaim(device,handle_pool,reclaim_type,handle);
       }

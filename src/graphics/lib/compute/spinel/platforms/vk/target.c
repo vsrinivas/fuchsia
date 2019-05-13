@@ -730,7 +730,7 @@ spn_target_create(struct spn_device_vk          * const vk,
 
 #define SPN_TARGET_PL_CREATE(_p_idx,_p_id,...)                          \
   {                                                                     \
-    const uint32_t pps = target->config.p.push_sizes.array[_p_idx];     \
+    uint32_t const pps = target->config.p.push_sizes.array[_p_idx];     \
                                                                         \
     if (pps == 0) {                                                     \
       plci.pushConstantRangeCount = 0;                                  \

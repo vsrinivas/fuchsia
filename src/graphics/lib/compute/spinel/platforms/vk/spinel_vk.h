@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_SPINEL_VK
-#define SPN_ONCE_SPINEL_VK
+#pragma once
 
 //
 //
@@ -14,10 +13,23 @@
 #include "spinel.h"
 
 //
+//
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//
 // CONTEXT CREATION: VULKAN
 //
 
-// create the vulkan context
+spn_result
+spn_context_create_vk(spn_context_t                 * const context_p,
+                      struct spn_device_vk          * const device_vk,
+                      struct spn_target_image const * const target_image,
+                      uint64_t                        const block_pool_size,
+                      uint32_t                        const handle_count);
 
 //
 // RENDER EXTENSION: VULKAN BUFFER
@@ -40,6 +52,8 @@ struct spn_render_submit_ext_vk_buffer
 //
 //
 
+#ifdef __cplusplus
+}
 #endif
 
 //
