@@ -28,6 +28,7 @@ class App {
 
   void StartTracing(std::unique_ptr<TraceConfig> trace_config);
   void StopTracing();
+  bool IsTracing() const { return context_ != nullptr; }
 
   void PrintHelp();
 

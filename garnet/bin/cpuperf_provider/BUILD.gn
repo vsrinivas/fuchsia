@@ -103,10 +103,26 @@ executable("cpuperf_provider_tests_bin") {
   ]
 }
 
+executable("cpuperf_provider_integration_tests") {
+  testonly = true
+  output_name = "cpuperf_provider_integration_tests"
+
+  sources = [
+    "cpuperf_provider_integration_tests.cc"
+  ]
+
+  deps = [
+    "//garnet/lib/perfmon",
+    "//src/developer/tracing/lib/test_utils",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/trace-reader",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 test_package("cpuperf_provider_tests") {
   deps = [
     ":cpuperf_provider_tests_bin",
-    "//src/lib/fxl",
   ]
 
   tests = [
@@ -115,4 +131,17 @@ test_package("cpuperf_provider_tests") {
       environments = basic_envs
     },
   ]
+
+  if (current_cpu == "x64") {
+    deps += [
+      ":cpuperf_provider_integration_tests",
+    ]
+
+    tests += [
+      {
+        name = "cpuperf_provider_integration_tests"
+        environments = basic_envs
+      },
+    ]
+  }
 }

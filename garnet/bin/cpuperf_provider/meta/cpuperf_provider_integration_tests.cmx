@@ -1,0 +1,33 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tracelink.Registry": [
+                    "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
+                    "--verbose=4"
+                ],
+                "fuchsia.tracing.controller.Controller": [
+                    "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
+                    "--verbose=4"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/cpuperf_provider_integration_tests"
+    },
+    "sandbox": {
+        "dev": [ "sys/cpu-trace" ],
+        "features": [
+            "shell",
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.controller.Controller"
+        ]
+    }
+}

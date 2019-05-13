@@ -9,11 +9,17 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/cpuperf_provider/app.h"
+#include "garnet/lib/perfmon/controller.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
+
+  if (!perfmon::Controller::IsSupported()) {
+    FXL_LOG(INFO) << "Exiting, perfmon device not supported";
+    return 0;
+  }
 
   FXL_VLOG(2) << argv[0] << ": starting";
 

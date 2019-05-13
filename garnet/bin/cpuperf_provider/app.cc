@@ -103,13 +103,11 @@ void App::PrintHelp() {
 
 void App::UpdateState() {
   if (trace_state() == TRACE_STARTED) {
+    FXL_DCHECK(!IsTracing());
     auto new_config = TraceConfig::Create(model_event_manager_.get(),
                                           trace_is_category_enabled);
-    if (new_config && trace_config_->Changed(*new_config)) {
-      StopTracing();
-      if (new_config->is_enabled()) {
-        StartTracing(std::move(new_config));
-      }
+    if (new_config != nullptr && new_config->is_enabled()) {
+      StartTracing(std::move(new_config));
     }
   } else {
     StopTracing();
@@ -157,8 +155,8 @@ Fail:
 }
 
 void App::StopTracing() {
-  if (!context_) {
-    return;  // not currently tracing
+  if (!IsTracing()) {
+    return;
   }
   FXL_DCHECK(trace_config_->is_enabled());
 
