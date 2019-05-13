@@ -69,6 +69,10 @@
             "$ref": "common.json#/definitions/file"
           }
         },
+        "dist_dir": {
+          "description": "Path to the base directory for prebuilt libraries",
+          "$ref": "common.json#/definitions/file"
+        },
         "include_dir": {
           "description": "Path to the base directory for includes",
           "$ref": "common.json#/definitions/file"
@@ -101,7 +105,8 @@
         "include_dir",
         "link_libs",
         "dist_libs",
-        "debug_libs"
+        "debug_libs",
+        "dist_dir"
       ],
       "additionalProperties": false
     }

@@ -17,6 +17,7 @@ version_content = {
   root = file_base
 
   include_dir = "$file_base/include"
+  dist_dir = ""
   headers = []
   link_libs = []
   dist_libs = []
@@ -75,6 +76,7 @@ foreach(entry, zircon_legacy_sysroot) {
       } else if (defined(sdk.dist)) {
         file = "$sysroot_dir/${sdk.dist}"
         version_content.dist_libs += [ "$file_base/${sdk.dist}" ]
+        version_content.dist_dir = file_base
         sdk_files += [
           {
             source = rebase_path(sdk.source, "", zircon_root_build_dir)
