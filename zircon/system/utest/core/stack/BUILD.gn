@@ -5,7 +5,7 @@
 source_set("stack") {
   testonly = true
   sources = [
-    "stack-test.c",
+    "stack-test.cpp",
   ]
   cflags = [ "-fstack-protector-all" ]
   deps = [
