@@ -122,8 +122,6 @@ inline System::TypeId SystemTypeForCmd(
     case fuchsia::ui::scenic::Command::Tag::kGfx:
       return System::TypeId::kGfx;
     case fuchsia::ui::scenic::Command::Tag::kInput:
-      // TODO(SCN-1124): Provide a way to route input to a11y_input here when
-      // applicable.
       return System::TypeId::kInput;
     case fuchsia::ui::scenic::Command::Tag::kVectorial:
       return System::TypeId::kVectorial;
