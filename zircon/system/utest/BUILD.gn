@@ -62,6 +62,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/digest/test",
       "$zx/system/ulib/disk-inspector/test",
       "$zx/system/ulib/driver-integration-test/test",
+      "$zx/system/ulib/fbl/test",
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/gpt/test",
       "$zx/system/ulib/id_allocator/test",
@@ -109,7 +110,6 @@ if (current_cpu != "") {
       "evil",
       "exception",
       "exit",
-      "fbl",
       "fdio",
       "ffl",
       "fidl",
@@ -216,11 +216,11 @@ if (current_cpu != "") {
   group("host-tests") {
     testonly = true
     deps = [
+      "$zx/system/ulib/fbl/test",
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/zxtest/test",
       "$zx/system/ulib/trace-reader:tests",
       "cmdline",
-      "fbl",
       "ffl",
       "fidl-compiler",
       "fit",
