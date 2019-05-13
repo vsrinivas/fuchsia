@@ -56,18 +56,17 @@ file = library-header , ( using-list ) , declaration-list ;
 
 library-header = ( attribute-list ) , "library" , compound-identifier , ";" ;
 
-using-list = ( using | using-declaration )* ;
+using-list = ( using )* ;
 
-using-declaration = "using" , IDENTIFIER ,  "=" , type-constructor , ";" ;
+using = "using" , compound-identifier , ( "as" , IDENTIFIER ) , ";" ;
 
 declaration-list = ( declaration , ";" )* ;
 
 compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 
-using = "using" , compound-identifier , ( "as" , IDENTIFIER ) , ";" ;
-
 declaration = bits-declaration | const-declaration | enum-declaration | protocol-declaration
-            | struct-declaration | table-declaration | union-declaration | xunion-declaration ;
+            | struct-declaration | table-declaration | union-declaration | xunion-declaration
+            | type-alias-declaration ;
 
 const-declaration = ( attribute-list ) , "const" , type-constructor , IDENTIFIER , "=" , constant ;
 
@@ -114,6 +113,8 @@ table-field = ( attribute-list ) , table-field-ordinal , table-field-declaration
 table-field-ordinal = ordinal , ":" ;
 
 table-field-declaration = struct-field | "reserved" ;
+
+type-alias-declaration = "using" , IDENTIFIER ,  "=" , type-constructor , ";" ;
 
 attribute-list = "[" , attributes , "]" ;
 
