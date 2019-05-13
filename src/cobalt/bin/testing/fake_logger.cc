@@ -4,6 +4,8 @@
 
 #include "src/cobalt/bin/testing/fake_logger.h"
 
+#include <vector>
+
 using fuchsia::cobalt::CobaltEvent;
 using fuchsia::cobalt::CustomEventValue;
 using fuchsia::cobalt::HistogramBucket;
@@ -117,6 +119,7 @@ zx_status_t FakeLogger_Sync::LogCobaltEvents(::std::vector<CobaltEvent> events,
   call_count_++;
   last_log_method_invoked_ = kLogCobaltEvents;
   *out_status = Status::OK;
+  event_count_ = events.size();
   return ZX_OK;
 }
 

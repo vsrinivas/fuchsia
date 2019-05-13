@@ -10,12 +10,14 @@
 #include <future>
 
 #include "gtest/gtest.h"
+#include "src/cobalt/bin/system-metrics/fake_cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/fake_memory_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/testing/fake_clock.h"
 #include "src/cobalt/bin/testing/fake_logger.h"
 #include "src/cobalt/bin/utils/clock.h"
 
+using cobalt::FakeCpuStatsFetcher;
 using cobalt::FakeLogger_Sync;
 using cobalt::FakeMemoryStatsFetcher;
 using cobalt::FakeSteadyClock;
@@ -36,7 +38,9 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
             dispatcher(), nullptr, &fake_logger_,
             std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
             std::unique_ptr<cobalt::MemoryStatsFetcher>(
-                new FakeMemoryStatsFetcher()))) {}
+                new FakeMemoryStatsFetcher()),
+            std::unique_ptr<cobalt::CpuStatsFetcher>(
+                new FakeCpuStatsFetcher()))) {}
 
   seconds LogFuchsiaUpPing(seconds uptime) {
     return daemon_->LogFuchsiaUpPing(uptime);
@@ -56,14 +60,23 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   seconds LogMemoryUsage() { return daemon_->LogMemoryUsage(); }
 
+  seconds LogCpuUsage() {
+    for (int i = 0; i < 59; i++) {
+      daemon_->cpu_percentages_.push_back(static_cast<double>(i));
+    }
+    return daemon_->LogCpuUsage();
+  }
+
   void CheckValues(LogMethod expected_log_method_invoked,
                    size_t expected_call_count, uint32_t expected_metric_id,
-                   uint32_t expected_last_event_code) {
+                   uint32_t expected_last_event_code,
+                   size_t expected_event_count = 0) {
     EXPECT_EQ(expected_log_method_invoked,
               fake_logger_.last_log_method_invoked());
     EXPECT_EQ(expected_call_count, fake_logger_.call_count());
     EXPECT_EQ(expected_metric_id, fake_logger_.last_metric_id());
     EXPECT_EQ(expected_last_event_code, fake_logger_.last_event_code());
+    EXPECT_EQ(expected_event_count, fake_logger_.event_count());
   }
 
   void DoFuchsiaUpPingTest(seconds now_seconds, seconds expected_sleep_seconds,
@@ -407,5 +420,14 @@ TEST_F(SystemMetricsDaemonTest, LogMemoryUsage) {
   // When LogMemoryUsage() is invoked it should log 10 events
   // for each of the memory breakdowns and return 1 minute.
   EXPECT_EQ(seconds(60).count(), LogMemoryUsage().count());
-  CheckValues(cobalt::kLogCobaltEvents, 2, -1, -1);
+  CheckValues(cobalt::kLogCobaltEvents, 2, -1, -1, 10);
+}
+// Tests the method LogCpuUsage(). Uses a local FakeLogger_Sync and
+// does not use FIDL. Does not use the message loop.
+TEST_F(SystemMetricsDaemonTest, LogCpuUsage) {
+  fake_logger_.reset();
+  // When LogCpuUsage() is invoked it should log 60 events
+  // in 1 FIDL call, and return 1 second.
+  EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
+  CheckValues(cobalt::kLogCobaltEvents, 1, -1, -1, 60);
 }

@@ -9,7 +9,8 @@
 
 namespace cobalt {
 
-// An abstrace interface to a
+// An abstrace interface for memory stats fetching from various
+// resources
 class MemoryStatsFetcher {
  public:
   virtual ~MemoryStatsFetcher() = default;

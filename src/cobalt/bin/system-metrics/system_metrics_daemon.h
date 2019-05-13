@@ -15,7 +15,9 @@
 #include <chrono>
 #include <memory>
 #include <thread>
+#include <vector>
 
+#include "src/cobalt/bin/system-metrics/cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/memory_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/utils/clock.h"
@@ -53,7 +55,8 @@ class SystemMetricsDaemon {
       async_dispatcher_t* dispatcher, sys::ComponentContext* context,
       fuchsia::cobalt::Logger_Sync* logger,
       std::unique_ptr<cobalt::SteadyClock> clock,
-      std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher);
+      std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher,
+      std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher);
 
   void InitializeLogger();
 
@@ -68,6 +71,11 @@ class SystemMetricsDaemon {
   // then uses the |dispatcher| passed to the constructor to schedule
   // the next round.
   void RepeatedlyLogMemoryUsage();
+
+  // Calls LogCpuUsage,
+  // then uses the |dispatcher| passed to the constructor to schedule
+  // the next round.
+  void RepeatedlyLogCpuUsage();
 
   // Returns the amount of time since SystemMetricsDaemon started.
   std::chrono::seconds GetUpTime();
@@ -121,6 +129,15 @@ class SystemMetricsDaemon {
   // information in one zx_info_kmem_stats_t stats data point.
   void LogMemoryUsageToCobalt(const zx_info_kmem_stats_t& stats);
 
+  // Fetches and logs system-wide CPU usage.
+  //
+  // Returns the amount of time before this method needs to be invoked again.
+  std::chrono::seconds LogCpuUsage();
+
+  // Helper function to call Cobalt logger's LogCobaltEvent to log
+  // a vector of cpu percentages taken in one minute into Cobalt.
+  void LogCpuPercentagesToCobalt();
+
   bool boot_reported_ = false;
   async_dispatcher_t* const dispatcher_;
   sys::ComponentContext* context_;
@@ -130,6 +147,8 @@ class SystemMetricsDaemon {
   std::chrono::steady_clock::time_point start_time_;
   std::unique_ptr<cobalt::SteadyClock> clock_;
   std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher_;
+  std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;
+  std::vector<double> cpu_percentages_;
 };
 
 #endif  // SRC_COBALT_BIN_SYSTEM_METRICS_SYSTEM_METRICS_DAEMON_H_

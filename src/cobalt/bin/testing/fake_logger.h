@@ -77,11 +77,16 @@ class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
 
   void reset_call_count() { call_count_ = 0; }
 
+  size_t event_count() { return event_count_; }  // for LogCobaltEvents only
+
+  void reset_event_count() { event_count_ = 0; }  // for LogCobaltEvents only
+
   void reset() {
     reset_last_metric_id();
     reset_last_event_code();
     reset_last_log_method_invoked();
     reset_call_count();
+    reset_event_count();
   }
 
  private:
@@ -89,6 +94,7 @@ class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
   uint32_t last_event_code_ = -1;
   LogMethod last_log_method_invoked_ = kOther;
   size_t call_count_ = 0;
+  size_t event_count_ = 0;  // for LogCobaltEvents only
 };
 
 }  // namespace cobalt

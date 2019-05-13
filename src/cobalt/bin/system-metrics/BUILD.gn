@@ -15,6 +15,9 @@ metrics_registry("metrics_registry") {
 
 source_set("system_metrics_daemon_lib") {
   sources = [
+    "cpu_stats_fetcher.h",
+    "cpu_stats_fetcher_impl.cc",
+    "cpu_stats_fetcher_impl.h",
     "memory_stats_fetcher.h",
     "memory_stats_fetcher_impl.cc",
     "memory_stats_fetcher_impl.h",
@@ -27,9 +30,9 @@ source_set("system_metrics_daemon_lib") {
     "//garnet/public/lib/fsl",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/utils:clock",
+    "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
-    "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider",
@@ -69,6 +72,8 @@ executable("cobalt_system_metrics_unittests") {
   testonly = true
 
   sources = [
+    "fake_cpu_stats_fetcher.cc",
+    "fake_cpu_stats_fetcher.h",
     "fake_memory_stats_fetcher.cc",
     "fake_memory_stats_fetcher.h",
     "system_metrics_daemon_test.cc",

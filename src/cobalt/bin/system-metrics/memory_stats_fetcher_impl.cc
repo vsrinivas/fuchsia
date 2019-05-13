@@ -9,6 +9,7 @@
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/resource.h>
+#include <trace/event.h>
 #include <zircon/status.h>
 
 #include "src/lib/fxl/logging.h"
@@ -20,6 +21,7 @@ MemoryStatsFetcherImpl::MemoryStatsFetcherImpl() {
 }
 
 bool MemoryStatsFetcherImpl::FetchMemoryStats(zx_info_kmem_stats_t* mem_stats) {
+  TRACE_DURATION("system_metrics", "MemoryStatsFetcherImpl::FetchMemoryStats");
   if (root_resource_handle_ == ZX_HANDLE_INVALID) {
     FXL_LOG(ERROR) << "MemoryStatsFetcherImpl: No root resource"
                    << "present. Reconnecting...";

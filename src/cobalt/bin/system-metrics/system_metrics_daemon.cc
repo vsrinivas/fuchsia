@@ -19,8 +19,11 @@
 
 #include <chrono>
 #include <memory>
+#include <numeric>
 #include <thread>
+#include <vector>
 
+#include "src/cobalt/bin/system-metrics/cpu_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/memory_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/utils/clock.h"
@@ -48,7 +51,9 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
           dispatcher, context, nullptr,
           std::unique_ptr<cobalt::SteadyClock>(new cobalt::RealSteadyClock()),
           std::unique_ptr<cobalt::MemoryStatsFetcher>(
-              new cobalt::MemoryStatsFetcherImpl())) {
+              new cobalt::MemoryStatsFetcherImpl()),
+          std::unique_ptr<cobalt::CpuStatsFetcher>(
+              new cobalt::CpuStatsFetcherImpl())) {
   InitializeLogger();
 }
 
@@ -56,18 +61,21 @@ SystemMetricsDaemon::SystemMetricsDaemon(
     async_dispatcher_t* dispatcher, sys::ComponentContext* context,
     fuchsia::cobalt::Logger_Sync* logger,
     std::unique_ptr<cobalt::SteadyClock> clock,
-    std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher)
+    std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher,
+    std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher)
     : dispatcher_(dispatcher),
       context_(context),
       logger_(logger),
       start_time_(clock->Now()),
       clock_(std::move(clock)),
-      memory_stats_fetcher_(std::move(memory_stats_fetcher)) {}
+      memory_stats_fetcher_(std::move(memory_stats_fetcher)),
+      cpu_stats_fetcher_(std::move(cpu_stats_fetcher)) {}
 
 void SystemMetricsDaemon::StartLogging() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::StartLogging");
   // We keep gathering metrics until this process is terminated.
   RepeatedlyLogUpTimeAndLifeTimeEvents();
+  RepeatedlyLogCpuUsage();
   RepeatedlyLogMemoryUsage();
 }
 
@@ -76,6 +84,14 @@ void SystemMetricsDaemon::RepeatedlyLogUpTimeAndLifeTimeEvents() {
   async::PostDelayedTask(
       dispatcher_, [this]() { RepeatedlyLogUpTimeAndLifeTimeEvents(); },
       zx::sec(seconds_to_sleep.count() + 5));
+  return;
+}
+
+void SystemMetricsDaemon::RepeatedlyLogCpuUsage() {
+  std::chrono::seconds seconds_to_sleep = LogCpuUsage();
+  async::PostDelayedTask(
+      dispatcher_, [this]() { RepeatedlyLogCpuUsage(); },
+      zx::sec(seconds_to_sleep.count()));
   return;
 }
 
@@ -236,6 +252,52 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {
   return std::chrono::seconds::max();
 }
 
+std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
+  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogCpuUsage");
+  if (!logger_) {
+    FXL_LOG(ERROR) << "Cobalt SystemMetricsDaemon: No logger "
+                      "present. Reconnecting...";
+    InitializeLogger();
+    return std::chrono::minutes(1);
+  }
+
+  double cpu_percentage;
+  if (!cpu_stats_fetcher_->FetchCpuPercentage(&cpu_percentage)) {
+    return std::chrono::minutes(1);
+  }
+  cpu_percentages_.push_back(cpu_percentage);
+  // collect 60 data points before sending to Cobalt
+  if (cpu_percentages_.size() == 60) {
+    LogCpuPercentagesToCobalt();
+    cpu_percentages_.clear();
+  }
+  return std::chrono::seconds(1);
+}
+
+void SystemMetricsDaemon::LogCpuPercentagesToCobalt() {
+  TRACE_DURATION("system_metrics",
+                 "SystemMetricsDaemon::LogCpuPercentagesToCobalt");
+  std::vector<CobaltEvent> events;
+  // per sec
+  auto builder = CobaltEventBuilder(
+      fuchsia_system_metrics::kFuchsiaCpuPercentageExperimentalMetricId);
+  for (unsigned i = 0; i < cpu_percentages_.size(); i++) {
+    // TODO(CB-253) Change to CPU metric type and
+    // take away "* 100" if the new metric type supports double.
+    events.push_back(
+        builder.Clone().as_memory_usage(cpu_percentages_[i] * 100));
+  }
+  // call cobalt FIDL
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  logger_->LogCobaltEvents(std::move(events), &status);
+  if (status != fuchsia::cobalt::Status::OK) {
+    FXL_LOG(ERROR) << "Cobalt SystemMetricsDaemon::LogCpuPercentagesToCobalt "
+                      "returned status="
+                   << StatusToString(status);
+  }
+  return;
+}
+
 std::chrono::seconds SystemMetricsDaemon::LogMemoryUsage() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogMemoryUsage");
   if (!logger_) {
@@ -256,6 +318,8 @@ std::chrono::seconds SystemMetricsDaemon::LogMemoryUsage() {
 
 void SystemMetricsDaemon::LogMemoryUsageToCobalt(
     const zx_info_kmem_stats_t& stats, const std::chrono::seconds& uptime) {
+  TRACE_DURATION("system_metrics",
+                 "SystemMetricsDaemon::LogMemoryUsageToCobalt");
   typedef FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown Breakdown;
 
   auto builder =
@@ -333,6 +397,8 @@ SystemMetricsDaemon::GetUpTimeEventCode(const std::chrono::seconds& uptime) {
 
 void SystemMetricsDaemon::LogMemoryUsageToCobalt(
     const zx_info_kmem_stats_t& stats) {
+  TRACE_DURATION("system_metrics",
+                 "SystemMetricsDaemon::LogMemoryUsageToCobalt2");
   typedef FuchsiaMemoryExperimentalMetricDimensionMemoryBreakdown Breakdown;
 
   std::vector<CobaltEvent> events;
