@@ -201,17 +201,6 @@ group("feedback_agent") {
   ]
 }
 
-group("auth") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/auth/tests/account_manager_integration:account_manager_integration_test_pkg",
-    "//garnet/bin/auth/tests/token_manager_integration:token_manager_integration_tests",
-    "//garnet/packages/prod:auth",
-    "//src/identity/bin/dev_auth_provider",
-    "//src/identity/bin/dev_auth_provider_iotid",
-  ]
-}
-
 group("elflib") {
   testonly = true
   public_deps = [
@@ -315,7 +304,6 @@ group("all") {
     "//garnet/packages/tests:asio",
     "//garnet/packages/tests:async_promise",
     "//garnet/packages/tests:ath10k",
-    "//garnet/packages/tests:auth",
     "//garnet/packages/tests:banjo",
     "//garnet/packages/tests:bluetooth",
     "//garnet/packages/tests:boringssl",

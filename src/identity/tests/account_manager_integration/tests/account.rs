@@ -10,8 +10,8 @@ use fidl_fuchsia_auth::{
 use fidl_fuchsia_auth_account::{
     AccountManagerMarker, AccountManagerProxy, LocalAccountId, Status,
 };
-use futures::prelude::*;
 use futures::future::join;
+use futures::prelude::*;
 
 /// Calls provision_new_account on the supplied account_manager, returning an error on any
 /// non-OK responses, or the account ID on success.

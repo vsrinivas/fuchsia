@@ -419,19 +419,3 @@ INSTANTIATE_TEST_SUITE_P(Cpp, DevTokenManagerAppTest,
                          ::testing::ValuesIn(kTestComponentParams));
 }  // namespace
 }  // namespace e2e_dev
-
-int main(int argc, char** argv) {
-  test_runner::GTestListener listener(argv[0]);
-  testing::InitGoogleTest(&argc, argv);
-  testing::UnitTest::GetInstance()->listeners().Append(&listener);
-  int status = RUN_ALL_TESTS();
-  testing::UnitTest::GetInstance()->listeners().Release(&listener);
-
-  {
-    async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    auto context = sys::ComponentContext::Create();
-    test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
-  }
-
-  return status;
-}

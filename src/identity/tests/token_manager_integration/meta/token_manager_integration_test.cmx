@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/token_manager_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.auth.TokenManagerFactory",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

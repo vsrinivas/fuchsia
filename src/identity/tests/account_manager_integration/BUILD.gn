@@ -7,7 +7,17 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("account_manager_integration") {
+group("account_manager_integration") {
+  testonly = true
+  deps = [
+    ":account_manager_integration_test_pkg",
+    "//src/identity/bin/dev_auth_provider",
+    "//src/identity/bin/dev_auth_provider_iotid",
+  ]
+}
+
+rustc_library("lib") {
+  name = "account_manager_integration"
   edition = "2018"
   testonly = true
   with_unit_tests = true
@@ -32,7 +42,7 @@ rustc_library("account_manager_integration") {
 
 test_package("account_manager_integration_test_pkg") {
   deps = [
-    ":account_manager_integration",
+    ":lib",
   ]
 
   tests = [

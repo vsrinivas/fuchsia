@@ -1,13 +1,4 @@
 {
-    "program": {
-        "binary": "test/account_manager_integration_lib_test"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink",
-            "fuchsia.auth.account.AccountManager"
-        ]
-    },
     "facets": {
         "fuchsia.test": {
             "injected-services": {
@@ -17,5 +8,14 @@
                 ]
             }
         }
+    },
+    "program": {
+        "binary": "test/account_manager_integration_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.auth.account.AccountManager"
+        ]
     }
 }

@@ -29,7 +29,7 @@ test_package("identity_bin_unittests") {
   ]
 
   tests = [
-   {
+    {
       name = "account_handler_bin_test"
       environments = basic_envs
     },
