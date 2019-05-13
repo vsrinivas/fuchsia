@@ -29,6 +29,7 @@ library("fs-management") {
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
+    "$zx/system/ulib/pretty",
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/uboringssl",
   ]

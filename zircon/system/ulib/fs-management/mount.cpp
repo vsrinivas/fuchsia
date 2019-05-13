@@ -25,6 +25,7 @@
 #include <lib/fdio/vfs.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
+#include <pretty/hexdump.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/device/vfs.h>
@@ -264,7 +265,12 @@ const fsck_options_t default_fsck_options = {
     .apply_journal = false,
 };
 
-disk_format_t detect_disk_format(int fd) {
+enum DiskFormatLogVerbosity {
+    Silent,
+    Verbose,
+};
+
+disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) {
     if (lseek(fd, 0, SEEK_SET) != 0) {
         fprintf(stderr, "detect_disk_format: Cannot seek to start of device.\n");
         return DISK_FORMAT_UNKNOWN;
@@ -320,7 +326,28 @@ disk_format_t detect_disk_format(int fd) {
         }
         return DISK_FORMAT_MBR;
     }
+
+    if (verbosity == DiskFormatLogVerbosity::Verbose) {
+        // Log a hexdump of the bytes we looked at and didn't find any magic in.
+        fprintf(stderr, "detect_disk_format: did not recognize format.  Looked at:\n");
+        // fvm, zxcrypt, minfs, and blobfs have their magic bytes at the start
+        // of the block.
+        hexdump_very_ex(data, 16, 0, hexdump_stdio_printf, stderr);
+        // MBR is two bytes at offset 0x1fe, but print 16 just for consistency
+        hexdump_very_ex(data + 0x1f0, 16, 0x1f0, hexdump_stdio_printf, stderr);
+        // GPT magic is stored 512 bytes in, so it can coexist with MBR.
+        hexdump_very_ex(data + 0x200, 16, 0x200, hexdump_stdio_printf, stderr);
+    }
+
     return DISK_FORMAT_UNKNOWN;
+}
+
+disk_format_t detect_disk_format(int fd) {
+    return detect_disk_format_impl(fd, DiskFormatLogVerbosity::Silent);
+}
+
+disk_format_t detect_disk_format_log_unknown(int fd) {
+    return detect_disk_format_impl(fd, DiskFormatLogVerbosity::Verbose);
 }
 
 zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const mount_options_t* options,
