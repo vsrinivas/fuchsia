@@ -52,7 +52,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
           ASSERT_EQ(fuchsia::sys::TerminationReason::EXITED, reason);
           done = true;
         };
-    ASSERT_TRUE(RunLoopUntil([&done] { return done; }));
+    RunLoopUntil([&done] { return done; });
   }
 
   // Open the root object connection on the given sync pointer.

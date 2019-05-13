@@ -320,7 +320,7 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
     wait = true;
   };
   component_ptr->Kill();
-  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
+  RunLoopUntil([&wait] { return wait; });
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -345,7 +345,7 @@ TEST_F(ComponentControllerTest, CreateAndDeleteWithoutKilling) {
   };
   realm_.ExtractComponent(component_to_remove);
 
-  EXPECT_TRUE(RunLoopUntil([&return_code] { return return_code; }));
+  RunLoopUntil([&return_code] { return return_code; });
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -362,7 +362,7 @@ TEST_F(ComponentControllerTest, ControllerScope) {
 
     ASSERT_EQ(realm_.ComponentCount(), 1u);
   }
-  EXPECT_TRUE(RunLoopUntil([this]() { return realm_.ComponentCount() == 0; }));
+  RunLoopUntil([this]() { return realm_.ComponentCount() == 0; });
 }
 
 TEST_F(ComponentControllerTest, DetachController) {
@@ -478,7 +478,7 @@ TEST_F(ComponentBridgeTest, CreateAndKill) {
   SendReady();
   SetReturnCode(expected_retval);
   component_ptr->Kill();
-  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
+  RunLoopUntil([&wait] { return wait; });
   EXPECT_TRUE(ready);
   EXPECT_EQ(expected_retval, retval);
   EXPECT_EQ(TerminationReason::EXITED, termination_reason);
@@ -507,7 +507,7 @@ TEST_F(ComponentBridgeTest, CreateAndDeleteWithoutKilling) {
   // Component controller called OnTerminated before the component is destroyed,
   // so we expect the value set above (INTERNAL_ERROR).
   runner_.ExtractComponent(component_to_remove);
-  EXPECT_TRUE(RunLoopUntil([&terminated] { return terminated; }));
+  RunLoopUntil([&terminated] { return terminated; });
   EXPECT_EQ(-1, retval);
   EXPECT_EQ(TerminationReason::INTERNAL_ERROR, termination_reason);
 
@@ -534,7 +534,7 @@ TEST_F(ComponentBridgeTest, RemoteComponentDied) {
   // Even though the termination reason was set above, unbinding and closing the
   // channel will cause the bridge to return UNKNOWN>.
   binding_.Unbind();
-  EXPECT_TRUE(RunLoopUntil([&terminated] { return terminated; }));
+  RunLoopUntil([&terminated] { return terminated; });
   EXPECT_EQ(-1, retval);
   EXPECT_EQ(TerminationReason::UNKNOWN, termination_reason);
   EXPECT_EQ(0u, runner_.ComponentCount());
@@ -556,7 +556,7 @@ TEST_F(ComponentBridgeTest, ControllerScope) {
     runner_.AddComponent(std::move(component));
     ASSERT_EQ(runner_.ComponentCount(), 1u);
   }
-  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
+  RunLoopUntil([&wait] { return wait; });
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -592,7 +592,7 @@ TEST_F(ComponentBridgeTest, DetachController) {
         wait = true;
       });
   component_bridge_ptr->Kill();
-  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
+  RunLoopUntil([&wait] { return wait; });
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -655,7 +655,7 @@ TEST_F(ComponentBridgeTest, BindingErrorHandler) {
     auto component =
         CreateComponentBridge(component_ptr, std::move(export_dir_req));
   }
-  EXPECT_TRUE(RunLoopUntil([this] { return !binding_.is_bound(); }));
+  RunLoopUntil([this] { return !binding_.is_bound(); });
   EXPECT_TRUE(binding_error_handler_called_);
 }
 
@@ -671,7 +671,7 @@ TEST_F(ComponentBridgeTest, BindingErrorHandlerWhenDetached) {
     component_ptr->Detach();
     RunLoopUntilIdle();
   }
-  EXPECT_TRUE(RunLoopUntil([this] { return !binding_.is_bound(); }));
+  RunLoopUntil([this] { return !binding_.is_bound(); });
   EXPECT_TRUE(binding_error_handler_called_);
 }
 

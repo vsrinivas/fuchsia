@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
-#include <vector>
-
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_interceptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+
+#include <string>
+#include <vector>
 
 #include "gtest/gtest.h"
 
@@ -85,7 +85,7 @@ TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
     info.url = kInterceptUrl;
     env->CreateComponent(std::move(info), controller.NewRequest());
 
-    ASSERT_TRUE(RunLoopUntil([&] { return intercepted_url; }));
+    RunLoopUntil([&] { return intercepted_url; });
     EXPECT_EQ(kInterceptUrl, actual_url);
   }
 
@@ -99,8 +99,7 @@ TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
     // Should this call into our TestLoader.
     env->CreateComponent(std::move(info), controller.NewRequest());
 
-    ASSERT_TRUE(
-        RunLoopUntil([&] { return test_loader.requested_urls.size() > 0u; }));
+    RunLoopUntil([&] { return test_loader.requested_urls.size() > 0u; });
 
     EXPECT_EQ(kFallbackUrl, test_loader.requested_urls[0]);
   }
@@ -137,11 +136,11 @@ TEST_F(ComponentInterceptorTest, TestOnKill) {
     info.url = kInterceptUrl;
     env->CreateComponent(std::move(info), controller.NewRequest());
 
-    ASSERT_TRUE(RunLoopUntil([&] { return !!component; }));
+    RunLoopUntil([&] { return !!component; });
     ASSERT_FALSE(killed);
   }
   // should be killed
-  ASSERT_TRUE(RunLoopUntil([&] { return killed; }));
+  RunLoopUntil([&] { return killed; });
 }
 
 TEST_F(ComponentInterceptorTest, ExtraCmx) {

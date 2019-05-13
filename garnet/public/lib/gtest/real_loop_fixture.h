@@ -61,12 +61,8 @@ class RealLoopFixture : public ::testing::Test {
   // reached.
   bool RunLoopWithTimeout(zx::duration timeout = zx::sec(1));
 
-  // Runs the loop until the condition returns true or the timeout is reached.
-  // Returns |true| if the condition was met, and |false| if the timeout was
-  // reached.
-  // TODO(qsr): When existing usage have been migrated to
-  // |RunLoopWithTimeoutOrUntil|, remove the timeout from this method.
-  bool RunLoopUntil(fit::function<bool()> condition,
+  // Runs the loop until the condition returns true.
+  void RunLoopUntil(fit::function<bool()> condition,
                     zx::duration step = zx::msec(10));
 
   // Runs the loop until the condition returns true or the timeout is reached.

@@ -61,8 +61,7 @@ class ComponentsBinaryTest : public sys::testing::TestWithEnvironment {
         [&return_code](int64_t code, fuchsia::sys::TerminationReason reason) {
           return_code = code;
         };
-    ASSERT_TRUE(
-        RunLoopUntil([&return_code] { return return_code != INT64_MIN; }));
+    RunLoopUntil([&return_code] { return return_code != INT64_MIN; });
     EXPECT_EQ(0, return_code);
   }
 

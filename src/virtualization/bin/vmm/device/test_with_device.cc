@@ -28,10 +28,7 @@ zx_status_t TestWithDevice::LaunchDevice(
   // Create test environment.
   enclosing_environment_ =
       CreateNewEnclosingEnvironment(env_label, std::move(env_services));
-  bool started = WaitForEnclosingEnvToStart(enclosing_environment_.get());
-  if (!started) {
-    return ZX_ERR_TIMED_OUT;
-  }
+  WaitForEnclosingEnvToStart(enclosing_environment_.get());
 
   zx::channel request;
   services_ = sys::ServiceDirectory::CreateWithRequest(&request);

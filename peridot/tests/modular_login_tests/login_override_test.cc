@@ -72,7 +72,7 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
                      test_harness()->Run(std::move(spec));
                    });
 
-  ASSERT_TRUE(RunLoopUntil([&] { return intercepted; }));
+  RunLoopUntil([&] { return intercepted; });
 }
 
 // Setting LoginOverride to AUTOLOGIN_GUEST should launch the session shell.
@@ -98,5 +98,5 @@ TEST_F(LoginOverrideTest, AutoLoginGuestOverrideLaunchesSessionShell) {
                      test_harness()->Run(std::move(spec));
                    });
 
-  ASSERT_TRUE(RunLoopUntil([&] { return intercepted; }));
+  RunLoopUntil([&] { return intercepted; });
 }

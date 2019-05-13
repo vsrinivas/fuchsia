@@ -108,13 +108,13 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
       fuchsia::sys::LaunchInfo launch_info,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> request);
 
-  // Returns true if environment was created.
+  // Waits for the environment to start.
   //
   // You should either use this function to wait or run your own loop if you
   // want CreateComponent* to succed on |enclosing_environment|.
-  bool WaitForEnclosingEnvToStart(
+  void WaitForEnclosingEnvToStart(
       const EnclosingEnvironment* enclosing_environment) {
-    return RunLoopUntil([enclosing_environment] {
+    RunLoopUntil([enclosing_environment] {
       return enclosing_environment->is_running();
     });
   }

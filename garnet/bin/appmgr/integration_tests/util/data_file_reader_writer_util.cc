@@ -4,8 +4,6 @@
 
 #include "garnet/bin/appmgr/integration_tests/util/data_file_reader_writer_util.h"
 
-#include <src/lib/fxl/logging.h>
-
 namespace component {
 namespace testing {
 
@@ -19,7 +17,7 @@ fidl::StringPtr DataFileReaderWriterUtil::ReadFileSync(
     done = true;
     result = contents;
   });
-  FXL_CHECK(RunLoopUntil([&] { return done; }));
+  RunLoopUntil([&] { return done; });
   return result;
 }
 
@@ -32,7 +30,7 @@ zx_status_t DataFileReaderWriterUtil::WriteFileSync(
     done = true;
     result = write_result;
   });
-  FXL_CHECK(RunLoopUntil([&] { return done; }));
+  RunLoopUntil([&] { return done; });
   return result;
 }
 

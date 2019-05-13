@@ -78,7 +78,7 @@ class DirConnection : public gtest::RealLoopFixture {
               << "from file " << caller_file << ", line " << caller_line;
         };
 
-    ASSERT_TRUE(RunLoopUntil([&]() { return on_open_called; }, zx::msec(1)));
+    RunLoopUntil([&]() { return on_open_called; }, zx::msec(1));
 
     // Bind channel to sync_ptr
     out_sync_ptr.Bind(node_ptr.Unbind().TakeChannel());

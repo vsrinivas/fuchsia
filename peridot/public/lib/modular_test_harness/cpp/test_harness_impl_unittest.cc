@@ -71,7 +71,7 @@ namespace {
 // it's not usable.
 TEST_F(TestHarnessImplTest, ExitCallback) {
   test_harness().Unbind();
-  ASSERT_TRUE(RunLoopUntil([&] { return did_exit(); }));
+  RunLoopUntil([&] { return did_exit(); });
 }
 
 // Check that the config that TestHarnessImpl generates is readable by
@@ -155,7 +155,7 @@ TEST_F(TestHarnessImplTest, DefaultInjectedServices) {
       fuchsia::auth::account::AccountManager::Name_,
       accountmgr.NewRequest().TakeChannel());
 
-  ASSERT_TRUE(RunLoopUntil([&] { return intercepted_accountmgr; }));
+  RunLoopUntil([&] { return intercepted_accountmgr; });
 }
 
 // Test that additional injected services are made available, spin up the
@@ -199,7 +199,7 @@ TEST_F(TestHarnessImplTest, CustomInjectedServices) {
       fuchsia::modular::ComponentContext::Name_,
       componentctx.NewRequest().TakeChannel());
 
-  ASSERT_TRUE(RunLoopUntil([&] { return intercepted_componentctx; }));
+  RunLoopUntil([&] { return intercepted_componentctx; });
 }
 
 TEST_F(TestHarnessImplTest, InterceptBaseShell) {
@@ -228,7 +228,7 @@ TEST_F(TestHarnessImplTest, InterceptBaseShell) {
 
   test_harness()->Run(std::move(spec));
 
-  ASSERT_TRUE(RunLoopUntil([&] { return intercepted; }));
+  RunLoopUntil([&] { return intercepted; });
 };
 
 TEST_F(TestHarnessImplTest, InterceptSessionShell) {
@@ -260,7 +260,7 @@ TEST_F(TestHarnessImplTest, InterceptSessionShell) {
 
   test_harness()->Run(std::move(spec));
 
-  ASSERT_TRUE(RunLoopUntil([&] { return intercepted; }));
+  RunLoopUntil([&] { return intercepted; });
 };
 
 TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {

@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
-#include <cstdio>
-#include <string>
-#include <vector>
-
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
@@ -14,18 +9,23 @@
 #include <fuchsia/testing/chrealm/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <lib/gtest/real_loop_fixture.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <cstdio>
+#include <string>
+#include <vector>
 
 #include "garnet/bin/appmgr/util.h"
 #include "gtest/gtest.h"
@@ -57,7 +57,7 @@ class ChrealmTest : public sys::testing::TestWithEnvironment,
     ASSERT_EQ(ZX_OK, services->AddService(bindings_.GetHandler(this)));
     // Create a nested realm to test with.
     enclosing_env_ = CreateNewEnclosingEnvironment(kRealm, std::move(services));
-    ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_env_.get()));
+    WaitForEnclosingEnvToStart(enclosing_env_.get());
 
     // Get the path to the test realm in /hub. Test is running in the root
     // realm, so we find the realm under sys.

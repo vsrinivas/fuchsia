@@ -64,7 +64,7 @@ void DirConnection::AssertOpen(async_dispatcher_t* dispatcher, uint32_t flags,
           }
         };
 
-    ASSERT_TRUE(RunLoopUntil([&]() { return on_open_called; }, zx::msec(1)));
+    RunLoopUntil([&]() { return on_open_called; }, zx::msec(1));
   }
 }
 

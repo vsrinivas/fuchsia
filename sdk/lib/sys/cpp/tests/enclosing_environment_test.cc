@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/testing/enclosing_environment.h>
-
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/debugdata/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/vmo.h>
 #include <zircon/processargs.h>
+
 #include <memory>
 
 #include "src/lib/fxl/strings/string_printf.h"
@@ -115,7 +115,7 @@ TEST_F(EnclosingEnvTest, RespawnService) {
   linfo.arguments.reset({"--echo", "--kill=die"});
   svc->AddServiceWithLaunchInfo(std::move(linfo), echo::Echo::Name_);
   auto env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+  WaitForEnclosingEnvToStart(env.get());
   // attempt to connect to service:
   bool req_done = false;
   bool got_error = false;
@@ -129,7 +129,7 @@ TEST_F(EnclosingEnvTest, RespawnService) {
     ASSERT_EQ(rsp, "hello");
     req_done = true;
   });
-  ASSERT_TRUE(RunLoopUntil([&req_done]() { return req_done; }));
+  RunLoopUntil([&req_done]() { return req_done; });
 
   // reset flag, and send the kill string
   req_done = false;
@@ -140,8 +140,7 @@ TEST_F(EnclosingEnvTest, RespawnService) {
   });
 
   // wait until we see the response AND the channel closing
-  ASSERT_TRUE(RunLoopUntil(
-      [&req_done, &got_error]() { return req_done && got_error; }));
+  RunLoopUntil([&req_done, &got_error]() { return req_done && got_error; });
 
   // Try to communicate with server again, we expect
   // it to be spun up once more
@@ -161,7 +160,7 @@ TEST_F(EnclosingEnvTest, EnclosingEnvOnASeperateThread) {
   linfo.arguments.reset({"--echo", "--kill=die"});
   svc->AddServiceWithLaunchInfo(std::move(linfo), echo::Echo::Name_);
   env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+  WaitForEnclosingEnvToStart(env.get());
 
   echo::EchoSyncPtr echo_ptr;
   env->ConnectToService(echo_ptr.NewRequest());
@@ -186,7 +185,7 @@ TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
       },
       echo::Echo::Name_);
   auto env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+  WaitForEnclosingEnvToStart(env.get());
   // attempt to connect to service:
   bool req_done = false;
   bool got_error = false;
@@ -200,7 +199,7 @@ TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
     ASSERT_EQ(rsp, "hello");
     req_done = true;
   });
-  ASSERT_TRUE(RunLoopUntil([&req_done]() { return req_done; }));
+  RunLoopUntil([&req_done]() { return req_done; });
   // check that the launch info factory function was called only once
   EXPECT_EQ(call_counter, 1);
 
@@ -213,8 +212,7 @@ TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
   });
 
   // wait until we see the response AND the channel closing
-  ASSERT_TRUE(RunLoopUntil(
-      [&req_done, &got_error]() { return req_done && got_error; }));
+  RunLoopUntil([&req_done, &got_error]() { return req_done && got_error; });
 
   // Try to communicate with server again, we expect
   // it to be spun up once more
@@ -247,7 +245,7 @@ TEST_F(EnclosingEnvTest, OutErrPassing) {
       },
       echo::Echo::Name_);
   auto env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+  WaitForEnclosingEnvToStart(env.get());
   // attempt to connect to service:
   echo::EchoPtr echo;
 
@@ -257,10 +255,10 @@ TEST_F(EnclosingEnvTest, OutErrPassing) {
 
   // now it's just a matter of waiting for the socket readers to
   // have seen those strings:
-  ASSERT_TRUE(RunLoopUntil([&cout_reader, &cerr_reader]() {
+  RunLoopUntil([&cout_reader, &cerr_reader]() {
     return cout_reader.GetString().find("potato") != std::string::npos &&
            cerr_reader.GetString().find("tomato") != std::string::npos;
-  }));
+  });
 }
 
 class FakeLoader : public fuchsia::sys::Loader {
@@ -308,15 +306,13 @@ TEST_F(EnclosingEnvTest, CanLaunchMoreThanOneService) {
     svc_names.push_back(svc_name);
   }
   auto env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+  WaitForEnclosingEnvToStart(env.get());
 
   for (int i = 0; i < 3; i++) {
     echo::EchoPtr echo;
     env->ConnectToService(echo.NewRequest(), svc_names[i]);
   }
-  ASSERT_TRUE(RunLoopUntil([&loader]() {
-    return loader.component_urls().size() == 3;
-  })) << loader.component_urls().size();
+  RunLoopUntil([&loader]() { return loader.component_urls().size() == 3; });
   ASSERT_EQ(loader.component_urls(), urls);
 }
 
@@ -355,7 +351,7 @@ TEST_F(EnclosingEnvTest, DebugDataServicePlumbedCorrectly) {
   auto svc = CreateServicesWithParentOverrides(std::move(parent_overrides));
 
   auto env = CreateNewEnclosingEnvironment("test-env1", std::move(svc));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+  WaitForEnclosingEnvToStart(env.get());
   // make sure count was 0
   ASSERT_EQ(0u, debug_data.call_count());
 
@@ -364,9 +360,7 @@ TEST_F(EnclosingEnvTest, DebugDataServicePlumbedCorrectly) {
   ASSERT_EQ(ZX_OK, zx::vmo::create(8, 0, &data));
   ptr->Publish("data_sink", std::move(data));
 
-  ASSERT_TRUE(RunLoopUntil([&debug_data]() {
-    return debug_data.call_count() == 1;
-  })) << debug_data.call_count();
+  RunLoopUntil([&debug_data]() { return debug_data.call_count() == 1; });
 
   // make sure service is automatically plumbed to sub environments
   auto sub_env = env->CreateNestedEnclosingEnvironment("test-env2");
@@ -377,9 +371,7 @@ TEST_F(EnclosingEnvTest, DebugDataServicePlumbedCorrectly) {
   ASSERT_EQ(ZX_OK, zx::vmo::create(8, 0, &data));
   ptr->Publish("data_sink", std::move(data));
 
-  ASSERT_TRUE(RunLoopUntil([&debug_data]() {
-    return debug_data.call_count() == 2;
-  })) << debug_data.call_count();
+  RunLoopUntil([&debug_data]() { return debug_data.call_count() == 2; });
 }
 
 }  // namespace sys::testing::test

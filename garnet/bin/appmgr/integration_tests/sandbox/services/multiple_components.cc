@@ -40,6 +40,6 @@ TEST_F(NamespaceTest, MultipleComponents) {
     controllers.push_back(std::move(controller));
   }
 
-  ASSERT_TRUE(RunLoopUntil([&num_running] { return num_running == 0; }));
+  RunLoopUntil([&num_running] { return num_running == 0; });
   EXPECT_EQ(num_running, 0);
 }

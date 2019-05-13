@@ -60,7 +60,7 @@ class NetworkServiceTest : public TestWithEnvironment {
     services->AddService(svc_->GetHandler());
     test_env_ = CreateNewEnclosingEnvironment("env", std::move(services));
 
-    ASSERT_TRUE(WaitForEnclosingEnvToStart(test_env_.get()));
+    WaitForEnclosingEnvToStart(test_env_.get());
   }
 
   void GetNetworkManager(fidl::InterfaceRequest<FNetworkManager> nm) {

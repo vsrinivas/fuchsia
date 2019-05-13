@@ -76,7 +76,7 @@ TEST_F(TestReader, Empty) {
         result = std::move(res);
       }));
 
-  ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
+  RunLoopUntil([&] { return !!result; });
   EXPECT_THAT(
       inspect::ReadFromFidlObject(result.take_value()),
       NodeMatches(AllOf(NameMatches(kObjectsName), MetricList(IsEmpty()),
@@ -98,7 +98,7 @@ TEST_F(TestReader, Values) {
         result = std::move(res);
       }));
 
-  ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
+  RunLoopUntil([&] { return !!result; });
 
   EXPECT_THAT(
       inspect::ReadFromFidlObject(result.take_value()),
@@ -124,7 +124,7 @@ TEST_F(TestReader, ListChildren) {
         result = std::move(res);
       }));
 
-  ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
+  RunLoopUntil([&] { return !!result; });
 
   auto children = result.take_value();
   EXPECT_THAT(*children, UnorderedElementsAre("child a", "child b"));
@@ -145,7 +145,7 @@ TEST_F(TestReader, OpenChild) {
                         result = std::move(res);
                       }));
 
-  ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
+  RunLoopUntil([&] { return !!result; });
 
   EXPECT_THAT(inspect::ReadFromFidlObject(result.take_value()),
               NodeMatches(AllOf(
@@ -179,7 +179,7 @@ TEST_F(TestReader, OpenChildren) {
                 }
               }));
 
-  ASSERT_TRUE(RunLoopUntil([&] { return result.size() == 2; }));
+  RunLoopUntil([&] { return result.size() == 2; });
 
   std::vector<std::string> names;
   for (size_t i = 0; i < result.size(); i++) {
@@ -249,7 +249,7 @@ TEST_F(TestHierarchy, ObjectHierarchy) {
             result = std::move(res);
           }));
 
-  ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
+  RunLoopUntil([&] { return !!result; });
 
   auto hierarchy = result.take_value();
 
@@ -264,7 +264,7 @@ TEST_F(TestHierarchy, ObjectHierarchyLimitDepth) {
                         result = std::move(res);
                       }));
 
-  ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
+  RunLoopUntil([&] { return !!result; });
 
   auto hierarchy = result.take_value();
 

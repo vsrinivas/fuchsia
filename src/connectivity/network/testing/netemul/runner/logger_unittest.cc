@@ -66,7 +66,7 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
                                          .inherit_parent_services = false,
                                          .kill_on_oom = true,
                                          .delete_storage_on_death = true});
-    ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+    WaitForEnclosingEnvToStart(env.get());
 
     fuchsia::logger::LogSinkPtr sink;
     env->ConnectToService(sink.NewRequest(dispatcher()));

@@ -4,11 +4,11 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/sys/cpp/file_descriptor.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <lib/sys/cpp/file_descriptor.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include "garnet/bin/sysmgr/config.h"
 #include "gmock/gmock.h"
@@ -48,8 +48,7 @@ class HubTest : public sys::testing::TestWithEnvironment {
         [&return_code](int64_t code, fuchsia::sys::TerminationReason reason) {
           return_code = code;
         };
-    ASSERT_TRUE(
-        RunLoopUntil([&return_code] { return return_code != INT64_MIN; }));
+    RunLoopUntil([&return_code] { return return_code != INT64_MIN; });
     std::string output;
     ASSERT_TRUE(files::ReadFileDescriptorToString(out_fd, &output));
     EXPECT_EQ(expected_return_code, return_code)
@@ -128,7 +127,7 @@ TEST_F(HubTest, ScopePolicy) {
   // test that we can see nested env
   auto nested_env =
       CreateNewEnclosingEnvironment("hubscopepolicytest", CreateServices());
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(nested_env.get()));
+  WaitForEnclosingEnvToStart(nested_env.get());
   RunComponent(launcher_ptr(), kGlobUrl, {"/hub/r/hubscopepolicytest/"}, 0);
 
   // test that we cannot see nested env using its own launcher
@@ -144,7 +143,7 @@ TEST_F(HubTest, SystemObjects) {
 
   auto nested_env =
       CreateNewEnclosingEnvironment("hubscopepolicytest", CreateServices());
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(nested_env.get()));
+  WaitForEnclosingEnvToStart(nested_env.get());
   RunComponent(launcher_ptr(), glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
 
   // test that we can see system objects

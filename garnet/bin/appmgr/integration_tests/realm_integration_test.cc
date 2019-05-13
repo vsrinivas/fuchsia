@@ -137,14 +137,14 @@ TEST_F(RealmTest, Resolve) {
 
         ASSERT_EQ(expect, actual);
       });
-  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
+  RunLoopUntil([&wait] { return wait; });
 }
 
 TEST_F(RealmTest, LaunchNonExistentComponent) {
   auto env_services = CreateServices();
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
 
   // try to launch file url.
   auto controller1 =
@@ -155,7 +155,7 @@ TEST_F(RealmTest, LaunchNonExistentComponent) {
         wait = true;
         EXPECT_EQ(reason, fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);
       };
-  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
+  RunLoopUntil([&wait] { return wait; });
 
   // try to launch pkg url.
   auto controller2 =
@@ -167,7 +167,7 @@ TEST_F(RealmTest, LaunchNonExistentComponent) {
         wait = true;
         EXPECT_EQ(reason, fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);
       };
-  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
+  RunLoopUntil([&wait] { return wait; });
 }
 
 // This test exercises the fact that two components should be in separate jobs,
@@ -183,7 +183,7 @@ TEST_F(RealmTest, CreateTwoKillOne) {
                 fidl::examples::echo::Echo::Name_));
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
   // launch component normally
   auto controller1 = RunComponent(
       enclosing_environment.get(),
@@ -196,7 +196,7 @@ TEST_F(RealmTest, CreateTwoKillOne) {
   fidl::StringPtr ret_msg = "";
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
+  RunLoopUntil([&] { return std::string(ret_msg) == message; });
 
   // Kill one of the two components, make sure it's exited via Wait
   bool wait = false;
@@ -205,13 +205,13 @@ TEST_F(RealmTest, CreateTwoKillOne) {
         wait = true;
       };
   controller1->Kill();
-  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
+  RunLoopUntil([&wait] { return wait; });
 
   // Make sure the second component is still running.
   ret_msg = "";
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
+  RunLoopUntil([&] { return std::string(ret_msg) == message; });
 }
 
 TEST_F(RealmTest, KillRealmKillsComponent) {
@@ -223,7 +223,7 @@ TEST_F(RealmTest, KillRealmKillsComponent) {
                 fidl::examples::echo::Echo::Name_));
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
 
   // make sure echo service is running.
   fidl::examples::echo::EchoPtr echo;
@@ -232,17 +232,16 @@ TEST_F(RealmTest, KillRealmKillsComponent) {
   fidl::StringPtr ret_msg = "";
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
+  RunLoopUntil([&] { return std::string(ret_msg) == message; });
 
   bool killed = false;
   echo.set_error_handler([&](zx_status_t status) { killed = true; });
   enclosing_environment->Kill();
-  EXPECT_TRUE(
-      RunLoopUntil([&] { return enclosing_environment->is_running(); }));
+  RunLoopUntil([&] { return enclosing_environment->is_running(); });
   // send a msg, without that error handler won't be called.
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  EXPECT_TRUE(RunLoopUntil([&] { return killed; }));
+  RunLoopUntil([&] { return killed; });
 }
 
 TEST_F(RealmTest, EnvironmentControllerRequired) {
@@ -254,7 +253,7 @@ TEST_F(RealmTest, EnvironmentControllerRequired) {
   zx_status_t env_status = ZX_OK;
   env.set_error_handler([&](zx_status_t status) { env_status = status; });
 
-  EXPECT_TRUE(RunLoopUntil([&] { return env_status != ZX_OK; }));
+  RunLoopUntil([&] { return env_status != ZX_OK; });
 }
 
 TEST_F(RealmTest, EnvironmentLabelMustBeUnique) {
@@ -279,9 +278,8 @@ TEST_F(RealmTest, EnvironmentLabelMustBeUnique) {
       env.NewRequest(), env_controller.NewRequest(), kRealm, nullptr,
       fuchsia::sys::EnvironmentOptions{});
 
-  EXPECT_TRUE(RunLoopUntil([&] { return env_status == ZX_ERR_BAD_STATE; }));
-  EXPECT_TRUE(
-      RunLoopUntil([&] { return env_controller_status == ZX_ERR_BAD_STATE; }));
+  RunLoopUntil([&] { return env_status == ZX_ERR_BAD_STATE; });
+  RunLoopUntil([&] { return env_controller_status == ZX_ERR_BAD_STATE; });
 }
 
 TEST_F(RealmTest, RealmJobProvider) {
@@ -318,7 +316,7 @@ TEST_F(RealmTest, RealmDiesWhenItsJobDies) {
                 fidl::examples::echo::Echo::Name_));
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
 
   // make sure echo service is running.
   fidl::examples::echo::EchoPtr echo;
@@ -327,7 +325,7 @@ TEST_F(RealmTest, RealmDiesWhenItsJobDies) {
   fidl::StringPtr ret_msg = "";
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
+  RunLoopUntil([&] { return std::string(ret_msg) == message; });
 
   fuchsia::sys::JobProviderSyncPtr ptr;
   files::Glob glob(std::string("/hub/r/") + kRealm + "/*/job");
@@ -339,8 +337,7 @@ TEST_F(RealmTest, RealmDiesWhenItsJobDies) {
   EXPECT_EQ(ZX_OK, ptr->GetJob(&job));
   ASSERT_EQ(ZX_OK, job.kill());
 
-  EXPECT_TRUE(
-      RunLoopUntil([&] { return !enclosing_environment->is_running(); }));
+  RunLoopUntil([&] { return !enclosing_environment->is_running(); });
 }
 
 TEST_F(RealmTest, EmptyRealmDiesWhenItsJobDies) {
@@ -348,7 +345,7 @@ TEST_F(RealmTest, EmptyRealmDiesWhenItsJobDies) {
 
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
 
   fuchsia::sys::JobProviderSyncPtr ptr;
   files::Glob glob(std::string("/hub/r/") + kRealm + "/*/job");
@@ -360,8 +357,7 @@ TEST_F(RealmTest, EmptyRealmDiesWhenItsJobDies) {
   EXPECT_EQ(ZX_OK, ptr->GetJob(&job));
   ASSERT_EQ(ZX_OK, job.kill());
 
-  EXPECT_TRUE(
-      RunLoopUntil([&] { return !enclosing_environment->is_running(); }));
+  RunLoopUntil([&] { return !enclosing_environment->is_running(); });
 }
 
 TEST_F(RealmTest, KillWorks) {
@@ -369,7 +365,7 @@ TEST_F(RealmTest, KillWorks) {
 
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
-  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
 
   std::string hub_path = std::string("/hub/r/") + kRealm;
   // make sure realm was created
@@ -378,7 +374,7 @@ TEST_F(RealmTest, KillWorks) {
 
   bool killed = false;
   enclosing_environment->Kill([&] { killed = true; });
-  ASSERT_TRUE(RunLoopUntil([&] { return killed; }));
+  RunLoopUntil([&] { return killed; });
 
   // make sure realm was really killed
   files::Glob glob2(hub_path);
@@ -415,7 +411,7 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
   // storage it owns.
   bool killed = false;
   enclosing_environment->Kill([&] { killed = true; });
-  ASSERT_TRUE(RunLoopUntil([&] { return killed; }));
+  RunLoopUntil([&] { return killed; });
 
   // Recreate the environment and component using the same environment label.
   services = sys::ServiceDirectory::CreateWithRequest(&request);
@@ -457,12 +453,10 @@ TEST_P(EnvironmentLabelTest, CheckLabelValidity) {
       /* additional_services = */ nullptr, fuchsia::sys::EnvironmentOptions{});
 
   if (label_valid) {
-    EXPECT_TRUE(RunLoopUntil([&] { return env_created; }));
+    RunLoopUntil([&] { return env_created; });
   } else {
-    EXPECT_TRUE(
-        RunLoopUntil([&] { return env_status == ZX_ERR_INVALID_ARGS; }));
-    EXPECT_TRUE(RunLoopUntil(
-        [&] { return env_controller_status == ZX_ERR_INVALID_ARGS; }));
+    RunLoopUntil([&] { return env_status == ZX_ERR_INVALID_ARGS; });
+    RunLoopUntil([&] { return env_controller_status == ZX_ERR_INVALID_ARGS; });
     EXPECT_FALSE(env_created);
   }
 }
@@ -506,8 +500,8 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
     component_url_ = url;
   }
 
-  bool WaitForComponentLoad() {
-    return RunLoopUntil([this] { return !component_url_.empty(); });
+  void WaitForComponentLoad() {
+    RunLoopUntil([this] { return !component_url_.empty(); });
   }
 
   const std::string& component_url() const { return component_url_; }
@@ -522,28 +516,28 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
 
 TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTP) {
   RunComponent(enclosing_environment_.get(), "http://example.com");
-  ASSERT_TRUE(WaitForComponentLoad());
+  WaitForComponentLoad();
   EXPECT_THAT(component_url(),
               Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"));
 }
 
 TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTPS) {
   RunComponent(enclosing_environment_.get(), "https://example.com");
-  ASSERT_TRUE(WaitForComponentLoad());
+  WaitForComponentLoad();
   EXPECT_THAT(component_url(),
               Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"));
 }
 
 TEST_F(RealmFakeLoaderTest, CreateCastComponent_CAST) {
   RunComponent(enclosing_environment_.get(), "cast://a12345/");
-  ASSERT_TRUE(WaitForComponentLoad());
+  WaitForComponentLoad();
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx",
             component_url());
 }
 
 TEST_F(RealmFakeLoaderTest, CreateCastComponent_CASTS) {
   RunComponent(enclosing_environment_.get(), "casts://a12345/");
-  ASSERT_TRUE(WaitForComponentLoad());
+  WaitForComponentLoad();
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx",
             component_url());
 }
@@ -557,7 +551,7 @@ TEST_F(RealmFakeLoaderTest, CreateInvalidComponent) {
     return_code = err;
     reason = r;
   };
-  ASSERT_TRUE(RunLoopUntil([&] { return return_code < INT64_MAX; }));
+  RunLoopUntil([&] { return return_code < INT64_MAX; });
   EXPECT_EQ(TerminationReason::URL_INVALID, reason);
   EXPECT_EQ(-1, return_code);
 }
