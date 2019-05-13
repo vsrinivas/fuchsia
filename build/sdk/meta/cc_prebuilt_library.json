@@ -46,6 +46,10 @@
           "description": "Path to the base directory for includes",
           "$ref": "common.json#/definitions/file"
         },
+        "dist_dir": {
+          "description": "Path to the base directory for prebuilt libraries.",
+          "$ref": "common.json#/definitions/file"
+        },
         "deps": {
           "description": "List of C/C++ libraries this library depends on",
           "type": "array",
@@ -77,6 +81,7 @@
         "format",
         "headers",
         "include_dir",
+        "dist_dir",
         "root",
 
         "name",

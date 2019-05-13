@@ -227,6 +227,8 @@ template("sdk_shared_library") {
              file_base,
              "--include-dir",
              "$file_base/include",
+             "--dist-dir",
+             "$prebuilt_base/dist",
              "--deps",
            ] + sdk_metas + [ "--headers" ] + sdk_metadata_headers +
            [

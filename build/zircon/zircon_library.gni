@@ -109,6 +109,7 @@ template("zircon_library") {
                              "include_dirs",
                              "install",
                              "lib_dirs",
+                             "dist_dir",
                              "libs",
                              "public_deps",
                              "source_dir",
@@ -250,6 +251,10 @@ template("zircon_library") {
           x64 = installed_binaries
         }
       }
+    }
+
+    if (!defined(invoker.sources)) {
+      dist_dir = pkg
     }
   }
 

@@ -36,6 +36,9 @@ def main():
     parser.add_argument('--include-dir',
                         help='Path to the include directory',
                         required=True)
+    parser.add_argument('--dist-dir',
+                        help='Path to the base directory for prebuilt libraries',
+                        required=True)
     parser.add_argument('--arch',
                         help='Name of the target architecture',
                         required=True)
@@ -65,6 +68,7 @@ def main():
         'format': 'shared',
         'headers': args.headers,
         'include_dir': args.include_dir,
+        'dist_dir': args.dist_dir,
     }
     metadata['binaries'] = {
         args.arch: {
