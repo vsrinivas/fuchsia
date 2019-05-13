@@ -8,17 +8,17 @@ import("//build/go/go_test.gni")
 group("tests") {
   testonly = true
   public_deps = [
-    ":host_fuzzers_test($host_toolchain)",
+    ":fuzzing_host_test($host_toolchain)",
   ]
 }
 
-go_library("host_fuzzers_test_lib") {
+go_library("fuzzing_host_test_lib") {
   name = "fuzzing"
 }
 
-go_test("host_fuzzers_test") {
+go_test("fuzzing_host_test") {
   gopackage = "fuzzing"
   deps = [
-    ":host_fuzzers_test_lib",
+    ":fuzzing_host_test_lib",
   ]
 }
