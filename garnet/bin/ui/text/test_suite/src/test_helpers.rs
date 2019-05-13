@@ -271,31 +271,25 @@ mod test {
                 await!(wrapper.simple_insert("meow!")).expect("Should have inserted successfully");
             },
         );
-        if let txt::TextFieldRequest::BeginEdit { revision, .. } = await!(stream.try_next())
+        let (revision, _ch) = await!(stream.try_next())
             .expect("Waiting for message failed")
             .expect("Should have sent message")
-        {
-            assert_eq!(revision, 4);
-        } else {
-            panic!("Expected BeginEdit");
-        }
-        if let txt::TextFieldRequest::Replace { new_text, .. } = await!(stream.try_next())
+            .into_begin_edit()
+            .expect("Expected BeginEdit");
+        assert_eq!(revision, 4);
+
+        let (_range, new_text, _ch) = await!(stream.try_next())
             .expect("Waiting for message failed")
             .expect("Should have sent message")
-        {
-            assert_eq!(new_text, "meow!");
-        } else {
-            panic!("Expected Replace");
-        }
-        if let txt::TextFieldRequest::CommitEdit { .. } = await!(stream.try_next())
+            .into_replace()
+            .expect("Expected Replace");
+        assert_eq!(new_text, "meow!");
+
+        await!(stream.try_next())
             .expect("Waiting for message failed")
             .expect("Should have sent message")
-        {
-            // ok!
-        } else {
-            panic!("Expected CommitEdit");
-        }
-        assert!(true);
+            .into_commit_edit()
+            .expect("Expected CommitEdit");
     }
 
     #[fuchsia_async::run_singlethreaded]

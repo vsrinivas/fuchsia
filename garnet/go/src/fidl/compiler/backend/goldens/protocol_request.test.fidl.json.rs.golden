@@ -136,6 +136,9 @@ impl futures::Stream for ChildEventStream {
 pub enum ChildEvent {
 	}
 
+impl ChildEvent {
+}
+
 pub struct ChildEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -232,6 +235,9 @@ impl futures::Stream for ChildRequestStream {
 }
 #[derive(Debug)]
 pub enum ChildRequest {
+}
+
+impl ChildRequest {
 }
 
 pub struct ChildEncoder;
@@ -448,6 +454,9 @@ pub enum ParentEvent {
 	
 	}
 
+impl ParentEvent {
+}
+
 pub struct ParentEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -600,6 +609,69 @@ pub enum ParentRequest {
 		
 		r: fidl::endpoints::ServerEnd<ChildMarker>,
 		control_handle: ParentControlHandle,},
+}
+
+impl ParentRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_get_child(self) -> Option<(ParentGetChildResponder,
+	)> {
+		if let ParentRequest::GetChild {responder,
+		} = self {
+			Some((responder,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_get_child_request(self) -> Option<(ParentGetChildRequestResponder,
+	)> {
+		if let ParentRequest::GetChildRequest {responder,
+		} = self {
+			Some((responder,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_take_child(self) -> Option<(
+		fidl::endpoints::ClientEnd<ChildMarker>,
+		ParentControlHandle,
+	)> {
+		if let ParentRequest::TakeChild {
+			c,
+			control_handle,
+		} = self {
+			Some((
+				c,
+				control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_take_child_request(self) -> Option<(
+		fidl::endpoints::ServerEnd<ChildMarker>,
+		ParentControlHandle,
+	)> {
+		if let ParentRequest::TakeChildRequest {
+			r,
+			control_handle,
+		} = self {
+			Some((
+				r,
+				control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
 }
 
 pub struct ParentEncoder;

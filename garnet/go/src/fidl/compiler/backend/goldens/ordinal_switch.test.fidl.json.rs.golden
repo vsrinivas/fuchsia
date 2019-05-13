@@ -192,6 +192,33 @@ pub enum SwitchingOrdinalsEvent {
 		
 	},}
 
+impl SwitchingOrdinalsEvent {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_event_ordinal_fifteen(self) -> Option<(
+	)> {
+		if let SwitchingOrdinalsEvent::EventOrdinalFifteen {
+		} = self {
+			Some((
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_event_only_generated_ordinal(self) -> Option<(
+	)> {
+		if let SwitchingOrdinalsEvent::EventOnlyGeneratedOrdinal {
+		} = self {
+			Some((
+			))
+		} else {
+			None
+		}
+	}
+	
+}
+
 pub struct SwitchingOrdinalsEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -328,6 +355,33 @@ pub enum SwitchingOrdinalsRequest {
 		control_handle: SwitchingOrdinalsControlHandle,},
 	OnlyGeneratedOrdinal {
 		control_handle: SwitchingOrdinalsControlHandle,},
+}
+
+impl SwitchingOrdinalsRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_ordinal_five(self) -> Option<(SwitchingOrdinalsControlHandle,
+	)> {
+		if let SwitchingOrdinalsRequest::OrdinalFive {control_handle,
+		} = self {
+			Some((control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_only_generated_ordinal(self) -> Option<(SwitchingOrdinalsControlHandle,
+	)> {
+		if let SwitchingOrdinalsRequest::OnlyGeneratedOrdinal {control_handle,
+		} = self {
+			Some((control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
 }
 
 pub struct SwitchingOrdinalsEncoder;

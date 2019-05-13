@@ -232,6 +232,21 @@ pub enum InterfaceEvent {
 		
 	},}
 
+impl InterfaceEvent {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_on_event(self) -> Option<(
+	)> {
+		if let InterfaceEvent::OnEvent {
+		} = self {
+			Some((
+			))
+		} else {
+			None
+		}
+	}
+	
+}
+
 pub struct InterfaceEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -354,6 +369,21 @@ pub enum InterfaceRequest {
 	/// method comment #3
 	Method {
 		control_handle: InterfaceControlHandle,},
+}
+
+impl InterfaceRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_method(self) -> Option<(InterfaceControlHandle,
+	)> {
+		if let InterfaceRequest::Method {control_handle,
+		} = self {
+			Some((control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
 }
 
 pub struct InterfaceEncoder;

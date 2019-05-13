@@ -305,6 +305,39 @@ pub enum WithAndWithoutRequestResponseEvent {
 		
 	},}
 
+impl WithAndWithoutRequestResponseEvent {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_on_empty_response(self) -> Option<(
+	)> {
+		if let WithAndWithoutRequestResponseEvent::OnEmptyResponse {
+		} = self {
+			Some((
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_on_with_response(self) -> Option<(
+		String,
+		
+	)> {
+		if let WithAndWithoutRequestResponseEvent::OnWithResponse {
+			ret,
+			
+		} = self {
+			Some((
+				ret,
+				
+			))
+		} else {
+			None
+		}
+	}
+	
+}
+
 pub struct WithAndWithoutRequestResponseEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -508,6 +541,99 @@ pub enum WithAndWithoutRequestResponseRequest {
 		
 		arg: String,
 		responder: WithAndWithoutRequestResponseWithRequestWithResponseResponder,},
+}
+
+impl WithAndWithoutRequestResponseRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_no_request_no_response(self) -> Option<(WithAndWithoutRequestResponseControlHandle,
+	)> {
+		if let WithAndWithoutRequestResponseRequest::NoRequestNoResponse {control_handle,
+		} = self {
+			Some((control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_no_request_empty_response(self) -> Option<(WithAndWithoutRequestResponseNoRequestEmptyResponseResponder,
+	)> {
+		if let WithAndWithoutRequestResponseRequest::NoRequestEmptyResponse {responder,
+		} = self {
+			Some((responder,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_no_request_with_response(self) -> Option<(WithAndWithoutRequestResponseNoRequestWithResponseResponder,
+	)> {
+		if let WithAndWithoutRequestResponseRequest::NoRequestWithResponse {responder,
+		} = self {
+			Some((responder,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_with_request_no_response(self) -> Option<(
+		String,
+		WithAndWithoutRequestResponseControlHandle,
+	)> {
+		if let WithAndWithoutRequestResponseRequest::WithRequestNoResponse {
+			arg,
+			control_handle,
+		} = self {
+			Some((
+				arg,
+				control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_with_request_empty_response(self) -> Option<(
+		String,
+		WithAndWithoutRequestResponseWithRequestEmptyResponseResponder,
+	)> {
+		if let WithAndWithoutRequestResponseRequest::WithRequestEmptyResponse {
+			arg,
+			responder,
+		} = self {
+			Some((
+				arg,
+				responder,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_with_request_with_response(self) -> Option<(
+		String,
+		WithAndWithoutRequestResponseWithRequestWithResponseResponder,
+	)> {
+		if let WithAndWithoutRequestResponseRequest::WithRequestWithResponse {
+			arg,
+			responder,
+		} = self {
+			Some((
+				arg,
+				responder,
+			))
+		} else {
+			None
+		}
+	}
+	
 }
 
 pub struct WithAndWithoutRequestResponseEncoder;
@@ -1183,6 +1309,9 @@ pub enum WithErrorSyntaxEvent {
 	
 	}
 
+impl WithErrorSyntaxEvent {
+}
+
 pub struct WithErrorSyntaxEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -1309,6 +1438,33 @@ pub enum WithErrorSyntaxRequest {
 		responder: WithErrorSyntaxErrorAsPrimitiveResponder,},
 	ErrorAsEnum {
 		responder: WithErrorSyntaxErrorAsEnumResponder,},
+}
+
+impl WithErrorSyntaxRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_error_as_primitive(self) -> Option<(WithErrorSyntaxErrorAsPrimitiveResponder,
+	)> {
+		if let WithErrorSyntaxRequest::ErrorAsPrimitive {responder,
+		} = self {
+			Some((responder,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_error_as_enum(self) -> Option<(WithErrorSyntaxErrorAsEnumResponder,
+	)> {
+		if let WithErrorSyntaxRequest::ErrorAsEnum {responder,
+		} = self {
+			Some((responder,
+			))
+		} else {
+			None
+		}
+	}
+	
 }
 
 pub struct WithErrorSyntaxEncoder;
@@ -1748,6 +1904,33 @@ pub enum OvernetInternalProtocolEvent {
 	
 	}
 
+impl OvernetInternalProtocolEvent {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_event_a(self) -> Option<(
+		i64,
+		
+		i64,
+		
+	)> {
+		if let OvernetInternalProtocolEvent::EventA {
+			a,
+			
+			b,
+			
+		} = self {
+			Some((
+				a,
+				
+				b,
+				
+			))
+		} else {
+			None
+		}
+	}
+	
+}
+
 pub struct OvernetInternalProtocolEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -1906,6 +2089,75 @@ pub enum OvernetInternalProtocolRequest {
 		
 		a: zx::Socket,
 		responder: OvernetInternalProtocolMutateSocketResponder,},
+}
+
+impl OvernetInternalProtocolRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_method_a(self) -> Option<(
+		i64,
+		
+		i64,
+		OvernetInternalProtocolControlHandle,
+	)> {
+		if let OvernetInternalProtocolRequest::MethodA {
+			a,
+			
+			b,
+			control_handle,
+		} = self {
+			Some((
+				a,
+				
+				b,
+				control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_method_b(self) -> Option<(
+		i64,
+		
+		i64,
+		OvernetInternalProtocolMethodBResponder,
+	)> {
+		if let OvernetInternalProtocolRequest::MethodB {
+			a,
+			
+			b,
+			responder,
+		} = self {
+			Some((
+				a,
+				
+				b,
+				responder,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_mutate_socket(self) -> Option<(
+		zx::Socket,
+		OvernetInternalProtocolMutateSocketResponder,
+	)> {
+		if let OvernetInternalProtocolRequest::MutateSocket {
+			a,
+			responder,
+		} = self {
+			Some((
+				a,
+				responder,
+			))
+		} else {
+			None
+		}
+	}
+	
 }
 
 pub struct OvernetInternalProtocolEncoder;
@@ -2390,6 +2642,33 @@ pub enum SocketControlProtocolEvent {
 	
 	}
 
+impl SocketControlProtocolEvent {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_event_a(self) -> Option<(
+		i64,
+		
+		i64,
+		
+	)> {
+		if let SocketControlProtocolEvent::EventA {
+			a,
+			
+			b,
+			
+		} = self {
+			Some((
+				a,
+				
+				b,
+				
+			))
+		} else {
+			None
+		}
+	}
+	
+}
+
 pub struct SocketControlProtocolEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -2548,6 +2827,75 @@ pub enum SocketControlProtocolRequest {
 		
 		a: zx::Socket,
 		responder: SocketControlProtocolMutateSocketResponder,},
+}
+
+impl SocketControlProtocolRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_method_a(self) -> Option<(
+		i64,
+		
+		i64,
+		SocketControlProtocolControlHandle,
+	)> {
+		if let SocketControlProtocolRequest::MethodA {
+			a,
+			
+			b,
+			control_handle,
+		} = self {
+			Some((
+				a,
+				
+				b,
+				control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_method_b(self) -> Option<(
+		i64,
+		
+		i64,
+		SocketControlProtocolMethodBResponder,
+	)> {
+		if let SocketControlProtocolRequest::MethodB {
+			a,
+			
+			b,
+			responder,
+		} = self {
+			Some((
+				a,
+				
+				b,
+				responder,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_mutate_socket(self) -> Option<(
+		zx::Socket,
+		SocketControlProtocolMutateSocketResponder,
+	)> {
+		if let SocketControlProtocolRequest::MutateSocket {
+			a,
+			responder,
+		} = self {
+			Some((
+				a,
+				responder,
+			))
+		} else {
+			None
+		}
+	}
+	
 }
 
 pub struct SocketControlProtocolEncoder;
@@ -3032,6 +3380,33 @@ pub enum ChannelProtocolEvent {
 	
 	}
 
+impl ChannelProtocolEvent {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_event_a(self) -> Option<(
+		i64,
+		
+		i64,
+		
+	)> {
+		if let ChannelProtocolEvent::EventA {
+			a,
+			
+			b,
+			
+		} = self {
+			Some((
+				a,
+				
+				b,
+				
+			))
+		} else {
+			None
+		}
+	}
+	
+}
+
 pub struct ChannelProtocolEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -3190,6 +3565,75 @@ pub enum ChannelProtocolRequest {
 		
 		a: zx::Socket,
 		responder: ChannelProtocolMutateSocketResponder,},
+}
+
+impl ChannelProtocolRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_method_a(self) -> Option<(
+		i64,
+		
+		i64,
+		ChannelProtocolControlHandle,
+	)> {
+		if let ChannelProtocolRequest::MethodA {
+			a,
+			
+			b,
+			control_handle,
+		} = self {
+			Some((
+				a,
+				
+				b,
+				control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_method_b(self) -> Option<(
+		i64,
+		
+		i64,
+		ChannelProtocolMethodBResponder,
+	)> {
+		if let ChannelProtocolRequest::MethodB {
+			a,
+			
+			b,
+			responder,
+		} = self {
+			Some((
+				a,
+				
+				b,
+				responder,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_mutate_socket(self) -> Option<(
+		zx::Socket,
+		ChannelProtocolMutateSocketResponder,
+	)> {
+		if let ChannelProtocolRequest::MutateSocket {
+			a,
+			responder,
+		} = self {
+			Some((
+				a,
+				responder,
+			))
+		} else {
+			None
+		}
+	}
+	
 }
 
 pub struct ChannelProtocolEncoder;
@@ -3674,6 +4118,33 @@ pub enum KitchenSinkEvent {
 	
 	}
 
+impl KitchenSinkEvent {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_event_a(self) -> Option<(
+		i64,
+		
+		i64,
+		
+	)> {
+		if let KitchenSinkEvent::EventA {
+			a,
+			
+			b,
+			
+		} = self {
+			Some((
+				a,
+				
+				b,
+				
+			))
+		} else {
+			None
+		}
+	}
+	
+}
+
 pub struct KitchenSinkEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -3832,6 +4303,75 @@ pub enum KitchenSinkRequest {
 		
 		a: zx::Socket,
 		responder: KitchenSinkMutateSocketResponder,},
+}
+
+impl KitchenSinkRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_method_a(self) -> Option<(
+		i64,
+		
+		i64,
+		KitchenSinkControlHandle,
+	)> {
+		if let KitchenSinkRequest::MethodA {
+			a,
+			
+			b,
+			control_handle,
+		} = self {
+			Some((
+				a,
+				
+				b,
+				control_handle,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_method_b(self) -> Option<(
+		i64,
+		
+		i64,
+		KitchenSinkMethodBResponder,
+	)> {
+		if let KitchenSinkRequest::MethodB {
+			a,
+			
+			b,
+			responder,
+		} = self {
+			Some((
+				a,
+				
+				b,
+				responder,
+			))
+		} else {
+			None
+		}
+	}
+	
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_mutate_socket(self) -> Option<(
+		zx::Socket,
+		KitchenSinkMutateSocketResponder,
+	)> {
+		if let KitchenSinkRequest::MutateSocket {
+			a,
+			responder,
+		} = self {
+			Some((
+				a,
+				responder,
+			))
+		} else {
+			None
+		}
+	}
+	
 }
 
 pub struct KitchenSinkEncoder;

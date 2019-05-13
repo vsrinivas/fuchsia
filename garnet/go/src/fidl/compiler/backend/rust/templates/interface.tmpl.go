@@ -282,6 +282,33 @@ pub enum {{ $interface.Name }}Event {
 	{{- end -}}
 }
 
+impl {{ $interface.Name }}Event {
+	{{- range $method := $interface.Methods }}
+	{{- if not $method.HasRequest }}
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_{{ $method.Name }}(self) -> Option<(
+		{{- range $param := $method.Response }}
+		{{ $param.Type }},
+		{{ end }}
+	)> {
+		if let {{ $interface.Name }}Event::{{ $method.CamelName }} {
+			{{- range $param := $method.Response }}
+			{{ $param.Name }},
+			{{ end }}
+		} = self {
+			Some((
+				{{- range $param := $method.Response }}
+				{{ $param.Name }},
+				{{ end }}
+			))
+		} else {
+			None
+		}
+	}
+	{{ end }}
+	{{- end }}
+}
+
 pub struct {{ $interface.Name }}EventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
@@ -454,6 +481,48 @@ pub enum {{ $interface.Name }}Request {
 		{{- end -}}
 	},
 	{{- end }}
+	{{- end }}
+}
+
+impl {{ $interface.Name }}Request {
+	{{- range $method := $interface.Methods }}
+	{{- if $method.HasRequest }}
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_{{ $method.Name }}(self) -> Option<(
+		{{- range $param := $method.Request }}
+		{{ $param.Type }},
+		{{ end }}
+		{{- if $method.HasResponse -}}
+		{{ $interface.Name }}{{ $method.CamelName }}Responder,
+		{{- else -}}
+		{{ $interface.Name }}ControlHandle,
+		{{- end }}
+	)> {
+		if let {{ $interface.Name }}Request::{{ $method.CamelName }} {
+			{{- range $param := $method.Request }}
+			{{ $param.Name }},
+			{{ end }}
+			{{- if $method.HasResponse -}}
+			responder,
+			{{- else -}}
+			control_handle,
+			{{- end }}
+		} = self {
+			Some((
+				{{- range $param := $method.Request }}
+				{{ $param.Name }},
+				{{ end }}
+				{{- if $method.HasResponse -}}
+				responder,
+				{{- else -}}
+				control_handle,
+				{{- end }}
+			))
+		} else {
+			None
+		}
+	}
+	{{ end }}
 	{{- end }}
 }
 
