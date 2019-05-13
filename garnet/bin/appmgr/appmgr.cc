@@ -27,7 +27,8 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       sysmgr_permanently_failed_(false),
       storage_watchdog_(StorageWatchdog("/data", "/data/cache")) {
   // 0. Start storage watchdog for cache storage
-  storage_watchdog_.Run(dispatcher);
+  // TODO(CF-736): improve StorageWatchdog::GetStorageUsage and reenable
+  // storage_watchdog_.Run(dispatcher);
   // 1. Create root realm.
   RealmArgs realm_args = RealmArgs::Make(
       nullptr, kRootLabel, "/data", "/data/cache", args.environment_services,
