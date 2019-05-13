@@ -28,8 +28,6 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-const zx::duration kLoopTimeout = zx::sec(1);
-
 template <typename ResultListenerT>
 bool DoStringBufferMatch(const fuchsia::mem::Buffer& actual,
                          const std::string& expected,
@@ -78,11 +76,7 @@ class CollectSystemLogTest : public gtest::RealLoopFixture {
   }
 
   fit::result<fuchsia::mem::Buffer> CollectSystemLog(
-      zx::duration timeout = zx::msec(900)) {
-    FXL_CHECK(timeout < kLoopTimeout)
-        << "The timeout for the system log collection must be strictly smaller "
-           "than the timeout for the test";
-
+      zx::duration timeout = zx::sec(1)) {
     fit::result<fuchsia::mem::Buffer> result;
     executor_.schedule_task(
         fuchsia::feedback::CollectSystemLog(
@@ -90,9 +84,7 @@ class CollectSystemLogTest : public gtest::RealLoopFixture {
             .then([&result](fit::result<fuchsia::mem::Buffer>& res) {
               result = std::move(res);
             }));
-    FXL_CHECK(
-        RunLoopWithTimeoutOrUntil([&result] { return !!result; }, kLoopTimeout))
-        << "Test timed out";
+    RunLoopUntil([&result] { return !!result; });
     return result;
   }
 

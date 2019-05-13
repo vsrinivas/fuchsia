@@ -204,8 +204,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
                           feedback_response.screenshot = std::move(screenshot);
                           has_feedback_response = true;
                         });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&has_feedback_response] { return has_feedback_response; }));
+  RunLoopUntil([&has_feedback_response] { return has_feedback_response; });
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -240,8 +239,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningFailure) {
                           feedback_response.screenshot = std::move(screenshot);
                           has_feedback_response = true;
                         });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&has_feedback_response] { return has_feedback_response; }));
+  RunLoopUntil([&has_feedback_response] { return has_feedback_response; });
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -262,8 +260,7 @@ TEST_F(DataProviderImplTest,
                           feedback_response.screenshot = std::move(screenshot);
                           has_feedback_response = true;
                         });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&has_feedback_response] { return has_feedback_response; }));
+  RunLoopUntil([&has_feedback_response] { return has_feedback_response; });
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -294,9 +291,9 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
           feedback_responses.push_back({std::move(screenshot)});
         });
   }
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&feedback_responses, num_calls] {
+  RunLoopUntil([&feedback_responses, num_calls] {
     return feedback_responses.size() == num_calls;
-  }));
+  });
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -343,8 +340,7 @@ TEST_F(DataProviderImplTest, GetData_SmokeTest) {
     feedback_result = std::move(result);
     has_feedback_result = true;
   });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&has_feedback_result] { return has_feedback_result; }));
+  RunLoopUntil([&has_feedback_result] { return has_feedback_result; });
 
   ASSERT_TRUE(feedback_result.is_response());
   // As we control the system log attachment, we can expect it to be present and

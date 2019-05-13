@@ -185,8 +185,7 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
           out_result = std::move(result);
           has_out_result = true;
         });
-    FXL_CHECK(RunLoopWithTimeoutOrUntil(
-        [&has_out_result] { return has_out_result; }));
+    RunLoopUntil([&has_out_result] { return has_out_result; });
     return out_result;
   }
 
@@ -277,8 +276,7 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
         out_result = std::move(result);
         has_out_result = true;
       });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&has_out_result] { return has_out_result; }));
+  RunLoopUntil([&has_out_result] { return has_out_result; });
 
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments();
@@ -315,8 +313,7 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_Dart_Basic) {
         out_result = std::move(result);
         has_out_result = true;
       });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&has_out_result] { return has_out_result; }));
+  RunLoopUntil([&has_out_result] { return has_out_result; });
 
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"DartError"});
@@ -337,8 +334,7 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
         out_result = std::move(result);
         has_out_result = true;
       });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&has_out_result] { return has_out_result; }));
+  RunLoopUntil([&has_out_result] { return has_out_result; });
 
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"data"});
@@ -356,8 +352,7 @@ TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
         out_result = std::move(result);
         has_out_result = true;
       });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&has_out_result] { return has_out_result; }));
+  RunLoopUntil([&has_out_result] { return has_out_result; });
 
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"kernel_panic_crash_log"});
