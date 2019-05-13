@@ -313,6 +313,7 @@ impl FontService {
     fn handle_font_provider_request(
         &self, request: fonts::ProviderRequest,
     ) -> impl Future<Output = Result<(), fidl::Error>> {
+        #[allow(unused_variables)]
         match request {
             fonts::ProviderRequest::GetFont { request, responder } => {
                 let mut response = self.match_request(request);
@@ -321,6 +322,14 @@ impl FontService {
             fonts::ProviderRequest::GetFamilyInfo { family, responder } => {
                 let mut font_info = self.get_font_info(family);
                 future::ready(responder.send(font_info.as_mut().map(OutOfLine)))
+            }
+            fonts::ProviderRequest::GetTypeface { request, responder } => {
+                // TODO(I18N-12): Implement changes from API review
+                unimplemented!();
+            }
+            fonts::ProviderRequest::GetFontFamilyInfo { family, responder } => {
+                // TODO(I18N-12): Implement changes from API review
+                unimplemented!();
             }
         }
     }

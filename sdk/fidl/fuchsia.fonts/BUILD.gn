@@ -9,9 +9,12 @@ fidl("fuchsia.fonts") {
 
   sources = [
     "font_provider.fidl",
+    "provider.fidl",
+    "styles.fidl",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.intl",
     "//zircon/public/fidl/fuchsia-mem",
   ]
 }

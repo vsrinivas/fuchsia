@@ -1,3 +1,5 @@
 {
-  "fidl/fuchsia.fonts/font_provider.fidl": "235173cb08d4421d53c8905c0e351455"
+  "fidl/fuchsia.fonts/font_provider.fidl": "2d8e7878bd19c1dcb72d523d82a5db3c",
+  "fidl/fuchsia.fonts/provider.fidl": "442eac20007bd397686255d215d074dd",
+  "fidl/fuchsia.fonts/styles.fidl": "ce2944f0316e3138e7356a5659f46acd"
 }

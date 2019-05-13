@@ -1,0 +1,99 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fonts;
+
+using Weight = uint16;
+
+// Commonly used constants for font weight.
+const uint16 WEIGHT_THIN = 100;
+const uint16 WEIGHT_EXTRA_LIGHT = 200;
+const uint16 WEIGHT_LIGHT = 300;
+const uint16 WEIGHT_NORMAL = 400;
+const uint16 WEIGHT_MEDIUM = 500;
+const uint16 WEIGHT_SEMI_BOLD = 600;
+const uint16 WEIGHT_BOLD = 700;
+const uint16 WEIGHT_EXTRA_BOLD = 800;
+const uint16 WEIGHT_BLACK = 900;
+
+/// The type of slant of a type face.
+enum Slant {
+    /// The default; upright glyphs.
+    UPRIGHT = 1;
+    /// Specially designed, slanted and slightly calligraphic glyphs.
+    ITALIC = 2;
+    /// Skewed glyphs. Oblique usually means an geometric transformation of the upright variant,
+    /// rather than a custom-designed variant.
+    OBLIQUE = 3;
+};
+
+/// Horizontal width class of the glyphs.
+///
+/// See https://docs.microsoft.com/en-us/typography/opentype/spec/os2#uswidthclass.
+enum Width {
+    /// 50% of normal width
+    ULTRA_CONDENSED = 1;
+    /// 62.5% of normal width
+    EXTRA_CONDENSED = 2;
+    /// 75% of normal width
+    CONDENSED = 3;
+    /// 87.5% of normal width
+    SEMI_CONDENSED = 4;
+    /// Normal width
+    NORMAL = 5;
+    /// 112.5% of normal width
+    SEMI_EXPANDED = 6;
+    /// 125% of normal width
+    EXPANDED = 7;
+    /// 150% of normal width
+    EXTRA_EXPANDED = 8;
+    /// 200% of normal width
+    ULTRA_EXPANDED = 9;
+};
+
+/// Style properties that can be used when requesting or describing a type face.
+table Style2 {
+    /// See |Slant|.
+    1: Slant slant;
+    /// Weight or thickness of the glyphs. Allowed values are integers in the range [1, 1000], but
+    /// most real-world font families only support some integer multiples of 100:
+    /// {100, 200, ..., 900}. Normal text (|WEIGHT_NORMAL|) is 400; |WEIGHT_BOLD| is 700.
+    ///
+    /// See:
+    /// https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight#Common_weight_name_mapping
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/os2#usweightclass
+    2: Weight weight;
+    /// See |Width|.
+    3: Width width;
+};
+
+/// Generic groups of font families that can serve as fallbacks for a specific family.
+///
+/// Every font family belongs to some _generic_ font family (see examples below).
+///
+/// If an exact requested family is unavailable but a fallback group is specified in the request,
+/// the provider may return some other family that belongs to the fallback group. For example, if
+/// the client requests the "Arial" family with a |SANS_SERIF| fallback, and "Arial" is unavailable,
+/// the provider may return another available sans serif family, such as "Roboto Regular", instead.
+///
+/// See also:
+/// https://www.w3.org/Style/Examples/007/fonts.en.html
+/// https://developer.mozilla.org/en-US/docs/Web/CSS/font-family#Values
+enum GenericFontFamily {
+    /// Glyphs have little "serifs", hooks, or notches at the ends of most strokes.
+    /// Examples: Georgia, Noto Serif, Times New Roman.
+    SERIF = 1;
+    /// Glyphs that have no serifs at the ends of most strokes.
+    /// Examples: Arial, Noto Sans, Roboto, Tahoma.
+    SANS_SERIF = 2;
+    /// Fixed-width fonts.
+    /// Examples: Consolas, Courier New, Inconsolata.
+    MONOSPACE = 3;
+    /// Handwritten or cursive fonts.
+    /// Examples: Brush Script, Comic Sans, Lucida Calligraphy.
+    CURSIVE = 4;
+    /// Decorative fonts.
+    /// Examples: Impact, Papyrus.
+    FANTASY = 5;
+};
