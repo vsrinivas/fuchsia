@@ -7,6 +7,7 @@ use crate::{
     installer::Plan,
     request_builder::RequestParams,
 };
+use futures::future::FutureObj;
 use std::time::SystemTime;
 
 pub mod stub;
@@ -44,7 +45,7 @@ pub enum UpdateDecision {
 }
 
 /// The policy implementation itself
-trait Policy {
+pub trait Policy {
     /// When should the next update happen?
     fn compute_next_update_time(
         policy_data: &PolicyData,
@@ -72,4 +73,30 @@ trait Policy {
         policy_data: &PolicyData,
         proposed_install_plan: &impl Plan,
     ) -> UpdateDecision;
+}
+
+pub trait PolicyEngine {
+    /// When should the next update happen?
+    fn compute_next_update_time(
+        &mut self,
+        apps: &[App],
+        scheduling: &UpdateCheckSchedule,
+        protocol_state: &ProtocolState,
+    ) -> FutureObj<UpdateCheckSchedule>;
+
+    /// Given the context provided by State, does the Policy allow an update check to
+    /// happen at this time?  This should be consistent with the compute_next_update_time
+    /// so that during background updates, the result of compute_next_update_time will
+    /// result in a CheckDecision::Ok() value from this function.
+    fn update_check_allowed(
+        &mut self,
+        apps: &[App],
+        scheduling: &UpdateCheckSchedule,
+        protocol_state: &ProtocolState,
+        check_options: &CheckOptions,
+    ) -> FutureObj<CheckDecision>;
+
+    /// Given the current State, the current PolicyData, can the proposed InstallPlan
+    /// be executed at this time.
+    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> FutureObj<UpdateDecision>;
 }

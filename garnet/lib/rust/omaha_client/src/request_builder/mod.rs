@@ -16,19 +16,23 @@ use crate::{
         Cohort, PROTOCOL_V3,
     },
 };
-
+use failure::Fail;
 use http;
 use log::*;
+use std::fmt::Display;
 use std::result;
 
 type ProtocolApp = crate::protocol::request::App;
 
 /// Building a request can fail for multiple reasons, this enum consolidates them into a single
 /// type that can be used to express those reasons.
-#[derive(Debug)]
+#[derive(Debug, Fail)]
 pub enum Error {
-    Json(serde_json::Error),
-    Http(http::Error),
+    #[fail(display = "Unexpected JSON error constructing update check: {}", _0)]
+    Json(#[cause] serde_json::Error),
+
+    #[fail(display = "Http error performing update check: {}", _0)]
+    Http(#[cause] http::Error),
 }
 
 impl From<serde_json::Error> for Error {
@@ -205,7 +209,9 @@ impl<'a> RequestBuilder<'a> {
     ///
     /// Note that the builder is consumed in the process, and cannot be used afterward.
     pub fn build(self) -> Result<http::Request<hyper::Body>> {
-        self.build_intermediate().into()
+        let intermediate = self.build_intermediate();
+        info!("Building Request: {}", intermediate);
+        intermediate.into()
     }
 
     /// Helper function that constructs the request body from the builder.
@@ -257,6 +263,7 @@ impl<'a> RequestBuilder<'a> {
 ///
 /// This struct owns all of it's data, so that they can be moved directly into the constructed http
 /// request.
+#[derive(Debug)]
 struct Intermediate {
     /// The URI for the http request.
     uri: String,
@@ -268,9 +275,22 @@ struct Intermediate {
     body: RequestWrapper,
 }
 
+impl Display for Intermediate {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        writeln!(f, "uri: {} ", self.uri)?;
+        for (name, value) in &self.headers {
+            writeln!(f, "header: {}={}", name, value)?;
+        }
+        match serde_json::to_value(&self.body) {
+            Ok(value) => writeln!(f, "body: {:#}", value),
+            Err(e) => writeln!(f, "err: {}", e),
+        }
+    }
+}
+
 impl From<Intermediate> for Result<http::Request<hyper::Body>> {
     fn from(intermediate: Intermediate) -> Self {
-        let mut builder = hyper::Request::get(intermediate.uri);
+        let mut builder = hyper::Request::post(intermediate.uri);
         for (key, value) in intermediate.headers {
             builder.header(key, value);
         }

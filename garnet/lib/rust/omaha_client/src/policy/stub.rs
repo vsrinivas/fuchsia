@@ -5,9 +5,12 @@
 use crate::{
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
-    policy::{CheckDecision, Policy, PolicyData, UpdateDecision},
+    policy::{CheckDecision, Policy, PolicyData, PolicyEngine, UpdateDecision},
     request_builder::RequestParams,
 };
+use futures::future::FutureObj;
+use futures::prelude::*;
+use std::time::SystemTime;
 
 /// A stub policy implementation that allows everything immediately.
 pub struct StubPolicy;
@@ -44,6 +47,52 @@ impl Policy for StubPolicy {
         _proposed_install_plan: &impl Plan,
     ) -> UpdateDecision {
         UpdateDecision::Ok
+    }
+}
+
+/// A stub PolicyEngine that just gathers the current time and hands it off to the StubPolicy as the
+/// PolicyData.
+pub struct StubPolicyEngine;
+
+impl PolicyEngine for StubPolicyEngine {
+    fn compute_next_update_time(
+        &mut self,
+        apps: &[App],
+        scheduling: &UpdateCheckSchedule,
+        protocol_state: &ProtocolState,
+    ) -> FutureObj<UpdateCheckSchedule> {
+        let schedule = StubPolicy::compute_next_update_time(
+            &PolicyData { current_time: SystemTime::now() },
+            apps,
+            scheduling,
+            protocol_state,
+        );
+        FutureObj::new(future::ready(schedule).boxed())
+    }
+
+    fn update_check_allowed(
+        &mut self,
+        apps: &[App],
+        scheduling: &UpdateCheckSchedule,
+        protocol_state: &ProtocolState,
+        check_options: &CheckOptions,
+    ) -> FutureObj<CheckDecision> {
+        let decision = StubPolicy::update_check_allowed(
+            &PolicyData { current_time: SystemTime::now() },
+            apps,
+            scheduling,
+            protocol_state,
+            check_options,
+        );
+        FutureObj::new(future::ready(decision).boxed())
+    }
+
+    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> FutureObj<UpdateDecision> {
+        let decision = StubPolicy::update_can_start(
+            &PolicyData { current_time: SystemTime::now() },
+            proposed_install_plan,
+        );
+        FutureObj::new(future::ready(decision).boxed())
     }
 }
 

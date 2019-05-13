@@ -6,6 +6,7 @@
 mod tests;
 
 use crate::protocol::Cohort;
+use serde::Deserialize;
 use serde_derive::Deserialize;
 use serde_json::{Map, Value};
 
@@ -199,12 +200,33 @@ pub struct Package {
     pub extra_attributes: Map<String, Value>,
 }
 
+/// Parse a slice of bytes into a Response object (stripping out the ResponseWrapper in the process)
 pub fn parse_json_response(json: &[u8]) -> serde_json::Result<Response> {
     #[derive(Deserialize)]
     struct ResponseWrapper {
         response: Response,
     }
 
-    let wrapper: ResponseWrapper = serde_json::from_slice(json)?;
+    let wrapper: ResponseWrapper = parse_safe_json(json)?;
     Ok(wrapper.response)
+}
+
+/// The returned JSON may use a strategy to mitigate against XSSI attacks by pre-pending the
+/// following string to the actual, valid, JSON:
+///
+/// ")]}'\n"
+///
+/// This function detects this case and has serde parse the valid json instead.
+fn parse_safe_json<'a, T>(raw: &'a [u8]) -> serde_json::Result<T>
+where
+    T: Deserialize<'a>,
+{
+    let safety_prefix = b")]}'\n";
+    // if the raw data starts with the safety prefix, adjust the slice to parse to be after the
+    // safety prefix.
+    if raw.starts_with(safety_prefix) {
+        serde_json::from_slice(&raw[safety_prefix.len()..])
+    } else {
+        serde_json::from_slice(raw)
+    }
 }

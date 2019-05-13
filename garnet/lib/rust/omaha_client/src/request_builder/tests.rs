@@ -79,7 +79,7 @@ pub fn test_single_request() {
     .into_parts();
 
     // Assert that the HTTP method and uri are accurate
-    assert_eq!(http::Method::GET, parts.method);
+    assert_eq!(http::Method::POST, parts.method);
     assert_eq!(config.service_url, parts.uri.to_string());
 
     // Assert that all the request body is correct, by generating an equivalent JSON one and

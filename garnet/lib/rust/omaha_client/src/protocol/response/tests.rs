@@ -449,3 +449,29 @@ fn test_missing_app() {
 }}"#;
     assert!(parse_json_response(json).is_err());
 }
+
+#[test]
+fn test_no_safe_json() {
+    let valid_json = json!({"this":["is", "valid", "json"]});
+    let valid_json_bytes =
+        serde_json::to_vec_pretty(&valid_json).expect("Unable to serialize JSON to string");
+
+    let parse_result: serde_json::Result<serde_json::Value> = parse_safe_json(&valid_json_bytes);
+    let parsed_json = parse_result.expect("Unable to parse valid JSON");
+
+    assert_eq!(parsed_json, valid_json);
+}
+
+#[test]
+fn test_safe_json() {
+    let valid_json = json!({"this":["is", "valid", "json"]});
+    let mut safe_json = b")]}'\n".to_vec();
+
+    serde_json::to_writer(&mut safe_json, &valid_json)
+        .expect("Unable to construct 'safe' test JSON");
+
+    let parsed_json: serde_json::Value =
+        parse_safe_json(&safe_json).expect("Unable to parse 'made safe' JSON");
+
+    assert_eq!(parsed_json, valid_json);
+}

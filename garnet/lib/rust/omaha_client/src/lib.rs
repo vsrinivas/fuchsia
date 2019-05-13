@@ -15,3 +15,4 @@ pub mod metrics;
 pub mod policy;
 pub mod protocol;
 pub mod request_builder;
+pub mod state_machine;
