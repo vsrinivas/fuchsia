@@ -2,26 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::rewrite_manager::RewriteManager;
-use failure::{Error, ResultExt};
-use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_amber::{self, ControlMarker as AmberMarker, ControlProxy as AmberProxy};
-use fidl_fuchsia_io::{self, DirectoryMarker};
-use fidl_fuchsia_pkg::{
-    PackageCacheProxy, PackageResolverRequest, PackageResolverRequestStream, UpdatePolicy,
+use {
+    crate::rewrite_manager::RewriteManager,
+    failure::{Error, ResultExt},
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_amber::{self, ControlMarker as AmberMarker, ControlProxy as AmberProxy},
+    fidl_fuchsia_io::{self, DirectoryMarker},
+    fidl_fuchsia_pkg::{
+        PackageCacheProxy, PackageResolverRequest, PackageResolverRequestStream, UpdatePolicy,
+    },
+    fidl_fuchsia_pkg_ext::BlobId,
+    fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_uri::pkg_uri::PkgUri,
+    fuchsia_zircon::{Channel, MessageBuf, Signals, Status},
+    futures::prelude::*,
+    lazy_static::lazy_static,
+    log::{info, warn},
+    parking_lot::RwLock,
+    regex::Regex,
+    std::sync::Arc,
 };
-use fidl_fuchsia_pkg_ext::BlobId;
-use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
-use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
-use fuchsia_uri::pkg_uri::PkgUri;
-use fuchsia_zircon::{Channel, MessageBuf, Signals, Status};
-use futures::prelude::*;
-use lazy_static::lazy_static;
-use log::{info, warn};
-use parking_lot::RwLock;
-use regex::Regex;
-use std::sync::Arc;
 
 lazy_static! {
     // The error amber returns if it could not find the merkle for this package.

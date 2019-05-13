@@ -5,17 +5,19 @@
 #![feature(async_await, await_macro)]
 #![deny(warnings)]
 
-use failure::{Error, ResultExt};
-use fidl_fuchsia_amber::ControlMarker as AmberMarker;
-use fidl_fuchsia_pkg::PackageCacheMarker;
-use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
-use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::{self, fx_log_err, fx_log_info};
-use futures::{StreamExt, TryFutureExt};
-use parking_lot::RwLock;
-use std::io;
-use std::sync::Arc;
+use {
+    failure::{Error, ResultExt},
+    fidl_fuchsia_amber::ControlMarker as AmberMarker,
+    fidl_fuchsia_pkg::PackageCacheMarker,
+    fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_syslog::{self, fx_log_err, fx_log_info},
+    futures::{StreamExt, TryFutureExt},
+    parking_lot::RwLock,
+    std::io,
+    std::sync::Arc,
+};
 
 mod repository_manager;
 mod repository_service;
@@ -26,11 +28,10 @@ mod rewrite_service;
 #[cfg(test)]
 mod test_util;
 
-use repository_manager::{RepositoryManager, RepositoryManagerBuilder};
-use repository_service::RepositoryService;
-
-use rewrite_manager::{RewriteManager, RewriteManagerBuilder};
-use rewrite_service::RewriteService;
+use crate::repository_manager::{RepositoryManager, RepositoryManagerBuilder};
+use crate::repository_service::RepositoryService;
+use crate::rewrite_manager::{RewriteManager, RewriteManagerBuilder};
+use crate::rewrite_service::RewriteService;
 
 const SERVER_THREADS: usize = 2;
 
