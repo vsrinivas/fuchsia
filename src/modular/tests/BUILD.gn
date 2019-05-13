@@ -2,19 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("modular") {
-  testonly = true
-  deps = [
-    ":tests",
-    "bundles",
-  ]
-}
-
 group("tests") {
   testonly = true
-
   deps = [
-    "tests",  # tests/ directory
+    # Add individual test packages here.
   ]
-  data_deps = []
 }
