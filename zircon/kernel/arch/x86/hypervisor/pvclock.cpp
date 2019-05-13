@@ -11,6 +11,7 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <platform.h>
 #include <vm/physmap.h>
+#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 namespace {
@@ -71,7 +72,7 @@ zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas
     // VCPUs, but documentation doesn't mention that it cannot happen and moreover it properly
     // protects per VCPU system time. Therefore to be on the safer side we use one global mutex
     // for protection.
-    static uint32_t version __TA_GUARDED(UpdateBootTimeLock::Get());
+    static uint32_t version TA_GUARDED(UpdateBootTimeLock::Get());
 
     hypervisor::GuestPtr guest_ptr;
     zx_status_t status = gpas->CreateGuestPtr(guest_paddr, sizeof(pvclock_boot_time),

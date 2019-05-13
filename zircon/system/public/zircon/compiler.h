@@ -40,13 +40,20 @@
 #define __LEAF_FN __attribute__((__leaf__))
 #define __OPTIMIZE(x) __attribute__((__optimize__(x)))
 #define __EXTERNALLY_VISIBLE __attribute__((__externally_visible__))
-#define __THREAD_ANNOTATION(x)
 #define __NO_SAFESTACK
+#define __THREAD_ANNOTATION(x)
 #else
 #define __LEAF_FN
 #define __OPTIMIZE(x)
 #define __EXTERNALLY_VISIBLE
+// The thread safety annotations are frequently used with C++ standard library
+// types in userspace, so only enable the annotations if we know that the C++
+// standard library types are annotated or if we're in kernel code.
+#if defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS) || defined(_KERNEL)
 #define __THREAD_ANNOTATION(x) __attribute__((x))
+#else
+#define __THREAD_ANNOTATION(x)
+#endif  // _LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS
 #define __NO_SAFESTACK __attribute__((__no_sanitize__("safe-stack")))
 #endif
 

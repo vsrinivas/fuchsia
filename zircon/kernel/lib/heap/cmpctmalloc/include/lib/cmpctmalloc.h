@@ -12,16 +12,17 @@
 #include <stddef.h>
 
 #include <zircon/compiler.h>
+#include <zircon/thread_annotations.h>
 
 DECLARE_SINGLETON_MUTEX(TheHeapLock);
 
-void* cmpct_alloc(size_t) __TA_EXCLUDES(TheHeapLock::Get());
-void* cmpct_realloc(void*, size_t) __TA_EXCLUDES(TheHeapLock::Get());
-void cmpct_free(void*) __TA_EXCLUDES(TheHeapLock::Get());
-void* cmpct_memalign(size_t size, size_t alignment) __TA_EXCLUDES(TheHeapLock::Get());
+void* cmpct_alloc(size_t) TA_EXCL(TheHeapLock::Get());
+void* cmpct_realloc(void*, size_t) TA_EXCL(TheHeapLock::Get());
+void cmpct_free(void*) TA_EXCL(TheHeapLock::Get());
+void* cmpct_memalign(size_t size, size_t alignment) TA_EXCL(TheHeapLock::Get());
 
-void cmpct_init(void) __TA_EXCLUDES(TheHeapLock::Get());
-void cmpct_dump(bool panic_time) __TA_EXCLUDES(TheHeapLock::Get());
-void cmpct_get_info(size_t* size_bytes, size_t* free_bytes) __TA_EXCLUDES(TheHeapLock::Get());
-void cmpct_test(void) __TA_EXCLUDES(TheHeapLock::Get());
-void cmpct_trim(void) __TA_EXCLUDES(TheHeapLock::Get());
+void cmpct_init(void) TA_EXCL(TheHeapLock::Get());
+void cmpct_dump(bool panic_time) TA_EXCL(TheHeapLock::Get());
+void cmpct_get_info(size_t* size_bytes, size_t* free_bytes) TA_EXCL(TheHeapLock::Get());
+void cmpct_test(void) TA_EXCL(TheHeapLock::Get());
+void cmpct_trim(void) TA_EXCL(TheHeapLock::Get());

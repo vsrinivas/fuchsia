@@ -18,10 +18,11 @@
 #include <ktl/atomic.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
+#include <zircon/thread_annotations.h>
 
 // Kernel mutex support.
 //
-class __TA_CAPABILITY("mutex") Mutex {
+class TA_CAP("mutex") Mutex {
 public:
     constexpr Mutex() = default;
     ~Mutex();
@@ -29,11 +30,11 @@ public:
     // No moving or copying allowed.
     DISALLOW_COPY_ASSIGN_AND_MOVE(Mutex);
 
-    void Acquire() __TA_ACQUIRE() __TA_EXCLUDES(thread_lock);
-    void Release() __TA_RELEASE() __TA_EXCLUDES(thread_lock);
+    void Acquire() TA_ACQ() TA_EXCL(thread_lock);
+    void Release() TA_REL() TA_EXCL(thread_lock);
 
     // Special version of Release which operates with the thread lock held
-    void ReleaseThreadLocked(const bool allow_reschedule) __TA_RELEASE() __TA_REQUIRES(thread_lock);
+    void ReleaseThreadLocked(const bool allow_reschedule) TA_REL() TA_REQ(thread_lock);
 
     // does the current thread hold the mutex?
     bool IsHeld() const {
@@ -51,7 +52,7 @@ private:
     static constexpr uintptr_t STATE_FLAG_CONTESTED = 1u;
 
     template <ThreadLockState TLS>
-    void ReleaseInternal(const bool allow_reschedule) __TA_RELEASE() __TA_NO_THREAD_SAFETY_ANALYSIS;
+    void ReleaseInternal(const bool allow_reschedule) TA_REL() __TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // Accessors to extract the holder pointer from the val member
     uintptr_t val() const {
@@ -80,12 +81,12 @@ struct MutexPolicy {
 
     // Basic acquire and release operations.
     template <typename LockType>
-    static bool Acquire(LockType* lock, State*) __TA_ACQUIRE(lock) __TA_EXCLUDES(thread_lock) {
+    static bool Acquire(LockType* lock, State*) TA_ACQ(lock) TA_EXCL(thread_lock) {
         lock->Acquire();
         return true;
     }
     template <typename LockType>
-    static void Release(LockType* lock, State*) __TA_RELEASE(lock) __TA_EXCLUDES(thread_lock) {
+    static void Release(LockType* lock, State*) TA_REL(lock) TA_EXCL(thread_lock) {
         lock->Release();
     }
 
@@ -110,7 +111,7 @@ struct MutexPolicy {
                         State*,
                         SelectThreadLockHeld,
                         RescheduleOption reschedule = Reschedule)
-    __TA_RELEASE(lock) __TA_REQUIRES(thread_lock) {
+    TA_REL(lock) TA_REQ(thread_lock) {
         lock->ReleaseThreadLocked(reschedule);
     }
 };
