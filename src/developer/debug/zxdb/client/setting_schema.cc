@@ -96,6 +96,20 @@ Err SettingSchema::ValidateSetting(const std::string& key,
         SettingTypeToString(setting.setting.value.type));
   }
 
+  if (setting.setting.value.is_list() && !setting.options.empty()) {
+    for (auto& item : value.get_list()) {
+      bool found = false;
+      for (auto& option : setting.options) {
+        if (item == option) {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+        return Err("Option \"%s\" is not a valid option", item.c_str());
+    }
+  }
+
   return Err();
 }
 

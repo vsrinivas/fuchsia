@@ -27,6 +27,11 @@ fxl::RefPtr<SettingSchema> GetSchema() {
     FXL_NOTREACHED() << "Schema should be valid!";
     return nullptr;
   }
+  if (!schema->AddList("list_with_options", "list_with_options", {},
+                       DefaultList())) {
+    FXL_NOTREACHED() << "Schema should be valid!";
+    return nullptr;
+  }
   return schema;
 }
 
@@ -96,6 +101,19 @@ TEST(SettingStore, Overrides) {
   err = store.SetInt("int", kNewInt);
   ASSERT_FALSE(err.has_error());
   EXPECT_EQ(store.GetInt("int"), kNewInt);
+}
+
+TEST(SettingStore, ListOptions) {
+  Err err;
+  SettingStore store(GetSchema(), nullptr);
+
+  // Attemp to add a valid item to the list with options.
+  err = store.SetList("list_with_options", {kDefaultString});
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Add an option that doesn't exist.
+  err = store.SetList("list_with_options", {"some_weird_option"});
+  EXPECT_TRUE(err.has_error());
 }
 
 TEST(SettingStore, Fallback) {
