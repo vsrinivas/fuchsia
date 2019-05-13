@@ -8,13 +8,10 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 # The vDSO can't be built with instrumentation.
 exclude_tags = [ "instrumented" ]
 
-if (toolchain.environment != "user") {
-  # References from other environments only get the headers.
-  group("zircon") {
-    public_deps = [
-      ":headers",
-    ]
-  }
+# References from instrumented variants just redirect.  This prevents extra
+# abigen runs in other toolchains just to get identical generated headers.
+if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
+    toolchain.environment != "user") {
   environment_redirect("headers") {
     environment_label = "$zx/public/gn/toolchain:user"
     direct = true
@@ -24,21 +21,26 @@ if (toolchain.environment != "user") {
       ":headers",
     ]
   }
-} else if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags) {
-  # References from instrumented variants just redirect.  This prevents
-  # extra abigen runs in other toolchains just to get identical generated
-  # headers.
-  foreach(target,
-          [
-            "zircon",
-            "headers",
-          ]) {
-    environment_redirect(target) {
+  if (toolchain.base_environment == "user") {
+    # Instrumented variants, and all variants of derived environments,
+    # link against the uninstrumented library.
+    environment_redirect("zircon") {
+      environment_label = "$zx/public/gn/toolchain:user"
       direct = true
       shlib = true
       exclude_variant_tags = exclude_tags
       deps = [
-        ":$target",
+        ":zircon",
+      ]
+    }
+  } else {
+    # References from other environments only get the headers.  This
+    # makes it easy to have "$zx/system/ulib/zircon" deps in common
+    # libraries that need to link against it in userland but that in
+    # other contexts like kernel or userboot are just using the headers.
+    group("zircon") {
+      public_deps = [
+        ":headers",
       ]
     }
   }
