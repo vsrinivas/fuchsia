@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-#![recursion_limit = "128"]
+#![recursion_limit = "256"]
 
 mod serialization;
 mod session;
@@ -14,11 +14,12 @@ use failure::Error;
 use fidl_fuchsia_ledger_cloud::CloudProviderRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
+use futures::future::LocalFutureObj;
 use futures::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::session::CloudSession;
+use crate::session::{CloudSession, CloudSessionShared};
 use crate::state::Cloud;
 
 /// An factory for instances of the cloud provider sharing the same
@@ -32,8 +33,8 @@ impl CloudFactory {
     }
 
     /// Returns a future that handles the request stream.
-    fn spawn(&self, stream: CloudProviderRequestStream) -> impl Future<Output = ()> {
-        CloudSession::new(Rc::clone(&self.0), stream).run()
+    fn spawn(&self, stream: CloudProviderRequestStream) -> LocalFutureObj<'static, ()> {
+        CloudSession::new(Rc::new(CloudSessionShared::new(Rc::clone(&self.0))), stream).run()
     }
 }
 

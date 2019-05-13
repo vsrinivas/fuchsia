@@ -16,8 +16,10 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ledger.cloud:fuchsia.ledger.cloud-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:pin-utils",
     "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
+  with_unit_tests = true
 }
 
 package("cloud_provider_memory_diff") {
@@ -39,6 +41,7 @@ package("cloud_provider_memory_diff_tests") {
   testonly = true
 
   deps = [
+    ":bin",
     "validation",
   ]
 
@@ -52,6 +55,10 @@ package("cloud_provider_memory_diff_tests") {
   tests = [
     {
       name = "launch_validation_tests_memory_diff"
+      environments = basic_envs
+    },
+    {
+      name = "cloud_provider_memory_diff_bin_test"
       environments = basic_envs
     },
   ]
