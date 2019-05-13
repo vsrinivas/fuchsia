@@ -1,0 +1,27 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.discover;
+
+[Discoverable]
+protocol ModuleOutputWriter {
+    /// Writes the |entity_reference| to the module's |output_parameter_name|
+    /// output. If no entity is provided, the output will be unset.
+    /// Return happens upon completion of a successful write.
+    Write(string output_name, string? entity_reference) -> () error OutputError;
+};
+
+/// Errors that can occur when writing to an output.
+enum OutputError : int32 {
+    /// If the output doesn't match a parameter defined in the module manifest
+    /// for the action currently being handled by the module.
+    UNKNOWN_NAME = 1;
+
+    /// If the entity reference couldn't be resolved.
+    UNKNOWN_ENTITY_REFERENCE = 2;
+
+    /// If the entity type written doesn't match the type defined in the module
+    /// manifest for the action currently being handled by the module..
+    INVALID_ENTITY_TYPE = 3;
+};

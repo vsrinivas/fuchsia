@@ -1,0 +1,24 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.app.discover;
+
+using fuchsia.app;
+
+/// Interface between sessionmgr and discovermgr to route service connections
+/// requests that require module scoping.
+[Discoverable]
+protocol DiscoverRegistry {
+    /// Retrieves a module output writer for the module identified by |module|.
+    RegisterModuleOutputWriter(ModuleIdentifier module, request<ModuleOutputWriter> request);
+};
+
+table ModuleIdentifier {
+    /// The ID of the story to which the module belongs.
+    1: fuchsia.app.StoryId story_id;
+
+    /// The named path leading up to this module instance. This path is a unique
+    /// identifier of the module in the story.
+    2: vector<string> module_path;
+};
