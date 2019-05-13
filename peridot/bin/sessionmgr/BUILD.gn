@@ -51,7 +51,6 @@ executable_package("sessionmgr") {
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
-    "//peridot/lib/ledger_client:status",
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/modular_config:modular_config",
     "//peridot/lib/module_manifest:module_facet_reader_impl",

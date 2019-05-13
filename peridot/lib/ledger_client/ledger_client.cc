@@ -5,6 +5,7 @@
 #include "peridot/lib/ledger_client/ledger_client.h"
 
 #include <lib/fsl/vmo/strings.h>
+#include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <algorithm>
@@ -12,7 +13,6 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/page_client.h"
-#include "peridot/lib/ledger_client/status.h"
 #include "peridot/lib/ledger_client/types.h"
 
 namespace modular {
@@ -118,10 +118,10 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
     result_provider_.set_error_handler([](zx_status_t status) {
       if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
         FXL_LOG(ERROR) << "ResultProvider error: "
-                       << LedgerEpitaphToString(status);
+                       << zx_status_get_string(status);
       } else {
         FXL_LOG(INFO) << "ResultProvider disconnected: "
-                      << LedgerEpitaphToString(status);
+                      << zx_status_get_string(status);
       }
     });
   }
@@ -228,10 +228,10 @@ LedgerClient::LedgerClient(fuchsia::ledger::LedgerPtr ledger,
     : ledger_(std::move(ledger)) {
   ledger_.set_error_handler([error = std::move(error)](zx_status_t status) {
     if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
-      FXL_LOG(ERROR) << "Ledger error: " << LedgerEpitaphToString(status);
+      FXL_LOG(ERROR) << "Ledger error: " << zx_status_get_string(status);
       error(status);
     } else {
-      FXL_LOG(INFO) << "Ledger disconnected: " << LedgerEpitaphToString(status);
+      FXL_LOG(INFO) << "Ledger disconnected: " << zx_status_get_string(status);
     }
   });
   ledger_->SetConflictResolverFactory(bindings_.AddBinding(this));
@@ -242,10 +242,10 @@ LedgerClient::LedgerClient(
     const std::string& name, fit::function<void(zx_status_t)> error) {
   ledger_.set_error_handler([error = std::move(error)](zx_status_t status) {
     if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
-      FXL_LOG(ERROR) << "Ledger error: " << LedgerEpitaphToString(status);
+      FXL_LOG(ERROR) << "Ledger error: " << zx_status_get_string(status);
       error(status);
     } else {
-      FXL_LOG(INFO) << "Ledger disconnected: " << LedgerEpitaphToString(status);
+      FXL_LOG(INFO) << "Ledger disconnected: " << zx_status_get_string(status);
     }
   });
   // Open Ledger.

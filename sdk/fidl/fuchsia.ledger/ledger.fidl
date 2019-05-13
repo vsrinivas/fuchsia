@@ -13,26 +13,6 @@ using zx;
 /// Type of the keys in a ledger Page.
 using Key = bytes:256;
 
-/// Response code for ledger operations.
-enum Status : int32 {
-    OK = 0;
-    PARTIAL_RESULT = 1;
-    INVALID_TOKEN = 2;
-    INVALID_ARGUMENT = 3;
-    PAGE_NOT_FOUND = 4;
-    KEY_NOT_FOUND = 5;
-    REFERENCE_NOT_FOUND = 6;
-    NEEDS_FETCH = 7;
-    IO_ERROR = 8;
-    NETWORK_ERROR = 9;
-    TRANSACTION_ALREADY_IN_PROGRESS = 10;
-    NO_TRANSACTION_IN_PROGRESS = 11;
-    INTERNAL_ERROR = 12;
-    VALUE_TOO_LARGE = 13;
-    ILLEGAL_STATE = 14;
-    UNKNOWN_ERROR = -1;
-};
-
 /// Size in bytes of Page IDs.
 const uint32 PAGE_ID_SIZE = 16;
 

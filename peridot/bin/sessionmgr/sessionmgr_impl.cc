@@ -21,6 +21,7 @@
 #include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
+#include <zircon/status.h>
 
 #include <memory>
 #include <string>
@@ -47,7 +48,6 @@
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
-#include "peridot/lib/ledger_client/status.h"
 #include "peridot/lib/module_manifest/module_facet_reader_impl.h"
 
 namespace modular {
@@ -340,7 +340,7 @@ void SessionmgrImpl::InitializeLedger(
 
   ledger_repository_factory_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "LedgerRepositoryFactory.GetRepository() failed: "
-                   << LedgerEpitaphToString(status) << std::endl
+                   << zx_status_get_string(status) << std::endl
                    << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
     Shutdown();
   });
@@ -358,7 +358,7 @@ void SessionmgrImpl::InitializeLedger(
   // is cleared), ledger will close the connection to |ledger_repository_|.
   ledger_repository_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "LedgerRepository disconnected with epitaph: "
-                   << LedgerEpitaphToString(status) << std::endl
+                   << zx_status_get_string(status) << std::endl
                    << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
     Shutdown();
   });

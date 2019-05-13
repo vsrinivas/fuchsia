@@ -5,13 +5,13 @@
 #include "peridot/lib/ledger_client/page_client.h"
 
 #include <lib/fsl/vmo/strings.h>
+#include <zircon/status.h>
 
 #include <memory>
 #include <utility>
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
-#include "peridot/lib/ledger_client/status.h"
 
 namespace modular {
 
@@ -37,7 +37,7 @@ fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot() {
   fuchsia::ledger::PageSnapshotPtr ptr;
   ptr.set_error_handler([](zx_status_t status) {
     if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
-      FXL_LOG(ERROR) << "PageSnapshot error: " << LedgerEpitaphToString(status);
+      FXL_LOG(ERROR) << "PageSnapshot error: " << zx_status_get_string(status);
     }
   });
   page_->GetSnapshot(ptr.NewRequest(), to_array(prefix_),

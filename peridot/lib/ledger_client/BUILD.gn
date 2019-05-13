@@ -45,7 +45,6 @@ source_set("page_client") {
   ]
 
   deps = [
-    ":status",
     ":types",
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
@@ -70,18 +69,6 @@ source_set("promise") {
   public_deps = [
     "//peridot/lib/fidl:array_to_string",
     "//sdk/fidl/fuchsia.ledger",
-  ]
-}
-
-source_set("status") {
-  sources = [
-    "status.cc",
-    "status.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.ledger",
-    "//src/lib/fxl",
   ]
 }
 

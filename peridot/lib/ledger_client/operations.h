@@ -28,13 +28,6 @@ namespace modular {
 // PagePtr is held by LedgerClient and handed out as Page* to PageClient, which
 // passes it on to the respective Operations.
 //
-// As a result, callbacks for methods invoked on the Page* are not cancelled
-// when the Operation instance is deleted, as they would be if the FIDL pointer
-// were owned by the Operation instance. Therefore, such callbacks must be
-// explicitly guarded using a weak pointer to the Operation instance against
-// execution after their Operation instance was destroyed.
-//
-// This base class provides the method Protect() for the purpose.
 //
 // In derived class that are themselves template classes, the method must be
 // invoked by explicit qualification with this-> (or alternatively with the base
@@ -56,17 +49,6 @@ class PageOperation : public Operation<Args...> {
 
  protected:
   fuchsia::ledger::Page* page() const { return page_; }
-
-  using PageCallback = fit::function<void(fuchsia::ledger::Status)>;
-
-  PageCallback Protect(PageCallback callback) {
-    return [weak_this = this->GetWeakPtr(),
-            callback = std::move(callback)](fuchsia::ledger::Status status) {
-      if (weak_this) {
-        callback(status);
-      }
-    };
-  }
 
  private:
   fuchsia::ledger::Page* const page_;
@@ -93,17 +75,6 @@ class LedgerOperation : public Operation<Args...> {
  protected:
   fuchsia::ledger::Ledger* ledger() const { return ledger_; }
   fuchsia::ledger::Page* page() const { return page_; }
-
-  using LedgerCallback = fit::function<void(fuchsia::ledger::Status)>;
-
-  LedgerCallback Protect(LedgerCallback callback) {
-    return [weak_this = this->GetWeakPtr(),
-            callback = std::move(callback)](fuchsia::ledger::Status status) {
-      if (weak_this) {
-        callback(status);
-      }
-    };
-  }
 
  private:
   fuchsia::ledger::Ledger* const ledger_;
