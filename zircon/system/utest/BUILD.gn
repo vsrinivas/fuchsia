@@ -143,6 +143,7 @@ if (current_cpu != "") {
       "fs-test-utils",
       "futex-ownership",
       "fvm",
+      "fvm:fvm-integration",
       "getentropy",
       "goldfish",
       "handle-alias",
