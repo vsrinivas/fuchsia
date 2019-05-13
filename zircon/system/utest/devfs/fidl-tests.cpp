@@ -97,7 +97,7 @@ bool TestFidlOpen() {
         ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
         ASSERT_EQ(fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
         ASSERT_TRUE(FidlOpenValidator(dev_client, "zero", fuchsia_io_NodeInfoTag_device, 1));
-        ASSERT_TRUE(FidlOpenValidator(dev_client, "class/block/000", fuchsia_io_NodeInfoTag_device, 1));
+        ASSERT_TRUE(FidlOpenValidator(dev_client, "class/platform-bus/000", fuchsia_io_NodeInfoTag_device, 1));
         ASSERT_TRUE(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
         ASSERT_TRUE(FidlOpenErrorValidator(dev_client, "zero/this-path-better-not-actually-exist"));
     }
