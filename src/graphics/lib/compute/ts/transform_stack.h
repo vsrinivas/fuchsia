@@ -18,6 +18,14 @@
 //
 //
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//
+//
+//
+
 struct ts_transform_stack;
 
 //
@@ -245,6 +253,14 @@ ts_transform_stack_concat(struct ts_transform_stack * const ts);
 
 void
 ts_transform_stack_multiply(struct ts_transform_stack * const ts);
+
+//
+//
+//
+
+#ifdef __cplusplus
+}
+#endif
 
 //
 //

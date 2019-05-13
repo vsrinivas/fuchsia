@@ -15,6 +15,14 @@
 #include <stdint.h>
 
 //
+//
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//
 // CONVERT FROM 0xAARRGGBB WORD ORDER INTO f32[4]
 //
 
@@ -59,6 +67,14 @@ void color_linear_lerp_rgba_f32(float       rgba_m[4],
                                 float const rgba_a[4],
                                 float const rgba_b[4],
                                 float const t);
+
+//
+//
+//
+
+#ifdef __cplusplus
+}
+#endif
 
 //
 //

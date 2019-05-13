@@ -3,15 +3,11 @@
 // found in the LICENSE file.
 
 //
-//
-//
-
-#include <math.h>
-#include "color.h"
-
-//
 // COLOR UTILITIES
 //
+
+#include "color.h"
+#include <math.h>
 
 //
 // CONVERT FROM 0xAARRGGBB WORD ORDER INTO f32[4]
