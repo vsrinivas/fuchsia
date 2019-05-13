@@ -10,6 +10,12 @@ if (current_cpu != "") {
   group("utest") {
     testonly = true
 
+    # For unittests, the recommended naming scheme is:
+    #   path/to/code/test
+    # or
+    #   path/to/code:test
+    #
+    # Where "test" is a group containing all unittest labels.
     deps = [
       ":host",  # TODO(mcgrathr): reach this differently?
       "$zx/system/core/bootsvc:tests",
@@ -78,7 +84,8 @@ if (current_cpu != "") {
       "$zx/system/ulib/tftp:tftp-test",
       "$zx/system/ulib/trace-reader:tests",
       "$zx/system/ulib/trace-vthread:tests",
-      "$zx/system/ulib/zbi-bootfs/test:test",
+      "$zx/system/ulib/zbi-bootfs/test",
+      "$zx/system/ulib/zx/test",
       "$zx/system/ulib/zxtest/test",
       "abigen",
       "async-testutils",
@@ -140,7 +147,6 @@ if (current_cpu != "") {
       "kernel-unittests",
       "launchpad",
       "libhwreg",
-      "libzx",
       "log",
       "logger",
       "memfs",
