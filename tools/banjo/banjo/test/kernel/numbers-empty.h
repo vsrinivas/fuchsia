@@ -5,3 +5,4 @@
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
 // Generated from the banjo.examples.empty banjo file
 
+

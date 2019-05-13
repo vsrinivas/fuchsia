@@ -48,4 +48,3 @@ syscall float32
 syscall float64
     (u64: double)
     returns (double, f64_2: double);
-

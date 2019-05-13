@@ -8,36 +8,6 @@ mod ast_tests;
 mod codegen_tests;
 mod fidl_tests;
 
-/// Asserts the left and right hand side are the same ignoring new line characters
-#[macro_export]
-macro_rules! assert_eq_trim {
-    ($left:expr , $right:expr,) => {{
-        let left_val_trim: String = $left.chars().filter(|c| *c != '\n').collect();
-        let right_val_trim: String = $right.chars().filter(|c| *c != '\n').collect();
-        assert_eq!(left_val_trim, right_val_trim);
-    }};
-    ($left:expr , $right:expr) => {{
-        match (&($left), &($right)) {
-            (left_val, right_val) => {
-                let left_val_trim: String = left_val.chars().filter(|c| *c != '\n').collect();
-                let right_val_trim: String = right_val.chars().filter(|c| *c != '\n').collect();
-                assert_eq!(left_val_trim, right_val_trim);
-            }
-        }
-    }};
-    ($left:expr , $right:expr, $($arg:tt)*) => {{
-        match (&($left), &($right)) {
-            (left_val, right_val) => {
-                if !(*left_val == *right_val) {
-                    let left_val_trim: String = left_val.chars().filter(|c| *c != '\n').collect();
-                    let right_val_trim: String = right_val.chars().filter(|c| *c != '\n').collect();
-                    assert_eq!(left_val_trim, right_val_trim);
-                }
-            }
-        }
-    }};
-}
-
 /// Makes a banjo backend test.
 /// Arguments:
 ///     id: name of test
@@ -70,7 +40,7 @@ macro_rules! codegen_test {
                     backend.codegen(ast).unwrap();
                 }
                 let output = String::from_utf8(output).unwrap();
-                $crate::assert_eq_trim!(output, expected)
+                assert_eq!(output, expected);
             }
     }
 }
