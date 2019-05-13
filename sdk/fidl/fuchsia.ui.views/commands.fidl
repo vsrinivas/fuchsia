@@ -4,30 +4,9 @@
 
 library fuchsia.ui.views;
 
+// DO NOT USE - Retained for ABI stability in fuchsia.ui.scenic.Command
+
+// DO NOT USE
 union Command {
-    CreateViewCmd create_view;
-    CreateViewHolderCmd create_view_holder;
-
-    AddChildViewCmd add_child_view;
-    RemoveChildViewCmd remove_child_view;
-};
-
-struct CreateViewCmd {
-    uint32 id;
-    handle<eventpair> token;
-};
-
-struct CreateViewHolderCmd {
-    uint32 id;
-    handle<eventpair> token;
-};
-
-struct AddChildViewCmd {
-    uint32 view_id;
-    uint32 view_holder_id;
-};
-
-struct RemoveChildViewCmd {
-    uint32 view_id;
-    uint32 view_holder_id;
+    int32 empty;
 };

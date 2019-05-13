@@ -9,7 +9,6 @@ fidl("fuchsia.ui.views") {
 
   sources = [
     "commands.fidl",
-    "events.fidl",
     "view.fidl",
     "view_config.fidl",
     "view_token.fidl",

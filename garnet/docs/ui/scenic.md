@@ -277,7 +277,6 @@ make up Scenic.
 
 * [Views](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.views) (`fuchsia.ui.views`)
   * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.views/commands.fidl)
-  * [events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.views/events.fidl)
 
 * [Input](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input) (`fuchsia.ui.input`)
   * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/commands.fidl)
