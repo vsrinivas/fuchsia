@@ -51,8 +51,8 @@ a/b/.channel
 
 $ iquery --cat a
 a:
-  key = value
-  key2 = 3.4
+  a_key = a_value
+  a_key2 = 3.4
 
 $ iquery --cat --recursive a
 a:
