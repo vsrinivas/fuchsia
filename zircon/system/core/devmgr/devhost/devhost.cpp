@@ -46,7 +46,9 @@
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
 #include "composite-device.h"
+#include "connection-destroyer.h"
 #include "main.h"
+#include "proxy-iostate.h"
 #include "scheduler_profile.h"
 #include "tracing.h"
 
@@ -58,26 +60,6 @@ zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
 namespace devmgr {
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
-
-struct ProxyIostate : AsyncLoopOwnedRpcHandler<ProxyIostate> {
-    ProxyIostate() = default;
-    ~ProxyIostate();
-
-    // Creates a ProxyIostate and points |dev| at it.  The ProxyIostate is owned
-    // by the async loop, and its destruction may be requested by calling
-    // Cancel().
-    static zx_status_t Create(const fbl::RefPtr<zx_device_t>& dev, zx::channel rpc);
-
-    // Request the destruction of the proxy connection
-    void Cancel();
-
-    static void HandleRpc(fbl::unique_ptr<ProxyIostate> conn, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
-
-    fbl::RefPtr<zx_device_t> dev;
-};
-static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev);
 
 static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
 
@@ -96,77 +78,6 @@ static zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch) {
     conn->set_channel(std::move(ch));
     return DevhostControllerConnection::BeginWait(std::move(conn),
                                                       DevhostAsyncLoop()->dispatcher());
-}
-
-// Handles destroying Connection objects in the single-threaded DevhostAsyncLoop().
-// This allows us to prevent races between canceling waiting on the connection
-// channel and executing the connection's handler.
-class ConnectionDestroyer {
-public:
-    static ConnectionDestroyer* Get() {
-        static ConnectionDestroyer destroyer;
-        return &destroyer;
-    }
-
-    zx_status_t QueueDeviceControllerConnection(DeviceControllerConnection* conn);
-    zx_status_t QueueProxyConnection(ProxyIostate* conn);
-
-private:
-    ConnectionDestroyer() = default;
-
-    ConnectionDestroyer(const ConnectionDestroyer&) = delete;
-    ConnectionDestroyer& operator=(const ConnectionDestroyer&) = delete;
-
-    ConnectionDestroyer(ConnectionDestroyer&&) = delete;
-    ConnectionDestroyer& operator=(ConnectionDestroyer&&) = delete;
-
-    static void Handler(async_dispatcher_t* dispatcher, async::Receiver* receiver,
-                        zx_status_t status, const zx_packet_user_t* data);
-
-    enum class Type {
-        DeviceController,
-        Proxy,
-    };
-
-    async::Receiver receiver_{ConnectionDestroyer::Handler};
-};
-
-zx_status_t ConnectionDestroyer::QueueProxyConnection(ProxyIostate* conn) {
-    zx_packet_user_t pkt = {};
-    pkt.u64[0] = static_cast<uint64_t>(Type::Proxy);
-    pkt.u64[1] = reinterpret_cast<uintptr_t>(conn);
-    return receiver_.QueuePacket(DevhostAsyncLoop()->dispatcher(), &pkt);
-}
-
-zx_status_t ConnectionDestroyer::QueueDeviceControllerConnection(
-        DeviceControllerConnection* conn) {
-    zx_packet_user_t pkt = {};
-    pkt.u64[0] = static_cast<uint64_t>(Type::DeviceController);
-    pkt.u64[1] = reinterpret_cast<uintptr_t>(conn);
-    return receiver_.QueuePacket(DevhostAsyncLoop()->dispatcher(), &pkt);
-}
-
-void ConnectionDestroyer::Handler(async_dispatcher_t* dispatcher, async::Receiver* receiver,
-                                  zx_status_t status, const zx_packet_user_t* data) {
-    Type type = static_cast<Type>(data->u64[0]);
-    uintptr_t ptr = data->u64[1];
-
-    switch (type) {
-    case Type::DeviceController: {
-        auto conn = reinterpret_cast<DeviceControllerConnection*>(ptr);
-        log(TRACE, "devhost: destroying devcoord conn '%p'\n", conn);
-        delete conn;
-        break;
-    }
-    case Type::Proxy: {
-        auto conn = reinterpret_cast<ProxyIostate*>(ptr);
-        log(TRACE, "devhost: destroying proxy conn '%p'\n", conn);
-        delete conn;
-        break;
-    }
-    default:
-        ZX_ASSERT_MSG(false, "Unknown IosDestructionType %" PRIu64 "\n", data->u64[0]);
-    }
 }
 
 static const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max) {
@@ -607,7 +518,7 @@ static zx_status_t fidl_ConnectProxy(void* raw_ctx, zx_handle_t raw_shadow) {
     ctx->conn->dev->ops->rxrpc(ctx->conn->dev->ctx, ZX_HANDLE_INVALID);
     // Ignore any errors in the creation for now?
     // TODO(teisenbe/kulakowski): Investigate if this is the right thing
-    ProxyIostate::Create(ctx->conn->dev, std::move(shadow));
+    ProxyIostate::Create(ctx->conn->dev, std::move(shadow), DevhostAsyncLoop()->dispatcher());
     return ZX_OK;
 }
 
@@ -824,91 +735,11 @@ void DevfsConnection::HandleRpc(fbl::unique_ptr<DevfsConnection> conn,
     log(TRACE, "devhost: destroying devfs conn %p\n", conn.get());
 }
 
-ProxyIostate::~ProxyIostate() {
-    fbl::AutoLock guard(&dev->proxy_ios_lock);
-    if (dev->proxy_ios == this) {
-        dev->proxy_ios = nullptr;
-    }
-}
-
-// Handling RPC From Proxy Devices to BusDevs
-void ProxyIostate::HandleRpc(fbl::unique_ptr<ProxyIostate> conn, async_dispatcher_t* dispatcher,
-                             async::WaitBase* wait, zx_status_t status,
-                             const zx_packet_signal_t* signal) {
-    if (status != ZX_OK) {
-        return;
-    }
-
-    if (conn->dev == nullptr) {
-        log(RPC_SDW, "proxy-rpc: stale rpc? (ios=%p)\n", conn.get());
-        // Do not re-issue the wait here
-        return;
-    }
-    if (signal->observed & ZX_CHANNEL_READABLE) {
-        log(RPC_SDW, "proxy-rpc: rpc readable (ios=%p,dev=%p)\n", conn.get(), conn->dev.get());
-        zx_status_t r = conn->dev->ops->rxrpc(conn->dev->ctx, wait->object());
-        if (r != ZX_OK) {
-            log(RPC_SDW, "proxy-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, conn.get(),
-                conn->dev.get());
-            // Let |conn| be destroyed
-            return;
-        }
-        BeginWait(std::move(conn), dispatcher);
-        return;
-    }
-    if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        log(RPC_SDW, "proxy-rpc: peer closed (ios=%p,dev=%p)\n", conn.get(), conn->dev.get());
-        // Let |conn| be destroyed
-        return;
-    }
-    log(ERROR, "devhost: no work? %08x\n", signal->observed);
-    BeginWait(std::move(conn), dispatcher);
-}
-
-zx_status_t ProxyIostate::Create(const fbl::RefPtr<zx_device_t>& dev, zx::channel rpc) {
-    // This must be held for the adding of the channel to the port, since the
-    // async loop may run immediately after that point.
-    fbl::AutoLock guard(&dev->proxy_ios_lock);
-
-    if (dev->proxy_ios) {
-        dev->proxy_ios->Cancel();
-        dev->proxy_ios = nullptr;
-    }
-
-    auto ios = std::make_unique<ProxyIostate>();
-    if (ios == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    ios->dev = dev;
-    ios->set_channel(std::move(rpc));
-
-    // |ios| is will be owned by the async loop.  |dev| holds a reference that will be
-    // cleared prior to destruction.
-    dev->proxy_ios = ios.get();
-
-    zx_status_t status = BeginWait(std::move(ios), DevhostAsyncLoop()->dispatcher());
-    if (status != ZX_OK) {
-        dev->proxy_ios = nullptr;
-        return status;
-    }
-
-    return ZX_OK;
-}
-
-// The device for which ProxyIostate is currently attached to should have
-// its proxy_ios_lock held across Cancel().
-void ProxyIostate::Cancel() {
-    // TODO(teisenbe): We should probably check the return code in case the
-    // queue was full
-    ConnectionDestroyer::Get()->QueueProxyConnection(this);
-}
-
 static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
     fbl::AutoLock guard(&dev->proxy_ios_lock);
 
     if (dev->proxy_ios) {
-        dev->proxy_ios->Cancel();
+        dev->proxy_ios->Cancel(DevhostAsyncLoop()->dispatcher());
     }
     dev->proxy_ios = nullptr;
 }
@@ -1144,7 +975,8 @@ zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
     dev->rpc = zx::unowned_channel();
 
     // queue an event to destroy the connection
-    ConnectionDestroyer::Get()->QueueDeviceControllerConnection(conn);
+    ConnectionDestroyer::Get()->QueueDeviceControllerConnection(DevhostAsyncLoop()->dispatcher(),
+                                                                conn);
 
     // shut down our proxy rpc channel if it exists
     proxy_ios_destroy(dev);

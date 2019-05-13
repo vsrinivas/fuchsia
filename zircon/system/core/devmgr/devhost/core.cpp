@@ -162,7 +162,20 @@ static zx_protocol_device_t device_invalid_ops = []() {
 #define DEAD_DEVICE_MAX 7
 
 void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
-    static fbl::DoublyLinkedList<zx_device*, zx_device::Node> dead_list;
+    // Wrap the deferred-deletion list in a struct, so we can give it a proper
+    // dtor.  Otherwise, this causes the binary to crash on exit due to an
+    // is_empty assert in fbl::DoublyLinkedList.  This was particularly a
+    // problem for unit tests.
+    struct DeadList {
+        ~DeadList() {
+            while (!devices.is_empty()) {
+                delete devices.pop_front();
+            }
+        }
+        fbl::DoublyLinkedList<zx_device*, zx_device::Node> devices;
+    };
+
+    static DeadList dead_list;
     static unsigned dead_count = 0;
 
     // ensure any ops will be fatal
@@ -187,10 +200,10 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
     // Defer destruction to help catch use-after-free and also
     // so the compiler can't (easily) optimize away the poisoning
     // we do above.
-    dead_list.push_back(dev);
+    dead_list.devices.push_back(dev);
 
     if (dead_count == DEAD_DEVICE_MAX) {
-        zx_device_t* to_delete = dead_list.pop_front();
+        zx_device_t* to_delete = dead_list.devices.pop_front();
         delete to_delete;
     } else {
         dead_count++;

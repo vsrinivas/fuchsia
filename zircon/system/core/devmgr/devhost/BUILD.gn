@@ -11,24 +11,23 @@ executable("devhost") {
   ]
 }
 
-# "$zx/system/ulib/driver" is an alias for this.
-library("driver") {
-  sdk = "shared"
-  sdk_headers = []
-  shared = true
-  static = false
+source_set("common") {
+  visibility = [ ":*" ]
+
   sources = [
     "api.cpp",
     "composite-device.cpp",
+    "connection-destroyer.cpp",
     "core.cpp",
     "devhost.cpp",
+    "proxy-iostate.cpp",
     "rpc-server.cpp",
     "scheduler_profile.cpp",
     "tracing.cpp",
     "zx-device.cpp",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
-  deps = [
+
+  public_deps = [
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device-manager:c",
@@ -53,10 +52,37 @@ library("driver") {
     "../shared:env",
   ]
   configs += [ "$zx/public/gn/config:static-libc++" ]
+}
+
+# "$zx/system/ulib/driver" is an alias for this.
+library("driver") {
+  sdk = "shared"
+  sdk_headers = []
+  shared = true
+  static = false
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+
+  sources = []
+
+  deps = [
+    ":common",
+  ]
 
   # Since the tracing support is brought in via an archive, we need explicit
   # references to ensure everything is present.
   libs = [ "$zx/system/ulib/trace-engine/ddk-exports.ld" ]
 
   assert_no_deps = [ "$zx/system/ulib/trace-engine:trace-engine.shared" ]
+}
+
+test("devhost-test") {
+  test_group = "ddk"
+  sources = [
+    "proxy-iostate-test.cpp",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/ulib/zxtest",
+    "../shared:env",
+  ]
 }

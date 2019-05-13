@@ -18,6 +18,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
