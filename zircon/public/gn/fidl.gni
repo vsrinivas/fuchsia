@@ -147,6 +147,18 @@ template("fidl_library") {
   assert(defined(invoker.sources),
          "fidl_library(\"$target_name\") must set `sources`")
 
+  foreach(file, invoker.sources) {
+    assert(get_path_info(file, "extension") == "fidl",
+           "fidl_library() sources should be `.fidl` files, not $file")
+    file = get_path_info(file, "name")
+    if (get_path_info(file, "extension") == "test") {
+      assert(!defined(invoker.testonly) || invoker.testonly,
+             "fidl_library(\"$target_name\") is implicitly testonly since " +
+                 " it has `.test.fidl` sources; cannot use testonly=false!")
+      invoker.testonly = true
+    }
+  }
+
   fidl_target = target_name
 
   # TODO(mcgrathr): temporary until everything is renamed with . names
