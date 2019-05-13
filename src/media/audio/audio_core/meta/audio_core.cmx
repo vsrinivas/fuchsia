@@ -14,9 +14,6 @@
         ],
         "services": [
             "fuchsia.scheduler.ProfileProvider"
-        ],
-        "system": [
-            "data/media"
         ]
     }
 }
