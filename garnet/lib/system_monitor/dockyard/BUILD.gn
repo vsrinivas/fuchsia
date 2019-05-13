@@ -4,6 +4,12 @@
 
 import("//third_party/protobuf/proto_library.gni")
 
+source_set("headers") {
+  sources = [
+    "dockyard.h",
+  ]
+}
+
 source_set("lib") {
   sources = [
     "dockyard.cc",
@@ -11,6 +17,7 @@ source_set("lib") {
     "test_sample_generator.cc",
     "test_sample_generator.h",
   ]
+
   public_deps = [
     ":protos",
     "//src/lib/fxl",

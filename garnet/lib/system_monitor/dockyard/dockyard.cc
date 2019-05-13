@@ -62,6 +62,7 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
       return grpc::Status::CANCELLED;
     }
     reply->set_version(DOCKYARD_VERSION);
+    dockyard_->OnConnection();
     return grpc::Status::OK;
   }
 
@@ -120,8 +121,10 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
     for (int i = 0; i < request->path_size(); ++i) {
       DockyardId id = dockyard_->GetDockyardId(request->path(i));
       reply->add_id(id);
+#ifdef VERBOSE_OUTPUT
       FXL_LOG(INFO) << "Received DockyardIds "
                     << ": " << request->path(i) << ", id " << id;
+#endif  // VERBOSE_OUTPUT
     }
     return grpc::Status::OK;
   }
@@ -199,7 +202,11 @@ std::ostream& operator<<(std::ostream& out,
        ++list) {
     out << "  data_set: {";
     for (auto data = list->begin(); data != list->end(); ++data) {
-      out << " " << *data;
+      if (*data == NO_DATA) {
+        out << " NO_DATA";
+      } else {
+        out << " " << *data;
+      }
     }
     out << " }, " << std::endl;
   }
@@ -211,8 +218,9 @@ std::ostream& operator<<(std::ostream& out,
 Dockyard::Dockyard()
     : device_time_delta_ns_(0ULL),
       latest_sample_time_ns_(0ULL),
-      paths_handler_(nullptr),
-      stream_sets_handler_(nullptr),
+      on_connection_handler_(nullptr),
+      on_paths_handler_(nullptr),
+      on_stream_sets_handler_(nullptr),
       next_context_id_(0ULL) {}
 
 Dockyard::~Dockyard() {
@@ -341,6 +349,12 @@ uint64_t Dockyard::GetStreamSets(StreamSetsRequest* request) {
   return request->request_id;
 }
 
+void Dockyard::OnConnection() {
+  if (on_connection_handler_ != nullptr) {
+    on_connection_handler_("");
+  }
+}
+
 void Dockyard::StartCollectingFrom(const std::string& device) {
   Initialize();
   FXL_LOG(INFO) << "Starting collecting from " << device;
@@ -362,22 +376,32 @@ bool Dockyard::Initialize() {
   return server_thread_.joinable();
 }
 
-PathsCallback Dockyard::SetDockyardPathsHandler(PathsCallback callback) {
+OnConnectionCallback Dockyard::SetConnectionHandler(
+    OnConnectionCallback callback) {
   assert(!server_thread_.joinable());
-  auto old_handler = paths_handler_;
-  paths_handler_ = callback;
+  auto old_handler = on_connection_handler_;
+  on_connection_handler_ = callback;
   return old_handler;
 }
 
-StreamSetsCallback Dockyard::SetStreamSetsHandler(StreamSetsCallback callback) {
-  auto old_handler = stream_sets_handler_;
-  stream_sets_handler_ = callback;
+OnPathsCallback Dockyard::SetDockyardPathsHandler(OnPathsCallback callback) {
+  assert(!server_thread_.joinable());
+  auto old_handler = on_paths_handler_;
+  on_paths_handler_ = callback;
+  return old_handler;
+}
+
+OnStreamSetsCallback Dockyard::SetStreamSetsHandler(
+    OnStreamSetsCallback callback) {
+  auto old_handler = on_stream_sets_handler_;
+  on_stream_sets_handler_ = callback;
   return old_handler;
 }
 
 void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
                                     StreamSetsResponse* response) const {
   std::lock_guard<std::mutex> guard(mutex_);
+  FXL_LOG(INFO) << "ProcessSingleRequest request " << request;
   response->request_id = request.request_id;
   for (auto dockyard_id = request.dockyard_ids.begin();
        dockyard_id != request.dockyard_ids.end(); ++dockyard_id) {
@@ -699,12 +723,12 @@ void Dockyard::ComputeLowestHighestForRequest(
 }
 
 void Dockyard::ProcessRequests() {
-  if (stream_sets_handler_ != nullptr) {
+  if (on_stream_sets_handler_ != nullptr) {
     StreamSetsResponse response;
     for (auto i = pending_requests_.begin(); i != pending_requests_.end();
          ++i) {
       ProcessSingleRequest(**i, &response);
-      stream_sets_handler_(response);
+      on_stream_sets_handler_(response);
     }
   }
   pending_requests_.clear();

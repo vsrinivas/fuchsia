@@ -813,6 +813,7 @@ group("system_monitor_fuchsia") {
 group("system_monitor_host") {
   testonly = true
   public_deps = [
+    "//garnet/bin/system_monitor/dockyard_host/tests:dockyard_host_test($host_toolchain)",
     "//garnet/lib/system_monitor:system_monitor_tests($host_toolchain)",
   ]
 }
@@ -1012,9 +1013,9 @@ group("chrealm") {
 group("amber") {
   testonly = true
   public_deps = [
-    "//garnet/go/src/amber/system_updater:system_updater_tests",
     "//garnet/go/src/amber:amber_tests",
     "//garnet/go/src/amber:test_config",
+    "//garnet/go/src/amber/system_updater:system_updater_tests",
     "//garnet/packages/prod:amber",
     "//garnet/tests/amberctl:amberctl-tests",
   ]

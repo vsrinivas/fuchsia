@@ -5,12 +5,25 @@
 import("//build/host.gni")
 
 if (current_toolchain == host_toolchain) {
-  executable("dockyard_host") {
+  source_set("lib") {
     sources = [
       "dockyard_host.cc",
+      "dockyard_host.h",
+    ]
+
+    public_deps = [
+      "//garnet/lib/system_monitor/dockyard:headers",
+      "//src/lib/fxl",
+    ]
+  }
+
+  executable("dockyard_host") {
+    sources = [
+      "dockyard_main.cc",
     ]
 
     deps = [
+      ":lib",
       "//garnet/lib/system_monitor/dockyard:lib",
     ]
   }

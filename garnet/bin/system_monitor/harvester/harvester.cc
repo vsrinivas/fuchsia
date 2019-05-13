@@ -199,7 +199,8 @@ void Harvester::GatherData() {
   GatherCpuSamples();
   GatherMemorySamples();
   GatherThreadSamples();
-  GatherComponentIntrospection();
+  // TODO(smbug.com/16): This should be enabled on demand.
+  // GatherComponentIntrospection();
   // TODO(smbug.com/18): make this actually run at rate (i.e. remove drift from
   // execution time).
   async::PostDelayedTask(

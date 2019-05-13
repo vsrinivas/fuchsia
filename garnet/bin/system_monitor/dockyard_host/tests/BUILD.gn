@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/test.gni")
+
+if (current_toolchain == host_toolchain) {
+  test("dockyard_host_test") {
+    sources = [
+      "dockyard_fake.cc",
+      "dockyard_host_test.cc",
+    ]
+
+    deps = [
+      "//garnet/bin/system_monitor/dockyard_host:lib",
+      "//garnet/lib/system_monitor/dockyard:headers",
+      "//third_party/googletest:gtest",
+      "//third_party/googletest:gtest_main",
+    ]
+  }
+}

@@ -14,6 +14,8 @@
 #include <thread>
 #include <vector>
 
+class SystemMonitorDockyardHostTest;
+
 namespace dockyard {
 
 // An integer value representing a dockyard path.
@@ -174,6 +176,11 @@ struct StreamSetsResponse {
 typedef std::map<DockyardId, std::string> DockyardIdToPathMap;
 typedef std::map<std::string, DockyardId> DockyardPathToIdMap;
 
+// Called when a connection is made between the Dockyard and Harvester on a
+// Fuchsia device.
+typedef std::function<void(const std::string& device_name)>
+    OnConnectionCallback;
+
 // Called when new streams are added or removed. Added values include their ID
 // and string path. Removed values only have the ID.
 // Intended to inform clients of PathInfoMap changes (so they may keep
@@ -183,12 +190,12 @@ typedef std::map<std::string, DockyardId> DockyardPathToIdMap;
 // Use SetDockyardPathsHandler() to install a StreamCallback callback.
 typedef std::function<void(const std::vector<PathInfo>& add,
                            const std::vector<DockyardId>& remove)>
-    PathsCallback;
+    OnPathsCallback;
 
 // Called after (and in response to) a request is sent to |GetStreamSets()|.
 // Use SetStreamSetsHandler() to install a StreamSetsCallback callback.
 typedef std::function<void(const StreamSetsResponse& response)>
-    StreamSetsCallback;
+    OnStreamSetsCallback;
 
 class Dockyard {
  public:
@@ -251,16 +258,21 @@ class Dockyard {
   // Returns unique context ID.
   uint64_t GetStreamSets(StreamSetsRequest* request);
 
+  // Called by server when a connection is made.
+  void OnConnection();
+
   // Start collecting data from a named device. Tip: device names are normally
   // four short words, such as "duck floor quick rock".
   void StartCollectingFrom(const std::string& device);
   void StopCollectingFrom(const std::string& device);
 
+  OnConnectionCallback SetConnectionHandler(OnConnectionCallback callback);
+
   // Sets the function called when sample streams are added or removed. Pass
   // nullptr as |callback| to stop receiving calls.
   //
   // Returns prior callback or nullptr.
-  PathsCallback SetDockyardPathsHandler(PathsCallback callback);
+  OnPathsCallback SetDockyardPathsHandler(OnPathsCallback callback);
 
   // Sets the function called when sample stream data arrives in response to a
   // call to GetStreamSets(). So, first set a handler with
@@ -268,7 +280,7 @@ class Dockyard {
   // desired. Pass nullptr as |callback| to stop receiving calls.
   //
   // Returns prior callback or nullptr.
-  StreamSetsCallback SetStreamSetsHandler(StreamSetsCallback callback);
+  OnStreamSetsCallback SetStreamSetsHandler(OnStreamSetsCallback callback);
 
   // Generate responses and call handlers for sample requests. Not intended for
   // use by the GUI.
@@ -285,8 +297,9 @@ class Dockyard {
   SampleTimeNs latest_sample_time_ns_;
 
   // Communication with the GUI.
-  PathsCallback paths_handler_;
-  StreamSetsCallback stream_sets_handler_;
+  OnConnectionCallback on_connection_handler_;
+  OnPathsCallback on_paths_handler_;
+  OnStreamSetsCallback on_stream_sets_handler_;
   std::vector<StreamSetsRequest*> pending_requests_;
 
   // Storage of sample data.
@@ -344,6 +357,8 @@ class Dockyard {
   // Gather the overall lowest and highest values encountered.
   void ProcessSingleRequest(const StreamSetsRequest& request,
                             StreamSetsResponse* response) const;
+
+  friend class ::SystemMonitorDockyardHostTest;
 };
 
 }  // namespace dockyard
