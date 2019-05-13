@@ -286,6 +286,8 @@ template("fidl_library") {
           legacy_dirs += [ "fidl/$fidl_name" ]
           legacy_targets += [
             {
+              _label = get_label_info(":$target_name", "label_with_toolchain")
+              _zircon_public = "fidl"
               import = "//build/fidl/fidl.gni"
               target_type = "fidl"
               target_name = fidl_name
