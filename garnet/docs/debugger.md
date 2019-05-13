@@ -36,7 +36,7 @@ A Fuchsia "core" build includes (as of this writing) the necessary targets
 for the debugger. So this build configuration is sufficient:
 
 ```sh
-fx --dir=out/x64 core.x64
+fx --dir=out/x64 set core.x64
 ```
 
 If you're compiling with another product, you may not get it by default. If you
@@ -44,7 +44,7 @@ don't have the debugger in your build, add `//bundles:tools` to your
 "universe", either with:
 
 ```
-fx <normal_stuff_you_use> -with //bundles:tools
+fx <normal_stuff_you_use> --with //bundles:tools
 ```
 
 Or you can edit your GN args directly by editing `<build_dir>/args.gn` and
