@@ -111,8 +111,8 @@ void DefaultFrameScheduler::RequestFrame() {
              render_pending_);
 
   // Logging the first few frames to find common startup bugs.
-  if (frame_number_ < 5) {
-    FXL_LOG(INFO) << "DefaultFrameScheduler::RequestFrame";
+  if (frame_number_ < 3) {
+    FXL_LOG(INFO) << "RequestFrame";
   }
 
   auto requested_presentation_time =
@@ -144,11 +144,10 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
                  presentation_time);
 
   // Logging the first few frames to find common startup bugs.
-  if (frame_number_ < 5) {
-    FXL_LOG(INFO)
-        << "DefaultFrameScheduler::MaybeRenderFrame presentation_time="
-        << presentation_time << " wakeup_time=" << wakeup_time_
-        << " frame_number=" << frame_number_;
+  if (frame_number_ < 3) {
+    FXL_LOG(INFO) << "MaybeRenderFrame presentation_time=" << presentation_time
+                  << " wakeup_time=" << wakeup_time_
+                  << " frame_number=" << frame_number_;
   }
 
   FXL_DCHECK(delegate_.frame_renderer);
@@ -186,10 +185,9 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
   FXL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
 
   // Logging the first few frames to find common startup bugs.
-  if (frame_number_ < 5) {
-    FXL_LOG(INFO)
-        << "DefaultFrameScheduler: calling RenderFrame presentation_time="
-        << presentation_time << " frame_number=" << frame_number_;
+  if (frame_number_ < 3) {
+    FXL_LOG(INFO) << "Calling RenderFrame presentation_time="
+                  << presentation_time << " frame_number=" << frame_number_;
   }
   TRACE_INSTANT("gfx", "Render start", TRACE_SCOPE_PROCESS,
                 "Expected presentation time", presentation_time, "frame_number",
@@ -234,10 +232,9 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(
                             .requested_presentation_time = presentation_time});
 
   // Logging the first few frames to find common startup bugs.
-  if (frame_number_ < 5) {
-    FXL_LOG(INFO)
-        << "DefaultFrameScheduler::ScheduleUpdateForSession session_id: "
-        << session_id << " presentation_time: " << presentation_time;
+  if (frame_number_ < 3) {
+    FXL_LOG(INFO) << "ScheduleUpdateForSession session_id: " << session_id
+                  << " presentation_time: " << presentation_time;
   }
 
   RequestFrame();
@@ -248,9 +245,8 @@ bool DefaultFrameScheduler::ApplyScheduledSessionUpdates(
   FXL_DCHECK(delegate_.session_updater);
 
   // Logging the first few frames to find common startup bugs.
-  if (frame_number_ < 5) {
-    FXL_LOG(INFO) << "DefaultFrameScheduler::ApplyScheduledSessionUpdates "
-                     "presentation_time="
+  if (frame_number_ < 3) {
+    FXL_LOG(INFO) << "ApplyScheduledSessionUpdates presentation_time="
                   << presentation_time << " frame_number=" << frame_number_;
   }
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time",
