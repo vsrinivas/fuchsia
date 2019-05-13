@@ -413,6 +413,7 @@ group("all") {
     "//garnet/packages/tests:scpi",
     "//garnet/packages/tests:setui_client",
     "//garnet/packages/tests:setui_service",
+    "//garnet/packages/tests:sl4f",
     "//garnet/packages/tests:sse",
     "//garnet/packages/tests:stash",
     "//garnet/packages/tests:svc",
@@ -1294,5 +1295,12 @@ group("catapult_converter") {
   testonly = true
   public_deps = [
     "//garnet/bin/catapult_converter:host_catapult_converter_test($host_toolchain)",
+  ]
+}
+
+group("sl4f") {
+  testonly = true
+  public_deps = [
+    "//sdk/testing/sl4f/client:tests",
   ]
 }
