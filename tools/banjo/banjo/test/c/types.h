@@ -46,6 +46,7 @@ typedef uint8_t u8_enum_t;
 typedef struct this_is_an_interface_protocol this_is_an_interface_protocol_t;
 typedef struct structs structs_t;
 typedef struct unions unions_t;
+typedef union union_types union_types_t;
 typedef struct interfaces interfaces_t;
 typedef struct interfaces interfaces_t;
 
@@ -421,7 +422,7 @@ struct handles {
 };
 
 union this_is_a_union {
-    char* s;
+    const char* s;
 };
 
 typedef struct this_is_an_interface_protocol_ops {
@@ -447,6 +448,35 @@ struct structs {
 struct unions {
     this_is_a_union_t s;
     this_is_a_union_t nullable_u;
+};
+
+union union_types {
+    bool b;
+    int8_t i8;
+    int16_t i16;
+    int32_t i32;
+    int64_t i64;
+    uint8_t u8;
+    uint16_t u16;
+    uint32_t u32;
+    uint64_t u64;
+    float f32;
+    double f64;
+    bool b_0[1];
+    int8_t i8_0[1];
+    int16_t i16_0[1];
+    int32_t i32_0[1];
+    int64_t i64_0[1];
+    uint8_t u8_0[1];
+    uint16_t u16_0[1];
+    uint32_t u32_0[1];
+    uint64_t u64_0[1];
+    float f32_0[1];
+    double f64_0[1];
+    zx_handle_t handle_0[1];
+    const char* str;
+    this_is_a_struct_t s;
+    this_is_a_union_t u;
 };
 
 struct interfaces {

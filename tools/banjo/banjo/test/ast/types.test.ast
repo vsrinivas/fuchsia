@@ -4846,6 +4846,361 @@ BanjoAst {
                     },
                 ],
             },
+            Union {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types",
+                    ),
+                    name: "union_types",
+                },
+                fields: [
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Bool,
+                        ident: Ident {
+                            namespace: None,
+                            name: "b",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int8,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int16,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int64,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: UInt8,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: UInt16,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: UInt32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: UInt64,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Float32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Float64,
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Bool,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int8,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int16,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int32,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Int64,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt16,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt32,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt64,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Float32,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Float64,
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: Handle {
+                                ty: Handle,
+                                reference: false,
+                            },
+                            size: Constant(
+                                "1",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_0",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "str",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.types",
+                                ),
+                                name: "this_is_a_struct",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "s",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.types",
+                                ),
+                                name: "this_is_a_union",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u",
+                        },
+                    },
+                ],
+            },
         ],
     },
 }

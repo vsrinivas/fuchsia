@@ -167,6 +167,88 @@ fn struct_attrs_to_c_str(attributes: &Attrs) -> String {
         .join(" ")
 }
 
+fn field_to_c_str(
+    attrs: &Attrs,
+    ty: &ast::Ty,
+    ident: &Ident,
+    indent: &str,
+    ast: &ast::BanjoAst,
+) -> Result<String, Error> {
+    let mut accum = String::new();
+    accum.push_str(get_doc_comment(attrs, 1).as_str());
+    let prefix = if ty.is_reference() { "" } else { "const " };
+    match ty {
+        ast::Ty::Vector { ty: ref inner_ty, .. } => {
+            let ty_name = ty_to_c_str(ast, &ty)?;
+            // TODO(surajmalhotra): Support multi-dimensional vectors.
+            let ptr = if inner_ty.is_reference() { "*" } else { "" };
+            accum.push_str(
+                format!(
+                    "{indent}{prefix}{ty}{ptr}* {c_name}_{buffer};\n\
+                     {indent}size_t {c_name}_{size};",
+                    indent = indent,
+                    buffer = name_buffer(&ty_name),
+                    size = name_size(&ty_name),
+                    c_name = to_c_name(ident.name()),
+                    prefix = prefix,
+                    ty = ty_name,
+                    ptr = ptr,
+                )
+                .as_str(),
+            );
+        }
+        ast::Ty::Array { .. } => {
+            let bounds = array_bounds(ast, &ty).unwrap();
+            accum.push_str(
+                format!(
+                    "{indent}{ty} {c_name}{bounds};",
+                    indent = indent,
+                    c_name = to_c_name(ident.name()),
+                    bounds = bounds,
+                    ty = ty_to_c_str(ast, &ty)?
+                )
+                .as_str(),
+            );
+        }
+        ast::Ty::Str { ref size, .. } => {
+            if let Some(size) = size {
+                accum.push_str(
+                    format!(
+                        "{indent}char {c_name}[{size}];",
+                        indent = indent,
+                        c_name = to_c_name(ident.name()),
+                        size = size,
+                    )
+                    .as_str(),
+                );
+            } else {
+                accum.push_str(
+                    format!(
+                        "{indent}{prefix}{ty} {c_name};",
+                        indent = indent,
+                        c_name = to_c_name(ident.name()),
+                        prefix = prefix,
+                        ty = ty_to_c_str(ast, &ty)?
+                    )
+                    .as_str(),
+                );
+            }
+        }
+        _ => {
+            accum.push_str(
+                format!(
+                    "{indent}{ty} {c_name};",
+                    indent = indent,
+                    c_name = to_c_name(ident.name()),
+                    ty = ty_to_c_str(ast, &ty)?
+                )
+                .as_str(),
+            );
+        }
+    }
+    Ok(accum)
+}
+
 fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String), Error> {
     // Return parameter if a primitive type.
     if method.out_params.get(0).map_or(false, |p| p.1.is_primitive(&ast)) {
@@ -475,18 +557,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         let attrs = struct_attrs_to_c_str(attributes);
         let members = fields
             .iter()
-            .map(|f| {
-                let mut accum = String::new();
-                accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
-                accum.push_str(
-                    format!(
-                        "    {ty} {c_name};",
-                        c_name = to_c_name(f.ident.name()),
-                        ty = ty_to_c_str(ast, &f.ty)?
-                    )
-                    .as_str(),
-                );
-                Ok(accum)
+            .map(|f| match f.ty {
+                ast::Ty::Vector { .. } => Err(format_err!("unsupported for UnionField: {:?}", f)),
+                _ => field_to_c_str(&f.attributes, &f.ty, &f.ident, "    ", &ast),
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
@@ -533,75 +606,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         let attrs = struct_attrs_to_c_str(attributes);
         let members = fields
             .iter()
-            .map(|f| {
-                let mut accum = String::new();
-                accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
-                let prefix = if f.ty.is_reference() { "" } else { "const " };
-                match f.ty {
-                    ast::Ty::Vector { ty: ref inner_ty, .. } => {
-                        let ty_name = ty_to_c_str(ast, &f.ty)?;
-                        // TODO(surajmalhotra): Support multi-dimensional vectors.
-                        let ptr = if inner_ty.is_reference() { "*" } else { "" };
-                        accum.push_str(
-                            format!(
-                                "    {prefix}{ty}{ptr}* {c_name}_{buffer};\n    size_t {c_name}_{size};",
-                                buffer = name_buffer(&ty_name),
-                                size = name_size(&ty_name),
-                                c_name = to_c_name(f.ident.name()),
-                                prefix = prefix,
-                                ty = ty_name,
-                                ptr = ptr,
-                            )
-                            .as_str(),
-                        );
-                    }
-                    ast::Ty::Array { .. } => {
-                        let bounds = array_bounds(ast, &f.ty).unwrap();
-                        accum.push_str(
-                            format!(
-                                "    {ty} {c_name}{bounds};",
-                                c_name = to_c_name(f.ident.name()),
-                                bounds = bounds,
-                                ty = ty_to_c_str(ast, &f.ty)?
-                            )
-                            .as_str(),
-                        );
-                    }
-                    ast::Ty::Str { ref size, .. } => {
-                        if let Some(size) = size {
-                            accum.push_str(
-                                format!(
-                                    "    char {c_name}[{size}];",
-                                    c_name = to_c_name(f.ident.name()),
-                                    size = size,
-                                )
-                                .as_str(),
-                            );
-                        } else {
-                            accum.push_str(
-                                format!(
-                                    "    {prefix}{ty} {c_name};",
-                                    c_name = to_c_name(f.ident.name()),
-                                    prefix = prefix,
-                                    ty = ty_to_c_str(ast, &f.ty)?
-                                )
-                                .as_str(),
-                            );
-                        }
-                    }
-                    _ => {
-                        accum.push_str(
-                            format!(
-                                "    {ty} {c_name};",
-                                c_name = to_c_name(f.ident.name()),
-                                ty = ty_to_c_str(ast, &f.ty)?
-                            )
-                            .as_str(),
-                        );
-                    }
-                }
-                Ok(accum)
-            })
+            .map(|f| field_to_c_str(&f.attributes, &f.ty, &f.ident, "    ", &ast))
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
         let mut accum = String::new();

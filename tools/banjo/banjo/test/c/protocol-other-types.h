@@ -44,7 +44,7 @@ struct this_is_astruct {
 };
 
 union this_is_aunion {
-    char* s;
+    const char* s;
 };
 
 typedef struct other_types_reference_protocol_ops {
