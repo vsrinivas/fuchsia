@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/sh",
+        "args": [ "-c", "/pkg/bin/hello_world" ]
+    },
+    "use": [
+      {
+        "service": "/svc/fuchsia.process.Launcher",
+        "as": "/svc/fuchsia.process.Launcher",
+      },
+    ]
+}

@@ -1,0 +1,95 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/zircon.gni")
+import("//build/images/manifest.gni")
+import("//build/package.gni")
+import("//build/package/component.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+zircon_extras_manifest("zircon-bin-manifest") {
+  visibility = [ ":*" ]
+  manifest = "image"
+  patterns = [ "bin/sh" ]
+}
+
+rustc_binary("dash_test_bin") {
+  name = "dash_test"
+  with_unit_tests = true
+  edition = "2018"
+  source_root = "src/integration_test.rs"
+  deps = [
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+test_package("dash_test") {
+  deps = [
+    ":dash_test_bin",
+    ":zircon-bin-manifest",
+    "//garnet/examples/components/v2:hello_world_bin",
+    "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
+  ]
+
+  components = [
+    "//src/sys/component_manager:component_manager_as_v1_component",
+    ":dash_component",
+  ]
+
+  extra = get_target_outputs(":zircon-bin-manifest")
+
+  binaries = [
+    {
+      name = "hello_world"
+    },
+    {
+      name = "mock_pkg_resolver"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mock_pkg_resolver_for_dash_test.cmx")
+      dest = "mock_pkg_resolver.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "dash_test"
+      dest = "dash_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+package("dash") {
+  deps = [
+    ":zircon-bin-manifest",
+    "//garnet/examples/components/v2:hello_world_bin",
+  ]
+
+  components = [ ":dash_component" ]
+
+  extra = get_target_outputs(":zircon-bin-manifest")
+
+  binaries = [
+    {
+      name = "hello_world"
+    },
+  ]
+}
+
+deprecated_fuchsia_component("dash_component") {
+  manifest = rebase_path("meta/dash_hello.cml")
+}

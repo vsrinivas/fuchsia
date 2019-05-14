@@ -1,0 +1,13 @@
+{
+    "program": {
+        "args": [
+            "dash_test"
+        ],
+        "binary": "bin/mock_pkg_resolver"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

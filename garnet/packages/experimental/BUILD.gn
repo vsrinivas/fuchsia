@@ -54,6 +54,7 @@ group("sys") {
   testonly = true
   public_deps = [
     "//src/sys/component_manager",
+    "//src/sys/dash",
   ]
 }
 

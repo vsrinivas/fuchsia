@@ -1,0 +1,19 @@
+{
+    "program": {
+        "binary": "test/dash_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.pkg.PackageResolver",
+            "fuchsia.sys.Launcher",
+            "fuchsia.process.Launcher"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/dash_test#meta/mock_pkg_resolver.cmx"
+            }
+        }
+    }
+}

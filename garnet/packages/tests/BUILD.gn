@@ -433,6 +433,7 @@ group("all") {
     "//garnet/packages/tests:zxdb",
     "//src/connectivity/dhcp:dhcp_tests",
     "//src/sys/component_index:component_index_tests",
+    "//src/sys/dash:dash_test",
     "//src/sys/locate:locate_integration_test",
   ]
 }
