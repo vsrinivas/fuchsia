@@ -16,6 +16,30 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
+iwlwifi_core_srcs = [
+  "cfg/7000.c",
+  "fuchsia_porting.h",
+  "fw/init.c",
+  "ieee80211.h",
+  "iwl-config.h",
+  "iwl-csr.h",
+  "iwl-drv.c",
+  "iwl-drv.h",
+  "iwl-fh.h",
+  "iwl-io.c",
+  "iwl-phy-db.c",
+  "iwl-trans.c",
+  "iwl-trans.h",
+  "mvm/fw.c",
+  "mvm/mac80211.c",
+  "mvm/ops.c",
+  "mvm/rxmq.c",
+  "mvm/scan.c",
+  "mvm/tof.c",
+  "mvm/tt.c",
+  "mvm/tx.c",
+]
+
 driver_module("iwlwifi_driver") {
   output_name = "iwlwifi"
 
@@ -24,28 +48,7 @@ driver_module("iwlwifi_driver") {
     "CPTCFG_IWLMVM=1",
   ]
 
-  sources = [
-    "cfg/7000.c",
-    "fuchsia_porting.h",
-    "fw/init.c",
-    "ieee80211.h",
-    "iwl-config.h",
-    "iwl-csr.h",
-    "iwl-drv.c",
-    "iwl-drv.h",
-    "iwl-fh.h",
-    "iwl-io.c",
-    "iwl-phy-db.c",
-    "iwl-trans.c",
-    "iwl-trans.h",
-    "mvm/fw.c",
-    "mvm/mac80211.c",
-    "mvm/ops.c",
-    "mvm/rxmq.c",
-    "mvm/scan.c",
-    "mvm/tof.c",
-    "mvm/tt.c",
-    "mvm/tx.c",
+  sources = iwlwifi_core_srcs + [
     "pcie/drv.c",
     "pcie/internal.h",
     "pcie/trans-gen2.c",
@@ -58,7 +61,6 @@ driver_module("iwlwifi_driver") {
     "//garnet/lib/wlan/protocol",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
-    "//zircon/public/lib/sync",
   ]
 }
 
@@ -104,4 +106,19 @@ package("iwlwifi") {
       },
     ]
   }
+}
+
+source_set("iwlwifi_sim_trans_ss") {
+  defines = [
+    "CPTCFG_IWL_TIMEOUT_FACTOR=1",
+    "CPTCFG_IWLMVM=1",
+    "CONFIG_TEST_SIM=1",
+  ]
+
+  sources = iwlwifi_core_srcs
+
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device:simdevice",
+    "//zircon/public/lib/ddk",
+  ]
 }
