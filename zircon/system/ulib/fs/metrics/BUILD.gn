@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Wrapper library for logging fs related metrics.
+library("metrics") {
+  sources = [
+    "histograms.cpp"
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    "$zx/system/ulib/fbl:headers",
+    "$zx/system/ulib/inspect-vmo:headers",
+    "$zx/system/ulib/zx:headers",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/inspect-vmo",
+    "$zx/system/ulib/zx",
+  ]
+}

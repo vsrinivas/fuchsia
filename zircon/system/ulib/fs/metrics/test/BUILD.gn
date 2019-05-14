@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("metrics") {
+  test_group = "fs"
+  sources = [
+    "histograms-test.cpp",
+    "latency-event-test.cpp",
+    "offsets-test.cpp"
+  ]
+
+
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fs/metrics",
+    "$zx/system/ulib/inspect-vmo",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
