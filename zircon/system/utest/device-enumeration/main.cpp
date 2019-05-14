@@ -43,14 +43,15 @@ Board GetBoardType() {
         return Board::kUnknown;
     }
 
-    char board_name[ZX_MAX_NAME_LEN];
+    char board_name[fuchsia_sysinfo_SYSINFO_BOARD_NAME_LEN + 1];
     zx_status_t status;
     size_t actual_size;
-    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
-                                                                sizeof(board_name), &actual_size);
+    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(
+        channel.get(), &status, board_name, sizeof(board_name), &actual_size);
     if (fidl_status != ZX_OK || status != ZX_OK) {
         return Board::kUnknown;
     }
+    board_name[actual_size] = '\0';
 
     printf("Found board %s\n", board_name);
 
