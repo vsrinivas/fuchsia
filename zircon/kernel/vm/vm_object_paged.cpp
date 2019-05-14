@@ -83,10 +83,15 @@ VmObjectPaged::VmObjectPaged(
     AddToGlobalList();
 }
 
-void VmObjectPaged::InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent) {
+void VmObjectPaged::InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent, uint64_t offset) {
     DEBUG_ASSERT(lock_.lock().IsHeld());
     DEBUG_ASSERT(parent_ == nullptr);
     DEBUG_ASSERT(original_parent_user_id_ == 0);
+
+    if (parent->is_paged()) {
+        page_list_.InitializeSkew(
+                VmObjectPaged::AsVmObjectPaged(parent)->page_list_.GetSkew(), offset);
+    }
 
     original_parent_user_id_ = parent->user_id_locked();
     parent_ = ktl::move(parent);
@@ -98,6 +103,25 @@ VmObjectPaged::~VmObjectPaged() {
     LTRACEF("%p\n", this);
 
     RemoveFromGlobalList();
+
+    if (!is_hidden()) {
+        // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
+        // to be done before emptying the page list so that a hidden parent can't merge into this
+        // vmo and repopulate the page list.
+        //
+        // To prevent races with a hidden parent merging itself into this vmo, it is necessary
+        // to hold the lock over the parent_ check and into the subsequent removal call.
+        Guard<fbl::Mutex> guard{&lock_};
+        if (parent_) {
+            LTRACEF("removing ourself from our parent %p\n", parent_.get());
+            parent_->RemoveChild(this, guard.take());
+        }
+    } else {
+        // Most of the hidden vmo's state should have already been cleaned up when it merged
+        // itself into its child in ::OnChildRemoved.
+        DEBUG_ASSERT(children_list_len_ == 0);
+        DEBUG_ASSERT(page_list_.IsEmpty());
+    }
 
     page_list_.ForEveryPage(
         [this](const auto p, uint64_t off) {
@@ -118,12 +142,6 @@ VmObjectPaged::~VmObjectPaged() {
     }
 
     pmm_free(&list);
-
-    // remove ourself from our parent (if present)
-    if (parent_) {
-        LTRACEF("removing ourself from our parent %p\n", parent_.get());
-        parent_->RemoveChild(this);
-    }
 }
 
 zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags,
@@ -315,7 +333,7 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
 void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden_parent) {
     // Insert the new VmObject |hidden_parent| between between |this| and |parent_|.
     if (parent_) {
-        hidden_parent->InitializeOriginalParentLocked(parent_);
+        hidden_parent->InitializeOriginalParentLocked(parent_, 0);
         parent_->ReplaceChildLocked(this, hidden_parent.get());
     }
     hidden_parent->AddChildLocked(this);
@@ -344,6 +362,11 @@ zx_status_t VmObjectPaged::CreateCowClone(Resizability resizable, CloneType type
     LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
     canary_.Assert();
+
+    // offset must be page aligned
+    if (!IS_PAGE_ALIGNED(offset)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     // make sure size is page aligned
     zx_status_t status = RoundSize(size, &size);
@@ -400,12 +423,10 @@ zx_status_t VmObjectPaged::CreateCowClone(Resizability resizable, CloneType type
             return ZX_ERR_BAD_STATE;
         }
 
-        // set the offset with the parent
-        status = vmo->SetParentOffsetLocked(offset);
-        if (status != ZX_OK) {
-            return status;
-        }
-        vmo->parent_limit_ = fbl::min(size, size_ - vmo->parent_offset_);
+        // TODO: ZX-692 make sure that the accumulated parent offset of the entire
+        // parent chain doesn't wrap 64bit space.
+        vmo->parent_offset_ = offset;
+        vmo->parent_limit_ = fbl::min(size, size_ - offset);
 
         VmObjectPaged* clone_parent;
         if (type == CloneType::Bidirectional) {
@@ -421,7 +442,7 @@ zx_status_t VmObjectPaged::CreateCowClone(Resizability resizable, CloneType type
             clone_parent = this;
         }
 
-        vmo->InitializeOriginalParentLocked(fbl::WrapRefPtr(clone_parent));
+        vmo->InitializeOriginalParentLocked(fbl::WrapRefPtr(clone_parent), offset);
 
         // add the new vmo as a child before we do anything, since its
         // dtor expects to find it in its parent's child list
@@ -479,16 +500,86 @@ void VmObjectPaged::OnChildRemoved(Guard<fbl::Mutex>&& adopt) {
         return;
     }
 
-    // TODO(stevensd): flatten hidden vmos with only one child.
+    if (children_list_len_ == 2) {
+        // If there are multiple eager COW clones of one vmo, we need to proxy clone closure
+        // to the original vmo to update the userspace-visible child count. In this situation,
+        // we use user_id_ to walk the tree to find the original vmo.
 
-    // If there are multiple eager COW clones of one  vmo we need to proxy clone closure
-    // to the original vmo to update the userspace-visible child count. In this situation,
-    // we use user_id_ to walk the tree to find the original vmo.
-    for (auto& c : children_list_) {
-        if (c.user_id_ == user_id_) {
-            c.OnChildRemoved(guard.take());
-            return;
+        // A hidden vmo must be fully initialized to have 2 children.
+        DEBUG_ASSERT(user_id_ != ZX_KOID_INVALID);
+
+        for (auto& c : children_list_) {
+            if (c.user_id_ == user_id_) {
+                c.OnChildRemoved(guard.take());
+                return;
+            }
         }
+        return;
+    }
+
+    // Hidden vmos have at most 2 children, and this function ensures that that OnChildRemoved
+    // isn't called on the last child. So at this point we know that there is exactly one child.
+    DEBUG_ASSERT(children_list_len_ == 1);
+    auto& child = children_list_.front();
+
+    const uint64_t merge_start_offset = child.parent_offset_;
+    const uint64_t merge_end_offset = child.parent_offset_ + child.parent_limit_;
+
+    // Update child's parent limit so that it won't be able to see more of parent_ than
+    // this can see once it gets reparented and has its offset adjusted.
+    if (child.parent_offset_ + child.parent_limit_ < parent_limit_) {
+        // No need to update the limit since child's view is a subset of this's view.
+        // TODO(stevensd): Release ancestor pages which this can see but child can't.
+    } else {
+        // Set the limit so the child won't be able to see more of its new parent
+        // than this hidden vmo was able to see.
+        if (parent_limit_ < child.parent_offset_) {
+            child.parent_limit_ = 0;
+        } else {
+            child.parent_limit_ = parent_limit_ - child.parent_offset_;
+        }
+    }
+
+    // TODO(stevensd): Release ancestor pages below child.parent_offset_.
+
+    bool overflow = add_overflow(parent_offset_, child.parent_offset_, &child.parent_offset_);
+    // Overflow here means that something went wrong when setting up parent limits.
+    DEBUG_ASSERT(!overflow);
+
+    list_node covered_pages;
+    list_initialize(&covered_pages);
+
+    // Merge our page list into the child page list and update all the necessary metadata.
+    // TODO: This does work proportional to the number of pages in page_list_. Investigate what
+    // would need to be done to make the work proportional to the number of pages actually split.
+    child.page_list_.MergeFrom(page_list_,
+            merge_start_offset, merge_end_offset,
+            [](vm_page* page, uint64_t offset) {
+                // TODO(stevensd): Update per-page metadata here when available
+            },
+            [](vm_page* page, uint64_t offset) {
+                // TODO(stevensd): Update per-page metadata here when available
+            }, &covered_pages);
+
+    if (!list_is_empty(&covered_pages)) {
+        pmm_free(&covered_pages);
+    }
+
+    // The child which removed itself and led to the invocation should have a reference
+    // to us, in addition to child.parent_ which we are about to clear.
+    DEBUG_ASSERT(ref_count_debug() >= 2);
+
+    // Drop the child from our list, but don't recurse back into this function. Then
+    // remove ourselves from the clone tree.
+    DropChildLocked(&child);
+    if (parent_) {
+        parent_->ReplaceChildLocked(this, &child);
+    }
+    child.parent_ = std::move(parent_);
+
+    if (child.user_id_ == user_id_) {
+        // Pass the removal notification towards the original vmo.
+        child.OnChildRemoved(guard.take());
     }
 }
 
@@ -1143,27 +1234,6 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
 
     guard.Release();
     pmm_free(&free_list);
-
-    return ZX_OK;
-}
-
-zx_status_t VmObjectPaged::SetParentOffsetLocked(uint64_t offset) {
-    DEBUG_ASSERT(lock_.lock().IsHeld());
-
-    // offset must be page aligned
-    if (!IS_PAGE_ALIGNED(offset)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // TODO: ZX-692 make sure that the accumulated offset of the entire parent chain doesn't wrap 64bit space
-
-    // make sure the size + this offset are still valid
-    uint64_t end;
-    if (add_overflow(offset, size_, &end)) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    parent_offset_ = offset;
 
     return ZX_OK;
 }

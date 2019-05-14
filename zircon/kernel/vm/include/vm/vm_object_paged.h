@@ -145,9 +145,11 @@ public:
         page_source_->Detach();
     }
 
-    // The size is clamped to allow VmPageList to use a one-past-the-end for
-    // VmPageListNode offsets.
-    static const uint64_t MAX_SIZE = ROUNDDOWN(UINT64_MAX, VmPageListNode::kPageFanOut * PAGE_SIZE);
+    static constexpr uint64_t MAX_SIZE = VmPageList::MAX_SIZE;
+    // Ensure that MAX_SIZE + PAGE_SIZE doesn't overflow so VmObjectPaged doesn't
+    // need to worry about overflow for loop bounds.
+    static_assert(MAX_SIZE <= ROUNDDOWN(UINT64_MAX, PAGE_SIZE) - PAGE_SIZE);
+    static_assert(MAX_SIZE % PAGE_SIZE == 0);
 
 private:
     // private constructor (use Create())
@@ -155,9 +157,12 @@ private:
         uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
         fbl::RefPtr<vm_lock_t> root_lock, fbl::RefPtr<PageSource> page_source);
 
-    // Initializes the original parent state of the vmo. This function should only be called
-    // at most once, even if the parent changes after initialization.
-    void InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent)
+    // Initializes the original parent state of the vmo. |offset| is the offset of
+    // this vmo in |parent|.
+    //
+    // This function should be called at most once, even if the parent changes
+    // after initialization.
+    void InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent, uint64_t offset)
         // Accesses both parent and child, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
@@ -198,9 +203,6 @@ private:
     // internal read/write routine that takes a templated copy function to help share some code
     template <typename T>
     zx_status_t ReadWriteInternal(uint64_t offset, size_t len, bool write, T copyfunc);
-
-    // set our offset within our parent
-    zx_status_t SetParentOffsetLocked(uint64_t o) TA_REQ(lock_);
 
     // Searches for info for initialization of a page being commited into |this| at |offset|.
     //

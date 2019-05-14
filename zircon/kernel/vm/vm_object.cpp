@@ -201,20 +201,28 @@ void VmObject::ReplaceChildLocked(VmObjectPaged* old, VmObjectPaged* new_child) 
     children_list_.replace(*old, new_child);
 }
 
-void VmObject::RemoveChild(VmObjectPaged* o) {
+void VmObject::DropChildLocked(VmObjectPaged* c) {
     canary_.Assert();
-    Guard<fbl::Mutex> shared_guard{&lock_};
-    children_list_.erase(*o);
     DEBUG_ASSERT(children_list_len_ > 0);
-    children_list_len_--;
+    children_list_.erase(*c);
+    --children_list_len_;
+}
 
-    OnChildRemoved(shared_guard.take());
+void VmObject::RemoveChild(VmObjectPaged* o, Guard<Mutex>&& adopt) {
+    canary_.Assert();
+    DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
+    Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
+
+    DropChildLocked(o);
+
+    OnChildRemoved(guard.take());
 }
 
 void VmObject::OnChildRemoved(Guard<fbl::Mutex>&& adopt) {
     DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
     Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
 
+    DEBUG_ASSERT(user_child_count_ > 0);
     --user_child_count_;
     if (user_child_count_ != 0) {
         return;

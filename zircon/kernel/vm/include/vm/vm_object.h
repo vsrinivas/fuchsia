@@ -245,7 +245,13 @@ public:
     // Notifies the child observer that there is one child.
     void NotifyOneChild() TA_EXCL(lock_);
 
-    void RemoveChild(VmObjectPaged* r);
+    // |guard| must be this vmo's lock.
+    void RemoveChild(VmObjectPaged* r, Guard<Mutex>&& guard)
+        // Analysis doesn't know |guard| is this vmo's lock.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
+    // Drops |c| from the child list without going through the full removal
+    // process. ::RemoveChild is probably what you want here.
+    void DropChildLocked(VmObjectPaged* c) TA_REQ(lock_);
     void ReplaceChildLocked(VmObjectPaged* old, VmObjectPaged* new_child) TA_REQ(lock_);
     uint32_t num_user_children() const;
     uint32_t num_children() const;
