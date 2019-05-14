@@ -30,19 +30,19 @@ executable("bin") {
   output_name = package_name
   sources = [
     "main.c",
-    "sort.cpp"
+    "sort.cpp",
   ]
   include_dirs = [
     "$target_gen_dir",
     "//src/graphics/lib/compute",
-    "//src/graphics/lib/compute/hotsort/platforms/vk"
+    "//src/graphics/lib/compute/hotsort/platforms/vk",
   ]
   deps = [
     ":targets",
     "//src/graphics/lib/compute/common",
     "//src/graphics/lib/compute/common/vk",
     "//src/graphics/lib/compute/hotsort/platforms/vk",
-    "//third_party/vulkan_loader_and_validation_layers:vulkan"
+    "//third_party/vulkan_loader_and_validation_layers:vulkan",
   ]
 }
 
@@ -53,7 +53,7 @@ executable("bin") {
 package(package_name) {
   deps = [
     ":bin",
-    "//third_party/vulkan_loader_and_validation_layers/layers"
+    "//third_party/vulkan_loader_and_validation_layers/layers",
   ]
 
   binary = package_name
@@ -65,11 +65,7 @@ package(package_name) {
     },
   ]
 
-  public_deps      = vulkan_validation_layers.public_deps
+  public_deps = vulkan_validation_layers.public_deps
   loadable_modules = vulkan_validation_layers.loadable_modules
-  resources        = vulkan_validation_layers.resources
+  resources = vulkan_validation_layers.resources
 }
-
-#
-#
-#

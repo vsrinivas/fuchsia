@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_HOTSORT_VK_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_HOTSORT_VK_H_
 
 //
 // NOTE: reevaluate the HotSort/VK API once "Physical Storage Buffer
@@ -15,8 +16,8 @@
 //
 //
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 //
 //
@@ -71,8 +72,8 @@ struct hotsort_vk_push
 };
 
 #define HOTSORT_VK_PUSH_CONSTANT_RANGE_STAGE_FLAGS VK_SHADER_STAGE_COMPUTE_BIT
-#define HOTSORT_VK_PUSH_CONSTANT_RANGE_OFFSET      0
-#define HOTSORT_VK_PUSH_CONSTANT_RANGE_SIZE        sizeof(struct hotsort_vk_push)
+#define HOTSORT_VK_PUSH_CONSTANT_RANGE_OFFSET 0
+#define HOTSORT_VK_PUSH_CONSTANT_RANGE_SIZE sizeof(struct hotsort_vk_push)
 
 //
 // Declare the offsets of the key-value arrays before sorting.
@@ -91,7 +92,7 @@ struct hotsort_vk_ds_offsets
 
 struct hotsort_vk *
 hotsort_vk_create(VkDevice                               device,
-                  VkAllocationCallbacks    const *       allocator,
+                  VkAllocationCallbacks const *          allocator,
                   VkPipelineCache                        pipeline_cache,
                   VkPipelineLayout                       pipeline_layout,
                   struct hotsort_vk_target const * const target);
@@ -104,7 +105,7 @@ hotsort_vk_create(VkDevice                               device,
 void
 hotsort_vk_release(VkDevice                            device,
                    VkAllocationCallbacks const * const allocator,
-                   struct hotsort_vk           * const hs);
+                   struct hotsort_vk * const           hs);
 
 //
 // Explicitly reveal what padding of maximum valued key-vals will be
@@ -126,9 +127,9 @@ hotsort_vk_release(VkDevice                            device,
 
 void
 hotsort_vk_pad(struct hotsort_vk const * const hs,
-               uint32_t                  const count,
-               uint32_t                * const padded_in,
-               uint32_t                * const padded_out);
+               uint32_t const                  count,
+               uint32_t * const                padded_in,
+               uint32_t * const                padded_out);
 
 //
 // Append commands to the command buffer that, when enqueued, will:
@@ -149,12 +150,12 @@ hotsort_vk_pad(struct hotsort_vk const * const hs,
 
 void
 hotsort_vk_sort(VkCommandBuffer                            cb,
-                struct hotsort_vk            const * const hs,
+                struct hotsort_vk const * const            hs,
                 struct hotsort_vk_ds_offsets const * const offsets,
-                uint32_t                             const count,
-                uint32_t                             const padded_in,
-                uint32_t                             const padded_out,
-                bool                                 const linearize);
+                uint32_t const                             count,
+                uint32_t const                             padded_in,
+                uint32_t const                             padded_out,
+                bool const                                 linearize);
 
 //
 //
@@ -167,3 +168,5 @@ hotsort_vk_sort(VkCommandBuffer                            cb,
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_HOTSORT_VK_H_

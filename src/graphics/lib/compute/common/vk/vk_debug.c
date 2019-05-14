@@ -6,10 +6,10 @@
 //
 //
 
-#include <stdio.h>
+#include "vk_debug.h"
+
 #include <stdbool.h>
 
-#include "vk_debug.h"
 #include "common/macros.h"
 
 //
@@ -51,30 +51,27 @@ vk_debug_compute_props(FILE * file, VkPhysicalDeviceProperties const * const pdp
 void
 vk_debug_subgroup_props(FILE * file, VkPhysicalDeviceSubgroupProperties const * const pdsp)
 {
-  fprintf(file,
-          "%-49s : %u\n",
-          "subgroupSize",
-          pdsp->subgroupSize);
+  fprintf(file, "%-49s : %u\n", "subgroupSize", pdsp->subgroupSize);
 
   fprintf(file,
           "%-49s : %s\n",
           "quadOperationsInAllStages",
           pdsp->quadOperationsInAllStages ? "true" : "false");
 
-#define DEBUG_PDSP_SHADER_STAGE(pdsp,bit)                       \
-  fprintf(file,                                                 \
-          "    %-45s : %s\n",                                   \
-          STRINGIFY_MACRO(bit),                                 \
+#define DEBUG_PDSP_SHADER_STAGE(pdsp, bit)                                                         \
+  fprintf(file,                                                                                    \
+          "    %-45s : %s\n",                                                                      \
+          STRINGIFY_MACRO(bit),                                                                    \
           (pdsp->supportedStages & bit) ? "true" : "false")
 
-  fprintf(file,"supportedStages\n");
-  DEBUG_PDSP_SHADER_STAGE(pdsp,VK_SHADER_STAGE_VERTEX_BIT);
-  DEBUG_PDSP_SHADER_STAGE(pdsp,VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
-  DEBUG_PDSP_SHADER_STAGE(pdsp,VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
-  DEBUG_PDSP_SHADER_STAGE(pdsp,VK_SHADER_STAGE_GEOMETRY_BIT);
-  DEBUG_PDSP_SHADER_STAGE(pdsp,VK_SHADER_STAGE_FRAGMENT_BIT);
-  DEBUG_PDSP_SHADER_STAGE(pdsp,VK_SHADER_STAGE_COMPUTE_BIT);
-  DEBUG_PDSP_SHADER_STAGE(pdsp,VK_SHADER_STAGE_ALL_GRAPHICS);
+  fprintf(file, "supportedStages\n");
+  DEBUG_PDSP_SHADER_STAGE(pdsp, VK_SHADER_STAGE_VERTEX_BIT);
+  DEBUG_PDSP_SHADER_STAGE(pdsp, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+  DEBUG_PDSP_SHADER_STAGE(pdsp, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+  DEBUG_PDSP_SHADER_STAGE(pdsp, VK_SHADER_STAGE_GEOMETRY_BIT);
+  DEBUG_PDSP_SHADER_STAGE(pdsp, VK_SHADER_STAGE_FRAGMENT_BIT);
+  DEBUG_PDSP_SHADER_STAGE(pdsp, VK_SHADER_STAGE_COMPUTE_BIT);
+  DEBUG_PDSP_SHADER_STAGE(pdsp, VK_SHADER_STAGE_ALL_GRAPHICS);
 #if 0
   DEBUG_PDSP_SHADER_STAGE(pdsp,VK_SHADER_STAGE_RAYGEN_BIT_NV);
   DEBUG_PDSP_SHADER_STAGE(pdsp,VK_SHADER_STAGE_ANY_HIT_BIT_NV);
@@ -86,33 +83,32 @@ vk_debug_subgroup_props(FILE * file, VkPhysicalDeviceSubgroupProperties const * 
   DEBUG_PDSP_SHADER_STAGE(pdsp,VK_SHADER_STAGE_MESH_BIT_NV);
 #endif
 
-#define DEBUG_PDSP_SUBGROUP_FEATURE(pdsp,op)                    \
-  fprintf(file,                                                 \
-          "    %-45s : %s\n",                                   \
-          STRINGIFY_MACRO(op),                                  \
+#define DEBUG_PDSP_SUBGROUP_FEATURE(pdsp, op)                                                      \
+  fprintf(file,                                                                                    \
+          "    %-45s : %s\n",                                                                      \
+          STRINGIFY_MACRO(op),                                                                     \
           (pdsp->supportedOperations & op) ? "true" : "false")
 
-  fprintf(file,"supportedOperations\n");
-  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp,VK_SUBGROUP_FEATURE_BASIC_BIT);
-  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp,VK_SUBGROUP_FEATURE_VOTE_BIT);
-  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp,VK_SUBGROUP_FEATURE_ARITHMETIC_BIT);
-  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp,VK_SUBGROUP_FEATURE_BALLOT_BIT);
-  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp,VK_SUBGROUP_FEATURE_SHUFFLE_BIT);
-  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp,VK_SUBGROUP_FEATURE_SHUFFLE_RELATIVE_BIT);
-  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp,VK_SUBGROUP_FEATURE_CLUSTERED_BIT);
-  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp,VK_SUBGROUP_FEATURE_QUAD_BIT);
+  fprintf(file, "supportedOperations\n");
+  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp, VK_SUBGROUP_FEATURE_BASIC_BIT);
+  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp, VK_SUBGROUP_FEATURE_VOTE_BIT);
+  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp, VK_SUBGROUP_FEATURE_ARITHMETIC_BIT);
+  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp, VK_SUBGROUP_FEATURE_BALLOT_BIT);
+  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp, VK_SUBGROUP_FEATURE_SHUFFLE_BIT);
+  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp, VK_SUBGROUP_FEATURE_SHUFFLE_RELATIVE_BIT);
+  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp, VK_SUBGROUP_FEATURE_CLUSTERED_BIT);
+  DEBUG_PDSP_SUBGROUP_FEATURE(pdsp, VK_SUBGROUP_FEATURE_QUAD_BIT);
 #if 0
   DEBUG_PDSP_SUBGROUP_FEATURE(pdsp,VK_SUBGROUP_FEATURE_PARTITIONED_BIT_NV);
 #endif
-  fprintf(file,"\n");
+  fprintf(file, "\n");
 }
 
 //
 //
 //
 
-VkBool32
-VKAPI_PTR
+VkBool32 VKAPI_PTR
 vk_debug_report_cb(VkDebugReportFlagsEXT      flags,
                    VkDebugReportObjectTypeEXT objectType,
                    uint64_t                   object,
@@ -120,15 +116,15 @@ vk_debug_report_cb(VkDebugReportFlagsEXT      flags,
                    int32_t                    messageCode,
                    char const *               pLayerPrefix,
                    char const *               pMessage,
-                   void       *               pUserData)
+                   void *                     pUserData)
 {
   char const * flag_str = "";
   bool         is_error = false;
 
-#define VK_FLAG_CASE_TO_STRING(c)               \
-  case c:                                       \
-    flag_str = #c;                              \
-    is_error = true;                            \
+#define VK_FLAG_CASE_TO_STRING(c)                                                                  \
+  case c:                                                                                          \
+    flag_str = #c;                                                                                 \
+    is_error = true;                                                                               \
     break
 
   switch (flags)
@@ -142,11 +138,7 @@ vk_debug_report_cb(VkDebugReportFlagsEXT      flags,
 
   if (is_error)
     {
-      fprintf(stderr,
-              "%s  %s  %s\n",
-              flag_str,
-              pLayerPrefix,
-              pMessage);
+      fprintf(stderr, "%s  %s  %s\n", flag_str, pLayerPrefix, pMessage);
     }
 
   return VK_FALSE;

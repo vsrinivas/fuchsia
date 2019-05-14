@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_CORE_C
-#define SPN_ONCE_CORE_C
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_CORE_C_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_CORE_C_H_
 
 /////////////////////////////////////////////////////////////////
 //
@@ -11,6 +11,10 @@
 //
 
 #include <stdint.h>
+
+//
+// clang-format off
+//
 
 struct spn_vec2   { float    x; float    y; };
 struct spn_vec4   { float    x; float    y; float    z; float    w; };
@@ -219,11 +223,7 @@ union spn_gradient_vector
 #endif
 
 //
-//
+// clang-format on
 //
 
-#endif
-
-//
-//
-//
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_CORE_C_H_

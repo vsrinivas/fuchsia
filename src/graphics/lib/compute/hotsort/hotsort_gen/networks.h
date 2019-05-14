@@ -6,7 +6,8 @@
 //
 //
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_HOTSORT_GEN_NETWORKS_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_HOTSORT_GEN_NETWORKS_H_
 
 //
 //
@@ -20,7 +21,7 @@
 
 struct hsg_network
 {
-  uint32_t      const   length;
+  uint32_t const        length;
   struct hsg_op const * network;
 };
 
@@ -37,3 +38,5 @@ extern struct hsg_network const hsg_networks_merging[];
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_HOTSORT_GEN_NETWORKS_H_

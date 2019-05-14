@@ -7,6 +7,7 @@
 //
 
 #include "extent_ring.h"
+
 #include "common/macros.h"
 
 //
@@ -15,12 +16,12 @@
 
 void
 spn_extent_ring_init(struct spn_extent_ring * const ring,
-                     uint32_t                 const size_pow2,
-                     uint32_t                 const size_snap,
-                     uint32_t                 const size_elem)
+                     uint32_t const                 size_pow2,
+                     uint32_t const                 size_snap,
+                     uint32_t const                 size_elem)
 {
-  ring->head         = NULL;
-  ring->last         = NULL;
+  ring->head = NULL;
+  ring->last = NULL;
 
   ring->outer.reads  = 0;
   ring->outer.writes = 0;
@@ -30,10 +31,10 @@ spn_extent_ring_init(struct spn_extent_ring * const ring,
 
   // FIXME -- assert size is pow2 -- either here or statically in the config
 
-  ring->size.pow2    = size_pow2;
-  ring->size.mask    = size_pow2 - 1;
-  ring->size.snap    = size_snap;
-  ring->size.elem    = size_elem;
+  ring->size.pow2 = size_pow2;
+  ring->size.mask = size_pow2 - 1;
+  ring->size.snap = size_snap;
+  ring->size.elem = size_elem;
 }
 
 //
@@ -61,13 +62,15 @@ spn_extent_ring_wip_count(struct spn_extent_ring const * const ring)
 uint32_t
 spn_extent_ring_wip_rem(struct spn_extent_ring const * const ring)
 {
-  return MIN_MACRO(uint32_t,spn_extent_ring_rem(ring),ring->size.snap) - spn_extent_ring_wip_count(ring);
+  return MIN_MACRO(uint32_t, spn_extent_ring_rem(ring), ring->size.snap) -
+         spn_extent_ring_wip_count(ring);
 }
 
 bool
 spn_extent_ring_wip_is_full(struct spn_extent_ring const * const ring)
 {
-  return spn_extent_ring_wip_count(ring) == MIN_MACRO(uint32_t,spn_extent_ring_rem(ring),ring->size.snap);
+  return spn_extent_ring_wip_count(ring) ==
+         MIN_MACRO(uint32_t, spn_extent_ring_rem(ring), ring->size.snap);
 }
 
 uint32_t
@@ -92,30 +95,29 @@ spn_extent_ring_checkpoint(struct spn_extent_ring * const ring)
 
 struct spn_extent_ring_snap *
 spn_extent_ring_snap_temp_alloc(struct spn_allocator_host_temp * const host_temp,
-                                struct spn_device              * const device,
-                                spn_result                    (* const wait)(struct spn_device * const device),
-                                struct spn_extent_ring         * const ring)
+                                struct spn_device * const              device,
+                                spn_result (*const wait)(struct spn_device * const device),
+                                struct spn_extent_ring * const ring)
 {
   spn_subbuf_id_t id;
 
-  struct spn_extent_ring_snap * snap =
-    spn_allocator_host_temp_alloc(host_temp,
-                                  device,
-                                  wait,
-                                  SPN_MEM_FLAGS_READ_WRITE,
-                                  sizeof(*snap),
-                                  &id,
-                                  NULL);
+  struct spn_extent_ring_snap * snap = spn_allocator_host_temp_alloc(host_temp,
+                                                                     device,
+                                                                     wait,
+                                                                     SPN_MEM_FLAGS_READ_WRITE,
+                                                                     sizeof(*snap),
+                                                                     &id,
+                                                                     NULL);
   // save the id
-  snap->id      = id;
+  snap->id = id;
 
   // back point to parent
-  snap->ring    = ring;
-  snap->next    = NULL;
+  snap->ring = ring;
+  snap->next = NULL;
 
   // save the inner boundaries of the ring to the snapshot
-  snap->reads   = ring->inner.reads;
-  snap->writes  = ring->inner.reads = ring->inner.writes;
+  snap->reads  = ring->inner.reads;
+  snap->writes = ring->inner.reads = ring->inner.writes;
 
   // mark not free
   snap->is_free = false;
@@ -141,7 +143,7 @@ spn_extent_ring_snap_temp_alloc(struct spn_allocator_host_temp * const host_temp
 
 void
 spn_extent_ring_snap_temp_free(struct spn_allocator_host_temp * const host_temp,
-                               struct spn_extent_ring_snap    * const snap)
+                               struct spn_extent_ring_snap * const    snap)
 {
   // snap will be lazily freed
   snap->is_free = true;
@@ -150,31 +152,33 @@ spn_extent_ring_snap_temp_free(struct spn_allocator_host_temp * const host_temp,
   // if this snapshot is no longer referenced then try to dispose of
   // the ring buffer's leading unreferenced snapshots
   //
-  struct spn_extent_ring      * const ring = snap->ring;
-  struct spn_extent_ring_snap *       curr = ring->head;
+  struct spn_extent_ring * const ring = snap->ring;
+  struct spn_extent_ring_snap *  curr = ring->head;
 
   if (!curr->is_free)
     return;
 
-  do {
-    // increment read counter
-    ring->outer.reads = curr->writes;
+  do
+    {
+      // increment read counter
+      ring->outer.reads = curr->writes;
 
-    struct spn_extent_ring_snap * const next = curr->next;
+      struct spn_extent_ring_snap * const next = curr->next;
 
-    spn_allocator_host_temp_free(host_temp,curr->id);
+      spn_allocator_host_temp_free(host_temp, curr->id);
 
-    curr = next;
+      curr = next;
 
-    // this was the last snap...
-    if (curr == NULL)
-      {
-        ring->last = NULL;
-        break;
-      }
+      // this was the last snap...
+      if (curr == NULL)
+        {
+          ring->last = NULL;
+          break;
+        }
 
-    // is the next free?
-  } while (curr->is_free);
+      // is the next free?
+    }
+  while (curr->is_free);
 
   // update head
   ring->head = curr;

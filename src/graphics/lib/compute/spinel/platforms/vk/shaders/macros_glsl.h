@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_MACROS_GLSL
-#define SPN_ONCE_MACROS_GLSL
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SHADERS_MACROS_GLSL_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SHADERS_MACROS_GLSL_H_
 
 //
 // Use C-like structure layout everywhere
 //
 // NOTE: the current descriptors are simple enough that std430 is
 // sufficient.
+//
+
+//
+// clang-format off
 //
 
 #if 0
@@ -97,11 +101,7 @@
 #endif
 
 //
-//
+// clang-format on
 //
 
-#endif
-
-//
-//
-//
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SHADERS_MACROS_GLSL_H_

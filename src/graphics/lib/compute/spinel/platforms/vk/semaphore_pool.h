@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SEMAPHORE_POOL_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SEMAPHORE_POOL_H_
 
 //
 //
@@ -34,9 +35,10 @@ VkSemaphore
 spn_device_semaphore_pool_acquire(struct spn_device * const device);
 
 void
-spn_device_semaphore_pool_release(struct spn_device * const device,
-                                  VkSemaphore         const semaphore);
+spn_device_semaphore_pool_release(struct spn_device * const device, VkSemaphore const semaphore);
 
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SEMAPHORE_POOL_H_

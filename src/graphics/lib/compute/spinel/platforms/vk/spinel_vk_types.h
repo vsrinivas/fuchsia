@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SPINEL_VK_TYPES_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SPINEL_VK_TYPES_H_
 
 //
 //
@@ -11,8 +12,6 @@
 #include <vulkan/vulkan_core.h>
 
 #include "spinel_types.h"
-
-
 
 //
 // VK RENDER EXTENSIONS
@@ -30,11 +29,11 @@ typedef enum spn_render_submit_ext_type_e
 
 struct spn_render_submit_ext_vk_buffer
 {
-  void                         * ext;
-  spn_render_submit_ext_type_e   type;
-  VkDescriptorBufferInfo         surface;
-  uint32_t                       surface_pitch;
-  VkSubmitInfo           const * si;
+  void *                       ext;
+  spn_render_submit_ext_type_e type;
+  VkDescriptorBufferInfo       surface;
+  uint32_t                     surface_pitch;
+  VkSubmitInfo const *         si;
 } spn_render_submit_ext_vk_buffer_t;
 
 //
@@ -43,10 +42,10 @@ struct spn_render_submit_ext_vk_buffer
 
 struct spn_render_submit_ext_vk_image
 {
-  void                         * ext;
-  spn_render_submit_ext_type_e   type;
-  VkDescriptorImageInfo          surface;
-  VkSubmitInfo           const * si;
+  void *                       ext;
+  spn_render_submit_ext_type_e type;
+  VkDescriptorImageInfo        surface;
+  VkSubmitInfo const *         si;
 } spn_render_submit_ext_vk_image_t;
 
 //
@@ -60,3 +59,5 @@ struct spn_render_submit_ext_vk_image
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SPINEL_VK_TYPES_H_

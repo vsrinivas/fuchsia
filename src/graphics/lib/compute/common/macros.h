@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_COMMON_MACROS_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_COMMON_MACROS_H_
 
 //
 //
 //
 
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
 
 //
-//
+// clang-format off
 //
 
 #define ARRAY_LENGTH_MACRO(x)   (sizeof(x)/sizeof(x[0]))
 #define OFFSET_OF_MACRO(t,m)    ((size_t)&(((t*)0)->m))
 #define MEMBER_SIZE_MACRO(t,m)  sizeof(((t*)0)->m)
-
 
 //
 // FIXME
@@ -76,8 +76,8 @@
 // order.
 //
 
-#define NPBTOHL_MACRO(pb4)            ((((pb4)[0])<<24) | (((pb4)[1])<<16) |    \
-                                      (( (pb4)[2])<< 8) |   (pb4)[3])
+#define NPBTOHL_MACRO(pb4)                                              \
+  ((((pb4)[0])<<24) | (((pb4)[1])<<16) | (((pb4)[2])<< 8) | (pb4)[3])
 
 //
 // FIXME -- get rid of network order counts in target_config.
@@ -145,5 +145,7 @@
 #endif
 
 //
+// clang-format on
 //
-//
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_COMMON_MACROS_H_

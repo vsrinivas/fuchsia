@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_TARGET_LAYOUTS
-#define SPN_ONCE_TARGET_LAYOUTS
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGET_LAYOUTS_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGET_LAYOUTS_H_
 
 //
 //
@@ -16,7 +16,7 @@
 #endif
 
 //
-//
+// clang-format off
 //
 
 /////////////////////////////////////////////////////////////////
@@ -762,11 +762,7 @@
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_RASTERS_RECLAIM,SPN_TARGET_GLSL_PUSH_KERNEL_RASTERS_RECLAIM())
 
 //
-//
+// clang-format on
 //
 
-#endif
-
-//
-//
-//
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGET_LAYOUTS_H_

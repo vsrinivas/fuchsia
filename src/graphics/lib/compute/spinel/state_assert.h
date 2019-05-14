@@ -6,7 +6,8 @@
 //
 //
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_STATE_ASSERT_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_STATE_ASSERT_H_
 
 //
 //
@@ -15,7 +16,7 @@
 #include "common/macros.h"
 
 //
-//
+// clang-format off
 //
 
 #if 1
@@ -38,5 +39,7 @@
 #endif
 
 //
+// clang-format on
 //
-//
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_STATE_ASSERT_H_

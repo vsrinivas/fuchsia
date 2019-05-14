@@ -1,2 +1,38 @@
-# TODO(SPN-7): Reformat and enforce formatting of all compute code
-DisableFormat: 'true'
+# Keep C99 aesthetics
+BasedOnStyle:                                    Google
+Language:                                        Cpp
+Standard:                                        Cpp11
+AlignConsecutiveAssignments:                     true
+AlignConsecutiveDeclarations:                    true
+AlignEscapedNewlines:                            Right
+AllowAllArgumentsOnNextLine:                     false
+AllowAllParametersOfDeclarationOnNextLine:       true
+AllowShortFunctionsOnASingleLine:                None
+AllowShortIfStatementsOnASingleLine:             Never
+AllowShortLoopsOnASingleLine:                    false
+AlwaysBreakAfterReturnType:                      All
+AlwaysBreakBeforeMultilineStrings:               false
+BinPackArguments:                                false
+BinPackParameters:                               false
+BraceWrapping:
+  AfterControlStatement:                         true
+  AfterEnum:                                     true
+  AfterFunction:                                 true
+  AfterStruct:                                   true
+  AfterUnion:                                    true
+  AfterExternBlock:                              false
+  BeforeElse:                                    true
+  IndentBraces:                                  true
+BreakBeforeBraces:                               Custom
+BreakStringLiterals:                             false
+ColumnLimit:                                     100
+ContinuationIndentWidth:                         2
+DerivePointerAlignment:                          false
+ForEachMacros:
+  - UNIMPLEMENTED_FOREACH
+MacroBlockBegin:                                 ''
+MacroBlockEnd:                                   ''
+PointerAlignment:                                Middle
+ReflowComments:                                  false
+StatementMacros:
+  - UNIMPLEMENTED_STATEMENT

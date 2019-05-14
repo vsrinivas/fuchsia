@@ -15,12 +15,10 @@
 void
 vk_barrier_compute_w_to_compute_r(VkCommandBuffer cb)
 {
-  static VkMemoryBarrier const w_to_r = {
-    .sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-    .pNext         = NULL,
-    .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-    .dstAccessMask = VK_ACCESS_SHADER_READ_BIT
-  };
+  static VkMemoryBarrier const w_to_r = {.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+                                         .pNext         = NULL,
+                                         .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+                                         .dstAccessMask = VK_ACCESS_SHADER_READ_BIT};
 
   vkCmdPipelineBarrier(cb,
                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -45,8 +43,7 @@ vk_barrier_compute_w_to_transfer_r(VkCommandBuffer cb)
     .sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
     .pNext         = NULL,
     .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-    .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT
-  };
+    .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT};
 
   vkCmdPipelineBarrier(cb,
                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_SPINEL_TYPES_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_SPINEL_TYPES_H_
 
 //
 //
 //
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 //
 //
@@ -20,7 +21,7 @@ extern "C" {
 #endif
 
 //
-//
+// clang-format off
 //
 
 typedef struct spn_context        * spn_context_t;
@@ -56,6 +57,10 @@ typedef        spn_weakref_t        spn_clip_weakref_t;
 #define SPN_CLIP_WEAKREF_INVALID       SPN_WEAKREF_INVALID
 
 //
+// clang-format on
+//
+
+//
 // TRANSFORM LAYOUT: { sx shx tx shy sy ty w0 w1 }
 //
 
@@ -72,10 +77,10 @@ typedef        spn_weakref_t        spn_clip_weakref_t;
 
 typedef struct spn_render_submit
 {
-  void              * ext;
-  spn_styling_t       styling;
-  spn_composition_t   composition;
-  uint32_t            tile_clip[4];
+  void *            ext;
+  spn_styling_t     styling;
+  spn_composition_t composition;
+  uint32_t          tile_clip[4];
 } spn_render_submit_t;
 
 //
@@ -89,3 +94,5 @@ typedef struct spn_render_submit
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_SPINEL_TYPES_H_

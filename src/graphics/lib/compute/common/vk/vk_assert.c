@@ -6,8 +6,8 @@
 //
 //
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 //
 //
@@ -19,7 +19,9 @@
 //
 //
 
-#define VK_RESULT_TO_STRING(result) case result: return #result
+#define VK_RESULT_TO_STRING(result)                                                                \
+  case result:                                                                                     \
+    return #result
 
 //
 // FIXME -- results and errors
@@ -66,11 +68,11 @@ vk_get_result_string(VkResult const result)
       VK_RESULT_TO_STRING(VK_ERROR_FRAGMENTATION_EXT);
       VK_RESULT_TO_STRING(VK_ERROR_NOT_PERMITTED_EXT);
 
-      //
-      // Extensions: vk_xyz
-      //
-    default:
-      return "UNKNOWN VULKAN RESULT";
+        //
+        // Extensions: vk_xyz
+        //
+      default:
+        return "UNKNOWN VULKAN RESULT";
     }
 }
 
@@ -79,10 +81,7 @@ vk_get_result_string(VkResult const result)
 //
 
 VkResult
-vk_assert(VkResult     const result,
-          char const * const file,
-          int          const line,
-          bool         const is_abort)
+vk_assert(VkResult const result, char const * const file, int const line, bool const is_abort)
 {
   if (result != VK_SUCCESS)
     {
@@ -90,11 +89,15 @@ vk_assert(VkResult     const result,
 
       fprintf(stderr,
               "\"%s\", line %d: vk_assert( %d ) = \"%s\"",
-              file,line,result,vk_result_str);
+              file,
+              line,
+              result,
+              vk_result_str);
 
-      if (is_abort) {
-        abort();
-      }
+      if (is_abort)
+        {
+          abort();
+        }
     }
 
   return result;

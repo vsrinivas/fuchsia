@@ -6,9 +6,9 @@
 //
 //
 
-#include <assert.h>
-
 #include "ring.h"
+
+#include <assert.h>
 
 //
 // A barebones ring
@@ -38,8 +38,7 @@ spn_ring_is_full(struct spn_ring const * const ring)
 }
 
 bool
-spn_ring_is_tail(struct spn_ring const * const ring,
-                 uint32_t                const idx)
+spn_ring_is_tail(struct spn_ring const * const ring, uint32_t const idx)
 {
   return ring->tail == idx;
 }

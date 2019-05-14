@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_ALLOCATOR_HOST_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_ALLOCATOR_HOST_H_
 
 //
 //
@@ -16,12 +17,11 @@
 //
 //
 
-typedef enum spn_mem_flags_e {
-
+typedef enum spn_mem_flags_e
+{
   SPN_MEM_FLAGS_READ_WRITE,
-  // SPN_MEM_FLAGS_WRITE_ONLY,
-  // SPN_MEM_FLAGS_READ_ONLY
-
+  SPN_MEM_FLAGS_WRITE_ONLY,
+  SPN_MEM_FLAGS_READ_ONLY
 } spn_mem_flags_e;
 
 //
@@ -43,7 +43,7 @@ struct spn_allocator_host_perm
 struct spn_allocator_host_temp
 {
   struct spn_allocator_host_perm * host_perm;
-  uint8_t                        * extent;
+  uint8_t *                        extent;
   struct spn_suballocator          suballocator;
 };
 
@@ -53,20 +53,18 @@ struct spn_allocator_host_temp
 
 void
 spn_allocator_host_perm_create(struct spn_allocator_host_perm * const host_perm,
-                               uint64_t                         const alignment);
+                               uint64_t const                         alignment);
 
 void
 spn_allocator_host_perm_dispose(struct spn_allocator_host_perm * const host_perm);
 
-
 void *
 spn_allocator_host_perm_alloc(struct spn_allocator_host_perm * const host_perm,
-                              spn_mem_flags_e                  const flags,
-                              uint64_t                         const size);
+                              spn_mem_flags_e const                  flags,
+                              uint64_t const                         size);
 
 void
-spn_allocator_host_perm_free(struct spn_allocator_host_perm * const host_perm,
-                             void                           * const mem);
+spn_allocator_host_perm_free(struct spn_allocator_host_perm * const host_perm, void * const mem);
 //
 // TEMP
 //
@@ -74,26 +72,28 @@ spn_allocator_host_perm_free(struct spn_allocator_host_perm * const host_perm,
 void
 spn_allocator_host_temp_create(struct spn_allocator_host_temp * const host_temp,
                                struct spn_allocator_host_perm * const host_perm,
-                               uint32_t                         const subbufs,
-                               uint64_t                         const size,
-                               uint64_t                         const alignment);
+                               uint32_t const                         subbufs,
+                               uint64_t const                         size,
+                               uint64_t const                         alignment);
 
 void
 spn_allocator_host_temp_dispose(struct spn_allocator_host_temp * const host_temp);
 
 void *
 spn_allocator_host_temp_alloc(struct spn_allocator_host_temp * const host_temp,
-                              struct spn_device              * const device,
-                              spn_result                    (* const wait)(struct spn_device * const device),
-                              spn_mem_flags_e                  const flags,
-                              uint64_t                         const size,
-                              spn_subbuf_id_t                * const subbuf_id,
-                              uint64_t                       * const subbuf_size);
+                              struct spn_device * const              device,
+                              spn_result (*const wait)(struct spn_device * const device),
+                              spn_mem_flags_e const   flags,
+                              uint64_t const          size,
+                              spn_subbuf_id_t * const subbuf_id,
+                              uint64_t * const        subbuf_size);
 
 void
 spn_allocator_host_temp_free(struct spn_allocator_host_temp * const host_temp,
-                             spn_subbuf_id_t                  const subbuf_id);
+                             spn_subbuf_id_t const                  subbuf_id);
 
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_ALLOCATOR_HOST_H_

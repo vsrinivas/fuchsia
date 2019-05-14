@@ -7,6 +7,7 @@
 //
 
 #include "color.h"
+
 #include <math.h>
 
 //
@@ -16,19 +17,19 @@
 void
 color_rgb32_to_rgba_f32(float rgba[4], const uint32_t rgb, const float opacity)
 {
-  rgba[2] = (float)(rgb        & 0xFF) / 255.0f; // b
-  rgba[1] = (float)(rgb  >> 8  & 0xFF) / 255.0f; // g
-  rgba[0] = (float)(rgb  >> 16 & 0xFF) / 255.0f; // r
+  rgba[2] = (float)(rgb & 0xFF) / 255.0f;        // b
+  rgba[1] = (float)(rgb >> 8 & 0xFF) / 255.0f;   // g
+  rgba[0] = (float)(rgb >> 16 & 0xFF) / 255.0f;  // r
   rgba[3] = opacity;
 }
 
 void
 color_argb32_to_rgba_f32(float rgba[4], const uint32_t argb)
 {
-  rgba[2] = (float)(argb       & 0xFF) / 255.0f; // b
-  rgba[1] = (float)(argb >> 8  & 0xFF) / 255.0f; // g
-  rgba[0] = (float)(argb >> 16 & 0xFF) / 255.0f; // r
-  rgba[3] = (float)(argb >> 24 & 0xFF) / 255.0f; // a
+  rgba[2] = (float)(argb & 0xFF) / 255.0f;        // b
+  rgba[1] = (float)(argb >> 8 & 0xFF) / 255.0f;   // g
+  rgba[0] = (float)(argb >> 16 & 0xFF) / 255.0f;  // r
+  rgba[3] = (float)(argb >> 24 & 0xFF) / 255.0f;  // a
 }
 
 //
@@ -40,7 +41,7 @@ color_premultiply_rgba_f32(float rgba[4])
 {
   if (rgba[3] < 1.0f)
     {
-      for (uint32_t ii=0; ii<3; ii++)
+      for (uint32_t ii = 0; ii < 3; ii++)
         rgba[ii] = rgba[ii] * rgba[3];
     }
 }
@@ -63,7 +64,7 @@ color_premultiply_rgba_f32(float rgba[4])
 void
 color_srgb_to_linear_rgb_f32(float rgb[3])
 {
-  for (uint32_t ii=0; ii<3; ii++)
+  for (uint32_t ii = 0; ii < 3; ii++)
     {
       if (rgb[ii] <= 0.04045f)
         {
@@ -79,7 +80,7 @@ color_srgb_to_linear_rgb_f32(float rgb[3])
 void
 color_linear_to_srgb_rgb_f32(float rgb[3])
 {
-  for (uint32_t ii=0; ii<3; ii++)
+  for (uint32_t ii = 0; ii < 3; ii++)
     {
       if (rgb[ii] < 0.0031308f)
         {
@@ -96,8 +97,7 @@ color_linear_to_srgb_rgb_f32(float rgb[3])
 //
 //
 
-static
-float
+static float
 lerpf(float const a, float const b, float const t)
 {
   return fmaf(t, b, fmaf(-t, a, a));
@@ -113,8 +113,8 @@ color_linear_lerp_rgba_f32(float       rgba_m[4],
                            float const rgba_b[4],
                            float const t)
 {
-  for (int32_t ii=0; ii<4; ii++)
-    rgba_m[ii] = lerpf(rgba_a[ii],rgba_b[ii],t);
+  for (int32_t ii = 0; ii < 4; ii++)
+    rgba_m[ii] = lerpf(rgba_a[ii], rgba_b[ii], t);
 }
 
 //

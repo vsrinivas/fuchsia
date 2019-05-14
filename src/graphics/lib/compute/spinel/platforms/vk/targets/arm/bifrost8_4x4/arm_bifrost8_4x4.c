@@ -12,11 +12,11 @@
 //
 //
 
-#include "name.h"
 #include "config.h"
+#include "name.h"
 
 //
-//
+// clang-format off
 //
 
 #define SPN_TARGET_EXTENT_PDRW         (SPN_TARGET_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
@@ -257,7 +257,7 @@ struct spn_target_image const SPN_TARGET_IMAGE_NAME =
 };
 
 //
-//
+// clang-format on
 //
 
 #include "targets/dump.inl"

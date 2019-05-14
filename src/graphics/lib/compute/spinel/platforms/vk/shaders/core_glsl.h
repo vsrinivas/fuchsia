@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_CORE_GLSL
-#define SPN_ONCE_CORE_GLSL
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SHADERS_CORE_GLSL_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SHADERS_CORE_GLSL_H_
 
 /////////////////////////////////////////////////////////////////
 //
 // VULKAN/GLSL
+//
+
+//
+// clang-format off
 //
 
 #define SPN_TYPE_UINT                         uint
@@ -91,11 +95,7 @@
 #define SPN_BITFIELD_INSERT(v,i,o,b) bitfieldInsert(v,i,o,b)
 
 //
-//
+// clang-format on
 //
 
-#endif
-
-//
-//
-//
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SHADERS_CORE_GLSL_H_

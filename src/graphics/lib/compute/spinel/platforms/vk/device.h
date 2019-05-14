@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_DEVICE_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_DEVICE_H_
 
 //
 //
@@ -10,12 +11,10 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include "spinel_types.h"
-
-#include "allocator_host.h"
 #include "allocator_device.h"
-
+#include "allocator_host.h"
 #include "fence_pool.h"
+#include "spinel_types.h"
 
 //
 //
@@ -29,9 +28,9 @@ struct spn_target_image;
 
 struct spn_device_vk
 {
-  VkAllocationCallbacks    const * ac;
+  VkAllocationCallbacks const *    ac;
   VkPhysicalDevice                 pd;
-  uint32_t                         qfi; // queue family index
+  uint32_t                         qfi;  // queue family index
   VkPhysicalDeviceMemoryProperties pdmp;
   VkDevice                         d;
   VkPipelineCache                  pc;
@@ -43,35 +42,40 @@ struct spn_device_vk
 
 struct spn_device
 {
-  struct spn_context                   * context;
+  struct spn_context * context;
 
-  struct spn_device_vk                 * vk;
+  struct spn_device_vk * vk;
 
-  struct spn_target                    * target;
+  struct spn_target * target;
 
-  struct {
-    struct {
-      struct spn_allocator_host_perm     perm;
-      struct spn_allocator_host_temp     temp;
+  struct
+  {
+    struct
+    {
+      struct spn_allocator_host_perm perm;
+      struct spn_allocator_host_temp temp;
     } host;
-    struct {
-      struct {
+    struct
+    {
+      struct
+      {
         struct spn_allocator_device_perm local;
-        struct spn_allocator_device_perm copyback; // hrN     -- copy-back to host
-        struct spn_allocator_device_perm coherent; // hw1:drN -- target-specific
+        struct spn_allocator_device_perm copyback;  // hrN     -- copy-back to host
+        struct spn_allocator_device_perm coherent;  // hw1:drN -- target-specific
       } perm;
-      struct {
+      struct
+      {
         struct spn_allocator_device_temp local;
       } temp;
     } device;
   } allocator;
 
-  struct spn_queue_pool                * queue_pool;
-  struct spn_cb_pool                   * cb_pool;
-  struct spn_fence_pool                * fence_pool;
-  struct spn_handle_pool               * handle_pool;
+  struct spn_queue_pool *  queue_pool;
+  struct spn_cb_pool *     cb_pool;
+  struct spn_fence_pool *  fence_pool;
+  struct spn_handle_pool * handle_pool;
 
-  struct spn_block_pool                * block_pool;
+  struct spn_block_pool * block_pool;
 
   //
   //
@@ -84,7 +88,6 @@ struct spn_device
   struct hs_cl      const      * hs;     // opaque hotsort
 #endif
 };
-
 
 //
 // FIXME -- Spinel target needs to be able to vend what extensions it
@@ -124,17 +127,16 @@ spn_device_block_pool_get_mask(struct spn_device * const device);
 VkCommandBuffer
 spn_device_cb_acquire_begin(struct spn_device * const device);
 
-
 //
 // End a command buffer and acquire a fence
 //
 
 VkFence
-spn_device_cb_end_fence_acquire(struct spn_device    * const device,
-                                VkCommandBuffer        const cb,
+spn_device_cb_end_fence_acquire(struct spn_device * const    device,
+                                VkCommandBuffer const        cb,
                                 spn_fence_complete_pfn const pfn,
-                                void                 * const pfn_payload,
-                                size_t                 const pfn_payload_size);
+                                void * const                 pfn_payload,
+                                size_t const                 pfn_payload_size);
 
 //
 // yield : if there are unsignaled fences, test if at least one fence is signaled
@@ -154,3 +156,5 @@ spn_device_drain(struct spn_device * const device);
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_DEVICE_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PATH_BUILDER_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PATH_BUILDER_H_
 
 //
 //
@@ -12,15 +13,15 @@
 #include "state_assert.h"
 
 //
-//
+// clang-format off
 //
 
-typedef enum spn_path_builder_state_e {
-
+typedef enum spn_path_builder_state_e
+{
   SPN_PATH_BUILDER_STATE_READY,
   SPN_PATH_BUILDER_STATE_BUILDING
-
 } spn_path_builder_state_e;
+
 
 //
 // We define all path geometry types here since their differences are
@@ -68,16 +69,16 @@ struct spn_path_builder_coords_next
 
 struct spn_path_builder
 {
-  struct spn_path_builder_impl         * impl;
+  struct spn_path_builder_impl      * impl;
 
-  spn_result                          (* begin    )(struct spn_path_builder_impl * const impl);
-  spn_result                          (* end      )(struct spn_path_builder_impl * const impl, spn_path_t * const path);
-  spn_result                          (* release  )(struct spn_path_builder_impl * const impl);
-  spn_result                          (* flush    )(struct spn_path_builder_impl * const impl);
+  spn_result                       (* begin    )(struct spn_path_builder_impl * const impl);
+  spn_result                       (* end      )(struct spn_path_builder_impl * const impl, spn_path_t * const path);
+  spn_result                       (* release  )(struct spn_path_builder_impl * const impl);
+  spn_result                       (* flush    )(struct spn_path_builder_impl * const impl);
 
 #undef  SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
 #define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p,_i,_n)                                           \
-  spn_result                          (* _p       )(struct spn_path_builder_impl * const impl);
+  spn_result                       (* _p       )(struct spn_path_builder_impl * const impl);
 
   SPN_PATH_BUILDER_PRIM_TYPE_EXPAND()
 
@@ -94,5 +95,7 @@ struct spn_path_builder
 };
 
 //
+// clang-format on
 //
-//
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PATH_BUILDER_H_

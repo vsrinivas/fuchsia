@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_EXPAND_X
-#define SPN_ONCE_EXPAND_X
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_EXPAND_X_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_EXPAND_X_H_
 
 //
 // SPN_EXPAND(I,N,P,L):
 //
 //   INDEX, NEXT, PREV, LAST?
+//
+
+//
+// clang-format off
 //
 
 #define SPN_EXPAND_1()                          \
@@ -218,7 +222,7 @@
   SPN_EXPAND_X(14,15,13, true)
 
 //
-//
+// clang-format on
 //
 
-#endif
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_EXPAND_X_H_

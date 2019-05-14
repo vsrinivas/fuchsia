@@ -6,11 +6,11 @@
 //
 //
 
+#include "vk_shader_info_amd.h"
+
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
-
-#include "vk_shader_info_amd.h"
 
 //
 //
@@ -20,13 +20,12 @@ void
 vk_shader_info_amd_statistics(VkDevice           device,
                               VkPipeline         p[],
                               char const * const names[],
-                              uint32_t     const count)
+                              uint32_t const     count)
 {
 #ifndef VK_SHADER_INFO_AMD_STATISTICS_DISABLE
 
   PFN_vkGetShaderInfoAMD vkGetShaderInfoAMD =
-    (PFN_vkGetShaderInfoAMD)
-    vkGetDeviceProcAddr(device,"vkGetShaderInfoAMD");
+    (PFN_vkGetShaderInfoAMD)vkGetDeviceProcAddr(device, "vkGetShaderInfoAMD");
 
   if (vkGetShaderInfoAMD == NULL)
     return;
@@ -35,7 +34,7 @@ vk_shader_info_amd_statistics(VkDevice           device,
           "                                   PHY   PHY  AVAIL AVAIL\n"
           "VGPRs SGPRs LDS_MAX LDS/WG  SPILL VGPRs SGPRs VGPRs SGPRs  WORKGROUP_SIZE  NAME\n");
 
-  for (uint32_t ii=0; ii<count; ii++)
+  for (uint32_t ii = 0; ii < count; ii++)
     {
       VkShaderStatisticsInfoAMD ssi_amd;
       size_t                    ssi_amd_size = sizeof(ssi_amd);
@@ -60,12 +59,14 @@ vk_shader_info_amd_statistics(VkDevice           device,
                   "%5" PRIu32 " "
                   "%5" PRIu32 "  "
 
-                  "( %6" PRIu32 ", " "%6" PRIu32 ", " "%6" PRIu32 " )  ",
+                  "( %6" PRIu32 ", "
+                  "%6" PRIu32 ", "
+                  "%6" PRIu32 " )  ",
                   ssi_amd.resourceUsage.numUsedVgprs,
                   ssi_amd.resourceUsage.numUsedSgprs,
                   ssi_amd.resourceUsage.ldsSizePerLocalWorkGroup,
-                  ssi_amd.resourceUsage.ldsUsageSizeInBytes,    // size_t
-                  ssi_amd.resourceUsage.scratchMemUsageInBytes, // size_t
+                  ssi_amd.resourceUsage.ldsUsageSizeInBytes,     // size_t
+                  ssi_amd.resourceUsage.scratchMemUsageInBytes,  // size_t
                   ssi_amd.numPhysicalVgprs,
                   ssi_amd.numPhysicalSgprs,
                   ssi_amd.numAvailableVgprs,
@@ -75,9 +76,9 @@ vk_shader_info_amd_statistics(VkDevice           device,
                   ssi_amd.computeWorkGroupSize[2]);
 
           if (names != NULL)
-            fprintf(stdout,"%s\n",names[ii]);
+            fprintf(stdout, "%s\n", names[ii]);
           else
-            fprintf(stdout,"---\n");
+            fprintf(stdout, "---\n");
         }
     }
 
@@ -92,18 +93,17 @@ void
 vk_shader_info_amd_disassembly(VkDevice           device,
                                VkPipeline         p[],
                                char const * const names[],
-                               uint32_t     const count)
+                               uint32_t const     count)
 {
 #ifndef VK_SHADER_INFO_AMD_DISASSEMBLY_DISABLE
 
   PFN_vkGetShaderInfoAMD vkGetShaderInfoAMD =
-    (PFN_vkGetShaderInfoAMD)
-    vkGetDeviceProcAddr(device,"vkGetShaderInfoAMD");
+    (PFN_vkGetShaderInfoAMD)vkGetDeviceProcAddr(device, "vkGetShaderInfoAMD");
 
   if (vkGetShaderInfoAMD == NULL)
     return;
 
-  for (uint32_t ii=0; ii<count; ii++)
+  for (uint32_t ii = 0; ii < count; ii++)
     {
       size_t disassembly_amd_size;
 
@@ -124,9 +124,9 @@ vk_shader_info_amd_disassembly(VkDevice           device,
                                  disassembly_amd) == VK_SUCCESS)
             {
               if (names != NULL)
-                fprintf(stdout,"SHADER: %s\n",names[ii]);
+                fprintf(stdout, "SHADER: %s\n", names[ii]);
 
-              fprintf(stdout,"%s",(char*)disassembly_amd);
+              fprintf(stdout, "%s", (char *)disassembly_amd);
             }
 
           free(disassembly_amd);

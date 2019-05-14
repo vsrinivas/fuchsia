@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_EXTENT_RING_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_EXTENT_RING_H_
 
 //
 //
 //
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "allocator_host.h"
 
@@ -36,21 +37,24 @@ struct spn_extent_ring
   struct spn_extent_ring_snap * head;
   struct spn_extent_ring_snap * last;
 
-  struct {
-    uint32_t                    reads;  // number of reads
-    uint32_t                    writes; // number of writes
+  struct
+  {
+    uint32_t reads;   // number of reads
+    uint32_t writes;  // number of writes
   } outer;
 
-  struct {
-    uint32_t                    reads;  // number of reads
-    uint32_t                    writes; // number of writes
+  struct
+  {
+    uint32_t reads;   // number of reads
+    uint32_t writes;  // number of writes
   } inner;
 
-  struct {
-    uint32_t                    pow2;   // ring size must be pow2
-    uint32_t                    mask;   // modulo is a mask because size is pow2
-    uint32_t                    snap;   // max elements in a snapshot (not req'd to be pow2)
-    uint32_t                    elem;   // size of element in bytes
+  struct
+  {
+    uint32_t pow2;  // ring size must be pow2
+    uint32_t mask;  // modulo is a mask because size is pow2
+    uint32_t snap;  // max elements in a snapshot (not req'd to be pow2)
+    uint32_t elem;  // size of element in bytes
   } size;
 };
 
@@ -60,9 +64,9 @@ struct spn_extent_ring
 
 void
 spn_extent_ring_init(struct spn_extent_ring * const ring,
-                     uint32_t                 const size_pow2,
-                     uint32_t                 const size_snap,
-                     uint32_t                 const size_elem);
+                     uint32_t const                 size_pow2,
+                     uint32_t const                 size_snap,
+                     uint32_t const                 size_elem);
 
 //
 //
@@ -100,15 +104,15 @@ spn_extent_ring_checkpoint(struct spn_extent_ring * const ring);
 
 struct spn_extent_ring_snap
 {
-  struct spn_extent_ring      * ring;   // parent ring
-  struct spn_extent_ring_snap * next;   // next snap
+  struct spn_extent_ring *      ring;  // parent ring
+  struct spn_extent_ring_snap * next;  // next snap
 
-  uint32_t                      reads;  // number of reads
-  uint32_t                      writes; // number of writes
+  uint32_t reads;   // number of reads
+  uint32_t writes;  // number of writes
 
-  bool                          is_free;
+  bool is_free;
 
-  spn_subbuf_id_t               id;     // id of host temp suballocation
+  spn_subbuf_id_t id;  // id of host temp suballocation
 };
 
 //
@@ -118,13 +122,13 @@ struct spn_extent_ring_snap
 
 struct spn_extent_ring_snap *
 spn_extent_ring_snap_temp_alloc(struct spn_allocator_host_temp * const host_temp,
-                                struct spn_device              * const device,
-                                spn_result                    (* const wait)(struct spn_device * const device),
-                                struct spn_extent_ring         * const ring);
+                                struct spn_device * const              device,
+                                spn_result (*const wait)(struct spn_device * const device),
+                                struct spn_extent_ring * const ring);
 
 void
 spn_extent_ring_snap_temp_free(struct spn_allocator_host_temp * const host_temp,
-                               struct spn_extent_ring_snap    * const snap);
+                               struct spn_extent_ring_snap * const    snap);
 
 //
 //
@@ -142,3 +146,5 @@ spn_extent_ring_snap_to(struct spn_extent_ring_snap const * const snap);
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_EXTENT_RING_H_

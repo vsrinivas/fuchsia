@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_SUBALLOCATOR_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_SUBALLOCATOR_H_
 
 //
 // This is a suballocator for a large extent typically less than 4GB.
@@ -45,12 +46,12 @@ struct spn_device;
 
 typedef uint16_t spn_subbuf_id_t;
 
-#define SPN_SUBBUF_ID_INVALID  ((spn_subbuf_id_t)-1)
+#define SPN_SUBBUF_ID_INVALID ((spn_subbuf_id_t)-1)
 
 #ifndef SPN_SUBALLOCATOR_GTE_4GB
-typedef uint32_t spn_subbuf_size_t; // < 4GB
+typedef uint32_t spn_subbuf_size_t;  // < 4GB
 #else
-typedef uint64_t spn_subbuf_size_t; // >=4GB
+typedef uint64_t spn_subbuf_size_t;  // >=4GB
 #endif
 
 //
@@ -60,23 +61,24 @@ typedef uint64_t spn_subbuf_size_t; // >=4GB
 
 struct spn_suballocator
 {
-  struct {
-    uint32_t           avail;
-    uint32_t           spare;
-  } rem; // inuse = count - (avail + spare)
+  struct
+  {
+    uint32_t avail;
+    uint32_t spare;
+  } rem;  // inuse = count - (avail + spare)
 
-  spn_subbuf_size_t    size;      // size of memory extent
-  spn_subbuf_size_t    total;     // total outstanding allocations
+  spn_subbuf_size_t size;   // size of memory extent
+  spn_subbuf_size_t total;  // total outstanding allocations
 
-  uint32_t             alignment; // required pow2 alignment
-  uint32_t             count;     // number of subbufs
+  uint32_t alignment;  // required pow2 alignment
+  uint32_t count;      // number of subbufs
 
-  struct spn_subbuf  * subbufs;
+  struct spn_subbuf * subbufs;
 
-  spn_subbuf_id_t    * ids;       // [<-AVAIL-><-empty-><-SPARE->]
+  spn_subbuf_id_t * ids;  // [<-AVAIL-><-empty-><-SPARE->]
 
 #ifndef NDEBUG
-  char const *         name;
+  char const * name;
 #endif
 };
 
@@ -85,15 +87,15 @@ struct spn_suballocator
 //
 
 void
-spn_suballocator_create(struct spn_suballocator        * const suballocator,
+spn_suballocator_create(struct spn_suballocator * const        suballocator,
                         struct spn_allocator_host_perm * const host_perm,
-                        char                     const * const name,
-                        uint32_t                         const subbufs,
-                        uint64_t                         const size,
-                        uint64_t                         const alignment);
+                        char const * const                     name,
+                        uint32_t const                         subbufs,
+                        uint64_t const                         size,
+                        uint64_t const                         alignment);
 
 void
-spn_suballocator_dispose(struct spn_suballocator        * const suballocator,
+spn_suballocator_dispose(struct spn_suballocator * const        suballocator,
                          struct spn_allocator_host_perm * const host_perm);
 
 //
@@ -102,12 +104,12 @@ spn_suballocator_dispose(struct spn_suballocator        * const suballocator,
 
 void
 spn_suballocator_subbuf_alloc(struct spn_suballocator * const suballocator,
-                              struct spn_device       * const device,
-                              spn_result             (* const wait)(struct spn_device * const device),
-                              uint64_t                  const size,
-                              spn_subbuf_id_t         * const subbuf_id,
-                              uint64_t                * const subbuf_origin,
-                              uint64_t                * const subbuf_size);
+                              struct spn_device * const       device,
+                              spn_result (*const wait)(struct spn_device * const device),
+                              uint64_t const          size,
+                              spn_subbuf_id_t * const subbuf_id,
+                              uint64_t * const        subbuf_origin,
+                              uint64_t * const        subbuf_size);
 
 void
 spn_suballocator_subbuf_free(struct spn_suballocator * const suballocator,
@@ -116,3 +118,5 @@ spn_suballocator_subbuf_free(struct spn_suballocator * const suballocator,
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_SUBALLOCATOR_H_

@@ -5,11 +5,11 @@
 source_set("common") {
   public = [
     "macros.h",
-    "util.h"
+    "util.h",
   ]
   sources = [
     "macros.h",
+    "util.c",
     "util.h",
-    "util.c"
   ]
 }

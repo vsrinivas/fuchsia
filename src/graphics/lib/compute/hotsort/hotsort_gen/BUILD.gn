@@ -6,22 +6,20 @@ if (current_toolchain == host_toolchain) {
   executable("hotsort_gen") {
     sources = [
       "gen.h",
-      "networks.h",
-      "transpose.h",
       "main.c",
+      "networks.h",
       "networks_merging_64.c",
       "networks_sorting_64.c",
       "target_cuda.c",
       "target_debug.c",
       "target_glsl.c",
       "target_opencl.c",
-      "transpose.c"
+      "transpose.c",
+      "transpose.h",
     ]
-    include_dirs = [
-      "//src/graphics/lib/compute"
-    ]
+    include_dirs = [ "//src/graphics/lib/compute" ]
     deps = [
-      "//src/graphics/lib/compute/common"
+      "//src/graphics/lib/compute/common",
     ]
   }
 }

@@ -6,6 +6,10 @@
 // Record the push sizes
 //
 
+//
+// clang-format off
+//
+
 #undef  SPN_TARGET_PUSH_UINT
 #undef  SPN_TARGET_PUSH_UVEC4
 #undef  SPN_TARGET_PUSH_IVEC4
@@ -33,5 +37,5 @@
 },
 
 //
-//
+// clang-format on
 //

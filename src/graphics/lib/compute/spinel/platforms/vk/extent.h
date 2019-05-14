@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_EXTENT_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_EXTENT_H_
 
 //
 //
@@ -17,7 +18,7 @@
 //
 //
 
-struct spn_device; // FIXME -- remove
+struct spn_device;  // FIXME -- remove
 
 //
 // Legend:
@@ -49,12 +50,11 @@ struct spn_extent_phrw
 
 void
 spn_extent_phrw_alloc(struct spn_extent_phrw * const extent,
-                      struct spn_device      * const device,
-                      size_t                   const size);
+                      struct spn_device * const      device,
+                      size_t const                   size);
 
 void
-spn_extent_phrw_free(struct spn_extent_phrw * const extent,
-                     struct spn_device      * const device);
+spn_extent_phrw_free(struct spn_extent_phrw * const extent, struct spn_device * const device);
 
 //
 // DURABLE R/W DEVICE EXTENT -- ALLOCATED FROM DEVICE HEAP
@@ -67,15 +67,15 @@ struct spn_extent_pdrw
 };
 
 void
-spn_extent_pdrw_alloc(struct spn_extent_pdrw           * const extent,
+spn_extent_pdrw_alloc(struct spn_extent_pdrw * const           extent,
                       struct spn_allocator_device_perm * const perm,
-                      struct spn_device_vk             * const vk,
-                      uint64_t                           const size);
+                      struct spn_device_vk * const             vk,
+                      uint64_t const                           size);
 
 void
-spn_extent_pdrw_free(struct spn_extent_pdrw           * const extent,
+spn_extent_pdrw_free(struct spn_extent_pdrw * const           extent,
                      struct spn_allocator_device_perm * const perm,
-                     struct spn_device_vk             * const vk);
+                     struct spn_device_vk * const             vk);
 
 //
 // EPHEMERAL DEVICE R/W EXTENT -- ALLOCATED QUICKLY FROM A MANAGED RING
@@ -90,16 +90,14 @@ struct spn_extent_tdrw
 
 void
 spn_extent_tdrw_alloc(struct spn_extent_tdrw * const extent,
-                      struct spn_device      * const device,
-                      size_t                   const size);
+                      struct spn_device * const      device,
+                      size_t const                   size);
 
 void
-spn_extent_tdrw_free(struct spn_extent_tdrw * const extent,
-                     struct spn_device      * const device);
+spn_extent_tdrw_free(struct spn_extent_tdrw * const extent, struct spn_device * const device);
 
 void
-spn_extent_tdrw_zero(struct spn_extent_tdrw * const extent,
-                     VkCommandBuffer                cb);
+spn_extent_tdrw_zero(struct spn_extent_tdrw * const extent, VkCommandBuffer cb);
 
 //
 // DURABLE SMALL EXTENTS BACKING ATOMICS
@@ -107,27 +105,25 @@ spn_extent_tdrw_zero(struct spn_extent_tdrw * const extent,
 
 struct spn_extent_phr_pdrw
 {
-  VkDeviceSize size; // must be multiple of words
-  void       * hr;
+  VkDeviceSize size;  // must be multiple of words
+  void *       hr;
   VkBuffer     drw;
 };
 
 void
 spn_extent_phr_pdrw_alloc(struct spn_extent_phr_pdrw * const extent,
-                          struct spn_device          * const device,
-                          size_t                       const size);
+                          struct spn_device * const          device,
+                          size_t const                       size);
 
 void
 spn_extent_phr_pdrw_free(struct spn_extent_phr_pdrw * const extent,
-                         struct spn_device          * const device);
+                         struct spn_device * const          device);
 
 void
-spn_extent_phr_pdrw_read(struct spn_extent_phr_pdrw * const extent,
-                         VkCommandBuffer                    cb);
+spn_extent_phr_pdrw_read(struct spn_extent_phr_pdrw * const extent, VkCommandBuffer cb);
 
 void
-spn_extent_phr_pdrw_zero(struct spn_extent_phr_pdrw * const extent,
-                         VkCommandBuffer                    cb);
+spn_extent_phr_pdrw_zero(struct spn_extent_phr_pdrw * const extent, VkCommandBuffer cb);
 
 //
 // EPHEMERAL SMALL EXTENTS BACKING ATOMICS
@@ -135,12 +131,13 @@ spn_extent_phr_pdrw_zero(struct spn_extent_phr_pdrw * const extent,
 
 struct spn_extent_thr_tdrw
 {
-  VkDeviceSize      size; // must be multiple of words
+  VkDeviceSize size;  // must be multiple of words
 
-  void            * hr;
-  VkBuffer          drw;
+  void *   hr;
+  VkBuffer drw;
 
-  struct {
+  struct
+  {
     spn_subbuf_id_t hr;
     spn_subbuf_id_t drw;
   } id;
@@ -148,20 +145,18 @@ struct spn_extent_thr_tdrw
 
 void
 spn_extent_thr_tdrw_alloc(struct spn_extent_thr_tdrw * const extent,
-                          struct spn_device          * const device,
-                          size_t                       const size);
+                          struct spn_device * const          device,
+                          size_t const                       size);
 
 void
 spn_extent_thr_tdrw_free(struct spn_extent_thr_tdrw * const extent,
-                         struct spn_device          * const device);
+                         struct spn_device * const          device);
 
 void
-spn_extent_thr_tdrw_read(struct spn_extent_thr_tdrw * const extent,
-                         VkCommandBuffer                    cb);
+spn_extent_thr_tdrw_read(struct spn_extent_thr_tdrw * const extent, VkCommandBuffer cb);
 
 void
-spn_extent_thr_tdrw_zero(struct spn_extent_thr_tdrw * const extent,
-                         VkCommandBuffer                    cb);
+spn_extent_thr_tdrw_zero(struct spn_extent_thr_tdrw * const extent, VkCommandBuffer cb);
 
 //
 // DURABLE W/1 HOST RING WITH AN EPHEMERAL R/N DEVICE SNAPSHOT
@@ -181,27 +176,27 @@ struct spn_extent_phw1g_tdrNs_snap
 
 void
 spn_extent_phw1g_tdrNs_alloc(struct spn_extent_phw1g_tdrNs * const extent,
-                             struct spn_device             * const device,
-                             size_t                          const size);
+                             struct spn_device * const             device,
+                             size_t const                          size);
 
 void
 spn_extent_phw1g_tdrNs_free(struct spn_extent_phw1g_tdrNs * const extent,
-                            struct spn_device             * const device);
+                            struct spn_device * const             device);
 
 void
 spn_extent_phw1g_tdrNs_snap_init(struct spn_extent_phw1g_tdrNs_snap * const snap,
-                                 struct spn_extent_ring             * const ring,
-                                 struct spn_device                  * const device);
+                                 struct spn_extent_ring * const             ring,
+                                 struct spn_device * const                  device);
 
 void
 spn_extent_phw1g_tdrNs_snap_alloc(struct spn_extent_phw1g_tdrNs_snap * const snap,
-                                  struct spn_extent_phw1g_tdrNs      * const extent,
-                                  struct spn_device                  * const device,
+                                  struct spn_extent_phw1g_tdrNs * const      extent,
+                                  struct spn_device * const                  device,
                                   VkCommandBuffer                            cb);
 
 void
 spn_extent_phw1g_tdrNs_snap_free(struct spn_extent_phw1g_tdrNs_snap * const snap,
-                                 struct spn_device                  * const device);
+                                 struct spn_device * const                  device);
 
 //
 // DURABLE R/W HOST RING WITH AN EPHEMERAL R/N DEVICE SNAPSHOT
@@ -221,27 +216,27 @@ struct spn_extent_phrwg_tdrNs_snap
 
 void
 spn_extent_phrwg_tdrNs_alloc(struct spn_extent_phrwg_tdrNs * const extent,
-                             struct spn_device             * const device,
-                             size_t                          const size);
+                             struct spn_device * const             device,
+                             size_t const                          size);
 
 void
 spn_extent_phrwg_tdrNs_free(struct spn_extent_phrwg_tdrNs * const extent,
-                            struct spn_device             * const device);
+                            struct spn_device * const             device);
 
 void
 spn_extent_phrwg_tdrNs_snap_init(struct spn_extent_phrwg_tdrNs_snap * const snap,
-                                 struct spn_extent_ring             * const ring,
-                                 struct spn_device                  * const device);
+                                 struct spn_extent_ring * const             ring,
+                                 struct spn_device * const                  device);
 
 void
 spn_extent_phrwg_tdrNs_snap_alloc(struct spn_extent_phrwg_tdrNs_snap * const snap,
-                                  struct spn_extent_phrwg_tdrNs      * const extent,
-                                  struct spn_device                  * const device,
+                                  struct spn_extent_phrwg_tdrNs * const      extent,
+                                  struct spn_device * const                  device,
                                   VkCommandBuffer                            cb);
 
 void
 spn_extent_phrwg_tdrNs_snap_free(struct spn_extent_phrwg_tdrNs_snap * const snap,
-                                 struct spn_device                  * const device);
+                                 struct spn_device * const                  device);
 
 //
 // DURABLE HOST R/W RING WITH AN EPHEMERAL HOST R/1 SNAPSHOT
@@ -260,38 +255,40 @@ struct spn_extent_phrwg_thr1s_snap
 {
   struct spn_extent_ring_snap * snap;
 
-  struct {
-    uint32_t                    lo;
-    uint32_t                    hi;
+  struct
+  {
+    uint32_t lo;
+    uint32_t hi;
   } count;
 
-  struct {
-    void                      * lo;
-    void                      * hi;
+  struct
+  {
+    void * lo;
+    void * hi;
   } hr1;
 };
 
 void
 spn_extent_phrwg_thr1s_alloc(struct spn_extent_phrwg_thr1s * const extent,
-                             struct spn_device             * const device,
-                             size_t                          const size);
+                             struct spn_device * const             device,
+                             size_t const                          size);
 
 void
 spn_extent_phrwg_thr1s_free(struct spn_extent_phrwg_thr1s * const extent,
-                            struct spn_device             * const device);
+                            struct spn_device * const             device);
 
 void
 spn_extent_phrwg_thr1s_snap_init(struct spn_extent_phrwg_thr1s_snap * const snap,
-                                 struct spn_extent_ring             * const ring,
-                                 struct spn_device                  * const device);
+                                 struct spn_extent_ring * const             ring,
+                                 struct spn_device * const                  device);
 void
 spn_extent_phrwg_thr1s_snap_alloc(struct spn_extent_phrwg_thr1s_snap * const snap,
-                                  struct spn_extent_phrwg_thr1s      * const extent,
-                                  struct spn_device                  * const device);
+                                  struct spn_extent_phrwg_thr1s * const      extent,
+                                  struct spn_device * const                  device);
 
 void
 spn_extent_phrwg_thr1s_snap_free(struct spn_extent_phrwg_thr1s_snap * const snap,
-                                 struct spn_device                  * const device);
+                                 struct spn_device * const                  device);
 
 //
 // EPHEMERAL MAPPING
@@ -313,24 +310,23 @@ struct spn_extent_thrw_tdrw
 
 void
 spn_extent_thrw_tdrw_alloc(struct spn_extent_thrw_tdrw * const extent,
-                           struct spn_device           * const device,
-                           size_t                        const size);
+                           struct spn_device * const           device,
+                           size_t const                        size);
 
 void
 spn_extent_thrw_tdrw_free(struct spn_extent_thrw_tdrw * const extent,
-                          struct spn_device           * const device);
+                          struct spn_device * const           device);
 
 void *
 spn_extent_thrw_tdrw_map_size(struct spn_extent_thrw_tdrw * const extent,
-                              size_t                        const size,  // FIXME {OFFSET,SIZE}
+                              size_t const                        size,  // FIXME {OFFSET,SIZE}
                               VkCommandBuffer                     cb);
 
 void *
 spn_extent_thrw_tdrw_map(struct spn_extent_thrw_tdrw * const extent);
 
 void
-spn_extent_thrw_tdrw_unmap(struct spn_extent_thrw_tdrw * const extent,
-                           void                        * const hrN);
+spn_extent_thrw_tdrw_unmap(struct spn_extent_thrw_tdrw * const extent, void * const hrN);
 
 //
 // DURABLE MAPPING
@@ -351,23 +347,22 @@ struct spn_extent_phrw_pdrw
 
 void
 spn_extent_phrw_pdrw_alloc(struct spn_extent_phrw_pdrw * const extent,
-                           struct spn_device           * const device,
-                           size_t                        const size);
+                           struct spn_device * const           device,
+                           size_t const                        size);
 
 void
 spn_extent_phrw_pdrw_free(struct spn_extent_phrw_pdrw * const extent,
-                          struct spn_device           * const device);
+                          struct spn_device * const           device);
 
 void *
 spn_extent_phrw_pdrw_map_size(struct spn_extent_phrw_pdrw * const extent,
-                              size_t                        const size); // FIXME {OFFSET,SIZE}
+                              size_t const                        size);  // FIXME {OFFSET,SIZE}
 
 void *
 spn_extent_phrw_pdrw_map(struct spn_extent_phrw_pdrw * const extent);
 
 void
-spn_extent_phrw_pdrw_unmap(struct spn_extent_phrw_pdrw * const extent,
-                           void                        * const hrN);
+spn_extent_phrw_pdrw_unmap(struct spn_extent_phrw_pdrw * const extent, void * const hrN);
 
 //
 // DURABLE MAPPING
@@ -388,23 +383,21 @@ struct spn_extent_phrN_pdwN
 
 void
 spn_extent_phrN_pdwN_alloc(struct spn_extent_phrN_pdwN * const extent,
-                           struct spn_device           * const device,
-                           size_t                        const size);
+                           struct spn_device * const           device,
+                           size_t const                        size);
 
 void
 spn_extent_phrN_pdwN_free(struct spn_extent_phrN_pdwN * const extent,
-                          struct spn_device           * const device);
+                          struct spn_device * const           device);
 
 void *
-spn_extent_phrN_pdwN_map_size(struct spn_extent_phrN_pdwN * const extent,
-                              size_t                        const size);
+spn_extent_phrN_pdwN_map_size(struct spn_extent_phrN_pdwN * const extent, size_t const size);
 
 void *
 spn_extent_phrN_pdwN_map(struct spn_extent_phrN_pdwN * const extent);
 
 void
-spn_extent_phrN_pdwN_unmap(struct spn_extent_phrN_pdwN * const extent,
-                           void                        * const hrN);
+spn_extent_phrN_pdwN_unmap(struct spn_extent_phrN_pdwN * const extent, void * const hrN);
 
 //
 // DURABLE MAPPING
@@ -425,24 +418,25 @@ struct spn_extent_phwN_pdrN
 
 void
 spn_extent_phwN_pdrN_alloc(struct spn_extent_phwN_pdrN * const extent,
-                           struct spn_device           * const device,
-                           size_t                        const size);
+                           struct spn_device * const           device,
+                           size_t const                        size);
 
 void
 spn_extent_phwN_pdrN_free(struct spn_extent_phwN_pdrN * const extent,
-                          struct spn_device           * const device);
+                          struct spn_device * const           device);
 
 void *
 spn_extent_phwN_pdrN_map_size(struct spn_extent_phwN_pdrN * const extent,
-                              size_t                        const size); // FIXME {OFFSET,SIZE}
+                              size_t const                        size);  // FIXME {OFFSET,SIZE}
 
 void *
 spn_extent_phwN_pdrN_map(struct spn_extent_phwN_pdrN * const extent);
 
 void
-spn_extent_phwN_pdrN_unmap(struct spn_extent_phwN_pdrN * const extent,
-                           void                        * const hwm);
+spn_extent_phwN_pdrN_unmap(struct spn_extent_phwN_pdrN * const extent, void * const hwm);
 
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_EXTENT_H_

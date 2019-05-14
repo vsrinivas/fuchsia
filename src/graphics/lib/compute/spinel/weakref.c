@@ -7,10 +7,15 @@
 //
 
 #include "weakref.h"
+
 #include "common/macros.h"
 
 //
 // WEAKREF
+//
+
+//
+// clang-format off
 //
 
 #define SPN_WEAKREF_INDEX_BITS   16 // max bits for a weakref index
@@ -48,13 +53,17 @@ STATIC_ASSERT_MACRO(sizeof(union spn_weakref) == sizeof(uint64_t),
                     "sizeof(union spn_weakref) != sizeof(uint64_t)");
 
 //
+// clang-format on
+//
+
+//
 //
 //
 
 void
 spn_weakref_epoch_init(spn_weakref_epoch_t * const epoch_p)
 {
-  *epoch_p  = SPN_WEAKREF_EPOCH_ONE;
+  *epoch_p = SPN_WEAKREF_EPOCH_ONE;
 }
 
 void
@@ -69,8 +78,7 @@ spn_weakref_epoch_bump(spn_weakref_epoch_t * const epoch_p)
 
 #ifndef NDEBUG
 
-static
-bool
+static bool
 spn_weakref_is_index_out_of_range(uint32_t const index)
 {
   return index >= SPN_WEAKREF_INDEX_COUNT;
@@ -85,9 +93,9 @@ spn_weakref_init(spn_weakref_t * const weakref_p)
 }
 
 void
-spn_weakref_update(spn_weakref_t     * const weakref_p,
+spn_weakref_update(spn_weakref_t * const     weakref_p,
                    spn_weakref_epoch_t const epoch,
-                   uint32_t            const index)
+                   uint32_t const            index)
 {
   assert(!spn_weakref_is_index_out_of_range(index));
 
@@ -96,14 +104,15 @@ spn_weakref_update(spn_weakref_t     * const weakref_p,
 
 bool
 spn_weakref_get_index(spn_weakref_t const * const weakref_p,
-                      spn_weakref_epoch_t   const epoch,
-                      uint32_t            * const idx_p)
+                      spn_weakref_epoch_t const   epoch,
+                      uint32_t * const            idx_p)
 {
-  union spn_weakref const weakref = { .u64 = *weakref_p };
+  union spn_weakref const weakref = {.u64 = *weakref_p};
 
-  if (((weakref.u64 ^ epoch) & SPN_WEAKREF_EPOCH_MASK) != 0UL) {
-    return false;
-  }
+  if (((weakref.u64 ^ epoch) & SPN_WEAKREF_EPOCH_MASK) != 0UL)
+    {
+      return false;
+    }
 
   *idx_p = weakref.index;
 

@@ -35,7 +35,7 @@
 //   DWORD N+1 - module[N-1]
 //
 
-#define HS_LITERALS_PER_LINE  6
+#define HS_LITERALS_PER_LINE 6
 
 //
 //
@@ -46,9 +46,10 @@ main(int argc, char const * argv[])
 {
   // This tool will typically be passed ~20 files but if there isn't
   // at least one file then fail.
-  if (argc < 3) {
-    return EXIT_FAILURE;
-  }
+  if (argc < 3)
+    {
+      return EXIT_FAILURE;
+    }
 
   //
   // layout buffer is reallocated for each module
@@ -62,34 +63,38 @@ main(int argc, char const * argv[])
   //
   uint32_t const module_count = argc - 2;
 
-  for (uint32_t ii=0; ii<module_count; ii++)
+  for (uint32_t ii = 0; ii < module_count; ii++)
     {
-      FILE * module = fopen(argv[2+ii],"rb");
+      FILE * module = fopen(argv[2 + ii], "rb");
 
-      if (module == NULL) {
-        return EXIT_FAILURE;
-      }
+      if (module == NULL)
+        {
+          return EXIT_FAILURE;
+        }
 
-      if (fseek(module,0L,SEEK_END) != 0) {
-        return EXIT_FAILURE;
-      }
+      if (fseek(module, 0L, SEEK_END) != 0)
+        {
+          return EXIT_FAILURE;
+        }
 
       long const module_bytes = ftell(module);
 
-      if (module_bytes == EOF) {
-        return EXIT_FAILURE;
-      }
+      if (module_bytes == EOF)
+        {
+          return EXIT_FAILURE;
+        }
 
       rewind(module);
 
       // "length + module size"
       layout_size += sizeof(uint32_t) + module_bytes;
 
-      layout = realloc(layout,layout_size);
+      layout = realloc(layout, layout_size);
 
-      if (layout == NULL) {
-        return EXIT_FAILURE;
-      }
+      if (layout == NULL)
+        {
+          return EXIT_FAILURE;
+        }
 
       // store dwords
       uint32_t const module_dwords = (uint32_t)(module_bytes / sizeof(uint32_t));
@@ -97,14 +102,16 @@ main(int argc, char const * argv[])
       layout[layout_next++] = module_dwords;
 
       // load module
-      if (fread(layout+layout_next,1,module_bytes,module) != (size_t)module_bytes) {
-        return EXIT_FAILURE;
-      }
+      if (fread(layout + layout_next, 1, module_bytes, module) != (size_t)module_bytes)
+        {
+          return EXIT_FAILURE;
+        }
 
       // close module
-      if (fclose(module) != 0) {
-        return EXIT_FAILURE;
-      }
+      if (fclose(module) != 0)
+        {
+          return EXIT_FAILURE;
+        }
 
       // move to next module
       layout_next += module_dwords;
@@ -113,30 +120,35 @@ main(int argc, char const * argv[])
   //
   // store
   //
-  FILE * file = fopen(argv[1],"wb");
+  FILE * file = fopen(argv[1], "wb");
 
-  if (file == NULL) {
-    return EXIT_FAILURE;
-  }
+  if (file == NULL)
+    {
+      return EXIT_FAILURE;
+    }
 
   uint32_t literals = 0;
 
-  for (uint32_t ii=0; ii<layout_next; ii++)
+  for (uint32_t ii = 0; ii < layout_next; ii++)
     {
-      fprintf(file,"0x%08X",layout[ii]);
+      fprintf(file, "0x%08X", layout[ii]);
 
-      if ((++literals % HS_LITERALS_PER_LINE) != 0) {
-        fprintf(file,", ");
-      } else {
-        fprintf(file,",\n");
-      }
+      if ((++literals % HS_LITERALS_PER_LINE) != 0)
+        {
+          fprintf(file, ", ");
+        }
+      else
+        {
+          fprintf(file, ",\n");
+        }
     }
 
-  fprintf(file,"\n");
+  fprintf(file, "\n");
 
-  if (ferror(file) || fclose(file) != 0) {
-    return EXIT_FAILURE;
-  }
+  if (ferror(file) || fclose(file) != 0)
+    {
+      return EXIT_FAILURE;
+    }
 
   return EXIT_SUCCESS;
 }

@@ -6,7 +6,8 @@
 // COLOR UTILITIES
 //
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_COLOR_COLOR_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_COLOR_COLOR_H_
 
 //
 //
@@ -26,9 +27,11 @@ extern "C" {
 // CONVERT FROM 0xAARRGGBB WORD ORDER INTO f32[4]
 //
 
-void color_rgb32_to_rgba_f32(float rgba[4], const uint32_t rgb, const float opacity);
+void
+color_rgb32_to_rgba_f32(float rgba[4], const uint32_t rgb, const float opacity);
 
-void color_argb32_to_rgba_f32(float rgba[4], const uint32_t argb);
+void
+color_argb32_to_rgba_f32(float rgba[4], const uint32_t argb);
 
 //
 // PREMULTIPLY
@@ -36,7 +39,8 @@ void color_argb32_to_rgba_f32(float rgba[4], const uint32_t argb);
 // { r, g, b, a } ==> { r*a, g*a, b*a, a }
 //
 
-void color_premultiply_rgba_f32(float rgba[4]);
+void
+color_premultiply_rgba_f32(float rgba[4]);
 
 //
 // SRGB<>LINEAR
@@ -55,18 +59,21 @@ void color_premultiply_rgba_f32(float rgba[4]);
 //        {  1.0,                                       cl >= 1
 //
 
-void color_srgb_to_linear_rgb_f32(float rgb[3]);
+void
+color_srgb_to_linear_rgb_f32(float rgb[3]);
 
-void color_linear_to_srgb_rgb_f32(float rgb[3]);
+void
+color_linear_to_srgb_rgb_f32(float rgb[3]);
 
 //
 //
 //
 
-void color_linear_lerp_rgba_f32(float       rgba_m[4],
-                                float const rgba_a[4],
-                                float const rgba_b[4],
-                                float const t);
+void
+color_linear_lerp_rgba_f32(float       rgba_m[4],
+                           float const rgba_a[4],
+                           float const rgba_b[4],
+                           float const t);
 
 //
 //
@@ -79,3 +86,5 @@ void color_linear_lerp_rgba_f32(float       rgba_m[4],
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_COLOR_COLOR_H_

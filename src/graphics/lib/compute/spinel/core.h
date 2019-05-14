@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SPN_ONCE_CORE
-#define SPN_ONCE_CORE
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_CORE_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_CORE_H_
 
 //
-//
+// clang-format off
 //
 
 #define SPN_EMPTY
@@ -1054,11 +1054,7 @@ union spn_gradient_vector
 #define SPN_GRADIENT_CMD_DWORDS_V2_ADJUST(v1,v2)     (SPN_GRADIENT_CMD_DWORDS_V1(v1) - ((v2) + 6))
 
 //
-//
+// clang-format on
 //
 
-#endif
-
-//
-//
-//
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_CORE_H_

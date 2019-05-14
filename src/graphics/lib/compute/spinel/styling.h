@@ -2,19 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_STYLING_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_STYLING_H_
 
 //
 //
 //
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "spinel_result.h"
 
 //
 // STYLING
+//
+
+//
+// clang-format off
 //
 
 struct spn_styling
@@ -42,5 +47,7 @@ struct spn_styling
 };
 
 //
+// clang-format on
 //
-//
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_STYLING_H_

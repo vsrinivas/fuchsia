@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_RING_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_RING_H_
 
 //
 //
 //
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 //
 // Simple ring
@@ -48,8 +49,7 @@ bool
 spn_ring_is_full(struct spn_ring const * const ring);
 
 bool
-spn_ring_is_tail(struct spn_ring const * const ring,
-                 uint32_t                const idx);
+spn_ring_is_tail(struct spn_ring const * const ring, uint32_t const idx);
 
 uint32_t
 spn_ring_rem_nowrap(struct spn_ring const * const ring);
@@ -82,3 +82,5 @@ spn_next_drop_n(struct spn_next * const next, uint32_t const n);
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_RING_H_

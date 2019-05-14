@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_HANDLE_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_HANDLE_H_
 
 //
 //
@@ -34,7 +35,7 @@ typedef uint32_t spn_typed_handle_t;
 typedef uint32_t spn_handle_t;
 
 //
-//
+// clang-format off
 //
 
 typedef enum spn_typed_handle_type_e
@@ -57,5 +58,7 @@ typedef enum spn_typed_handle_type_e
 #define SPN_TYPED_HANDLE_IS_RASTER(h)    SPN_TYPE_HANDLE_IS_TYPE(SPN_TYPED_HANDLE_TYPE_RASTER)
 
 //
+// clang-format on
 //
-//
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_HANDLE_H_

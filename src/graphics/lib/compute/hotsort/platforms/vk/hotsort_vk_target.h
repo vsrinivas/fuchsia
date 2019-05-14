@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_HOTSORT_VK_TARGET_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_HOTSORT_VK_TARGET_H_
 
 //
 //
@@ -25,29 +26,35 @@ extern "C" {
 
 struct hotsort_vk_target_config
 {
-  uint8_t     is_in_place;
+  uint8_t is_in_place;
 
-  struct {
-    uint8_t   threads_log2;
-    uint8_t   width_log2;
-    uint8_t   height;
+  struct
+  {
+    uint8_t threads_log2;
+    uint8_t width_log2;
+    uint8_t height;
   } slab;
 
-  struct {
-    uint8_t   key;
-    uint8_t   val;
+  struct
+  {
+    uint8_t key;
+    uint8_t val;
   } dwords;
 
-  struct {
-    uint8_t   slabs;
+  struct
+  {
+    uint8_t slabs;
   } block;
 
-  struct {
-    struct {
+  struct
+  {
+    struct
+    {
       uint8_t scale_min;
       uint8_t scale_max;
     } fm;
-    struct {
+    struct
+    {
       uint8_t scale_min;
       uint8_t scale_max;
     } hm;
@@ -81,3 +88,5 @@ struct hotsort_vk_target
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_HOTSORT_VK_TARGET_H_

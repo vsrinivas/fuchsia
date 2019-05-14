@@ -6,21 +6,20 @@
 //
 //
 
+#include "handle_pool.h"
+
 #include <string.h>
 
-#include "handle_pool.h"
+#include "block_pool.h"
+#include "common/macros.h"
+#include "common/vk/vk_assert.h"
 #include "core_c.h"
 #include "device.h"
 #include "extent.h"
 #include "fence_pool.h"
 #include "queue_pool.h"
-#include "block_pool.h"
 #include "target.h"
 #include "target_config.h"
-
-#include "common/macros.h"
-#include "common/vk/vk_assert.h"
-
 
 //
 // FIXME -- THIS DOCUMENTATION IS STALE NOW THAT A REFERENCE COUNT REP
@@ -90,8 +89,7 @@ typedef uint8_t  spn_handle_refcnt_d;
 typedef uint16_t spn_handle_refcnt_hd;
 
 STATIC_ASSERT_MACRO_1(sizeof(spn_handle_refcnt_hd) ==
-                      sizeof(spn_handle_refcnt_h)  +
-                      sizeof(spn_handle_refcnt_d));
+                      sizeof(spn_handle_refcnt_h) + sizeof(spn_handle_refcnt_d));
 
 //
 //
@@ -99,11 +97,12 @@ STATIC_ASSERT_MACRO_1(sizeof(spn_handle_refcnt_hd) ==
 
 union spn_handle_refcnt
 {
-  spn_handle_refcnt_hd   hd; // host and device
+  spn_handle_refcnt_hd hd;  // host and device
 
-  struct {
-    spn_handle_refcnt_h  h;  // host
-    spn_handle_refcnt_d  d;  // device
+  struct
+  {
+    spn_handle_refcnt_h h;  // host
+    spn_handle_refcnt_d d;  // device
   };
 };
 
@@ -111,7 +110,8 @@ union spn_handle_refcnt
 //
 //
 
-typedef enum spn_handle_pool_reclaim_type_e {
+typedef enum spn_handle_pool_reclaim_type_e
+{
   SPN_HANDLE_POOL_RECLAIM_TYPE_PATH,
   SPN_HANDLE_POOL_RECLAIM_TYPE_RASTER,
   SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT
@@ -129,27 +129,31 @@ struct spn_handle_pool_br
 
 struct spn_handle_pool
 {
-  struct spn_extent_pdrw      map;     // device-managed extent mapping a host handle to device block id
+  struct spn_extent_pdrw map;  // device-managed extent mapping a host handle to device block id
 
-  struct {
-    spn_handle_t            * extent;  // array of individual host handles -- segmented into blocks
-    union spn_handle_refcnt * refcnts; // array of reference counts indexed by an individual handle
-    uint32_t                  count;   // total number of handles
+  struct
+  {
+    spn_handle_t *            extent;   // array of individual host handles -- segmented into blocks
+    union spn_handle_refcnt * refcnts;  // array of reference counts indexed by an individual handle
+    uint32_t                  count;    // total number of handles
   } handle;
 
-  struct {
-    uint32_t                  size;    // number of handles in a block
-    uint32_t                * indices; // block indices
-    struct {
-      uint32_t                avail;   // blocks with handles
-      uint32_t                empty;   // blocks with no handles
+  struct
+  {
+    uint32_t   size;     // number of handles in a block
+    uint32_t * indices;  // block indices
+    struct
+    {
+      uint32_t avail;  // blocks with handles
+      uint32_t empty;  // blocks with no handles
     } rem;
-    uint32_t                  count;   // total number of indices
+    uint32_t count;  // total number of indices
   } block;
 
-  struct {
+  struct
+  {
     struct spn_handle_pool_br acquire;
-    struct spn_handle_pool_br reclaim[SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT]; // FIXME -- need to pad
+    struct spn_handle_pool_br reclaim[SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT];  // FIXME -- need to pad
   } wip;
 };
 
@@ -157,11 +161,11 @@ struct spn_handle_pool
 //
 //
 
-#define SPN_HANDLE_REFCNT_HOST_BITS   (MEMBER_SIZE_MACRO(union spn_handle_refcnt,h) * 8)
-#define SPN_HANDLE_REFCNT_DEVICE_BITS (MEMBER_SIZE_MACRO(union spn_handle_refcnt,d) * 8)
+#define SPN_HANDLE_REFCNT_HOST_BITS (MEMBER_SIZE_MACRO(union spn_handle_refcnt, h) * 8)
+#define SPN_HANDLE_REFCNT_DEVICE_BITS (MEMBER_SIZE_MACRO(union spn_handle_refcnt, d) * 8)
 
-#define SPN_HANDLE_REFCNT_HOST_MAX    BITS_TO_MASK_MACRO(SPN_HANDLE_REFCNT_HOST_BITS)
-#define SPN_HANDLE_REFCNT_DEVICE_MAX  BITS_TO_MASK_MACRO(SPN_HANDLE_REFCNT_DEVICE_BITS)
+#define SPN_HANDLE_REFCNT_HOST_MAX BITS_TO_MASK_MACRO(SPN_HANDLE_REFCNT_HOST_BITS)
+#define SPN_HANDLE_REFCNT_DEVICE_MAX BITS_TO_MASK_MACRO(SPN_HANDLE_REFCNT_DEVICE_BITS)
 
 //
 // Globally assume that the push constant limit is 256 bytes.
@@ -170,12 +174,11 @@ struct spn_handle_pool
 // halt device creation in a debug build.
 //
 
-#define SPN_HANDLE_POOL_MAX_PUSH_CONSTANTS_SIZE   256
-#define SPN_HANDLE_POOL_MAX_RECLAIM_SIZE          \
+#define SPN_HANDLE_POOL_MAX_PUSH_CONSTANTS_SIZE 256
+#define SPN_HANDLE_POOL_MAX_RECLAIM_SIZE                                                           \
   ((SPN_HANDLE_POOL_MAX_PUSH_CONSTANTS_SIZE / sizeof(spn_handle_t)) - 1)
 
-static
-uint32_t
+static uint32_t
 spn_device_handle_pool_reclaim_size(struct spn_target_config const * const config)
 {
   uint32_t const paths   = config->p.push_sizes.named.paths_reclaim;
@@ -185,7 +188,8 @@ spn_device_handle_pool_reclaim_size(struct spn_target_config const * const confi
   assert(paths == rasters);
 
   // reclaim size matches the push constant size
-  return (paths - OFFSET_OF_MACRO(struct spn_target_push_paths_reclaim,path_ids)) / sizeof(spn_handle_t);
+  return (paths - OFFSET_OF_MACRO(struct spn_target_push_paths_reclaim, path_ids)) /
+         sizeof(spn_handle_t);
 }
 
 //
@@ -193,8 +197,7 @@ spn_device_handle_pool_reclaim_size(struct spn_target_config const * const confi
 //
 
 void
-spn_device_handle_pool_create(struct spn_device * const device,
-                              uint32_t            const handle_count)
+spn_device_handle_pool_create(struct spn_device * const device, uint32_t const handle_count)
 {
   struct spn_handle_pool * const handle_pool =
     spn_allocator_host_perm_alloc(&device->allocator.host.perm,
@@ -203,11 +206,13 @@ spn_device_handle_pool_create(struct spn_device * const device,
 
   device->handle_pool = handle_pool;
 
-  uint32_t const reclaim_size   = spn_device_handle_pool_reclaim_size(spn_target_get_config(device->target));
+  uint32_t const reclaim_size =
+    spn_device_handle_pool_reclaim_size(spn_target_get_config(device->target));
 
-  uint32_t const blocks         = (handle_count + reclaim_size - 1) / reclaim_size;
-  uint32_t const blocks_padded  = blocks + MAX_MACRO(uint32_t,/*block_pad*/0,SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT);
-  uint32_t const handles        = blocks        * reclaim_size;
+  uint32_t const blocks = (handle_count + reclaim_size - 1) / reclaim_size;
+  uint32_t const blocks_padded =
+    blocks + MAX_MACRO(uint32_t, /*block_pad*/ 0, SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT);
+  uint32_t const handles        = blocks * reclaim_size;
   uint32_t const handles_padded = blocks_padded * reclaim_size;
 
   spn_extent_pdrw_alloc(&handle_pool->map,
@@ -217,41 +222,38 @@ spn_device_handle_pool_create(struct spn_device * const device,
   //
   // allocate handles
   //
-  handle_pool->handle.extent  =
+  handle_pool->handle.extent =
     spn_allocator_host_perm_alloc(&device->allocator.host.perm,
                                   SPN_MEM_FLAGS_READ_WRITE,
-                                  handles_padded *
-                                  sizeof(*handle_pool->handle.extent));
+                                  handles_padded * sizeof(*handle_pool->handle.extent));
 
   handle_pool->handle.refcnts =
     spn_allocator_host_perm_alloc(&device->allocator.host.perm,
                                   SPN_MEM_FLAGS_READ_WRITE,
-                                  handles_padded *
-                                  sizeof(*handle_pool->handle.refcnts));
+                                  handles_padded * sizeof(*handle_pool->handle.refcnts));
 
   // initialize handles and refcnts
-  for (uint32_t ii=0; ii<handles; ii++)
+  for (uint32_t ii = 0; ii < handles; ii++)
     {
       handle_pool->handle.extent[ii]     = ii;
       handle_pool->handle.refcnts[ii].hd = 0;
     }
 
-  handle_pool->handle.count   = handles;
+  handle_pool->handle.count = handles;
 
   //
   // allocate blocks of handles
   //
-  handle_pool->block.indices  =
+  handle_pool->block.indices =
     spn_allocator_host_perm_alloc(&device->allocator.host.perm,
                                   SPN_MEM_FLAGS_READ_WRITE,
-                                  blocks_padded *
-                                  sizeof(*handle_pool->block.indices));
+                                  blocks_padded * sizeof(*handle_pool->block.indices));
 
   // initialize block accounting
-  for (uint32_t ii=0; ii<blocks_padded; ii++)
+  for (uint32_t ii = 0; ii < blocks_padded; ii++)
     handle_pool->block.indices[ii] = ii;
 
-  handle_pool->block.size      = reclaim_size; // reclaim size for both paths and rasters
+  handle_pool->block.size      = reclaim_size;  // reclaim size for both paths and rasters
   handle_pool->block.rem.avail = blocks;
   handle_pool->block.rem.empty = blocks_padded - blocks;
   handle_pool->block.count     = blocks_padded;
@@ -259,7 +261,7 @@ spn_device_handle_pool_create(struct spn_device * const device,
   handle_pool->wip.acquire.rem = 0;
 
   // initialize reclaim/acquire
-  for (uint32_t ii=0; ii<SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT; ii++)
+  for (uint32_t ii = 0; ii < SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT; ii++)
     handle_pool->wip.reclaim[ii].rem = 0;
 }
 
@@ -271,33 +273,31 @@ void
 spn_device_handle_pool_dispose(struct spn_device * const device)
 {
   struct spn_allocator_host_perm * const perm        = &device->allocator.host.perm;
-  struct spn_handle_pool         * const handle_pool = device->handle_pool;
+  struct spn_handle_pool * const         handle_pool = device->handle_pool;
 
-  spn_allocator_host_perm_free(perm,handle_pool->block.indices);
-  spn_allocator_host_perm_free(perm,handle_pool->handle.refcnts);
-  spn_allocator_host_perm_free(perm,handle_pool->handle.extent);
+  spn_allocator_host_perm_free(perm, handle_pool->block.indices);
+  spn_allocator_host_perm_free(perm, handle_pool->handle.refcnts);
+  spn_allocator_host_perm_free(perm, handle_pool->handle.extent);
 
-  spn_extent_pdrw_free(&handle_pool->map,
-                       &device->allocator.device.perm.local,
-                       device->vk);
+  spn_extent_pdrw_free(&handle_pool->map, &device->allocator.device.perm.local, device->vk);
 
-  spn_allocator_host_perm_free(perm,device->handle_pool);
+  spn_allocator_host_perm_free(perm, device->handle_pool);
 }
 
 //
 //
 //
 
-static
-uint32_t
-spn_device_handle_pool_block_acquire_pop(struct spn_device      * const device,
+static uint32_t
+spn_device_handle_pool_block_acquire_pop(struct spn_device * const      device,
                                          struct spn_handle_pool * const handle_pool)
 {
   uint32_t avail;
 
-  while ((avail = handle_pool->block.rem.avail) == 0) {
-    spn_device_wait(device);
-  }
+  while ((avail = handle_pool->block.rem.avail) == 0)
+    {
+      spn_device_wait(device);
+    }
 
   uint32_t idx = avail - 1;
 
@@ -306,16 +306,16 @@ spn_device_handle_pool_block_acquire_pop(struct spn_device      * const device,
   return handle_pool->block.indices[idx];
 }
 
-static
-uint32_t
-spn_device_handle_pool_block_reclaim_pop(struct spn_device      * const device,
+static uint32_t
+spn_device_handle_pool_block_reclaim_pop(struct spn_device * const      device,
                                          struct spn_handle_pool * const handle_pool)
 {
   uint32_t empty;
 
-  while ((empty = handle_pool->block.rem.empty) == 0) {
-    spn_device_wait(device);
-  }
+  while ((empty = handle_pool->block.rem.empty) == 0)
+    {
+      spn_device_wait(device);
+    }
 
   uint32_t idx = handle_pool->block.count - empty;
 
@@ -328,19 +328,17 @@ spn_device_handle_pool_block_reclaim_pop(struct spn_device      * const device,
 //
 //
 
-static
-void
+static void
 spn_device_handle_pool_block_acquire_push(struct spn_handle_pool * const handle_pool,
-                                          uint32_t                 const block)
+                                          uint32_t const                 block)
 {
   uint32_t const idx              = handle_pool->block.rem.avail++;
   handle_pool->block.indices[idx] = block;
 }
 
-static
-void
+static void
 spn_device_handle_pool_block_reclaim_push(struct spn_handle_pool * const handle_pool,
-                                          uint32_t                 const block)
+                                          uint32_t const                 block)
 {
   uint32_t const idx              = handle_pool->block.count - ++handle_pool->block.rem.empty;
   handle_pool->block.indices[idx] = block;
@@ -356,10 +354,10 @@ struct spn_handle_pool_reclaim_complete_payload
   uint32_t                 block;
 };
 
-STATIC_ASSERT_MACRO_1(sizeof(struct spn_handle_pool_reclaim_complete_payload) <= SPN_FENCE_COMPLETE_PFN_PAYLOAD_SIZE_MAX);
+STATIC_ASSERT_MACRO_1(sizeof(struct spn_handle_pool_reclaim_complete_payload) <=
+                      SPN_FENCE_COMPLETE_PFN_PAYLOAD_SIZE_MAX);
 
-static
-void
+static void
 spn_handle_pool_reclaim_complete(void * const pfn_payload)
 {
   //
@@ -369,9 +367,9 @@ spn_handle_pool_reclaim_complete(void * const pfn_payload)
   // POTENTIAL INVOCATION OF SPN_DEVICE_YIELD/WAIT/DRAIN()
   //
   struct spn_handle_pool_reclaim_complete_payload const * const payload     = pfn_payload;
-  struct spn_handle_pool                                * const handle_pool = payload->handle_pool;
+  struct spn_handle_pool * const                                handle_pool = payload->handle_pool;
 
-  spn_device_handle_pool_block_acquire_push(handle_pool,payload->block);
+  spn_device_handle_pool_block_acquire_push(handle_pool, payload->block);
 }
 
 //
@@ -385,18 +383,18 @@ spn_handle_pool_reclaim_complete(void * const pfn_payload)
 // - bind the pipeline
 //
 
-static
-void
+static void
 spn_device_bind_paths_reclaim(struct spn_device * const device,
-                              spn_handle_t      * const handles,
+                              spn_handle_t * const      handles,
                               VkCommandBuffer           cb)
 {
-  struct spn_target               * const target = device->target;
+  struct spn_target * const               target = device->target;
   struct spn_target_ds_block_pool_t const ds     = spn_device_block_pool_get_ds(device);
 
-  spn_target_ds_bind_paths_reclaim_block_pool(target,cb,ds);
+  spn_target_ds_bind_paths_reclaim_block_pool(target, cb, ds);
 
-  union {
+  union
+  {
     uint8_t                              bytes[SPN_HANDLE_POOL_MAX_PUSH_CONSTANTS_SIZE];
     struct spn_target_push_paths_reclaim reclaim;
   } push;
@@ -407,26 +405,27 @@ spn_device_bind_paths_reclaim(struct spn_device * const device,
   // FIXME -- any way to avoid this copy?  Only if the push constant
   // structure mirrored te reclamation structure so probabaly not.
   //
-  memcpy(push.reclaim.path_ids,
-         handles,
-         spn_target_get_config(target)->p.push_sizes.named.paths_reclaim - sizeof(push.reclaim.bp_mask));
+  memcpy(
+    push.reclaim.path_ids,
+    handles,
+    spn_target_get_config(target)->p.push_sizes.named.paths_reclaim - sizeof(push.reclaim.bp_mask));
 
-  spn_target_p_push_paths_reclaim(target,cb,&push.reclaim);
-  spn_target_p_bind_paths_reclaim(target,cb);
+  spn_target_p_push_paths_reclaim(target, cb, &push.reclaim);
+  spn_target_p_bind_paths_reclaim(target, cb);
 }
 
-static
-void
+static void
 spn_device_bind_rasters_reclaim(struct spn_device * const device,
-                                spn_handle_t      * const handles,
+                                spn_handle_t * const      handles,
                                 VkCommandBuffer           cb)
 {
-  struct spn_target               * const target = device->target;
+  struct spn_target * const               target = device->target;
   struct spn_target_ds_block_pool_t const ds     = spn_device_block_pool_get_ds(device);
 
-  spn_target_ds_bind_rasters_reclaim_block_pool(target,cb,ds);
+  spn_target_ds_bind_rasters_reclaim_block_pool(target, cb, ds);
 
-  union {
+  union
+  {
     uint8_t                                bytes[SPN_HANDLE_POOL_MAX_PUSH_CONSTANTS_SIZE];
     struct spn_target_push_rasters_reclaim reclaim;
   } push;
@@ -435,37 +434,34 @@ spn_device_bind_rasters_reclaim(struct spn_device * const device,
 
   memcpy(push.reclaim.raster_ids,
          handles,
-         spn_target_get_config(target)->p.push_sizes.named.rasters_reclaim - sizeof(push.reclaim.bp_mask));
+         spn_target_get_config(target)->p.push_sizes.named.rasters_reclaim -
+           sizeof(push.reclaim.bp_mask));
 
-  spn_target_p_push_rasters_reclaim(target,cb,&push.reclaim);
-  spn_target_p_bind_rasters_reclaim(target,cb);
+  spn_target_p_push_rasters_reclaim(target, cb, &push.reclaim);
+  spn_target_p_bind_rasters_reclaim(target, cb);
 }
 
 //
 //
 //
 
-static
-void
-spn_device_handle_pool_reclaim(struct spn_device              * const device,
-                               struct spn_handle_pool         * const handle_pool,
-                               spn_handle_pool_reclaim_type_e   const reclaim_type,
-                               spn_handle_t                     const handle)
+static void
+spn_device_handle_pool_reclaim(struct spn_device * const            device,
+                               struct spn_handle_pool * const       handle_pool,
+                               spn_handle_pool_reclaim_type_e const reclaim_type,
+                               spn_handle_t const                   handle)
 {
   struct spn_handle_pool_br * const reclaim = handle_pool->wip.reclaim + reclaim_type;
 
   if (reclaim->rem == 0)
     {
-      reclaim->block = spn_device_handle_pool_block_reclaim_pop(device,handle_pool);
+      reclaim->block = spn_device_handle_pool_block_reclaim_pop(device, handle_pool);
       reclaim->rem   = handle_pool->block.size;
     }
 
   reclaim->rem -= 1;
 
-  uint32_t const handle_idx =
-    reclaim->block          *
-    handle_pool->block.size +
-    reclaim->rem;
+  uint32_t const handle_idx = reclaim->block * handle_pool->block.size + reclaim->rem;
 
   spn_handle_t * const handles = handle_pool->handle.extent + handle_idx;
 
@@ -480,11 +476,11 @@ spn_device_handle_pool_reclaim(struct spn_device              * const device,
       //
       if (reclaim_type == SPN_HANDLE_POOL_RECLAIM_TYPE_PATH)
         {
-          spn_device_bind_paths_reclaim(device,handles,cb);
+          spn_device_bind_paths_reclaim(device, handles, cb);
         }
       else
         {
-          spn_device_bind_rasters_reclaim(device,handles,cb);
+          spn_device_bind_rasters_reclaim(device, handles, cb);
         }
 
       //
@@ -493,11 +489,8 @@ spn_device_handle_pool_reclaim(struct spn_device              * const device,
       // - return reclamation descriptor set
       // - return block index to handle pool
       //
-      struct spn_handle_pool_reclaim_complete_payload payload =
-        {
-          .handle_pool = handle_pool,
-          .block       = reclaim->block
-        };
+      struct spn_handle_pool_reclaim_complete_payload payload = {.handle_pool = handle_pool,
+                                                                 .block       = reclaim->block};
 
       //
       // submit the command buffer
@@ -508,19 +501,17 @@ spn_device_handle_pool_reclaim(struct spn_device              * const device,
                                                             &payload,
                                                             sizeof(payload));
       // boilerplate submit
-      struct VkSubmitInfo const si = {
-        .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .pNext                = NULL,
-        .waitSemaphoreCount   = 0,
-        .pWaitSemaphores      = NULL,
-        .pWaitDstStageMask    = NULL,
-        .commandBufferCount   = 1,
-        .pCommandBuffers      = &cb,
-        .signalSemaphoreCount = 0,
-        .pSignalSemaphores    = NULL
-      };
+      struct VkSubmitInfo const si = {.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                      .pNext                = NULL,
+                                      .waitSemaphoreCount   = 0,
+                                      .pWaitSemaphores      = NULL,
+                                      .pWaitDstStageMask    = NULL,
+                                      .commandBufferCount   = 1,
+                                      .pCommandBuffers      = &cb,
+                                      .signalSemaphoreCount = 0,
+                                      .pSignalSemaphores    = NULL};
 
-      vk(QueueSubmit(spn_device_queue_next(device),1,&si,fence));
+      vk(QueueSubmit(spn_device_queue_next(device), 1, &si, fence));
     }
 }
 
@@ -529,8 +520,7 @@ spn_device_handle_pool_reclaim(struct spn_device              * const device,
 //
 
 void
-spn_device_handle_pool_acquire(struct spn_device * const device,
-                               spn_handle_t      * const handle)
+spn_device_handle_pool_acquire(struct spn_device * const device, spn_handle_t * const handle)
 {
   //
   // FIXME -- running out of handles is almost always going to be
@@ -541,24 +531,23 @@ spn_device_handle_pool_acquire(struct spn_device * const device,
 
   if (handle_pool->wip.acquire.rem == 0)
     {
-      handle_pool->wip.acquire.block = spn_device_handle_pool_block_acquire_pop(device,handle_pool);
-      handle_pool->wip.acquire.rem   = handle_pool->block.size;
+      handle_pool->wip.acquire.block =
+        spn_device_handle_pool_block_acquire_pop(device, handle_pool);
+      handle_pool->wip.acquire.rem = handle_pool->block.size;
     }
 
-  if (--handle_pool->wip.acquire.rem == 0) {
-    spn_device_handle_pool_block_reclaim_push(handle_pool,handle_pool->wip.acquire.block);
-  }
+  if (--handle_pool->wip.acquire.rem == 0)
+    {
+      spn_device_handle_pool_block_reclaim_push(handle_pool, handle_pool->wip.acquire.block);
+    }
 
   uint32_t const handle_idx =
-    handle_pool->wip.acquire.block *
-    handle_pool->block.size        +
-    handle_pool->wip.acquire.rem;
+    handle_pool->wip.acquire.block * handle_pool->block.size + handle_pool->wip.acquire.rem;
 
   *handle = handle_pool->handle.extent[handle_idx];
 
-  handle_pool->handle.refcnts[*handle] = (union spn_handle_refcnt){ .h = 1, .d = 1 };
+  handle_pool->handle.refcnts[*handle] = (union spn_handle_refcnt){.h = 1, .d = 1};
 }
-
 
 //
 // Validate host-provided handles before retaining.
@@ -573,25 +562,24 @@ spn_device_handle_pool_acquire(struct spn_device * const device,
 // After validation, retain the handles for the host
 //
 
-static
-spn_result
-spn_handle_pool_validate_retain_h(struct spn_handle_pool   * const handle_pool,
-                                  spn_typed_handle_type_e    const handle_type,
+static spn_result
+spn_handle_pool_validate_retain_h(struct spn_handle_pool * const   handle_pool,
+                                  spn_typed_handle_type_e const    handle_type,
                                   spn_typed_handle_t const * const typed_handles,
-                                  uint32_t                   const count)
+                                  uint32_t const                   count)
 {
   //
   // FIXME -- test to make sure handles aren't completely out of range integers
   //
 
   union spn_handle_refcnt * const refcnts      = handle_pool->handle.refcnts;
-  uint32_t                  const handle_count = handle_pool->handle.count;
+  uint32_t const                  handle_count = handle_pool->handle.count;
 
-  for (uint32_t ii=0; ii<count; ii++)
+  for (uint32_t ii = 0; ii < count; ii++)
     {
       spn_typed_handle_t const typed_handle = typed_handles[ii];
 
-      if (!SPN_TYPED_HANDLE_IS_TYPE(typed_handle,handle_type))
+      if (!SPN_TYPED_HANDLE_IS_TYPE(typed_handle, handle_type))
         {
           return SPN_ERROR_HANDLE_INVALID;
         }
@@ -602,7 +590,7 @@ spn_handle_pool_validate_retain_h(struct spn_handle_pool   * const handle_pool,
           if (handle < handle_count)
             {
               union spn_handle_refcnt * const refcnt_ptr = refcnts + handle;
-              uint32_t                  const host       = refcnt_ptr->h;
+              uint32_t const                  host       = refcnt_ptr->h;
 
               if (host == 0)
                 {
@@ -623,7 +611,7 @@ spn_handle_pool_validate_retain_h(struct spn_handle_pool   * const handle_pool,
   //
   // all the handles validated, so retain them all..
   //
-  for (uint32_t ii=0; ii<count; ii++)
+  for (uint32_t ii = 0; ii < count; ii++)
     refcnts[SPN_TYPED_HANDLE_TO_HANDLE(typed_handles[ii])].h++;
 
   return SPN_SUCCESS;
@@ -635,8 +623,8 @@ spn_handle_pool_validate_retain_h(struct spn_handle_pool   * const handle_pool,
 
 spn_result
 spn_device_handle_pool_validate_retain_h_paths(struct spn_device * const device,
-                                               spn_path_t  const * const typed_handles,
-                                               uint32_t            const count)
+                                               spn_path_t const * const  typed_handles,
+                                               uint32_t const            count)
 {
   return spn_handle_pool_validate_retain_h(device->handle_pool,
                                            SPN_TYPED_HANDLE_TYPE_PATH,
@@ -646,8 +634,8 @@ spn_device_handle_pool_validate_retain_h_paths(struct spn_device * const device,
 
 spn_result
 spn_device_handle_pool_validate_retain_h_rasters(struct spn_device * const device,
-                                                 spn_path_t  const * const typed_handles,
-                                                 uint32_t            const count)
+                                                 spn_path_t const * const  typed_handles,
+                                                 uint32_t const            count)
 {
   return spn_handle_pool_validate_retain_h(device->handle_pool,
                                            SPN_TYPED_HANDLE_TYPE_RASTER,
@@ -667,23 +655,22 @@ spn_device_handle_pool_validate_retain_h_rasters(struct spn_device * const devic
 // After validation, release the handles for the host
 //
 
-static
-spn_result
-spn_device_handle_pool_validate_release_h(struct spn_device              * const device,
-                                          spn_typed_handle_type_e          const handle_type,
-                                          spn_handle_pool_reclaim_type_e   const reclaim_type,
-                                          spn_typed_handle_t       const * const typed_handles,
-                                          uint32_t                         const count)
+static spn_result
+spn_device_handle_pool_validate_release_h(struct spn_device * const            device,
+                                          spn_typed_handle_type_e const        handle_type,
+                                          spn_handle_pool_reclaim_type_e const reclaim_type,
+                                          spn_typed_handle_t const * const     typed_handles,
+                                          uint32_t const                       count)
 {
-  struct spn_handle_pool   * const handle_pool  = device->handle_pool;
-  union  spn_handle_refcnt * const refcnts      = handle_pool->handle.refcnts;
-  uint32_t                   const handle_count = handle_pool->handle.count;
+  struct spn_handle_pool * const  handle_pool  = device->handle_pool;
+  union spn_handle_refcnt * const refcnts      = handle_pool->handle.refcnts;
+  uint32_t const                  handle_count = handle_pool->handle.count;
 
-  for (uint32_t ii=0; ii<count; ii++)
+  for (uint32_t ii = 0; ii < count; ii++)
     {
       spn_typed_handle_t const typed_handle = typed_handles[ii];
 
-      if (!SPN_TYPED_HANDLE_IS_TYPE(typed_handle,handle_type))
+      if (!SPN_TYPED_HANDLE_IS_TYPE(typed_handle, handle_type))
         {
           return SPN_ERROR_HANDLE_INVALID;
         }
@@ -698,11 +685,12 @@ spn_device_handle_pool_validate_release_h(struct spn_device              * const
           else
             {
               union spn_handle_refcnt * const refcnt_ptr = refcnts + handle;
-              uint32_t                  const host       = refcnt_ptr->h;
+              uint32_t const                  host       = refcnt_ptr->h;
 
-              if (host == 0) {
-                return SPN_ERROR_HANDLE_INVALID;
-              }
+              if (host == 0)
+                {
+                  return SPN_ERROR_HANDLE_INVALID;
+                }
             }
         }
     }
@@ -712,18 +700,19 @@ spn_device_handle_pool_validate_release_h(struct spn_device              * const
   //
   // FIXME -- change this loop to fill reclaim block directly
   //
-  for (uint32_t ii=0; ii<count; ii++)
+  for (uint32_t ii = 0; ii < count; ii++)
     {
-      spn_handle_t              const handle     = SPN_TYPED_HANDLE_TO_HANDLE(typed_handles[ii]);
+      spn_handle_t const              handle     = SPN_TYPED_HANDLE_TO_HANDLE(typed_handles[ii]);
       union spn_handle_refcnt * const refcnt_ptr = refcnts + handle;
       union spn_handle_refcnt         refcnt     = *refcnt_ptr;
 
-      refcnt.h   -= 1;
+      refcnt.h -= 1;
       *refcnt_ptr = refcnt;
 
-      if (refcnt.hd == 0) {
-        spn_device_handle_pool_reclaim(device,handle_pool,reclaim_type,handle);
-      }
+      if (refcnt.hd == 0)
+        {
+          spn_device_handle_pool_reclaim(device, handle_pool, reclaim_type, handle);
+        }
     }
 
   return SPN_SUCCESS;
@@ -735,8 +724,8 @@ spn_device_handle_pool_validate_release_h(struct spn_device              * const
 
 spn_result
 spn_device_handle_pool_validate_release_h_paths(struct spn_device * const device,
-                                                spn_path_t  const * const typed_handles,
-                                                uint32_t            const count)
+                                                spn_path_t const * const  typed_handles,
+                                                uint32_t const            count)
 {
   return spn_device_handle_pool_validate_release_h(device,
                                                    SPN_TYPED_HANDLE_TYPE_PATH,
@@ -746,9 +735,9 @@ spn_device_handle_pool_validate_release_h_paths(struct spn_device * const device
 }
 
 spn_result
-spn_device_handle_pool_validate_release_h_rasters(struct spn_device  * const device,
+spn_device_handle_pool_validate_release_h_rasters(struct spn_device * const  device,
                                                   spn_raster_t const * const typed_handles,
-                                                  uint32_t             const count)
+                                                  uint32_t const             count)
 {
   return spn_device_handle_pool_validate_release_h(device,
                                                    SPN_TYPED_HANDLE_TYPE_RASTER,
@@ -761,27 +750,25 @@ spn_device_handle_pool_validate_release_h_rasters(struct spn_device  * const dev
 // After validation, retain the handles for the device
 //
 
-static
-void
-spn_handle_pool_retain_d(struct spn_handle_pool   * const handle_pool,
+static void
+spn_handle_pool_retain_d(struct spn_handle_pool * const   handle_pool,
                          spn_typed_handle_t const * const typed_handles,
-                         uint32_t                   const count)
+                         uint32_t const                   count)
 {
   union spn_handle_refcnt * const refcnts = handle_pool->handle.refcnts;
 
-  for (uint32_t ii=0; ii<count; ii++) {
-    refcnts[SPN_TYPED_HANDLE_TO_HANDLE(typed_handles[ii])].d++;
-  }
+  for (uint32_t ii = 0; ii < count; ii++)
+    {
+      refcnts[SPN_TYPED_HANDLE_TO_HANDLE(typed_handles[ii])].d++;
+    }
 }
 
 void
-spn_device_handle_pool_retain_d(struct spn_device        * const device,
+spn_device_handle_pool_retain_d(struct spn_device * const        device,
                                 spn_typed_handle_t const * const typed_handles,
-                                uint32_t                   const count)
+                                uint32_t const                   count)
 {
-  spn_handle_pool_retain_d(device->handle_pool,
-                           typed_handles,
-                           count);
+  spn_handle_pool_retain_d(device->handle_pool, typed_handles, count);
 }
 
 //
@@ -794,20 +781,20 @@ spn_device_handle_pool_retain_d(struct spn_device        * const device,
 //
 
 spn_result
-spn_device_handle_pool_validate_retain_d(struct spn_device        * const device,
-                                         spn_typed_handle_type_e    const handle_type,
+spn_device_handle_pool_validate_retain_d(struct spn_device * const        device,
+                                         spn_typed_handle_type_e const    handle_type,
                                          spn_typed_handle_t const * const typed_handles,
-                                         uint32_t                   const count)
+                                         uint32_t const                   count)
 {
-  struct spn_handle_pool   * const handle_pool  = device->handle_pool;
-  union  spn_handle_refcnt * const refcnts      = handle_pool->handle.refcnts;
-  uint32_t                   const handle_count = handle_pool->handle.count;
+  struct spn_handle_pool * const  handle_pool  = device->handle_pool;
+  union spn_handle_refcnt * const refcnts      = handle_pool->handle.refcnts;
+  uint32_t const                  handle_count = handle_pool->handle.count;
 
-  for (uint32_t ii=0; ii<count; ii++)
+  for (uint32_t ii = 0; ii < count; ii++)
     {
       spn_typed_handle_t const typed_handle = typed_handles[ii];
 
-      if (!SPN_TYPED_HANDLE_IS_TYPE(typed_handle,handle_type))
+      if (!SPN_TYPED_HANDLE_IS_TYPE(typed_handle, handle_type))
         {
           return SPN_ERROR_HANDLE_INVALID;
         }
@@ -836,7 +823,7 @@ spn_device_handle_pool_validate_retain_d(struct spn_device        * const device
         }
     }
 
-  spn_handle_pool_retain_d(handle_pool,typed_handles,count);
+  spn_handle_pool_retain_d(handle_pool, typed_handles, count);
 
   return SPN_SUCCESS;
 }
@@ -845,31 +832,31 @@ spn_device_handle_pool_validate_retain_d(struct spn_device        * const device
 // Release the pre-validated device-held handles
 //
 
-static
-void
-spn_device_handle_pool_release_d(struct spn_device              * const device,
-                                 spn_handle_pool_reclaim_type_e   const reclaim_type,
-                                 spn_handle_t             const * const handles,
-                                 uint32_t                         const count)
+static void
+spn_device_handle_pool_release_d(struct spn_device * const            device,
+                                 spn_handle_pool_reclaim_type_e const reclaim_type,
+                                 spn_handle_t const * const           handles,
+                                 uint32_t const                       count)
 {
-  struct spn_handle_pool   * const handle_pool = device->handle_pool;
-  union  spn_handle_refcnt * const refcnts     = handle_pool->handle.refcnts;
+  struct spn_handle_pool * const  handle_pool = device->handle_pool;
+  union spn_handle_refcnt * const refcnts     = handle_pool->handle.refcnts;
 
   //
   // FIXME -- change this loop to fill reclaim block directly
   //
-  for (uint32_t ii=0; ii<count; ii++)
+  for (uint32_t ii = 0; ii < count; ii++)
     {
-      spn_handle_t              const handle     = handles[ii];
+      spn_handle_t const              handle     = handles[ii];
       union spn_handle_refcnt * const refcnt_ptr = refcnts + handle;
       union spn_handle_refcnt         refcnt     = *refcnt_ptr;
 
-      refcnt.d   -= 1;
+      refcnt.d -= 1;
       *refcnt_ptr = refcnt;
 
-      if (refcnt.hd == 0) {
-        spn_device_handle_pool_reclaim(device,handle_pool,reclaim_type,handle);
-      }
+      if (refcnt.hd == 0)
+        {
+          spn_device_handle_pool_reclaim(device, handle_pool, reclaim_type, handle);
+        }
     }
 }
 
@@ -878,25 +865,19 @@ spn_device_handle_pool_release_d(struct spn_device              * const device,
 //
 
 void
-spn_device_handle_pool_release_d_paths(struct spn_device  * const device,
+spn_device_handle_pool_release_d_paths(struct spn_device * const  device,
                                        spn_handle_t const * const handles,
-                                       uint32_t             const count)
+                                       uint32_t const             count)
 {
-  spn_device_handle_pool_release_d(device,
-                                   SPN_HANDLE_POOL_RECLAIM_TYPE_PATH,
-                                   handles,
-                                   count);
+  spn_device_handle_pool_release_d(device, SPN_HANDLE_POOL_RECLAIM_TYPE_PATH, handles, count);
 }
 
 void
-spn_device_handle_pool_release_d_rasters(struct spn_device  * const device,
+spn_device_handle_pool_release_d_rasters(struct spn_device * const  device,
                                          spn_handle_t const * const handles,
-                                         uint32_t             const count)
+                                         uint32_t const             count)
 {
-  spn_device_handle_pool_release_d(device,
-                                   SPN_HANDLE_POOL_RECLAIM_TYPE_RASTER,
-                                   handles,
-                                   count);
+  spn_device_handle_pool_release_d(device, SPN_HANDLE_POOL_RECLAIM_TYPE_RASTER, handles, count);
 }
 
 //
@@ -904,46 +885,38 @@ spn_device_handle_pool_release_d_rasters(struct spn_device  * const device,
 //
 
 void
-spn_device_handle_pool_release_ring_d_paths(struct spn_device  * const device,
+spn_device_handle_pool_release_ring_d_paths(struct spn_device * const  device,
                                             spn_handle_t const * const paths,
-                                            uint32_t             const size,
-                                            uint32_t             const span,
-                                            uint32_t             const head)
+                                            uint32_t const             size,
+                                            uint32_t const             span,
+                                            uint32_t const             head)
 {
-  uint32_t const count_lo = MIN_MACRO(uint32_t,head + span,size) - head;
+  uint32_t const count_lo = MIN_MACRO(uint32_t, head + span, size) - head;
 
-  spn_device_handle_pool_release_d_paths(device,
-                                         paths + head,
-                                         count_lo);
+  spn_device_handle_pool_release_d_paths(device, paths + head, count_lo);
   if (span > count_lo)
     {
       uint32_t const count_hi = span - count_lo;
 
-      spn_device_handle_pool_release_d_paths(device,
-                                             paths,
-                                             count_hi);
+      spn_device_handle_pool_release_d_paths(device, paths, count_hi);
     }
 }
 
 void
-spn_device_handle_pool_release_ring_d_rasters(struct spn_device  * const device,
+spn_device_handle_pool_release_ring_d_rasters(struct spn_device * const  device,
                                               spn_handle_t const * const rasters,
-                                              uint32_t             const size,
-                                              uint32_t             const span,
-                                              uint32_t             const head)
+                                              uint32_t const             size,
+                                              uint32_t const             span,
+                                              uint32_t const             head)
 {
-  uint32_t const count_lo = MIN_MACRO(uint32_t,head + span,size) - head;
+  uint32_t const count_lo = MIN_MACRO(uint32_t, head + span, size) - head;
 
-  spn_device_handle_pool_release_d_rasters(device,
-                                           rasters + head,
-                                           count_lo);
+  spn_device_handle_pool_release_d_rasters(device, rasters + head, count_lo);
   if (span > count_lo)
     {
       uint32_t const count_hi = span - count_lo;
 
-      spn_device_handle_pool_release_d_rasters(device,
-                                               rasters,
-                                               count_hi);
+      spn_device_handle_pool_release_d_rasters(device, rasters, count_hi);
     }
 }
 

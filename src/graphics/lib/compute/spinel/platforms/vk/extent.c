@@ -34,28 +34,20 @@ spn_extent_phrw_free(struct spn_runtime     * const runtime,
 //
 
 void
-spn_extent_pdrw_alloc(struct spn_extent_pdrw           * const extent,
+spn_extent_pdrw_alloc(struct spn_extent_pdrw * const           extent,
                       struct spn_allocator_device_perm * const perm,
-                      struct spn_device_vk             * const vk,
-                      uint64_t                           const size)
+                      struct spn_device_vk * const             vk,
+                      uint64_t const                           size)
 {
-  spn_allocator_device_perm_alloc(perm,
-                                  vk,
-                                  size,
-                                  NULL,
-                                  &extent->dbi,
-                                  &extent->devmem);
+  spn_allocator_device_perm_alloc(perm, vk, size, NULL, &extent->dbi, &extent->devmem);
 }
 
 void
-spn_extent_pdrw_free(struct spn_extent_pdrw           * const extent,
+spn_extent_pdrw_free(struct spn_extent_pdrw * const           extent,
                      struct spn_allocator_device_perm * const perm,
-                     struct spn_device_vk             * const vk)
+                     struct spn_device_vk * const             vk)
 {
-  spn_allocator_device_perm_free(perm,
-                                 vk,
-                                 &extent->dbi,
-                                 extent->devmem);
+  spn_allocator_device_perm_free(perm, vk, &extent->dbi, extent->devmem);
 }
 
 //

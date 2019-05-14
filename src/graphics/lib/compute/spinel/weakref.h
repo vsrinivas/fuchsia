@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_WEAKREF_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_WEAKREF_H_
 
 //
 //
@@ -34,15 +35,17 @@ void
 spn_weakref_init(spn_weakref_t * const weakref_p);
 
 void
-spn_weakref_update(spn_weakref_t     * const weakref_p,
+spn_weakref_update(spn_weakref_t * const     weakref_p,
                    spn_weakref_epoch_t const epoch,
-                   uint32_t            const index);
+                   uint32_t const            index);
 
 bool
 spn_weakref_get_index(spn_weakref_t const * const weakref_p,
-                      spn_weakref_epoch_t   const epoch,
-                      uint32_t            * const idx_p);
+                      spn_weakref_epoch_t const   epoch,
+                      uint32_t * const            idx_p);
 
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_WEAKREF_H_

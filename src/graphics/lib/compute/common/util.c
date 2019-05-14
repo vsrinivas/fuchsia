@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#if defined (_MSC_VER) && !defined (__clang__)
+#include "util.h"
+
+//
+//
+//
+
+#if defined(_MSC_VER) && !defined(__clang__)
 
 #include <intrin.h>
 
@@ -12,16 +18,10 @@
 //
 //
 
-#include "util.h"
-
-//
-//
-//
-
 bool
 is_pow2_u32(uint32_t n)
 {
-  return (n & (n-1)) == 0;
+  return (n & (n - 1)) == 0;
 }
 
 //
@@ -59,15 +59,15 @@ pow2_rd_u32(uint32_t n)
 uint32_t
 msb_idx_u32(uint32_t n)
 {
-#if defined (_MSC_VER) && !defined (__clang__)
+#if defined(_MSC_VER) && !defined(__clang__)
 
   uint32_t index;
 
-  _BitScanReverse((unsigned long *)&index,n);
+  _BitScanReverse((unsigned long *)&index, n);
 
   return index;
 
-#elif defined( __GNUC__ )
+#elif defined(__GNUC__)
 
   return __builtin_clz(n) ^ 31;
 

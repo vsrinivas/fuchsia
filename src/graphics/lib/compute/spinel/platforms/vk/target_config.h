@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGET_CONFIG_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGET_CONFIG_H_
 
 //
 //
@@ -18,6 +19,10 @@
 
 struct spn_target_config
 {
+  //
+  // clang-format off
+  //
+
   //
   // host allocators
   //
@@ -114,21 +119,27 @@ struct spn_target_config
   } composition;
 
   //
+  // clang-format on
+  //
+
+  //
   // descriptors
   //
-  struct {
+  struct
+  {
+#undef SPN_TARGET_DESC_TYPE_STORAGE_BUFFER
+#define SPN_TARGET_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_ext, _d_id) uint32_t _d_id;
 
-#undef  SPN_TARGET_DESC_TYPE_STORAGE_BUFFER
-#define SPN_TARGET_DESC_TYPE_STORAGE_BUFFER(_ds_id,_d_idx,_d_ext,_d_id)  uint32_t _d_id;
+#undef SPN_TARGET_DESC_TYPE_STORAGE_IMAGE
+#define SPN_TARGET_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_ext, _d_id)                          \
+  uint32_t _d_id;  // do nothing for now
 
-#undef  SPN_TARGET_DESC_TYPE_STORAGE_IMAGE
-#define SPN_TARGET_DESC_TYPE_STORAGE_IMAGE(_ds_id,_d_idx,_d_ext,_d_id)   uint32_t _d_id; // do nothing for now
-
-#undef  SPN_TARGET_DS_EXPAND_X
-#define SPN_TARGET_DS_EXPAND_X(_ds_idx,_ds_id,_ds)      \
-    struct {                                            \
-      uint32_t sets;                                    \
-    } _ds_id;
+#undef SPN_TARGET_DS_EXPAND_X
+#define SPN_TARGET_DS_EXPAND_X(_ds_idx, _ds_id, _ds)                                               \
+  struct                                                                                           \
+  {                                                                                                \
+    uint32_t sets;                                                                                 \
+  } _ds_id;
 
     SPN_TARGET_DS_EXPAND()
 
@@ -137,15 +148,17 @@ struct spn_target_config
   //
   // descriptor extents
   //
-  struct {
-
-#undef  SPN_TARGET_DS_EXPAND_X
-#define SPN_TARGET_DS_EXPAND_X(_ds_idx,_ds_id,_ds)      \
-    struct {                                            \
-      struct {                                          \
-        _ds                                             \
-      } props;                                          \
-    } _ds_id;
+  struct
+  {
+#undef SPN_TARGET_DS_EXPAND_X
+#define SPN_TARGET_DS_EXPAND_X(_ds_idx, _ds_id, _ds)                                               \
+  struct                                                                                           \
+  {                                                                                                \
+    struct                                                                                         \
+    {                                                                                              \
+      _ds                                                                                          \
+    } props;                                                                                       \
+  } _ds_id;
 
     SPN_TARGET_DS_EXPAND()
 
@@ -156,12 +169,14 @@ struct spn_target_config
   //
   // - push constant sizes by name and index
   //
-  struct {
-    union {
-      struct {
-#undef  SPN_TARGET_P_EXPAND_X
-#define SPN_TARGET_P_EXPAND_X(_p_idx,_p_id,_p_descs)      \
-        uint32_t _p_id;
+  struct
+  {
+    union
+    {
+      struct
+      {
+#undef SPN_TARGET_P_EXPAND_X
+#define SPN_TARGET_P_EXPAND_X(_p_idx, _p_id, _p_descs) uint32_t _p_id;
 
         SPN_TARGET_P_EXPAND()
       } named;
@@ -183,9 +198,11 @@ struct spn_target_config
 struct spn_target_image
 {
   struct spn_target_config config;
-  ALIGN_MACRO(4) uint8_t   modules[]; // modules[] must start on 32-bit boundary
+  ALIGN_MACRO(4) uint8_t modules[];  // modules[] must start on 32-bit boundary
 };
 
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGET_CONFIG_H_

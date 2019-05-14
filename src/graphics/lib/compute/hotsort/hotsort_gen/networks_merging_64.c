@@ -6,8 +6,8 @@
 // Odd-merge merging networks of size 2 to 64.
 //
 
-#include "networks.h"
 #include "common/macros.h"
+#include "networks.h"
 
 //
 // clang-format off

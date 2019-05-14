@@ -15,7 +15,7 @@
 //
 //
 
-#define HSG_INDENT  2
+#define HSG_INDENT 2
 
 //
 //
@@ -33,30 +33,26 @@ struct hsg_target_state
 void
 hsg_target_indent(struct hsg_target * const target, uint32_t const depth)
 {
-  fprintf(target->state->txt,
-          "%*s",
-          depth*HSG_INDENT,"");
+  fprintf(target->state->txt, "%*s", depth * HSG_INDENT, "");
 }
 
 void
-hsg_target_debug(struct hsg_target       * const target,
+hsg_target_debug(struct hsg_target * const       target,
                  struct hsg_config const * const config,
-                 struct hsg_merge  const * const merge,
-                 struct hsg_op     const * const ops,
-                 uint32_t                  const depth)
+                 struct hsg_merge const * const  merge,
+                 struct hsg_op const * const     ops,
+                 uint32_t const                  depth)
 {
   if (ops->type == HSG_OP_TYPE_TARGET_BEGIN)
     {
       target->state = malloc(sizeof(*target->state));
 
-      target->state->txt = fopen("hs_debug.txt","wb");
+      target->state->txt = fopen("hs_debug.txt", "wb");
     }
 
-  hsg_target_indent(target,depth);
+  hsg_target_indent(target, depth);
 
-  fprintf(target->state->txt,
-          "%s\n",
-          hsg_op_type_string[ops->type]);
+  fprintf(target->state->txt, "%s\n", hsg_op_type_string[ops->type]);
 
   if (ops->type == HSG_OP_TYPE_TARGET_END)
     {

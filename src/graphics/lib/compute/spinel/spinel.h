@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_SPINEL_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_SPINEL_H_
 
 //
 //
@@ -77,45 +78,38 @@ spn_path_release(spn_context_t context, spn_path_t const * paths, uint32_t count
 //
 
 spn_result
-spn_path_move_to(spn_path_builder_t path_builder,
-                 float x0, float y0);
+spn_path_move_to(spn_path_builder_t path_builder, float x0, float y0);
 
 spn_result
-spn_path_line_to(spn_path_builder_t path_builder,
-                 float x1, float y1);
+spn_path_line_to(spn_path_builder_t path_builder, float x1, float y1);
 
 spn_result
-spn_path_cubic_to(spn_path_builder_t path_builder,
-                  float x1, float y1,
-                  float x2, float y2,
-                  float x3, float y3);
+spn_path_cubic_to(
+  spn_path_builder_t path_builder, float x1, float y1, float x2, float y2, float x3, float y3);
 
 spn_result
-spn_path_cubic_smooth_to(spn_path_builder_t path_builder,
-                         float x2, float y2,
-                         float x3, float y3);
+spn_path_cubic_smooth_to(spn_path_builder_t path_builder, float x2, float y2, float x3, float y3);
 
 spn_result
-spn_path_quad_to(spn_path_builder_t path_builder,
-                 float x1, float y1,
-                 float x2, float y2);
+spn_path_quad_to(spn_path_builder_t path_builder, float x1, float y1, float x2, float y2);
 
 spn_result
-spn_path_quad_smooth_to(spn_path_builder_t path_builder,
-                        float x2, float y2);
+spn_path_quad_smooth_to(spn_path_builder_t path_builder, float x2, float y2);
 
 spn_result
-spn_path_rat_quad_to(spn_path_builder_t path_builder,
-                     float x1, float y1,
-                     float x2, float y2,
-                     float w0);
+spn_path_rat_quad_to(
+  spn_path_builder_t path_builder, float x1, float y1, float x2, float y2, float w0);
 
 spn_result
 spn_path_rat_cubic_to(spn_path_builder_t path_builder,
-                      float x1, float y1,
-                      float x2, float y2,
-                      float x3, float y3,
-                      float w0, float w1);
+                      float              x1,
+                      float              y1,
+                      float              x2,
+                      float              y2,
+                      float              x3,
+                      float              y3,
+                      float              w0,
+                      float              w1);
 
 //
 // FIXME -- this is a synthetic built from primitives and doesn't
@@ -123,9 +117,7 @@ spn_path_rat_cubic_to(spn_path_builder_t path_builder,
 //
 
 spn_result
-spn_path_ellipse(spn_path_builder_t path_builder,
-                 float cx, float cy,
-                 float rx, float ry);
+spn_path_ellipse(spn_path_builder_t path_builder, float cx, float cy, float rx, float ry);
 
 //
 // RASTER BUILDER
@@ -178,6 +170,7 @@ spn_raster_release(spn_context_t context, spn_raster_t const * rasters, uint32_t
 float const spn_transform_identity[8];
 float const spn_clip_default[4];
 
+// clang-format off
 spn_result
 spn_raster_fill(spn_raster_builder_t         raster_builder,
                 spn_path_t                 * paths,
@@ -186,14 +179,14 @@ spn_raster_fill(spn_raster_builder_t         raster_builder,
                 spn_clip_weakref_t         * clip_weakrefs,
                 float               const (* clips)[4],
                 uint32_t                     count);
+// clang-format on
 
 //
 // COMPOSITION STATE
 //
 
 spn_result
-spn_composition_create(spn_context_t       context,
-                       spn_composition_t * composition);
+spn_composition_create(spn_context_t context, spn_composition_t * composition);
 
 spn_result
 spn_composition_clone(spn_context_t       context,
@@ -210,12 +203,14 @@ spn_composition_release(spn_composition_t composition);
 // FIXME -- do we want a per-place clip?
 //
 
+// clang-format off
 spn_result
 spn_composition_place(spn_composition_t     composition,
                       spn_raster_t const  * rasters,
                       spn_layer_id const  * layer_ids,
                       int32_t      const (* txtys)[2],
                       uint32_t              count);
+// clang-format on
 
 spn_result
 spn_composition_seal(spn_composition_t composition);
@@ -275,30 +270,29 @@ spn_result
 spn_styling_seal(spn_styling_t styling);
 
 spn_result
-spn_styling_unseal(spn_styling_t styling); // FIXME
+spn_styling_unseal(spn_styling_t styling);  // FIXME
 
 spn_result
-spn_styling_reset(spn_styling_t styling); // FIXME -- make unseal reset
+spn_styling_reset(spn_styling_t styling);  // FIXME -- make unseal reset
 
 //
 // STYLING GROUPS AND LAYERS
 //
 
 spn_result
-spn_styling_group_alloc(spn_styling_t        styling,
-                        spn_group_id * const group_id);
+spn_styling_group_alloc(spn_styling_t styling, spn_group_id * const group_id);
 
 spn_result
-spn_styling_group_enter(spn_styling_t       styling,
-                        spn_group_id  const group_id,
-                        uint32_t      const n,
-                        uint32_t  * * const cmds);
+spn_styling_group_enter(spn_styling_t      styling,
+                        spn_group_id const group_id,
+                        uint32_t const     n,
+                        uint32_t ** const  cmds);
 
 spn_result
-spn_styling_group_leave(spn_styling_t       styling,
-                        spn_group_id  const group_id,
-                        uint32_t      const n,
-                        uint32_t  * * const cmds);
+spn_styling_group_leave(spn_styling_t      styling,
+                        spn_group_id const group_id,
+                        uint32_t const     n,
+                        uint32_t ** const  cmds);
 //
 // n:
 //
@@ -311,27 +305,27 @@ spn_styling_group_leave(spn_styling_t       styling,
 //
 
 spn_result
-spn_styling_group_parents(spn_styling_t       styling,
-                          spn_group_id  const group_id,
-                          uint32_t      const n,
-                          uint32_t  * * const parents);
+spn_styling_group_parents(spn_styling_t      styling,
+                          spn_group_id const group_id,
+                          uint32_t const     n,
+                          uint32_t ** const  parents);
 
 spn_result
-spn_styling_group_range_lo(spn_styling_t       styling,
-                           spn_group_id  const group_id,
-                           spn_layer_id  const layer_lo);
+spn_styling_group_range_lo(spn_styling_t      styling,
+                           spn_group_id const group_id,
+                           spn_layer_id const layer_lo);
 
 spn_result
-spn_styling_group_range_hi(spn_styling_t       styling,
-                           spn_group_id  const group_id,
-                           spn_layer_id  const layer_hi);
+spn_styling_group_range_hi(spn_styling_t      styling,
+                           spn_group_id const group_id,
+                           spn_layer_id const layer_hi);
 
 spn_result
-spn_styling_group_layer(spn_styling_t               styling,
-                        spn_group_id          const group_id,
-                        spn_layer_id          const layer_id,
-                        uint32_t              const n,
-                        spn_styling_cmd_t * * const cmds);
+spn_styling_group_layer(spn_styling_t              styling,
+                        spn_group_id const         group_id,
+                        spn_layer_id const         layer_id,
+                        uint32_t const             n,
+                        spn_styling_cmd_t ** const cmds);
 
 //
 // FIXME -- styling command encoders will be opaque
@@ -346,15 +340,15 @@ void
 spn_styling_background_over_encoder(spn_styling_cmd_t * cmds, float const rgba[4]);
 
 void
-spn_styling_layer_fill_gradient_encoder(spn_styling_cmd_t         * cmds,
+spn_styling_layer_fill_gradient_encoder(spn_styling_cmd_t *         cmds,
                                         float                       x0,
                                         float                       y0,
                                         float                       x1,
                                         float                       y1,
                                         spn_styling_gradient_type_e type,
                                         uint32_t                    n,
-                                        float                 const stops[],
-                                        float                 const colors[]);
+                                        float const                 stops[],
+                                        float const                 colors[]);
 #endif
 
 //
@@ -390,3 +384,5 @@ spn_render(spn_context_t context, spn_render_submit_t const * const submit);
 //
 //
 //
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_SPINEL_H_

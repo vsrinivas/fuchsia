@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGETS_ARM_BIFROST4_CONFIG_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGETS_ARM_BIFROST4_CONFIG_H_
+
 //
-//
+// clang-format off
 //
 
 #include "expand_x.h"
@@ -187,5 +190,7 @@
 #define SPN_KERNEL_RASTERS_RECLAIM_EXPAND_SIZE                    (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_RASTERS_RECLAIM_SUBGROUP_SIZE / 2)
 
 //
+// clang-format on
 //
-//
+
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGETS_ARM_BIFROST4_CONFIG_H_
