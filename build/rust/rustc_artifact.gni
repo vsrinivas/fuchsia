@@ -448,6 +448,15 @@ template("rustc_artifact") {
       args += [ "--with-unit-tests" ]
     }
 
+    if (defined(invoker.non_rust_deps)) {
+      foreach(dep, invoker.non_rust_deps) {
+        args += [
+          "--lib-dir",
+          rebase_path(get_label_info(dep, "target_out_dir")),
+        ]
+      }
+    }
+
     args += dep_info_paths
     outputs = [
       output_file,
