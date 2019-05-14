@@ -29,12 +29,6 @@ pub struct Inspector {
     root_node: Node,
 }
 
-/// Allowed formats for a Metric data type (uint, int, double)
-pub trait MetricFormat {}
-impl MetricFormat for u64 {}
-impl MetricFormat for i64 {}
-impl MetricFormat for f64 {}
-
 /// Provides functions required to implement formats for a property.
 pub trait PropertyFormat {
     fn bytes(&self) -> &[u8];
@@ -52,7 +46,7 @@ pub struct Node {
 }
 
 /// Inspect API Metric data type.
-pub struct Metric<T: MetricFormat> {
+pub struct Metric<T> {
     /// Index of the block in the VMO.
     block_index: u32,
 
@@ -229,7 +223,7 @@ metric_impl!(int, i64);
 metric_impl!(uint, u64);
 metric_impl!(double, f64);
 
-impl<T: MetricFormat> Drop for Metric<T> {
+impl<T> Drop for Metric<T> {
     fn drop(&mut self) {
         self.state
             .lock()
