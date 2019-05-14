@@ -10,6 +10,7 @@
 #include <fbl/string.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <unittest/unittest.h>
+#include <variant>
 #include <zircon/process.h>
 
 namespace {
@@ -18,31 +19,15 @@ constexpr uint8_t kBlockSize = 5;
 
 // Mock device based on code from ums-function.c
 
-union usb_descriptor {
-    usb_interface_descriptor_t interface;
-    usb_endpoint_descriptor_t endpoint;
-
-    static constexpr usb_descriptor Create(usb_interface_descriptor_t descriptor) {
-        usb_descriptor retval = {};
-        retval.interface = descriptor;
-        return retval;
-    }
-    static constexpr usb_descriptor Create(usb_endpoint_descriptor_t descriptor) {
-        usb_descriptor retval = {};
-        retval.endpoint = descriptor;
-        return retval;
-    }
-} __PACKED;
+using usb_descriptor = std::variant<usb_interface_descriptor_t, usb_endpoint_descriptor_t>;
 
 const usb_descriptor kDescriptors[] = {
     // Interface descriptor
-    usb_descriptor::Create({sizeof(usb_descriptor), USB_DT_INTERFACE, 0, 0, 2, 8, 7, 0x50, 0}),
+    usb_interface_descriptor_t{sizeof(usb_descriptor), USB_DT_INTERFACE, 0, 0, 2, 8, 7, 0x50, 0},
     // IN endpoint
-    usb_descriptor::Create(usb_endpoint_descriptor_t(
-        {sizeof(usb_descriptor), USB_DT_ENDPOINT, USB_DIR_IN, USB_ENDPOINT_BULK, 64, 0})),
+    usb_endpoint_descriptor_t{sizeof(usb_descriptor), USB_DT_ENDPOINT, USB_DIR_IN, USB_ENDPOINT_BULK, 64, 0},
     // OUT endpoint
-    usb_descriptor::Create(usb_endpoint_descriptor_t(
-        {sizeof(usb_descriptor), USB_DT_ENDPOINT, USB_DIR_OUT, USB_ENDPOINT_BULK, 64, 0}))};
+    usb_endpoint_descriptor_t{sizeof(usb_descriptor), USB_DT_ENDPOINT, USB_DIR_OUT, USB_ENDPOINT_BULK, 64, 0}};
 
 struct Packet;
 struct Packet : fbl::DoublyLinkedListable<fbl::RefPtr<Packet>>, fbl::RefCounted<Packet> {
