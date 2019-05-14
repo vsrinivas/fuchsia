@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/netcfg_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ]
+    }
+}
