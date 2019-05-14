@@ -26,68 +26,74 @@ func NewArgMap(sources *SourceMap) *ArgMap {
 	}
 }
 
-// AddArg creates args from GNArgs and adds them to the maps
+// AddArgs creates args from GNArgs and adds them to the maps
 func (a *ArgMap) AddArgs(gnArgs <-chan Arg) {
 	for gnArg := range gnArgs {
 		a.AddArg(gnArg)
 	}
 }
 
+// AddArg adds Arg to the maps
 func (a *ArgMap) AddArg(gnArg Arg) {
 	a.args[gnArg.Key] = append(a.args[gnArg.Key], gnArg)
 	a.argLookup[gnArg.Name] = append(a.argLookup[gnArg.Name], gnArg.Key)
 }
 
-// sortedArgs returns the list of args in the appropriate order to print.
-func (a *ArgMap) sortedArgs() (map[string]map[string][]Arg, []string) {
+// EmitMarkdown emits Markdown text for the map of arguments.
+func (a *ArgMap) EmitMarkdown(out io.Writer) {
+	type mappedArgs struct {
+		m map[string][]Arg
+		k []string
+	}
+	sortedArgs := struct {
+		m map[string]*mappedArgs
+		k []string
+	}{
+		m: make(map[string]*mappedArgs),
+		k: make([]string, 0),
+	}
+
 	numKeys := len(a.args)
-	args := make(map[string]map[string][]Arg)
-	// For each arg, we need to push it into the appropiate list.
 	for _, gnArgs := range a.args {
 		for _, gnArg := range gnArgs {
 			// Lookup the keys associated with this arg & sort & stringify.
 			keys, _ := a.argLookup[gnArg.Name]
 			if len(keys) == numKeys {
-				// Incoming keys will always have an `=`, and so this is an okay value.
+				// Incoming keys will always have an `=`, and so  this is an
+				// okay value.
 				keys = []string{"all"}
 			}
+			sort.Strings(keys)
 			key := strings.Join(keys, ", ")
-			_, ok := args[key]
-			if !ok {
-				args[key] = make(map[string][]Arg)
+			if _, ok := sortedArgs.m[key]; !ok {
+				sortedArgs.m[key] = &mappedArgs{
+					m: make(map[string][]Arg),
+					k: make([]string, 0)}
 			}
-			args[key][gnArg.Name] = append(args[key][gnArg.Name], gnArg)
+			sortedArgs.m[key].m[gnArg.Name] = append(sortedArgs.m[key].m[gnArg.Name], gnArg)
 		}
 	}
-
-	// Get the keys in alphabetical order
-	keys := make([]string, 0, numKeys)
-	for k := range args {
-		// Sort by name first, then by key
-		for argName := range args[k] {
-			sort.Slice(args[k][argName], func(i, j int) bool { return args[k][argName][i].Key < args[k][argName][j].Key })
+	for k := range sortedArgs.m {
+		for argName := range sortedArgs.m[k].m {
+			sort.Slice(sortedArgs.m[k].m[argName], func(i, j int) bool {
+				return sortedArgs.m[k].m[argName][i].Key < sortedArgs.m[k].m[argName][j].Key
+			})
+			sortedArgs.m[k].k = append(sortedArgs.m[k].k, argName)
 		}
-
-		keys = append(keys, k)
+		sort.Strings(sortedArgs.m[k].k)
+		sortedArgs.k = append(sortedArgs.k, k)
 	}
-	sort.Strings(keys)
-
-	return args, keys
-}
-
-// EmitMarkdown emits Markdown text for the map of arguments.
-func (a *ArgMap) EmitMarkdown(out io.Writer) {
+	sort.Strings(sortedArgs.k)
 	// Emit a header.
 	fmt.Fprintf(out, "# %s\n\n", pageTitle)
-	gnArgsMap, keys := a.sortedArgs()
-	for _, name := range keys {
+	for _, name := range sortedArgs.k {
 		if name == "all" {
 			fmt.Fprintf(out, "## All builds\n\n")
 		} else {
 			fmt.Fprintf(out, "## `%s`\n\n", name)
 		}
-
-		for _, gnArgs := range gnArgsMap[name] {
+		for _, argsKey := range sortedArgs.m[name].k {
+			gnArgs := sortedArgs.m[name].m[argsKey]
 			writeArgs(gnArgs, out, a.sources)
 		}
 	}
