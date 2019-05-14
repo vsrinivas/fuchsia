@@ -15,8 +15,10 @@ import (
 
 // fakeMDNS is a fake implementation of MDNS for testing.
 type fakeMDNS struct {
-	answer   *fakeAnswer
-	handlers []func(net.Interface, net.Addr, mdns.Packet)
+	answer           *fakeAnswer
+	handlers         []func(net.Interface, net.Addr, mdns.Packet)
+	sendEmptyData    bool
+	sendTooShortData bool
 }
 
 type fakeAnswer struct {
@@ -41,6 +43,27 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 					// 'list' command
 					answers := make([]mdns.Record, len(m.answer.domains))
 					for _, d := range m.answer.domains {
+						// Cases for malformed response.
+						if m.sendEmptyData {
+							answers = append(answers, mdns.Record{
+								Class: mdns.IN,
+								Type:  mdns.PTR,
+								Data:  nil, // Empty data
+							})
+							continue
+						}
+						if m.sendTooShortData {
+							data := make([]byte, len(d)) // One byte shorter
+							data[0] = byte(len(d))
+							copy(data[1:], []byte(d[1:]))
+							answers = append(answers, mdns.Record{
+								Class: mdns.IN,
+								Type:  mdns.PTR,
+								Data:  data,
+							})
+							continue
+						}
+
 						data := make([]byte, len(d)+1)
 						data[0] = byte(len(d))
 						copy(data[1:], []byte(d))
@@ -77,7 +100,7 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 }
 func (m *fakeMDNS) Start(context.Context, int) error { return nil }
 
-func newDevFinderCmd(handler mDNSHandler, answerDomains []string) devFinderCmd {
+func newDevFinderCmd(handler mDNSHandler, answerDomains []string, sendEmptyData bool, sendTooShortData bool) devFinderCmd {
 	// Because mdnsAddrs have two addresses specified and mdnsPorts have
 	// two ports specified, four MDNS objects are created. To emulate the
 	// case where only one of them responds, create only one fake MDNS
@@ -98,6 +121,8 @@ func newDevFinderCmd(handler mDNSHandler, answerDomains []string) devFinderCmd {
 						ip:      "192.168.0.42",
 						domains: answerDomains,
 					},
+					sendEmptyData:    sendEmptyData,
+					sendTooShortData: sendTooShortData,
 				}
 			default:
 				return &fakeMDNS{}
@@ -119,7 +144,7 @@ func TestListDevices(t *testing.T) {
 			[]string{
 				"some.domain",
 				"another.domain",
-			}),
+			}, false, false),
 	}
 
 	got, err := cmd.listDevices(context.Background())
@@ -139,7 +164,6 @@ func TestListDevices(t *testing.T) {
 	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
 		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
 	}
-
 }
 
 func TestListDevices_domainFilter(t *testing.T) {
@@ -149,7 +173,7 @@ func TestListDevices_domainFilter(t *testing.T) {
 			[]string{
 				"some.domain",
 				"another.domain",
-			}),
+			}, false, false),
 		domainFilter: "some",
 	}
 
@@ -166,7 +190,39 @@ func TestListDevices_domainFilter(t *testing.T) {
 	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
 		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
 	}
+}
 
+func TestListDevices_emptyData(t *testing.T) {
+	cmd := listCmd{
+		devFinderCmd: newDevFinderCmd(
+			listMDNSHandler,
+			[]string{
+				"some.domain",
+				"another.domain",
+			},
+			true, // sendEmptyData
+			false),
+	}
+
+	// Must not crash.
+	cmd.listDevices(context.Background())
+}
+
+func TestListDevices_tooShortData(t *testing.T) {
+	cmd := listCmd{
+		devFinderCmd: newDevFinderCmd(
+			listMDNSHandler,
+			[]string{
+				"some.domain",
+				"another.domain",
+			},
+			false,
+			true, // sendTooShortData
+		),
+	}
+
+	// Must not crash.
+	cmd.listDevices(context.Background())
 }
 
 //// Tests for the `resolve` command.
@@ -178,7 +234,7 @@ func TestResolveDevices(t *testing.T) {
 			[]string{
 				"some.domain.local",
 				"another.domain.local",
-			}),
+			}, false, false),
 	}
 
 	got, err := cmd.resolveDevices(context.Background(), "some.domain")
@@ -194,7 +250,6 @@ func TestResolveDevices(t *testing.T) {
 	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
 		t.Errorf("resolveDevices mismatch: (-want +got):\n%s", d)
 	}
-
 }
 
 //// Tests for output functions.
@@ -239,7 +294,6 @@ func TestOutputNormal(t *testing.T) {
 			t.Errorf("outputNormal(includeDomain) mismatch: (-want +got):\n%s", d)
 		}
 	}
-
 }
 
 func TestOutputJSON(t *testing.T) {

@@ -50,10 +50,20 @@ func (cmd *listCmd) SetFlags(f *flag.FlagSet) {
 func listMDNSHandler(resp mDNSResponse, localResolve bool, devChan chan<- *fuchsiaDevice, errChan chan<- error) {
 	for _, a := range resp.rxPacket.Answers {
 		if a.Class == mdns.IN && a.Type == mdns.PTR {
+			// DX-1498: Some protection against malformed responses.
+			if len(a.Data) == 0 {
+				log.Print("Empty data in response. Ignoring...")
+				continue
+			}
+			nameLength := int(a.Data[0])
+			if len(a.Data) < nameLength+1 {
+				log.Printf("Too short data in response. Got %d bytes; expected %d", len(a.Data), nameLength+1)
+				continue
+			}
+
 			// This is a bit convoluted: the domain param is being used
 			// as a "service", and the Data field actually contains the
 			// domain of the device.
-			nameLength := int(a.Data[0])
 			fuchsiaDomain := string(a.Data[1 : nameLength+1])
 			if localResolve {
 				recvIP, err := resp.getReceiveIP()
