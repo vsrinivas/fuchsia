@@ -45,7 +45,7 @@ executable("data_provider_unittest") {
   ]
 
   deps = [
-    ":stub_log_listener",
+    ":stub_logger",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
@@ -73,7 +73,7 @@ executable("log_listener_unittest") {
   ]
 
   deps = [
-    ":stub_log_listener",
+    ":stub_logger",
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//garnet/public/lib/fsl",
@@ -112,10 +112,10 @@ executable("feedback_agent_integration_test") {
   ]
 }
 
-source_set("stub_log_listener") {
+source_set("stub_logger") {
   sources = [
-    "stub_log_listener.cc",
-    "stub_log_listener.h",
+    "stub_logger.cc",
+    "stub_logger.h",
   ]
 
   public_deps = [

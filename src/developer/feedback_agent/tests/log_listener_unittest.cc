@@ -19,7 +19,7 @@
 #include <ostream>
 #include <vector>
 
-#include "src/developer/feedback_agent/tests/stub_log_listener.h"
+#include "src/developer/feedback_agent/tests/stub_logger.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"

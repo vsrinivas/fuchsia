@@ -24,7 +24,7 @@
 #include <ostream>
 #include <vector>
 
-#include "src/developer/feedback_agent/tests/stub_log_listener.h"
+#include "src/developer/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback_agent/tests/stub_scenic.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
