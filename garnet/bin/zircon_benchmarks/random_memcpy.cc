@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstring>
 #include <iostream>
 #include <random>
 #include <vector>
@@ -45,8 +46,9 @@ bool RandomMemcpy(perftest::RepeatState* state, size_t block_size_bytes,
     return false;
   }
 
-  // Prepare the buffer. The std::vector constructor will zero the bytes.
-  std::vector<char> buf(buffer_size_bytes);
+  // Prepare the buffer.
+  auto buf = std::make_unique<char[]>(buffer_size_bytes);
+  memset(buf.get(), 0, buffer_size_bytes);
 
   // Prepare the random source and destination addresses.
   const size_t cache_size_bytes = kCacheSizeMB * 1024 * 1024;
@@ -62,9 +64,9 @@ bool RandomMemcpy(perftest::RepeatState* state, size_t block_size_bytes,
   std::vector<char*> src_addrs(access_sequence_len);
   std::vector<char*> dst_addrs(access_sequence_len);
   std::generate(src_addrs.begin(), src_addrs.end(),
-                [&] { return &buf.front() + rand_offset_gen(rand_dev); });
+                [&] { return buf.get() + rand_offset_gen(rand_dev); });
   std::generate(dst_addrs.begin(), dst_addrs.end(),
-                [&] { return &buf.front() + rand_offset_gen(rand_dev); });
+                [&] { return buf.get() + rand_offset_gen(rand_dev); });
 
   // Run the benchmark task.
   state->SetBytesProcessedPerRun(block_size_bytes);
