@@ -50,8 +50,7 @@ bool ZbiBootfsParser::IsSkipBlock(const char* path,
     return status == ZX_OK;
 }
 
-zx_status_t ZbiBootfsParser::ProcessZbi(zx::vmo& vmo_out, const char* filename) {
-
+zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* entry) {
     zbi_header_t hdr;
     zx::vmo bootfs_vmo;
 
@@ -130,6 +129,8 @@ zx_status_t ZbiBootfsParser::ProcessZbi(zx::vmo& vmo_out, const char* filename) 
                 return ZX_OK;
             });
 
+            bool found = false;
+
             for (const auto& parsed_entry : parsed_entries) {
                 printf("Entry = %s\n ", parsed_entry->name);
                 if (!(strcmp(parsed_entry->name, filename))) {
@@ -138,12 +139,21 @@ zx_status_t ZbiBootfsParser::ProcessZbi(zx::vmo& vmo_out, const char* filename) 
                     printf("File data length = %d\n", parsed_entry->data_len);
                     printf("File data offset = %d\n", parsed_entry->data_off);
                     auto buffer = std::make_unique<uint8_t[]>(parsed_entry->data_len);
-                    bootfs_vmo.read(buffer.get(), parsed_entry->data_off, sizeof(buffer));
-                    vmo_out.write(buffer.get(), 0, sizeof(buffer));
+
+                    size_t data_len = parsed_entry->data_len;
+                    bootfs_vmo.read(buffer.get(), parsed_entry->data_off, data_len);
+
+                    zx::vmo vmo;
+                    zx::vmo::create(parsed_entry->data_len, 0, &vmo);
+                    *entry = Entry { parsed_entry->data_len, std::move(vmo) };
+
+                    entry->vmo.write(buffer.get(), 0, data_len);
+                    found = true;
+                    break;
                 }
             }
 
-            status = ZX_OK;
+            status = found ? ZX_OK : ZX_ERR_NOT_FOUND;
             break;
         }
         default:

@@ -18,14 +18,14 @@
 #include <unittest/unittest.h>
 #include <zbi-bootfs/zbi-bootfs.h>
 
-#define file_path "boot/testdata/zbi-bootfs/test-image.zbi"
-#define file_name "nand_image"
+constexpr char kFilePath[] = "boot/testdata/zbi-bootfs/test-image.zbi";
+constexpr char kFileName[] = "nand_image";
 
 static bool ZbiInit(void) {
     BEGIN_TEST;
     zbi_bootfs::ZbiBootfsParser image;
     size_t byte_offset = 0;
-    const char* input = file_path;
+    const char* input = kFilePath;
 
     // Check good input
     zx::vmo vmo_out;
@@ -49,32 +49,32 @@ static bool ZbiInitBadInput(void) {
 static bool ZbiProcessSuccess(void) {
     BEGIN_TEST;
     zbi_bootfs::ZbiBootfsParser image;
-    const char* input = file_path;
-    const char* filename = file_name;
+    const char* input = kFilePath;
+    const char* filename = kFileName;
     size_t byte_offset = 0;
 
-    zx::vmo vmo_out;
+    zbi_bootfs::Entry entry;
 
     ASSERT_EQ(ZX_OK, image.Init(input, byte_offset));
 
     // Check bootfs filename
     // This will return a list of Bootfs entires, plus details of "filename" entry
-    ASSERT_EQ(ZX_OK, image.ProcessZbi(vmo_out, filename));
+    ASSERT_EQ(ZX_OK, image.ProcessZbi(filename, &entry));
     END_TEST;
 }
 
 static bool ZbiProcessBadOffset(void) {
     BEGIN_TEST;
     zbi_bootfs::ZbiBootfsParser image;
-    const char* input = file_path;
-    const char* filename = file_name;
-    zx::vmo vmo_out;
+    const char* input = kFilePath;
+    const char* filename = kFileName;
+    zbi_bootfs::Entry entry;
 
     // Check loading zbi with bad offset value and then try processing it
     // This should return an error
     size_t byte_offset = 1;
     ASSERT_EQ(ZX_OK, image.Init(input, byte_offset));
-    ASSERT_EQ(ZX_ERR_BAD_STATE, image.ProcessZbi(vmo_out, filename));
+    ASSERT_EQ(ZX_ERR_BAD_STATE, image.ProcessZbi(filename, &entry));
 
     END_TEST;
 }
@@ -82,15 +82,15 @@ static bool ZbiProcessBadOffset(void) {
 static bool ZbiProcessBadFile(void) {
     BEGIN_TEST;
     zbi_bootfs::ZbiBootfsParser image;
-    const char* input = file_path;
+    const char* input = kFilePath;
     size_t byte_offset = 0;
-    zx::vmo vmo_out;
+    zbi_bootfs::Entry entry;
 
     ASSERT_EQ(ZX_OK, image.Init(input, byte_offset));
     // Check bad payload filename
     // This will return a list of payload (Bootfs) entires
     const char* filename = "";
-    ASSERT_EQ(ZX_OK, image.ProcessZbi(vmo_out, filename));
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, image.ProcessZbi(filename, &entry));
 
     END_TEST;
 }
