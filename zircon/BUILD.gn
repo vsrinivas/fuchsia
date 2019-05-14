@@ -218,7 +218,6 @@ group("all-cpu") {
 group("build-tests") {
   testonly = true
   deps = [
-    "$zx/public/gn/fuzzer:noop-test.fuzzer",
     "$zx/public/gn/toolchain:noop-test",
   ]
 }
