@@ -6,15 +6,20 @@
 
 use {
     crate::module_output::ModuleOutputWriterService,
+    crate::story_context_store::StoryContextStore,
     failure::{Error, ResultExt},
     fidl_fuchsia_app_discover::{DiscoverRegistryRequest, DiscoverRegistryRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog as syslog,
     futures::prelude::*,
+    parking_lot::Mutex,
+    std::sync::Arc,
 };
 
 mod module_output;
+mod story_context_store;
+mod utils;
 
 // The directory name where the discovermgr FIDL services are exposed.
 static SERVICE_DIRECTORY: &str = "public";
@@ -26,6 +31,7 @@ enum IncomingServices {
 
 /// Handle DiscoveryRegistry requests.
 async fn run_discover_registry_server(
+    story_context_store: Arc<Mutex<StoryContextStore>>,
     mut stream: DiscoverRegistryRequestStream,
 ) -> Result<(), Error> {
     while let Some(request) =
@@ -34,7 +40,8 @@ async fn run_discover_registry_server(
         match request {
             DiscoverRegistryRequest::RegisterModuleOutputWriter { module, request, .. } => {
                 let module_output_stream = request.into_stream()?;
-                ModuleOutputWriterService::new(module)?.spawn(module_output_stream);
+                ModuleOutputWriterService::new(story_context_store.clone(), module)?
+                    .spawn(module_output_stream);
             }
         }
     }
@@ -45,6 +52,8 @@ async fn run_discover_registry_server(
 async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["discovermgr"])?;
 
+    let story_context_store = Arc::new(Mutex::new(StoryContextStore::new()));
+
     let mut fs = ServiceFs::new_local();
     fs.dir(SERVICE_DIRECTORY).add_fidl_service(IncomingServices::DiscoverRegistry);
 
@@ -53,7 +62,8 @@ async fn main() -> Result<(), Error> {
     const MAX_CONCURRENT: usize = 10_000;
     let fut =
         fs.for_each_concurrent(MAX_CONCURRENT, |IncomingServices::DiscoverRegistry(stream)| {
-            run_discover_registry_server(stream).unwrap_or_else(|e| syslog::fx_log_err!("{:?}", e))
+            run_discover_registry_server(story_context_store.clone(), stream)
+                .unwrap_or_else(|e| syslog::fx_log_err!("{:?}", e))
         });
 
     await!(fut);

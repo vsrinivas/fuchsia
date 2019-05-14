@@ -21,6 +21,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:parking_lot",
   ]
 }
 
