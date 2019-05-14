@@ -8,7 +8,7 @@ const uint32 MAX_FACET_NAME_LENGTH = 100;
 const uint32 MAX_CHILD_NAME_LENGTH = 100;
 const uint32 MAX_STORAGE_NAME_LENGTH = 100;
 const uint32 MAX_PATH_LENGTH = 1024;
-const uint32 MAX_URI_LENGTH = 4096;
+const uint32 MAX_URL_LENGTH = 4096;
 const uint32 MAX_MONIKER_LENGTH = 4096;
 
 // Error produced when a component terminates unexpected.

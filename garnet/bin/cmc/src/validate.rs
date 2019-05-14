@@ -692,12 +692,12 @@ mod tests {
                 "children": [
                     {
                         "name": "system-logger2",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                         "startup": "lazy"
                     },
                     {
                         "name": "abc123_-",
-                        "uri": "https://www.google.com/gmail",
+                        "url": "https://www.google.com/gmail",
                         "startup": "eager"
                     }
                 ]
@@ -708,14 +708,14 @@ mod tests {
             input = json!({
                 "children": [ {} ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /children/0/name, This property is required at /children/0/startup, This property is required at /children/0/uri")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /children/0/name, This property is required at /children/0/startup, This property is required at /children/0/url")),
         },
         test_cm_children_bad_name => {
             input = json!({
                 "children": [
                     {
                         "name": "bad^",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                         "startup": "lazy"
                     }
                 ]
@@ -827,7 +827,7 @@ mod tests {
                 "children": [
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-.",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                         "startup": "lazy"
                     }
                 ]
@@ -839,7 +839,7 @@ mod tests {
                 "children": [
                     {
                         "name": "#bad",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                         "startup": "lazy"
                     }
                 ]
@@ -851,48 +851,48 @@ mod tests {
                 "children": [
                     {
                         "name": "a".repeat(101),
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                         "startup": "lazy"
                     }
                 ]
             }),
             result = Err(Error::validate_schema(CM_SCHEMA, "MaxLength condition is not met at /children/0/name")),
         },
-        test_cm_uri => {
+        test_cm_url => {
             input = json!({
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "my+awesome-scheme.2://abc123!@#$%.com",
+                        "url": "my+awesome-scheme.2://abc123!@#$%.com",
                         "startup": "lazy"
                     }
                 ]
             }),
             result = Ok(()),
         },
-        test_cm_uri_invalid => {
+        test_cm_url_invalid => {
             input = json!({
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://",
+                        "url": "fuchsia-pkg://",
                         "startup": "lazy"
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /children/0/uri")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /children/0/url")),
         },
-        test_cm_uri_too_long => {
+        test_cm_url_too_long => {
             input = json!({
                 "children": [
                     {
                         "name": "logger",
-                        "uri": &format!("fuchsia-pkg://{}", "a".repeat(4083)),
+                        "url": &format!("fuchsia-pkg://{}", "a".repeat(4083)),
                         "startup": "lazy"
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "MaxLength condition is not met at /children/0/uri")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "MaxLength condition is not met at /children/0/url")),
         },
     }
 
@@ -907,7 +907,7 @@ mod tests {
             "children": [
                 {
                     'name': 'logger',
-                    'uri': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
+                    'url': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
                 },
             ],
         }"##;
@@ -960,7 +960,7 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     }
                 ]
             }),
@@ -974,7 +974,7 @@ mod tests {
                 "children": [
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-.",
-                        "uri": "https://www.google.com/gmail"
+                        "url": "https://www.google.com/gmail"
                     }
                 ]
             }),
@@ -1004,7 +1004,7 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     }
                 ]
             }),
@@ -1049,15 +1049,15 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     },
                     {
                         "name": "scenic",
-                        "uri": "fuchsia-pkg://fuchsia.com/scenic/stable#meta/scenic.cm"
+                        "url": "fuchsia-pkg://fuchsia.com/scenic/stable#meta/scenic.cm"
                     },
                     {
                         "name": "echo_server",
-                        "uri": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
                     }
                 ]
             }),
@@ -1079,11 +1079,11 @@ mod tests {
                 "children": [
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-from",
-                        "uri": "https://www.google.com/gmail"
+                        "url": "https://www.google.com/gmail"
                     },
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-to",
-                        "uri": "https://www.google.com/gmail"
+                        "url": "https://www.google.com/gmail"
                     },
                 ]
             }),
@@ -1152,7 +1152,7 @@ mod tests {
                 } ],
                 "children": [ {
                     "name": "logger",
-                    "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                 } ]
             }),
             result = Err(Error::validate("\"#missing\" is an \"offer\" target but it does not appear in \"children\"")),
@@ -1179,7 +1179,7 @@ mod tests {
                     ],
                 } ],
                 "children": [ {
-                    "name": "logger", "uri": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                    "name": "logger", "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
                 } ],
             }),
             result = Err(Error::validate("Offer target \"#logger\" is same as source")),
@@ -1206,11 +1206,11 @@ mod tests {
                 "children": [
                     {
                         "name": "scenic",
-                        "uri": "fuchsia-pkg://fuchsia.com/scenic/stable#meta/scenic.cm"
+                        "url": "fuchsia-pkg://fuchsia.com/scenic/stable#meta/scenic.cm"
                     },
                     {
                         "name": "echo_server",
-                        "uri": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
                     }
                 ]
             }),
@@ -1223,16 +1223,16 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                     },
                     {
                         "name": "gmail",
-                        "uri": "https://www.google.com/gmail",
+                        "url": "https://www.google.com/gmail",
                         "startup": "eager",
                     },
                     {
                         "name": "echo",
-                        "uri": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
                         "startup": "lazy",
                     },
                 ]
@@ -1243,18 +1243,18 @@ mod tests {
             input = json!({
                 "children": [ {} ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /children/0/name, This property is required at /children/0/uri")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /children/0/name, This property is required at /children/0/url")),
         },
         test_cml_children_duplicate_names => {
            input = json!({
                "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     },
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/beta#meta/logger.cm"
+                        "url": "fuchsia-pkg://fuchsia.com/logger/beta#meta/logger.cm"
                     }
                 ]
             }),
@@ -1265,7 +1265,7 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                         "startup": "zzz",
                     },
                 ],
@@ -1353,7 +1353,7 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                     },
                 ]
             }),
@@ -1364,7 +1364,7 @@ mod tests {
                 "children": [
                     {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-.",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                     },
                 ]
             }),
@@ -1375,7 +1375,7 @@ mod tests {
                 "children": [
                     {
                         "name": "#bad",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                     },
                 ]
             }),
@@ -1386,44 +1386,44 @@ mod tests {
                 "children": [
                     {
                         "name": "a".repeat(101),
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                     }
                 ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /children/0/name")),
         },
-        test_cml_uri => {
+        test_cml_url => {
             input = json!({
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "my+awesome-scheme.2://abc123!@#$%.com",
+                        "url": "my+awesome-scheme.2://abc123!@#$%.com",
                     },
                 ]
             }),
             result = Ok(()),
         },
-        test_cml_uri_invalid => {
+        test_cml_url_invalid => {
             input = json!({
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://",
+                        "url": "fuchsia-pkg://",
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/uri")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/url")),
         },
-        test_cml_uri_too_long => {
+        test_cml_url_too_long => {
             input = json!({
                 "children": [
                     {
                         "name": "logger",
-                        "uri": &format!("fuchsia-pkg://{}", "a".repeat(4083)),
+                        "url": &format!("fuchsia-pkg://{}", "a".repeat(4083)),
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /children/0/uri")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /children/0/url")),
         },
     }
 

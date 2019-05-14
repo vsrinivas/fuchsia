@@ -17,11 +17,11 @@
     "children": [
         {
             "name": "echo_server",
-            "uri": "fuchsia-pkg://fuchsia.com/topology_example#meta/echo_server.cm",
+            "url": "fuchsia-pkg://fuchsia.com/topology_example#meta/echo_server.cm",
         },
         {
             "name": "echo_client",
-            "uri": "fuchsia-pkg://fuchsia.com/topology_example#meta/echo_client.cm",
+            "url": "fuchsia-pkg://fuchsia.com/topology_example#meta/echo_client.cm",
             "startup": "eager",
         },
     ],

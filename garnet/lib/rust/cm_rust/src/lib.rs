@@ -312,7 +312,7 @@ fidl_into_struct!(OfferTarget, OfferTarget, fsys::OfferTarget, fsys::OfferTarget
 fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
                   {
                       name: String,
-                      uri: String,
+                      url: String,
                       startup: fsys::StartupMode,
                   });
 
@@ -824,13 +824,13 @@ mod tests {
                children: Some(vec![
                     fsys::ChildDecl {
                         name: Some("netstack".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm"
+                        url: Some("fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm"
                                   .to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                     },
                     fsys::ChildDecl {
                         name: Some("echo".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/echo#meta/echo.cm"
+                        url: Some("fuchsia-pkg://fuchsia.com/echo#meta/echo.cm"
                                   .to_string()),
                         startup: Some(fsys::StartupMode::Eager),
                     },
@@ -898,12 +898,12 @@ mod tests {
                     children: vec![
                         ChildDecl {
                             name: "netstack".to_string(),
-                            uri: "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm".to_string(),
+                            url: "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                         ChildDecl {
                             name: "echo".to_string(),
-                            uri: "fuchsia-pkg://fuchsia.com/echo#meta/echo.cm".to_string(),
+                            url: "fuchsia-pkg://fuchsia.com/echo#meta/echo.cm".to_string(),
                             startup: fsys::StartupMode::Eager,
                         },
                     ],

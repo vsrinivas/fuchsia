@@ -25,7 +25,7 @@ pub struct Document {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Child {
     pub name: String,
-    pub uri: String,
+    pub url: String,
     pub startup: String,
 }
 

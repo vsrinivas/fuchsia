@@ -42,12 +42,12 @@ fn main() {
         let children = vec![
             ChildDecl {
                 name: Some("logger".to_string()),
-                uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                 startup: Some(StartupMode::Lazy),
             },
             ChildDecl {
                 name: Some("netstack".to_string()),
-                uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                 startup: Some(StartupMode::Lazy),
             },
         ];

@@ -13,7 +13,7 @@
       "minLength": 1,
       "maxLength": 1024
     },
-    "uri-clause": {
+    "url-clause": {
       "type": "string",
       "pattern": "^[0-9a-z+\\-\\.]+://.+$",
       "minLength": 1,
@@ -266,7 +266,7 @@
         "type": "object",
         "required": [
           "name",
-          "uri"
+          "url"
         ],
         "properties": {
           "name": {
@@ -278,10 +278,10 @@
               "System-logger"
             ]
           },
-          "uri": {
+          "url": {
             "title": "Child component URI",
             "description": "The URI that identifies the child component.",
-            "allOf": [{ "$ref": "#/definitions/uri-clause" }],
+            "allOf": [{ "$ref": "#/definitions/url-clause" }],
             "examples": [
               "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server.cml"
             ]

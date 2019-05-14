@@ -10,8 +10,8 @@ using fuchsia.io;
 //
 // This object provides access to a package's content and relevant metadata.
 table Package {
-    // The URI of the package itself.
-    1: string package_uri;
+    // The URL of the package itself.
+    1: string package_url;
 
     // The package's content directory.
     2: fuchsia.io.Directory package_dir;

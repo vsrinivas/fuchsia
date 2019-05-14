@@ -14,9 +14,9 @@ use {
 
 pub static SCHEME: &str = "fuchsia-boot";
 
-/// Resolves component URIs with the "fuchsia-boot" scheme.
+/// Resolves component URLs with the "fuchsia-boot" scheme.
 ///
-/// URI syntax:
+/// URL syntax:
 /// - fuchsia-boot:///directory#meta/component.cm
 pub struct FuchsiaBootResolver {}
 
@@ -27,35 +27,35 @@ impl FuchsiaBootResolver {
 
     async fn resolve_async<'a>(
         &'a self,
-        component_uri: &'a str,
+        component_url: &'a str,
     ) -> Result<fsys::Component, ResolverError> {
-        // Parse URI.
-        let uri = BootUri::parse(component_uri)
-            .map_err(|e| ResolverError::component_not_available(component_uri, e))?;
-        let res = uri.resource().ok_or(ResolverError::uri_missing_resource_error(component_uri))?;
-        let res_path = PathBuf::from(uri.path()).join(PathBuf::from(res));
+        // Parse URL.
+        let url = BootUri::parse(component_url)
+            .map_err(|e| ResolverError::component_not_available(component_url, e))?;
+        let res = url.resource().ok_or(ResolverError::url_missing_resource_error(component_url))?;
+        let res_path = PathBuf::from(url.path()).join(PathBuf::from(res));
         let res_path_str =
-            res_path.to_str().ok_or(ResolverError::uri_missing_resource_error(component_uri))?;
+            res_path.to_str().ok_or(ResolverError::url_missing_resource_error(component_url))?;
 
         // Read component manifest from resource into a component decl.
         let cm_file = io_util::open_file_in_namespace(&res_path_str)
-            .map_err(|e| ResolverError::component_not_available(component_uri, e))?;
+            .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let cm_str = await!(io_util::read_file(&cm_file))
-            .map_err(|e| ResolverError::component_not_available(component_uri, e))?;
+            .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let component_decl = translate(&cm_str)
-            .map_err(|e| ResolverError::component_not_available(component_uri, e))?;
+            .map_err(|e| ResolverError::component_not_available(component_url, e))?;
 
         // Set up the fuchsia-boot path as the component's "package" namespace.
-        let package_path = uri.path();
+        let package_path = url.path();
         let path_proxy = io_util::open_directory_in_namespace(&package_path)
-            .map_err(|e| ResolverError::component_not_available(component_uri, e))?;
+            .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let package = fsys::Package {
-            package_uri: Some(uri.root_uri().to_string()),
+            package_url: Some(url.root_uri().to_string()),
             package_dir: Some(ClientEnd::new(path_proxy.into_channel().unwrap().into_zx_channel())),
         };
 
         Ok(fsys::Component {
-            resolved_uri: Some(component_uri.to_string()),
+            resolved_url: Some(component_url.to_string()),
             decl: Some(component_decl),
             package: Some(package),
         })
@@ -65,9 +65,9 @@ impl FuchsiaBootResolver {
 impl Resolver for FuchsiaBootResolver {
     fn resolve<'a>(
         &'a self,
-        component_uri: &'a str,
+        component_url: &'a str,
     ) -> FutureObj<'a, Result<fsys::Component, ResolverError>> {
-        FutureObj::new(Box::new(self.resolve_async(component_uri)))
+        FutureObj::new(Box::new(self.resolve_async(component_url)))
     }
 }
 
@@ -88,7 +88,7 @@ mod tests {
             .unwrap();
             assert_eq!(
                 "fuchsia-boot:///pkg#meta/component_manager_tests_hello_world.cm",
-                component.resolved_uri.unwrap()
+                component.resolved_url.unwrap()
             );
             let program = fdata::Dictionary {
                 entries: vec![fdata::Entry {
@@ -106,7 +106,7 @@ mod tests {
                 storage: None,
             };
             assert_eq!(component_decl, component.decl.unwrap());
-            assert_eq!("fuchsia-boot:///pkg", component.package.unwrap().package_uri.unwrap());
+            assert_eq!("fuchsia-boot:///pkg", component.package.unwrap().package_url.unwrap());
         });
     }
 }

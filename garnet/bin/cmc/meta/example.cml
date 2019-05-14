@@ -29,11 +29,11 @@
   "children": [
     {
       "name": "logger",
-      "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+      "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
     },
     {
       "name": "netstack",
-      "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+      "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
     },
   ],
   "facets": {

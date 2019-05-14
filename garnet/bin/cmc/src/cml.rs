@@ -56,7 +56,7 @@ pub struct To {
 #[derive(Deserialize, Debug)]
 pub struct Child {
     pub name: String,
-    pub uri: String,
+    pub url: String,
     pub startup: Option<String>,
 }
 

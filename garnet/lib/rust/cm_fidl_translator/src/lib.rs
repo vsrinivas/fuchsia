@@ -172,7 +172,7 @@ impl CmInto<fsys::ChildDecl> for cm::Child {
     fn cm_into(self) -> Result<fsys::ChildDecl, Error> {
         Ok(fsys::ChildDecl {
             name: Some(self.name),
-            uri: Some(self.uri),
+            url: Some(self.url),
             startup: Some(startup_from_str(&self.startup)?),
         })
     }
@@ -504,7 +504,7 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                         "startup": "lazy"
                     }
                 ]
@@ -527,7 +527,7 @@ mod tests {
                 let children = vec![
                     fsys::ChildDecl{
                         name: Some("logger".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                     },
                 ];
@@ -592,12 +592,12 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                         "startup": "lazy",
                     },
                     {
                         "name": "netstack",
-                        "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
                         "startup": "eager",
                     }
                 ],
@@ -644,12 +644,12 @@ mod tests {
                 let children = vec![
                     fsys::ChildDecl{
                         name: Some("logger".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                     },
                     fsys::ChildDecl{
                         name: Some("netstack".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Eager),
                     },
                 ];
@@ -664,12 +664,12 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                         "startup": "lazy"
                     },
                     {
                         "name": "echo_server",
-                        "uri": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm",
                         "startup": "eager"
                     }
                 ]
@@ -678,12 +678,12 @@ mod tests {
                 let children = vec![
                     fsys::ChildDecl{
                         name: Some("logger".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                     },
                     fsys::ChildDecl{
                         name: Some("echo_server".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm".to_string()),
                         startup: Some(fsys::StartupMode::Eager),
                     },
                 ];
@@ -772,12 +772,12 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                         "startup": "lazy"
                     },
                     {
                         "name": "netstack",
-                        "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+                        "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
                         "startup": "eager"
                     }
                 ],
@@ -823,12 +823,12 @@ mod tests {
                 let children = vec![
                     fsys::ChildDecl {
                         name: Some("logger".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                     },
                     fsys::ChildDecl {
                         name: Some("netstack".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Eager),
                     },
                 ];

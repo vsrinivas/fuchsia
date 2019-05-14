@@ -8,7 +8,7 @@
       "minLength": 1,
       "maxLength": 1024
     },
-    "uri-clause": {
+    "url-clause": {
       "type": "string",
       "pattern": "^[0-9a-z+\\-\\.]+://.+$",
       "minLength": 1,
@@ -304,7 +304,7 @@
         "type": "object",
         "required": [
           "name",
-          "uri",
+          "url",
           "startup"
         ],
         "properties": {
@@ -312,8 +312,8 @@
             "allOf": [{ "$ref": "#/definitions/name-clause" }],
             "title": "Child component name"
           },
-          "uri": {
-            "allOf": [{ "$ref": "#/definitions/uri-clause" }],
+          "url": {
+            "allOf": [{ "$ref": "#/definitions/url-clause" }],
             "title": "Child component URI"
           },
           "startup": {

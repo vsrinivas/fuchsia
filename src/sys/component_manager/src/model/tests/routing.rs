@@ -54,7 +54,7 @@ async fn use_from_parent() {
                     ],
                     children: vec![ChildDecl {
                         name: "b".to_string(),
-                        uri: "test:///b".to_string(),
+                        url: "test:///b".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     }],
                     ..default_component_decl()
@@ -124,7 +124,7 @@ async fn use_from_grandparent() {
                     ],
                     children: vec![ChildDecl {
                         name: "b".to_string(),
-                        uri: "test:///b".to_string(),
+                        url: "test:///b".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     }],
                     ..default_component_decl()
@@ -153,7 +153,7 @@ async fn use_from_grandparent() {
                     ],
                     children: vec![ChildDecl {
                         name: "c".to_string(),
-                        uri: "test:///c".to_string(),
+                        url: "test:///c".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     }],
                     ..default_component_decl()
@@ -202,7 +202,7 @@ async fn use_from_sibling_no_root() {
                 ComponentDecl {
                     children: vec![ChildDecl {
                         name: "b".to_string(),
-                        uri: "test:///b".to_string(),
+                        url: "test:///b".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     }],
                     ..default_component_decl()
@@ -232,12 +232,12 @@ async fn use_from_sibling_no_root() {
                     children: vec![
                         ChildDecl {
                             name: "c".to_string(),
-                            uri: "test:///c".to_string(),
+                            url: "test:///c".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                         ChildDecl {
                             name: "d".to_string(),
-                            uri: "test:///d".to_string(),
+                            url: "test:///d".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                     ],
@@ -322,12 +322,12 @@ async fn use_from_sibling_root() {
                     children: vec![
                         ChildDecl {
                             name: "b".to_string(),
-                            uri: "test:///b".to_string(),
+                            url: "test:///b".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                         ChildDecl {
                             name: "c".to_string(),
-                            uri: "test:///c".to_string(),
+                            url: "test:///c".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                     ],
@@ -415,12 +415,12 @@ async fn use_from_niece() {
                     children: vec![
                         ChildDecl {
                             name: "b".to_string(),
-                            uri: "test:///b".to_string(),
+                            url: "test:///b".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                         ChildDecl {
                             name: "c".to_string(),
-                            uri: "test:///c".to_string(),
+                            url: "test:///c".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                     ],
@@ -444,7 +444,7 @@ async fn use_from_niece() {
                     ],
                     children: vec![ChildDecl {
                         name: "d".to_string(),
-                        uri: "test:///d".to_string(),
+                        url: "test:///d".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     }],
                     ..default_component_decl()
@@ -535,12 +535,12 @@ async fn use_kitchen_sink() {
                     children: vec![
                         ChildDecl {
                             name: "b".to_string(),
-                            uri: "test:///b".to_string(),
+                            url: "test:///b".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                         ChildDecl {
                             name: "c".to_string(),
-                            uri: "test:///c".to_string(),
+                            url: "test:///c".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                     ],
@@ -577,12 +577,12 @@ async fn use_kitchen_sink() {
                     children: vec![
                         ChildDecl {
                             name: "d".to_string(),
-                            uri: "test:///d".to_string(),
+                            url: "test:///d".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                         ChildDecl {
                             name: "e".to_string(),
-                            uri: "test:///e".to_string(),
+                            url: "test:///e".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                     ],
@@ -614,12 +614,12 @@ async fn use_kitchen_sink() {
                     children: vec![
                         ChildDecl {
                             name: "f".to_string(),
-                            uri: "test:///f".to_string(),
+                            url: "test:///f".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                         ChildDecl {
                             name: "g".to_string(),
-                            uri: "test:///g".to_string(),
+                            url: "test:///g".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                     ],
@@ -680,7 +680,7 @@ async fn use_kitchen_sink() {
                     }),],
                     children: vec![ChildDecl {
                         name: "h".to_string(),
-                        uri: "test:///h".to_string(),
+                        url: "test:///h".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     },],
                     ..default_component_decl()
@@ -745,7 +745,7 @@ async fn use_from_component_manager_namespace() {
                     ],
                     children: vec![ChildDecl {
                         name: "b".to_string(),
-                        uri: "test:///b".to_string(),
+                        url: "test:///b".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     }],
                     ..default_component_decl()
@@ -792,7 +792,7 @@ async fn use_not_offered() {
                     program: None,
                     children: vec![ChildDecl {
                         name: "b".to_string(),
-                        uri: "test:///b".to_string(),
+                        url: "test:///b".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     }],
                     ..default_component_decl()
@@ -860,12 +860,12 @@ async fn use_offer_source_not_exposed() {
                     children: vec![
                         ChildDecl {
                             name: "b".to_string(),
-                            uri: "test:///b".to_string(),
+                            url: "test:///b".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                         ChildDecl {
                             name: "c".to_string(),
-                            uri: "test:///c".to_string(),
+                            url: "test:///c".to_string(),
                             startup: fsys::StartupMode::Lazy,
                         },
                     ],
@@ -917,7 +917,7 @@ async fn use_offer_source_not_offered() {
                 ComponentDecl {
                     children: vec![ChildDecl {
                         name: "b".to_string(),
-                        uri: "test:///b".to_string(),
+                        url: "test:///b".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     },],
                     ..default_component_decl()
@@ -947,7 +947,7 @@ async fn use_offer_source_not_offered() {
                     ],
                     children: vec![ChildDecl {
                         name: "c".to_string(),
-                        uri: "test:///c".to_string(),
+                        url: "test:///c".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     },],
                     ..default_component_decl()
@@ -998,7 +998,7 @@ async fn use_from_expose() {
                     program: None,
                     children: vec![ChildDecl {
                         name: "b".to_string(),
-                        uri: "test:///b".to_string(),
+                        url: "test:///b".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     },],
                     ..default_component_decl()
@@ -1019,7 +1019,7 @@ async fn use_from_expose() {
                     ],
                     children: vec![ChildDecl {
                         name: "c".to_string(),
-                        uri: "test:///c".to_string(),
+                        url: "test:///c".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     },],
                     ..default_component_decl()
@@ -1088,7 +1088,7 @@ async fn offer_from_non_executable() {
                     ],
                     children: vec![ChildDecl {
                         name: "b".to_string(),
-                        uri: "test:///b".to_string(),
+                        url: "test:///b".to_string(),
                         startup: fsys::StartupMode::Lazy,
                     }],
                     ..default_component_decl()

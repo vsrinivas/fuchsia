@@ -14,10 +14,10 @@ use {
 lazy_static! {
     static ref PATH: Identifier = Identifier::new(r"^(/[^/]+)+$", 1024);
     static ref NAME: Identifier = Identifier::new(r"^[0-9a-z_\-\.]+$", 100);
-    static ref URI: Identifier = Identifier::new(r"^[0-9a-z\+\-\.]+://.+$", 4096);
+    static ref URL: Identifier = Identifier::new(r"^[0-9a-z\+\-\.]+://.+$", 4096);
 }
 
-/// Enum type that can represent any error encountered during validation.
+/// Enum type that can represent any error encountered durlng validation.
 #[derive(Debug)]
 pub enum Error {
     MissingField(String, String),
@@ -83,7 +83,7 @@ impl fmt::Display for Error {
     }
 }
 
-/// Represents a list of errors encountered during validation.
+/// Represents a list of errors encountered durlng validation.
 #[derive(Debug)]
 pub struct ErrorList {
     errs: Vec<Error>,
@@ -203,7 +203,7 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::duplicate_field("ChildDecl", "name", name));
             }
         }
-        URI.check(child.uri.as_ref(), "ChildDecl", "uri", &mut self.errors);
+        URL.check(child.url.as_ref(), "ChildDecl", "url", &mut self.errors);
         if child.startup.is_none() {
             self.errors.push(Error::missing_field("ChildDecl", "startup"));
         }
@@ -585,19 +585,19 @@ mod tests {
             result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
         },
 
-        // uri
-        test_identifier_uri_valid => {
-            identifier = &URI,
+        // url
+        test_identifier_url_valid => {
+            identifier = &URL,
             input = "my+awesome-scheme.2://abc123!@#$%.com",
             result = Ok(()),
         },
-        test_identifier_uri_invalid => {
-            identifier = &URI,
+        test_identifier_url_invalid => {
+            identifier = &URL,
             input = "fuchsia-pkg://",
             result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
         },
-        test_identifier_uri_too_long => {
-            identifier = &URI,
+        test_identifier_url_too_long => {
+            identifier = &URL,
             input = &format!("fuchsia-pkg://{}", "a".repeat(4083)),
             result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
         },
@@ -893,7 +893,7 @@ mod tests {
                 decl.children = Some(vec![
                     ChildDecl{
                         name: Some("netstack".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Lazy),
                     },
                 ]);
@@ -973,7 +973,7 @@ mod tests {
                 ]);
                 decl.children = Some(vec![ChildDecl{
                     name: Some("logger".to_string()),
-                    uri: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
                     startup: Some(StartupMode::Lazy),
                 }]);
                 decl
@@ -1019,7 +1019,7 @@ mod tests {
                 decl.children = Some(vec![
                     ChildDecl{
                         name: Some("netstack".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Eager),
                     },
                 ]);
@@ -1069,14 +1069,14 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.children = Some(vec![ChildDecl{
                     name: None,
-                    uri: None,
+                    url: None,
                     startup: None,
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
                 Error::missing_field("ChildDecl", "name"),
-                Error::missing_field("ChildDecl", "uri"),
+                Error::missing_field("ChildDecl", "url"),
                 Error::missing_field("ChildDecl", "startup"),
             ])),
         },
@@ -1085,14 +1085,14 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.children = Some(vec![ChildDecl{
                     name: Some("^bad".to_string()),
-                    uri: Some("bad-scheme&://blah".to_string()),
+                    url: Some("bad-scheme&://blah".to_string()),
                     startup: Some(StartupMode::Lazy),
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_field("ChildDecl", "name"),
-                Error::invalid_field("ChildDecl", "uri"),
+                Error::invalid_field("ChildDecl", "url"),
             ])),
         },
         test_validate_children_long_identifiers => {
@@ -1100,14 +1100,14 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.children = Some(vec![ChildDecl{
                     name: Some("a".repeat(1025)),
-                    uri: Some(format!("fuchsia-pkg://{}", "a".repeat(4083))),
+                    url: Some(format!("fuchsia-pkg://{}", "a".repeat(4083))),
                     startup: Some(StartupMode::Lazy),
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
                 Error::field_too_long("ChildDecl", "name"),
-                Error::field_too_long("ChildDecl", "uri"),
+                Error::field_too_long("ChildDecl", "url"),
             ])),
         },
     }

@@ -6,32 +6,32 @@ library fuchsia.sys2;
 
 using zx;
 
-// An interface for resolving a URI to a component.
+// An interface for resolving a URL to a component.
 //
 // This interface is implemented by components that provide support
-// for loading components with a particular URI scheme.   For example,
+// for loading components with a particular URL scheme.   For example,
 // the Fuchsia package component resolver exposes a service with this
-// interface to resolve component URIs using the "fuchsia-pkg://" scheme.
+// interface to resolve component URLs using the "fuchsia-pkg://" scheme.
 //
-// To use a resolver to resolve URIs within your realm, register it
+// To use a resolver to resolve URLs within your realm, register it
 // in your realm's manifest.  (TODO: explain in more detail)
 //
 // Note: The component manager is the only intended direct client of this
 // interface.
 [Discoverable]
 protocol ComponentResolver {
-    // Resolves a component with the given URI.
+    // Resolves a component with the given URL.
     //
-    // |component_uri| is the unescaped URI of the component to resolve.
+    // |component_url| is the unescaped URL of the component to resolve.
     //
     // If successful, returns |ZX_OK| and information about the component
     // that was resolved.
     //
     // On failure, returns null |info| and...
-    // - |ZX_ERR_INVALID_ARGS|: The component's URI was malformed.
+    // - |ZX_ERR_INVALID_ARGS|: The component's URL was malformed.
     // - |ZX_ERR_NOT_FOUND|: The component does not exist.
     // - |ZX_ERR_UNAVAILABLE|: The resolver was unable to retrieve or parse
     //   the component's resources.
-    Resolve(string component_uri)
+    Resolve(string component_url)
         -> (zx.status status, Component component);
 };

@@ -23,16 +23,16 @@ use {
 const NUM_THREADS: usize = 2;
 
 struct Opt {
-    pub root_component_uri: String,
+    pub root_component_url: String,
 }
 
 fn parse_args() -> Result<Opt, Error> {
     let mut args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <root-component-uri>", &args[0]);
+        println!("Usage: {} <root-component-url>", &args[0]);
         return Err(failure::err_msg("Invalid arguments"));
     }
-    Ok(Opt { root_component_uri: args.remove(1) })
+    Ok(Opt { root_component_url: args.remove(1) })
 }
 
 fn main() -> Result<(), Error> {
@@ -45,7 +45,7 @@ fn main() -> Result<(), Error> {
 
     let resolver_registry = startup::available_resolvers()?;
     let params = ModelParams {
-        root_component_uri: opt.root_component_uri,
+        root_component_url: opt.root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Box::new(ElfRunner::new()),
     };

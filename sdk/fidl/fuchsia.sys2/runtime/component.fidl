@@ -9,10 +9,10 @@ library fuchsia.sys2;
 // This object provides the component's declaration, access to its package's
 // content, and relevant metadata.
 table Component {
-    // The resolved URI of the component.
-    // This is the canonical URI obtained by the component resolver after
+    // The resolved URL of the component.
+    // This is the canonical URL obtained by the component resolver after
     // after following redirects and resolving relative paths.
-    1: string resolved_uri;
+    1: string resolved_url;
 
     // The component's declaration.
     // This information is typically obtained from the component's manifest
@@ -25,7 +25,7 @@ table Component {
     //
     // This is null if the component is not represented as a package.
     // In that case, it is the runner's responsibility to load the component's
-    // resource from the |resolved_uri|.  This mechanism is used for web
+    // resource from the |resolved_url|.  This mechanism is used for web
     // applications.
     //
     // TODO(CP-154): It might be better to return a package loader interface

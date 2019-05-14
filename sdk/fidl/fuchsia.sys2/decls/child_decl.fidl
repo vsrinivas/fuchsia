@@ -19,16 +19,16 @@ table ChildDecl {
     /// following characters: [a-z0-9-_.].
     1: string:MAX_CHILD_NAME_LENGTH name;
 
-    /// The child component's URI.
+    /// The child component's URL.
     ///
-    /// Must be non-empty and a well-formed URI.
-    2: string:MAX_URI_LENGTH uri;
+    /// Must be non-empty and a well-formed URL.
+    2: string:MAX_URL_LENGTH url;
 
     /// The startup mode for the component instance.
     3: StartupMode startup;
 
     // TODO(CP-154): Provide a way to supply parameters to the child, possibly
-    // as command-line arguments, by URI, or maybe in some other way which is
+    // as command-line arguments, by URL, or maybe in some other way which is
     // orthogonal to other inputs to mitigate confused deputy issues.  Perhaps
     // as a dictionary like we do for runners?
 };

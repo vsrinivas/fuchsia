@@ -14,7 +14,7 @@ using fuchsia.io;
 // the Dart virtual machine exposes a service with this interface to run
 // Dart programs.
 //
-// To specify the runner needed to run your component, set the "runner_uri"
+// To specify the runner needed to run your component, set the "runner_url"
 // property in your component's manifest.
 //
 // Note: The component manager is the only intended direct client of this
@@ -32,10 +32,10 @@ protocol ComponentRunner {
 
 // Parameters for starting a new component instance.
 table ComponentStartInfo {
-    // The resolved URI of the component.
-    // This is the canonical URI obtained by the component resolver after
+    // The resolved URL of the component.
+    // This is the canonical URL obtained by the component resolver after
     // after following redirects and resolving relative paths.
-    1: string resolved_uri;
+    1: string resolved_url;
 
     // The component's program declaration.
     // This information originates from |ComponentDecl.program|.

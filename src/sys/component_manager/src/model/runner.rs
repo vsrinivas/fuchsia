@@ -21,36 +21,36 @@ pub trait Runner {
 /// Errors produced by `Runner`.
 #[derive(Debug, Fail)]
 pub enum RunnerError {
-    #[fail(display = "invalid arguments provided for component with uri \"{}\": {}", uri, err)]
+    #[fail(display = "invalid arguments provided for component with url \"{}\": {}", url, err)]
     InvalidArgs {
-        uri: String,
+        url: String,
         #[fail(cause)]
         err: Error,
     },
-    #[fail(display = "unable to load component with uri \"{}\": {}", uri, err)]
+    #[fail(display = "unable to load component with url \"{}\": {}", url, err)]
     ComponentLoadError {
-        uri: String,
+        url: String,
         #[fail(cause)]
         err: Error,
     },
-    #[fail(display = "failed to launch component with uri \"{}\": {}", uri, err)]
+    #[fail(display = "failed to launch component with url \"{}\": {}", url, err)]
     ComponentLaunchError {
-        uri: String,
+        url: String,
         #[fail(cause)]
         err: Error,
     },
 }
 
 impl RunnerError {
-    pub fn invalid_args(uri: impl Into<String>, err: impl Into<Error>) -> RunnerError {
-        RunnerError::InvalidArgs { uri: uri.into(), err: err.into() }
+    pub fn invalid_args(url: impl Into<String>, err: impl Into<Error>) -> RunnerError {
+        RunnerError::InvalidArgs { url: url.into(), err: err.into() }
     }
 
-    pub fn component_load_error(uri: impl Into<String>, err: impl Into<Error>) -> RunnerError {
-        RunnerError::ComponentLoadError { uri: uri.into(), err: err.into() }
+    pub fn component_load_error(url: impl Into<String>, err: impl Into<Error>) -> RunnerError {
+        RunnerError::ComponentLoadError { url: url.into(), err: err.into() }
     }
 
-    pub fn component_launch_error(uri: impl Into<String>, err: impl Into<Error>) -> RunnerError {
-        RunnerError::ComponentLaunchError { uri: uri.into(), err: err.into() }
+    pub fn component_launch_error(url: impl Into<String>, err: impl Into<Error>) -> RunnerError {
+        RunnerError::ComponentLaunchError { url: url.into(), err: err.into() }
     }
 }

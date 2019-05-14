@@ -21,10 +21,10 @@ use {
 /// Runs components with ELF binaries.
 pub struct ElfRunner {}
 
-fn get_resolved_uri(start_info: &fsys::ComponentStartInfo) -> Result<String, Error> {
-    match &start_info.resolved_uri {
-        Some(uri) => Ok(uri.to_string()),
-        _ => Err(err_msg("missing uri")),
+fn get_resolved_url(start_info: &fsys::ComponentStartInfo) -> Result<String, Error> {
+    match &start_info.resolved_url {
+        Some(url) => Ok(url.to_string()),
+        _ => Err(err_msg("missing url")),
     }
 }
 
@@ -81,20 +81,20 @@ fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
 }
 
 async fn load_launch_info(
-    uri: String,
+    url: String,
     start_info: fsys::ComponentStartInfo,
     launcher: &fproc::LauncherProxy,
 ) -> Result<fproc::LaunchInfo, Error> {
     let bin_path =
-        get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(uri.as_ref(), e))?;
+        get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(url.as_ref(), e))?;
     let bin_arg = &[String::from(bin_path.to_str().ok_or(err_msg("invalid binary path"))?)];
     let args = get_program_args(&start_info)?;
 
-    let name = PathBuf::from(uri)
+    let name = PathBuf::from(url)
         .file_name()
-        .ok_or(err_msg("invalid uri"))?
+        .ok_or(err_msg("invalid url"))?
         .to_str()
-        .ok_or(err_msg("invalid uri"))?
+        .ok_or(err_msg("invalid url"))?
         .to_string();
 
     // Make a non-Option namespace
@@ -161,16 +161,16 @@ impl ElfRunner {
     }
 
     async fn start_async(&self, start_info: fsys::ComponentStartInfo) -> Result<(), RunnerError> {
-        let resolved_uri =
-            get_resolved_uri(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
+        let resolved_url =
+            get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
         let launcher = connect_to_service::<fproc::LauncherMarker>()
             .context("failed to connect to launcher service")
-            .map_err(|e| RunnerError::component_load_error(resolved_uri.as_ref(), e))?;
+            .map_err(|e| RunnerError::component_load_error(resolved_url.as_ref(), e))?;
 
         // Load the component
-        let mut launch_info = await!(load_launch_info(resolved_uri.clone(), start_info, &launcher))
-            .map_err(|e| RunnerError::component_load_error(resolved_uri.as_ref(), e))?;
+        let mut launch_info = await!(load_launch_info(resolved_url.clone(), start_info, &launcher))
+            .map_err(|e| RunnerError::component_load_error(resolved_url.as_ref(), e))?;
 
         // Launch the component
         await!(async {
@@ -180,7 +180,7 @@ impl ElfRunner {
             }
             Ok(())
         })
-        .map_err(|e| RunnerError::component_launch_error(resolved_uri, e))?;
+        .map_err(|e| RunnerError::component_launch_error(resolved_url, e))?;
 
         Ok(())
     }
@@ -218,7 +218,7 @@ mod tests {
             };
 
             let start_info = fsys::ComponentStartInfo {
-                resolved_uri: Some(
+                resolved_url: Some(
                     "fuchsia-pkg://fuchsia.com/hello_world_hippo#meta/hello_world.cm".to_string(),
                 ),
                 program: Some(fdata::Dictionary {
@@ -248,7 +248,7 @@ mod tests {
             }),
             ns: None,
             outgoing_dir: None,
-            resolved_uri: None,
+            resolved_url: None,
         }
     }
 
@@ -262,7 +262,7 @@ mod tests {
                 program: Some(fdata::Dictionary { entries: vec![] }),
                 ns: None,
                 outgoing_dir: None,
-                resolved_uri: None,
+                resolved_url: None,
             })
             .unwrap()
         );

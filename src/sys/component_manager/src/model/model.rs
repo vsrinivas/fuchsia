@@ -20,8 +20,8 @@ use {
 /// Parameters for initializing a component model, particularly the root of the component
 /// instance tree.
 pub struct ModelParams {
-    /// The URI of the root component.
-    pub root_component_uri: String,
+    /// The URL of the root component.
+    pub root_component_url: String,
     /// The component resolver registry used in the root realm.
     /// In particular, it will be used to resolve the root component itself.
     pub root_resolver_registry: ResolverRegistry,
@@ -51,7 +51,7 @@ impl Model {
                 default_runner: Arc::new(params.root_default_runner),
                 abs_moniker: AbsoluteMoniker::root(),
                 instance: Instance {
-                    component_uri: params.root_component_uri,
+                    component_url: params.root_component_url,
                     // Started by main().
                     startup: fsys::StartupMode::Lazy,
                     state: Mutex::new(InstanceState {
@@ -142,7 +142,7 @@ impl Model {
             Some(_) => {}
             None => {
                 let component =
-                    await!(realm.resolver_registry.resolve(&realm.instance.component_uri))?;
+                    await!(realm.resolver_registry.resolve(&realm.instance.component_url))?;
                 state.populate_decl(component.decl, &*realm)?;
                 let decl = state.decl.as_ref().unwrap();
                 if decl.program.is_some() {
@@ -151,7 +151,7 @@ impl Model {
                     let mut namespace = IncomingNamespace::new(component.package)?;
                     let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
                     let execution = Execution::start_from(
-                        component.resolved_uri,
+                        component.resolved_url,
                         namespace,
                         DirectoryProxy::from_channel(
                             fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
@@ -159,7 +159,7 @@ impl Model {
                     )?;
 
                     let start_info = fsys::ComponentStartInfo {
-                        resolved_uri: Some(execution.resolved_uri.clone()),
+                        resolved_url: Some(execution.resolved_url.clone()),
                         program: data::clone_option_dictionary(&decl.program),
                         ns: Some(ns),
                         outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),

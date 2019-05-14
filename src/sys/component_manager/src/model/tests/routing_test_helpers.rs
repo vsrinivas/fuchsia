@@ -46,14 +46,14 @@ pub fn default_component_decl() -> ComponentDecl {
     }
 }
 
-/// Returns a cloned DirectoryProxy to the dir `dir_string` inside the namespace of `resolved_uri`.
+/// Returns a cloned DirectoryProxy to the dir `dir_string` inside the namespace of `resolved_url`.
 pub async fn get_dir(
     dir_string: &str,
-    resolved_uri: String,
+    resolved_url: String,
     namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
 ) -> DirectoryProxy {
     let mut ns_guard = await!(namespaces.lock());
-    let ns = ns_guard.get_mut(&resolved_uri).unwrap();
+    let ns = ns_guard.get_mut(&resolved_url).unwrap();
 
     // Find the index of our directory in the namespace, and remove the directory and path. The
     // path is removed so that the paths/dirs aren't shuffled in the namespace.
@@ -160,16 +160,16 @@ fn echo_server_fn(server_end: ServerEnd<NodeMarker>) {
     });
 }
 
-/// Looks up `resolved_uri` in the namespace, and attempts to read ${dir_path}/hippo. The file
+/// Looks up `resolved_url` in the namespace, and attempts to read ${dir_path}/hippo. The file
 /// should contain the string "hippo".
 pub async fn read_data(
     path: CapabilityPath,
-    resolved_uri: String,
+    resolved_url: String,
     namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
     should_succeed: bool,
 ) {
     let path = path.to_string();
-    let dir_proxy = await!(get_dir(&path, resolved_uri, namespaces));
+    let dir_proxy = await!(get_dir(&path, resolved_url, namespaces));
     let file = PathBuf::from("hippo");
     let file_proxy = io_util::open_file(&dir_proxy, &file).expect("failed to open file");
     let res = await!(io_util::read_file(&file_proxy));
@@ -183,15 +183,15 @@ pub async fn read_data(
     }
 }
 
-/// Looks up `resolved_uri` in the namespace, and attempts to use `path`. Expects the service
+/// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
 /// to be fidl.examples.echo.Echo.
 async fn call_svc(
     path: CapabilityPath,
-    resolved_uri: String,
+    resolved_url: String,
     namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
     should_succeed: bool,
 ) {
-    let dir_proxy = await!(get_dir(&path.dirname, resolved_uri, namespaces));
+    let dir_proxy = await!(get_dir(&path.dirname, resolved_url, namespaces));
     let node_proxy =
         io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
             .expect("failed to open echo service");
@@ -332,7 +332,7 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
     }
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
-        root_component_uri: format!("test:///{}", test.root_component),
+        root_component_url: format!("test:///{}", test.root_component),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });

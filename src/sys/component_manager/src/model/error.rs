@@ -16,7 +16,7 @@ pub enum ModelError {
     ComponentInvalid,
     #[fail(display = "component manifest invalid")]
     ManifestInvalid {
-        uri: String,
+        url: String,
         #[fail(cause)]
         err: Error,
     },
@@ -51,8 +51,8 @@ impl ModelError {
         ModelError::NamespaceCreationFailed { err: err.into() }
     }
 
-    pub fn manifest_invalid(uri: impl Into<String>, err: impl Into<Error>) -> ModelError {
-        ModelError::ManifestInvalid { uri: uri.into(), err: err.into() }
+    pub fn manifest_invalid(url: impl Into<String>, err: impl Into<Error>) -> ModelError {
+        ModelError::ManifestInvalid { url: url.into(), err: err.into() }
     }
 
     pub fn capability_discovery_error(err: impl Into<Error>) -> ModelError {
