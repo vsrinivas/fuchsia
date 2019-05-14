@@ -45,16 +45,6 @@ pub struct Node {
     state: Arc<Mutex<State>>,
 }
 
-/// Inspect API Metric data type.
-pub struct Metric<T> {
-    /// Index of the block in the VMO.
-    block_index: u32,
-
-    /// Reference to the VMO heap.
-    state: Arc<Mutex<State>>,
-    phantom: PhantomData<T>,
-}
-
 /// Inspect API Property data type.
 pub struct Property<T: PropertyFormat> {
     /// Index of the block in the VMO.
@@ -133,13 +123,13 @@ impl PropertyFormat for String {
 ///   `name`: identifier for the name (example: double)
 ///   `type`: the type of the metric (example: f64)
 macro_rules! create_metric_fn {
-    ($name:ident, $type:ident) => {
+    ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
             pub fn [<create_ $name _metric>](&self, name: &str, value: $type)
-                -> Result<Metric<$type>, Error> {
+                -> Result<[<$name_cap Metric>], Error> {
                 let block = self.state.lock().[<create_ $name _metric>](
                     name, value, self.block_index)?;
-                Ok(Metric::<$type> {state: self.state.clone(), block_index: block.index(), phantom: PhantomData})
+                Ok([<$name_cap Metric>] {state: self.state.clone(), block_index: block.index() })
             }
         }
     };
@@ -164,9 +154,9 @@ impl Node {
 
     /// Add a metric to this node: create_int_metric, create_double_metric,
     /// create_uint_metric.
-    create_metric_fn!(int, i64);
-    create_metric_fn!(uint, u64);
-    create_metric_fn!(double, f64);
+    create_metric_fn!(int, Int, i64);
+    create_metric_fn!(uint, Uint, u64);
+    create_metric_fn!(double, Double, f64);
 
     /// Add a property to this node.
     pub fn create_property<T: PropertyFormat>(
@@ -209,28 +199,39 @@ macro_rules! metric_fn {
 /// Utility for generating a metric datatype impl
 ///   `name`: the readble name of the type of the function (example: double)
 ///   `type`: the type of the argument of the function to generate (example: f64)
-macro_rules! metric_impl {
-    ($name:ident, $type:ident) => {
-        impl Metric<$type> {
-            metric_fn!(set, $type, $name);
-            metric_fn!(add, $type, $name);
-            metric_fn!(subtract, $type, $name);
+macro_rules! metric {
+    ($name:ident, $name_cap:ident, $type:ident) => {
+        paste::item! {
+            /// Inspect API Metric data type.
+            pub struct [<$name_cap Metric>] {
+                /// Index of the block in the VMO.
+                block_index: u32,
+
+                /// Reference to the VMO heap.
+                state: Arc<Mutex<State>>,
+            }
+
+            impl [<$name_cap Metric>] {
+                metric_fn!(set, $type, $name);
+                metric_fn!(add, $type, $name);
+                metric_fn!(subtract, $type, $name);
+            }
+
+            impl Drop for [<$name_cap Metric>] {
+                fn drop(&mut self) {
+                    self.state
+                        .lock()
+                        .free_value(self.block_index)
+                        .expect(&format!("Failed to free metric index={}", self.block_index));
+                }
+            }
         }
     };
 }
 
-metric_impl!(int, i64);
-metric_impl!(uint, u64);
-metric_impl!(double, f64);
-
-impl<T> Drop for Metric<T> {
-    fn drop(&mut self) {
-        self.state
-            .lock()
-            .free_value(self.block_index)
-            .expect(&format!("Failed to free metric index={}", self.block_index));
-    }
-}
+metric!(int, Int, i64);
+metric!(uint, Uint, u64);
+metric!(double, Double, f64);
 
 impl<T: PropertyFormat> Property<T> {
     /// Set a property value.
