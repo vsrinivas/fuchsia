@@ -283,12 +283,12 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		if err := t.Start(ctx, imgs, r.zirconArgs); err != nil {
 			errs <- err
 		}
+		errs <- r.runCmd(ctx, args, t, syslog)
+	}()
+	go func() {
 		if err := t.Wait(ctx); err != nil && err != target.ErrUnimplemented {
 			errs <- err
 		}
-	}()
-	go func() {
-		errs <- r.runCmd(ctx, args, t, syslog)
 	}()
 
 	select {
