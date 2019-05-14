@@ -73,12 +73,18 @@ table SessionShellConfig {
     1: AppConfig app_config;
 
     /// The display usage policy for this session shell.
+    ///
+    /// Optional: defaults to DisplayUsage::kUnknown.
     2: fuchsia.ui.policy.DisplayUsage display_usage;
 
     /// The screen height in millimeters for the session shell's display.
+    ///
+    /// Optional: defaults to full screen.
     3: float32 screen_height;
 
     /// The screen width in millimeters for the session shell's display.
+    ///
+    /// Optional: defaults to full screen.
     4: float32 screen_width;
 };
 
