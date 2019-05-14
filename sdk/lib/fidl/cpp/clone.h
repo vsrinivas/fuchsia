@@ -49,15 +49,29 @@ inline typename std::enable_if<IsPrimitive<T>::value, zx_status_t>::type Clone(
   return ZX_OK;
 }
 
+// Forward-declare some templates:
+template <typename T, size_t N>
+inline typename std::enable_if<IsPrimitive<T>::value || IsStdString<T>::value,
+                               zx_status_t>::type
+Clone(const std::array<T, N>& value, std::array<T, N>* result);
+template <typename T, size_t N>
+inline typename std::enable_if<!IsPrimitive<T>::value &&
+                                   !IsStdString<T>::value,
+                               zx_status_t>::type
+Clone(const std::array<T, N>& value, std::array<T, N>* result);
+
+
 template <typename T>
 inline
 #ifdef __Fuchsia__
     typename std::enable_if<!IsPrimitive<T>::value &&
                                 !std::is_base_of<zx::object_base, T>::value &&
-                                !IsStdVector<T>::value,
+                                !IsStdVector<T>::value &&
+                                !IsStdArray<T>::value,
                             zx_status_t>::type
 #else   // __Fuchsia__
-    typename std::enable_if<!IsPrimitive<T>::value && !IsStdVector<T>::value,
+    typename std::enable_if<!IsPrimitive<T>::value && !IsStdVector<T>::value &&
+                                !IsStdArray<T>::value,
                             zx_status_t>::type
 #endif  // __Fuchsia__
     Clone(const T& value, T* result) {
