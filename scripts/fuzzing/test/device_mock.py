@@ -58,6 +58,6 @@ drw-r--r--    2 0        0             13552 Mar 20 01:40 corpus
         stdout=stdout,
         stderr=subprocess.STDOUT)
 
-  def _scp(self, src, dst):
+  def _scp(self, srcs, dst):
     """ Overrides Device._scp."""
-    self.history.append(' '.join(self.get_ssh_cmd(['scp', src, dst])))
+    self.history.append(' '.join(self.get_ssh_cmd(['scp'] + srcs + [dst])))

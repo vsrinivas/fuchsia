@@ -39,8 +39,6 @@ class Cipd(object):
 
   def __init__(self, fuzzer, disabled=False, root=None, label=None):
     self.disabled = disabled
-    if disabled:
-      return
     self.device = fuzzer.device
     self.host = fuzzer.host
     self.fuzzer = fuzzer

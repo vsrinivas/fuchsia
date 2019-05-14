@@ -6,6 +6,7 @@
 import os
 import unittest
 import subprocess
+import tempfile
 
 import test_env
 from lib.args import Args
@@ -118,10 +119,18 @@ class TestDevice(unittest.TestCase):
 
   def test_store(self):
     mock = MockDevice()
-    mock.store('local-path', 'remote-path')
+    mock.store(tempfile.gettempdir(), 'remote-path')
     self.assertIn(' '.join(
-        mock.get_ssh_cmd(['scp', 'local-path', '[::1]:remote-path'])),
+        mock.get_ssh_cmd(['scp',
+                          tempfile.gettempdir(), '[::1]:remote-path'])),
                   mock.history)
+    # Ensure globbing works
+    mock.history = []
+    with tempfile.NamedTemporaryFile() as f:
+      mock.store('{}/*'.format(tempfile.gettempdir()), 'remote-path')
+      for cmd in mock.history:
+        if cmd.startswith('scp'):
+          self.assertIn(f.name, cmd)
 
 
 if __name__ == '__main__':

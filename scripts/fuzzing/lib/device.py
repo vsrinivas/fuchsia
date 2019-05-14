@@ -4,8 +4,10 @@
 # found in the LICENSE file.
 
 import argparse
+import glob
 import os
 import re
+import shlex
 import subprocess
 
 from host import Host
@@ -180,28 +182,26 @@ class Device(object):
       pass
     return results
 
-  def _scp(self, src, dst):
+  def _scp(self, srcs, dst):
     """Copies `src` to `dst`.
 
     Don't call directly; use `fetch` or `store` instead.`
 
     Args:
-      src: Local or remote path to copy from.
+      srcs: Local or remote paths to copy from.
       dst: Local or remote path to copy to.
     """
-    subprocess.check_call(
-        self.get_ssh_cmd(['scp', src, dst]),
-        shell=True,
-        stdout=None,
-        stderr=None)
+    # Wild cards only work if shell=True and the whole line passed as a string.
+    cmd = self.get_ssh_cmd(['scp'] + srcs + [dst])
+    subprocess.check_call(cmd, stdout=None, stderr=None)
 
   def fetch(self, data_src, host_dst):
     """Copies `data_src` on the target to `host_dst` on the host."""
     if not os.path.isdir(host_dst):
       raise ValueError(host_dst + ' is not a directory')
-    self._scp('[' + self._addr + ']:' + data_src, host_dst)
+    self._scp(['[{}]:{}'.format(self._addr, data_src)], host_dst)
 
   def store(self, host_src, data_dst):
     """Copies `host_src` on the host to `data_dst` on the target."""
     self.ssh(['mkdir', '-p', data_dst])
-    self._scp(host_src, '[' + self._addr + ']:' + data_dst)
+    self._scp(glob.glob(host_src), '[{}]:{}'.format(self._addr, data_dst))
