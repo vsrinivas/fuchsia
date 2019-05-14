@@ -54,6 +54,7 @@ function get-diff-base() {
 function format-cmd() {
   if [ -f "$1" ]; then
     case "$1" in
+      *.c) printf "${CLANG_CMD}" ;;
       *.cc) printf "${CLANG_CMD}" ;;
       *.cmx) printf "${JSON_FMT_CMD}" ;;
       *.cpp) printf "${CLANG_CMD}" ;;
