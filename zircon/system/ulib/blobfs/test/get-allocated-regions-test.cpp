@@ -4,48 +4,40 @@
 
 #include <blobfs/allocator.h>
 #include <id_allocator/id_allocator.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "utils.h"
 
 namespace blobfs {
 namespace {
-using id_allocator::IdAllocator;
-bool MakeBitmapFrom(const fbl::Vector<uint8_t>& bit_vector, RawBitmap* out_bitmap) {
-    BEGIN_HELPER;
 
+using id_allocator::IdAllocator;
+
+void MakeBitmapFrom(const fbl::Vector<uint8_t>& bit_vector, RawBitmap* out_bitmap) {
     ASSERT_EQ(ZX_OK, out_bitmap->Reset(bit_vector.size()));
     for (size_t i = 0; i < bit_vector.size(); i++) {
         if (bit_vector[i] == 1) {
             ASSERT_EQ(ZX_OK, out_bitmap->Set(i, i + 1));
         }
     }
-
-    END_HELPER;
 }
 
-bool EmptyTest() {
-    BEGIN_TEST;
-
+TEST(GetAllocatedRegionsTest, Empty) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
-    ASSERT_TRUE(InitializeAllocator(1, 1, &space_manager, &allocator));
+    ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
 
     // GetAllocatedRegions should return an empty vector
     ASSERT_EQ(0, allocator->GetAllocatedRegions().size());
-
-    END_TEST;
 }
 
-bool FullTest() {
-    BEGIN_TEST;
-
+TEST(GetAllocatedRegionsTest, Full) {
     MockSpaceManager space_manager;
     RawBitmap block_map;
     fzl::ResizeableVmoMapper node_map;
 
     fbl::Vector<uint8_t> bit_vector = {1};
-    ASSERT_TRUE(MakeBitmapFrom(bit_vector, &block_map));
+    ASSERT_NO_FAILURES(MakeBitmapFrom(bit_vector, &block_map));
 
     std::unique_ptr<IdAllocator> id_allocator;
     ASSERT_EQ(IdAllocator::Create(0, &id_allocator), ZX_OK);
@@ -59,18 +51,15 @@ bool FullTest() {
     ASSERT_EQ(0, regions[0].offset);
     ASSERT_EQ(1, regions[0].length);
 
-    END_TEST;
 }
 
-bool FragmentedTest() {
-    BEGIN_TEST;
-
+TEST(GetAllocatedRegionsTest, Fragmented) {
     MockSpaceManager space_manager;
     RawBitmap block_map;
     fzl::ResizeableVmoMapper node_map;
 
     fbl::Vector<uint8_t> bit_vector = {1, 0, 1, 0, 1};
-    ASSERT_TRUE(MakeBitmapFrom(bit_vector, &block_map));
+    ASSERT_NO_FAILURES(MakeBitmapFrom(bit_vector, &block_map));
 
     std::unique_ptr<IdAllocator> id_allocator;
     ASSERT_EQ(IdAllocator::Create(0, &id_allocator), ZX_OK);
@@ -87,19 +76,15 @@ bool FragmentedTest() {
     ASSERT_EQ(1, regions[1].length);
     ASSERT_EQ(4, regions[2].offset);
     ASSERT_EQ(1, regions[2].length);
-
-    END_TEST;
 }
 
-bool LengthTest() {
-    BEGIN_TEST;
-
+TEST(GetAllocatedRegionsTest, Length) {
     MockSpaceManager space_manager;
     RawBitmap block_map;
     fzl::ResizeableVmoMapper node_map;
 
     fbl::Vector<uint8_t> bit_vector = {0, 1, 1, 0};
-    ASSERT_TRUE(MakeBitmapFrom(bit_vector, &block_map));
+    ASSERT_NO_FAILURES(MakeBitmapFrom(bit_vector, &block_map));
 
     std::unique_ptr<IdAllocator> id_allocator;
     ASSERT_EQ(IdAllocator::Create(0, &id_allocator), ZX_OK);
@@ -112,17 +97,7 @@ bool LengthTest() {
     ASSERT_EQ(1, regions.size());
     ASSERT_EQ(1, regions[0].offset);
     ASSERT_EQ(2, regions[0].length);
-
-
-    END_TEST;
 }
 
 } // namespace
 } // namespace blobfs
-
-BEGIN_TEST_CASE(blobfsGetAllocatedRegionsTests)
-RUN_TEST(blobfs::EmptyTest)
-RUN_TEST(blobfs::FullTest)
-RUN_TEST(blobfs::FragmentedTest)
-RUN_TEST(blobfs::LengthTest)
-END_TEST_CASE(blobfsGetAllocatedRegionsTests)

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/allocator.h>
-#include <unittest/unittest.h>
-
 #include "utils.h"
+
+#include <zxtest/zxtest.h>
 
 using id_allocator::IdAllocator;
 
@@ -13,9 +12,8 @@ namespace blobfs {
 
 // Create a block and node map of the requested size, update the superblock of
 // the |space_manager|, and create an allocator from this provided info.
-bool InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_manager,
+void InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_manager,
                          fbl::unique_ptr<Allocator>* out) {
-    BEGIN_HELPER;
     RawBitmap block_map;
     ASSERT_EQ(ZX_OK, block_map.Reset(blocks));
     fzl::ResizeableVmoMapper node_map;
@@ -28,14 +26,11 @@ bool InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_ma
     *out = std::make_unique<Allocator>(space_manager, std::move(block_map), std::move(node_map),
                                        std::move(nodes_bitmap));
     (*out)->SetLogging(false);
-    END_HELPER;
 }
 
 // Force the allocator to become maximally fragmented by allocating
 // every-other block within up to |blocks|.
-bool ForceFragmentation(Allocator* allocator, size_t blocks) {
-    BEGIN_HELPER;
-
+void ForceFragmentation(Allocator* allocator, size_t blocks) {
     fbl::Vector<ReservedExtent> extents[blocks];
     for (size_t i = 0; i < blocks; i++) {
         ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(1, &extents[i]));
@@ -45,8 +40,6 @@ bool ForceFragmentation(Allocator* allocator, size_t blocks) {
     for (size_t i = 0; i < blocks; i += 2) {
         allocator->MarkBlocksAllocated(extents[i][0]);
     }
-
-    END_HELPER;
 }
 
 // Save the extents within |in| in a non-reserved vector |out|.

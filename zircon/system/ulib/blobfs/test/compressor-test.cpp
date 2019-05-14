@@ -11,8 +11,8 @@
 #include <blobfs/compression/compressor.h>
 #include <blobfs/compression/lz4.h>
 #include <blobfs/compression/zstd.h>
-#include <unittest/unittest.h>
 #include <zircon/assert.h>
+#include <zxtest/zxtest.h>
 
 namespace blobfs {
 namespace {
@@ -41,17 +41,14 @@ std::unique_ptr<char[]> GenerateInput(DataType data_type, unsigned seed, size_t 
         }
         break;
     default:
-        ZX_DEBUG_ASSERT_MSG(false, "Bad Data Type");
+        ADD_FAILURE("Bad Data Type");
     }
     return input;
 }
 
-template <CompressionAlgorithm Algorithm>
-bool CompressionHelper(const char* input, size_t size, size_t step,
+void CompressionHelper(CompressionAlgorithm algorithm, const char* input, size_t size, size_t step,
                        std::optional<BlobCompressor>* out) {
-    BEGIN_HELPER;
-
-    auto compressor = BlobCompressor::Create(Algorithm, size);
+    auto compressor = BlobCompressor::Create(algorithm, size);
     ASSERT_TRUE(compressor);
 
     size_t offset = 0;
@@ -65,17 +62,15 @@ bool CompressionHelper(const char* input, size_t size, size_t step,
     EXPECT_GT(compressor->Size(), 0);
 
     *out = std::move(compressor);
-    END_HELPER;
 }
 
-template <CompressionAlgorithm Algorithm>
-bool DecompressionHelper(const void* compressed, size_t compressed_size,
+void DecompressionHelper(CompressionAlgorithm algorithm,
+                         const void* compressed, size_t compressed_size,
                          const void* expected, size_t expected_size) {
-    BEGIN_HELPER;
     std::unique_ptr<char[]> output(new char[expected_size]);
     size_t target_size = expected_size;
     size_t src_size = compressed_size;
-    switch (Algorithm) {
+    switch (algorithm) {
     case CompressionAlgorithm::LZ4:
         ASSERT_EQ(ZX_OK, LZ4Decompress(output.get(), &target_size, compressed, &src_size));
         break;
@@ -88,41 +83,96 @@ bool DecompressionHelper(const void* compressed, size_t compressed_size,
     EXPECT_EQ(expected_size, target_size);
     EXPECT_EQ(compressed_size, src_size);
     EXPECT_EQ(0, memcmp(expected, output.get(), expected_size));
-
-    END_HELPER;
 }
 
 // Tests a contained case of compression and decompression.
 //
-// kSize: The Size of the input buffer.
-// kStep: The step size of updating the compression buffer.
-template <CompressionAlgorithm Algorithm, DataType kDataType, size_t kSize, size_t kStep>
-bool CompressDecompress() {
-    BEGIN_TEST;
-
-    static_assert(kStep <= kSize, "Step size too large");
+// size: The size of the input buffer.
+// step: The step size of updating the compression buffer.
+void RunCompressDecompressTest(CompressionAlgorithm algorithm, DataType data_type, size_t size,
+                               size_t step) {
+    ASSERT_LE(step, size, "Step size too large");
 
     // Generate input.
-    std::unique_ptr<char[]> input(GenerateInput(kDataType, 0, kSize));
+    std::unique_ptr<char[]> input(GenerateInput(data_type, 0, size));
 
     // Compress a buffer.
     std::optional<BlobCompressor> compressor;
-    ASSERT_TRUE(CompressionHelper<Algorithm>(input.get(), kSize, kStep, &compressor));
+    ASSERT_NO_FAILURES(CompressionHelper(algorithm, input.get(), size, step, &compressor));
     ASSERT_TRUE(compressor);
 
     // Decompress the buffer.
-    ASSERT_TRUE(DecompressionHelper<Algorithm>(compressor->Data(), compressor->Size(),
-                                               input.get(), kSize));
-
-    END_TEST;
+    ASSERT_NO_FAILURES(DecompressionHelper(algorithm, compressor->Data(), compressor->Size(),
+                                           input.get(), size));
 }
 
-template <CompressionAlgorithm Algorithm>
-bool UpdateNoData() {
-    BEGIN_TEST;
+TEST(CompressorTests, CompressDecompressLZ4Random1) {
+    RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 0, 1 << 0);
+}
 
+TEST(CompressorTests, CompressDecompressLZ4Random2) {
+    RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 1, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressLZ4Random3) {
+    RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 10, 1 << 5);
+}
+
+TEST(CompressorTests, CompressDecompressLZ4Random4) {
+    RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 15, 1 << 10);
+}
+
+TEST(CompressorTests, CompressDecompressLZ4Compressible1) {
+    RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 0, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressLZ4Compressible2) {
+    RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 1, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressLZ4Compressible3) {
+    RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 10, 1 << 5);
+}
+
+TEST(CompressorTests, CompressDecompressLZ4Compressible4) {
+    RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 15, 1 << 10);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDRandom1) {
+    RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 0, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDRandom2) {
+    RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 1, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDRandom3) {
+    RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 10, 1 << 5);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDRandom4) {
+    RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 15, 1 << 10);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDCompressible1) {
+    RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 0, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDCompressible2) {
+    RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 1, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDCompressible3) {
+    RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 10, 1 << 5);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDCompressible4) {
+    RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 15, 1 << 10);
+}
+
+void RunUpdateNoDataTest(CompressionAlgorithm algorithm) {
     const size_t input_size = 1024;
-    auto compressor = BlobCompressor::Create(Algorithm, input_size);
+    auto compressor = BlobCompressor::Create(algorithm, input_size);
     ASSERT_TRUE(compressor);
 
     std::unique_ptr<char[]> input(new char[input_size]);
@@ -135,10 +185,16 @@ bool UpdateNoData() {
 
     // Ensure that even with the addition of a zero-length buffer, we still decompress
     // to the expected output.
-    ASSERT_TRUE(DecompressionHelper<Algorithm>(compressor->Data(), compressor->Size(),
-                                               input.get(), input_size));
+    ASSERT_NO_FAILURES(DecompressionHelper(algorithm, compressor->Data(), compressor->Size(),
+                                           input.get(), input_size));
+}
 
-    END_TEST;
+TEST(CompressorTests, UpdateNoDataLZ4) {
+    RunUpdateNoDataTest(CompressionAlgorithm::LZ4);
+}
+
+TEST(CompressorTests, UpdateNoDataZSTD) {
+    RunUpdateNoDataTest(CompressionAlgorithm::ZSTD);
 }
 
 // TODO(smklein): Add a test of:
@@ -147,22 +203,5 @@ bool UpdateNoData() {
 // - Decompress
 // (This mimics blobfs' usage, where the exact compressed size is not stored explicitly)
 
-#define ALL_COMPRESSION_TESTS(ALGORITHM) \
-    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Random, 1 << 0, 1 << 0>)) \
-    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Random, 1 << 1, 1 << 0>)) \
-    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Random, 1 << 10, 1 << 5>)) \
-    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Random, 1 << 15, 1 << 10>)) \
-    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Compressible, 1 << 0, 1 << 0>)) \
-    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Compressible, 1 << 1, 1 << 0>)) \
-    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Compressible, 1 << 10, 1 << 5>)) \
-    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Compressible, 1 << 15, 1 << 10>)) \
-    RUN_TEST((UpdateNoData<ALGORITHM>)) \
-
-BEGIN_TEST_CASE(blobfsCompressorTests)
-ALL_COMPRESSION_TESTS(CompressionAlgorithm::LZ4)
-ALL_COMPRESSION_TESTS(CompressionAlgorithm::ZSTD)
-END_TEST_CASE(blobfsCompressorTests)
-
 } // namespace
 } // namespace blobfs
-

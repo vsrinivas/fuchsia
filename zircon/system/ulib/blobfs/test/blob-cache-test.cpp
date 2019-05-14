@@ -4,7 +4,7 @@
 
 #include <blobfs/blob-cache.h>
 #include <blobfs/cache-node.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "utils.h"
 
@@ -72,23 +72,19 @@ Digest GenerateDigest(size_t seed) {
     return digest;
 }
 
-bool CheckNothingOpenHelper(BlobCache* cache) {
-    BEGIN_HELPER;
-    ASSERT_NONNULL(cache);
+void CheckNothingOpenHelper(BlobCache* cache) {
+    ASSERT_TRUE(cache);
     cache->ForAllOpenNodes([](fbl::RefPtr<CacheNode>) {
         ZX_ASSERT(false);
     });
-    END_HELPER;
 }
 
-bool NullTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, Null) {
     BlobCache cache;
 
-    ASSERT_TRUE(CheckNothingOpenHelper(&cache));
+    ASSERT_NO_FAILURES(CheckNothingOpenHelper(&cache));
     cache.Reset();
-    ASSERT_TRUE(CheckNothingOpenHelper(&cache));
+    ASSERT_NO_FAILURES(CheckNothingOpenHelper(&cache));
 
     Digest digest = GenerateDigest(0);
     fbl::RefPtr<CacheNode> missing_node;
@@ -97,13 +93,9 @@ bool NullTest() {
     fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Evict(node));
     node->SetCache(false);
-
-    END_TEST;
 }
 
-bool AddLookupEvictTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, AddLookupEvict) {
     // Add a node to the cache.
     BlobCache cache;
     Digest digest = GenerateDigest(0);
@@ -120,16 +112,12 @@ bool AddLookupEvictTest() {
     // Observe that evicting the node removes it from the cache.
     ASSERT_EQ(ZX_OK, cache.Evict(node));
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
-
-    END_TEST;
 }
 
 // ShouldCache = false, Evicted = false.
 //
 // This results in the node being deleted from the cache.
-bool StopCachingTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, StopCaching) {
     BlobCache cache;
     Digest digest = GenerateDigest(0);
     // The node is also deleted if we stop caching it, instead of just evicting.
@@ -140,16 +128,12 @@ bool StopCachingTest() {
         node->SetCache(false);
     }
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
-
-    END_TEST;
 }
 
 // ShouldCache = false, Evicted = True.
 //
 // This results in the node being deleted from the cache.
-bool EvictNoCacheTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, EvictNoCache) {
     BlobCache cache;
     Digest digest = GenerateDigest(0);
     // The node is also deleted if we stop caching it, instead of just evicting.
@@ -160,16 +144,12 @@ bool EvictNoCacheTest() {
         ASSERT_EQ(ZX_OK, cache.Evict(node));
     }
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
-
-    END_TEST;
 }
 
 // ShouldCache = true, Evicted = true.
 //
 // This results in the node being deleted from the cache.
-bool EvictWhileCachingTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, EvictWhileCaching) {
     BlobCache cache;
     Digest digest = GenerateDigest(0);
     // The node is automatically deleted if it wants to be cached, but has been
@@ -182,26 +162,20 @@ bool EvictWhileCachingTest() {
         node->SetCache(true);
     }
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
-
-    END_TEST;
 }
 
 // This helper function only operates correctly when a single node is open in the cache.
-bool CheckExistsAloneInOpenCache(BlobCache* cache, void* node_ptr) {
-    BEGIN_HELPER;
-    ASSERT_NONNULL(cache);
+void CheckExistsAloneInOpenCache(BlobCache* cache, void* node_ptr) {
+    ASSERT_TRUE(cache);
     size_t node_count = 0;
     cache->ForAllOpenNodes([&node_count, &node_ptr](fbl::RefPtr<CacheNode> node) {
         node_count++;
         ZX_ASSERT(node.get() == node_ptr);
     });
     ASSERT_EQ(1, node_count);
-    END_HELPER;
 }
 
-bool CacheAfterRecycleTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, CacheAfterRecycle) {
     BlobCache cache;
     Digest digest = GenerateDigest(0);
     void* node_ptr = nullptr;
@@ -214,12 +188,12 @@ bool CacheAfterRecycleTest() {
         ASSERT_EQ(ZX_OK, cache.Lookup(digest, nullptr));
 
         // Observe the node is in the set of open nodes.
-        ASSERT_TRUE(CheckExistsAloneInOpenCache(&cache, node_ptr));
+        ASSERT_NO_FAILURES(CheckExistsAloneInOpenCache(&cache, node_ptr));
     }
 
     // Observe the node is in no longer in the set of open nodes, now that it has
     // run out of strong references.
-    ASSERT_TRUE(CheckNothingOpenHelper(&cache));
+    ASSERT_NO_FAILURES(CheckNothingOpenHelper(&cache));
 
     // Observe that although the node in in the "closed set", it still exists in the cache,
     // and can be re-acquired.
@@ -230,7 +204,7 @@ bool CacheAfterRecycleTest() {
         fbl::RefPtr<CacheNode> node;
         ASSERT_EQ(ZX_OK, cache.Lookup(digest, &node));
         ASSERT_EQ(node_ptr, node.get());
-        ASSERT_TRUE(CheckExistsAloneInOpenCache(&cache, node_ptr));
+        ASSERT_NO_FAILURES(CheckExistsAloneInOpenCache(&cache, node_ptr));
     }
     ASSERT_EQ(ZX_OK, cache.Lookup(digest, nullptr));
 
@@ -243,13 +217,9 @@ bool CacheAfterRecycleTest() {
         ASSERT_EQ(ZX_OK, cache.Evict(vnode));
     }
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
-
-    END_TEST;
 }
 
-bool ResetClosedTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, ResetClosed) {
     BlobCache cache;
     // Create a node which exists in the closed cache.
     Digest digest = GenerateDigest(0);
@@ -262,12 +232,9 @@ bool ResetClosedTest() {
     // After resetting, the node should no longer exist.
     cache.Reset();
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
-
-    END_TEST;
 }
 
-bool ResetOpenTest() {
-    BEGIN_TEST;
+TEST(BlobCacheTest, ResetOpen) {
 
     BlobCache cache;
     // Create a node which exists in the open cache.
@@ -278,13 +245,9 @@ bool ResetOpenTest() {
     // After resetting, the node should no longer exist.
     cache.Reset();
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
-
-    END_TEST;
 }
 
-bool DestructorTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, Destructor) {
     fbl::RefPtr<TestNode> open_node;
 
     {
@@ -299,13 +262,9 @@ bool DestructorTest() {
         ASSERT_EQ(ZX_OK, cache.Add(closed_node));
     }
     ASSERT_TRUE(open_node->UsingMemory());
-
-    END_TEST;
 }
 
-bool ForAllOpenNodesTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, ForAllOpenNodes) {
     BlobCache cache;
 
     // Add a bunch of open nodes to the cache.
@@ -341,13 +300,9 @@ bool ForAllOpenNodesTest() {
         ZX_ASSERT_MSG(false, "Found open node not contained in expected open set");
     });
     ASSERT_EQ(fbl::count_of(open_nodes), node_index);
-
-    END_TEST;
 }
 
-bool CachePolicyEvictImmediatelyTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, CachePolicyEvictImmediately) {
     BlobCache cache;
     Digest digest = GenerateDigest(0);
 
@@ -363,13 +318,9 @@ bool CachePolicyEvictImmediatelyTest() {
     ASSERT_EQ(ZX_OK, cache.Lookup(digest, &cache_node));
     auto node = fbl::RefPtr<TestNode>::Downcast(std::move(cache_node));
     ASSERT_FALSE(node->UsingMemory());
-
-    END_TEST;
 }
 
-bool CachePolicyNeverEvictTest() {
-    BEGIN_TEST;
-
+TEST(BlobCacheTest, CachePolicyNeverEvict) {
     BlobCache cache;
     Digest digest = GenerateDigest(0);
 
@@ -385,24 +336,7 @@ bool CachePolicyNeverEvictTest() {
     ASSERT_EQ(ZX_OK, cache.Lookup(digest, &cache_node));
     auto node = fbl::RefPtr<TestNode>::Downcast(std::move(cache_node));
     ASSERT_TRUE(node->UsingMemory());
-
-    END_TEST;
 }
 
 } // namespace
 } // namespace blobfs
-
-BEGIN_TEST_CASE(blobfsBlobCacheTests)
-RUN_TEST(blobfs::NullTest)
-RUN_TEST(blobfs::AddLookupEvictTest)
-RUN_TEST(blobfs::StopCachingTest)
-RUN_TEST(blobfs::EvictNoCacheTest)
-RUN_TEST(blobfs::EvictWhileCachingTest)
-RUN_TEST(blobfs::CacheAfterRecycleTest)
-RUN_TEST(blobfs::ResetClosedTest)
-RUN_TEST(blobfs::ResetOpenTest)
-RUN_TEST(blobfs::DestructorTest)
-RUN_TEST(blobfs::ForAllOpenNodesTest)
-RUN_TEST(blobfs::CachePolicyEvictImmediatelyTest)
-RUN_TEST(blobfs::CachePolicyNeverEvictTest)
-END_TEST_CASE(blobfsBlobCacheTests)

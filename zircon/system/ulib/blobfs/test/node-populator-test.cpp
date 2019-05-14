@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 #include <blobfs/iterator/node-populator.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "utils.h"
 
 namespace blobfs {
 namespace {
 
-bool NodeCountTest() {
-    BEGIN_TEST;
-
+TEST(NodePopulatorTest, NodeCount) {
     for (ExtentCountType i = 0; i <= kInlineMaxExtents; i++) {
         EXPECT_EQ(1, NodePopulator::NodeCountForExtents(i));
     }
@@ -26,16 +24,12 @@ bool NodeCountTest() {
          i <= kInlineMaxExtents + kContainerMaxExtents * 2; i++) {
         EXPECT_EQ(3, NodePopulator::NodeCountForExtents(i));
     }
-
-    END_TEST;
 }
 
-bool NullTest() {
-    BEGIN_TEST;
-
+TEST(NodePopulatorTest, Null) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
-    ASSERT_TRUE(InitializeAllocator(1, 1, &space_manager, &allocator));
+    ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
 
     fbl::Vector<ReservedExtent> extents;
     fbl::Vector<ReservedNode> nodes;
@@ -55,16 +49,13 @@ bool NullTest() {
 
     ASSERT_EQ(ZX_OK, populator.Walk(on_node, on_extent));
     ASSERT_EQ(1, nodes_visited);
-    END_TEST;
 }
 
 // Test a single node and a single extent.
-bool WalkOneTest() {
-    BEGIN_TEST;
-
+TEST(NodePopulatorTest, WalkOne) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
-    ASSERT_TRUE(InitializeAllocator(1, 1, &space_manager, &allocator));
+    ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
 
     fbl::Vector<ReservedNode> nodes;
     ASSERT_EQ(ZX_OK, allocator->ReserveNodes(1, &nodes));
@@ -110,19 +101,15 @@ bool WalkOneTest() {
     ASSERT_EQ(1, inode->extent_count);
     ASSERT_EQ(allocated_extent.Start(), inode->extents[0].Start());
     ASSERT_EQ(allocated_extent.Length(), inode->extents[0].Length());
-
-    END_TEST;
 }
 
 // Test all the extents in a single node.
-bool WalkAllInlineExtentsTest() {
-    BEGIN_TEST;
-
+TEST(NodePopulatorTest, WalkAllInlineExtents) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     constexpr size_t kBlockCount = kInlineMaxExtents * 3;
-    ASSERT_TRUE(InitializeAllocator(kBlockCount, 1, &space_manager, &allocator));
-    ASSERT_TRUE(ForceFragmentation(allocator.get(), kBlockCount));
+    ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, 1, &space_manager, &allocator));
+    ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
 
     fbl::Vector<ReservedNode> nodes;
     ASSERT_EQ(ZX_OK, allocator->ReserveNodes(1, &nodes));
@@ -171,20 +158,16 @@ bool WalkAllInlineExtentsTest() {
     for (size_t i = 0; i < kInlineMaxExtents; i++) {
         ASSERT_TRUE(allocated_extents[i] == inode->extents[i]);
     }
-
-    END_TEST;
 }
 
 // Test a node which requires an additional extent container.
-bool WalkManyNodesTest() {
-    BEGIN_TEST;
-
+TEST(NodePopulatorTest, WalkManyNodes) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     constexpr size_t kBlockCount = kInlineMaxExtents * 5;
     constexpr size_t kNodeCount = 2;
-    ASSERT_TRUE(InitializeAllocator(kBlockCount, kNodeCount, &space_manager, &allocator));
-    ASSERT_TRUE(ForceFragmentation(allocator.get(), kBlockCount));
+    ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, kNodeCount, &space_manager, &allocator));
+    ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
 
     constexpr size_t kExpectedExtents = kInlineMaxExtents + 1;
 
@@ -245,14 +228,10 @@ bool WalkManyNodesTest() {
     ASSERT_EQ(allocated_nodes[0], container->previous_node);
     ASSERT_EQ(1, container->extent_count);
     ASSERT_TRUE(allocated_extents[kInlineMaxExtents] == container->extents[0]);
-
-    END_TEST;
 }
 
 // Test a node which requires multiple additional extent containers.
-bool WalkManyContainersTest() {
-    BEGIN_TEST;
-
+TEST(NodePopulatorTest, WalkManyContainers) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     constexpr size_t kExpectedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
@@ -260,8 +239,8 @@ bool WalkManyContainersTest() {
     // Block count is large enough to allow for both fragmentation and the
     // allocation of |kExpectedExtents| extents.
     constexpr size_t kBlockCount = 3 * kExpectedExtents;
-    ASSERT_TRUE(InitializeAllocator(kBlockCount, kNodeCount, &space_manager, &allocator));
-    ASSERT_TRUE(ForceFragmentation(allocator.get(), kBlockCount));
+    ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, kNodeCount, &space_manager, &allocator));
+    ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
 
     // Allocate the initial nodes and blocks.
     fbl::Vector<ReservedNode> nodes;
@@ -332,14 +311,10 @@ bool WalkManyContainersTest() {
     ASSERT_EQ(allocated_nodes[1], container->previous_node);
     ASSERT_EQ(1, container->extent_count);
     ASSERT_TRUE(allocated_extents[kInlineMaxExtents + kContainerMaxExtents] == container->extents[0]);
-
-    END_TEST;
 }
 
 // Test walking when extra nodes are left unused.
-bool WalkExtraNodesTest() {
-    BEGIN_TEST;
-
+TEST(NodePopulatorTest, WalkExtraNodes) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     constexpr size_t kAllocatedExtents = kInlineMaxExtents;
@@ -349,8 +324,8 @@ bool WalkExtraNodesTest() {
     // Block count is large enough to allow for both fragmentation and the
     // allocation of |kAllocatedExtents| extents.
     constexpr size_t kBlockCount = 3 * kAllocatedExtents;
-    ASSERT_TRUE(InitializeAllocator(kBlockCount, kAllocatedNodes, &space_manager, &allocator));
-    ASSERT_TRUE(ForceFragmentation(allocator.get(), kBlockCount));
+    ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, kAllocatedNodes, &space_manager, &allocator));
+    ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
 
     // Allocate the initial nodes and blocks.
     fbl::Vector<ReservedNode> nodes;
@@ -407,15 +382,12 @@ bool WalkExtraNodesTest() {
     ASSERT_FALSE(inode->header.IsAllocated());
     inode = allocator->GetNode(allocated_nodes[2]);
     ASSERT_FALSE(inode->header.IsAllocated());
-    END_TEST;
 }
 
 // Test walking when extra extents are left unused. This simulates a case where
 // less storage is needed to store the blob than originally allocated (for
 // example, while compressing a blob).
-bool WalkExtraExtentsTest() {
-    BEGIN_TEST;
-
+TEST(NodePopulatorTest, WalkExtraExtents) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
@@ -425,8 +397,8 @@ bool WalkExtraExtentsTest() {
     // Block count is large enough to allow for both fragmentation and the
     // allocation of |kAllocatedExtents| extents.
     constexpr size_t kBlockCount = 3 * kAllocatedExtents;
-    ASSERT_TRUE(InitializeAllocator(kBlockCount, kAllocatedNodes, &space_manager, &allocator));
-    ASSERT_TRUE(ForceFragmentation(allocator.get(), kBlockCount));
+    ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, kAllocatedNodes, &space_manager, &allocator));
+    ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
 
     // Allocate the initial nodes and blocks.
     fbl::Vector<ReservedNode> nodes;
@@ -486,19 +458,7 @@ bool WalkExtraExtentsTest() {
     ASSERT_FALSE(inode->header.IsAllocated());
     inode = allocator->GetNode(allocated_nodes[2]);
     ASSERT_FALSE(inode->header.IsAllocated());
-    END_TEST;
 }
 
 } // namespace
 } // namespace blobfs
-
-BEGIN_TEST_CASE(blobfsNodePopulatorTests)
-RUN_TEST(blobfs::NodeCountTest)
-RUN_TEST(blobfs::NullTest)
-RUN_TEST(blobfs::WalkOneTest)
-RUN_TEST(blobfs::WalkAllInlineExtentsTest)
-RUN_TEST(blobfs::WalkManyNodesTest)
-RUN_TEST(blobfs::WalkManyContainersTest)
-RUN_TEST(blobfs::WalkExtraNodesTest)
-RUN_TEST(blobfs::WalkExtraExtentsTest)
-END_TEST_CASE(blobfsNodePopulatorTests)

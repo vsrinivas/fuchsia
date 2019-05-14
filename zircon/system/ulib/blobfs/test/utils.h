@@ -5,7 +5,7 @@
 #pragma once
 
 #include <blobfs/allocator.h>
-#include <unittest/unittest.h>
+#include <fbl/vector.h>
 
 namespace blobfs {
 
@@ -38,12 +38,12 @@ private:
 
 // Create a block and node map of the requested size, update the superblock of
 // the |space_manager|, and create an allocator from this provided info.
-bool InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_manager,
+void InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_manager,
                          fbl::unique_ptr<Allocator>* out);
 
 // Force the allocator to become maximally fragmented by allocating
 // every-other block within up to |blocks|.
-bool ForceFragmentation(Allocator* allocator, size_t blocks);
+void ForceFragmentation(Allocator* allocator, size_t blocks);
 
 // Save the extents within |in| in a non-reserved vector |out|.
 void CopyExtents(const fbl::Vector<ReservedExtent>& in, fbl::Vector<Extent>* out);

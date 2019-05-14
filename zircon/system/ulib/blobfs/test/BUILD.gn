@@ -19,11 +19,10 @@ test("blobfs-unit") {
     "extent-reserver-test.cpp",
     "get-allocated-regions-test.cpp",
     "journal-test.cpp",
-    "main.cpp",
     "node-populator-test.cpp",
     "node-reserver-test.cpp",
-    "unbuffered-operations-builder-test.cpp",
     "ring-buffer-test.cpp",
+    "unbuffered-operations-builder-test.cpp",
     "utils.cpp",
     "vector-extent-iterator-test.cpp",
     "vmo-buffer-test.cpp",
@@ -31,7 +30,6 @@ test("blobfs-unit") {
   ]
   deps = [
     "$zx/system/ulib/blobfs",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zxtest",
   ]
 }

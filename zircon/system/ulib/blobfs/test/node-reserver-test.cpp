@@ -5,15 +5,13 @@
 #include <bitmap/rle-bitmap.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/node-reserver.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace blobfs {
 namespace {
 
 // Test that reserving a node actually changes the node count, and that RAII releases the node.
-bool ReserveTest() {
-    BEGIN_TEST;
-
+TEST(NodeReserver, Reserve) {
     NodeReserver reserver;
     {
         const uint32_t ino = 3;
@@ -21,12 +19,9 @@ bool ReserveTest() {
         EXPECT_EQ(1, reserver.ReservedNodeCount());
     }
     EXPECT_EQ(0, reserver.ReservedNodeCount());
-    END_TEST;
 }
 
-bool ReserveResetTest() {
-    BEGIN_TEST;
-
+TEST(NodeReserver, ReserveReset) {
     NodeReserver reserver;
     {
         const uint32_t ino = 3;
@@ -37,13 +32,10 @@ bool ReserveResetTest() {
     }
     EXPECT_EQ(0, reserver.ReservedNodeCount());
 
-    END_TEST;
 }
 
 // Test the constructors of the reserved node.
-bool ConstructorTest() {
-    BEGIN_TEST;
-
+TEST(NodeReserver, Constructor) {
     NodeReserver reserver;
     // Test the constructor.
     {
@@ -52,12 +44,9 @@ bool ConstructorTest() {
         EXPECT_EQ(1, reserver.ReservedNodeCount());
     }
     EXPECT_EQ(0, reserver.ReservedNodeCount());
-    END_TEST;
 }
 
-bool MoveConstructorTest() {
-    BEGIN_TEST;
-
+TEST(NodeReserver, MoveConstructor) {
     NodeReserver reserver;
     // Test the move constructor.
     {
@@ -70,12 +59,9 @@ bool MoveConstructorTest() {
         EXPECT_EQ(1, reserver.ReservedNodeCount());
     }
     EXPECT_EQ(0, reserver.ReservedNodeCount());
-    END_TEST;
 }
 
-bool MoveAssignmentTest() {
-    BEGIN_TEST;
-
+TEST(NodeReserver, MoveAssignment) {
     NodeReserver reserver;
     // Test the move assignment operator.
     {
@@ -89,16 +75,7 @@ bool MoveAssignmentTest() {
     }
     EXPECT_EQ(0, reserver.ReservedNodeCount());
 
-    END_TEST;
 }
 
 } // namespace
 } // namespace blobfs
-
-BEGIN_TEST_CASE(blobfsNodeReserverTests)
-RUN_TEST(blobfs::ReserveTest)
-RUN_TEST(blobfs::ReserveResetTest)
-RUN_TEST(blobfs::ConstructorTest)
-RUN_TEST(blobfs::MoveConstructorTest)
-RUN_TEST(blobfs::MoveAssignmentTest)
-END_TEST_CASE(blobfsNodeReserverTests)

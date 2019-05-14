@@ -5,14 +5,13 @@
 #include <bitmap/rle-bitmap.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/node-reserver.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace blobfs {
 namespace {
 
 // Test simple cases of reserving a single extent
-bool ReserveTest() {
-    BEGIN_TEST;
+TEST(ExtentReserverTest, Reserve) {
     ExtentReserver reserver;
     BlockOffsetType start_block = 0;
     BlockCountType block_count = 1;
@@ -25,12 +24,9 @@ bool ReserveTest() {
         EXPECT_EQ(block_count, reserver.ReservedBlockCount());
     }
     EXPECT_EQ(0, reserver.ReservedBlockCount());
-
-    END_TEST;
 }
 
-bool ReserveResetTest() {
-    BEGIN_TEST;
+TEST(ExtentReserverTest, ReserveReset) {
     ExtentReserver reserver;
     BlockOffsetType start_block = 0;
     BlockCountType block_count = 1;
@@ -45,14 +41,10 @@ bool ReserveResetTest() {
         EXPECT_EQ(0, reserver.ReservedBlockCount());
     }
     EXPECT_EQ(0, reserver.ReservedBlockCount());
-
-    END_TEST;
 }
 
 // Test the constructors of the reserved extent.
-bool ConstructorTest() {
-    BEGIN_TEST;
-
+TEST(ExtentReserverTest, Constructor) {
     ExtentReserver reserver;
     BlockOffsetType start_block = 0;
     BlockCountType block_count = 1;
@@ -66,12 +58,9 @@ bool ConstructorTest() {
         EXPECT_EQ(block_count, reserver.ReservedBlockCount());
     }
     EXPECT_EQ(0, reserver.ReservedBlockCount());
-    END_TEST;
 }
 
-bool MoveConstructorTest() {
-    BEGIN_TEST;
-
+TEST(ExtentReserverTest, MoveConstructor) {
     ExtentReserver reserver;
     BlockOffsetType start_block = 0;
     BlockCountType block_count = 1;
@@ -90,12 +79,9 @@ bool MoveConstructorTest() {
         EXPECT_EQ(extent.Length(), dest_extent.extent().Length());
     }
     EXPECT_EQ(0, reserver.ReservedBlockCount());
-    END_TEST;
 }
 
-bool MoveAssignmentTest() {
-    BEGIN_TEST;
-
+TEST(ExtentReserverTest, MoveAssignment) {
     ExtentReserver reserver;
     BlockOffsetType start_block = 0;
     BlockCountType block_count = 1;
@@ -113,14 +99,10 @@ bool MoveAssignmentTest() {
         EXPECT_EQ(extent.Start(), dest_extent.extent().Start());
         EXPECT_EQ(extent.Length(), dest_extent.extent().Length());
     }
-
-    END_TEST;
 }
 
 // Test splitting of extents.
-bool SplitTest() {
-    BEGIN_TEST;
-
+TEST(ExtentReserverTest, Split) {
     ExtentReserver reserver;
     uint64_t start_block = 0;
     BlockCountType block_count = 10;
@@ -147,18 +129,7 @@ bool SplitTest() {
     // When the latter half of the reservation goes out of scope, the reservations
     // are cleaned up too.
     EXPECT_EQ(5, reserver.ReservedBlockCount());
-
-    END_TEST;
 }
 
 } // namespace
 } // namespace blobfs
-
-BEGIN_TEST_CASE(blobfsExtentReserverTests)
-RUN_TEST(blobfs::ReserveTest)
-RUN_TEST(blobfs::ReserveResetTest)
-RUN_TEST(blobfs::ConstructorTest)
-RUN_TEST(blobfs::MoveConstructorTest)
-RUN_TEST(blobfs::MoveAssignmentTest)
-RUN_TEST(blobfs::SplitTest)
-END_TEST_CASE(blobfsExtentReserverTests)

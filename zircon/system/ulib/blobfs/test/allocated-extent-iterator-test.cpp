@@ -5,7 +5,7 @@
 #include <blobfs/iterator/allocated-extent-iterator.h>
 #include <blobfs/iterator/block-iterator.h>
 #include <blobfs/iterator/node-populator.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "utils.h"
 
@@ -15,17 +15,16 @@ namespace {
 // Allocates a blob with the provided number of extents / nodes.
 //
 // Returns the allocator, the extents, and nodes used.
-bool TestSetup(size_t allocated_blocks, size_t allocated_nodes, bool fragmented,
+void TestSetup(size_t allocated_blocks, size_t allocated_nodes, bool fragmented,
                MockSpaceManager* space_manager, fbl::unique_ptr<Allocator>* out_allocator,
                fbl::Vector<Extent>* out_extents, fbl::Vector<uint32_t>* out_nodes) {
-    BEGIN_HELPER;
-
     // Block count is large enough to allow for both fragmentation and the
     // allocation of |allocated_blocks| extents.
     size_t block_count = 3 * allocated_blocks;
-    ASSERT_TRUE(InitializeAllocator(block_count, allocated_nodes, space_manager, out_allocator));
+    ASSERT_NO_FAILURES(InitializeAllocator(block_count, allocated_nodes, space_manager,
+                                           out_allocator));
     if (fragmented) {
-        ASSERT_TRUE(ForceFragmentation(out_allocator->get(), block_count));
+        ASSERT_NO_FAILURES(ForceFragmentation(out_allocator->get(), block_count));
     }
 
     // Allocate the initial nodes and blocks.
@@ -49,14 +48,10 @@ bool TestSetup(size_t allocated_blocks, size_t allocated_nodes, bool fragmented,
     };
     NodePopulator populator(out_allocator->get(), std::move(extents), std::move(nodes));
     ASSERT_EQ(ZX_OK, populator.Walk(on_node, on_extent));
-
-    END_HELPER;
 }
 
 // Iterate over the null blob.
-bool NullTest() {
-    BEGIN_TEST;
-
+TEST(AllocatedExtentIteratorTest, Null) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     fbl::Vector<Extent> allocated_extents;
@@ -64,8 +59,8 @@ bool NullTest() {
     constexpr size_t kAllocatedExtents = 0;
     constexpr size_t kAllocatedNodes = 1;
 
-    ASSERT_TRUE(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/ true, &space_manager,
-                          &allocator, &allocated_extents, &allocated_nodes));
+    ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/ true,
+                                 &space_manager, &allocator, &allocated_extents, &allocated_nodes));
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
@@ -77,14 +72,10 @@ bool NullTest() {
     ASSERT_TRUE(iter.Done());
     ASSERT_EQ(0, iter.BlockIndex());
     ASSERT_EQ(0, iter.ExtentIndex());
-
-    END_TEST;
 }
 
 // Iterate over a blob with inline extents.
-bool InlineNodeTest() {
-    BEGIN_TEST;
-
+TEST(AllocatedExtentIteratorTest, InlineNode) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     fbl::Vector<Extent> allocated_extents;
@@ -92,8 +83,8 @@ bool InlineNodeTest() {
     constexpr size_t kAllocatedExtents = kInlineMaxExtents;
     constexpr size_t kAllocatedNodes = 1;
 
-    ASSERT_TRUE(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/ true, &space_manager,
-                          &allocator, &allocated_extents, &allocated_nodes));
+    ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/ true,
+                                 &space_manager, &allocator, &allocated_extents, &allocated_nodes));
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
@@ -120,14 +111,10 @@ bool InlineNodeTest() {
     ASSERT_TRUE(iter.Done());
     ASSERT_EQ(allocated_extents.size(), iter.ExtentIndex());
     ASSERT_EQ(blocks_seen, iter.BlockIndex());
-
-    END_TEST;
 }
 
 // Iterate over a blob with multiple nodes.
-bool MultiNodeTest() {
-    BEGIN_TEST;
-
+TEST(AllocatedExtentIteratorTest, MultiNode) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     fbl::Vector<Extent> allocated_extents;
@@ -135,8 +122,8 @@ bool MultiNodeTest() {
     constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
     constexpr size_t kAllocatedNodes = 3;
 
-    ASSERT_TRUE(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/ true, &space_manager,
-                          &allocator, &allocated_extents, &allocated_nodes));
+    ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/ true,
+                                 &space_manager, &allocator, &allocated_extents, &allocated_nodes));
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
@@ -170,15 +157,11 @@ bool MultiNodeTest() {
     ASSERT_TRUE(iter.Done());
     ASSERT_EQ(allocated_extents.size(), iter.ExtentIndex());
     ASSERT_EQ(blocks_seen, iter.BlockIndex());
-
-    END_TEST;
 }
 
 // Demonstrate that the allocated extent iterator won't let us access invalid
 // nodes.
-bool BadInodeNextNodeTest() {
-    BEGIN_TEST;
-
+TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     fbl::Vector<Extent> allocated_extents;
@@ -186,8 +169,8 @@ bool BadInodeNextNodeTest() {
     constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
     constexpr size_t kAllocatedNodes = 4;
 
-    ASSERT_TRUE(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/ true, &space_manager,
-                          &allocator, &allocated_extents, &allocated_nodes));
+    ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/ true,
+                                 &space_manager, &allocator, &allocated_extents, &allocated_nodes));
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
@@ -244,14 +227,11 @@ bool BadInodeNextNodeTest() {
 //        ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter.Next(&extent));
 //    }
 
-    END_TEST;
 }
 
 // Test utilization of the BlockIterator over the allocated extent iterator
 // while the underlying storage is maximally fragmented.
-bool BlockIteratorFragmentedTest() {
-    BEGIN_TEST;
-
+TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     fbl::Vector<Extent> allocated_extents;
@@ -259,8 +239,8 @@ bool BlockIteratorFragmentedTest() {
     constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
     constexpr size_t kAllocatedNodes = 3;
 
-    ASSERT_TRUE(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/ true, &space_manager,
-                          &allocator, &allocated_extents, &allocated_nodes));
+    ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/ true,
+                                 &space_manager, &allocator, &allocated_extents, &allocated_nodes));
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
@@ -292,14 +272,11 @@ bool BlockIteratorFragmentedTest() {
     }
 
     ASSERT_TRUE(iter.Done());
-    END_TEST;
 }
 
 // Test utilization of the BlockIterator over the allocated extent iterator
 // while the underlying storage is unfragmented.
-bool BlockIteratorUnfragmentedTest() {
-    BEGIN_TEST;
-
+TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
     MockSpaceManager space_manager;
     fbl::unique_ptr<Allocator> allocator;
     fbl::Vector<Extent> allocated_extents;
@@ -307,8 +284,8 @@ bool BlockIteratorUnfragmentedTest() {
     constexpr size_t kAllocatedBlocks = 100;
     constexpr size_t kAllocatedNodes = 1;
 
-    ASSERT_TRUE(TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/ false,
-                          &space_manager, &allocator, &allocated_extents, &allocated_nodes));
+    ASSERT_NO_FAILURES(TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/ false,
+                                 &space_manager, &allocator, &allocated_extents, &allocated_nodes));
 
     // After walking, observe that the inode is allocated.
     const uint32_t node_index = allocated_nodes[0];
@@ -354,8 +331,6 @@ bool BlockIteratorUnfragmentedTest() {
         }
         ASSERT_EQ(kAllocatedBlocks, iter.BlockIndex());
     }
-
-    END_TEST;
 }
 
 // TODO(smklein): Test against chains of extents which cause loops, such as:
@@ -365,12 +340,3 @@ bool BlockIteratorUnfragmentedTest() {
 
 } // namespace
 } // namespace blobfs
-
-BEGIN_TEST_CASE(blobfsAllocatedExtentIteratorTests)
-RUN_TEST(blobfs::NullTest)
-RUN_TEST(blobfs::InlineNodeTest)
-RUN_TEST(blobfs::MultiNodeTest)
-RUN_TEST(blobfs::BadInodeNextNodeTest);
-RUN_TEST(blobfs::BlockIteratorFragmentedTest);
-RUN_TEST(blobfs::BlockIteratorUnfragmentedTest);
-END_TEST_CASE(blobfsAllocatedExtentIteratorTests)
