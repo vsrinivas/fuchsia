@@ -9,6 +9,7 @@ import("//build/testing/environments.gni")
 group("test") {
   testonly = true
   deps = [
+    ":mpsc_queue_tests",
     ":raw_frames",
     ":raw_frames_test",
     ":raw_frames_test_bin",
@@ -97,6 +98,36 @@ test_package("timestamp_extrapolator_tests") {
   tests = [
     {
       name = "timestamp_extrapolator_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("mpsc_queue_test_bin") {
+  output_name = "mpsc_queue_tests"
+
+  testonly = true
+
+  sources = [
+    "mpsc_queue_tests.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/media/codecs:mpsc_queue",
+    "//garnet/public/lib/fsl",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+test_package("mpsc_queue_tests") {
+  deps = [
+    ":mpsc_queue_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "mpsc_queue_tests"
       environments = basic_envs
     },
   ]

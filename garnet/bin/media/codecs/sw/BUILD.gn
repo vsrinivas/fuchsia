@@ -10,9 +10,6 @@ group("sw") {
   deps = [
     ":codec_adapter_sw",
     ":codec_runner_sw",
-    ":mpsc_queue",
-    ":mpsc_queue_test_bin",
-    ":mpsc_queue_tests",
     "ffmpeg",
     "low_layer",
   ]
@@ -54,58 +51,10 @@ source_set("codec_adapter_sw") {
   public_configs = [ ":codec_adapter_sw_include_config" ]
 
   public_deps = [
-    ":mpsc_queue",
+    "//garnet/bin/media/codecs:mpsc_queue",
     "//garnet/lib/media/codec_impl",
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-config("mpsc_queue_include_config") {
-  include_dirs = [ "." ]
-}
-
-source_set("mpsc_queue") {
-  visibility = [ "//garnet/bin/media/codecs/sw/*" ]
-
-  public = [
-    "mpsc_queue.h",
-  ]
-
-  public_configs = [ ":mpsc_queue_include_config" ]
-
-  public_deps = [
-    "//zircon/public/lib/fit",
-  ]
-}
-
-executable("mpsc_queue_test_bin") {
-  output_name = "mpsc_queue_tests"
-
-  testonly = true
-
-  sources = [
-    "test/mpsc_queue_tests.cc",
-  ]
-
-  deps = [
-    ":mpsc_queue",
-    "//garnet/public/lib/fsl",
-    "//third_party/googletest:gtest_main",
-    "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-test_package("mpsc_queue_tests") {
-  deps = [
-    ":mpsc_queue_test_bin",
-  ]
-
-  tests = [
-    {
-      name = "mpsc_queue_tests"
-      environments = basic_envs
-    },
   ]
 }

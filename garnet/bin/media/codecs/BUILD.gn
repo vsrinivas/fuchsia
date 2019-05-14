@@ -5,6 +5,7 @@
 group("codecs") {
   testonly = true
   deps = [
+    ":mpsc_queue",
     ":timestamp_extrapolator",
     "sw",
     "test",
@@ -26,4 +27,14 @@ source_set("timestamp_extrapolator") {
   public_deps = [
     "//zircon/public/lib/zx",
   ]
+}
+
+source_set("mpsc_queue") {
+  visibility = [ "//garnet/bin/media/codecs/*" ]
+
+  public = [
+    "mpsc_queue.h",
+  ]
+
+  public_configs = [ ":local_header_include_config" ]
 }

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_CODECS_SW_MPSC_QUEUE_H_
-#define GARNET_BIN_MEDIA_CODECS_SW_MPSC_QUEUE_H_
+#ifndef GARNET_BIN_MEDIA_CODECS_MPSC_QUEUE_H_
+#define GARNET_BIN_MEDIA_CODECS_MPSC_QUEUE_H_
 
-#include <lib/fit/defer.h>
 #include <lib/zx/event.h>
 #include <src/lib/fxl/macros.h>
 #include <zircon/assert.h>
@@ -162,4 +161,4 @@ class BlockingMpscQueue {
   MpscQueue<T> queue_;
 };
 
-#endif  // GARNET_BIN_MEDIA_CODECS_SW_MPSC_QUEUE_H_
+#endif  // GARNET_BIN_MEDIA_CODECS_MPSC_QUEUE_H_
