@@ -25,6 +25,10 @@ package("magma-img-rgx-mt8167") {
     "//garnet/drivers/gpu/msd-img-rgx/mtk:msd_img_rgx_mt8167",
   ]
 
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
+
   # internal access is needed to get the firmware.
   if (internal_access) {
     # The firmware is treated as a library, so the copy needs to go into the

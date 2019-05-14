@@ -29,6 +29,10 @@
 
 #define GPU_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
+#if MAGMA_TEST_DRIVER
+void magma_indriver_test(zx_device_t* device, void* driver_device_handle);
+#endif
+
 namespace {
 struct ComponentDescription {
     static constexpr uint32_t kPowerResetBBit = 0;
@@ -375,6 +379,11 @@ zx_status_t Mt8167sGpu::Bind()
         GPU_ERROR("pdev_map_mmio_buffer failed\n");
         return status;
     }
+
+#if MAGMA_TEST_DRIVER
+    DLOG("running magma indriver test");
+    magma_indriver_test(parent(), this);
+#endif
 
     {
         std::lock_guard<std::mutex> lock(magma_mutex_);

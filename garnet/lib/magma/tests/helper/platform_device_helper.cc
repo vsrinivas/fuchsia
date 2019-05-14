@@ -6,18 +6,16 @@
 
 magma::PlatformPciDevice* TestPlatformPciDevice::g_instance;
 void* TestPlatformPciDevice::core_device_;
+static void* driver_device_s;
 
 std::unique_ptr<magma::PlatformDevice> TestPlatformDevice::g_instance;
 
+void SetTestDeviceHandle(void* handle) { driver_device_s = handle; }
+
 void* GetTestDeviceHandle()
 {
-    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-    if (platform_device)
-        return platform_device->GetDeviceHandle();
-    magma::PlatformPciDevice* platform_pci_device = TestPlatformPciDevice::GetInstance();
-    if (platform_pci_device)
-        return platform_pci_device->GetDeviceHandle();
-
-    DLOG("no platform device found");
-    return nullptr;
+    if (!driver_device_s) {
+        return DRETP(nullptr, "no platform device found");
+    }
+    return driver_device_s;
 }

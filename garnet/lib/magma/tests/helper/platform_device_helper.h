@@ -49,8 +49,10 @@ public:
     static std::unique_ptr<magma::PlatformDevice> g_instance;
 };
 
-// Get the device handle from either TestPlatformDevice or
-// TestPlatformPciDevice, whichever is currently valid.
+// Sets the driver handle that tests pass in to msd_create_device.
+void SetTestDeviceHandle(void* driver_device);
+
+// Gets the handle set in SetTestDeviceHandle
 void* GetTestDeviceHandle();
 
 #endif // TEST_PLATFORM_DEVICE_H

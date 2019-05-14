@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,13 +9,15 @@
 #include "gtest/gtest.h"
 #include <ddk/device.h>
 
-void magma_indriver_test(zx_device_t* device)
+void magma_indriver_test(zx_device_t* device, void* driver_device_handle)
 {
-    DLOG("running magma unit tests");
+    DLOG("running magma indriver unit tests");
+    SetTestDeviceHandle(driver_device_handle);
     TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(device));
-    SetTestDeviceHandle(device);
     const int kArgc = 3;
-    const char* argv[kArgc] = {"magma_indriver_test", "--gtest_filter=-PlatformPci*.*"};
+    const char* argv[kArgc] = {"magma_indriver_test",
+                               "--gtest_filter=-PlatformPci*.*:MagmaSystem.Multithread:MsdBuffer.*:"
+                               "MsdContext.*:MsdSemaphore.*"};
     testing::InitGoogleTest(const_cast<int*>(&kArgc), const_cast<char**>(argv));
 
     printf("[DRV START=]\n");
