@@ -6,11 +6,10 @@ package power
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"fuchsia.googlesource.com/tools/botanist/power/amt"
 	"fuchsia.googlesource.com/tools/botanist/power/wol"
+	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/sshutil"
 
 	"golang.org/x/crypto/ssh"
@@ -26,10 +25,6 @@ const (
 	// Controller machines have multiple interfaces, currently
 	// 'eno2' is used for swarming bots.
 	botInterface = "eno2"
-
-	sshUser = "fuchsia"
-
-	sshRebootTimeout = 10 * time.Second
 )
 
 // Client represents a power management configuration for a particular device.
@@ -54,15 +49,9 @@ type Client struct {
 // additionally uses the given configuration to reboot the device if specified.
 func (c Client) RebootDevice(signers []ssh.Signer, nodename string) error {
 	// Always attempt to soft reboot the device to recovery.
-	ch := make(chan error)
-	go func() {
-		ch <- rebootRecovery(nodename, signers)
-	}()
-	// Just move on if rebootRecovery returns or timeout reached.
-	select {
-	case <-ch:
-	// Strict timeout if SSH hangs
-	case <-time.After(sshRebootTimeout):
+	err := rebootRecovery(nodename, signers)
+	if err != nil {
+		logger.Warningf(context.Background(), "soft reboot failed: %v", err)
 	}
 
 	// Hard reboot the device if specified in the config.
@@ -72,20 +61,20 @@ func (c Client) RebootDevice(signers []ssh.Signer, nodename string) error {
 	case "wol":
 		return wol.Reboot(botBroadcastAddr, botInterface, c.HostMACAddr)
 	default:
-		return fmt.Errorf("unsupported power type: %s", c.Type)
+		return err
 	}
 }
 
 func rebootRecovery(nodeName string, signers []ssh.Signer) error {
-	return sendCommand(nodeName, "dm reboot-recovery", signers)
+	// Invoke `dm reboot-recovery` with a 2 second delay in the background, then exit the SSH shell.
+	// This prevents the SSH connection hanging waiting for `dm reboot-recovery to return.`
+	return sendCommand(nodeName, "{ sleep 2; dm reboot-recovery; } >/dev/null & exit", signers)
 }
 
 func sendCommand(nodeName, command string, signers []ssh.Signer) error {
-	publicKeyAuth := ssh.PublicKeys(signers...)
-	config := &ssh.ClientConfig{
-		User:            sshUser,
-		Auth:            []ssh.AuthMethod{publicKeyAuth},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	config, err := sshutil.DefaultSSHConfigFromSigners(signers...)
+	if err != nil {
+		return err
 	}
 
 	ctx := context.Background()
@@ -116,10 +105,5 @@ func sendCommand(nodeName, command string, signers []ssh.Signer) error {
 	select {
 	case err := <-done:
 		return err
-	// session.Wait() doesn't return on success due to the reboot killing the
-	// connection on the target nor does it timeout on any reasonable time
-	// scale.
-	case <-time.After(10 * time.Second):
-		return nil
 	}
 }

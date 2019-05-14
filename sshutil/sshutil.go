@@ -83,9 +83,14 @@ func DefaultSSHConfig(privateKey []byte) (*ssh.ClientConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	return DefaultSSHConfigFromSigners(signer)
+}
+
+// DefaultSSHConfigFromSigners returns a basic SSH client configuration.
+func DefaultSSHConfigFromSigners(signers ...ssh.Signer) (*ssh.ClientConfig, error) {
 	return &ssh.ClientConfig{
 		User:            sshUser,
-		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signers...)},
 		Timeout:         defaultIOTimeout,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}, nil
