@@ -18,6 +18,7 @@ use std::thread;
 mod audio;
 mod auth;
 mod bluetooth;
+mod logging;
 mod netstack;
 mod scenic;
 mod server;

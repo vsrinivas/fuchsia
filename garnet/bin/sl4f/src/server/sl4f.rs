@@ -35,6 +35,9 @@ use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
 
+// Logging related includes
+use crate::logging::facade::LoggingFacade;
+
 // Netstack related includes
 use crate::netstack::facade::NetstackFacade;
 
@@ -88,6 +91,9 @@ pub struct Sl4f {
     // gatt_server_facade: Thread safe object for state for Gatt Server tests
     gatt_server_facade: Arc<GattServerFacade>,
 
+    // logging_facade: Thread safe object for state for logging functions.
+    logging_facade: Arc<LoggingFacade>,
+
     // netstack_facade: Thread safe object for state for netstack functions.
     netstack_facade: Arc<NetstackFacade>,
 
@@ -117,6 +123,7 @@ impl Sl4f {
         let bt_control_facade = Arc::new(BluetoothControlFacade::new());
         let gatt_client_facade = Arc::new(GattClientFacade::new());
         let gatt_server_facade = Arc::new(GattServerFacade::new());
+        let logging_facade = Arc::new(LoggingFacade::new());
         let netstack_facade = Arc::new(NetstackFacade::new());
         let scenic_facade = Arc::new(ScenicFacade::new());
         let setui_facade = Arc::new(SetUiFacade::new()?);
@@ -130,6 +137,7 @@ impl Sl4f {
             bt_control_facade,
             gatt_client_facade,
             gatt_server_facade,
+            logging_facade,
             netstack_facade,
             scenic_facade,
             setui_facade,
@@ -169,6 +177,10 @@ impl Sl4f {
 
     pub fn get_bt_facade(&self) -> Arc<RwLock<BluetoothFacade>> {
         self.bt_facade.clone()
+    }
+
+    pub fn get_logging_facade(&self) -> Arc<LoggingFacade> {
+        self.logging_facade.clone()
     }
 
     pub fn get_scenic_facade(&self) -> Arc<ScenicFacade> {
