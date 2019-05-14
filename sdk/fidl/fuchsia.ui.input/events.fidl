@@ -1,0 +1,28 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.input;
+
+/// Phase of the keyboard key input.
+enum KeyEventPhase {
+    /// Key is pressed down.
+    PRESSED = 0;
+
+    /// Key is released.
+    RELEASED = 1;
+};
+
+/// Keyboard event is generated to reflect key input.
+table KeyEvent {
+  /// Physical key being pressed.
+  ///
+  /// Keyboard layout is applied (QWERTY/AZERTY/Dvorak/etc).
+  1: Key key;
+
+  /// Phase of input.
+  2: KeyEventPhase phase;
+
+  /// Modifier keys being held.
+  3: Modifiers modifiers;
+};

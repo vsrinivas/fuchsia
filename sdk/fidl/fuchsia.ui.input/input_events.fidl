@@ -27,6 +27,8 @@ enum KeyboardEventPhase {
 //
 // The input system will repeat those events automatically when a code_point is
 // available.
+//
+// DEPRECATED: Will be removed in favor of |fuchsia.ui.input.KeyEvent|.
 struct KeyboardEvent {
     // Time the event was delivered. The time is in nanoseconds and corresponds
     // to the uptime of the machine.
