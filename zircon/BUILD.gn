@@ -281,6 +281,10 @@ foreach(cpu, standard_fuchsia_cpus) {
         ":all-ulib-$cpu",
         ":driver-deps-$cpu",
         ":instrumented-ulib-$cpu",
+
+        # Include the tests so their libraries are in the aux manifest
+        # when individual binaries are drawn from the tests manifest.
+        ":legacy-tests-deps-$cpu",
       ]
       metadata = {
         # This prevents build_api_module("legacy-$cpu") from visiting the
