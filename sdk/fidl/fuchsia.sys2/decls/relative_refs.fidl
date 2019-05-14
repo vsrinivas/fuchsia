@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+/// A reference to a component’s containing realm, i.e. the parent component.
+table RealmRef {};
+
+/// A reference to the component itself.
+table SelfRef {};
+
+/// A reference to one of the component's children.
+table ChildRef {
+    1: string:MAX_CHILD_NAME_LENGTH name;
+};
+
+/// A reference to one of the component's storage sections.
+table StorageRef {
+    1: string:MAX_STORAGE_NAME_LENGTH name;
+};

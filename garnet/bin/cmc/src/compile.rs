@@ -169,9 +169,9 @@ where
     }
     let ret = if from.starts_with("#") {
         let (_, child_name) = from.split_at(1);
-        cm::ExposeSource::Child(cm::ChildId { name: child_name.to_string() })
+        cm::ExposeSource::Child(cm::ChildRef { name: child_name.to_string() })
     } else if from == "self" {
-        cm::ExposeSource::Myself(cm::SelfId {})
+        cm::ExposeSource::Myself(cm::SelfRef {})
     } else {
         return Err(Error::internal(format!("invalid \"from\" for \"expose\": {}", from)));
     };
@@ -188,11 +188,11 @@ where
     }
     let ret = if from.starts_with("#") {
         let (_, child_name) = from.split_at(1);
-        cm::OfferSource::Child(cm::ChildId { name: child_name.to_string() })
+        cm::OfferSource::Child(cm::ChildRef { name: child_name.to_string() })
     } else if from == "realm" {
-        cm::OfferSource::Realm(cm::RealmId {})
+        cm::OfferSource::Realm(cm::RealmRef {})
     } else if from == "self" {
-        cm::OfferSource::Myself(cm::SelfId {})
+        cm::OfferSource::Myself(cm::SelfRef {})
     } else {
         return Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", from)));
     };

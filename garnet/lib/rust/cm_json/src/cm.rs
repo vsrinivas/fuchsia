@@ -96,19 +96,19 @@ pub struct OfferDirectory {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ExposeSource {
     #[serde(rename = "myself")]
-    Myself(SelfId),
+    Myself(SelfRef),
     #[serde(rename = "child")]
-    Child(ChildId),
+    Child(ChildRef),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum OfferSource {
     #[serde(rename = "realm")]
-    Realm(RealmId),
+    Realm(RealmRef),
     #[serde(rename = "myself")]
-    Myself(SelfId),
+    Myself(SelfRef),
     #[serde(rename = "child")]
-    Child(ChildId),
+    Child(ChildRef),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -118,12 +118,12 @@ pub struct Target {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct RealmId {}
+pub struct RealmRef {}
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct SelfId {}
+pub struct SelfRef {}
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ChildId {
+pub struct ChildRef {
     pub name: String,
 }

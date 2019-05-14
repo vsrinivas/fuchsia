@@ -2,8 +2,8 @@ use cm_fidl_translator;
 use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
-    ChildDecl, ChildId, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, OfferDecl,
-    OfferServiceDecl, OfferSource, OfferTarget, SelfId, StartupMode, UseDecl, UseServiceDecl,
+    ChildDecl, ChildRef, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, OfferDecl,
+    OfferServiceDecl, OfferSource, OfferTarget, SelfRef, StartupMode, UseDecl, UseServiceDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -27,12 +27,12 @@ fn main() {
             target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
         })];
         let exposes = vec![ExposeDecl::Directory(ExposeDirectoryDecl {
-            source: Some(ExposeSource::Myself(SelfId {})),
+            source: Some(ExposeSource::Myself(SelfRef {})),
             source_path: Some("/volumes/blobfs".to_string()),
             target_path: Some("/volumes/blobfs".to_string()),
         })];
         let offers = vec![OfferDecl::Service(OfferServiceDecl {
-            source: Some(OfferSource::Child(ChildId { name: Some("logger".to_string()) })),
+            source: Some(OfferSource::Child(ChildRef { name: Some("logger".to_string()) })),
             source_path: Some("/svc/fuchsia.logger.Log".to_string()),
             targets: Some(vec![OfferTarget {
                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),

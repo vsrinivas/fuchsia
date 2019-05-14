@@ -197,21 +197,21 @@ impl CmInto<fsys::OfferSource> for cm::OfferSource {
     }
 }
 
-impl CmInto<fsys::RealmId> for cm::RealmId {
-    fn cm_into(self) -> Result<fsys::RealmId, Error> {
-        Ok(fsys::RealmId {})
+impl CmInto<fsys::RealmRef> for cm::RealmRef {
+    fn cm_into(self) -> Result<fsys::RealmRef, Error> {
+        Ok(fsys::RealmRef {})
     }
 }
 
-impl CmInto<fsys::SelfId> for cm::SelfId {
-    fn cm_into(self) -> Result<fsys::SelfId, Error> {
-        Ok(fsys::SelfId {})
+impl CmInto<fsys::SelfRef> for cm::SelfRef {
+    fn cm_into(self) -> Result<fsys::SelfRef, Error> {
+        Ok(fsys::SelfRef {})
     }
 }
 
-impl CmInto<fsys::ChildId> for cm::ChildId {
-    fn cm_into(self) -> Result<fsys::ChildId, Error> {
-        Ok(fsys::ChildId { name: Some(self.name) })
+impl CmInto<fsys::ChildRef> for cm::ChildRef {
+    fn cm_into(self) -> Result<fsys::ChildRef, Error> {
+        Ok(fsys::ChildRef { name: Some(self.name) })
     }
 }
 
@@ -513,14 +513,14 @@ mod tests {
                 let exposes = vec![
                     fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
-                        source: Some(fsys::ExposeSource::Child(fsys::ChildId {
+                        source: Some(fsys::ExposeSource::Child(fsys::ChildRef {
                             name: Some("logger".to_string()),
                         })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
                     fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                         source_path: Some("/volumes/blobfs".to_string()),
-                        source: Some(fsys::ExposeSource::Myself(fsys::SelfId{})),
+                        source: Some(fsys::ExposeSource::Myself(fsys::SelfRef{})),
                         target_path: Some("/volumes/blobfs".to_string()),
                     }),
                 ];
@@ -606,7 +606,7 @@ mod tests {
                 let offers = vec![
                     fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                         source_path: Some("/data/assets".to_string()),
-                        source: Some(fsys::OfferSource::Realm(fsys::RealmId{})),
+                        source: Some(fsys::OfferSource::Realm(fsys::RealmRef{})),
                         targets: Some(vec![
                             fsys::OfferTarget {
                                 target_path: Some("/data/realm_assets".to_string()),
@@ -620,7 +620,7 @@ mod tests {
                     }),
                     fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                         source_path: Some("/data/config".to_string()),
-                        source: Some(fsys::OfferSource::Myself(fsys::SelfId{})),
+                        source: Some(fsys::OfferSource::Myself(fsys::SelfRef{})),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/data/config".to_string()),
@@ -630,7 +630,7 @@ mod tests {
                     }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        source: Some(fsys::OfferSource::Child(fsys::ChildId {
+                        source: Some(fsys::OfferSource::Child(fsys::ChildRef {
                             name: Some("logger".to_string()),
                         })),
                         targets: Some(vec![
@@ -801,14 +801,14 @@ mod tests {
                 ];
                 let exposes = vec![
                     fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
-                        source: Some(fsys::ExposeSource::Myself(fsys::SelfId{})),
+                        source: Some(fsys::ExposeSource::Myself(fsys::SelfRef{})),
                         source_path: Some("/volumes/blobfs".to_string()),
                         target_path: Some("/volumes/blobfs".to_string()),
                     }),
                 ];
                 let offers = vec![
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                        source: Some(fsys::OfferSource::Child(fsys::ChildId {
+                        source: Some(fsys::OfferSource::Child(fsys::ChildRef {
                             name: Some("logger".to_string()),
                         })),
                         source_path: Some("/svc/fuchsia.logger.Log".to_string()),

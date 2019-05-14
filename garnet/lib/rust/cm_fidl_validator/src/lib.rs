@@ -209,7 +209,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_source_child(&mut self, child: &fsys::ChildId, decl_type: &str) {
+    fn validate_source_child(&mut self, child: &fsys::ChildRef, decl_type: &str) {
         if NAME.check(child.name.as_ref(), decl_type, "source.child.name", &mut self.errors) {
             if let Some(child_name) = &child.name {
                 if !self.all_children.contains(child_name as &str) {
@@ -443,9 +443,9 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_sys2::{
-            ChildDecl, ChildId, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl,
+            ChildDecl, ChildRef, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl,
             ExposeSource, OfferDecl, OfferDirectoryDecl, OfferServiceDecl, OfferSource,
-            OfferTarget, RealmId, SelfId, StartupMode, UseDecl, UseDirectoryDecl, UseServiceDecl,
+            OfferTarget, RealmRef, SelfRef, StartupMode, UseDecl, UseDirectoryDecl, UseServiceDecl,
         },
     };
 
@@ -704,12 +704,12 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
-                        source: Some(ExposeSource::Child(ChildId{name: Some("^bad".to_string())})),
+                        source: Some(ExposeSource::Child(ChildRef{name: Some("^bad".to_string())})),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
-                        source: Some(ExposeSource::Child(ChildId{name: Some("^bad".to_string())})),
+                        source: Some(ExposeSource::Child(ChildRef{name: Some("^bad".to_string())})),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
                     }),
@@ -730,12 +730,12 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
-                        source: Some(ExposeSource::Child(ChildId{name: Some("b".repeat(101))})),
+                        source: Some(ExposeSource::Child(ChildRef{name: Some("b".repeat(101))})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
-                        source: Some(ExposeSource::Child(ChildId{name: Some("b".repeat(101))})),
+                        source: Some(ExposeSource::Child(ChildRef{name: Some("b".repeat(101))})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                     }),
@@ -756,14 +756,14 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
-                        source: Some(ExposeSource::Child(ChildId {
+                        source: Some(ExposeSource::Child(ChildRef {
                             name: Some("netstack".to_string()),
                         })),
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
-                        source: Some(ExposeSource::Child(ChildId {
+                        source: Some(ExposeSource::Child(ChildRef {
                             name: Some("netstack".to_string()),
                         })),
                         source_path: Some("/data/netstack".to_string()),
@@ -782,12 +782,12 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
-                        source: Some(ExposeSource::Myself(SelfId{})),
+                        source: Some(ExposeSource::Myself(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
-                        source: Some(ExposeSource::Myself(SelfId{})),
+                        source: Some(ExposeSource::Myself(SelfRef{})),
                         source_path: Some("/svc/logger2".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
@@ -832,7 +832,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(OfferSource::Child(ChildId{name: Some("a".repeat(101))})),
+                        source: Some(OfferSource::Child(ChildRef{name: Some("a".repeat(101))})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         targets: Some(vec![
                             OfferTarget {
@@ -842,7 +842,7 @@ mod tests {
                         ]),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: Some(OfferSource::Child(ChildId{name: Some("a".repeat(101))})),
+                        source: Some(OfferSource::Child(ChildRef{name: Some("a".repeat(101))})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         targets: Some(vec![
                             OfferTarget {
@@ -870,7 +870,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
+                        source: Some(OfferSource::Child(ChildRef{name: Some("logger".to_string())})),
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         targets: Some(vec![
                             OfferTarget {
@@ -880,7 +880,7 @@ mod tests {
                         ]),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
+                        source: Some(OfferSource::Child(ChildRef{name: Some("logger".to_string())})),
                         source_path: Some("/data/assets".to_string()),
                         targets: Some(vec![
                             OfferTarget {
@@ -909,12 +909,12 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(OfferSource::Realm(RealmId{})),
+                        source: Some(OfferSource::Realm(RealmRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         targets: Some(vec![OfferTarget{target_path: None, child_name: None}]),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: Some(OfferSource::Realm(RealmId{})),
+                        source: Some(OfferSource::Realm(RealmRef{})),
                         source_path: Some("/data/assets".to_string()),
                         targets: Some(vec![OfferTarget{target_path: None, child_name: None}]),
                     }),
@@ -933,12 +933,12 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(OfferSource::Myself(SelfId{})),
+                        source: Some(OfferSource::Myself(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         targets: Some(vec![]),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: Some(OfferSource::Myself(SelfId{})),
+                        source: Some(OfferSource::Myself(SelfRef{})),
                         source_path: Some("/data/assets".to_string()),
                         targets: Some(vec![]),
                     }),
@@ -955,7 +955,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
+                        source: Some(OfferSource::Child(ChildRef{name: Some("logger".to_string())})),
                         source_path: Some("/svc/logger".to_string()),
                         targets: Some(vec![OfferTarget{
                             target_path: Some("/svc/logger".to_string()),
@@ -963,7 +963,7 @@ mod tests {
                         }]),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: Some(OfferSource::Child(ChildId{name: Some("logger".to_string())})),
+                        source: Some(OfferSource::Child(ChildRef{name: Some("logger".to_string())})),
                         source_path: Some("/data/assets".to_string()),
                         targets: Some(vec![OfferTarget{
                             target_path: Some("/data".to_string()),
@@ -988,7 +988,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(OfferSource::Myself(SelfId{})),
+                        source: Some(OfferSource::Myself(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         targets: Some(vec![
                             OfferTarget {
@@ -1002,7 +1002,7 @@ mod tests {
                         ]),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: Some(OfferSource::Myself(SelfId{})),
+                        source: Some(OfferSource::Myself(SelfRef{})),
                         source_path: Some("/data/assets".to_string()),
                         targets: Some(vec![
                             OfferTarget{
@@ -1035,7 +1035,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
-                        source: Some(OfferSource::Myself(SelfId{})),
+                        source: Some(OfferSource::Myself(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         targets: Some(vec![
                             OfferTarget{
@@ -1045,7 +1045,7 @@ mod tests {
                         ]),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: Some(OfferSource::Myself(SelfId{})),
+                        source: Some(OfferSource::Myself(SelfRef{})),
                         source_path: Some("/data/assets".to_string()),
                         targets: Some(vec![
                             OfferTarget{

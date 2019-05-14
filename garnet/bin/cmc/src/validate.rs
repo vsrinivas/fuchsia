@@ -1342,7 +1342,7 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /use/0/service")),
         },
-        test_cml_relative_id_too_long => {
+        test_cml_relative_ref_too_long => {
             input = json!({
                 "expose": [
                     {

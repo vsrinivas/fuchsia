@@ -46,7 +46,7 @@ table ExposeDirectoryDecl {
 /// Identifies a source component of an ExposeDecl.
 // TODO: Split ExposeSource by capability type.
 xunion ExposeSource {
-  SelfId myself;
-  ChildId child;
+  SelfRef myself;
+  ChildRef child;
 };
 

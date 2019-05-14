@@ -71,8 +71,8 @@ enum StorageType {
 /// The source of an offered storage capability, which may be either the realm
 /// or the name of a storage section on the component itself.
 xunion StorageOfferSource {
-    RealmId realm;
-    StorageId storage_section;
+    RealmRef realm;
+    StorageRef storage_section;
 };
 
 /// Describes a target for the offering of a storage capability.
@@ -85,9 +85,9 @@ table StorageOfferTarget {
 /// Identifies a source component of an OfferDecl.
 // TODO: Split OfferSource by capability type.
 xunion OfferSource {
-  RealmId realm;
-  SelfId myself;
-  ChildId child;
+  RealmRef realm;
+  SelfRef myself;
+  ChildRef child;
 };
 
 /// Describes a target for a capability offering.
