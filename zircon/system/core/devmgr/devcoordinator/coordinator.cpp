@@ -1288,35 +1288,6 @@ void Coordinator::DmMexec(zx::vmo kernel, zx::vmo bootdata) {
                            std::move(kernel), std::move(bootdata)));
 }
 
-// device binding program that pure (parentless)
-// misc devices use to get published in the misc devhost
-static struct zx_bind_inst misc_device_binding =
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT);
-
-static bool is_misc_driver(Driver* drv) {
-    return (drv->binding_size == sizeof(misc_device_binding)) &&
-           (memcmp(&misc_device_binding, drv->binding.get(), sizeof(misc_device_binding)) == 0);
-}
-
-// device binding program that pure (parentless)
-// test devices use to get published in the test devhost
-static struct zx_bind_inst test_device_binding =
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT);
-
-static bool is_test_driver(Driver* drv) {
-    return (drv->binding_size == sizeof(test_device_binding)) &&
-           (memcmp(&test_device_binding, drv->binding.get(), sizeof(test_device_binding)) == 0);
-}
-
-// device binding program that special root-level
-// devices use to get published in the root devhost
-static struct zx_bind_inst root_device_binding = BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ROOT);
-
-static bool is_root_driver(Driver* drv) {
-    return (drv->binding_size == sizeof(root_device_binding)) &&
-           (memcmp(&root_device_binding, drv->binding.get(), sizeof(root_device_binding)) == 0);
-}
-
 fbl::unique_ptr<Driver> Coordinator::ValidateDriver(fbl::unique_ptr<Driver> drv) {
     if ((drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !config_.asan_drivers) {
         if (launched_first_devhost_) {
@@ -1399,7 +1370,7 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
 }
 
 zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
-                                            bool autobind) {
+                                            bool autobind, const AttemptBindFunc& attempt_bind) {
     if (!dev->is_bindable()) {
         return ZX_ERR_NEXT;
     }
@@ -1409,7 +1380,7 @@ zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, cons
 
     log(SPEW, "devcoordinator: drv='%s' bindable to dev='%s'\n", drv->name.data(),
         dev->name().data());
-    zx_status_t status = AttemptBind(drv, dev);
+    zx_status_t status = attempt_bind(drv, dev);
     if (status != ZX_OK) {
         log(ERROR, "devcoordinator: failed to bind drv='%s' to dev='%s': %s\n", drv->name.data(),
             dev->name().data(), zx_status_get_string(status));
@@ -1424,19 +1395,29 @@ zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, cons
 // BindDriver is called when a new driver becomes available to
 // the Coordinator.  Existing devices are inspected to see if the
 // new driver is bindable to them (unless they are already bound).
-zx_status_t Coordinator::BindDriver(Driver* drv) {
-    if (is_root_driver(drv)) {
-        return AttemptBind(drv, root_device_);
-    } else if (is_misc_driver(drv)) {
-        return AttemptBind(drv, misc_device_);
-    } else if (is_test_driver(drv)) {
-        return AttemptBind(drv, test_device_);
-    } else if (!running_) {
+zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind) {
+    if (drv->never_autoselect) {
+        return ZX_OK;
+    }
+    zx_status_t status = BindDriverToDevice(root_device_, drv, true /* autobind */, attempt_bind);
+    if (status != ZX_ERR_NEXT) {
+        return status;
+    }
+    status = BindDriverToDevice(misc_device_, drv, true /* autobind */, attempt_bind);
+    if (status != ZX_ERR_NEXT) {
+        return status;
+    }
+    status = BindDriverToDevice(test_device_, drv, true /* autobind */, attempt_bind);
+    if (status != ZX_ERR_NEXT) {
+        return status;
+    }
+    if (!running_) {
         return ZX_ERR_UNAVAILABLE;
     }
     printf("devcoordinator: driver '%s' added\n", drv->name.data());
     for (auto& dev : devices_) {
-        zx_status_t status = BindDriverToDevice(fbl::WrapRefPtr(&dev), drv, true /* autobind */);
+        zx_status_t status = BindDriverToDevice(fbl::WrapRefPtr(&dev), drv, true /* autobind */,
+                                                attempt_bind);
         if (status == ZX_ERR_NEXT) {
             continue;
         }

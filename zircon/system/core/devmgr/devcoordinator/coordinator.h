@@ -142,11 +142,23 @@ public:
     void DriverAddedInit(Driver* drv, const char* version);
     zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
 
+    // Function that is invoked to request a driver try to bind to a device
+    using AttemptBindFunc =
+            fit::function<zx_status_t(const Driver* drv, const fbl::RefPtr<Device>& dev)>;
+
     // Attempts to bind the given driver to the given device.  Returns ZX_OK on
     // success, ZX_ERR_NEXT if the driver is not capable of binding to the device,
     // and a different error if the driver was capable of binding but failed to bind.
     zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
-                                   bool autobind);
+                                   bool autobind) {
+        return BindDriverToDevice(dev, drv, autobind,
+                                  fit::bind_member(this, &Coordinator::AttemptBind));
+    }
+
+    // The same as above, but the given function is called to perform the
+    // bind attempt.
+    zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
+                                   bool autobind, const AttemptBindFunc& attempt_bind);
 
     // Used to implement fuchsia::device::manager::Coordinator.
     zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel rpc,
@@ -231,6 +243,9 @@ public:
     const Driver* component_driver() const { return component_driver_; }
 
     void ReleaseDevhost(Devhost* dh);
+
+    // This method is public only for the test suite.
+    zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
 private:
     CoordinatorConfig config_;
     bool running_ = false;
@@ -288,7 +303,9 @@ private:
 
     zx_status_t NewDevhost(const char* name, Devhost* parent, Devhost** out);
 
-    zx_status_t BindDriver(Driver* drv);
+    zx_status_t BindDriver(Driver* drv) {
+        return BindDriver(drv, fit::bind_member(this, &Coordinator::AttemptBind));
+    }
     zx_status_t AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev);
     void BindSystemDrivers();
     void DriverAddedSys(Driver* drv, const char* version);

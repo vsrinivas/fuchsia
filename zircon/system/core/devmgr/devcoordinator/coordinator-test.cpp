@@ -97,6 +97,106 @@ TEST(CoordinatorTestCase, BindDrivers) {
     ASSERT_EQ(driver, &coordinator.drivers().front());
 }
 
+// Test binding drivers against the root/test/misc devices
+TEST(CoordinatorTestCase, BindDriversForBuiltins) {
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
+
+    zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
+    ASSERT_EQ(ZX_OK, status);
+
+    // AttemptBind function that asserts it has only been called once
+    class CallOnce {
+    public:
+        explicit CallOnce(size_t line) : line_number_(line) {}
+        CallOnce(const CallOnce&) = delete;
+        CallOnce& operator=(const CallOnce&) = delete;
+
+        CallOnce(CallOnce&& other) {
+            *this = std::move(other);
+        }
+        CallOnce& operator=(CallOnce&& other) {
+            if (this != &other) {
+                line_number_ = other.line_number_;
+                call_count_ = other.call_count_;
+                // Ensure the dtor for the other one doesn't run
+                other.call_count_ = 1;
+            }
+            return *this;
+        }
+
+        ~CallOnce() { EXPECT_EQ(1, call_count_, "Mismatch from line %zu\n", line_number_); }
+        zx_status_t operator()(const devmgr::Driver* drv, const fbl::RefPtr<devmgr::Device>& dev) {
+            ++call_count_;
+            return ZX_OK;
+        }
+    private:
+        size_t line_number_;
+        size_t call_count_ = 0;
+    };
+
+    auto make_fake_driver = [](auto&& instructions) -> std::unique_ptr<devmgr::Driver> {
+        size_t instruction_count = fbl::count_of(instructions);
+        auto binding = std::make_unique<zx_bind_inst_t[]>(instruction_count);
+        memcpy(binding.get(), instructions, instruction_count * sizeof(instructions[0]));
+        auto drv = std::make_unique<devmgr::Driver>();
+        drv->binding.reset(binding.release());
+        drv->binding_size = static_cast<uint32_t>(instruction_count * sizeof(instructions[0]));
+        return drv;
+    };
+
+    {
+        zx_bind_inst_t test_drv_bind[] = {
+            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
+        };
+        auto test_drv = make_fake_driver(test_drv_bind);
+        ASSERT_OK(coordinator.BindDriver(test_drv.get(), CallOnce{__LINE__}));
+    }
+
+    {
+        zx_bind_inst_t misc_drv_bind[] = {
+            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+        };
+        auto misc_drv = make_fake_driver(misc_drv_bind);
+        ASSERT_OK(coordinator.BindDriver(misc_drv.get(), CallOnce{__LINE__}));
+    }
+
+    {
+        zx_bind_inst_t root_drv_bind[] = {
+            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ROOT),
+        };
+        auto root_drv = make_fake_driver(root_drv_bind);
+        ASSERT_OK(coordinator.BindDriver(root_drv.get(), CallOnce{__LINE__}));
+    }
+
+    {
+        zx_bind_inst_t test_drv_bind[] = {
+            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
+            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+        };
+        auto test_drv = make_fake_driver(test_drv_bind);
+        ASSERT_OK(coordinator.BindDriver(test_drv.get(), CallOnce{__LINE__}));
+    }
+
+    {
+        zx_bind_inst_t misc_drv_bind[] = {
+            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+        };
+        auto misc_drv = make_fake_driver(misc_drv_bind);
+        ASSERT_OK(coordinator.BindDriver(misc_drv.get(), CallOnce{__LINE__}));
+    }
+
+    {
+        zx_bind_inst_t root_drv_bind[] = {
+            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ROOT),
+            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+        };
+        auto root_drv = make_fake_driver(root_drv_bind);
+        ASSERT_OK(coordinator.BindDriver(root_drv.get(), CallOnce{__LINE__}));
+    }
+}
+
 void InitializeCoordinator(devmgr::Coordinator* coordinator) {
     zx_status_t status = coordinator->InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
