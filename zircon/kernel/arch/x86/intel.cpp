@@ -35,12 +35,11 @@ uint32_t x86_intel_get_patch_level(void) {
 bool x86_intel_cpu_has_meltdown(void) {
     // IA32_ARCH_CAPABILITIES MSR enumerates fixes for Meltdown and other speculation-related side
     // channels, where available.
-    const auto* leaf = x86_get_cpuid_leaf(X86_CPUID_EXTENDED_FEATURE_FLAGS);
-    if (leaf && BIT(leaf->d, 29)) {
-        uint64_t arch_capabilities = read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
-        if (BIT(arch_capabilities, X86_ARCH_CAPABILITIES_RDCL_NO)) {
-            return false;
-        }
+    if (x86_feature_test(X86_FEATURE_ARCH_CAPABILITIES)) {
+      uint64_t arch_capabilities = read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
+      if (BIT(arch_capabilities, X86_ARCH_CAPABILITIES_RDCL_NO)) {
+        return false;
+      }
     }
 
     return true;
@@ -53,8 +52,7 @@ bool x86_intel_cpu_has_l1tf(void) {
         return false;
     }
 
-    const auto* leaf = x86_get_cpuid_leaf(X86_CPUID_EXTENDED_FEATURE_FLAGS);
-    if (leaf && BIT(leaf->d, 29)) {
+    if (x86_feature_test(X86_FEATURE_ARCH_CAPABILITIES)) {
         uint64_t arch_capabilities = read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
         if (BIT(arch_capabilities, X86_ARCH_CAPABILITIES_RDCL_NO)) {
             return false;

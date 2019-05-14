@@ -163,6 +163,7 @@ void x86_feature_debug(void);
 #define X86_FEATURE_PKU                 X86_CPUID_BIT(0x7, 2, 3)
 #define X86_FEATURE_IBRS_IBPB           X86_CPUID_BIT(0x7, 3, 26)
 #define X86_FEATURE_STIBP               X86_CPUID_BIT(0x7, 3, 27)
+#define X86_FEATURE_ARCH_CAPABILITIES   X86_CPUID_BIT(0x7, 3, 29)
 #define X86_FEATURE_SSBD                X86_CPUID_BIT(0x7, 3, 31)
 
 #define X86_FEATURE_KVM_PVCLOCK_STABLE  X86_CPUID_BIT(0x40000001, 0, 24)
