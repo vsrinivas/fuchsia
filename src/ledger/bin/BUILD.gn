@@ -54,13 +54,9 @@ executable("ledger_unittests") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
-fuzz_package("ledger_fuzzers") {
-  targets = [
+fuzzers_package("ledger_fuzzers") {
+  fuzzers = [
     "//src/ledger/bin/p2p_sync/impl:p2p_sync_fuzzer",
     "//src/ledger/bin/storage/impl/btree:encoding_fuzzer",
-  ]
-  sanitizers = [
-    "asan",
-    "ubsan",
   ]
 }

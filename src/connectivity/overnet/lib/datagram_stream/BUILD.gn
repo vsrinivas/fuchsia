@@ -100,8 +100,7 @@ source_set("linearizer_test") {
   ]
 }
 
-fuzz_target("linearizer_fuzzer") {
-  testonly = true
+fuzzer("linearizer_fuzzer") {
   sources = [
     "linearizer_fuzzer_main.cc",
   ]
@@ -151,8 +150,7 @@ source_set("receive_mode_test") {
   ]
 }
 
-fuzz_target("receive_mode_fuzzer") {
-  testonly = true
+fuzzer("receive_mode_fuzzer") {
   sources = [
     "receive_mode_fuzzer.cc",
   ]

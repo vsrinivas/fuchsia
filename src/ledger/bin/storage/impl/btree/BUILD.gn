@@ -103,7 +103,7 @@ source_set("unittests") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
-fuzz_target("encoding_fuzzer") {
+fuzzer("encoding_fuzzer") {
   sources = [
     "encoding_fuzztest.cc",
   ]

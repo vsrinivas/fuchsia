@@ -90,8 +90,7 @@ fidl("fuchsia.overnet.routingtablefuzzer") {
   ]
 }
 
-fuzz_target("routing_table_fuzzer") {
-  testonly = true
+fuzzer("routing_table_fuzzer") {
   sources = [
     "routing_table_fuzzer.cc",
   ]

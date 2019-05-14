@@ -53,8 +53,8 @@ test_package("overnet_tests") {
   ]
 }
 
-fuzz_package("overnet_fuzzers") {
-  targets = [
+fuzzers_package("overnet_fuzzers") {
+  fuzzers = [
     "datagram_stream:linearizer_fuzzer",
     "datagram_stream:receive_mode_fuzzer",
     "links:packet_nub_connection_fuzzer",

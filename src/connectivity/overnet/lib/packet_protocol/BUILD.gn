@@ -136,8 +136,7 @@ source_set("packet_protocol_test") {
   ]
 }
 
-fuzz_target("packet_protocol_fuzzer") {
-  testonly = true
+fuzzer("packet_protocol_fuzzer") {
   sources = [
     "packet_protocol_fuzzer_main.cc",
   ]

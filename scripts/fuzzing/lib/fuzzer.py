@@ -26,8 +26,8 @@ class Fuzzer(object):
     Attributes:
       device: A Device where this fuzzer can be run
       host: The build host that built the fuzzer
-      pkg: The GN fuzz_package name
-      tgt: The GN fuzz_target name
+      pkg: The GN fuzzers_package name
+      tgt: The GN fuzzers name
   """
 
   # Matches the prefixes in libFuzzer passed to |Fuzzer::DumpCurrentUnit| or

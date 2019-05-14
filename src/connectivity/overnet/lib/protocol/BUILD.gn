@@ -50,8 +50,7 @@ source_set("ack_frame_test") {
   ]
 }
 
-fuzz_target("ack_frame_fuzzer") {
-  testonly = true
+fuzzer("ack_frame_fuzzer") {
   sources = [
     "ack_frame_fuzzer.cc",
   ]
@@ -73,8 +72,7 @@ source_set("coding") {
   ]
 }
 
-fuzz_target("overnet_encoding_fuzzer") {
-  testonly = true
+fuzzer("overnet_encoding_fuzzer") {
   sources = [
     "encoding_fuzzer.cc",
   ]
@@ -83,8 +81,7 @@ fuzz_target("overnet_encoding_fuzzer") {
   ]
 }
 
-fuzz_target("overnet_decoding_fuzzer") {
-  testonly = true
+fuzzer("overnet_decoding_fuzzer") {
   sources = [
     "decoding_fuzzer.cc",
   ]
@@ -147,8 +144,7 @@ source_set("routable_message_test") {
   ]
 }
 
-fuzz_target("routable_message_fuzzer") {
-  testonly = true
+fuzzer("routable_message_fuzzer") {
   sources = [
     "routable_message_fuzzer.cc",
   ]

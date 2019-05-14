@@ -79,7 +79,7 @@ source_set("unittests") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
-fuzz_target("p2p_sync_fuzzer") {
+fuzzer("p2p_sync_fuzzer") {
   sources = [
     "user_communicator_impl_fuzztest.cc",
   ]

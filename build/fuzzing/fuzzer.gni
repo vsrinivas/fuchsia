@@ -8,9 +8,9 @@ import("//build/package.gni")
 # TODO(aarongreen): SEC-224.  Add tests to catch fuzzer building/packaging
 # regressions.
 
-# Defines a fuzz target component
+# Defines a fuzzer binary.
 #
-# The fuzz_target template is used to create components containing binaries
+# The fuzzer template is used to create components containing binaries
 # which leverage LLVM's libFuzzer to perform fuzz testing.
 #
 # Parameters
@@ -21,7 +21,7 @@ import("//build/package.gni")
 #
 #   binary (optional)
 #     [path] The path to the primary binary for the component. This can be
-#     used to indicate a fuzz_target binary built in a different phase of the
+#     used to indicate a fuzzer binary built in a different phase of the
 #     build, e.g. in zircon.
 #
 #     NOTE: Exactly one of sources or binary must be set.
@@ -35,16 +35,16 @@ import("//build/package.gni")
 #     [file] If specified, a file containing inputs, one per line, that the
 #     fuzzer will use to generate new mutations.
 #
-template("fuzz_target") {
+template("fuzzer") {
   assert(
       (defined(invoker.binary) && !defined(invoker.sources)) ||
           (!defined(invoker.binary) || defined(invoker.sources)),
       "Exactly one of `binary` or `sources` must be defined for $target_name")
-  fuzz_target_name = target_name
+  fuzzer_name = target_name
 
   # If not specified, generate the component binary
   if (!defined(invoker.binary)) {
-    executable(fuzz_target_name) {
+    executable(fuzzer_name) {
       # Explicitly forward visibility, implicitly forward everything else.
       # See comment in //build/config/BUILDCONFIG.gn for details on this pattern.
       forward_variables_from(invoker, [ "visibility" ])
@@ -61,11 +61,11 @@ template("fuzz_target") {
   }
 
   # Generate the component manifest
-  fuzz_target_cmx = "${target_gen_dir}/${fuzz_target_name}.cmx"
-  action("${fuzz_target_name}_cmx") {
+  fuzzer_cmx = "${target_gen_dir}/${fuzzer_name}.cmx"
+  action("${fuzzer_name}_cmx") {
     script = "//build/fuzzing/gen_fuzzer_manifest.py"
     outputs = [
-      fuzz_target_cmx,
+      fuzzer_cmx,
     ]
     args = [
       "--out",
@@ -75,7 +75,7 @@ template("fuzz_target") {
     if (defined(invoker.binary)) {
       args += [ invoker.binary ]
     } else {
-      args += [ fuzz_target_name ]
+      args += [ fuzzer_name ]
     }
     if (defined(invoker.cmx)) {
       args += [
@@ -86,9 +86,9 @@ template("fuzz_target") {
   }
 
   # Generate data files needed at runtime
-  output_dictionary = "${target_gen_dir}/${fuzz_target_name}/dictionary"
+  output_dictionary = "${target_gen_dir}/${fuzzer_name}/dictionary"
   if (defined(invoker.dictionary)) {
-    copy("${fuzz_target_name}_dictionary") {
+    copy("${fuzzer_name}_dictionary") {
       sources = [
         invoker.dictionary,
       ]
@@ -97,47 +97,47 @@ template("fuzz_target") {
       ]
     }
   } else {
-    generated_file("${fuzz_target_name}_dictionary") {
+    generated_file("${fuzzer_name}_dictionary") {
       contents = []
       outputs = [
         output_dictionary,
       ]
     }
   }
-  generated_file("${fuzz_target_name}_options") {
+  generated_file("${fuzzer_name}_options") {
     contents = []
     if (defined(invoker.options)) {
       contents = invoker.options
     }
     outputs = [
-      "${target_gen_dir}/${fuzz_target_name}/options",
+      "${target_gen_dir}/${fuzzer_name}/options",
     ]
   }
 
-  # Create the fuzz_target component
-  deprecated_fuchsia_component("${fuzz_target_name}_component") {
+  # Create the fuzzer component
+  deprecated_fuchsia_component("${fuzzer_name}_component") {
     testonly = true
-    manifest = fuzz_target_cmx
+    manifest = fuzzer_cmx
     if (defined(invoker.binary)) {
       binary = invoker.binary
     } else {
-      binary = "${fuzz_target_name}"
+      binary = "${fuzzer_name}"
     }
     resources = [
       {
-        path = "${target_gen_dir}/${fuzz_target_name}/dictionary"
-        dest = "${fuzz_target_name}/dictionary"
+        path = "${target_gen_dir}/${fuzzer_name}/dictionary"
+        dest = "${fuzzer_name}/dictionary"
       },
       {
-        path = "${target_gen_dir}/${fuzz_target_name}/options"
-        dest = "${fuzz_target_name}/options"
+        path = "${target_gen_dir}/${fuzzer_name}/options"
+        dest = "${fuzzer_name}/options"
       },
     ]
     deps = []
     forward_variables_from(invoker, [ "visibility" ])
     if (!defined(invoker.binary)) {
-      # deps, public_deps, and data_deps are forwarded to ${fuzz_target_name}
-      deps += [ ":${fuzz_target_name}" ]
+      # deps, public_deps, and data_deps are forwarded to ${fuzzer_name}
+      deps += [ ":${fuzzer_name}" ]
     } else {
       forward_variables_from(invoker,
                              [
@@ -147,31 +147,31 @@ template("fuzz_target") {
                              ])
     }
     deps += [
-      ":${fuzz_target_name}_cmx",
-      ":${fuzz_target_name}_dictionary",
-      ":${fuzz_target_name}_options",
+      ":${fuzzer_name}_cmx",
+      ":${fuzzer_name}_dictionary",
+      ":${fuzzer_name}_options",
     ]
   }
 }
 
-set_defaults("fuzz_target") {
+set_defaults("fuzzer") {
   configs = default_executable_configs +
             [ "//build/fuzzing:fuzzing_build_mode_unsafe_for_production" ]
 }
 
-# Defines a package of fuzz target components
+# Defines a package of fuzzers
 #
-# The fuzz_package template is used to bundle several fuzz_targets and their
+# The fuzzers_package template is used to bundle several fuzzers and their
 # associated data into a single Fuchsia package.
 #
 # Parameters
 #
-#   targets (required)
-#     [list of labels] The fuzz_target() targets to include in this package.
+#   fuzzers (required)
+#     [list of labels] The fuzzer() labels to include in this package.
 #
 #   sanitizers (optional)
 #     [list of variants] A set of sanitizer variants.  The resulting package
-#     will contain binaries for each sanitizer/target combination. Defaults to
+#     will contain binaries for each sanitizer/fuzzer combination. Defaults to
 #     [ "asan", "ubsan" ]
 #
 #   fuzz_host (optional)
@@ -193,8 +193,8 @@ set_defaults("fuzz_target") {
 #   data_deps (optional)
 #   testonly (optional)
 #     Usual GN meanings.
-template("fuzz_package") {
-  assert(defined(invoker.targets), "targets must be defined for $target_name}")
+template("fuzzers_package") {
+  assert(defined(invoker.fuzzers), "fuzzers must be defined for $target_name}")
 
   if (defined(invoker.sanitizers)) {
     sanitizers = invoker.sanitizers
@@ -211,38 +211,38 @@ template("fuzz_package") {
     fuzz_host = false
   }
 
-  # Collect the selected fuzz targets listed in this package based on the
-  # variants selected in args.gn and filtered by the package's list of
-  # supported sanitizers.
+  # Collect the selected fuzzers listed in this package based on the variants
+  # selected in args.gn and filtered by the package's list of supported
+  # sanitizers.
   selected = false
-  selected_targets = []
-  foreach(fuzz_target, invoker.targets) {
+  selected_fuzzers = []
+  foreach(fuzzer, invoker.fuzzers) {
     selected = false
     foreach(sanitizer, sanitizers) {
       foreach(selector, select_variant_canonical) {
         if (!selected && selector.variant == "${sanitizer}-fuzzer" &&
             ((defined(selector.target_type) &&
               selector.target_type == [ "fuzzed_executable" ]) ||
-             (defined(selector.name) && selector.name == [ fuzz_target ]) ||
+             (defined(selector.name) && selector.name == [ fuzzer ]) ||
              (defined(selector.output_name) &&
-              selector.output_name == [ fuzz_target ]))) {
+              selector.output_name == [ fuzzer ]))) {
           selected = true
-          selected_targets += [ fuzz_target ]
+          selected_fuzzers += [ fuzzer ]
         }
       }
     }
   }
 
   # Assemble the Fuchsia package
-  if (selected_targets != []) {
+  if (selected_fuzzers != []) {
     package(target_name) {
       metadata = {
         fuzz_spec = [
           {
-            fuzz_package = target_name
-            fuzz_targets = []
-            foreach(selected_target, selected_targets) {
-              fuzz_targets += [ get_label_info(selected_target, "name") ]
+            fuzzers_package = target_name
+            fuzzers = []
+            foreach(selected_target, selected_fuzzers) {
+              fuzzers += [ get_label_info(selected_target, "name") ]
             }
             fuzz_host = fuzz_host
           },
@@ -257,13 +257,13 @@ template("fuzz_package") {
       forward_variables_from(invoker,
                              "*",
                              [
-                               "targets",
+                               "fuzzers",
                                "sanitizers",
                                "visibility",
                                "fuzz_host",
                              ])
       testonly = true
-      foreach(selected_target, selected_targets) {
+      foreach(selected_target, selected_fuzzers) {
         components += [ "${selected_target}_component" ]
       }
       if (fuzz_host) {
@@ -277,9 +277,9 @@ template("fuzz_package") {
     if (fuzz_host) {
       install_host_tools("host_${target_name}") {
         testonly = true
-        deps = selected_targets
+        deps = selected_fuzzers
         outputs = []
-        foreach(target, selected_targets) {
+        foreach(target, selected_fuzzers) {
           outputs += [ get_label_info(target, "name") ]
         }
       }
@@ -294,4 +294,23 @@ template("fuzz_package") {
                  "selected",
                ])
   }
+}
+
+# TODO(aarongreen): Complete soft transition and remove.
+# These templates are the old names for `fuzzer` and `fuzzers_package`. They
+# are included to allow third_party projects to transition softly.
+template("fuzz_target") {
+  source_set(target_name) {
+  }
+  not_needed(invoker, "*")
+}
+
+set_defaults("fuzz_target") {
+  configs = []
+}
+
+template("fuzz_package") {
+  group(target_name) {
+  }
+  not_needed(invoker, "*")
 }

@@ -97,8 +97,7 @@ source_set("internal_list_test") {
   ]
 }
 
-fuzz_target("internal_list_fuzzer") {
-  testonly = true
+fuzzer("internal_list_fuzzer") {
   sources = [
     "internal_list_fuzzer.cc",
   ]

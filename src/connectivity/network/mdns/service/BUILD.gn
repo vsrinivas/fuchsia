@@ -184,8 +184,7 @@ test_package("mdns_tests") {
   ]
 }
 
-fuzz_target("packet_reader_fuzzer") {
-  testonly = true
+fuzzer("packet_reader_fuzzer") {
   sources = [
     "dns_message.cc",
     "dns_message.h",
@@ -201,10 +200,6 @@ fuzz_target("packet_reader_fuzzer") {
   ]
 }
 
-fuzz_package("mdns_fuzzers") {
-  targets = [ ":packet_reader_fuzzer" ]
-  sanitizers = [
-    "asan",
-    "ubsan",
-  ]
+fuzzers_package("mdns_fuzzers") {
+  fuzzers = [ ":packet_reader_fuzzer" ]
 }

@@ -92,8 +92,7 @@ fidl("fuchsia.overnet.streamlinkfuzzer") {
   ]
 }
 
-fuzz_target("stream_link_untrusted_fuzzer") {
-  testonly = true
+fuzzer("stream_link_untrusted_fuzzer") {
   sources = [
     "stream_link_untrusted_fuzzer.cc",
   ]
@@ -107,8 +106,7 @@ fuzz_target("stream_link_untrusted_fuzzer") {
   ]
 }
 
-fuzz_target("stream_link_peer_to_peer_fuzzer") {
-  testonly = true
+fuzzer("stream_link_peer_to_peer_fuzzer") {
   sources = [
     "stream_link_peer_to_peer_fuzzer.cc",
   ]
@@ -166,8 +164,7 @@ source_set("packet_nub_test") {
   ]
 }
 
-fuzz_target("packet_nub_fuzzer") {
-  testonly = true
+fuzzer("packet_nub_fuzzer") {
   sources = [
     "packet_nub_fuzzer_main.cc",
   ]
@@ -176,8 +173,7 @@ fuzz_target("packet_nub_fuzzer") {
   ]
 }
 
-fuzz_target("packet_nub_connection_fuzzer") {
-  testonly = true
+fuzzer("packet_nub_connection_fuzzer") {
   sources = [
     "packet_nub_connection_fuzzer.cc",
   ]
