@@ -8,6 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/handles/object_info.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/logger.h>
@@ -22,6 +23,8 @@
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/schema.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -137,7 +140,80 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                   MatchesKey("build.snapshot"),
                   MatchesKey("log.kernel"),
                   MatchesKey("log.system"),
+                  MatchesKey("inspect"),
               }));
+}
+
+constexpr char kInspectJsonSchema[] = R"({
+  "type": "array",
+  "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "contents": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "path",
+          "contents"
+        ],
+        "additionalProperties": false
+  },
+  "uniqueItems": true
+})";
+
+TEST_F(FeedbackAgentIntegrationTest, GetData_ValidInspectJson) {
+  DataProviderSyncPtr data_provider;
+  environment_services_->Connect(data_provider.NewRequest());
+
+  DataProvider_GetData_Result out_result;
+  ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
+
+  ASSERT_TRUE(out_result.is_response());
+  ASSERT_TRUE(out_result.response().data.has_attachments());
+
+  bool found_inspect_attachment = false;
+  for (const auto& attachment : out_result.response().data.attachments()) {
+    if (attachment.key.compare("inspect") != 0) {
+      continue;
+    }
+    found_inspect_attachment = true;
+
+    std::string inspect_str;
+    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_str));
+    ASSERT_FALSE(inspect_str.empty());
+
+    // JSON verification.
+    // We check that the output is a valid JSON and that it matches the schema.
+    rapidjson::Document inspect_json;
+    ASSERT_FALSE(inspect_json.Parse(inspect_str.c_str()).HasParseError());
+    rapidjson::Document inspect_schema_json;
+    ASSERT_FALSE(inspect_schema_json.Parse(kInspectJsonSchema).HasParseError());
+    rapidjson::SchemaDocument schema(inspect_schema_json);
+    rapidjson::SchemaValidator validator(schema);
+    EXPECT_TRUE(inspect_json.Accept(validator));
+
+    // We check that we get some Inspect data for the two components that are
+    // guaranteed to be in the test environment: feedback_agent.cmx and
+    // feedback_agent_integration_test.cmx.
+    bool has_entry_for_feedback_agent = false;
+    bool has_entry_for_feedback_agent_integration_test = false;
+    for (const auto& obj : inspect_json.GetArray()) {
+      const std::string path = obj["path"].GetString();
+      if (path.find("feedback_agent.cmx") != std::string::npos) {
+        has_entry_for_feedback_agent = true;
+      } else if (path.find("feedback_agent_integration_test.cmx") !=
+                 std::string::npos) {
+        has_entry_for_feedback_agent_integration_test = true;
+      }
+    }
+    EXPECT_TRUE(has_entry_for_feedback_agent);
+    EXPECT_TRUE(has_entry_for_feedback_agent_integration_test);
+  }
+  EXPECT_TRUE(found_inspect_attachment);
 }
 
 // EXPECTs that there is a feedback_agent.cmx process running in a child job of

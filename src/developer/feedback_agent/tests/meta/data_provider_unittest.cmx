@@ -8,7 +8,8 @@
         ],
         "features": [
             "build-info",
-            "isolated-persistent-storage"
+            "isolated-persistent-storage",
+            "shell"
         ],
         "services": [
             "fuchsia.logger.LogSink"

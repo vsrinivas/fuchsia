@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback_agent/inspect.h"
 #include "src/developer/feedback_agent/log_listener.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -86,6 +87,8 @@ fit::promise<fuchsia::mem::Buffer> BuildValue(
     return GetKernelLog();
   } else if (key == "log.system") {
     return CollectSystemLog(services, kAttachmentTimeout);
+  } else if (key == "inspect") {
+    return CollectInspectData(kAttachmentTimeout);
   } else {
     FX_LOGS(WARNING) << "Unknown attachment " << key;
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());

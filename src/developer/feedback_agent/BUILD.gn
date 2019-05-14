@@ -82,6 +82,8 @@ source_set("src") {
     "data_provider.h",
     "image_conversion.cc",
     "image_conversion.h",
+    "inspect.cc",
+    "inspect.h",
     "log_listener.cc",
     "log_listener.h",
   ]
@@ -101,6 +103,8 @@ source_set("src") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/inspect/query",
+    "//garnet/public/lib/inspect/query:json_formatter",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/files",

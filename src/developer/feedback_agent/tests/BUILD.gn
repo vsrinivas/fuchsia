@@ -158,6 +158,7 @@ executable("feedback_agent_integration_test") {
     "//src/ui/lib/escher/test:gtest_vulkan",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",

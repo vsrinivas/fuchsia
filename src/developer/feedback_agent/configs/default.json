@@ -1,6 +1,7 @@
 {
     "attachment_whitelist": [
         "build.snapshot",
+        "inspect",
         "log.kernel",
         "log.system"
     ]
