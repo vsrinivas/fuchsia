@@ -8,6 +8,7 @@
 #include <lib/callback/operation_serializer.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
+#include <lib/fit/result.h>
 
 #include <memory>
 #include <queue>
@@ -72,7 +73,7 @@ class PageDelegate {
 
   void CreateReference(
       std::unique_ptr<storage::DataSource> data,
-      fit::function<void(Status, CreateReferenceStatus, ReferencePtr)>
+      fit::function<void(Status, fit::result<Reference, zx_status_t>)>
           callback);
 
   void StartTransaction(fit::function<void(Status)> callback);

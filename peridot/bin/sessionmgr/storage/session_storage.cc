@@ -5,6 +5,7 @@
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
 
 #include <lib/fidl/cpp/clone.h>
+#include <zircon/status.h>
 
 #include <unordered_set>
 
@@ -331,25 +332,21 @@ class WriteSnapshotCall : public Operation<> {
     FlowToken flow{this};
     page_client_->page()->CreateReferenceFromBuffer(
         std::move(snapshot_),
-        [this, flow](fuchsia::ledger::CreateReferenceStatus status,
-                     std::unique_ptr<fuchsia::ledger::Reference> reference) {
-          if (status != fuchsia::ledger::CreateReferenceStatus::OK) {
+        [this,
+         flow](fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result) {
+          if (result.is_err()) {
             FXL_LOG(ERROR) << trace_name()
                            << " PageSnapshot.CreateReferenceFromBuffer() "
-                           << fidl::ToUnderlying(status);
-            return;
-          } else if (!reference) {
+                           << zx_status_get_string(result.err());
             return;
           }
-
-          PutReference(std::move(reference), flow);
+          PutReference(std::move(result.response().reference), flow);
         });
   }
 
-  void PutReference(std::unique_ptr<fuchsia::ledger::Reference> reference,
-                    FlowToken flow) {
+  void PutReference(fuchsia::ledger::Reference reference, FlowToken flow) {
     page_client_->page()->PutReference(
-        to_array(key_), std::move(*reference),
+        to_array(key_), std::move(reference),
         // TODO(MI4-1425): Experiment with declaring lazy priority.
         fuchsia::ledger::Priority::EAGER);
   }

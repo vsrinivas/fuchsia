@@ -60,13 +60,15 @@ void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
   (*page)->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       [page, key = std::move(key), priority, callback = std::move(callback)](
-          CreateReferenceStatus status, ReferencePtr reference) mutable {
-        if (status != CreateReferenceStatus::OK) {
+          fuchsia::ledger::Page_CreateReferenceFromBuffer_Result
+              result) mutable {
+        if (result.is_err()) {
           LogOnError(Status::IO_ERROR, "Page::CreateReferenceFromBuffer");
           callback(Status::IO_ERROR);
           return;
         }
-        (*page)->PutReference(std::move(key), std::move(*reference), priority);
+        (*page)->PutReference(std::move(key),
+                              std::move(result.response().reference), priority);
         callback(Status::OK);
       });
 }

@@ -75,15 +75,6 @@ struct Token {
     bytes opaque_id;
 };
 
-/// The result of a CreateReference operation on the page.
-enum CreateReferenceStatus {
-    /// Create reference succeeded.
-    OK = 0;
-    /// The argument is invalid. This is returned when the size of the data does not correspond to
-    /// the received data.
-    INVALID_ARGUMENT = 1;
-};
-
 /// The result of a wait for conflict resolution. See
 /// |Page.WaitForConflictResolution| for details.
 enum ConflictResolutionWaitStatus {
@@ -154,12 +145,12 @@ protocol Page {
     /// will be the content of the socket. The content size must be equal to
     /// |size|, otherwise the call will fail.
     CreateReferenceFromSocket(uint64 size, handle<socket> data)
-        -> (CreateReferenceStatus status, Reference? reference);
+        -> (Reference reference) error zx.status;
     /// Creates a new reference. The object is not part of any commit. It must be
     /// associated with a key using |PutReference()|. The content of the reference
     /// will be the content of the buffer.
     CreateReferenceFromBuffer(fuchsia.mem.Buffer buffer)
-        -> (CreateReferenceStatus status, Reference? reference);
+        -> (Reference reference) error zx.status;
 
     // Transactions.
 

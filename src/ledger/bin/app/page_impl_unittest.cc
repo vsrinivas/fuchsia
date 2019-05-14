@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 
+#include "fuchsia/ledger/cpp/fidl.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
@@ -218,18 +219,18 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
 
   bool called;
-  CreateReferenceStatus status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
   page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
+      callback::Capture(callback::SetWhenCalled(&called), &result));
   DrainLoop();
 
   ASSERT_TRUE(called);
-  ASSERT_EQ(CreateReferenceStatus::OK, status);
+  ASSERT_TRUE(result.is_response());
 
   std::string key("some_key");
-  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
+  page_ptr_->PutReference(convert::ToArray(key),
+                          std::move(result.response().reference),
                           Priority::LAZY);
 
   DrainLoop();
@@ -253,14 +254,14 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
 
 TEST_F(PageImplTest, PutUnknownReference) {
   std::string key("some_key");
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray("12345678");
+  Reference reference;
+  reference.opaque_id = convert::ToArray("12345678");
 
   bool called;
   zx_status_t status;
   page_ptr_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&called), &status));
-  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
+  page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
                           Priority::LAZY);
   DrainLoop();
   EXPECT_TRUE(called);
@@ -304,14 +305,12 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
 
   bool called;
-  CreateReferenceStatus reference_status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
   page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
-      callback::Capture(callback::SetWhenCalled(&called), &reference_status,
-                        &reference));
+      callback::Capture(callback::SetWhenCalled(&called), &result));
   DrainLoop();
-  ASSERT_EQ(CreateReferenceStatus::OK, reference_status);
+  ASSERT_TRUE(result.is_response());
 
   zx::channel writer, reader;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &writer, &reader));
@@ -320,7 +319,8 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   // Key too large; message doesn't go through, failing on validation.
   const size_t key_size = kMaxKeySize + 1;
   std::string key = GetKey(1, key_size);
-  page_ptr_->PutReference(convert::ToArray(key), fidl::Clone(*reference),
+  page_ptr_->PutReference(convert::ToArray(key),
+                          std::move(result.response().reference),
                           Priority::EAGER);
   zx_status_t status = reader.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
   DrainLoop();
@@ -328,7 +328,8 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
 
   // With a smaller key, message goes through.
   key = GetKey(1, kMaxKeySize);
-  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
+  page_ptr_->PutReference(convert::ToArray(key),
+                          std::move(result.response().reference),
                           Priority::EAGER);
   status = reader.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr);
   DrainLoop();
@@ -383,14 +384,13 @@ TEST_F(PageImplTest, TransactionCommit) {
   ASSERT_TRUE(fsl::VmoFromString(value2, &vmo));
 
   bool called;
-  CreateReferenceStatus status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
   page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
+      callback::Capture(callback::SetWhenCalled(&called), &result));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(CreateReferenceStatus::OK, status);
+  ASSERT_TRUE(result.is_response());
 
   // Sequence of operations:
   //  - StartTransaction
@@ -430,7 +430,8 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
   }
 
-  page_ptr_->PutReference(convert::ToArray(key2), std::move(*reference),
+  page_ptr_->PutReference(convert::ToArray(key2),
+                          std::move(result.response().reference),
                           Priority::LAZY);
 
   {
@@ -648,14 +649,13 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
 
   std::string value("a small value");
   bool called;
-  CreateReferenceStatus status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromSocket_Result result;
   page_ptr_->CreateReferenceFromSocket(
       value.size(), fsl::WriteStringToSocket(value),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
+      callback::Capture(callback::SetWhenCalled(&called), &result));
   DrainLoop();
   EXPECT_TRUE(called);
-  EXPECT_EQ(CreateReferenceStatus::OK, status);
+  EXPECT_TRUE(result.is_response());
   ASSERT_EQ(1u, fake_storage_->GetObjects().size());
   ASSERT_EQ(value, fake_storage_->GetObjects().begin()->second);
 }
@@ -668,14 +668,13 @@ TEST_F(PageImplTest, CreateReferenceFromBuffer) {
   ASSERT_TRUE(fsl::VmoFromString(value, &vmo));
 
   bool called;
-  CreateReferenceStatus status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
   page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &reference));
+      callback::Capture(callback::SetWhenCalled(&called), &result));
   DrainLoop();
   EXPECT_TRUE(called);
-  EXPECT_EQ(CreateReferenceStatus::OK, status);
+  EXPECT_TRUE(result.is_response());
   ASSERT_EQ(1u, fake_storage_->GetObjects().size());
   ASSERT_EQ(value, fake_storage_->GetObjects().begin()->second);
 }
@@ -1259,19 +1258,18 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   ASSERT_TRUE(fsl::VmoFromString(value_string, &vmo));
 
   bool called;
-  CreateReferenceStatus create_reference_status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
   page_ptr_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
-      callback::Capture(callback::SetWhenCalled(&called),
-                        &create_reference_status, &reference));
+      callback::Capture(callback::SetWhenCalled(&called), &result));
   DrainLoop();
 
   ASSERT_TRUE(called);
-  ASSERT_EQ(CreateReferenceStatus::OK, create_reference_status);
+  ASSERT_TRUE(result.is_response());
 
   std::string key("some_key");
-  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
+  page_ptr_->PutReference(convert::ToArray(key),
+                          std::move(result.response().reference),
                           Priority::EAGER);
 
   PageSnapshotPtr snapshot = GetSnapshot();

@@ -10,6 +10,7 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <trace/event.h>
+#include <zircon/errors.h>
 
 #include <string>
 #include <utility>
@@ -178,7 +179,7 @@ void PageDelegate::Clear(fit::function<void(Status)> callback) {
 
 void PageDelegate::CreateReference(
     std::unique_ptr<storage::DataSource> data,
-    fit::function<void(Status, CreateReferenceStatus, ReferencePtr)> callback) {
+    fit::function<void(Status, fit::result<Reference, zx_status_t>)> callback) {
   storage_->AddObjectFromLocal(
       storage::ObjectType::BLOB, std::move(data), {},
       callback::MakeScoped(
@@ -186,7 +187,7 @@ void PageDelegate::CreateReference(
           [this, callback = std::move(callback)](
               Status status, storage::ObjectIdentifier object_identifier) {
             if (status != Status::OK && status != Status::IO_ERROR) {
-              callback(status, CreateReferenceStatus::OK, nullptr);
+              callback(status, fit::error(ZX_ERR_INTERNAL));
               return;
             }
 
@@ -197,14 +198,12 @@ void PageDelegate::CreateReference(
             // An INVALID_ARGUMENT should not cause the page to get
             // disconnected, so use OK as status.
             if (status == Status::IO_ERROR) {
-              callback(Status::OK, CreateReferenceStatus::INVALID_ARGUMENT,
-                       nullptr);
+              callback(Status::OK, fit::error(ZX_ERR_INVALID_ARGS));
               return;
             }
 
-            callback(Status::OK, CreateReferenceStatus::OK,
-                     fidl::MakeOptional(manager_->CreateReference(
-                         std::move(object_identifier))));
+            callback(Status::OK, fit::ok(manager_->CreateReference(
+                                     std::move(object_identifier))));
           }));
 }
 

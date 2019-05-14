@@ -302,15 +302,17 @@ void PutBenchmark::PutEntry(std::vector<uint8_t> key,
   page_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       [this, trace_event_id, key = std::move(key),
-       on_done = std::move(on_done)](CreateReferenceStatus status,
-                                     ReferencePtr reference) mutable {
-        if (QuitOnError(QuitLoopClosure(), status,
+       on_done = std::move(on_done)](
+          fuchsia::ledger::Page_CreateReferenceFromBuffer_Result
+              result) mutable {
+        if (QuitOnError(QuitLoopClosure(), result,
                         "Page::CreateReferenceFromBuffer")) {
           return;
         }
         TRACE_ASYNC_END("benchmark", "create_reference", trace_event_id);
         TRACE_ASYNC_BEGIN("benchmark", "put_reference", trace_event_id);
-        page_->PutReference(std::move(key), std::move(*reference),
+        page_->PutReference(std::move(key),
+                            std::move(result.response().reference),
                             Priority::EAGER);
         page_->Sync([trace_event_id, on_done = std::move(on_done)] {
           TRACE_ASYNC_END("benchmark", "put_reference", trace_event_id);

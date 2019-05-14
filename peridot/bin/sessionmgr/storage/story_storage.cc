@@ -9,6 +9,7 @@
 #include <lib/fit/result.h>
 #include <lib/fsl/vmo/strings.h>
 #include <src/lib/fxl/strings/string_view.h>
+#include <zircon/status.h>
 
 #include "fuchsia/ledger/cpp/fidl.h"
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
@@ -278,19 +279,18 @@ class WriteVmoCall : public Operation<StoryStorage::Status> {
     status_ = StoryStorage::Status::OK;
 
     page_client_->page()->CreateReferenceFromBuffer(
-        std::move(value_), [this, flow, weak_ptr = GetWeakPtr()](
-                               fuchsia::ledger::CreateReferenceStatus status,
-                               fuchsia::ledger::ReferencePtr reference) {
+        std::move(value_),
+        [this, flow, weak_ptr = GetWeakPtr()](
+            fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result) {
           if (weak_ptr) {
-            if (status == fuchsia::ledger::CreateReferenceStatus::OK) {
-              FXL_DCHECK(reference);
+            if (result.is_response()) {
               page_client_->page()->PutReference(
-                  to_array(key_), std::move(*reference),
+                  to_array(key_), std::move(result.response().reference),
                   fuchsia::ledger::Priority::EAGER);
             } else {
               FXL_LOG(ERROR) << "StoryStorage.WriteVmoCall " << key_ << " "
                              << " Page.CreateReferenceFromBuffer() "
-                             << fidl::ToUnderlying(status);
+                             << zx_status_get_string(result.err());
               status_ = StoryStorage::Status::LEDGER_ERROR;
             }
           }
@@ -477,16 +477,16 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
                 FlowToken flow) {
     page()->CreateReferenceFromBuffer(
         std::move(data),
-        [this, key, flow](fuchsia::ledger::CreateReferenceStatus status,
-                          fuchsia::ledger::ReferencePtr reference) {
-          if (status == fuchsia::ledger::CreateReferenceStatus::OK) {
-            FXL_DCHECK(reference);
-            page()->PutReference(to_array(key), std::move(*reference),
+        [this, key,
+         flow](fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result) {
+          if (result.is_response()) {
+            page()->PutReference(to_array(key),
+                                 std::move(result.response().reference),
                                  fuchsia::ledger::Priority::EAGER);
           } else {
             FXL_LOG(ERROR) << trace_name() << " "
                            << "SetEntityDataCall.CreateReferenceFromBuffer "
-                           << key << " " << fidl::ToUnderlying(status);
+                           << key << " " << zx_status_get_string(result.err());
             status_ = StoryStorage::Status::LEDGER_ERROR;
           }
         });

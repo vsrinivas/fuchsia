@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 
+#include "fuchsia/ledger/cpp/fidl.h"
 #include "src/ledger/bin/app/delaying_facade.h"
 #include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -51,13 +52,13 @@ class PageImpl : public fuchsia::ledger::PageErrorNotifierDelegate {
   void Clear(fit::function<void(Status)> callback) override;
   void CreateReferenceFromSocket(
       uint64_t size, zx::socket data,
-      fit::function<void(Status, CreateReferenceStatus,
-                         std::unique_ptr<Reference>)>
+      fit::function<
+          void(Status, fuchsia::ledger::Page_CreateReferenceFromSocket_Result)>
           callback) override;
   void CreateReferenceFromBuffer(
       fuchsia::mem::Buffer data,
-      fit::function<void(Status, CreateReferenceStatus,
-                         std::unique_ptr<Reference>)>
+      fit::function<
+          void(Status, fuchsia::ledger::Page_CreateReferenceFromBuffer_Result)>
           callback) override;
   void StartTransaction(fit::function<void(Status)> callback) override;
   void Commit(fit::function<void(Status)> callback) override;

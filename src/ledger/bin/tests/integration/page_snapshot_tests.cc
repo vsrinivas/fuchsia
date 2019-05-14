@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
+#include <zircon/errors.h>
 
 #include <utility>
 #include <vector>
@@ -517,14 +518,14 @@ TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
 
   PagePtr page = instance->GetTestPage();
 
-  CreateReferenceStatus status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromSocket_Result result;
   auto waiter = NewWaiter();
   page->CreateReferenceFromSocket(
       123, StreamDataToSocket(big_data),
-      callback::Capture(waiter->GetCallback(), &status, &reference));
+      callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(CreateReferenceStatus::INVALID_ARGUMENT, status);
+  ASSERT_TRUE(result.is_err());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.err());
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
@@ -534,28 +535,27 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   PagePtr page = instance->GetTestPage();
 
   // Stream the data into the reference.
-  CreateReferenceStatus create_reference_status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromSocket_Result create_result;
   auto waiter = NewWaiter();
   page->CreateReferenceFromSocket(
       big_data.size(), StreamDataToSocket(big_data),
-      callback::Capture(waiter->GetCallback(), &create_reference_status,
-                        &reference));
+      callback::Capture(waiter->GetCallback(), &create_result));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(CreateReferenceStatus::OK, create_reference_status);
+  EXPECT_TRUE(create_result.is_response());
 
   // Set the reference under a key.
-  page->PutReference(convert::ToArray("big data"), std::move(*reference),
+  page->PutReference(convert::ToArray("big data"),
+                     std::move(create_result.response().reference),
                      Priority::EAGER);
 
   // Get a snapshot and read the value.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  fuchsia::ledger::PageSnapshot_Get_Result result;
+  fuchsia::ledger::PageSnapshot_Get_Result get_result;
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("big data"),
-                callback::Capture(waiter->GetCallback(), &result));
+                callback::Capture(waiter->GetCallback(), &get_result));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_THAT(result, MatchesString(big_data));
+  EXPECT_THAT(get_result, MatchesString(big_data));
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
@@ -567,28 +567,27 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   PagePtr page = instance->GetTestPage();
 
   // Stream the data into the reference.
-  CreateReferenceStatus create_reference_status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromBuffer_Result create_result;
   auto waiter = NewWaiter();
   page->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
-      callback::Capture(waiter->GetCallback(), &create_reference_status,
-                        &reference));
+      callback::Capture(waiter->GetCallback(), &create_result));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(CreateReferenceStatus::OK, create_reference_status);
+  EXPECT_TRUE(create_result.is_response());
 
   // Set the reference under a key.
-  page->PutReference(convert::ToArray("big data"), std::move(*reference),
+  page->PutReference(convert::ToArray("big data"),
+                     std::move(create_result.response().reference),
                      Priority::EAGER);
 
   // Get a snapshot and read the value.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  fuchsia::ledger::PageSnapshot_Get_Result result;
+  fuchsia::ledger::PageSnapshot_Get_Result get_result;
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("big data"),
-                callback::Capture(waiter->GetCallback(), &result));
+                callback::Capture(waiter->GetCallback(), &get_result));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_THAT(result, MatchesString(big_data));
+  EXPECT_THAT(get_result, MatchesString(big_data));
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {

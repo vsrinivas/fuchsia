@@ -15,6 +15,23 @@
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
+namespace {
+// Converts a callback into one suitable for PageDelegate::CreateReference
+template <typename C>
+auto ToCreateReferenceCallback(fit::function<void(Status, C)> callback) {
+  return [callback = std::move(callback)](
+             Status status, fit::result<Reference, zx_status_t> result) {
+    C typed_result;
+    if (result.is_ok()) {
+      typed_result.response().reference = std::move(result.value());
+    } else {
+      typed_result.err() = result.error();
+    }
+    callback(status, std::move(typed_result));
+  };
+}
+}  // namespace
+
 PageImpl::PageImpl(storage::PageIdView page_id,
                    fidl::InterfaceRequest<Page> request)
     : binding_(this) {
@@ -100,12 +117,13 @@ void PageImpl::Clear(fit::function<void(Status)> callback) {
 
 void PageImpl::CreateReferenceFromSocket(
     uint64_t size, zx::socket data,
-    fit::function<void(Status, CreateReferenceStatus,
-                       std::unique_ptr<Reference>)>
+    fit::function<void(Status,
+                       fuchsia::ledger::Page_CreateReferenceFromSocket_Result)>
         callback) {
-  fit::function<void(Status, CreateReferenceStatus, std::unique_ptr<Reference>)>
-      timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
-                                      "page_create_reference_from_socket");
+  fit::function<void(Status, fit::result<Reference, zx_status_t>)>
+      timed_callback =
+          TRACE_CALLBACK(ToCreateReferenceCallback(std::move(callback)),
+                         "ledger", "page_create_reference_from_socket");
   delaying_facade_.EnqueueCall(
       &PageDelegate::CreateReference,
       storage::DataSource::Create(std::move(data), size),
@@ -113,15 +131,17 @@ void PageImpl::CreateReferenceFromSocket(
 }
 
 void PageImpl::CreateReferenceFromBuffer(
-    fuchsia::mem::Buffer data, fit::function<void(Status, CreateReferenceStatus,
-                                                  std::unique_ptr<Reference>)>
-                                   callback) {
-  fit::function<void(Status, CreateReferenceStatus, std::unique_ptr<Reference>)>
-      timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
-                                      "page_create_reference_from_vmo");
+    fuchsia::mem::Buffer data,
+    fit::function<void(Status,
+                       fuchsia::ledger::Page_CreateReferenceFromBuffer_Result)>
+        callback) {
+  fit::function<void(Status, fit::result<Reference, zx_status_t>)>
+      timed_callback =
+          TRACE_CALLBACK(ToCreateReferenceCallback(std::move(callback)),
+                         "ledger", "page_create_reference_from_vmo");
   fsl::SizedVmo vmo;
   if (!fsl::SizedVmo::FromTransport(std::move(data), &vmo)) {
-    callback(Status::OK, CreateReferenceStatus::INVALID_ARGUMENT, nullptr);
+    callback(Status::INVALID_ARGUMENT, {});
     return;
   }
   delaying_facade_.EnqueueCall(&PageDelegate::CreateReference,

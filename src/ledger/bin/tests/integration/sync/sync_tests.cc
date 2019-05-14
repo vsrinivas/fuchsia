@@ -169,16 +169,14 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   std::vector<uint8_t> big_value = generator.MakeValue(2 * 65536 + 1).take();
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromVector(big_value, &vmo));
-  CreateReferenceStatus create_reference_status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromBuffer_Result create_result;
   loop_waiter = NewWaiter();
   page1->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
-      callback::Capture(loop_waiter->GetCallback(), &create_reference_status,
-                        &reference));
+      callback::Capture(loop_waiter->GetCallback(), &create_result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(CreateReferenceStatus::OK, create_reference_status);
-  page1->PutReference(key, *reference, Priority::LAZY);
+  ASSERT_TRUE(create_result.is_response());
+  page1->PutReference(key, create_result.response().reference, Priority::LAZY);
 
   EXPECT_TRUE(RunLoopUntil(
       [&page2_watcher]() { return page2_watcher.GetChangesSeen() == 1; }));
@@ -186,11 +184,11 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
 
   // Lazy value is not downloaded eagerly.
   loop_waiter = NewWaiter();
-  fuchsia::ledger::PageSnapshot_Get_Result result;
+  fuchsia::ledger::PageSnapshot_Get_Result get_result;
   snapshot->Get(convert::ToArray("Hello"),
-                callback::Capture(loop_waiter->GetCallback(), &result));
+                callback::Capture(loop_waiter->GetCallback(), &get_result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  EXPECT_THAT(result, MatchesError(fuchsia::ledger::Error::NEEDS_FETCH));
+  EXPECT_THAT(get_result, MatchesError(fuchsia::ledger::Error::NEEDS_FETCH));
 
   fuchsia::ledger::PageSnapshot_FetchPartial_Result fetch_result;
   loop_waiter = NewWaiter();
@@ -202,7 +200,7 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   EXPECT_THAT(fetch_result, MatchesString(SizeIs(10)));
 
   // Change priority to eager, re-upload.
-  page1->PutReference(key, *reference, Priority::EAGER);
+  page1->PutReference(key, create_result.response().reference, Priority::EAGER);
 
   EXPECT_TRUE(RunLoopUntil(
       [&page2_watcher]() { return page2_watcher.GetChangesSeen() == 2; }));
@@ -211,9 +209,9 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   // Now Get succeeds, as the value is no longer lazy.
   loop_waiter = NewWaiter();
   snapshot->Get(convert::ToArray("Hello"),
-                callback::Capture(loop_waiter->GetCallback(), &result));
+                callback::Capture(loop_waiter->GetCallback(), &get_result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  EXPECT_THAT(result, MatchesString(convert::ToString(big_value)));
+  EXPECT_THAT(get_result, MatchesString(convert::ToString(big_value)));
 }
 
 // Verifies that a PageWatcher correctly delivers notifications about the
@@ -235,16 +233,15 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
   std::vector<uint8_t> big_value(2 * 65536 + 1);
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromVector(big_value, &vmo));
-  CreateReferenceStatus create_reference_status;
-  ReferencePtr reference;
+  fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
   loop_waiter = NewWaiter();
   page1->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
-      callback::Capture(loop_waiter->GetCallback(), &create_reference_status,
-                        &reference));
+      callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(CreateReferenceStatus::OK, create_reference_status);
-  page1->PutReference(key, *reference, Priority::LAZY);
+  ASSERT_TRUE(result.is_response());
+  page1->PutReference(key, std::move(result.response().reference),
+                      Priority::LAZY);
 
   loop_waiter = NewWaiter();
   PageSnapshotPtr snapshot;

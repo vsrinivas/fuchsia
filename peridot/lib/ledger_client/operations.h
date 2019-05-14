@@ -10,6 +10,7 @@
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fsl/vmo/strings.h>
+#include <zircon/status.h>
 
 #include <string>
 
@@ -211,26 +212,21 @@ class WriteDataCall : public PageOperation<> {
     FXL_CHECK(fsl::VmoFromString(json, &vmo));
     page()->CreateReferenceFromBuffer(
         std::move(vmo).ToTransport(),
-        [this, weak_ptr = GetWeakPtr(), flow](
-            fuchsia::ledger::CreateReferenceStatus status,
-            std::unique_ptr<fuchsia::ledger::Reference> reference) {
+        [this, weak_ptr = GetWeakPtr(),
+         flow](fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result) {
           if (!weak_ptr) {
             return;
           }
-          PutReference(std::move(reference), flow);
+          if (result.is_err()) {
+            FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+                           << "Page.Put() could not construct reference: "
+                           << zx_status_get_string(result.err());
+            return;
+          }
+          page()->PutReference(to_array(key_),
+                               std::move(result.response().reference),
+                               fuchsia::ledger::Priority::EAGER);
         });
-  }
-
-  void PutReference(std::unique_ptr<fuchsia::ledger::Reference> reference,
-                    FlowToken flow) {
-    if (!reference) {
-      FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                     << "Page.Put() could not construct reference.";
-      return;
-    }
-
-    page()->PutReference(to_array(key_), std::move(*reference),
-                         fuchsia::ledger::Priority::EAGER);
   }
 
   const std::string key_;

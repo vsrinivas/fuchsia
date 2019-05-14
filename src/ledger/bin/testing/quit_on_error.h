@@ -10,6 +10,7 @@
 #include <functional>
 #include <string>
 
+#include "fuchsia/ledger/cpp/fidl.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/lib/fxl/strings/string_view.h"
@@ -23,7 +24,8 @@ class StatusTranslater {
   // Implicit to be able to take both status in |QuitOnError| and
   // |QuitOnErrorCallback|.
   StatusTranslater(Status status);
-  StatusTranslater(CreateReferenceStatus status);
+  StatusTranslater(
+      const fuchsia::ledger::Page_CreateReferenceFromBuffer_Result& result);
   StatusTranslater(zx_status_t status);
   StatusTranslater(const fuchsia::ledger::PageSnapshot_Get_Result& result);
   StatusTranslater(
