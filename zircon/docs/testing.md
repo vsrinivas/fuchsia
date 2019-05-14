@@ -1,10 +1,39 @@
 # Testing
 
+## Quick Start
+
+To build Zircon and run unit tests, run one of the following commands:
+
+```sh
+# Build and run x64.
+./scripts/build-zircon-x64 && ./scripts/run-zircon-x64
+
+# Build and run arm64.
+./scripts/build-zircon-arm64 && ./scripts/run-zircon-arm64
+```
+
+Once the scripts finish running, you should see the Zircon shell. To run
+userspace tests, use the Zircon shell to run:
+
+```sh
+runtests
+```
+
+To run in-kernel tests, use the Zircon shell to run:
+
+```sh
+k ut all
+```
+
+The [Notes for hacking on Zircon](hacking.md) page has more details about how to
+use the Zircon shell and how to automatically build all supported architectures.
+
 ## Userspace Tests
-The test harness which runs on our bots (called "runtests") picks up all
-executables in the "/boot/test" and "/system/test" directories and runs them.
-If you provide a command-line argument, such as `runtests -S -m widget_test`,
-runtests will only run the single test requested -- in this case, `widget_test`.
+
+The test harness, runtests, picks up and runs all of the executables from the
+`/boot/test` and `/system/test` directories. If you provide a command-line
+argument, such as `runtests -S -m widget_test`, runtests will only run the
+single test requested -- in this case, `widget_test`.
 
 "runtests" takes command-line arguments to toggle classes of tests to execute.
 
