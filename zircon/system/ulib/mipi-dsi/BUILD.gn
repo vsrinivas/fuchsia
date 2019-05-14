@@ -11,3 +11,17 @@ library("mipi-dsi") {
     "$zx/system/banjo/ddk.protocol.dsiimpl",
   ]
 }
+
+test("mipidsi") {
+  sources = [
+    "test/mipi-dsi-test.cpp",
+  ]
+  deps = [
+  "$zx/system/banjo/ddk.protocol.dsiimpl",
+  "$zx/system/ulib/fbl",
+  "$zx/system/ulib/fdio",
+  "$zx/system/ulib/mipi-dsi",
+  "$zx/system/ulib/zx",
+  "$zx/system/ulib/zxtest",
+  ]
+}
