@@ -9,12 +9,18 @@
 
 #define MAX_NAMESPACE_DEPTH 100
 
-typedef struct acpi_device_resource {
+typedef struct acpi_device_pio_resource {
+    uint32_t base_address;
+    uint32_t alignment;
+    uint32_t address_length;
+} acpi_device_pio_resource_t;
+
+typedef struct acpi_device_mmio_resource {
     bool writeable;
     uint32_t base_address;
     uint32_t alignment;
     uint32_t address_length;
-} acpi_device_resource_t;
+} acpi_device_mmio_resource_t;
 
 typedef struct acpi_device_irq {
     uint8_t trigger;
@@ -39,9 +45,13 @@ typedef struct acpi_device {
 
     bool got_resources;
 
+    // port resources from _CRS
+    acpi_device_pio_resource_t* pio_resources;
+    size_t pio_resource_count;
+
     // memory resources from _CRS
-    acpi_device_resource_t* resources;
-    size_t resource_count;
+    acpi_device_mmio_resource_t* mmio_resources;
+    size_t mmio_resource_count;
 
     // interrupt resources from _CRS
     acpi_device_irq_t* irqs;

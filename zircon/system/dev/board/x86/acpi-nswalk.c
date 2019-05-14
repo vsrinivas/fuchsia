@@ -17,6 +17,7 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
+#include <zircon/syscalls/resource.h>
 #include <zircon/threads.h>
 
 #include "acpi-private.h"
@@ -43,9 +44,13 @@ static zx_protocol_device_t acpi_device_proto = {
 };
 
 typedef struct {
-    acpi_device_resource_t* resources;
-    size_t resource_count;
-    size_t resource_i;
+    acpi_device_pio_resource_t* pio_resources;
+    size_t pio_resource_count;
+    size_t pio_resource_i;
+
+    acpi_device_mmio_resource_t* mmio_resources;
+    size_t mmio_resource_count;
+    size_t mmio_resource_i;
 
     acpi_device_irq_t* irqs;
     size_t irq_count;
@@ -64,12 +69,12 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
             return AE_ERROR;
         }
 
-        ctx->resources[ctx->resource_i].writeable = mem.writeable;
-        ctx->resources[ctx->resource_i].base_address = mem.minimum;
-        ctx->resources[ctx->resource_i].alignment = mem.alignment;
-        ctx->resources[ctx->resource_i].address_length = mem.address_length;
+        ctx->mmio_resources[ctx->mmio_resource_i].writeable = mem.writeable;
+        ctx->mmio_resources[ctx->mmio_resource_i].base_address = mem.minimum;
+        ctx->mmio_resources[ctx->mmio_resource_i].alignment = mem.alignment;
+        ctx->mmio_resources[ctx->mmio_resource_i].address_length = mem.address_length;
 
-        ctx->resource_i += 1;
+        ctx->mmio_resource_i += 1;
 
     } else if (resource_is_address(res)) {
         resource_address_t addr;
@@ -80,13 +85,26 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
         if ((addr.resource_type == RESOURCE_ADDRESS_MEMORY) && addr.min_address_fixed &&
             addr.max_address_fixed && (addr.maximum < addr.minimum)) {
 
-            ctx->resources[ctx->resource_i].writeable = true;
-            ctx->resources[ctx->resource_i].base_address = addr.min_address_fixed;
-            ctx->resources[ctx->resource_i].alignment = 0;
-            ctx->resources[ctx->resource_i].address_length = addr.address_length;
+            ctx->mmio_resources[ctx->mmio_resource_i].writeable = true;
+            ctx->mmio_resources[ctx->mmio_resource_i].base_address = addr.min_address_fixed;
+            ctx->mmio_resources[ctx->mmio_resource_i].alignment = 0;
+            ctx->mmio_resources[ctx->mmio_resource_i].address_length = addr.address_length;
 
-            ctx->resource_i += 1;
+            ctx->mmio_resource_i += 1;
         }
+
+    } else if (resource_is_io(res)) {
+        resource_io_t io;
+        zx_status_t st = resource_parse_io(res, &io);
+        if (st != ZX_OK) {
+            return AE_ERROR;
+        }
+
+        ctx->pio_resources[ctx->pio_resource_i].base_address = io.minimum;
+        ctx->pio_resources[ctx->pio_resource_i].alignment = io.alignment;
+        ctx->pio_resources[ctx->pio_resource_i].address_length = io.address_length;
+
+        ctx->pio_resource_i += 1;
 
     } else if (resource_is_irq(res)) {
         resource_irq_t irq;
@@ -117,7 +135,7 @@ static ACPI_STATUS report_current_resources_count_cb(ACPI_RESOURCE* res, void* _
         if ((st != ZX_OK) || (mem.minimum != mem.maximum)) {
             return AE_ERROR;
         }
-        ctx->resource_count += 1;
+        ctx->mmio_resource_count += 1;
 
     } else if (resource_is_address(res)) {
         resource_address_t addr;
@@ -127,8 +145,16 @@ static ACPI_STATUS report_current_resources_count_cb(ACPI_RESOURCE* res, void* _
         }
         if ((addr.resource_type == RESOURCE_ADDRESS_MEMORY) && addr.min_address_fixed &&
             addr.max_address_fixed && (addr.maximum < addr.minimum)) {
-            ctx->resource_count += 1;
+            ctx->mmio_resource_count += 1;
         }
+
+    } else if (resource_is_io(res)) {
+        resource_io_t io;
+        zx_status_t st = resource_parse_io(res, &io);
+        if (st != ZX_OK) {
+            return AE_ERROR;
+        }
+        ctx->pio_resource_count += 1;
 
     } else if (resource_is_irq(res)) {
         ctx->irq_count += res->Data.Irq.InterruptCount;
@@ -152,18 +178,24 @@ static zx_status_t report_current_resources(acpi_device_t* dev) {
         return acpi_to_zx_status(acpi_status);
     }
 
-    if (ctx.resource_count == 0) {
+    if (ctx.pio_resource_count == 0 && ctx.mmio_resource_count == 0 && ctx.irq_count == 0) {
         return ZX_OK;
     }
 
     // allocate resources
-    ctx.resources = calloc(ctx.resource_count, sizeof(acpi_device_resource_t));
-    if (!ctx.resources) {
+    ctx.pio_resources = calloc(ctx.pio_resource_count, sizeof(acpi_device_pio_resource_t));
+    if (!ctx.pio_resources) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    ctx.mmio_resources = calloc(ctx.mmio_resource_count, sizeof(acpi_device_mmio_resource_t));
+    if (!ctx.mmio_resources) {
+        free(ctx.pio_resources);
         return ZX_ERR_NO_MEMORY;
     }
     ctx.irqs = calloc(ctx.irq_count, sizeof(acpi_device_irq_t));
     if (!ctx.irqs) {
-        free(ctx.resources);
+        free(ctx.pio_resources);
+        free(ctx.mmio_resources);
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -171,26 +203,37 @@ static zx_status_t report_current_resources(acpi_device_t* dev) {
     acpi_status = AcpiWalkResources(dev->ns_node, (char*)"_CRS",
             report_current_resources_resource_cb, &ctx);
     if ((acpi_status != AE_NOT_FOUND) && (acpi_status != AE_OK)) {
-        free(ctx.resources);
+        free(ctx.pio_resources);
+        free(ctx.mmio_resources);
         free(ctx.irqs);
         return acpi_to_zx_status(acpi_status);
     }
 
-    dev->resources = ctx.resources;
-    dev->resource_count = ctx.resource_count;
+    dev->pio_resources = ctx.pio_resources;
+    dev->pio_resource_count = ctx.pio_resource_count;
+    dev->mmio_resources = ctx.mmio_resources;
+    dev->mmio_resource_count = ctx.mmio_resource_count;
     dev->irqs = ctx.irqs;
     dev->irq_count = ctx.irq_count;
 
-    zxlogf(TRACE, "acpi-bus[%s]: found %zd resources %zx irqs\n", device_get_name(dev->zxdev),
-            dev->resource_count, dev->irq_count);
+    zxlogf(TRACE, "acpi-bus[%s]: found %zd port resources %zd memory resources %zx irqs\n",
+            device_get_name(dev->zxdev), dev->pio_resource_count, dev->mmio_resource_count,
+            dev->irq_count);
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
-        zxlogf(SPEW, "resources:\n");
-        for (size_t i = 0; i < dev->resource_count; i++) {
+        zxlogf(SPEW, "port resources:\n");
+        for (size_t i = 0; i < dev->pio_resource_count; i++) {
+            zxlogf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x\n", i,
+                    dev->pio_resources[i].base_address,
+                    dev->pio_resources[i].address_length,
+                    dev->pio_resources[i].alignment);
+        }
+        zxlogf(SPEW, "memory resources:\n");
+        for (size_t i = 0; i < dev->mmio_resource_count; i++) {
             zxlogf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x writeable=%d\n", i,
-                    dev->resources[i].base_address,
-                    dev->resources[i].address_length,
-                    dev->resources[i].alignment,
-                    dev->resources[i].writeable);
+                    dev->mmio_resources[i].base_address,
+                    dev->mmio_resources[i].address_length,
+                    dev->mmio_resources[i].alignment,
+                    dev->mmio_resources[i].writeable);
         }
         zxlogf(SPEW, "irqs:\n");
         for (size_t i = 0; i < dev->irq_count; i++) {
@@ -233,6 +276,38 @@ static zx_status_t report_current_resources(acpi_device_t* dev) {
     return ZX_OK;
 }
 
+static zx_status_t acpi_op_get_pio(void* ctx, uint32_t index, zx_handle_t* out_pio) {
+    acpi_device_t* dev = (acpi_device_t*)ctx;
+    mtx_lock(&dev->lock);
+
+    zx_status_t st = report_current_resources(dev);
+    if (st != ZX_OK) {
+        goto unlock;
+    }
+
+    if (index >= dev->pio_resource_count) {
+        st = ZX_ERR_NOT_FOUND;
+        goto unlock;
+    }
+
+    acpi_device_pio_resource_t* res = dev->pio_resources + index;
+
+    zx_handle_t resource;
+    // Please do not use get_root_resource() in new code. See ZX-1467.
+    // TODO: figure out what to pass to name here
+    st = zx_resource_create(get_root_resource(), ZX_RSRC_KIND_IOPORT, res->base_address,
+                            res->address_length, device_get_name(dev->zxdev), 0, &resource);
+    if (st != ZX_OK) {
+        goto unlock;
+    }
+
+    *out_pio = resource;
+
+unlock:
+    mtx_unlock(&dev->lock);
+    return st;
+}
+
 static zx_status_t acpi_op_get_mmio(void* ctx, uint32_t index, acpi_mmio_t* out_mmio) {
     acpi_device_t* dev = (acpi_device_t*)ctx;
     mtx_lock(&dev->lock);
@@ -242,15 +317,15 @@ static zx_status_t acpi_op_get_mmio(void* ctx, uint32_t index, acpi_mmio_t* out_
         goto unlock;
     }
 
-    if (index >= dev->resource_count) {
+    if (index >= dev->mmio_resource_count) {
         st = ZX_ERR_NOT_FOUND;
         goto unlock;
     }
 
-    acpi_device_resource_t* res = dev->resources + index;
+    acpi_device_mmio_resource_t* res = dev->mmio_resources + index;
     if (((res->base_address & (PAGE_SIZE - 1)) != 0) ||
         ((res->address_length & (PAGE_SIZE - 1)) != 0)) {
-        zxlogf(ERROR, "acpi-bus[%s]: resource id=%d addr=0x%08x len=0x%x is not page aligned\n",
+        zxlogf(ERROR, "acpi-bus[%s]: memory id=%d addr=0x%08x len=0x%x is not page aligned\n",
                 device_get_name(dev->zxdev), index, res->base_address, res->address_length);
         st = ZX_ERR_NOT_FOUND;
         goto unlock;
@@ -389,6 +464,7 @@ unlock:
 
 // TODO marking unused until we publish some devices
 static __attribute__ ((unused)) acpi_protocol_ops_t acpi_proto = {
+    .get_pio = acpi_op_get_pio,
     .get_mmio = acpi_op_get_mmio,
     .map_interrupt = acpi_op_map_interrupt,
     .get_bti = acpi_op_get_bti,
