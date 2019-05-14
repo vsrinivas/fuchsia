@@ -17,7 +17,6 @@ source_set("unit") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/vfs/cpp",
     "//zircon/public/fidl/fuchsia-io",

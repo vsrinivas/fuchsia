@@ -14,6 +14,7 @@ source_set("mocks") {
 
   deps = [
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.viewsv1",

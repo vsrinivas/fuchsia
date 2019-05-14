@@ -133,6 +133,7 @@ executable("linux_runner_unittests") {
 
   deps = [
     ":lib",
+    "//garnet/public/lib/gtest",
     "//garnet/public/lib/guest/testing",
     "//sdk/lib/sys/cpp/testing:unit",
     "//third_party/googletest:gtest_main",

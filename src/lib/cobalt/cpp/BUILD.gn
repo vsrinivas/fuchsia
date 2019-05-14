@@ -52,6 +52,7 @@ source_set("unittests") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/gtest",
     "//garnet/public/lib/svc/cpp",
   ]
 

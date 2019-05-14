@@ -30,6 +30,7 @@ executable("virtualization_lib_unittests") {
 
   deps = [
     ":virtualization",
+    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//third_party/googletest:gtest_main",
   ]
