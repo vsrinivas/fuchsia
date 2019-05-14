@@ -20,6 +20,7 @@
         ],
         "services": [
             "fuchsia.feedback.DataProvider",
+            "fuchsia.logger.Log",
             "fuchsia.tracelink.Registry",
             "fuchsia.vulkan.loader.Loader"
         ]

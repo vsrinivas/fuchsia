@@ -3,10 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/handles/object_info.h>
+#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <stdint.h>
@@ -14,6 +18,7 @@
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback_agent/tests/zx_object_util.h"
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -30,7 +35,7 @@ MATCHER_P(MatchesKey, expected_key,
 
 // Smoke-tests the real environment service for the
 // fuchsia.feedback.DataProvider FIDL interface, connecting through FIDL.
-class FeedbackAgentIntegrationTest : public testing::Test {
+class FeedbackAgentIntegrationTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
     environment_services_ = ::sys::ServiceDirectory::CreateFromNamespace();
@@ -55,7 +60,56 @@ VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
   // return a screenshot or not depending on which device the test runs.
 }
 
+class LogListener : public fuchsia::logger::LogListener {
+ public:
+  LogListener(std::shared_ptr<::sys::ServiceDirectory> services)
+      : binding_(this) {
+    binding_.Bind(log_listener_.NewRequest());
+
+    fuchsia::logger::LogPtr logger = services->Connect<fuchsia::logger::Log>();
+    logger->Listen(std::move(log_listener_), /*options=*/nullptr);
+  }
+
+  bool HasLogs() { return has_logs_; }
+
+ private:
+  // |fuchsia::logger::LogListener|
+  void LogMany(::std::vector<fuchsia::logger::LogMessage> log) {
+    has_logs_ = true;
+  }
+  void Log(fuchsia::logger::LogMessage log) { has_logs_ = true; }
+  void Done() { FXL_NOTIMPLEMENTED(); }
+
+  fidl::Binding<fuchsia::logger::LogListener> binding_;
+  fuchsia::logger::LogListenerPtr log_listener_;
+  bool has_logs_ = false;
+};
+
 TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
+  // One of the attachments are the syslog. Syslog are generally handled by a
+  // single logger that implements two protocols: (1) fuchsia.logger.LogSink to
+  // write syslog messages and (2) fuchsia.logger.Log to read syslog messages
+  // and kernel log messages. Returned syslog messages are restricted to the
+  // ones that were written using its LogSink while kernel log messages are the
+  // same for all loggers.
+  //
+  // In this integration test, we inject a "fresh copy" of logger.cmx for
+  // fuchsia.logger.Log so we can retrieve the syslog messages. But we do _not_
+  // inject that same logger.cmx for fuchsia.logger.LogSink as it would swallow
+  // all the error and warning messages the other injected services could
+  // produce and make debugging really hard. Therefore, the injected logger.cmx
+  // does not have any syslog messages and will only have the global kernel log
+  // messages.
+  //
+  // When logger.cmx spawns, it will start collecting asynchronously kernel log
+  // messages. But if DumpLogs() is called "too soon", it will immediately
+  // return empty logs instead of waiting on the kernel log collection (CF-790),
+  // resulting in a flaky test (FLK-179). We thus spawn logger.cmx on advance
+  // and wait for it to have at least one message before running the actual
+  // test.
+  LogListener log_listener(environment_services_);
+  RunLoopUntil([&log_listener] { return log_listener.HasLogs(); });
+
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
 
