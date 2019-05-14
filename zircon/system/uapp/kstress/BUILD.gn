@@ -16,4 +16,11 @@ executable("kstress") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+
+  # The vmstress test has starvation issues when run without the fair scheduler.
+  if (enable_fair_scheduler) {
+    sources += ["vmstress.cpp"]
+  } else {
+    defines = [ "DISABLE_VMSTRESS" ]
+  }
 }
