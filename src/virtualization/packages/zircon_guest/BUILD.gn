@@ -17,6 +17,9 @@ config_data("services_config") {
 guest_fvm_blk_label = "//build/images/guest:fvm.blk"
 
 guest_package("zircon_guest") {
+  # This guest package needs to be marked as testonly becuase it contains tests
+  # within the guest image.
+  testonly = true
   deps = [
     "//build/images/guest",
     guest_fvm_blk_label,

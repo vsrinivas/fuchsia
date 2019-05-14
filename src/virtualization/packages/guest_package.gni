@@ -27,7 +27,8 @@ template("guest_package") {
   guest_config_file = "${target_out_dir}/guest.cfg"
 
   action(guest_config_target_name) {
-    testonly = true
+    testonly = defined(invoker.testonly) && invoker.testonly
+
     script = "//src/virtualization/packages/generate_guest_config.py"
     outputs = [
       guest_config_file,
@@ -88,7 +89,8 @@ template("guest_package") {
   }
 
   package(target_name) {
-    testonly = true
+    testonly = defined(invoker.testonly) && invoker.testonly
+
     deps = [
       ":${guest_config_target_name}",
     ]
