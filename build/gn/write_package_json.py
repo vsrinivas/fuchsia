@@ -16,7 +16,11 @@ def main():
     args = parser.parse_args()
 
     with open(args.path, 'w') as f:
-        json.dump({'name': args.name, 'version': args.version}, f)
+        json.dump(
+            {'name': args.name, 'version': args.version},
+            f,
+            separators=(',', ':'),
+            sort_keys=True)
 
     return 0
 
