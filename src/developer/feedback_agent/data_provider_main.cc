@@ -14,6 +14,8 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <memory>
+
 #include "src/developer/feedback_agent/data_provider.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -31,9 +33,14 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = sys::ComponentContext::Create();
-  fuchsia::feedback::DataProviderImpl data_provider(loop.dispatcher(),
-                                                    context->svc());
-  fidl::Binding<fuchsia::feedback::DataProvider> binding(&data_provider);
+  std::unique_ptr<fuchsia::feedback::DataProviderImpl> data_provider =
+      fuchsia::feedback::DataProviderImpl::TryCreate(loop.dispatcher(),
+                                                     context->svc());
+  if (!data_provider) {
+    return EXIT_FAILURE;
+  }
+
+  fidl::Binding<fuchsia::feedback::DataProvider> binding(data_provider.get());
   // TODO(DX-1497): in addition to exiting the process when the connection is
   // closed, we should have an internal timeout since the last call and exit the
   // process then in case clients don't close the connection themselves.

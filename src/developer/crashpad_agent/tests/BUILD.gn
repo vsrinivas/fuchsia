@@ -19,11 +19,11 @@ group("tests") {
 test_package("crashpad_agent_tests") {
   tests = [
     {
-      name = "config_unittest"
+      name = "crashpad_agent_unittest"
       environments = basic_envs
     },
     {
-      name = "crashpad_agent_unittest"
+      name = "crashpad_config_unittest"
       environments = basic_envs
     },
     {
@@ -40,37 +40,37 @@ test_package("crashpad_agent_tests") {
   ]
 
   resources = [
-    # needed for config_unittest
+    # needed for crashpad_config_unittest
     {
       path = "configs/valid_no_upload.json"
       dest = "valid_config_no_upload.json"
     },
 
-    # needed for config_unittest
+    # needed for crashpad_config_unittest
     {
       path = "configs/valid_upload.json"
       dest = "valid_config_upload.json"
     },
 
-    # needed for config_unittest
+    # needed for crashpad_config_unittest
     {
       path = "configs/valid_no_upload_spurious_server.json"
       dest = "valid_config_no_upload_spurious_server.json"
     },
 
-    # needed for config_unittest
+    # needed for crashpad_config_unittest
     {
       path = "configs/bad_schema_spurious_field.json"
       dest = "bad_schema_spurious_field_config.json"
     },
 
-    # needed for config_unittest
+    # needed for crashpad_config_unittest
     {
       path = "configs/bad_schema_missing_required_field.json"
       dest = "bad_schema_missing_required_field_config.json"
     },
 
-    # needed for config_unittest
+    # needed for crashpad_config_unittest
     {
       path = "configs/bad_schema_missing_server.json"
       dest = "bad_schema_missing_server_config.json"
@@ -87,6 +87,8 @@ test_package("crashpad_agent_tests") {
 
 executable("config_unittest") {
   testonly = true
+
+  output_name = "crashpad_config_unittest"
 
   sources = [
     "config_unittest.cc",

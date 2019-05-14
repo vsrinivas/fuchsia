@@ -15,14 +15,24 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback_agent/config.h"
+
 namespace fuchsia {
 namespace feedback {
 
 // Provides data useful to attach in feedback reports (crash or user feedback).
 class DataProviderImpl : public DataProvider {
  public:
+  // Static factory method.
+  // Returns nullptr if the data provider cannot be instantiated, e.g., because
+  // the config cannot be parsed.
+  static std::unique_ptr<DataProviderImpl> TryCreate(
+      async_dispatcher_t* dispatcher,
+      std::shared_ptr<::sys::ServiceDirectory> services);
+
   DataProviderImpl(async_dispatcher_t* dispatcher,
-                   std::shared_ptr<::sys::ServiceDirectory> services);
+                   std::shared_ptr<::sys::ServiceDirectory> services,
+                   const Config& config);
 
   // |fuchsia.feedback.DataProvider|
   void GetData(GetDataCallback callback) override;
@@ -40,6 +50,7 @@ class DataProviderImpl : public DataProvider {
 
   async::Executor executor_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
+  const Config config_;
 
   // TODO(DX-1499): we should have a connection to Scenic per GetScreenshot()
   // call, not a single one overall.

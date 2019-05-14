@@ -1,0 +1,6 @@
+{
+    "attachment_whitelist": [
+        "log.kernel",
+        "log.syslog"
+    ]
+}

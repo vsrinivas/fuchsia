@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/crashpad_config_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

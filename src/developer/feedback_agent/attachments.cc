@@ -78,9 +78,23 @@ fit::promise<fuchsia::mem::Buffer> VmoFromFilename(
   return fit::make_ok_promise(std::move(vmo).ToTransport());
 }
 
+fit::promise<fuchsia::mem::Buffer> BuildValue(
+    const std::string& key, std::shared_ptr<::sys::ServiceDirectory> services) {
+  if (key == "build.snapshot") {
+    return VmoFromFilename("/config/build-info/snapshot");
+  } else if (key == "log.kernel") {
+    return GetKernelLog();
+  } else if (key == "log.system") {
+    return CollectSystemLog(services, kAttachmentTimeout);
+  } else {
+    FX_LOGS(WARNING) << "Unknown attachment " << key;
+    return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
+  }
+}
+
 fit::promise<Attachment> BuildAttachment(
-    const std::string& key, fit::promise<fuchsia::mem::Buffer> value) {
-  return value
+    const std::string& key, std::shared_ptr<::sys::ServiceDirectory> services) {
+  return BuildValue(key, services)
       .and_then([key](fuchsia::mem::Buffer& vmo) -> fit::result<Attachment> {
         Attachment attachment;
         attachment.key = key;
@@ -88,7 +102,7 @@ fit::promise<Attachment> BuildAttachment(
         return fit::ok(std::move(attachment));
       })
       .or_else([key]() {
-        FX_LOGS(WARNING) << "missing attachment " << key;
+        FX_LOGS(WARNING) << "Failed to build attachment " << key;
         return fit::error();
       });
 }
@@ -96,13 +110,17 @@ fit::promise<Attachment> BuildAttachment(
 }  // namespace
 
 std::vector<fit::promise<Attachment>> GetAttachments(
-    std::shared_ptr<::sys::ServiceDirectory> services) {
+    std::shared_ptr<::sys::ServiceDirectory> services,
+    const std::set<std::string>& whitelist) {
+  if (whitelist.empty()) {
+    FX_LOGS(WARNING) << "Attachment whitelist is empty, nothing to retrieve";
+    return {};
+  }
+
   std::vector<fit::promise<Attachment>> attachments;
-  attachments.push_back(BuildAttachment(
-      "build.snapshot", VmoFromFilename("/config/build-info/snapshot")));
-  attachments.push_back(BuildAttachment("log.kernel", GetKernelLog()));
-  attachments.push_back(BuildAttachment(
-      "log.system", CollectSystemLog(services, kAttachmentTimeout)));
+  for (const auto& key : whitelist) {
+    attachments.push_back(BuildAttachment(key, services));
+  }
   return attachments;
 }
 

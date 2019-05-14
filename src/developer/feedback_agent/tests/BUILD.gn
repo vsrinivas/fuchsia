@@ -11,6 +11,9 @@ test_package("feedback_agent_tests") {
       name = "data_provider_unittest"
     },
     {
+      name = "data_provider_config_unittest"
+    },
+    {
       name = "log_listener_unittest"
     },
     {
@@ -22,16 +25,60 @@ test_package("feedback_agent_tests") {
   ]
 
   resources = [
+    # needed for data_provider_unittest
     {
       path = "resources/checkerboard_100.png"
       dest = "checkerboard_100.png"
     },
+
+    # needed for data_provider_config_unittest
+    {
+      path = "configs/valid.json"
+      dest = "valid_config.json"
+    },
+
+    # needed for data_provider_config_unittest
+    {
+      path = "configs/bad_schema_duplicated_attachment_key.json"
+      dest = "bad_schema_duplicated_attachment_key_config.json"
+    },
+
+    # needed for data_provider_config_unittest
+    {
+      path = "configs/bad_schema_spurious_field.json"
+      dest = "bad_schema_spurious_field_config.json"
+    },
+
+    # needed for data_provider_config_unittest
+    {
+      path = "configs/bad_schema_missing_required_field.json"
+      dest = "bad_schema_missing_required_field_config.json"
+    },
   ]
 
   deps = [
+    ":config_unittest",
     ":data_provider_unittest",
     ":feedback_agent_integration_test",
     ":log_listener_unittest",
+  ]
+}
+
+executable("config_unittest") {
+  testonly = true
+
+  output_name = "data_provider_config_unittest"
+
+  sources = [
+    "config_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
+    "//src/developer/feedback_agent:src",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
   ]
 }
 

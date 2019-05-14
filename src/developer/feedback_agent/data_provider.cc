@@ -13,22 +13,47 @@
 
 #include "src/developer/feedback_agent/annotations.h"
 #include "src/developer/feedback_agent/attachments.h"
+#include "src/developer/feedback_agent/config.h"
 #include "src/developer/feedback_agent/image_conversion.h"
 
 namespace fuchsia {
 namespace feedback {
+namespace {
+
+const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
+
+}  // namespace
+
+std::unique_ptr<DataProviderImpl> DataProviderImpl::TryCreate(
+    async_dispatcher_t* dispatcher,
+    std::shared_ptr<::sys::ServiceDirectory> services) {
+  Config config;
+
+  const zx_status_t parse_status = ParseConfig(kDefaultConfigPath, &config);
+  if (parse_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to read default config file at "
+                   << kDefaultConfigPath << ": " << parse_status << " ("
+                   << zx_status_get_string(parse_status) << ")";
+    FX_LOGS(FATAL) << "Failed to set up data provider";
+    return nullptr;
+  }
+
+  return std::make_unique<DataProviderImpl>(dispatcher, std::move(services),
+                                            config);
+}
 
 DataProviderImpl::DataProviderImpl(
     async_dispatcher_t* dispatcher,
-    std::shared_ptr<::sys::ServiceDirectory> services)
-    : executor_(dispatcher), services_(services) {}
+    std::shared_ptr<::sys::ServiceDirectory> services, const Config& config)
+    : executor_(dispatcher), services_(services), config_(config) {}
 
 void DataProviderImpl::GetData(GetDataCallback callback) {
   // Today attachments are fetched asynchronously, but annotations are not.
   // In the future, we can use fit::join_promises() if annotations need to be
   // fetched asynchronously as well.
   auto promise =
-      fit::join_promise_vector(GetAttachments(services_))
+      fit::join_promise_vector(
+          GetAttachments(services_, config_.attachment_whitelist))
           .then([callback = std::move(callback)](
                     fit::result<std::vector<fit::result<Attachment>>>&
                         attachments) {
@@ -42,9 +67,12 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
                   ok_attachments.emplace_back(attachment.take_value());
                 }
               }
-              response.data.set_attachments(std::move(ok_attachments));
+
+              if (!ok_attachments.empty()) {
+                response.data.set_attachments(std::move(ok_attachments));
+              }
             } else {
-              FX_LOGS(WARNING) << "failed to retrieve any attachments";
+              FX_LOGS(WARNING) << "Failed to retrieve any attachments";
             }
 
             DataProvider_GetData_Result result;

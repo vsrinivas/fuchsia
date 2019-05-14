@@ -9,6 +9,8 @@
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
+#include <set>
+#include <string>
 #include <vector>
 
 namespace fuchsia {
@@ -16,8 +18,11 @@ namespace feedback {
 
 // Returns attachments useful to attach in feedback reports (crash or user
 // feedback).
+//
+// Only attachments which keys are in the |whitelist| will be returned.
 std::vector<fit::promise<Attachment>> GetAttachments(
-    std::shared_ptr<::sys::ServiceDirectory> services);
+    std::shared_ptr<::sys::ServiceDirectory> services,
+    const std::set<std::string>& whitelist);
 
 }  // namespace feedback
 }  // namespace fuchsia

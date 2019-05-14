@@ -24,6 +24,7 @@
 #include <ostream>
 #include <vector>
 
+#include "src/developer/feedback_agent/config.h"
 #include "src/developer/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback_agent/tests/stub_scenic.h"
 #include "src/lib/fxl/logging.h"
@@ -34,6 +35,12 @@
 namespace fuchsia {
 namespace feedback {
 namespace {
+
+const Config kDefaultConfig = Config{/*attachment_whitelist=*/{
+    "build.snapshot",
+    "log.kernel",
+    "log.system",
+}};
 
 constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
@@ -163,11 +170,41 @@ class DataProviderImplTest : public gtest::RealLoopFixture {
     FXL_CHECK(service_directory_provider_.AddService(
                   stub_logger_->GetHandler(dispatcher())) == ZX_OK);
 
-    agent_.reset(new DataProviderImpl(
-        dispatcher(), service_directory_provider_.service_directory()));
+    ResetDataProvider(kDefaultConfig);
   }
 
  protected:
+  // Resets the underlying |data_provider_| using the given |config|.
+  void ResetDataProvider(const Config& config) {
+    data_provider_.reset(new DataProviderImpl(
+        dispatcher(), service_directory_provider_.service_directory(), config));
+  }
+
+  GetScreenshotResponse GetScreenshot() {
+    GetScreenshotResponse out_response;
+    bool has_out_response = false;
+    data_provider_->GetScreenshot(
+        ImageEncoding::PNG, [&out_response, &has_out_response](
+                                std::unique_ptr<Screenshot> screenshot) {
+          out_response.screenshot = std::move(screenshot);
+          has_out_response = true;
+        });
+    RunLoopUntil([&has_out_response] { return has_out_response; });
+    return out_response;
+  }
+
+  DataProvider_GetData_Result GetData() {
+    DataProvider_GetData_Result out_result;
+    bool has_out_result = false;
+    data_provider_->GetData(
+        [&out_result, &has_out_result](DataProvider_GetData_Result result) {
+          out_result = std::move(result);
+          has_out_result = true;
+        });
+    RunLoopUntil([&has_out_result] { return has_out_result; });
+    return out_result;
+  }
+
   void set_scenic_responses(std::vector<TakeScreenshotResponse> responses) {
     stub_scenic_->set_take_screenshot_responses(std::move(responses));
   }
@@ -180,7 +217,7 @@ class DataProviderImplTest : public gtest::RealLoopFixture {
     stub_logger_->set_messages(messages);
   }
 
-  std::unique_ptr<DataProviderImpl> agent_;
+  std::unique_ptr<DataProviderImpl> data_provider_;
 
  private:
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
@@ -196,15 +233,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
                                 kSuccess);
   set_scenic_responses(std::move(scenic_responses));
 
-  GetScreenshotResponse feedback_response;
-  bool has_feedback_response = false;
-  agent_->GetScreenshot(ImageEncoding::PNG,
-                        [&feedback_response, &has_feedback_response](
-                            std::unique_ptr<Screenshot> screenshot) {
-                          feedback_response.screenshot = std::move(screenshot);
-                          has_feedback_response = true;
-                        });
-  RunLoopUntil([&has_feedback_response] { return has_feedback_response; });
+  GetScreenshotResponse feedback_response = GetScreenshot();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -231,15 +260,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningFailure) {
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
   set_scenic_responses(std::move(scenic_responses));
 
-  GetScreenshotResponse feedback_response;
-  bool has_feedback_response = false;
-  agent_->GetScreenshot(ImageEncoding::PNG,
-                        [&feedback_response, &has_feedback_response](
-                            std::unique_ptr<Screenshot> screenshot) {
-                          feedback_response.screenshot = std::move(screenshot);
-                          has_feedback_response = true;
-                        });
-  RunLoopUntil([&has_feedback_response] { return has_feedback_response; });
+  GetScreenshotResponse feedback_response = GetScreenshot();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -252,15 +273,7 @@ TEST_F(DataProviderImplTest,
   scenic_responses.emplace_back(CreateNonBGRA8Screenshot(), kSuccess);
   set_scenic_responses(std::move(scenic_responses));
 
-  GetScreenshotResponse feedback_response;
-  bool has_feedback_response = false;
-  agent_->GetScreenshot(ImageEncoding::PNG,
-                        [&feedback_response, &has_feedback_response](
-                            std::unique_ptr<Screenshot> screenshot) {
-                          feedback_response.screenshot = std::move(screenshot);
-                          has_feedback_response = true;
-                        });
-  RunLoopUntil([&has_feedback_response] { return has_feedback_response; });
+  GetScreenshotResponse feedback_response = GetScreenshot();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -285,7 +298,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
 
   std::vector<GetScreenshotResponse> feedback_responses;
   for (size_t i = 0; i < num_calls; i++) {
-    agent_->GetScreenshot(
+    data_provider_->GetScreenshot(
         ImageEncoding::PNG,
         [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
           feedback_responses.push_back({std::move(screenshot)});
@@ -333,25 +346,34 @@ TEST_F(DataProviderImplTest, GetData_SmokeTest) {
                       /*timestamp_offset=*/zx::duration(0), {"foo"}),
   });
 
-  DataProvider_GetData_Result feedback_result;
-  bool has_feedback_result = false;
-  agent_->GetData([&feedback_result,
-                   &has_feedback_result](DataProvider_GetData_Result result) {
-    feedback_result = std::move(result);
-    has_feedback_result = true;
-  });
-  RunLoopUntil([&has_feedback_result] { return has_feedback_result; });
+  DataProvider_GetData_Result result = GetData();
 
-  ASSERT_TRUE(feedback_result.is_response());
+  ASSERT_TRUE(result.is_response());
   // As we control the system log attachment, we can expect it to be present and
   // with a particular value.
-  ASSERT_TRUE(feedback_result.response().data.has_attachments());
+  ASSERT_TRUE(result.response().data.has_attachments());
   EXPECT_THAT(
-      feedback_result.response().data.attachments(),
+      result.response().data.attachments(),
       testing::Contains(MatchesAttachment(
           "log.system", "[15604.000][07559][07687][foo] INFO: log message\n")));
   // There is nothing else we can assert here as no missing annotation nor
   // attachment is fatal.
+}
+
+TEST_F(DataProviderImplTest, GetData_EmptyAttachmentWhitelist) {
+  ResetDataProvider(Config{/*attachment_whitelist=*/{}});
+
+  DataProvider_GetData_Result result = GetData();
+  ASSERT_TRUE(result.is_response());
+  EXPECT_FALSE(result.response().data.has_attachments());
+}
+
+TEST_F(DataProviderImplTest, GetData_UnknownWhitelistedAttachment) {
+  ResetDataProvider(Config{/*attachment_whitelist=*/{"unknown.attachment"}});
+
+  DataProvider_GetData_Result result = GetData();
+  ASSERT_TRUE(result.is_response());
+  EXPECT_FALSE(result.response().data.has_attachments());
 }
 
 }  // namespace
