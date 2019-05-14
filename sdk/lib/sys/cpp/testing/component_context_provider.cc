@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/testing/component_context_provider.h>
-
 #include <lib/fdio/directory.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <zircon/processargs.h>
+
 #include <memory>
 
 namespace sys {
@@ -19,7 +19,7 @@ ComponentContextProvider::ComponentContextProvider(
   zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
   component_context_ = std::make_unique<sys::ComponentContext>(
-      sys::ComponentContext::MakePrivate{}, svc_provider_->service_directory(),
+      svc_provider_->service_directory(),
       outgoing_directory_ptr_.NewRequest(dispatcher).TakeChannel(), dispatcher);
 
   fdio_service_connect_at(
