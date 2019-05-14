@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/importer_tests"
+    }
+}

@@ -15,13 +15,6 @@
 namespace ktrace_provider {
 namespace {
 
-constexpr zx_koid_t kNoProcess = 0u;
-constexpr zx_koid_t kKernelThreadFlag = 0x100000000;
-
-constexpr zx_koid_t kKernelPseudoKoidBase = 0x00000000'70000000u;
-constexpr zx_koid_t kKernelPseudoCpuBase =
-    kKernelPseudoKoidBase + 0x00000000'01000000u;
-
 constexpr uint64_t ToUInt64(uint32_t lo, uint32_t hi) {
   return (static_cast<uint64_t>(hi) << 32) | lo;
 }
@@ -96,7 +89,8 @@ bool Importer::Import(Reader& reader) {
   while (true) {
     if (auto record = reader.ReadNextRecord()) {
       if (!ImportRecord(record, KTRACE_LEN(record->tag))) {
-        FXL_VLOG(2) << "Skipped ktrace record, tag=" << record->tag;
+        FXL_VLOG(2) << "Skipped ktrace record, tag=0x" << std::hex
+                    << record->tag;
       }
     } else {
       break;

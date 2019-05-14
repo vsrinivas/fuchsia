@@ -5,19 +5,21 @@
 #ifndef GARNET_BIN_KTRACE_PROVIDER_IMPORTER_H_
 #define GARNET_BIN_KTRACE_PROVIDER_IMPORTER_H_
 
-#include <fbl/string.h>
-#include <fbl/string_piece.h>
-#include <trace-engine/context.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include <array>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
 
+#include <fbl/string.h>
+#include <fbl/string_piece.h>
+#include <trace-engine/context.h>
+
+#include "garnet/bin/ktrace_provider/reader.h"
 #include "garnet/bin/ktrace_provider/tags.h"
 #include "src/lib/fxl/macros.h"
-#include "stddef.h"
-#include "stdint.h"
 
 namespace ktrace_provider {
 
@@ -25,6 +27,13 @@ class Reader;
 
 class Importer {
  public:
+  static constexpr zx_koid_t kNoProcess = 0u;
+  static constexpr zx_koid_t kKernelThreadFlag = 0x100000000;
+
+  static constexpr zx_koid_t kKernelPseudoKoidBase = 0x00000000'70000000u;
+  static constexpr zx_koid_t kKernelPseudoCpuBase =
+      kKernelPseudoKoidBase + 0x00000000'01000000u;
+
   Importer(trace_context* context);
   ~Importer();
 

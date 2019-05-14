@@ -2,62 +2,50 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zircon-internal/ktrace.h>
+
 #include "garnet/bin/ktrace_provider/reader.h"
 
-#include <fcntl.h>
-#include <limits.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-#include "src/lib/files/eintr_wrapper.h"
-
 namespace ktrace_provider {
-namespace {
 
-constexpr char kTraceDev[] = "/dev/misc/ktrace";
+Reader::Reader(const char* buffer, size_t buffer_size)
+  : current_(buffer),
+    marker_(buffer),
+    end_(buffer + buffer_size) {
+}
 
-}  // namespace
-
-Reader::Reader() : fd_(open(kTraceDev, O_RDONLY)) {}
-
-ktrace_header_t* Reader::ReadNextRecord() {
-  if (AvailableBytes() < sizeof(ktrace_header_t))
+const ktrace_header_t* Reader::ReadNextRecord() {
+  if (AvailableBytes() < sizeof(ktrace_header_t)) {
     ReadMoreData();
+  }
 
-  if (AvailableBytes() < sizeof(ktrace_header_t))
+  if (AvailableBytes() < sizeof(ktrace_header_t)) {
+    FXL_VLOG(10) << "No more records";
     return nullptr;
+  }
 
-  auto record = reinterpret_cast<ktrace_header_t*>(current_);
+  auto record = reinterpret_cast<const ktrace_header_t*>(current_);
 
-  if (AvailableBytes() < KTRACE_LEN(record->tag))
+  if (AvailableBytes() < KTRACE_LEN(record->tag)) {
     ReadMoreData();
+  }
 
-  if (AvailableBytes() < KTRACE_LEN(record->tag))
+  if (AvailableBytes() < KTRACE_LEN(record->tag)) {
+    FXL_VLOG(10) << "No more records, incomplete last record";
     return nullptr;
+  }
 
-  record = reinterpret_cast<ktrace_header_t*>(current_);
+  record = reinterpret_cast<const ktrace_header_t*>(current_);
   current_ += KTRACE_LEN(record->tag);
 
   number_bytes_read_ += KTRACE_LEN(record->tag);
   number_records_read_ += 1;
+
+  FXL_VLOG(10) << "Importing ktrace event 0x" << std::hex
+               << KTRACE_EVENT(record->tag) << ", size " << std::dec
+               << KTRACE_LEN(record->tag);
+
   return record;
-}
-
-void Reader::ReadMoreData() {
-  memcpy(buffer_, current_, AvailableBytes());
-  marker_ = buffer_ + AvailableBytes();
-
-  while (marker_ < end_) {
-    int bytes_read =
-        HANDLE_EINTR(read(fd_.get(), marker_, std::distance(marker_, end_)));
-
-    if (bytes_read <= 0)
-      break;
-
-    marker_ += bytes_read;
-  }
-
-  current_ = buffer_;
 }
 
 }  // namespace ktrace_provider

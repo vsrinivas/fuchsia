@@ -60,6 +60,7 @@ group("tracing") {
   testonly = true
   public_deps = [
     "//garnet/bin/cpuperf_provider:cpuperf_provider_tests",
+    "//garnet/bin/ktrace_provider:ktrace_provider_tests",
     "//garnet/bin/trace/tests:trace_tests",
     "//garnet/bin/trace2json:trace2json_tests($host_toolchain)",
     "//garnet/bin/trace_stress",

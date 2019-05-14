@@ -5,21 +5,22 @@
 #include "garnet/bin/ktrace_provider/app.h"
 
 #include <fcntl.h>
+#include <unistd.h>
+
 #include <fuchsia/tracing/kernel/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
-#include <unistd.h>
 #include <zircon/device/ktrace.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
 
+#include "garnet/bin/ktrace_provider/device_reader.h"
 #include "garnet/bin/ktrace_provider/importer.h"
-#include "garnet/bin/ktrace_provider/reader.h"
-#include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ktrace_provider {
 namespace {
@@ -191,7 +192,7 @@ void App::StopKTrace() {
   // Acquire a context for writing to the trace buffer.
   auto buffer_context = trace_acquire_context();
 
-  Reader reader;
+  DeviceReader reader;
   Importer importer(buffer_context);
   if (!importer.Import(reader)) {
     FXL_LOG(ERROR) << "Errors encountered while importing ktrace data";

@@ -6,6 +6,8 @@
 
 #include <mutex>
 
+#include <lib/zircon-internal/ktrace.h>
+
 namespace ktrace_provider {
 namespace {
 
