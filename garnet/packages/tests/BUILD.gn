@@ -1127,6 +1127,7 @@ group("bluetooth") {
   public_deps = [
     "//garnet/packages/prod:bluetooth_core",
     "//src/connectivity/bluetooth/core/bt-gap:tests",
+    "//src/connectivity/bluetooth/core/bt-host:bluetooth_fuzzers",
     "//src/connectivity/bluetooth/hci/fake",
     "//src/connectivity/bluetooth/lib/bt-avdtp:tests",
     "//src/connectivity/bluetooth/lib/bt-avctp:tests",
