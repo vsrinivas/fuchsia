@@ -55,9 +55,6 @@ protocol TestHarness {
     /// Connects to environment services injected into the TestHarness
     /// environment.
     ConnectToEnvironmentService(string service_name, handle<channel> request);
-
-    /// DEPRECATED. Use |ConnectToModularService()| instead, they are the same.
-    GetService(TestHarnessService service);
 };
 
 /// Describes which service to connect to using |ConnectToModularService()|.
@@ -170,11 +167,4 @@ table InterceptSpec {
     ///
     /// |extra_cmx_contents| is considered malformed if it is not valid JSON.
     2: fuchsia.mem.Buffer extra_cmx_contents;
-};
-
-/// DEPRECATED. Use |ConnectToModularService| instead.
-xunion TestHarnessService {
-    request<fuchsia.modular.PuppetMaster> puppet_master;
-    request<fuchsia.modular.ComponentContext> component_context;
-    request<fuchsia.modular.AgentContext> agent_context;
 };

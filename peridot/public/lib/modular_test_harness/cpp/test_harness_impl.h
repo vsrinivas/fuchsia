@@ -48,16 +48,16 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
   class InterceptedComponentImpl;
   class InterceptedSessionAgent;
 
-  // Services requested using |TestHarness.GetService()| are provided by a
+  // Services requested using |TestHarness.ConnectToService()| are provided by a
   // session agent which is started as part of the test harness' modular runtime
   // instance. This session agent is intercepted and implemented by the
   // |InterceptedSessionAgent| inner class. This struct holds state or the
   // intercepted session agent implementation.
   struct InterceptedSessionAgentInfo {
-    // Service requests from |TestHarness.GetService()| may be issued before the
-    // session agent, which provides these services, has been initialized. These
-    // service requests are buffered here until the session agent has been
-    // initialized.
+    // Service requests from |TestHarness.ConnectToService()| may be issued
+    // before the session agent, which provides these services, has been
+    // initialized. These service requests are buffered here until the session
+    // agent has been initialized.
     //
     // Flushed using FlushBufferedSessionAgentServices().
     struct BufferedServiceRequest {
@@ -76,10 +76,6 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
 
   // |fuchsia::modular::testing::TestHarness|
   void Run(fuchsia::modular::testing::TestHarnessSpec spec) override;
-
-  // |fuchsia::modular::testing::TestHarness|
-  void GetService(
-      fuchsia::modular::testing::TestHarnessService service) override;
 
   // |fuchsia::modular::testing::TestHarness|
   void ConnectToModularService(
