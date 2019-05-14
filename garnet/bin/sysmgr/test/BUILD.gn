@@ -40,4 +40,11 @@ package("sysmgr_tests") {
       environments = basic_envs
     },
   ]
+
+  meta = [
+    {
+      path = rebase_path("meta/config_test.cmx")
+      dest = "config_test.cmx"
+    },
+  ]
 }

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/config_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}
