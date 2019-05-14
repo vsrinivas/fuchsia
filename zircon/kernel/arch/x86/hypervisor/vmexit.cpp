@@ -299,6 +299,9 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
                 1u << X86_FEATURE_IBRS_IBPB.bit |
                 1u << X86_FEATURE_STIBP.bit |
                 1u << X86_FEATURE_SSBD.bit);
+            // Disable support of IA32_ARCH_CAPABILITIES MSR.
+            guest_state->rdx &= ~(
+                1u << X86_FEATURE_ARCH_CAPABILITIES.bit);
             break;
         }
         return ZX_OK;
