@@ -7,6 +7,19 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 static_library("url") {
+  # We limit the visibility of this library because we will eventually need to
+  # remove or replace this library.
+  #
+  # Please do not add any more entries to this list.
+  visibility = [
+    "//src/lib",
+    ":*",
+    "//garnet/bin/http:*",
+    "//garnet/examples/mediaplayer/audio_player:*",
+    "//src/media/playback/mediaplayer:*",
+    "//topaz/examples/mediaplayer/mediaplayer_skia:*",
+  ]
+
   sources = [
     "gurl.cc",
     "gurl.h",
