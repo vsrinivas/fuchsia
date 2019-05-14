@@ -177,7 +177,6 @@ library("c") {
             "float.h",
             "fmtmsg.h",
             "fnmatch.h",
-            "ftw.h",
             "getopt.h",
             "glob.h",
             "grp.h",
