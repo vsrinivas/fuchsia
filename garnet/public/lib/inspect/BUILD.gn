@@ -12,8 +12,6 @@ source_set("inspect") {
 
   public_deps = [
     "deprecated",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/vfs/cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/inspect-vmo",
     "//zircon/public/lib/zx",
@@ -40,5 +38,7 @@ source_set("component") {
 
   public_deps = [
     ":inspect",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/vfs/cpp",
   ]
 }
