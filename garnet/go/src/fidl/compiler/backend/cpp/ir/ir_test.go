@@ -92,7 +92,7 @@ func TestCompileInterface(t *testing.T) {
 						GenOrdinalName:       "kTest_First_GenOrdinal",
 						Name:                 "First",
 						NameInLowerSnakeCase: "first",
-						HasRequest:     true,
+						HasRequest:           true,
 						Request: []Parameter{
 							{
 								Type: Type{
@@ -133,7 +133,7 @@ func TestCompileInterface(t *testing.T) {
 						GenOrdinalName:       "kTest_Second_GenOrdinal",
 						Name:                 "Second",
 						NameInLowerSnakeCase: "second",
-						HasRequest:     true,
+						HasRequest:           true,
 						Request: []Parameter{
 							{
 								Type: Type{
@@ -232,11 +232,11 @@ func TestCompileInterface(t *testing.T) {
 						GenOrdinalName:       "kEventTest_First_GenOrdinal",
 						Name:                 "First",
 						NameInLowerSnakeCase: "first",
-						Request: []Parameter{},
-						RequestSize:         0,
-						RequestTypeName:     "_EventTestFirstRequestTable",
-						RequestMaxHandles:   0,
-						HasResponse:         true,
+						Request:              []Parameter{},
+						RequestSize:          0,
+						RequestTypeName:      "_EventTestFirstRequestTable",
+						RequestMaxHandles:    0,
+						HasResponse:          true,
 						Response: []Parameter{
 							{
 								Type: Type{
@@ -279,9 +279,9 @@ func TestCompileInterface(t *testing.T) {
 				Name: types.EncodedCompoundIdentifier("EventTest"),
 				Methods: []types.Method{
 					{
-						Ordinal:    types.Ordinal(2),
-						GenOrdinal: types.Ordinal(271828),
-						Name:       types.Identifier("Second"),
+						Ordinal:     types.Ordinal(2),
+						GenOrdinal:  types.Ordinal(271828),
+						Name:        types.Identifier("Second"),
 						HasResponse: true,
 						Response: []types.Parameter{
 							{
@@ -325,21 +325,21 @@ func TestCompileInterface(t *testing.T) {
 						GenOrdinalName:       "kEventTest_Second_GenOrdinal",
 						Name:                 "Second",
 						NameInLowerSnakeCase: "second",
-						HasRequest:      false,
-						Request: []Parameter{},
-						RequestSize:       0,
-						RequestTypeName:   "_EventTestSecondRequestTable",
-						RequestMaxHandles: 0,
-						HasResponse:       true,
+						HasRequest:           false,
+						Request:              []Parameter{},
+						RequestSize:          0,
+						RequestTypeName:      "_EventTestSecondRequestTable",
+						RequestMaxHandles:    0,
+						HasResponse:          true,
 						Response: []Parameter{
 							{
 								Type: Type{
 									Decl:                "::std::array<int64_t, 8000>",
 									LLDecl:              "::fidl::Array<int64_t, 8000>",
-									Dtor:                "~Array",
+									Dtor:                "~array",
 									LLDtor:              "~Array",
 									OvernetEmbeddedDecl: "::std::array<int64_t, 8000>",
-									OvernetEmbeddedDtor: "~Array",
+									OvernetEmbeddedDtor: "~array",
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -365,7 +365,6 @@ func TestCompileInterface(t *testing.T) {
 				},
 			},
 		},
-
 	}
 	for _, ex := range cases {
 		t.Run(ex.name, func(t *testing.T) {
@@ -593,10 +592,10 @@ func TestCompileXUnion(t *testing.T) {
 						Type: Type{
 							Decl:                "::std::array<int64_t, 10>",
 							LLDecl:              "::fidl::Array<int64_t, 10>",
-							Dtor:                "~Array",
+							Dtor:                "~array",
 							LLDtor:              "~Array",
 							OvernetEmbeddedDecl: "::std::array<int64_t, 10>",
-							OvernetEmbeddedDtor: "~Array",
+							OvernetEmbeddedDtor: "~array",
 						},
 						Name:        "i",
 						StorageName: "i_",
@@ -609,10 +608,10 @@ func TestCompileXUnion(t *testing.T) {
 						Type: Type{
 							Decl:                "::std::array<int64_t, 20>",
 							LLDecl:              "::fidl::Array<int64_t, 20>",
-							Dtor:                "~Array",
+							Dtor:                "~array",
 							LLDtor:              "~Array",
 							OvernetEmbeddedDecl: "::std::array<int64_t, 20>",
-							OvernetEmbeddedDtor: "~Array",
+							OvernetEmbeddedDtor: "~array",
 						},
 						Name:        "j",
 						StorageName: "j_",

@@ -540,7 +540,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
 		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
-		r.Dtor = fmt.Sprintf("~Array")
+		r.Dtor = fmt.Sprintf("~array")
 		r.LLDtor = fmt.Sprintf("~Array")
 		r.OvernetEmbeddedDecl = r.Decl
 		r.OvernetEmbeddedDtor = r.Dtor
@@ -571,7 +571,11 @@ func (c *compiler) compileType(val types.Type) Type {
 		c.handleTypes[val.HandleSubtype] = true
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
 		r.LLDecl = r.Decl
-		r.Dtor = fmt.Sprintf("~%s", val.HandleSubtype)
+		if val.HandleSubtype == "handle" {
+			r.Dtor = "~object<void>"
+		} else {
+			r.Dtor = fmt.Sprintf("~%s", val.HandleSubtype)
+		}
 		r.LLDtor = r.Dtor
 		r.OvernetEmbeddedDecl = fmt.Sprintf("::overnet::ClosedPtr<::overnet::Zx%s>",
 			strings.Title(fmt.Sprintf("%s", val.HandleSubtype)))

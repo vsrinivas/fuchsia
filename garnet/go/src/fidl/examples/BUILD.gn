@@ -66,6 +66,8 @@ fidl_example("test") {
 }
 fidl_example("types") {
 }
+fidl_example("xunion") {
+}
 
 fidl("point") {
   name = "fidl.examples.librarya"
@@ -108,5 +110,6 @@ group("examples") {
     ":test",
     ":types",
     ":view",
+    ":xunion",
   ]
 }

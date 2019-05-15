@@ -13,4 +13,8 @@ xunion xu {
     float32 f;
     string s;
     [Selector = "v2"] vector<int64> v;
+    array<int32>:5 a;
+    handle h;
+    handle<channel> c;
+    handle<event> e;
 };
