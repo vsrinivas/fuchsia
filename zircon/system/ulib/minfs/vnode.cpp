@@ -236,7 +236,7 @@ zx_status_t VnodeMinfs::InitVmo(Transaction* transaction) {
 
     zx_status_t status;
     const size_t vmo_size = fbl::round_up(GetSize(), kMinfsBlockSize);
-    if ((status = zx::vmo::create(vmo_size, 0, &vmo_)) != ZX_OK) {
+    if ((status = zx::vmo::create(vmo_size, ZX_VMO_RESIZABLE, &vmo_)) != ZX_OK) {
         FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         return status;
     }

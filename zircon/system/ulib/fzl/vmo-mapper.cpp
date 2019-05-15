@@ -15,7 +15,8 @@ zx_status_t VmoMapper::CreateAndMap(uint64_t size,
                                     fbl::RefPtr<VmarManager> vmar_manager,
                                     zx::vmo* vmo_out,
                                     zx_rights_t vmo_rights,
-                                    uint32_t cache_policy) {
+                                    uint32_t cache_policy,
+                                    uint32_t vmo_options) {
     if (size == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -26,7 +27,7 @@ zx_status_t VmoMapper::CreateAndMap(uint64_t size,
     }
 
     zx::vmo vmo;
-    zx_status_t ret = zx::vmo::create(size, 0, &vmo);
+    zx_status_t ret = zx::vmo::create(size, vmo_options, &vmo);
     if (ret != ZX_OK) {
         return ret;
     }

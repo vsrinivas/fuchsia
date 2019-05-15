@@ -15,14 +15,16 @@ zx_status_t OwnedVmoMapper::CreateAndMap(uint64_t size,
                                          const char* name,
                                          zx_vm_option_t map_options,
                                          fbl::RefPtr<VmarManager> vmar_manager,
-                                         uint32_t cache_policy) {
+                                         uint32_t cache_policy,
+                                         uint32_t vmo_options) {
     zx::vmo temp;
     zx_status_t res = VmoMapper::CreateAndMap(size,
                                               map_options,
                                               std::move(vmar_manager),
                                               &temp,
                                               ZX_RIGHT_SAME_RIGHTS,
-                                              cache_policy);
+                                              cache_policy,
+                                              vmo_options);
 
     if (res == ZX_OK) {
         temp.set_property(ZX_PROP_NAME, name, name ? strlen(name) : 0);

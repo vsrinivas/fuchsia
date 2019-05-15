@@ -47,12 +47,14 @@ public:
     //                to leave the default rights.
     // cache_policy : When non-zero, indicates the cache policy to apply to the
     //                created VMO.
+    // vmo_options  : The options to use when creating the VMO.
     zx_status_t CreateAndMap(uint64_t size,
                              zx_vm_option_t map_flags,
                              fbl::RefPtr<VmarManager> vmar_manager = nullptr,
                              zx::vmo* vmo_out = nullptr,
                              zx_rights_t vmo_rights = ZX_RIGHT_SAME_RIGHTS,
-                             uint32_t cache_policy = 0);
+                             uint32_t cache_policy = 0,
+                             uint32_t vmo_options = 0);
 
     // Map an existing VMO our address space using the provided map
     // flags and optional target VMAR.

@@ -89,7 +89,7 @@ public:
         Release();
         size_ = fbl::round_up(size, static_cast<size_t>(PAGE_SIZE));
         zx_status_t status;
-        if ((status = zx::vmo::create(size_, 0, &vmo_)) != ZX_OK) {
+        if ((status = zx::vmo::create(size_, ZX_VMO_RESIZABLE, &vmo_)) != ZX_OK) {
             return status;
         } else if ((status = zx_vmar_map(zx_vmar_root_self(),
                                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,

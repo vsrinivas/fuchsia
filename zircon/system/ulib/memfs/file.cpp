@@ -102,7 +102,7 @@ zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size)
     zx_status_t status;
     if (!vmo_.is_valid()) {
         // First access to the file? Allocate it.
-        if ((status = zx::vmo::create(0, 0, &vmo_)) != ZX_OK) {
+        if ((status = zx::vmo::create(0, ZX_VMO_RESIZABLE, &vmo_)) != ZX_OK) {
             return status;
         }
     }
