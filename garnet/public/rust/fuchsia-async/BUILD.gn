@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-async") {
   name = "fuchsia_async"
@@ -21,5 +23,18 @@ rustc_library("fuchsia-async") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:slab",
+  ]
+}
+
+test_package("fuchsia-async-tests") {
+  deps = [
+    ":fuchsia-async",
+  ]
+
+  tests = [
+    {
+      name = "fuchsia_async_lib_test"
+      environments = basic_envs
+    },
   ]
 }

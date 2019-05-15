@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
@@ -227,9 +228,7 @@ executable("auto_login_base_shell_test_bin") {
   ]
 }
 
-package("auto_login_base_shell_test") {
-  testonly = true
-
+test_package("auto_login_base_shell_test") {
   deps = [
     ":auto_login_base_shell_bin",
     ":auto_login_base_shell_test_bin",
@@ -239,13 +238,6 @@ package("auto_login_base_shell_test") {
     {
       name = "auto_login_base_shell_test"
       environments = basic_envs
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/auto_login_base_shell_test.cmx"
-      dest = "auto_login_base_shell_test.cmx"
     },
   ]
 }

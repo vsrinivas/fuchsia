@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.net.Connectivity",
+                "fuchsia.net.SocketProvider",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/fuchsia_async_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.SocketProvider"
+        ]
+    }
+}

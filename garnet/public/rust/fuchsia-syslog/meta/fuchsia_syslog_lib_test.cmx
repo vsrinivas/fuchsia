@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fuchsia_syslog_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}
