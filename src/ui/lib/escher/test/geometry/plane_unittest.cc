@@ -442,4 +442,71 @@ TEST(plane3, UniformScale) {
   }
 }
 
+// Basic test to ensure that projecting 3D planes onto
+// the z=0 plane works as expected.
+TEST(plane3, Projection) {
+  using namespace escher;
+
+  // Simple example with a normalized normal and no D direction.
+  plane3 plane_1(vec3(1, 0, 0), 0);
+  plane2 plane_1_res(plane_1);
+  vec2 res_norm = plane_1_res.dir();
+  float_t res_dist = plane_1_res.dist();
+  EXPECT_TRUE(res_norm.x == 1 && res_norm.y == 0);
+  EXPECT_TRUE(res_dist == 0);
+
+  // Add a D value, but keep the normal normalized.
+  plane_1 = plane3(vec3(0, 1, 0), 5);
+  plane_1_res = plane2(plane_1);
+  res_norm = plane_1_res.dir();
+  res_dist = plane_1_res.dist();
+  EXPECT_TRUE(res_norm.x == 0 && res_norm.y == 1);
+  EXPECT_TRUE(res_dist == 5);
+
+  // Add a D value and a normal with a Z component.
+  vec3 dir = glm::normalize(vec3(1, 1, 1));
+  plane_1_res = plane2(plane3(dir, 30));
+  res_norm = plane_1_res.dir();
+  res_dist = plane_1_res.dist();
+  EXPECT_TRUE(fabs(res_norm.x - 0.707106) <= kEpsilon);
+  EXPECT_TRUE(fabs(res_norm.y - 0.707106) <= kEpsilon);
+  EXPECT_TRUE(fabs(res_dist - 30.f / glm::length(vec2(dir))) <= kEpsilon);
+
+  // Stress test. We check to make sure the z component
+  // of each normal is not within the vicinity of 1 to
+  // avoid checking against an invalid plane that is
+  // parallel to the z=0 plane.
+  for (int32_t x = -20; x <= 20; x++) {
+    for (int32_t y = -20; y <= 20; y++) {
+      for (int32_t z = -20; z <= 20; z++) {
+        for (int32_t d = -5; d <= 5; d++) {
+          // Skip zero vector.
+          if (x == 0 && y == 0 && z == 0) {
+            continue;
+          }
+
+          // Ignore parallel planes.
+          vec3 test_norm = glm::normalize(vec3(x, y, z));
+          if (1.f - fabs(test_norm.z) <= kEpsilon) {
+            continue;
+          }
+
+          plane_1_res = plane2(plane3(test_norm, d));
+          res_norm = plane_1_res.dir();
+          res_dist = plane_1_res.dist();
+
+          float_t length = glm::length(vec2(test_norm));
+          float_t expected_norm_x = test_norm.x / length;
+          float_t expected_norm_y = test_norm.y / length;
+          float_t expected_new_dist = d / length;
+
+          EXPECT_TRUE(fabs(res_norm.x - expected_norm_x) <= kEpsilon);
+          EXPECT_TRUE(fabs(res_norm.y - expected_norm_y) <= kEpsilon);
+          EXPECT_TRUE(fabs(res_dist - expected_new_dist) <= kEpsilon);
+        }
+      }
+    }
+  }
+}
+
 }  // namespace

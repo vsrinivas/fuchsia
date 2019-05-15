@@ -54,11 +54,13 @@ class BoundingBox {
   // Return the number of bounding box corners that are clipped by the
   // specified plane (between 0 and 8).  Since this is a 2D plane, the z
   // coordinate is ignored, and only 4 corners need to be tested.
-  uint32_t NumClippedCorners(const plane2& plane) const;
+  uint32_t NumClippedCorners(const plane2& plane,
+                             const float_t& epsilon = kEpsilon) const;
 
   // Return the number of bounding box corners that are clipped by the
   // specified plane (between 0 and 8).
-  uint32_t NumClippedCorners(const plane3& plane) const;
+  uint32_t NumClippedCorners(const plane3& plane,
+                             const float_t& epsilon = kEpsilon) const;
 
  private:
   vec3 min_;

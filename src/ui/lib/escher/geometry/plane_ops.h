@@ -81,9 +81,13 @@ inline float PlaneDistanceToPoint(const planeN<vec2>& plane,
 
 // Return true if point is contained within the half-space of the oriented
 // plane, or on the boundary.
+// Epsilon controls the aggressiveness of the clipping. A higher epsilon
+// means less aggressive clipping, with a minimum allowed value of 0.f.
 template <typename PlaneT, typename VecT>
-bool PlaneClipsPoint(const PlaneT& plane, const VecT& point) {
-  return PlaneDistanceToPoint(plane, point) < 0.f;
+bool PlaneClipsPoint(const PlaneT& plane, const VecT& point,
+                     const float_t& epsilon = 0.f) {
+  FXL_CHECK(epsilon >= 0.f);
+  return PlaneDistanceToPoint(plane, point) < -epsilon;
 }
 
 }  // namespace escher

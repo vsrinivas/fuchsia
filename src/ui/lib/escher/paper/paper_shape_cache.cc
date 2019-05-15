@@ -41,15 +41,20 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(
               MeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
 
   // Convert 3d clip planes to 2d before clipping.
-  plane2* clip_planes = ESCHER_ALLOCA(plane2, num_clip_planes);
+  std::vector<plane2> clip_planes_vec;
   for (size_t i = 0; i < num_clip_planes; ++i) {
-    // TODO(ES-141): support arbitrary plane3 (where the direction has a
-    // Z-component) by projecting them onto the Z == 0 plane.  Don't want to
-    // deal with this now, so we just DCHECK.
-    FXL_DCHECK(clip_planes3[i].dir().z == 0);
-    clip_planes[i] =
-        plane2(vec2(clip_planes3[i].dir()), clip_planes3[i].dist());
+    // Check to make sure the incoming 3D clip plane is not parallel
+    // to the z=0 plane. If the two planes intersect, add in the
+    // constructed plane2 to the vector of plane2s.
+    if (1.f - fabs(clip_planes3[i].dir().z) > 0.001) {
+      clip_planes_vec.push_back(plane2(clip_planes3[i]));
+    };
   }
+
+  // Grab the raw pointer data from the vector
+  // and update the total number of clip planes.
+  plane2* clip_planes = clip_planes_vec.data();
+  num_clip_planes = clip_planes_vec.size();
 
   IndexedTriangleMesh2d<vec2> tri_mesh;
   std::tie(tri_mesh, std::ignore) =

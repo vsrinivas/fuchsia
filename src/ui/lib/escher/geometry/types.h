@@ -80,24 +80,80 @@ struct planeN {
   const VecT& dir() const { return dir_; }
   float dist() const { return dist_; }
 
- private:
+ protected:
   VecT dir_;
   float dist_;
 };
 
+// A "plane2" is simply a line that exists on the z = 0 (XY) plane.
+// In standard form this would be written Ax + By + C = 0, where
+// (A,B) are the coordinates of the normal vector of the plane and
+// C is the distance to the origin along that normal vector. (AB)
+// is represented by the parameter "direction" and 'C' is represented
+// by the parameter "distance". This is analogous to the equation of
+// a plane in 3D which is given by the equation Ax + By + Cz + D = 0.
+//
+// To generate a "plane2" (line) that represents the intersection of
+// an arbitrary 3D (clip) plane and the Z = 0 plane, we simply have
+// to solve the following system of equations:
+//
+// 1) Ax + By + Cz + D = 0
+// 2) z = 0
+//
+// This can be achieved by simply substituting equation 2 into equation
+// 1 to yield Ax + By + D = 0, which is the same as our line equation
+// as given above, meaning that for any arbitrary 3D plane, we can find
+// its line of intersection on the Z = 0 plane by simply deleting the
+// original Z component.
+//
+// We do however require that the normal vector (AB) is normalized,
+// despite the fact that mathematically the line equation Ax + By + C = 0
+// does not require a normalized (AB) to be a valid line equation.
+//
+// It is easy to renormalize the equation by realizing that the line
+// equation can be rewritten as dot(AB, XY) = -D which itself can be
+// expanded out to be  |AB| * |XY| * cosTheta = -D. Dividing both
+// sides of the equation by |AB| yields:
+//
+// (|AB|/|AB|) * |XY| * cosTheta = -D / |AB| =
+// |XY| * cosTheta = -D / |AB|
+//
+// So what this means in terms of our implementation is just that we
+// have to drop the Z component from the incoming direction, renormalize
+// the remaining two components, and then divide the distance by the
+// pre-normalized 2D direction.
+//
+// One last thing to note is that this only works if the incoming 3D plane
+// is NOT parallel to the Z = 0 plane. This means we need to check if the
+// direction of the incoming plane is (0,0,1) or (0,0,-1) using FXL_DCHECK
+//  to make sure this is not the case. We use a small epsilon value to
+// check within the vicinity of z=1 to account for any floating point wackiness.
 struct plane2 : public planeN<vec2> {
   using planeN::planeN;
-  plane2(const vec3& direction, float distance)
-      : planeN<vec2>(vec2(direction), distance) {
-    // We only want to construct plane2 instead of plane3 when no info will be
-    // lost.  It is up to the caller to guarantee that z == 0.
-    FXL_DCHECK(direction.z == 0);
+
+  // Project a 3D plane onto the Z=0 plane, as described abover.
+  plane2(const planeN<vec3>& plane) {
+    vec3 direction = plane.dir();
+    float_t distance = plane.dist();
+
+    // We only want to construct plane2 instead of plane3 when we know that
+    // the incoming plane will intersect the Z = 0 plane.
+    FXL_DCHECK(1.f - fabs(direction.z) > kEpsilon);
+
+    vec2 projected_direction = vec2(direction);
+
+    // Length will be <=1, because the vector being projected has length 1.
+    const float_t length = glm::length(projected_direction);
+    const float_t projected_distance = distance / length;
+
+    dir_ = glm::normalize(projected_direction);
+    dist_ = projected_distance;
   }
 };
 
 struct plane3 : public planeN<vec3> {
   using planeN::planeN;
-  explicit plane3(const plane2& p)
+  explicit plane3(const planeN<vec2>& p)
       : planeN<vec3>(vec3(p.dir(), 0.f), p.dist()) {}
 };
 

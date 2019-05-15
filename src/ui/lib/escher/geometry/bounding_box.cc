@@ -93,25 +93,57 @@ BoundingBox operator*(const mat4& matrix, const BoundingBox& box) {
   return BoundingBox(min, max);
 }
 
-uint32_t BoundingBox::NumClippedCorners(const plane2& plane) const {
+uint32_t BoundingBox::NumClippedCorners(const plane2& plane,
+                                        const float_t& epsilon) const {
   uint32_t count = 0;
-  count += PlaneClipsPoint(plane, vec2(min_.x, min_.y)) ? 2 : 0;
-  count += PlaneClipsPoint(plane, vec2(min_.x, max_.y)) ? 2 : 0;
-  count += PlaneClipsPoint(plane, vec2(max_.x, max_.y)) ? 2 : 0;
-  count += PlaneClipsPoint(plane, vec2(max_.x, min_.y)) ? 2 : 0;
+  float_t adjusted_epsilon = std::max(epsilon, 0.f);
+  count +=
+      PlaneClipsPoint(plane, vec2(min_.x, min_.y), adjusted_epsilon) ? 2 : 0;
+  count +=
+      PlaneClipsPoint(plane, vec2(min_.x, max_.y), adjusted_epsilon) ? 2 : 0;
+  count +=
+      PlaneClipsPoint(plane, vec2(max_.x, max_.y), adjusted_epsilon) ? 2 : 0;
+  count +=
+      PlaneClipsPoint(plane, vec2(max_.x, min_.y), adjusted_epsilon) ? 2 : 0;
   return count;
 }
 
-uint32_t BoundingBox::NumClippedCorners(const plane3& plane) const {
+uint32_t BoundingBox::NumClippedCorners(const plane3& plane,
+                                        const float_t& epsilon) const {
   uint32_t count = 0;
-  count += PlaneClipsPoint(plane, vec3(min_.x, min_.y, min_.z)) ? 1 : 0;
-  count += PlaneClipsPoint(plane, vec3(min_.x, min_.y, max_.z)) ? 1 : 0;
-  count += PlaneClipsPoint(plane, vec3(min_.x, max_.y, min_.z)) ? 1 : 0;
-  count += PlaneClipsPoint(plane, vec3(min_.x, max_.y, max_.z)) ? 1 : 0;
-  count += PlaneClipsPoint(plane, vec3(max_.x, min_.y, min_.z)) ? 1 : 0;
-  count += PlaneClipsPoint(plane, vec3(max_.x, min_.y, max_.z)) ? 1 : 0;
-  count += PlaneClipsPoint(plane, vec3(max_.x, max_.y, min_.z)) ? 1 : 0;
-  count += PlaneClipsPoint(plane, vec3(max_.x, max_.y, max_.z)) ? 1 : 0;
+  float_t adjusted_epsilon = std::max(epsilon, 0.f);
+  count +=
+      PlaneClipsPoint(plane, vec3(min_.x, min_.y, min_.z), adjusted_epsilon)
+          ? 1
+          : 0;
+  count +=
+      PlaneClipsPoint(plane, vec3(min_.x, min_.y, max_.z), adjusted_epsilon)
+          ? 1
+          : 0;
+  count +=
+      PlaneClipsPoint(plane, vec3(min_.x, max_.y, min_.z), adjusted_epsilon)
+          ? 1
+          : 0;
+  count +=
+      PlaneClipsPoint(plane, vec3(min_.x, max_.y, max_.z), adjusted_epsilon)
+          ? 1
+          : 0;
+  count +=
+      PlaneClipsPoint(plane, vec3(max_.x, min_.y, min_.z), adjusted_epsilon)
+          ? 1
+          : 0;
+  count +=
+      PlaneClipsPoint(plane, vec3(max_.x, min_.y, max_.z), adjusted_epsilon)
+          ? 1
+          : 0;
+  count +=
+      PlaneClipsPoint(plane, vec3(max_.x, max_.y, min_.z), adjusted_epsilon)
+          ? 1
+          : 0;
+  count +=
+      PlaneClipsPoint(plane, vec3(max_.x, max_.y, max_.z), adjusted_epsilon)
+          ? 1
+          : 0;
 
   return count;
 }
