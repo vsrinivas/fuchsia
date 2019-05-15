@@ -318,6 +318,7 @@ int main(int argc, const char* argv[]) {
     fbl::Vector<fbl::unique_ptr<VirtualLayer>> layers;
     int32_t num_frames = 120; // default to 120 frames
     enum Platform {
+        SIMPLE,
         INTEL,
         ARM_MEDIATEK,
         ARM_AMLOGIC,
@@ -382,6 +383,10 @@ int main(int argc, const char* argv[]) {
             argc -= 1;
         } else if (strcmp(argv[0], "--amlogic") == 0) {
             platform = ARM_AMLOGIC;
+            argv += 1;
+            argc -= 1;
+        } else if (strcmp(argv[0], "--simple") == 0) {
+            platform = SIMPLE;
             argv += 1;
             argc -= 1;
         } else {
@@ -497,7 +502,16 @@ int main(int argc, const char* argv[]) {
         layer4->SetAlpha(true, (float)0.3);
         layers.push_back(std::move(layer4));
     } else if (platform == ARM_AMLOGIC) {
-        // Mediatek display test
+        // Amlogic display test
+        fbl::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac,
+                                                                                      displays);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        layers.push_back(std::move(layer1));
+    } else if (platform == SIMPLE) {
+        // Simple display test
         fbl::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac,
                                                                                       displays);
         if (!ac.check()) {
