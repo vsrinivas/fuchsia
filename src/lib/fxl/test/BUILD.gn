@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("test_settings") {
+  testonly = true
+
+  sources = [
+    "test_settings.cc",
+    "test_settings.h",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+  ]
+}
+
 # Generic main entry point target for GTest executables.
 source_set("gtest_main") {
   testonly = true
@@ -11,6 +24,7 @@ source_set("gtest_main") {
   ]
 
   deps = [
+    ":test_settings",
     "//src/lib/fxl",
   ]
 

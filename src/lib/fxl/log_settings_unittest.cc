@@ -7,9 +7,10 @@
 #include <unistd.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 
@@ -22,12 +23,12 @@ class LogSettingsFixture : public ::testing::Test {
       : old_settings_(GetLogSettings()), old_stderr_(dup(STDERR_FILENO)) {}
   ~LogSettingsFixture() {
     SetLogSettings(old_settings_);
-    dup2(old_stderr_, STDERR_FILENO);
+    dup2(old_stderr_.get(), STDERR_FILENO);
   }
 
  private:
   LogSettings old_settings_;
-  int old_stderr_;
+  fxl::UniqueFD old_stderr_;
 };
 
 TEST(LogSettings, DefaultOptions) {

@@ -1,16 +1,12 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #include "gtest/gtest.h"
-
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
+#include "test_settings.h"
 
 int main(int argc, char** argv) {
-  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(cl)) {
+  if (!fxl::SetTestSettings(argc, argv)) {
     FXL_LOG(ERROR) << "Failed to parse log settings from command-line";
     return EXIT_FAILURE;
   }

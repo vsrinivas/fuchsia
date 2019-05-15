@@ -37,6 +37,9 @@ source_set("unittests") {
 
   deps = [
     ":gtest",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gmock",
     "//zircon/public/lib/async-cpp",
   ]
 }

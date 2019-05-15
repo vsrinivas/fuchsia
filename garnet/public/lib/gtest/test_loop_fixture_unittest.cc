@@ -7,6 +7,14 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
+#include <cstdlib>
+
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/test/test_settings.h"
+
 namespace gtest {
 namespace {
 
@@ -79,6 +87,37 @@ TEST_F(TestLoopFixtureTest, LoopRunsRepeatedly) {
 
   // There should be nothing further to dispatch.
   EXPECT_FALSE(RunLoopUntilIdle());
+}
+
+// Test that --test_loop_seed correctly propagates the random seed to the test
+// loop. This must be done before the test fixture is instanciated, hence the
+// use of |SetUpTestSuite| to set the flag (and restore the environment variable
+// to its original value once done).
+class RandomSeedTest : public TestLoopFixture {
+ public:
+  static void SetUpTestSuite() {
+    random_seed_ = getenv("TEST_LOOP_RANDOM_SEED");
+    FXL_CHECK(fxl::SetTestSettings(fxl::CommandLineFromInitializerList(
+        {"argv0", "--test_loop_seed=1234"})));
+  }
+
+  static void TearDownTestSuite() {
+    if (random_seed_) {
+      setenv("TEST_LOOP_RANDOM_SEED", random_seed_, /*overwrite=*/true);
+      random_seed_ = nullptr;
+    } else {
+      unsetenv("TEST_LOOP_RANDOM_SEED");
+    }
+  }
+
+ private:
+  static char *random_seed_;
+};
+
+char *RandomSeedTest::random_seed_;
+
+TEST_F(RandomSeedTest, RandomSeedFromFlag) {
+  EXPECT_EQ(test_loop().initial_state(), 1234u);
 }
 
 }  // namespace
