@@ -26,6 +26,7 @@
 #include <string>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
+#include "peridot/bin/sessionmgr/agent_runner/map_agent_service_index.h"
 #include "peridot/bin/sessionmgr/component_context_impl.h"
 #include "peridot/bin/sessionmgr/focus.h"
 #include "peridot/bin/sessionmgr/message_queue/message_queue_manager.h"
@@ -455,11 +456,18 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       ledger_client_.get(), MakePageId(kAgentRunnerPageId));
   AtEnd(Reset(&agent_runner_storage_));
 
+  std::map<std::string, std::string> service_to_agent_map;
+  for (auto& entry : config_.agent_service_index()) {
+    service_to_agent_map.emplace(entry.service_name(), entry.agent_url());
+  }
+  auto agent_service_index =
+      std::make_unique<MapAgentServiceIndex>(std::move(service_to_agent_map));
+
   agent_runner_.reset(new AgentRunner(
       session_environment_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
       agent_token_manager_.get(), user_intelligence_provider_impl_.get(),
-      entity_provider_runner_.get()));
+      entity_provider_runner_.get(), std::move(agent_service_index)));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
   maxwell_component_context_bindings_ = std::make_unique<

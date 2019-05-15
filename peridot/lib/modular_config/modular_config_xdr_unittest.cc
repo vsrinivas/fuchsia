@@ -103,6 +103,7 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
       "startup_agents":null,
       "session_agents":null,
       "component_args":null,
+      "agent_service_index":null,
       "use_parent_runner_for_story_realm": false})";
 
   // Remove whitespace for string comparison

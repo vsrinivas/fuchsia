@@ -6,6 +6,7 @@ library fuchsia.modular.session;
 
 using fuchsia.io;
 using fuchsia.ui.policy;
+using fuchsia.sys;
 
 /// Descriptions and defaults for these configurations are echoed in
 /// peridot/docs/modular/guide/config.md.
@@ -131,6 +132,11 @@ table SessionmgrConfig {
     /// environment for stories.
     /// Default: false
     9: bool use_parent_runner_for_story_realm;
+
+    /// A list of supported services and the URL of the agent known to provide
+    /// that service. Used by the Session Manager to implement
+    /// |ComponentContext| method ConnectToAgentService().
+    10: vector<AgentServiceIndexEntry> agent_service_index;
 };
 
 /// Used to pass around configuration references to apps such as base shell,
@@ -141,6 +147,15 @@ table AppConfig {
 
     /// The arguments for the app.
     2: vector<string> args;
+};
+
+/// A service and the URL of the agent known to provide that service.
+table AgentServiceIndexEntry {
+    /// The service name.
+    1: string service_name;
+
+    /// The fuchsia component url for agent.
+    2: fuchsia.sys.component_url agent_url;
 };
 
 enum CloudProvider {

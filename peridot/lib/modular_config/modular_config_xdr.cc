@@ -123,6 +123,13 @@ void XdrComponentArgs(XdrContext* const xdr,
                         default_args);
 }
 
+void XdrAgentServiceIndexEntry(
+    XdrContext* const xdr,
+    fuchsia::modular::session::AgentServiceIndexEntry* const data) {
+  xdr->Field(modular_config::kServiceName, data->mutable_service_name());
+  xdr->Field(modular_config::kAgentUrl, data->mutable_agent_url());
+}
+
 std::vector<fuchsia::modular::session::SessionShellMapEntry>
 GetDefaultSessionShellMap() {
   fuchsia::modular::session::SessionShellConfig config;
@@ -292,6 +299,14 @@ void XdrSessionmgrConfig_v1(
   xdr->FieldWithDefault(modular_config::kComponentArgs,
                         data->mutable_component_args(), XdrComponentArgs,
                         has_component_args, std::move(default_component_args));
+
+  std::vector<fuchsia::modular::session::AgentServiceIndexEntry>
+      default_agent_service_index;
+  bool has_agent_service_index = data->has_agent_service_index();
+  xdr->FieldWithDefault(modular_config::kAgentServiceIndex,
+                        data->mutable_agent_service_index(),
+                        XdrAgentServiceIndexEntry, has_agent_service_index,
+                        std::move(default_agent_service_index));
 
   bool has_use_parent_runner_for_story_realm =
       data->has_use_parent_runner_for_story_realm();

@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
+#include "peridot/bin/sessionmgr/agent_runner/agent_service_index.h"
 #include "peridot/bin/sessionmgr/argv_injecting_launcher.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"

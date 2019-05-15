@@ -26,6 +26,16 @@
     ],
     "session_agents": [
       "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx"
+    ],
+    "agent_service_index": [
+      {
+        "service_name": "chromium.cast.ApplicationConfigManager",
+        "agent_url": "fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx"
+      },
+      {
+        "service_name": "fuchsia.modular.Clipboard",
+        "agent_url": "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx"
+      }
     ]
   }
 }

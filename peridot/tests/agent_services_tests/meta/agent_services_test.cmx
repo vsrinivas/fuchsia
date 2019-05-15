@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/agent_services_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

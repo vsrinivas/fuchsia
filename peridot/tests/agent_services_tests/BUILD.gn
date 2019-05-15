@@ -1,0 +1,42 @@
+import("//build/package.gni")
+import("//build/testing/environments.gni")
+
+executable("agent_services_test") {
+  testonly = true
+
+  output_name = "agent_services_test"
+
+  sources = [
+    "agent_services_test.cc",
+  ]
+
+  deps = [
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("agent_services_tests") {
+  testonly = true
+
+  tests = [
+    {
+      name = "agent_services_test"
+      environments = basic_envs
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/agent_services_test.cmx"
+      dest = "agent_services_test.cmx"
+    },
+  ]
+
+  deps = [
+    ":agent_services_test",
+  ]
+}

@@ -23,7 +23,7 @@ class MapAgentServiceIndex : public AgentServiceIndex {
   // returns one |agent_url| for a given |service_name|, this restriction simply
   // means the given map predefines which |agent_url| is returned.)
   MapAgentServiceIndex(std::map<std::string, std::string> service_to_agents)
-      : service_to_agents_(service_to_agents) {}
+      : service_to_agents_(std::move(service_to_agents)) {}
 
   ~MapAgentServiceIndex() = default;
 

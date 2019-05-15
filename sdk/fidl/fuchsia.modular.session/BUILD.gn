@@ -11,6 +11,7 @@ fidl("fuchsia.modular.session") {
     "modular_config.fidl",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.policy",
     "//zircon/public/fidl/fuchsia-io",
   ]
