@@ -26,7 +26,7 @@ constexpr size_t BUFFER_SIZE = 4096;
 // Data to send to the device
 uint8_t send_buf[BUFFER_SIZE] = {};
 // Buffer for receiving data from the device
-int receive_buf[BUFFER_SIZE] = {};
+uint8_t receive_buf[BUFFER_SIZE] = {};
 
 constexpr int TIMEOUT = 1000; // 1 seecond
 
@@ -84,6 +84,7 @@ bool control_interrupt_test(size_t transfer_size) {
     wait_thread.join();
 
     EXPECT_EQ(complete_req, req);
+    EXPECT_EQ(static_cast<size_t>(req->actual_length), transfer_size);
 
     // Sent data should match payload of interrupt request.
     EXPECT_EQ(memcmp(send_buf, receive_buf, transfer_size), 0);

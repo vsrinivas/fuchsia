@@ -613,8 +613,8 @@ int MtUsb::IrqThread() {
         .set_usbcom(1)
         .WriteTo(mmio);
 
-   // Configure all endpoints other than endpoint zero to use 512 byte double-buffered FIFOs.
-    constexpr uint32_t fifo_size = 512 >> 3;   // FIFO size is measured in 8 byte units.
+   // Configure all endpoints other than endpoint zero to use 1024 byte double-buffered FIFOs.
+    constexpr uint32_t fifo_size = 1024 >> 3;   // FIFO size is measured in 8 byte units.
     uint32_t fifo_addr = (64 >> 3);             // First 64 bytes used for endpoint zero.
     for (uint8_t i = 1; i <= NUM_EPS; i++) {
         INDEX::Get().FromValue(0).set_selected_endpoint(i).WriteTo(mmio);
@@ -627,8 +627,8 @@ int MtUsb::IrqThread() {
         RXFIFOADD::Get().FromValue(0).set_rxfifoadd(static_cast<uint16_t>(fifo_addr)).WriteTo(mmio);
         fifo_addr += 2*fifo_size; // double-buffered
 
-        TXFIFOSZ::Get().FromValue(0).set_txdpb(1).set_txsz(FIFO_SIZE_512).WriteTo(mmio);
-        RXFIFOSZ::Get().FromValue(0).set_rxdpb(1).set_rxsz(FIFO_SIZE_512).WriteTo(mmio);
+        TXFIFOSZ::Get().FromValue(0).set_txdpb(1).set_txsz(FIFO_SIZE_1024).WriteTo(mmio);
+        RXFIFOSZ::Get().FromValue(0).set_rxdpb(1).set_rxsz(FIFO_SIZE_1024).WriteTo(mmio);
     }
 
     while (true) {
