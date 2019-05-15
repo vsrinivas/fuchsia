@@ -85,7 +85,7 @@ class TestFuzzer(unittest.TestCase):
     self.assertIn(' '.join(
         mock_device.get_ssh_cmd([
             'ssh', '::1', 'run',
-            fuzzer.url(), '-artifact_prefix=data', '-some-lf-arg=value'
+            fuzzer.url(), '-artifact_prefix=data/', '-some-lf-arg=value'
         ])), mock_device.history)
 
   def test_start(self):
@@ -118,7 +118,7 @@ class TestFuzzer(unittest.TestCase):
     self.assertIn(' '.join(
         mock_device.get_ssh_cmd([
             'ssh', '::1', 'run',
-            fuzzer.url(), '-artifact_prefix=data', '-some-lf-arg=value'
+            fuzzer.url(), '-artifact_prefix=data/', '-some-lf-arg=value'
         ] + artifacts)), mock_device.history)
 
   def test_merge(self):
@@ -128,9 +128,9 @@ class TestFuzzer(unittest.TestCase):
     self.assertIn(' '.join(
         mock_device.get_ssh_cmd([
             'ssh', '::1', 'run',
-            fuzzer.url(), '-artifact_prefix=data', '-merge=1',
+            fuzzer.url(), '-artifact_prefix=data/', '-merge=1',
             '-merge_control_file=data/.mergefile',
-            '-some-lf-arg=value data/corpus', 'data/corpus.prev'
+            '-some-lf-arg=value data/corpus/', 'data/corpus.prev/'
         ])), mock_device.history)
 
 

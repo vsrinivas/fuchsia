@@ -146,7 +146,7 @@ class Fuzzer(object):
     return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (self.pkg, self.tgt)
 
   def run(self, fuzzer_args, logfile=None):
-    fuzz_cmd = ['run', self.url(), '-artifact_prefix=data'] + fuzzer_args
+    fuzz_cmd = ['run', self.url(), '-artifact_prefix=data/'] + fuzzer_args
     print('+ ' + ' '.join(fuzz_cmd))
     self.device.ssh(fuzz_cmd, quiet=False, logfile=logfile)
 
@@ -159,7 +159,7 @@ class Fuzzer(object):
 
       The command will be like:
       run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
-        -artifact_prefix=data -jobs=1 data/corpus
+        -artifact_prefix=data/ -jobs=1 data/corpus/
 
       See also: https://llvm.org/docs/LibFuzzer.html#running
 
@@ -187,7 +187,7 @@ class Fuzzer(object):
         fuzzer_args.append('-jobs=1')
     self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
     if len(filter(lambda x: not x.startswith('-'), fuzzer_args)) == 0:
-      fuzzer_args.append('data/corpus')
+      fuzzer_args.append('data/corpus/')
 
     with Log(self):
       if self._foreground:
@@ -226,7 +226,7 @@ class Fuzzer(object):
       run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
         -artifact_prefix=data -jobs=1 \
         -merge=1 -merge_control_file=data/.mergefile \
-        data/corpus data/corpus.prev'
+        data/corpus/ data/corpus.prev/'
 
       See also: https://llvm.org/docs/LibFuzzer.html#corpus
 
@@ -244,8 +244,8 @@ class Fuzzer(object):
     # Save mergefile in case we are interrupted
     fuzzer_args = ['-merge=1', '-merge_control_file=data/.mergefile'
                   ] + fuzzer_args
-    fuzzer_args.append('data/corpus')
-    fuzzer_args.append('data/corpus.prev')
+    fuzzer_args.append('data/corpus/')
+    fuzzer_args.append('data/corpus.prev/')
     self.run(fuzzer_args)
     # Cleanup
     self.device.ssh(['rm', self.data_path('.mergefile')])
