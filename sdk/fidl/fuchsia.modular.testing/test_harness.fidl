@@ -38,6 +38,10 @@ protocol TestHarness {
     /// This event is sent when a component specified in
     /// |TestHarnessSpec.components_to_intercept| is created.
     /// |startup_info.launch_info.url| contains the component URL.
+    ///
+    /// Closing |intercepted_component| will signal to the component manager
+    /// that this component has exited unexpectedly. Prefer to use
+    /// InterceptedComponent/Exit to provide exit code and reason.
     -> OnNewComponent(fuchsia.sys.StartupInfo startup_info,
                       InterceptedComponent intercepted_component);
 
@@ -72,11 +76,9 @@ xunion ModularService {
 /// equivalent in behaviour to the |ComponentController| being closed.
 protocol InterceptedComponent {
     /// Signals that component has exit'd with the specified exit code. The
-    /// values here are bubbled up to the |ComponentController.OnTerminated|
-    /// event. The |OnKill| event is sent, and this InterceptedComponent
-    /// protocol is closed.
-    ///
-    /// This connection is closed once |Exit| is processed.
+    /// values here are bubbled up to the
+    /// |fuchsia.sys.ComponentController.OnTerminated| event. The |OnKill| event
+    /// is sent, and this InterceptedComponent handle is closed.
     Exit(int64 exit_code, fuchsia.sys.TerminationReason reason);
 
     /// The event is sent when the component is killed by the associated
@@ -168,7 +170,15 @@ table InterceptSpec {
     /// override the default constructed manifest, which only has the required
     /// "program.binary" field defined.
     ///
-    /// |extra_cmx_contents| is considered malformed if it is not valid JSON.
+    /// |extra_cmx_contents| must be a valid .cmx JSON. Example:
+    ///
+    /// {
+    ///   "sandbox": {
+    ///     "services": [
+    ///       "fuchsia.sys.Launcher",
+    ///     ]
+    ///   }
+    /// }
     2: fuchsia.mem.Buffer extra_cmx_contents;
 };
 
