@@ -44,6 +44,7 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Cond used to wait on the watchdog thread starting.
 static pthread_cond_t init_cond = PTHREAD_COND_INITIALIZER;
+static bool init_done = false;
 
 // The name of the current test.
 // Used to report which test timed out.
@@ -125,6 +126,7 @@ static __NO_RETURN void watchdog_signal_timeout(const char* name) {
 static void* watchdog_thread_func(void* arg) {
     pthread_mutex_lock(&mutex);
 
+    init_done = true;
     pthread_cond_signal(&init_cond);
 
     for (;;) {
@@ -181,25 +183,19 @@ void watchdog_initialize() {
     if (watchdog_is_enabled()) {
         tests_running = true;
 
-        // We don't want the watchdog thread to commit additional pages after it starts as that
-        // muddies page usage stats used by tests. To prevent this, give the watchdog thread one
-        // page for its stack, as that is all it needs, and wait for it to start. Currently, the
-        // watchdog thread always uses the unsafe stacks during initialization; if that changes,
-        // then we'll need to explicitly write to it.
-        pthread_attr_t attr;
-        pthread_attr_init(&attr);
-        int res = pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
+        // We don't want the watchdog thread to commit pages while tests are running as that
+        // muddies page usage stats. To avoid that, wait for the thread to start before running
+        // the tests. Currently, the watchdog thread always uses the unsafe stacks during
+        // initialization; if that changes, then we'll need to explicitly write to it.
 
+        pthread_mutex_lock(&mutex);
+        int res = pthread_create(&watchdog_thread, nullptr, &watchdog_thread_func, NULL);
         if (res == 0) {
-            pthread_mutex_lock(&mutex);
-            res = pthread_create(&watchdog_thread, &attr, &watchdog_thread_func, NULL);
-            if (res == 0) {
-                res = pthread_cond_wait(&init_cond, &mutex);
+            while (!init_done) {
+                pthread_cond_wait(&init_cond, &mutex);
             }
-            pthread_mutex_unlock(&mutex);
         }
-
-        pthread_attr_destroy(&attr);
+        pthread_mutex_unlock(&mutex);
 
         if (res != 0) {
             unittest_printf_critical("ERROR STARTING WATCHDOG THREAD: %d(%s)\n", res, strerror(res));
