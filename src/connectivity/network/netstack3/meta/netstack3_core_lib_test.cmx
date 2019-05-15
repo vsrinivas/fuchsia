@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/netstack3_core_lib_test"
+    }
+}
