@@ -47,8 +47,10 @@ public:
 
     size_t GetCapacity() const { return buffer_->capacity(); }
 
-    // Stops the asynchronous queue processor.
+    // Stops the asynchronous queue processor. Returns |ZX_ERR_BAD_STATE| if Teardown() has already
+    // been called.
     zx_status_t Teardown();
+
 private:
     // The waiter struct may be used as a stack-allocated queue for producers.
     // It allows them to take turns putting data into the buffer when it is

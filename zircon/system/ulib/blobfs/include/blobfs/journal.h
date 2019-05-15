@@ -266,7 +266,8 @@ public:
     // Verifies the transactions and sets the buffer if necessary.
     zx_status_t EnqueueEntryWork(fbl::unique_ptr<WritebackWork> work) final;
 
-    // Stops the asynchronous queue processor.
+    // Stops the asynchronous queue processor. Returns |ZX_ERR_BAD_STATE| if Teardown() has already
+    // been called.
     zx_status_t Teardown();
 
 private:

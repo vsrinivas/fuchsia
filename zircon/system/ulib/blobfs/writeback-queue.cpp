@@ -12,6 +12,10 @@
 namespace blobfs {
 
 WritebackQueue::~WritebackQueue() {
+    if (IsRunning()) {
+        Teardown();
+    }
+
     // Ensure that thread teardown has completed, or that it was never brought up to begin with.
     ZX_DEBUG_ASSERT(!IsRunning());
     ZX_DEBUG_ASSERT(work_queue_.is_empty());
@@ -22,6 +26,10 @@ zx_status_t WritebackQueue::Teardown() {
 
     {
         fbl::AutoLock lock(&lock_);
+        if (unmounting_) {
+            return ZX_ERR_BAD_STATE;
+        }
+
         state = state_;
 
         // Signal the background thread.

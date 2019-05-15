@@ -3,94 +3,13 @@
 // found in the LICENSE file.
 
 #include <blobfs/writeback.h>
-#include <blobfs/writeback-queue.h>
 #include <zircon/assert.h>
 #include <zxtest/zxtest.h>
 
+#include "utils.h"
+
 namespace blobfs {
 namespace {
-
-constexpr uint32_t kBlockSize = 8192;
-constexpr groupid_t kGroupID = 2;
-constexpr uint32_t kDeviceBlockSize = 1024;
-constexpr size_t kCapacity = 8;
-
-class MockTransactionManager : public TransactionManager {
-public:
-    ~MockTransactionManager() {
-        if (writeback_) {
-            writeback_->Teardown();
-        }
-    }
-
-    MockTransactionManager() {
-        EXPECT_EQ(ZX_OK, WritebackQueue::Create(this, kCapacity, &writeback_));
-    }
-
-    uint32_t FsBlockSize() const final {
-        return kBlockSize;
-    }
-
-    groupid_t BlockGroupID() final {
-        return kGroupID;
-    }
-
-    uint32_t DeviceBlockSize() const final {
-        return kDeviceBlockSize;
-    }
-
-    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override {
-        // TODO(smklein): Improve validation.
-        return ZX_OK;
-    }
-
-    const Superblock& Info() const final {
-        return superblock_;
-    }
-
-    zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t AddBlocks(size_t nblocks, RawBitmap* map) final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final {
-        *out = 2;
-        return ZX_OK;
-    }
-
-    zx_status_t DetachVmo(vmoid_t vmoid) final {
-        return ZX_OK;
-    }
-
-    BlobfsMetrics& LocalMetrics() final {
-        return metrics_;
-    }
-
-    size_t WritebackCapacity() const final {
-        return kCapacity;
-    }
-
-    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final {
-        ZX_ASSERT(out != nullptr);
-        ZX_ASSERT(vnode == nullptr);
-
-        out->reset(new WritebackWork(this));
-        return ZX_OK;
-    }
-
-    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final {
-        ZX_ASSERT(type == EnqueueType::kData);
-        return writeback_->Enqueue(std::move(work));
-    }
-
-private:
-    fbl::unique_ptr<WritebackQueue> writeback_{};
-    BlobfsMetrics metrics_{};
-    Superblock superblock_{};
-};
 
 // Enqueue a request which fits within writeback buffer.
 TEST(EnqueuePaginated, EnqueueSmallRequests) {
@@ -98,7 +17,7 @@ TEST(EnqueuePaginated, EnqueueSmallRequests) {
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
 
-    constexpr size_t kXferSize = kCapacity * kBlockSize;
+    constexpr size_t kXferSize = kWritebackCapacity * kBlockSize;
     ASSERT_EQ(ZX_OK, zx::vmo::create(kXferSize, 0, &vmo));
     ASSERT_EQ(ZX_OK, transaction_manager.CreateWork(&work, nullptr));
     ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr,
@@ -112,7 +31,7 @@ TEST(EnqueuePaginated, EnqueueLargeRequests) {
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
 
-    constexpr size_t kXferSize = kCapacity * kBlockSize;
+    constexpr size_t kXferSize = kWritebackCapacity * kBlockSize;
     ASSERT_EQ(ZX_OK, zx::vmo::create(kXferSize, 0, &vmo));
     ASSERT_EQ(ZX_OK, transaction_manager.CreateWork(&work, nullptr));
     ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr,
@@ -126,11 +45,11 @@ TEST(EnqueuePaginatedTest, EnqueueMany) {
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
 
-    ASSERT_EQ(ZX_OK, zx::vmo::create(kCapacity * kBlockSize, 0, &vmo));
+    ASSERT_EQ(ZX_OK, zx::vmo::create(kWritebackCapacity * kBlockSize, 0, &vmo));
     ASSERT_EQ(ZX_OK, transaction_manager.CreateWork(&work, nullptr));
 
     constexpr size_t kSegments = 4;
-    constexpr size_t kBufferSizeBytes = kCapacity * kBlockSize;
+    constexpr size_t kBufferSizeBytes = kWritebackCapacity * kBlockSize;
     static_assert(kBufferSizeBytes % 4 == 0, "Bad segment count");
     constexpr size_t kXferSize = kBufferSizeBytes / kSegments;
     for (size_t i = 0; i < kSegments; i++) {
@@ -247,6 +166,13 @@ TEST(FlushRequestsTest, BadFlush) {
     fbl::Vector<BufferedOperation> operations;
     operations.push_back(BufferedOperation { 1, Operation { OperationType::kWrite, 1, 2, 3 }});
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, FlushWriteRequests(&manager, operations));
+}
+
+TEST(WritebackQueueTest, DestroyWritebackWithoutTeardown) {
+    MockTransactionManager transaction_manager;
+    fbl::unique_ptr<WritebackQueue> writeback_;
+    EXPECT_EQ(ZX_OK, WritebackQueue::Create(&transaction_manager, kWritebackCapacity, &writeback_));
+    writeback_.reset();
 }
 
 } // namespace

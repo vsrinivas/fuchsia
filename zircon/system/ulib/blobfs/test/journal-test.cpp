@@ -5,6 +5,8 @@
 #include <blobfs/journal.h>
 #include <zxtest/zxtest.h>
 
+#include "utils.h"
+
 namespace blobfs {
 namespace {
 
@@ -181,6 +183,29 @@ TEST(JournalTest, JournalProcessorResetsWork) {
     processor.ResetWork();
 
     processor.ProcessSyncQueue();
+}
+
+TEST(JournalTest, DestroyJournalWithoutTeardown) {
+    MockTransactionManager transaction_manager;
+
+    // Journal creation requires a valid superblock, so make sure Load will acquire one from "disk".
+    transaction_manager.SetTransactionCallback([](const block_fifo_request_t& request,
+                                                  const zx::vmo& vmo){
+        if (request.dev_offset == 0 && request.opcode == BLOCKIO_READ) {
+            JournalInfo journal_info;
+            memset(&journal_info, 0, sizeof(JournalInfo));
+            journal_info.magic = kJournalMagic;
+            return vmo.write(&journal_info, request.vmo_offset * kBlobfsBlockSize,
+                             sizeof(JournalInfo));
+        }
+        return ZX_OK;
+    });
+
+    fbl::unique_ptr<Journal> journal_;
+    ASSERT_EQ(ZX_OK, Journal::Create(&transaction_manager, 16, 0, &journal_));
+    ASSERT_EQ(ZX_OK, journal_->Replay());
+    ASSERT_EQ(ZX_OK, journal_->InitWriteback());
+    journal_.reset();
 }
 
 } // namespace

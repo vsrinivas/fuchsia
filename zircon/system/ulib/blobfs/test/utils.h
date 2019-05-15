@@ -5,9 +5,103 @@
 #pragma once
 
 #include <blobfs/allocator.h>
+#include <blobfs/writeback-queue.h>
+#include <blobfs/writeback-work.h>
+#include <fbl/auto_lock.h>
 #include <fbl/vector.h>
+#include <zxtest/zxtest.h>
+
+#include <optional>
 
 namespace blobfs {
+
+constexpr uint32_t kBlockSize = 8192;
+constexpr groupid_t kGroupID = 2;
+constexpr uint32_t kDeviceBlockSize = 1024;
+constexpr size_t kWritebackCapacity = 8;
+
+// Callback for MockTransactionManager to invoke on calls to Transaction(). |request| is performed
+// on the provided |vmo|.
+using TransactionCallback = fbl::Function<zx_status_t(const block_fifo_request_t& request,
+                                                      const zx::vmo& vmo)>;
+
+// A simplified TransactionManager to be used when unit testing structures which require one (e.g.
+// WritebackQueue, Journal). Allows vmos to be attached/detached and a customized callback to be
+// invoked on transaction completion.
+// This class is thread-safe.
+class MockTransactionManager : public TransactionManager {
+public:
+    MockTransactionManager() {
+        ASSERT_OK(WritebackQueue::Create(this, kWritebackCapacity, &writeback_));
+    }
+
+    ~MockTransactionManager() = default;
+
+    // Sets the |callback| to be invoked for each request on calls to Transaction().
+    void SetTransactionCallback(TransactionCallback callback) {
+        fbl::AutoLock lock(&lock_);
+        transaction_callback_ = std::move(callback);
+    }
+
+    uint32_t FsBlockSize() const final {
+        return kBlockSize;
+    }
+
+    groupid_t BlockGroupID() final {
+        return kGroupID;
+    }
+
+    uint32_t DeviceBlockSize() const final {
+        return kDeviceBlockSize;
+    }
+
+    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override;
+
+    const Superblock& Info() const final {
+        return superblock_;
+    }
+
+    zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_status_t AddBlocks(size_t nblocks, RawBitmap* map) final {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
+
+    zx_status_t DetachVmo(vmoid_t vmoid) final;
+
+    BlobfsMetrics& LocalMetrics() final {
+        return metrics_;
+    }
+
+    size_t WritebackCapacity() const final {
+        return kWritebackCapacity;
+    }
+
+    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final {
+        ZX_ASSERT(out != nullptr);
+        ZX_ASSERT(vnode == nullptr);
+
+        out->reset(new WritebackWork(this));
+        return ZX_OK;
+    }
+
+    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final {
+        ZX_ASSERT(type == EnqueueType::kData);
+        return writeback_->Enqueue(std::move(work));
+    }
+
+private:
+    fbl::unique_ptr<WritebackQueue> writeback_{};
+    BlobfsMetrics metrics_{};
+    Superblock superblock_{};
+    fbl::Vector<std::optional<zx::vmo>> attached_vmos_ __TA_GUARDED(lock_);
+    TransactionCallback transaction_callback_ __TA_GUARDED(lock_);
+    fbl::Mutex lock_;
+};
 
 // A trivial space manager, incapable of resizing.
 class MockSpaceManager : public SpaceManager {

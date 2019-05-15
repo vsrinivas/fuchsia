@@ -92,6 +92,10 @@ zx_status_t Journal::Create(TransactionManager* transaction_manager, uint64_t jo
 }
 
 Journal::~Journal() {
+    if (IsRunning()) {
+        Teardown();
+    }
+
     // Ensure that thread teardown has completed, or that it was never brought up to begin with.
     ZX_DEBUG_ASSERT(!IsRunning());
 
@@ -105,6 +109,10 @@ zx_status_t Journal::Teardown() {
 
     {
         fbl::AutoLock lock(&lock_);
+        if (unmounting_) {
+            return ZX_ERR_BAD_STATE;
+        }
+
         state = state_;
 
         // Signal the background thread.

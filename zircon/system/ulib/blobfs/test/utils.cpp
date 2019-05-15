@@ -10,6 +10,55 @@ using id_allocator::IdAllocator;
 
 namespace blobfs {
 
+zx_status_t MockTransactionManager::Transaction(block_fifo_request_t* requests, size_t count) {
+    fbl::AutoLock lock(&lock_);
+
+    if (transaction_callback_) {
+        for (size_t i = 0; i < count; i++) {
+            if (attached_vmos_.size() < requests[i].vmoid) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+
+            std::optional<zx::vmo>* optional_vmo = &attached_vmos_[requests[i].vmoid - 1];
+
+            if (!optional_vmo->has_value()) {
+                return ZX_ERR_BAD_STATE;
+            }
+
+            zx_status_t status = transaction_callback_(requests[i], optional_vmo->value());
+            if (status != ZX_OK) {
+                return status;
+            }
+        }
+    }
+    return ZX_OK;
+}
+
+zx_status_t MockTransactionManager::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
+    fbl::AutoLock lock(&lock_);
+    zx::vmo duplicate_vmo;
+    zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
+    attached_vmos_.push_back(std::move(duplicate_vmo));
+    *out = static_cast<uint16_t>(attached_vmos_.size());
+    if (*out == 0) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return ZX_OK;
+}
+
+zx_status_t MockTransactionManager::DetachVmo(vmoid_t vmoid) {
+    fbl::AutoLock lock(&lock_);
+    if (attached_vmos_.size() < vmoid) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    attached_vmos_[vmoid - 1].reset();
+    return ZX_OK;
+}
+
 // Create a block and node map of the requested size, update the superblock of
 // the |space_manager|, and create an allocator from this provided info.
 void InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_manager,
