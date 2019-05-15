@@ -137,6 +137,10 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.wlan.service.Wlan",
     // TODO(PT-88): This entry is temporary, until PT-88 is resolved.
     "fuchsia.tracing.controller.Controller",
+    // For amberctl over serial shell.
+    "fuchsia.pkg.PackageResolver",
+    "fuchsia.pkg.RepositoryManager",
+    "fuchsia.pkg.rewrite.Engine",
     nullptr,
     // DO NOT ADD MORE ENTRIES TO THIS LIST.
     // Tests should not be accessing services from the environment. Instead,
