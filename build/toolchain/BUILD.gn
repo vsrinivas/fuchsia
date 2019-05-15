@@ -26,12 +26,10 @@ clang_toolchain_suite("linux_x64") {
   toolchain_cpu = "x64"
   toolchain_os = "linux"
   use_strip = true
-  with_shared = true
 }
 
 clang_toolchain_suite("linux_arm64") {
   toolchain_cpu = "arm64"
   toolchain_os = "linux"
   use_strip = true
-  with_shared = true
 }

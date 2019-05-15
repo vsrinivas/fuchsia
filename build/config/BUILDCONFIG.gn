@@ -88,6 +88,7 @@ if (!defined(toolchain_variant.name)) {
   toolchain_variant.remove_shared_configs = []
   toolchain_variant.deps = []
   toolchain_variant.is_pic_default = false
+  toolchain_variant.with_shared = true
 }
 
 is_android = false
@@ -213,7 +214,7 @@ set_defaults("executable") {
   configs = default_executable_configs
 }
 
-if (is_fuchsia) {
+if (toolchain_variant.with_shared) {
   if (!toolchain_variant.is_pic_default) {
     # In the main toolchain, shared_library just redirects to the same
     # target in the -shared toolchain.

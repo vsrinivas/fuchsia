@@ -354,6 +354,7 @@ template("_clang_toolchain_variant") {
       toolchain_variant = {
         forward_variables_from(this_variant, "*")
         is_pic_default = invoker.this_pic_default
+        with_shared = this_invoker.with_shared
       }
       if (defined(this_variant.toolchain_args)) {
         forward_variables_from(this_variant.toolchain_args, "*")
