@@ -25,7 +25,6 @@ def _dart_codegen_impl(target, context):
 
     package_root_dir = context.rule.attr.name + "_fidl_dart/lib"
     package_root = context.actions.declare_directory(package_root_dir)
-    fidl_dart_file = context.new_file(package_root_dir + "/fidl.dart")
     fidl_async_dart_file = context.new_file(
         package_root_dir + "/fidl_async.dart")
 
@@ -44,7 +43,6 @@ def _dart_codegen_impl(target, context):
         ],
         outputs = [
             package_root,
-            fidl_dart_file,
             fidl_async_dart_file,
         ],
         mnemonic = "FidlGenDart",
@@ -56,7 +54,6 @@ def _dart_codegen_impl(target, context):
     dart_ctx = make_dart_context(
         context,
         generated_srcs = [
-            fidl_dart_file,
             fidl_async_dart_file,
         ],
         lib_root = context.label.package + "/" + package_root_dir,
