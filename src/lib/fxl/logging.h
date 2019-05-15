@@ -5,6 +5,11 @@
 #ifndef LIB_FXL_LOGGING_H_
 #define LIB_FXL_LOGGING_H_
 
+#if defined(__Fuchsia__)
+#include <zircon/types.h>
+#endif
+
+#include <limits>
 #include <sstream>
 
 #include "src/lib/fxl/fxl_export.h"
@@ -21,7 +26,12 @@ class LogMessageVoidify {
 class FXL_EXPORT LogMessage {
  public:
   LogMessage(LogSeverity severity, const char* file, int line,
-             const char* condition);
+             const char* condition
+#if defined(__Fuchsia__)
+             ,
+             zx_status_t status = std::numeric_limits<zx_status_t>::max()
+#endif
+  );
   ~LogMessage();
 
   std::ostream& stream() { return stream_; }
@@ -31,6 +41,9 @@ class FXL_EXPORT LogMessage {
   const LogSeverity severity_;
   const char* file_;
   const int line_;
+#if defined(__Fuchsia__)
+  const zx_status_t status_;
+#endif
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LogMessage);
 };
@@ -47,6 +60,11 @@ FXL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
 #define FXL_LOG_STREAM(severity) \
   ::fxl::LogMessage(::fxl::LOG_##severity, __FILE__, __LINE__, nullptr).stream()
 
+#define FXL_LOG_STREAM_STATUS(severity, status)                         \
+  ::fxl::LogMessage(::fxl::LOG_##severity, __FILE__, __LINE__, nullptr, \
+                    status)                                             \
+      .stream()
+
 #define FXL_LAZY_STREAM(stream, condition) \
   !(condition) ? (void)0 : ::fxl::LogMessageVoidify() & (stream)
 
@@ -61,6 +79,12 @@ FXL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
 
 #define FXL_LOG(severity) \
   FXL_LAZY_STREAM(FXL_LOG_STREAM(severity), FXL_LOG_IS_ON(severity))
+
+#if defined(__Fuchsia__)
+#define FXL_PLOG(severity, status)                         \
+  FXL_LAZY_STREAM(FXL_LOG_STREAM_STATUS(severity, status), \
+                  FXL_LOG_IS_ON(severity))
+#endif
 
 #define FXL_CHECK(condition)                                              \
   FXL_LAZY_STREAM(                                                        \

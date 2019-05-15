@@ -10,7 +10,9 @@
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/logging.h"
 
-#if defined(OS_ANDROID)
+#if defined(__Fuchsia__)
+#include <zircon/status.h>
+#elif defined(OS_ANDROID)
 #include <android/log.h>
 #elif defined(OS_IOS)
 #include <lib/syslog.h>
@@ -45,8 +47,20 @@ const char* StripPath(const char* path) {
 }  // namespace
 
 LogMessage::LogMessage(LogSeverity severity, const char* file, int line,
-                       const char* condition)
-    : severity_(severity), file_(file), line_(line) {
+                       const char* condition
+#if defined(__Fuchsia__)
+                       ,
+                       zx_status_t status
+#endif
+                       )
+    : severity_(severity),
+      file_(file),
+      line_(line)
+#if defined(__Fuchsia__)
+      ,
+      status_(status)
+#endif
+{
   stream_ << "[";
   if (severity >= LOG_INFO)
     stream_ << GetNameForLogSeverity(severity);
@@ -60,6 +74,11 @@ LogMessage::LogMessage(LogSeverity severity, const char* file, int line,
 }
 
 LogMessage::~LogMessage() {
+#if defined(__Fuchsia__)
+  if (status_ != std::numeric_limits<zx_status_t>::max()) {
+    stream_ << ": " << status_ << " (" << zx_status_get_string(status_) << ")";
+  }
+#endif
   stream_ << std::endl;
 
 #if defined(OS_ANDROID)

@@ -39,6 +39,10 @@ target(fxl_logging_type, "fxl_logging") {
   public_deps = [
     ":common",
   ]
+
+  if (is_fuchsia) {
+    libs = [ "zircon" ]
+  }
 }
 
 source_set("memory") {
@@ -203,6 +207,7 @@ executable("fxl_unittests") {
     "functional/apply_unittest.cc",
     "functional/cancelable_callback_unittest.cc",
     "log_settings_unittest.cc",
+    "logging_unittest.cc",
     "memory/ref_counted_unittest.cc",
     "memory/weak_ptr_unittest.cc",
     "observer_list_unittest.cc",
