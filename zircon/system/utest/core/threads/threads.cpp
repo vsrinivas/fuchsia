@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 #include <unistd.h>
+#include <atomic>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -104,18 +105,29 @@ static bool advance_over_breakpoint(zx_handle_t thread) {
 // just resume the thread), and issues errors for anything else.
 static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t eport, uint32_t excp_type,
                                   uint32_t ignore_type) {
+    BEGIN_HELPER;
+
     zx_port_packet_t packet;
     while (true) {
         ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet), ZX_OK);
-        ASSERT_EQ(packet.key, kExceptionPortKey);
+
+        // Use EXPECTs rather than ASSERTs here so that if something fails
+        // we log all the relevant information about the packet contents.
+        EXPECT_EQ(packet.key, kExceptionPortKey);
+
+        zx_koid_t koid = ZX_KOID_INVALID;
+        EXPECT_TRUE(get_koid(thread, &koid));
+        EXPECT_EQ(packet.exception.tid, koid);
+
         if (packet.type != ignore_type) {
-            ASSERT_EQ(packet.type, excp_type);
+            EXPECT_EQ(packet.type, excp_type);
             break;
         } else {
-            ASSERT_EQ(zx_task_resume_from_exception(thread, eport, 0), ZX_OK);
+            EXPECT_EQ(zx_task_resume_from_exception(thread, eport, 0), ZX_OK);
         }
     }
-    return true;
+
+    END_HELPER;
 }
 
 namespace {
@@ -652,7 +664,7 @@ static bool TestSuspendPortCall() {
 }
 
 struct TestWritingThreadArg {
-    volatile int v;
+    std::atomic<int> v;
 };
 
 __NO_SAFESTACK static void TestWritingThreadFn(void* arg_) {
@@ -829,7 +841,7 @@ static bool TestKillSuspendedThread() {
               ZX_OK);
     // Check for the bug.  The thread should not have resumed execution and
     // so should not have modified arg.v.
-    EXPECT_EQ(arg.v, 100);
+    EXPECT_EQ(arg.v.load(), 100);
 
     // Check that the thread is reported as exiting and not as resumed.
     ASSERT_TRUE(wait_thread_excp_type(thread_h, eport, ZX_EXCP_THREAD_EXITING, 0));
