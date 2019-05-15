@@ -12,7 +12,7 @@ package("rust-crates-tests") {
     "fdio",
     "fuchsia-archive",
     "fuchsia-async",
-    "fuchsia-component",
+    "fuchsia-component:fuchsia-component-blackbox-unit-tests",
     "fuchsia-cprng",
     "fuchsia-framebuffer",
     "fuchsia-hyper:fuchsia-hyper-tests",
@@ -41,6 +41,10 @@ package("rust-crates-tests") {
     },
     {
       name = "fuchsia_async_lib_test"
+      environments = basic_envs
+    },
+    {
+      name = "fuchsia_component_blackbox_unit_tests_lib_test"
       environments = basic_envs
     },
     {
