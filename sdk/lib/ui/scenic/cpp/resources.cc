@@ -5,6 +5,7 @@
 #include <lib/images/cpp/images.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <algorithm>
 
@@ -325,11 +326,8 @@ void ImportNode::Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback) {
 ViewHolder::ViewHolder(Session* session, zx::eventpair token,
                        const std::string& debug_name)
     : Resource(session) {
-  session->Enqueue(NewCreateViewHolderCmd(id(),
-                                          fuchsia::ui::views::ViewHolderToken({
-                                              .value = std::move(token),
-                                          }),
-                                          debug_name));
+  session->Enqueue(NewCreateViewHolderCmd(
+      id(), scenic::ToViewHolderToken(std::move(token)), debug_name));
 }
 
 ViewHolder::ViewHolder(Session* session,
@@ -359,10 +357,7 @@ void ViewHolder::SetViewProperties(
 
 View::View(Session* session, zx::eventpair token, const std::string& debug_name)
     : Resource(session) {
-  session->Enqueue(NewCreateViewCmd(id(),
-                                    fuchsia::ui::views::ViewToken({
-                                        .value = std::move(token),
-                                    }),
+  session->Enqueue(NewCreateViewCmd(id(), scenic::ToViewToken(std::move(token)),
                                     debug_name));
 }
 

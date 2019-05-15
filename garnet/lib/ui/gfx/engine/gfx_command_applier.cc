@@ -299,31 +299,25 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(
       return ApplyCreateMaterial(session, id,
                                  std::move(command.resource.material()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kView:
+      return ApplyCreateView(session, id, std::move(command.resource.view()));
+    case fuchsia::ui::gfx::ResourceArgs::Tag::kViewHolder:
+      return ApplyCreateViewHolder(session, id,
+                                   std::move(command.resource.view_holder()));
+    case fuchsia::ui::gfx::ResourceArgs::Tag::kView2:
       return ApplyCreateView(
           session, id,
-          fuchsia::ui::gfx::ViewArgs2({
-              .token =
-                  {
-                      .value = std::move(command.resource.view().token),
-                  },
-              .debug_name = std::move(command.resource.view().debug_name),
-          }));
-    case fuchsia::ui::gfx::ResourceArgs::Tag::kViewHolder:
+          fuchsia::ui::gfx::ViewArgs{
+              .token = std::move(command.resource.view2().token),
+              .debug_name = std::move(command.resource.view2().debug_name),
+          });
+    case fuchsia::ui::gfx::ResourceArgs::Tag::kViewHolder2:
       return ApplyCreateViewHolder(
           session, id,
-          fuchsia::ui::gfx::ViewHolderArgs2({
-              .token =
-                  {
-                      .value = std::move(command.resource.view_holder().token),
-                  },
+          fuchsia::ui::gfx::ViewHolderArgs{
+              .token = std::move(command.resource.view_holder2().token),
               .debug_name =
-                  std::move(command.resource.view_holder().debug_name),
-          }));
-    case fuchsia::ui::gfx::ResourceArgs::Tag::kView2:
-      return ApplyCreateView(session, id, std::move(command.resource.view2()));
-    case fuchsia::ui::gfx::ResourceArgs::Tag::kViewHolder2:
-      return ApplyCreateViewHolder(session, id,
-                                   std::move(command.resource.view_holder2()));
+                  std::move(command.resource.view_holder2().debug_name),
+          });
     case fuchsia::ui::gfx::ResourceArgs::Tag::kClipNode:
       return ApplyCreateClipNode(session, id,
                                  std::move(command.resource.clip_node()));
@@ -1324,7 +1318,7 @@ bool GfxCommandApplier::ApplyCreateMaterial(
 }
 
 bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
-                                        fuchsia::ui::gfx::ViewArgs2 args) {
+                                        fuchsia::ui::gfx::ViewArgs args) {
   // Sanity check.  We also rely on FIDL to enforce this for us, although it
   // does not at the moment.
   FXL_DCHECK(args.token.value) << "scenic_impl::gfx::GfxCommandApplier::"
@@ -1346,7 +1340,7 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
 }
 
 bool GfxCommandApplier::ApplyCreateViewHolder(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ViewHolderArgs2 args) {
+    Session* session, ResourceId id, fuchsia::ui::gfx::ViewHolderArgs args) {
   // Sanity check.  We also rely on FIDL to enforce this for us, although it
   // does not at the moment
   FXL_DCHECK(args.token.value)
@@ -1513,7 +1507,7 @@ ResourcePtr GfxCommandApplier::CreatePointLight(Session* session,
 }
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
-                                          fuchsia::ui::gfx::ViewArgs2 args) {
+                                          fuchsia::ui::gfx::ViewArgs args) {
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ImportLink link = view_linker->CreateImport(
       std::move(args.token.value), session->error_reporter());
@@ -1526,7 +1520,7 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
 }
 
 ResourcePtr GfxCommandApplier::CreateViewHolder(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ViewHolderArgs2 args) {
+    Session* session, ResourceId id, fuchsia::ui::gfx::ViewHolderArgs args) {
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ExportLink link = view_linker->CreateExport(
       std::move(args.token.value), session->error_reporter());

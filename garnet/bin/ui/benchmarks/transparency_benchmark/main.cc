@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <math.h>
-
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/images/cpp/images.h>
 #include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <math.h>
 #include <trace-provider/provider.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace {
 const float FRAMEDROP_DETECTION_FACTOR = 1.2f;
@@ -22,7 +23,8 @@ const size_t SIZE_OF_BGRA8 = sizeof(uint32_t);
 
 class View : public fuchsia::ui::scenic::SessionListener {
  public:
-  View(component::StartupContext* startup_context, zx::eventpair view_token)
+  View(component::StartupContext* startup_context,
+       fuchsia::ui::views::ViewToken view_token)
       : session_listener_binding_(this) {
     // Connect to Scenic.
     fuchsia::ui::scenic::ScenicPtr scenic =
@@ -90,7 +92,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
     return image_id;
   }
 
-  void InitializeScene(zx::eventpair view_token) {
+  void InitializeScene(fuchsia::ui::views::ViewToken view_token) {
     // Build up a list of commands we will send over our Scenic Session.
     std::vector<fuchsia::ui::scenic::Command> cmds;
 
@@ -502,7 +504,8 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
       override {
-    auto view = std::make_unique<View>(startup_context_, std::move(view_token));
+    auto view = std::make_unique<View>(
+        startup_context_, scenic::ToViewToken(std::move(view_token)));
     views_.push_back(std::move(view));
   }
 

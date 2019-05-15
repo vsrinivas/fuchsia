@@ -196,9 +196,9 @@ class GfxCommandApplier {
   static bool ApplyCreateMaterial(Session* session, ResourceId id,
                                   fuchsia::ui::gfx::MaterialArgs args);
   static bool ApplyCreateView(Session* session, ResourceId id,
-                              fuchsia::ui::gfx::ViewArgs2 args);
+                              fuchsia::ui::gfx::ViewArgs args);
   static bool ApplyCreateViewHolder(Session* session, ResourceId id,
-                                    fuchsia::ui::gfx::ViewHolderArgs2 args);
+                                    fuchsia::ui::gfx::ViewHolderArgs args);
   static bool ApplyCreateClipNode(Session* session, ResourceId id,
                                   fuchsia::ui::gfx::ClipNodeArgs args);
   static bool ApplyCreateEntityNode(Session* session, ResourceId id,
@@ -256,9 +256,9 @@ class GfxCommandApplier {
   static ResourcePtr CreatePointLight(Session* session, ResourceId id);
 
   static ResourcePtr CreateView(Session* session, ResourceId id,
-                                fuchsia::ui::gfx::ViewArgs2 args);
+                                fuchsia::ui::gfx::ViewArgs args);
   static ResourcePtr CreateViewHolder(Session* session, ResourceId id,
-                                      fuchsia::ui::gfx::ViewHolderArgs2 args);
+                                      fuchsia::ui::gfx::ViewHolderArgs args);
   static ResourcePtr CreateClipNode(Session* session, ResourceId id,
                                     fuchsia::ui::gfx::ClipNodeArgs args);
   static ResourcePtr CreateEntityNode(Session* session, ResourceId id,

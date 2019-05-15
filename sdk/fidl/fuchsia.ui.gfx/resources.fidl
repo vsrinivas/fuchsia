@@ -109,7 +109,7 @@ struct BufferArgs {
 /// processes.  By combining them, the UI for an entire system can be built
 /// using content contributed from many different processes.
 struct ViewArgs {
-    handle<eventpair> token;
+    fuchsia.ui.views.ViewToken token;
     string? debug_name;
 };
 
@@ -128,7 +128,7 @@ struct ViewArgs2 {
 /// processes.  By combining them, the UI for an entire system can be built
 /// using content contributed from many different processes.
 struct ViewHolderArgs {
-    handle<eventpair> token;
+    fuchsia.ui.views.ViewHolderToken token;
     string? debug_name;
 };
 
