@@ -171,6 +171,13 @@ class ArrayMetric final {
   // Create a default numeric array metric.
   // Operations on the metric will have no effect.
   ArrayMetric() = default;
+  ~ArrayMetric() = default;
+
+  // Allow moving, disallow copying.
+  ArrayMetric(const ArrayMetric& other) = delete;
+  ArrayMetric(ArrayMetric&& other) = default;
+  ArrayMetric& operator=(const ArrayMetric& other) = delete;
+  ArrayMetric& operator=(ArrayMetric&& other) = default;
 
   // Set the value of the given array index.
   void Set(size_t index, T value) { vmo_metric_.Set(index, value); }
@@ -215,6 +222,13 @@ class HistogramMetric final {
   // Create a default histogram.
   // Operations on the metric will have no effect.
   HistogramMetric() = default;
+  ~HistogramMetric() = default;
+
+  // Allow moving, disallow copying.
+  HistogramMetric(const HistogramMetric& other) = delete;
+  HistogramMetric(HistogramMetric&& other) = default;
+  HistogramMetric& operator=(const HistogramMetric& other) = delete;
+  HistogramMetric& operator=(HistogramMetric&& other) = default;
 
   // Insert the given value once to the correct bucket of the histogram.
   void Insert(T value) { Insert(value, 1); }
