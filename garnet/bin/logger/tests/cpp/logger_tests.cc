@@ -4,14 +4,17 @@
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/handles/object_info.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
+#include <zircon/types.h>
 
 #include <vector>
 
+#include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace {
@@ -28,7 +31,8 @@ class StubLogListener : public fuchsia::logger::LogListener {
   const std::vector<fuchsia::logger::LogMessage>& GetLogs() {
     return log_messages_;
   }
-  bool ConnectToLogger(sys::ComponentContext* component_context, zx_koid_t pid);
+  bool ListenFiltered(sys::ComponentContext* component_context, zx_koid_t pid,
+                      const std::string& tag);
 
  private:
   ::fidl::Binding<fuchsia::logger::LogListener> binding_;
@@ -52,8 +56,8 @@ void StubLogListener::Log(fuchsia::logger::LogMessage log) {
 
 void StubLogListener::Done() {}
 
-bool StubLogListener::ConnectToLogger(sys::ComponentContext* component_context,
-                                      zx_koid_t pid) {
+bool StubLogListener::ListenFiltered(sys::ComponentContext* component_context,
+                                     zx_koid_t pid, const std::string& tag) {
   if (!log_listener_) {
     return false;
   }
@@ -61,25 +65,9 @@ bool StubLogListener::ConnectToLogger(sys::ComponentContext* component_context,
   auto options = fuchsia::logger::LogFilterOptions::New();
   options->filter_by_pid = true;
   options->pid = pid;
-  // make tags non-null.
-  options->tags.resize(0);
+  options->tags = {tag};
   log_service->Listen(std::move(log_listener_), std::move(options));
   return true;
-}
-
-using LoggerTest = gtest::RealLoopFixture;
-
-zx_koid_t GetKoid(zx_handle_t handle) {
-  zx_info_handle_basic_t info;
-  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
-                                          sizeof(info), nullptr, nullptr);
-  return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
-}
-
-zx_koid_t GetCurrentProcessKoid() {
-  auto koid = GetKoid(zx::process::self()->get());
-  ZX_DEBUG_ASSERT(koid != ZX_KOID_INVALID);
-  return koid;
 }
 
 // This function will fail to build when zircon ABI changes
@@ -113,24 +101,31 @@ TEST(CAbi, LogRecordAbi) {
   static_assert(offsetof(zx_log_record_t, data) == 32, "");
 }
 
-TEST_F(LoggerTest, Integration) {
-  StubLogListener log_listener;
+using LoggerIntegrationTest = gtest::RealLoopFixture;
 
-  auto pid = GetCurrentProcessKoid();
-
-  auto tag = "logger_integration_cpp_test";
+TEST_F(LoggerIntegrationTest, ListenFiltered) {
+  // Make sure there is one syslog message coming from that pid and with a tag
+  // unique to this test case.
+  auto pid = fsl::GetCurrentProcessKoid();
+  auto tag = "logger_integration_cpp_test.ListenFiltered";
+  auto message = "my message";
   ASSERT_EQ(syslog::InitLogger({tag}), ZX_OK);
-  FX_LOGS(INFO) << "my message";
-  auto component_context = sys::ComponentContext::Create();
-  ASSERT_TRUE(log_listener.ConnectToLogger(component_context.get(), pid));
+  FX_LOGS(INFO) << message;
+
+  // Start the log listener and the logger, and wait for the log message to
+  // arrive.
+  StubLogListener log_listener;
+  ASSERT_TRUE(log_listener.ListenFiltered(sys::ComponentContext::Create().get(),
+                                          pid, tag));
   auto& logs = log_listener.GetLogs();
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&logs] { return logs.size() >= 1u; },
-                                        zx::sec(5)));
+  RunLoopUntil([&logs] { return logs.size() >= 1u; });
+
   ASSERT_EQ(logs.size(), 1u);
   ASSERT_EQ(logs[0].tags.size(), 1u);
   EXPECT_EQ(logs[0].tags[0], tag);
   EXPECT_EQ(logs[0].severity, FX_LOG_INFO);
   EXPECT_EQ(logs[0].pid, pid);
+  EXPECT_THAT(logs[0].msg, testing::EndsWith(message));
 }
 
 }  // namespace
