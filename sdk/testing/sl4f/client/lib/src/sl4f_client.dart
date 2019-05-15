@@ -11,8 +11,11 @@ import 'dart:convert';
 import 'dart:io' show Platform, Process, SocketException;
 
 import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
 
 import 'exceptions.dart';
+
+final _log = Logger('sl4f_client');
 
 /// Handles the SL4F server and communication with it.
 class Sl4f {
@@ -31,7 +34,7 @@ class Sl4f {
   String sshKeyPath;
 
   Sl4f(this.target, this.sshKeyPath) {
-    print('Target device: $target');
+    _log.info('Target device: $target');
   }
 
   /// Constructs an SL4F client from the `FUCHSIA_IPV4_ADDR` and
@@ -86,11 +89,11 @@ class Sl4f {
 
       // Check if it's already started.
       if (await _isRunning()) {
-        print('SL4F has started.');
+        _log.info('SL4F has started.');
         return;
       }
 
-      print('Try $attempt at starting sl4f.');
+      _log.info('Try $attempt at starting sl4f.');
       // 'run -d' doesn't exit with error if the component doesn't exist
       // (CF-666). Since we'd like to have clear logs about that particular
       // error, we don't run with '-d', but that in turn means that the ssh
@@ -100,7 +103,7 @@ class Sl4f {
       ssh('run $_sl4fComponentUrl');
 
       if (await _isRunning(tries: 3, delay: Duration(seconds: 2))) {
-        print('SL4F has started.');
+        _log.info('SL4F has started.');
         return;
       }
     }
@@ -112,13 +115,13 @@ class Sl4f {
   /// If no ssh key path is given, it's taken from the FUCHSIA_SSH_KEY env var.
   Future<void> stopServer() async {
     if (!await ssh('killall $_sl4fComponentName')) {
-      print('Could not stop sl4f. Continuing.');
+      _log.warning('Could not stop sl4f. Continuing.');
     }
   }
 
   /// Runs the command given by [cmd] on the target using ssh.
   Future<bool> ssh(String cmd) async {
-    print('Running over ssh: $cmd');
+    _log.fine('Running over ssh: $cmd');
     final result = await Process.run(
         'ssh',
         [
@@ -134,8 +137,7 @@ class Sl4f {
         // If not run in a shell it doesn't seem like the PATH is searched.
         runInShell: true);
     if (result.exitCode != 0) {
-      print(result.stdout);
-      print(result.stderr);
+      _log..warning(result.stdout)..warning(result.stderr);
       return false;
     }
     return true;
@@ -146,7 +148,7 @@ class Sl4f {
   /// Throws an Sl4fException if it fails to reboot the device or if all the
   /// attempts at restarting SL4F fail.
   Future<void> reboot() async {
-    print('Initiating reboot sequence.');
+    _log.info('Initiating reboot sequence.');
     // Kill SL4F first, we'll use it to try to guess when the reboot is done.
     await stopServer();
     // Issue a reboot command and wait.

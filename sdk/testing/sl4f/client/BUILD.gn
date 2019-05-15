@@ -25,6 +25,7 @@ dart_library("client") {
   deps = [
     "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/image",
+    "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/meta",
   ]
 }
