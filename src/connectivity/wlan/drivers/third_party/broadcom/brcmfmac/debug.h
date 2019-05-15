@@ -43,6 +43,7 @@
 #define BRCMF_MSGBUF_VAL  0x00040000
 #define BRCMF_PCIE_VAL    0x00080000
 #define BRCMF_FWCON_VAL   0x00100000
+#define BRCMF_SIM_VAL     0x00200000
 #define BRCMF_ALL_VAL     0xffffffff
 
 // clang-format on

@@ -1309,6 +1309,7 @@ static const struct brcmf_bus_ops brcmf_usb_bus_ops = {
     .wowl_config = brcmf_usb_wowl_config,
     .get_fwname = brcmf_usb_get_fwname,
     .get_bootloader_macaddr = brcmf_usb_get_bootloader_macaddr,
+    .device_add = device_add,
 };
 
 static zx_status_t brcmf_usb_bus_setup(struct brcmf_usbdev_info* devinfo) {

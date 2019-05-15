@@ -21,7 +21,6 @@ import("//build/test.gni")
 brcmf_core_srcs = [
     "bcdc.cc",
     "bcdc.h",
-    "bcmsdh.cc",
     "btcoex.cc",
     "btcoex.h",
     "bus.h",
@@ -63,13 +62,11 @@ brcmf_core_srcs = [
     "of.h",
     "p2p.cc",
     "p2p.h",
-    "pcie.cc",
     "pcie.h",
     "pno.cc",
     "pno.h",
     "proto.cc",
     "proto.h",
-    "sdio.cc",
     "sdio.h",
     "usb.h",
     "utils.cc",
@@ -105,7 +102,10 @@ source_set("brcmfmac_drvr_srcs") {
   ]
 
   sources = brcmf_core_srcs +
-          [ "binding.cc",
+          [ "bcmsdh.cc",
+            "binding.cc",
+            "pcie.cc",
+            "sdio.cc",
             "usb.cc",
           ]
 

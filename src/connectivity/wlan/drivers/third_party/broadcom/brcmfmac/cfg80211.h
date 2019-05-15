@@ -453,7 +453,7 @@ void brcmf_set_mpc(struct brcmf_if* ndev, int mpc);
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg);
 void brcmf_free_net_device_vif(struct net_device* ndev);
 
-zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req, 
+zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req,
                                    uint16_t* out_iface_id);
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet);
 

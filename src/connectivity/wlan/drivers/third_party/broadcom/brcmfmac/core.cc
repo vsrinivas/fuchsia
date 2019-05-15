@@ -16,9 +16,6 @@
 
 #include "core.h"
 
-#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
-#include <ddk/device.h>
-#endif
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/usb.h>
@@ -47,9 +44,6 @@
 #include "pcie.h"
 #include "pno.h"
 #include "proto.h"
-#if CONFIG_BRCMFMAC_SIM
-#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
-#endif
 #include "workqueue.h"
 
 #define MAX_WAIT_FOR_8021X_TX_MSEC (950)
@@ -584,21 +578,13 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
     };
 
     struct brcmf_device* device = if_to_dev(ifp);
+    struct brcmf_bus* bus = device->bus;
 
-#if CONFIG_BRCMFMAC_SIM
-    result = wlan_sim_device_add(device->zxdev, &args, &device->phy_zxdev);
-    if (result != ZX_OK) {
-        brcmf_err("wlan_sim_device_add failed: %s", zx_status_get_string(result));
-        goto fail;
-    }
-#else
-    result = device_add(device->zxdev, &args, &device->phy_zxdev);
+    result = brcmf_bus_device_add(bus, device->zxdev, &args, &device->phy_zxdev);
     if (result != ZX_OK) {
         brcmf_err("device_add failed: %s", zx_status_get_string(result));
         goto fail;
     }
-#endif
-
     brcmf_dbg(TEMP, "device_add() succeeded. Added phy hooks.");
 
     return ZX_OK;

@@ -1221,6 +1221,7 @@ static const struct brcmf_bus_ops brcmf_pcie_bus_ops = {
     .get_memdump = brcmf_pcie_get_memdump,
     .get_fwname = brcmf_pcie_get_fwname,
     .get_bootloader_macaddr = brcmf_pcie_get_bootloader_macaddr,
+    .device_add = device_add,
 };
 
 static void brcmf_pcie_adjust_ramsize(struct brcmf_pciedev_info* devinfo, uint8_t* data,

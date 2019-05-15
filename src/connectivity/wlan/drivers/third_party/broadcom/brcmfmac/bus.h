@@ -17,6 +17,7 @@
 #ifndef BRCMFMAC_BUS_H
 #define BRCMFMAC_BUS_H
 
+#include <ddk/device.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/usb.h>
 
@@ -74,6 +75,7 @@ struct brcmf_bus_dcmd {
  * @get_memdump: obtain device memory dump in provided buffer.
  * @get_fwname: obtain firmware name.
  * @get_bootloader_macaddr: obtain mac address from bootloader, if supported.
+ * @device_add: register device.
  *
  * This structure provides an abstract interface towards the
  * bus specific driver. For control messages to common driver
@@ -96,6 +98,7 @@ struct brcmf_bus_ops {
     zx_status_t (*get_fwname)(struct brcmf_device* dev, uint chip, uint chiprev,
                               unsigned char* fw_name);
     zx_status_t (*get_bootloader_macaddr)(struct brcmf_device* dev, uint8_t* mac_addr);
+    zx_status_t (*device_add)(zx_device_t* parent, device_add_args_t* args, zx_device_t** out);
 };
 
 /**
@@ -150,6 +153,7 @@ struct brcmf_bus {
         struct brcmf_sdio_dev* sdio;
         struct brcmf_usbdev* usb;
         struct brcmf_pciedev* pcie;
+        struct brcmf_simdev* sim;
     } bus_priv;
     enum brcmf_bus_protocol_type proto_type;
     struct brcmf_device* dev;
@@ -236,6 +240,11 @@ static inline zx_status_t brcmf_bus_get_fwname(struct brcmf_bus* bus, uint chip,
 static inline zx_status_t brcmf_bus_get_bootloader_macaddr(struct brcmf_bus* bus,
                                                            uint8_t* mac_addr) {
     return bus->ops->get_bootloader_macaddr(bus->dev, mac_addr);
+}
+
+static inline zx_status_t brcmf_bus_device_add(struct brcmf_bus* bus, zx_device_t* parent,
+                                               device_add_args_t* args, zx_device_t** out) {
+    return bus->ops->device_add(parent, args, out);
 }
 
 /*

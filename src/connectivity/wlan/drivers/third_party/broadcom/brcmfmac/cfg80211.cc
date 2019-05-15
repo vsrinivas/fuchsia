@@ -18,9 +18,6 @@
 
 #include "cfg80211.h"
 
-#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
-#include <ddk/device.h>
-#endif
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/if-impl.h>
 #include <zircon/status.h>
@@ -44,9 +41,6 @@
 #include "p2p.h"
 #include "pno.h"
 #include "proto.h"
-#if CONFIG_BRCMFMAC_SIM
-#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
-#endif
 #include "workqueue.h"
 
 #define BRCMF_SCAN_IE_LEN_MAX 2048
@@ -3474,7 +3468,7 @@ static zx_protocol_device_t if_impl_device_ops = {
     .release = brcmf_release_zx_if_device,
 };
 
-zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req, 
+zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req,
                                    uint16_t* out_iface_id) {
     struct brcmf_if* ifp = static_cast<decltype(ifp)>(ctx);
     struct net_device* ndev = ifp->ndev;
@@ -3493,13 +3487,10 @@ zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req,
     };
 
     struct brcmf_device* device = ifp->drvr->bus_if->dev;
+    struct brcmf_bus* bus = device->bus;
+
     brcmf_dbg(TEMP, "About to add if_dev");
-#if CONFIG_BRCMFMAC_SIM
-    result = wlan_sim_device_add(device->phy_zxdev, &args, &device->if_zxdev);
-#endif
-#if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
-    result = device_add(device->phy_zxdev, &args, &device->if_zxdev);
-#endif
+    result = brcmf_bus_device_add(bus, device->phy_zxdev, &args, &device->if_zxdev);
     if (result != ZX_OK) {
         brcmf_err("Failed to device_add: %s", zx_status_get_string(result));
         return result;
