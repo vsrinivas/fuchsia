@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/cmx_facet_parser_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

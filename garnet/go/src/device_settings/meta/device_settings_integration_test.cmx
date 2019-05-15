@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.devicesettings.DeviceSettingsManager": "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/device_settings_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.devicesettings.DeviceSettingsManager"
+        ]
+    }
+}

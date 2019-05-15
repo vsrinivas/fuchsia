@@ -5,7 +5,7 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("device_settings") {
@@ -23,9 +23,7 @@ go_test("device_settings_integration_test") {
   ]
 }
 
-package("device_settings_gotests") {
-  testonly = true
-
+test_package("device_settings_gotests") {
   deps = [
     ":device_settings_integration_test",
   ]

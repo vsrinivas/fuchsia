@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("cmx_facet_parser") {
@@ -24,7 +24,7 @@ source_set("cmx_facet_parser") {
 executable("tests") {
   testonly = true
 
-  output_name = "cmx_facet_parser_unittest_bin"
+  output_name = "cmx_facet_parser_unittest"
 
   sources = [
     "cmx_facet_parser_unittest.cc",
@@ -41,15 +41,13 @@ executable("tests") {
   ]
 }
 
-package("cmx_facet_parser_unittests") {
-  testonly = true
-
+test_package("cmx_facet_parser_unittests") {
   deps = [
     ":tests",
   ]
   tests = [
     {
-      name = "cmx_facet_parser_unittest_bin"
+      name = "cmx_facet_parser_unittest"
       environments = basic_envs
     },
   ]
