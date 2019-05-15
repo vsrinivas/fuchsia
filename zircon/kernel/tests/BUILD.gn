@@ -15,6 +15,7 @@ source_set("tests") {
     "fibo.cpp",
     "lock_dep_tests.cpp",
     "mem_tests.cpp",
+    "mmu_tests.cpp",
     "mp_hotplug_tests.cpp",
     "pi_tests.cpp",
     "popcount.cpp",
