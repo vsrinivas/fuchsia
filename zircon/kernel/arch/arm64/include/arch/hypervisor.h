@@ -51,7 +51,7 @@ private:
     hypervisor::TrapMap traps_;
     const uint8_t vmid_;
 
-    fbl::Mutex vcpu_mutex_;
+    DECLARE_MUTEX(Guest) vcpu_mutex_;
     // TODO(alexlegg): Find a good place for this constant to live (max vcpus).
     hypervisor::IdAllocator<uint8_t, 8> TA_GUARDED(vcpu_mutex_) vpid_allocator_;
 

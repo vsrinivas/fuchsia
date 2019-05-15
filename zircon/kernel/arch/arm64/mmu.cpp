@@ -76,7 +76,7 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(AsidAllocator);
 
-    fbl::Mutex lock_;
+    DECLARE_MUTEX(AsidAllocator) lock_;
     uint16_t last_ TA_GUARDED(lock_) = MMU_ARM64_FIRST_USER_ASID - 1;
 
     bitmap::RawBitmapGeneric<bitmap::FixedStorage<MMU_ARM64_MAX_USER_ASID + 1>> bitmap_ TA_GUARDED(lock_);
@@ -91,7 +91,7 @@ zx_status_t AsidAllocator::Alloc(uint16_t* asid) {
     // [MMU_ARM64_FIRST_USER_ASID, MMU_ARM64_MAX_USER_ASID]
     // start the search from the last found id + 1 and wrap when hitting the end of the range
     {
-        fbl::AutoLock al(&lock_);
+        Guard<Mutex> al{&lock_};
 
         size_t val;
         bool notfound = bitmap_.Get(last_ + 1, MMU_ARM64_MAX_USER_ASID + 1, &val);
@@ -121,7 +121,7 @@ zx_status_t AsidAllocator::Alloc(uint16_t* asid) {
 zx_status_t AsidAllocator::Free(uint16_t asid) {
     LTRACEF("free asid %#x\n", asid);
 
-    fbl::AutoLock al(&lock_);
+    Guard<Mutex> al{&lock_};
 
     bitmap_.ClearOne(asid);
 
@@ -286,7 +286,7 @@ static void s2_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
 }
 
 zx_status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
-    fbl::AutoLock a(&lock_);
+    Guard<Mutex> al{&lock_};
     return QueryLocked(vaddr, paddr, mmu_flags);
 }
 
@@ -867,7 +867,7 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
 
     ssize_t ret;
     {
-        fbl::AutoLock a(&lock_);
+        Guard<Mutex> a{&lock_};
         pte_t attrs;
         vaddr_t vaddr_base;
         uint top_size_shift, top_index_shift, page_size_shift;
@@ -916,7 +916,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
 
     size_t total_mapped = 0;
     {
-        fbl::AutoLock a(&lock_);
+        Guard<Mutex> a{&lock_};
         pte_t attrs;
         vaddr_t vaddr_base;
         uint top_size_shift, top_index_shift, page_size_shift;
@@ -973,7 +973,7 @@ zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped
     if (!IS_PAGE_ALIGNED(vaddr))
         return ZX_ERR_INVALID_ARGS;
 
-    fbl::AutoLock a(&lock_);
+    Guard<Mutex> a{&lock_};
 
     ssize_t ret;
     {
@@ -1007,7 +1007,7 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
     if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
         return ZX_ERR_INVALID_ARGS;
 
-    fbl::AutoLock a(&lock_);
+    Guard<Mutex> a{&lock_};
 
     int ret;
     {
@@ -1030,7 +1030,7 @@ zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
     LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n",
             this, base, size, flags);
 
-    fbl::AutoLock a(&lock_);
+    Guard<Mutex> a{&lock_};
 
     // Validate that the base + size is sane and doesn't wrap.
     DEBUG_ASSERT(size > PAGE_SIZE);
@@ -1087,7 +1087,7 @@ zx_status_t ArmArchVmAspace::Destroy() {
     canary_.Assert();
     LTRACEF("aspace %p\n", this);
 
-    fbl::AutoLock a(&lock_);
+    Guard<Mutex> a{&lock_};
 
     DEBUG_ASSERT((flags_ & ARCH_ASPACE_FLAG_KERNEL) == 0);
 

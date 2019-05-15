@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include <fbl/auto_lock.h>
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <hwreg/bitfields.h>
@@ -77,7 +76,7 @@ public:
     void* virt() const { return virt_; }
 
     size_t pages() {
-        fbl::AutoLock al(&lock_);
+        Guard<Mutex> al{&lock_};
         return pages_;
     }
     void* ctx() const { return ctx_; }
@@ -185,5 +184,5 @@ private:
     fbl::Canary<fbl::magic("X86P")> canary_;
 
     // low lock to protect the mmu code
-    fbl::Mutex lock_;
+    DECLARE_MUTEX(X86PageTableBase) lock_;
 };

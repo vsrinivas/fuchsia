@@ -34,7 +34,7 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    fbl::AutoLock lock(&guest->vcpu_mutex_);
+    Guard<Mutex> lock{&guest->vcpu_mutex_};
     status = guest->vpid_allocator_.Init();
     if (status != ZX_OK) {
         return status;
@@ -103,11 +103,11 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
 }
 
 zx_status_t Guest::AllocVpid(uint8_t* vpid) {
-    fbl::AutoLock lock(&vcpu_mutex_);
+    Guard<Mutex> lock{&vcpu_mutex_};
     return vpid_allocator_.AllocId(vpid);
 }
 
 zx_status_t Guest::FreeVpid(uint8_t vpid) {
-    fbl::AutoLock lock(&vcpu_mutex_);
+    Guard<Mutex> lock{&vcpu_mutex_};
     return vpid_allocator_.FreeId(vpid);
 }

@@ -54,7 +54,7 @@ private:
     hypervisor::TrapMap traps_;
     VmxPage msr_bitmaps_page_;
 
-    fbl::Mutex vcpu_mutex_;
+    DECLARE_MUTEX(Guest) vcpu_mutex_;
     // TODO(alexlegg): Find a good place for this constant to live (max VCPUs).
     hypervisor::IdAllocator<uint16_t, 64> TA_GUARDED(vcpu_mutex_) vpid_allocator_;
 

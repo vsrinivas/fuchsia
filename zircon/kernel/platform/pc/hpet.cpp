@@ -9,7 +9,7 @@
 #include <bits.h>
 #include <err.h>
 #include <fbl/algorithm.h>
-#include <kernel/auto_lock.h>
+#include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <lk/init.h>
 #include <vm/vm_aspace.h>
@@ -34,7 +34,7 @@ struct hpet_registers {
     struct hpet_timer_registers timers[];
 } __PACKED;
 
-static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
+DECLARE_SINGLETON_SPINLOCK(hpet_lock);
 
 static struct acpi_hpet_descriptor hpet_desc;
 static bool hpet_present = false;
@@ -121,7 +121,7 @@ zx_status_t hpet_timer_disable(uint n) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    AutoSpinLockNoIrqSave guard(&lock);
+    Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
     hpet_regs->timers[n].conf_caps &= ~TIMER_CONF_INT_EN;
 
     return ZX_OK;
@@ -140,7 +140,7 @@ uint64_t hpet_get_value(void) {
 }
 
 zx_status_t hpet_set_value(uint64_t v) {
-    AutoSpinLockNoIrqSave guard(&lock);
+    Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
 
     if (hpet_regs->general_config & GEN_CONF_EN) {
         return ZX_ERR_BAD_STATE;
@@ -155,7 +155,7 @@ zx_status_t hpet_timer_configure_irq(uint n, uint irq) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    AutoSpinLockNoIrqSave guard(&lock);
+    Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
 
     uint32_t irq_bitmap = TIMER_CAP_IRQS(hpet_regs->timers[n].conf_caps);
     if (irq >= 32 || !BIT_SET(irq_bitmap, irq)) {
@@ -175,7 +175,7 @@ zx_status_t hpet_timer_set_oneshot(uint n, uint64_t deadline) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    AutoSpinLockNoIrqSave guard(&lock);
+    Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
 
     uint64_t difference = deadline - hpet_get_value();
     if (unlikely(difference > (1ULL >> 63))) {
@@ -199,7 +199,7 @@ zx_status_t hpet_timer_set_periodic(uint n, uint64_t period) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    AutoSpinLockNoIrqSave guard(&lock);
+    Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
 
     if (!TIMER_CAP_PERIODIC(hpet_regs->timers[n].conf_caps)) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -227,14 +227,14 @@ bool hpet_is_present(void) {
 void hpet_enable(void) {
     DEBUG_ASSERT(hpet_is_present());
 
-    AutoSpinLockNoIrqSave guard(&lock);
+    Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
     hpet_regs->general_config |= GEN_CONF_EN;
 }
 
 void hpet_disable(void) {
     DEBUG_ASSERT(hpet_is_present());
 
-    AutoSpinLockNoIrqSave guard(&lock);
+    Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
     hpet_regs->general_config &= ~GEN_CONF_EN;
 }
 

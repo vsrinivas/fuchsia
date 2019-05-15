@@ -8,7 +8,7 @@
 #include <arch/x86/feature.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
+#include <kernel/lockdep.h>
 #include <kernel/mp.h>
 #include <kernel/spinlock.h>
 #include <lib/console.h>
@@ -17,7 +17,7 @@
 
 static bool hwp_enabled = false;
 
-static SpinLock lock;
+DECLARE_SINGLETON_SPINLOCK(hwp_lock);
 
 static void hwp_enable_sync_task(void* ctx) {
     // Enable HWP
@@ -31,7 +31,7 @@ static void hwp_enable_sync_task(void* ctx) {
 }
 
 static void hwp_enable(void) {
-    AutoSpinLockNoIrqSave guard(&lock);
+    Guard<SpinLock, NoIrqSave> guard{hwp_lock::Get()};
 
     if (hwp_enabled) {
         return;
@@ -56,7 +56,7 @@ static void hwp_set_hint_sync_task(void* ctx) {
 }
 
 static void hwp_set_hint(unsigned long hint) {
-    AutoSpinLockNoIrqSave guard(&lock);
+    Guard<SpinLock, NoIrqSave> guard{hwp_lock::Get()};
 
     if (!hwp_enabled) {
         printf("Enable HWP first\n");

@@ -11,7 +11,6 @@
 #include <assert.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <trace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -176,7 +175,7 @@ public:
     // Disable thread safety analysis here because it has trouble identifying
     // that |pt_->lock_| is held here.
     void queue_free(vm_page_t* page) TA_NO_THREAD_SAFETY_ANALYSIS {
-        DEBUG_ASSERT(pt_->lock_.IsHeld());
+        DEBUG_ASSERT(pt_->lock_.lock().IsHeld());
 
         list_add_tail(&to_free_, &page->queue_node);
         pt_->pages_--;
@@ -218,7 +217,7 @@ X86PageTableBase::ConsistencyManager::~ConsistencyManager() {
 }
 
 void X86PageTableBase::ConsistencyManager::Finish() {
-    DEBUG_ASSERT(pt_->lock_.IsHeld());
+    DEBUG_ASSERT(pt_->lock_.lock().IsHeld());
 
     clf_.ForceFlush();
     if (pt_->needs_cache_flushes()) {
@@ -820,7 +819,7 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count,
 
     ConsistencyManager cm(this);
     {
-        fbl::AutoLock a(&lock_);
+        Guard<Mutex> a{&lock_};
         DEBUG_ASSERT(virt_);
         RemoveMapping(virt_, top_level(), start, &result, &cm);
         cm.Finish();
@@ -855,7 +854,7 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
     PageTableLevel top = top_level();
     ConsistencyManager cm(this);
     {
-        fbl::AutoLock a(&lock_);
+        Guard<Mutex> a{&lock_};
         DEBUG_ASSERT(virt_);
 
         // TODO(teisenbe): Improve performance of this function by integrating deeper into
@@ -924,7 +923,7 @@ zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr,
     MappingCursor result;
     ConsistencyManager cm(this);
     {
-        fbl::AutoLock a(&lock_);
+        Guard<Mutex> a{&lock_};
         DEBUG_ASSERT(virt_);
         zx_status_t status = AddMapping(virt_, mmu_flags, top_level(), start, &result, &cm);
         cm.Finish();
@@ -961,7 +960,7 @@ zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu
     MappingCursor result;
     ConsistencyManager cm(this);
     {
-        fbl::AutoLock a(&lock_);
+        Guard<Mutex> a{&lock_};
         zx_status_t status = UpdateMapping(virt_, mmu_flags, top_level(), start, &result, &cm);
         cm.Finish();
         if (status != ZX_OK) {
@@ -980,7 +979,7 @@ zx_status_t X86PageTableBase::QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mm
     LTRACEF("aspace %p, vaddr %#" PRIxPTR ", paddr %p, mmu_flags %p\n", this, vaddr, paddr,
             mmu_flags);
 
-    fbl::AutoLock a(&lock_);
+    Guard<Mutex> a{&lock_};
 
     volatile pt_entry_t* last_valid_entry;
     zx_status_t status = GetMapping(virt_, vaddr, top_level(), &ret_level, &last_valid_entry);

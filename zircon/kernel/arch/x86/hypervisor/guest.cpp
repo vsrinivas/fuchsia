@@ -76,7 +76,7 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
     ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_SYSENTER_EIP);
 
     // Setup VPID allocator
-    fbl::AutoLock lock(&guest->vcpu_mutex_);
+    Guard<Mutex> lock{&guest->vcpu_mutex_};
     status = guest->vpid_allocator_.Init();
     if (status != ZX_OK) {
         return status;
@@ -132,11 +132,11 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
 }
 
 zx_status_t Guest::AllocVpid(uint16_t* vpid) {
-    fbl::AutoLock lock(&vcpu_mutex_);
+    Guard<Mutex> lock{&vcpu_mutex_};
     return vpid_allocator_.AllocId(vpid);
 }
 
 zx_status_t Guest::FreeVpid(uint16_t vpid) {
-    fbl::AutoLock lock(&vcpu_mutex_);
+    Guard<Mutex> lock{&vcpu_mutex_};
     return vpid_allocator_.FreeId(vpid);
 }

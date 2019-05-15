@@ -92,7 +92,7 @@ private:
 
     fbl::Canary<fbl::magic("VAAS")> canary_;
 
-    fbl::Mutex lock_;
+    DECLARE_MUTEX(ArmArchVmAspace) lock_;
 
     uint16_t asid_ = MMU_ARM64_UNUSED_ASID;
 

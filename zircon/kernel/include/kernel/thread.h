@@ -572,12 +572,12 @@ __END_CDECLS
 // Example usage:
 //
 //   AutoReschedDisable resched_disable;
-//   AutoLock al(&lock_);
+//   Guard<Mutex> al{&lock_};
 //   // Do some initial computation...
 //   resched_disable.Disable();
 //   // Possibly wake another thread...
 //
-// The AutoReschedDisable must be placed before the AutoLock to ensure that
+// The AutoReschedDisable must be placed before the Guard to ensure that
 // rescheduling is re-enabled only after releasing the mutex.
 class AutoReschedDisable {
 public:
