@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/network_test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/tapctl",
+            "class/ethernet"
+        ],
+        "services": [
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

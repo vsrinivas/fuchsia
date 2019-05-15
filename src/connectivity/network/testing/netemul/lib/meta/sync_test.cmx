@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/sync_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

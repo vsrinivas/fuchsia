@@ -3,11 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-package("netemul_lib_test") {
-  testonly = true
-
+test_package("netemul_lib_test") {
   deps = [
     "network:network_test_bin",
     "sync:sync_test_bin",
