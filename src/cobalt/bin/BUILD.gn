@@ -24,29 +24,12 @@ test_package("cobalt_tests") {
     "app:cobalt_app_unittests",
     "system-metrics:cobalt_system_metrics_unittests",
     "testapp:cobalt_testapp",
-    "testapp:generate_legacy_testapp_metrics",
-    "testapp:generate_testapp_metrics",
     "utils:cobalt_utils_unittests",
   ]
 
   binaries = [
     {
       name = "cobalt_testapp"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              get_label_info("testapp:generate_legacy_testapp_metrics",
-                             "target_gen_dir") + "/legacy_cobalt_metrics.pb")
-      dest = "legacy_cobalt_metrics.pb"
-    },
-    {
-      path =
-          rebase_path(get_label_info("testapp:generate_testapp_metrics",
-                                     "target_gen_dir") + "/cobalt_metrics.pb")
-      dest = "cobalt_metrics.pb"
     },
   ]
 

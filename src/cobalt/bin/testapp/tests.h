@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_TESTAPP_TESTS_H
-#define GARNET_BIN_COBALT_TESTAPP_TESTS_H
+#ifndef SRC_COBALT_BIN_TESTAPP_TESTS_H_
+#define SRC_COBALT_BIN_TESTAPP_TESTS_H_
 
 #include <memory>
 #include <sstream>
@@ -22,32 +22,6 @@
 
 namespace cobalt {
 namespace testapp {
-
-namespace legacy {
-
-bool TestLogEvent(CobaltTestAppLogger* logger);
-
-bool TestLogEventUsingServiceFromEnvironment(CobaltTestAppLogger* logger);
-
-bool TestLogEventCount(CobaltTestAppLogger* logger);
-
-bool TestLogElapsedTime(CobaltTestAppLogger* logger);
-
-bool TestLogFrameRate(CobaltTestAppLogger* logger);
-
-bool TestLogMemoryUsage(CobaltTestAppLogger* logger);
-
-bool TestLogString(CobaltTestAppLogger* logger);
-
-bool TestLogStringUsingBlockUntilEmpty(CobaltTestAppLogger* logger);
-
-bool TestLogTimer(CobaltTestAppLogger* logger);
-
-bool TestLogIntHistogram(CobaltTestAppLogger* logger);
-
-bool TestLogCustomEvent(CobaltTestAppLogger* logger);
-
-}  // namespace legacy
 
 bool TestLogEvent(CobaltTestAppLogger* logger);
 
@@ -100,4 +74,4 @@ bool TestLogElapsedTimeWithAggregation(
 }  // namespace testapp
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_TESTAPP_COBALT_TESTS_H
+#endif  // SRC_COBALT_BIN_TESTAPP_TESTS_H_
