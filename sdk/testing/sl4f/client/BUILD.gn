@@ -4,7 +4,6 @@
 
 import("//build/dart/dart_library.gni")
 import("//build/dart/test.gni")
-import("//build/testing/environments.gni")
 
 dart_library("client") {
   package_name = "sl4f"
@@ -41,8 +40,6 @@ dart_test("sl4f_client_tests") {
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
   ]
-
-  environments = [ linux_env ]
 }
 
 group("tests") {
