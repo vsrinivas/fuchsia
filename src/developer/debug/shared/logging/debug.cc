@@ -90,14 +90,16 @@ const char* LogCategoryToString(LogCategory category) {
       return "Session";
     case LogCategory::kSetting:
       return "Setting";
-    case LogCategory::kTiming:
-      return "Timing";
     case LogCategory::kTest:
       return "Test";
+    case LogCategory::kTiming:
+      return "Timing";
     case LogCategory::kThread:
       return "Thread";
     case LogCategory::kWatchpoint:
       return "Watchpoint";
+    case LogCategory::kWorkerPool:
+      return "WorkerPool";
     case LogCategory::kAll:
       return "All";
   }

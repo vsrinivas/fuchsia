@@ -20,6 +20,8 @@ static_library("shared") {
     "stream_buffer.h",
     "test_stream_buffer.cc",
     "test_stream_buffer.h",
+    "worker_pool.cc",
+    "worker_pool.h",
     "zx_status.cc",
     "zx_status.h",
     "zx_status_definitions.h",
@@ -27,6 +29,7 @@ static_library("shared") {
 
   public_deps = [
     "//src/developer/debug/shared/logging",
+    "//src/lib/containers/cpp",
     "//src/lib/fxl",
   ]
 
@@ -67,6 +70,7 @@ source_set("tests") {
     "message_loop_unittest.cc",
     "regex_unittest.cc",
     "stream_buffer_unittest.cc",
+    "worker_pool_unittest.cc",
   ]
 
   deps = [
