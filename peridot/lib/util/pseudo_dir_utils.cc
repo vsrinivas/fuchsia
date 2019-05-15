@@ -35,7 +35,9 @@ std::unique_ptr<vfs::PseudoDir> MakeFilePathWithContents(
                                         file_contents.end(),
                                         std::back_inserter(*out));
                               return ZX_OK;
-                            }));
+                            },
+                            vfs::PseudoFile::WriteHandler() /* not used */,
+                            file_contents.size()));
 
   return config_dir;
 }
