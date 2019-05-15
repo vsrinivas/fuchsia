@@ -216,6 +216,12 @@ void AgentRunner::ConnectToAgentService(
     return;
   }
 
+  if (!request.has_agent_controller()) {
+    FXL_LOG(ERROR)
+        << "Missing required agent_controller in AgentServiceRequest";
+    return;
+  }
+
   std::string agent_url;
   if (request.has_handler()) {
     agent_url = request.handler();
