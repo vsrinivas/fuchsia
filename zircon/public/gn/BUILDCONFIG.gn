@@ -188,8 +188,14 @@ template("shared_library") {
       if (output_extension != "") {
         output_file += ".$output_extension"
       }
+      link_output_file = output_file + toolchain.link_output_suffix
 
       metadata = {
+        binaries = []
+        link_barrier = []
+        link_output = []
+        elf_link_output = []
+
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")
         }
@@ -202,12 +208,25 @@ template("shared_library") {
         # The last is provided only on ELF platforms, to indicate all the link
         # outputs that should be checked for a build ID if collecting an
         # exhaustive list via metadata.
-        link_output = [ rebase_path(output_file + toolchain.link_output_suffix,
-                                    root_build_dir) ]
-        link_barrier = []
+        link_output += [ rebase_path(link_output_file, root_build_dir) ]
         if (current_os != "mac" && current_os != "win") {
-          elf_link_output = link_output
+          elf_link_output += [ rebase_path(link_output_file, root_build_dir) ]
         }
+
+        # For build_api_module("binaries") in $zx/BUILD.gn.
+        binaries += [
+          {
+            type = "shared_library"
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            environment = toolchain.environment
+            cpu = current_cpu
+            os = current_os
+            debug = rebase_path(link_output_file, root_build_dir)
+            if (toolchain.link_output_suffix != "") {
+              dist = rebase_path(output_file, root_build_dir)
+            }
+          },
+        ]
       }
     }
   } else {
@@ -1238,24 +1257,45 @@ template("_basic_executable") {
     if (output_extension != "") {
       output_file += ".$output_extension"
     }
+    link_output_file = output_file + toolchain.link_output_suffix
 
     metadata = {
+      binaries = []
+      link_barrier = []
+      link_output = []
+      elf_link_output = []
+
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
 
       # Every terminal target provides these metadata keys.  The first is
-      # used the data key for the output of the link, as a file name
-      # relative to $root_build_dir appropriate for command-line
-      # contexts.  The second is used as a walk key to provide a
-      # dependency barrier against e.g. shared_library() deps or other
-      # executable() data_deps.
-      link_output = [ rebase_path(output_file + toolchain.link_output_suffix,
-                                  root_build_dir) ]
-      link_barrier = []
+      # used as the data key for the output of the link, as a file name
+      # relative to $root_build_dir appropriate for command-line contexts.
+      # The second is used as a walk key to provide a dependency barrier
+      # against e.g. shared_library() deps or other executable() data_deps.
+      # The last is provided only on ELF platforms, to indicate all the link
+      # outputs that should be checked for a build ID if collecting an
+      # exhaustive list via metadata.
+      link_output += [ rebase_path(link_output_file, root_build_dir) ]
       if (current_os != "mac" && current_os != "win") {
-        elf_link_output = link_output
+        elf_link_output += [ rebase_path(link_output_file, root_build_dir) ]
       }
+
+      # For build_api_module("binaries") in $zx/BUILD.gn.
+      binaries += [
+        {
+          type = "executable"
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          environment = toolchain.environment
+          cpu = current_cpu
+          os = current_os
+          debug = rebase_path(link_output_file, root_build_dir)
+          if (toolchain.link_output_suffix != "") {
+            dist = rebase_path(output_file, root_build_dir)
+          }
+        },
+      ]
     }
 
     if (!is_host && !is_kernel) {
@@ -1521,24 +1561,45 @@ template("_loadable_module") {
     if (output_extension != "") {
       output_file += ".$output_extension"
     }
+    link_output_file = output_file + toolchain.link_output_suffix
 
     metadata = {
+      binaries = []
+      link_barrier = []
+      link_output = []
+      elf_link_output = []
+
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
 
       # Every terminal target provides these metadata keys.  The first is
-      # used the data key for the output of the link, as a file name
-      # relative to $root_build_dir appropriate for command-line
-      # contexts.  The second is used as a walk key to provide a
-      # dependency barrier against e.g. shared_library() deps or other
-      # executable() data_deps.
-      link_output = [ rebase_path(output_file + toolchain.link_output_suffix,
-                                  root_build_dir) ]
-      link_barrier = []
+      # used as the data key for the output of the link, as a file name
+      # relative to $root_build_dir appropriate for command-line contexts.
+      # The second is used as a walk key to provide a dependency barrier
+      # against e.g. shared_library() deps or other executable() data_deps.
+      # The last is provided only on ELF platforms, to indicate all the link
+      # outputs that should be checked for a build ID if collecting an
+      # exhaustive list via metadata.
+      link_output += [ rebase_path(link_output_file, root_build_dir) ]
       if (current_os != "mac" && current_os != "win") {
-        elf_link_output = link_output
+        elf_link_output += [ rebase_path(link_output_file, root_build_dir) ]
       }
+
+      # For build_api_module("binaries") in $zx/BUILD.gn.
+      binaries += [
+        {
+          type = "loadable_module"
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          environment = toolchain.environment
+          cpu = current_cpu
+          os = current_os
+          debug = rebase_path(link_output_file, root_build_dir)
+          if (toolchain.link_output_suffix != "") {
+            dist = rebase_path(output_file, root_build_dir)
+          }
+        },
+      ]
     }
 
     if (defined(invoker.install_path)) {

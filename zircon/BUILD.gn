@@ -543,6 +543,77 @@ build_api_module("generated_sources") {
   data_keys = [ "generated_sources" ]
 }
 
+# This describes all the binaries linked by the build.
+#
+# This enumerates each linked binary (executable, shared library, or
+# loadable/"plug-in" module).  This includes host tools, kernels, boot
+# loaders, drivers, as well as normal executables.  It does not yet include
+# any non-native binary formats.  This is meant to reach the entire
+# dependency graph of all binaries that the build would ever produce.  Not
+# every binary described is necessary actually produced by any given Ninja
+# run.  Either the $debug or the $dist file for any individual binary can
+# be passed to Ninja as a specific target argument to ensure it's built and
+# up to date before making use of that binary.  Like all build_api_module()
+# targets, the top-level "binaries" target serves as a Ninja target to
+# request that every binary described be built.
+#
+# Type: list(scope)
+#
+#   cpu
+#     Required: CPU architecture the binary is for, e.g. "arm64" or "x64".
+#     Type: string
+#
+#   os
+#     Required: OS the binary is for, e.g. "fuchsia", "linux", or "mac".
+#     Type: string
+#
+#   environment
+#     Required: The ${toolchain.environment} name of what specific
+#     execution this was built for, e.g. "user", "host", "guest".  The
+#     tuple of ($cpu, $os, $environment) should indicate what hardware and
+#     software environment this binary is compatible with.
+#     Type: string
+#
+#   label
+#     Required: The GN label of the binary target.
+#     Type: label_with_toolchain
+#
+#   type
+#     Required: The type of binary.
+#     Type: "executable" or "shared_library" or "loadable_module"
+#
+#   debug
+#     Required: Path to where the unstripped or separate debug file is
+#     found, relative to $root_build_dir.  If $dist is omitted, this
+#     is also the file that is used at runtime.
+#     Type: path relative to $root_build_dir
+#
+#   dist
+#     Optional: Path to where the stripped binary for deployment/execution is
+#     found, relative to $root_build_dir.  This binary may be required for
+#     some debugging tasks if $debug is a separate debug file rather than
+#     an unstripped file.  It should exactly match the binary that will be
+#     seen on devices or run directly on hosts.
+#     Type: path relative to $root_build_dir
+#
+#   elf_build_id
+#     **TODO(mcgrathr): This is not actually produced yet.**
+#     Optional: Path to a file containing the lowercase ASCII hexadecimal
+#     representation of the ELF build ID in this binary.  This is omitted
+#     for OS environments that don't use ELF.  For an ELF binary that
+#     doesn't have a build ID note, this key will be present but point to
+#     an empty file.
+#     Type: path relative to $root_build_dir
+#
+build_api_module("binaries") {
+  testonly = true
+  deps = [
+    # TODO(mcgrathr): Need a //:everything distinct from default.
+    ":default",
+  ]
+  data_keys = [ "binaries" ]
+}
+
 # This describes pre-generated FIDL bindings that are required by the build.
 #
 # TODO(BLD-441): This will go away when fidlgen is built in this build.
