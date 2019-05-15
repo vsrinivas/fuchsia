@@ -5,7 +5,6 @@
     "sandbox": {
         "features": [
             "build-info",
-            "isolated-persistent-storage",
             "system-temp"
         ],
         "services": [

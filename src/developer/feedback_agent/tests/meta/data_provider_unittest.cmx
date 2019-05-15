@@ -8,7 +8,6 @@
         ],
         "features": [
             "build-info",
-            "isolated-persistent-storage",
             "shell"
         ],
         "services": [
