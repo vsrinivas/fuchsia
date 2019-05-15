@@ -23,6 +23,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/policy.h>
 
+#include <string>
 #include <utility>
 
 namespace {
@@ -108,14 +109,18 @@ bool LaunchHelper(const char* argv[]) {
     END_HELPER;
 }
 
-// This test app contains a subset of fidl-tests; refer to BUILD.gn
-static constexpr char kTestApp[] = "/boot/bin/fidl-handle-policy-test-app";
-
 bool TestWithStrictHandlePolicy() {
     BEGIN_TEST;
 
+    // This test app contains a subset of fidl-tests; refer to BUILD.gn
+    const char* root_dir = getenv("TEST_ROOT_DIR");
+    if (root_dir == nullptr) {
+        root_dir = "";
+    }
+    const std::string test_app =
+        std::string(root_dir) + "/bin/fidl-handle-policy-test-app";
     const char* args[] = {
-        kTestApp,
+        test_app.c_str(),
         nullptr
     };
     ASSERT_TRUE(LaunchHelper(args));

@@ -12,7 +12,6 @@
 #include <unistd.h>
 
 #include <fbl/auto_call.h>
-#include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
@@ -144,12 +143,22 @@ bool TestFileComponentInfoTest() {
     END_TEST;
 }
 
+static ScopedTestFile NewPublishFile(const fbl::String& test_name) {
+    const char* root_dir = getenv("TEST_ROOT_DIR");
+    if (root_dir == nullptr) {
+        root_dir = "";
+    }
+    const fbl::String path =
+        fbl::String::Concat({root_dir, "/bin/publish-data-helper"});
+    return ScopedTestFile(test_name.c_str(), path.c_str());
+}
+
 bool RunTestDontPublishData() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
     fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
-    ScopedTestFile file(test_name.c_str(), "/boot/bin/publish-data-helper");
+    auto file = NewPublishFile(test_name);
 
     const char* argv[] = {test_name.c_str(), nullptr};
     std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
@@ -166,7 +175,7 @@ bool RunTestsPublishData() {
 
     ScopedTestDir test_dir;
     fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
-    ScopedTestFile file(test_name.c_str(), "/boot/bin/publish-data-helper");
+    auto file = NewPublishFile(test_name);
     int num_failed = 0;
     fbl::Vector<std::unique_ptr<Result>> results;
     const signed char verbosity = 77;
@@ -188,7 +197,7 @@ bool RunAllTestsPublishData() {
 
     ScopedTestDir test_dir;
     fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
-    ScopedTestFile file(test_name.c_str(), "/boot/bin/publish-data-helper");
+    auto file = NewPublishFile(test_name);
 
     const fbl::String output_dir =
         JoinPath(test_dir.path(), "run-all-tests-output-1");
