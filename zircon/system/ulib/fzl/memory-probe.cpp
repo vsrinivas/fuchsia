@@ -6,6 +6,7 @@
 
 #include <limits.h>
 #include <stdio.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <lib/zx/port.h>
@@ -66,6 +67,16 @@ bool do_probe(ProbeOperation op, const void* addr) {
             // Thread crashed so the operation failed. The thread is now in a suspended state and
             // needs to be explicitly terminated.
             thread.kill();
+
+            // Wait for the kill operation to complete so we don't
+            // interrupt exception handling by closing port.
+            // TODO(ZX-4105): Reexamine once killing and exceptions have defined interactions.
+            zx_status_t status = port.wait(zx::time::infinite(), &packet);
+            ZX_DEBUG_ASSERT(status == ZX_OK
+                    && ZX_PKT_IS_SIGNAL_ONE(packet.type)
+                    && packet.key == kThreadKey
+                    && (packet.signal.observed & ZX_THREAD_TERMINATED));
+
             return false;
         }
         if (ZX_PKT_IS_SIGNAL_ONE(packet.type)) {
