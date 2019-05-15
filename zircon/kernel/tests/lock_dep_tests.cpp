@@ -24,22 +24,22 @@ bool g_try_lock_succeeds = true;
 struct Spinlock : Mutex {
     using Mutex::Mutex;
 
-    bool AcquireIrqSave(uint64_t* flags) TA_ACQUIRE() {
+    bool AcquireIrqSave(uint64_t* flags) TA_ACQ() {
         (void)flags;
         Acquire();
         return true;
     }
-    void ReleaseIrqRestore(uint64_t flags) TA_RELEASE() {
+    void ReleaseIrqRestore(uint64_t flags) TA_REL() {
         (void)flags;
         Release();
     }
 
-    bool TryAcquire() TA_TRY_ACQUIRE(true) {
+    bool TryAcquire() TA_TRY_ACQ(true) {
         if (g_try_lock_succeeds)
             Acquire();
         return g_try_lock_succeeds;
     }
-    bool TryAcquireIrqSave(uint64_t* flags) TA_TRY_ACQUIRE(true) {
+    bool TryAcquireIrqSave(uint64_t* flags) TA_TRY_ACQ(true) {
         (void)flags;
         if (g_try_lock_succeeds)
             Acquire();
@@ -72,11 +72,11 @@ struct TryNoIrqSave {};
 struct SpinlockNoIrqSave {
     struct State {};
 
-    static bool Acquire(Spinlock* lock, State*) TA_ACQUIRE(lock) {
+    static bool Acquire(Spinlock* lock, State*) TA_ACQ(lock) {
         lock->Acquire();
         return true;
     }
-    static void Release(Spinlock* lock, State*) TA_RELEASE(lock) {
+    static void Release(Spinlock* lock, State*) TA_REL(lock) {
         lock->Release();
     }
 };
@@ -88,11 +88,11 @@ struct SpinlockIrqSave {
         uint64_t flags;
     };
 
-    static bool Acquire(Spinlock* lock, State* state) TA_ACQUIRE(lock) {
+    static bool Acquire(Spinlock* lock, State* state) TA_ACQ(lock) {
         lock->AcquireIrqSave(&state->flags);
         return true;
     }
-    static void Release(Spinlock* lock, State* state) TA_RELEASE(lock) {
+    static void Release(Spinlock* lock, State* state) TA_REL(lock) {
         lock->ReleaseIrqRestore(state->flags);
     }
 };
@@ -101,10 +101,10 @@ LOCK_DEP_POLICY_OPTION(Spinlock, IrqSave, SpinlockIrqSave);
 struct SpinlockTryNoIrqSave {
     struct State {};
 
-    static bool Acquire(Spinlock* lock, State*) TA_TRY_ACQUIRE(true, lock) {
+    static bool Acquire(Spinlock* lock, State*) TA_TRY_ACQ(true, lock) {
         return lock->TryAcquire();
     }
-    static void Release(Spinlock* lock, State*) TA_RELEASE(lock) {
+    static void Release(Spinlock* lock, State*) TA_REL(lock) {
         lock->Release();
     }
 };
@@ -116,10 +116,10 @@ struct SpinlockTryIrqSave {
         uint64_t flags;
     };
 
-    static bool Acquire(Spinlock* lock, State* state) TA_TRY_ACQUIRE(true, lock) {
+    static bool Acquire(Spinlock* lock, State* state) TA_TRY_ACQ(true, lock) {
         return lock->TryAcquireIrqSave(&state->flags);
     }
-    static void Release(Spinlock* lock, State* state) TA_RELEASE(lock) {
+    static void Release(Spinlock* lock, State* state) TA_REL(lock) {
         lock->ReleaseIrqRestore(state->flags);
     }
 };
@@ -193,32 +193,32 @@ struct Nestable : ::Mutex {
 };
 LOCK_DEP_TRAITS(Nestable, lockdep::LockFlagsNestable);
 
-struct TA_CAPABILITY("mutex") ReadWriteLock {
-    bool AcquireWrite() TA_ACQUIRE() {
+struct TA_CAP("mutex") ReadWriteLock {
+    bool AcquireWrite() TA_ACQ() {
         return true;
     }
-    bool AcquireRead() TA_ACQUIRE_SHARED() {
+    bool AcquireRead() TA_ACQ_SHARED() {
         return true;
     }
-    void Release() TA_RELEASE() {}
+    void Release() TA_REL() {}
 
     struct Read {
         struct State {};
         struct Shared {};
-        static bool Acquire(ReadWriteLock* lock, State*) TA_ACQUIRE_SHARED(lock) {
+        static bool Acquire(ReadWriteLock* lock, State*) TA_ACQ_SHARED(lock) {
             return lock->AcquireRead();
         }
-        static void Release(ReadWriteLock* lock, State*) TA_RELEASE(lock) {
+        static void Release(ReadWriteLock* lock, State*) TA_REL(lock) {
             lock->Release();
         }
     };
 
     struct Write {
         struct State {};
-        static bool Acquire(ReadWriteLock* lock, State*) TA_ACQUIRE(lock) {
+        static bool Acquire(ReadWriteLock* lock, State*) TA_ACQ(lock) {
             return lock->AcquireWrite();
         }
-        static void Release(ReadWriteLock* lock, State*) TA_RELEASE(lock) {
+        static void Release(ReadWriteLock* lock, State*) TA_REL(lock) {
             lock->Release();
         }
     };
@@ -229,42 +229,42 @@ LOCK_DEP_POLICY_OPTION(ReadWriteLock, ReadWriteLock::Write, ReadWriteLock::Write
 struct Foo {
     LOCK_DEP_INSTRUMENT(Foo, Mutex) lock;
 
-    void TestRequire() TA_REQUIRES(lock) {}
-    void TestExclude() TA_EXCLUDES(lock) {}
+    void TestRequire() TA_REQ(lock) {}
+    void TestExclude() TA_EXCL(lock) {}
 };
 
 struct Bar {
     LOCK_DEP_INSTRUMENT(Bar, Mutex) lock;
 
-    void TestRequire() TA_REQUIRES(lock) {}
-    void TestExclude() TA_EXCLUDES(lock) {}
+    void TestRequire() TA_REQ(lock) {}
+    void TestExclude() TA_EXCL(lock) {}
 };
 
 template <typename LockType>
 struct Baz {
     LOCK_DEP_INSTRUMENT(Baz, LockType) lock;
 
-    void TestRequire() TA_REQUIRES(lock) {}
-    void TestExclude() TA_EXCLUDES(lock) {}
-    void TestShared() TA_REQUIRES_SHARED(lock) {}
+    void TestRequire() TA_REQ(lock) {}
+    void TestExclude() TA_EXCL(lock) {}
+    void TestShared() TA_REQ_SHARED(lock) {}
 };
 
 struct MultipleLocks {
     LOCK_DEP_INSTRUMENT(MultipleLocks, Mutex) lock_a;
     LOCK_DEP_INSTRUMENT(MultipleLocks, Mutex) lock_b;
 
-    void TestRequireLockA() TA_REQUIRES(lock_a) {}
-    void TestExcludeLockA() TA_EXCLUDES(lock_a) {}
-    void TestRequireLockB() TA_REQUIRES(lock_b) {}
-    void TestExcludeLockB() TA_EXCLUDES(lock_b) {}
+    void TestRequireLockA() TA_REQ(lock_a) {}
+    void TestExcludeLockA() TA_EXCL(lock_a) {}
+    void TestRequireLockB() TA_REQ(lock_b) {}
+    void TestExcludeLockB() TA_EXCL(lock_b) {}
 };
 
 template <size_t Index>
 struct Number {
     LOCK_DEP_INSTRUMENT(Number, Mutex) lock;
 
-    void TestRequire() TA_REQUIRES(lock) {}
-    void TestExclude() TA_EXCLUDES(lock) {}
+    void TestRequire() TA_REQ(lock) {}
+    void TestExclude() TA_EXCL(lock) {}
 };
 
 lockdep::LockResult GetLastResult() {
