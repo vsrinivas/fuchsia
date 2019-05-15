@@ -6,7 +6,7 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
+
 #include <utility>
 
 namespace modular_example {
@@ -43,7 +43,8 @@ void ModuleApp::CreateView(
   scenic::ViewContext context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-      .view_token = scenic::ToViewToken(std::move(view_token)),
+      .view_token =
+          fuchsia::ui::views::ViewToken{.value = std::move(view_token)},
       .incoming_services = std::move(incoming_services),
       .outgoing_services = std::move(outgoing_services),
       .startup_context = startup_context(),

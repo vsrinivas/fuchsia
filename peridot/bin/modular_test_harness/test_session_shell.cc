@@ -4,16 +4,16 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <lib/zx/eventpair.h>
-#include <peridot/lib/fidl/single_service_app.h>
-#include <peridot/lib/fidl/view_host.h>
 
 #include <memory>
 #include <utility>
+
+#include "peridot/lib/fidl/single_service_app.h"
+#include "peridot/lib/fidl/view_host.h"
 
 namespace {
 
@@ -83,18 +83,17 @@ class TestSessionShellApp : public modular::ViewApp,
   void OnDelete(std::string story_id) override {}
 
   // |SessionShell|
-  void AttachView(fuchsia::modular::ViewIdentifier view_id,
-                  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
-                      view_owner) override {
-    AttachView2(view_id, scenic::ToViewHolderToken(zx::eventpair(
-                             view_owner.TakeChannel().release())));
+  void AttachView(
+      fuchsia::modular::ViewIdentifier view_id,
+      fuchsia::ui::views::ViewHolderToken view_holder_token) override {
+    view_->ConnectView(std::move(view_holder_token));
   }
 
   // |SessionShell|
   void AttachView2(
       fuchsia::modular::ViewIdentifier view_id,
       fuchsia::ui::views::ViewHolderToken view_holder_token) override {
-    view_->ConnectView(std::move(view_holder_token));
+    AttachView(view_id, std::move(view_holder_token));
   }
 
   // |SessionShell|

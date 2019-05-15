@@ -6,8 +6,4 @@ import("//garnet/public/build/fostr/fostr_fidl.gni")
 
 fostr_fidl("fuchsia.modular.auth") {
   fidl_target = "//sdk/fidl/fuchsia.modular.auth"
-
-  deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.viewsv1token",
-  ]
 }

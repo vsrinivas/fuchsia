@@ -9,23 +9,19 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
 
 #include <memory>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace {
-
-// STOP SUBMISSION DO NOT SUBMIT
 
 class DevStoryShellApp
     : public modular::SingleServiceApp<fuchsia::modular::StoryShell> {
@@ -57,25 +53,24 @@ class DevStoryShellApp
 
   // |fuchsia::modular::StoryShell|
   void AddSurface(fuchsia::modular::ViewConnection view_connection,
-                  fuchsia::modular::SurfaceInfo surface_info) override {
-    AddSurface2(
-        fuchsia::modular::ViewConnection2{
-            .surface_id = view_connection.surface_id,
-            .view_holder_token = scenic::ToViewHolderToken(
-                zx::eventpair(view_connection.owner.TakeChannel().release())),
-        },
-        std::move(surface_info));
-  }
-
-  // |fuchsia::modular::StoryShell|
-  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
-                   fuchsia::modular::SurfaceInfo /*surface_info*/) override {
+                  fuchsia::modular::SurfaceInfo /*surface_info*/) override {
     if (view_) {
       view_->ConnectView(std::move(view_connection.view_holder_token));
     } else {
       child_view_holder_tokens_.push_back(
           std::move(view_connection.view_holder_token));
     }
+  }
+
+  // |fuchsia::modular::StoryShell|
+  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
+                   fuchsia::modular::SurfaceInfo surface_info) override {
+    AddSurface(
+        fuchsia::modular::ViewConnection{
+            .surface_id = view_connection.surface_id,
+            .view_holder_token = std::move(view_connection.view_holder_token),
+        },
+        std::move(surface_info));
   }
 
   // |fuchsia::modular::StoryShell|

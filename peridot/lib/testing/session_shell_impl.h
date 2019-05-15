@@ -7,7 +7,6 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <src/lib/fxl/logging.h>
@@ -53,9 +52,9 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
 
  private:
   // |SessionShell|
-  void AttachView(fuchsia::modular::ViewIdentifier view_id,
-                  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
-                      view_owner) override;
+  void AttachView(
+      fuchsia::modular::ViewIdentifier view_id,
+      fuchsia::ui::views::ViewHolderToken view_holder_token) override;
 
   // |SessionShell|
   void AttachView2(

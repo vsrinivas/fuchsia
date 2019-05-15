@@ -14,7 +14,6 @@ fostr_fidl("fuchsia.modular") {
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//garnet/public/lib/fostr/fidl/fuchsia.sys",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.policy",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.viewsv1token",
     "//peridot/public/lib/fostr/fidl/fuchsia.ledger",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular.auth",
     "//peridot/public/lib/fostr/fidl/fuchsia.speech",

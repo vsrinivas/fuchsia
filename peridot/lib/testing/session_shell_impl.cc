@@ -21,7 +21,7 @@ SessionShellImpl::GetHandler() {
 // |SessionShell|
 void SessionShellImpl::AttachView(
     fuchsia::modular::ViewIdentifier view_id,
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner) {
+    fuchsia::ui::views::ViewHolderToken /*view_holder_token*/) {
   on_attach_view_(std::move(view_id));
 }
 
@@ -29,7 +29,7 @@ void SessionShellImpl::AttachView(
 void SessionShellImpl::AttachView2(
     fuchsia::modular::ViewIdentifier view_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  on_attach_view_(std::move(view_id));
+  AttachView(std::move(view_id), std::move(view_holder_token));
 }
 
 // |SessionShell|

@@ -49,13 +49,13 @@ executable("test_session_shell_bin") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
     "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.viewsv1token",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

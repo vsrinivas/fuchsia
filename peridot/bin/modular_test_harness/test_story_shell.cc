@@ -5,11 +5,9 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <memory>
 
@@ -55,25 +53,24 @@ class TestStoryShellApp
 
   // |fuchsia::modular::StoryShell|
   void AddSurface(fuchsia::modular::ViewConnection view_connection,
-                  fuchsia::modular::SurfaceInfo surface_info) override {
-    AddSurface2(
-        fuchsia::modular::ViewConnection2{
-            .surface_id = view_connection.surface_id,
-            .view_holder_token = scenic::ToViewHolderToken(
-                zx::eventpair(view_connection.owner.TakeChannel().release())),
-        },
-        std::move(surface_info));
-  }
-
-  // |fuchsia::modular::StoryShell|
-  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
-                   fuchsia::modular::SurfaceInfo /*surface_info*/) override {
+                  fuchsia::modular::SurfaceInfo /*surface_info*/) override {
     if (view_) {
       view_->ConnectView(std::move(view_connection.view_holder_token));
     } else {
       child_view_holder_tokens_.push_back(
           std::move(view_connection.view_holder_token));
     }
+  }
+
+  // |fuchsia::modular::StoryShell|
+  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
+                   fuchsia::modular::SurfaceInfo surface_info) override {
+    AddSurface(
+        fuchsia::modular::ViewConnection{
+            .surface_id = std::move(view_connection.surface_id),
+            .view_holder_token = std::move(view_connection.view_holder_token),
+        },
+        std::move(surface_info));
   }
 
   // |fuchsia::modular::StoryShell|
@@ -94,14 +91,6 @@ class TestStoryShellApp
       std::vector<fuchsia::modular::ContainerView> /* views */) override {}
 
   // |fuchsia::modular::StoryShell|
-  void AddContainer2(
-      std::string /*container_name*/, fidl::StringPtr /*parent_id*/,
-      fuchsia::modular::SurfaceRelation /* relation */,
-      std::vector<fuchsia::modular::ContainerLayout> /*layout*/,
-      std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
-      std::vector<fuchsia::modular::ContainerView2> /* views */) override {}
-
-  // |fuchsia::modular::StoryShell|
   void RemoveSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
@@ -109,17 +98,8 @@ class TestStoryShellApp
       fuchsia::modular::ViewConnection /*view_connection*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void ReconnectView2(
-      fuchsia::modular::ViewConnection2 /*view_connection*/) override {}
-
-  // |fuchsia::modular::StoryShell|
   void UpdateSurface(fuchsia::modular::ViewConnection /*view_connection*/,
                      fuchsia::modular::SurfaceInfo /*surface_info*/) override{};
-
-  // |fuchsia::modular::StoryShell|
-  void UpdateSurface2(
-      fuchsia::modular::ViewConnection2 /*view_connection*/,
-      fuchsia::modular::SurfaceInfo /*surface_info*/) override{};
 
   void Connect() {
     if (story_shell_context_.is_bound() && view_token_.value) {
@@ -142,8 +122,8 @@ class TestStoryShellApp
     }
   }
 
-  std::unique_ptr<modular::ViewHost> view_;
   fuchsia::ui::views::ViewToken view_token_;
+  std::unique_ptr<modular::ViewHost> view_;
   std::vector<fuchsia::ui::views::ViewHolderToken> child_view_holder_tokens_;
 
   fuchsia::modular::StoryShellContextPtr story_shell_context_;

@@ -10,7 +10,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
@@ -18,11 +17,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <lib/zx/eventpair.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
 
 #include <memory>
 #include <utility>
@@ -31,6 +25,9 @@
 #include "peridot/lib/fidl/view_host.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/test_driver.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace {
 
@@ -206,19 +203,18 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   }
 
   // |SessionShell|
-  void AttachView(fuchsia::modular::ViewIdentifier view_id,
-                  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
-                      view_owner) override {
-    AttachView2(view_id, scenic::ToViewHolderToken(zx::eventpair(
-                             view_owner.TakeChannel().release())));
+  void AttachView(
+      fuchsia::modular::ViewIdentifier view_id,
+      fuchsia::ui::views::ViewHolderToken view_holder_token) override {
+    FXL_LOG(INFO) << "DevSessionShell AttachView(): " << view_id.story_id;
+    view_->ConnectView(std::move(view_holder_token));
   }
 
   // |SessionShell|
   void AttachView2(
       fuchsia::modular::ViewIdentifier view_id,
       fuchsia::ui::views::ViewHolderToken view_holder_token) override {
-    FXL_LOG(INFO) << "DevSessionShell AttachView(): " << view_id.story_id;
-    view_->ConnectView(std::move(view_holder_token));
+    AttachView(view_id, std::move(view_holder_token));
   }
 
   // |SessionShell|

@@ -6,15 +6,19 @@ executable("login_override_test") {
 
   output_name = "login_override_test"
 
-  sources = ["login_override_test.cc"]
+  sources = [
+    "login_override_test.cc",
+  ]
 
   deps = [
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/fidl/fuchsia.sys",
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.auth.account",
+    "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.setui",
-    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -41,9 +45,6 @@ package("modular_login_tests") {
     "//garnet/public/lib/callback",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/lib/app_driver/cpp",
-    "//sdk/fidl/fuchsia.auth.account",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]

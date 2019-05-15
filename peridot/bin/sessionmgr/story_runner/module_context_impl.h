@@ -7,18 +7,17 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <src/lib/fxl/macros.h>
 
 #include <string>
 
 #include "peridot/bin/sessionmgr/component_context_impl.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
+#include "src/lib/fxl/macros.h"
 
 namespace modular {
 
@@ -56,12 +55,11 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
                fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
   // |fuchsia::modular::ModuleContext|
-  void EmbedModule(
-      std::string name, fuchsia::modular::Intent intent,
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController>
-          module_controller,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      EmbedModuleCallback callback) override;
+  void EmbedModule(std::string name, fuchsia::modular::Intent intent,
+                   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+                       module_controller,
+                   fuchsia::ui::views::ViewToken view_token,
+                   EmbedModuleCallback callback) override;
 
   // |fuchsia::modular::ModuleContext|
   void EmbedModule2(std::string name, fuchsia::modular::Intent intent,

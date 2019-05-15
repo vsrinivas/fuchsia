@@ -5,7 +5,6 @@
 library fuchsia.modular;
 
 using fuchsia.ui.views;
-using fuchsia.ui.viewsv1token;
 using fuchsia.mem;
 
 /// This interface is exposed to all Module instances in a story. It allows to
@@ -51,7 +50,7 @@ protocol ModuleContext {
     [Transitional]
     EmbedModule(string name, Intent intent,
                 request<ModuleController> module_controller,
-                request<fuchsia.ui.viewsv1token.ViewOwner> view_owner)
+                fuchsia.ui.views.ViewToken view_token)
         -> (StartModuleStatus status);
     // DEPRECATED, for transition purposes only.
     [Transitional]

@@ -8,7 +8,6 @@ using fuchsia.modular.auth;
 using fuchsia.speech;
 using fuchsia.ui.policy;
 using fuchsia.ui.views;
-using fuchsia.ui.viewsv1token;
 
 // This interface is implemented by a session shell and is used by the
 // sessionmgr to hand to the session shell views of stories, or to notify that
@@ -19,7 +18,7 @@ protocol SessionShell {
     // identified by |view_id.story_id|.
     // DEPRECATED.  For transitional purposes only.
     [Transitional]
-    AttachView(ViewIdentifier view_id, fuchsia.ui.viewsv1token.ViewOwner view_owner);
+    AttachView(ViewIdentifier view_id, fuchsia.ui.views.ViewHolderToken view_holder_token);
     [Transitional]
     AttachView2(ViewIdentifier view_id, fuchsia.ui.views.ViewHolderToken view_holder_token);
 

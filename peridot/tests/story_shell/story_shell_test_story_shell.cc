@@ -7,14 +7,9 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
 
 #include <memory>
 
@@ -25,6 +20,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_shell/defs.h"
 #include "rapidjson/document.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 using modular::testing::Signal;
 
@@ -76,18 +74,6 @@ class TestApp
   // |fuchsia::modular::StoryShell|
   void AddSurface(fuchsia::modular::ViewConnection view_connection,
                   fuchsia::modular::SurfaceInfo surface_info) override {
-    AddSurface2(
-        fuchsia::modular::ViewConnection2{
-            .surface_id = view_connection.surface_id,
-            .view_holder_token = scenic::ToViewHolderToken(
-                zx::eventpair(view_connection.owner.TakeChannel().release())),
-        },
-        std::move(surface_info));
-  }
-
-  // |fuchsia::modular::StoryShell|
-  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
-                   fuchsia::modular::SurfaceInfo surface_info) override {
     fuchsia::modular::ModuleManifestPtr module_manifest =
         std::move(surface_info.module_manifest);
     FXL_LOG(INFO) << "AddSurface " << view_connection.surface_id << " "
@@ -123,6 +109,17 @@ class TestApp
         Signal("root:one:two ordering");
       }
     }
+  }
+
+  // |fuchsia::modular::StoryShell|
+  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
+                   fuchsia::modular::SurfaceInfo surface_info) override {
+    AddSurface(
+        fuchsia::modular::ViewConnection{
+            .surface_id = view_connection.surface_id,
+            .view_holder_token = std::move(view_connection.view_holder_token),
+        },
+        std::move(surface_info));
   }
 
   // |fuchsia::modular::StoryShell|

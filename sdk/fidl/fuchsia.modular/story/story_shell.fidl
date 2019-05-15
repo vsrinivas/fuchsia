@@ -6,7 +6,6 @@ library fuchsia.modular;
 
 using fuchsia.ui.policy;
 using fuchsia.ui.views;
-using fuchsia.ui.viewsv1token;
 
 // This interface is implemented by a story shell. Dependencies are passed to it
 // in Initialize() on startup. The story shell is also expected to implement
@@ -104,16 +103,16 @@ protocol StoryShell {
     UpdateSurface2(ViewConnection2 view_connection, SurfaceInfo surface_info);
 };
 
-// DEPRECATED, for backwards compatibility only.
+// A pair mapping a surface ID to a view (via |view_holder_token|).
 struct ViewConnection {
-    // The new view corresponding to the surface.
-    fuchsia.ui.viewsv1token.ViewOwner owner;
-
     // The ID for the surface
     string surface_id;
+
+    // Token for embedding the new view corresponding to the surface.
+    fuchsia.ui.views.ViewHolderToken view_holder_token;
 };
 
-// A pair mapping a surface ID to a view (via |view_holder_token|).
+// DEPRECATED, for transition purposes only.
 struct ViewConnection2 {
     // The ID for the surface
     string surface_id;
@@ -139,18 +138,19 @@ struct SurfaceInfo {
     ModuleSource module_source;
 };
 
-// DEPRECATED, for backwards compatbility only.
+// Maps the node_name to the specific scenic view resulting from resolving and
+// launching the intent specified in a Container node.
 struct ContainerView {
     // Name by which this container node is referenced in container layout and
     // surface relationship specifications (cf. container.fidl)
     string node_name;
 
-    // View owner for the surface
-    fuchsia.ui.viewsv1token.ViewOwner owner;
+    // Token for embedding the new view.  The view is resolved from the intent
+    // corresponding to |node_name|.
+    fuchsia.ui.views.ViewHolderToken view_holder_token;
 };
 
-// Maps the node_name to the specific scenic view resulting from resolving and
-// launching the intent specified in a Container node.
+// DEPRECATED, for transition purposes only.
 struct ContainerView2 {
     // Name by which this container node is referenced in container layout and
     // surface relationship specifications (cf. container.fidl)
