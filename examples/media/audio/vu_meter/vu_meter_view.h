@@ -10,7 +10,6 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 #include <queue>
