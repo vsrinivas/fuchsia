@@ -256,7 +256,7 @@ From //BUILD.gn:16
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"host-arm64-linux-thinlto/thinlto-cache"`
+**Current value (from the default):** `"user-x64-lto/thinlto-cache"`
 
 From //public/gn/config/lto/BUILD.gn:22
 

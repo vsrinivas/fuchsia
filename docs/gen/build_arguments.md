@@ -37,7 +37,7 @@ Whether basemgr should automatically login as a persistent guest user.
 
 **Current value (from the default):** `false`
 
-From //peridot/bin/basemgr/BUILD.gn:13
+From //peridot/bin/basemgr/BUILD.gn:14
 
 ### auto_update_packages
 Whether the component loader should automatically update packages.
@@ -53,7 +53,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//topaz/bundles:buildbot"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -61,7 +61,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:14
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//topaz/bundles:buildbot"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -364,7 +364,7 @@ module_suggester is not AOT compiled in debug builds
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/dart/dart_component.gni#51)
+From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
 
@@ -422,7 +422,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -430,7 +430,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -480,7 +480,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/dart/dart_component.gni#41)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -719,7 +719,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:403
+From //build/config/BUILDCONFIG.gn:404
 
 ### fastboot_product
 
@@ -735,19 +735,19 @@ package and deduplicated by blobfs.
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/dart/dart_component.gni#27)
+From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/dart/dart_component.gni#27)
 
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/dart/dart_component.gni#32)
 
 ### flutter_runtime_mode
 The runtime mode ("debug", "profile", "release", "dynamic_profile", or "dynamic_release")
@@ -761,13 +761,13 @@ Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/dart/dart_component.gni#38)
+From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/dart/dart_component.gni#38)
 
 ### framework_packages
 
 **Current value (from the default):** `["collection", "flutter", "meta", "typed_data", "vector_math"]`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/flutter_runner/prebuilt_framework.gni#8)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/flutter_runner/prebuilt_framework.gni#8)
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -1042,7 +1042,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:338
+From //build/config/BUILDCONFIG.gn:339
 
 ### ledger_sync_credentials_file
 
@@ -1095,7 +1095,7 @@ From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:19
 
 **Current value (from the default):** `"30000"`
 
-From //garnet/bin/log_listener/BUILD.gn:14
+From //garnet/bin/log_listener/BUILD.gn:15
 
 ### magma_build_root
 
@@ -1138,7 +1138,7 @@ Should be a string value that only contains digits.
 
 **Current value (from the default):** `"0"`
 
-From //garnet/bin/log_listener/BUILD.gn:13
+From //garnet/bin/log_listener/BUILD.gn:14
 
 ### meta_package_labels
 A list of labels for meta packages to be included in the monolith.
@@ -1231,13 +1231,13 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/flutter_runner/prebuilt_framework.gni#7)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/flutter_runner/prebuilt_framework.gni#7)
 
 ### prebuilt_framework_path
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/flutter_runner/prebuilt_framework.gni#6)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/2f0c1875cad1b6edc0d274e0b1bbcdc8ff7f6d60/runtime/flutter_runner/prebuilt_framework.gni#6)
 
 ### prebuilt_libvulkan_arm_path
 
@@ -1392,7 +1392,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:626
+From //build/config/BUILDCONFIG.gn:627
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1401,7 +1401,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:631
+From //build/config/BUILDCONFIG.gn:632
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1434,7 +1434,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:449
+From //build/config/BUILDCONFIG.gn:450
 
 ### shell_enable_vulkan
 
@@ -1691,7 +1691,7 @@ From //third_party/skia/BUILD.gn:63
 
 From //.gn:26
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:63
 
@@ -1739,7 +1739,7 @@ From //third_party/skia/BUILD.gn:24
 
 From //.gn:28
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:24
 
@@ -1799,7 +1799,7 @@ From //third_party/skia/BUILD.gn:30
 
 From //.gn:29
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:30
 
@@ -1841,7 +1841,7 @@ From //third_party/skia/BUILD.gn:64
 
 From //.gn:30
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:64
 
@@ -1871,7 +1871,7 @@ From //third_party/skia/BUILD.gn:38
 
 From //.gn:31
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:38
 
@@ -1970,7 +1970,7 @@ From //build/config/lto/config.gni:13
 Manifest files describing target libraries from toolchains.
 Can be either // source paths or absolute system paths.
 
-**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/x86_64-linux-gnu.manifest"]`
+**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]`
 
 From //build/images/manifest.gni:11
 
@@ -2023,7 +2023,7 @@ From //build/config/BUILDCONFIG.gn:74
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:423
+From //build/config/BUILDCONFIG.gn:424
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
