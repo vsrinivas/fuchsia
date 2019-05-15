@@ -10,6 +10,6 @@ fidl("fuchsia.virtualization.vmm") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.virtualization",
   ]
 }

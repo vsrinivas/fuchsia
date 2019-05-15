@@ -30,6 +30,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
+#include "src/lib/files/file.h"
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 #include "src/virtualization/bin/vmm/controller/virtio_block.h"
 #include "src/virtualization/bin/vmm/controller/virtio_console.h"
@@ -40,7 +41,7 @@
 #include "src/virtualization/bin/vmm/controller/virtio_wl.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/guest_config.h"
-#include "src/virtualization/bin/vmm/instance_controller_impl.h"
+#include "src/virtualization/bin/vmm/guest_impl.h"
 #include "src/virtualization/bin/vmm/interrupt_controller.h"
 #include "src/virtualization/bin/vmm/linux.h"
 #include "src/virtualization/bin/vmm/pci.h"
@@ -50,7 +51,6 @@
 #include "src/virtualization/bin/vmm/virtio_net_legacy.h"
 #include "src/virtualization/bin/vmm/virtio_vsock.h"
 #include "src/virtualization/bin/vmm/zircon.h"
-#include "src/lib/files/file.h"
 
 #if __aarch64__
 #include "src/virtualization/bin/vmm/arch/arm64/pl031.h"
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
   std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();
 
-  fuchsia::guest::LaunchInfo launch_info;
+  fuchsia::virtualization::LaunchInfo launch_info;
   fuchsia::virtualization::vmm::LaunchInfoProviderSyncPtr launch_info_provider;
   context->ConnectToEnvironmentService(launch_info_provider.NewRequest());
   zx_status_t status = launch_info_provider->GetLaunchInfo(&launch_info);
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
     FXL_LOG(INFO) << "No launch info provided.";
   }
 
-  InstanceControllerImpl instance_controller;
+  GuestImpl guest_controller;
   fuchsia::sys::LauncherPtr launcher;
   context->environment()->GetLauncher(launcher.NewRequest());
 
@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
   std::vector<PlatformDevice*> platform_devices;
 
   // Setup UARTs.
-  Uart uart(instance_controller.SerialSocket());
+  Uart uart(guest_controller.SerialSocket());
   status = uart.Init(&guest);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create UART at " << status;
@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
   //
   // We first add the devices specified in the package config file, followed by
   // the devices in the launch_info.
-  std::vector<fuchsia::guest::BlockDevice> block_infos;
+  std::vector<fuchsia::virtualization::BlockDevice> block_infos;
   for (size_t i = 0; i < cfg.block_devices().size(); i++) {
     const auto& block_spec = cfg.block_devices()[i];
     if (block_spec.path.empty()) {
@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
       return ZX_ERR_INVALID_ARGS;
     }
     uint32_t flags = ZX_FS_RIGHT_READABLE;
-    if (block_spec.mode == fuchsia::guest::BlockMode::READ_WRITE) {
+    if (block_spec.mode == fuchsia::virtualization::BlockMode::READ_WRITE) {
       flags |= ZX_FS_RIGHT_WRITABLE;
     }
     fidl::InterfaceHandle<fuchsia::io::File> file;
@@ -272,7 +272,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status = console.Start(guest.object(), instance_controller.SerialSocket(),
+    status = console.Start(guest.object(), guest_controller.SerialSocket(),
                            launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start console device " << status;
@@ -458,7 +458,7 @@ int main(int argc, char** argv) {
     loop.Quit();
   }
 
-  status = instance_controller.AddPublicService(context.get());
+  status = guest_controller.AddPublicService(context.get());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to add public service " << status;
     loop.Quit();

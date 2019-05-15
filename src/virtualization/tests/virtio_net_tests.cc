@@ -31,7 +31,8 @@ T* GuestTest<T>::enclosed_guest_ = nullptr;
 
 class VirtioNetZirconGuest : public ZirconEnclosedGuest {
  public:
-  zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
+  zx_status_t LaunchInfo(
+      fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--virtio-net=true");
@@ -45,7 +46,8 @@ class VirtioNetZirconGuest : public ZirconEnclosedGuest {
 
 class VirtioNetDebianGuest : public DebianEnclosedGuest {
  public:
-  zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
+  zx_status_t LaunchInfo(
+      fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kDebianGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--virtio-net=true");

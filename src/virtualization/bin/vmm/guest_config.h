@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_GUEST_CONFIG_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_GUEST_CONFIG_H_
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -16,8 +16,10 @@
 
 struct BlockSpec {
   std::string path;
-  fuchsia::guest::BlockFormat format = fuchsia::guest::BlockFormat::RAW;
-  fuchsia::guest::BlockMode mode = fuchsia::guest::BlockMode::READ_WRITE;
+  fuchsia::virtualization::BlockFormat format =
+      fuchsia::virtualization::BlockFormat::RAW;
+  fuchsia::virtualization::BlockMode mode =
+      fuchsia::virtualization::BlockMode::READ_WRITE;
 };
 
 enum class MemoryPolicy {

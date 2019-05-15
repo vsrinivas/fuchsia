@@ -6,19 +6,19 @@
 
 #include <iostream>
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <src/lib/fxl/logging.h>
 #include <virtio/balloon.h>
 
 void handle_balloon(uint32_t env_id, uint32_t cid, uint32_t num_pages,
                     sys::ComponentContext* context) {
   // Connect to environment.
-  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
-  context->svc()->Connect(environment_manager.NewRequest());
-  fuchsia::guest::EnvironmentControllerSyncPtr env_ptr;
-  environment_manager->Connect(env_id, env_ptr.NewRequest());
+  fuchsia::virtualization::ManagerSyncPtr manager;
+  context->svc()->Connect(manager.NewRequest());
+  fuchsia::virtualization::RealmSyncPtr env_ptr;
+  manager->Connect(env_id, env_ptr.NewRequest());
 
-  fuchsia::guest::BalloonControllerSyncPtr balloon_controller;
+  fuchsia::virtualization::BalloonControllerSyncPtr balloon_controller;
   env_ptr->ConnectToBalloon(cid, balloon_controller.NewRequest());
 
   balloon_controller->RequestNumPages(num_pages);
@@ -55,16 +55,16 @@ static const char* tag_name(uint16_t tag) {
 void handle_balloon_stats(uint32_t env_id, uint32_t cid,
                           sys::ComponentContext* context) {
   // Connect to environment.
-  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
-  context->svc()->Connect(environment_manager.NewRequest());
-  fuchsia::guest::EnvironmentControllerSyncPtr env_ptr;
-  environment_manager->Connect(env_id, env_ptr.NewRequest());
+  fuchsia::virtualization::ManagerSyncPtr manager;
+  context->svc()->Connect(manager.NewRequest());
+  fuchsia::virtualization::RealmSyncPtr env_ptr;
+  manager->Connect(env_id, env_ptr.NewRequest());
 
-  fuchsia::guest::BalloonControllerSyncPtr balloon_controller;
+  fuchsia::virtualization::BalloonControllerSyncPtr balloon_controller;
   env_ptr->ConnectToBalloon(cid, balloon_controller.NewRequest());
 
   zx_status_t status;
-  fidl::VectorPtr<fuchsia::guest::MemStat> mem_stats;
+  fidl::VectorPtr<fuchsia::virtualization::MemStat> mem_stats;
   balloon_controller->GetMemStats(&status, &mem_stats);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get memory statistics " << status;

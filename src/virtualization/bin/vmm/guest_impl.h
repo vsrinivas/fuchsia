@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_VMM_INSTANCE_CONTROLLER_IMPL_H_
-#define SRC_VIRTUALIZATION_BIN_VMM_INSTANCE_CONTROLLER_IMPL_H_
+#ifndef SRC_VIRTUALIZATION_BIN_VMM_GUEST_IMPL_H_
+#define SRC_VIRTUALIZATION_BIN_VMM_GUEST_IMPL_H_
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 
-// Provides an implementation of the |fuchsia::guest::InstanceController|
+// Provides an implementation of the |fuchsia::virtualization::Guest|
 // interface. This exposes some guest services over FIDL.
-class InstanceControllerImpl : public fuchsia::guest::InstanceController {
+class GuestImpl : public fuchsia::virtualization::Guest {
  public:
-  InstanceControllerImpl();
+  GuestImpl();
 
   zx_status_t AddPublicService(component::StartupContext* context);
 
@@ -22,14 +22,14 @@ class InstanceControllerImpl : public fuchsia::guest::InstanceController {
   // via |GetSerial|.
   zx::socket SerialSocket();
 
-  // |fuchsia::guest::InstanceController|
+  // |fuchsia::virtualization::Guest|
   void GetSerial(GetSerialCallback callback) override;
 
  private:
-  fidl::BindingSet<fuchsia::guest::InstanceController> bindings_;
+  fidl::BindingSet<fuchsia::virtualization::Guest> bindings_;
 
   zx::socket socket_;
   zx::socket remote_socket_;
 };
 
-#endif  // SRC_VIRTUALIZATION_BIN_VMM_INSTANCE_CONTROLLER_IMPL_H_
+#endif  // SRC_VIRTUALIZATION_BIN_VMM_GUEST_IMPL_H_

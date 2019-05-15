@@ -19,7 +19,7 @@ static constexpr uint16_t kVirtioBalloonNumQueues = 3;
 class VirtioBalloon
     : public VirtioComponentDevice<VIRTIO_ID_BALLOON, kVirtioBalloonNumQueues,
                                    virtio_balloon_config_t>,
-      public fuchsia::guest::BalloonController {
+      public fuchsia::virtualization::BalloonController {
  public:
   explicit VirtioBalloon(const PhysMem& phys_mem);
 
@@ -29,7 +29,7 @@ class VirtioBalloon
                     async_dispatcher_t* dispatcher);
 
  private:
-  fidl::BindingSet<fuchsia::guest::BalloonController> bindings_;
+  fidl::BindingSet<fuchsia::virtualization::BalloonController> bindings_;
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
   fuchsia::virtualization::hardware::VirtioBalloonSyncPtr balloon_;
@@ -39,7 +39,7 @@ class VirtioBalloon
                              zx_gpaddr_t avail, zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 
-  // |fuchsia::guest::BalloonController|
+  // |fuchsia::virtualization::BalloonController|
   void GetNumPages(GetNumPagesCallback callback) override;
   void RequestNumPages(uint32_t num_pages) override;
   void GetMemStats(GetMemStatsCallback callback) override;

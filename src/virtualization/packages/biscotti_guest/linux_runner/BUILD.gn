@@ -50,12 +50,12 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/guest",
-    "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.wayland",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/virtualization",
     "//src/lib/fxl",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
     "//third_party/grpc:grpc++",
@@ -134,8 +134,8 @@ executable("linux_runner_unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/guest/testing",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/virtualization/testing",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/memfs",
   ]

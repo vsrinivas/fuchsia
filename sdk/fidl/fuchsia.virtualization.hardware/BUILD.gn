@@ -10,9 +10,9 @@ fidl("fuchsia.virtualization.hardware") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.virtualization",
     "//zircon/public/fidl/fuchsia-io",
   ]
 }

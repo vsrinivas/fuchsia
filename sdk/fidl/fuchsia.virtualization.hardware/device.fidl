@@ -4,10 +4,10 @@
 
 library fuchsia.virtualization.hardware;
 
-using fuchsia.guest;
 using fuchsia.io;
 using fuchsia.ui.gfx;
 using fuchsia.ui.input;
+using fuchsia.virtualization;
 using zx;
 
 // The following EVENT_* constants indicate which user signal is associated with an event.
@@ -74,7 +74,7 @@ protocol VirtioBalloon {
 
     // Get memory statistics from the balloon device.
     GetMemStats() -> (zx.status status,
-                      vector<fuchsia.guest.MemStat>? mem_stats);
+                      vector<fuchsia.virtualization.MemStat>? mem_stats);
 };
 
 [Discoverable]
@@ -83,8 +83,8 @@ protocol VirtioBlock {
 
     // Start the block device.
     Start(StartInfo start_info,
-          string:fuchsia.guest.MAX_BLOCK_DEVICE_ID_SIZE id,
-          fuchsia.guest.BlockMode mode, fuchsia.guest.BlockFormat format,
+          string:fuchsia.virtualization.MAX_BLOCK_DEVICE_ID_SIZE id,
+          fuchsia.virtualization.BlockMode mode, fuchsia.virtualization.BlockFormat format,
           fuchsia.io.File file) -> (uint64 size);
 };
 
@@ -148,7 +148,7 @@ protocol VirtioWayland {
     // Start the wayland device.
     Start(StartInfo start_info,
           handle<vmar> vmar,
-          fuchsia.guest.WaylandDispatcher dispatcher,
+          fuchsia.virtualization.WaylandDispatcher dispatcher,
           string device_path,
           string driver_path) -> ();
 };

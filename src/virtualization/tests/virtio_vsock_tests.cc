@@ -14,13 +14,13 @@ T* GuestTest<T>::enclosed_guest_ = nullptr;
 
 template <class T>
 class VsockGuestTest : public GuestTest<T>,
-                       public fuchsia::guest::HostVsockAcceptor {
+                       public fuchsia::virtualization::HostVsockAcceptor {
  public:
   struct IncomingRequest {
     uint32_t src_cid;
     uint32_t src_port;
     uint32_t port;
-    fuchsia::guest::HostVsockAcceptor::AcceptCallback callback;
+    fuchsia::virtualization::HostVsockAcceptor::AcceptCallback callback;
   };
 
   std::vector<IncomingRequest> requests;
@@ -55,10 +55,10 @@ class VsockGuestTest : public GuestTest<T>,
   void TestThread() {
     async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-    fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
+    fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
     this->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
-    fidl::Binding<fuchsia::guest::HostVsockAcceptor> binding{this};
+    fidl::Binding<fuchsia::virtualization::HostVsockAcceptor> binding{this};
     zx_status_t out_status;
     ASSERT_EQ(vsock_endpoint->Listen(8000, binding.NewBinding(), &out_status),
               ZX_OK);

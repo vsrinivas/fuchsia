@@ -51,12 +51,13 @@ class GuestTest : public ::testing::Test {
   uint32_t GetGuestCid() { return enclosed_guest_->GetGuestCid(); }
 
   void GetHostVsockEndpoint(
-      fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint) {
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
+          endpoint) {
     enclosed_guest_->GetHostVsockEndpoint(std::move(endpoint));
   }
 
   void ConnectToBalloon(
-      fidl::InterfaceRequest<fuchsia::guest::BalloonController>
+      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
           balloon_controller) {
     enclosed_guest_->ConnectToBalloon(std::move(balloon_controller));
   }

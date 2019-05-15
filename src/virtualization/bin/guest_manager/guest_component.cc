@@ -15,11 +15,12 @@ GuestComponent::GuestComponent(
       component_controller_(std::move(component_controller)) {}
 
 void GuestComponent::ConnectToInstance(
-    fidl::InterfaceRequest<fuchsia::guest::InstanceController> request) {
+    fidl::InterfaceRequest<fuchsia::virtualization::Guest> request) {
   services_.ConnectToService(std::move(request));
 }
 
 void GuestComponent::ConnectToBalloon(
-    fidl::InterfaceRequest<fuchsia::guest::BalloonController> request) {
+    fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
+        request) {
   services_.ConnectToService(std::move(request));
 }

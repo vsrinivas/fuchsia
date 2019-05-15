@@ -5,8 +5,8 @@
 #include "src/virtualization/bin/guest/vshc.h"
 
 #include <fcntl.h>
-#include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/hardware/pty/c/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <google/protobuf/message_lite.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <poll.h>
@@ -281,20 +281,20 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
                 sys::ComponentContext* context) {
   uint32_t env_id, cid, port = o_port.value_or(vsh_util::kVshPort);
 
-  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
-  context->svc()->Connect(environment_manager.NewRequest());
-  std::vector<fuchsia::guest::EnvironmentInfo> env_infos;
-  environment_manager->List(&env_infos);
+  fuchsia::virtualization::ManagerSyncPtr manager;
+  context->svc()->Connect(manager.NewRequest());
+  std::vector<fuchsia::virtualization::EnvironmentInfo> env_infos;
+  manager->List(&env_infos);
   if (env_infos.size() == 0) {
     FXL_LOG(ERROR) << "Unable to find any environments.";
     return;
   }
   env_id = o_env_id.value_or(env_infos[0].id);
 
-  fuchsia::guest::EnvironmentControllerSyncPtr environment_controller;
-  environment_manager->Connect(env_id, environment_controller.NewRequest());
-  std::vector<fuchsia::guest::InstanceInfo> instances;
-  environment_controller->ListInstances(&instances);
+  fuchsia::virtualization::RealmSyncPtr realm;
+  manager->Connect(env_id, realm.NewRequest());
+  std::vector<fuchsia::virtualization::InstanceInfo> instances;
+  realm->ListInstances(&instances);
   if (instances.size() == 0) {
     FXL_LOG(ERROR) << "Unable to find any instances in environment " << env_id;
     return;
@@ -316,8 +316,8 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
     return;
   }
 
-  fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
-  environment_controller->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
+  fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
+  realm->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
   // Open a socket to the guest's vsock port where vshd should be listening
   zx::socket socket, remote_socket;

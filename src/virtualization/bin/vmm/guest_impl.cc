@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/vmm/instance_controller_impl.h"
+#include "src/virtualization/bin/vmm/guest_impl.h"
 
 #include <src/lib/fxl/logging.h>
 
@@ -13,18 +13,17 @@ static zx::socket duplicate(const zx::socket& socket) {
   return dup;
 }
 
-InstanceControllerImpl::InstanceControllerImpl() {
+GuestImpl::GuestImpl() {
   zx_status_t status = zx::socket::create(0, &socket_, &remote_socket_);
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
 }
 
-zx_status_t InstanceControllerImpl::AddPublicService(
-    component::StartupContext* context) {
+zx_status_t GuestImpl::AddPublicService(component::StartupContext* context) {
   return context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-zx::socket InstanceControllerImpl::SerialSocket() { return duplicate(socket_); }
+zx::socket GuestImpl::SerialSocket() { return duplicate(socket_); }
 
-void InstanceControllerImpl::GetSerial(GetSerialCallback callback) {
+void GuestImpl::GetSerial(GetSerialCallback callback) {
   callback(duplicate(remote_socket_));
 }

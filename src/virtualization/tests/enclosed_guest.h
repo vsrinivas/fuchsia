@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_
 #define SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -58,15 +58,15 @@ class EnclosedGuest {
   virtual GuestKernel GetGuestKernel() = 0;
 
   void GetHostVsockEndpoint(
-      fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint) {
-    environment_controller_->GetHostVsockEndpoint(std::move(endpoint));
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
+          endpoint) {
+    realm_->GetHostVsockEndpoint(std::move(endpoint));
   }
 
   void ConnectToBalloon(
-      fidl::InterfaceRequest<fuchsia::guest::BalloonController>
+      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
           balloon_controller) {
-    environment_controller_->ConnectToBalloon(guest_cid_,
-                                              std::move(balloon_controller));
+    realm_->ConnectToBalloon(guest_cid_, std::move(balloon_controller));
   }
 
   uint32_t GetGuestCid() const { return guest_cid_; }
@@ -75,7 +75,8 @@ class EnclosedGuest {
 
  protected:
   // Provides guest specific |launch_info|, called by Start.
-  virtual zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) = 0;
+  virtual zx_status_t LaunchInfo(
+      fuchsia::virtualization::LaunchInfo* launch_info) = 0;
 
   // Waits until the guest is ready to run test utilities, called by Start.
   virtual zx_status_t WaitForSystemReady() = 0;
@@ -87,9 +88,9 @@ class EnclosedGuest {
   std::shared_ptr<sys::ServiceDirectory> real_services_;
   fuchsia::sys::EnvironmentPtr real_env_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_environment_;
-  fuchsia::guest::EnvironmentManagerPtr environment_manager_;
-  fuchsia::guest::EnvironmentControllerPtr environment_controller_;
-  fuchsia::guest::InstanceControllerPtr instance_controller_;
+  fuchsia::virtualization::ManagerPtr manager_;
+  fuchsia::virtualization::RealmPtr realm_;
+  fuchsia::virtualization::GuestPtr guest_;
   MockNetstack mock_netstack_;
   TestSerial serial_;
   uint32_t guest_cid_;
@@ -104,7 +105,8 @@ class ZirconEnclosedGuest : public EnclosedGuest {
   GuestKernel GetGuestKernel() override { return GuestKernel::ZIRCON; }
 
  protected:
-  zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override;
+  zx_status_t LaunchInfo(
+      fuchsia::virtualization::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
   std::string SerialPrompt() override { return "$ "; }
 };
@@ -117,7 +119,8 @@ class DebianEnclosedGuest : public EnclosedGuest {
   GuestKernel GetGuestKernel() override { return GuestKernel::LINUX; }
 
  protected:
-  zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override;
+  zx_status_t LaunchInfo(
+      fuchsia::virtualization::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
   std::string SerialPrompt() override { return "$ "; }
 };

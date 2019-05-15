@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/guest/socat.h"
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include <iostream>
@@ -14,12 +14,12 @@
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/guest/serial.h"
 
-class HostVsockAcceptor : public fuchsia::guest::HostVsockAcceptor {
+class HostVsockAcceptor : public fuchsia::virtualization::HostVsockAcceptor {
  public:
   HostVsockAcceptor(uint32_t port, async::Loop* loop)
       : port_(port), console_(loop) {}
 
-  // |fuchsia::guest::HostVsockAcceptor|
+  // |fuchsia::virtualization::HostVsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
     if (port != port_) {
@@ -46,15 +46,15 @@ class HostVsockAcceptor : public fuchsia::guest::HostVsockAcceptor {
 
 void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
                          sys::ComponentContext* context) {
-  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
-  context->svc()->Connect(environment_manager.NewRequest());
-  fuchsia::guest::EnvironmentControllerSyncPtr environment_controller;
-  environment_manager->Connect(env_id, environment_controller.NewRequest());
-  fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
-  environment_controller->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
+  fuchsia::virtualization::ManagerSyncPtr manager;
+  context->svc()->Connect(manager.NewRequest());
+  fuchsia::virtualization::RealmSyncPtr realm;
+  manager->Connect(env_id, realm.NewRequest());
+  fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
+  realm->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
   HostVsockAcceptor acceptor(port, loop);
-  fidl::Binding<fuchsia::guest::HostVsockAcceptor> binding(&acceptor);
+  fidl::Binding<fuchsia::virtualization::HostVsockAcceptor> binding(&acceptor);
   zx_status_t status;
   vsock_endpoint->Listen(port, binding.NewBinding(), &status);
   if (status != ZX_OK) {
@@ -67,12 +67,12 @@ void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
 
 void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port,
                           async::Loop* loop, sys::ComponentContext* context) {
-  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
-  context->svc()->Connect(environment_manager.NewRequest());
-  fuchsia::guest::EnvironmentControllerSyncPtr environment_controller;
-  environment_manager->Connect(env_id, environment_controller.NewRequest());
-  fuchsia::guest::HostVsockEndpointSyncPtr vsock_endpoint;
-  environment_controller->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
+  fuchsia::virtualization::ManagerSyncPtr manager;
+  context->svc()->Connect(manager.NewRequest());
+  fuchsia::virtualization::RealmSyncPtr realm;
+  manager->Connect(env_id, realm.NewRequest());
+  fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
+  realm->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
   zx::socket socket, remote_socket;
   zx_status_t status =

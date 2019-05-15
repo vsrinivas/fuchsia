@@ -18,15 +18,15 @@ class VirtioBlock
     : public VirtioComponentDevice<VIRTIO_ID_BLOCK, kVirtioBlockNumQueues,
                                    virtio_blk_config_t> {
  public:
-  VirtioBlock(fuchsia::guest::BlockMode mode, const PhysMem& phys_mem);
+  VirtioBlock(fuchsia::virtualization::BlockMode mode, const PhysMem& phys_mem);
 
   zx_status_t Start(const zx::guest& guest, const std::string& id,
-                    fuchsia::guest::BlockFormat format,
+                    fuchsia::virtualization::BlockFormat format,
                     fuchsia::io::FilePtr file, fuchsia::sys::Launcher* launcher,
                     async_dispatcher_t* dispatcher);
 
  private:
-  fuchsia::guest::BlockMode mode_;
+  fuchsia::virtualization::BlockMode mode_;
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
   fuchsia::virtualization::hardware::VirtioBlockSyncPtr block_;

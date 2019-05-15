@@ -12,14 +12,15 @@ HostVsockEndpoint::HostVsockEndpoint(AcceptorProvider acceptor_provider)
     : acceptor_provider_(std::move(acceptor_provider)) {}
 
 void HostVsockEndpoint::AddBinding(
-    fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> request) {
+    fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
+        request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void HostVsockEndpoint::Connect(
     uint32_t src_cid, uint32_t src_port, uint32_t cid, uint32_t port,
-    fuchsia::guest::HostVsockConnector::ConnectCallback callback) {
-  if (cid == fuchsia::guest::HOST_CID) {
+    fuchsia::virtualization::HostVsockConnector::ConnectCallback callback) {
+  if (cid == fuchsia::virtualization::HOST_CID) {
     // Guest to host connection.
     auto it = listeners_.find(port);
     if (it == listeners_.end()) {
@@ -29,7 +30,8 @@ void HostVsockEndpoint::Connect(
     it->second->Accept(src_cid, src_port, port, std::move(callback));
   } else {
     // Guest to guest connection.
-    fuchsia::guest::GuestVsockAcceptor* acceptor = acceptor_provider_(cid);
+    fuchsia::virtualization::GuestVsockAcceptor* acceptor =
+        acceptor_provider_(cid);
     if (acceptor == nullptr) {
       callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
       return;
@@ -50,7 +52,7 @@ void HostVsockEndpoint::Connect(
 
 void HostVsockEndpoint::Listen(
     uint32_t port,
-    fidl::InterfaceHandle<fuchsia::guest::HostVsockAcceptor> acceptor,
+    fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
     ListenCallback callback) {
   if (port_bitmap_.GetOne(port)) {
     callback(ZX_ERR_ALREADY_BOUND);
@@ -74,13 +76,14 @@ void HostVsockEndpoint::Listen(
 
 void HostVsockEndpoint::Connect(
     uint32_t cid, uint32_t port, zx::handle handle,
-    fuchsia::guest::HostVsockEndpoint::ConnectCallback callback) {
-  if (cid == fuchsia::guest::HOST_CID) {
+    fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback) {
+  if (cid == fuchsia::virtualization::HOST_CID) {
     FXL_LOG(ERROR) << "Attempt to connect to host service from host";
     callback(ZX_ERR_CONNECTION_REFUSED);
     return;
   }
-  fuchsia::guest::GuestVsockAcceptor* acceptor = acceptor_provider_(cid);
+  fuchsia::virtualization::GuestVsockAcceptor* acceptor =
+      acceptor_provider_(cid);
   if (acceptor == nullptr) {
     callback(ZX_ERR_CONNECTION_REFUSED);
     return;
@@ -92,16 +95,17 @@ void HostVsockEndpoint::Connect(
     return;
   }
   // Get access to the guests.
-  acceptor->Accept(fuchsia::guest::HOST_CID, src_port, port, std::move(handle),
-                   [this, src_port, callback = std::move(callback)](
-                       zx_status_t status) mutable {
-                     ConnectCallback(status, src_port, std::move(callback));
-                   });
+  acceptor->Accept(
+      fuchsia::virtualization::HOST_CID, src_port, port, std::move(handle),
+      [this, src_port,
+       callback = std::move(callback)](zx_status_t status) mutable {
+        ConnectCallback(status, src_port, std::move(callback));
+      });
 }
 
 void HostVsockEndpoint::ConnectCallback(
     zx_status_t status, uint32_t src_port,
-    fuchsia::guest::HostVsockEndpoint::ConnectCallback callback) {
+    fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback) {
   if (status != ZX_OK) {
     FreeEphemeralPort(src_port);
   }

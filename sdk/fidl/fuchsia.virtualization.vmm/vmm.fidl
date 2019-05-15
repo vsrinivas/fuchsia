@@ -4,9 +4,9 @@
 
 library fuchsia.virtualization.vmm;
 
-using fuchsia.guest;
+using fuchsia.virtualization;
 
 [Discoverable]
 protocol LaunchInfoProvider {
-    GetLaunchInfo() -> (fuchsia.guest.LaunchInfo launch_info);
+    GetLaunchInfo() -> (fuchsia.virtualization.LaunchInfo launch_info);
 };

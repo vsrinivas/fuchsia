@@ -116,7 +116,7 @@ class StatsStream : public StreamBase {
     }
 
     zx_status_t status = ZX_ERR_IO_DATA_INTEGRITY;
-    fidl::VectorPtr<fuchsia::guest::MemStat> mem_stats;
+    fidl::VectorPtr<fuchsia::virtualization::MemStat> mem_stats;
     if (queue_.NextChain(&chain_) && chain_.NextDescriptor(&desc_) &&
         desc_.len % sizeof(virtio_balloon_stat_t) == 0) {
       auto stats = static_cast<virtio_balloon_stat_t*>(desc_.addr);

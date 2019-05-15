@@ -200,7 +200,8 @@ class VirtioQueue {
 //       while (chain.NextDescriptor(&descriptor)) {
 //         // |descriptor| describes a single buffer in the chain.
 //         if (descriptor.writable) {
-//           uint32_t bytes_written = WriteToDescriptor(descriptor.addr, descriptor.len);
+//           uint32_t bytes_written =
+//               WriteToDescriptor(descriptor.addr, descriptor.len);
 //
 //           // Increment the |Used| value by the number of bytes written.
 //           *chain.Used() += bytes_written;
@@ -208,7 +209,8 @@ class VirtioQueue {
 //           ReadFromDescriptor(descriptor.addr, descriptor.len);
 //         }
 //       }
-//       // Write the chain to the used ring, passing ownership back to the driver.
+//       // Write the chain to the used ring, passing ownership back to the
+//       // driver.
 //       chain.Return();
 //     }
 //   }

@@ -95,13 +95,13 @@ TEST_F(GuestConfigParserTest, BlockSpecArg) {
   ASSERT_EQ(2ul, config_.block_devices().size());
 
   const BlockSpec& spec0 = config_.block_devices()[0];
-  ASSERT_EQ(fuchsia::guest::BlockMode::READ_ONLY, spec0.mode);
-  ASSERT_EQ(fuchsia::guest::BlockFormat::RAW, spec0.format);
+  ASSERT_EQ(fuchsia::virtualization::BlockMode::READ_ONLY, spec0.mode);
+  ASSERT_EQ(fuchsia::virtualization::BlockFormat::RAW, spec0.format);
   ASSERT_EQ("/pkg/data/foo", spec0.path);
 
   const BlockSpec& spec1 = config_.block_devices()[1];
-  ASSERT_EQ(fuchsia::guest::BlockMode::READ_WRITE, spec1.mode);
-  ASSERT_EQ(fuchsia::guest::BlockFormat::RAW, spec1.format);
+  ASSERT_EQ(fuchsia::virtualization::BlockMode::READ_WRITE, spec1.mode);
+  ASSERT_EQ(fuchsia::virtualization::BlockFormat::RAW, spec1.format);
   ASSERT_EQ("/dev/class/block/001", spec1.path);
 }
 
@@ -116,13 +116,13 @@ TEST_F(GuestConfigParserTest, BlockSpecJson) {
   ASSERT_EQ(2ul, config_.block_devices().size());
 
   const BlockSpec& spec0 = config_.block_devices()[0];
-  ASSERT_EQ(fuchsia::guest::BlockMode::READ_ONLY, spec0.mode);
-  ASSERT_EQ(fuchsia::guest::BlockFormat::RAW, spec0.format);
+  ASSERT_EQ(fuchsia::virtualization::BlockMode::READ_ONLY, spec0.mode);
+  ASSERT_EQ(fuchsia::virtualization::BlockFormat::RAW, spec0.format);
   ASSERT_EQ("/pkg/data/foo", spec0.path);
 
   const BlockSpec& spec1 = config_.block_devices()[1];
-  ASSERT_EQ(fuchsia::guest::BlockMode::READ_WRITE, spec1.mode);
-  ASSERT_EQ(fuchsia::guest::BlockFormat::RAW, spec1.format);
+  ASSERT_EQ(fuchsia::virtualization::BlockMode::READ_WRITE, spec1.mode);
+  ASSERT_EQ(fuchsia::virtualization::BlockFormat::RAW, spec1.format);
   ASSERT_EQ("/dev/class/block/001", spec1.path);
 }
 

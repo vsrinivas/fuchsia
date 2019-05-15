@@ -84,24 +84,24 @@ static fidl::InterfaceHandle<fuchsia::io::File> GetExtrasPartition() {
   return fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
 }
 
-static fidl::VectorPtr<fuchsia::guest::BlockDevice> GetBlockDevices(
+static fidl::VectorPtr<fuchsia::virtualization::BlockDevice> GetBlockDevices(
     size_t stateful_image_size) {
   TRACE_DURATION("linux_runner", "GetBlockDevices");
   auto file_handle = GetOrCreateStatefulPartition(stateful_image_size);
   FXL_CHECK(file_handle) << "Failed to open stateful file";
-  fidl::VectorPtr<fuchsia::guest::BlockDevice> devices;
+  fidl::VectorPtr<fuchsia::virtualization::BlockDevice> devices;
   devices.push_back({
       "stateful",
-      fuchsia::guest::BlockMode::READ_WRITE,
-      fuchsia::guest::BlockFormat::RAW,
+      fuchsia::virtualization::BlockMode::READ_WRITE,
+      fuchsia::virtualization::BlockFormat::RAW,
       std::move(file_handle),
   });
   auto extras_handle = GetExtrasPartition();
   if (extras_handle) {
     devices.push_back({
         "extras",
-        fuchsia::guest::BlockMode::VOLATILE_WRITE,
-        fuchsia::guest::BlockFormat::RAW,
+        fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
+        fuchsia::virtualization::BlockFormat::RAW,
         std::move(extras_handle),
     });
   }
@@ -134,9 +134,9 @@ zx_status_t Guest::CreateAndStart(sys::ComponentContext* context,
                                   GuestConfig config,
                                   std::unique_ptr<Guest>* guest) {
   TRACE_DURATION("linux_runner", "Guest::CreateAndStart");
-  fuchsia::guest::EnvironmentManagerPtr guestmgr;
+  fuchsia::virtualization::ManagerPtr guestmgr;
   context->svc()->Connect(guestmgr.NewRequest());
-  fuchsia::guest::EnvironmentControllerPtr guest_env;
+  fuchsia::virtualization::RealmPtr guest_env;
   guestmgr->Create(kLinuxEnvirionmentName, guest_env.NewRequest());
 
   *guest = std::make_unique<Guest>(context, config, std::move(guest_env));
@@ -144,7 +144,7 @@ zx_status_t Guest::CreateAndStart(sys::ComponentContext* context,
 }
 
 Guest::Guest(sys::ComponentContext* context, GuestConfig config,
-             fuchsia::guest::EnvironmentControllerPtr env)
+             fuchsia::virtualization::RealmPtr env)
     : async_(async_get_default_dispatcher()),
       executor_(async_),
       config_(config),
@@ -182,11 +182,12 @@ class GrpcServerBuilder {
  public:
   // The BindingFactory is a function that returns an |InterfaceHandle| to use
   // for a new binding.
-  using BindingFactory =
-      fit::function<fidl::InterfaceHandle<fuchsia::guest::HostVsockAcceptor>()>;
+  using BindingFactory = fit::function<
+      fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor>()>;
 
-  GrpcServerBuilder(const fuchsia::guest::HostVsockEndpointPtr& socket_endpoint,
-                    BindingFactory binding_factory)
+  GrpcServerBuilder(
+      const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint,
+      BindingFactory binding_factory)
       : binding_factory_(std::move(binding_factory)),
         socket_endpoint_(socket_endpoint) {}
 
@@ -219,7 +220,7 @@ class GrpcServerBuilder {
 
  private:
   BindingFactory binding_factory_;
-  const fuchsia::guest::HostVsockEndpointPtr& socket_endpoint_;
+  const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint_;
   grpc::ServerBuilder builder_;
 };
 
@@ -268,12 +269,12 @@ void Guest::StartGuest() {
       << "Called StartGuest with an existing instance";
   FXL_LOG(INFO) << "Launching guest...";
 
-  fuchsia::guest::LaunchInfo launch_info;
+  fuchsia::virtualization::LaunchInfo launch_info;
   launch_info.url = kLinuxGuestPackage;
   launch_info.args.push_back("--virtio-gpu=false");
   launch_info.args.push_back("--legacy-net=false");
   launch_info.block_devices = GetBlockDevices(config_.stateful_image_size);
-  launch_info.wayland_device = fuchsia::guest::WaylandDevice::New();
+  launch_info.wayland_device = fuchsia::virtualization::WaylandDevice::New();
   launch_info.wayland_device->dispatcher = wayland_dispatcher_.NewBinding();
 
   auto vm_create_nonce = TRACE_NONCE();

@@ -7,7 +7,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.guest.EnvironmentManager",
+            "fuchsia.virtualization.Manager",
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry"
         ]

@@ -6,14 +6,14 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/namespace.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/guest/testing/fake_environment_manager.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/virtualization/testing/fake_manager.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -91,9 +91,9 @@ class LinuxRunnerGuestTest : public gtest::TestLoopFixture {
                                      &data_) == ZX_OK);
     memfs_loop_.StartThread();
 
-    // Add a fake guest EnvironmentManager to the components context.
+    // Add a fake guest Manager to the components context.
     provider_.service_directory_provider()->AddService(
-        fake_guest_environment_manager_.GetHandler());
+        fake_guest_manager_.GetHandler());
   }
 
   void TearDown() override {
@@ -111,12 +111,10 @@ class LinuxRunnerGuestTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  guest::testing::FakeEnvironmentManager* guest_environment_manager() {
-    return &fake_guest_environment_manager_;
-  }
+  guest::testing::FakeManager* guest_manager() { return &fake_guest_manager_; }
 
  private:
-  guest::testing::FakeEnvironmentManager fake_guest_environment_manager_;
+  guest::testing::FakeManager fake_guest_manager_;
   std::unique_ptr<Guest> guest_;
   sys::testing::ComponentContextProvider provider_;
   async::Loop memfs_loop_{&kAsyncLoopConfigNoAttachToThread};
@@ -126,7 +124,7 @@ class LinuxRunnerGuestTest : public gtest::TestLoopFixture {
 TEST_F(LinuxRunnerGuestTest, ConnectToStartupListener) {
   StartGuest();
   zx::handle handle;
-  zx_status_t status = guest_environment_manager()->GuestVsock()->ConnectToHost(
+  zx_status_t status = guest_manager()->GuestVsock()->ConnectToHost(
       kStartupListenerPort, [&handle](zx::handle h) { handle = std::move(h); });
   ASSERT_EQ(ZX_OK, status)
       << "linux_runner is not listening on StartupListener port";

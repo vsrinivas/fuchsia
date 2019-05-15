@@ -6,7 +6,7 @@
 #define SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_HOST_VSOCK_ENDPOINT_H_
 
 #include <bitmap/rle-bitmap.h>
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding_set.h>
 
@@ -17,48 +17,52 @@
 static constexpr uint32_t kFirstEphemeralPort = 49152;
 static constexpr uint32_t kLastEphemeralPort = 65535;
 
-// An callback for querying a |EnvironmentController| for |GuestVsockAcceptor|s.
+// An callback for querying a |Realm| for |GuestVsockAcceptor|s.
 using AcceptorProvider =
-    fit::function<fuchsia::guest::GuestVsockAcceptor*(uint32_t)>;
+    fit::function<fuchsia::virtualization::GuestVsockAcceptor*(uint32_t)>;
 
 // An endpoint that represents the host. Specifically this endpoint will handle
 // out-bound port allocations to avoid port collisions and exposes an interface
 // for registering listeners on a per-port basis.
-class HostVsockEndpoint : public fuchsia::guest::HostVsockConnector,
-                          public fuchsia::guest::HostVsockEndpoint {
+class HostVsockEndpoint : public fuchsia::virtualization::HostVsockConnector,
+                          public fuchsia::virtualization::HostVsockEndpoint {
  public:
   HostVsockEndpoint(AcceptorProvider acceptor_provider);
 
   void AddBinding(
-      fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> request);
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
+          request);
 
-  // |fuchsia::guest::HostVsockConnector|
-  void Connect(
-      uint32_t src_cid, uint32_t src_port, uint32_t cid, uint32_t port,
-      fuchsia::guest::HostVsockConnector::ConnectCallback callback) override;
+  // |fuchsia::virtualization::HostVsockConnector|
+  void Connect(uint32_t src_cid, uint32_t src_port, uint32_t cid, uint32_t port,
+               fuchsia::virtualization::HostVsockConnector::ConnectCallback
+                   callback) override;
 
-  // |fuchsia::guest::HostVsockEndpoint|
+  // |fuchsia::virtualization::HostVsockEndpoint|
   void Listen(uint32_t port,
-              fidl::InterfaceHandle<fuchsia::guest::HostVsockAcceptor> acceptor,
+              fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor>
+                  acceptor,
               ListenCallback callback) override;
-  void Connect(
-      uint32_t cid, uint32_t port, zx::handle handle,
-      fuchsia::guest::HostVsockEndpoint::ConnectCallback callback) override;
+  void Connect(uint32_t cid, uint32_t port, zx::handle handle,
+               fuchsia::virtualization::HostVsockEndpoint::ConnectCallback
+                   callback) override;
 
   void OnShutdown(uint32_t port);
 
  private:
   void ConnectCallback(
       zx_status_t status, uint32_t src_port,
-      fuchsia::guest::HostVsockEndpoint::ConnectCallback remote_callback);
+      fuchsia::virtualization::HostVsockEndpoint::ConnectCallback
+          remote_callback);
 
   zx_status_t AllocEphemeralPort(uint32_t* port);
   void FreeEphemeralPort(uint32_t port);
 
   AcceptorProvider acceptor_provider_;
   bitmap::RleBitmap port_bitmap_;
-  fidl::BindingSet<fuchsia::guest::HostVsockEndpoint> bindings_;
-  std::unordered_map<uint32_t, fuchsia::guest::HostVsockAcceptorPtr> listeners_;
+  fidl::BindingSet<fuchsia::virtualization::HostVsockEndpoint> bindings_;
+  std::unordered_map<uint32_t, fuchsia::virtualization::HostVsockAcceptorPtr>
+      listeners_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_HOST_VSOCK_ENDPOINT_H_

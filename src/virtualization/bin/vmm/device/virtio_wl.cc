@@ -201,7 +201,8 @@ VirtioWl::VirtioWl(component::StartupContext* context) : DeviceBase(context) {}
 
 void VirtioWl::Start(
     fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
-    fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher,
+    fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
+        dispatcher,
     std::string device_path, std::string driver_path, StartCallback callback) {
   auto deferred = fit::defer(std::move(callback));
   PrepStart(std::move(start_info));

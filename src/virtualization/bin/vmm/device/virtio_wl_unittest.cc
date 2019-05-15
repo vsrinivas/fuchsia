@@ -4,7 +4,7 @@
 
 #include <string.h>
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <virtio/wl.h>
 
@@ -31,12 +31,13 @@ static constexpr uint32_t kVirtioWlVmarSize = 1 << 16;
 static constexpr uint32_t kAllocateFlags =
     ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE;
 
-class TestWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
+class TestWaylandDispatcher
+    : public fuchsia::virtualization::WaylandDispatcher {
  public:
   TestWaylandDispatcher(fit::function<void(zx::channel)> callback)
       : callback_(std::move(callback)) {}
 
-  fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> Bind() {
+  fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> Bind() {
     return binding_.NewBinding();
   }
 
@@ -44,7 +45,7 @@ class TestWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
   void OnNewConnection(zx::channel channel) { callback_(std::move(channel)); }
 
   fit::function<void(zx::channel)> callback_;
-  fidl::Binding<fuchsia::guest::WaylandDispatcher> binding_{this};
+  fidl::Binding<fuchsia::virtualization::WaylandDispatcher> binding_{this};
 };
 
 class VirtioWlTest : public TestWithDevice {

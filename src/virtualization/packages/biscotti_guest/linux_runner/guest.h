@@ -5,14 +5,14 @@
 #ifndef SRC_VIRTUALIZATION_PACKAGES_BISCOTTI_GUEST_LINUX_RUNNER_GUEST_H_
 #define SRC_VIRTUALIZATION_PACKAGES_BISCOTTI_GUEST_LINUX_RUNNER_GUEST_H_
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <grpc++/grpc++.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
-#include <lib/guest/scenic_wayland_dispatcher.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/virtualization/scenic_wayland_dispatcher.h>
 #include <trace/event.h>
 #include <zircon/types.h>
 
@@ -45,7 +45,7 @@ struct GuestConfig {
   size_t stateful_image_size;
 };
 
-class Guest : public fuchsia::guest::HostVsockAcceptor,
+class Guest : public fuchsia::virtualization::HostVsockAcceptor,
               public vm_tools::StartupListener::Service,
               public vm_tools::tremplin::TremplinListener::Service,
               public vm_tools::container::ContainerListener::Service {
@@ -56,7 +56,7 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
                                     std::unique_ptr<Guest>* guest);
 
   Guest(sys::ComponentContext* context, GuestConfig config,
-        fuchsia::guest::EnvironmentControllerPtr env);
+        fuchsia::virtualization::RealmPtr env);
   ~Guest();
 
   void Launch(AppLaunchRequest request);
@@ -74,7 +74,7 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   void SetupUser();
   void DumpContainerDebugInfo();
 
-  // |fuchsia::guest::HostVsockAcceptor|
+  // |fuchsia::virtualization::HostVsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override;
 
@@ -161,10 +161,11 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   async::Executor executor_;
   GuestConfig config_;
   std::unique_ptr<grpc::Server> grpc_server_;
-  fuchsia::guest::HostVsockEndpointPtr socket_endpoint_;
-  fidl::BindingSet<fuchsia::guest::HostVsockAcceptor> acceptor_bindings_;
-  fuchsia::guest::EnvironmentControllerPtr guest_env_;
-  fuchsia::guest::InstanceControllerPtr guest_controller_;
+  fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint_;
+  fidl::BindingSet<fuchsia::virtualization::HostVsockAcceptor>
+      acceptor_bindings_;
+  fuchsia::virtualization::RealmPtr guest_env_;
+  fuchsia::virtualization::GuestPtr guest_controller_;
   uint32_t guest_cid_ = 0;
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
   std::unique_ptr<vm_tools::tremplin::Tremplin::Stub> tremplin_;

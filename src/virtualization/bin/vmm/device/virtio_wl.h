@@ -102,11 +102,12 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   void NotifyQueue(uint16_t queue) override;
 
   // |fuchsia::virtualization::hardware::VirtioWayland|
-  void Start(
-      fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
-      fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher,
-      std::string device_path, std::string driver_path,
-      StartCallback callback) override;
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
+             zx::vmar vmar,
+             fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
+                 dispatcher,
+             std::string device_path, std::string driver_path,
+             StartCallback callback) override;
 
  private:
   void HandleCommand(VirtioChain* chain);
@@ -137,7 +138,7 @@ class VirtioWl : public DeviceBase<VirtioWl>,
 
   std::array<VirtioQueue, VIRTWL_QUEUE_COUNT> queues_;
   zx::vmar vmar_;
-  fuchsia::guest::WaylandDispatcherPtr dispatcher_;
+  fuchsia::virtualization::WaylandDispatcherPtr dispatcher_;
   VirtioChain out_chain_;
   size_t bytes_written_for_send_request_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<Vfd>> vfds_;

@@ -37,10 +37,10 @@ class TestVsockAcceptorBase : public T {
   std::vector<ConnectionRequest> connection_requests_;
 };
 
-class TestVsockAcceptor
-    : public TestVsockAcceptorBase<fuchsia::guest::GuestVsockAcceptor> {
+class TestVsockAcceptor : public TestVsockAcceptorBase<
+                              fuchsia::virtualization::GuestVsockAcceptor> {
  private:
-  // |fuchsia::guest::GuestVsockAcceptor|
+  // |fuchsia::virtualization::GuestVsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               zx::handle handle, AcceptCallback callback) override {
     connection_requests_.emplace_back(ConnectionRequest{
@@ -49,9 +49,9 @@ class TestVsockAcceptor
 };
 
 class TestHostVsockAcceptor
-    : public TestVsockAcceptorBase<fuchsia::guest::HostVsockAcceptor> {
+    : public TestVsockAcceptorBase<fuchsia::virtualization::HostVsockAcceptor> {
  private:
-  // |fuchsia::guest::HostVsockAcceptor|
+  // |fuchsia::virtualization::HostVsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
     connection_requests_.emplace_back(ConnectionRequest{
@@ -63,7 +63,7 @@ struct TestConnectorConnection {
   zx_status_t status = ZX_ERR_BAD_STATE;
   zx::handle handle;
 
-  fuchsia::guest::HostVsockConnector::ConnectCallback callback() {
+  fuchsia::virtualization::HostVsockConnector::ConnectCallback callback() {
     return [this](zx_status_t status, zx::handle handle) {
       this->status = status;
       this->handle = std::move(handle);
@@ -74,7 +74,7 @@ struct TestConnectorConnection {
 struct TestEndpointConnection {
   zx_status_t status = ZX_ERR_BAD_STATE;
 
-  fuchsia::guest::HostVsockEndpoint::ConnectCallback callback() {
+  fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback() {
     return [this](zx_status_t status) { this->status = status; };
   }
 };
@@ -88,7 +88,7 @@ class HostVsockEndpointTest : public ::gtest::TestLoopFixture {
   TestVsockAcceptor guest_acceptor_;
 
  private:
-  fuchsia::guest::GuestVsockAcceptor* GetAcceptor(uint32_t cid) {
+  fuchsia::virtualization::GuestVsockAcceptor* GetAcceptor(uint32_t cid) {
     return cid == kGuestCid ? &guest_acceptor_ : nullptr;
   }
 };
@@ -116,7 +116,7 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToHost) {
   host_endpoint_.Listen(22, host_acceptor.NewBinding(), NoOpCallback);
 
   TestConnectorConnection connection;
-  host_endpoint_.Connect(kGuestCid, 1022, fuchsia::guest::HOST_CID, 22,
+  host_endpoint_.Connect(kGuestCid, 1022, fuchsia::virtualization::HOST_CID, 22,
                          connection.callback());
 
   RunLoopUntilIdle();
@@ -147,7 +147,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuest) {
 
   auto requests = guest_acceptor_.TakeRequests();
   ASSERT_EQ(1u, requests.size());
-  EXPECT_EQ(fuchsia::guest::HOST_CID, requests[0].src_cid);
+  EXPECT_EQ(fuchsia::virtualization::HOST_CID, requests[0].src_cid);
   EXPECT_EQ(kFirstEphemeralPort, requests[0].src_port);
   EXPECT_EQ(22u, requests[0].port);
   EXPECT_TRUE(requests[0].handle.is_valid());
@@ -162,7 +162,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToHost) {
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
 
   TestEndpointConnection connection;
-  host_endpoint_.Connect(fuchsia::guest::HOST_CID, 22, std::move(h1),
+  host_endpoint_.Connect(fuchsia::virtualization::HOST_CID, 22, std::move(h1),
                          connection.callback());
 
   ASSERT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
@@ -182,7 +182,7 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToGuestNoAcceptor) {
 
 TEST_F(HostVsockEndpointTest, ConnectGuestToHostNoAcceptor) {
   TestConnectorConnection connection;
-  host_endpoint_.Connect(kGuestCid, 1022, fuchsia::guest::HOST_CID, 22,
+  host_endpoint_.Connect(kGuestCid, 1022, fuchsia::virtualization::HOST_CID, 22,
                          connection.callback());
 
   EXPECT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
@@ -231,7 +231,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestMultipleTimes) {
   ASSERT_EQ(kNumTimes, requests.size());
   uint32_t port = kFirstEphemeralPort;
   for (const auto& request : requests) {
-    EXPECT_EQ(fuchsia::guest::HOST_CID, request.src_cid);
+    EXPECT_EQ(fuchsia::virtualization::HOST_CID, request.src_cid);
     EXPECT_EQ(port++, request.src_port);
     EXPECT_EQ(22u, request.port);
     EXPECT_TRUE(request.handle.is_valid());
@@ -254,7 +254,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
   ASSERT_EQ(kNumTimes, requests.size());
   uint32_t port = kFirstEphemeralPort;
   for (const auto& request : requests) {
-    EXPECT_EQ(fuchsia::guest::HOST_CID, request.src_cid);
+    EXPECT_EQ(fuchsia::virtualization::HOST_CID, request.src_cid);
     EXPECT_EQ(port++, request.src_port);
     EXPECT_EQ(22u, request.port);
     EXPECT_TRUE(request.handle.is_valid());
@@ -275,7 +275,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
 
   requests = guest_acceptor_.TakeRequests();
   ASSERT_EQ(1u, requests.size());
-  EXPECT_EQ(fuchsia::guest::HOST_CID, requests[0].src_cid);
+  EXPECT_EQ(fuchsia::virtualization::HOST_CID, requests[0].src_cid);
   EXPECT_EQ(kFirstEphemeralPort, requests[0].src_port);
   EXPECT_EQ(22u, requests[0].port);
   EXPECT_TRUE(requests[0].handle.is_valid());

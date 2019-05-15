@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/guest_manager/environment_controller_impl.h"
+#include "src/virtualization/bin/guest_manager/realm_impl.h"
 
 #include <lib/fit/function.h>
 #include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/bin/guest_manager/guest_services.h"
 
-EnvironmentControllerImpl::EnvironmentControllerImpl(
+RealmImpl::RealmImpl(
     uint32_t id, const std::string& label, component::StartupContext* context,
-    fidl::InterfaceRequest<fuchsia::guest::EnvironmentController> request)
+    fidl::InterfaceRequest<fuchsia::virtualization::Realm> request)
     : id_(id),
       label_(label),
-      host_vsock_endpoint_(
-          fit::bind_member(this, &EnvironmentControllerImpl::GetAcceptor)) {
+      host_vsock_endpoint_(fit::bind_member(this, &RealmImpl::GetAcceptor)) {
   // Create environment.
   context->environment()->CreateNestedEnvironment(
       env_.NewRequest(), env_controller_.NewRequest(), label,
@@ -28,19 +27,17 @@ EnvironmentControllerImpl::EnvironmentControllerImpl(
   AddBinding(std::move(request));
 }
 
-void EnvironmentControllerImpl::set_unbound_handler(
-    fit::function<void()> handler) {
+void RealmImpl::set_unbound_handler(fit::function<void()> handler) {
   bindings_.set_empty_set_handler(std::move(handler));
 }
 
-void EnvironmentControllerImpl::AddBinding(
-    fidl::InterfaceRequest<EnvironmentController> request) {
+void RealmImpl::AddBinding(fidl::InterfaceRequest<Realm> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void EnvironmentControllerImpl::LaunchInstance(
-    fuchsia::guest::LaunchInfo launch_info,
-    fidl::InterfaceRequest<fuchsia::guest::InstanceController> controller,
+void RealmImpl::LaunchInstance(
+    fuchsia::virtualization::LaunchInfo launch_info,
+    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
     LaunchInstanceCallback callback) {
   component::Services services;
   fuchsia::sys::ComponentControllerPtr component_controller;
@@ -59,10 +56,10 @@ void EnvironmentControllerImpl::LaunchInstance(
 
   // Setup guest endpoint.
   const uint32_t cid = next_guest_cid_++;
-  fuchsia::guest::GuestVsockEndpointPtr guest_endpoint;
+  fuchsia::virtualization::GuestVsockEndpointPtr guest_endpoint;
   services.ConnectToService(guest_endpoint.NewRequest());
   guest_endpoint.events().OnShutdown =
-      fit::bind_member(this, &EnvironmentControllerImpl::OnVsockShutdown);
+      fit::bind_member(this, &RealmImpl::OnVsockShutdown);
   auto endpoint = std::make_unique<GuestVsockEndpoint>(
       cid, std::move(guest_endpoint), &host_vsock_endpoint_);
 
@@ -83,26 +80,24 @@ void EnvironmentControllerImpl::LaunchInstance(
   callback(cid);
 }
 
-void EnvironmentControllerImpl::OnVsockShutdown(uint32_t src_cid,
-                                                uint32_t src_port,
-                                                uint32_t dst_cid,
-                                                uint32_t dst_port) {
-  if (src_cid == fuchsia::guest::HOST_CID) {
+void RealmImpl::OnVsockShutdown(uint32_t src_cid, uint32_t src_port,
+                                uint32_t dst_cid, uint32_t dst_port) {
+  if (src_cid == fuchsia::virtualization::HOST_CID) {
     host_vsock_endpoint_.OnShutdown(src_port);
   }
 }
 
-void EnvironmentControllerImpl::GetHostVsockEndpoint(
-    fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> request) {
+void RealmImpl::GetHostVsockEndpoint(
+    fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
+        request) {
   host_vsock_endpoint_.AddBinding(std::move(request));
 }
 
-fidl::VectorPtr<fuchsia::guest::InstanceInfo>
-EnvironmentControllerImpl::ListGuests() {
-  fidl::VectorPtr<fuchsia::guest::InstanceInfo> infos =
-      fidl::VectorPtr<fuchsia::guest::InstanceInfo>::New(0);
+fidl::VectorPtr<fuchsia::virtualization::InstanceInfo> RealmImpl::ListGuests() {
+  fidl::VectorPtr<fuchsia::virtualization::InstanceInfo> infos =
+      fidl::VectorPtr<fuchsia::virtualization::InstanceInfo>::New(0);
   for (const auto& it : guests_) {
-    infos.push_back(fuchsia::guest::InstanceInfo{
+    infos.push_back(fuchsia::virtualization::InstanceInfo{
         .cid = it.first,
         .label = it.second->label(),
     });
@@ -110,29 +105,30 @@ EnvironmentControllerImpl::ListGuests() {
   return infos;
 }
 
-void EnvironmentControllerImpl::ListInstances(ListInstancesCallback callback) {
+void RealmImpl::ListInstances(ListInstancesCallback callback) {
   callback(ListGuests());
 }
 
-void EnvironmentControllerImpl::ConnectToInstance(
+void RealmImpl::ConnectToInstance(
     uint32_t id,
-    fidl::InterfaceRequest<fuchsia::guest::InstanceController> request) {
+    fidl::InterfaceRequest<fuchsia::virtualization::Guest> request) {
   const auto& it = guests_.find(id);
   if (it != guests_.end()) {
     it->second->ConnectToInstance(std::move(request));
   }
 }
 
-void EnvironmentControllerImpl::ConnectToBalloon(
+void RealmImpl::ConnectToBalloon(
     uint32_t id,
-    fidl::InterfaceRequest<fuchsia::guest::BalloonController> request) {
+    fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
+        request) {
   const auto& it = guests_.find(id);
   if (it != guests_.end()) {
     it->second->ConnectToBalloon(std::move(request));
   }
 }
 
-fuchsia::guest::GuestVsockAcceptor* EnvironmentControllerImpl::GetAcceptor(
+fuchsia::virtualization::GuestVsockAcceptor* RealmImpl::GetAcceptor(
     uint32_t cid) {
   const auto& it = guests_.find(cid);
   return it == guests_.end() ? nullptr : it->second->endpoint();

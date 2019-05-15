@@ -7,11 +7,11 @@
 #include <fcntl.h>
 #include <poll.h>
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
 
 #include "lib/fsl/socket/socket_drainer.h"
@@ -125,17 +125,17 @@ void SerialConsole::Start(zx::socket socket) {
 void handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
                    sys::ComponentContext* context) {
   // Connect to environment.
-  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
-  context->svc()->Connect(environment_manager.NewRequest());
-  fuchsia::guest::EnvironmentControllerSyncPtr env_ptr;
-  environment_manager->Connect(env_id, env_ptr.NewRequest());
+  fuchsia::virtualization::ManagerSyncPtr manager;
+  context->svc()->Connect(manager.NewRequest());
+  fuchsia::virtualization::RealmSyncPtr env_ptr;
+  manager->Connect(env_id, env_ptr.NewRequest());
 
-  fuchsia::guest::InstanceControllerSyncPtr instance_controller;
-  env_ptr->ConnectToInstance(cid, instance_controller.NewRequest());
+  fuchsia::virtualization::GuestSyncPtr guest;
+  env_ptr->ConnectToInstance(cid, guest.NewRequest());
 
   // Open the serial service of the guest and process IO.
   zx::socket socket;
-  instance_controller->GetSerial(&socket);
+  guest->GetSerial(&socket);
   if (!socket) {
     FXL_LOG(ERROR) << "Failed to open serial port";
     return;

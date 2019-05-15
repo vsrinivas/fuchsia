@@ -170,15 +170,15 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   std::string token;
   while (std::getline(token_stream, token, ',')) {
     if (token == "fdio") {
-      out->format = fuchsia::guest::BlockFormat::RAW;
+      out->format = fuchsia::virtualization::BlockFormat::RAW;
     } else if (token == "qcow") {
-      out->format = fuchsia::guest::BlockFormat::QCOW;
+      out->format = fuchsia::virtualization::BlockFormat::QCOW;
     } else if (token == "rw") {
-      out->mode = fuchsia::guest::BlockMode::READ_WRITE;
+      out->mode = fuchsia::virtualization::BlockMode::READ_WRITE;
     } else if (token == "ro") {
-      out->mode = fuchsia::guest::BlockMode::READ_ONLY;
+      out->mode = fuchsia::virtualization::BlockMode::READ_ONLY;
     } else if (token == "volatile") {
-      out->mode = fuchsia::guest::BlockMode::VOLATILE_WRITE;
+      out->mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
     } else if (token.size() > 0 && token[0] == '/') {
       out->path = std::move(token);
     }

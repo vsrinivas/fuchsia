@@ -43,8 +43,8 @@ executable("bin") {
   deps = [
     "//garnet/lib/inet",
     "//garnet/public/lib/svc/cpp",
-    "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/virtualization/bin/vmm/device",

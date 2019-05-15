@@ -22,7 +22,8 @@ template <class T>
 T* GuestTest<T>::enclosed_guest_ = nullptr;
 
 class SingleCpuZirconEnclosedGuest : public ZirconEnclosedGuest {
-  zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
+  zx_status_t LaunchInfo(
+      fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
@@ -32,7 +33,8 @@ class SingleCpuZirconEnclosedGuest : public ZirconEnclosedGuest {
 };
 
 class SingleCpuDebianEnclosedGuest : public DebianEnclosedGuest {
-  zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
+  zx_status_t LaunchInfo(
+      fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kDebianGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
@@ -85,7 +87,7 @@ TEST_F(VirtioBalloonGuestTest, VirtioBalloon) {
   EXPECT_EQ(this->Execute("echo \"test\"", &result), ZX_OK);
   EXPECT_EQ(result, "test\n");
 
-  fuchsia::guest::BalloonControllerSyncPtr balloon_controller;
+  fuchsia::virtualization::BalloonControllerSyncPtr balloon_controller;
   ConnectToBalloon(balloon_controller.NewRequest());
 
   uint32_t initial_num_pages;

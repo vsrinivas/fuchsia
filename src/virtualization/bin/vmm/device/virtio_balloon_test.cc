@@ -106,7 +106,7 @@ TEST_F(VirtioBalloonTest, Stats) {
   ASSERT_EQ(thrd_success, ret);
 
   zx_status_t stats_status;
-  fidl::VectorPtr<fuchsia::guest::MemStat> mem_stats;
+  fidl::VectorPtr<fuchsia::virtualization::MemStat> mem_stats;
   status = balloon_->GetMemStats(&stats_status, &mem_stats);
   ASSERT_EQ(ZX_OK, status);
   ASSERT_EQ(ZX_OK, stats_status);
@@ -122,7 +122,7 @@ TEST_F(VirtioBalloonTest, Stats) {
 
 TEST_F(VirtioBalloonTest, StatsShouldWait) {
   zx_status_t stats_status;
-  fidl::VectorPtr<fuchsia::guest::MemStat> mem_stats;
+  fidl::VectorPtr<fuchsia::virtualization::MemStat> mem_stats;
   zx_status_t status = balloon_->GetMemStats(&stats_status, &mem_stats);
   ASSERT_EQ(ZX_OK, status);
   ASSERT_EQ(ZX_ERR_SHOULD_WAIT, stats_status);

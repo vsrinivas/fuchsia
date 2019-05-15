@@ -22,7 +22,8 @@ VirtioWl::VirtioWl(const PhysMem& phys_mem)
 
 zx_status_t VirtioWl::Start(
     const zx::guest& guest, zx::vmar vmar,
-    fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatch_handle,
+    fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
+        dispatch_handle,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher,
     const std::string& device_path, const std::string& driver_path) {
   component::Services services;

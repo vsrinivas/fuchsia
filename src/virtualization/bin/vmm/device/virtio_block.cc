@@ -234,11 +234,11 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
  private:
   // |fuchsia::virtualization::hardware::VirtioBlock|
   void Start(fuchsia::virtualization::hardware::StartInfo start_info,
-             std::string id, fuchsia::guest::BlockMode mode,
-             fuchsia::guest::BlockFormat format,
+             std::string id, fuchsia::virtualization::BlockMode mode,
+             fuchsia::virtualization::BlockFormat format,
              fidl::InterfaceHandle<fuchsia::io::File> file,
              StartCallback callback) override {
-    read_only_ = mode == fuchsia::guest::BlockMode::READ_ONLY;
+    read_only_ = mode == fuchsia::virtualization::BlockMode::READ_ONLY;
     PrepStart(std::move(start_info));
 
     NestedBlockDispatcherCallback nested =
@@ -250,7 +250,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
           callback(size);
         };
 
-    if (mode == fuchsia::guest::BlockMode::VOLATILE_WRITE) {
+    if (mode == fuchsia::virtualization::BlockMode::VOLATILE_WRITE) {
       nested = [nested = std::move(nested)](
                    size_t size, std::unique_ptr<BlockDispatcher> disp) mutable {
         CreateVolatileWriteBlockDispatcher(size, std::move(disp),
@@ -258,7 +258,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
       };
     }
 
-    if (format == fuchsia::guest::BlockFormat::QCOW) {
+    if (format == fuchsia::virtualization::BlockFormat::QCOW) {
       nested = [nested = std::move(nested)](
                    size_t size, std::unique_ptr<BlockDispatcher> disp) mutable {
         CreateQcowBlockDispatcher(std::move(disp), std::move(nested));
@@ -266,7 +266,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     }
 
     uint32_t vmo_flags = fuchsia::io::VMO_FLAG_READ;
-    if (mode == fuchsia::guest::BlockMode::READ_WRITE) {
+    if (mode == fuchsia::virtualization::BlockMode::READ_WRITE) {
       vmo_flags |= fuchsia::io::VMO_FLAG_WRITE;
     }
     CreateRawBlockDispatcher(file.Bind(), vmo_flags, std::move(nested));

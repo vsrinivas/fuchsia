@@ -46,7 +46,7 @@ zx_status_t EnclosedGuest::Start() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kGuestManagerUrl;
   zx_status_t status = services->AddServiceWithLaunchInfo(
-      std::move(launch_info), fuchsia::guest::EnvironmentManager::Name_);
+      std::move(launch_info), fuchsia::virtualization::Manager::Name_);
   if (status != ZX_OK) {
     return status;
   }
@@ -62,7 +62,7 @@ zx_status_t EnclosedGuest::Start() {
     return ZX_ERR_BAD_STATE;
   }
 
-  fuchsia::guest::LaunchInfo guest_launch_info;
+  fuchsia::virtualization::LaunchInfo guest_launch_info;
   status = LaunchInfo(&guest_launch_info);
   if (status != ZX_OK) {
     return status;
@@ -73,20 +73,18 @@ zx_status_t EnclosedGuest::Start() {
   std::string env_label = guest_launch_info.url;
   std::replace(env_label.begin(), env_label.end(), '/', ':');
 
-  enclosing_environment_->ConnectToService(environment_manager_.NewRequest());
-  environment_manager_->Create(env_label, environment_controller_.NewRequest());
+  enclosing_environment_->ConnectToService(manager_.NewRequest());
+  manager_->Create(env_label, realm_.NewRequest());
 
-  environment_controller_->LaunchInstance(std::move(guest_launch_info),
-                                          instance_controller_.NewRequest(),
-                                          [this](uint32_t cid) {
-                                            guest_cid_ = cid;
-                                            loop_.Quit();
-                                          });
+  realm_->LaunchInstance(std::move(guest_launch_info), guest_.NewRequest(),
+                         [this](uint32_t cid) {
+                           guest_cid_ = cid;
+                           loop_.Quit();
+                         });
   loop_.Run();
 
   zx::socket socket;
-  instance_controller_->GetSerial(
-      [&socket](zx::socket s) { socket = std::move(s); });
+  guest_->GetSerial([&socket](zx::socket s) { socket = std::move(s); });
   bool socket_valid = RunLoopUntil(&loop_, [&] { return socket.is_valid(); });
   if (!socket_valid) {
     return ZX_ERR_BAD_STATE;
@@ -106,7 +104,7 @@ zx_status_t EnclosedGuest::Start() {
 }
 
 zx_status_t ZirconEnclosedGuest::LaunchInfo(
-    fuchsia::guest::LaunchInfo* launch_info) {
+    fuchsia::virtualization::LaunchInfo* launch_info) {
   launch_info->url = kZirconGuestUrl;
   launch_info->args.push_back("--virtio-gpu=false");
   launch_info->args.push_back("--cmdline-add=kernel.serial=none");
@@ -141,7 +139,7 @@ zx_status_t ZirconEnclosedGuest::RunUtil(const std::string& util,
 }
 
 zx_status_t DebianEnclosedGuest::LaunchInfo(
-    fuchsia::guest::LaunchInfo* launch_info) {
+    fuchsia::virtualization::LaunchInfo* launch_info) {
   launch_info->url = kDebianGuestUrl;
   launch_info->args.push_back("--virtio-gpu=false");
   return ZX_OK;

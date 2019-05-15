@@ -5,8 +5,8 @@
 #include "src/virtualization/bin/guest_manager/guest_vsock_endpoint.h"
 
 GuestVsockEndpoint::GuestVsockEndpoint(
-    uint32_t cid, fuchsia::guest::GuestVsockEndpointPtr guest_endpoint,
-    fuchsia::guest::HostVsockConnector* connector)
+    uint32_t cid, fuchsia::virtualization::GuestVsockEndpointPtr guest_endpoint,
+    fuchsia::virtualization::HostVsockConnector* connector)
     : connector_binding_(connector),
       guest_endpoint_(std::move(guest_endpoint)) {
   guest_endpoint_->SetContextId(cid, connector_binding_.NewBinding(),

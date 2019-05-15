@@ -7,7 +7,7 @@
 #include <lib/fidl/cpp/vector.h>
 #include <lib/zx/channel.h>
 
-GuestServices::GuestServices(fuchsia::guest::LaunchInfo launch_info)
+GuestServices::GuestServices(fuchsia::virtualization::LaunchInfo launch_info)
     : launch_info_(std::move(launch_info)) {
   services_.AddService<fuchsia::virtualization::vmm::LaunchInfoProvider>(
       [this](fidl::InterfaceRequest<

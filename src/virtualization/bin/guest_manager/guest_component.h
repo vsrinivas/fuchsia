@@ -5,8 +5,8 @@
 #ifndef SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_COMPONENT_H_
 #define SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_COMPONENT_H_
 
-#include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/svc/cpp/services.h>
 
 #include "src/virtualization/bin/guest_manager/guest_services.h"
@@ -26,9 +26,10 @@ class GuestComponent {
   GuestVsockEndpoint* endpoint() const { return endpoint_.get(); }
 
   void ConnectToInstance(
-      fidl::InterfaceRequest<fuchsia::guest::InstanceController> request);
+      fidl::InterfaceRequest<fuchsia::virtualization::Guest> request);
   void ConnectToBalloon(
-      fidl::InterfaceRequest<fuchsia::guest::BalloonController> request);
+      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
+          request);
 
  private:
   const std::string label_;

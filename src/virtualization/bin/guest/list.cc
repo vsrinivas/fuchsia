@@ -4,14 +4,14 @@
 
 #include "src/virtualization/bin/guest/list.h"
 
-#include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <iostream>
 
 void handle_list(sys::ComponentContext* context) {
-  fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
-  context->svc()->Connect(environment_manager.NewRequest());
-  std::vector<fuchsia::guest::EnvironmentInfo> env_infos;
-  environment_manager->List(&env_infos);
+  fuchsia::virtualization::ManagerSyncPtr manager;
+  context->svc()->Connect(manager.NewRequest());
+  std::vector<fuchsia::virtualization::EnvironmentInfo> env_infos;
+  manager->List(&env_infos);
   if (env_infos.empty()) {
     printf("no environments\n");
   }

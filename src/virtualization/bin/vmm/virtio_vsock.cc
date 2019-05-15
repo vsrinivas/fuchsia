@@ -24,7 +24,7 @@ zx_status_t VirtioVsock::Stream<F>::WaitOnQueue() {
 // without having direct access to the device.
 VirtioVsock::Connection::Connection(
     async_dispatcher_t* dispatcher,
-    fuchsia::guest::GuestVsockAcceptor::AcceptCallback accept_callback,
+    fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback)
     : dispatcher_(dispatcher),
       accept_callback_(std::move(accept_callback)),
@@ -175,7 +175,7 @@ zx_status_t VirtioVsock::Connection::WaitOnReceive(zx_status_t status) {
 
 VirtioVsock::SocketConnection::SocketConnection(
     zx::handle handle, async_dispatcher_t* dispatcher,
-    fuchsia::guest::GuestVsockAcceptor::AcceptCallback accept_callback,
+    fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback)
     : Connection(dispatcher, std::move(accept_callback),
                  std::move(queue_callback)),
@@ -355,7 +355,7 @@ zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue,
 
 VirtioVsock::ChannelConnection::ChannelConnection(
     zx::handle handle, async_dispatcher_t* dispatcher,
-    fuchsia::guest::GuestVsockAcceptor::AcceptCallback accept_callback,
+    fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback)
     : Connection(dispatcher, std::move(accept_callback),
                  std::move(queue_callback)),
@@ -519,8 +519,10 @@ bool VirtioVsock::HasConnection(uint32_t src_cid, uint32_t src_port,
 
 void VirtioVsock::SetContextId(
     uint32_t cid,
-    fidl::InterfaceHandle<fuchsia::guest::HostVsockConnector> connector,
-    fidl::InterfaceRequest<fuchsia::guest::GuestVsockAcceptor> acceptor) {
+    fidl::InterfaceHandle<fuchsia::virtualization::HostVsockConnector>
+        connector,
+    fidl::InterfaceRequest<fuchsia::virtualization::GuestVsockAcceptor>
+        acceptor) {
   {
     std::lock_guard<std::mutex> lock(device_config_.mutex);
     config_.guest_cid = cid;
@@ -532,7 +534,7 @@ void VirtioVsock::SetContextId(
 
 static std::unique_ptr<VirtioVsock::Connection> create_connection(
     zx::handle handle, async_dispatcher_t* dispatcher,
-    fuchsia::guest::GuestVsockAcceptor::AcceptCallback accept_callback,
+    fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback) {
   zx_obj_type_t type = fsl::GetType(handle.get());
   switch (type) {
@@ -552,7 +554,7 @@ static std::unique_ptr<VirtioVsock::Connection> create_connection(
 
 void VirtioVsock::Accept(
     uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
-    fuchsia::guest::GuestVsockAcceptor::AcceptCallback callback) {
+    fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback callback) {
   if (HasConnection(src_cid, src_port, port)) {
     callback(ZX_ERR_ALREADY_BOUND);
     return;

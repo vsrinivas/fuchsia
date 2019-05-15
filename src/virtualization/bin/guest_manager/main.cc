@@ -4,10 +4,10 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "src/virtualization/bin/guest_manager/environment_manager_impl.h"
+#include "src/virtualization/bin/guest_manager/manager_impl.h"
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  EnvironmentManagerImpl env_mgr;
+  ManagerImpl env_mgr;
   loop.Run();
 }

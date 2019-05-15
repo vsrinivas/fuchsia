@@ -13,7 +13,7 @@
 
 class GuestServices : public fuchsia::virtualization::vmm::LaunchInfoProvider {
  public:
-  GuestServices(fuchsia::guest::LaunchInfo launch_info);
+  GuestServices(fuchsia::virtualization::LaunchInfo launch_info);
 
   fuchsia::sys::ServiceListPtr ServeDirectory();
 
@@ -24,7 +24,7 @@ class GuestServices : public fuchsia::virtualization::vmm::LaunchInfoProvider {
   component::ServiceProviderBridge services_;
   fidl::Binding<fuchsia::virtualization::vmm::LaunchInfoProvider> binding_{
       this};
-  fuchsia::guest::LaunchInfo launch_info_;
+  fuchsia::virtualization::LaunchInfo launch_info_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_SERVICES_H_

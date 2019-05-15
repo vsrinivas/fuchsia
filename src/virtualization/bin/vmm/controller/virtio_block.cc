@@ -11,11 +11,11 @@
 static constexpr char kVirtioBlockUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
 
-static bool read_only(fuchsia::guest::BlockMode mode) {
-  return mode == fuchsia::guest::BlockMode::READ_ONLY;
+static bool read_only(fuchsia::virtualization::BlockMode mode) {
+  return mode == fuchsia::virtualization::BlockMode::READ_ONLY;
 }
 
-VirtioBlock::VirtioBlock(fuchsia::guest::BlockMode mode,
+VirtioBlock::VirtioBlock(fuchsia::virtualization::BlockMode mode,
                          const PhysMem& phys_mem)
     : VirtioComponentDevice(
           phys_mem,
@@ -30,7 +30,7 @@ VirtioBlock::VirtioBlock(fuchsia::guest::BlockMode mode,
       mode_(mode) {}
 
 zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
-                               fuchsia::guest::BlockFormat format,
+                               fuchsia::virtualization::BlockFormat format,
                                fuchsia::io::FilePtr file,
                                fuchsia::sys::Launcher* launcher,
                                async_dispatcher_t* dispatcher) {
