@@ -27,7 +27,7 @@ driver("mt-musb-host") {
   ]
 }
 
-test("usb-transaction-test") {
+test("mt-hci-transaction-test") {
   sources = [
     "usb-transaction-test.cpp",
     "usb-transaction.cpp",
@@ -39,6 +39,29 @@ test("usb-transaction-test") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("mt-hci-endpoint-test") {
+  sources = [
+    "usb-endpoint-test.cpp",
+    "usb-endpoint.cpp",
+    "usb-transaction.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.usb.hci",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mt8167",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/mock-function",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
