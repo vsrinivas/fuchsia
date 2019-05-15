@@ -86,6 +86,7 @@ bool is_lower_camel_case(const std::string& str);
 bool is_upper_camel_case(const std::string& str);
 
 std::string strip_konstant_k(const std::string& str);
+std::string to_konstant_case(const std::string& str);
 std::string to_lower_no_separator_case(const std::string& str);
 std::string to_lower_snake_case(const std::string& str);
 std::string to_upper_snake_case(const std::string& str);

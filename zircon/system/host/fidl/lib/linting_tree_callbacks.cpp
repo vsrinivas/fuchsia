@@ -23,6 +23,9 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnFile(element);
+            for (auto& callback : callbacks_.exit_file_callbacks_) {
+                callback(*element.get());
+            }
         }
         void OnUsing(std::unique_ptr<raw::Using> const& element) override {
             for (auto& callback : callbacks_.using_callbacks_) {
@@ -41,6 +44,9 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnBitsDeclaration(element);
+            for (auto& callback : callbacks_.exit_bits_declaration_callbacks_) {
+                callback(*element.get());
+            }
         }
         void OnBitsMember(std::unique_ptr<raw::BitsMember> const& element) override {
             for (auto& callback : callbacks_.bits_member_callbacks_) {
@@ -59,12 +65,18 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnEnumDeclaration(element);
+            for (auto& callback : callbacks_.exit_enum_declaration_callbacks_) {
+                callback(*element.get());
+            }
         }
         void OnInterfaceDeclaration(std::unique_ptr<raw::InterfaceDeclaration> const& element) override {
             for (auto& callback : callbacks_.interface_declaration_callbacks_) {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnInterfaceDeclaration(element);
+            for (auto& callback : callbacks_.exit_interface_declaration_callbacks_) {
+                callback(*element.get());
+            }
         }
         void OnInterfaceMethod(std::unique_ptr<raw::InterfaceMethod> const& element) override {
             if (element->maybe_request != nullptr) {
@@ -95,6 +107,9 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnStructDeclaration(element);
+            for (auto& callback : callbacks_.exit_struct_declaration_callbacks_) {
+                callback(*element.get());
+            }
         }
         void OnTableMember(std::unique_ptr<raw::TableMember> const& element) override {
             for (auto& callback : callbacks_.table_member_callbacks_) {
@@ -107,6 +122,9 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnTableDeclaration(element);
+            for (auto& callback : callbacks_.exit_table_declaration_callbacks_) {
+                callback(*element.get());
+            }
         }
         void OnUnionMember(std::unique_ptr<raw::UnionMember> const& element) override {
             for (auto& callback : callbacks_.union_member_callbacks_) {
@@ -119,6 +137,9 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnUnionDeclaration(element);
+            for (auto& callback : callbacks_.exit_union_declaration_callbacks_) {
+                callback(*element.get());
+            }
         }
         void OnXUnionMember(std::unique_ptr<raw::XUnionMember> const& element) override {
             for (auto& callback : callbacks_.xunion_member_callbacks_) {
@@ -131,6 +152,9 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
                 callback(*element.get());
             }
             DeclarationOrderTreeVisitor::OnXUnionDeclaration(element);
+            for (auto& callback : callbacks_.exit_xunion_declaration_callbacks_) {
+                callback(*element.get());
+            }
         }
     };
 

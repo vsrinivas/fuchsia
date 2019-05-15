@@ -72,7 +72,7 @@ std::vector<std::string> id_to_words(const std::string& astr) {
     bool last_char_was_upper_or_begin = true;
     for (size_t i = 0; i < str.size(); i++) {
         char ch = str[i];
-        if (ch == '_' || ch == '-') {
+        if (ch == '_' || ch == '-' || ch == '.') {
             if (word.size() > 0) {
                 words.push_back(word);
                 word.clear();
@@ -149,6 +149,10 @@ std::string to_upper_camel_case(const std::string& astr) {
         newid.append(word.substr(1));
     }
     return newid;
+}
+
+std::string to_konstant_case(const std::string& str) {
+    return "k" + to_upper_camel_case(str);
 }
 
 void WriteFindingsToErrorReporter(const Findings& findings,

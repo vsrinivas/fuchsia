@@ -54,7 +54,7 @@ public:
     }
 
     bool ExpectNoFinding() {
-        ASSERT_TRUE(ValidTest(), "Bad test!");
+        ASSERT_TRUE(ValidTest(/*expect_finding=*/false), "Bad test!");
         auto source = source_template_.Substitute(substitutions_);
         TestLibrary library(source);
         Findings findings;
@@ -77,7 +77,7 @@ public:
     }
 
     bool ExpectOneFinding() {
-        ASSERT_TRUE(ValidTest(), "Bad test!");
+        ASSERT_TRUE(ValidTest(/*expect_finding=*/true), "Bad test!");
         auto source = source_template_.Substitute(substitutions_);
         auto context = source.c_str();
 
@@ -112,14 +112,16 @@ public:
     }
 
 private:
-    bool ValidTest() {
+    bool ValidTest(bool expect_finding) {
         ASSERT_FALSE(check_id_.size() == 0, "Missing check_id");
-        ASSERT_FALSE(message_.size() == 0, "Missing message");
-        ASSERT_FALSE(source_template_.str().size() == 0,
-                     "Missing source template");
-        ASSERT_FALSE(source_template_.Substitute(substitutions_, false) !=
-                         source_template_.Substitute(substitutions_, true),
-                     "Missing template substitutions");
+        if (expect_finding) {
+            ASSERT_FALSE(message_.size() == 0, "Missing message");
+            ASSERT_FALSE(source_template_.str().size() == 0,
+                         "Missing source template");
+            ASSERT_FALSE(source_template_.Substitute(substitutions_, false) !=
+                             source_template_.Substitute(substitutions_, true),
+                         "Missing template substitutions");
+        }
         return true;
     }
 
@@ -131,133 +133,80 @@ private:
     Substitutions substitutions_;
 };
 
-bool bitfield_member_name_repeats_enclosing_type_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool constant_repeats_enclosing_type_name() {
     BEGIN_TEST;
+    std::map<std::string, std::string> named_templates = {
+        {"enum", R"FIDL(
+library fidl.repeater;
 
-    LintTest test;
-    test.check_id("bitfield-member-name-repeats-enclosing-type-name")
-        .message("Bitfield members must not repeat names from the enclosing type")
-        .source_template(R"FIDL(
-library fidl.a;
+enum ConstantContainer : int8 {
+    ${TEST} = -1;
+};
+)FIDL"},
+        {"bitfield", R"FIDL(
+library fidl.repeater;
 
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
+bits ConstantContainer : uint32 {
+  ${TEST} = 0x00000004;
+};
+)FIDL"},
+    };
 
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    for (auto const& named_template : named_templates) {
+        LintTest test;
+        test.check_id("name-repeats-enclosing-type-name")
+            .source_template(named_template.second);
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        test.substitute("TEST", "SOME_VALUE");
+        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
+        test.substitute("TEST", "SOME_CONSTANT")
+            .message(named_template.first +
+                     " member names (constant) must not repeat names from the enclosing " +
+                     named_template.first + " 'ConstantContainer'");
+        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    }
     END_TEST;
 }
 
-bool bitfield_member_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool constant_repeats_library_name() {
     BEGIN_TEST;
 
-    LintTest test;
-    test.check_id("bitfield-member-name-repeats-library-name")
-        .message("Bitfield members must not repeat names from the enclosing type (or library)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool bitfield_name_repeats_enclosing_type_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("bitfield-name-repeats-enclosing-type-name")
-        .message("Bitfield names must not repeat names from the enclosing type")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool bitfield_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("bitfield-name-repeats-library-name")
-        .message("Bitfield names must not repeat names from the enclosing type (or library)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool constant_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("constant-name-repeats-library-name")
-        .message("Constant names must not repeat names from the enclosing library")
-        .source_template(R"FIDL(
-library fidl.bandwidth;
+    std::map<std::string, std::string> named_templates = {
+        {"constant", R"FIDL(
+library fidl.repeater;
 
 const uint64 ${TEST} = 1234;
-)FIDL");
+)FIDL"},
+        {"enum member", R"FIDL(
+library fidl.repeater;
 
-    test.substitute("TEST", "RATE");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+enum Int8Enum : int8 {
+    ${TEST} = -1;
+};
+)FIDL"},
+        {"bitfield member", R"FIDL(
+library fidl.repeater;
 
-    test.substitute("TEST", "BANDWIDTH");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+bits Uint32Bitfield : uint32 {
+  ${TEST} = 0x00000004;
+};
+)FIDL"},
+    };
+
+    for (auto const& named_template : named_templates) {
+        LintTest test;
+        test.check_id("name-repeats-library-name")
+            .source_template(named_template.second);
+
+        test.substitute("TEST", "SOME_CONST");
+        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+        test.substitute("TEST", "LIBRARY_REPEATER")
+            .message(named_template.first +
+                     " names (repeater) must not repeat names from the library 'fidl.repeater'");
+        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    }
 
     END_TEST;
 }
@@ -374,6 +323,186 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
+bool decl_member_repeats_enclosing_type_name() {
+    BEGIN_TEST;
+
+    std::map<std::string, std::string> named_templates = {
+        {"struct", R"FIDL(
+library fidl.repeater;
+
+struct DeclName {
+    string ${TEST};
+};
+)FIDL"},
+        {"table", R"FIDL(
+library fidl.repeater;
+
+table DeclName {
+    1: string ${TEST};
+};
+)FIDL"},
+        {"union", R"FIDL(
+library fidl.repeater;
+
+union DeclName {
+    string ${TEST};
+};
+)FIDL"},
+        {"xunion", R"FIDL(
+library fidl.repeater;
+
+xunion DeclName {
+    string ${TEST};
+};
+)FIDL"},
+    };
+
+    for (auto const& named_template : named_templates) {
+        LintTest test;
+        test.check_id("name-repeats-enclosing-type-name")
+            .source_template(named_template.second);
+
+        test.substitute("TEST", "some_member");
+        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+        test.substitute("TEST", "decl_member")
+            .message(named_template.first +
+                     " member names (decl) must not repeat names from the enclosing " +
+                     named_template.first + " 'DeclName'");
+        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    }
+
+    END_TEST;
+}
+
+bool decl_member_repeats_library_name() {
+    BEGIN_TEST;
+
+    std::map<std::string, std::string> named_templates = {
+        {"struct", R"FIDL(
+library fidl.repeater;
+
+struct DeclName {
+    string ${TEST};
+};
+)FIDL"},
+        {"table", R"FIDL(
+library fidl.repeater;
+
+table DeclName {
+    1: string ${TEST};
+};
+)FIDL"},
+        {"union", R"FIDL(
+library fidl.repeater;
+
+union DeclName {
+    string ${TEST};
+};
+)FIDL"},
+        {"xunion", R"FIDL(
+library fidl.repeater;
+
+xunion DeclName {
+    string ${TEST};
+};
+)FIDL"},
+    };
+
+    for (auto const& named_template : named_templates) {
+        LintTest test;
+        test.check_id("name-repeats-library-name")
+            .source_template(named_template.second);
+
+        test.substitute("TEST", "some_member");
+        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+        test.substitute("TEST", "library_repeater")
+            .message(named_template.first +
+                     " member names (repeater) must not repeat names from the library "
+                     "'fidl.repeater'");
+        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    }
+
+    END_TEST;
+}
+
+bool decl_name_repeats_library_name() {
+    BEGIN_TEST;
+
+    std::map<std::string, std::string> named_templates = {
+        {"protocol", R"FIDL(
+library fidl.repeater;
+
+protocol ${TEST} {};
+)FIDL"},
+        {"method", R"FIDL(
+library fidl.repeater;
+
+protocol TestProtocol {
+    ${TEST}();
+};
+)FIDL"},
+        {"enum", R"FIDL(
+library fidl.repeater;
+
+enum ${TEST} : int8 {
+    SOME_CONST = -1;
+};
+)FIDL"},
+        {"bitfield", R"FIDL(
+library fidl.repeater;
+
+bits ${TEST} : uint32 {
+  SOME_BIT = 0x00000004;
+};
+)FIDL"},
+        {"struct", R"FIDL(
+library fidl.repeater;
+
+struct ${TEST} {
+    string decl_member;
+};
+)FIDL"},
+        {"table", R"FIDL(
+library fidl.repeater;
+
+table ${TEST} {
+    1: string decl_member;
+};
+)FIDL"},
+        {"union", R"FIDL(
+library fidl.repeater;
+
+union ${TEST} {
+    string decl_member;
+};
+)FIDL"},
+        {"xunion", R"FIDL(
+library fidl.repeater;
+
+xunion ${TEST} {
+    string decl_member;
+};
+)FIDL"},
+    };
+
+    for (auto const& named_template : named_templates) {
+        LintTest test;
+        test.check_id("name-repeats-library-name")
+            .source_template(named_template.second);
+
+        test.substitute("TEST", "UrlLoader");
+        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+        test.substitute("TEST", "LibraryRepeater")
+            .message(named_template.first + " names (repeater) must not repeat names from the library 'fidl.repeater'");
+        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    }
+
+    END_TEST;
+}
+
 bool deprecation_comment_should_not_flow_through_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
@@ -435,7 +564,7 @@ library fidl.${TEST};
     END_TEST;
 }
 
-bool disallowed_protocol_name_ends_in_service_please_implement_me() {
+bool protocol_name_ends_in_service_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -444,7 +573,7 @@ bool disallowed_protocol_name_ends_in_service_please_implement_me() {
     // ("Service" is only part of a word) is OK.
 
     LintTest test;
-    test.check_id("disallowed-protocol-name-ends-in-service")
+    test.check_id("protocol-name-ends-in-service")
         .message("Protocols must not include the name 'service.'")
         .source_template(R"FIDL(
 library fidl.a;
@@ -465,7 +594,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool disallowed_protocol_name_includes_service_please_implement_me() {
+bool protocol_name_includes_service_please_implement_me() {
     if (true)
         return true; // disabled pending feature implementation
     BEGIN_TEST;
@@ -474,7 +603,7 @@ bool disallowed_protocol_name_includes_service_please_implement_me() {
     // ("Service" is only part of a word) is OK.
 
     LintTest test;
-    test.check_id("disallowed-protocol-name-includes-service")
+    test.check_id("protocol-name-includes-service")
         .message("Protocols must not include the name 'service.'")
         .source_template(R"FIDL(
 library fidl.a;
@@ -554,55 +683,31 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool enum_member_name_repeats_enclosing_type_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool event_names_must_start_with_on() {
     BEGIN_TEST;
 
     LintTest test;
-    test.check_id("enum-member-name-repeats-enclosing-type-name")
-        .message("Enum member names must not repeat names from the enclosing type")
+    test.check_id("event-names-must-start-with-on")
+        .message("Event names must start with 'On'")
         .source_template(R"FIDL(
 library fidl.a;
 
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+protocol TestProtocol {
+  -> ${TEST}();
+};
 )FIDL");
 
-    test.substitute("TEST", "!GOOD_VALUE!");
+    test.substitute("TEST", "OnPress");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.substitute("TEST", "Press")
+        .suggestion("change 'Press' to 'OnPress'")
+        .replacement("OnPress");
     ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
 
-    END_TEST;
-}
-
-bool enum_member_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("enum-member-name-repeats-library-name")
-        .message("Enum member names must not repeat names from the enclosing type (or library)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.substitute("TEST", "OntologyUpdate")
+        .suggestion("change 'OntologyUpdate' to 'OnOntologyUpdate'")
+        .replacement("OnOntologyUpdate");
     ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
 
     END_TEST;
@@ -808,7 +913,7 @@ enum Int8Enum : int8 {
     ${TEST} = -1;
 };
 )FIDL"},
-        {"bitfield members", R"FIDL(  // CHECK NOT YET IMPLEMENTED!
+        {"bitfield members", R"FIDL(
 library fidl.a;
 
 bits Uint32Bitfield : uint32 {
@@ -848,7 +953,7 @@ bool invalid_case_for_decl_member() {
 library fidl.a;
 
 protocol TestProtocol {
-    TestMethod(string ${TEST});
+    SomeMethod(string ${TEST});
 };
 )FIDL"},
         {"struct members", R"FIDL(
@@ -915,13 +1020,6 @@ protocol TestProtocol {
   ${TEST}();
 };
 )FIDL"},
-        {"events", R"FIDL(
-library fidl.a;
-
-protocol TestProtocol {
-  -> ${TEST}();
-};
-)FIDL"},
         {"enums", R"FIDL(
 library fidl.a;
 
@@ -980,6 +1078,31 @@ xunion ${TEST} {
             .replacement("UrlLoader");
         ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
     }
+
+    END_TEST;
+}
+
+bool invalid_case_for_decl_name_for_event() {
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("invalid-case-for-decl-name")
+        .message("events must be named in UpperCamelCase")
+        .source_template(R"FIDL(
+library fidl.a;
+
+protocol TestProtocol {
+  -> ${TEST}();
+};
+)FIDL");
+
+    test.substitute("TEST", "OnUrlLoader");
+    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+
+    test.substitute("TEST", "OnURLLoader")
+        .suggestion("change 'OnURLLoader' to 'OnUrlLoader'")
+        .replacement("OnUrlLoader");
+    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
 
     END_TEST;
 }
@@ -1092,109 +1215,25 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool member_name_repeats_enclosing_type_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool method_repeats_enclosing_type_name() {
     BEGIN_TEST;
 
     LintTest test;
-    test.check_id("member-name-repeats-enclosing-type-name")
-        .message("Member names must not repeat names from the enclosing type")
+    test.check_id("name-repeats-enclosing-type-name")
         .source_template(R"FIDL(
-library fidl.a;
+library fidl.repeater;
 
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+protocol TestProtocol {
+    ${TEST}();
+};
 )FIDL");
 
-    test.substitute("TEST", "!GOOD_VALUE!");
+    test.substitute("TEST", "SomeMethod");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool member_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("member-name-repeats-library-name")
-        .message("Member names must not repeat names from the enclosing type (or library)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool method_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("method-name-repeats-library-name")
-        .message("Method names must not repeat names from the enclosing protocol (or library)")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
-
-    END_TEST;
-}
-
-bool method_name_repeats_protocol_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("method-name-repeats-protocol-name")
-        .message("Method names must not repeat names from the enclosing protocol")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.substitute("TEST", "ProtocolMethod")
+        .message("method names (protocol) must not repeat names from the enclosing protocol "
+                 "'TestProtocol'");
     ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
 
     END_TEST;
@@ -1531,24 +1570,23 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool primitive_alias_name_repeats_library_name_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool primitive_alias_repeats_library_name() {
     BEGIN_TEST;
 
     LintTest test;
-    test.check_id("primitive-alias-name-repeats-library-name")
-        .message("Primitive aliases must not repeat names from the enclosing library")
+    test.check_id("name-repeats-library-name")
         .source_template(R"FIDL(
-library fidl.bandwidth;
+library fidl.repeater;
 
-using foo as ${TEST};
+using uint64 as ${TEST};
 )FIDL");
 
-    test.substitute("TEST", "rate");
+    test.substitute("TEST", "some_alias");
     ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
 
-    test.substitute("TEST", "bandwidth");
+    test.substitute("TEST", "library_repeater")
+        .message("primitive alias names (repeater) must not repeat names from the library "
+                 "'fidl.repeater'");
     ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
 
     END_TEST;
@@ -1896,21 +1934,18 @@ library ${TEST}.subcomponent;
 
 BEGIN_TEST_CASE(lint_findings_tests)
 
-RUN_TEST(bitfield_member_name_repeats_enclosing_type_name_please_implement_me)
-RUN_TEST(bitfield_member_name_repeats_library_name_please_implement_me)
-RUN_TEST(bitfield_name_repeats_enclosing_type_name_please_implement_me)
-RUN_TEST(bitfield_name_repeats_library_name_please_implement_me)
-RUN_TEST(constant_name_repeats_library_name_please_implement_me)
+RUN_TEST(constant_repeats_library_name)
+RUN_TEST(constant_repeats_enclosing_type_name)
 RUN_TEST(constant_should_use_common_prefix_suffix_please_implement_me)
 RUN_TEST(copyright_notice_should_not_flow_through_please_implement_me)
+RUN_TEST(decl_member_repeats_enclosing_type_name)
+RUN_TEST(decl_member_repeats_library_name)
+RUN_TEST(decl_name_repeats_library_name)
 RUN_TEST(deprecation_comment_should_not_flow_through_please_implement_me)
 RUN_TEST(disallowed_library_name_component)
-RUN_TEST(disallowed_protocol_name_ends_in_service_please_implement_me)
-RUN_TEST(disallowed_protocol_name_includes_service_please_implement_me)
 RUN_TEST(discontiguous_comment_block_please_implement_me)
 RUN_TEST(end_of_file_should_be_one_newline_please_implement_me)
-RUN_TEST(enum_member_name_repeats_enclosing_type_name_please_implement_me)
-RUN_TEST(enum_member_name_repeats_library_name_please_implement_me)
+RUN_TEST(event_names_must_start_with_on)
 RUN_TEST(excessive_number_of_separate_protocols_for_file_please_implement_me)
 RUN_TEST(excessive_number_of_separate_protocols_for_library_please_implement_me)
 RUN_TEST(inconsistent_type_for_recurring_file_concept_please_implement_me)
@@ -1920,20 +1955,20 @@ RUN_TEST(incorrect_spacing_between_declarations_please_implement_me)
 RUN_TEST(invalid_case_for_constant)
 RUN_TEST(invalid_case_for_decl_member)
 RUN_TEST(invalid_case_for_decl_name)
+RUN_TEST(invalid_case_for_decl_name_for_event)
 RUN_TEST(invalid_case_for_primitive_alias)
 RUN_TEST(invalid_copyright_for_platform_source_library_please_implement_me)
 RUN_TEST(library_name_does_not_match_file_path_please_implement_me)
 RUN_TEST(manager_protocols_are_discouraged_please_implement_me)
-RUN_TEST(member_name_repeats_enclosing_type_name_please_implement_me)
-RUN_TEST(member_name_repeats_library_name_please_implement_me)
-RUN_TEST(method_name_repeats_library_name_please_implement_me)
-RUN_TEST(method_name_repeats_protocol_name_please_implement_me)
+RUN_TEST(method_repeats_enclosing_type_name)
 RUN_TEST(method_return_status_missing_ok_please_implement_me)
 RUN_TEST(method_returns_status_with_non_optional_result_please_implement_me)
 RUN_TEST(method_should_pipeline_protocols_please_implement_me)
 RUN_TEST(no_commonly_reserved_words_please_implement_me)
 RUN_TEST(note_comment_should_not_flow_through_please_implement_me)
-RUN_TEST(primitive_alias_name_repeats_library_name_please_implement_me)
+RUN_TEST(primitive_alias_repeats_library_name)
+RUN_TEST(protocol_name_ends_in_service_please_implement_me)
+RUN_TEST(protocol_name_includes_service_please_implement_me)
 RUN_TEST(service_hub_pattern_is_discouraged_please_implement_me)
 RUN_TEST(string_bounds_not_specified_please_implement_me)
 RUN_TEST(tabs_disallowed_please_implement_me)

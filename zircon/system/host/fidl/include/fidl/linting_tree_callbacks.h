@@ -34,6 +34,9 @@ public:
     void OnFile(fit::function<void(const raw::File&)> callback) {
         file_callbacks_.push_back(std::move(callback));
     }
+    void OnExitFile(fit::function<void(const raw::File&)> callback) {
+        exit_file_callbacks_.push_back(std::move(callback));
+    }
     void OnUsing(fit::function<void(const raw::Using&)> callback) {
         using_callbacks_.push_back(std::move(callback));
     }
@@ -42,6 +45,9 @@ public:
     }
     void OnBitsMember(fit::function<void(const raw::BitsMember&)> callback) {
         bits_member_callbacks_.push_back(std::move(callback));
+    }
+    void OnExitBitsDeclaration(fit::function<void(const raw::BitsDeclaration&)> callback) {
+        exit_bits_declaration_callbacks_.push_back(std::move(callback));
     }
     void OnConstDeclaration(fit::function<void(const raw::ConstDeclaration&)> callback) {
         const_declaration_callbacks_.push_back(std::move(callback));
@@ -52,8 +58,14 @@ public:
     void OnEnumMember(fit::function<void(const raw::EnumMember&)> callback) {
         enum_member_callbacks_.push_back(std::move(callback));
     }
+    void OnExitEnumDeclaration(fit::function<void(const raw::EnumDeclaration&)> callback) {
+        exit_enum_declaration_callbacks_.push_back(std::move(callback));
+    }
     void OnInterfaceDeclaration(fit::function<void(const raw::InterfaceDeclaration&)> callback) {
         interface_declaration_callbacks_.push_back(std::move(callback));
+    }
+    void OnExitInterfaceDeclaration(fit::function<void(const raw::InterfaceDeclaration&)> callback) {
+        exit_interface_declaration_callbacks_.push_back(std::move(callback));
     }
     void OnMethod(fit::function<void(const raw::InterfaceMethod&)> callback) {
         method_callbacks_.push_back(std::move(callback));
@@ -64,29 +76,41 @@ public:
     void OnParameter(fit::function<void(const raw::Parameter&)> callback) {
         parameter_callbacks_.push_back(std::move(callback));
     }
-    void OnStructMember(fit::function<void(const raw::StructMember&)> callback) {
-        struct_member_callbacks_.push_back(std::move(callback));
-    }
     void OnStructDeclaration(fit::function<void(const raw::StructDeclaration&)> callback) {
         struct_declaration_callbacks_.push_back(std::move(callback));
     }
-    void OnTableMember(fit::function<void(const raw::TableMember&)> callback) {
-        table_member_callbacks_.push_back(std::move(callback));
+    void OnStructMember(fit::function<void(const raw::StructMember&)> callback) {
+        struct_member_callbacks_.push_back(std::move(callback));
+    }
+    void OnExitStructDeclaration(fit::function<void(const raw::StructDeclaration&)> callback) {
+        exit_struct_declaration_callbacks_.push_back(std::move(callback));
     }
     void OnTableDeclaration(fit::function<void(const raw::TableDeclaration&)> callback) {
         table_declaration_callbacks_.push_back(std::move(callback));
     }
-    void OnUnionMember(fit::function<void(const raw::UnionMember&)> callback) {
-        union_member_callbacks_.push_back(std::move(callback));
+    void OnTableMember(fit::function<void(const raw::TableMember&)> callback) {
+        table_member_callbacks_.push_back(std::move(callback));
+    }
+    void OnExitTableDeclaration(fit::function<void(const raw::TableDeclaration&)> callback) {
+        exit_table_declaration_callbacks_.push_back(std::move(callback));
     }
     void OnUnionDeclaration(fit::function<void(const raw::UnionDeclaration&)> callback) {
         union_declaration_callbacks_.push_back(std::move(callback));
     }
-    void OnXUnionMember(fit::function<void(const raw::XUnionMember&)> callback) {
-        xunion_member_callbacks_.push_back(std::move(callback));
+    void OnUnionMember(fit::function<void(const raw::UnionMember&)> callback) {
+        union_member_callbacks_.push_back(std::move(callback));
+    }
+    void OnExitUnionDeclaration(fit::function<void(const raw::UnionDeclaration&)> callback) {
+        exit_union_declaration_callbacks_.push_back(std::move(callback));
     }
     void OnXUnionDeclaration(fit::function<void(const raw::XUnionDeclaration&)> callback) {
         xunion_declaration_callbacks_.push_back(std::move(callback));
+    }
+    void OnXUnionMember(fit::function<void(const raw::XUnionMember&)> callback) {
+        xunion_member_callbacks_.push_back(std::move(callback));
+    }
+    void OnExitXUnionDeclaration(fit::function<void(const raw::XUnionDeclaration&)> callback) {
+        exit_xunion_declaration_callbacks_.push_back(std::move(callback));
     }
 
 private:
@@ -103,24 +127,32 @@ private:
     std::unique_ptr<fidl::raw::TreeVisitor> tree_visitor_;
 
     std::vector<fit::function<void(const raw::File&)>> file_callbacks_;
+    std::vector<fit::function<void(const raw::File&)>> exit_file_callbacks_;
     std::vector<fit::function<void(const raw::Using&)>> using_callbacks_;
     std::vector<fit::function<void(const raw::BitsDeclaration&)>> bits_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::BitsDeclaration&)>> exit_bits_declaration_callbacks_;
     std::vector<fit::function<void(const raw::BitsMember&)>> bits_member_callbacks_;
     std::vector<fit::function<void(const raw::ConstDeclaration&)>> const_declaration_callbacks_;
     std::vector<fit::function<void(const raw::EnumDeclaration&)>> enum_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::EnumDeclaration&)>> exit_enum_declaration_callbacks_;
     std::vector<fit::function<void(const raw::EnumMember&)>> enum_member_callbacks_;
     std::vector<fit::function<void(const raw::InterfaceDeclaration&)>> interface_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::InterfaceDeclaration&)>> exit_interface_declaration_callbacks_;
     std::vector<fit::function<void(const raw::InterfaceMethod&)>> method_callbacks_;
     std::vector<fit::function<void(const raw::InterfaceMethod&)>> event_callbacks_;
     std::vector<fit::function<void(const raw::Parameter&)>> parameter_callbacks_;
     std::vector<fit::function<void(const raw::StructMember&)>> struct_member_callbacks_;
     std::vector<fit::function<void(const raw::StructDeclaration&)>> struct_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::StructDeclaration&)>> exit_struct_declaration_callbacks_;
     std::vector<fit::function<void(const raw::TableMember&)>> table_member_callbacks_;
     std::vector<fit::function<void(const raw::TableDeclaration&)>> table_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::TableDeclaration&)>> exit_table_declaration_callbacks_;
     std::vector<fit::function<void(const raw::UnionMember&)>> union_member_callbacks_;
     std::vector<fit::function<void(const raw::UnionDeclaration&)>> union_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::UnionDeclaration&)>> exit_union_declaration_callbacks_;
     std::vector<fit::function<void(const raw::XUnionMember&)>> xunion_member_callbacks_;
     std::vector<fit::function<void(const raw::XUnionDeclaration&)>> xunion_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::XUnionDeclaration&)>> exit_xunion_declaration_callbacks_;
 };
 
 } // namespace linter

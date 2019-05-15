@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
 
+#include <list>
 #include <set>
 
 #include <fidl/check_def.h>
@@ -35,11 +36,50 @@ public:
               Findings* findings);
 
 private:
+    struct CaseType {
+        fit::function<bool(std::string)> matches;
+        fit::function<std::string(std::string)> convert;
+    };
+
+    class Context {
+    public:
+        Context(std::string type, std::string id, CheckDef context_check)
+            : type_(type), id_(id), context_check_(context_check) {}
+
+        // Enables move construction and assignment
+        Context(Context&& rhs) = default;
+        Context& operator=(Context&&) = default;
+
+        // no copy or assign (move-only or pass by reference)
+        Context(const Context&) = delete;
+        Context& operator=(const Context&) = delete;
+
+        std::string type() { return type_; }
+
+        std::string id() { return id_; }
+
+        const std::set<std::string>& words() {
+            if (words_.empty()) {
+                auto words = utils::id_to_words(id_);
+                words_.insert(words.begin(), words.end());
+            }
+            return words_;
+        }
+
+        const CheckDef& context_check() { return context_check_; }
+
+    private:
+        std::string type_;
+        std::string id_;
+        std::set<std::string> words_;
+        CheckDef context_check_;
+    };
+
     const std::set<std::string>& permitted_library_prefixes() const;
     std::string permitted_library_prefixes_as_string() const;
 
-    const CheckDef& DefineCheck(std::string check_id,
-                                std::string message_template);
+    CheckDef DefineCheck(std::string check_id,
+                         std::string message_template);
 
     template <typename... Args>
     Finding& AddFinding(Args&&... args) const;
@@ -52,23 +92,38 @@ private:
         std::string suggestion_template = "",
         std::string replacement_template = "") const;
 
-    // Add a finding for an invalid identifier, and suggested replacement
-    template <typename SourceElementSubtypeRefOrPtr>
-    const Finding& AddReplaceIdFinding(
-        const SourceElementSubtypeRefOrPtr& element,
-        const CheckDef& check,
-        std::string check_subtype,
-        std::string id,
-        std::string replacement) const;
-
     std::set<std::string> permitted_library_prefixes_ = {
         "fuchsia",
         "fidl",
         "test",
     };
 
+    const Finding* CheckCase(std::string type,
+                             const std::unique_ptr<raw::Identifier>& identifier,
+                             const CheckDef& check_def, const CaseType& case_type);
+    const Finding* CheckRepeatedName(std::string type,
+                                     const std::unique_ptr<raw::Identifier>& id);
+
+    template <typename... Args>
+    void EnterContext(Args&&... args) {
+        context_stack_.emplace_front(args...);
+    }
+
+    void ExitContext() {
+        context_stack_.pop_front();
+    }
+
+    std::list<Context> context_stack_;
+
     std::vector<CheckDef> checks_;
     LintingTreeCallbacks callbacks_;
+
+    CaseType lower_snake_{utils::is_lower_snake_case,
+                          utils::to_lower_snake_case};
+    CaseType upper_snake_{utils::is_upper_snake_case,
+                          utils::to_upper_snake_case};
+    CaseType upper_camel_{utils::is_upper_camel_case,
+                          utils::to_upper_camel_case};
 
     // Pointer to the current "Findings" object, passed to the Lint() method,
     // for the diration of the Visit() to lint a given FIDL file. When the

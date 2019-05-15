@@ -18,15 +18,6 @@
 namespace fidl {
 namespace linter {
 
-#define CHECK_CASE(CHECK_SUBTYPE, CASE, IDENTIFIER) \
-    assert(IDENTIFIER != nullptr);                  \
-    std::string id = to_string(IDENTIFIER);         \
-    if (!utils::is_##CASE##_case(id)) {             \
-        linter.AddReplaceIdFinding(                 \
-            IDENTIFIER, check, CHECK_SUBTYPE,       \
-            id, utils::to_##CASE##_case(id));       \
-    }
-
 const std::set<std::string>& Linter::permitted_library_prefixes() const {
     return permitted_library_prefixes_;
 }
@@ -144,28 +135,8 @@ const Finding& Linter::AddFinding(
     return finding;
 }
 
-// Add a finding for an invalid identifier, and suggested replacement
-template <typename SourceElementSubtypeRefOrPtr>
-const Finding& Linter::AddReplaceIdFinding(
-    const SourceElementSubtypeRefOrPtr& element,
-    const CheckDef& check,
-    std::string check_subtype,
-    std::string id,
-    std::string replacement) const {
-    return AddFinding(
-        element,
-        check,
-        {
-            {"CHECK_SUBTYPE", check_subtype},
-            {"IDENTIFIER", id},
-            {"REPLACEMENT", replacement},
-        },
-        "change '${IDENTIFIER}' to '${REPLACEMENT}'",
-        "${REPLACEMENT}");
-}
-
-const CheckDef& Linter::DefineCheck(std::string check_id,
-                                    std::string message_template) {
+CheckDef Linter::DefineCheck(std::string check_id,
+                             std::string message_template) {
     checks_.emplace_back(check_id, TemplateString(message_template));
     return checks_.back();
 }
@@ -183,130 +154,320 @@ bool Linter::Lint(std::unique_ptr<raw::File> const& parsed_source,
     return false;
 }
 
+const Finding* Linter::CheckCase(std::string type,
+                                 const std::unique_ptr<raw::Identifier>& identifier,
+                                 const CheckDef& check_def, const CaseType& case_type) {
+    std::string id = to_string(identifier);
+    if (!case_type.matches(id)) {
+        return &(AddFinding(
+            identifier, check_def,
+            {
+                {"TYPE", type},
+                {"IDENTIFIER", id},
+                {"REPLACEMENT", case_type.convert(id)},
+            },
+            "change '${IDENTIFIER}' to '${REPLACEMENT}'",
+            "${REPLACEMENT}"));
+    }
+    return nullptr;
+}
+
+const Finding* Linter::CheckRepeatedName(std::string type,
+                                         const std::unique_ptr<raw::Identifier>& identifier) {
+    std::string id = to_string(identifier);
+    auto split_id = utils::id_to_words(id);
+    std::set<std::string> words;
+    words.insert(split_id.begin(), split_id.end());
+    std::set<std::string> repeats;
+    for (auto& context : context_stack_) {
+        std::set_intersection(words.begin(), words.end(),
+                              context.words().begin(), context.words().end(),
+                              std::inserter(repeats, repeats.begin()));
+        if (!repeats.empty()) {
+            // TODO(fxb/FIDL-628): Modify check to allow repeated names if otherwise ambiguous.
+            std::string repeated_names;
+            for (const auto& repeat : repeats) {
+                if (!repeated_names.empty()) {
+                    repeated_names.append(", ");
+                }
+                repeated_names.append(repeat);
+            }
+            return &(AddFinding(
+                identifier, context.context_check(),
+                {
+                    {"TYPE", type},
+                    {"REPEATED_NAMES", repeated_names},
+                    {"CONTEXT_TYPE", context.type()},
+                    {"CONTEXT_ID", context.id()},
+                }));
+        }
+    }
+    return nullptr;
+}
+
+static std::string to_library_id(const std::vector<std::unique_ptr<raw::Identifier>>& components) {
+    std::string id;
+    for (const auto& component : components) {
+        if (!id.empty()) {
+            id.append(".");
+        }
+        id.append(to_string(component));
+    }
+    return id;
+}
+
 Linter::Linter()
     : callbacks_(LintingTreeCallbacks()) {
 
     callbacks_.OnUsing(
         [& linter = *this,
-         check = DefineCheck(
+         case_check = DefineCheck(
              "invalid-case-for-primitive-alias",
-             "Primitive aliases must be named in lower_snake_case")]
+             "Primitive aliases must be named in lower_snake_case"),
+         &case_type = lower_snake_]
         //
         (const raw::Using& element) {
             if (element.maybe_alias != nullptr) {
-                CHECK_CASE("primitive alias", lower_snake, element.maybe_alias)
+                linter.CheckCase("primitive alias", element.maybe_alias,
+                                 case_check, case_type);
+                linter.CheckRepeatedName("primitive alias", element.maybe_alias);
             }
         });
 
-    auto& invalid_case_for_constant = DefineCheck(
+    auto invalid_case_for_constant = DefineCheck(
         "invalid-case-for-constant",
-        "${CHECK_SUBTYPE} must be named in ALL_CAPS_SNAKE_CASE");
+        "${TYPE} must be named in ALL_CAPS_SNAKE_CASE");
 
     callbacks_.OnConstDeclaration(
         [& linter = *this,
-         check = invalid_case_for_constant]
+         case_check = invalid_case_for_constant,
+         &case_type = upper_snake_]
         //
         (const raw::ConstDeclaration& element) {
-            CHECK_CASE("constants", upper_snake, element.identifier)
+            linter.CheckCase("constants", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("constant", element.identifier);
         });
 
     callbacks_.OnEnumMember(
         [& linter = *this,
-         check = invalid_case_for_constant]
+         case_check = invalid_case_for_constant,
+         &case_type = upper_snake_]
         //
         (const raw::EnumMember& element) {
-            CHECK_CASE("enum members", upper_snake, element.identifier)
+            linter.CheckCase("enum members", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("enum member", element.identifier);
         });
 
     callbacks_.OnBitsMember(
         [& linter = *this,
-         check = invalid_case_for_constant]
+         case_check = invalid_case_for_constant,
+         &case_type = upper_snake_]
         //
         (const raw::BitsMember& element) {
-            CHECK_CASE("bitfield members", upper_snake, element.identifier)
+            linter.CheckCase("bitfield members", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("bitfield member", element.identifier);
         });
 
-    auto& invalid_case_for_decl_name = DefineCheck(
+    auto invalid_case_for_decl_name = DefineCheck(
         "invalid-case-for-decl-name",
-        "${CHECK_SUBTYPE} must be named in UpperCamelCase");
+        "${TYPE} must be named in UpperCamelCase");
+
+    auto name_repeats_enclosing_type_name = DefineCheck(
+        "name-repeats-enclosing-type-name",
+        "${TYPE} names (${REPEATED_NAMES}) must not repeat names from the "
+        "enclosing ${CONTEXT_TYPE} '${CONTEXT_ID}'");
 
     callbacks_.OnInterfaceDeclaration(
         [& linter = *this,
-         check = invalid_case_for_decl_name]
+         case_check = invalid_case_for_decl_name,
+         &case_type = upper_camel_,
+         context_check = name_repeats_enclosing_type_name]
         //
         (const raw::InterfaceDeclaration& element) {
-            CHECK_CASE("protocols", upper_camel, element.identifier)
+            linter.CheckCase("protocols", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("protocol", element.identifier);
+            linter.EnterContext("protocol", to_string(element.identifier), context_check);
+        });
+
+    callbacks_.OnExitInterfaceDeclaration(
+        [& linter = *this]
+        //
+        (const raw::InterfaceDeclaration& element) {
+            linter.ExitContext();
         });
 
     callbacks_.OnMethod(
         [& linter = *this,
-         check = invalid_case_for_decl_name]
+         case_check = invalid_case_for_decl_name,
+         &case_type = upper_camel_]
         //
         (const raw::InterfaceMethod& element) {
-            CHECK_CASE("methods", upper_camel, element.identifier)
+            linter.CheckCase("methods", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("method", element.identifier);
         });
 
     callbacks_.OnEvent(
         [& linter = *this,
-         check = invalid_case_for_decl_name]
+         case_check = invalid_case_for_decl_name,
+         event_check = DefineCheck("event-names-must-start-with-on",
+                                   "Event names must start with 'On'"),
+         &case_type = upper_camel_]
         //
         (const raw::InterfaceMethod& element) {
-            CHECK_CASE("events", upper_camel, element.identifier)
+            std::string id = to_string(element.identifier);
+            auto finding = linter.CheckCase("events", element.identifier,
+                                            case_check, case_type);
+            if (finding) {
+                id = *finding->suggestion()->replacement();
+            }
+            if ((id.compare(0, 2, "On") != 0) || !isupper(id[2])) {
+                std::string replacement = "On" + id;
+                linter.AddFinding(
+                    element.identifier, event_check,
+                    {
+                        {"IDENTIFIER", id},
+                        {"REPLACEMENT", replacement},
+                    },
+                    "change '${IDENTIFIER}' to '${REPLACEMENT}'",
+                    "${REPLACEMENT}");
+            }
+            linter.CheckRepeatedName("event", element.identifier);
         });
 
     callbacks_.OnEnumDeclaration(
         [& linter = *this,
-         check = invalid_case_for_decl_name]
+         case_check = invalid_case_for_decl_name,
+         &case_type = upper_camel_,
+         context_check = name_repeats_enclosing_type_name]
         //
         (const raw::EnumDeclaration& element) {
-            CHECK_CASE("enums", upper_camel, element.identifier)
+            linter.CheckCase("enums", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("enum", element.identifier);
+            linter.EnterContext("enum", to_string(element.identifier), context_check);
+        });
+
+    callbacks_.OnExitEnumDeclaration(
+        [& linter = *this]
+        //
+        (const raw::EnumDeclaration& element) {
+            linter.ExitContext();
         });
 
     callbacks_.OnBitsDeclaration(
         [& linter = *this,
-         check = invalid_case_for_decl_name]
+         case_check = invalid_case_for_decl_name,
+         &case_type = upper_camel_,
+         context_check = name_repeats_enclosing_type_name]
         //
         (const raw::BitsDeclaration& element) {
-            CHECK_CASE("bitfields", upper_camel, element.identifier)
+            linter.CheckCase("bitfields", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("bitfield", element.identifier);
+            linter.EnterContext("bitfield", to_string(element.identifier), context_check);
+        });
+
+    callbacks_.OnExitBitsDeclaration(
+        [& linter = *this]
+        //
+        (const raw::BitsDeclaration& element) {
+            linter.ExitContext();
         });
 
     callbacks_.OnStructDeclaration(
         [& linter = *this,
-         check = invalid_case_for_decl_name]
+         case_check = invalid_case_for_decl_name,
+         &case_type = upper_camel_,
+         context_check = name_repeats_enclosing_type_name]
         //
         (const raw::StructDeclaration& element) {
-            CHECK_CASE("structs", upper_camel, element.identifier)
+            linter.CheckCase("structs", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("struct", element.identifier);
+            linter.EnterContext("struct", to_string(element.identifier), context_check);
+        });
+
+    callbacks_.OnExitStructDeclaration(
+        [& linter = *this]
+        //
+        (const raw::StructDeclaration& element) {
+            linter.ExitContext();
         });
 
     callbacks_.OnTableDeclaration(
         [& linter = *this,
-         check = invalid_case_for_decl_name]
+         case_check = invalid_case_for_decl_name,
+         &case_type = upper_camel_,
+         context_check = name_repeats_enclosing_type_name]
         //
         (const raw::TableDeclaration& element) {
-            CHECK_CASE("tables", upper_camel, element.identifier)
+            linter.CheckCase("tables", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("table", element.identifier);
+            linter.EnterContext("table", to_string(element.identifier), context_check);
+        });
+
+    callbacks_.OnExitTableDeclaration(
+        [& linter = *this]
+        //
+        (const raw::TableDeclaration& element) {
+            linter.ExitContext();
         });
 
     callbacks_.OnUnionDeclaration(
         [& linter = *this,
-         check = invalid_case_for_decl_name]
+         case_check = invalid_case_for_decl_name,
+         &case_type = upper_camel_,
+         context_check = name_repeats_enclosing_type_name]
         //
         (const raw::UnionDeclaration& element) {
-            CHECK_CASE("unions", upper_camel, element.identifier)
+            linter.CheckCase("unions", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("union", element.identifier);
+            linter.EnterContext("union", to_string(element.identifier), context_check);
+        });
+
+    callbacks_.OnExitUnionDeclaration(
+        [& linter = *this]
+        //
+        (const raw::UnionDeclaration& element) {
+            linter.ExitContext();
         });
 
     callbacks_.OnXUnionDeclaration(
         [& linter = *this,
-         check = invalid_case_for_decl_name]
+         case_check = invalid_case_for_decl_name,
+         &case_type = upper_camel_,
+         context_check = name_repeats_enclosing_type_name]
         //
         (const raw::XUnionDeclaration& element) {
-            CHECK_CASE("xunions", upper_camel, element.identifier)
+            linter.CheckCase("xunions", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("xunion", element.identifier);
+            linter.EnterContext("xunion", to_string(element.identifier), context_check);
+        });
+
+    callbacks_.OnExitXUnionDeclaration(
+        [& linter = *this]
+        //
+        (const raw::XUnionDeclaration& element) {
+            linter.ExitContext();
         });
 
     callbacks_.OnFile(
         [& linter = *this,
          check = DefineCheck(
              "disallowed-library-name-component",
-             "Library names must not contain the following components: common, service, util, base, f<letter>l, zx<word>")]
+             "Library names must not contain the following components: common, service, util, base, f<letter>l, zx<word>"),
+         context_check = DefineCheck(
+             "name-repeats-library-name",
+             "${TYPE} names (${REPEATED_NAMES}) must not repeat names from the "
+             "library '${CONTEXT_ID}'")]
         //
         (const raw::File& element) {
             static const std::regex disallowed_library_component(
@@ -318,6 +479,15 @@ Linter::Linter()
                     break;
                 }
             }
+            linter.EnterContext("library", to_library_id(element.library_name->components),
+                                context_check);
+        });
+
+    callbacks_.OnExitFile(
+        [& linter = *this]
+        //
+        (const raw::File& element) {
+            linter.ExitContext();
         });
 
     callbacks_.OnFile(
@@ -347,48 +517,62 @@ Linter::Linter()
             }
         });
 
-    auto& invalid_case_for_decl_member = DefineCheck(
+    auto invalid_case_for_decl_member = DefineCheck(
         "invalid-case-for-decl-member",
-        "${CHECK_SUBTYPE} must be named in lower_snake_case");
+        "${TYPE} must be named in lower_snake_case");
 
     callbacks_.OnParameter(
         [& linter = *this,
-         check = invalid_case_for_decl_member]
+         case_check = invalid_case_for_decl_member,
+         &case_type = lower_snake_]
         //
         (const raw::Parameter& element) {
-            CHECK_CASE("parameters", lower_snake, element.identifier)
+            linter.CheckCase("parameters", element.identifier,
+                             case_check, case_type);
         });
     callbacks_.OnStructMember(
         [& linter = *this,
-         check = invalid_case_for_decl_member]
+         case_check = invalid_case_for_decl_member,
+         &case_type = lower_snake_]
         //
         (const raw::StructMember& element) {
-            CHECK_CASE("struct members", lower_snake, element.identifier)
+            linter.CheckCase("struct members", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("struct member", element.identifier);
         });
     callbacks_.OnTableMember(
         [& linter = *this,
-         check = invalid_case_for_decl_member]
+         case_check = invalid_case_for_decl_member,
+         &case_type = lower_snake_]
         //
         (const raw::TableMember& element) {
             if (element.maybe_used != nullptr) {
-                CHECK_CASE("table members", lower_snake, element.maybe_used->identifier)
+                linter.CheckCase("table members", element.maybe_used->identifier,
+                                 case_check, case_type);
+                linter.CheckRepeatedName("table member", element.maybe_used->identifier);
             }
         });
     callbacks_.OnUnionMember(
         [& linter = *this,
-         check = invalid_case_for_decl_member]
+         case_check = invalid_case_for_decl_member,
+         &case_type = lower_snake_]
         //
         (const raw::UnionMember& element) {
-            CHECK_CASE("union members", lower_snake, element.identifier)
+            linter.CheckCase("union members", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("union member", element.identifier);
         });
     callbacks_.OnXUnionMember(
         [& linter = *this,
-         check = invalid_case_for_decl_member]
+         case_check = invalid_case_for_decl_member,
+         &case_type = lower_snake_]
         //
         (const raw::XUnionMember& element) {
-            CHECK_CASE("xunion members", lower_snake, element.identifier)
+            linter.CheckCase("xunion members", element.identifier,
+                             case_check, case_type);
+            linter.CheckRepeatedName("xunion member", element.identifier);
         });
-}
+} // namespace linter
 
 } // namespace linter
 } // namespace fidl
