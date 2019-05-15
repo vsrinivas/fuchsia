@@ -8,13 +8,32 @@ platforms.
 
 Instead of relying on [`pub`][pub] to manage dependencies, sources of
 third-party packages we depend on are checked into the tree under
-[`//third_party/dart-pkg`][dart-3p].
+`//third_party/dart-pkg`.
 This is to ensure we use consistent versions of our dependencies across multiple
 builds.
 
 Likewise, no build output is placed in the source tree as everything goes under
 `out/`. That includes `.packages` files which are generated as part of the build
 based on a target's dependency.
+
+## Exiting Dart programs
+
+The Dart runner for Fuchsia does not
+monitor the FIDL channels opened by Dart programs and as a result does not end
+the program normally, but rather waits for the explict call to `fuchsia.exit()`
+to indicate the program should be ended.
+
+Note: Calling exit() from dart:io will result in an exception since components
+are not allowed to call this method since it would shutdown the dart_runner process.
+
+```dart
+import 'package:fuchsia/fuchsia.dart' as fuchsia;
+
+void main(List<String> args) {
+  print('Hello Dart!');
+  fuchsia.exit(23);
+}
+```
 
 
 ## Targets

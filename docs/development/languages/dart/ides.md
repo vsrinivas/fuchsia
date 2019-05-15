@@ -56,6 +56,15 @@ A prebuilt Dart SDK is available for IDE consumption at:
 
 ```
 
+## CLion/IntelliJ
+
+* Add the Dart plugin by going to `Settings > Plugins` then searching for
+  Dart language support.
+* Set the Dart path in `Settings > Languages & Frameworks > Dart` by
+  * Check __Enable Dart support for the project <project name>.__
+  * Enter the Dart SDK path "${FUCHSIA_SRC}/third_party/dart/tools/sdks/dart-sdk"
+
+
 ## Troubleshooting
 
 If you find that the IDE is unable to find imports (red squigglies) that are

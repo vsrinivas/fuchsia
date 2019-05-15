@@ -400,7 +400,7 @@ to unix shell environments have been ported and are available, such as `ps`,
 
 ## Performing other common tasks
 
-### Getting logs
+### Getting logs {:#getting_logs}
 
 `fx syslog` captures all logs from low-level and high-level programs,
 including the kernel, drivers and other userspace programs. `fx syslog`
