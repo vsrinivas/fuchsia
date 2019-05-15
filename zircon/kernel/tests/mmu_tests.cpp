@@ -22,10 +22,9 @@
 #define PGTABLE_L2_SHIFT    MMU_LX_X(MMU_KERNEL_PAGE_SIZE_SHIFT, 2)
 #endif
 
-static bool mmu_tests() {
+static bool test_large_unaligned_region() {
     BEGIN_TEST;
     unittest_printf("creating large un-aligned vm region, and unmap it without mapping, make sure no leak (ZX-315)\n");
-    {
         ArchVmAspace aspace;
         vaddr_t base = 1UL << 20;
         size_t size = (1UL << 47) - base - (1UL << 20);
@@ -75,7 +74,12 @@ static bool mmu_tests() {
 
         err = aspace.Destroy();
         EXPECT_EQ(err, ZX_OK, "destroy aspace");
-    }
+
+    END_TEST;
+}
+
+static bool test_large_unaligned_region_without_map() {
+    BEGIN_TEST;
 
     unittest_printf("creating large un-aligned vm region, and unmap it without mapping (ZX-315)\n");
     {
@@ -121,5 +125,7 @@ static bool mmu_tests() {
 }
 
 UNITTEST_START_TESTCASE(mmu_tests)
-UNITTEST("mmu tests", mmu_tests)
+UNITTEST("create large unaligned region and ensure it can be unmapped", test_large_unaligned_region)
+UNITTEST("create large unaligned region without mapping and ensure it can be unmapped",
+         test_large_unaligned_region_without_map)
 UNITTEST_END_TESTCASE(mmu_tests, "mmu", "mmu tests");
