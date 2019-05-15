@@ -7,6 +7,7 @@
 #include <src/lib/fxl/logging.h>
 
 #include "rapidjson/error/en.h"
+#include "tools/fidlcat/lib/wire_object.h"
 #include "tools/fidlcat/lib/wire_types.h"
 
 // See library_loader.h for details.
@@ -15,15 +16,14 @@ namespace fidlcat {
 
 const std::unique_ptr<Type> Enum::GetType() const {
   // TODO Consider caching this.
-  return Type::ScalarTypeFromName(value_["type"].GetString());
+  return Type::ScalarTypeFromName(value_["type"].GetString(), 0);
 }
 
-std::string Enum::GetNameFromBytes(const uint8_t* bytes, size_t length) const {
+std::string Enum::GetNameFromBytes(const uint8_t* bytes) const {
   std::unique_ptr<Type> type = GetType();
+  size_t length = type->InlineSize();
   for (auto& member : value_["members"].GetArray()) {
-    Marker end(bytes + length, nullptr);
-    Marker marker(bytes, nullptr, end);
-    if (type->ValueEquals(marker, length, member["value"]["literal"])) {
+    if (type->ValueEquals(bytes, length, member["value"]["literal"])) {
       return member["name"].GetString();
     }
   }
@@ -35,60 +35,74 @@ uint32_t Enum::size() const { return GetType()->InlineSize(); }
 std::unique_ptr<Type> UnionMember::GetType() const {
   if (!value_.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
-    return Type::get_illegal();
+    return std::make_unique<RawType>(size());
   }
   const rapidjson::Value& type = value_["type"];
   return Type::GetType(enclosing_union().enclosing_library().enclosing_loader(),
-                       type);
+                       type, size());
 }
 
-const UnionMember& Union::MemberWithTag(uint32_t tag) const {
-  if (tag >= members_.size() || tag < 0) {
-    return get_illegal_member();
+const UnionMember* Union::MemberWithTag(uint32_t tag) const {
+  if (tag >= members_.size()) {
+    return nullptr;
   }
-  return members_[tag];
+  return &members_[tag];
 }
 
-const UnionMember& Union::get_illegal_member() const {
-  class IllegalUnionMember : public UnionMember {
-   public:
-    IllegalUnionMember(const Union& uni) : UnionMember(uni, value_) {}
-
-    virtual std::unique_ptr<Type> GetType() const override {
-      return Type::get_illegal();
+const UnionMember* Union::MemberWithOrdinal(Ordinal ordinal) const {
+  for (const auto& member : members_) {
+    if (member.ordinal() == ordinal) {
+      return &member;
     }
-
-    virtual uint64_t size() const override { return enclosing_union().size(); }
-
-    virtual const std::string_view name() const override { return "unknown"; }
-
-   private:
-    const rapidjson::Value value_;
-  };
-  if (illegal_ == nullptr) {
-    illegal_.reset(new IllegalUnionMember(*this));
   }
-  return *illegal_;
+  return nullptr;
+}
+
+std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder,
+                                               std::string_view name,
+                                               uint64_t offset,
+                                               bool nullable) const {
+  std::unique_ptr<UnionField> result =
+      std::make_unique<UnionField>(name, *this);
+  if (nullable) {
+    result->DecodeNullable(decoder, offset);
+  } else {
+    result->DecodeAt(decoder, offset);
+  }
+  return result;
 }
 
 std::unique_ptr<Type> StructMember::GetType() const {
   if (!value_.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
-    return Type::get_illegal();
+    return std::make_unique<RawType>(size());
   }
   const rapidjson::Value& type = value_["type"];
   return Type::GetType(
-      enclosing_struct().enclosing_library().enclosing_loader(), type);
+      enclosing_struct().enclosing_library().enclosing_loader(), type, size());
+}
+
+std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder,
+                                             std::string_view name,
+                                             uint64_t offset,
+                                             bool nullable) const {
+  std::unique_ptr<Object> result = std::make_unique<Object>(name, *this);
+  if (nullable) {
+    result->DecodeNullable(decoder, offset);
+  } else {
+    result->DecodeAt(decoder, offset);
+  }
+  return result;
 }
 
 std::unique_ptr<Type> TableMember::GetType() const {
   if (!value_.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
-    return Type::get_illegal();
+    return std::make_unique<RawType>(size());
   }
   const rapidjson::Value& type = value_["type"];
   return Type::GetType(enclosing_table().enclosing_library().enclosing_loader(),
-                       type);
+                       type, size());
 }
 
 Table::Table(const Library& enclosing_library, const rapidjson::Value& value)
@@ -181,14 +195,13 @@ Library::Library(const LibraryLoader& enclosing, rapidjson::Document& document)
   }
 }
 
-std::unique_ptr<Type> Library::TypeFromIdentifier(
-    bool is_nullable, std::string& identifier) const {
+std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable,
+                                                  std::string& identifier,
+                                                  size_t inline_size) const {
   auto str = structs_.find(identifier);
   if (str != structs_.end()) {
-    std::unique_ptr<Type> type(new StructType(std::ref(str->second)));
-    if (is_nullable) {
-      return std::make_unique<PointerType>(type.release());
-    }
+    std::unique_ptr<Type> type(
+        new StructType(std::ref(str->second), is_nullable));
     return type;
   }
   auto enu = enums_.find(identifier);
@@ -202,10 +215,8 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(
   }
   auto uni = unions_.find(identifier);
   if (uni != unions_.end()) {
-    std::unique_ptr<Type> type(new UnionType(std::ref(uni->second)));
-    if (is_nullable) {
-      return std::make_unique<PointerType>(type.release());
-    }
+    std::unique_ptr<Type> type(
+        new UnionType(std::ref(uni->second), is_nullable));
     return type;
   }
   auto xuni = xunions_.find(identifier);
@@ -213,7 +224,7 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(
     // Note: XUnion and nullable XUnion are encoded in the same way
     return std::make_unique<XUnionType>(std::ref(xuni->second), is_nullable);
   }
-  return Type::get_illegal();
+  return std::make_unique<RawType>(inline_size);
 }
 
 bool Library::GetInterfaceByName(const std::string& name,

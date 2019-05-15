@@ -4,6 +4,7 @@
 
 #include "wire_parser.h"
 
+#include "tools/fidlcat/lib/wire_object.h"
 #include "tools/fidlcat/lib/wire_types.h"
 
 namespace fidlcat {
@@ -46,31 +47,16 @@ void PrintMembers(FILE* fstream, const rapidjson::Value& value) {
 
 namespace {
 
-// Takes a Message which holds either a request or a response and extract a JSON
-// object which represents the message. The format of the message is specified
-// by str.
+// Takes a Message which holds either a request or a response and extracts a
+// JSON object which represents the message. The format of the message is
+// specified by str.
 // Returns true on success, false on failure.
 bool MessageToJSON(const Struct& str, const fidl::Message& message,
                    rapidjson::Document& result) {
-  result.SetObject();
-  const fidl::BytePart& bytes = message.bytes();
-  const fidl::HandlePart& handles = message.handles();
-
-  Marker end(bytes.end(), handles.end());
-  ObjectTracker tracker(end);
-  Marker marker(bytes.begin(), handles.begin(), tracker.end());
-
-  StructType type(str);
-  ValueGeneratingCallback value_callback;
-  marker = type.GetValueCallback(marker, str.size(), &tracker,
-                                 value_callback);
-  if (!marker.is_valid()) {
-    return false;
-  }
-
-  tracker.MessageEnqueue(std::move(value_callback), result,
-                         result.GetAllocator());
-  return tracker.RunCallbacksFrom(marker);
+  MessageDecoder decoder(message);
+  std::unique_ptr<Object> object = decoder.DecodeMessage(str);
+  object->ExtractJson(result.GetAllocator(), result);
+  return !decoder.HasError();
 }
 
 }  // anonymous namespace

@@ -14,10 +14,13 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 #include "library_loader.h"
+#include "message_decoder.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "test/fidlcat/examples/cpp/fidl.h"
 #include "tools/fidlcat/lib/library_loader_test_data.h"
+#include "wire_object.h"
+#include "wire_parser.h"
 
 namespace fidlcat {
 
@@ -148,8 +151,7 @@ TEST_F(WireParserTest, ParseSingleString) {
   fidlcat::RequestToJSON(method, message, actual);
 
   rapidjson::Document expected;
-  expected.Parse<rapidjson::kParseNumbersAsStringsFlag>(
-      R"JSON({"value":"one"})JSON");
+  expected.Parse(R"JSON({"value":"one"})JSON");
   ASSERT_EQ(expected, actual);
 }
 
@@ -187,8 +189,7 @@ TEST_F(WireParserTest, ParseSingleString) {
                                                                                \
     rapidjson::Document expected;                                              \
     std::string expected_source = _json_value;                                 \
-    expected.Parse<rapidjson::kParseNumbersAsStringsFlag>(                     \
-        expected_source.c_str());                                              \
+    expected.Parse(expected_source.c_str());                                   \
     rapidjson::StringBuffer expected_string;                                   \
     rapidjson::Writer<rapidjson::StringBuffer> expected_w(expected_string);    \
     expected.Accept(expected_w);                                               \
@@ -198,21 +199,19 @@ TEST_F(WireParserTest, ParseSingleString) {
         << expected_source << ")"                                              \
         << " and actual = " << actual_string.GetString();                      \
                                                                                \
-    /* Note we do might not check the last few bytes - we could be done */     \
-    /* parsing before end of the word-boundary aligned amount that was sent */ \
-    /* over the wire. */                                                       \
-    for (uint32_t actual = 0;                                                  \
-         message.bytes().actual() > ((actual + 7) & (~7)); actual++) {         \
+    for (uint32_t actual = 0; actual < message.bytes().actual(); ++actual) {   \
       fidl::HandlePart handles(message.handles().data(),                       \
                                message.handles().capacity(),                   \
                                message.handles().actual());                    \
       fidl::BytePart bytes(message.bytes().data(), message.bytes().capacity(), \
                            actual);                                            \
       fidl::Message message_copy(std::move(bytes), std::move(handles));        \
-      rapidjson::Document doc;                                                 \
-      ASSERT_FALSE(fidlcat::RequestToJSON(method, message_copy, doc))          \
-          << "bytes storage = " << message.bytes().actual()                    \
-          << " and succeeded when truncating to " << actual;                   \
+      MessageDecoder decoder(message_copy, /*output_errors=*/false);           \
+      std::unique_ptr<Object> object =                                         \
+          decoder.DecodeMessage(*method->request());                           \
+      ASSERT_TRUE(decoder.HasError())                                          \
+          << "expect decoding error for buffer size " << actual                \
+          << " instead of " << message.bytes().actual();                       \
     }                                                                          \
                                                                                \
     for (uint32_t actual = 0; message.handles().actual() > actual; actual++) { \
@@ -221,10 +220,12 @@ TEST_F(WireParserTest, ParseSingleString) {
       fidl::BytePart bytes(message.bytes().data(), message.bytes().capacity(), \
                            message.bytes().actual());                          \
       fidl::Message message_copy(std::move(bytes), std::move(handles));        \
-      rapidjson::Document doc;                                                 \
-      ASSERT_FALSE(fidlcat::RequestToJSON(method, message_copy, doc))          \
-          << "handle storage = " << message.handles().actual()                 \
-          << " and succeeded when truncating to " << actual;                   \
+      MessageDecoder decoder(message_copy, /*output_errors=*/false);           \
+      std::unique_ptr<Object> object =                                         \
+          decoder.DecodeMessage(*method->request());                           \
+      ASSERT_TRUE(decoder.HasError())                                          \
+          << "expect decoding error for handle size " << actual                \
+          << " instead of " << message.handles().actual();                     \
     }                                                                          \
   } while (0)
 

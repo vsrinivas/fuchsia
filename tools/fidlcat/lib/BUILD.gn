@@ -9,12 +9,17 @@ static_library("lib") {
 
   public = [
     "library_loader.h",
+    "memory_helpers.h",
+    "message_decoder.h",
+    "wire_object.h",
     "wire_parser.h",
     "wire_types.h",
   ]
 
   sources = [
     "library_loader.cc",
+    "message_decoder.cc",
+    "wire_object.cc",
     "wire_parser.cc",
     "wire_types.cc",
   ]

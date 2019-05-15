@@ -15,8 +15,8 @@
 // This file contains a programmatic representation of a FIDL schema.  A
 // LibraryLoader loads a set of Libraries.  The libraries contain structs,
 // enums, interfaces, and so on.  Each element has the logic necessary to take
-// wire-encoded bits of that type, and transform it to a JSON representation of
-// that type.
+// wire-encoded bits of that type, and transform it to a representation of that
+// type.
 
 // A LibraryLoader object can be used to fetch a particular library or interface
 // method, which can then be used for debug purposes.
@@ -50,15 +50,16 @@ struct LibraryReadError {
   rapidjson::ParseResult parse_result;
 };
 
-class Type;
+class Interface;
 class Library;
 class LibraryLoader;
-class Interface;
-class InterfaceMethod;
-class Enum;
+class MessageDecoder;
+class Object;
 class Struct;
 class Table;
+class Type;
 class Union;
+class UnionField;
 class XUnion;
 
 class Enum {
@@ -80,7 +81,7 @@ class Enum {
   // and you pass |bytes| a 2-byte representation of -23, and |length| 2, this
   // function will return "x".  Returns "(Unknown enum member)" if it can't find
   // the member.
-  std::string GetNameFromBytes(const uint8_t* bytes, size_t length) const;
+  std::string GetNameFromBytes(const uint8_t* bytes) const;
 
   uint32_t size() const;
 
@@ -93,39 +94,30 @@ class Enum {
 class UnionMember {
  public:
   UnionMember(const Union& enclosing_union, const rapidjson::Value& value)
-      : enclosing_union_(enclosing_union), value_(value) {}
+      : enclosing_union_(enclosing_union),
+        value_(value),
+        name_(value["name"].GetString()),
+        offset_(std::strtoll(value["offset"].GetString(), nullptr, 10)),
+        size_(std::strtoll(value["size"].GetString(), nullptr, 10)),
+        ordinal_(value.HasMember("ordinal")
+                     ? std::strtoll(value["ordinal"].GetString(), nullptr, 10)
+                     : 0) {}
 
-  virtual std::unique_ptr<Type> GetType() const;
+  const Union& enclosing_union() const { return enclosing_union_; }
+  std::string_view name() const { return name_; }
+  uint64_t size() const { return size_; }
+  uint64_t offset() const { return offset_; }
+  Ordinal ordinal() const { return ordinal_; }
 
-  virtual uint64_t size() const {
-    return std::strtoll(value_["size"].GetString(), nullptr, 10);
-  }
-
-  virtual uint64_t offset() const {
-    return std::strtoll(value_["offset"].GetString(), nullptr, 10);
-  }
-
-  virtual const std::string_view name() const {
-    return value_["name"].GetString();
-  }
-
-  virtual const Union& enclosing_union() const { return enclosing_union_; }
-
-  // Only valid for xunions.  TODO: clean this up when unions go away - at that
-  // point, there is no value in this method's being optional.
-  std::optional<Ordinal> ordinal() const {
-    if (value_.HasMember("ordinal")) {
-      return std::optional<Ordinal>(
-          std::strtoll(value_["ordinal"].GetString(), nullptr, 10));
-    }
-    return {};
-  }
-
-  virtual ~UnionMember() {}
+  std::unique_ptr<Type> GetType() const;
 
  private:
   const Union& enclosing_union_;
   const rapidjson::Value& value_;
+  const std::string name_;
+  const uint64_t offset_;
+  const uint64_t size_;
+  const Ordinal ordinal_;
 };
 
 class Union {
@@ -149,7 +141,9 @@ class Union {
 
   const std::vector<UnionMember>& members() const { return members_; }
 
-  const UnionMember& MemberWithTag(uint32_t tag) const;
+  const UnionMember* MemberWithTag(uint32_t tag) const;
+
+  const UnionMember* MemberWithOrdinal(Ordinal ordinal) const;
 
   uint64_t alignment() const {
     return std::strtoll(value_["alignment"].GetString(), nullptr, 10);
@@ -159,13 +153,15 @@ class Union {
     return std::strtoll(value_["size"].GetString(), nullptr, 10);
   }
 
+  std::unique_ptr<UnionField> DecodeUnion(MessageDecoder* decoder,
+                                          std::string_view name,
+                                          uint64_t offset, bool nullable) const;
+
  protected:
   const Library& enclosing_library_;
   const rapidjson::Value& value_;
 
  private:
-  const UnionMember& get_illegal_member() const;
-
   std::vector<UnionMember> members_;
   mutable std::unique_ptr<UnionMember> illegal_;
 };
@@ -223,14 +219,18 @@ class Struct {
 
   const Library& enclosing_library() const { return enclosing_library_; }
 
+  uint32_t size() const { return size_; }
+
   const std::vector<StructMember>& members() const { return members_; }
 
-  uint32_t size() const { return size_; }
+  std::unique_ptr<Object> DecodeObject(MessageDecoder* decoder,
+                                       std::string_view name, uint64_t offset,
+                                       bool nullable) const;
 
  private:
   const Library& enclosing_library_;
   const rapidjson::Value& value_;
-  uint32_t size_;
+  const uint32_t size_;
   std::vector<StructMember> members_;
 };
 
@@ -391,7 +391,8 @@ class Library {
   const LibraryLoader& enclosing_loader() const { return enclosing_loader_; }
 
   std::unique_ptr<Type> TypeFromIdentifier(bool is_nullable,
-                                           std::string& identifier) const;
+                                           std::string& identifier,
+                                           size_t inline_size) const;
 
   // The size of the type with name |identifier| when it is inline (e.g.,
   // embedded in an array)
