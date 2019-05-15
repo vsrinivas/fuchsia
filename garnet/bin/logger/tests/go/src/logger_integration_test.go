@@ -15,7 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syslog/logger"
+	"syslog"
 	"testing"
 	"time"
 )
@@ -32,10 +32,10 @@ func TestFullStack(t *testing.T) {
 	tag := genTag()
 
 	ctx := context.CreateFromStartupInfo()
-	if err := logger.InitDefaultLoggerWithTags(ctx.Connector(), tag); err != nil {
+	if err := syslog.InitDefaultLoggerWithTags(ctx.Connector(), tag); err != nil {
 		t.Fatal(err)
 	}
-	if err := logger.Infof("integer: %d", 10); err != nil {
+	if err := syslog.Infof("integer: %d", 10); err != nil {
 		t.Fatal(err)
 	}
 
@@ -54,7 +54,7 @@ func TestFullStack(t *testing.T) {
 		tagToIgnore = genTag()
 	}
 
-	if err := logger.InfoTf(tagToIgnore, "integer: NaN"); err != nil {
+	if err := syslog.InfoTf(tagToIgnore, "integer: NaN"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -66,7 +66,7 @@ func TestFullStack(t *testing.T) {
 		testListingAndIgnoringTag(t, tag, tagToIgnore, expected)
 	})
 
-	if err := logger.Warnf("integer: %d", 20); err != nil {
+	if err := syslog.Warnf("integer: %d", 20); err != nil {
 		t.Fatal(err)
 	}
 

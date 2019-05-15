@@ -19,7 +19,7 @@ import (
 	"app/context"
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/pkg"
-	"syslog/logger"
+	"syslog"
 )
 
 type Package struct {
@@ -32,7 +32,7 @@ func ConnectToPackageResolver() (*pkg.PackageResolverInterface, error) {
 	req, pxy, err := pkg.NewPackageResolverInterfaceRequest()
 
 	if err != nil {
-		logger.Errorf("control interface could not be acquired: %s", err)
+		syslog.Errorf("control interface could not be acquired: %s", err)
 		return nil, err
 	}
 
@@ -89,7 +89,7 @@ func FetchPackages(pkgs []*Package, resolver *pkg.PackageResolverInterface) erro
 	var errCount int
 	for _, pkg := range pkgs {
 		if err := fetchPackage(pkg, resolver); err != nil {
-			logger.Errorf("fetch error: %s", err)
+			syslog.Errorf("fetch error: %s", err)
 			errCount++
 		}
 	}
@@ -116,7 +116,7 @@ func fetchPackage(p *Package, resolver *pkg.PackageResolverInterface) error {
 	dirReq, dirPxy, err := fuchsiaio.NewDirectoryInterfaceRequest()
 	defer dirPxy.Close()
 
-	logger.Infof("requesting %s from update system", pkgUri)
+	syslog.Infof("requesting %s from update system", pkgUri)
 
 	status, err := resolver.Resolve(pkgUri, selectors, updatePolicy, dirReq)
 	if err != nil {
@@ -154,12 +154,12 @@ func ValidateImgs(imgs []string, imgsPath string) error {
 }
 
 func WriteImgs(imgs []string, imgsPath string) error {
-	logger.Infof("Writing images %+v from %q", imgs, imgsPath)
+	syslog.Infof("Writing images %+v from %q", imgs, imgsPath)
 
 	for _, img := range imgs {
 		imgPath := filepath.Join(imgsPath, img)
 		if fi, err := os.Stat(imgPath); err != nil || fi.Size() == 0 {
-			logger.Warnf("img_writer: %q image not found or zero length, skipping", img)
+			syslog.Warnf("img_writer: %q image not found or zero length, skipping", img)
 			continue
 		}
 
@@ -181,19 +181,19 @@ func WriteImgs(imgs []string, imgsPath string) error {
 			return fmt.Errorf("unrecognized image %q", img)
 		}
 
-		logger.Infof("img_writer: writing %q from %q", img, imgPath)
+		syslog.Infof("img_writer: writing %q from %q", img, imgPath)
 		out, err := writeImg(c, imgPath)
 		if len(out) != 0 {
-			logger.Infof("img_writer: %s", string(out))
+			syslog.Infof("img_writer: %s", string(out))
 		}
 		if err != nil {
-			logger.Errorf("img_writer: error writing %q from %q: %s", img, imgPath, err)
+			syslog.Errorf("img_writer: error writing %q from %q: %s", img, imgPath, err)
 			if len(out) != 0 {
-				logger.Errorf("img_writer: %s", string(out))
+				syslog.Errorf("img_writer: %s", string(out))
 			}
 			return err
 		}
-		logger.Infof("img_writer: wrote %q successfully from %q", img, imgPath)
+		syslog.Infof("img_writer: wrote %q successfully from %q", img, imgPath)
 	}
 	return nil
 }

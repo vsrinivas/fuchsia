@@ -16,8 +16,8 @@ go_library("syslog") {
   ]
 }
 
-go_test("syslog_logger_test") {
-  gopackage = "syslog/logger"
+go_test("syslog_test") {
+  gopackage = "syslog"
   deps = [
     ":syslog",
   ]
@@ -27,13 +27,13 @@ package("syslog_gotests") {
   testonly = true
 
   deps = [
-    ":syslog_logger_test",
+    ":syslog_test",
   ]
 
   tests = [
     {
-      name = "syslog_logger_test"
-      environments = basic_envs
+      name = "syslog_test"
+      environments = [ qemu_env ]
     },
   ]
 }

@@ -7,13 +7,13 @@
 package netstack
 
 import (
-	"syslog/logger"
+	"syslog"
 
 	"net/http"
 	_ "net/http/pprof"
 )
 
 func pprofListen() {
-	logger.Infof("starting http server on port 6060")
-	logger.Infof("%v", http.ListenAndServe(":6060", nil))
+	syslog.Infof("starting http server on port 6060")
+	syslog.Infof("%v", http.ListenAndServe(":6060", nil))
 }

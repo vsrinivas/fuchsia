@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"syslog/logger"
+	"syslog"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -176,7 +176,7 @@ func (s *State) updateStateUDP(dir Direction, dataLen uint16) error {
 		s.expireTime = time.Now().Add(UDPExpireDefault)
 	}
 
-	logger.VLogTf(logger.TraceVerbosity, tag, "updated state: %v", s)
+	syslog.VLogTf(syslog.TraceVerbosity, tag, "updated state: %v", s)
 	return nil
 }
 
@@ -302,7 +302,7 @@ func (s *State) updateStateTCP(dir Direction, dataLen uint16, win uint16, seq, a
 	}
 
 	if chatty {
-		logger.VLogTf(logger.TraceVerbosity, tag, "updated state: %v", s)
+		syslog.VLogTf(syslog.TraceVerbosity, tag, "updated state: %v", s)
 	}
 	return nil
 }
@@ -423,7 +423,7 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 		now := time.Now()
 		for k, s := range ss.extToGwy {
 			if now.After(s.expireTime) {
-				logger.VLogTf(logger.TraceVerbosity, tag, "delete state: %v (ExtToGwy) expire: %v now: %v", s, s.expireTime, now)
+				syslog.VLogTf(syslog.TraceVerbosity, tag, "delete state: %v (ExtToGwy) expire: %v now: %v", s, s.expireTime, now)
 				delete(ss.extToGwy, k)
 			}
 			if s.rsvdPort != 0 {
@@ -434,13 +434,13 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 		}
 		for k, s := range ss.lanToExt {
 			if now.After(s.expireTime) {
-				logger.VLogTf(logger.TraceVerbosity, tag, "delete state: %v (LanToExt) expire: %v now: %v", s, s.expireTime, now)
+				syslog.VLogTf(syslog.TraceVerbosity, tag, "delete state: %v (LanToExt) expire: %v now: %v", s, s.expireTime, now)
 				delete(ss.lanToExt, k)
 			}
 		}
 		for k, s := range ss.lockKeyToMut {
 			if now.After(s.expireTime) {
-				logger.VLogTf(logger.TraceVerbosity, tag, "delete mutex: %v (ext)", k)
+				syslog.VLogTf(syslog.TraceVerbosity, tag, "delete mutex: %v (ext)", k)
 				delete(ss.lockKeyToMut, k)
 			}
 		}
@@ -600,7 +600,7 @@ func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolN
 	ss.lanToExt[kLanToExt] = s
 	ss.extToGwy[kExtToGwy] = s
 
-	logger.VLogTf(logger.TraceVerbosity, tag, "new state: %v", s)
+	syslog.VLogTf(syslog.TraceVerbosity, tag, "new state: %v", s)
 
 	return s
 }

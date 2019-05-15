@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"syslog/logger"
+	"syslog"
 
 	"golang.org/x/net/dns/dnsmessage"
 )
@@ -136,18 +136,18 @@ func (cache *cacheInfo) insert(rr dnsmessage.Resource) {
 				existing.ttd = newEntry.ttd
 			}
 		}
-		logger.VLogTf(logger.TraceVerbosity, tag, "DNS cache update: %v(%v) expires %v", h.Name, h.Type, existing.ttd)
+		syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache update: %v(%v) expires %v", h.Name, h.Type, existing.ttd)
 		return
 	}
 	if cache.numEntries+1 <= maxEntries {
-		logger.VLogTf(logger.TraceVerbosity, tag, "DNS cache insert: %v(%v) expires %v", h.Name, h.Type, newEntry.ttd)
+		syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache insert: %v(%v) expires %v", h.Name, h.Type, newEntry.ttd)
 		cache.m[h.Name] = append(entries, newEntry)
 		cache.numEntries++
 	} else {
 		// TODO(mpcomplete): might be better to evict the LRU entry instead.
 		// TODO(mpcomplete): RFC 1035 7.4 says that if we can't cache this RR, we
 		// shouldn't cache any other RRs for the same name in this response.
-		logger.WarnTf(tag, "DNS cache is full; insert failed: %v(%v)", h.Name, h.Type)
+		syslog.WarnTf(tag, "DNS cache is full; insert failed: %v(%v)", h.Name, h.Type)
 	}
 }
 
@@ -223,11 +223,11 @@ func newCachedResolver(fallback Resolver) Resolver {
 		rrs := cache.lookup(question)
 		cache.mu.Unlock()
 		if len(rrs) != 0 {
-			logger.VLogTf(logger.TraceVerbosity, tag, "DNS cache hit %v(%v) => %v", question.Name, question.Type, rrs)
+			syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache hit %v(%v) => %v", question.Name, question.Type, rrs)
 			return dnsmessage.Name{}, rrs, dnsmessage.Message{}, nil
 		}
 
-		logger.VLogTf(logger.TraceVerbosity, tag, "DNS cache miss for the message %v(%v)", question.Name, question.Type)
+		syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache miss for the message %v(%v)", question.Name, question.Type)
 		cname, rrs, msg, err := fallback(c, question)
 		if err != nil {
 			mu.Lock()
@@ -237,13 +237,13 @@ func newCachedResolver(fallback Resolver) Resolver {
 			}
 			mu.Unlock()
 			if !throttled {
-				time.AfterFunc(10 * time.Second, func() {
+				time.AfterFunc(10*time.Second, func() {
 					mu.Lock()
 					delete(mu.throttled, question)
 					mu.Unlock()
 				})
 
-				logger.WarnTf(tag, "%s", err)
+				syslog.WarnTf(tag, "%s", err)
 			}
 		}
 

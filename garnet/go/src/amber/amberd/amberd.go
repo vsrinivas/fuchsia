@@ -26,7 +26,7 @@ import (
 	"fidl/fuchsia/amber"
 
 	"app/context"
-	"syslog/logger"
+	"syslog"
 )
 
 const (
@@ -126,7 +126,7 @@ func (l *logWriter) Write(data []byte) (n int, err error) {
 		data = data[:len(data)-1]
 	}
 
-	if err := logger.Infof("%s", data); err != nil {
+	if err := syslog.Infof("%s", data); err != nil {
 		return 0, err
 	}
 
@@ -134,7 +134,7 @@ func (l *logWriter) Write(data []byte) (n int, err error) {
 }
 
 func registerLogger(ctx *context.Context) {
-	if err := logger.InitDefaultLoggerWithTags(ctx.Connector(), "amber"); err != nil {
+	if err := syslog.InitDefaultLoggerWithTags(ctx.Connector(), "amber"); err != nil {
 		log.Printf("error initializing syslog interface: %s", err)
 	}
 	log.SetOutput(&logWriter{})

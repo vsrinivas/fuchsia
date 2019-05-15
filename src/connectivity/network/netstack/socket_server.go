@@ -18,7 +18,7 @@ import (
 	"syscall/zx/zxwait"
 
 	"netstack/fidlconv"
-	"syslog/logger"
+	"syslog"
 
 	"fidl/fuchsia/net"
 
@@ -349,13 +349,13 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 func (ios *iostate) loopControl() error {
 	defer func() {
 		if code, err := ios.Close(); err != nil {
-			logger.Errorf("SocketControl.Close failed: %s", err)
+			syslog.Errorf("SocketControl.Close failed: %s", err)
 		} else if code != 0 {
-			logger.Errorf("SocketControl.Close failed: %s", syscall.Errno(code))
+			syslog.Errorf("SocketControl.Close failed: %s", syscall.Errno(code))
 		}
 
 		if err := ios.dataHandle.Close(); err != nil {
-			logger.Errorf("dataHandle.Close() failed: %s", err)
+			syslog.Errorf("dataHandle.Close() failed: %s", err)
 		}
 	}()
 
@@ -484,14 +484,14 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 
 	go func() {
 		if err := ios.loopControl(); err != nil {
-			logger.Errorf("%p: loopControl: %s", ios, err)
+			syslog.Errorf("%p: loopControl: %s", ios, err)
 		}
 	}()
 	go func() {
 		defer ios.wq.EventUnregister(&inEntry)
 
 		if err := ios.loopRead(inCh); err != nil {
-			logger.VLogf(logger.DebugVerbosity, "%p: loopRead: %s", ios, err)
+			syslog.VLogf(syslog.DebugVerbosity, "%p: loopRead: %s", ios, err)
 		}
 		if err := ios.dataHandle.Shutdown(zx.SocketShutdownWrite); err != nil {
 			if err, ok := err.(*zx.Error); ok {
@@ -500,14 +500,14 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 					return
 				}
 			}
-			logger.Warnf("%p: %s", ios, err)
+			syslog.Warnf("%p: %s", ios, err)
 		}
 	}()
 	go func() {
 		defer close(ios.loopWriteDone)
 
 		if err := ios.loopWrite(); err != nil {
-			logger.VLogf(logger.DebugVerbosity, "%p: loopWrite: %s", ios, err)
+			syslog.VLogf(syslog.DebugVerbosity, "%p: loopWrite: %s", ios, err)
 		}
 		if err := ios.dataHandle.Shutdown(zx.SocketShutdownRead); err != nil {
 			if err, ok := err.(*zx.Error); ok {
@@ -516,7 +516,7 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 					return
 				}
 			}
-			logger.Warnf("%p: %s", ios, err)
+			syslog.Warnf("%p: %s", ios, err)
 		}
 	}()
 
@@ -534,7 +534,7 @@ func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
 		info, err := ifs.toNetInterface2Locked()
 		ifs.mu.Unlock()
 		if err != nil {
-			logger.Errorf("NIC %d: error getting info: %s", ifs.nicid, err)
+			syslog.Errorf("NIC %d: error getting info: %s", ifs.nicid, err)
 			continue
 		}
 		if info.Addr == fidlconv.ToNetIpAddress(ipv4Loopback) {
@@ -591,7 +591,7 @@ func tcpipErrorToCode(err *tcpip.Error) int16 {
 			}
 			errStr = fmt.Sprintf("%s:%d: %s", file, line, errStr)
 		}
-		logger.VLogf(logger.DebugVerbosity, errStr)
+		syslog.VLogf(syslog.DebugVerbosity, errStr)
 	}
 	switch err {
 	case tcpip.ErrUnknownDevice:
@@ -705,7 +705,7 @@ func (ios *iostate) Listen(backlog int16) (int16, error) {
 	if err != nil {
 		panic(err)
 	}
-	logger.InfoTf("listen", "%p: local=%+v", ios, addr)
+	syslog.InfoTf("listen", "%p: local=%+v", ios, addr)
 
 	return 0, nil
 }
@@ -739,7 +739,7 @@ func (ios *iostate) Accept(flags int16) (int16, error) {
 	if err != nil {
 		panic(err)
 	}
-	logger.InfoTf("accept", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
+	syslog.InfoTf("accept", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
 
 	return 0, nil
 }
@@ -818,16 +818,16 @@ func (ios *iostate) Ioctl(req int16, in []uint8) (int16, []uint8, error) {
 	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
 	case ioctlNetcGetIfInfoAt:
 		if lastIfInfo == nil {
-			logger.Infof("ioctlNetcGetIfInfoAt: called before ioctlNetcGetNumIfs")
+			syslog.Infof("ioctlNetcGetIfInfoAt: called before ioctlNetcGetNumIfs")
 			return tcpipErrorToCode(tcpip.ErrInvalidEndpointState), nil, nil
 		}
 		if len(in) != 4 {
-			logger.Errorf("ioctlNetcGetIfInfoAt: bad input length %d", len(in))
+			syslog.Errorf("ioctlNetcGetIfInfoAt: bad input length %d", len(in))
 			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil, nil
 		}
 		requestedIndex := binary.LittleEndian.Uint32(in)
 		if requestedIndex >= uint32(lastIfInfo.n_info) {
-			logger.Infof("ioctlNetcGetIfInfoAt: index out of range (%d vs %d)", requestedIndex, lastIfInfo.n_info)
+			syslog.Infof("ioctlNetcGetIfInfoAt: index out of range (%d vs %d)", requestedIndex, lastIfInfo.n_info)
 			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil, nil
 		}
 		return 0, lastIfInfo.info[requestedIndex].Marshal(), nil

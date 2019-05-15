@@ -50,7 +50,7 @@ import (
 
 	"netstack/link"
 
-	"syslog/logger"
+	"syslog"
 
 	"fidl/fuchsia/hardware/ethernet"
 )
@@ -112,7 +112,7 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		if err.(*zx.Error).Status != zx.ErrNotSupported {
 			return nil, err
 		}
-		logger.Warnf("%s", err)
+		syslog.Warnf("%s", err)
 	}
 	info, err := device.GetInfo()
 	if err != nil {
@@ -239,10 +239,10 @@ func (c *Client) closeLocked() error {
 	}
 
 	if err := c.fifos.Tx.Close(); err != nil {
-		logger.Warnf("eth: failed to close tx fifo: %s", err)
+		syslog.Warnf("eth: failed to close tx fifo: %s", err)
 	}
 	if err := c.fifos.Rx.Close(); err != nil {
-		logger.Warnf("eth: failed to close rx fifo: %s", err)
+		syslog.Warnf("eth: failed to close rx fifo: %s", err)
 	}
 	c.tmpbuf = c.tmpbuf[:0]
 	c.recvbuf = c.recvbuf[:0]
@@ -438,9 +438,9 @@ func (c *Client) WaitRecv() {
 			// TODO(): The wired Ethernet should receive this signal upon being
 			// hooked up with a (an active) Ethernet cable.
 			if status, err := c.GetStatus(); err != nil {
-				logger.WarnTf("eth", "status error: %s", err)
+				syslog.WarnTf("eth", "status error: %s", err)
 			} else {
-				logger.VLogTf(logger.TraceVerbosity, "eth", "status: %d", status)
+				syslog.VLogTf(syslog.TraceVerbosity, "eth", "status: %d", status)
 
 				c.mu.Lock()
 				switch status {

@@ -7,7 +7,7 @@ package netstack
 import (
 	"syscall/zx"
 
-	"syslog/logger"
+	"syslog"
 
 	"netstack/util"
 
@@ -96,7 +96,7 @@ func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *
 
 	code, transProto := toTransProto(int16(hints.SockType), int16(hints.Protocol))
 	if code != 0 {
-		logger.VLogf(logger.DebugVerbosity, "getaddrinfo: sockProto: %d", code)
+		syslog.VLogf(syslog.DebugVerbosity, "getaddrinfo: sockProto: %d", code)
 		return net.AddrInfoStatusSystemError, 0, [4]net.AddrInfo{}, nil
 	}
 
@@ -104,7 +104,7 @@ func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *
 	if service != nil && *service != "" {
 		var err error
 		if port, err = serviceLookup(*service, transProto); err != nil {
-			logger.VLogf(logger.DebugVerbosity, "getaddrinfo: serviceLookup: %v", err)
+			syslog.VLogf(syslog.DebugVerbosity, "getaddrinfo: serviceLookup: %v", err)
 			return net.AddrInfoStatusSystemError, 0, [4]net.AddrInfo{}, nil
 		}
 	}
@@ -128,7 +128,7 @@ func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *
 		var err error
 		if addrs, err = sp.ns.dnsClient.LookupIP(*node); err != nil {
 			addrs = append(addrs, util.Parse(*node))
-			logger.VLogf(logger.DebugVerbosity, "getaddrinfo: addr=%v, err=%v", addrs, err)
+			syslog.VLogf(syslog.DebugVerbosity, "getaddrinfo: addr=%v, err=%v", addrs, err)
 		}
 	}
 
@@ -161,7 +161,7 @@ func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *
 			ai.Family = C.AF_INET6
 			ai.Addr.Len = uint32(copy(ai.Addr.Val[:], addr))
 		default:
-			logger.VLogf(logger.DebugVerbosity, "getaddrinfo: len(addr)=%d, wrong size", len(addr))
+			syslog.VLogf(syslog.DebugVerbosity, "getaddrinfo: len(addr)=%d, wrong size", len(addr))
 			// TODO: failing to resolve is a valid reply. fill out retval
 			return net.AddrInfoStatusSystemError, 0, results, nil
 		}

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package logger_test
+package syslog_test
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 	"os"
 	"strings"
 	"syscall/zx"
-	"syslog/logger"
+	"syslog"
 	"testing"
 )
 
@@ -22,14 +22,14 @@ var (
 )
 
 func TestLogSimpleWithWriter(t *testing.T) {
-	options := logger.GetDefaultInitOptions()
+	options := syslog.GetDefaultInitOptions()
 	tmpFile, err := ioutil.TempFile("", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(tmpFile.Name())
 	options.ConsoleWriter = tmpFile
-	logger, err := logger.NewLogger(options)
+	logger, err := syslog.NewLogger(options)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,23 +47,23 @@ func TestLogSimpleWithWriter(t *testing.T) {
 		t.Errorf("%q should contains %d", got, Pid)
 	}
 }
-func setup(t *testing.T, tags ...string) (zx.Socket, *logger.Logger) {
-	options := logger.GetDefaultInitOptions()
+func setup(t *testing.T, tags ...string) (zx.Socket, *syslog.Logger) {
+	options := syslog.GetDefaultInitOptions()
 	options.Tags = tags
-	sin, sout, err := zx.NewSocket(logger.SOCKET_DATAGRAM)
+	sin, sout, err := zx.NewSocket(syslog.SOCKET_DATAGRAM)
 	if err != nil {
 		t.Fatal(err)
 	}
 	options.LogServiceChannel = &sout
-	log, err := logger.NewLogger(options)
+	log, err := syslog.NewLogger(options)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return sin, log
 }
 
-func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity logger.LogLevel, tags ...string) {
-	var data [logger.SOCKET_BUFFER_LEN]byte
+func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity syslog.LogLevel, tags ...string) {
+	var data [syslog.SOCKET_BUFFER_LEN]byte
 	if n, err := sin.Read(data[:], 0); err != nil {
 		t.Fatal(err)
 	} else {
@@ -129,7 +129,7 @@ func TestLogSimple(t *testing.T) {
 	format := "integer: %d"
 	log.Infof(format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, logger.InfoLevel)
+	checkoutput(t, sin, expectedMsg, syslog.InfoLevel)
 }
 
 func TestLogWithLocalTag(t *testing.T) {
@@ -137,7 +137,7 @@ func TestLogWithLocalTag(t *testing.T) {
 	format := "integer: %d"
 	log.InfoTf("local_tag", format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, logger.InfoLevel, "local_tag")
+	checkoutput(t, sin, expectedMsg, syslog.InfoLevel, "local_tag")
 }
 
 func TestLogWithGlobalTags(t *testing.T) {
@@ -145,13 +145,13 @@ func TestLogWithGlobalTags(t *testing.T) {
 	format := "integer: %d"
 	log.InfoTf("local_tag", format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, logger.InfoLevel, "gtag1", "gtag2", "local_tag")
+	checkoutput(t, sin, expectedMsg, syslog.InfoLevel, "gtag1", "gtag2", "local_tag")
 }
 
 func TestLoggerSeverity(t *testing.T) {
 	sin, log := setup(t)
 	format := "integer: %d"
-	log.SetSeverity(logger.WarningLevel)
+	log.SetSeverity(syslog.WarningLevel)
 	log.Infof(format, 10)
 	_, err := sin.Read(make([]byte, 0), 0)
 	if err, ok := err.(*zx.Error); !ok || err.Status != zx.ErrShouldWait {
@@ -159,41 +159,41 @@ func TestLoggerSeverity(t *testing.T) {
 	}
 	log.Warnf(format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, logger.WarningLevel)
+	checkoutput(t, sin, expectedMsg, syslog.WarningLevel)
 }
 
 func TestLoggerVerbosity(t *testing.T) {
 	sin, log := setup(t)
 	format := "integer: %d"
-	log.VLogf(logger.TraceVerbosity, format, 10)
+	log.VLogf(syslog.TraceVerbosity, format, 10)
 	_, err := sin.Read(make([]byte, 0), 0)
 	if err, ok := err.(*zx.Error); !ok || err.Status != zx.ErrShouldWait {
 		t.Fatal(err)
 	}
 	log.SetVerbosity(2)
-	log.VLogf(logger.TraceVerbosity, format, 10)
+	log.VLogf(syslog.TraceVerbosity, format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, logger.LogLevel(-2))
+	checkoutput(t, sin, expectedMsg, syslog.LogLevel(-2))
 }
 
 func TestGlobalTagLimits(t *testing.T) {
-	options := logger.GetDefaultInitOptions()
+	options := syslog.GetDefaultInitOptions()
 	options.ConsoleWriter = os.Stdout
-	tags := [logger.MAX_GLOBAL_TAGS + 1]string{}
+	tags := [syslog.MAX_GLOBAL_TAGS + 1]string{}
 	for i := 0; i < len(tags); i++ {
 		tags[i] = "a"
 	}
 	options.Tags = tags[:]
-	if _, err := logger.NewLogger(options); err != logger.ErrInvalidArg {
+	if _, err := syslog.NewLogger(options); err != syslog.ErrInvalidArg {
 		t.Fatalf("expected error 'ErrInvalidArg' got: %s", err)
 	}
-	options.Tags = tags[0:logger.MAX_GLOBAL_TAGS]
-	var tag [logger.MAX_TAG_LEN + 1]byte
+	options.Tags = tags[0:syslog.MAX_GLOBAL_TAGS]
+	var tag [syslog.MAX_TAG_LEN + 1]byte
 	for i := 0; i < len(tag); i++ {
 		tag[i] = 65
 	}
 	options.Tags[1] = string(tag[:])
-	if _, err := logger.NewLogger(options); err != logger.ErrInvalidArg {
+	if _, err := syslog.NewLogger(options); err != syslog.ErrInvalidArg {
 		t.Fatalf("expected error 'ErrInvalidArg' got: %s", err)
 	}
 }
@@ -201,13 +201,13 @@ func TestGlobalTagLimits(t *testing.T) {
 func TestLocalTagLimits(t *testing.T) {
 	sin, log := setup(t)
 	format := "integer: %d"
-	var tag [logger.MAX_TAG_LEN + 1]byte
+	var tag [syslog.MAX_TAG_LEN + 1]byte
 	for i := 0; i < len(tag); i++ {
 		tag[i] = 65
 	}
 	log.InfoTf(string(tag[:]), format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, logger.InfoLevel, string(tag[:logger.MAX_TAG_LEN]))
+	checkoutput(t, sin, expectedMsg, syslog.InfoLevel, string(tag[:syslog.MAX_TAG_LEN]))
 }
 
 func TestFallback(t *testing.T) {
@@ -265,10 +265,10 @@ func TestFallbackWhenSocketCloses(t *testing.T) {
 
 func TestMessageLenLimit(t *testing.T) {
 	sin, log := setup(t)
-	msgLen := logger.SOCKET_BUFFER_LEN - 32 - 1 - 1 // 1 for starting and ending null bytes
+	msgLen := syslog.SOCKET_BUFFER_LEN - 32 - 1 - 1 // 1 for starting and ending null bytes
 	format := fmt.Sprintf("%%0%ddstart", msgLen-3)
 	if err := log.Infof(format, 10); err != nil {
-		if err2 := logger.ToErrMsgTooLong(err); err2 == nil {
+		if err2 := syslog.ToErrMsgTooLong(err); err2 == nil {
 			t.Fatal(err)
 		} else {
 			if err2.Msg != "start" {
@@ -281,5 +281,5 @@ func TestMessageLenLimit(t *testing.T) {
 	expectedMsgBytes = expectedMsgBytes[:msgLen]
 	copy(expectedMsgBytes[msgLen-3:msgLen], "...")
 	expectedMsg = string(expectedMsgBytes[:]) // "<0000...ntimes>10..."
-	checkoutput(t, sin, expectedMsg, logger.InfoLevel)
+	checkoutput(t, sin, expectedMsg, syslog.InfoLevel)
 }

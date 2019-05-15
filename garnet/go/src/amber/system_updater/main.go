@@ -9,14 +9,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
+	"time"
 
 	"app/context"
 	devmgr "fidl/fuchsia/device/manager"
-	"syslog/logger"
+	"syslog"
 
 	"metrics"
 )
@@ -38,13 +38,13 @@ func run() (err error) {
 		queryFreeSpace = func() int64 {
 			n, err := blobfs.QueryFreeSpace()
 			if err != nil {
-				logger.Errorf("error querying blobfs free space! %s", err)
+				syslog.Errorf("error querying blobfs free space! %s", err)
 				return -1
 			}
 			return n
 		}
 	} else {
-		logger.Errorf("error opening blobfs! %s", err)
+		syslog.Errorf("error opening blobfs! %s", err)
 		queryFreeSpace = func() int64 {
 			return -1
 		}
@@ -70,7 +70,7 @@ func run() (err error) {
 				ErrorCode:      -1,
 			})
 			if err := history.Save(); err != nil {
-				logger.Errorf("error writing update history: %s", err)
+				syslog.Errorf("error writing update history: %s", err)
 			}
 		}
 	}()
@@ -105,7 +105,7 @@ func run() (err error) {
 		return fmt.Errorf("failed getting packages: %s", err)
 	}
 
-	if err:= ValidateImgs(imgs, dataPath); err != nil {
+	if err := ValidateImgs(imgs, dataPath); err != nil {
 		return fmt.Errorf("failed to validate imgs: %s", err)
 	}
 
@@ -131,14 +131,14 @@ func run() (err error) {
 	})
 
 	if err := UpdateCurrentChannel(); err != nil {
-		logger.Errorf("%v", err)
+		syslog.Errorf("%v", err)
 	}
 
 	if err := history.Save(); err != nil {
-		logger.Errorf("error writing update history: %s", err)
+		syslog.Errorf("error writing update history: %s", err)
 	}
 
-	logger.Infof("system update complete, rebooting...")
+	syslog.Infof("system update complete, rebooting...")
 
 	SendReboot()
 
@@ -148,14 +148,14 @@ func run() (err error) {
 func SendReboot() {
 	channel_local, channel_remote, err := zx.NewChannel(0)
 	if err != nil {
-		logger.Errorf("error creating channel: %s", err)
+		syslog.Errorf("error creating channel: %s", err)
 		return
 	}
 
 	err = fdio.ServiceConnect(
 		"/svc/fuchsia.device.manager.Administrator", zx.Handle(channel_remote))
 	if err != nil {
-		logger.Errorf("error connecting to devmgr service: %s", err)
+		syslog.Errorf("error connecting to devmgr service: %s", err)
 		return
 	}
 
@@ -164,7 +164,7 @@ func SendReboot() {
 	var status int32
 	status, err = administrator.Suspend(devmgr.SuspendFlagReboot)
 	if err != nil || status != 0 {
-		logger.Errorf("error sending restart to Administrator: %s status: %d", err, status)
+		syslog.Errorf("error sending restart to Administrator: %s status: %d", err, status)
 	}
 }
 
@@ -185,7 +185,7 @@ func (i InitiatorValue) Set(s string) error {
 
 func Main() {
 	ctx := context.CreateFromStartupInfo()
-	if err := logger.InitDefaultLoggerWithTags(ctx.Connector(), "system_updater"); err != nil {
+	if err := syslog.InitDefaultLoggerWithTags(ctx.Connector(), "system_updater"); err != nil {
 		fmt.Printf("error initializing syslog interface: %s\n", err)
 	}
 
@@ -200,6 +200,6 @@ func Main() {
 	startTime = time.Unix(0, *start)
 
 	if err := run(); err != nil {
-		logger.Fatalf("%s", err)
+		syslog.Fatalf("%s", err)
 	}
 }

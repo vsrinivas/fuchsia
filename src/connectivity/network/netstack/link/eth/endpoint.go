@@ -6,7 +6,7 @@ package eth
 
 import (
 	"syscall/zx"
-	"syslog/logger"
+	"syslog"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -41,7 +41,7 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 			break
 		}
 		if err := e.client.WaitSend(); err != nil {
-			logger.VLogTf(logger.DebugVerbosity, "eth", "wait error: %s", err)
+			syslog.VLogTf(syslog.DebugVerbosity, "eth", "wait error: %s", err)
 			return tcpip.ErrWouldBlock
 		}
 	}
@@ -63,11 +63,11 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 		used += copy(buf[used:], v)
 	}
 	if err := e.client.Send(buf[:used]); err != nil {
-		logger.VLogTf(logger.DebugVerbosity, "eth", "send error: %s", err)
+		syslog.VLogTf(syslog.DebugVerbosity, "eth", "send error: %s", err)
 		return tcpip.ErrWouldBlock
 	}
 
-	logger.VLogTf(logger.TraceVerbosity, "eth", "write=%d", used)
+	syslog.VLogTf(syslog.TraceVerbosity, "eth", "write=%d", used)
 
 	return nil
 }
@@ -94,7 +94,7 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 				dispatcher.DeliverNetworkPacket(e, eth.SourceAddress(), eth.DestinationAddress(), eth.Type(), v.ToVectorisedView())
 			}
 		}(); err != nil {
-			logger.WarnTf("eth", "dispatch error: %s", err)
+			syslog.WarnTf("eth", "dispatch error: %s", err)
 		}
 	}()
 

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sort"
 
-	"syslog/logger"
+	"syslog"
 
 	"netstack/fidlconv"
 	"netstack/link"
@@ -119,7 +119,7 @@ func (ns *Netstack) delInterface(id uint64) *stack.Error {
 
 	if ok {
 		if err := ifs.eth.Close(); err != nil {
-			logger.Errorf("ifs.eth.Close() failed (NIC: %d): %v", id, err)
+			syslog.Errorf("ifs.eth.Close() failed (NIC: %d): %v", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 		return nil
@@ -151,12 +151,12 @@ func (ns *Netstack) setInterfaceState(id uint64, enabled bool) *stack.Error {
 
 	if enabled {
 		if err := ifs.eth.Up(); err != nil {
-			logger.Errorf("ifs.eth.Up() failed (NIC %d): %v", id, err)
+			syslog.Errorf("ifs.eth.Up() failed (NIC %d): %v", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 	} else {
 		if err := ifs.eth.Down(); err != nil {
-			logger.Errorf("ifs.eth.Down() failed (NIC %d): %v", id, err)
+			syslog.Errorf("ifs.eth.Down() failed (NIC %d): %v", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 	}
@@ -185,7 +185,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 	}
 
 	if err := ns.addInterfaceAddress(nicid, protocol, fidlconv.ToTCPIPAddress(ifAddr.IpAddress), ifAddr.PrefixLen); err != nil {
-		logger.Errorf("(*Netstack).setInterfaceAddress(...) failed (NIC %d): %v", nicid, err)
+		syslog.Errorf("(*Netstack).setInterfaceAddress(...) failed (NIC %d): %v", nicid, err)
 		return &stack.Error{Type: stack.ErrorTypeBadState}
 	}
 	return nil
@@ -353,7 +353,7 @@ func (ni *stackImpl) DelInterfaceAddress(id uint64, addr stack.InterfaceAddress)
 	}
 
 	if err := ni.ns.removeInterfaceAddress(tcpip.NICID(id), protocol, fidlconv.ToTCPIPAddress(addr.IpAddress), uint8(addr.PrefixLen)); err != nil {
-		logger.Errorf("failed to remove interface address: %s", err)
+		syslog.Errorf("failed to remove interface address: %s", err)
 		return &stack.Error{Type: stack.ErrorTypeInternal}, nil
 	}
 

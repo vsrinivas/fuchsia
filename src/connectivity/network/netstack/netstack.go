@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"syslog/logger"
+	"syslog"
 
 	"netstack/dns"
 	"netstack/fidlconv"
@@ -139,7 +139,7 @@ func subnetRoute(addr tcpip.Address, mask tcpip.AddressMask, nicid tcpip.NICID) 
 // AddRoute adds a single route to the route table in a sorted fashion. This
 // takes the lock.
 func (ns *Netstack) AddRoute(r tcpip.Route, metric routes.Metric, dynamic bool) error {
-	logger.Infof("adding route %+v metric:%d dynamic=%v", r, metric, dynamic)
+	syslog.Infof("adding route %+v metric:%d dynamic=%v", r, metric, dynamic)
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 	return ns.AddRouteLocked(r, metric, dynamic)
@@ -187,7 +187,7 @@ func (ns *Netstack) AddRoutesLocked(rs []tcpip.Route, metric routes.Metric, dyna
 
 // DelRoute deletes a single route from the route table. This takes the lock.
 func (ns *Netstack) DelRoute(r tcpip.Route) error {
-	logger.Infof("deleting route %+v", r)
+	syslog.Infof("deleting route %+v", r)
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 	return ns.DelRouteLocked(r)
@@ -221,7 +221,7 @@ func (ns *Netstack) UpdateRoutesByInterfaceLocked(nicid tcpip.NICID, action rout
 // UpdateInterfaceMetric changes the metric for an interface and updates all
 // routes tracking that interface metric. This takes the lock.
 func (ns *Netstack) UpdateInterfaceMetric(nicid tcpip.NICID, metric routes.Metric) error {
-	logger.Infof("update interface metric for NIC %d to metric=%d", nicid, metric)
+	syslog.Infof("update interface metric for NIC %d to metric=%d", nicid, metric)
 
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
@@ -243,7 +243,7 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 		return fmt.Errorf("error parsing subnet format for NIC ID %d: %s", nic, err)
 	}
 	route := subnetRoute(addr, subnet.Mask(), nic)
-	logger.Infof("removing static IP %v/%d from NIC %d, deleting subnet route %+v", addr, prefixLen, nic, route)
+	syslog.Infof("removing static IP %v/%d from NIC %d, deleting subnet route %+v", addr, prefixLen, nic, route)
 
 	ns.mu.Lock()
 	if err := func() error {
@@ -311,7 +311,7 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkP
 		return fmt.Errorf("error parsing subnet format for NIC ID %d: %s", nic, err)
 	}
 	route := subnetRoute(addr, subnet.Mask(), nic)
-	logger.Infof("adding static IP %v/%d to NIC %d, creating subnet route %+v with metric=<not-set>, dynamic=false", addr, prefixLen, nic, route)
+	syslog.Infof("adding static IP %v/%d to NIC %d, creating subnet route %+v with metric=<not-set>, dynamic=false", addr, prefixLen, nic, route)
 
 	ns.mu.Lock()
 	if err := func() error {
@@ -356,18 +356,18 @@ func (ifs *ifState) updateMetric(metric routes.Metric) {
 
 func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
 	if oldAddr != "" && oldAddr != newAddr {
-		logger.Infof("NIC %s: DHCP IP %s expired", ifs.mu.nic.Name, oldAddr)
+		syslog.Infof("NIC %s: DHCP IP %s expired", ifs.mu.nic.Name, oldAddr)
 	}
 	if config.Error != nil {
-		logger.Errorf("%v", config.Error)
+		syslog.Errorf("%v", config.Error)
 		return
 	}
 	if newAddr == "" {
-		logger.Errorf("NIC %s: DHCP could not acquire address", ifs.mu.nic.Name)
+		syslog.Errorf("NIC %s: DHCP could not acquire address", ifs.mu.nic.Name)
 		return
 	}
-	logger.Infof("NIC %s: DHCP acquired IP %s for %s", ifs.mu.nic.Name, newAddr, config.LeaseLength)
-	logger.Infof("NIC %s: Adding DNS servers: %v", ifs.mu.nic.Name, config.DNS)
+	syslog.Infof("NIC %s: DHCP acquired IP %s for %s", ifs.mu.nic.Name, newAddr, config.LeaseLength)
+	syslog.Infof("NIC %s: Adding DNS servers: %v", ifs.mu.nic.Name, config.DNS)
 
 	ifs.mu.Lock()
 	ifs.mu.nic.IsDynamicAddr = true
@@ -377,11 +377,11 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 	// Add a default route and a route for the local subnet.
 	rs := defaultRoutes(ifs.nicid, config.Gateway)
 	rs = append(rs, subnetRoute(newAddr, config.SubnetMask, ifs.nicid))
-	logger.Infof("adding routes %+v with metric=<not-set> dynamic=true", rs)
+	syslog.Infof("adding routes %+v with metric=<not-set> dynamic=true", rs)
 
 	ifs.ns.mu.Lock()
 	if err := ifs.ns.AddRoutesLocked(rs, metricNotSet, true /* dynamic */); err != nil {
-		logger.Infof("error adding routes for DHCP address/gateway: %v", err)
+		syslog.Infof("error adding routes for DHCP address/gateway: %v", err)
 	}
 	interfaces := ifs.ns.getNetInterfaces2Locked()
 	ifs.ns.mu.Unlock()
@@ -427,7 +427,7 @@ func (ifs *ifState) stateChange(s link.State) {
 		delete(ifs.ns.mu.ifStates, ifs.nicid)
 		fallthrough
 	case link.StateDown:
-		logger.Infof("NIC %s: stopped", ifs.mu.nic.Name)
+		syslog.Infof("NIC %s: stopped", ifs.mu.nic.Name)
 		ifs.mu.dhcp.cancel()
 
 		// TODO(crawshaw): more cleanup to be done here:
@@ -435,7 +435,7 @@ func (ifs *ifState) stateChange(s link.State) {
 		//	- reclaim NICID?
 
 		if ifs.mu.nic.IsDynamicAddr || s == link.StateClosed {
-			logger.Infof("removing IP from NIC %d", ifs.nicid)
+			syslog.Infof("removing IP from NIC %d", ifs.nicid)
 			ifs.mu.nic.DNSServers = nil
 		}
 
@@ -448,7 +448,7 @@ func (ifs *ifState) stateChange(s link.State) {
 		}
 
 	case link.StateStarted:
-		logger.Infof("NIC %s: starting", ifs.mu.nic.Name)
+		syslog.Infof("NIC %s: starting", ifs.mu.nic.Name)
 		// Re-enable static routes out this interface.
 		ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionEnableStatic)
 		if ifs.mu.dhcp.enabled {
@@ -461,7 +461,7 @@ func (ifs *ifState) stateChange(s link.State) {
 		// Update the state before adding the routes, so they are properly enabled.
 		ifs.mu.state = s
 		if err := ifs.ns.AddRoutesLocked(defaultRoutes(ifs.nicid, ""), lowPriorityRoute, true /* dynamic */); err != nil {
-			logger.Infof("error adding default routes: %v", err)
+			syslog.Infof("error adding default routes: %v", err)
 		}
 	}
 	ifs.mu.state = s
@@ -514,7 +514,7 @@ func (ns *Netstack) getDNSServers() []tcpip.Address {
 func (ns *Netstack) getNodeName() string {
 	nodename, status, err := ns.deviceSettings.GetString(deviceSettingsManagerNodenameKey)
 	if err != nil {
-		logger.Warnf("getNodeName: error accessing device settings: %s", err)
+		syslog.Warnf("getNodeName: error accessing device settings: %s", err)
 		return defaultNodename
 	}
 	if status != devicesettings.StatusOk {
@@ -533,7 +533,7 @@ func (ns *Netstack) getNodeName() string {
 		default:
 			reportStatus = fmt.Sprintf("unknown status code: %d", status)
 		}
-		logger.Warnf("getNodeName: device settings error: %s", reportStatus)
+		syslog.Warnf("getNodeName: device settings error: %s", reportStatus)
 		return defaultNodename
 	}
 	return nodename
@@ -671,7 +671,7 @@ func (ns *Netstack) addEndpoint(
 	ns.mu.ifStates[ifs.nicid] = ifs
 	ns.mu.countNIC++
 
-	logger.Infof("NIC %s added [sniff = %t]", name, ns.sniff)
+	syslog.Infof("NIC %s added [sniff = %t]", name, ns.sniff)
 
 	if err := ns.mu.stack.CreateNIC(ifs.nicid, linkID); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %v", ifs.mu.nic.Name, err)
@@ -697,7 +697,7 @@ func (ns *Netstack) addEndpoint(
 
 		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, ifs.nicid, linkAddr, ifs.dhcpAcquired)
 
-		logger.Infof("NIC %s: link-local IPv6: %v", name, lladdr)
+		syslog.Infof("NIC %s: link-local IPv6: %v", name, lladdr)
 	}
 
 	ifs.mu.nic.Name = name

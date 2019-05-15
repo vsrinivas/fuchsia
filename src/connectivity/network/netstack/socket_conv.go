@@ -10,7 +10,7 @@ import (
 	"net"
 	"time"
 
-	"syslog/logger"
+	"syslog"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
@@ -63,7 +63,7 @@ func GetSockOpt(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transPr
 		C.SOL_PACKET:
 
 	default:
-		logger.Infof("unimplemented getsockopt: level=%d name=%d", level, name)
+		syslog.Infof("unimplemented getsockopt: level=%d name=%d", level, name)
 
 	}
 	return nil, tcpip.ErrUnknownProtocol
@@ -188,7 +188,7 @@ func getSockOptSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, t
 		return int32(v), nil
 
 	default:
-		logger.Infof("unimplemented getsockopt: SOL_SOCKET name=%d", name)
+		syslog.Infof("unimplemented getsockopt: SOL_SOCKET name=%d", name)
 
 	}
 	return nil, tcpip.ErrUnknownProtocolOption
@@ -256,7 +256,7 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		C.TCP_NOTSENT_LOWAT:
 
 	default:
-		logger.Infof("unimplemented getsockopt: SOL_TCP name=%d", name)
+		syslog.Infof("unimplemented getsockopt: SOL_TCP name=%d", name)
 
 	}
 	return nil, tcpip.ErrUnknownProtocolOption
@@ -275,7 +275,7 @@ func getSockOptIPv6(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 	case C.IPV6_PATHMTU:
 
 	default:
-		logger.Infof("unimplemented getsockopt: SOL_IPV6 name=%d", name)
+		syslog.Infof("unimplemented getsockopt: SOL_IPV6 name=%d", name)
 
 	}
 	return nil, tcpip.ErrUnknownProtocolOption
@@ -316,7 +316,7 @@ func getSockOptIP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		return int32(0), nil
 
 	default:
-		logger.Infof("unimplemented getsockopt: SOL_IP name=%d", name)
+		syslog.Infof("unimplemented getsockopt: SOL_IP name=%d", name)
 
 	}
 	return nil, tcpip.ErrUnknownProtocolOption
@@ -342,7 +342,7 @@ func SetSockOpt(ep tcpip.Endpoint, level, name int16, optVal []uint8) *tcpip.Err
 		C.SOL_PACKET:
 
 	default:
-		logger.Infof("unimplemented setsockopt: level=%d name=%d optVal=%x", level, name, optVal)
+		syslog.Infof("unimplemented setsockopt: level=%d name=%d optVal=%x", level, name, optVal)
 
 	}
 	return tcpip.ErrUnknownProtocolOption
@@ -413,7 +413,7 @@ func setSockOptSocket(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error
 		return tcpip.ErrNotSupported
 
 	default:
-		logger.Infof("unimplemented setsockopt: SOL_SOCKET name=%d optVal=%x", name, optVal)
+		syslog.Infof("unimplemented setsockopt: SOL_SOCKET name=%d optVal=%x", name, optVal)
 
 	}
 	return tcpip.ErrUnknownProtocolOption
@@ -469,7 +469,7 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 	case C.TCP_REPAIR_OPTIONS:
 
 	default:
-		logger.Infof("unimplemented setsockopt: SOL_TCP name=%d optVal=%x", name, optVal)
+		syslog.Infof("unimplemented setsockopt: SOL_TCP name=%d optVal=%x", name, optVal)
 
 	}
 	return tcpip.ErrUnknownProtocolOption
@@ -520,7 +520,7 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		C.MCAST_UNBLOCK_SOURCE:
 
 	default:
-		logger.Infof("unimplemented setsockopt: SOL_IPV6 name=%d optVal=%x", name, optVal)
+		syslog.Infof("unimplemented setsockopt: SOL_IPV6 name=%d optVal=%x", name, optVal)
 
 	}
 	return tcpip.ErrUnknownProtocolOption
@@ -672,7 +672,7 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		C.MCAST_UNBLOCK_SOURCE:
 
 	default:
-		logger.Infof("unimplemented setsockopt: SOL_IP name=%d optVal=%x", name, optVal)
+		syslog.Infof("unimplemented setsockopt: SOL_IP name=%d optVal=%x", name, optVal)
 
 	}
 	return tcpip.ErrUnknownProtocolOption
