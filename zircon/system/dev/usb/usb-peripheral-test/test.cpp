@@ -30,6 +30,8 @@ uint8_t receive_buf[BUFFER_SIZE] = {};
 
 constexpr int TIMEOUT = 1000; // 1 seecond
 
+// Interface number for the test interface
+static uint8_t test_interface;
 
 // Fill send_buf with random values.
 void randomize() {
@@ -48,13 +50,15 @@ bool control_interrupt_test(size_t transfer_size) {
     // Send data to device via OUT control request.
     int ret = usb_device_control_transfer(
         dev, USB_DIR_OUT | USB_TYPE_VENDOR | USB_TYPE_VENDOR | USB_RECIP_INTERFACE,
-        USB_PERIPHERAL_TEST_SET_DATA, 0, 0, send_buf, static_cast<int>(transfer_size), TIMEOUT);
+        USB_PERIPHERAL_TEST_SET_DATA, 0, test_interface, send_buf,
+        static_cast<int>(transfer_size), TIMEOUT);
     EXPECT_EQ(ret, static_cast<int>(transfer_size));
 
     // Receive data back from device via IN control request.
     ret = usb_device_control_transfer(
         dev, USB_DIR_IN | USB_TYPE_VENDOR | USB_TYPE_VENDOR | USB_RECIP_INTERFACE,
-        USB_PERIPHERAL_TEST_GET_DATA, 0, 0, receive_buf, static_cast<int>(transfer_size), TIMEOUT);
+        USB_PERIPHERAL_TEST_GET_DATA, 0, test_interface, receive_buf,
+        static_cast<int>(transfer_size), TIMEOUT);
     EXPECT_EQ(ret, static_cast<int>(transfer_size));
 
     // Sent and received data should match.
@@ -78,7 +82,8 @@ bool control_interrupt_test(size_t transfer_size) {
     // Ask the device to send us an interrupt request containing the data we sent earlier.
     ret = usb_device_control_transfer(dev,
                             USB_DIR_OUT | USB_TYPE_VENDOR | USB_TYPE_VENDOR | USB_RECIP_INTERFACE,
-                            USB_PERIPHERAL_TEST_SEND_INTERUPT, 0, 0, nullptr, 0, TIMEOUT);
+                            USB_PERIPHERAL_TEST_SEND_INTERUPT, 0, test_interface, nullptr, 0,
+                            TIMEOUT);
     EXPECT_EQ(ret, 0);
 
     wait_thread.join();
@@ -219,6 +224,7 @@ int usb_device_added(const char *dev_name, void *client_data) {
         fprintf(stderr, "usb_device_claim_interface failed\n");
         goto fail;
     }
+    test_interface = intf->bInterfaceNumber;
 
     // Device found, exit from usb_host_load().
     return 1;
