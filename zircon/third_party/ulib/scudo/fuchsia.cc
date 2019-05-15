@@ -90,7 +90,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
     }
   } else {
     // Otherwise, create a Vmo and set its name.
-    Status = _zx_vmo_create(Size, ZX_VMO_RESIZABLE, &Vmo);
+    Status = _zx_vmo_create(Size, 0, &Vmo);
     if (Status != ZX_OK) {
       if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
         dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);

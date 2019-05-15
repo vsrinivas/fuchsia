@@ -25,21 +25,13 @@
 KCOUNTER(dispatcher_vmo_create_count, "dispatcher.vmo.create")
 KCOUNTER(dispatcher_vmo_destroy_count, "dispatcher.vmo.destroy")
 
-// Legacy values so that applications built against prebuilt SDKs
-// will continue to function until they update to the new values.
-// TODO(stevensd): Finish migrating out-of-tree clients to new values
-#define LEGACY_ZX_VMO_NON_RESIZABLE 1
-#define LEGACY_ZX_VMO_CHILD_NON_RESIZABLE (1 << 1)
-
 zx_status_t VmObjectDispatcher::parse_create_syscall_flags(uint32_t flags, uint32_t* out_flags) {
     uint32_t res = 0;
-    if (flags & ZX_VMO_RESIZABLE) {
-        res |= VmObjectPaged::kResizable;
+    if (flags & ZX_VMO_NON_RESIZABLE) {
+        flags &= ~ZX_VMO_NON_RESIZABLE;
+    } else {
         flags &= ~ZX_VMO_RESIZABLE;
-    }
-
-    if (flags & LEGACY_ZX_VMO_NON_RESIZABLE) {
-        flags &= ~LEGACY_ZX_VMO_NON_RESIZABLE;
+        res |= VmObjectPaged::kResizable;
     }
 
     if (flags) {
@@ -254,14 +246,12 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
         return ZX_ERR_INVALID_ARGS;
     }
 
-    Resizability resizable = Resizability::NonResizable;
-    if (options & ZX_VMO_CHILD_RESIZABLE) {
-        resizable = Resizability::Resizable;
+    Resizability resizable = Resizability::Resizable;
+    if (options & ZX_VMO_CHILD_NON_RESIZEABLE) {
+        resizable = Resizability::NonResizable;
+        options &= ~ZX_VMO_CHILD_NON_RESIZEABLE;
+    } else {
         options &= ~ZX_VMO_CHILD_RESIZABLE;
-    }
-
-    if (options & LEGACY_ZX_VMO_CHILD_NON_RESIZABLE) {
-        options &= ~LEGACY_ZX_VMO_CHILD_NON_RESIZABLE;
     }
 
     if (options)

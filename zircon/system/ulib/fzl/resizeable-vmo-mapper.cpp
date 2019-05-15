@@ -39,7 +39,7 @@ zx_status_t ResizeableVmoMapper::CreateAndMap(uint64_t size,
                                               uint32_t cache_policy) {
     zx::vmo temp;
     zx_status_t res = OwnedVmoMapper::CreateAndMap(size, name, map_options, std::move(vmar_manager),
-                                                   cache_policy, ZX_VMO_RESIZABLE);
+                                                   cache_policy);
     if (res == ZX_OK) {
         map_options_ = map_options;
     }

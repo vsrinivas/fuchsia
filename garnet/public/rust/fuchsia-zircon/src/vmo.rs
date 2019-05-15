@@ -146,7 +146,6 @@ bitflags! {
     #[repr(transparent)]
     pub struct VmoOptions: u32 {
         const NON_RESIZABLE = sys::ZX_VMO_NON_RESIZABLE;
-        const RESIZABLE = sys::ZX_VMO_RESIZABLE;
     }
 }
 
@@ -156,7 +155,6 @@ bitflags! {
     pub struct VmoChildOptions: u32 {
         const COPY_ON_WRITE = sys::ZX_VMO_CHILD_COPY_ON_WRITE;
         const NON_RESIZABLE = sys::ZX_VMO_CHILD_NON_RESIZEABLE;
-        const RESIZABLE = sys::ZX_VMO_CHILD_RESIZABLE;
     }
 }
 
@@ -201,7 +199,7 @@ mod tests {
     fn vmo_set_size() {
         // Use a multiple of page size to match VMOs page aligned size
         let start_size = 4096;
-        let vmo = Vmo::create_with_opts(VmoOptions::RESIZABLE, start_size).unwrap();
+        let vmo = Vmo::create(start_size).unwrap();
         assert_eq!(start_size, vmo.get_size().unwrap());
 
         // Change the size and make sure the new size is reported

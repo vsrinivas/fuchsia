@@ -43,7 +43,7 @@ VMO syscall interactions with clones.
 In addition, *options* can contain zero or more of the following flags to
 further specify the child's behavior:
 
-- **ZX_VMO_CHILD_RESIZEABLE** - Create a resizeable child VMO.
+- **ZX_VMO_CHILD_NON_RESIZEABLE** - Create a non-resizeable clone VMO.
 
 *offset* must be page aligned.
 

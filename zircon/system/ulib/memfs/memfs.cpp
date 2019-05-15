@@ -80,7 +80,7 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size,
     }
     zx_status_t status;
     if (!vmo.is_valid()) {
-        if ((status = zx::vmo::create(aligned_len, ZX_VMO_RESIZABLE, &vmo)) != ZX_OK) {
+        if ((status = zx::vmo::create(aligned_len, 0, &vmo)) != ZX_OK) {
             return status;
         }
     } else {

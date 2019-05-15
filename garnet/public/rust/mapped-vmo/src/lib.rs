@@ -130,10 +130,7 @@ mod tests {
         let flags = zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
         {
             // Requires NON_RESIZEABLE
-            let vmo = zx::Vmo::create_with_opts(
-                zx::VmoOptions::RESIZABLE,
-                size as u64
-            ).unwrap();
+            let vmo = zx::Vmo::create(size as u64).unwrap();
             let status = Mapping::create_from_vmo(&vmo, size, flags).unwrap_err();
             assert_eq!(status, zx::Status::NOT_SUPPORTED);
         }

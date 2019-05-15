@@ -212,7 +212,7 @@ zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_offset) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
 
-        zx_status_t status = zx::vmo::create(buf_size, ZX_VMO_RESIZABLE, &vmo);
+        zx_status_t status = zx::vmo::create(buf_size, 0, &vmo);
 
         if (status != ZX_OK) {
             fprintf(stderr, "Error creating VMO\n");

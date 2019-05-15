@@ -40,7 +40,7 @@ bool vmo_check(const zx::vmo& vmo, uint32_t expected, uint32_t offset = 0) {
 // Creates a vmo with |page_count| pages and writes (page_index + 1) to each page.
 bool init_page_tagged_vmo(uint32_t page_count, zx::vmo* vmo) {
     zx_status_t status;
-    status = zx::vmo::create(page_count * ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, vmo);
+    status = zx::vmo::create(page_count * ZX_PAGE_SIZE, 0, vmo);
     if (status != ZX_OK) {
         unittest_printf_critical(" create failed %d", status);
         return false;
@@ -153,9 +153,11 @@ bool info_test() {
     ASSERT_EQ(clone_info.parent_koid, orig_info.koid);
 
     // Check that flags are properly set.
-    constexpr uint32_t kOriginalFlags = ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_VIA_HANDLE;
+    constexpr uint32_t kOriginalFlags =
+            ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_VIA_HANDLE | ZX_INFO_VMO_RESIZABLE;
     constexpr uint32_t kCloneFlags =
-            ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_IS_COW_CLONE | ZX_INFO_VMO_VIA_HANDLE;
+            ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_IS_COW_CLONE |
+            ZX_INFO_VMO_VIA_HANDLE | ZX_INFO_VMO_RESIZABLE;
     ASSERT_EQ(orig_info.flags, kOriginalFlags);
     ASSERT_EQ(new_info.flags, kOriginalFlags);
     ASSERT_EQ(clone_info.flags, kCloneFlags);
@@ -571,8 +573,7 @@ bool resize_test(bool resize_child) {
     ASSERT_TRUE(init_page_tagged_vmo(4, &vmo));
 
     zx::vmo clone;
-    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2 | ZX_VMO_CHILD_RESIZABLE,
-                               0, 4 * ZX_PAGE_SIZE, &clone), ZX_OK);
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, 4 * ZX_PAGE_SIZE, &clone), ZX_OK);
 
     // Write to one page in each vmo.
     ASSERT_TRUE(vmo_write(vmo, 5, ZX_PAGE_SIZE));
@@ -625,8 +626,7 @@ bool resize_grow_test() {
     ASSERT_TRUE(init_page_tagged_vmo(2, &vmo));
 
     zx::vmo clone;
-    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2 | ZX_VMO_CHILD_RESIZABLE,
-                               0, ZX_PAGE_SIZE, &clone), ZX_OK);
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, &clone), ZX_OK);
 
     ASSERT_TRUE(vmo_check(clone, 1));
 
@@ -673,7 +673,7 @@ bool resize_disjoint_child_test() {
         // Clone one clone for each page.
         zx::vmo clones[3];
         for (unsigned i = 0; i < 3; i++) {
-            ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2 | ZX_VMO_CHILD_RESIZABLE,
+            ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
                                        i * ZX_PAGE_SIZE, ZX_PAGE_SIZE, clones + i), ZX_OK);
             ASSERT_TRUE(vmo_check(clones[i], i + 1));
         }
@@ -703,8 +703,7 @@ bool resize_multiple_progressive_test() {
 
     // Clone the vmo and fork a page into both.
     zx::vmo clone;
-    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2 | ZX_VMO_CHILD_RESIZABLE,
-                               0, 2 * ZX_PAGE_SIZE, &clone), ZX_OK);
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, 2 * ZX_PAGE_SIZE, &clone), ZX_OK);
     ASSERT_TRUE(vmo_write(vmo, 4, 0 * ZX_PAGE_SIZE));
     ASSERT_TRUE(vmo_write(clone, 5, 1 * ZX_PAGE_SIZE));
 
@@ -920,7 +919,7 @@ uint64_t progressive_clone_discard_test(bool close) {
 
     // Repeatedly clone the vmo while simultaniously changing it.
     for (unsigned i = 1; i < kNumClones; i++) {
-        ASSERT_EQ(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE2 | ZX_VMO_CHILD_RESIZABLE,
+        ASSERT_EQ(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
                                        0, kNumClones * ZX_PAGE_SIZE, vmos + i), ZX_OK);
         ASSERT_TRUE(vmo_write(vmos[i], kNumClones + 2, i * ZX_PAGE_SIZE));
     }

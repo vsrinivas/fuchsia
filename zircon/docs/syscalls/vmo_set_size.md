@@ -42,8 +42,7 @@ of failure, a negative error value is returned.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_WRITE** right.
 
-**ZX_ERR_UNAVAILABLE** The VMO was not created with **ZX_VMO_RESIZABLE**
-or **ZX_VMO_CHILD_RESIZABLE**.
+**ZX_ERR_UNAVAILABLE** The VMO was created with **ZX_VMO_NON_RESIZABLE** option.
 
 **ZX_ERR_OUT_OF_RANGE**  Requested size is too large.
 
