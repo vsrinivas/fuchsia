@@ -82,7 +82,7 @@ pub fn make_mlme_set_keys_request(peer: [u8; 6], key: &Key) -> fidl_mlme::SetKey
             address: peer,
             cipher_suite_oui: OUI,
             cipher_suite_type: key.cipher_suite_type(),
-            rsc: [0u8; 8],
+            rsc: 0,
         }],
     }
 }
@@ -164,7 +164,7 @@ mod tests {
                 address: [4; 6],
                 cipher_suite_oui: [0x00, 0x0F, 0xAC],
                 cipher_suite_type: 1,
-                rsc: [0u8; 8],
+                rsc: 0,
             }],
         };
         assert_eq!(actual, expected);
@@ -179,7 +179,7 @@ mod tests {
                 address: [4; 6],
                 cipher_suite_oui: [0x00, 0x0F, 0xAC],
                 cipher_suite_type: 5,
-                rsc: [0u8; 8],
+                rsc: 0,
             }],
         };
         assert_eq!(actual, expected);

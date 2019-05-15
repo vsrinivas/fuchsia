@@ -771,7 +771,7 @@ struct SetKeyDescriptor {
     uint16 key_id;
     KeyType key_type;
     array<uint8>:6 address;
-    array<uint8>:8 rsc;
+    uint64 rsc;
     array<uint8>:3 cipher_suite_oui;
     uint8 cipher_suite_type;
 };

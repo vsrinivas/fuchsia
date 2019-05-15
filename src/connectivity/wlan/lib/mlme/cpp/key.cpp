@@ -37,6 +37,7 @@ std::optional<wlan_key_config_t> ToKeyConfig(
   key_config.key_idx = key_descriptor.key_id;
   key_config.protection = WLAN_PROTECTION_RX_TX;
   key_config.cipher_type = key_descriptor.cipher_suite_type;
+  key_config.rsc = key_descriptor.rsc;
   memcpy(key_config.cipher_oui, key_descriptor.cipher_suite_oui.data(),
          sizeof(key_config.cipher_oui));
   memcpy(key_config.peer_addr, key_descriptor.address.data(),

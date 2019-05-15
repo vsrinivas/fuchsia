@@ -137,7 +137,7 @@ impl RemoteClient {
                 key_id: 0,
                 key_type: fidl_mlme::KeyType::Pairwise,
                 address: self.addr.clone(),
-                rsc: [0u8; 8],
+                rsc: 0,
                 cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
                 cipher_suite_type: ptk.cipher.suite_type,
             },
@@ -146,7 +146,7 @@ impl RemoteClient {
                 key_id: gtk.key_id() as u16,
                 key_type: fidl_mlme::KeyType::Group,
                 address: [0xFFu8; 6],
-                rsc: [0u8; 8],
+                rsc: 0,
                 cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
                 cipher_suite_type: gtk.cipher.suite_type,
             },
@@ -268,7 +268,7 @@ mod tests {
                 assert_eq!(k.key_id, 0);
                 assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
                 assert_eq!(k.address, CLIENT_ADDR);
-                assert_eq!(k.rsc, [0u8; 8]);
+                assert_eq!(k.rsc, 0);
                 assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
                 assert_eq!(k.cipher_suite_type, 4);
             }
@@ -283,7 +283,7 @@ mod tests {
                 assert_eq!(k.key_id, 2);
                 assert_eq!(k.key_type, fidl_mlme::KeyType::Group);
                 assert_eq!(k.address, [0xFFu8; 6]);
-                assert_eq!(k.rsc, [0u8; 8]);
+                assert_eq!(k.rsc, 0);
                 assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
                 assert_eq!(k.cipher_suite_type, 4);
             }

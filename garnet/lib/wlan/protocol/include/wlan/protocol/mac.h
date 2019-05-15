@@ -170,6 +170,9 @@ typedef struct wlan_key_config {
     uint8_t key_len;
     // They key's actual bytes.
     uint8_t key[32];
+    // Receive Sequence Counter for group keys only.
+    // In all other cases the RSC will be 0.
+    uint64_t rsc;
 } wlan_key_config_t;
 
 typedef struct wlan_tx_packet {

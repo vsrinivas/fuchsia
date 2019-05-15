@@ -498,7 +498,7 @@ void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
     std::memcpy(key_desc->address, fidl_key_desc.address.data(), ETH_ALEN);
 
     // rsc
-    std::memcpy(key_desc->rsc, fidl_key_desc.rsc.data(), sizeof(key_desc->rsc));
+    key_desc->rsc = fidl_key_desc.rsc;
 
     // cipher_suite_oui
     std::memcpy(key_desc->cipher_suite_oui, fidl_key_desc.cipher_suite_oui.data(),

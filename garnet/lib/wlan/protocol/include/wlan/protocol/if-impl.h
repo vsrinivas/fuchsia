@@ -212,7 +212,7 @@ typedef struct set_key_descriptor {
     uint16_t key_id;
     uint8_t key_type;  // WLAN_KEY_TYPE_*
     uint8_t address[ETH_ALEN];
-    uint8_t rsc[8];
+    uint64_t rsc;
     uint8_t cipher_suite_oui[3];
     uint8_t cipher_suite_type;
 } set_key_descriptor_t;
