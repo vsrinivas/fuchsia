@@ -1,0 +1,6 @@
+{
+  "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/component_context_provider.h": "860765c38af372174d5b69f4e2224ba4",
+  "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/fake_component.h": "0b5b41bae88a22ee14a32c10e6ab0411",
+  "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/fake_launcher.h": "202f2a80f2f0275a098b2ab4fb0440df",
+  "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/service_directory_provider.h": "d441532601621792e021ac6c9a9e8238"
+}

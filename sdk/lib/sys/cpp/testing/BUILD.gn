@@ -2,8 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("unit") {
-  testonly = true
+import("//build/cpp/sdk_source_set.gni")
+
+sdk_source_set("unit") {
+  category = "partner"
+
+  sdk_name = "sys_cpp_testing"
+
+  include_base = "//sdk"
 
   sources = [
     "component_context_provider.cc",

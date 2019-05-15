@@ -224,6 +224,7 @@ sdk("core") {
     "//sdk/lib/fidl/cpp:cpp_sdk",
     "//sdk/lib/svc:svc_sdk",
     "//sdk/lib/sys/cpp:cpp_sdk",
+    "//sdk/lib/sys/cpp/testing:unit_sdk",
     "//sdk/lib/ui/scenic/cpp:cpp_sdk",
     "//sdk/lib/vfs/cpp:cpp_sdk",
     "//src/developer/debug/zxdb:zxdb_sdk($host_toolchain)",

@@ -79,7 +79,7 @@ class ComponentContextProvider {
   const std::shared_ptr<ServiceDirectoryProvider>& service_directory_provider()
       const {
     return svc_provider_;
-  };
+  }
 
   // Relinquishes the ownership of fake context. This object should be alive
   // for lifetime of returned context.

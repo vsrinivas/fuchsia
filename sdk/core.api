@@ -73,6 +73,7 @@ sdk://pkg/scenic_cpp
 sdk://pkg/svc
 sdk://pkg/sync
 sdk://pkg/sys_cpp
+sdk://pkg/sys_cpp_testing
 sdk://pkg/syslog
 sdk://pkg/sysroot
 sdk://pkg/trace-engine
