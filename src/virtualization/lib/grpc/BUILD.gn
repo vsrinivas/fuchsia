@@ -1,0 +1,77 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+source_set("grpc") {
+  sources = [
+    "fdio_util.cc",
+    "fdio_util.h",
+    "grpc_vsock_server.cc",
+    "grpc_vsock_server.h",
+    "grpc_vsock_stub.cc",
+    "grpc_vsock_stub.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.virtualization",
+    "//third_party/grpc:grpc++",
+    "//zircon/public/lib/fit",
+  ]
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+proto_library("test_proto") {
+  visibility = [ "*:*" ]
+
+  sources = [
+    "test_server.proto",
+  ]
+
+  generate_python = false
+  cc_generator_options = "lite"
+  generator_plugin_suffix = ".grpc.pb"
+  generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
+
+  import_dirs = [ "//third_party/protobuf/src" ]
+  deps = [
+    "//third_party/grpc:grpc++",
+    "//third_party/protobuf:protobuf_full",
+  ]
+}
+
+executable("unittest") {
+  testonly = true
+
+  sources = [
+    "grpc_vsock_tests.cc",
+  ]
+
+  deps = [
+    ":grpc",
+    ":test_proto",
+    "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/virtualization/testing",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+test_package("grpc_vsock_tests") {
+  deps = [
+    ":unittest",
+  ]
+
+  tests = [
+    {
+      name = "unittest"
+      environments = basic_envs
+    },
+  ]
+}

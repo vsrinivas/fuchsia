@@ -48,6 +48,7 @@ source_set("lib") {
   ]
   public_configs = [ ":linux_runner_net_config" ]
   public_deps = [
+    "//src/virtualization/lib/grpc",
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.sys",

@@ -19,6 +19,7 @@
 #include <deque>
 #include <memory>
 
+#include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/linux_component.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/log_collector.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/container_guest.grpc.pb.h"
@@ -45,8 +46,7 @@ struct GuestConfig {
   size_t stateful_image_size;
 };
 
-class Guest : public fuchsia::virtualization::HostVsockAcceptor,
-              public vm_tools::StartupListener::Service,
+class Guest : public vm_tools::StartupListener::Service,
               public vm_tools::tremplin::TremplinListener::Service,
               public vm_tools::container::ContainerListener::Service {
  public:
@@ -63,7 +63,7 @@ class Guest : public fuchsia::virtualization::HostVsockAcceptor,
 
  private:
   fit::promise<> Start();
-  fit::promise<std::unique_ptr<grpc::Server>, zx_status_t> StartGrpcServer();
+  fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> StartGrpcServer();
   void StartGuest();
   void MountExtrasPartition();
   void ConfigureNetwork();
@@ -73,10 +73,6 @@ class Guest : public fuchsia::virtualization::HostVsockAcceptor,
   void StartContainer();
   void SetupUser();
   void DumpContainerDebugInfo();
-
-  // |fuchsia::virtualization::HostVsockAcceptor|
-  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              AcceptCallback callback) override;
 
   // |vm_tools::StartupListener::Service|
   grpc::Status VmReady(grpc::ServerContext* context,
@@ -146,10 +142,6 @@ class Guest : public fuchsia::virtualization::HostVsockAcceptor,
       const vm_tools::container::UpdateMimeTypesRequest* request,
       vm_tools::EmptyMessage* response) override;
 
-  template <typename Service>
-  fit::promise<std::unique_ptr<typename Service::Stub>, zx_status_t>
-  NewVsockStub(uint32_t cid, uint32_t port);
-
   void LaunchApplication(AppLaunchRequest request);
   void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
   void CreateComponent(
@@ -160,10 +152,8 @@ class Guest : public fuchsia::virtualization::HostVsockAcceptor,
   async_dispatcher_t* async_;
   async::Executor executor_;
   GuestConfig config_;
-  std::unique_ptr<grpc::Server> grpc_server_;
+  std::unique_ptr<GrpcVsockServer> grpc_server_;
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint_;
-  fidl::BindingSet<fuchsia::virtualization::HostVsockAcceptor>
-      acceptor_bindings_;
   fuchsia::virtualization::RealmPtr guest_env_;
   fuchsia::virtualization::GuestPtr guest_controller_;
   uint32_t guest_cid_ = 0;
