@@ -271,7 +271,6 @@ static zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t 
     txn.virt_buffer = data;
     txn.data_size = size;
     txn.incr = !fifo;
-    txn.fifo = fifo;
     txn.use_dma = false; // TODO(cphoenix): Decide when to use DMA
     txn.buf_offset = 0;
 

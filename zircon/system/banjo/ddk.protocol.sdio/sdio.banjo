@@ -58,7 +58,6 @@ struct SdioRwTxn {
     uint32 addr;
     uint32 data_size;
     bool incr;
-    bool fifo;
     bool write;
     bool use_dma;
     /// Used if use_dma is true
