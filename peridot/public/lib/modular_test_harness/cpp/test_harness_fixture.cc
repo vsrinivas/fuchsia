@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fsl/vmo/strings.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 
 namespace modular {
@@ -43,7 +44,8 @@ std::string TestHarnessFixture::InterceptBaseShell(
 }
 
 std::string TestHarnessFixture::InterceptSessionShell(
-    fuchsia::modular::testing::TestHarnessSpec* spec) const {
+    fuchsia::modular::testing::TestHarnessSpec* spec,
+    std::string extra_cmx_contents) const {
   auto url = GenerateFakeUrl();
 
   // 1. Add session shell to modular config.
@@ -57,6 +59,10 @@ std::string TestHarnessFixture::InterceptSessionShell(
 
   // 2. Set up interception for session shell.
   fuchsia::modular::testing::InterceptSpec shell_intercept_spec;
+  if (!extra_cmx_contents.empty()) {
+    FXL_CHECK(fsl::VmoFromString(
+        extra_cmx_contents, shell_intercept_spec.mutable_extra_cmx_contents()));
+  }
   shell_intercept_spec.set_component_url(url);
   spec->mutable_components_to_intercept()->push_back(
       std::move(shell_intercept_spec));

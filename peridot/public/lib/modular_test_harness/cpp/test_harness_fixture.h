@@ -32,7 +32,8 @@ class TestHarnessFixture : public sys::testing::TestWithEnvironment {
   // interception. Returns the generated fake URL used to configure the session
   // shell.
   std::string InterceptSessionShell(
-      fuchsia::modular::testing::TestHarnessSpec* spec) const;
+      fuchsia::modular::testing::TestHarnessSpec* spec,
+      std::string extra_cmx_contents="") const;
 
   // Configure |test_harness| to intercept to story shell. Returns the generated
   // fake URL used to configure the story shell.

@@ -29,6 +29,7 @@ sdk_source_set("test_harness_fixture") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
