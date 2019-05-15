@@ -306,9 +306,9 @@ TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {
   fuchsia::modular::PuppetMasterPtr puppet_master;
   fuchsia::modular::StoryPuppetMasterPtr story_master;
 
-  fuchsia::modular::testing::ModularService svc;
+  fuchsia::modular::testing::TestHarnessService svc;
   svc.set_puppet_master(puppet_master.NewRequest());
-  test_harness()->ConnectToModularService(std::move(svc));
+  test_harness()->GetService(std::move(svc));
 
   puppet_master->ControlStory("my_story", story_master.NewRequest());
 
