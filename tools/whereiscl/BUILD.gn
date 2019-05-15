@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/host.gni")
+
+go_library("whereiscl_lib") {
+  name = "whereiscl_lib"
+}
+
+go_binary("whereiscl") {
+  gopackage = "whereiscl_lib"
+  deps = [
+    ":whereiscl_lib",
+  ]
+}
+
+install_host_tools("host") {
+  deps = [
+    ":whereiscl",
+  ]
+  outputs = [
+    "whereiscl",
+  ]
+}
+
+go_test("whereiscl_test") {
+  gopackage = "whereiscl_lib"
+  deps = [
+    ":whereiscl_lib",
+    "//garnet/public/go/third_party:github.com/google/go-cmp",
+  ]
+}

@@ -75,6 +75,7 @@ group("all") {
     "//garnet/packages/tools:tiles",
     "//garnet/packages/tools:zxdb",
     "//garnet/packages/tools:boringssl",
+    "//garnet/packages/tools:whereiscl",
     "//src/connectivity/wlan:tools",
     "//src/sys/locate",
   ]
@@ -205,5 +206,12 @@ group("boringssl") {
   testonly = true
   public_deps = [
     "//third_party/boringssl:boringssl_tool",
+  ]
+}
+
+group("whereiscl") {
+  testonly = true
+  public_deps = [
+    "//tools/whereiscl:host($host_toolchain)",
   ]
 }

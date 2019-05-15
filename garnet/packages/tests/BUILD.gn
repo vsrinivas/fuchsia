@@ -428,6 +428,7 @@ group("all") {
     ":vulkan",
     ":wayland",
     ":webpki_roots_fuchsia",
+    ":whereiscl",
     ":zircon",
     ":zxdb",
     "//garnet/go/src/pm:host_tests",
@@ -1293,5 +1294,12 @@ group("sl4f") {
   testonly = true
   public_deps = [
     "//sdk/testing/sl4f/client:tests",
+  ]
+}
+
+group("whereiscl") {
+  testonly = true
+  public_deps = [
+    "//tools/whereiscl:whereiscl_test($host_toolchain)",
   ]
 }
