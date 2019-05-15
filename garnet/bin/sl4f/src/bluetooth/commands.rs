@@ -359,6 +359,10 @@ pub async fn gatt_server_method_to_fidl(
             let result = await!(facade.publish_server(args))?;
             Ok(to_value(result)?)
         }
+        BluetoothMethod::GattServerCloseServer => {
+            let result = await!(facade.close_server());
+            Ok(to_value(result)?)
+        }
         _ => bail!("Invalid Gatt Server FIDL method: {:?}", method_name),
     }
 }

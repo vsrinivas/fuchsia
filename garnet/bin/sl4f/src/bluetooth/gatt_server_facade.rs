@@ -687,6 +687,10 @@ impl GattServerFacade {
         Ok(())
     }
 
+    pub async fn close_server(&self) {
+        self.inner.write().server_proxy = None
+    }
+
     // GattServerFacade for cleaning up objects in use.
     pub fn cleanup(&self) {
         let tag = "GattServerFacade::cleanup:";

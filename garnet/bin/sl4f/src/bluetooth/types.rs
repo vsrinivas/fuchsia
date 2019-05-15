@@ -47,6 +47,7 @@ pub enum BluetoothMethod {
     GattcReadLongDescriptorById,
     GattcReadDescriptorById,
     GattcWriteDescriptorById,
+    GattServerCloseServer,
     GattServerPublishServer,
 }
 
@@ -84,6 +85,7 @@ impl BluetoothMethod {
             "GattcReadLongDescriptorById" => BluetoothMethod::GattcReadLongDescriptorById,
             "GattcReadDescriptorById" => BluetoothMethod::GattcReadDescriptorById,
             "GattcWriteDescriptorById" => BluetoothMethod::GattcWriteDescriptorById,
+            "GattServerCloseServer" => BluetoothMethod::GattServerCloseServer,
             "GattServerPublishServer" => BluetoothMethod::GattServerPublishServer,
 
             _ => BluetoothMethod::BleUndefined,
