@@ -32,17 +32,21 @@ const char* _zx_status_get_string(zx_status_t status) {
     case ZX_ERR_ACCESS_DENIED: return "ZX_ERR_ACCESS_DENIED";
     case ZX_ERR_IO: return "ZX_ERR_IO";
     case ZX_ERR_IO_REFUSED: return "ZX_ERR_IO_REFUSED";
-    case ZX_ERR_IO_INVALID: return "ZX_ERR_IO_INVALID";
     case ZX_ERR_IO_DATA_INTEGRITY: return "ZX_ERR_IO_DATA_INTEGRITY";
     case ZX_ERR_IO_DATA_LOSS: return "ZX_ERR_IO_DATA_LOSS";
     case ZX_ERR_IO_NOT_PRESENT: return "ZX_ERR_IO_NOT_PRESENT";
+    case ZX_ERR_IO_OVERRUN: return "ZX_ERR_IO_OVERRUN";
+    case ZX_ERR_IO_MISSED_DEADLINE: return "ZX_ERR_IO_MISSED_DEADLINE";
+    case ZX_ERR_IO_INVALID: return "ZX_ERR_IO_INVALID";
     case ZX_ERR_BAD_PATH: return "ZX_ERR_BAD_PATH";
     case ZX_ERR_NOT_DIR: return "ZX_ERR_NOT_DIR";
     case ZX_ERR_NOT_FILE: return "ZX_ERR_NOT_FILE";
     case ZX_ERR_FILE_BIG: return "ZX_ERR_FILE_BIG";
     case ZX_ERR_NO_SPACE: return "ZX_ERR_NO_SPACE";
+    case ZX_ERR_NOT_EMPTY: return "ZX_ERR_NOT_EMPTY";
     case ZX_ERR_STOP: return "ZX_ERR_STOP";
     case ZX_ERR_NEXT: return "ZX_ERR_NEXT";
+    case ZX_ERR_ASYNC: return "ZX_ERR_ASYNC";
     case ZX_ERR_PROTOCOL_NOT_SUPPORTED: return "ZX_ERR_PROTOCOL_NOT_SUPPORTED";
     case ZX_ERR_ADDRESS_UNREACHABLE: return "ZX_ERR_ADDRESS_UNREACHABLE";
     case ZX_ERR_ADDRESS_IN_USE: return "ZX_ERR_ADDRESS_IN_USE";
@@ -67,6 +71,10 @@ const char* _zx_status_get_string(zx_status_t status) {
 VDSO_INTERFACE_FUNCTION(zx_status_get_string);
 
 // Generated with:
-// grep '#define'  system/public/zircon/errors.h | grep -v ZX_OK |
-// sed 's/.*ZX_ERR_/ZX_ERR_/g' | sed 's/\s.*//g' |
-// awk '{print "case "$1": return \""$1"\";";}'
+#if 0
+grep '#define'  system/public/zircon/errors.h |
+grep -v ZX_OK |
+grep -v _ERRORS_H_ |
+sed 's/.*ZX_ERR_/ZX_ERR_/g' | sed 's/\s.*//g' |
+awk '{print "case "$1": return \""$1"\";";}'
+#endif
