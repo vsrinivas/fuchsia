@@ -42,5 +42,6 @@ group("tests") {
   testonly = true
   public_deps = [
     "//peridot/packages/tests:modular_test_harness",
+    "//src/modular:tests",
   ]
 }

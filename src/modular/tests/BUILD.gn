@@ -2,9 +2,59 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+
 group("tests") {
   testonly = true
   deps = [
-    # Add individual test packages here.
+    ":modular_integration_tests",
+  ]
+}
+
+executable("last_focus_time_test") {
+  testonly = true
+
+  output_name = "last_focus_time_test"
+
+  sources = [
+    "last_focus_time_test.cc",
+  ]
+
+  deps = [
+    "//peridot/lib/testing:session_shell_impl",
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("modular_integration_tests") {
+  testonly = true
+
+  tests = [
+    {
+      name = "last_focus_time_test"
+      environments = basic_envs
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/last_focus_time_test.cmx"
+      dest = "last_focus_time_test.cmx"
+    },
+  ]
+
+  deps = [
+    ":last_focus_time_test",
+    "//garnet/public/lib/callback",
+    "//peridot/public/lib/app_driver/cpp",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
