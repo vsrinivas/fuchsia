@@ -53,7 +53,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//topaz/bundles:buildbot"]`
 
 From //root_build_dir/args.gn:3
 
@@ -61,7 +61,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:14
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//topaz/bundles:buildbot"]`
 
 From //root_build_dir/args.gn:3
 
@@ -367,11 +367,10 @@ module_suggester is not AOT compiled in debug builds
 From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/e29830bce7ed87ab3acaa05eb475c99f33d399ab/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
-Allow for deduping the VM between standalone, flutter_runner and dart_runner.
 
-**Current value (from the default):** `"shared_library"`
+**Current value (from the default):** `"static_library"`
 
-From //third_party/dart/runtime/runtime_args.gni:78
+From //third_party/dart/runtime/runtime_args.gni:80
 
 ### dart_core_snapshot_kind
 Controls the kind of core snapshot linked into the standalone VM. Using a
@@ -844,7 +843,7 @@ From //build/go/go_build.gni:20
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/host_x64/.gocache"`
 
 From //build/go/go_build.gni:16
 
@@ -1505,13 +1504,13 @@ From //third_party/skia/BUILD.gn:70
 
 ### skia_enable_fontmgr_custom
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //third_party/skia/BUILD.gn:68
 
 ### skia_enable_fontmgr_custom_empty
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //third_party/skia/BUILD.gn:69
 
@@ -1523,7 +1522,7 @@ From //third_party/skia/BUILD.gn:66
 
 ### skia_enable_fontmgr_fuchsia
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //third_party/skia/BUILD.gn:71
 
@@ -1684,7 +1683,7 @@ From //third_party/skia/BUILD.gn:21
 
 From //.gn:26
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:63
 
@@ -1732,7 +1731,7 @@ From //third_party/skia/BUILD.gn:27
 
 From //.gn:28
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:24
 
@@ -1764,7 +1763,7 @@ From //third_party/skia/gn/skia.gni:14
 
 ### skia_use_icu
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //third_party/skia/gn/skia.gni:13
 
@@ -1792,7 +1791,7 @@ From //third_party/skia/BUILD.gn:29
 
 From //.gn:29
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:30
 
@@ -1834,7 +1833,7 @@ From //third_party/skia/BUILD.gn:33
 
 From //.gn:30
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:64
 
@@ -1848,9 +1847,9 @@ From //third_party/skia/BUILD.gn:64
 
 ### skia_use_vulkan
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:86
+From //third_party/skia/BUILD.gn:88
 
 ### skia_use_wuffs
 
@@ -1864,7 +1863,7 @@ From //third_party/skia/BUILD.gn:34
 
 From //.gn:31
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:38
 
@@ -1956,7 +1955,7 @@ From //build/config/sysroot.gni:7
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"linux_x64-shared/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -1971,7 +1970,7 @@ From //build/config/lto/config.gni:13
 Manifest files describing target libraries from toolchains.
 Can be either // source paths or absolute system paths.
 
-**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]`
+**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/x86_64-linux-gnu.manifest"]`
 
 From //build/images/manifest.gni:11
 
