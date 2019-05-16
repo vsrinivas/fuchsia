@@ -74,6 +74,6 @@ class Traceutil {
     final String response = await _sl4f
         .request('traceutil_facade.GetTraceFile', {'path': tracePath});
     return _dump.writeAsBytes(
-        '$traceName-trace', 'json', utf8.encode(response));
+        '$traceName-trace', 'json', base64.decode(response));
   }
 }

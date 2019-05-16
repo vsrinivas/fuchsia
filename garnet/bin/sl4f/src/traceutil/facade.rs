@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use base64;
 use failure::Error;
 use serde_json::{to_value, Value};
 
@@ -27,9 +28,11 @@ impl TraceutilFacade {
         let path = path.as_str().ok_or(format_err!("GetTraceFile failed, path not string"))?;
 
         let mut file = File::open(path)?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
+        let mut contents = Vec::new();
+        file.read_to_end(&mut contents)?;
 
-        Ok(to_value(contents)?)
+        let encoded_contents = base64::encode(&contents);
+
+        Ok(to_value(encoded_contents)?)
     }
 }
