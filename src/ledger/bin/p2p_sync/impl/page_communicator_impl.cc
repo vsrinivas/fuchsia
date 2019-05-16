@@ -30,14 +30,18 @@ storage::ObjectIdentifier ToObjectIdentifier(const ObjectId* fb_object_id) {
 // sent to peers and for which we wait for an answer.
 class PageCommunicatorImpl::PendingObjectRequestHolder {
  public:
-  explicit PendingObjectRequestHolder(
+  PendingObjectRequestHolder() = default;
+
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+
+  // Registers this additional callback for the request.
+  void AddCallback(
       fit::function<void(storage::Status, storage::ChangeSource,
                          storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
-          callback)
-      : callback_(std::move(callback)) {}
-
-  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+          callback) {
+    callbacks_.push_back(std::move(callback));
+  }
 
   // Registers a new pending request to device |destination|.
   void AddNewPendingRequest(std::string destination) {
@@ -56,17 +60,17 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
         return;
       }
       // All requests have returned and none is valid: return an error.
-      callback_(storage::Status::INTERNAL_NOT_FOUND, storage::ChangeSource::P2P,
-                storage::IsObjectSynced::NO, nullptr);
+      for (auto& callback : callbacks_) {
+        callback(storage::Status::INTERNAL_NOT_FOUND,
+                 storage::ChangeSource::P2P, storage::IsObjectSynced::NO,
+                 nullptr);
+      }
       if (on_empty_) {
         on_empty_();
       }
       return;
     }
 
-    std::unique_ptr<storage::DataSource::DataChunk> chunk =
-        storage::DataSource::DataChunk::Create(
-            convert::ToString(object->data()->bytes()));
     storage::IsObjectSynced is_object_synced;
     switch (object->sync_status()) {
       case ObjectSyncStatus_UNSYNCED:
@@ -76,17 +80,23 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
         is_object_synced = storage::IsObjectSynced::YES;
         break;
     }
-    callback_(storage::Status::OK, storage::ChangeSource::P2P, is_object_synced,
-              std::move(chunk));
+    for (auto& callback : callbacks_) {
+      std::unique_ptr<storage::DataSource::DataChunk> chunk =
+          storage::DataSource::DataChunk::Create(
+              convert::ToString(object->data()->bytes()));
+      callback(storage::Status::OK, storage::ChangeSource::P2P,
+               is_object_synced, std::move(chunk));
+    }
     if (on_empty_) {
       on_empty_();
     }
   }
 
  private:
-  fit::function<void(
+  std::vector<fit::function<void(
       storage::Status, storage::ChangeSource, storage::IsObjectSynced,
-      std::unique_ptr<storage::DataSource::DataChunk>)> const callback_;
+      std::unique_ptr<storage::DataSource::DataChunk>)>>
+      callbacks_;
   // Set of devices for which we are waiting an answer.
   // We might be able to get rid of this list and just use a counter (or even
   // nothing at all) once we have a timeout on requests.
@@ -316,18 +326,20 @@ void PageCommunicatorImpl::GetObject(
                        storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
-  flatbuffers::FlatBufferBuilder buffer;
-
-  BuildObjectRequestBuffer(&buffer, object_identifier);
-
   auto request_holder = pending_object_requests_.emplace(
-      std::move(object_identifier), std::move(callback));
+      object_identifier, PendingObjectRequestHolder());
+  request_holder.first->second.AddCallback(std::move(callback));
 
-  for (const auto& device : interested_devices_) {
-    request_holder.first->second.AddNewPendingRequest(device);
-  }
-  for (const auto& device : interested_devices_) {
-    mesh_->Send(device, buffer);
+  if (request_holder.second) {
+    flatbuffers::FlatBufferBuilder buffer;
+    BuildObjectRequestBuffer(&buffer, std::move(object_identifier));
+
+    for (const auto& device : interested_devices_) {
+      request_holder.first->second.AddNewPendingRequest(device);
+    }
+    for (const auto& device : interested_devices_) {
+      mesh_->Send(device, buffer);
+    }
   }
 }
 

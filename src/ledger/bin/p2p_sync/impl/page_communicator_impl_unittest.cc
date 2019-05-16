@@ -892,6 +892,67 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   EXPECT_FALSE(data);
 }
 
+TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
+  page_communicator.Start();
+
+  flatbuffers::FlatBufferBuilder buffer;
+  BuildWatchStartBuffer(&buffer, "ledger", "page");
+  MessageHolder<Message> new_device_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
+  page_communicator.OnNewRequest(
+      "device2", std::move(new_device_message)
+                     .TakeAndMap<Request>([](const Message* message) {
+                       return static_cast<const Request*>(message->message());
+                     }));
+
+  bool called1, called2;
+  storage::Status status1, status2;
+  storage::ChangeSource source1, source2;
+  storage::IsObjectSynced is_object_synced1, is_object_synced2;
+  std::unique_ptr<storage::DataSource::DataChunk> data1, data2;
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"),
+      callback::Capture(callback::SetWhenCalled(&called1), &status1, &source1,
+                        &is_object_synced1, &data1));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called1);
+
+  ASSERT_EQ(1u, mesh.messages_.size());
+  EXPECT_EQ("device2", mesh.messages_[0].first);
+
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"),
+      callback::Capture(callback::SetWhenCalled(&called2), &status2, &source2,
+                        &is_object_synced2, &data2));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called2);
+
+  flatbuffers::FlatBufferBuilder response_buffer;
+  BuildObjectResponseBuffer(
+      &response_buffer, "ledger", "page",
+      {std::make_tuple(MakeObjectIdentifier("foo"), "foo_data", true)});
+  MessageHolder<Message> response_message = *CreateMessageHolder<Message>(
+      convert::ToStringView(response_buffer), &ParseMessage);
+  page_communicator.OnNewResponse(
+      "device2", std::move(response_message)
+                     .TakeAndMap<Response>([](const Message* message) {
+                       return static_cast<const Response*>(message->message());
+                     }));
+
+  EXPECT_TRUE(called1);
+  EXPECT_TRUE(called2);
+  EXPECT_EQ(storage::Status::OK, status1);
+  EXPECT_EQ(storage::Status::OK, status2);
+  EXPECT_EQ("foo_data", data1->Get());
+  EXPECT_EQ("foo_data", data2->Get());
+  EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced1);
+  EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced2);
+}
+
 TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   FakeDeviceMesh mesh;
   FakePageStorage storage_1(dispatcher(), "page");
