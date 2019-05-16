@@ -35,6 +35,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.auth",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//sdk/lib/sys/cpp/testing:integration",
   ]
 }
 
@@ -50,4 +51,3 @@ test_package("token_manager_integration_test_pkg") {
     },
   ]
 }
-

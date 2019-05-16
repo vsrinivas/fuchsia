@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Token manager unit tests using DEV auth provider.
+// Token manager integration tests using dev auth provider.
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include <memory>
 #include <string>
@@ -16,12 +17,7 @@
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/gtest/real_loop_fixture.h"
-#include "lib/sys/cpp/service_directory.h"
-#include "lib/test_runner/cpp/reporting/gtest_listener.h"
-#include "lib/test_runner/cpp/reporting/reporter.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
@@ -29,33 +25,28 @@
 namespace e2e_dev {
 namespace {
 
-struct TestAuthProviderParams {
-  const std::string type;
-  const char* url;
-};
-
 struct TestComponentParam {
-  const TestAuthProviderParams auth_provider_params;
-  const char* token_manager_url;
+  const std::string auth_provider_type;
+  const char* auth_provider_url;
 };
 
+const std::string kEnvironment = "dev_token_mgr_test_env";
 const std::string kTestUserId = "tq_auth_user_1";
 const std::string kTestAppUrl = "/pkgfs/packages/test_auth_client/bin/app";
 const std::string kDevIdp = "Dev";
 const std::string kDevIotIDIdp = "DevIotID";
 const bool kForce = true;
 
+const std::string kTokenManagerFactoryUrl = "fuchsia-pkg://fuchsia.com/"
+    "token_manager_factory#meta/token_manager_factory.cmx";
 const TestComponentParam kTestComponentParams[] = {
-    {{kDevIdp,
-      "fuchsia-pkg://fuchsia.com/dev_auth_provider#"
-      "meta/dev_auth_provider.cmx"},
-     "fuchsia-pkg://fuchsia.com/token_manager_factory#"
-     "meta/token_manager_factory.cmx"},
-    {{kDevIotIDIdp,
-      "fuchsia-pkg://fuchsia.com/dev_auth_provider_iotid#"
-      "meta/dev_auth_provider_iotid.cmx"},
-     "fuchsia-pkg://fuchsia.com/token_manager_factory#"
-     "meta/token_manager_factory.cmx"}};
+    {kDevIdp,
+     "fuchsia-pkg://fuchsia.com/dev_auth_provider#"
+     "meta/dev_auth_provider.cmx"},
+    {kDevIotIDIdp,
+     "fuchsia-pkg://fuchsia.com/dev_auth_provider_iotid#"
+     "meta/dev_auth_provider_iotid.cmx"}
+};
 
 fuchsia::auth::AppConfig MakeDevAppConfig(
     const std::string& auth_provider_type) {
@@ -67,47 +58,45 @@ fuchsia::auth::AppConfig MakeDevAppConfig(
 }
 
 using fuchsia::auth::AppConfig;
+using fuchsia::auth::FirebaseTokenPtr;
 using fuchsia::auth::Status;
+using fuchsia::auth::TokenManagerFactory;
+using fuchsia::auth::UserProfileInfoPtr;
+using fuchsia::sys::LaunchInfo;
+using sys::testing::EnclosingEnvironment;
+using sys::testing::EnvironmentServices;
 
 class DevTokenManagerAppTest
-    : public gtest::RealLoopFixture,
+    : public sys::testing::TestWithEnvironment,
       public ::testing::WithParamInterface<TestComponentParam>,
       fuchsia::auth::AuthenticationContextProvider {
  public:
   DevTokenManagerAppTest()
-      : startup_context_(sys::ComponentContext::Create()),
-        auth_context_provider_binding_(this) {}
+      : auth_context_provider_binding_(this) {}
 
   ~DevTokenManagerAppTest() {}
 
  protected:
   // ::testing::Test:
   void SetUp() override {
-    fidl::InterfaceHandle<fuchsia::io::Directory> services;
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = GetParam().token_manager_url;
-    launch_info.directory_request = services.NewRequest().TakeChannel();
-    {
-      std::ostringstream stream;
-      stream << "--verbose=" << fxl::GetVlogVerbosity();
-      launch_info.arguments.push_back(stream.str());
-    }
-    fuchsia::sys::LauncherPtr launcher;
-    startup_context_->svc()->Connect(launcher.NewRequest());
-    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-    controller_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
-    });
 
-    sys::ServiceDirectory service_directory(std::move(services));
-    service_directory.Connect(token_mgr_factory_.NewRequest());
+    std::unique_ptr<EnvironmentServices> services = CreateServices();
+    LaunchInfo launch_info;
+    launch_info.url = kTokenManagerFactoryUrl;
+    services->AddServiceWithLaunchInfo(std::move(launch_info), TokenManagerFactory::Name_);
 
-    std::string auth_provider_type = GetParam().auth_provider_params.type;
+    environment_ = CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
+    WaitForEnclosingEnvToStart(environment_.get());
+
+    environment_->ConnectToService(token_mgr_factory_.NewRequest());
+    ASSERT_TRUE(token_mgr_factory_.is_bound());
+
+    std::string auth_provider_type = GetParam().auth_provider_type;
     dev_app_config_ = MakeDevAppConfig(auth_provider_type);
 
     fuchsia::auth::AuthProviderConfig dev_auth_provider_config;
     dev_auth_provider_config.auth_provider_type = auth_provider_type;
-    dev_auth_provider_config.url = GetParam().auth_provider_params.url;
+    dev_auth_provider_config.url = GetParam().auth_provider_url;
     std::vector<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
     auth_provider_configs.push_back(std::move(dev_auth_provider_config));
 
@@ -122,9 +111,10 @@ class DevTokenManagerAppTest
     // uses a different user_profile_id for each test and so any problems with
     // deletion should not impact test accuracy.
     if (token_mgr_.is_bound() && !user_profile_id_.is_null()) {
-      Status status;
+      bool call_complete = false;
       token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_, kForce,
-                                  &status);
+                [&] (Status status) {call_complete = true;});
+      RunLoopUntil([&] {return call_complete;});
     }
   }
 
@@ -132,38 +122,39 @@ class DevTokenManagerAppTest
   void GetAuthenticationUIContext(
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
       override {
-    FXL_LOG(INFO) << "DevTokenManagerAppTest::GetAuthenticationUIContext() is "
-                     "unimplemented.";
+    // Silently ignore this request. The TokenManager will pass the other end
+    // of the channel into the dev auth provider, which will never attempt to
+    // use it since it does not display UI.
   }
 
  private:
-  std::unique_ptr<sys::ComponentContext> startup_context_;
-  fuchsia::sys::ComponentControllerPtr controller_;
+  std::unique_ptr<EnclosingEnvironment> environment_;
 
  protected:
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       auth_context_provider_binding_;
 
   fuchsia::auth::AppConfig dev_app_config_;
-  fuchsia::auth::TokenManagerSyncPtr token_mgr_;
-  fuchsia::auth::TokenManagerFactorySyncPtr token_mgr_factory_;
+  fuchsia::auth::TokenManagerPtr token_mgr_;
+  fuchsia::auth::TokenManagerFactoryPtr token_mgr_factory_;
   fidl::StringPtr user_profile_id_;
 
   void RegisterUser(fuchsia::auth::AppConfig app_config) {
     auto scopes = fidl::VectorPtr<std::string>::New(0);
     scopes.push_back("test_scope");
 
-    Status status;
-    fuchsia::auth::UserProfileInfoPtr user_info;
-
+    bool call_complete = false;
     token_mgr_->Authorize(
         app_config, nullptr,   /* optional AuthenticationUiContext */
         std::move(scopes), "", /* new user, no existing user_profile_id */
         "",                    /* empty auth_code */
-        &status, &user_info);
-    ASSERT_EQ(Status::OK, status);
-    ASSERT_FALSE(!user_info);
-    user_profile_id_ = user_info->id;
+        [&](Status status, UserProfileInfoPtr user_info)  {
+            EXPECT_EQ(Status::OK, status);
+            EXPECT_NE(nullptr, user_info);
+            user_profile_id_ = user_info->id;
+            call_complete = true;
+        });
+    RunLoopUntil([&] {return call_complete;});
   }
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevTokenManagerAppTest);
@@ -172,102 +163,114 @@ class DevTokenManagerAppTest
 TEST_P(DevTokenManagerAppTest, Authorize) {
   auto scopes = fidl::VectorPtr<std::string>::New(0);
   scopes.push_back("test_scope");
-
-  Status status;
-  fuchsia::auth::UserProfileInfoPtr user_info;
-
+  bool call_complete = false;
   token_mgr_->Authorize(
       dev_app_config_, nullptr, /* optional AuthenticationUiContext */
       std::move(scopes), "",    /* new user, no existing user_profile_id */
       "",                       /* empty auth_code */
-      &status, &user_info);
-  ASSERT_EQ(Status::OK, status);
-  ASSERT_FALSE(!user_info);
-  EXPECT_FALSE(user_info->id.empty());
-  EXPECT_FALSE(user_info->display_name.get().empty());
-  EXPECT_FALSE(user_info->url.get().empty());
-  EXPECT_FALSE(user_info->image_url.get().empty());
+      [&](Status status, UserProfileInfoPtr user_info)  {
+          EXPECT_EQ(Status::OK, status);
+          EXPECT_NE(nullptr, user_info);
+          EXPECT_FALSE(user_info->id.empty());
+          EXPECT_FALSE(user_info->display_name.get().empty());
+          EXPECT_FALSE(user_info->url.get().empty());
+          EXPECT_FALSE(user_info->image_url.get().empty());
+          call_complete = true;
+      });
+
+  RunLoopUntil([&] {return call_complete;});
 }
 
 TEST_P(DevTokenManagerAppTest, GetAccessToken) {
-  auto scopes = fidl::VectorPtr<std::string>::New(0);
-  Status status;
-  fidl::StringPtr access_token;
-
   RegisterUser(dev_app_config_);
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_,
-                             std::move(scopes), &status, &access_token);
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_TRUE(access_token.get().find(":at_") != std::string::npos);
+  auto scopes = fidl::VectorPtr<std::string>::New(0);
+  bool call_complete = false;
+  token_mgr_->GetAccessToken(
+       dev_app_config_, user_profile_id_, std::move(scopes),
+       [&](Status status, fidl::StringPtr access_token)  {
+          EXPECT_EQ(Status::OK, status);
+          EXPECT_NE(std::string::npos, access_token.get().find(":at_"));
+          call_complete = true;
+      });
+  RunLoopUntil([&] {return call_complete;});
 }
 
 TEST_P(DevTokenManagerAppTest, GetIdToken) {
-  Status status;
-  fidl::StringPtr id_token;
-
   RegisterUser(dev_app_config_);
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "", &status,
-                         &id_token);
-  if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
-    // TODO(ukode): Not yet supported for IotID
-    ASSERT_EQ(Status::INVALID_REQUEST, status);
-  } else {
-    ASSERT_EQ(Status::OK, status);
-    EXPECT_TRUE(id_token.get().find(":idt_") != std::string::npos);
-  }
+  bool call_complete = false;
+  token_mgr_->GetIdToken(
+       dev_app_config_, user_profile_id_, "",
+       [&](Status status, fidl::StringPtr id_token)  {
+          if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
+            // TODO(ukode): Not yet supported for IotID
+            EXPECT_EQ(Status::INVALID_REQUEST, status);
+          } else {
+            EXPECT_EQ(Status::OK, status);
+            EXPECT_NE(std::string::npos, id_token.get().find(":idt_"));
+          }
+          call_complete = true;
+      });
+  RunLoopUntil([&] {return call_complete;});
 }
 
 TEST_P(DevTokenManagerAppTest, GetFirebaseToken) {
-  Status status;
-  fuchsia::auth::FirebaseTokenPtr firebase_token;
-
   RegisterUser(dev_app_config_);
-
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_,
-                               "firebase_test_api_key", "", &status,
-                               &firebase_token);
-  if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
-    // TODO(ukode): Not yet supported for IotID
-    ASSERT_EQ(Status::INVALID_REQUEST, status);
-  } else {
-    ASSERT_EQ(Status::OK, status);
-    if (firebase_token) {
-      EXPECT_TRUE(firebase_token->id_token.find(":fbt_") != std::string::npos);
-      EXPECT_TRUE(firebase_token->email.get().find("@firebase.example.com") !=
-                  std::string::npos);
-      EXPECT_TRUE(firebase_token->local_id.get().find("local_id_") !=
-                  std::string::npos);
-    }
-  }
+  bool call_complete = false;
+  token_mgr_->GetFirebaseToken(
+      dev_app_config_, user_profile_id_, "firebase_test_api_key", "",
+      [&](Status status, FirebaseTokenPtr firebase_token)  {
+        if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
+          // TODO(ukode): Not yet supported for IotID
+          EXPECT_EQ(Status::INVALID_REQUEST, status);
+        } else {
+          EXPECT_EQ(Status::OK, status);
+          EXPECT_NE(std::string::npos, firebase_token->id_token.find(":fbt_"));
+          EXPECT_NE(std::string::npos, firebase_token->email.get().find("@firebase.example.com"));
+          EXPECT_NE(std::string::npos, firebase_token->local_id.get().find("local_id_"));
+        }
+        call_complete = true;
+  });
+  RunLoopUntil([&] {return call_complete;});
 }
 
-TEST_P(DevTokenManagerAppTest, GetCachedFirebaseToken) {
+TEST_P(DevTokenManagerAppTest, GetFirebaseTokenFromCache) {
   // TODO(ukode): Not yet supported for IotID
   if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
     return;
   }
-  Status status;
-  fuchsia::auth::FirebaseTokenPtr firebase_token;
-  fuchsia::auth::FirebaseTokenPtr other_firebase_token;
-  fuchsia::auth::FirebaseTokenPtr cached_firebase_token;
+
+  FirebaseTokenPtr firebase_token;
+  FirebaseTokenPtr other_firebase_token;
+  FirebaseTokenPtr cached_firebase_token;
 
   RegisterUser(dev_app_config_);
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_, "", "key1",
-                               &status, &firebase_token);
-  ASSERT_EQ(Status::OK, status);
 
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_, "", "key2",
-                               &status, &other_firebase_token);
-  ASSERT_EQ(Status::OK, status);
+  bool last_call_complete = false;
+  token_mgr_->GetFirebaseToken(
+      dev_app_config_, user_profile_id_, "", "key1",
+      [&](Status status, FirebaseTokenPtr token)  {
+          EXPECT_EQ(Status::OK, status);
+          firebase_token = std::move(token);
+      });
+  token_mgr_->GetFirebaseToken(
+      dev_app_config_, user_profile_id_, "", "key2",
+      [&](Status status, FirebaseTokenPtr token)  {
+          EXPECT_EQ(Status::OK, status);
+          other_firebase_token = std::move(token);
+      });
+  token_mgr_->GetFirebaseToken(
+      dev_app_config_, user_profile_id_, "", "key1",
+      [&](Status status, FirebaseTokenPtr token)  {
+          EXPECT_EQ(Status::OK, status);
+          cached_firebase_token = std::move(token);
+          last_call_complete = true;
+      });
 
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_, "", "key1",
-                               &status, &cached_firebase_token);
-  ASSERT_EQ(Status::OK, status);
-
-  ASSERT_NE(firebase_token->id_token, other_firebase_token->id_token);
-  ASSERT_EQ(firebase_token->id_token, cached_firebase_token->id_token);
-  ASSERT_EQ(firebase_token->email, cached_firebase_token->email);
-  ASSERT_EQ(firebase_token->local_id, cached_firebase_token->local_id);
+  RunLoopUntil([&] {return last_call_complete;});
+  EXPECT_NE(firebase_token->id_token, other_firebase_token->id_token);
+  EXPECT_EQ(firebase_token->id_token, cached_firebase_token->id_token);
+  EXPECT_EQ(firebase_token->email, cached_firebase_token->email);
+  EXPECT_EQ(firebase_token->local_id, cached_firebase_token->local_id);
 }
 
 TEST_P(DevTokenManagerAppTest, EraseAllTokens) {
@@ -275,43 +278,59 @@ TEST_P(DevTokenManagerAppTest, EraseAllTokens) {
   if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
     return;
   }
-  auto scopes = fidl::VectorPtr<std::string>::New(0);
-  Status status;
-
-  fidl::StringPtr id_token;
-  fidl::StringPtr access_token;
-  fuchsia::auth::FirebaseTokenPtr firebase_token;
 
   RegisterUser(dev_app_config_);
+  bool last_call_complete = false;
 
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "", &status,
-                         &id_token);
-  ASSERT_EQ(Status::OK, status);
+  token_mgr_->GetIdToken(
+       dev_app_config_, user_profile_id_, "",
+       [&](Status status, fidl::StringPtr id_token)  {
+          EXPECT_EQ(Status::OK, status);
+          EXPECT_NE(nullptr, id_token);
+      });
 
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_,
-                             std::move(scopes), &status, &access_token);
-  ASSERT_EQ(Status::OK, status);
+  auto scopes = fidl::VectorPtr<std::string>::New(0);
+  token_mgr_->GetAccessToken(
+       dev_app_config_, user_profile_id_, std::move(scopes),
+       [&](Status status, fidl::StringPtr access_token)  {
+          EXPECT_EQ(Status::OK, status);
+          EXPECT_NE(nullptr, access_token);
+      });
 
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_, "", "",
-                               &status, &firebase_token);
-  ASSERT_EQ(Status::OK, status);
+  token_mgr_->GetFirebaseToken(
+      dev_app_config_, user_profile_id_, "", "",
+      [&](Status status, FirebaseTokenPtr firebase_token)  {
+        EXPECT_EQ(Status::OK, status);
+        EXPECT_NE(nullptr, firebase_token);
+  });
 
-  token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_, kForce,
-                              &status);
-  ASSERT_EQ(Status::OK, status);
+  token_mgr_->DeleteAllTokens(
+      dev_app_config_, user_profile_id_, kForce,
+      [&](Status status)  {
+        EXPECT_EQ(Status::OK, status);
+      });
 
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "", &status,
-                         &id_token);
-  ASSERT_EQ(Status::USER_NOT_FOUND, status);
+  token_mgr_->GetIdToken(
+       dev_app_config_, user_profile_id_, "",
+       [&](Status status, fidl::StringPtr id_token)  {
+          EXPECT_EQ(Status::USER_NOT_FOUND, status);
+      });
 
   scopes = fidl::VectorPtr<std::string>::New(0);
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_,
-                             std::move(scopes), &status, &access_token);
-  ASSERT_EQ(Status::USER_NOT_FOUND, status);
+  token_mgr_->GetAccessToken(
+       dev_app_config_, user_profile_id_, std::move(scopes),
+       [&](Status status, fidl::StringPtr access_token)  {
+          EXPECT_EQ(Status::USER_NOT_FOUND, status);
+      });
 
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_, "", "",
-                               &status, &firebase_token);
-  ASSERT_EQ(Status::USER_NOT_FOUND, status);
+  token_mgr_->GetFirebaseToken(
+      dev_app_config_, user_profile_id_, "", "",
+      [&](Status status, FirebaseTokenPtr firebase_token)  {
+        EXPECT_EQ(Status::USER_NOT_FOUND, status);
+        last_call_complete = true;
+  });
+
+  RunLoopUntil([&] {return last_call_complete;});
 }
 
 TEST_P(DevTokenManagerAppTest, GetIdTokenFromCache) {
@@ -319,100 +338,134 @@ TEST_P(DevTokenManagerAppTest, GetIdTokenFromCache) {
   if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
     return;
   }
-  Status status;
+
   fidl::StringPtr id_token;
-  fidl::StringPtr cached_id_token;
   fidl::StringPtr second_user_id_token;
 
   RegisterUser(dev_app_config_);
 
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "", &status,
-                         &id_token);
-  ASSERT_EQ(Status::OK, status);
+  bool last_call_complete = false;
+  token_mgr_->GetIdToken(
+       dev_app_config_, user_profile_id_, "",
+       [&](Status status, fidl::StringPtr token)  {
+          EXPECT_EQ(Status::OK, status);
+          id_token = std::move(token);
+      });
 
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "", &status,
-                         &cached_id_token);
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_TRUE(id_token.get().find(":idt_") != std::string::npos);
-  ASSERT_EQ(id_token.get(), cached_id_token.get());
+  token_mgr_->GetIdToken(
+       dev_app_config_, user_profile_id_, "",
+       [&](Status status, fidl::StringPtr token)  {
+          EXPECT_EQ(Status::OK, status);
+          EXPECT_EQ(id_token.get(), token.get());
+      });
 
   // Verify ID tokens are different for different user to prevent a
   // degenerate test.
   fidl::StringPtr original_user_profile_id = user_profile_id_;
   RegisterUser(dev_app_config_);
-  ASSERT_NE(user_profile_id_, original_user_profile_id);
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "", &status,
-                         &second_user_id_token);
-  ASSERT_NE(id_token.get(), second_user_id_token.get());
+  EXPECT_NE(user_profile_id_, original_user_profile_id);
+  token_mgr_->GetIdToken(
+       dev_app_config_, user_profile_id_, "",
+       [&](Status status, fidl::StringPtr token)  {
+          EXPECT_EQ(Status::OK, status);
+          EXPECT_NE(id_token.get(), token.get());
+          last_call_complete = true;
+      });
+
+  RunLoopUntil([&] {return last_call_complete;});
 }
 
 TEST_P(DevTokenManagerAppTest, GetAccessTokenFromCache) {
-  auto scopes = fidl::VectorPtr<std::string>::New(0);
-  Status status;
   fidl::StringPtr access_token;
-  fidl::StringPtr cached_access_token;
 
   RegisterUser(dev_app_config_);
 
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_,
-                             std::move(scopes), &status, &access_token);
-  ASSERT_EQ(Status::OK, status);
+  bool last_call_complete = false;
+  auto scopes = fidl::VectorPtr<std::string>::New(0);
+  token_mgr_->GetAccessToken(
+       dev_app_config_, user_profile_id_, std::move(scopes),
+       [&](Status status, fidl::StringPtr token)  {
+          EXPECT_EQ(Status::OK, status);
+          EXPECT_NE(std::string::npos, token.get().find(":at_"));
+          access_token = std::move(token);
+      });
 
   scopes = fidl::VectorPtr<std::string>::New(0);
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_,
-                             std::move(scopes), &status, &cached_access_token);
-  ASSERT_EQ(Status::OK, status);
+  token_mgr_->GetAccessToken(
+       dev_app_config_, user_profile_id_, std::move(scopes),
+       [&](Status status, fidl::StringPtr token)  {
+          EXPECT_EQ(Status::OK, status);
+          EXPECT_EQ(access_token.get(), token.get());
+          last_call_complete = true;
+      });
 
-  EXPECT_TRUE(access_token.get().find(":at_") != std::string::npos);
-  ASSERT_EQ(access_token.get(), cached_access_token.get());
+  RunLoopUntil([&] {return last_call_complete;});
 }
 
 // Tests user re-authorization flow that generates fresh long lived credentials
 // and verifies that short lived credentials are based on the most recent long
 // lived credentials.
 TEST_P(DevTokenManagerAppTest, Reauthorize) {
-  fidl::StringPtr token;
+  fidl::StringPtr user_profile_id;
+  std::string credential;
+  bool authorize_complete = false;
+  bool last_call_complete = false;
+
   auto scopes = fidl::VectorPtr<std::string>::New(0);
-
-  Status status;
-  fuchsia::auth::UserProfileInfoPtr user_info;
-
-  token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes), "", "",
-                        &status, &user_info);
-  ASSERT_EQ(Status::OK, status);
-  fidl::StringPtr user_profile_id = user_info->id;
+  token_mgr_->Authorize(
+        dev_app_config_, nullptr, std::move(scopes), "", "",
+        [&](Status status, UserProfileInfoPtr user_info)  {
+            EXPECT_EQ(Status::OK, status);
+            user_profile_id = user_info->id;
+            authorize_complete = true;
+        });
+  RunLoopUntil([&] {return authorize_complete;});
 
   scopes = fidl::VectorPtr<std::string>::New(0);
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id,
-                             std::move(scopes), &status, &token);
-  ASSERT_EQ(Status::OK, status);
-  std::string credential = token->substr(0, token->find(":"));
+  token_mgr_->GetAccessToken(
+       dev_app_config_, user_profile_id, std::move(scopes),
+       [&](Status status, fidl::StringPtr access_token)  {
+          EXPECT_EQ(Status::OK, status);
+          // Extract part of the fake access token reflecting the refresh token
+          credential = access_token->substr(0, access_token->find(":"));
+      });
 
-  token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id, kForce,
-                              &status);
-  ASSERT_EQ(Status::OK, status);
+  token_mgr_->DeleteAllTokens(
+      dev_app_config_, user_profile_id, kForce,
+      [&](Status status)  {
+        EXPECT_EQ(Status::OK, status);
+      });
 
   // Verify that the credential and cache should now be cleared
   scopes = fidl::VectorPtr<std::string>::New(0);
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id,
-                             std::move(scopes), &status, &token);
-  ASSERT_EQ(Status::USER_NOT_FOUND, status);
-  EXPECT_TRUE(token.get().empty());
+  token_mgr_->GetAccessToken(
+       dev_app_config_, user_profile_id, std::move(scopes),
+       [&](Status status, fidl::StringPtr access_token)  {
+          EXPECT_EQ(Status::USER_NOT_FOUND, status);
+          EXPECT_EQ(nullptr, access_token);
+      });
 
-  // Re-authorize and obtain a fresh credential for the same |user_profile_id|
+  // Re-authorize the same |user_profile_id|
   scopes = fidl::VectorPtr<std::string>::New(0);
-  token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes),
-                        user_profile_id, "", &status, &user_info);
-  ASSERT_EQ(Status::OK, status);
-  ASSERT_EQ(user_info->id, user_profile_id);
+  token_mgr_->Authorize(
+        dev_app_config_, nullptr, std::move(scopes), user_profile_id, "",
+        [&](Status status, UserProfileInfoPtr user_info)  {
+            EXPECT_EQ(Status::OK, status);
+            EXPECT_EQ(user_info->id, user_profile_id);
+        });
 
-  // Verify that the new access token is not based on the old credential
-  fidl::StringPtr token2;
+  // Verify that new access token is not based on the original credential
   scopes = fidl::VectorPtr<std::string>::New(0);
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id,
-                             std::move(scopes), &status, &token2);
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_TRUE(token2.get().find(credential) == std::string::npos);
+  token_mgr_->GetAccessToken(
+       dev_app_config_, user_profile_id, std::move(scopes),
+       [&](Status status, fidl::StringPtr access_token)  {
+          EXPECT_EQ(Status::OK, status);
+          EXPECT_NE(nullptr, access_token);
+          EXPECT_EQ(std::string::npos, access_token.get().find(credential));
+          last_call_complete = true;
+      });
+
+  RunLoopUntil([&] {return last_call_complete;});
 }
 
 INSTANTIATE_TEST_SUITE_P(Cpp, DevTokenManagerAppTest,

@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.auth.TokenManagerFactory",
             "fuchsia.logger.LogSink",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
         ]
     }
 }
