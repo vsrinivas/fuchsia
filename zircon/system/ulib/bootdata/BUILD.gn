@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 library("bootdata") {
+  sdk = "source"
+  sdk_headers = [ "bootdata/decompress.h" ]
+
   sources = [
     "decompress.c",
   ]

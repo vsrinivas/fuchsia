@@ -7,6 +7,7 @@ group("ulib") {
   # listed here.  That is, library() targets with `sdk` set.
   deps = [
     "backtrace",
+    "lz4",
     "ngunwind",
     "safemath",
   ]

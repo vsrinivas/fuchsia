@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 library("bootfs") {
+  sdk = "source"
+  sdk_headers = [ "lib/bootfs/parser.h" ]
+
   sources = [
     "parser.cpp",
   ]

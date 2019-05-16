@@ -3,6 +3,15 @@
 # found in the LICENSE file.
 
 library("lz4") {
+  sdk = "static"
+  sdk_headers = [
+    "lz4/lz4.h",
+    "lz4/lz4frame_static.h",
+    "lz4/lz4frame.h",
+    "lz4/lz4hc.h",
+    "lz4/xxhash.h",
+  ]
+
   host = true
   sources = [
     "lz4.c",
