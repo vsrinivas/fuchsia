@@ -106,6 +106,7 @@ func (c *Client) WaitForDeviceToBeUp(t *testing.T) {
 
 	c.waitForDevicePath("/bin")
 	c.waitForDevicePath("/config")
+	c.waitForDevicePath("/config/build-info")
 
 	log.Printf("device up")
 }
