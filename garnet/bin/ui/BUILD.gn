@@ -40,9 +40,7 @@ declare_args() {
   scenic_enable_vulkan_validation = is_debug
 }
 
-package("scenic_tests") {
-  testonly = true
-
+test_package("scenic_tests") {
   deps = [
     "input/tests",
     "input_reader/tests",
@@ -102,41 +100,6 @@ package("scenic_tests") {
     {
       name = "scenic_unittests"
       environments = basic_envs
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/scenic_tests.cmx")
-      dest = "scenic_tests.cmx"
-    },
-    {
-      path = rebase_path("meta/gfx_apptests.cmx")
-      dest = "gfx_apptests.cmx"
-    },
-    {
-      path = rebase_path("meta/gfx_pixeltests.cmx")
-      dest = "gfx_pixeltests.cmx"
-    },
-    {
-      path = rebase_path("meta/gfx_viewstate_apptests.cmx")
-      dest = "gfx_viewstate_apptests.cmx"
-    },
-    {
-      path = rebase_path("meta/gfx_unittests.cmx")
-      dest = "gfx_unittests.cmx"
-    },
-    {
-      path = rebase_path("meta/input_unittests.cmx")
-      dest = "input_unittests.cmx"
-    },
-    {
-      path = rebase_path("meta/root_presenter_unittests.cmx")
-      dest = "root_presenter_unittests.cmx"
-    },
-    {
-      path = rebase_path("meta/scenic_unittests.cmx")
-      dest = "scenic_unittests.cmx"
     },
   ]
 

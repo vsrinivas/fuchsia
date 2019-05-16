@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/geometry_util_unittests"
+    }
+}

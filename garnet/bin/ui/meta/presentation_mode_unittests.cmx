@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/presentation_mode_unittests"
+    }
+}

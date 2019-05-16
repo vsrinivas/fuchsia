@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/input_reader_unittests"
+    }
+}
