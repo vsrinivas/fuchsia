@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use failure::{format_err, Error};
+use fuchsia_component::server::{ServiceFs, ServiceObjTrait};
+use fuchsia_zircon::{self as zx, HandleBased};
 use mapped_vmo::Mapping;
 use num_traits::ToPrimitive;
 use parking_lot::Mutex;
@@ -58,9 +60,19 @@ pub struct Property<T: PropertyFormat> {
 /// Root API for inspect. Used to create the VMO and get the root node.
 impl Inspector {
     /// Create a new Inspect VMO object with the given maximum size.
-    pub fn new(max_size: usize, name: &str) -> Result<Self, Error> {
-        let (mapping, _) = Mapping::allocate(max_size)
+    pub fn new<ServiceObjTy: ServiceObjTrait>(
+        max_size: usize,
+        name: &str,
+        fs: &mut ServiceFs<ServiceObjTy>,
+    ) -> Result<Self, Error> {
+        let (mapping, vmo) = Mapping::allocate(max_size)
             .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
+        fs.dir("objects").add_vmo_file_at(
+            "root.inspect",
+            vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)?,
+            0, /* vmo offset */
+            max_size as u64,
+        );
         let heap = Heap::new(Rc::new(mapping))?;
         let state = State::create(heap)?;
         let root_node =
