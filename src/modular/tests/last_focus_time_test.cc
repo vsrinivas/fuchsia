@@ -204,8 +204,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   test_harness()->Run(std::move(spec));
 
   // Wait for our session shell to start.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return !!test_session_shell; },
-                                        zx::sec(5)));
+  RunLoopUntil([&] { return !!test_session_shell; });
 
   // Connect to extra services also provided to session shells.
   fuchsia::modular::PuppetMasterPtr puppet_master;
@@ -247,8 +246,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   bool story_created{false};
   story_puppet_master->Execute(
       [&](fuchsia::modular::ExecuteResult result) { story_created = true; });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return story_created; }, zx::sec(5)));
+  RunLoopUntil([&] { return story_created; });
 
   // Watch the story and then start it.
   TestStoryWatcher story_watcher;
@@ -268,8 +266,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   // 1) The story is created.
   // 2) The story transitions to running.
   // 3) The story is focused.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&]() { return last_focus_timestamps.size() == 3; }, zx::sec(5)));
+  RunLoopUntil([&]() { return last_focus_timestamps.size() == 3; });
   EXPECT_EQ(0, last_focus_timestamps[0]);
   EXPECT_EQ(0, last_focus_timestamps[1]);
   EXPECT_LT(0, last_focus_timestamps[2]);
