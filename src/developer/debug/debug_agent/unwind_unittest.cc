@@ -127,16 +127,10 @@ void DoUnwindTest() {
 
 }  // namespace
 
-#if !defined(__aarch64__)
-// TODO(brettw) This test fails on ARM for unknown reasons. The unwinder
-// reports only one stack frame. This will happen if the AOSP unwinder can't
-// find the libraries, and hence the unwind information from them so it could
-// be related to that.
 TEST(Unwind, Android) {
   SetUnwinderType(UnwinderType::kAndroid);
   DoUnwindTest();
 }
-#endif
 
 TEST(Unwind, NG) {
   SetUnwinderType(UnwinderType::kNgUnwind);

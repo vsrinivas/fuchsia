@@ -137,13 +137,13 @@ void RegsFuchsia::IterateRegisters(
   fn("pc", regs_[ARM64_REG_PC]);
 }
 
-uint64_t RegsFuchsia::pc() { return regs_[X86_64_REG_PC]; }
+uint64_t RegsFuchsia::pc() { return regs_[ARM64_REG_PC]; }
 
-uint64_t RegsFuchsia::sp() { return regs_[X86_64_REG_SP]; }
+uint64_t RegsFuchsia::sp() { return regs_[ARM64_REG_SP]; }
 
-void RegsFuchsia::set_pc(uint64_t pc) { regs_[X86_64_REG_PC] = pc; }
+void RegsFuchsia::set_pc(uint64_t pc) { regs_[ARM64_REG_PC] = pc; }
 
-void RegsFuchsia::set_sp(uint64_t sp) { regs_[X86_64_REG_SP] = sp; }
+void RegsFuchsia::set_sp(uint64_t sp) { regs_[ARM64_REG_SP] = sp; }
 
 Regs* RegsFuchsia::Clone() { return new RegsFuchsia(*this); }
 
