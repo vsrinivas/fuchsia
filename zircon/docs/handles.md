@@ -41,6 +41,128 @@ The '[rights](rights.md)' specify what operations on the kernel object
 are allowed. It is possible for a single process to have two different
 handles to the same kernel object with different rights.
 
+![User-mode versus Kernel-mode](images/handle-creation1.png)
+
+**Figure 1.** A user process starts the creation of a handle.
+
+<!--- handle-creation1.png
+```dot
+digraph Q {
+    node [shape=record];
+    nd_1 [label = "Process"];
+    nd_2 [label = "Event", style = invis];
+
+    subgraph cluster_Userspace {
+        label = "User-mode";
+        nd_1
+    }
+
+    subgraph cluster_Kernel {
+        label = "Kernel-mode";
+        style=filled;
+        nd_2;
+    }
+}
+```
+-->
+
+![User process creates the kernel object](images/handle-creation2.png)
+
+**Figure 2.** The user process creates the kernel object (for example, an
+event) with a system call and holds an integer reference to the object.
+
+<!--- handle-creation2.png
+```dot
+digraph Q {
+    node [shape=record];
+    nd_2 [label = "event"];
+    nd_3 [label = "ev0"];
+    rankdir=LR;
+
+    subgraph cluster_Userspace {
+        label = "User-mode";
+        subgraph cluster_Process {
+            label = "Process";
+            nd_3;
+        }
+    }
+
+    subgraph cluster_Kernel {
+        label = "Kernel-mode";
+        style=filled;
+        nd_2;
+    }
+
+    nd_3->nd_2 [label = "zx_event_create()"];
+}
+```
+-->
+
+![Handles are created with a set of basic rights](images/handle-creation3.png)
+
+**Figure 3.** Handles are created with a set of basic rights and any additional
+rights applicable to the kernel object type.
+
+<!--- handle-creation3.png
+```dot
+digraph Q {
+    node [shape=record];
+    nd_2 [label = "event"];
+    nd_3 [label = "ev0"];
+    rankdir=RL;
+
+    subgraph cluster_Userspace {
+        label = "User-mode";
+        subgraph cluster_Process {
+            label = "Process";
+            nd_3;
+        }
+    }
+
+    subgraph cluster_Kernel {
+        label = "Kernel-mode";
+        style=filled;
+        nd_2;
+    }
+    nd_2->nd_3 [label= "ZX basic rights\n + signalling right"];
+}
+```
+-->
+
+![Handles can be duplicated](images/handle-creation4.png)
+
+**Figure 4.** Handles can be duplicated. Rights can be dropped during this
+process.
+
+<!--- handle-creation4.png
+```dot
+graph Q {
+    node [shape=record];
+    nd_2 [label = "event"];
+    nd_3 [label = "ev0"];
+    nd_4 [label = "ev1"];
+    rankdir=RL;
+
+    subgraph cluster_Userspace {
+        label = "User-mode";
+        subgraph cluster_Process {
+            label = "Process";
+            nd_3;
+            nd_4;
+        }
+    }
+
+    subgraph cluster_Kernel {
+        label = "Kernel-mode";
+        style=filled;
+        nd_2;
+    }
+    nd_2--nd_3 [label= "ZX basic rights\n + signalling right"];
+    nd_4--nd_2 [label= "ZX wait right only"];
+}
+```
+-->
+
 ## Using Handles
 There are many syscalls that create a new kernel object
 and which return a handle to it. To name a few:
