@@ -78,6 +78,8 @@ bool CpuStatsFetcherImpl::CalculateCpuPercentage(double *cpu_percentage) {
                           static_cast<double>(elapsed_time);
   }
   *cpu_percentage = cpu_percentage_sum / static_cast<double>(num_cpu_cores_);
+  TRACE_COUNTER("system_metrics", "cpu_usage", 0, "average_cpu_percentage",
+                *cpu_percentage);
   return true;
 }
 
