@@ -46,7 +46,8 @@ class MockFunction {
 public:
     MockFunction& ExpectCall(R ret, Ts... args) {
         has_expectations_ = true;
-        expectations_.push_back(Expectation{ret, std::make_tuple(args...)});
+        std::tuple<Ts...> args_tuple = std::make_tuple(std::forward<Ts>(args)...);
+        expectations_.push_back(Expectation{std::move(ret), std::move(args_tuple)});
         return *this;
     }
 
@@ -57,7 +58,7 @@ public:
 
     R Call(Ts... args) {
         R ret = {};
-        CallHelper(&ret, args...);
+        CallHelper(&ret, std::forward<Ts>(args)...);
         return ret;
     }
 
@@ -79,9 +80,9 @@ private:
     void CallHelper(R* ret, Ts... args) {
         ASSERT_LT(expectation_index_, expectations_.size());
 
-        Expectation exp = expectations_[expectation_index_++];
-        EXPECT_TRUE(exp.args == std::make_tuple(args...));
-        *ret = exp.ret_value;
+        Expectation exp = std::move(expectations_[expectation_index_++]);
+        EXPECT_TRUE(exp.args == std::make_tuple(std::forward<Ts>(args)...));
+        *ret = std::move(exp.ret_value);
     }
 
     bool has_expectations_ = false;
@@ -94,7 +95,8 @@ class MockFunction<void, Ts...> {
 public:
     MockFunction& ExpectCall(Ts... args) {
         has_expectations_ = true;
-        expectations_.push_back(std::make_tuple(args...));
+        std::tuple<Ts...> args_tuple = std::make_tuple(std::forward<Ts>(args)...);
+        expectations_.push_back(std::move(args_tuple));
         return *this;
     }
 
@@ -103,7 +105,7 @@ public:
         return *this;
     }
 
-    void Call(Ts... args) { CallHelper(args...); }
+    void Call(Ts... args) { CallHelper(std::forward<Ts>(args)...); }
 
     bool HasExpectations() const { return has_expectations_; }
 
@@ -117,7 +119,9 @@ public:
 private:
     void CallHelper(Ts... args) {
         ASSERT_LT(expectation_index_, expectations_.size());
-        EXPECT_TRUE(expectations_[expectation_index_++] == std::make_tuple(args...));
+
+        std::tuple<Ts...> exp = std::move(expectations_[expectation_index_++]);
+        EXPECT_TRUE(exp == std::make_tuple(std::forward<Ts>(args)...));
     }
 
     bool has_expectations_ = false;
