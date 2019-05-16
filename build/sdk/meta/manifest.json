@@ -1,5 +1,5 @@
 {
-  "description": "A target image",
+  "description": "The manifest describing the contents of the SDK",
   "type": "object",
   "properties": {
     "arch": {

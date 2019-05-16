@@ -105,7 +105,7 @@ template("sdk") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ "//build/sdk:schemas" ]
+    deps += [ "//build/sdk/meta" ]
   }
 
   intermediate_manifest_file = "$target_gen_dir/$generation_target_name.sdk"
