@@ -88,12 +88,10 @@ impl AccountHandlerConnection {
             .account_manager_status(Status::IoError)?;
         let request_stream = AccountHandlerContextRequestStream::from_channel(server_async_chan);
         let context_clone = Arc::clone(&context);
-        fasync::spawn(
-            async move {
-                await!(context_clone.handle_requests_from_stream(request_stream))
-                    .unwrap_or_else(|err| error!("Error handling AccountHandlerContext: {:?}", err))
-            },
-        );
+        fasync::spawn(async move {
+            await!(context_clone.handle_requests_from_stream(request_stream))
+                .unwrap_or_else(|err| error!("Error handling AccountHandlerContext: {:?}", err))
+        });
         Ok(ClientEnd::new(client_chan))
     }
 

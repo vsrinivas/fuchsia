@@ -6,9 +6,6 @@
 //! sending events to listeners, optionally configured with filters, about changes in the accounts
 //! presence and states during their lifetime.
 
-// TODO(dnordstrom): remove once integrated with AccountManager.
-#![allow(dead_code)]
-
 use account_common::{AccountAuthState, FidlAccountAuthState, LocalAccountId};
 use fidl_fuchsia_auth_account::{AccountListenerOptions, AccountListenerProxy};
 use futures::future::*;
@@ -17,8 +14,14 @@ use std::pin::Pin;
 
 /// Events emitted on account listeners
 pub enum AccountEvent {
+    /// AccountAdded is emitted after an account has been added.
     AccountAdded(LocalAccountId),
+
+    /// AccountRemoved is emitted after an account has been removed.
     AccountRemoved(LocalAccountId),
+
+    /// AuthStateChanged is emitted after an account's auth state has changed.
+    #[allow(dead_code)]
     AuthStateChanged(AccountAuthState),
 }
 

@@ -444,12 +444,10 @@ mod tests {
             fasync::Channel::from_channel(server_chan).unwrap(),
         );
 
-        fasync::spawn(
-            async move {
-                await!(test_object.handle_requests_from_stream(request_stream))
-                    .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
-            },
-        );
+        fasync::spawn(async move {
+            await!(test_object.handle_requests_from_stream(request_stream))
+                .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
+        });
 
         executor.run_singlethreaded(test_fn(proxy)).expect("Executor run failed.")
     }
