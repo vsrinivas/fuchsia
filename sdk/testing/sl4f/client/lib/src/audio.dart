@@ -5,6 +5,9 @@
 import 'dart:convert';
 import 'dart:io' show File;
 import 'dart:typed_data' show Uint8List;
+
+import 'package:pedantic/pedantic.dart';
+
 import 'dump.dart';
 import 'sl4f_client.dart';
 
@@ -78,7 +81,7 @@ class Audio {
     }
 
     if (dumpName != null) {
-      _dump.writeAsBytes(dumpName, 'wav', bytes);
+      unawaited(_dump.writeAsBytes(dumpName, 'wav', bytes));
     }
 
     return AudioTrack()

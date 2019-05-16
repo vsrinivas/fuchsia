@@ -32,6 +32,7 @@ dart_library("client") {
 dart_test("sl4f_client_tests") {
   sources = [
     "scenic_test.dart",
+    "traceutil_test.dart",
   ]
 
   deps = [

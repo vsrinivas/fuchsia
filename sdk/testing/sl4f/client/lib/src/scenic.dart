@@ -5,6 +5,7 @@
 import 'dart:convert' show base64Decode;
 
 import 'package:image/image.dart' show encodePng, Image;
+import 'package:pedantic/pedantic.dart';
 
 import 'dump.dart';
 import 'sl4f_client.dart';
@@ -42,7 +43,7 @@ class Scenic {
         info['width'], info['height'], base64Decode(response['data']));
 
     if (dumpName != null) {
-      _dump.writeAsBytes(dumpName, 'png', encodePng(image));
+      unawaited(_dump.writeAsBytes(dumpName, 'png', encodePng(image)));
     }
 
     return image;

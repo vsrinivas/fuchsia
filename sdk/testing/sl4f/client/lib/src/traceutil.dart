@@ -1,9 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be// found in the LICENSE file.
 
 import 'dart:convert';
+import 'dart:io' show File;
 
+import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
 
 import 'dump.dart';
@@ -12,6 +13,8 @@ import 'sl4f_client.dart';
 String _traceNameToTargetPath(String traceName) {
   return '/tmp/$traceName-trace.json';
 }
+
+final _log = Logger('traceutil');
 
 class Traceutil {
   final Sl4f _sl4f;
@@ -63,10 +66,14 @@ class Traceutil {
   ///
   /// A [trace] call with the same [traceName] must have successfully
   /// completed before calling [downloadTraceFile].
-  Future<void> downloadTraceFile(String traceName) async {
+  ///
+  /// Returns the download trace [File].
+  Future<File> downloadTraceFile(String traceName) async {
+    _log.info('Traceutil: Downloading trace $traceName');
     final tracePath = _traceNameToTargetPath(traceName);
     final String response = await _sl4f
         .request('traceutil_facade.GetTraceFile', {'path': tracePath});
-    _dump.writeAsBytes('$traceName-trace', 'json', utf8.encode(response));
+    return _dump.writeAsBytes(
+        '$traceName-trace', 'json', utf8.encode(response));
   }
 }

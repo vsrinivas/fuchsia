@@ -54,13 +54,16 @@ class Dump {
   /// Writes the bytes to the dump directory under a timestamp, the
   /// given topic name and the given file type suffix. Does nothing if
   /// no dump directory is configured.
-  void writeAsBytes(String name, String suffix, List<int> bytes) {
+  ///
+  /// Returns the [File] object of the newly created file.
+  Future<File> writeAsBytes(String name, String suffix, List<int> bytes) {
     if (_hasDumpDirectory) {
       final filename = '${DateTime.now().toIso8601String()}-$name.$suffix';
 
       // Writes to the file asynchronously so the test can continue.
-      File([_dumpDirectory, filename].join('/')).writeAsBytes(bytes);
+      return File([_dumpDirectory, filename].join('/')).writeAsBytes(bytes);
     }
+    return null;
   }
 
   bool get _hasDumpDirectory => _notEmptyString(_dumpDirectory);
