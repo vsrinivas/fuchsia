@@ -25,14 +25,8 @@ use unicase::UniCase;
 
 fn clone_buffer(buf: &mem::Buffer) -> Result<mem::Buffer, Error> {
     let vmo_rights = zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP;
-    let vmo = buf
-        .vmo
-        .duplicate_handle(vmo_rights)
-        .context("Failed to duplicate VMO handle.")?;
-    Ok(mem::Buffer {
-        vmo,
-        size: buf.size,
-    })
+    let vmo = buf.vmo.duplicate_handle(vmo_rights).context("Failed to duplicate VMO handle.")?;
+    Ok(mem::Buffer { vmo, size: buf.size })
 }
 
 struct Asset {
@@ -40,11 +34,29 @@ struct Asset {
     buffer: RwLock<Option<mem::Buffer>>,
 }
 
+/// Provides cached storage of [`Asset`]s. Should be initialized by [`FontService`].
+///
+/// Each [`Asset`] is assigned an ID equal to its index in `assets`.
+///
+/// # Examples
+/// ```
+/// let asset_collection = AssetCollection::new();
+/// // Load data into asset_collection, including "/path/to/font.ttf".
+/// let path: PathBuf = PathBuf::from("/path/to/font.ttf");
+/// let asset_id: u32 = asset_collection.assets_map.get(path).unwrap();
+/// let asset: &Asset = &asset_collection.assets[asset_id as usize];
+/// ```
 struct AssetCollection {
+    /// Maps [`Asset`] path to ID.
     assets_map: BTreeMap<PathBuf, u32>,
+
+    /// [`Asset`] cache. Indices correspond to values stored in `self.assets_map`.
+    ///
+    /// Currently, no cache eviction strategy is implemented (I18N-15).
     assets: Vec<Asset>,
 }
 
+/// Load a `Vmo` from disk into a `Buffer`.
 fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, Error> {
     let file = File::open(path)?;
     let vmo = fdio::get_vmo_copy_from_file(&file)?;
@@ -54,26 +66,26 @@ fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, Error> {
 
 impl AssetCollection {
     fn new() -> AssetCollection {
-        AssetCollection {
-            assets_map: BTreeMap::new(),
-            assets: vec![],
-        }
+        AssetCollection { assets_map: BTreeMap::new(), assets: vec![] }
     }
 
+    /// Lazily add the [`Asset`] found at `path` to the collection and return its ID.
+    /// If it already exists, just return the ID.
+    ///
+    /// The push onto `assets` is lazy in the sense that the pushed [`Asset`] has an empty `buffer`.
     fn add_or_get_asset_id(&mut self, path: &Path) -> u32 {
         if let Some(id) = self.assets_map.get(path) {
             return *id;
         }
 
         let id = self.assets.len() as u32;
-        self.assets.push(Asset {
-            path: path.to_path_buf(),
-            buffer: RwLock::new(None),
-        });
+        self.assets.push(Asset { path: path.to_path_buf(), buffer: RwLock::new(None) });
         self.assets_map.insert(path.to_path_buf(), id);
         id
     }
 
+    /// Get a `Buffer` holding the `Vmo` for the [`Asset`] corresponding to `id`, using the
+    /// cache if possible. On a cache miss, the [`Asset`] is cached unconditionally.
     fn get_asset(&self, id: u32) -> Result<mem::Buffer, Error> {
         assert!(id < self.assets.len() as u32);
 
@@ -90,6 +102,8 @@ impl AssetCollection {
         Ok(buf_clone)
     }
 
+    /// Clear the cache by deallocating all [`Asset`]'s `buffer`s.
+    /// Does not reduce the size of `assets`.
     fn reset_cache(&mut self) {
         for asset in self.assets.iter_mut() {
             *asset.buffer.write().unwrap() = None;
@@ -105,21 +119,19 @@ struct FontFamily {
 
 impl FontFamily {
     fn new(name: String, fallback_group: fonts::FallbackGroup) -> FontFamily {
-        FontFamily {
-            name,
-            fonts: FontCollection::new(),
-            fallback_group,
-        }
+        FontFamily { name, fonts: FontCollection::new(), fallback_group }
     }
 }
 
 enum FamilyOrAlias {
     Family(FontFamily),
+    /// Represents an alias to a `Family` whose name is the associated [`UniCase`]`<`[`String`]`>`.
     Alias(UniCase<String>),
 }
 
 pub struct FontService {
     assets: AssetCollection,
+    /// Maps the font family name from the manifest (`families.family`) to a FamilyOrAlias.
     families: BTreeMap<UniCase<String>, FamilyOrAlias>,
     fallback_collection: FontCollection,
 }
@@ -133,7 +145,7 @@ impl FontService {
         }
     }
 
-    // Verifies that we have a reasonable font configuration and can start.
+    /// Verify that we have a reasonable font configuration and can start.
     pub fn check_can_start(&self) -> Result<(), Error> {
         if self.fallback_collection.is_empty() {
             return Err(format_err!("Need at least one fallback font"));
@@ -145,17 +157,15 @@ impl FontService {
     pub fn load_manifest(&mut self, manifest_path: &Path) -> Result<(), Error> {
         let manifest = manifest::FontsManifest::load_from_file(&manifest_path)?;
         self.add_fonts_from_manifest(manifest).with_context(|_| {
-            format!(
-                "Failed to load fonts from {}",
-                manifest_path.to_string_lossy()
-            )
+            format!("Failed to load fonts from {}", manifest_path.to_string_lossy())
         })?;
 
         Ok(())
     }
 
     fn add_fonts_from_manifest(
-        &mut self, mut manifest: manifest::FontsManifest,
+        &mut self,
+        mut manifest: manifest::FontsManifest,
     ) -> Result<(), Error> {
         let font_info_loader = font_info::FontInfoLoader::new()?;
 
@@ -166,6 +176,12 @@ impl FontService {
 
             let family_name = UniCase::new(family_manifest.family.clone());
 
+            // Get the [`FamilyOrAlias`] from `families` associated with `family_name`.
+            //
+            // If the key `family_name` does not exist in `families`, insert it with a
+            // [`FamilyOrAlias`]`::Family` value.
+            //
+            // If a [`FamilyOrAlias`]`::Alias` with the same name already exists, [`Error`].
             let family = match self.families.entry(family_name.clone()).or_insert_with(|| {
                 FamilyOrAlias::Family(FontFamily::new(
                     family_manifest.family.clone(),
@@ -185,15 +201,10 @@ impl FontService {
             };
 
             for font_manifest in family_manifest.fonts.drain(..) {
-                let asset_id = self
-                    .assets
-                    .add_or_get_asset_id(font_manifest.asset.as_path());
+                let asset_id = self.assets.add_or_get_asset_id(font_manifest.asset.as_path());
 
                 let buffer = self.assets.get_asset(asset_id).with_context(|_| {
-                    format!(
-                        "Failed to load font from {}",
-                        font_manifest.asset.to_string_lossy()
-                    )
+                    format!("Failed to load font from {}", font_manifest.asset.to_string_lossy())
                 })?;
 
                 let info = font_info_loader
@@ -255,6 +266,7 @@ impl FontService {
         Ok(())
     }
 
+    /// Get font family by name.
     fn match_family(&self, family_name: &UniCase<String>) -> Option<&FontFamily> {
         let family = match self.families.get(family_name)? {
             FamilyOrAlias::Family(f) => f,
@@ -267,9 +279,8 @@ impl FontService {
     }
 
     fn match_request(&self, mut request: fonts::Request) -> Option<fonts::Response> {
-        request.language = request
-            .language
-            .map(|list| list.iter().map(|l| l.to_ascii_lowercase()).collect());
+        request.language =
+            request.language.map(|list| list.iter().map(|l| l.to_ascii_lowercase()).collect());
 
         let matched_family = request
             .family
@@ -311,7 +322,8 @@ impl FontService {
     }
 
     fn handle_font_provider_request(
-        &self, request: fonts::ProviderRequest,
+        &self,
+        request: fonts::ProviderRequest,
     ) -> impl Future<Output = Result<(), fidl::Error>> {
         #[allow(unused_variables)]
         match request {
