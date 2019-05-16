@@ -19,15 +19,14 @@ ARCHES = [
 ]
 
 
-def program_exists(name):
-    """Returns True if an executable with the name exists"""
-    if len(name) > 0 and name[0] == '/':
-        return os.path.isfile(name) and os.access(name, os.X_OK)
-    for path in os.environ["PATH"].split(os.pathsep):
-        fname = os.path.join(path, name)
-        if os.path.isfile(fname) and os.access(fname, os.X_OK):
-            return True
-    return False
+def find_bazel(opt_path):
+    if opt_path and os.path.isfile(opt_path) and os.access(opt_path, os.X_OK):
+        return (os.path.realpath(opt_path), True)
+    for dir in os.environ["PATH"].split(os.pathsep):
+        path = os.path.join(dir, 'bazel')
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return (os.path.realpath(path), True)
+    return ('bazel', False)
 
 
 class BazelTester(object):
@@ -122,15 +121,15 @@ def main():
                         help='If set, ignored tests are run too.',
                         action='store_true')
     parser.add_argument('--bazel',
-                        help='Path to the Bazel tool',
-                        default='bazel')
+                        help='Path to the Bazel tool; otherwise found in PATH')
     parser.add_argument('--once',
                         help='Whether to only run tests once',
                         action='store_true')
     args = parser.parse_args()
 
-    if not program_exists(args.bazel):
-        print('"%s": command not found' % (args.bazel))
+    (bazel, found) = find_bazel(args.bazel)
+    if not found:
+        print('"%s": command not found' % (bazel))
         return 1
 
     def print_test_start(arch, cpp_version):
@@ -143,7 +142,7 @@ def main():
         print_test_start(arch, 'C++14')
         config_flags = ['--config=fuchsia_%s' % arch]
         cpp14_flags = ['--cxxopt=-Wc++14-compat', '--cxxopt=-Wc++17-extensions']
-        if not BazelTester(args.no_sdk, args.ignored, args.bazel,
+        if not BazelTester(args.no_sdk, args.ignored, bazel,
                            optional_flags=config_flags + cpp14_flags).run():
             return 1
 
@@ -153,7 +152,7 @@ def main():
 
         print_test_start(arch, 'C++17')
         cpp17_flags = ['--cxxopt=-std=c++17', '--cxxopt=-Wc++17-compat']
-        if not BazelTester(args.no_sdk, args.ignored, args.bazel,
+        if not BazelTester(args.no_sdk, args.ignored, bazel,
                            optional_flags=config_flags + cpp17_flags).run():
             return 1
     return 0

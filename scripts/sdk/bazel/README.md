@@ -72,6 +72,12 @@ Tests are then run with:
 $ my_test_workspace/run.py
 ```
 
+It is recommended to use the version of Bazel available in the Fuchsia source
+tree at `//prebuilt/sdk/bazel` to run the tests:
+```
+$ my_test_workspace/run.py --bazel $FUCHSIA_DIR/prebuilt/sdk/bazel/bazel
+```
+
 To exclude a target from the suite, mark it as ignored with:
 ```
 my_rule(
