@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 group("tests") {
@@ -70,7 +69,9 @@ executable("cpuperf_integration_tests") {
   ]
 }
 
-test_package("cpuperf_tests") {
+package("cpuperf_tests") {
+  testonly = true
+
   deps = [
     ":cpuperf_integration_tests",
     ":cpuperf_tests_bin",
@@ -84,6 +85,13 @@ test_package("cpuperf_tests") {
     {
       name = "cpuperf_tests"
       environments = basic_envs
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/cpuperf_integration_tests.cmx")
+      dest = "cpuperf_integration_tests.cmx"
     },
   ]
 

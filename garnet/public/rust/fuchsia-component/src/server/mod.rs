@@ -12,23 +12,23 @@ use {
         endpoints::{Proxy as _, RequestStream, ServerEnd, ServiceMarker},
     },
     fidl_fuchsia_io::{
-        DirectoryObject, DirectoryRequest, DirectoryRequestStream, FileRequest, FileRequestStream,
-        NodeAttributes, NodeInfo, NodeMarker, SeekOrigin, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes, NodeInfo,
+        NodeMarker, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys::{
         EnvironmentControllerProxy, EnvironmentMarker, EnvironmentOptions, LauncherProxy,
         LoaderMarker, ServiceList,
     },
     fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, HandleBased as _, Peered, Signals},
+    fuchsia_zircon::{self as zx, Peered, Signals},
     futures::{
+        ready,
         stream::{FuturesUnordered, StreamExt},
         task::Context,
-        Poll, Stream,
+        Future, Poll, Stream,
     },
     std::{
-        cmp::min,
         collections::hash_map::{Entry, HashMap},
         io::Write,
         marker::{PhantomData, Unpin},
@@ -40,55 +40,19 @@ use {
 mod service;
 pub use service::{FidlService, Service, ServiceObj, ServiceObjLocal, ServiceObjTrait};
 
-mod stream_helpers;
-use stream_helpers::NextWith;
-
 enum ServiceFsNode<ServiceObjTy: ServiceObjTrait> {
     Directory {
         /// A map from filename to index in the parent `ServiceFs`.
         children: HashMap<String, usize>,
     },
     Service(ServiceObjTy),
-    VmoFile {
-        vmo: zx::Vmo,
-        offset: u64,
-        length: u64,
-    },
 }
 
-const NOT_A_DIR: &str = "ServiceFs expected directory";
-
 impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
-    fn is_service(&self) -> bool {
-        if let ServiceFsNode::Service(_) = self {
-            true
-        } else {
-            false
-        }
-    }
-
-    fn expect_dir(&self) -> &HashMap<String, usize> {
-        if let ServiceFsNode::Directory { children } = self {
-            children
-        } else {
-            panic!(NOT_A_DIR)
-        }
-    }
-
-    fn expect_dir_mut(&mut self) -> &mut HashMap<String, usize> {
-        if let ServiceFsNode::Directory { children } = self {
-            children
-        } else {
-            panic!(NOT_A_DIR)
-        }
-    }
-
-    fn file_size(&self) -> u64 {
+    fn expect_dir(&mut self) -> &mut HashMap<String, usize> {
         match self {
-            ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
-                panic!("called file_size on non-file node")
-            }
-            ServiceFsNode::VmoFile { length, .. } => *length,
+            ServiceFsNode::Directory { children } => children,
+            ServiceFsNode::Service(_) => panic!("ServiceFs expected directory"),
         }
     }
 
@@ -96,7 +60,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
         match self {
             ServiceFsNode::Directory { .. } => fidl_fuchsia_io::DIRENT_TYPE_DIRECTORY,
             ServiceFsNode::Service(_) => fidl_fuchsia_io::DIRENT_TYPE_SERVICE,
-            ServiceFsNode::VmoFile { .. } => fidl_fuchsia_io::DIRENT_TYPE_FILE,
         }
     }
 }
@@ -111,11 +74,9 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
 /// as the result of a request.
 #[must_use]
 pub struct ServiceFs<ServiceObjTy: ServiceObjTrait> {
-    /// Open connections to `ServiceFs` directories.
-    dir_connections: FuturesUnordered<DirConnection>,
-
-    /// Open connections to `ServiceFs` files.
-    file_connections: FuturesUnordered<FileConnection>,
+    /// The open connections to this `ServiceFs`. These connections
+    /// represent external clients who may attempt to open services.
+    client_connections: FuturesUnordered<ClientConnection>,
 
     /// The tree of `ServiceFsNode`s.
     /// The root is always a directory at index 0.
@@ -142,8 +103,7 @@ impl<'a, Output: 'a> ServiceFs<ServiceObjLocal<'a, Output>> {
     /// require services to implement `Send`.
     pub fn new_local() -> Self {
         Self {
-            dir_connections: FuturesUnordered::new(),
-            file_connections: FuturesUnordered::new(),
+            client_connections: FuturesUnordered::new(),
             nodes: vec![ServiceFsNode::Directory { children: HashMap::new() }],
         }
     }
@@ -154,8 +114,7 @@ impl<'a, Output: 'a> ServiceFs<ServiceObj<'a, Output>> {
     /// services to implement `Send`.
     pub fn new() -> Self {
         Self {
-            dir_connections: FuturesUnordered::new(),
-            file_connections: FuturesUnordered::new(),
+            client_connections: FuturesUnordered::new(),
             nodes: vec![ServiceFsNode::Directory { children: HashMap::new() }],
         }
     }
@@ -175,7 +134,7 @@ fn dir<'a, ServiceObjTy: ServiceObjTrait>(
     path: String,
 ) -> ServiceFsDir<'a, ServiceObjTy> {
     let new_node_position = fs.nodes.len();
-    let self_dir = fs.nodes[position].expect_dir_mut();
+    let self_dir = fs.nodes[position].expect_dir();
     let &mut position = self_dir.entry(path.clone()).or_insert(new_node_position);
     if position == new_node_position {
         fs.nodes.push(ServiceFsNode::Directory { children: HashMap::new() });
@@ -187,22 +146,22 @@ fn dir<'a, ServiceObjTy: ServiceObjTrait>(
     ServiceFsDir { position, fs }
 }
 
-fn add_entry<ServiceObjTy: ServiceObjTrait>(
-    fs: &mut ServiceFs<ServiceObjTy>,
+fn add_service<'a, ServiceObjTy: ServiceObjTrait>(
+    fs: &'a mut ServiceFs<ServiceObjTy>,
     position: usize,
     path: String,
-    entry: ServiceFsNode<ServiceObjTy>,
+    service: ServiceObjTy,
 ) {
     let new_node_position = fs.nodes.len();
-    let self_dir = fs.nodes[position].expect_dir_mut();
-    let map_entry = self_dir.entry(path);
-    match map_entry {
+    let self_dir = fs.nodes[position].expect_dir();
+    let entry = self_dir.entry(path);
+    match entry {
         Entry::Occupied(prev) => {
-            panic!("Duplicate ServiceFs entry added at path \"{}\"", prev.key())
+            panic!("Duplicate ServiceFs service added at path \"{}\"", prev.key())
         }
         Entry::Vacant(slot) => {
             slot.insert(new_node_position);
-            fs.nodes.push(entry);
+            fs.nodes.push(ServiceFsNode::Service(service));
         }
     }
 }
@@ -287,24 +246,8 @@ impl<O> Service for ComponentProxy<O> {
 
 // Not part of a trait so that clients won't have to import a trait
 // in order to call these functions.
-macro_rules! add_functions {
+macro_rules! add_service_functions {
     () => {
-        /// Adds a service to the directory at the given path.
-        ///
-        /// The path must be a single component containing no `/` characters.
-        ///
-        /// Panics if any node has already been added at the given path.
-        pub fn add_service_at(
-            &mut self,
-            path: impl Into<String>,
-            service: impl Into<ServiceObjTy>,
-        ) -> &mut Self {
-            self.add_entry_at(
-                path.into(),
-                ServiceFsNode::Service(service.into()),
-            )
-        }
-
         /// Adds a FIDL service to the directory.
         ///
         /// The FIDL service will be hosted at the name provided by the
@@ -396,24 +339,6 @@ macro_rules! add_functions {
                 }
             )
         }
-
-        /// Adds a VMO file to the directory at the given path.
-        ///
-        /// The path must be a single component containing no `/` characters.
-        ///
-        /// Panics if any node has already been added at the given path.
-        pub fn add_vmo_file_at(
-            &mut self,
-            path: impl Into<String>,
-            vmo: zx::Vmo,
-            offset: u64,
-            length: u64,
-        ) -> &mut Self {
-            self.add_entry_at(
-                path.into(),
-                ServiceFsNode::VmoFile { vmo, offset, length },
-            )
-        }
     };
 }
 
@@ -428,12 +353,21 @@ impl<'a, ServiceObjTy: ServiceObjTrait> ServiceFsDir<'a, ServiceObjTy> {
         dir(self.fs, self.position, path.into())
     }
 
-    fn add_entry_at(&mut self, path: String, entry: ServiceFsNode<ServiceObjTy>) -> &mut Self {
-        add_entry(self.fs, self.position, path, entry);
+    add_service_functions!();
+
+    /// Adds a service to the directory at the given path.
+    ///
+    /// The path must be a single component containing no `/` characters.
+    ///
+    /// Panics if any node has already been added at the given path.
+    pub fn add_service_at(
+        &mut self,
+        path: impl Into<String>,
+        service: impl Into<ServiceObjTy>,
+    ) -> &mut Self {
+        add_service(self.fs, self.position, path.into(), service.into());
         self
     }
-
-    add_functions!();
 }
 
 impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
@@ -447,24 +381,27 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         dir(self, ROOT_NODE, path.into())
     }
 
-    fn add_entry_at(&mut self, path: String, entry: ServiceFsNode<ServiceObjTy>) -> &mut Self {
-        add_entry(self, ROOT_NODE, path, entry);
+    add_service_functions!();
+
+    /// Adds a service to the directory at the given path.
+    ///
+    /// The path must be a single component containing no `/` characters.
+    ///
+    /// Panics if any node has already been added at the given path.
+    pub fn add_service_at(
+        &mut self,
+        path: impl Into<String>,
+        service: impl Into<ServiceObjTy>,
+    ) -> &mut Self {
+        add_service(self, ROOT_NODE, path.into(), service.into());
         self
     }
-
-    add_functions!();
 
     /// Start serving directory protocol service requests via a `ServiceList`.
     /// The resulting `ServiceList` can be attached to a new environment in
     /// order to provide child components with access to these services.
     pub fn host_services_list(&mut self) -> Result<ServiceList, Error> {
-        let names = self.nodes[ROOT_NODE]
-            .expect_dir()
-            .iter()
-            .filter(|(_, v)| self.nodes[**v].is_service())
-            .map(|(k, _)| k)
-            .cloned()
-            .collect();
+        let names = self.nodes[ROOT_NODE].expect_dir().keys().cloned().collect();
 
         let (chan1, chan2) = zx::Channel::create()?;
         self.serve_connection(chan1)?;
@@ -620,11 +557,18 @@ enum ConnectionState {
     Closed,
 }
 
-/// A client connection to a directory of `ServiceFs`.
-type DirConnection = NextWith<DirectoryRequestStream, DirConnectionData>;
+/// A client connection to `ServiceFs`.
+///
+/// This type also implements the `Future` trait and resolves to itself
+/// when the channel becomes readable.
+struct ClientConnection {
+    /// The stream of incoming requests. This is always `Some` unless
+    /// this `ClientConnection` was used as a `Future` and completed, in
+    /// which case it will have given away the stream to the output of
+    /// the `Future`.
+    stream: Option<DirectoryRequestStream>,
 
-struct DirConnectionData {
-    /// The current node of the `DirConnection` in the `ServiceFs`
+    /// The current node of the `ClientConnection` in the `ServiceFs`
     /// filesystem.
     position: usize,
 
@@ -632,12 +576,28 @@ struct DirConnectionData {
     dirents_buf: Option<(Vec<u8>, usize)>,
 }
 
-/// A client connection to a file in `ServiceFs`.
-type FileConnection = NextWith<FileRequestStream, FileConnectionData>;
+impl ClientConnection {
+    fn stream(&mut self) -> &mut DirectoryRequestStream {
+        self.stream.as_mut().expect("ClientConnection used after `Future` completed")
+    }
+}
 
-struct FileConnectionData {
-    position: usize,
-    seek_offset: u64,
+impl Future for ClientConnection {
+    type Output = Option<(Result<DirectoryRequest, fidl::Error>, ClientConnection)>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let res_opt = ready!(self.stream().poll_next_unpin(cx));
+        Poll::Ready(res_opt.map(|res| {
+            (
+                res,
+                ClientConnection {
+                    stream: self.stream.take(),
+                    position: self.position,
+                    dirents_buf: self.dirents_buf.take(),
+                },
+            )
+        }))
+    }
 }
 
 /// An error indicating the startup handle on which the FIDL server
@@ -682,35 +642,6 @@ fn handle_potentially_unsupported_flags(
     }
 }
 
-macro_rules! unsupported {
-    ($responder:ident $($args:tt)*) => {
-        $responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED $($args)*)
-    }
-}
-
-// Can't be a single function because DirectoryRequestStream and
-// FileRequestStream don't have matching types, even though their
-// function signatures are identical.
-macro_rules! send_info_fn {
-    ($(($name:ident, $stream:ty),)*) => { $(
-        fn $name(stream: &$stream, info: Option<NodeInfo>) -> Result<(), Error> {
-            if let Some(mut info) = info {
-                stream
-                    .control_handle()
-                    .send_on_open_(zx::sys::ZX_OK, Some(OutOfLine(&mut info)))
-                    .context("fail sending OnOpen event")?;
-            }
-            Ok(())
-        }
-    )* }
-}
-
-#[rustfmt::skip]
-send_info_fn![
-    (send_info_dir, DirectoryRequestStream),
-    (send_info_file, FileRequestStream),
-];
-
 impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     /// Removes the `DirectoryRequest` startup handle for the current
     /// component and adds connects it to this `ServiceFs` as a client.
@@ -725,14 +656,12 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         self.serve_connection(zx::Channel::from(startup_handle))
     }
 
-    /// Add an additional connection to the `ServiceFs` to provide services to.
+    /// Add an additional connection to the `FdioServer` to provide services to.
     pub fn serve_connection(&mut self, chan: zx::Channel) -> Result<&mut Self, Error> {
         self.serve_connection_at(chan, ROOT_NODE, NO_FLAGS)?;
         Ok(self)
     }
 
-    /// Serve a connection at a specific node.
-    /// Note: this must only be used with file nodes and directory nodes.
     fn serve_connection_at(
         &mut self,
         chan: zx::Channel,
@@ -755,58 +684,47 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         let chan =
             fasync::Channel::from_channel(chan).context("failure to convert to async channel")?;
 
-        let info = if (flags & OPEN_FLAG_DESCRIBE) != 0 {
-            Some(self.describe_node(position)?)
-        } else {
-            None
-        };
-
-        match self.nodes[position] {
-            ServiceFsNode::Directory { .. } => {
-                let stream = DirectoryRequestStream::from_channel(chan);
-                send_info_dir(&stream, info)?;
-                self.dir_connections.push(DirConnection::new(
-                    stream,
-                    DirConnectionData { position, dirents_buf: None },
-                ));
-            }
-            ServiceFsNode::VmoFile { .. } => {
-                let stream = FileRequestStream::from_channel(chan);
-                send_info_file(&stream, info)?;
-                self.file_connections.push(FileConnection::new(
-                    stream,
-                    FileConnectionData { position, seek_offset: 0 },
-                ));
-            }
-            ServiceFsNode::Service(_) => panic!("serve_connection_at on Service node"),
+        let stream = DirectoryRequestStream::from_channel(chan);
+        if (flags & OPEN_FLAG_DESCRIBE) != 0 {
+            let mut info =
+                self.describe_node(position).expect("error serving connection for missing node");
+            stream
+                .control_handle()
+                .send_on_open_(zx::sys::ZX_OK, Some(OutOfLine(&mut info)))
+                .context("fail sending OnOpen event")?;
         }
+
+        self.client_connections.push(ClientConnection {
+            stream: Some(stream),
+            position,
+            dirents_buf: None,
+        });
         Ok(())
     }
 
-    fn handle_clone(
-        &mut self,
-        flags: u32,
-        object: ServerEnd<NodeMarker>,
-        position: usize,
-    ) -> Result<(), Error> {
-        let object =
-            handle_potentially_unsupported_flags(object, flags, CLONE_REQ_SUPPORTED_FLAGS)?;
-
-        self.serve_connection_at(object.into_channel(), position, flags)
-            .unwrap_or_else(|e| eprintln!("ServiceFs failed to clone: {:?}", e));
-        Ok(())
-    }
-
-    fn handle_dir_request(
+    fn handle_request(
         &mut self,
         request: DirectoryRequest,
-        connection: &mut DirConnectionData,
+        connection: &mut ClientConnection,
     ) -> Result<(Option<ServiceObjTy::Output>, ConnectionState), Error> {
         assert!(self.nodes.len() > connection.position);
 
+        macro_rules! unsupported {
+            ($responder:ident $($args:tt)*) => {
+                $responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED $($args)*)
+            }
+        }
+
         match request {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                self.handle_clone(flags, object, connection.position)?;
+                let object =
+                    handle_potentially_unsupported_flags(object, flags, CLONE_REQ_SUPPORTED_FLAGS)?;
+
+                if let Err(e) =
+                    self.serve_connection_at(object.into_channel(), connection.position, flags)
+                {
+                    eprintln!("ServiceFs failed to clone: {:?}", e);
+                }
             }
             DirectoryRequest::Close { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
@@ -842,13 +760,13 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
 
                 if let Some(&next_node_pos) = children.get(end_segment) {
                     match self.nodes.get_mut(next_node_pos).expect("Missing child node") {
-                        ServiceFsNode::Directory { .. } | ServiceFsNode::VmoFile { .. } => {
+                        ServiceFsNode::Directory { .. } => {
                             if let Err(e) = self.serve_connection_at(
                                 object.into_channel(),
                                 next_node_pos,
                                 flags,
                             ) {
-                                eprintln!("ServiceFs failed to open file or directory: {:?}", e);
+                                eprintln!("ServiceFs failed to open directory: {:?}", e);
                             }
                         }
                         ServiceFsNode::Service(service) => {
@@ -884,13 +802,20 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 }
             }
             DirectoryRequest::Describe { responder } => {
-                let mut info = self.describe_node(connection.position)?;
+                let mut info =
+                    self.describe_node(connection.position).expect("node missing for Describe req");
                 responder.send(&mut info)?;
             }
             DirectoryRequest::GetAttr { responder } => {
-                let mode_type = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
+                let node =
+                    self.nodes.get(connection.position).expect("node missing for GetAttr req");
+                let mode_type = match node {
+                    ServiceFsNode::Directory { .. } => fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+                    ServiceFsNode::Service(..) => fidl_fuchsia_io::MODE_TYPE_SERVICE,
+                };
+
                 let mut attrs = NodeAttributes {
-                    mode: mode_type | libc::S_IRUSR,
+                    mode: mode_type | 0o400, /* mode R_USR */
                     id: fidl_fuchsia_io::INO_UNKNOWN,
                     content_size: 0,
                     storage_size: 0,
@@ -936,121 +861,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         Ok((None, ConnectionState::Open))
     }
 
-    fn handle_file_request(
-        &mut self,
-        request: FileRequest,
-        connection: &mut FileConnectionData,
-    ) -> Result<ConnectionState, Error> {
-        match request {
-            FileRequest::Clone { flags, object, control_handle: _ } => {
-                self.handle_clone(flags, object, connection.position)?;
-            }
-            FileRequest::Close { responder } => {
-                responder.send(zx::sys::ZX_OK)?;
-                return Ok(ConnectionState::Closed);
-            }
-            FileRequest::Describe { responder } => {
-                let mut info = self.describe_node(connection.position)?;
-                responder.send(&mut info)?;
-            }
-            FileRequest::Sync { responder } => unsupported!(responder)?,
-            FileRequest::GetAttr { responder } => {
-                let mode_type = fidl_fuchsia_io::MODE_TYPE_FILE;
-                let size = self.nodes[connection.position].file_size();
-                let mut attrs = NodeAttributes {
-                    mode: mode_type | libc::S_IRUSR,
-                    id: fidl_fuchsia_io::INO_UNKNOWN,
-                    content_size: size,
-                    storage_size: size,
-                    link_count: 1,
-                    creation_time: 0,
-                    modification_time: 0,
-                };
-                responder.send(zx::sys::ZX_OK, &mut attrs)?
-            }
-            FileRequest::SetAttr { responder, .. } => unsupported!(responder)?,
-            FileRequest::Ioctl { responder, .. } => {
-                unsupported!(responder, &mut std::iter::empty(), &mut std::iter::empty())?
-            }
-            // FIXME(cramertj) enforce READ rights
-            FileRequest::Read { count, responder } => match &self.nodes[connection.position] {
-                ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
-                    panic!("read on non-file node")
-                }
-                ServiceFsNode::VmoFile { vmo, length, offset } => {
-                    let actual_count = min(count, length.saturating_sub(connection.seek_offset));
-                    let mut data = vec![0; actual_count as usize];
-                    let status = vmo.read(&mut data, offset.saturating_add(connection.seek_offset));
-                    match status {
-                        Ok(()) => {
-                            responder.send(zx::sys::ZX_OK, &mut data.iter().cloned())?;
-                            connection.seek_offset += actual_count;
-                        }
-                        Err(s) => responder.send(s.into_raw(), &mut std::iter::empty())?,
-                    }
-                }
-            },
-            FileRequest::ReadAt { count, offset: read_offset, responder } => {
-                match &self.nodes[connection.position] {
-                    ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
-                        panic!("read-at on non-file node")
-                    }
-                    ServiceFsNode::VmoFile { vmo, length, offset } => {
-                        let length = *length;
-                        let offset = *offset;
-                        let actual_offset = min(offset.saturating_add(read_offset), length);
-                        let actual_count = min(count, length.saturating_sub(actual_offset));
-                        let mut data = vec![0; actual_count as usize];
-                        let status = vmo.read(&mut data, actual_offset);
-                        match status {
-                            Ok(()) => responder.send(zx::sys::ZX_OK, &mut data.iter().cloned())?,
-                            Err(s) => responder.send(s.into_raw(), &mut std::iter::empty())?,
-                        }
-                    }
-                }
-            }
-            FileRequest::Write { responder, .. } => unsupported!(responder, 0)?,
-            FileRequest::WriteAt { responder, .. } => unsupported!(responder, 0)?,
-            FileRequest::Seek { offset, start, responder } => {
-                let start = match start {
-                    SeekOrigin::Start => 0,
-                    SeekOrigin::Current => connection.seek_offset,
-                    SeekOrigin::End => match &self.nodes[connection.position] {
-                        ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
-                            panic!("seek on non-file node")
-                        }
-                        ServiceFsNode::VmoFile { length, .. } => *length,
-                    },
-                };
-                let new_offset: u64 = if offset.is_positive() {
-                    start.saturating_add(offset as u64)
-                } else if offset == i64::min_value() {
-                    0
-                } else {
-                    start.saturating_sub(offset.abs() as u64)
-                };
-                connection.seek_offset = new_offset;
-                responder.send(zx::sys::ZX_OK, new_offset)?;
-            }
-            FileRequest::Truncate { responder, .. } => unsupported!(responder)?,
-            FileRequest::GetFlags { responder, .. } => unsupported!(responder, 0)?,
-            FileRequest::SetFlags { responder, .. } => unsupported!(responder)?,
-            FileRequest::GetBuffer { responder, .. } => unsupported!(responder, None)?,
-        }
-        Ok(ConnectionState::Open)
-    }
-
-    fn describe_node(&self, pos: usize) -> Result<NodeInfo, Error> {
-        Ok(match self.nodes.get(pos).expect("describe on missing node") {
+    fn describe_node(&self, pos: usize) -> Option<NodeInfo> {
+        self.nodes.get(pos).map(|node| match node {
             ServiceFsNode::Directory { .. } => NodeInfo::Directory(DirectoryObject),
             ServiceFsNode::Service(..) => NodeInfo::Service(fidl_fuchsia_io::Service),
-            ServiceFsNode::VmoFile { vmo, offset, length } => {
-                let vmo = vmo
-                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
-                    .context("error duplicating VmoFile handle in describe_node")?;
-                let (offset, length) = (*offset, *length);
-                NodeInfo::Vmofile(fidl_fuchsia_io::Vmofile { vmo, offset, length })
-            }
         })
     }
 
@@ -1110,124 +924,38 @@ fn write_dirent_bytes(buf: &mut Vec<u8>, ino: u64, typ: u8, name: &str) -> Resul
 
 impl<ServiceObjTy: ServiceObjTrait> Unpin for ServiceFs<ServiceObjTy> {}
 
-struct PollState {
-    // `true` if *any* items so far have made progress.
-    made_progress: bool,
-    // Only `true` if *all* items so far are complete.
-    is_complete: bool,
-}
-
-impl Default for PollState {
-    fn default() -> Self {
-        Self { made_progress: false, is_complete: true }
-    }
-}
-
-impl PollState {
-    const NO_PROGRESS: PollState = PollState { made_progress: false, is_complete: false };
-    const SOME_PROGRESS: PollState = PollState { made_progress: true, is_complete: false };
-    const COMPLETE: PollState = PollState { made_progress: false, is_complete: true };
-
-    fn merge(&mut self, other: PollState) {
-        self.made_progress |= other.made_progress;
-        self.is_complete &= other.is_complete;
-    }
-}
-
-// FIXME(cramertj) it'd be nice to abstract away the common
-// bits of these two functions.
-impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
-    fn poll_serve_dir_connection(
-        &mut self,
-        cx: &mut Context<'_>,
-    ) -> (Option<ServiceObjTy::Output>, PollState) {
-        let (request, dir_stream, mut dir_connection_data) =
-            match self.dir_connections.poll_next_unpin(cx) {
-                // a client request
-                Poll::Ready(Some(Some(x))) => x,
-                // this client_connection has terminated
-                Poll::Ready(Some(None)) => return (None, PollState::SOME_PROGRESS),
-                // all client connections have terminated
-                Poll::Ready(None) => return (None, PollState::COMPLETE),
-                Poll::Pending => return (None, PollState::NO_PROGRESS),
-            };
-        let request = match request {
-            Ok(request) => request,
-            Err(e) => {
-                eprintln!("ServiceFs failed to parse an incoming directory request: {:?}", e);
-                return (None, PollState::SOME_PROGRESS);
-            }
-        };
-        match self.handle_dir_request(request, &mut dir_connection_data) {
-            Ok((value, connection_state)) => {
-                if let ConnectionState::Open = connection_state {
-                    // Requeue the client to receive new requests
-                    self.dir_connections.push(DirConnection::new(dir_stream, dir_connection_data));
-                }
-                (value, PollState::SOME_PROGRESS)
-            }
-            Err(e) => {
-                eprintln!("ServiceFs failed to handle an incoming directory request: {:?}", e);
-                (None, PollState::SOME_PROGRESS)
-            }
-        }
-    }
-
-    fn poll_serve_file_connection(&mut self, cx: &mut Context<'_>) -> PollState {
-        let (request, file_stream, mut file_connection_data) =
-            match self.file_connections.poll_next_unpin(cx) {
-                // a client request
-                Poll::Ready(Some(Some(x))) => x,
-                // This client connection has terminated
-                Poll::Ready(Some(None)) => return PollState::SOME_PROGRESS,
-                // all client connections have terminated
-                Poll::Ready(None) => return PollState::COMPLETE,
-                Poll::Pending => return PollState::NO_PROGRESS,
-            };
-        let request = match request {
-            Ok(request) => request,
-            Err(e) => {
-                eprintln!("ServiceFs failed to parse an incoming file request: {:?}", e);
-                return PollState::SOME_PROGRESS;
-            }
-        };
-        match self.handle_file_request(request, &mut file_connection_data) {
-            Ok(ConnectionState::Open) => {
-                // Requeue the client to receive new requests
-                self.file_connections.push(FileConnection::new(file_stream, file_connection_data));
-            }
-            Ok(ConnectionState::Closed) => {}
-            Err(e) => {
-                eprintln!("ServiceFs failed to hande and incoming file request: {:?}", e);
-            }
-        }
-        PollState::SOME_PROGRESS
-    }
-}
-
 impl<ServiceObjTy: ServiceObjTrait> Stream for ServiceFs<ServiceObjTy> {
     type Item = ServiceObjTy::Output;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
-            let mut iter_state = PollState::default();
-
-            let (output, state) = self.poll_serve_dir_connection(cx);
-            if let Some(output) = output {
-                return Poll::Ready(Some(output));
-            }
-            iter_state.merge(state);
-
-            let state = self.poll_serve_file_connection(cx);
-            iter_state.merge(state);
-
-            // Return `None` to end the stream if all connections are done being served.
-            if iter_state.is_complete {
-                return Poll::Ready(None);
-            }
-            // Otherwise, return `Pending` if no new requests were available to serve.
-            if !iter_state.made_progress {
-                return Poll::Pending;
+            let (request, mut client_connection) =
+                match ready!(self.client_connections.poll_next_unpin(cx)) {
+                    // a client request
+                    Some(Some(x)) => x,
+                    // this client_connection has terminated
+                    Some(None) => continue,
+                    // all client connections have terminated
+                    None => return Poll::Ready(None),
+                };
+            let request = match request {
+                Ok(request) => request,
+                Err(e) => {
+                    eprintln!("ServiceFs failed to parse an incoming request: {:?}", e);
+                    continue;
+                }
+            };
+            match self.handle_request(request, &mut client_connection) {
+                Ok((value, connection_state)) => {
+                    if let ConnectionState::Open = connection_state {
+                        // Requeue the client to receive new requests
+                        self.client_connections.push(client_connection);
+                    }
+                    if let Some(value) = value {
+                        return Poll::Ready(Some(value));
+                    }
+                }
+                Err(e) => eprintln!("ServiceFs failed to handle an incoming request: {:?}", e),
             }
         }
     }

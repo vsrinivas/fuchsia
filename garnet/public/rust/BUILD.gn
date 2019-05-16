@@ -11,12 +11,15 @@ package("rust-crates-tests") {
   deps = [
     "fdio",
     "fuchsia-archive",
-    "fuchsia-component:fuchsia-component-blackbox-unit-tests",
+    "fuchsia-async",
+    "fuchsia-component",
     "fuchsia-cprng",
     "fuchsia-framebuffer",
     "fuchsia-hyper:fuchsia-hyper-tests",
     "fuchsia-inspect",
     "fuchsia-merkle",
+    "fuchsia-syslog",
+    "fuchsia-syslog",
     "fuchsia-trace",
     "fuchsia-vfs/pseudo-fs",
     "fuchsia-zircon",
@@ -37,7 +40,7 @@ package("rust-crates-tests") {
       environments = basic_envs
     },
     {
-      name = "fuchsia_component_blackbox_unit_tests_lib_test"
+      name = "fuchsia_async_lib_test"
       environments = basic_envs
     },
     {
@@ -50,6 +53,10 @@ package("rust-crates-tests") {
     },
     {
       name = "fuchsia_merkle_lib_test"
+      environments = basic_envs
+    },
+    {
+      name = "fuchsia_syslog_lib_test"
       environments = basic_envs
     },
     {

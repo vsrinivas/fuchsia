@@ -1157,9 +1157,7 @@ group("rust_crates") {
     "//garnet/lib/rust/fuchsia_uri_rewrite:fuchsia_uri_rewrite_tests",
     "//garnet/lib/rust/io_util:io_util_tests",
     "//garnet/public/rust:rust-crates-tests",
-    "//garnet/public/rust/fuchsia-async:fuchsia-async-tests",
     "//garnet/public/rust/fuchsia-hyper:fuchsia-hyper-tests",
-    "//garnet/public/rust/fuchsia-syslog:fuchsia-syslog-tests",
   ]
 }
 

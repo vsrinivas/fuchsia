@@ -4,7 +4,6 @@
 
 import("//build/cpp/sdk_source_set.gni")
 import("//build/package.gni")
-import("//build/test/test_package.gni")
 
 group("unittests") {
   testonly = true
@@ -52,11 +51,20 @@ executable("test_harness_fixture_test_bin") {
   ]
 }
 
-test_package("test_harness_fixture_test") {
+package("test_harness_fixture_test") {
+  testonly = true
+
   tests = [
     {
       name = "test_harness_fixture_test_bin"
       environments = basic_envs
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/test_harness_fixture_test.cmx"
+      dest = "test_harness_fixture_test.cmx"
     },
   ]
 
