@@ -9,6 +9,7 @@ use log::warn;
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::fs::{self, File};
+use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::result;
 
@@ -70,15 +71,15 @@ impl<S: Serializer> AuthDbFile<S> {
         // Note that we first write into a temporary staging file then rename to provide atomicity.
         // We use a fixed tempfile rather than dynamically generating filenames to ensure we
         // never accumulate multiple tempfiles.
-        let f = Self::truncate_file(&self.tmp_file_path)?;
+        let f = BufWriter::new(Self::truncate_file(&self.tmp_file_path)?);
         self.serializer.serialize(f, self.credentials.values())?;
         Self::rename_file(&self.tmp_file_path, &self.file_path)?;
         Ok(())
     }
 
     /// Attempts to read the supplied file path.
-    fn read_file(path: &Path) -> Result<File> {
-        File::open(path).map_err(|err| {
+    fn read_file(path: &Path) -> Result<BufReader<File>> {
+        File::open(path).map(|file| BufReader::new(file)).map_err(|err| {
             warn!("AuthDbFile failed to read credential file: {:?}", err);
             AuthDbError::IoError(err)
         })
