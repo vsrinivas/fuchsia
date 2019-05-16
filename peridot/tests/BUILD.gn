@@ -60,7 +60,6 @@ group("tests") {
     "component_context",
     "embed_shell",
     "intents",
-    "last_focus_time",
     "maxwell_integration",
     "modular_config",
     "modular_login_tests",

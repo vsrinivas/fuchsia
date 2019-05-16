@@ -91,7 +91,6 @@ group("modular_integration_tests") {
     "//peridot/tests/embed_shell:embed_shell_test_story_shell",
     "//peridot/tests/intents:intent_test_child_module",
     "//peridot/tests/intents:intent_test_parent_module",
-    "//peridot/tests/last_focus_time:last_focus_time_test_session_shell",
     "//peridot/tests/modular_config:test_config",
     "//peridot/tests/modular_login_tests:modular_login_tests",
     "//peridot/tests/module_context:module_context_test_entity_module",
