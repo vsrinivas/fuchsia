@@ -219,10 +219,7 @@ pub fn install_hippo_dir() {
     let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
     let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
     if status != zx::sys::ZX_OK {
-        panic!(
-            "bad status returned for fdio_ns_get_installed: {}",
-            zx::Status::from_raw(status)
-        );
+        panic!("bad status returned for fdio_ns_get_installed: {}", zx::Status::from_raw(status));
     }
     let cstr = CString::new("/hippo").unwrap();
     let status =

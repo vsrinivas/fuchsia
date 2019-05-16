@@ -45,18 +45,6 @@ pub fn clone_component_namespace(
     ))
 }
 
-/// clone_component_namespace_map will create a clone of the given HashMap by calling the Clone
-/// function on all the DirectoryProxy's in the map
-pub fn clone_component_namespace_map(
-    ns_map: &HashMap<PathBuf, DirectoryProxy>,
-) -> Result<HashMap<PathBuf, DirectoryProxy>, Error> {
-    let mut new_map = HashMap::new();
-    for (path, dir) in ns_map {
-        new_map.insert(path.clone(), io_util::clone_directory(&dir)?);
-    }
-    Ok(new_map)
-}
-
 /// ns_to_map will convert the given namespace into a HashMap, where each path is the key for the
 /// directory of the same index. If the lengths of ns.paths and ns.directories do not match, they
 /// are truncated.

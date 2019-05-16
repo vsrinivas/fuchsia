@@ -27,7 +27,7 @@ impl KernelLogger {
         let debuglog = zx::DebugLog::create(zx::DebugLogOpts::empty())
             .context("Failed to create debuglog object")
             .unwrap();
-        KernelLogger{debuglog}
+        KernelLogger { debuglog }
     }
 
     /// Initialize the global logger to use KernelLogger.
@@ -50,12 +50,12 @@ impl KernelLogger {
         panic::set_hook(Box::new(move |panic_info| {
             // Handle common cases of &'static str or String payload.
             let msg = match panic_info.payload().downcast_ref::<&'static str>() {
-                    Some(s) => *s,
-                    None => match panic_info.payload().downcast_ref::<String>() {
-                        Some(s) => &s[..],
-                        None => "<Unknown panic payload type>",
-                    }
-                };
+                Some(s) => *s,
+                None => match panic_info.payload().downcast_ref::<String>() {
+                    Some(s) => &s[..],
+                    None => "<Unknown panic payload type>",
+                },
+            };
             LOGGER.log_helper("PANIC", &format_args!("{}", msg));
 
             default_hook(panic_info);
@@ -137,7 +137,6 @@ mod tests {
                     panic!("Unexpected error from zx_debuglog_read: {}", status);
                 }
             }
-
         }
         panic!("first 10000 log messages didn't include the one we sent!");
     }

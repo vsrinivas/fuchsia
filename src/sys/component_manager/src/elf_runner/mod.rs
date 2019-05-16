@@ -28,11 +28,11 @@ fn get_resolved_url(start_info: &fsys::ComponentStartInfo) -> Result<String, Err
     }
 }
 
-fn get_program_binary(start_info: &fsys::ComponentStartInfo) -> Result<PathBuf, Error> {
+fn get_program_binary(start_info: &fsys::ComponentStartInfo) -> Result<String, Error> {
     if let Some(program) = &start_info.program {
         if let Some(binary) = program.find("binary") {
             if let fdata::Value::Str(bin) = binary {
-                return Ok(PKG_PATH.join(bin));
+                return Ok(bin.to_string());
             }
         }
     }
@@ -87,7 +87,7 @@ async fn load_launch_info(
 ) -> Result<fproc::LaunchInfo, Error> {
     let bin_path =
         get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(url.as_ref(), e))?;
-    let bin_arg = &[String::from(bin_path.to_str().ok_or(err_msg("invalid binary path"))?)];
+    let bin_arg = &[String::from(PKG_PATH.join(&bin_path).to_str().ok_or(err_msg("invalid binary path"))?)];
     let args = get_program_args(&start_info)?;
 
     let name = PathBuf::from(url)
@@ -105,16 +105,22 @@ async fn load_launch_info(
     let (mut ns, ns_clone) = ns_util::clone_component_namespace(ns)?;
     let ns_map = ns_util::ns_to_map(ns_clone)?;
 
-    let executable_vmo = await!(library_loader::load_object(&ns_map, bin_path))
+    // Start the library loader service
+    let (ll_client_chan, ll_service_chan) = zx::Channel::create()?;
+    let pkg_proxy = ns_map.get(&*PKG_PATH).ok_or(err_msg("/pkg missing from namespace"))?;
+    let lib_proxy = io_util::open_directory(pkg_proxy, &PathBuf::from("lib"))?;
+
+    // The loader service should only be able to load files from `/pkg/lib` and `/pkg/bin`. Giving
+    // it a larger scope is potentially a security vulnerability, as it could make it trivial for
+    // parts of applications to get handles to things the application author didn't intend.
+    library_loader::start(lib_proxy, ll_service_chan);
+
+    let executable_vmo = await!(library_loader::load_vmo(pkg_proxy, bin_path))
         .context("error loading executable")?;
 
     let child_job = job_default().create_child_job()?;
 
     let child_job_dup = child_job.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
-
-    // Start the library loader service
-    let (ll_client_chan, ll_service_chan) = zx::Channel::create()?;
-    library_loader::start(ns_map, ll_service_chan);
 
     let mut string_iters: Vec<_> = bin_arg.iter().chain(args.iter()).map(|s| s.bytes()).collect();
     launcher.add_args(
@@ -200,22 +206,17 @@ mod tests {
     fn hello_world_test() {
         let mut executor = fasync::Executor::new().unwrap();
         executor.run_singlethreaded(async {
-            // Get a handle to /bin
-            let bin_path = "/pkg/bin".to_string();
-            let bin_proxy = io_util::open_directory_in_namespace("/pkg/bin").unwrap();
-            let bin_chan = bin_proxy.into_channel().unwrap();
-            let bin_handle = ClientEnd::new(bin_chan.into_zx_channel());
+            // Get a handle to /pkg
+            let pkg_path = "/pkg".to_string();
+            let pkg_chan = io_util::open_directory_in_namespace("/pkg")
+                .unwrap()
+                .into_channel()
+                .unwrap()
+                .into_zx_channel();
+            let pkg_handle = ClientEnd::new(pkg_chan);
 
-            // Get a handle to /lib
-            let lib_path = "/pkg/lib".to_string();
-            let lib_proxy = io_util::open_directory_in_namespace("/pkg/lib").unwrap();
-            let lib_chan = lib_proxy.into_channel().unwrap();
-            let lib_handle = ClientEnd::new(lib_chan.into_zx_channel());
-
-            let ns = fsys::ComponentNamespace {
-                paths: vec![lib_path, bin_path],
-                directories: vec![lib_handle, bin_handle],
-            };
+            let ns =
+                fsys::ComponentNamespace { paths: vec![pkg_path], directories: vec![pkg_handle] };
 
             let start_info = fsys::ComponentStartInfo {
                 resolved_url: Some(
@@ -224,9 +225,7 @@ mod tests {
                 program: Some(fdata::Dictionary {
                     entries: vec![fdata::Entry {
                         key: "binary".to_string(),
-                        value: Some(Box::new(fdata::Value::Str(
-                            "/pkg/bin/hello_world".to_string(),
-                        ))),
+                        value: Some(Box::new(fdata::Value::Str("bin/hello_world".to_string()))),
                     }],
                 }),
                 ns: Some(ns),

@@ -3,21 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    crate::ns_util::{self, PKG_PATH},
-    failure::{err_msg, format_err, Error},
+    failure::{format_err, Error},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_io::{DirectoryProxy, VMO_FLAG_EXEC, VMO_FLAG_READ},
+    fidl_fuchsia_io::{DirectoryProxy, VMO_FLAG_READ},
     fidl_fuchsia_ldsvc::{LoaderRequest, LoaderRequestStream},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
+    io_util,
     log::*,
-    std::collections::HashMap,
     std::path::PathBuf,
 };
 
-/// start will expose the ldsvc.fidl service over the given channel, providing VMO buffers of
-/// requested library object names from the given namespace.
-pub fn start(ns_map: HashMap<PathBuf, DirectoryProxy>, chan: zx::Channel) {
+/// start will expose the `fuchsia.ldsvc.Loader` service over the given channel, providing VMO
+/// buffers of requested library object names from `lib_proxy`.
+pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
     fasync::spawn(
         async move {
             // Wait for requests
@@ -31,15 +30,14 @@ pub fn start(ns_map: HashMap<PathBuf, DirectoryProxy>, chan: zx::Channel) {
                     LoaderRequest::LoadObject { object_name, responder } => {
                         // TODO(ZX-3392): The name provided by the client here has a null byte at
                         // the end, which doesn't work from here on out (io.fidl doesn't like it).
-                        let object_name = object_name.trim_matches(char::from(0));
-                        let object_path = PKG_PATH.join("lib").join(object_name);
-                        match await!(load_object(&ns_map, PathBuf::from(object_path))) {
+                        let object_name = object_name.trim_matches(char::from(0)).to_string();
+                        match await!(load_vmo(&lib_proxy, object_name)) {
                             Ok(b) => responder.send(zx::sys::ZX_OK, Some(b))?,
                             Err(e) => {
                                 warn!("failed to load object: {}", e);
                                 responder.send(zx::sys::ZX_ERR_NOT_FOUND, None)?;
                             }
-                        };
+                        }
                     }
                     LoaderRequest::LoadScriptInterpreter { interpreter_name: _, responder } => {
                         // Unimplemented
@@ -50,8 +48,8 @@ pub fn start(ns_map: HashMap<PathBuf, DirectoryProxy>, chan: zx::Channel) {
                         responder.control_handle().shutdown();
                     }
                     LoaderRequest::Clone { loader, responder } => {
-                        let new_ns_map = ns_util::clone_component_namespace_map(&ns_map)?;
-                        start(new_ns_map, loader.into_channel());
+                        let new_lib_proxy = io_util::clone_directory(&lib_proxy)?;
+                        start(new_lib_proxy, loader.into_channel());
                         responder.send(zx::sys::ZX_OK)?;
                     }
                     LoaderRequest::DebugPublishDataSink { data_sink: _, data: _, responder } => {
@@ -67,33 +65,65 @@ pub fn start(ns_map: HashMap<PathBuf, DirectoryProxy>, chan: zx::Channel) {
             Ok(())
         }
             .unwrap_or_else(|e: Error| warn!("couldn't run library loader service: {}", e)),
-    ); // TODO
+    );
 }
 
-/// load_object will find the named object in the given namespace and return a VMO containing its
-/// contents.
-pub async fn load_object(
-    ns_map: &HashMap<PathBuf, DirectoryProxy>,
-    object_path: PathBuf,
-) -> Result<zx::Vmo, Error> {
-    for (ns_prefix, current_dir) in ns_map.iter() {
-        if object_path.starts_with(ns_prefix) {
-            let sub_path = pathbuf_drop_prefix(&object_path, ns_prefix);
-            let file_proxy = io_util::open_file(current_dir, &sub_path)?;
-            let (status, fidlbuf) = await!(file_proxy.get_buffer(VMO_FLAG_READ | VMO_FLAG_EXEC))
-                .map_err(|e| format_err!("reading object at {:?} failed: {}", object_path, e))?;
-            let status = zx::Status::from_raw(status);
-            if status != zx::Status::OK {
-                return Err(format_err!("reading object at {:?} failed: {}", object_path, status));
-            }
-            return fidlbuf
-                .map(|b| b.vmo)
-                .ok_or(format_err!("bad status received on get_buffer: {}", status));
-        }
+/// load_vmo will attempt to open the provided name in `lib_proxy` and return an executable VMO
+/// with the contents.
+pub async fn load_vmo(lib_proxy: &DirectoryProxy, object_name: String) -> Result<zx::Vmo, Error> {
+    let file_proxy = io_util::open_file(lib_proxy, &PathBuf::from(&object_name))?;
+    let (status, fidlbuf) = await!(file_proxy.get_buffer(VMO_FLAG_READ))
+        .map_err(|e| format_err!("reading object at {:?} failed: {}", object_name, e))?;
+    let status = zx::Status::from_raw(status);
+    if status != zx::Status::OK {
+        return Err(format_err!("reading object at {:?} failed: {}", object_name, status));
     }
-    Err(err_msg(format!("requested library not found: {:?}", object_path)))
+    fidlbuf
+        .ok_or(format_err!("no buffer returned from GetBuffer"))?
+        .vmo
+        .replace_as_executable()
+        .map_err(|status| format_err!("failed to replace VMO as executable: {}", status))
 }
 
-fn pathbuf_drop_prefix(path: &PathBuf, prefix: &PathBuf) -> PathBuf {
-    path.clone().iter().skip(prefix.iter().count()).collect()
+#[cfg(test)]
+mod tests {
+    use {super::*, fidl::endpoints::Proxy, fidl_fuchsia_ldsvc::LoaderProxy};
+
+    #[fasync::run_singlethreaded(test)]
+    async fn load_objects_test() -> Result<(), Error> {
+        let pkg_lib = io_util::open_directory_in_namespace("/pkg/lib")?;
+        let (client_chan, service_chan) = zx::Channel::create()?;
+        start(pkg_lib, service_chan);
+
+        let loader = LoaderProxy::from_channel(fasync::Channel::from_channel(client_chan)?);
+
+        for (obj_name, should_succeed) in vec![
+            // Should be able to access lib/ld.so.1
+            ("ld.so.1", true),
+            // Should be able to access lib/libfdio.so
+            ("libfdio.so", true),
+            // Should not be able to access lib/lib/ld.so.1
+            ("lib/ld.so.1", false),
+            // Should not be able to access lib/../lib/ld.so.1
+            ("../lib/ld.so.1", false),
+            // Should not be able to access test/component_manager_tests
+            ("../test/component_manager_tests", false),
+            // Should not be able to access lib/bin/hello_world
+            ("bin/hello_world", false),
+            // Should not be able to access bin/hello_world
+            ("../bin/hello_world", false),
+            // Should not be able to access meta/component_manager_tests_hello_world.cm
+            ("../meta/component_manager_tests_hello_world.cm", false),
+        ] {
+            let (res, o_vmo) = await!(loader.load_object(obj_name))?;
+            if should_succeed {
+                assert_eq!(zx::sys::ZX_OK, res);
+                assert!(o_vmo.is_some());
+            } else {
+                assert_ne!(zx::sys::ZX_OK, res);
+                assert!(o_vmo.is_none());
+            }
+        }
+        Ok(())
+    }
 }
