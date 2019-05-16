@@ -1,0 +1,11 @@
+{
+  "program": {
+    "binary": "test/factory_reset_unittests"
+  },
+  "sandbox": {
+    "features": ["shell"],
+    "services": [
+      "fuchsia.process.Launcher"
+    ]
+  }
+}

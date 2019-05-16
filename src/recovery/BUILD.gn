@@ -6,6 +6,7 @@ group("recovery") {
   testonly = true
   deps = [
     ":tests",
+    "factory_reset",
     "system",
   ]
 }
@@ -13,6 +14,7 @@ group("recovery") {
 group("tests") {
   testonly = true
   deps = [
+    "factory_reset:tests",
     "integration:tests",
     "simulator:tests",
     "system:tests",
