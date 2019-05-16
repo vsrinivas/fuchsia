@@ -8,7 +8,7 @@ fidl("fuchsia.app.discover") {
   sdk_category = "partner"
 
   sources = [
-    "discover_manager.fidl",
+    "discover_registry.fidl",
     "module_output.fidl",
   ]
 
