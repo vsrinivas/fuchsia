@@ -12,6 +12,9 @@ if (target_cpu == "x64") {
   group("magma-vulkan") {
     if (magma_enable_developer_build) {
       testonly = true
+      deps = [
+        "//garnet/lib/magma/tests/unit_tests:testing_firmware_file",
+      ]
     }
     public_deps = [
       ":magma-intel-gen",

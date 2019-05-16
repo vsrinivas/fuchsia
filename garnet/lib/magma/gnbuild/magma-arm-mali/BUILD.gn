@@ -8,11 +8,15 @@ import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 # Only including packages built inside this file.
-have_libvulkan_mali = build_libvulkan_arm_mali != []|| have_prebuilt_libvulkan_arm
+have_libvulkan_mali =
+    build_libvulkan_arm_mali != [] || have_prebuilt_libvulkan_arm
 
 group("magma-vulkan") {
   if (magma_enable_developer_build) {
     testonly = true
+    deps = [
+      "//garnet/lib/magma/tests/unit_tests:testing_firmware_file",
+    ]
   }
   public_deps = [
     ":magma-arm-mali",

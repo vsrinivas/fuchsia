@@ -125,6 +125,32 @@ source_set("device") {
   allow_circular_includes_from = [ "zircon:device" ]
 }
 
+source_set("firmware_loader_header") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_firmware_loader.h",
+  ]
+  deps = [
+    ":buffer_header",
+  ]
+}
+
+source_set("firmware_loader") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":buffer",
+    ":firmware_loader_header",
+    ":handle",
+    "$magma_build_root/src/magma_util:common",
+  ]
+
+  deps = [
+    "zircon:firmware_loader",
+  ]
+}
+
 source_set("random_header") {
   public_configs = [ ":platform_include_config" ]
 

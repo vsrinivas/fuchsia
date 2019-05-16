@@ -109,6 +109,23 @@ source_set("device") {
   ]
 }
 
+source_set("firmware_loader") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_firmware_loader.cc",
+  ]
+
+  deps = [
+    ":buffer",
+    "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/ddk",
+    "$zircon_build_root/public/lib/driver",
+    "$zircon_build_root/public/lib/zx",
+    "..:firmware_loader_header",
+  ]
+}
+
 source_set("futex") {
   configs += [ "..:platform_include_config" ]
 

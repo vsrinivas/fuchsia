@@ -2,8 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+package("testing_firmware_file") {
+  deprecated_system_image = true
+  testonly = true
+  libraries = [
+    {
+      dest = "firmware/test_firmware.txt"
+      source = rebase_path("test_firmware.txt")
+    },
+  ]
+}
 executable("unit_tests") {
   testonly = true
   output_name = "magma_unit_tests"
@@ -101,6 +112,7 @@ source_set("magma_platform_hardware_tests") {
     "test_mmio.cc",
     "test_platform_buffer.cc",
     "test_platform_bus_mapper.cc",
+    "test_platform_firmware_loader.cc",
     "test_platform_interrupt.cc",
   ]
 
@@ -116,6 +128,7 @@ source_set("magma_platform_hardware_tests") {
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:bus_mapper",
     "$magma_build_root/src/magma_util/platform:device",
+    "$magma_build_root/src/magma_util/platform:firmware_loader",
     "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/tests/mock:mmio",
     "//third_party/googletest:gtest",
