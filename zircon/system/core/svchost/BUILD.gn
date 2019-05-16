@@ -2,14 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("svchost") {
+library("crashsvc") {
   sources = [
     "crashsvc.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-crash:c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/inspector",
+  ]
+  public_deps = [
+    "$zx/system/ulib/zx",
+  ]
+}
+
+executable("svchost") {
+  sources = [
     "svchost.cpp",
     "sysmem.cpp",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-crash:c",
+    ":crashsvc",
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-fshost:c",
     "$zx/system/fidl/fuchsia-io:c",
@@ -22,10 +36,8 @@ executable("svchost") {
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/fidl/fuchsia-virtualconsole:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs",
-    "$zx/system/ulib/inspector",
     "$zx/system/ulib/kernel-debug",
     "$zx/system/ulib/logger",
     "$zx/system/ulib/process-launcher",
@@ -33,5 +45,17 @@ executable("svchost") {
     "$zx/system/ulib/svc",
     "$zx/system/ulib/sysmem-connector",
     "$zx/system/ulib/zircon",
+  ]
+}
+
+test("crashsvc-test") {
+  output_name = "crashsvc-test"
+  sources = [
+    "crashsvc-test.cpp",
+  ]
+  deps = [
+    ":crashsvc",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
   ]
 }

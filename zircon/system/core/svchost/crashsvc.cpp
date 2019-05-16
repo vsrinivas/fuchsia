@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <crashsvc/crashsvc.h>
+
 #include <stdint.h>
 #include <stdio.h>
 #include <threads.h>
@@ -15,13 +17,22 @@
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
-#include <lib/zx/job.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/threads.h>
+
+namespace {
+
+enum PacketKey {
+    kExceptionPacketKey,
+    kJobTerminatedPacketKey
+};
+
+} // namespace
 
 static bool GetChildKoids(const zx::job& job, zx_object_info_topic_t child_kind,
                           fbl::unique_ptr<zx_koid_t[]>* koids, size_t* num_koids) {
@@ -153,42 +164,48 @@ int crash_svc(void* arg) {
             continue;
         }
 
+        if (packet.key == kJobTerminatedPacketKey) {
+            // We'll only get here in tests, if our job is actually the root job
+            // the system will halt before sending the packet.
+            return 0;
+        }
+
         HandOffException(*ctx, packet);
     }
 }
 
-// Initialize the crash service, this supersedes the standalone service with the same
-// name that lived in zircon/system/core/crashsvc/crashsvc.cpp (/boot/bin/crashsvc) and
-// ad-hoc microservice in devmgr that delegated to svchost. See ZX-3199 for details.
-//
-// The job of this service is to handle exceptions that reached |root_job| and delegate
-// the crash analysis to one of two services:
-//
-// - built-in : using system/ulib/inspector
-// - appmgr hosted: via FIDL interface call (fuchsia_crash_Analyzer).
-//
-//  Which one depends if |analyzer_svc| is a valid channel handle, which svchost sets
-//  depending on "use_system".
-//
-void start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc) {
+zx_status_t start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc, thrd_t* thread) {
 
     zx::port exception_port;
-    zx::port::create(0, &exception_port);
+    zx_status_t status = zx::port::create(0, &exception_port);
+    if (status != ZX_OK) {
+        fprintf(stderr, "svchost: unable to create port (error %d)\n", status);
+        return status;
+    }
 
-    if (root_job.bind_exception_port(exception_port, 0, 0) != ZX_OK) {
-        fprintf(stderr, "svchost: unable to bind to root job exception port\n");
-        return;
+    status = root_job.bind_exception_port(exception_port, kExceptionPacketKey, 0);
+    if (status != ZX_OK) {
+        fprintf(stderr, "svchost: unable to bind to job exception port (error %d)\n", status);
+        return status;
+    }
+
+    // This isn't necessary for normal operation since the root job would take
+    // down the entire system if it died, but it's low-cost and we want to be
+    // able to stop the thread in tests.
+    status = root_job.wait_async(exception_port, kJobTerminatedPacketKey, ZX_JOB_TERMINATED, 0);
+    if (status != ZX_OK) {
+        fprintf(stderr, "svchost: unable to wait for job signals (error %d)\n", status);
     }
 
     zx::channel ch0, ch1;
 
     if (analyzer_svc != ZX_HANDLE_INVALID) {
         zx::channel::create(0u, &ch0, &ch1);
-        auto status = fdio_service_connect_at(
+        status = fdio_service_connect_at(
             analyzer_svc, fuchsia_crash_Analyzer_Name, ch0.release());
         if (status != ZX_OK) {
             fprintf(stderr, "svchost: unable to connect to analyzer service\n");
-            return;
+            return status;
         }
     }
 
@@ -198,10 +215,9 @@ void start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc) {
         std::move(ch1),
     };
 
-    thrd_t t;
-    if ((thrd_create_with_name(&t, crash_svc, ctx, "crash-svc")) == thrd_success) {
-        thrd_detach(t);
-    } else {
+    status = thrd_status_to_zx_status(thrd_create_with_name(thread, crash_svc, ctx, "crash-svc"));
+    if (status != ZX_OK) {
         delete ctx;
     }
+    return status;
 }

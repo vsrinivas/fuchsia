@@ -4,6 +4,7 @@
 
 #include "sysmem.h"
 
+#include <crashsvc/crashsvc.h>
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
 #include <fs/remote-dir.h>
@@ -36,9 +37,6 @@ typedef struct zx_service_provider_instance {
     // The |ctx| pointer returned by the provider's |init| function, if any.
     void* ctx;
 } zx_service_provider_instance_t;
-
-// start_crashsvc() is implemented in crashsvc.cpp.
-void start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc);
 
 static zx_status_t provider_init(zx_service_provider_instance_t* instance) {
     if (instance->provider->ops->init) {
@@ -319,8 +317,17 @@ int main(int argc, char** argv) {
                               zx::unowned_channel(virtcon_proxy_channel));
     }
 
-    start_crashsvc(zx::job(root_job),
-        require_system? appmgr_svc : ZX_HANDLE_INVALID);
+    thrd_t thread;
+    status = start_crashsvc(zx::job(root_job), require_system ? appmgr_svc : ZX_HANDLE_INVALID,
+                            &thread);
+    if (status != ZX_OK) {
+        // The system can still function without crashsvc, log the error but
+        // keep going.
+        fprintf(stderr, "svchost: error: Failed to start crashsvc: %d (%s).\n",
+                status, zx_status_get_string(status));
+    } else {
+        thrd_detach(thread);
+    }
 
     status = loop.Run();
 

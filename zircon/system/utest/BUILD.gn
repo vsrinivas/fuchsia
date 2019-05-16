@@ -23,6 +23,7 @@ if (current_cpu != "") {
       "$zx/system/core/devmgr/devhost:devhost-test",
       "$zx/system/core/devmgr/fshost:block-watcher-test",
       "$zx/system/core/devmgr/fshost:fshost-test",
+      "$zx/system/core/svchost:crashsvc-test",
       "$zx/system/core/virtcon:virtual-console-test",
       "$zx/system/dev/backlight/sg-micro:sgm37603a-test",
       "$zx/system/dev/block/ahci:ahci-unittest",
