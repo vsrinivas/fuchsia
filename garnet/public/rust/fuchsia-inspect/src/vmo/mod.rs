@@ -36,6 +36,21 @@ pub trait PropertyFormat {
     fn length_in_bytes(&self) -> u32;
 }
 
+/// Trait implemented by metrics.
+pub trait Metric {
+    /// The type the metric is handling.
+    type Type;
+
+    /// Set the metric current value to |value|.
+    fn set(&self, value: Self::Type) -> Result<(), Error>;
+
+    /// Add the given |value| to the metric current value.
+    fn add(&self, value: Self::Type) -> Result<(), Error>;
+
+    /// Subtract the given |value| from the metric current value.
+    fn subtract(&self, value: Self::Type) -> Result<(), Error>;
+}
+
 /// Inspect API Node data type.
 pub struct Node {
     /// Index of the block in the VMO.
@@ -189,7 +204,7 @@ impl Drop for Node {
 macro_rules! metric_fn {
     ($fn_name:ident, $type:ident, $name:ident) => {
         paste::item! {
-            pub fn $fn_name(&self, value: $type) -> Result<(), Error> {
+            fn $fn_name(&self, value: $type) -> Result<(), Error> {
                 self.state.lock().[<$fn_name _ $name _metric>](self.block_index, value)
             }
         }
@@ -211,7 +226,8 @@ macro_rules! metric {
                 state: Arc<Mutex<State>>,
             }
 
-            impl [<$name_cap Metric>] {
+            impl Metric for [<$name_cap Metric>] {
+                type Type = $type;
                 metric_fn!(set, $type, $name);
                 metric_fn!(add, $type, $name);
                 metric_fn!(subtract, $type, $name);
