@@ -124,7 +124,9 @@ bool ComponentInterceptor::InterceptURL(std::string component_url,
   info.pkg_dir->AddEntry(
       kAutogenPkgDirManifestPath,
       std::make_unique<vfs::PseudoFile>(
-          [cmx_str = std::move(cmx_str)](std::vector<uint8_t>* out) {
+          cmx_str.length(),
+          [cmx_str = std::move(cmx_str)](std::vector<uint8_t>* out,
+                                         size_t max_file_size) {
             std::copy(cmx_str.begin(), cmx_str.end(), std::back_inserter(*out));
             return ZX_OK;
           }));

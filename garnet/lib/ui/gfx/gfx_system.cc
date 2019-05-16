@@ -4,17 +4,18 @@
 
 #include "garnet/lib/ui/gfx/gfx_system.h"
 
-#include "src/ui/lib/escher/escher_process_init.h"
-#include "src/ui/lib/escher/fs/hack_filesystem.h"
-#include "src/ui/lib/escher/util/check_vulkan_support.h"
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+#include <zircon/assert.h>
 
 #include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/screenshotter.h"
 #include "garnet/lib/ui/scenic/scenic.h"
+#include "src/ui/lib/escher/escher_process_init.h"
+#include "src/ui/lib/escher/fs/hack_filesystem.h"
+#include "src/ui/lib/escher/util/check_vulkan_support.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -203,14 +204,17 @@ void GfxSystem::Initialize() {
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
   context()->app_context()->outgoing()->debug_dir()->AddEntry(
-      "dump-scenes", std::make_unique<vfs::PseudoFile>(
-                         [this](std::vector<uint8_t>* output) {
-                           auto out = engine_->DumpScenes();
-                           output->resize(out.length());
-                           std::copy(out.begin(), out.end(), output->begin());
-                           return ZX_OK;
-                         },
-                         nullptr, kDumpScenesBufferCapacity));
+      "dump-scenes",
+      std::make_unique<vfs::PseudoFile>(
+          kDumpScenesBufferCapacity,
+          [this](std::vector<uint8_t>* output, size_t max_file_size) {
+            auto out = engine_->DumpScenes();
+            ZX_DEBUG_ASSERT(out.length() <= max_file_size);
+            output->resize(out.length());
+            std::copy(out.begin(), out.end(), output->begin());
+            return ZX_OK;
+          },
+          nullptr));
 
   SetToInitialized();
 };

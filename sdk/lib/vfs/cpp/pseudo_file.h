@@ -38,21 +38,29 @@ namespace vfs {
 // prior to destroying the file.
 class PseudoFile final : public vfs::internal::File {
  public:
+  // Deprecated, please use |ReadHandler|
+  using DeprecatedReadHandler =
+      fit::function<zx_status_t(std::vector<uint8_t>* output)>;
+
   // Handler called to read from the pseudo-file.
-  using ReadHandler = fit::function<zx_status_t(std::vector<uint8_t>* output)>;
+  using ReadHandler = fit::function<zx_status_t(std::vector<uint8_t>* output,
+                                                size_t max_bytes)>;
 
   // Handler called to write into the pseudo-file.
   using WriteHandler = fit::function<zx_status_t(std::vector<uint8_t> input)>;
 
+  [[deprecated("Please use other constructor")]] PseudoFile(
+      DeprecatedReadHandler read_handler = DeprecatedReadHandler(),
+      WriteHandler write_handler = WriteHandler(), size_t max_file_size = 1024);
+
   // Creates a buffered pseudo-file.
   //
   // |read_handler| cannot be null. If the |write_handler| is null, then the
-  // pseudo-file is considered not writable. The |buffer_capacity|
-  // determines the maximum number of bytes which can be written to the
-  // pseudo-file's input buffer when it it opened for writing.
-  PseudoFile(ReadHandler read_handler = ReadHandler(),
-             WriteHandler write_handler = WriteHandler(),
-             size_t buffer_capacity = 1024);
+  // pseudo-file is considered not writable. The |max_file_size|
+  // determines the maximum number of bytes which can be written to andread from
+  // the pseudo-file's input buffer when it it opened for writing/reading.
+  PseudoFile(size_t max_file_size, ReadHandler read_handler = ReadHandler(),
+             WriteHandler write_handler = WriteHandler());
 
   ~PseudoFile() override;
 
@@ -125,7 +133,7 @@ class PseudoFile final : public vfs::internal::File {
 
   ReadHandler const read_handler_;
   WriteHandler const write_handler_;
-  const size_t buffer_capacity_;
+  const size_t max_file_size_;
 };
 
 }  // namespace vfs

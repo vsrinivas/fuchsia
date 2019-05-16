@@ -21,7 +21,8 @@ namespace {
 
 std::unique_ptr<vfs::PseudoFile> MakePseudoFile() {
   return std::make_unique<vfs::PseudoFile>(
-      [](std::vector<uint8_t>* unused) { return ZX_OK; });
+      1024,  // arbitrary number. this test should not require a larger file.
+      [](std::vector<uint8_t>* unused, size_t unused_size) { return ZX_OK; });
 }
 
 class DiscoverTest : public TestFixture {

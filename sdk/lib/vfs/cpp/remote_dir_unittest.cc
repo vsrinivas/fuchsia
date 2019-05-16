@@ -60,12 +60,13 @@ class RemoteDirConnection : public vfs_tests::DirConnection {
  private:
   void AddFileToPseudoDir(const std::string& name) {
     pseudo_dir_.AddEntry(
-        name,
-        std::make_unique<vfs::PseudoFile>([name](std::vector<uint8_t>* output) {
-          output->resize(name.length());
-          std::copy(name.begin(), name.end(), output->begin());
-          return ZX_OK;
-        }));
+        name, std::make_unique<vfs::PseudoFile>(
+                  name.length(),
+                  [name](std::vector<uint8_t>* output, size_t max_file_size) {
+                    output->resize(name.length());
+                    std::copy(name.begin(), name.end(), output->begin());
+                    return ZX_OK;
+                  }));
   }
 };
 

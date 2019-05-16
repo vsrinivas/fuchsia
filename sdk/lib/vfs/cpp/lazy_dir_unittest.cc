@@ -82,7 +82,9 @@ class LazyDirConnection : public vfs_tests::DirConnection {
   TestLazyDir::TestContent CreateTestFile(std::string name,
                                           std::string content) {
     auto file = std::make_unique<vfs::PseudoFile>(
-        [content = std::move(content)](std::vector<uint8_t>* output) {
+        content.length(),
+        [content = std::move(content)](std::vector<uint8_t>* output,
+                                       size_t max_file_size) {
           output->resize(content.length());
           std::copy(content.begin(), content.end(), output->begin());
           return ZX_OK;

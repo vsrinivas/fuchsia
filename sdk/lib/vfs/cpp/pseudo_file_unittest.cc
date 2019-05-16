@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include "fuchsia/io/cpp/fidl.h"
 #include "lib/gtest/real_loop_fixture.h"
 
 namespace {
@@ -48,7 +49,7 @@ class FileWrapper {
               bool start_loop)
       : buffer_(std::move(initial_str)),
         loop_(&kAsyncLoopConfigNoAttachToThread) {
-    auto readFn = [this](std::vector<uint8_t>* output) {
+    auto readFn = [this](std::vector<uint8_t>* output, size_t max_file_size) {
       output->resize(buffer_.length());
       std::copy(buffer_.begin(), buffer_.end(), output->begin());
       return ZX_OK;
@@ -64,8 +65,8 @@ class FileWrapper {
       };
     }
 
-    file_ = std::make_unique<vfs::PseudoFile>(std::move(readFn),
-                                              std::move(writeFn), capacity);
+    file_ = std::make_unique<vfs::PseudoFile>(capacity, std::move(readFn),
+                                              std::move(writeFn));
     if (start_loop) {
       loop_.StartThread("vfs test thread");
     }
@@ -536,6 +537,22 @@ TEST_F(PseudoFileTest, ReadFailsForWriteOnly) {
   AssertRead(file, 10, "", ZX_ERR_ACCESS_DENIED);
 }
 
+TEST_F(PseudoFileTest, CapacityisSameAsFileContentSize) {
+  const std::string str = "this is a test string";
+  auto file_wrapper = FileWrapper::CreateReadWriteFile(str, str.length());
+  auto file = OpenFile(file_wrapper.file(), fuchsia::io::OPEN_RIGHT_READABLE,
+                       file_wrapper.dispatcher());
+
+  AssertRead(file, str.length(), str);
+}
+
+TEST_F(PseudoFileTest, OpenFailsForOverFlowingFile) {
+  const std::string str = "this is a test string";
+  auto file_wrapper = FileWrapper::CreateReadWriteFile(str, str.length() - 1);
+  AssertOpen(file_wrapper.file(), file_wrapper.dispatcher(),
+             fuchsia::io::OPEN_RIGHT_READABLE, ZX_ERR_FILE_BIG);
+}
+
 TEST_F(PseudoFileTest, CantReadNodeReferenceFile) {
   const std::string str = "this is a test string";
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
@@ -623,7 +640,7 @@ class FileWrapperWithFailingWriteFn {
                                 zx_status_t write_error)
       : buffer_(std::move(initial_str)),
         loop_(&kAsyncLoopConfigNoAttachToThread) {
-    auto readFn = [this](std::vector<uint8_t>* output) {
+    auto readFn = [this](std::vector<uint8_t>* output, size_t max_file_size) {
       output->resize(buffer_.length());
       std::copy(buffer_.begin(), buffer_.end(), output->begin());
       return ZX_OK;
@@ -637,8 +654,8 @@ class FileWrapperWithFailingWriteFn {
       return write_error;
     };
 
-    file_ = std::make_unique<vfs::PseudoFile>(std::move(readFn),
-                                              std::move(writeFn), capacity);
+    file_ = std::make_unique<vfs::PseudoFile>(capacity, std::move(readFn),
+                                              std::move(writeFn));
     loop_.StartThread("vfs test thread");
   }
 

@@ -12,6 +12,8 @@ namespace {
 
 using vfs_tests::Dirent;
 
+constexpr size_t kCommonCapacity = 1024;
+
 class TestNode : public vfs::internal::Node {
  public:
   TestNode(std::function<void()> death_callback = nullptr)
@@ -212,13 +214,15 @@ class DirectoryWrapper {
 
   void AddReadOnlyFile(const std::string& file_name,
                        const std::string& file_content) {
-    auto read_fn = [file_content](std::vector<uint8_t>* output) {
+    auto read_fn = [file_content](std::vector<uint8_t>* output,
+                                  size_t max_file_size) {
       output->resize(file_content.length());
       std::copy(file_content.begin(), file_content.end(), output->begin());
       return ZX_OK;
     };
 
-    auto file = std::make_unique<vfs::PseudoFile>(std::move(read_fn), nullptr);
+    auto file = std::make_unique<vfs::PseudoFile>(file_content.size(),
+                                                  std::move(read_fn));
 
     AddEntry(file_name, std::move(file));
   }
@@ -227,7 +231,8 @@ class DirectoryWrapper {
   // storage for read and write requests.
   void AddReadWriteFile(const std::string& file_name,
                         std::vector<uint8_t>* file_content) {
-    auto read_fn = [file_content](std::vector<uint8_t>* output) {
+    auto read_fn = [file_content](std::vector<uint8_t>* output,
+                                  size_t max_file_size) {
       output->resize(file_content->size());
       std::copy(file_content->begin(), file_content->end(), output->begin());
       return ZX_OK;
@@ -239,8 +244,8 @@ class DirectoryWrapper {
       return ZX_OK;
     };
 
-    auto file = std::make_unique<vfs::PseudoFile>(std::move(read_fn),
-                                                  std::move(write_fn));
+    auto file = std::make_unique<vfs::PseudoFile>(
+        kCommonCapacity, std::move(read_fn), std::move(write_fn));
 
     AddEntry(file_name, std::move(file));
   }
@@ -275,7 +280,7 @@ TEST_F(PseudoDirConnection, ReadDirSimple) {
       Dirent::DirentForFile("file1"), Dirent::DirentForFile("file2"),
       Dirent::DirentForFile("file3"),
   };
-  AssertReadDirents(ptr, 1024, expected_dirents);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents);
 }
 
 TEST_F(PseudoDirConnection, ReadDirOnEmptyDirectory) {
@@ -284,7 +289,7 @@ TEST_F(PseudoDirConnection, ReadDirOnEmptyDirectory) {
   std::vector<Dirent> expected_dirents = {
       Dirent::DirentForDot(),
   };
-  AssertReadDirents(ptr, 1024, expected_dirents);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents);
 }
 
 TEST_F(PseudoDirConnection, ReadDirSizeLessThanFirstEntry) {
@@ -401,8 +406,8 @@ TEST_F(PseudoDirConnection, ReadDirAfterFullRead) {
 
   std::vector<Dirent> empty_dirents;
 
-  AssertReadDirents(ptr, 1024, expected_dirents);
-  AssertReadDirents(ptr, 1024, empty_dirents);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents);
+  AssertReadDirents(ptr, kCommonCapacity, empty_dirents);
 }
 
 TEST_F(PseudoDirConnection, RewindWorksAfterFullRead) {
@@ -418,12 +423,12 @@ TEST_F(PseudoDirConnection, RewindWorksAfterFullRead) {
 
   std::vector<Dirent> empty_dirents;
 
-  AssertReadDirents(ptr, 1024, expected_dirents);
-  AssertReadDirents(ptr, 1024, empty_dirents);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents);
+  AssertReadDirents(ptr, kCommonCapacity, empty_dirents);
 
   AssertRewind(ptr);
 
-  AssertReadDirents(ptr, 1024, expected_dirents);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents);
 }
 
 TEST_F(PseudoDirConnection, RewindWorksAfterPartialRead) {
@@ -461,13 +466,13 @@ TEST_F(PseudoDirConnection, ReadDirAfterAddingEntry) {
       Dirent::DirentForDot(),
       Dirent::DirentForDirectory("subdir"),
   };
-  AssertReadDirents(ptr, 1024, expected_dirents1);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents1);
 
   dir_.AddReadOnlyFile("file1", "file1");
   std::vector<Dirent> expected_dirents2 = {
       Dirent::DirentForFile("file1"),
   };
-  AssertReadDirents(ptr, 1024, expected_dirents2);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents2);
 }
 
 TEST_F(PseudoDirConnection, ReadDirAndRewindAfterAddingEntry) {
@@ -480,7 +485,7 @@ TEST_F(PseudoDirConnection, ReadDirAndRewindAfterAddingEntry) {
       Dirent::DirentForDot(),
       Dirent::DirentForDirectory("subdir"),
   };
-  AssertReadDirents(ptr, 1024, expected_dirents1);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents1);
 
   dir_.AddReadOnlyFile("file1", "file1");
   AssertRewind(ptr);
@@ -489,7 +494,7 @@ TEST_F(PseudoDirConnection, ReadDirAndRewindAfterAddingEntry) {
       Dirent::DirentForDirectory("subdir"),
       Dirent::DirentForFile("file1"),
   };
-  AssertReadDirents(ptr, 1024, expected_dirents2);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents2);
 }
 
 TEST_F(PseudoDirConnection, ReadDirAfterRemovingEntry) {
@@ -502,10 +507,10 @@ TEST_F(PseudoDirConnection, ReadDirAfterRemovingEntry) {
       Dirent::DirentForDot(),
       Dirent::DirentForDirectory("subdir"),
   };
-  AssertReadDirents(ptr, 1024, expected_dirents1);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents1);
   std::vector<Dirent> empty_dirents;
   ASSERT_EQ(ZX_OK, dir_.dir()->RemoveEntry("subdir"));
-  AssertReadDirents(ptr, 1024, empty_dirents);
+  AssertReadDirents(ptr, kCommonCapacity, empty_dirents);
 
   // rewind and check again
   AssertRewind(ptr);
@@ -513,7 +518,7 @@ TEST_F(PseudoDirConnection, ReadDirAfterRemovingEntry) {
   std::vector<Dirent> expected_dirents2 = {
       Dirent::DirentForDot(),
   };
-  AssertReadDirents(ptr, 1024, expected_dirents2);
+  AssertReadDirents(ptr, kCommonCapacity, expected_dirents2);
 }
 
 TEST_F(PseudoDirConnection, CantReadNodeReferenceDir) {
@@ -575,7 +580,7 @@ TEST_F(PseudoDirConnection, OpenSelf) {
     AssertOpenPath(ptr, path, new_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
 
     // assert correct directory was opened
-    AssertReadDirents(new_ptr, 1024, expected_dirents);
+    AssertReadDirents(new_ptr, kCommonCapacity, expected_dirents);
   }
 }
 
@@ -620,7 +625,7 @@ TEST_F(PseudoDirConnection, OpenSubDir) {
     AssertOpenPath(ptr, path, new_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
 
     // assert correct directory was opened
-    AssertReadDirents(new_ptr, 1024, expected_dirents_sub1);
+    AssertReadDirents(new_ptr, kCommonCapacity, expected_dirents_sub1);
   }
 
   // test with other directory
@@ -644,7 +649,7 @@ TEST_F(PseudoDirConnection, OpenSubDir) {
     AssertOpenPath(ptr, path, new_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
 
     // assert correct directory was opened
-    AssertReadDirents(new_ptr, 1024, expected_dirents_sub2);
+    AssertReadDirents(new_ptr, kCommonCapacity, expected_dirents_sub2);
   }
 }
 

@@ -7,18 +7,29 @@
 #include <lib/vfs/cpp/internal/file_connection.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <sstream>
 
 namespace vfs {
 
-PseudoFile::PseudoFile(ReadHandler read_handler, WriteHandler write_handler,
-                       size_t buffer_capacity)
+PseudoFile::PseudoFile(size_t max_file_size, ReadHandler read_handler,
+                       WriteHandler write_handler)
     : read_handler_(std::move(read_handler)),
       write_handler_(std::move(write_handler)),
-      buffer_capacity_(buffer_capacity) {
+      max_file_size_(max_file_size) {
   ZX_DEBUG_ASSERT(read_handler_ != nullptr);
 }
+
+PseudoFile::PseudoFile(DeprecatedReadHandler read_handler,
+                       WriteHandler write_handler, size_t max_file_size)
+    : PseudoFile(
+          max_file_size,
+          [read_handler = std::move(read_handler)](std::vector<uint8_t>* output,
+                                                   size_t max_bytes) {
+            return read_handler(output);
+          },
+          std::move(write_handler)) {}
 
 PseudoFile::~PseudoFile() = default;
 
@@ -26,9 +37,12 @@ zx_status_t PseudoFile::CreateConnection(
     uint32_t flags, std::unique_ptr<vfs::internal::Connection>* connection) {
   std::vector<uint8_t> output;
   if (Flags::IsReadable(flags)) {
-    zx_status_t status = read_handler_(&output);
+    zx_status_t status = read_handler_(&output, max_file_size_);
     if (status != ZX_OK) {
       return status;
+    }
+    if (output.size() > max_file_size_) {
+      return ZX_ERR_FILE_BIG;
     }
   }
   *connection =
@@ -71,7 +85,7 @@ size_t PseudoFile::GetCapacity() {
   // this should never be called
   ZX_DEBUG_ASSERT(false);
 
-  return buffer_capacity_;
+  return max_file_size_;
 }
 
 PseudoFile::Content::Content(PseudoFile* file, uint32_t flags,
@@ -118,12 +132,12 @@ zx_status_t PseudoFile::Content::GetAttr(
 zx_status_t PseudoFile::Content::WriteAt(std::vector<uint8_t> data,
                                          uint64_t offset,
                                          uint64_t* out_actual) {
-  if (offset >= file_->buffer_capacity_) {
+  if (offset >= file_->max_file_size_) {
     *out_actual = 0u;
     return ZX_OK;
   }
 
-  size_t actual = std::min(data.size(), file_->buffer_capacity_ - offset);
+  size_t actual = std::min(data.size(), file_->max_file_size_ - offset);
   if (actual == 0) {
     *out_actual = 0u;
     return ZX_OK;
@@ -140,7 +154,7 @@ zx_status_t PseudoFile::Content::WriteAt(std::vector<uint8_t> data,
 }
 
 zx_status_t PseudoFile::Content::Truncate(uint64_t length) {
-  if (length > file_->buffer_capacity_) {
+  if (length > file_->max_file_size_) {
     return ZX_ERR_NO_SPACE;
   }
 
@@ -151,10 +165,11 @@ zx_status_t PseudoFile::Content::Truncate(uint64_t length) {
 
 uint64_t PseudoFile::Content::GetLength() { return buffer_.size(); }
 
-size_t PseudoFile::Content::GetCapacity() { return file_->buffer_capacity_; }
+size_t PseudoFile::Content::GetCapacity() { return file_->max_file_size_; }
 
 void PseudoFile::Content::SetInputLength(size_t length) {
-  ZX_DEBUG_ASSERT(length <= file_->buffer_capacity_);
+  ZX_ASSERT_MSG(length <= file_->max_file_size_,
+                "Should not happen. Please report a bug.");
 
   buffer_.resize(length);
 }

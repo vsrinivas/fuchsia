@@ -67,11 +67,19 @@ bool FuchsiaDataSource::InitializeWithRealFiles(
     zx_status_t status = dir->AddEntry(
         segs[segs.size() - 1],
         std::make_unique<vfs::PseudoFile>(
+            200 * 1024 * 1024 /* max file size, 200 MB */,
             /* read_handler= */
-            [this, path](std::vector<uint8_t>* output) {
+            [this, path](std::vector<uint8_t>* output, size_t max_file_size) {
               auto out = ReadFile(path);
-              output->resize(out.length());
-              std::copy(out.begin(), out.end(), output->begin());
+              size_t len = out.length();
+              if (len > max_file_size) {
+                FXL_LOG(WARNING)
+                    << "File(" << path << ") size more than: " << max_file_size
+                    << ", truncating";
+                len = max_file_size;
+              }
+              output->resize(len);
+              std::copy(out.begin(), out.begin() + len, output->begin());
               return ZX_OK;
             },
             /* write_handler= */
@@ -84,8 +92,7 @@ bool FuchsiaDataSource::InitializeWithRealFiles(
               FXL_LOG(INFO) << "Updated file: " << path;
               WriteFile(path, std::move(content));
               return ZX_OK;
-            },
-            200 * 1024 * 1024 /* max file size, 200 MB */));
+            }));
 
     if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
       FXL_LOG(WARNING) << "Failed to AddEntry(): " << status;
