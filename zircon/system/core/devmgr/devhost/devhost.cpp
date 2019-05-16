@@ -465,11 +465,6 @@ static zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
     zx::vmo driver_vmo(raw_driver_vmo);
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
 
-    // TODO: added to help debug DNO-492, remove when done
-    if (driver_path == "/boot/driver/zxcrypt.so") {
-        log(ERROR, "devhost[%s] bind zxcrypt\n", ctx->path);
-    }
-
     // TODO: api lock integration
     log(RPC_IN, "devhost[%s] bind driver '%.*s'\n", ctx->path, static_cast<int>(driver_path_size),
         driver_path_data);
