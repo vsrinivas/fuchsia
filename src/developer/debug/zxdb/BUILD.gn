@@ -7,6 +7,12 @@ import("//build/host.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 
+source_set("e2e_test_headers") {
+  public = [
+    "main_e2e_test.h",
+  ]
+}
+
 # ZXDB currently only compiles for the host.
 if (current_toolchain == host_toolchain) {
   sdk_executable("zxdb") {
@@ -19,6 +25,17 @@ if (current_toolchain == host_toolchain) {
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/console",
+    ]
+  }
+
+  test("zxdb_e2e_tests") {
+    sources = [
+      "main_e2e_test.cc",
+    ]
+    deps = [
+      ":e2e_test_headers",
+      "//src/developer/debug/zxdb/console:e2e_tests",
+      "//third_party/googletest:gtest",
     ]
   }
 

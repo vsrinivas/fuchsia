@@ -124,3 +124,17 @@ source_set("tests") {
     "//third_party/googletest:gtest",
   ]
 }
+
+source_set("e2e_tests") {
+  testonly = true
+  sources = [
+    "e2e_test.cc",
+    "mock_console.cc",
+  ]
+
+  deps = [
+    ":console",
+    "//src/developer/debug/zxdb:e2e_test_headers",
+    "//third_party/googletest:gtest",
+  ]
+}
