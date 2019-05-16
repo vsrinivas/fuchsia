@@ -34,9 +34,3 @@ pub const MAX_ORDER_SHIFT: usize = MIN_ORDER_SHIFT + NUM_ORDERS - 1;
 
 /// The size for order NUM_ORDERS-1 (the maximum order)
 pub const MAX_ORDER_SIZE: usize = 1 << MAX_ORDER_SHIFT;
-
-/// Property format flag for a bytevector.
-pub const PROPERTY_FLAG_BYTE_VECTOR: u8 = 1;
-
-/// Property format flag for a string.
-pub const PROPERTY_FLAG_STRING: u8 = 0;

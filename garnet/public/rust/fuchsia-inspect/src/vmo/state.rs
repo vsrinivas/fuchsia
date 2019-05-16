@@ -4,6 +4,7 @@
 
 use failure::{format_err, Error};
 use mapped_vmo::Mapping;
+use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::ToPrimitive;
 use std::rc::Rc;
 
@@ -12,12 +13,18 @@ use crate::vmo::block_type::BlockType;
 use crate::vmo::constants;
 use crate::vmo::heap::Heap;
 use crate::vmo::utils;
-use crate::vmo::PropertyFormat;
 
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
 pub struct State {
     pub(in crate::vmo) heap: Heap,
     header: Block<Rc<Mapping>>,
+}
+
+/// Format in which the property will be read.
+#[derive(FromPrimitive, ToPrimitive)]
+pub enum PropertyFormat {
+    String = 0,
+    ByteVector = 1,
 }
 
 /// Locks the VMO Header blcok, executes the given codeblock and unblocks it.
@@ -111,15 +118,16 @@ impl State {
     }
 
     /// Allocate a PROPERTY block with the given |name|, |value| and |parent_index|.
-    pub fn create_property<T: PropertyFormat>(
+    pub fn create_property(
         &mut self,
         name: &str,
-        value: T,
+        value: &[u8],
+        format: PropertyFormat,
         parent_index: u32,
     ) -> Result<Block<Rc<Mapping>>, Error> {
         with_header_lock!(self, {
             let (block, name_block) = self.allocate_reserved_value(name, parent_index)?;
-            block.become_property(name_block.index(), parent_index, value.flag())?;
+            block.become_property(name_block.index(), parent_index, format.to_u8().unwrap())?;
             if let Err(err) = self.inner_set_property_value(&block, &value) {
                 self.heap.free_block(block).expect("Failed to free block");
                 self.heap.free_block(name_block).expect("Failed to free name block");
@@ -139,15 +147,11 @@ impl State {
         })
     }
 
-    /// Set the |value| of a PROPERTY block.
-    pub fn set_property<T: PropertyFormat>(
-        &mut self,
-        block_index: u32,
-        value: T,
-    ) -> Result<(), Error> {
+    /// Set the |value| of a String PROPERTY block.
+    pub fn set_property(&mut self, block_index: u32, value: &[u8]) -> Result<(), Error> {
         with_header_lock!(self, {
             let block = self.heap.get_block(block_index)?;
-            self.inner_set_property_value(&block, &value)?;
+            self.inner_set_property_value(&block, value)?;
             Ok(())
         })
     }
@@ -223,22 +227,14 @@ impl State {
         }
     }
 
-    fn inner_set_property_value<T: PropertyFormat>(
+    fn inner_set_property_value(
         &mut self,
         block: &Block<Rc<Mapping>>,
-        value: &T,
+        value: &[u8],
     ) -> Result<(), Error> {
         self.free_extents(block.property_extent_index()?)?;
-        let property_flags = block.property_flags()?;
-        if value.flag() != property_flags {
-            return Err(format_err!(
-                "Expected value with flag:{} got:{}",
-                property_flags,
-                value.flag()
-            ));
-        }
         let extent_index = self.write_extents(value)?;
-        block.set_property_total_length(value.length_in_bytes())?;
+        block.set_property_total_length(value.len().to_u32().unwrap())?;
         block.set_property_extent_index(extent_index)?;
         Ok(())
     }
@@ -253,20 +249,19 @@ impl State {
         Ok(())
     }
 
-    fn write_extents<T: PropertyFormat>(&mut self, value: &T) -> Result<u32, Error> {
-        if value.length_in_bytes() == 0 {
+    fn write_extents(&mut self, value: &[u8]) -> Result<u32, Error> {
+        if value.len() == 0 {
             // Invalid index
             return Ok(constants::HEADER_INDEX);
         }
         let mut offset = 0;
-        let total_size = value.length_in_bytes().to_usize().unwrap();
-        let value_bytes = value.bytes();
+        let total_size = value.len().to_usize().unwrap();
         let mut extent_block =
             self.heap.allocate_block(utils::block_size_for_payload(total_size - offset))?;
         let head_extent_index = extent_block.index();
         while offset < total_size {
             extent_block.become_extent(0)?;
-            let bytes_written = extent_block.extent_set_contents(&value_bytes[offset..])?;
+            let bytes_written = extent_block.extent_set_contents(&value[offset..])?;
             offset += bytes_written;
             if offset < total_size {
                 let block =
@@ -480,7 +475,8 @@ mod tests {
         let mut state = get_state(4096);
 
         // Creates with value
-        let block = state.create_property("test", "test-property", 0).unwrap();
+        let block =
+            state.create_property("test", b"test-property", PropertyFormat::String, 0).unwrap();
         assert_eq!(block.block_type(), BlockType::PropertyValue);
         assert_eq!(block.index(), 1);
         assert_eq!(block.parent_index().unwrap(), 0);
@@ -523,7 +519,8 @@ mod tests {
         let mut state = get_state(4096);
 
         // Creates with value
-        let block = state.create_property("test", "test-property".as_bytes(), 0).unwrap();
+        let block =
+            state.create_property("test", b"test-property", PropertyFormat::ByteVector, 0).unwrap();
         assert_eq!(block.block_type(), BlockType::PropertyValue);
         assert_eq!(block.index(), 1);
         assert_eq!(block.parent_index().unwrap(), 0);
@@ -567,8 +564,9 @@ mod tests {
         let mut state = get_state(10000);
 
         let chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
-        let data: String = chars.iter().cycle().take(6000).collect();
-        let block = state.create_property("test", data, 0).unwrap();
+        let data = chars.iter().cycle().take(6000).collect::<String>();
+        let block =
+            state.create_property("test", data.as_bytes(), PropertyFormat::String, 0).unwrap();
         assert_eq!(block.block_type(), BlockType::PropertyValue);
         assert_eq!(block.index(), 1);
         assert_eq!(block.parent_index().unwrap(), 0);

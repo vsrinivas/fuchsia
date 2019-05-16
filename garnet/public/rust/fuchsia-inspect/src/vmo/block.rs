@@ -131,6 +131,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Get the flags of a PROPERTY block.
+    #[cfg(test)]
     pub fn property_flags(&self) -> Result<u8, Error> {
         self.check_type(BlockType::PropertyValue)?;
         Ok(self.read_payload().property_flags())

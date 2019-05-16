@@ -4,15 +4,13 @@
 
 use failure::{format_err, Error};
 use mapped_vmo::Mapping;
-use num_traits::ToPrimitive;
 use parking_lot::Mutex;
 use paste;
-use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::vmo::heap::Heap;
-use crate::vmo::state::State;
+use crate::vmo::state::{PropertyFormat, State};
 
 mod bitfields;
 mod block;
@@ -29,11 +27,11 @@ pub struct Inspector {
     root_node: Node,
 }
 
-/// Provides functions required to implement formats for a property.
-pub trait PropertyFormat {
-    fn bytes(&self) -> &[u8];
-    fn flag(&self) -> u8;
-    fn length_in_bytes(&self) -> u32;
+/// Trait implemented by properties.
+pub trait Property<'t> {
+    type Type;
+
+    fn set(&'t self, value: Self::Type) -> Result<(), Error>;
 }
 
 /// Trait implemented by metrics.
@@ -60,16 +58,6 @@ pub struct Node {
     state: Arc<Mutex<State>>,
 }
 
-/// Inspect API Property data type.
-pub struct Property<T: PropertyFormat> {
-    /// Index of the block in the VMO.
-    block_index: u32,
-
-    /// Reference to the VMO heap.
-    state: Arc<Mutex<State>>,
-    phantom: PhantomData<T>,
-}
-
 /// Root API for inspect. Used to create the VMO and get the root node.
 impl Inspector {
     /// Create a new Inspect VMO object with the given maximum size.
@@ -86,51 +74,6 @@ impl Inspector {
     /// Create the root of the VMO object with the given |name|.
     pub fn root(&self) -> &Node {
         &self.root_node
-    }
-}
-
-/// Implementation of property for a byte vector.
-impl PropertyFormat for &[u8] {
-    fn bytes(&self) -> &[u8] {
-        &self
-    }
-
-    fn flag(&self) -> u8 {
-        constants::PROPERTY_FLAG_BYTE_VECTOR
-    }
-
-    fn length_in_bytes(&self) -> u32 {
-        self.len().to_u32().unwrap()
-    }
-}
-
-/// Implementation of property for a string.
-impl PropertyFormat for &str {
-    fn bytes(&self) -> &[u8] {
-        self.as_bytes()
-    }
-
-    fn flag(&self) -> u8 {
-        constants::PROPERTY_FLAG_STRING
-    }
-
-    fn length_in_bytes(&self) -> u32 {
-        self.bytes().len().to_u32().unwrap()
-    }
-}
-
-/// Implementation of property for a string.
-impl PropertyFormat for String {
-    fn bytes(&self) -> &[u8] {
-        self.as_bytes()
-    }
-
-    fn flag(&self) -> u8 {
-        constants::PROPERTY_FLAG_STRING
-    }
-
-    fn length_in_bytes(&self) -> u32 {
-        self.bytes().len().to_u32().unwrap()
     }
 }
 
@@ -173,18 +116,30 @@ impl Node {
     create_metric_fn!(uint, Uint, u64);
     create_metric_fn!(double, Double, f64);
 
-    /// Add a property to this node.
-    pub fn create_property<T: PropertyFormat>(
+    /// Add a string property to this node.
+    pub fn create_string_property(&self, name: &str, value: &str) -> Result<StringProperty, Error> {
+        let block = self.state.lock().create_property(
+            name,
+            value.as_bytes(),
+            PropertyFormat::String,
+            self.block_index,
+        )?;
+        Ok(StringProperty { state: self.state.clone(), block_index: block.index() })
+    }
+
+    /// Add a byte vector property to this node.
+    pub fn create_byte_vector_property(
         &self,
         name: &str,
-        value: T,
-    ) -> Result<Property<T>, Error> {
-        let block = self.state.lock().create_property(name, value, self.block_index)?;
-        Ok(Property::<T> {
-            state: self.state.clone(),
-            block_index: block.index(),
-            phantom: PhantomData,
-        })
+        value: &[u8],
+    ) -> Result<ByteVectorProperty, Error> {
+        let block = self.state.lock().create_property(
+            name,
+            value,
+            PropertyFormat::ByteVector,
+            self.block_index,
+        )?;
+        Ok(ByteVectorProperty { state: self.state.clone(), block_index: block.index() })
     }
 }
 
@@ -245,25 +200,44 @@ macro_rules! metric {
     };
 }
 
+macro_rules! property {
+    ($name:ident, $type:expr, $bytes:expr) => {
+        paste::item! {
+            /// Inspect API Property data type.
+            pub struct [<$name Property>] {
+                /// Index of the block in the VMO.
+                block_index: u32,
+
+                /// Reference to the VMO heap.
+                state: Arc<Mutex<State>>,
+            }
+
+            impl<'t> Property<'t> for [<$name Property>] {
+                type Type = &'t $type;
+
+                fn set(&'t self, value: &'t $type) -> Result<(), Error> {
+                    self.state.lock().set_property(self.block_index, $bytes)
+                }
+            }
+
+            impl Drop for [<$name Property>] {
+                fn drop(&mut self) {
+                    self.state
+                        .lock()
+                        .free_property(self.block_index)
+                        .expect(&format!("Failed to free property index={}", self.block_index));
+                }
+            }
+        }
+    };
+}
+
 metric!(int, Int, i64);
 metric!(uint, Uint, u64);
 metric!(double, Double, f64);
 
-impl<T: PropertyFormat> Property<T> {
-    /// Set a property value.
-    pub fn set(&self, value: T) -> Result<(), Error> {
-        self.state.lock().set_property(self.block_index, value)
-    }
-}
-
-impl<T: PropertyFormat> Drop for Property<T> {
-    fn drop(&mut self) {
-        self.state
-            .lock()
-            .free_property(self.block_index)
-            .expect(&format!("Failed to free property index={}", self.block_index));
-    }
-}
+property!(String, str, value.as_bytes());
+property!(ByteVector, [u8], value);
 
 #[cfg(test)]
 mod tests {
@@ -272,6 +246,7 @@ mod tests {
     use crate::vmo::constants;
     use crate::vmo::heap::Heap;
     use mapped_vmo::Mapping;
+    use num_traits::ToPrimitive;
     use std::rc::Rc;
 
     #[test]
@@ -374,11 +349,14 @@ mod tests {
         let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
         let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
         {
-            let property = node.create_property("property", "test").unwrap();
+            let property = node.create_string_property("property", "test").unwrap();
             let property_block = node.state.lock().heap.get_block(property.block_index).unwrap();
             assert_eq!(property_block.block_type(), BlockType::PropertyValue);
             assert_eq!(property_block.property_total_length().unwrap(), 4);
-            assert_eq!(property_block.property_flags().unwrap(), constants::PROPERTY_FLAG_STRING);
+            assert_eq!(
+                property_block.property_flags().unwrap(),
+                PropertyFormat::String.to_u8().unwrap()
+            );
             assert_eq!(node_block.child_count().unwrap(), 1);
 
             assert!(property.set("test-set").is_ok());
@@ -388,23 +366,23 @@ mod tests {
     }
 
     #[test]
-    fn bytevector_property() {
+    fn byte_vector_property() {
         let mapping = Rc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
         let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
         {
-            let property = node.create_property("property", "test".as_bytes()).unwrap();
+            let property = node.create_byte_vector_property("property", b"test").unwrap();
             let property_block = node.state.lock().heap.get_block(property.block_index).unwrap();
             assert_eq!(property_block.block_type(), BlockType::PropertyValue);
             assert_eq!(property_block.property_total_length().unwrap(), 4);
             assert_eq!(
                 property_block.property_flags().unwrap(),
-                constants::PROPERTY_FLAG_BYTE_VECTOR
+                PropertyFormat::ByteVector.to_u8().unwrap(),
             );
             assert_eq!(node_block.child_count().unwrap(), 1);
 
-            assert!(property.set("test-set".as_bytes()).is_ok());
+            assert!(property.set(b"test-set").is_ok());
             assert_eq!(property_block.property_total_length().unwrap(), 8);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
