@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/wlan_buffer_utils_unittest"
+    }
+}

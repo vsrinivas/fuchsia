@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/wlan_timer_manager_unittest"
+    }
+}
