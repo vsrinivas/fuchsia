@@ -120,9 +120,11 @@ class Sl4f {
   }
 
   /// Runs the command given by [cmd] on the target using ssh.
-  Future<bool> ssh(String cmd) async {
+  ///
+  /// It can optionally send input via [stdin].
+  Future<bool> ssh(String cmd, {String stdin}) async {
     _log.fine('Running over ssh: $cmd');
-    final result = await Process.run(
+    final process = await Process.start(
         'ssh',
         [
           '-i',
@@ -136,8 +138,14 @@ class Sl4f {
         ],
         // If not run in a shell it doesn't seem like the PATH is searched.
         runInShell: true);
-    if (result.exitCode != 0) {
-      _log..warning(result.stdout)..warning(result.stderr);
+    if (stdin != null) {
+      process.stdin.write(stdin);
+      await process.stdin.flush();
+      await process.stdin.close();
+    }
+    if (await process.exitCode != 0) {
+      _log..warning(await process.stdout.transform(utf8.decoder).join())
+          ..warning(await process.stderr.transform(utf8.decoder).join());
       return false;
     }
     return true;
