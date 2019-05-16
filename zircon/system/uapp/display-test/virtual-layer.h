@@ -136,6 +136,9 @@ public:
         scaling_ = enable;
     }
     void SetImageFormat(uint32_t image_format) { image_format_ = image_format; }
+    void SetIntelYTiling(bool enable) {
+        intel_y_tiling_ = enable;
+    }
 
     bool Init(zx_handle_t channel) override;
     void StepLayout(int32_t frame_num) override;
@@ -171,6 +174,7 @@ private:
     bool alpha_enable_ = false;
     float alpha_val_ = 0.f;
     bool scaling_ = false;
+    bool intel_y_tiling_ = false;
 
     bool alt_image_ = false;
     Image* images_[2];

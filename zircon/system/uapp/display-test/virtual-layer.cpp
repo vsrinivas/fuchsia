@@ -110,10 +110,12 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
     uint32_t bg_color = alpha_enable_ ? 0x3fffffff : 0xffffffff;
 
     images_[0] = Image::Create(
-        dc_handle, image_width_, image_height_, image_format_, fg_color, bg_color, false);
+        dc_handle, image_width_, image_height_, image_format_, fg_color, bg_color,
+        intel_y_tiling_);
     if (layer_flipping_) {
         images_[1] = Image::Create(
-            dc_handle, image_width_, image_height_, image_format_, fg_color, bg_color, false);
+            dc_handle, image_width_, image_height_, image_format_, fg_color, bg_color,
+            intel_y_tiling_);
     } else {
         images_[0]->Render(-1, -1);
     }
@@ -350,7 +352,7 @@ bool CursorLayer::Init(zx_handle_t dc_handle) {
     fuchsia_hardware_display_CursorInfo info = displays_[0]->cursor();
     uint32_t bg_color = 0xffffffff;
     image_ = Image::Create(
-            dc_handle, info.width, info.height, info.pixel_format, get_fg_color(), bg_color, true);
+        dc_handle, info.width, info.height, info.pixel_format, get_fg_color(), bg_color, false);
     if (!image_) {
         return false;
     }

@@ -397,6 +397,9 @@ int main(int argc, const char* argv[]) {
 
     fbl::AllocChecker ac;
     if (platform == INTEL) {
+        // Intel only supports 90/270 rotation for Y-tiled images, so enable it for testing.
+        constexpr bool kIntelYTiling = true;
+
         // Color layer which covers all displays
         fbl::unique_ptr<ColorLayer> layer0 = fbl::make_unique_checked<ColorLayer>(&ac, displays);
         if (!ac.check()) {
@@ -412,6 +415,7 @@ int main(int argc, const char* argv[]) {
         }
         layer1->SetLayerFlipping(true);
         layer1->SetAlpha(true, .75);
+        layer1->SetIntelYTiling(kIntelYTiling);
         layers.push_back(std::move(layer1));
 
         // Layer which covers the left half of the of the first display
@@ -425,6 +429,7 @@ int main(int argc, const char* argv[]) {
                               displays[0].mode().vertical_resolution);
         layer2->SetLayerToggle(true);
         layer2->SetScaling(true);
+        layer2->SetIntelYTiling(kIntelYTiling);
         layers.push_back(std::move(layer2));
 
     // Intel only supports 3 layers, so add ifdef for quick toggling of the 3rd layer
@@ -451,6 +456,7 @@ int main(int argc, const char* argv[]) {
         layer3->SetPanDest(true);
         layer3->SetPanSrc(true);
         layer3->SetRotates(true);
+        layer3->SetIntelYTiling(kIntelYTiling);
         layers.push_back(std::move(layer3));
 #else
         CursorLayer* layer4 = new CursorLayer(displays);

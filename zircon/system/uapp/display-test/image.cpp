@@ -27,13 +27,14 @@ static constexpr uint32_t kRenderPeriod = 120;
 
 Image::Image(uint32_t width, uint32_t height, int32_t stride,
              zx_pixel_format_t format, zx_handle_t vmo, void* buf,
-             uint32_t fg_color, uint32_t bg_color, bool cursor)
+             uint32_t fg_color, uint32_t bg_color, bool use_intel_y_tiling)
         : width_(width), height_(height), stride_(stride), format_(format),
-          vmo_(vmo), buf_(buf), fg_color_(fg_color), bg_color_(bg_color), cursor_(cursor) {}
+          vmo_(vmo), buf_(buf), fg_color_(fg_color), bg_color_(bg_color),
+          use_intel_y_tiling_(use_intel_y_tiling) {}
 
 Image* Image::Create(zx_handle_t dc_handle,
                      uint32_t width, uint32_t height, zx_pixel_format_t format,
-                     uint32_t fg_color, uint32_t bg_color, bool cursor) {
+                     uint32_t fg_color, uint32_t bg_color, bool use_intel_y_tiling) {
     zx::channel allocator2_client;
     zx::channel allocator2_server;
     zx_status_t status;
@@ -111,7 +112,7 @@ Image* Image::Create(zx_handle_t dc_handle,
     constraints_msg.config.pixel_format = format;
     constraints_msg.config.height = height;
     constraints_msg.config.width = width;
-    if (USE_INTEL_Y_TILING && !cursor) {
+    if (use_intel_y_tiling) {
         constraints_msg.config.type = 2; // IMAGE_TYPE_Y_LEGACY
     } else {
         constraints_msg.config.type = IMAGE_TYPE_SIMPLE;
@@ -164,7 +165,7 @@ Image* Image::Create(zx_handle_t dc_handle,
             .type = fuchsia_sysmem_ColorSpaceType_REC709,
         };
     }
-    if (USE_INTEL_Y_TILING && !cursor) {
+    if (use_intel_y_tiling) {
         image_constraints.pixel_format.has_format_modifier = true;
         image_constraints.pixel_format.format_modifier.value =
             fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED;
@@ -236,7 +237,8 @@ Image* Image::Create(zx_handle_t dc_handle,
     zx_cache_flush(ptr, buffer_size, ZX_CACHE_FLUSH_DATA);
 
     return new Image(width, height, stride_pixels, format,
-                     vmo.release(), ptr, fg_color, bg_color, cursor);
+                     vmo.release(), ptr, fg_color, bg_color,
+                     use_intel_y_tiling);
 }
 
 #define STRIPE_SIZE 37 // prime to make movement more interesting
@@ -287,7 +289,7 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
                 int32_t color = in_stripe ? fg_color_ : bg_color_;
 
                 uint32_t* ptr = static_cast<uint32_t*>(buf_);
-                if (!USE_INTEL_Y_TILING || cursor_) {
+                if (!use_intel_y_tiling_) {
                     ptr += (y * stride_) + x;
                 } else {
                     // Add the offset to the pixel's tile
@@ -306,7 +308,7 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
             }
         }
 
-        if (!USE_INTEL_Y_TILING || cursor_) {
+        if (!use_intel_y_tiling_) {
             uint32_t byte_stride = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
             zx_cache_flush(reinterpret_cast<uint8_t*>(buf_) + (byte_stride * start),
                            byte_stride * (end - start), ZX_CACHE_FLUSH_DATA);
@@ -329,7 +331,7 @@ void Image::GetConfig(fuchsia_hardware_display_ImageConfig* config_out) {
     config_out->height = height_;
     config_out->width = width_;
     config_out->pixel_format = format_;
-    if (!USE_INTEL_Y_TILING || cursor_) {
+    if (!use_intel_y_tiling_) {
         config_out->type = IMAGE_TYPE_SIMPLE;
     } else {
         config_out->type = 2; // IMAGE_TYPE_Y_LEGACY

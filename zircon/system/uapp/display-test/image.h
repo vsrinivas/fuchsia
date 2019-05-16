@@ -10,14 +10,6 @@
 #include <zircon/types.h>
 #include <zircon/pixelformat.h>
 
-// Intel only supports 90/270 rotation for Y-tiled images, so add
-// a define to enable using it for testing.
-#if defined(__x86_64__)
-#define USE_INTEL_Y_TILING 1
-#else
-#define USE_INTEL_Y_TILING 0
-#endif
-
 #define TILE_PIXEL_WIDTH 32u
 #define TILE_PIXEL_HEIGHT 32u
 #define TILE_BYTES_PER_PIXEL 4u
@@ -40,7 +32,7 @@ class Image {
 public:
     static Image* Create(zx_handle_t dc_handle,
                          uint32_t width, uint32_t height, zx_pixel_format_t format,
-                         uint32_t fg_color, uint32_t bg_color, bool cursor);
+                         uint32_t fg_color, uint32_t bg_color, bool use_intel_y_tiling);
 
     void Render(int32_t prev_step, int32_t step_num);
 
@@ -56,7 +48,7 @@ public:
 private:
     Image(uint32_t width, uint32_t height, int32_t stride,
           zx_pixel_format_t format, zx_handle_t handle, void* buf,
-          uint32_t fg_color, uint32_t bg_color, bool cursor);
+          uint32_t fg_color, uint32_t bg_color, bool use_intel_y_tiling);
 
     uint32_t width_;
     uint32_t height_;
@@ -68,5 +60,5 @@ private:
 
     uint32_t fg_color_;
     uint32_t bg_color_;
-    bool cursor_;
+    bool use_intel_y_tiling_;
 };
