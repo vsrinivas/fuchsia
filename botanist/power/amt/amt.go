@@ -6,6 +6,7 @@ package amt
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -83,6 +84,15 @@ func Reboot(host, username, password string) error {
 		return err
 	}
 	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	returnValue := string(strings.Split(string(body), "ReturnValue>")[1][0])
+	if returnValue != "0" {
+		return fmt.Errorf("amt reboot ReturnValue=%s", returnValue)
+	}
 
 	return nil
 }
