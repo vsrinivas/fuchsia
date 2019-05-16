@@ -92,10 +92,10 @@ zx_status_t MapStructs2_1(const smbios::EntryPoint2_1* ep,
 
 // Walk the known SMBIOS structures.  The callback will be called once for each
 // structure found.
-zx_status_t SmbiosWalkStructs(smbios::StructWalkCallback cb, void* ctx) {
+zx_status_t SmbiosWalkStructs(smbios::StructWalkCallback cb) {
     switch (kEpVersion) {
         case smbios::EntryPointVersion::V2_1: {
-            return kEntryPoint.ep2_1->WalkStructs(kStructBase, cb, ctx);
+            return kEntryPoint.ep2_1->WalkStructs(kStructBase, std::move(cb));
         }
         case smbios::EntryPointVersion::V3_0:
             return ZX_ERR_NOT_SUPPORTED;
@@ -152,8 +152,7 @@ void pc_init_smbios() {
 }
 
 static zx_status_t DebugStructWalk(smbios::SpecVersion ver,
-                                   const smbios::Header* hdr, const smbios::StringTable& st,
-                                   void* ctx) {
+                                   const smbios::Header* hdr, const smbios::StringTable& st) {
     switch (hdr->type) {
         case smbios::StructType::BiosInfo: {
             if (ver.IncludesVersion(2, 4)) {
@@ -203,7 +202,7 @@ usage:
     }
 
     if (!strcmp(argv[1].str, "dump")) {
-        zx_status_t status = SmbiosWalkStructs(DebugStructWalk, nullptr);
+        zx_status_t status = SmbiosWalkStructs(DebugStructWalk);
         if (status != ZX_OK) {
             printf("smbios: failed to walk structs: %d\n", status);
         }

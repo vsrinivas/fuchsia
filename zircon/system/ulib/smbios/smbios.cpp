@@ -248,8 +248,7 @@ void SystemInformationStruct2_4::Dump(const StringTable& st) const {
     }
 }
 
-zx_status_t EntryPoint2_1::WalkStructs(uintptr_t struct_table_virt, StructWalkCallback cb,
-                                       void* ctx) const {
+zx_status_t EntryPoint2_1::WalkStructs(uintptr_t struct_table_virt, StructWalkCallback cb) const {
     size_t idx = 0;
     uintptr_t curr_addr = struct_table_virt;
     const uintptr_t table_end = curr_addr + struct_table_length;
@@ -265,7 +264,7 @@ zx_status_t EntryPoint2_1::WalkStructs(uintptr_t struct_table_virt, StructWalkCa
             return status;
         }
 
-        status = cb(version(), hdr, st, ctx);
+        status = cb(version(), hdr, st);
         if (status == ZX_ERR_STOP) {
             break;
         } else if (status != ZX_OK && status != ZX_ERR_NEXT) {

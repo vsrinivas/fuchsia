@@ -8,6 +8,7 @@
 
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/function.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
@@ -95,8 +96,9 @@ enum class EntryPointVersion {
 };
 
 // Returning ZX_ERR_STOP aborts the walk.
-using StructWalkCallback = zx_status_t (*)(SpecVersion version, const Header* h,
-                                           const StringTable& st, void* ctx);
+using StructWalkCallback = fbl::InlineFunction<zx_status_t(SpecVersion version, const Header* h,
+                                                           const StringTable& st),
+                                               fbl::kDefaultInlineCallableSize>;
 
 // System structure identifying where the SMBIOS structs are in memory.
 struct EntryPoint2_1 {
@@ -126,7 +128,7 @@ struct EntryPoint2_1 {
 
     // Walk the known SMBIOS structures, assuming they are mapped at struct_table_virt.  The
     // callback will be called once for each structure found.
-    zx_status_t WalkStructs(uintptr_t struct_table_virt, StructWalkCallback cb, void* ctx) const;
+    zx_status_t WalkStructs(uintptr_t struct_table_virt, StructWalkCallback cb) const;
 
     SpecVersion version() const { return SpecVersion(major_ver, minor_ver); }
 

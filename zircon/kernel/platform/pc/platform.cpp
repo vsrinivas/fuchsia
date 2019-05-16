@@ -895,14 +895,14 @@ void platform_init(void) {
     pc_init_smbios();
 
     SmbiosWalkStructs([](smbios::SpecVersion version, const smbios::Header* h,
-                         const smbios::StringTable& st, void* ctx) -> zx_status_t {
+                         const smbios::StringTable& st) -> zx_status_t {
         if (h->type == smbios::StructType::SystemInfo && version.IncludesVersion(2, 0)) {
             auto entry = reinterpret_cast<const smbios::SystemInformationStruct2_0*>(h);
             st.GetString(entry->manufacturer_str_idx, &manufacturer);
             st.GetString(entry->product_name_str_idx, &product);
         }
         return ZX_OK;
-    }, nullptr);
+    });
     printf("smbios: manufacturer=\"%s\" product=\"%s\"\n", manufacturer, product);
 }
 
