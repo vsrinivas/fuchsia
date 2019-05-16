@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/voila_bin_test"
+    }
+}

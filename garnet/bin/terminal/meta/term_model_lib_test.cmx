@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/term_model_lib_test"
+    }
+}
