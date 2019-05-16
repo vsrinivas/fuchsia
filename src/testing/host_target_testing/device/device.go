@@ -117,7 +117,7 @@ func (c *Client) GetBuildSnapshot(t *testing.T) []byte {
 	const buildInfoSnapshot = "/config/build-info/snapshot"
 	snapshot, err := c.ReadRemotePath(buildInfoSnapshot)
 	if err != nil {
-		t.Fatalf("failed to read %q", buildInfoSnapshot)
+		t.Fatalf("failed to read %q: %s", buildInfoSnapshot, err)
 	}
 
 	return snapshot
