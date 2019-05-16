@@ -72,6 +72,14 @@ public:
         PAGER,
     };
 
+    // Entry state for a thread
+    struct EntryState {
+        uintptr_t pc = 0;
+        uintptr_t sp = 0;
+        uintptr_t arg1 = 0;
+        uintptr_t arg2 = 0;
+    };
+
     static zx_status_t Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
                               fbl::StringPiece name, KernelHandle<ThreadDispatcher>* out_handle,
                               zx_rights_t* out_rights);
@@ -88,8 +96,7 @@ public:
     // Performs initialization on a newly constructed ThreadDispatcher
     // If this fails, then the object is invalid and should be deleted
     zx_status_t Initialize(const char* name, size_t len);
-    zx_status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2,
-                      bool initial_thread);
+    zx_status_t Start(const EntryState& entry, bool initial_thread);
     void Exit() __NO_RETURN;
     void Kill();
 
@@ -263,10 +270,7 @@ private:
     fbl::RefPtr<ProcessDispatcher> process_;
 
     // User thread starting register values.
-    uintptr_t user_entry_ = 0;
-    uintptr_t user_sp_ = 0;
-    uintptr_t user_arg1_ = 0;
-    uintptr_t user_arg2_ = 0;
+    EntryState user_entry_;
 
     ThreadState state_ TA_GUARDED(get_lock());
 

@@ -182,9 +182,7 @@ void ThreadDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
 }
 
 // start a thread
-zx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
-                                    uintptr_t arg1, uintptr_t arg2,
-                                    bool initial_thread) {
+zx_status_t ThreadDispatcher::Start(const EntryState& entry, bool initial_thread) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -198,9 +196,6 @@ zx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
 
     // save the user space entry state
     user_entry_ = entry;
-    user_sp_ = sp;
-    user_arg1_ = arg1;
-    user_arg2_ = arg2;
 
     // add ourselves to the process, which may fail if the process is in a dead state
     bool suspended;
@@ -500,7 +495,7 @@ int ThreadDispatcher::StartRoutine(void* arg) {
     // have changed is if a debugger user changes them. KISS.
     LTRACEF("arch_enter_uspace SP: %#" PRIxPTR " PC: %#" PRIxPTR
             ", ARG1: %#" PRIxPTR ", ARG2: %#" PRIxPTR "\n",
-            t->user_sp_, t->user_entry_, t->user_arg1_, t->user_arg2_);
+            t->user_entry_.sp, t->user_entry_.pc, t->user_entry_.arg1, t->user_entry_.arg2);
 
     // Initialize an iframe for entry into userspace.
     // We need all registers accessible from the ZX_EXCP_THREAD_STARTING
@@ -509,8 +504,8 @@ int ThreadDispatcher::StartRoutine(void* arg) {
     // general regs are left in the iframe for speed and simplicity. To keep
     // things simple we use the same scheme.
     iframe_t iframe{};
-    arch_setup_uspace_iframe(&iframe, t->user_entry_, t->user_sp_,
-                             t->user_arg1_, t->user_arg2_);
+    arch_setup_uspace_iframe(&iframe, t->user_entry_.pc, t->user_entry_.sp,
+                             t->user_entry_.arg1, t->user_entry_.arg2);
 
     arch_exception_context_t context{};
     context.frame = &iframe;
