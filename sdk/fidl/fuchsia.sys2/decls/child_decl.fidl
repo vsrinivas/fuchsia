@@ -11,7 +11,7 @@ enum StartupMode {
     EAGER = 1;
 };
 
-// Statically declares a child component instance.
+/// Statically declares a child component instance.
 table ChildDecl {
     /// The name assigned to the child by its parent.
     ///

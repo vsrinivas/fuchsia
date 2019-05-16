@@ -35,7 +35,11 @@ pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
     cm_json::validate_json(&value, CML_SCHEMA)?;
     let document: cml::Document = serde_json::from_value(value)
         .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
-    let mut ctx = ValidationContext { document: &document, all_children: HashSet::new() };
+    let mut ctx = ValidationContext {
+        document: &document,
+        all_children: HashSet::new(),
+        all_collections: HashSet::new(),
+    };
     ctx.validate()?;
     Ok(document)
 }
@@ -95,23 +99,16 @@ fn validate_file<P: AsRef<Path>>(
 struct ValidationContext<'a> {
     document: &'a cml::Document,
     all_children: HashSet<&'a str>,
+    all_collections: HashSet<&'a str>,
 }
 
 type PathMap<'a> = HashMap<String, HashSet<&'a str>>;
 
 impl<'a> ValidationContext<'a> {
     fn validate(&mut self) -> Result<(), Error> {
-        // Get the set of all children.
-        if let Some(children) = self.document.children.as_ref() {
-            for child in children.iter() {
-                if !self.all_children.insert(&child.name) {
-                    return Err(Error::validate(format!(
-                        "Duplicate child name: \"{}\"",
-                        &child.name
-                    )));
-                }
-            }
-        }
+        // Populate the sets of children and collections.
+        self.all_children = self.document.all_children()?;
+        self.all_collections = self.document.all_collections()?;
 
         // Validate "expose".
         if let Some(exposes) = self.document.expose.as_ref() {
@@ -147,7 +144,7 @@ impl<'a> ValidationContext<'a> {
         prev_target_paths: &mut PathMap<'a>,
     ) -> Result<(), Error> {
         self.validate_source("offer", offer)?;
-        let from_caps = cml::CHILD_RE.captures(&offer.from);
+        let from_caps = cml::REFERENCE_RE.captures(&offer.from);
         let from_child = match &from_caps {
             Some(caps) => Some(&caps[0]),
             None => None,
@@ -155,10 +152,12 @@ impl<'a> ValidationContext<'a> {
         let mut prev_targets = HashSet::new();
         for to in offer.to.iter() {
             // Check that any referenced child in the target name is valid.
-            if let Some(caps) = cml::CHILD_RE.captures(&to.dest) {
-                if !self.all_children.contains(&caps[1]) {
+            if let Some(caps) = cml::REFERENCE_RE.captures(&to.dest) {
+                if !self.all_children.contains(&caps[1]) && !self.all_collections.contains(&caps[1])
+                {
                     return Err(Error::validate(format!(
-                        "\"{}\" is an \"offer\" target but it does not appear in \"children\"",
+                        "\"{}\" is an \"offer\" target but it does not appear in \"children\" \
+                        or \"collections\"",
                         &to.dest,
                     )));
                 }
@@ -186,7 +185,7 @@ impl<'a> ValidationContext<'a> {
     where
         T: cml::FromClause + cml::CapabilityClause,
     {
-        if let Some(caps) = cml::CHILD_RE.captures(source_obj.from()) {
+        if let Some(caps) = cml::REFERENCE_RE.captures(source_obj.from()) {
             if !self.all_children.contains(&caps[1]) {
                 return Err(Error::validate(format!(
                     "\"{}\" is an \"{}\" source but it does not appear in \"children\"",
@@ -508,7 +507,11 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/svc/fuchsia.logger.SysLog",
-                                    "child_name": "viewer"
+                                    "dest": {
+                                        "child": {
+                                            "name": "viewer"
+                                        }
+                                    }
                                 }
                             ]
                         }
@@ -522,11 +525,19 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/svc/fuchsia.ui.Scenic",
-                                    "child_name": "user_shell"
+                                    "dest": {
+                                        "child": {
+                                            "name": "user_shell"
+                                        }
+                                    }
                                 },
                                 {
                                     "target_path": "/services/fuchsia.ui.Scenic",
-                                    "child_name": "viewer"
+                                    "dest": {
+                                        "collection": {
+                                            "name": "modular"
+                                        }
+                                    }
                                 }
                             ]
                         }
@@ -542,7 +553,19 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/data/kitten_assets",
-                                    "child_name": "cat_viewer"
+                                    "dest": {
+                                        "child": {
+                                            "name": "cat_viewer"
+                                        }
+                                    }
+                                },
+                                {
+                                    "target_path": "/data/artifacts",
+                                    "dest": {
+                                        "collection": {
+                                            "name": "tests"
+                                        }
+                                    }
                                 }
                             ]
                         }
@@ -565,7 +588,11 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/svc/fuchsia.logger.SysLog",
-                                    "child_name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
+                                    "dest": {
+                                        "child": {
+                                            "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
+                                        }
+                                    }
                                 }
                             ]
                         }
@@ -590,7 +617,11 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/svc/fuchsia.ui.Scenic",
-                                    "child_name": "user_shell"
+                                    "dest": {
+                                        "child": {
+                                            "name": "user_shell"
+                                        }
+                                    }
                                 }
                             ]
                         }
@@ -614,7 +645,11 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/svc/fuchsia.ui.Scenic",
-                                    "child_name": "user_shell"
+                                    "dest": {
+                                        "child": {
+                                            "name": "user_shell"
+                                        }
+                                    }
                                 }
                             ]
                         }
@@ -637,7 +672,11 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/svc/fuchsia.ui.Scenic",
-                                    "child_name": "user_shell"
+                                    "dest": {
+                                        "child": {
+                                            "name": "user_shell"
+                                        }
+                                    }
                                 }
                             ]
                         }
@@ -662,7 +701,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /offers/0/service/targets/0/child_name, This property is required at /offers/0/service/targets/0/target_path")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /offers/0/service/targets/0/dest, This property is required at /offers/0/service/targets/0/target_path")),
         },
         test_cm_offers_target_bad_child_name => {
             input = json!({
@@ -676,14 +715,18 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/svc/fuchsia.ui.Scenic",
-                                    "child_name": "bad^"
+                                    "dest": {
+                                        "child": {
+                                            "name": "bad^"
+                                        }
+                                    }
                                 }
                             ]
                         }
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/targets/0/child_name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/targets/0/dest/child/name")),
         },
 
         // children
@@ -721,6 +764,40 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /children/0/name")),
+        },
+
+        // collections
+        test_cm_collections => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent"
+                    },
+                    {
+                        "name": "tests",
+                        "durability": "transient"
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cm_collections_missing_props => {
+            input = json!({
+                "collections": [ {} ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /collections/0/durability, This property is required at /collections/0/name")),
+        },
+        test_cm_collections_bad_name => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "bad^",
+                        "durability": "persistent"
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /collections/0/name")),
         },
 
         // facets
@@ -1028,7 +1105,7 @@ mod tests {
                         "from": "#logger",
                         "to": [
                             { "dest": "#echo_server" },
-                            { "dest": "#scenic", "as": "/svc/fuchsia.logger.SysLog" }
+                            { "dest": "#modular", "as": "/svc/fuchsia.logger.SysLog" }
                         ]
                     },
                     {
@@ -1044,7 +1121,14 @@ mod tests {
                         "to": [
                             { "dest": "#echo_server" },
                         ]
-                    }
+                    },
+                    {
+                        "directory": "/data/index",
+                        "from": "realm",
+                        "to": [
+                            { "dest": "#modular" },
+                        ]
+                    },
                 ],
                 "children": [
                     {
@@ -1052,13 +1136,15 @@ mod tests {
                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     },
                     {
-                        "name": "scenic",
-                        "url": "fuchsia-pkg://fuchsia.com/scenic/stable#meta/scenic.cm"
-                    },
-                    {
                         "name": "echo_server",
                         "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
                     }
+                ],
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent",
+                    },
                 ]
             }),
             result = Ok(()),
@@ -1155,7 +1241,7 @@ mod tests {
                     "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                 } ]
             }),
-            result = Err(Error::validate("\"#missing\" is an \"offer\" target but it does not appear in \"children\"")),
+            result = Err(Error::validate("\"#missing\" is an \"offer\" target but it does not appear in \"children\" or \"collections\"")),
         },
         test_cml_offer_target_bad_to => {
             input = json!({
@@ -1271,6 +1357,55 @@ mod tests {
                 ],
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/startup")),
+        },
+
+        // collections
+        test_cml_collections => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent"
+                    },
+                    {
+                        "name": "tests",
+                        "durability": "transient"
+                    },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_collections_missing_props => {
+            input = json!({
+                "collections": [ {} ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /collections/0/durability, This property is required at /collections/0/name")),
+        },
+        test_cml_collections_duplicate_names => {
+           input = json!({
+               "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent"
+                    },
+                    {
+                        "name": "modular",
+                        "durability": "transient"
+                    }
+                ]
+            }),
+            result = Err(Error::validate("Duplicate collection name: \"modular\"")),
+        },
+        test_cml_collections_bad_durability => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "zzz",
+                    },
+                ],
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /collections/0/durability")),
         },
 
         // facets

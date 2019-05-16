@@ -2,8 +2,9 @@ use cm_fidl_translator;
 use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
-    ChildDecl, ChildRef, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, OfferDecl,
-    OfferServiceDecl, OfferSource, OfferTarget, SelfRef, StartupMode, UseDecl, UseServiceDecl,
+    ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
+    ExposeDirectoryDecl, ExposeSource, OfferDecl, OfferDest, OfferServiceDecl, OfferSource,
+    OfferTarget, SelfRef, StartupMode, UseDecl, UseServiceDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -36,21 +37,20 @@ fn main() {
             source_path: Some("/svc/fuchsia.logger.Log".to_string()),
             targets: Some(vec![OfferTarget {
                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                child_name: Some("netstack".to_string()),
+                dest: Some(OfferDest::Collection(CollectionRef {
+                    name: Some("modular".to_string()),
+                })),
             }]),
         })];
-        let children = vec![
-            ChildDecl {
-                name: Some("logger".to_string()),
-                url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
-                startup: Some(StartupMode::Lazy),
-            },
-            ChildDecl {
-                name: Some("netstack".to_string()),
-                url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
-                startup: Some(StartupMode::Lazy),
-            },
-        ];
+        let children = vec![ChildDecl {
+            name: Some("logger".to_string()),
+            url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+            startup: Some(StartupMode::Lazy),
+        }];
+        let collections = vec![CollectionDecl {
+            name: Some("modular".to_string()),
+            durability: Some(Durability::Persistent),
+        }];
         let facets = fd::Dictionary {
             entries: vec![
                 fd::Entry {
@@ -66,6 +66,7 @@ fn main() {
             exposes: Some(exposes),
             offers: Some(offers),
             children: Some(children),
+            collections: Some(collections),
             facets: Some(facets),
             storage: None,
         }

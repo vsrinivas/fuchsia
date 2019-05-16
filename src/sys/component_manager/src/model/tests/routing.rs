@@ -7,8 +7,8 @@ use {
     crate::model::*,
     cm_rust::{
         self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-        ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl, OfferServiceDecl,
-        OfferSource, OfferTarget, UseDecl, UseDirectoryDecl, UseServiceDecl,
+        ExposeServiceDecl, ExposeSource, OfferDecl, OfferDest, OfferDirectoryDecl,
+        OfferServiceDecl, OfferSource, OfferTarget, UseDecl, UseDirectoryDecl, UseServiceDecl,
     },
     fidl_fuchsia_sys2 as fsys,
     std::convert::TryFrom,
@@ -40,7 +40,7 @@ async fn use_from_parent() {
                             source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                                child_name: "b".to_string(),
+                                dest: OfferDest::Child("b".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -48,7 +48,7 @@ async fn use_from_parent() {
                             source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                                child_name: "b".to_string(),
+                                dest: OfferDest::Child("b".to_string()),
                             }],
                         }),
                     ],
@@ -110,7 +110,7 @@ async fn use_from_grandparent() {
                             source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                                child_name: "b".to_string(),
+                                dest: OfferDest::Child("b".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -118,7 +118,7 @@ async fn use_from_grandparent() {
                             source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                                child_name: "b".to_string(),
+                                dest: OfferDest::Child("b".to_string()),
                             }],
                         }),
                     ],
@@ -139,7 +139,7 @@ async fn use_from_grandparent() {
                             source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -147,7 +147,7 @@ async fn use_from_grandparent() {
                             source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                     ],
@@ -217,7 +217,7 @@ async fn use_from_sibling_no_root() {
                             source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -225,7 +225,7 @@ async fn use_from_sibling_no_root() {
                             source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                     ],
@@ -307,7 +307,7 @@ async fn use_from_sibling_root() {
                             source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -315,7 +315,7 @@ async fn use_from_sibling_root() {
                             source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                     ],
@@ -400,7 +400,7 @@ async fn use_from_niece() {
                             source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -408,7 +408,7 @@ async fn use_from_niece() {
                             source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                     ],
@@ -520,7 +520,7 @@ async fn use_kitchen_sink() {
                             source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
-                                child_name: "b".to_string(),
+                                dest: OfferDest::Child("b".to_string()),
                             }],
                         }),
                         OfferDecl::Directory(OfferDirectoryDecl {
@@ -528,7 +528,7 @@ async fn use_kitchen_sink() {
                             source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                     ],
@@ -557,7 +557,7 @@ async fn use_kitchen_sink() {
                             source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                                child_name: "e".to_string(),
+                                dest: OfferDest::Child("e".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -565,7 +565,7 @@ async fn use_kitchen_sink() {
                             source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
-                                child_name: "e".to_string(),
+                                dest: OfferDest::Child("e".to_string()),
                             }],
                         }),
                     ],
@@ -599,7 +599,7 @@ async fn use_kitchen_sink() {
                             source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                                child_name: "f".to_string(),
+                                dest: OfferDest::Child("f".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -607,7 +607,7 @@ async fn use_kitchen_sink() {
                             source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
-                                child_name: "f".to_string(),
+                                dest: OfferDest::Child("f".to_string()),
                             }],
                         }),
                     ],
@@ -730,7 +730,7 @@ async fn use_from_component_manager_namespace() {
                             source_path: CapabilityPath::try_from("/hippo/data/foo").unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/foo").unwrap(),
-                                child_name: "b".to_string(),
+                                dest: OfferDest::Child("b".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -739,7 +739,7 @@ async fn use_from_component_manager_namespace() {
                                 .unwrap(),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/echo/echo").unwrap(),
-                                child_name: "b".to_string(),
+                                dest: OfferDest::Child("b".to_string()),
                             }],
                         }),
                     ],
@@ -845,7 +845,7 @@ async fn use_offer_source_not_exposed() {
                             source: OfferSource::Child("b".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -853,7 +853,7 @@ async fn use_offer_source_not_exposed() {
                             source: OfferSource::Child("b".to_string()),
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                     ],
@@ -933,7 +933,7 @@ async fn use_offer_source_not_offered() {
                             source: OfferSource::Realm,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -941,7 +941,7 @@ async fn use_offer_source_not_offered() {
                             source: OfferSource::Realm,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                                child_name: "c".to_string(),
+                                dest: OfferDest::Child("c".to_string()),
                             }],
                         }),
                     ],
@@ -1074,7 +1074,7 @@ async fn offer_from_non_executable() {
                             source: OfferSource::Myself,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                                child_name: "b".to_string(),
+                                dest: OfferDest::Child("b".to_string()),
                             }],
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -1082,7 +1082,7 @@ async fn offer_from_non_executable() {
                             source: OfferSource::Myself,
                             targets: vec![OfferTarget {
                                 target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                                child_name: "b".to_string(),
+                                dest: OfferDest::Child("b".to_string()),
                             }],
                         }),
                     ],

@@ -2,7 +2,7 @@
   "type": "object",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
-    "relative-id-clause": {
+    "relative-ref-clause": {
       "type": "string",
       "minLength": 1,
       "maxLength": 101
@@ -23,7 +23,11 @@
       "type": "string",
       "pattern": "^(lazy|eager)$"
     },
-    "child-name-clause": {
+    "durability-clause": {
+      "type": "string",
+      "pattern": "^(persistent|transient)$"
+    },
+    "name-clause": {
       "type": "string",
       "pattern": "^[0-9a-z_\\-\\.]+$",
       "minLength": 1,
@@ -157,7 +161,7 @@
             "title": "Exposed capability source component",
             "pattern": "^(self|#[0-9a-z_\\-\\.]+)$",
             "description": "The component which has the capability to expose. Either \"self\" or \"#$CHILD\".",
-            "allOf": [{ "$ref": "#/definitions/relative-id-clause" }],
+            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
             "examples": [
               "self",
               "#scenic"
@@ -176,7 +180,7 @@
     },
     "offer": {
       "type": "array",
-      "title": "Offered capabilitys",
+      "title": "Offered capabilities",
       "description": "Capabilities offered by this component to its children",
       "uniqueItems": true,
       "items": {
@@ -214,7 +218,7 @@
             "title": "Offered capability source component",
             "description": "The component which has the capability to offer. Either \"realm\", \"self\" or \"#$CHILD\".",
             "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
-            "allOf": [{ "$ref": "#/definitions/relative-id-clause" }],
+            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
             "examples": [
               "realm",
               "self",
@@ -234,10 +238,10 @@
               ],
               "properties": {
                 "dest": {
-                  "title": "Offered capability target component",
-                  "description": "The child component to which the capability is being offered, with the syntax \"#$CHILD\".",
+                  "title": "Offered capability target",
+                  "description": "The child component or collection to which the capability is being offered, with the syntax \"#$CHILD\".",
                   "pattern": "^#[a-zA-Z0-9_-]+$",
-                  "allOf": [{ "$ref": "#/definitions/relative-id-clause" }],
+                  "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
                   "examples": [
                     "#scenic"
                   ]
@@ -245,7 +249,7 @@
                 "as": {
                   "title": "Offered capability target path",
                   "description": "The path by which the capability will be offered. The path is either a path in this component's namespace (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
-                  "allOf": [{ "$ref": "#/definitions/relative-id-clause" }],
+                  "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
                   "examples": [
                     "/data/assets/widgets",
                     "/svc/fuchsia.ui.Scenic"
@@ -272,7 +276,7 @@
           "name": {
             "title": "Child component name",
             "description": "The parent's local name for the child",
-            "allOf": [{ "$ref": "#/definitions/child-name-clause" }],
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
             "examples": [
               "echo_server",
               "System-logger"
@@ -293,6 +297,39 @@
             "examples": [
               "eager",
               "lazy"
+            ]
+          }
+        }
+      }
+    },
+    "collections": {
+      "type": "array",
+      "title": "Collections",
+      "description": "The collections under this component",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "durability"
+        ],
+        "properties": {
+          "name": {
+            "title": "Collection name",
+            "description": "The parent's local name for the collection",
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "examples": [
+              "modular",
+              "tests"
+            ]
+          },
+          "durability": {
+            "title": "Durability",
+            "description": "The durability of components in the collection. Either \"persistent\" (instances in the collection exist until the parent is destroyed) or \"transient\" (instances in the collection exist until the parent is stopped)",
+            "allOf": [{ "$ref": "#/definitions/durability-clause" }],
+            "examples": [
+              "persistent",
+              "transient"
             ]
           }
         }

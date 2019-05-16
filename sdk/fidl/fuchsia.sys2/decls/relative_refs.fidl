@@ -15,6 +15,11 @@ table ChildRef {
     1: string:MAX_CHILD_NAME_LENGTH name;
 };
 
+/// A reference to one of the component's collections.
+table CollectionRef {
+    1: collection_name name;
+};
+
 /// A reference to one of the component's storage sections.
 table StorageRef {
     1: string:MAX_STORAGE_NAME_LENGTH name;

@@ -164,6 +164,7 @@ pub struct ComponentDecl {
     pub exposes: Vec<ExposeDecl>,
     pub offers: Vec<OfferDecl>,
     pub children: Vec<ChildDecl>,
+    pub collections: Vec<CollectionDecl>,
     pub facets: Option<fdata::Dictionary>,
 }
 
@@ -175,6 +176,7 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
             exposes: self.exposes.fidl_into_native(),
             offers: self.offers.fidl_into_native(),
             children: self.children.fidl_into_native(),
+            collections: self.collections.fidl_into_native(),
             facets: self.facets.fidl_into_native(),
         }
     }
@@ -188,6 +190,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             exposes: self.exposes.native_into_fidl(),
             offers: self.offers.native_into_fidl(),
             children: self.children.native_into_fidl(),
+            collections: self.collections.native_into_fidl(),
             facets: self.facets.native_into_fidl(),
             storage: None,
         }
@@ -202,6 +205,7 @@ impl Clone for ComponentDecl {
             exposes: self.exposes.clone(),
             offers: self.offers.clone(),
             children: self.children.clone(),
+            collections: self.collections.clone(),
             facets: data::clone_option_dictionary(&self.facets),
         }
     }
@@ -224,24 +228,28 @@ impl ComponentDecl {
         child_name: &str,
     ) -> Option<&'a OfferDecl> {
         self.offers.iter().find(|&offer| match (capability, offer) {
-            (Capability::Service(p), OfferDecl::Service(d)) => {
-                if let Some(_) =
-                    d.targets.iter().find(|&e| e.target_path == *p && e.child_name == *child_name)
-                {
-                    true
-                } else {
-                    false
-                }
-            }
-            (Capability::Directory(p), OfferDecl::Directory(d)) => {
-                if let Some(_) =
-                    d.targets.iter().find(|&e| e.target_path == *p && e.child_name == *child_name)
-                {
-                    true
-                } else {
-                    false
-                }
-            }
+            (Capability::Service(p), OfferDecl::Service(d)) => d
+                .targets
+                .iter()
+                .find(|&e| {
+                    if let OfferDest::Child(target_child_name) = &e.dest {
+                        e.target_path == *p && target_child_name == child_name
+                    } else {
+                        false
+                    }
+                })
+                .is_some(),
+            (Capability::Directory(p), OfferDecl::Directory(d)) => d
+                .targets
+                .iter()
+                .find(|&e| {
+                    if let OfferDest::Child(target_child_name) = &e.dest {
+                        e.target_path == *p && target_child_name == child_name
+                    } else {
+                        false
+                    }
+                })
+                .is_some(),
             _ => false,
         })
     }
@@ -306,7 +314,7 @@ fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDe
 fidl_into_struct!(OfferTarget, OfferTarget, fsys::OfferTarget, fsys::OfferTarget,
                   {
                       target_path: CapabilityPath,
-                      child_name: String,
+                      dest: OfferDest,
                   });
 
 fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
@@ -316,13 +324,21 @@ fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
                       startup: fsys::StartupMode,
                   });
 
+fidl_into_struct!(CollectionDecl, CollectionDecl, fsys::CollectionDecl, fsys::CollectionDecl,
+                  {
+                      name: String,
+                      durability: fsys::Durability,
+                  });
+
 fidl_into_vec!(UseDecl, fsys::UseDecl);
 fidl_into_vec!(ExposeDecl, fsys::ExposeDecl);
 fidl_into_vec!(OfferDecl, fsys::OfferDecl);
 fidl_into_vec!(ChildDecl, fsys::ChildDecl);
+fidl_into_vec!(CollectionDecl, fsys::CollectionDecl);
 fidl_into_vec!(OfferTarget, fsys::OfferTarget);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
+fidl_translations_opt_type!(fsys::Durability);
 fidl_translations_opt_type!(fdata::Dictionary);
 fidl_translations_identical!(Option<fdata::Dictionary>);
 
@@ -578,6 +594,35 @@ impl NativeIntoFidl<Option<fsys::OfferSource>> for OfferSource {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum OfferDest {
+    Child(String),
+    Collection(String),
+}
+
+impl FidlIntoNative<OfferDest> for Option<fsys::OfferDest> {
+    fn fidl_into_native(self) -> OfferDest {
+        match self.unwrap() {
+            fsys::OfferDest::Child(c) => OfferDest::Child(c.name.unwrap()),
+            fsys::OfferDest::Collection(c) => OfferDest::Collection(c.name.unwrap()),
+            fsys::OfferDest::__UnknownVariant { .. } => panic!("unknown OfferDest variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::OfferDest>> for OfferDest {
+    fn native_into_fidl(self) -> Option<fsys::OfferDest> {
+        Some(match self {
+            OfferDest::Child(child_name) => {
+                fsys::OfferDest::Child(fsys::ChildRef { name: Some(child_name) })
+            }
+            OfferDest::Collection(collection_name) => {
+                fsys::OfferDest::Collection(fsys::CollectionRef { name: Some(collection_name) })
+            }
+        })
+    }
+}
+
 /// Converts the contents of a CM-FIDL declaration and produces the equivalent CM-Rust
 /// struct.
 /// This function applies cm_fidl_validator to check correctness.
@@ -753,6 +798,7 @@ mod tests {
                 exposes: None,
                 offers: None,
                 children: None,
+                collections: None,
                 facets: None,
                 storage: None,
             },
@@ -762,6 +808,7 @@ mod tests {
                 exposes: vec![],
                 offers: vec![],
                 children: vec![],
+                collections: vec![],
                 facets: None,
             },
         },
@@ -806,7 +853,9 @@ mod tests {
                        targets: Some(vec![
                            fsys::OfferTarget{
                                target_path: Some("/svc/mynetstack".to_string()),
-                               child_name: Some("echo".to_string()),
+                               dest: Some(fsys::OfferDest::Child(
+                                  fsys::ChildRef { name: Some("echo".to_string()) }
+                               )),
                            },
                        ]),
                    }),
@@ -816,7 +865,9 @@ mod tests {
                        targets: Some(vec![
                            fsys::OfferTarget{
                                target_path: Some("/data".to_string()),
-                               child_name: Some("echo".to_string()),
+                               dest: Some(fsys::OfferDest::Collection(
+                                   fsys::CollectionRef { name: Some("modular".to_string()) }
+                               )),
                            },
                        ]),
                    }),
@@ -833,6 +884,16 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/echo#meta/echo.cm"
                                   .to_string()),
                         startup: Some(fsys::StartupMode::Eager),
+                    },
+               ]),
+               collections: Some(vec![
+                    fsys::CollectionDecl {
+                        name: Some("modular".to_string()),
+                        durability: Some(fsys::Durability::Persistent),
+                    },
+                    fsys::CollectionDecl {
+                        name: Some("tests".to_string()),
+                        durability: Some(fsys::Durability::Transient),
                     },
                ]),
                facets: Some(fdata::Dictionary{entries: vec![
@@ -880,7 +941,7 @@ mod tests {
                             targets: vec![
                                 OfferTarget {
                                     target_path: "/svc/mynetstack".try_into().unwrap(),
-                                    child_name: "echo".to_string(),
+                                    dest: OfferDest::Child("echo".to_string()),
                                 },
                             ],
                         }),
@@ -890,7 +951,7 @@ mod tests {
                             targets: vec![
                                 OfferTarget {
                                     target_path: "/data".try_into().unwrap(),
-                                    child_name: "echo".to_string(),
+                                    dest: OfferDest::Collection("modular".to_string()),
                                 },
                             ],
                         }),
@@ -905,6 +966,16 @@ mod tests {
                             name: "echo".to_string(),
                             url: "fuchsia-pkg://fuchsia.com/echo#meta/echo.cm".to_string(),
                             startup: fsys::StartupMode::Eager,
+                        },
+                    ],
+                    collections: vec![
+                        CollectionDecl {
+                            name: "modular".to_string(),
+                            durability: fsys::Durability::Persistent,
+                        },
+                        CollectionDecl {
+                            name: "tests".to_string(),
+                            durability: fsys::Durability::Transient,
                         },
                     ],
                     facets: Some(fdata::Dictionary{entries: vec![
@@ -999,7 +1070,7 @@ mod tests {
                     targets: vec![
                         OfferTarget {
                             target_path: CapabilityPath::try_from("/blah").unwrap(),
-                            child_name: "child".to_string(),
+                            dest: OfferDest::Child("child".to_string()),
                         }
                     ],
                 }),
@@ -1009,7 +1080,7 @@ mod tests {
                     targets: vec![
                         OfferTarget {
                             target_path: CapabilityPath::try_from("/blah").unwrap(),
-                            child_name: "child".to_string(),
+                            dest: OfferDest::Child("child".to_string()),
                         }
                     ],
                 }),

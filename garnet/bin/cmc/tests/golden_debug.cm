@@ -33,7 +33,11 @@
                 "targets": [
                     {
                         "target_path": "/svc/fuchsia.logger.Log",
-                        "child_name": "netstack"
+                        "dest": {
+                            "collection": {
+                                "name": "modular"
+                            }
+                        }
                     }
                 ]
             }
@@ -44,11 +48,12 @@
             "name": "logger",
             "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
             "startup": "lazy"
-        },
+        }
+    ],
+    "collections": [
         {
-            "name": "netstack",
-            "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
-            "startup": "lazy"
+            "name": "modular",
+            "durability": "persistent"
         }
     ],
     "facets": {

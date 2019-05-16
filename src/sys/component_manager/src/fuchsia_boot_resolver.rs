@@ -103,6 +103,7 @@ mod tests {
                 offers: None,
                 facets: None,
                 children: None,
+                collections: None,
                 storage: None,
             };
             assert_eq!(component_decl, component.decl.unwrap());

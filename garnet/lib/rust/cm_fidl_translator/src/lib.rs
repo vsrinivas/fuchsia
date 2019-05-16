@@ -67,6 +67,7 @@ cm_into_opt_vec!(fsys::UseDecl, cm::Use);
 cm_into_opt_vec!(fsys::ExposeDecl, cm::Expose);
 cm_into_opt_vec!(fsys::OfferDecl, cm::Offer);
 cm_into_opt_vec!(fsys::ChildDecl, cm::Child);
+cm_into_opt_vec!(fsys::CollectionDecl, cm::Collection);
 cm_into_vec!(fsys::OfferTarget, cm::Target);
 
 impl CmInto<fsys::ComponentDecl> for cm::Document {
@@ -77,6 +78,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
             exposes: self.exposes.cm_into()?,
             offers: self.offers.cm_into()?,
             children: self.children.cm_into()?,
+            collections: self.collections.cm_into()?,
             facets: self.facets.cm_into()?,
             storage: None,
         })
@@ -178,6 +180,15 @@ impl CmInto<fsys::ChildDecl> for cm::Child {
     }
 }
 
+impl CmInto<fsys::CollectionDecl> for cm::Collection {
+    fn cm_into(self) -> Result<fsys::CollectionDecl, Error> {
+        Ok(fsys::CollectionDecl {
+            name: Some(self.name),
+            durability: Some(durability_from_str(&self.durability)?),
+        })
+    }
+}
+
 impl CmInto<fsys::ExposeSource> for cm::ExposeSource {
     fn cm_into(self) -> Result<fsys::ExposeSource, Error> {
         Ok(match self {
@@ -215,11 +226,26 @@ impl CmInto<fsys::ChildRef> for cm::ChildRef {
     }
 }
 
+impl CmInto<fsys::CollectionRef> for cm::CollectionRef {
+    fn cm_into(self) -> Result<fsys::CollectionRef, Error> {
+        Ok(fsys::CollectionRef { name: Some(self.name) })
+    }
+}
+
 impl CmInto<fsys::OfferTarget> for cm::Target {
     fn cm_into(self) -> Result<fsys::OfferTarget, Error> {
         Ok(fsys::OfferTarget {
             target_path: Some(self.target_path),
-            child_name: Some(self.child_name),
+            dest: Some(self.dest.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::OfferDest> for cm::OfferDest {
+    fn cm_into(self) -> Result<fsys::OfferDest, Error> {
+        Ok(match self {
+            cm::OfferDest::Child(c) => fsys::OfferDest::Child(c.cm_into()?),
+            cm::OfferDest::Collection(c) => fsys::OfferDest::Collection(c.cm_into()?),
         })
     }
 }
@@ -285,6 +311,14 @@ fn startup_from_str(value: &str) -> Result<fsys::StartupMode, Error> {
     }
 }
 
+fn durability_from_str(value: &str) -> Result<fsys::Durability, Error> {
+    match value {
+        cm::PERSISTENT => Ok(fsys::Durability::Persistent),
+        cm::TRANSIENT => Ok(fsys::Durability::Transient),
+        _ => Err(Error::parse(format!("Unknown durability: {}", value))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -304,6 +338,7 @@ mod tests {
             offers: None,
             facets: None,
             children: None,
+            collections: None,
             storage: None,
         }
     }
@@ -549,11 +584,19 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/data/realm_assets",
-                                    "child_name": "logger"
+                                    "dest": {
+                                        "child": {
+                                            "name": "logger"
+                                        }
+                                    }
                                 },
                                 {
                                     "target_path": "/data/assets",
-                                    "child_name": "netstack"
+                                    "dest": {
+                                        "collection": {
+                                            "name": "modular"
+                                        }
+                                    }
                                 }
                             ]
                         }
@@ -567,7 +610,11 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/data/config",
-                                    "child_name": "netstack"
+                                    "dest": {
+                                        "child": {
+                                            "name": "netstack"
+                                        }
+                                    }
                                 }
                             ]
                         }
@@ -583,7 +630,11 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/svc/fuchsia.logger.SysLog",
-                                    "child_name": "netstack"
+                                    "dest": {
+                                        "collection": {
+                                            "name": "modular"
+                                        }
+                                    }
                                 }
                             ]
                         }
@@ -593,12 +644,18 @@ mod tests {
                     {
                         "name": "logger",
                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-                        "startup": "lazy",
+                        "startup": "lazy"
                     },
                     {
                         "name": "netstack",
                         "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
-                        "startup": "eager",
+                        "startup": "eager"
+                    }
+                ],
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent"
                     }
                 ],
             }),
@@ -610,11 +667,15 @@ mod tests {
                         targets: Some(vec![
                             fsys::OfferTarget {
                                 target_path: Some("/data/realm_assets".to_string()),
-                                child_name: Some("logger".to_string()),
+                                dest: Some(fsys::OfferDest::Child(
+                                   fsys::ChildRef { name: Some("logger".to_string()) }
+                                )),
                             },
                             fsys::OfferTarget {
                                 target_path: Some("/data/assets".to_string()),
-                                child_name: Some("netstack".to_string()),
+                                dest: Some(fsys::OfferDest::Collection(
+                                   fsys::CollectionRef { name: Some("modular".to_string()) }
+                                )),
                             },
                         ]),
                     }),
@@ -624,7 +685,9 @@ mod tests {
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/data/config".to_string()),
-                                child_name: Some("netstack".to_string()),
+                                dest: Some(fsys::OfferDest::Child(
+                                   fsys::ChildRef { name: Some("netstack".to_string()) }
+                                )),
                             },
                         ]),
                     }),
@@ -636,7 +699,9 @@ mod tests {
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.SysLog".to_string()),
-                                child_name: Some("netstack".to_string()),
+                                dest: Some(fsys::OfferDest::Collection(
+                                   fsys::CollectionRef { name: Some("modular".to_string()) }
+                                )),
                             },
                         ]),
                     }),
@@ -653,9 +718,16 @@ mod tests {
                         startup: Some(fsys::StartupMode::Eager),
                     },
                 ];
+                let collections = vec![
+                    fsys::CollectionDecl{
+                        name: Some("modular".to_string()),
+                        durability: Some(fsys::Durability::Persistent),
+                    },
+                ];
                 let mut decl = new_component_decl();
                 decl.offers = Some(offers);
                 decl.children = Some(children);
+                decl.collections = Some(collections);
                 decl
             },
         },
@@ -689,6 +761,35 @@ mod tests {
                 ];
                 let mut decl = new_component_decl();
                 decl.children = Some(children);
+                decl
+            },
+        },
+        test_translate_collections => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent"
+                    },
+                    {
+                        "name": "tests",
+                        "durability": "transient"
+                    }
+                ]
+            }),
+            output = {
+                let collections = vec![
+                    fsys::CollectionDecl{
+                        name: Some("modular".to_string()),
+                        durability: Some(fsys::Durability::Persistent),
+                    },
+                    fsys::CollectionDecl{
+                        name: Some("tests".to_string()),
+                        durability: Some(fsys::Durability::Transient),
+                    },
+                ];
+                let mut decl = new_component_decl();
+                decl.collections = Some(collections);
                 decl
             },
         },
@@ -763,7 +864,19 @@ mod tests {
                             "targets": [
                                 {
                                     "target_path": "/svc/fuchsia.logger.Log",
-                                    "child_name": "netstack"
+                                    "dest": {
+                                        "child": {
+                                            "name": "netstack"
+                                        }
+                                    },
+                                },
+                                {
+                                    "target_path": "/svc/fuchsia.logger.Log",
+                                    "dest": {
+                                        "collection": {
+                                            "name": "modular"
+                                        }
+                                    },
                                 }
                             ]
                         }
@@ -779,6 +892,12 @@ mod tests {
                         "name": "netstack",
                         "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
                         "startup": "eager"
+                    }
+                ],
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent"
                     }
                 ],
                 "facets": {
@@ -815,7 +934,15 @@ mod tests {
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                                child_name: Some("netstack".to_string()),
+                                dest: Some(fsys::OfferDest::Child(
+                                   fsys::ChildRef { name: Some("netstack".to_string()) }
+                                )),
+                            },
+                            fsys::OfferTarget{
+                                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                                dest: Some(fsys::OfferDest::Collection(
+                                   fsys::CollectionRef { name: Some("modular".to_string()) }
+                                )),
                             },
                         ]),
                     }),
@@ -830,6 +957,12 @@ mod tests {
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Eager),
+                    },
+                ];
+                let collections = vec![
+                    fsys::CollectionDecl {
+                        name: Some("modular".to_string()),
+                        durability: Some(fsys::Durability::Persistent),
                     },
                 ];
                 let facets = fdata::Dictionary{entries: vec![
@@ -848,6 +981,7 @@ mod tests {
                     exposes: Some(exposes),
                     offers: Some(offers),
                     children: Some(children),
+                    collections: Some(collections),
                     facets: Some(facets),
                     storage: None,
                 }

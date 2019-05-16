@@ -5,6 +5,8 @@ pub const SERVICE: &str = "service";
 pub const DIRECTORY: &str = "directory";
 pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
+pub const PERSISTENT: &str = "persistent";
+pub const TRANSIENT: &str = "transient";
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Document {
@@ -19,6 +21,8 @@ pub struct Document {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub children: Option<Vec<Child>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub collections: Option<Vec<Collection>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub facets: Option<Map<String, Value>>,
 }
 
@@ -27,6 +31,12 @@ pub struct Child {
     pub name: String,
     pub url: String,
     pub startup: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Collection {
+    pub name: String,
+    pub durability: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -114,7 +124,15 @@ pub enum OfferSource {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Target {
     pub target_path: String,
-    pub child_name: String,
+    pub dest: OfferDest,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum OfferDest {
+    #[serde(rename = "child")]
+    Child(ChildRef),
+    #[serde(rename = "collection")]
+    Collection(CollectionRef),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -125,5 +143,10 @@ pub struct SelfRef {}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ChildRef {
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CollectionRef {
     pub name: String,
 }

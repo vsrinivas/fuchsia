@@ -98,6 +98,13 @@ table OfferTarget {
     /// Must be an absolute path starting with /.
     1: string:MAX_PATH_LENGTH target_path;
 
-    /// The name of the child component.
-    2: string:MAX_CHILD_NAME_LENGTH child_name;
+    /// Reference to the destination.
+    2: OfferDest dest;
 };
+
+/// References the destination of an OfferTarget.
+xunion OfferDest {
+    ChildRef child;
+    CollectionRef collection;
+};
+

@@ -2,17 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use cm_json::Error;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde_derive::Deserialize;
 use serde_json::{Map, Value};
+use std::collections::HashSet;
 
 lazy_static! {
-    pub static ref CHILD_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
+    pub static ref REFERENCE_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
     pub static ref FROM_RE: Regex = Regex::new(r"^(realm|self|#[A-Za-z0-9\-_]+)$").unwrap();
 }
 pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
+pub const PERSISTENT: &str = "persistent";
+pub const TRANSIENT: &str = "transient";
 
 #[derive(Deserialize, Debug)]
 pub struct Document {
@@ -21,7 +25,37 @@ pub struct Document {
     pub expose: Option<Vec<Expose>>,
     pub offer: Option<Vec<Offer>>,
     pub children: Option<Vec<Child>>,
+    pub collections: Option<Vec<Collection>>,
     pub facets: Option<Map<String, Value>>,
+}
+
+impl Document {
+    pub fn all_children(&self) -> Result<HashSet<&str>, Error> {
+        let mut all_children = HashSet::new();
+        if let Some(children) = self.children.as_ref() {
+            for child in children.iter() {
+                if !all_children.insert(&child.name as &str) {
+                    return Err(Error::validate(format!("Duplicate child name: \"{}\"", &child.name)));
+                }
+            }
+        }
+        Ok(all_children)
+    }
+
+    pub fn all_collections(&self) -> Result<HashSet<&str>, Error> {
+        let mut all_collections = HashSet::new();
+        if let Some(collections) = self.collections.as_ref() {
+            for collection in collections.iter() {
+                if !all_collections.insert(&collection.name as &str) {
+                    return Err(Error::validate(format!(
+                        "Duplicate collection name: \"{}\"",
+                        &collection.name
+                    )));
+                }
+            }
+        }
+        Ok(all_collections)
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -58,6 +92,12 @@ pub struct Child {
     pub name: String,
     pub url: String,
     pub startup: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Collection {
+    pub name: String,
+    pub durability: String,
 }
 
 pub trait FromClause {

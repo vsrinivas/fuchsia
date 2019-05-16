@@ -15,6 +15,7 @@ fidl("fuchsia.sys2") {
   sources = [
     "constants.fidl",
     "decls/child_decl.fidl",
+    "decls/collection_decl.fidl",
     "decls/component_decl.fidl",
     "decls/expose_decl.fidl",
     "decls/offer_decl.fidl",
@@ -29,5 +30,6 @@ fidl("fuchsia.sys2") {
     "runtime/component_resolver.fidl",
     "runtime/component_runner.fidl",
     "runtime/package.fidl",
+    "types.fidl",
   ]
 }

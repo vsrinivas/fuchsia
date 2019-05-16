@@ -42,6 +42,7 @@ pub fn default_component_decl() -> ComponentDecl {
         exposes: Vec::new(),
         offers: Vec::new(),
         children: Vec::new(),
+        collections: Vec::new(),
         facets: None,
     }
 }

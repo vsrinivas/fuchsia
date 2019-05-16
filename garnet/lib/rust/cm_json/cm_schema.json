@@ -18,6 +18,10 @@
       "type": "string",
       "pattern": "^(lazy|eager)$"
     },
+    "durability-clause": {
+      "type": "string",
+      "pattern": "^(persistent|transient)$"
+    },
     "name-clause": {
       "type": "string",
       "pattern": "^[0-9a-z_\\-\\.]+$",
@@ -90,7 +94,7 @@
       }
     },
     "offer-targets-clause": {
-      "title": "Offered capability target components",
+      "title": "Offered capability targets",
       "type": "array",
       "uniqueItems": true,
       "minItems": 1,
@@ -98,16 +102,49 @@
         "type": "object",
         "required": [
           "target_path",
-          "child_name"
+          "dest"
         ],
         "properties": {
           "target_path": {
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
-            "title": "Offered capability target path"
+            "title": "Offered capability target path",
+            "type": "string",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }]
           },
-          "child_name": {
-            "allOf": [{ "$ref": "#/definitions/name-clause" }],
-            "title": "Offered capability target child name"
+          "dest": {
+            "title": "Offered capability target component",
+            "type": "object",
+            "oneOf": [
+              {
+                "required": [ "child" ]
+              },
+              {
+                "required": [ "collection" ]
+              }
+            ],
+            "properties": {
+              "child": {
+                "type": "object",
+                "title": "Offered target component's child",
+                "required": [ "name" ],
+                "properties": {
+                  "name": {
+                    "title": "Child name",
+                    "allOf": [{ "$ref": "#/definitions/name-clause" }]
+                  }
+                }
+              },
+              "collection": {
+                "type": "object",
+                "title": "Offered target component's collection",
+                "required": [ "name" ],
+                "properties": {
+                  "name": {
+                    "title": "Collection name",
+                    "allOf": [{ "$ref": "#/definitions/name-clause" }]
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -319,6 +356,28 @@
           "startup": {
             "allOf": [{ "$ref": "#/definitions/startup-clause" }],
             "title": "Startup mode"
+          }
+        }
+      }
+    },
+    "collections": {
+      "type": "array",
+      "title": "Collections",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "durability"
+        ],
+        "properties": {
+          "name": {
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "title": "Collection name"
+          },
+          "durability": {
+            "allOf": [{ "$ref": "#/definitions/durability-clause" }],
+            "title": "Durability"
           }
         }
       }

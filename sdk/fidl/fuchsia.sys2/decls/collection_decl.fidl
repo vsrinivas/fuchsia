@@ -1,0 +1,24 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+/// Statically declares a component instance collection.
+table CollectionDecl {
+    /// The name of the collection. Instances created in the collection are
+    /// scoped to this name.
+    1: collection_name name;
+
+    /// The durability of instances in the collection.
+    2: Durability durability;
+};
+
+/// The durability of component instances created in a collection.
+enum Durability {
+  /// An instance exists until either it or its parent is destroyed.
+  PERSISTENT = 1;
+  /// An instance exists until either its parent instance is stopped
+  /// or it is explicitly destroyed.
+  TRANSIENT = 2;
+};

@@ -8,6 +8,7 @@ use cm_json::{self, cm, Error, CM_SCHEMA};
 use serde::ser::Serialize;
 use serde_json;
 use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
+use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -65,22 +66,27 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
 
 fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     let mut out = cm::Document::default();
-    if let Some(program) = document.program {
+    if let Some(program) = document.program.as_ref() {
         out.program = Some(program.clone());
     }
-    if let Some(r#use) = document.r#use {
-        out.uses = Some(translate_use(&r#use)?);
+    if let Some(r#use) = document.r#use.as_ref() {
+        out.uses = Some(translate_use(r#use)?);
     }
-    if let Some(expose) = document.expose {
-        out.exposes = Some(translate_expose(&expose)?);
+    if let Some(expose) = document.expose.as_ref() {
+        out.exposes = Some(translate_expose(expose)?);
     }
-    if let Some(offer) = document.offer {
-        out.offers = Some(translate_offer(&offer)?);
+    if let Some(offer) = document.offer.as_ref() {
+        let all_children = document.all_children()?;
+        let all_collections = document.all_collections()?;
+        out.offers = Some(translate_offer(offer, &all_children, &all_collections)?);
     }
-    if let Some(children) = document.children {
-        out.children = Some(translate_children(&children)?);
+    if let Some(children) = document.children.as_ref() {
+        out.children = Some(translate_children(children)?);
     }
-    if let Some(facets) = document.facets {
+    if let Some(collections) = document.collections.as_ref() {
+        out.collections = Some(translate_collections(collections)?);
+    }
+    if let Some(facets) = document.facets.as_ref() {
         out.facets = Some(facets.clone());
     }
     Ok(out)
@@ -127,11 +133,15 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
     Ok(out_exposes)
 }
 
-fn translate_offer(offer_in: &Vec<cml::Offer>) -> Result<Vec<cm::Offer>, Error> {
+fn translate_offer(
+    offer_in: &Vec<cml::Offer>,
+    all_children: &HashSet<&str>,
+    all_collections: &HashSet<&str>,
+) -> Result<Vec<cm::Offer>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
         let source = extract_offer_source(offer)?;
-        let targets = extract_targets(offer)?;
+        let targets = extract_targets(offer, all_children, all_collections)?;
         let out = if let Some(p) = offer.service() {
             Ok(cm::Offer::Service(cm::OfferService { source_path: p.clone(), source, targets }))
         } else if let Some(p) = offer.directory() {
@@ -157,6 +167,23 @@ fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<cm::Child>, E
         out_children.push(cm::Child { name: child.name.clone(), url: child.url.clone(), startup });
     }
     Ok(out_children)
+}
+
+fn translate_collections(
+    collections_in: &Vec<cml::Collection>,
+) -> Result<Vec<cm::Collection>, Error> {
+    let mut out_collections = vec![];
+    for collection in collections_in.iter() {
+        let durability = match &collection.durability as &str {
+            cml::PERSISTENT => cm::PERSISTENT.to_string(),
+            cml::TRANSIENT => cm::TRANSIENT.to_string(),
+            _ => {
+                return Err(Error::internal(format!("invalid durability")));
+            }
+        };
+        out_collections.push(cm::Collection { name: collection.name.clone(), durability });
+    }
+    Ok(out_collections)
 }
 
 fn extract_expose_source<T>(in_obj: &T) -> Result<cm::ExposeSource, Error>
@@ -199,16 +226,27 @@ where
     Ok(ret)
 }
 
-fn extract_targets(in_obj: &cml::Offer) -> Result<Vec<cm::Target>, Error> {
+fn extract_targets(
+    in_obj: &cml::Offer,
+    all_children: &HashSet<&str>,
+    all_collections: &HashSet<&str>,
+) -> Result<Vec<cm::Target>, Error> {
     let mut out_targets = vec![];
     for to in in_obj.to.iter() {
         let target_path = extract_target_path(in_obj, to)?;
-        let caps = match cml::CHILD_RE.captures(&to.dest) {
+        let caps = match cml::REFERENCE_RE.captures(&to.dest) {
             Some(c) => Ok(c),
             None => Err(Error::internal(format!("invalid \"dest\": {}", to.dest))),
         }?;
-        let child_name = caps[1].to_string();
-        out_targets.push(cm::Target { target_path, child_name });
+        let name = caps[1].to_string();
+        let dest = if all_children.contains(&name as &str) {
+            cm::OfferDest::Child(cm::ChildRef { name: name.to_string() })
+        } else if all_collections.contains(&name as &str) {
+            cm::OfferDest::Collection(cm::CollectionRef { name: name.to_string() })
+        } else {
+            return Err(Error::internal(format!("dangling reference: \"{}\"", name)));
+        };
+        out_targets.push(cm::Target { target_path, dest });
     }
     Ok(out_targets)
 }
@@ -279,6 +317,7 @@ mod tests {
             input = json!({}),
             output = "{}",
         },
+
         test_compile_program => {
             input = json!({
                 "program": {
@@ -291,6 +330,7 @@ mod tests {
     }
 }"#,
         },
+
         test_compile_use => {
             input = json!({
                 "use": [
@@ -315,6 +355,7 @@ mod tests {
     ]
 }"#,
         },
+
         test_compile_expose => {
             input = json!({
                 "expose": [
@@ -364,6 +405,7 @@ mod tests {
     ]
 }"#,
         },
+
         test_compile_offer => {
             input = json!({
                 "offer": [
@@ -372,16 +414,17 @@ mod tests {
                         "from": "#logger",
                         "to": [
                             { "dest": "#netstack" },
-                            { "dest": "#echo_server", "as": "/svc/fuchsia.logger.SysLog" }
+                            { "dest": "#modular", "as": "/svc/fuchsia.logger.SysLog" },
                         ]
                     },
                     {
                         "directory": "/data/assets",
                         "from": "realm",
                         "to": [
-                            { "dest": "#echo_server" },
+                            { "dest": "#netstack" },
+                            { "dest": "#modular", "as": "/data" }
                         ]
-                    }
+                    },
                 ],
                 "children": [
                     {
@@ -389,14 +432,16 @@ mod tests {
                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     },
                     {
-                        "name": "echo_server",
-                        "url": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm"
-                    },
-                    {
                         "name": "netstack",
                         "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm"
-                    }
-                ]
+                    },
+                ],
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent",
+                    },
+                ],
             }),
             output = r#"{
     "offers": [
@@ -411,11 +456,19 @@ mod tests {
                 "targets": [
                     {
                         "target_path": "/svc/fuchsia.logger.Log",
-                        "child_name": "netstack"
+                        "dest": {
+                            "child": {
+                                "name": "netstack"
+                            }
+                        }
                     },
                     {
                         "target_path": "/svc/fuchsia.logger.SysLog",
-                        "child_name": "echo_server"
+                        "dest": {
+                            "collection": {
+                                "name": "modular"
+                            }
+                        }
                     }
                 ]
             }
@@ -429,7 +482,19 @@ mod tests {
                 "targets": [
                     {
                         "target_path": "/data/assets",
-                        "child_name": "echo_server"
+                        "dest": {
+                            "child": {
+                                "name": "netstack"
+                            }
+                        }
+                    },
+                    {
+                        "target_path": "/data",
+                        "dest": {
+                            "collection": {
+                                "name": "modular"
+                            }
+                        }
                     }
                 ]
             }
@@ -442,18 +507,20 @@ mod tests {
             "startup": "lazy"
         },
         {
-            "name": "echo_server",
-            "url": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm",
-            "startup": "lazy"
-        },
-        {
             "name": "netstack",
             "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
             "startup": "lazy"
         }
+    ],
+    "collections": [
+        {
+            "name": "modular",
+            "durability": "persistent"
+        }
     ]
 }"#,
         },
+
         test_compile_children => {
             input = json!({
                 "children": [
@@ -494,6 +561,33 @@ mod tests {
 }"#,
         },
 
+        test_compile_collections => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent",
+                    },
+                    {
+                        "name": "tests",
+                        "durability": "transient",
+                    },
+                ]
+            }),
+            output = r#"{
+    "collections": [
+        {
+            "name": "modular",
+            "durability": "persistent"
+        },
+        {
+            "name": "tests",
+            "durability": "transient"
+        }
+    ]
+}"#,
+        },
+
         test_compile_facets => {
             input = json!({
                 "facets": {
@@ -521,37 +615,44 @@ mod tests {
         test_compile_all_sections => {
             input = json!({
                 "program": {
-                    "binary": "bin/app"
+                    "binary": "bin/app",
                 },
                 "use": [
                     { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                 ],
                 "expose": [
-                    { "directory": "/volumes/blobfs", "from": "self" }
+                    { "directory": "/volumes/blobfs", "from": "self" },
                 ],
                 "offer": [
                     {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
                         "to": [
-                            { "dest": "#netstack" }
-                        ]
-                    }
+                            { "dest": "#netstack" },
+                            { "dest": "#modular" },
+                        ],
+                    },
                 ],
                 "children": [
                     {
                         "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                     },
                     {
                         "name": "netstack",
-                        "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm"
-                    }
+                        "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+                    },
+                ],
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent",
+                    },
                 ],
                 "facets": {
                     "author": "Fuchsia",
-                    "year": 2018
-                }
+                    "year": 2018,
+                },
             }),
             output = r#"{
     "program": {
@@ -588,7 +689,19 @@ mod tests {
                 "targets": [
                     {
                         "target_path": "/svc/fuchsia.logger.Log",
-                        "child_name": "netstack"
+                        "dest": {
+                            "child": {
+                                "name": "netstack"
+                            }
+                        }
+                    },
+                    {
+                        "target_path": "/svc/fuchsia.logger.Log",
+                        "dest": {
+                            "collection": {
+                                "name": "modular"
+                            }
+                        }
                     }
                 ]
             }
@@ -604,6 +717,12 @@ mod tests {
             "name": "netstack",
             "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
             "startup": "lazy"
+        }
+    ],
+    "collections": [
+        {
+            "name": "modular",
+            "durability": "persistent"
         }
     ],
     "facets": {

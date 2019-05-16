@@ -21,7 +21,7 @@
       "from": "#logger",
       "to": [
         {
-          "dest": "#netstack",
+          "dest": "#modular",
         },
       ],
     },
@@ -31,9 +31,11 @@
       "name": "logger",
       "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
     },
+  ],
+  "collections": [
     {
-      "name": "netstack",
-      "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+      "name": "modular",
+      "durability": "persistent",
     },
   ],
   "facets": {
