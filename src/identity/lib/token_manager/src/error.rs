@@ -16,7 +16,7 @@ pub trait ResultExt<T, E> {
 
 impl<T, E> ResultExt<T, E> for Result<T, E>
 where
-    E: Fail,
+    E: Into<Error> + Send + Sync + Sized,
 {
     fn token_manager_status(self, status: Status) -> Result<T, TokenManagerError> {
         self.map_err(|err| TokenManagerError::new(status).with_cause(err))
@@ -101,5 +101,75 @@ impl From<AuthProviderStatus> for TokenManagerError {
             fatal: false,
             cause: Some(format_err!("Auth provider error: {:?}", auth_provider_status)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use failure::format_err;
+
+    const TEST_STATUS: Status = Status::UnknownError;
+
+    fn create_test_error() -> Error {
+        format_err!("Test error")
+    }
+
+    #[test]
+    fn test_new() {
+        let cause = format_err!("Example cause");
+        let error = TokenManagerError::new(TEST_STATUS).with_cause(cause);
+        assert_eq!(error.status, TEST_STATUS);
+        assert!(!error.fatal);
+        assert!(error.cause.is_some());
+    }
+
+    #[test]
+    fn test_from_status() {
+        let error: TokenManagerError = TEST_STATUS.into();
+        assert_eq!(error.status, TEST_STATUS);
+        assert!(!error.fatal);
+        assert!(error.cause.is_none());
+    }
+
+    #[test]
+    fn test_token_manager_status() {
+        let test_result: Result<(), Error> = Err(create_test_error());
+        let wrapped_result = test_result.token_manager_status(TEST_STATUS);
+        assert_eq!(wrapped_result.as_ref().unwrap_err().status, TEST_STATUS);
+        assert_eq!(
+            format!("{:?}", wrapped_result.unwrap_err().cause.unwrap()),
+            format!("{:?}", create_test_error())
+        );
+    }
+
+    #[test]
+    fn test_from_auth_db_error() {
+        let err = TokenManagerError::from(AuthDbError::CredentialNotFound);
+        let err_fatal = TokenManagerError::from(AuthDbError::DbInvalid);
+        assert_eq!(
+            (format!("{:?}", err.cause.as_ref().unwrap()), err.fatal, err.status),
+            (format!("{:?}", &AuthDbError::CredentialNotFound), false, Status::UserNotFound)
+        );
+        assert_eq!(
+            (format!("{:?}", err_fatal.cause.as_ref().unwrap()), err_fatal.fatal, err_fatal.status),
+            (format!("{:?}", &AuthDbError::DbInvalid), true, Status::InternalError)
+        );
+    }
+
+    #[test]
+    fn test_from_auth_cache_error() {
+        let err = TokenManagerError::from(AuthCacheError::InvalidArguments);
+        assert_eq!(
+            (format!("{:?}", err.cause.as_ref().unwrap()), err.fatal, err.status),
+            (format!("{:?}", &AuthCacheError::InvalidArguments), false, Status::InvalidRequest)
+        );
+    }
+
+    #[test]
+    fn test_from_auth_provider_status() {
+        let err = TokenManagerError::from(AuthProviderStatus::ReauthRequired);
+        assert_eq!((err.fatal, err.status), (false, Status::ReauthRequired));
+        assert!(err.cause.is_some());
     }
 }

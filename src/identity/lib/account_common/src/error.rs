@@ -94,10 +94,11 @@ mod tests {
     #[test]
     fn test_new() {
         let cause = format_err!("Example cause");
+        let cause_str = format!("{:?}", cause);
         let error = AccountManagerError::new(TEST_STATUS).with_cause(cause);
         assert_eq!(error.status, TEST_STATUS);
         assert!(!error.fatal);
-        assert!(error.cause.is_some());
+        assert_eq!(format!("{:?}", error.cause.unwrap()), cause_str);
     }
 
     #[test]
