@@ -54,7 +54,9 @@ test_package("netstack_gotests") {
     ":netstack_filter_test",
     ":netstack_link_eth_test",
     ":netstack_test",
+    "ifconfig:netstack_ifconfig_test",
     "netstack_service_test",
+    "netstat:netstack_netstat_test",
     "util:netstack_util_test",
   ]
 
@@ -89,18 +91,6 @@ test_package("netstack_gotests") {
       name = "netstack_util_test"
       environments = [ qemu_env ]
     },
-  ]
-}
-
-package("netstack_non_component_gotests") {
-  testonly = true
-
-  deps = [
-    "ifconfig:netstack_ifconfig_test",
-    "netstat:netstack_netstat_test",
-  ]
-
-  tests = [
     {
       name = "netstack_ifconfig_test"
       environments = [ qemu_env ]
