@@ -119,9 +119,9 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 	return netstack.NetInterface2{
 		Id:        uint32(ifs.nicid),
 		Flags:     flags,
-		Features:  ifs.mu.nic.Features,
-		Metric:    uint32(ifs.mu.nic.Metric),
-		Name:      ifs.mu.nic.Name,
+		Features:  ifs.features,
+		Metric:    uint32(ifs.mu.metric),
+		Name:      ifs.mu.name,
 		Addr:      fidlconv.ToNetIpAddress(addr),
 		Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(mask)),
 		Broadaddr: fidlconv.ToNetIpAddress(tcpip.Address(broadaddr)),

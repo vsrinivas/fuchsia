@@ -72,7 +72,7 @@ func getInterfaceInfo(ifs *ifState, addresses []tcpip.ProtocolAddress, subnets [
 			Mtu:                  uint32(ifs.endpoint.MTU()),
 			AdministrativeStatus: administrativeStatus,
 			PhysicalStatus:       physicalStatus,
-			Features:             ifs.mu.nic.Features,
+			Features:             ifs.features,
 			Addresses:            addrs,
 		},
 	}

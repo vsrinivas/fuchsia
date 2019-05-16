@@ -43,8 +43,8 @@ func TestNicName(t *testing.T) {
 		t.Fatal(err)
 	}
 	ifs.mu.Lock()
-	if ifs.mu.nic.Name != testDeviceName {
-		t.Errorf("ifs.mu.nic.Name = %v, want %v", ifs.mu.nic.Name, testDeviceName)
+	if ifs.mu.name != testDeviceName {
+		t.Errorf("ifs.mu.name = %v, want %v", ifs.mu.name, testDeviceName)
 	}
 	ifs.mu.Unlock()
 }
@@ -165,7 +165,7 @@ func TestUniqueFallbackNICNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ifs1.mu.nic.Name == ifs2.mu.nic.Name {
+	if ifs1.mu.name == ifs2.mu.name {
 		t.Fatalf("got (%+v).Name == (%+v).Name, want non-equal", ifs1, ifs2)
 	}
 }
