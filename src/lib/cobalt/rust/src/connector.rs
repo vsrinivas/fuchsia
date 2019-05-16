@@ -141,32 +141,29 @@ impl CobaltConnector {
     }
 
     async fn send_cobalt_events(logger: LoggerProxy, mut receiver: mpsc::Receiver<CobaltEvent>) {
-        let mut is_full = false;
+        let mut log_error = log_first_n_factory(30, |e| error!("{}", e));
         while let Some(mut event) = await!(receiver.next()) {
             let resp = await!(logger.log_cobalt_event(&mut event));
-            if let Err(e) = Self::throttle_cobalt_error(resp, event.metric_id, &mut is_full) {
-                error!("{}", e);
+            match resp {
+                Ok(Status::Ok) => continue,
+                Ok(other) => log_error(format!("Cobalt returned an error for metric {}: {:?}",
+                    event.metric_id, other)),
+                Err(e) => log_error(format!("Failed to send event to Cobalt for metric {}: {}",
+                    event.metric_id, e)),
             }
         }
     }
+}
 
-    fn throttle_cobalt_error(
-        resp: Result<Status, fidl::Error>,
-        metric_id: u32,
-        is_full: &mut bool,
-    ) -> Result<(), failure::Error> {
-        let was_full = *is_full;
-        *is_full = resp.as_ref().ok() == Some(&Status::BufferFull);
-        match resp {
-            Ok(Status::BufferFull) => {
-                if !was_full {
-                    bail!("Cobalt buffer became full. Cannot report the stats")
-                }
-                Ok(())
-            }
-            Ok(Status::Ok) => Ok(()),
-            Ok(other) => bail!("Cobalt returned an error for metric {}: {:?}", metric_id, other),
-            Err(e) => bail!("Failed to send event to Cobalt for metric {}: {}", metric_id, e),
+/// Takes a value `n` which represents the number of times to log messages and a function, `log_fn`
+/// that is called to perform the logging and returns a function that will only log the first `n`
+/// messages.
+fn log_first_n_factory(n: u64, mut log_fn: impl FnMut(String)) -> impl FnMut(String) {
+    let mut count = 0;
+    move |message| {
+        if count < n {
+            count += 1;
+            log_fn(message);
         }
     }
 }
@@ -174,34 +171,41 @@ impl CobaltConnector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_cobalt::Status;
 
     #[test]
-    fn throttle_errors() {
-        let mut is_full = false;
+    fn log_first_0() {
+        let mut messages_logged_count = 0;
+        {
+            let log_fn = |_| messages_logged_count += 1;
+            let mut log = log_first_n_factory(0, log_fn);
+            log("test message".into());
+        }
+        assert_eq!(messages_logged_count, 0);
+    }
 
-        let cobalt_resp = Ok(Status::Ok);
-        assert!(CobaltConnector::throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
-        assert_eq!(is_full, false);
+    #[test]
+    fn log_first_1() {
+        let mut messages_logged_count = 0;
+        {
+            let log_fn = |_| messages_logged_count += 1;
+            let mut log = log_first_n_factory(1, log_fn);
+            log("test message 1".into());
+            log("test message 2".into());
+        }
+        assert_eq!(messages_logged_count, 1);
+    }
 
-        let cobalt_resp = Ok(Status::InvalidArguments);
-        assert!(CobaltConnector::throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
-        assert_eq!(is_full, false);
-
-        let cobalt_resp = Ok(Status::BufferFull);
-        assert!(CobaltConnector::throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
-        assert_eq!(is_full, true);
-
-        let cobalt_resp = Ok(Status::BufferFull);
-        assert!(CobaltConnector::throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
-        assert_eq!(is_full, true);
-
-        let cobalt_resp = Ok(Status::Ok);
-        assert!(CobaltConnector::throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_ok());
-        assert_eq!(is_full, false);
-
-        let cobalt_resp = Err(fidl::Error::ClientWrite(fuchsia_zircon::Status::PEER_CLOSED));
-        assert!(CobaltConnector::throttle_cobalt_error(cobalt_resp, 1, &mut is_full).is_err());
-        assert_eq!(is_full, false);
+    #[test]
+    fn log_first_2() {
+        let mut messages_logged_count = 0;
+        {
+            let log_fn = |_| messages_logged_count += 1;
+            let mut log = log_first_n_factory(2, log_fn);
+            log("test message 1".into());
+            log("test message 2".into());
+            log("test message 3".into());
+            log("test message 4".into());
+        }
+        assert_eq!(messages_logged_count, 2);
     }
 }
