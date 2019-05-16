@@ -90,7 +90,7 @@ package("component_manager") {
 
 test_package("component_manager_tests") {
   deps = [
-    ":bin",
+    ":lib",
     "//garnet/examples/components/v2:hello_world_bin",
   ]
 
@@ -99,7 +99,7 @@ test_package("component_manager_tests") {
 
   tests = [
     {
-      name = "component_manager_bin_test"
+      name = "component_manager_lib_lib_test"
       dest = "component_manager_tests"
       environments = basic_envs
     },
