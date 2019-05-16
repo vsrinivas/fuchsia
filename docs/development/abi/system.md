@@ -82,9 +82,9 @@ in prose in comments in the FIDL definitions.
 
 ### Namespace conventions
 
-When run, components are given an *incoming namespace* and serve an
-*outgoing namespace*. The names in these namespaces follow certain
-conventions, which are are part of the system ABI.
+When run, components are given an *incoming namespace* and serve an *outgoing
+directory*. The names in the incoming namespace and outgoing directory follow
+certain conventions, which are are part of the system ABI.
 
 #### Incoming namespace
 
@@ -97,9 +97,9 @@ which conventionally contains services listed by their fully qualified discovery
 name. Similarly, by convention, the `pkg` entry in this namespace is mapped to
 the package from which the component was run.
 
-#### Outgoing namespace
+#### Outgoing directory
 
-A component can serve an outgoing namespace that lets the system and other
+A component can serve an outgoing directory that lets the system and other
 components interact with the component. For example, the component exposes
 services for other components using the `public` entry in this namespace.
 Similarly, the component exposes debugging interfaces through the `debug` entry
@@ -162,7 +162,7 @@ relocates the library, and maps the library into the newly created process.
 As part of starting a process, the creator of the process supplies the process
 with a message that contains, for example, the command line arguments, the
 `environ`, the initial handles, and the incoming namespace for the process.
-(The outgoing namespace is included in the set of initial handles for the
+(The outgoing directory is included in the set of initial handles for the
 process.)
 
 The format of this message, including length limitations on fields such as the
