@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cmdline/args_parser.h>
 #include <signal.h>
 #include <stdlib.h>
 
-#include <filesystem>
 #include <fstream>
 #include <optional>
-#include <set>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "tools/fidlcat/command_line_options.h"
 #include "tools/fidlcat/lib/interception_workflow.h"
 
 // TODO: Look into this.  Removing the hack that led to this (in
@@ -30,81 +28,6 @@
 #include "tools/fidlcat/lib/zx_channel_params.h"
 
 namespace fidlcat {
-
-struct CommandLineOptions {
-  std::optional<std::string> connect;
-  std::optional<std::string> remote_pid;
-  std::vector<std::string> symbol_paths;
-  std::vector<std::string> fidl_ir_paths;
-};
-
-const char kHelpIntro[] = R"(fidlcat [ <options> ] [ command [args] ]
-
-  fidlcat will run the specified command until it exits.  It will intercept and
-  record all fidl calls invoked by the process.  The command may be of the form
-  "run <component URL>", in which case the given component will be launched.
-
-Options:
-
-)";
-
-const char kRemoteHostHelp[] = R"(--connect
-      The host and port of the target Fuchsia instance, of the form
-      [<ipv6_addr>]:port.)";
-
-const char kRemotePidHelp[] = R"(--remote-pid
-      The koid of the remote process.)";
-
-const char kFidlIrPathHelp[] = R"(--fidl-ir-path=<path>
-      Adds the given path as a repository for FIDL IR, in the form of .fidl.json
-      files.  Passing a file adds the given file.  Passing a directory adds all
-      of the .fidl.json files in that directory and any directory transitively
-      reachable from there. This switch can be passed multiple times to add
-      multiple locations.)";
-
-const char kHelpHelp[] = R"(  --help
-  -h
-      Prints all command-line switches.)";
-
-const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
-  -s <path>
-      Adds the given directory or file to the symbol search path. Multiple
-      -s switches can be passed to add multiple locations. When a directory
-      path is passed, the directory will be enumerated non-recursively to
-      index all ELF files, unless the directory contains a .build-id
-      subdirectory, in which case that directory is assumed to contain an index
-      of all ELF files within. When a .txt file is passed, it will be treated
-      as a mapping database from build ID to file path. Otherwise, the path
-      will be loaded as an ELF file (if possible).)";
-
-cmdline::Status ParseCommandLine(int argc, const char* argv[],
-                                 CommandLineOptions* options,
-                                 std::vector<std::string>* params) {
-  cmdline::ArgsParser<CommandLineOptions> parser;
-
-  parser.AddSwitch("connect", 'r', kRemoteHostHelp,
-                   &CommandLineOptions::connect);
-  parser.AddSwitch("remote-pid", 'p', kRemotePidHelp,
-                   &CommandLineOptions::remote_pid);
-  parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp,
-                   &CommandLineOptions::fidl_ir_paths);
-  parser.AddSwitch("symbol-path", 's', kSymbolPathHelp,
-                   &CommandLineOptions::symbol_paths);
-  bool requested_help = false;
-  parser.AddGeneralSwitch("help", 'h', kHelpHelp,
-                          [&requested_help]() { requested_help = true; });
-
-  cmdline::Status status = parser.Parse(argc, argv, options, params);
-  if (status.has_error()) {
-    return status;
-  }
-
-  if (requested_help) {
-    return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
-  }
-
-  return cmdline::Status::Ok();
-}
 
 static bool called_onexit_once_ = false;
 static std::atomic<InterceptionWorkflow*> workflow_;
@@ -269,55 +192,6 @@ void EnqueueStartup(InterceptionWorkflow& workflow, LibraryLoader& loader,
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, connect);
 }
 
-namespace {
-
-bool EndsWith(const std::string& value, const std::string& suffix) {
-  if (suffix.size() > value.size()) {
-    return false;
-  }
-  return std::equal(suffix.rbegin(), suffix.rend(), value.rbegin());
-}
-
-}  // namespace
-
-// Gets the list of .fidl.json files from the command line flags.
-//
-// For each element in |cli_ir_paths|, add all transitively reachable .fidl.json
-// files, and store them in |paths|.
-void ExpandFidlPathsFromOptions(
-    const std::vector<std::string>& cli_ir_paths,
-    std::vector<std::unique_ptr<std::istream>>& paths) {
-  // Maybe also get from a single file, per
-  // https://fuchsia-review.googlesource.com/c/fuchsia/+/253357
-  std::vector<std::string> workqueue = cli_ir_paths;
-  std::set<std::string> checked_dirs;
-  // Repeat until workqueue is empty:
-  //  If it is a directory, add the directory contents to the workqueue.
-  //  If it is a .fidl.json file, add it to |paths|.
-  while (!workqueue.empty()) {
-    std::string current_string = workqueue.back();
-    workqueue.pop_back();
-    std::filesystem::path current_path = current_string;
-    if (std::filesystem::is_directory(current_path)) {
-      for (auto& dir_ent : std::filesystem::directory_iterator(current_path)) {
-        std::string ent_name = dir_ent.path().string();
-        if (std::filesystem::is_directory(ent_name)) {
-          auto found = checked_dirs.find(ent_name);
-          if (found == checked_dirs.end()) {
-            checked_dirs.insert(ent_name);
-            workqueue.push_back(ent_name);
-          }
-        } else if (EndsWith(ent_name, ".fidl.json")) {
-          paths.push_back(std::make_unique<std::ifstream>(dir_ent.path()));
-        }
-      }
-    } else if (std::filesystem::is_regular_file(current_path) &&
-               EndsWith(current_string, ".fidl.json")) {
-      paths.push_back(std::make_unique<std::ifstream>(current_string));
-    }
-  }
-}
-
 int ConsoleMain(int argc, const char* argv[]) {
   CommandLineOptions options;
   std::vector<std::string> params;
@@ -331,7 +205,20 @@ int ConsoleMain(int argc, const char* argv[]) {
   workflow.Initialize(options.symbol_paths);
 
   std::vector<std::unique_ptr<std::istream>> paths;
-  ExpandFidlPathsFromOptions(options.fidl_ir_paths, paths);
+  std::vector<std::string> bad_paths;
+  ExpandFidlPathsFromOptions(options.fidl_ir_paths, paths, bad_paths);
+  if (paths.size() == 0) {
+    std::string error = "No FIDL IR paths provided.";
+    if (bad_paths.size() != 0) {
+      error.append(" File(s) not found: [ ");
+      for (auto& s : bad_paths) {
+        error.append(s);
+        error.append(" ");
+      }
+      error.append("]");
+    }
+    FXL_LOG(INFO) << error;
+  }
 
   fidlcat::LibraryReadError loader_err;
   LibraryLoader loader(paths, &loader_err);
