@@ -24,3 +24,8 @@ group("core") {
     "//src:tests",
   ]
 }
+
+group("terminal") {
+  testonly = true
+  public_deps = []
+}
