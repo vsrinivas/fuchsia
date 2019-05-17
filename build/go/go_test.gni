@@ -31,11 +31,14 @@ template("go_test") {
   _output_path = "${root_out_dir}/${_output_name}"
 
   _is_disabled = defined(invoker.disabled) && invoker.disabled
+
   # We only include test metadata for non-disabled, linux/mac tests; metadata
   # for fuchsia tests is aggregated in the package template.
   _include_test_metadata = !_is_disabled && (is_linux || is_mac)
   if (_include_test_metadata) {
     test_spec(_test_spec_target_name) {
+      # TODO(BLD-493): testonly should be automatic here
+      testonly = true
       name = _main_target_name
       location = _output_path
       deps = []
