@@ -13,10 +13,10 @@ PseudoDirServer::PseudoDirServer(std::unique_ptr<vfs::PseudoDir> pseudo_dir)
             StartThread(std::move(request));
           },
           dir_.NewRequest()) {
-  // The thread (owned by |serving_thread_|) kicked off, but lets wait until
-  // it's run loop is ready.
+  // Block until the run loop in |serving_thread_| is ready before returning
+  // control to the caller.
   std::unique_lock<std::mutex> lock(ready_mutex_);
-  thread_loop_ready_.wait(lock);
+  thread_loop_ready_.wait(lock, [this] { return thread_loop_ != nullptr; });
 }
 
 PseudoDirServer::~PseudoDirServer() {
@@ -43,14 +43,17 @@ fxl::UniqueFD PseudoDirServer::OpenAt(std::string path) {
 void PseudoDirServer::StartThread(
     fidl::InterfaceRequest<fuchsia::io::Directory> request) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  thread_loop_ = &loop;
 
-  // The owner's thread is currently blocked waiting for this thread to
-  // initialize a valid |thread_loop_|. Notify the owner thread that it's now
-  // safe to manipulate this thread's run loop:
-  thread_loop_ready_.notify_all();
+  {
+    std::lock_guard<std::mutex> lock(ready_mutex_);
 
-  pseudo_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, request.TakeChannel());
+    // Setting this will let |thread_loop_ready_.wait()| proceed.
+    thread_loop_ = &loop;
+
+    pseudo_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, request.TakeChannel());
+    thread_loop_ready_.notify_one();
+  }
+
   thread_loop_->Run();
   // This thread exits when the owner thread calls thread_loop_->Quit().
 }
