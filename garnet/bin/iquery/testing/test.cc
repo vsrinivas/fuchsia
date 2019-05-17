@@ -48,7 +48,7 @@ class IqueryGoldenTest : public sys::testing::TestWithEnvironment,
     // to it.
     bool ready = false;
     controller_.events().OnDirectoryReady = [&ready] { ready = true; };
-    RunLoopWithTimeoutOrUntil([&ready] { return ready; }, zx::sec(10));
+    RunLoopUntil([&ready] { return ready; });
 
     SetUpHubPath();
   }
