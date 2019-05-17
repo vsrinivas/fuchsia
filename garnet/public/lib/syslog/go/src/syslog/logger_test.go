@@ -29,44 +29,37 @@ func TestLogSimple(t *testing.T) {
 	}
 	defer os.Remove(tmpFile.Name())
 	for _, logToSocket := range []bool{false, true} {
-		for _, logToWriter := range []bool{false, true} {
-			options :=
-				syslog.LogInitOptions{
-					MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
-					Socket: sout,
-					Writer: tmpFile,
-				}
-			if logToSocket {
-				options.LogToSocket = 1
+		options :=
+			syslog.LogInitOptions{
+				MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
+				Writer: tmpFile,
 			}
-			if logToWriter {
-				options.LogToWriter = 1
-			}
-			logger, err := syslog.NewLogger(options)
+		if logToSocket {
+			options.Socket = sout
+		}
+		logger, err := syslog.NewLogger(options)
+		if err != nil {
+			t.Fatal(err)
+		}
+		const format = "integer: %d"
+		logger.Infof(format, 10)
+		if logToSocket {
+			expectedMsg := fmt.Sprintf(format, 10)
+			checkoutput(t, sin, expectedMsg, syslog.InfoLevel)
+		} else {
+			tmpFile.Sync()
+			tmpFile.Seek(0, 0)
+			expected := "INFO: integer: 10\n"
+			b, err := ioutil.ReadAll(tmpFile)
 			if err != nil {
 				t.Fatal(err)
 			}
-			const format = "integer: %d"
-			logger.Infof(format, 10)
-			if logToSocket {
-				expectedMsg := fmt.Sprintf(format, 10)
-				checkoutput(t, sin, expectedMsg, syslog.InfoLevel)
+			got := string(b)
+			if !strings.HasSuffix(got, expected) {
+				t.Errorf("%q should have ended in %q", got, expected)
 			}
-			if logToWriter {
-				tmpFile.Sync()
-				tmpFile.Seek(0, 0)
-				expected := "INFO: integer: 10\n"
-				b, err := ioutil.ReadAll(tmpFile)
-				if err != nil {
-					t.Fatal(err)
-				}
-				got := string(b)
-				if !strings.HasSuffix(got, expected) {
-					t.Errorf("%q should have ended in %q", got, expected)
-				}
-				if !strings.Contains(got, fmt.Sprintf("[%d]", pid)) {
-					t.Errorf("%q should contains %d", got, pid)
-				}
+			if !strings.Contains(got, fmt.Sprintf("[%d]", pid)) {
+				t.Errorf("%q should contains %d", got, pid)
 			}
 			tmpFile.Truncate(0)
 		}
@@ -78,7 +71,6 @@ func setup(t *testing.T, tags ...string) (zx.Socket, *syslog.Logger) {
 		t.Fatal(err)
 	}
 	log, err := syslog.NewLogger(syslog.LogInitOptions{
-		LogToSocket:                   1,
 		MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
 		Socket: sout,
 		Tags:   tags,

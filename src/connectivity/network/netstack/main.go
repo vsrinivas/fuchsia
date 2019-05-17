@@ -45,17 +45,10 @@ func Main() {
 
 	ctx := context.CreateFromStartupInfo()
 
-	s, err := syslog.ConnectToLogger(ctx.Connector())
-	if err != nil {
-		panic(err)
-	}
 	l, err := syslog.NewLogger(syslog.LogInitOptions{
 		LogLevel:                      syslog.DebugLevel,
-		LogToSocket:                   1,
-		LogToWriter:                   1,
 		MinSeverityForFileAndLineInfo: syslog.InfoLevel,
-		Socket: s,
-		Tags:   []string{"netstack"},
+		Tags: []string{"netstack"},
 	})
 	if err != nil {
 		panic(err)

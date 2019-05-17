@@ -120,8 +120,6 @@ func ConnectToLogger(c *context.Connector) (zx.Socket, error) {
 
 type LogInitOptions struct {
 	LogLevel                      LogLevel
-	LogToSocket                   uint32
-	LogToWriter                   uint32
 	MinSeverityForFileAndLineInfo LogLevel
 	Socket                        zx.Socket
 	Tags                          []string
@@ -156,8 +154,6 @@ func NewLoggerWithDefaults(c *context.Connector, tags ...string) (*Logger, error
 	}
 	return NewLogger(LogInitOptions{
 		LogLevel:                      InfoLevel,
-		LogToSocket:                   1,
-		LogToWriter:                   0,
 		MinSeverityForFileAndLineInfo: ErrorLevel,
 		Socket: s,
 		Tags:   tags,
@@ -294,13 +290,12 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 	if logLevel == FatalLevel {
 		defer os.Exit(1)
 	}
-	if atomic.LoadUint32(&l.options.LogToSocket) != 0 {
+	if atomic.LoadUint32((*uint32)(&l.options.Socket)) != uint32(zx.HandleInvalid) {
 		switch err := l.logToSocket(time, logLevel, tag, msg).(type) {
-		case nil:
 		case *zx.Error:
 			switch err.Status {
 			case zx.ErrPeerClosed, zx.ErrBadState:
-				atomic.StoreUint32(&l.options.LogToWriter, 1)
+				atomic.StoreUint32((*uint32)(&l.options.Socket), uint32(zx.HandleInvalid))
 			default:
 				return err
 			}
@@ -308,10 +303,7 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 			return err
 		}
 	}
-	if atomic.LoadUint32(&l.options.LogToWriter) != 0 {
-		return l.logToWriter(l.options.Writer, time, logLevel, tag, msg)
-	}
-	return nil
+	return l.logToWriter(l.options.Writer, time, logLevel, tag, msg)
 }
 
 func (l *Logger) SetSeverity(logLevel LogLevel) {
