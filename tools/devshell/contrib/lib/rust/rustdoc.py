@@ -19,7 +19,7 @@ def manifest_path_from_path_or_gn_target(arg):
         return os.path.abspath(arg)
     else:
         gn_target = rust.GnTarget(arg)
-        return gn_target.manifest_path(os.environ["FUCHSIA_BUILD_DIR"])
+        return gn_target.manifest_path()
 
 def main():
     parser = argparse.ArgumentParser("Compiles all third-party Rust crates")

@@ -66,7 +66,10 @@ class GnTarget:
     def path(self):
         return os.path.join(ROOT_PATH, self.parts[0])
 
-    def manifest_path(self, build_dir=None):
+    def manifest_path(self, build_dir=None, prefer_host=False):
+        if build_dir is None:
+            build_dir = os.environ["FUCHSIA_BUILD_DIR"]
+
         if len(self.parts) == 1:
             # Turn foo/bar into foo/bar/bar
             path = os.path.join(self.gn_target, os.path.basename(self.gn_target))
@@ -74,5 +77,15 @@ class GnTarget:
             # Turn foo/bar:baz into foo/bar/baz
             path = self.gn_target.replace(":", os.sep)
 
-        return os.path.join(ROOT_PATH, build_dir, "gen", path, "Cargo.toml")
+        manifest_path_prefix = os.path.join(ROOT_PATH, build_dir)
+        manifest_path_suffix = os.path.join("gen", path, "Cargo.toml")
+
+        # By default, return the Fuchsia target Cargo.toml.
+        # Fall back to the
+        target_manifest_path = os.path.join(manifest_path_prefix, manifest_path_suffix)
+        host_manifest_path = os.path.join(manifest_path_prefix, "host_x64", manifest_path_suffix)
+        if not os.path.isfile(target_manifest_path) or prefer_host:
+            return host_manifest_path
+        else:
+            return target_manifest_path
 

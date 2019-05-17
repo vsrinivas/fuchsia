@@ -35,7 +35,7 @@ def main():
     if args.out_dir:
         build_dir = args.out_dir
     else:
-        build_dir = os.environ["FUCHSIA_BUILD_DIR"]
+        build_dir = None
 
     path = args.gn_target.manifest_path(build_dir)
 
