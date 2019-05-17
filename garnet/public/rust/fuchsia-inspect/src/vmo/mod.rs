@@ -61,17 +61,20 @@ pub struct Node {
 /// Root API for inspect. Used to create the VMO and get the root node.
 impl Inspector {
     /// Create a new Inspect VMO object with the given maximum size.
-    pub fn new(max_size: usize, name: &str) -> Result<Self, Error> {
+    pub fn new(max_size: usize) -> Result<Self, Error> {
         let (mapping, _) = Mapping::allocate(max_size)
             .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
         let heap = Heap::new(Rc::new(mapping))?;
         let state = State::create(heap)?;
-        let root_node =
-            Node::allocate(Arc::new(Mutex::new(state)), name, constants::ROOT_PARENT_INDEX)?;
+        let root_node = Node::allocate(
+            Arc::new(Mutex::new(state)),
+            constants::ROOT_NAME,
+            constants::ROOT_PARENT_INDEX,
+        )?;
         Ok(Inspector { root_node })
     }
 
-    /// Create the root of the VMO object with the given |name|.
+    /// Get the root of the VMO object.
     pub fn root(&self) -> &Node {
         &self.root_node
     }
@@ -248,6 +251,13 @@ mod tests {
     use mapped_vmo::Mapping;
     use num_traits::ToPrimitive;
     use std::rc::Rc;
+
+    #[test]
+    fn inspector() {
+        let inspector = Inspector::new(4096).unwrap();
+        let root_name_block = inspector.root().state.lock().heap.get_block(2).unwrap();
+        assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
+    }
 
     #[test]
     fn node() {

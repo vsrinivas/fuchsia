@@ -34,3 +34,6 @@ pub const MAX_ORDER_SHIFT: usize = MIN_ORDER_SHIFT + NUM_ORDERS - 1;
 
 /// The size for order NUM_ORDERS-1 (the maximum order)
 pub const MAX_ORDER_SIZE: usize = 1 << MAX_ORDER_SHIFT;
+
+/// Name of the root node
+pub const ROOT_NAME: &str = "root";
