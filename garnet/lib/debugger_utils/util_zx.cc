@@ -90,7 +90,7 @@ std::string ExceptionNameAsString(uint32_t type) {
   if (name) {
     return std::string(name);
   }
-  return fxl::StringPrintf("UNKNOWN(%u)", type);
+  return fxl::StringPrintf("UNKNOWN(0x%x)", type);
 }
 
 bool ReadString(const ByteBlock& m, zx_vaddr_t vaddr, char* ptr, size_t max) {

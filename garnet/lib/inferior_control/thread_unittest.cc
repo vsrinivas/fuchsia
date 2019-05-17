@@ -28,7 +28,8 @@ class TryNextThreadTest : public TestServer {
   void OnArchitecturalException(
       Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
       const zx_exception_context_t& context) {
-    FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
+    FXL_LOG(INFO) << "Got exception "
+                  << debugger_utils::ExceptionNameAsString(type);
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       got_sw_breakpoint_ = true;
       thread->TryNext(eport);
@@ -93,7 +94,8 @@ class SuspendResumeThreadTest : public TestServer {
   void OnArchitecturalException(
       Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
       const zx_exception_context_t& context) override {
-    FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
+    FXL_LOG(INFO) << "Got exception "
+                  << debugger_utils::ExceptionNameAsString(type);
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       FXL_CHECK(thread->id() == main_thread_id_) << thread->id();
       got_sw_breakpoint_ = true;
@@ -187,7 +189,8 @@ class ResumeAfterSwBreakThreadTest : public TestServer {
   void OnArchitecturalException(
       Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
       const zx_exception_context_t& context) {
-    FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
+    FXL_LOG(INFO) << "Got exception "
+                  << debugger_utils::ExceptionNameAsString(type);
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       got_sw_breakpoint_ = true;
       resume_after_break_succeeded_ =

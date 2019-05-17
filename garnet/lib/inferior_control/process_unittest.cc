@@ -173,7 +173,8 @@ class LdsoBreakpointTest : public TestServer {
       Process* process, Thread* thread, zx_handle_t eport,
       const zx_excp_type_t type, const zx_exception_context_t& context)
       override {
-    FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
+    FXL_LOG(INFO) << "Got exception "
+                  << debugger_utils::ExceptionNameAsString(type);
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       // The shared libraries should have been loaded by now.
       if (process->DsosLoaded()) {
