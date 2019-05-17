@@ -23,12 +23,18 @@
 #include <zircon/time.h>
 
 #include "device_id.h"
+#include "debuglog.h"
+#include "netboot.h"
+#include "tftp.h"
 
 #define FILTER_IPV6 1
 
-bool netbootloader = false;
+static bool g_netbootloader = false;
 
-const char* nodename = "zircon";
+static const char* g_nodename = "zircon";
+
+bool netbootloader() { return g_netbootloader; }
+const char* nodename() { return g_nodename; }
 
 void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport) {
@@ -63,8 +69,9 @@ bool netifc_send_pending() {
 
 void update_timeouts() {
     zx_time_t now = zx_clock_get_monotonic();
-    zx_time_t next_timeout =
-        (debuglog_next_timeout < tftp_next_timeout) ? debuglog_next_timeout : tftp_next_timeout;
+    zx_time_t next_timeout = (debuglog_next_timeout() < tftp_next_timeout())
+                                 ? debuglog_next_timeout()
+                                 : tftp_next_timeout();
     if (next_timeout != ZX_TIME_INFINITE) {
         uint32_t ms = static_cast<uint32_t>(
             (next_timeout < now) ? 0 : (zx_time_sub_time(next_timeout, now)) / ZX_MSEC(1));
@@ -96,7 +103,7 @@ int main(int argc, char** argv) {
     bool should_advertise = false;
     while (argc > 1) {
         if (!strncmp(argv[1], "--netboot", 9)) {
-            netbootloader = true;
+            g_netbootloader = true;
         } else if (!strncmp(argv[1], "--advertise", 11)) {
             should_advertise = true;
         } else if (!strncmp(argv[1], "--interface", 11)) {
@@ -111,7 +118,7 @@ int main(int argc, char** argv) {
         } else if (!strncmp(argv[1], "--nodename", 10)) {
             print_nodename_and_exit = true;
         } else {
-            nodename = argv[1];
+            g_nodename = argv[1];
             nodename_provided = true;
         }
         argv++;
@@ -131,25 +138,25 @@ int main(int argc, char** argv) {
         if (!nodename_provided) {
             netifc_get_info(mac, &mtu);
             device_id_get(mac, device_id);
-            nodename = device_id;
+            g_nodename = device_id;
             if (print_nodename_and_exit) {
-                printf("%s\n", nodename);
+                printf("%s\n", g_nodename);
                 return 0;
             }
         }
 
-        if (netbootloader) {
+        if (g_netbootloader) {
             printf("%szedboot: version: %s\n\n", zedboot_banner, BOOTLOADER_VERSION);
         }
 
-        printf("netsvc: nodename='%s'\n", nodename);
+        printf("netsvc: nodename='%s'\n", g_nodename);
         if (!should_advertise) {
             printf("netsvc: will not advertise\n");
         }
         printf("netsvc: start\n");
         for (;;) {
-            if (netbootloader && should_advertise) {
-                netboot_advertise(nodename);
+            if (g_netbootloader && should_advertise) {
+                netboot_advertise(g_nodename);
             }
 
             update_timeouts();
@@ -159,10 +166,10 @@ int main(int argc, char** argv) {
                 break;
             }
             zx_time_t now = zx_clock_get_monotonic();
-            if (now > debuglog_next_timeout) {
+            if (now > debuglog_next_timeout()) {
                 debuglog_timeout_expired();
             }
-            if (now > tftp_next_timeout) {
+            if (now > tftp_next_timeout()) {
                 tftp_timeout_expired();
             }
         }

@@ -2,19 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <errno.h>
-#include <fcntl.h>
+#include "tftp.h"
+
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
-#include <threads.h>
 #include <unistd.h>
-
-#include <atomic>
 
 #include <inet6/inet6.h>
 #include <lib/fdio/spawn.h>
-#include <lib/sync/completion.h>
 #include <tftp/tftp.h>
 #include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
@@ -23,48 +19,17 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 
-#include "board-name.h"
+#include "file-api.h"
 #include "netsvc.h"
 
 #define SCRATCHSZ 2048
 
-#define TFTP_TIMEOUT_SECS 1
+extern bool xfer_active;
 
-#define NB_IMAGE_PREFIX_LEN (strlen(NB_IMAGE_PREFIX))
-#define NB_FILENAME_PREFIX_LEN (strlen(NB_FILENAME_PREFIX))
+// Visible for test injection.
+netsvc::FileApiInterface* g_file_api = nullptr;
 
-// Identifies what the file being streamed over TFTP should be
-// used for.
-enum netfile_type_t {
-    netboot, // A bootfs file
-    paver,   // A disk image which should be paved to disk
-    board_name,  // A file containing the board name.
-                 // Expected to return error if it doesn't match the current board name.
-};
-
-struct file_info_t {
-    bool is_write;
-    char filename[PATH_MAX + 1];
-    netfile_type_t type;
-
-    // Only valid when type == netfile_type_t::netboot.
-    nbfile* netboot_file;
-
-    // Only valid when type == netfile_type_t::paver.
-    struct {
-        int fd;      // Pipe to paver process
-        size_t size; // Total size of file
-        zx_handle_t process;
-
-        // Buffer used for stashing data from tftp until it can be written out to the paver
-        zx_handle_t buffer_handle;
-        uint8_t* buffer;
-        std::atomic<unsigned int> buf_refcount;
-        std::atomic<size_t> offset; // Buffer write offset (read offset is stored locally)
-        thrd_t buf_copy_thrd;
-        sync_completion_t data_ready; // Allows read thread to block on buffer writes
-    } paver;
-};
+namespace {
 
 struct transport_info_t {
     ip6_addr_t dest_addr;
@@ -72,385 +37,41 @@ struct transport_info_t {
     uint32_t timeout_ms;
 };
 
-static char tftp_session_scratch[SCRATCHSZ];
+char tftp_session_scratch[SCRATCHSZ];
 char tftp_out_scratch[SCRATCHSZ];
 
-static size_t last_msg_size = 0;
-static tftp_session* session = NULL;
-static file_info_t file_info;
-static transport_info_t transport_info;
+size_t last_msg_size = 0;
+tftp_session* session = nullptr;
+transport_info_t transport_info;
 
-std::atomic<bool> paving_in_progress = false;
-std::atomic<int> paver_exit_code = 0;
-zx_time_t tftp_next_timeout = ZX_TIME_INFINITE;
+zx_time_t g_tftp_next_timeout = ZX_TIME_INFINITE;
 
-static ssize_t file_open_read(const char* filename, void* cookie) {
-    // Make sure all in-progress paving options have completed
-    if (atomic_load(&paving_in_progress) == true) {
-        return TFTP_ERR_SHOULD_WAIT;
-    }
-    if (std::atomic_load(&paver_exit_code) != 0) {
-        printf("paver exited with error: %d\n", std::atomic_load(&paver_exit_code));
-        std::atomic_store(&paver_exit_code, 0);
-        return TFTP_ERR_IO;
-    }
-    file_info_t* file_info = reinterpret_cast<file_info_t*>(cookie);
-    file_info->is_write = false;
-    strncpy(file_info->filename, filename, PATH_MAX);
-    file_info->filename[PATH_MAX] = '\0';
-    file_info->netboot_file = NULL;
-    size_t file_size;
-    if (netfile_open(filename, O_RDONLY, &file_size) == 0) {
-        return static_cast<ssize_t>(file_size);
-    }
-    return TFTP_ERR_NOT_FOUND;
+ssize_t file_open_read(const char* filename, void* cookie) {
+    auto* file_api = reinterpret_cast<netsvc::FileApiInterface*>(cookie);
+    return file_api->OpenRead(filename);
 }
 
-static zx_status_t alloc_paver_buffer(file_info_t* file_info, size_t size) {
-    zx_status_t status;
-    status = zx_vmo_create(size, 0, &file_info->paver.buffer_handle);
-    if (status != ZX_OK) {
-        printf("netsvc: unable to allocate buffer VMO\n");
-        return status;
-    }
-    zx_object_set_property(file_info->paver.buffer_handle, ZX_PROP_NAME, "paver", 5);
-    uintptr_t buffer;
-    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
-                         file_info->paver.buffer_handle, 0, size, &buffer);
-    if (status != ZX_OK) {
-        printf("netsvc: unable to map buffer\n");
-        zx_handle_close(file_info->paver.buffer_handle);
-        return status;
-    }
-    file_info->paver.buffer = reinterpret_cast<uint8_t*>(buffer);
-    return ZX_OK;
+tftp_status file_open_write(const char* filename, size_t size, void* cookie) {
+    auto* file_api = reinterpret_cast<netsvc::FileApiInterface*>(cookie);
+    return file_api->OpenWrite(filename, size);
 }
 
-static zx_status_t dealloc_paver_buffer(file_info_t* file_info) {
-    zx_status_t status =
-        zx_vmar_unmap(zx_vmar_root_self(), reinterpret_cast<uintptr_t>(file_info->paver.buffer),
-                      file_info->paver.size);
-    if (status != ZX_OK) {
-        printf("netsvc: failed to unmap paver buffer: %s\n", zx_status_get_string(status));
-        goto done;
-    }
-
-    status = zx_handle_close(file_info->paver.buffer_handle);
-    if (status != ZX_OK) {
-        printf("netsvc: failed to close paver buffer handle: %s\n", zx_status_get_string(status));
-    }
-
-done:
-    file_info->paver.buffer = NULL;
-    return status;
+tftp_status file_read(void* data, size_t* length, off_t offset, void* cookie) {
+    auto* file_api = reinterpret_cast<netsvc::FileApiInterface*>(cookie);
+    return file_api->Read(data, length, offset);
 }
 
-static int drain_pipe(void* arg) {
-    char buf[4096];
-    int fd = static_cast<int>(reinterpret_cast<intptr_t>(arg));
-
-    ssize_t sz;
-    while ((sz = read(fd, buf, sizeof(buf) - 1)) > 0) {
-        // ensure null termination
-        buf[sz] = '\0';
-        printf("%s", buf);
-    }
-
-    close(fd);
-    return static_cast<int>(sz);
+tftp_status file_write(const void* data, size_t* length, off_t offset, void* cookie) {
+    auto* file_api = reinterpret_cast<netsvc::FileApiInterface*>(cookie);
+    return file_api->Write(data, length, offset);
 }
 
-// Pushes all data from the paver buffer (filled by netsvc) into the paver input pipe. When
-// there's no data to copy, blocks on data_ready until more data is written into the buffer.
-static int paver_copy_buffer(void* arg) {
-    file_info_t* file_info = reinterpret_cast<file_info_t*>(arg);
-    size_t read_ndx = 0;
-    int result = 0;
-    zx_time_t last_reported = zx_clock_get_monotonic();
-    while (read_ndx < file_info->paver.size) {
-        sync_completion_reset(&file_info->paver.data_ready);
-        size_t write_ndx = atomic_load(&file_info->paver.offset);
-        if (write_ndx == read_ndx) {
-            // Wait for more data to be written -- we are allowed up to 3 tftp timeouts before
-            // a connection is dropped, so we should wait at least that long before giving up.
-            if (sync_completion_wait(&file_info->paver.data_ready, ZX_SEC(5 * TFTP_TIMEOUT_SECS)) ==
-                ZX_OK) {
-                continue;
-            }
-            printf("netsvc: timed out while waiting for data in paver-copy thread\n");
-            result = TFTP_ERR_TIMED_OUT;
-            goto done;
-        }
-        while (read_ndx < write_ndx) {
-            ssize_t r = write(file_info->paver.fd, &file_info->paver.buffer[read_ndx],
-                              write_ndx - read_ndx);
-            if (r <= 0) {
-                printf("netsvc: couldn't write to paver fd: %ld\n", r);
-                result = TFTP_ERR_IO;
-                goto done;
-            }
-            read_ndx += r;
-            zx_time_t curr_time = zx_clock_get_monotonic();
-            if (zx_time_sub_time(curr_time, last_reported) >= ZX_SEC(1)) {
-                float complete =
-                    (static_cast<float>(read_ndx) / static_cast<float>(file_info->paver.size)) *
-                    100.f;
-                printf("netsvc: paver write progress %0.1f%%\n", complete);
-                last_reported = curr_time;
-            }
-        }
-    }
-done:
-    close(file_info->paver.fd);
-
-    unsigned int refcount = std::atomic_fetch_sub(&file_info->paver.buf_refcount, 1u);
-    if (refcount == 1) {
-        dealloc_paver_buffer(file_info);
-    }
-
-    // wait for the paver to complete, as executing the paver concurrently has
-    // undefined behavior.
-    zx_signals_t signals;
-    zx_object_wait_one(file_info->paver.process, ZX_TASK_TERMINATED, zx_deadline_after(ZX_SEC(10)),
-                       &signals);
-
-    zx_info_process_t proc_info;
-    zx_object_get_info(file_info->paver.process, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info),
-                       NULL, NULL);
-
-    std::atomic_store(&paver_exit_code, static_cast<int>(proc_info.return_code));
-    zx_handle_close(file_info->paver.process);
-
-    if (result != 0) {
-        printf("netsvc: copy exited prematurely (%d): expect paver errors\n", result);
-    }
-
-    // Extra protection against double-close.
-    file_info->filename[0] = '\0';
-    atomic_store(&paving_in_progress, false);
-    return result;
+void file_close(void* cookie) {
+    auto* file_api = reinterpret_cast<netsvc::FileApiInterface*>(cookie);
+    return file_api->Close();
 }
 
-static tftp_status paver_open_write(const char* filename, size_t size, file_info_t* file_info) {
-    // paving an image to disk
-    const char* argv[] = {"/boot/bin/install-disk-image", NULL, NULL, NULL, NULL};
-
-    if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_BOARD_NAME_HOST_FILENAME)) {
-        printf("netsvc: Running board name validation\n");
-        file_info->type = board_name;
-        return TFTP_NO_ERROR;
-    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_FVM_HOST_FILENAME)) {
-        printf("netsvc: Running FVM Paver\n");
-        argv[1] = "install-fvm";
-    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_BOOTLOADER_HOST_FILENAME)) {
-        printf("netsvc: Running BOOTLOADER Paver\n");
-        argv[1] = "install-bootloader";
-    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONA_HOST_FILENAME)) {
-        printf("netsvc: Running ZIRCON-A Paver\n");
-        argv[1] = "install-zircona";
-    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONB_HOST_FILENAME)) {
-        printf("netsvc: Running ZIRCON-B Paver\n");
-        argv[1] = "install-zirconb";
-    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONR_HOST_FILENAME)) {
-        printf("netsvc: Running ZIRCON-R Paver\n");
-        argv[1] = "install-zirconr";
-    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_VBMETAA_HOST_FILENAME)) {
-        printf("netsvc: Running VBMETA-A Paver\n");
-        argv[1] = "install-vbmetaa";
-    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_VBMETAB_HOST_FILENAME)) {
-        printf("netsvc: Running VBMETA-B Paver\n");
-        argv[1] = "install-vbmetab";
-    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_SSHAUTH_HOST_FILENAME)) {
-        printf("netsvc: Installing SSH authorized_keys\n");
-        argv[1] = "install-data-file";
-        argv[2] = "--path";
-        argv[3] = "ssh/authorized_keys";
-    } else {
-        fprintf(stderr, "netsvc: Unknown Paver\n");
-        return TFTP_ERR_IO;
-    }
-
-    int fds[2];
-    if (pipe(fds)) {
-        return TFTP_ERR_IO;
-    }
-
-    int logfds[2];
-    if (pipe(logfds)) {
-        close(fds[0]);
-        close(fds[1]);
-        return TFTP_ERR_IO;
-    }
-
-    fdio_spawn_action_t actions[] = {
-        {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = "paver"}},
-        {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-         .fd = {.local_fd = fds[0], .target_fd = STDIN_FILENO}},
-        {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-         .fd = {.local_fd = logfds[1], .target_fd = STDERR_FILENO}},
-    };
-
-    zx_status_t status =
-        fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv, NULL,
-                       countof(actions), actions, &file_info->paver.process, NULL);
-
-    if (status != ZX_OK) {
-        printf("netsvc: tftp couldn't launch paver\n");
-        goto err_close_fds;
-    }
-
-    thrd_t log_thrd;
-    if ((thrd_create(&log_thrd, drain_pipe,
-                     reinterpret_cast<void*>(static_cast<uintptr_t>(logfds[0])))) == thrd_success) {
-        thrd_detach(log_thrd);
-    } else {
-        printf("netsvc: couldn't create paver log message redirection thread\n");
-        goto err_close_fds;
-    }
-
-    if ((status = alloc_paver_buffer(file_info, size)) != ZX_OK) {
-        goto err_close_fds;
-    }
-
-    file_info->type = paver;
-    file_info->paver.fd = fds[1];
-    file_info->paver.size = size;
-    // Both the netsvc thread and the paver copy thread access the buffer, and either
-    // may be done with it first so we use a refcount to decide when to deallocate it
-    std::atomic_store(&file_info->paver.buf_refcount, 2u);
-    std::atomic_store(&file_info->paver.offset, 0ul);
-    std::atomic_store(&paver_exit_code, 0);
-    std::atomic_store(&paving_in_progress, true);
-
-    if ((thrd_create(&file_info->paver.buf_copy_thrd, paver_copy_buffer,
-                     reinterpret_cast<void*>(file_info))) != thrd_success) {
-        printf("netsvc: unable to launch buffer copy thread\n");
-        status = ZX_ERR_NO_RESOURCES;
-        goto dealloc_buffer;
-    }
-    thrd_detach(file_info->paver.buf_copy_thrd);
-
-    return TFTP_NO_ERROR;
-
-dealloc_buffer:
-    dealloc_paver_buffer(file_info);
-
-err_close_fds:
-    close(fds[1]);
-    close(logfds[0]);
-    return status;
-}
-
-static tftp_status file_open_write(const char* filename, size_t size, void* cookie) {
-    // Make sure all in-progress paving options have completed
-    if (atomic_load(&paving_in_progress) == true) {
-        return TFTP_ERR_SHOULD_WAIT;
-    }
-    if (atomic_load(&paver_exit_code) != 0) {
-        atomic_store(&paver_exit_code, 0);
-        return TFTP_ERR_IO;
-    }
-
-    file_info_t* file_info = reinterpret_cast<file_info_t*>(cookie);
-    file_info->is_write = true;
-    strncpy(file_info->filename, filename, PATH_MAX);
-    file_info->filename[PATH_MAX] = '\0';
-
-    if (netbootloader && !strncmp(filename, NB_FILENAME_PREFIX, NB_FILENAME_PREFIX_LEN)) {
-        // netboot
-        file_info->type = netboot;
-        file_info->netboot_file = netboot_get_buffer(filename, size);
-        if (file_info->netboot_file != NULL) {
-            return TFTP_NO_ERROR;
-        }
-    } else if (netbootloader & !strncmp(filename, NB_IMAGE_PREFIX, NB_IMAGE_PREFIX_LEN)) {
-        // paver
-        tftp_status status = paver_open_write(filename, size, file_info);
-        if (status != TFTP_NO_ERROR) {
-            file_info->filename[0] = '\0';
-        }
-        return status;
-    } else {
-        // netcp
-        if (netfile_open(filename, O_WRONLY, NULL) == 0) {
-            return TFTP_NO_ERROR;
-        }
-    }
-    return TFTP_ERR_INVALID_ARGS;
-}
-
-static tftp_status file_read(void* data, size_t* length, off_t offset, void* cookie) {
-    if (length == NULL) {
-        return TFTP_ERR_INVALID_ARGS;
-    }
-    ssize_t read_len = netfile_offset_read(data, offset, *length);
-    if (read_len < 0) {
-        return TFTP_ERR_IO;
-    }
-    *length = static_cast<size_t>(read_len);
-    return TFTP_NO_ERROR;
-}
-
-static tftp_status file_write(const void* data, size_t* length, off_t offset, void* cookie) {
-    if (length == NULL) {
-        return TFTP_ERR_INVALID_ARGS;
-    }
-    file_info_t* file_info = reinterpret_cast<file_info_t*>(cookie);
-    if (file_info->type == netboot && file_info->netboot_file != NULL) {
-        nbfile* nb_file = file_info->netboot_file;
-        if ((static_cast<size_t>(offset) > nb_file->size) || (offset + *length) > nb_file->size) {
-            return TFTP_ERR_INVALID_ARGS;
-        }
-        memcpy(nb_file->data + offset, data, *length);
-        nb_file->offset = offset + *length;
-        return TFTP_NO_ERROR;
-    } else if (file_info->type == paver) {
-        if (!atomic_load(&paving_in_progress)) {
-            printf("netsvc: paver exited prematurely with %d\n", atomic_load(&paver_exit_code));
-            atomic_store(&paver_exit_code, 0);
-            return TFTP_ERR_IO;
-        }
-
-        if ((static_cast<size_t>(offset) > file_info->paver.size) ||
-            (offset + *length) > file_info->paver.size) {
-            return TFTP_ERR_INVALID_ARGS;
-        }
-        memcpy(&file_info->paver.buffer[offset], data, *length);
-        size_t new_offset = offset + *length;
-        atomic_store(&file_info->paver.offset, new_offset);
-        // Wake the paver thread, if it is waiting for data
-        sync_completion_signal(&file_info->paver.data_ready);
-        return TFTP_NO_ERROR;
-    } else if (file_info->type == board_name) {
-        return check_board_name((const char*)data, *length)
-                   ? TFTP_NO_ERROR
-                   : TFTP_ERR_BAD_STATE;
-    } else {
-        ssize_t write_result =
-            netfile_offset_write(reinterpret_cast<const char*>(data), offset, *length);
-        if (static_cast<size_t>(write_result) == *length) {
-            return TFTP_NO_ERROR;
-        }
-        if (write_result == -EBADF) {
-            return TFTP_ERR_BAD_STATE;
-        }
-        return TFTP_ERR_IO;
-    }
-}
-
-static void file_close(void* cookie) {
-    file_info_t* file_info = reinterpret_cast<file_info_t*>(cookie);
-    if (file_info->type == netboot && file_info->netboot_file == NULL) {
-        netfile_close();
-    } else if (file_info->type == paver) {
-        unsigned int refcount = std::atomic_fetch_sub(&file_info->paver.buf_refcount, 1u);
-        if (refcount == 1) {
-            dealloc_paver_buffer(file_info);
-        }
-    }
-}
-
-static tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
+tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
     transport_info_t* transport_info = reinterpret_cast<transport_info_t*>(transport_cookie);
     zx_status_t status = udp6_send(data, len, &transport_info->dest_addr, transport_info->dest_port,
                                    NB_TFTP_OUTGOING_PORT, true);
@@ -461,26 +82,28 @@ static tftp_status transport_send(void* data, size_t len, void* transport_cookie
     // The timeout is relative to sending instead of receiving a packet, since there are some
     // received packets we want to ignore (duplicate ACKs).
     if (transport_info->timeout_ms != 0) {
-        tftp_next_timeout = zx_deadline_after(ZX_MSEC(transport_info->timeout_ms));
+        g_tftp_next_timeout = zx_deadline_after(ZX_MSEC(transport_info->timeout_ms));
         update_timeouts();
     }
     return TFTP_NO_ERROR;
 }
 
-static int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
+int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
     transport_info_t* transport_info = reinterpret_cast<transport_info_t*>(transport_cookie);
     transport_info->timeout_ms = timeout_ms;
     return 0;
 }
 
-extern bool xfer_active;
-
-static void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
+void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
     int ret = tftp_init(&session, tftp_session_scratch, sizeof(tftp_session_scratch));
     if (ret != TFTP_NO_ERROR) {
         printf("netsvc: failed to initiate tftp session\n");
-        session = NULL;
+        session = nullptr;
         return;
+    }
+
+    if (g_file_api == nullptr) {
+        g_file_api = new netsvc::FileApi(netbootloader());
     }
 
     // Initialize file interface
@@ -498,26 +121,35 @@ static void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
     xfer_active = true;
 }
 
-static void end_connection() {
-    session = NULL;
-    tftp_next_timeout = ZX_TIME_INFINITE;
+void end_connection() {
+    session = nullptr;
+    g_tftp_next_timeout = ZX_TIME_INFINITE;
     xfer_active = false;
 }
+
+void report_metrics() {
+    char buf[256];
+    if (session && tftp_get_metrics(session, buf, sizeof(buf)) == TFTP_NO_ERROR) {
+        printf("netsvc: metrics: %s\n", buf);
+    }
+}
+
+} // namespace
+
+zx_time_t tftp_next_timeout() { return g_tftp_next_timeout; }
 
 void tftp_timeout_expired() {
     tftp_status result =
         tftp_timeout(session, tftp_out_scratch, &last_msg_size, sizeof(tftp_out_scratch),
-                     &transport_info.timeout_ms, &file_info);
+                     &transport_info.timeout_ms, g_file_api);
     if (result == TFTP_ERR_TIMED_OUT) {
         printf("netsvc: excessive timeouts, dropping tftp connection\n");
-        file_close(&file_info);
+        g_file_api->Abort();
         end_connection();
-        netfile_abort_write();
     } else if (result < 0) {
         printf("netsvc: failed to generate timeout response, dropping tftp connection\n");
-        file_close(&file_info);
+        g_file_api->Abort();
         end_connection();
-        netfile_abort_write();
     } else {
         if (last_msg_size > 0) {
             tftp_status send_result =
@@ -526,13 +158,6 @@ void tftp_timeout_expired() {
                 printf("netsvc: failed to send tftp timeout response (err = %d)\n", send_result);
             }
         }
-    }
-}
-
-static void report_metrics() {
-    char buf[256];
-    if (session && tftp_get_metrics(session, buf, sizeof(buf)) == TFTP_NO_ERROR) {
-        printf("netsvc: metrics: %s\n", buf);
     }
 }
 
@@ -560,21 +185,20 @@ void tftp_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                                       .outbuf_sz = &last_msg_size,
                                       .err_msg = err_msg,
                                       .err_msg_sz = sizeof(err_msg)};
-    tftp_status status = tftp_handle_msg(session, &transport_info, &file_info, &handler_opts);
+    tftp_status status = tftp_handle_msg(session, &transport_info, g_file_api, &handler_opts);
     switch (status) {
     case TFTP_NO_ERROR:
         return;
     case TFTP_TRANSFER_COMPLETED:
-        printf("netsvc: tftp %s of file %s completed\n", file_info.is_write ? "write" : "read",
-               file_info.filename);
+        printf("netsvc: tftp %s of file %s completed\n", g_file_api->is_write() ? "write" : "read",
+               g_file_api->filename());
         report_metrics();
         break;
     case TFTP_ERR_SHOULD_WAIT:
         break;
     default:
         printf("netsvc: %s\n", err_msg);
-        netfile_abort_write();
-        file_close(&file_info);
+        g_file_api->Abort();
         report_metrics();
         break;
     }
@@ -588,7 +212,7 @@ bool tftp_has_pending() {
 void tftp_send_next() {
     last_msg_size = sizeof(tftp_out_scratch);
     tftp_prepare_data(session, tftp_out_scratch, &last_msg_size, &transport_info.timeout_ms,
-                      &file_info);
+                      g_file_api);
     if (last_msg_size) {
         transport_send(tftp_out_scratch, last_msg_size, &transport_info);
     }

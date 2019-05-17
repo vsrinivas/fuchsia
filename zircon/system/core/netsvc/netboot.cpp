@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "netsvc.h"
-#include "zbi.h"
+#include "netboot.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -25,6 +24,11 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include "netsvc.h"
+#include "netcp.h"
+#include "paver.h"
+#include "zbi.h"
 
 static uint32_t last_cookie = 0;
 static uint32_t last_cmd = 0;
@@ -155,9 +159,14 @@ static void nb_open(const char* filename, uint32_t cookie, uint32_t arg, const i
     m.magic = NB_MAGIC;
     m.cookie = cookie;
     m.cmd = NB_ACK;
-    m.arg = netfile_open(filename, arg, NULL);
+    m.arg = netcp_open(filename, arg, NULL);
     udp6_send(&m, sizeof(m), saddr, sport, dport, false);
 }
+
+struct netfilemsg {
+    nbmsg hdr;
+    uint8_t data[1024];
+};
 
 static void nb_read(uint32_t cookie, uint32_t arg, const ip6_addr_t* saddr, uint16_t sport,
                     uint16_t dport) {
@@ -182,7 +191,7 @@ static void nb_read(uint32_t cookie, uint32_t arg, const ip6_addr_t* saddr, uint
             msg_size = sizeof(m.hdr);
         }
     } else if (arg == 0 || arg == blocknum + 1) {
-        ssize_t result = netfile_read(&m.data, sizeof(m.data));
+        ssize_t result = netcp_read(&m.data, sizeof(m.data));
         if (result < 0) {
             m.hdr.arg = static_cast<uint32_t>(result);
             msg_size = sizeof(m.hdr);
@@ -218,7 +227,7 @@ static void nb_write(const char* data, size_t len, uint32_t cookie, uint32_t arg
             m.arg = -EIO;
         }
     } else if (arg == 0 || arg == blocknum + 1) {
-        ssize_t result = netfile_write(data, len);
+        ssize_t result = netcp_write(data, len);
         m.arg = static_cast<uint32_t>(result > 0 ? 0 : result);
         blocknum = arg;
     }
@@ -231,7 +240,7 @@ static void nb_close(uint32_t cookie, const ip6_addr_t* saddr, uint16_t sport, u
     m.magic = NB_MAGIC;
     m.cookie = cookie;
     m.cmd = NB_ACK;
-    m.arg = netfile_close();
+    m.arg = netcp_close();
     udp6_send(&m, sizeof(m), saddr, sport, dport, false);
 }
 
@@ -391,12 +400,12 @@ static void bootloader_recv(void* data, size_t len, const ip6_addr_t* daddr, uin
         break;
     case NB_BOOT:
         // Wait for the paver to complete
-        while (atomic_load(&paving_in_progress)) {
+        while (netsvc::Paver::Get()->InProgress()) {
             thrd_yield();
         }
-        if (atomic_load(&paver_exit_code) != 0) {
-            printf("netboot: detected paver error: %d\n", atomic_load(&paver_exit_code));
-            atomic_store(&paver_exit_code, 0);
+        if (netsvc::Paver::Get()->exit_code() != 0) {
+            printf("netboot: detected paver error: %d\n", netsvc::Paver::Get()->exit_code());
+            netsvc::Paver::Get()->reset_exit_code();
             break;
         }
         do_boot = true;
@@ -404,12 +413,12 @@ static void bootloader_recv(void* data, size_t len, const ip6_addr_t* daddr, uin
         break;
     case NB_REBOOT:
         // Wait for the paver to complete
-        while (atomic_load(&paving_in_progress)) {
+        while (netsvc::Paver::Get()->InProgress()) {
             thrd_yield();
         }
-        if (atomic_load(&paver_exit_code) != 0) {
-            printf("netboot: detected paver error: %d\n", atomic_load(&paver_exit_code));
-            atomic_store(&paver_exit_code, 0);
+        if (netsvc::Paver::Get()->exit_code() != 0) {
+            printf("netboot: detected paver error: %d\n", netsvc::Paver::Get()->exit_code());
+            netsvc::Paver::Get()->reset_exit_code();
             break;
         }
         do_reboot = true;
@@ -468,17 +477,17 @@ void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr
     switch (msg->cmd) {
     case NB_QUERY: {
         if (strcmp(reinterpret_cast<char*>(msg->data), "*") &&
-            strcmp(reinterpret_cast<char*>(msg->data), nodename)) {
+            strcmp(reinterpret_cast<char*>(msg->data), nodename())) {
             break;
         }
-        size_t dlen = strlen(nodename) + 1;
+        size_t dlen = strlen(nodename()) + 1;
         char buf[1024 + sizeof(nbmsg)];
         if ((dlen + sizeof(nbmsg)) > sizeof(buf)) {
             return;
         }
         msg->cmd = NB_ACK;
         memcpy(buf, msg, sizeof(nbmsg));
-        memcpy(buf + sizeof(nbmsg), nodename, dlen);
+        memcpy(buf + sizeof(nbmsg), nodename(), dlen);
         udp6_send(buf, sizeof(nbmsg) + dlen, saddr, sport, dport, false);
         break;
     }
@@ -505,7 +514,7 @@ void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr
     default:
         // If the bootloader is enabled, then let it have a crack at the
         // incoming packets as well.
-        if (netbootloader) {
+        if (netbootloader()) {
             bootloader_recv(data, len + sizeof(nbmsg), daddr, dport, saddr, sport);
         }
     }

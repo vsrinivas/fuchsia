@@ -19,7 +19,6 @@
 #include <gpt/gpt.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/fdio.h>
-#include <lib/zx/channel.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -30,12 +29,12 @@ fbl::unique_fd FindGpt() {
     constexpr char kBlockDevPath[] = "/dev/class/block/";
     fbl::unique_fd d_fd(open(kBlockDevPath, O_RDONLY));
     if (!d_fd) {
-        printf("netsvc: Cannot inspect block devices\n");
+        fprintf(stderr, "netsvc: Cannot inspect block devices\n");
         return fbl::unique_fd();
     }
     DIR* d = fdopendir(d_fd.release());
     if (d == nullptr) {
-        printf("netsvc: Cannot inspect block devices\n");
+        fprintf(stderr, "netsvc: Cannot inspect block devices\n");
         return fbl::unique_fd();
     }
     const auto closer = fbl::MakeAutoCall([&]() { closedir(d); });
@@ -95,14 +94,15 @@ static bool IsChromebook() {
         status = io_status;
     }
     if (status != ZX_OK) {
-        printf("netsvc: Could not acquire GPT block info: %s\n", zx_status_get_string(status));
+        fprintf(stderr, "netsvc: Could not acquire GPT block info: %s\n",
+                zx_status_get_string(status));
         return false;
     }
     fbl::unique_ptr<gpt::GptDevice> gpt;
     status = gpt::GptDevice::Create(gpt_fd.get(), block_info.block_size, block_info.block_count,
                                     &gpt);
     if (status != ZX_OK) {
-        printf("netsvc: Failed to get GPT info: %s\n", zx_status_get_string(status));
+        fprintf(stderr, "netsvc: Failed to get GPT info: %s\n", zx_status_get_string(status));
         return false;
     }
     return is_cros(gpt.get());
@@ -110,24 +110,18 @@ static bool IsChromebook() {
 
 } // namespace
 
-bool check_board_name(const char* name, size_t length) {
-    length = std::min(length, ZX_MAX_NAME_LEN);
-
-    constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
-    fbl::unique_fd sysinfo(open(kSysInfoPath, O_RDWR));
+bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length) {
     if (!sysinfo) {
         return false;
     }
-    zx::channel channel;
-    if (fdio_get_service_handle(sysinfo.release(), channel.reset_and_get_address()) != ZX_OK) {
-        return false;
-    }
+
+    length = std::min(length, ZX_MAX_NAME_LEN);
 
     char real_board_name[ZX_MAX_NAME_LEN] = {};
     zx_status_t status;
     size_t actual_size;
     zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(
-        channel.get(), &status, real_board_name, sizeof(real_board_name), &actual_size);
+        sysinfo.get(), &status, real_board_name, sizeof(real_board_name), &actual_size);
     if (fidl_status != ZX_OK || status != ZX_OK) {
         return false;
     }

@@ -6,14 +6,9 @@ import("$zx/public/gn/config/product_parameters.gni")
 
 executable("netsvc") {
   sources = [
-    "board-name.cpp",
     "debuglog.cpp",
     "device_id.cpp",
-    "netboot.cpp",
-    "netfile.cpp",
     "netsvc.cpp",
-    "tftp.cpp",
-    "zbi.cpp",
   ]
   if (enable_netsvc_debugging_features) {
     sources += [
@@ -25,27 +20,71 @@ executable("netsvc") {
     ]
   }
   deps = [
-    "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-device-manager:c",
-    "$zx/system/fidl/fuchsia-hardware-block:c",
+    ":netsvc_common",
     "$zx/system/fidl/fuchsia-hardware-ethernet:c",
-    "$zx/system/fidl/fuchsia-sysinfo:c",
-    "$zx/system/ulib/chromeos-disk-setup",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/gpt",
     "$zx/system/ulib/inet6",
-    "$zx/system/ulib/libzbi",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/tftp",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
   data_deps = [
-    # netsvc launches /boot/bin/install-disk-image under --netboot.
-    "$zx/system/uapp/disk-pave",
-
     # netsvc launches /boot/bin/sh for netruncmd.
     "$zx/third_party/uapp/dash",
+  ]
+}
+
+source_set("netsvc_common") {
+  sources = [
+    "board-name.cpp",
+    "file-api.cpp",
+    "netcp.cpp",
+    "netboot.cpp",
+    "paver.cpp",
+    "payload-streamer.cpp",
+    "tftp.cpp",
+    "zbi.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-device-manager:c",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/chromeos-disk-setup",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/gpt",
+    "$zx/system/ulib/libzbi",
+    "$zx/system/ulib/zircon",
+  ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-paver:c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/inet6",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/tftp",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("netsvc-test") {
+  output_name = "netsvc-test"
+  sources = [
+    "test/file-api-test.cpp",
+    "test/paver-test.cpp",
+    "test/payload-streamer-test.cpp",
+    "test/tftp-test.cpp",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    ":netsvc_common",
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/zxtest",
   ]
 }

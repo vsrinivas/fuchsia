@@ -4,7 +4,14 @@
 
 #pragma once
 
-void update_timeouts();
+#include <zircon/types.h>
 
-bool netbootloader();
-const char* nodename();
+zx_time_t debuglog_next_timeout();
+
+int debuglog_init();
+
+void debuglog_recv(void* data, size_t len, bool is_mcast);
+
+void debuglog_timeout_expired();
+
+

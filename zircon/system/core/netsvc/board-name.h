@@ -6,4 +6,6 @@
 
 #include <unistd.h>
 
-bool check_board_name(const char* name, size_t length);
+#include <lib/zx/channel.h>
+
+bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length);

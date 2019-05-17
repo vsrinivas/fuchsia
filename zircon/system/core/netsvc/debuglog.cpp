@@ -2,13 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "debuglog.h"
+
 #include <inttypes.h>
 #include <string.h>
+#include <stdio.h>
 
+#include <zircon/boot/netboot.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
 #include "netsvc.h"
+#include "tftp.h"
 
 #define MAX_LOG_LINE (ZX_LOG_RECORD_MAX + 32)
 
@@ -19,7 +24,9 @@ static size_t pkt_len;
 static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
 
-zx_time_t debuglog_next_timeout = ZX_TIME_INFINITE;
+static zx_time_t g_debuglog_next_timeout = ZX_TIME_INFINITE;
+
+zx_time_t debuglog_next_timeout() { return g_debuglog_next_timeout; }
 
 #define SEND_DELAY_SHORT ZX_MSEC(100)
 #define SEND_DELAY_LONG ZX_SEC(4)
@@ -63,7 +70,7 @@ int debuglog_init() {
     }
 
     // Set up our timeout to expire immediately, so that we check for pending log messages
-    debuglog_next_timeout = zx_clock_get_monotonic();
+    g_debuglog_next_timeout = zx_clock_get_monotonic();
 
     seqno = 1;
     pending = 0;
@@ -77,7 +84,7 @@ static void debuglog_send() {
     if (pending == 0) {
         pkt.magic = NB_DEBUGLOG_MAGIC;
         pkt.seqno = seqno;
-        strncpy(pkt.nodename, nodename, sizeof(pkt.nodename) - 1);
+        strncpy(pkt.nodename, nodename(), sizeof(pkt.nodename) - 1);
         pkt_len = 0;
         while (pkt_len < (MAX_LOG_DATA - MAX_LOG_LINE)) {
             size_t r = get_log_line(pkt.data + pkt_len);
@@ -97,7 +104,7 @@ static void debuglog_send() {
     }
     udp6_send(&pkt, pkt_len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT, false);
 done:
-    debuglog_next_timeout = zx_deadline_after(send_delay);
+    g_debuglog_next_timeout = zx_deadline_after(send_delay);
 }
 
 void debuglog_recv(void* data, size_t len, bool is_mcast) {
