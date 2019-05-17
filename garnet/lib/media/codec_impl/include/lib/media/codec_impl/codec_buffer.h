@@ -13,6 +13,7 @@
 #include "codec_port.h"
 
 class CodecImpl;
+class CodecBufferForTest;
 
 // Core codec representation of a video frame.  Different core codecs may have
 // very different implementations of this.
@@ -59,6 +60,7 @@ class CodecBuffer {
   friend class CodecImpl;
   friend class std::unique_ptr<CodecBuffer>;
   friend struct std::default_delete<CodecBuffer>;
+  friend class CodecBufferForTest;
 
   CodecBuffer(CodecImpl* parent, CodecPort port,
               fuchsia::media::StreamBuffer buffer);

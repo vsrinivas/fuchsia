@@ -5,6 +5,7 @@
 group("codecs") {
   testonly = true
   deps = [
+    ":chunk_input_stream",
     ":mpsc_queue",
     ":timestamp_extrapolator",
     "sw",
@@ -37,4 +38,19 @@ source_set("mpsc_queue") {
   ]
 
   public_configs = [ ":local_header_include_config" ]
+}
+
+source_set("chunk_input_stream") {
+  public = [
+    "chunk_input_stream.h",
+  ]
+  sources = [
+    "chunk_input_stream.cc",
+  ]
+  public_configs = [ ":local_header_include_config" ]
+  public_deps = [
+    ":timestamp_extrapolator",
+    "//garnet/lib/media/codec_impl",
+    "//zircon/public/lib/zx",
+  ]
 }

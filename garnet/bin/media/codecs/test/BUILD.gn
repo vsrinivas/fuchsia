@@ -9,6 +9,7 @@ import("//build/testing/environments.gni")
 group("test") {
   testonly = true
   deps = [
+    ":chunk_input_stream_tests",
     ":mpsc_queue_tests",
     ":raw_frames",
     ":raw_frames_test",
@@ -128,6 +129,35 @@ test_package("mpsc_queue_tests") {
   tests = [
     {
       name = "mpsc_queue_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("chunk_input_stream_test_bin") {
+  output_name = "chunk_input_stream_tests"
+
+  testonly = true
+
+  sources = [
+    "chunk_input_stream_tests.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/media/codecs:chunk_input_stream",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("chunk_input_stream_tests") {
+  deps = [
+    ":chunk_input_stream_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "chunk_input_stream_tests"
       environments = basic_envs
     },
   ]

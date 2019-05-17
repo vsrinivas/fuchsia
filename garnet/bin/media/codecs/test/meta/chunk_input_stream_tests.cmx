@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/chunk_input_stream_tests"
+    },
+    "sandbox": {
+        "services": []
+    }
+}

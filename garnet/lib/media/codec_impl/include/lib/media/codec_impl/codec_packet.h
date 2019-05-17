@@ -13,6 +13,7 @@
 #include <memory>
 
 class CodecBuffer;
+class CodecPacketForTest;
 
 // Instances of this class are 1:1 with fuchsia::media::Packet.
 class CodecPacket {
@@ -51,6 +52,7 @@ class CodecPacket {
   // The public section is for the core codec to call - the private section is
   // only for CodecImpl to call.
   friend class CodecImpl;
+  friend class CodecPacketForTest;
 
   static constexpr uint32_t kStartOffsetNotSet =
       std::numeric_limits<uint32_t>::max();
