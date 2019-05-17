@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::geometry::{Coord, IntPoint, IntRect, IntSize, Point, Rect, Size};
+use crate::geometry::{Coord, IntCoord, IntPoint, IntRect, IntSize, Point, Rect, Size};
+use core::ops::Range;
 use euclid::rect;
 use failure::Error;
 use fidl_fuchsia_ui_gfx::ColorRgba;
@@ -130,6 +131,257 @@ impl PixelSink for MappingPixelSink {
     }
 }
 
+#[derive(Debug, Clone)]
+/// Struct representing one row of an update area. Right now
+/// it only handles a contiguous row of pixels, but it could
+/// be expanded to handle multiple discontiguous ranges of
+/// pixels if that turns out to be a common enough case
+/// to be worth the complexity.
+enum UpdateAreaRow {
+    Empty,
+    Single(Range<IntCoord>),
+}
+
+impl Default for UpdateAreaRow {
+    fn default() -> Self {
+        UpdateAreaRow::Empty
+    }
+}
+
+impl UpdateAreaRow {
+    #[cfg(test)]
+    pub fn covered_pixels(&self) -> IntCoord {
+        match self {
+            UpdateAreaRow::Empty => 0,
+            UpdateAreaRow::Single(range) => range.end - range.start,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct UpdateArea {
+    bounds: IntRect,
+    rows: Vec<UpdateAreaRow>,
+}
+
+impl UpdateArea {
+    /// Create an update area for the specified bounds.
+    fn new(bounds: &IntRect) -> UpdateArea {
+        let row_count = bounds.size.height.max(0) as usize;
+        let mut update_area = UpdateArea { bounds: *bounds, rows: Vec::with_capacity(row_count) };
+        update_area.rows.resize(row_count, Default::default());
+        update_area
+    }
+
+    /// Creator function for the default case where the update area
+    /// is the entire bounds. Useful for cases where the Canvas user
+    /// is not interested in maintaining update areas.
+    fn new_with_bounds_patch(bounds: &IntRect) -> UpdateArea {
+        let mut update_area = UpdateArea::new(bounds);
+        update_area.add_patch(bounds);
+        update_area
+    }
+
+    /// Adds a rectangular patch to the area of the canvas where
+    /// drawing will be allowed to change pixels.
+    fn add_patch(&mut self, patch: &IntRect) {
+        if let Some(clipped_patch) = self.bounds.intersection(patch) {
+            for y in clipped_patch.min_y()..clipped_patch.max_y() {
+                let index = y as usize;
+                let row = &mut self.rows[index];
+                match row {
+                    UpdateAreaRow::Empty => {
+                        *row = UpdateAreaRow::Single(clipped_patch.min_x()..clipped_patch.max_x());
+                    }
+                    UpdateAreaRow::Single(range) => {
+                        let left = clipped_patch.min_x().min(range.start);
+                        let right = clipped_patch.max_x().max(range.end);
+                        *row = UpdateAreaRow::Single(left..right);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Resets the update area to empty, allowing no drawing.
+    fn reset(&mut self) {
+        self.rows.iter_mut().for_each(|a| *a = Default::default());
+    }
+
+    #[cfg(test)]
+    /// Function used for unit tests
+    fn covered_pixels(&self) -> i32 {
+        self.rows.iter().map(UpdateAreaRow::covered_pixels).sum()
+    }
+}
+
+#[derive(Debug)]
+struct UpdateAreaIter<'a> {
+    area: &'a UpdateArea,
+    target: IntRect,
+    y: IntCoord,
+    y_limit: IntCoord,
+}
+
+impl<'a> UpdateAreaIter<'a> {
+    fn new(area: &'a UpdateArea, target: &IntRect) -> UpdateAreaIter<'a> {
+        UpdateAreaIter { area, target: *target, y: target.min_y(), y_limit: target.max_y() }
+    }
+}
+
+impl<'a> Iterator for UpdateAreaIter<'a> {
+    type Item = (IntCoord, Range<IntCoord>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.y < self.y_limit {
+            let y = self.y;
+            self.y += 1;
+            let row = &self.area.rows[y as usize];
+            match row {
+                UpdateAreaRow::Empty => (),
+                UpdateAreaRow::Single(range) => {
+                    let target_range = self.target.min_x()..self.target.max_x();
+                    if range.contains(&target_range.start) || target_range.contains(&range.start) {
+                        let min_x = target_range.start.max(range.start);
+                        let max_x = target_range.end.min(range.end);
+                        if min_x != max_x {
+                            return Some((y, min_x..max_x));
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
+#[cfg(test)]
+mod update_area_tests {
+    use super::{UpdateArea, UpdateAreaIter};
+    use crate::{IntCoord, IntPoint, IntRect, IntSize};
+    use core::ops::Range;
+    use euclid::rect;
+    use itertools::assert_equal;
+
+    struct UpdateAreaExpectedIter {
+        expected: Box<Iterator<Item = (IntCoord, Range<IntCoord>)>>,
+    }
+
+    impl UpdateAreaExpectedIter {
+        pub fn new_from_rect(rect: &IntRect) -> UpdateAreaExpectedIter {
+            let mut expected = Vec::new();
+            for y in rect.min_y()..rect.max_y() {
+                expected.push((y, rect.min_x()..rect.max_x()));
+            }
+            UpdateAreaExpectedIter { expected: Box::new(expected.into_iter()) }
+        }
+
+        pub fn new_from_rects(rects: &[IntRect]) -> UpdateAreaExpectedIter {
+            let mut expected = Vec::new();
+            for rect in rects {
+                for y in rect.min_y()..rect.max_y() {
+                    expected.push((y, rect.min_x()..rect.max_x()));
+                }
+            }
+            UpdateAreaExpectedIter { expected: Box::new(expected.into_iter()) }
+        }
+    }
+
+    impl Iterator for UpdateAreaExpectedIter {
+        type Item = (IntCoord, Range<IntCoord>);
+
+        fn next(&mut self) -> Option<Self::Item> {
+            self.expected.next()
+        }
+    }
+
+    fn update_area_test_bounds() -> IntRect {
+        IntRect::new(IntPoint::zero(), IntSize::new(800, 600))
+    }
+
+    #[test]
+    fn test_update_area() {
+        let bounds = update_area_test_bounds();
+        let mut area = UpdateArea::new(&bounds);
+        let covered_pixels = area.covered_pixels();
+        let expected_covered_pixels = 0;
+        assert_eq!(
+            covered_pixels, expected_covered_pixels,
+            "Expected {} pixels covered, got {}",
+            expected_covered_pixels, covered_pixels
+        );
+
+        let patch_bounds = rect(30, 30, 10, 10);
+        area.add_patch(&patch_bounds);
+        let covered_pixels = area.covered_pixels();
+        assert_eq!(
+            patch_bounds.area(),
+            covered_pixels,
+            "Expected {} pixels covered, got {}",
+            patch_bounds.area(),
+            covered_pixels,
+        );
+
+        let patch_bounds2 = rect(10, 10, 10, 10);
+        area.add_patch(&patch_bounds2);
+        let patch_bounds3 = rect(-10, -10, 20, 20);
+        area.add_patch(&patch_bounds3);
+        let covered_pixels = area.covered_pixels();
+        let expected_covered_pixels = 300;
+        assert_eq!(
+            expected_covered_pixels, covered_pixels,
+            "Expected {} pixels covered, got {}",
+            expected_covered_pixels, covered_pixels,
+        );
+    }
+
+    #[test]
+    fn test_update_area_iter() {
+        let bounds = update_area_test_bounds();
+        let mut area = UpdateArea::new(&bounds);
+        let patch = rect(20, 20, 80, 80);
+        area.add_patch(&patch);
+        let target = rect(30, 30, 20, 20);
+        let area_iter = UpdateAreaIter::new(&area, &target);
+        let overlapping = patch.intersection(&target).expect("bounds and target should overlap");
+        let expected_are_iter = UpdateAreaExpectedIter::new_from_rect(&overlapping);
+        assert_equal(area_iter, expected_are_iter);
+    }
+
+    #[test]
+    fn test_update_area_iter_multiple_patch() {
+        let bounds = update_area_test_bounds();
+        let mut area = UpdateArea::new(&bounds);
+        let patch = rect(20, 20, 80, 80);
+        let patch2 = rect(100, 100, 80, 80);
+        area.add_patch(&patch);
+        area.add_patch(&patch2);
+
+        let area_iter = UpdateAreaIter::new(&area, &bounds);
+        let overlapping1 = patch.intersection(&bounds).expect("bounds and target should overlap");
+        let overlapping2 = patch2.intersection(&bounds).expect("bounds and target should overlap");
+        let expected_are_iter =
+            UpdateAreaExpectedIter::new_from_rects(&[overlapping1, overlapping2]);
+        assert_equal(area_iter, expected_are_iter);
+    }
+
+    #[test]
+    fn test_update_area_iter_multiple_patch_same_row() {
+        let bounds = update_area_test_bounds();
+        let mut area = UpdateArea::new(&bounds);
+        let patch = rect(20, 20, 80, 80);
+        let patch2 = rect(100, 20, 80, 80);
+        area.add_patch(&patch);
+        area.add_patch(&patch2);
+
+        let area_iter = UpdateAreaIter::new(&area, &bounds);
+        let combined = patch.union(&patch2);
+        let expected_are_iter = UpdateAreaExpectedIter::new_from_rects(&[combined]);
+        assert_equal(area_iter, expected_are_iter);
+    }
+
+}
+
 /// Canvas is used to do simple graphics and text rendering into a
 /// SharedBuffer that can then be displayed using Scenic or
 /// Display Manager.
@@ -139,6 +391,8 @@ pub struct Canvas<T: PixelSink> {
     row_stride: u32,
     col_stride: u32,
     bounds: IntRect,
+    current_clip: Option<IntRect>,
+    update_area: UpdateArea,
 }
 
 impl<T: PixelSink> Canvas<T> {
@@ -150,7 +404,15 @@ impl<T: PixelSink> Canvas<T> {
         col_stride: u32,
     ) -> Canvas<MappingPixelSink> {
         let pixel_sink = MappingPixelSink { mapping };
-        Canvas { pixel_sink, row_stride, col_stride, bounds: IntRect::new(IntPoint::zero(), size) }
+        let bounds = IntRect::new(IntPoint::zero(), size);
+        Canvas {
+            pixel_sink,
+            row_stride,
+            col_stride,
+            bounds: bounds,
+            current_clip: None,
+            update_area: UpdateArea::new_with_bounds_patch(&bounds),
+        }
     }
 
     /// Create a canvas targeting a particular pixel sink and
@@ -161,7 +423,15 @@ impl<T: PixelSink> Canvas<T> {
         row_stride: u32,
         col_stride: u32,
     ) -> Canvas<T> {
-        Canvas { pixel_sink, row_stride, col_stride, bounds: IntRect::new(IntPoint::zero(), size) }
+        let bounds = IntRect::new(IntPoint::zero(), size);
+        Canvas {
+            pixel_sink,
+            row_stride,
+            col_stride,
+            bounds,
+            current_clip: None,
+            update_area: UpdateArea::new_with_bounds_patch(&bounds),
+        }
     }
 
     #[inline]
@@ -218,15 +488,37 @@ impl<T: PixelSink> Canvas<T> {
         }
     }
 
+    fn clipped_target_rect(&self, rect: &Rect) -> Option<IntRect> {
+        let i_rect = rect.round_out().to_i32();
+        if let Some(clipping_rect) = self.current_clip {
+            clipping_rect.intersection(&i_rect)
+        } else {
+            self.bounds.intersection(&i_rect)
+        }
+    }
+
+    /// reset_update_area
+    pub fn reset_update_area(&mut self) {
+        self.update_area.reset();
+    }
+
+    /// add to update area
+    pub fn add_to_update_area(&mut self, rect: &Rect) {
+        let i_rect = rect.round_out().to_i32();
+        self.update_area.add_patch(&i_rect);
+    }
+
     /// Fill a rectangle with a particular color.
     pub fn fill_rect(&mut self, rect: &Rect, color: Color) {
         if rect.is_empty() {
             return;
         }
-        let rect = rect.round_out().to_i32();
-        if let Some(clipped_rect) = self.bounds.intersection(&rect) {
-            for y in clipped_rect.min_y()..clipped_rect.max_y() {
-                for x in clipped_rect.min_x()..clipped_rect.max_x() {
+        let clipped_target = self.clipped_target_rect(&rect);
+        if let Some(clipped_rect) = clipped_target {
+            let area = self.update_area.clone();
+            let iter = UpdateAreaIter::new(&area, &clipped_rect);
+            for (y, row_iter) in iter {
+                for x in row_iter {
                     let offset = self.offset_from_x_y(x, y);
                     self.write_color_at_offset(offset as usize, color);
                 }
@@ -241,15 +533,17 @@ impl<T: PixelSink> Canvas<T> {
             return;
         }
         let diameter = radius * 2.0;
+        let radius_squared = radius * radius;
         let top_left = *center - Point::new(radius, radius);
         let circle_bounds = Rect::new(top_left.to_point(), Size::new(diameter, diameter));
-        let circle_bounds = circle_bounds.round_out().to_i32();
-        if let Some(clipped_rect) = self.bounds.intersection(&circle_bounds) {
-            let radius_squared = radius * radius;
-            for y in clipped_rect.min_y()..clipped_rect.max_y() {
+        let clipped_target = self.clipped_target_rect(&circle_bounds);
+        if let Some(clipped_rect) = clipped_target {
+            let area = self.update_area.clone();
+            let iter = UpdateAreaIter::new(&area, &clipped_rect);
+            for (y, row_iter) in iter {
                 let delta_y = y as Coord - center.y;
                 let delta_y_2 = delta_y * delta_y;
-                for x in clipped_rect.min_x()..clipped_rect.max_x() {
+                for x in row_iter {
                     let delta_x = x as Coord - center.x;
                     let delta_x_2 = delta_x * delta_x;
                     if delta_x_2 + delta_y_2 < radius_squared {
@@ -271,8 +565,8 @@ impl<T: PixelSink> Canvas<T> {
 
     /// Fill a rounded rectangle with a particular color.
     pub fn fill_roundrect(&mut self, rect: &Rect, corner_radius: Coord, color: Color) {
-        let rect_i = rect.round_out().to_i32();
-        if let Some(clipped_rect) = self.bounds.intersection(&rect_i) {
+        let clipped_target = self.clipped_target_rect(&rect);
+        if let Some(clipped_rect) = clipped_target {
             let corner_radius = corner_radius.max(0.0);
             if corner_radius == 0.0 {
                 self.fill_rect(rect, color);
@@ -287,9 +581,11 @@ impl<T: PixelSink> Canvas<T> {
             let top_right = Point::new(center_max_x, center_min_y);
             let bottom_right = Point::new(center_max_x, center_max_y);
             let corner_radius2 = corner_radius * corner_radius;
-            for y in clipped_rect.min_y()..clipped_rect.max_y() {
+            let area = self.update_area.clone();
+            let iter = UpdateAreaIter::new(&area, &clipped_rect);
+            for (y, row_iter) in iter {
                 let y_f = y as Coord;
-                for x in clipped_rect.min_x()..clipped_rect.max_x() {
+                for x in row_iter {
                     let x_f = x as Coord;
                     let offset = self.offset_from_x_y(x, y);
                     if x_f < center_min_x && y_f < center_min_y {
@@ -382,6 +678,20 @@ impl<T: PixelSink> Canvas<T> {
             }
         }
     }
+
+    /// Reduces the clip region to the intersection of the current clip and the given rectangle.
+    pub fn intersect_clip_with_rect(&mut self, rect: &Rect) {
+        let rect_i = rect.round_in().to_i32();
+        if let Some(clipped_rect) = rect_i.intersection(&self.bounds) {
+            if self.current_clip.is_none() {
+                self.current_clip = Some(clipped_rect);
+            } else {
+                panic!("unhandled case");
+            }
+        } else {
+            self.current_clip = Some(IntRect::zero());
+        }
+    }
 }
 
 /// Measure a line of text `text` and with the typographic characteristics in `font`.
@@ -401,9 +711,13 @@ pub fn measure_text(text: &str, font: &FontDescription) -> Size {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Canvas, Color, IntSize, PixelSink, Point, Rect, Size};
+    use crate::{Canvas, Color, Coord, IntSize, PixelSink, Point, Rect, Size};
     use fuchsia_framebuffer::{Config, PixelFormat};
     use std::collections::HashSet;
+
+    fn test_canvas_size() -> IntSize {
+        IntSize::new(800, 600)
+    }
 
     struct TestPixelSink {
         pub max_offset: usize,
@@ -431,18 +745,15 @@ mod tests {
         }
     }
 
-    fn make_test_canvas() -> Canvas<TestPixelSink> {
-        const WIDTH: i32 = 800;
-        const HEIGHT: i32 = 600;
+    fn make_test_canvas(size: IntSize) -> Canvas<TestPixelSink> {
         let config = Config {
             display_id: 0,
-            width: WIDTH as u32,
-            height: HEIGHT as u32,
-            linear_stride_pixels: WIDTH as u32,
+            width: size.width as u32,
+            height: size.height as u32,
+            linear_stride_pixels: size.width as u32,
             format: PixelFormat::Argb8888,
             pixel_size_bytes: 4,
         };
-        let size = IntSize::new(WIDTH, HEIGHT);
         let sink = TestPixelSink::new(size);
         Canvas::new_with_sink(
             size,
@@ -454,7 +765,7 @@ mod tests {
 
     #[test]
     fn test_draw_empty_rects() {
-        let mut canvas = make_test_canvas();
+        let mut canvas = make_test_canvas(test_canvas_size());
         let r = Rect::new(Point::new(0.0, 0.0), Size::new(0.0, 0.0));
         let color = Color::from_hash_code("#EBD5B3").expect("color failed to parse");
         canvas.fill_rect(&r, color);
@@ -463,14 +774,50 @@ mod tests {
 
     #[test]
     fn test_draw_out_of_bounds() {
-        let mut canvas = make_test_canvas();
+        let mut canvas = make_test_canvas(test_canvas_size());
         let color = Color::from_hash_code("#EBD5B3").expect("color failed to parse");
         let r = Rect::new(Point::new(10000.0, 10000.0), Size::new(20.0, 20.0));
+        println!("### about to do fill_roundrect");
         canvas.fill_roundrect(&r, 4.0, color);
+        println!("### about to do fill_circle");
         canvas.fill_circle(&Point::new(20000.0, -10000.0), 204.0, color);
         assert!(canvas.pixel_sink.touched_offsets.is_empty(), "Expected no pixles touched");
         let r = Rect::new(Point::new(-10.0, -10.0), Size::new(20.0, 20.0));
+        println!("### about to do fill_rect");
         canvas.fill_rect(&r, color);
         assert!(canvas.pixel_sink.touched_offsets.len() > 0, "Expected some pixles touched");
+    }
+
+    #[test]
+    fn test_clip() {
+        let canvas_size = test_canvas_size();
+        let mut canvas = make_test_canvas(canvas_size);
+        let top_left = Rect::new(Point::new(20.0, 20.0), Size::new(20.0, 20.0));
+        canvas.intersect_clip_with_rect(&top_left);
+        let fill_rect = Rect::new(Point::new(0.0, 0.0), canvas_size.to_f32());
+        let color = Color::from_hash_code("#EBD5B3").expect("color failed to parse");
+        canvas.fill_rect(&fill_rect, color);
+        let expected_pixels = top_left.to_usize().area();
+        assert_eq!(
+            canvas.pixel_sink.touched_offsets.len(),
+            expected_pixels,
+            "Expected {} pixels touched, got {}",
+            expected_pixels,
+            canvas.pixel_sink.touched_offsets.len()
+        );
+
+        let mut canvas = make_test_canvas(canvas_size);
+        let out_of_bounds = Rect::new(
+            Point::new(canvas_size.width as Coord + 2000.0, canvas_size.height as Coord + 2000.0),
+            Size::new(20.0, 20.0),
+        );
+        canvas.intersect_clip_with_rect(&out_of_bounds);
+        canvas.fill_rect(&fill_rect, color);
+        assert_eq!(
+            canvas.pixel_sink.touched_offsets.len(),
+            0,
+            "Expected 0 pixels touched, got {}",
+            canvas.pixel_sink.touched_offsets.len()
+        );
     }
 }

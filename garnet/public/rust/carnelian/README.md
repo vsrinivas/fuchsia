@@ -9,7 +9,16 @@ instructions for more details.
 
 # Tentative Roadmap
 
+1. Software Framebuffer and Scenic modes
 1. Flutter-style flex-box layout
+
+## Software Framebuffer and Scenic modes
+
+In order to support the UI for software recovery, Carnelian is going to
+be able to run some subset of its features in the software-only mode
+exposed by the `fuchsia-framebuffer` library. The `drawing` example
+runs in this mode, and this task is to modify Carnelian to provide an
+abstraction across this and Scenic.
 
 ## Flutter-style flex-box layout
 

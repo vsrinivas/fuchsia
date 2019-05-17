@@ -163,6 +163,7 @@ rustc_binary("drawing") {
     "//garnet/public/rust/carnelian",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-framebuffer",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
@@ -307,7 +308,6 @@ package("perf_test_04_rs") {
     },
   ]
 }
-
 
 package("drawing_rs") {
   deps = [
