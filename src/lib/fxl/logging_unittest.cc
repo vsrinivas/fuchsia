@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -41,13 +42,14 @@ TEST_F(LoggingFixture, Log) {
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
-  EXPECT_TRUE(
-      log.find(
-          "[ERROR:src/lib/fxl/logging_unittest.cc(38)] something at error") !=
-      std::string::npos);
-  EXPECT_TRUE(
-      log.find("[INFO:logging_unittest.cc(39)] and some other at info level") !=
-      std::string::npos);
+  EXPECT_THAT(
+      log,
+      testing::HasSubstr(
+          "[ERROR:src/lib/fxl/logging_unittest.cc(39)] something at error"));
+
+  EXPECT_THAT(
+      log, testing::HasSubstr(
+               "[INFO:logging_unittest.cc(40)] and some other at info level"));
 }
 
 #if defined(__Fuchsia__)
@@ -64,9 +66,9 @@ TEST_F(LoggingFixture, Plog) {
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
-  EXPECT_TRUE(log.find("should be ok: 0 (ZX_OK)") != std::string::npos);
-  EXPECT_TRUE(log.find("got access denied: -30 (ZX_ERR_ACCESS_DENIED)") !=
-              std::string::npos);
+  EXPECT_THAT(log, testing::HasSubstr("should be ok: 0 (ZX_OK)"));
+  EXPECT_THAT(
+      log, testing::HasSubstr("got access denied: -30 (ZX_ERR_ACCESS_DENIED)"));
 }
 #endif  // defined(__Fuchsia__)
 
