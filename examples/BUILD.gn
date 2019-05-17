@@ -5,6 +5,7 @@
 group("examples") {
   testonly = true
   deps = [
+    ":tests",
     "cowsay",
     "fortune",
     "hello_world",
@@ -15,7 +16,7 @@ group("examples") {
 
 group("tests") {
   testonly = true
-  deps = [
+  data_deps = [
     "hello_world:tests",
     "rust_static_linking:static_linking_tests",
   ]

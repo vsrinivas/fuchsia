@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 group("hello_world") {
+  testonly = true
   deps = [
+    ":tests",
     "cpp",
     "rust",
   ]
@@ -11,7 +13,7 @@ group("hello_world") {
 
 group("tests") {
   testonly = true
-  deps = [
+  data_deps = [
     "cpp:tests",
     "rust:tests",
   ]
