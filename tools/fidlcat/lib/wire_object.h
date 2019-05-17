@@ -148,7 +148,7 @@ class Object : public NullableField {
 // An envelope (used by TableField and XUnion).
 class EnvelopeField : public NullableField {
  public:
-  EnvelopeField(std::string_view name, std::unique_ptr<Type> type);
+  EnvelopeField(std::string_view name, const Type* type);
 
   uint32_t num_bytes() const { return num_bytes_; }
   uint32_t num_handles() const { return num_handles_; }
@@ -163,7 +163,7 @@ class EnvelopeField : public NullableField {
                    rapidjson::Value& result) const override;
 
  private:
-  std::unique_ptr<Type> type_;
+  const Type* const type_;
   uint32_t num_bytes_ = 0;
   uint32_t num_handles_ = 0;
   std::unique_ptr<Field> field_ = nullptr;
@@ -236,8 +236,7 @@ class ArrayField : public Field {
 // A vector.
 class VectorField : public NullableField {
  public:
-  VectorField(std::string_view name, uint64_t size,
-              std::shared_ptr<Type> component_type)
+  VectorField(std::string_view name, uint64_t size, const Type* component_type)
       : NullableField(name), size_(size), component_type_(component_type) {}
 
   void DecodeContent(MessageDecoder* decoder) override;
@@ -247,7 +246,7 @@ class VectorField : public NullableField {
 
  private:
   const uint64_t size_;
-  std::shared_ptr<Type> component_type_;
+  const Type* const component_type_;
   std::vector<std::unique_ptr<Field>> fields_;
 };
 

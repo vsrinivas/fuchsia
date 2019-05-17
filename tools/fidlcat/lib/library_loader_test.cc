@@ -27,8 +27,7 @@ TEST(LibraryLoader, LoadSimple) {
   LibraryLoader loader = LibraryLoader(library_files, &err);
   ASSERT_EQ(LibraryReadError::kOk, err.value);
 
-  const Library* library_ptr;
-  loader.GetLibraryFromName("fidl.test.frobinator", &library_ptr);
+  Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
 
   std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
   const Interface* found_interface = nullptr;
@@ -59,8 +58,8 @@ TEST(LibraryLoader, LoadFromOrdinal) {
   LibraryLoader loader = LibraryLoader(library_files, &err);
   ASSERT_EQ(LibraryReadError::kOk, err.value);
 
-  const Library* library_ptr = nullptr;
-  ASSERT_TRUE(loader.GetLibraryFromName("test.fidlcat.sys", &library_ptr));
+  Library* library_ptr = loader.GetLibraryFromName("test.fidlcat.sys");
+  ASSERT_NE(library_ptr, nullptr);
 
   std::string kDesiredInterfaceName = "test.fidlcat.sys/ComponentController";
   const Interface* found_interface = nullptr;

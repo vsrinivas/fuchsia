@@ -31,8 +31,11 @@ class Type {
   friend class Library;
 
  public:
-  Type() {}
-  virtual ~Type() {}
+  Type() = default;
+  virtual ~Type() = default;
+
+  // Return true if the type is a RawType.
+  virtual bool IsRaw() const { return false; }
 
   // Takes a pointer |bytes| and length of the data part |length|, and
   // returns whether that is equal to the Value represented by |value| according
@@ -53,7 +56,7 @@ class Type {
   // field "kind" that states the type (e.g., "array", "vector", "foo.bar/Baz").
   // |loader| is the set of libraries to use to find types that need to be given
   // by identifier (e.g., "foo.bar/Baz").
-  static std::unique_ptr<Type> GetType(const LibraryLoader& loader,
+  static std::unique_ptr<Type> GetType(LibraryLoader* loader,
                                        const rapidjson::Value& type,
                                        size_t inline_size);
 
@@ -71,7 +74,7 @@ class Type {
   // field "kind" that states the type.  "kind" is an identifier
   // (e.g.,"foo.bar/Baz").  |loader| is the set of libraries to use to lookup
   // that identifier.
-  static std::unique_ptr<Type> TypeFromIdentifier(const LibraryLoader& loader,
+  static std::unique_ptr<Type> TypeFromIdentifier(LibraryLoader* loader,
                                                   const rapidjson::Value& type,
                                                   size_t inline_size);
 
@@ -84,6 +87,8 @@ class Type {
 class RawType : public Type {
  public:
   RawType(size_t inline_size) : inline_size_(inline_size) {}
+
+  bool IsRaw() const override { return true; }
 
   virtual size_t InlineSize() const override { return inline_size_; }
 
@@ -202,11 +207,7 @@ class ElementSequenceType : public Type {
   explicit ElementSequenceType(std::unique_ptr<Type>&& component_type);
 
  protected:
-  explicit ElementSequenceType(std::shared_ptr<Type> component_type);
-
-  // The unique_ptr is converted to a shared_ptr so that it can be used by
-  // VectorField even when ElementSequenceType is destroyed.
-  std::shared_ptr<Type> component_type_;
+  std::unique_ptr<Type> component_type_;
 };
 
 class ArrayType : public ElementSequenceType {
@@ -234,9 +235,6 @@ class VectorType : public ElementSequenceType {
 
   std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
                                 uint64_t offset) const override;
-
- private:
-  VectorType(std::shared_ptr<Type> component_type, size_t element_size);
 };
 
 class EnumType : public Type {

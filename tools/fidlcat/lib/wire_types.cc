@@ -121,8 +121,7 @@ std::unique_ptr<Field> XUnionType::Decode(MessageDecoder* decoder,
     std::string key_name = std::string("unknown$") + std::to_string(ordinal);
     envelope = std::make_unique<EnvelopeField>(key_name, nullptr);
   } else {
-    envelope =
-        std::make_unique<EnvelopeField>(member->name(), member->GetType());
+    envelope = std::make_unique<EnvelopeField>(member->name(), member->type());
   }
   envelope->DecodeAt(decoder, offset);
   result->set_field(std::move(envelope));
@@ -131,11 +130,6 @@ std::unique_ptr<Field> XUnionType::Decode(MessageDecoder* decoder,
 
 ElementSequenceType::ElementSequenceType(std::unique_ptr<Type>&& component_type)
     : component_type_(std::move(component_type)) {
-  FXL_DCHECK(component_type_.get() != nullptr);
-}
-
-ElementSequenceType::ElementSequenceType(std::shared_ptr<Type> component_type)
-    : component_type_(component_type) {
   FXL_DCHECK(component_type_.get() != nullptr);
 }
 
@@ -156,10 +150,6 @@ std::unique_ptr<Field> ArrayType::Decode(MessageDecoder* decoder,
 VectorType::VectorType(std::unique_ptr<Type>&& component_type)
     : ElementSequenceType(std::move(component_type)) {}
 
-VectorType::VectorType(std::shared_ptr<Type> component_type,
-                       size_t element_size)
-    : ElementSequenceType(component_type) {}
-
 std::unique_ptr<Field> VectorType::Decode(MessageDecoder* decoder,
                                           std::string_view name,
                                           uint64_t offset) const {
@@ -167,7 +157,8 @@ std::unique_ptr<Field> VectorType::Decode(MessageDecoder* decoder,
   decoder->GetValueAt(offset, &size);
   offset += sizeof(size);
 
-  auto result = std::make_unique<VectorField>(name, size, component_type_);
+  auto result =
+      std::make_unique<VectorField>(name, size, component_type_.get());
   result->DecodeNullable(decoder, offset);
   return result;
 }
@@ -231,7 +222,7 @@ std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type,
   return ScalarTypeFromName(subtype, inline_size);
 }
 
-std::unique_ptr<Type> Type::TypeFromIdentifier(const LibraryLoader& loader,
+std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
                                                const rapidjson::Value& type,
                                                size_t inline_size) {
   if (!type.HasMember("identifier")) {
@@ -241,11 +232,10 @@ std::unique_ptr<Type> Type::TypeFromIdentifier(const LibraryLoader& loader,
   std::string id = type["identifier"].GetString();
   size_t split_index = id.find('/');
   std::string library_name = id.substr(0, split_index);
-  const Library* library;
-  if (!loader.GetLibraryFromName(library_name, &library)) {
+  Library* library = loader->GetLibraryFromName(library_name);
+  if (library == nullptr) {
     FXL_LOG(ERROR) << "Unknown type for identifier: " << library_name;
-    // TODO: Something else here
-    return std::unique_ptr<Type>();
+    return std::make_unique<RawType>(inline_size);
   }
 
   bool is_nullable = false;
@@ -255,7 +245,7 @@ std::unique_ptr<Type> Type::TypeFromIdentifier(const LibraryLoader& loader,
   return library->TypeFromIdentifier(is_nullable, id, inline_size);
 }
 
-std::unique_ptr<Type> Type::GetType(const LibraryLoader& loader,
+std::unique_ptr<Type> Type::GetType(LibraryLoader* loader,
                                     const rapidjson::Value& type,
                                     size_t inline_size) {
   // TODO: This is creating a new type every time we need one.  That's pretty

@@ -74,8 +74,8 @@ void Object::DecodeContent(MessageDecoder* decoder) {
 
 void Object::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   for (const auto& member : struct_definition_.members()) {
-    std::unique_ptr<Field> field = member.GetType()->Decode(
-        decoder, member.name(), base_offset + member.offset());
+    std::unique_ptr<Field> field = member->type()->Decode(
+        decoder, member->name(), base_offset + member->offset());
     if (field != nullptr) {
       fields_.push_back(std::move(field));
     }
@@ -97,12 +97,12 @@ void Object::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   }
 }
 
-EnvelopeField::EnvelopeField(std::string_view name, std::unique_ptr<Type> type)
-    : NullableField(name), type_(std::move(type)) {}
+EnvelopeField::EnvelopeField(std::string_view name, const Type* type)
+    : NullableField(name), type_(type) {}
 
 void EnvelopeField::DecodeContent(MessageDecoder* decoder) {
   MessageDecoder envelope_decoder(decoder, num_bytes_, num_handles_);
-  field_ = envelope_decoder.DecodeField(name(), type_.get());
+  field_ = envelope_decoder.DecodeField(name(), type_);
   decoder->GotoNextObjectOffset(num_bytes_);
   decoder->SkipHandles(num_handles_);
 }
@@ -148,10 +148,10 @@ void TableField::DecodeContent(MessageDecoder* decoder) {
       std::string key_name =
           std::string("unknown$") + std::to_string(envelope_id + 1);
       envelope = std::make_unique<EnvelopeField>(
-          key_name, std::make_unique<RawType>(table_definition_.size()));
+          key_name, table_definition_.unknown_member_type());
     } else {
       envelope =
-          std::make_unique<EnvelopeField>(member->name(), member->GetType());
+          std::make_unique<EnvelopeField>(member->name(), member->type());
     }
     envelope->DecodeAt(decoder, offset);
     envelopes_.push_back(std::move(envelope));
@@ -186,9 +186,8 @@ void UnionField::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
     field_ = std::make_unique<RawField>(
         std::string("unknown$") + std::to_string(tag), nullptr, 0);
   } else {
-    std::unique_ptr<Type> member_type = member->GetType();
-    field_ = member_type->Decode(decoder, member->name(),
-                                 base_offset + member->offset());
+    field_ = member->type()->Decode(decoder, member->name(),
+                                    base_offset + member->offset());
   }
 }
 

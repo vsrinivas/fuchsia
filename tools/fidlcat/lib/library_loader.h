@@ -51,6 +51,7 @@ struct LibraryReadError {
 };
 
 class Interface;
+class InterfaceMethod;
 class Library;
 class LibraryLoader;
 class MessageDecoder;
@@ -64,13 +65,13 @@ class XUnion;
 
 class Enum {
  public:
-  Enum(const Library& enclosing_library, const rapidjson::Value& value)
-      : enclosing_library_(enclosing_library), value_(value) {
-    (void)value_;
-    (void)enclosing_library_;
-  }
+  friend class Library;
 
-  const std::unique_ptr<Type> GetType() const;
+  ~Enum();
+
+  const std::string& name() const { return name_; }
+  uint64_t size() const { return size_; }
+  const Type* type() const { return type_.get(); }
 
   // Gets the name of the enum member corresponding to the value pointed to by
   // |bytes| of length |length|.  For example, if we had the following
@@ -83,194 +84,169 @@ class Enum {
   // the member.
   std::string GetNameFromBytes(const uint8_t* bytes) const;
 
-  uint32_t size() const;
-
  private:
-  const Library& enclosing_library_;
+  explicit Enum(const rapidjson::Value& value);
+
+  // Decode all the values from the JSON definition.
+  void DecodeTypes();
+
   const rapidjson::Value& value_;
+  bool decoded_ = false;
+  std::string name_;
+  uint64_t size_;
+  std::unique_ptr<Type> type_;
 };
 
 // TODO: Consider whether this is duplicative of Struct / Table member.
 class UnionMember {
  public:
-  UnionMember(const Union& enclosing_union, const rapidjson::Value& value)
-      : enclosing_union_(enclosing_union),
-        value_(value),
-        name_(value["name"].GetString()),
-        offset_(std::strtoll(value["offset"].GetString(), nullptr, 10)),
-        size_(std::strtoll(value["size"].GetString(), nullptr, 10)),
-        ordinal_(value.HasMember("ordinal")
-                     ? std::strtoll(value["ordinal"].GetString(), nullptr, 10)
-                     : 0) {}
+  UnionMember(const Library& enclosing_library, const rapidjson::Value& value);
+  ~UnionMember();
 
-  const Union& enclosing_union() const { return enclosing_union_; }
   std::string_view name() const { return name_; }
   uint64_t size() const { return size_; }
   uint64_t offset() const { return offset_; }
   Ordinal ordinal() const { return ordinal_; }
-
-  std::unique_ptr<Type> GetType() const;
+  const Type* type() const { return type_.get(); }
 
  private:
-  const Union& enclosing_union_;
-  const rapidjson::Value& value_;
   const std::string name_;
   const uint64_t offset_;
   const uint64_t size_;
   const Ordinal ordinal_;
+  std::unique_ptr<Type> type_;
 };
 
 class Union {
-  friend class Library;
-
  public:
-  Union(const Library& enclosing_library, const rapidjson::Value& value)
-      : enclosing_library_(enclosing_library),
-        value_(value),
-        illegal_(nullptr) {
-    auto member_arr = value["members"].GetArray();
-    members_.reserve(member_arr.Size());
-    for (auto& member : member_arr) {
-      members_.emplace_back(*this, member);
-    }
-  }
-
-  Union(const Union& other) : Union(other.enclosing_library_, other.value_) {}
+  friend class Library;
+  friend class XUnion;
 
   const Library& enclosing_library() const { return enclosing_library_; }
-
-  const std::vector<UnionMember>& members() const { return members_; }
+  const std::string& name() const { return name_; }
+  uint64_t alignment() const { return alignment_; }
+  uint32_t size() const { return size_; }
+  const std::vector<std::unique_ptr<UnionMember>>& members() const {
+    return members_;
+  }
 
   const UnionMember* MemberWithTag(uint32_t tag) const;
 
   const UnionMember* MemberWithOrdinal(Ordinal ordinal) const;
 
-  uint64_t alignment() const {
-    return std::strtoll(value_["alignment"].GetString(), nullptr, 10);
-  }
-
-  uint32_t size() const {
-    return std::strtoll(value_["size"].GetString(), nullptr, 10);
-  }
-
   std::unique_ptr<UnionField> DecodeUnion(MessageDecoder* decoder,
                                           std::string_view name,
                                           uint64_t offset, bool nullable) const;
 
- protected:
+ private:
+  Union(const Library& enclosing_library, const rapidjson::Value& value);
+
+  // Decode all the values from the JSON definition.
+  void DecodeTypes();
+
   const Library& enclosing_library_;
   const rapidjson::Value& value_;
-
- private:
-  std::vector<UnionMember> members_;
-  mutable std::unique_ptr<UnionMember> illegal_;
+  bool decoded_ = false;
+  std::string name_;
+  uint64_t alignment_;
+  uint64_t size_;
+  std::vector<std::unique_ptr<UnionMember>> members_;
 };
 
 class XUnion : public Union {
+ public:
   friend class Library;
 
- public:
+ private:
   XUnion(const Library& enclosing_library, const rapidjson::Value& value)
       : Union(enclosing_library, value) {}
-
-  XUnion(const XUnion& other)
-      : XUnion(other.enclosing_library_, other.value_) {}
 };
 
 class StructMember {
  public:
-  StructMember(const Struct& enclosing_struct, const rapidjson::Value& value)
-      : enclosing_struct_(enclosing_struct), value_(value) {}
+  StructMember(const Library& enclosing_library, const rapidjson::Value& value);
+  ~StructMember();
 
-  std::unique_ptr<Type> GetType() const;
-
-  uint64_t size() const {
-    return std::strtoll(value_["size"].GetString(), nullptr, 10);
-  }
-
-  uint64_t offset() const {
-    return std::strtoll(value_["offset"].GetString(), nullptr, 10);
-  }
-
-  const std::string_view name() const { return value_["name"].GetString(); }
-
-  const Struct& enclosing_struct() const { return enclosing_struct_; }
+  std::string_view name() const { return name_; }
+  uint64_t offset() const { return offset_; }
+  uint64_t size() const { return size_; }
+  const Type* type() const { return type_.get(); }
 
  private:
-  const Struct& enclosing_struct_;
-  const rapidjson::Value& value_;
+  const std::string name_;
+  const uint64_t offset_;
+  const uint64_t size_;
+  std::unique_ptr<Type> type_;
 };
 
 class Struct {
-  friend class Library;
-
  public:
-  Struct(const Library& enclosing_library, const rapidjson::Value& value,
-         std::string size_name, std::string member_name)
-      : enclosing_library_(enclosing_library),
-        value_(value),
-        size_(std::strtoll(value_[size_name].GetString(), nullptr, 10)) {
-    auto member_arr = value[member_name].GetArray();
-    members_.reserve(member_arr.Size());
-    for (auto& member : member_arr) {
-      members_.emplace_back(*this, member);
-    }
-  }
+  friend class Library;
+  friend class InterfaceMethod;
 
   const Library& enclosing_library() const { return enclosing_library_; }
-
   uint32_t size() const { return size_; }
-
-  const std::vector<StructMember>& members() const { return members_; }
+  const std::vector<std::unique_ptr<StructMember>>& members() const {
+    return members_;
+  }
 
   std::unique_ptr<Object> DecodeObject(MessageDecoder* decoder,
                                        std::string_view name, uint64_t offset,
                                        bool nullable) const;
 
  private:
+  Struct(const Library& enclosing_library, const rapidjson::Value& value);
+
+  // Decode all the values from the JSON definition if the object represents a
+  // structure.
+  void DecodeStructTypes();
+
+  // Decode all the values from the JSON definition if the object represents a
+  // request message.
+  void DecodeRequestTypes();
+
+  // Decode all the values from the JSON definition if the object represents a
+  // response message.
+  void DecodeResponseTypes();
+
+  // Decode all the values from the JSON definition.
+  void DecodeTypes(std::string size_name, std::string member_name);
+
   const Library& enclosing_library_;
   const rapidjson::Value& value_;
-  const uint32_t size_;
-  std::vector<StructMember> members_;
+  bool decoded_ = false;
+  std::string name_;
+  uint32_t size_ = 0;
+  std::vector<std::unique_ptr<StructMember>> members_;
 };
 
 class TableMember {
  public:
-  TableMember(const Table& enclosing_table, const rapidjson::Value& value)
-      : enclosing_table_(enclosing_table), value_(value) {}
+  TableMember(const Library& enclosing_library, const rapidjson::Value& value);
+  ~TableMember();
 
-  std::unique_ptr<Type> GetType() const;
-
-  uint64_t size() const {
-    return std::strtoll(value_["size"].GetString(), nullptr, 10);
-  }
-
-  uint64_t offset() const {
-    return std::strtoll(value_["offset"].GetString(), nullptr, 10);
-  }
-
-  const std::string_view name() const { return value_["name"].GetString(); }
-
-  Ordinal ordinal() const {
-    return std::strtoll(value_["ordinal"].GetString(), nullptr, 10);
-  }
-
-  const Table& enclosing_table() const { return enclosing_table_; }
+  const std::string_view name() const { return name_; }
+  Ordinal ordinal() const { return ordinal_; }
+  uint64_t size() const { return size_; }
+  const Type* type() const { return type_.get(); }
 
  private:
-  const Table& enclosing_table_;
-  const rapidjson::Value& value_;
+  const std::string name_;
+  const Ordinal ordinal_;
+  const uint64_t size_;
+  std::unique_ptr<Type> type_;
 };
 
 class Table {
  public:
-  Table(const Library& enclosing_library, const rapidjson::Value& value);
+  friend class Library;
 
-  Table(const Table&) = delete;
-
-  Table(Table&& other) : Table(other.enclosing_library_, other.value_) {}
+  ~Table();
 
   const Library& enclosing_library() const { return enclosing_library_; }
+  const std::string& name() const { return name_; }
+  uint32_t size() const { return size_; }
+  const Type* unknown_member_type() const { return unknown_member_type_.get(); }
 
   // Returns a vector of pointers to the table's members.  The ordinal of each
   // member is its index in the vector.  Omitted ordinals are indicated by
@@ -278,77 +254,76 @@ class Table {
   // nullptr.
   const std::vector<const TableMember*>& members() const { return members_; }
 
-  uint32_t size() const {
-    return std::strtoll(value_["size"].GetString(), nullptr, 10);
-  }
-
  private:
+  Table(const Library& enclosing_library, const rapidjson::Value& value);
+
+  // Decode all the values from the JSON definition.
+  void DecodeTypes();
+
   const Library& enclosing_library_;
   const rapidjson::Value& value_;
+  bool decoded_ = false;
+  std::string name_;
+  uint64_t size_;
+  std::unique_ptr<Type> unknown_member_type_;
 
   // This indirection - elements of members_ pointing to elements of
   // backing_members_ - is so that we can have empty members.  The author
   // thought that use sites would be more usable than a map.
   // These structures are not modified after the constructor.
   std::vector<const TableMember*> members_;
-  std::vector<TableMember> backing_members_;
+  std::vector<std::unique_ptr<TableMember>> backing_members_;
 };
 
 class InterfaceMethod {
  public:
   friend class Interface;
-  InterfaceMethod(const Interface& interface, const rapidjson::Value& value);
-  InterfaceMethod(InterfaceMethod&& other) = default;
 
   const Interface& enclosing_interface() const { return enclosing_interface_; }
-
   Ordinal ordinal() const { return ordinal_; }
-
   std::string name() const { return name_; }
-
-  const Struct* request() const { return request_.get(); }
-
-  const Struct* response() const { return response_.get(); }
+  Struct* request() const {
+    if (request_ != nullptr) {
+      request_->DecodeRequestTypes();
+    }
+    return request_.get();
+  }
+  Struct* response() const {
+    if (response_ != nullptr) {
+      response_->DecodeResponseTypes();
+    }
+    return response_.get();
+  }
 
   std::string fully_qualified_name() const;
-
-  const std::optional<uint64_t> request_size() const {
-    if (request_ == nullptr) {
-      return {};
-    }
-    return request_->size();
-  }
 
   InterfaceMethod(const InterfaceMethod& other) = delete;
   InterfaceMethod& operator=(const InterfaceMethod&) = delete;
 
  private:
+  InterfaceMethod(const Interface& interface, const rapidjson::Value& value);
+
   const Interface& enclosing_interface_;
-  Ordinal ordinal_;
-  std::string name_;
+  const rapidjson::Value& value_;
+  const Ordinal ordinal_;
+  const std::string name_;
   std::unique_ptr<Struct> request_;
   std::unique_ptr<Struct> response_;
-  const rapidjson::Value& value_;
 };
 
 class Interface {
  public:
-  Interface(const Library& library, const rapidjson::Value& value)
-      : value_(value),
-        enclosing_library_(library),
-        name_(value_["name"].GetString()) {
-    for (auto& method : value["methods"].GetArray()) {
-      interface_methods_.emplace_back(*this, method);
-    }
-  }
-  Interface(Interface&& other) = default;
+  friend class Library;
 
   Interface(const Interface& other) = delete;
   Interface& operator=(const Interface&) = delete;
 
+  const Library& enclosing_library() const { return enclosing_library_; }
+  std::string_view name() const { return name_; }
+
   void AddMethodsToIndex(std::map<Ordinal, const InterfaceMethod*>& index) {
     for (size_t i = 0; i < interface_methods_.size(); i++) {
-      const InterfaceMethod* method = &interface_methods_[i];
+      const InterfaceMethod* method = interface_methods_[i].get();
       index[method->ordinal()] = method;
     }
   }
@@ -357,48 +332,40 @@ class Interface {
   bool GetMethodByFullName(const std::string& name,
                            const InterfaceMethod** method) const;
 
-  const Library& enclosing_library() const { return enclosing_library_; }
-
-  std::string_view name() const { return name_; }
-
-  const std::vector<InterfaceMethod>& methods() const {
+  const std::vector<std::unique_ptr<InterfaceMethod>>& methods() const {
     return interface_methods_;
   }
 
  private:
-  const rapidjson::Value& value_;
+  Interface(const Library& library, const rapidjson::Value& value)
+      : enclosing_library_(library), name_(value["name"].GetString()) {
+    for (auto& method : value["methods"].GetArray()) {
+      interface_methods_.emplace_back(new InterfaceMethod(*this, method));
+    }
+  }
+
   const Library& enclosing_library_;
   std::string name_;
-  std::vector<InterfaceMethod> interface_methods_;
+  std::vector<std::unique_ptr<InterfaceMethod>> interface_methods_;
 };
 
 class Library {
  public:
-  Library(const LibraryLoader& enclosing, rapidjson::Document& document);
+  friend class LibraryLoader;
 
-  // Adds methods to this Library.  Pass it a std::map from ordinal value to the
-  // InterfaceMethod represented by that ordinal.
-  void AddMethodsToIndex(std::map<Ordinal, const InterfaceMethod*>& index) {
-    for (size_t i = 0; i < interfaces_.size(); i++) {
-      interfaces_[i].AddMethodsToIndex(index);
-    }
+  LibraryLoader* enclosing_loader() const { return enclosing_loader_; }
+  const std::string name() { return name_; }
+  const std::vector<std::unique_ptr<Interface>>& interfaces() const {
+    return interfaces_;
   }
-
-  const std::string_view name() {
-    return backing_document_["name"].GetString();
-  }
-
-  const LibraryLoader& enclosing_loader() const { return enclosing_loader_; }
 
   std::unique_ptr<Type> TypeFromIdentifier(bool is_nullable,
                                            std::string& identifier,
-                                           size_t inline_size) const;
+                                           size_t inline_size);
 
   // The size of the type with name |identifier| when it is inline (e.g.,
   // embedded in an array)
   size_t InlineSizeFromIdentifier(std::string& identifier) const;
-
-  const std::vector<Interface>& interfaces() const { return interfaces_; }
 
   // Set *ptr to the Interface called |name|
   bool GetInterfaceByName(const std::string& name, const Interface** ptr) const;
@@ -407,18 +374,28 @@ class Library {
   Library(const Library&) = delete;
 
  private:
-  const LibraryLoader& enclosing_loader_;
-  rapidjson::Document backing_document_;
+  Library(LibraryLoader* enclosing_loader, rapidjson::Document& document,
+          std::map<Ordinal, const InterfaceMethod*>& index);
 
-  std::vector<Interface> interfaces_;
-  std::map<std::string, Enum> enums_;
-  std::map<std::string, Struct> structs_;
-  std::map<std::string, Table> tables_;
-  std::map<std::string, Union> unions_;
-  std::map<std::string, XUnion> xunions_;
+  // Decode all the values from the JSON definition.
+  void DecodeTypes();
+
+  LibraryLoader* enclosing_loader_;
+  rapidjson::Document backing_document_;
+  bool decoded_ = false;
+  std::string name_;
+  std::vector<std::unique_ptr<Interface>> interfaces_;
+  std::map<std::string, std::unique_ptr<Enum>> enums_;
+  std::map<std::string, std::unique_ptr<Struct>> structs_;
+  std::map<std::string, std::unique_ptr<Table>> tables_;
+  std::map<std::string, std::unique_ptr<Union>> unions_;
+  std::map<std::string, std::unique_ptr<XUnion>> xunions_;
 };
 
 // An indexed collection of libraries.
+// WARNING: All references on Enum, Struct, Table, ... and all references on
+//          types and fields must be destroyed before this class (LibraryLoader
+//          should be one of the last objects we destroy).
 class LibraryLoader {
  public:
   LibraryLoader(std::vector<std::unique_ptr<std::istream>>& library_streams,
@@ -438,18 +415,17 @@ class LibraryLoader {
     return false;
   }
 
-  // If the library with name |name| is present in this loader, sets *|library|
-  // to a pointer to that library and returns true.  Otherwise, returns false.
+  // If the library with name |name| is present in this loader, returns the
+  // library. Otherwise, returns null.
   // |name| is of the format "a.b.c"
-  bool GetLibraryFromName(const std::string& name,
-                          const Library** library) const {
+  Library* GetLibraryFromName(const std::string& name) {
     auto l = representations_.find(name);
     if (l != representations_.end()) {
-      const Library* lib = &(l->second);
-      *library = lib;
-      return true;
+      Library* library = l->second.get();
+      library->DecodeTypes();
+      return library;
     }
-    return false;
+    return nullptr;
   }
 
  private:
@@ -465,14 +441,12 @@ class LibraryLoader {
       return;
     }
     std::string library_name = document["name"].GetString();
-    representations_.emplace(std::piecewise_construct,
-                             std::forward_as_tuple(library_name),
-                             std::forward_as_tuple(*this, document));
-    auto i = representations_.find(library_name);
-    i->second.AddMethodsToIndex(ordinal_map_);
+    representations_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(library_name),
+        std::forward_as_tuple(new Library(this, document, ordinal_map_)));
   }
 
-  std::map<std::string, Library> representations_;
+  std::map<std::string, std::unique_ptr<Library>> representations_;
   std::map<Ordinal, const InterfaceMethod*> ordinal_map_;
 };
 

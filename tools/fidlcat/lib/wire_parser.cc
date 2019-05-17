@@ -74,7 +74,6 @@ bool ResponseToJSON(const InterfaceMethod* method, const fidl::Message& message,
   if (method->response() == nullptr) {
     return false;
   }
-
   return MessageToJSON(*method->response(), message, response);
 }
 
