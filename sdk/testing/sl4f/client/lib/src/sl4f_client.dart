@@ -124,7 +124,86 @@ class Sl4f {
   /// It can optionally send input via [stdin].
   Future<bool> ssh(String cmd, {String stdin}) async {
     _log.fine('Running over ssh: $cmd');
-    final process = await Process.start(
+    final process = await _sshWithCommand(cmd);
+    if (stdin != null) {
+      process.stdin.write(stdin);
+      await process.stdin.flush();
+      await process.stdin.close();
+    }
+    if (await process.exitCode != 0) {
+      _log
+        ..warning(await process.stdout.transform(utf8.decoder).join())
+        ..warning(await process.stderr.transform(utf8.decoder).join());
+      return false;
+    }
+    return true;
+  }
+
+  /// Obtains the root inspect object for a component whose path includes
+  /// [componentName].
+  Future<dynamic> inspectComponentRoot(String componentName) async {
+    var hubEntries = StringBuffer();
+    for (final entry in (await retrieveHubEntries(filter: componentName))) {
+      hubEntries.write('$entry ');
+    }
+    if (hubEntries.isEmpty) {
+      _log.warning('No components with name $componentName!');
+      return null;
+    }
+
+    final jsonResult = await inspectRecursively(hubEntries.toString());
+
+    return jsonResult.single['contents']['root'];
+  }
+
+  /// Retrieves the inpect node(s) of [hubEntries], recursively, as a json object.
+  Future<dynamic> inspectRecursively(String hubEntries) async {
+    final process =
+        await _sshWithCommand('iquery --format=json --recursive $hubEntries');
+    if (await process.exitCode != 0) {
+      _log
+        ..warning(await process.stdout.transform(utf8.decoder).join())
+        ..warning(await process.stderr.transform(utf8.decoder).join());
+      return null;
+    }
+    var stringInspectResult =
+        await process.stdout.transform(utf8.decoder).join();
+
+    return json.decode(stringInspectResult);
+  }
+
+  /// Retrieves a list of hub entries.
+  ///
+  /// If [filter] is set, only those entries containing [filter] are returned.
+  Future<List<String>> retrieveHubEntries({String filter}) async {
+    final process = await _sshWithCommand('iquery --find /hub');
+    if (await process.exitCode != 0) {
+      _log
+        ..warning(await process.stdout.transform(utf8.decoder).join())
+        ..warning(await process.stderr.transform(utf8.decoder).join());
+      return null;
+    }
+    final stringFindResult =
+        await process.stdout.transform(utf8.decoder).join();
+    final hubEntries = stringFindResult.split('\n').where((line) {
+      if (filter == null) {
+        return true;
+      }
+      return line.contains(filter);
+    }).toList();
+    if (hubEntries.isEmpty) {
+      if (filter != null) {
+        _log.warning('No hub entries with $filter in their path!');
+      } else {
+        _log.warning('No hub entries found!');
+      }
+      return null;
+    }
+    return hubEntries;
+  }
+
+  Future<Process> _sshWithCommand(String cmd) {
+    return Process.start(
         'ssh',
         [
           '-i',
@@ -138,17 +217,6 @@ class Sl4f {
         ],
         // If not run in a shell it doesn't seem like the PATH is searched.
         runInShell: true);
-    if (stdin != null) {
-      process.stdin.write(stdin);
-      await process.stdin.flush();
-      await process.stdin.close();
-    }
-    if (await process.exitCode != 0) {
-      _log..warning(await process.stdout.transform(utf8.decoder).join())
-          ..warning(await process.stderr.transform(utf8.decoder).join());
-      return false;
-    }
-    return true;
   }
 
   /// Restarts the device under test.
