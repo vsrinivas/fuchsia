@@ -56,10 +56,6 @@ constexpr bool alwaysReturnFailure = false;
 class CrashpadAgentTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
-    stub_feedback_data_provider_.reset(new StubFeedbackDataProvider());
-    FXL_CHECK(service_directory_provider_.AddService(
-                  stub_feedback_data_provider_->GetHandler()) == ZX_OK);
-
     // The underlying agent is initialized with a default config, but can
     // be reset via ResetAgent() if a different config is necessary.
     ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
@@ -78,12 +74,6 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     FXL_CHECK(config.enable_upload_to_crash_server ^ !crash_server);
     crash_server_ = std::move(crash_server);
 
-    ResetFeedbackDataProvider(
-        // TODO(frousseau): check the annotations just like the attachments.
-        // This is trickier because they are stored in the minidump at best.
-        /*annotation.keys=*/{"unused.annotation.1", "unused.annotation.2"},
-        /*attachment.keys=*/{"build.snapshot", "log.kernel"});
-
     // "attachments" should be kept in sync with the value defined in
     // //crashpad/client/crash_report_database_generic.cc
     attachments_dir_ =
@@ -100,24 +90,18 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     return ResetAgent(std::move(config), /*crash_server=*/nullptr);
   }
 
-  // Resets the annotations and attachments returned by the underlying stub
-  // feedback data provider.
+  // Resets the underlying stub feedback data provider and registers it in the
+  // |service_directory_provider_|.
+  //
+  // This can only be done once per test as ServiceDirectoryProvider does not
+  // allow overridding a service. Hence why it is not in the SetUp().
   void ResetFeedbackDataProvider(
-      const std::vector<std::string>& annotation_keys,
-      const std::vector<std::string>& attachment_keys) {
-    stub_feedback_data_provider_->set_annotation_keys(annotation_keys);
-    stub_feedback_data_provider_->set_attachment_keys(attachment_keys);
-    feedback_attachment_keys_ = attachment_keys;
-  }
-
-  // Tells the stub feedback::DataProvider to return no annotation or
-  // attachment.
-  void FlushFeedbackDataAnnotationKeys() {
-    stub_feedback_data_provider_->reset_annotation_keys();
-  }
-  void FlushFeedbackDataAttachmentKeys() {
-    stub_feedback_data_provider_->reset_attachment_keys();
-    feedback_attachment_keys_.clear();
+      std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider) {
+    stub_feedback_data_provider_ = std::move(stub_feedback_data_provider);
+    if (stub_feedback_data_provider_) {
+      FXL_CHECK(service_directory_provider_.AddService(
+                    stub_feedback_data_provider_->GetHandler()) == ZX_OK);
+    }
   }
 
   // Checks that there is:
@@ -135,9 +119,10 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     // We expect as attachments the ones returned by the feedback::DataProvider
     // and the extra ones specific to the crash analysis flow under test.
     std::vector<std::string> expected_attachments = expected_extra_attachments;
-    expected_attachments.insert(expected_attachments.begin(),
-                                feedback_attachment_keys_.begin(),
-                                feedback_attachment_keys_.end());
+    expected_attachments.insert(
+        expected_attachments.begin(),
+        stub_feedback_data_provider_->attachment_keys().begin(),
+        stub_feedback_data_provider_->attachment_keys().end());
 
     std::vector<std::string> attachments;
     const std::string report_attachments_dir =
@@ -210,7 +195,6 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider_;
   std::string attachments_dir_;
-  std::vector<std::string> feedback_attachment_keys_;
 };
 
 TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
@@ -268,6 +252,8 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
             ZX_OK);
 
   // Test crash analysis.
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+
   Analyzer_OnNativeException_Result out_result;
   bool has_out_result = false;
   agent_->OnNativeException(
@@ -295,6 +281,7 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
 }
 
 TEST_F(CrashpadAgentTest, OnManagedRuntimeException_Dart_Basic) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   GenericException exception = {};
   const std::string type = "FileSystemException";
   std::copy(type.begin(), type.end(), exception.type.data());
@@ -320,6 +307,7 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_Dart_Basic) {
 }
 
 TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   UnknownException exception;
   ASSERT_TRUE(fsl::VmoFromString("#0", &exception.data));
   ManagedRuntimeException unknown_exception;
@@ -341,6 +329,7 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
 }
 
 TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   fuchsia::mem::Buffer crash_log;
   ASSERT_TRUE(fsl::VmoFromString("ZIRCON KERNEL PANIC", &crash_log));
 
@@ -359,6 +348,7 @@ TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
 }
 
 TEST_F(CrashpadAgentTest, PruneDatabase_ZeroSize) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   // We reset the agent with a max database size of 0, meaning reports will
   // get cleaned up before the end of the |agent_| call.
   ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
@@ -382,6 +372,7 @@ std::string GenerateString(const uint64_t string_size_in_kb) {
 }
 
 TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   // We reset the agent with a max database size equivalent to the expected
   // size of a report plus the value of an especially large attachment.
   const uint64_t crash_log_size_in_kb = 2u * kMaxTotalReportSizeInKb;
@@ -419,6 +410,7 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
 }
 
 TEST_F(CrashpadAgentTest, AnalysisFailOnFailedUpload) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
                     /*max_crashpad_database_size_in_kb=*/
                     kMaxTotalReportSizeInKb,
@@ -431,6 +423,7 @@ TEST_F(CrashpadAgentTest, AnalysisFailOnFailedUpload) {
 }
 
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoUpload) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
                     /*max_crashpad_database_size_in_kb=*/
                     kMaxTotalReportSizeInKb,
@@ -441,19 +434,21 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoUpload) {
 }
 
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackAttachments) {
-  FlushFeedbackDataAttachmentKeys();
+  ResetFeedbackDataProvider(
+      std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackAnnotations) {
-  FlushFeedbackDataAnnotationKeys();
+  ResetFeedbackDataProvider(
+      std::make_unique<StubFeedbackDataProviderReturnsNoAnnotation>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
 }
 
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackData) {
-  FlushFeedbackDataAnnotationKeys();
-  FlushFeedbackDataAttachmentKeys();
+  ResetFeedbackDataProvider(
+      std::make_unique<StubFeedbackDataProviderReturnsNoData>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
   CheckAttachments({"kernel_panic_crash_log"});
 }

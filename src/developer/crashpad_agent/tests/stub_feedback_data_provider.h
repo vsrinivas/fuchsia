@@ -18,6 +18,14 @@ namespace crash {
 // fuchsia::feedback::DataProvider::GetData().
 class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
  public:
+  StubFeedbackDataProvider()
+      : StubFeedbackDataProvider({"unused.annotation.1", "unused.annotation.2"},
+                                 {"build.snapshot", "log.kernel"}) {}
+
+  StubFeedbackDataProvider(const std::vector<std::string>& annotation_keys,
+                           const std::vector<std::string>& attachment_keys)
+      : annotation_keys_(annotation_keys), attachment_keys_(attachment_keys) {}
+
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
     return bindings_.GetHandler(this);
@@ -30,22 +38,45 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
     FXL_NOTIMPLEMENTED();
   }
 
-  // Stub injection methods.
-  void set_annotation_keys(const std::vector<std::string>& annotation_keys) {
-    next_annotation_keys_ =
-        std::make_unique<std::vector<std::string>>(annotation_keys);
-  }
-  void set_attachment_keys(const std::vector<std::string>& attachment_keys) {
-    next_attachment_keys_ =
-        std::make_unique<std::vector<std::string>>(attachment_keys);
-  }
-  void reset_annotation_keys() { next_annotation_keys_.reset(); }
-  void reset_attachment_keys() { next_attachment_keys_.reset(); }
+  const std::vector<std::string>& attachment_keys() { return attachment_keys_; }
+
+ protected:
+  const std::vector<std::string> annotation_keys_;
+  const std::vector<std::string> attachment_keys_;
 
  private:
   fidl::BindingSet<fuchsia::feedback::DataProvider> bindings_;
-  std::unique_ptr<std::vector<std::string>> next_annotation_keys_;
-  std::unique_ptr<std::vector<std::string>> next_attachment_keys_;
+};
+
+class StubFeedbackDataProviderReturnsNoAnnotation
+    : public StubFeedbackDataProvider {
+ public:
+  StubFeedbackDataProviderReturnsNoAnnotation()
+      : StubFeedbackDataProvider(/*annotation_keys=*/{}, /*attachment_keys=*/{
+                                     "build.snapshot", "log.kernel"}) {}
+
+  void GetData(GetDataCallback callback) override;
+};
+
+class StubFeedbackDataProviderReturnsNoAttachment
+    : public StubFeedbackDataProvider {
+ public:
+  StubFeedbackDataProviderReturnsNoAttachment()
+      : StubFeedbackDataProvider(
+            /*annotation_keys=*/{"unused.annotation.1", "unused.annotation.2"},
+            /*attachment_keys=*/{}) {}
+
+  void GetData(GetDataCallback callback) override;
+};
+
+class StubFeedbackDataProviderReturnsNoData : public StubFeedbackDataProvider {
+ public:
+  StubFeedbackDataProviderReturnsNoData()
+      : StubFeedbackDataProvider(
+            /*annotation_keys=*/{},
+            /*attachment_keys=*/{}) {}
+
+  void GetData(GetDataCallback callback) override;
 };
 
 }  // namespace crash

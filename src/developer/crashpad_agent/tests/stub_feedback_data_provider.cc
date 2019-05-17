@@ -28,6 +28,15 @@ Annotation BuildAnnotation(const std::string& key) {
   return annotation;
 }
 
+std::vector<Annotation> BuildAnnotations(
+    const std::vector<std::string>& annotation_keys) {
+  std::vector<Annotation> annotations;
+  for (const auto& key : annotation_keys) {
+    annotations.push_back(BuildAnnotation(key));
+  }
+  return annotations;
+}
+
 Attachment BuildAttachment(const std::string& key) {
   Attachment attachment;
   attachment.key = key;
@@ -35,37 +44,47 @@ Attachment BuildAttachment(const std::string& key) {
   return attachment;
 }
 
+std::vector<Attachment> BuildAttachments(
+    const std::vector<std::string>& attachment_keys) {
+  std::vector<Attachment> attachments;
+  for (const auto& key : attachment_keys) {
+    attachments.push_back(BuildAttachment(key));
+  }
+  return attachments;
+}
+
 }  // namespace
 
 void StubFeedbackDataProvider::GetData(GetDataCallback callback) {
   DataProvider_GetData_Result result;
+  DataProvider_GetData_Response response;
+  response.data.set_annotations(BuildAnnotations(annotation_keys_));
+  response.data.set_attachments(BuildAttachments(attachment_keys_));
+  result.set_response(std::move(response));
+  callback(std::move(result));
+}
 
-  if (!next_annotation_keys_ && !next_attachment_keys_) {
-    result.set_err(ZX_ERR_INTERNAL);
-  } else {
-    DataProvider_GetData_Response response;
+void StubFeedbackDataProviderReturnsNoAnnotation::GetData(
+    GetDataCallback callback) {
+  DataProvider_GetData_Result result;
+  DataProvider_GetData_Response response;
+  response.data.set_attachments(BuildAttachments(attachment_keys_));
+  result.set_response(std::move(response));
+  callback(std::move(result));
+}
 
-    if (next_annotation_keys_) {
-      std::vector<Annotation> annotations;
-      for (const auto& key : *next_annotation_keys_.get()) {
-        annotations.push_back(BuildAnnotation(key));
-      }
-      response.data.set_annotations(annotations);
-      reset_annotation_keys();
-    }
+void StubFeedbackDataProviderReturnsNoAttachment::GetData(
+    GetDataCallback callback) {
+  DataProvider_GetData_Result result;
+  DataProvider_GetData_Response response;
+  response.data.set_annotations(BuildAnnotations(annotation_keys_));
+  result.set_response(std::move(response));
+  callback(std::move(result));
+}
 
-    if (next_attachment_keys_) {
-      std::vector<Attachment> attachments;
-      for (const auto& key : *next_attachment_keys_.get()) {
-        attachments.push_back(BuildAttachment(key));
-      }
-      response.data.set_attachments(std::move(attachments));
-      reset_attachment_keys();
-    }
-
-    result.set_response(std::move(response));
-  }
-
+void StubFeedbackDataProviderReturnsNoData::GetData(GetDataCallback callback) {
+  DataProvider_GetData_Result result;
+  result.set_err(ZX_ERR_INTERNAL);
   callback(std::move(result));
 }
 
