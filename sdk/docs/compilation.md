@@ -30,6 +30,7 @@ a [standard convention][build-id].
 
 The following flags are guaranteed to not generate any warning:
 - `-Wsemi-extra`
+- `-Wshadow`
 
 The following flags may generate warnings:
 - `-Wdeprecated-declarations`

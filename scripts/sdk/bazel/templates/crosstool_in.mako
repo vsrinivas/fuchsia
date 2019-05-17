@@ -92,6 +92,7 @@ toolchain {
         flag: "-Wall"
         flag: "-Werror"
         flag: "-Wextra-semi"
+        flag: "-Wshadow"
       }
     }
     flag_set {
