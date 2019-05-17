@@ -27,8 +27,10 @@ const (
 	// Default RSA key size.
 	RSAKeySize = 2048
 
-	// The default timeout for IO operations.
-	defaultIOTimeout = 5 * time.Second
+	// The allowed timeout to establish an SSH connection.
+	connTimeout = 5 * time.Second
+	// The total allowed timeout to establish an SSH connection and complete an auth handshake.
+	totalDialTimeout = 10 * time.Second
 
 	sshUser = "fuchsia"
 )
@@ -58,13 +60,39 @@ func Connect(ctx context.Context, address net.Addr, config *ssh.ClientConfig) (*
 	// TODO: figure out optimal backoff time and number of retries
 	if err := retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, time.Minute), func() error {
 		var err error
-		client, err = ssh.Dial(network, address.String(), config)
+		client, err = dialWithTimeout(network, address.String(), config, totalDialTimeout)
 		return err
 	}, nil); err != nil {
 		return nil, fmt.Errorf("cannot connect to address %q: %v", address, err)
 	}
 
 	return client, nil
+}
+
+// ssh.Dial can hang during authentication, the 'timeout' being set in the config only
+// applying to establishment of the initial connection. This function is effectively
+// ssh.Dial with the ability to set a deadline on the underlying connection.
+//
+// See https://github.com/golang/go/issues/21941 for more details on the hang.
+func dialWithTimeout(network, addr string, config *ssh.ClientConfig, timeout time.Duration) (*ssh.Client, error) {
+	conn, err := net.DialTimeout(network, addr, config.Timeout)
+	if err != nil {
+		return nil, err
+	}
+	if err := conn.SetDeadline(time.Now().Add(timeout)); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	c, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if err := conn.SetDeadline(time.Time{}); err != nil {
+		c.Close()
+		return nil, err
+	}
+	return ssh.NewClient(c, chans, reqs), nil
 }
 
 // ConnectToNode connects to the device with the given nodename.
@@ -91,7 +119,7 @@ func DefaultSSHConfigFromSigners(signers ...ssh.Signer) (*ssh.ClientConfig, erro
 	return &ssh.ClientConfig{
 		User:            sshUser,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signers...)},
-		Timeout:         defaultIOTimeout,
+		Timeout:         connTimeout,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}, nil
 }
