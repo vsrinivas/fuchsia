@@ -67,9 +67,12 @@ def main():
 
     # test['location'] gives the path to the test relative build directory,
     # which is a valid ninja target.
-    subprocess.call(
+    ret = subprocess.call(
         [args.ninja, '-C', args.build_dir] +
         [test['location'] for test in tests])
+    if ret:
+      error_print('failed to compile tests')
+      return 1
 
     failed = []
     for test in tests:
