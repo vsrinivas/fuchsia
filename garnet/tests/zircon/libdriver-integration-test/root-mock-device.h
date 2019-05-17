@@ -39,6 +39,11 @@ public:
                               std::unique_ptr<MockDeviceHooks> hooks,
                               std::unique_ptr<RootMockDevice>* mock_out);
 
+    static zx_status_t CreateFromTestRoot(
+            const IsolatedDevmgr& devmgr, async_dispatcher_t* dispatcher,
+            fidl::SynchronousInterfacePtr<fuchsia::device::test::RootDevice> test_root,
+            std::unique_ptr<MockDeviceHooks> hooks, std::unique_ptr<RootMockDevice>* mock_out);
+
     // Path to device relative to the devmgr's devfs.
     const std::string& path() const { return path_; }
 private:

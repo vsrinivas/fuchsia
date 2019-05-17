@@ -4,10 +4,11 @@
 
 #include "zx-device.h"
 
-#include "devhost.h"
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include "composite-device.h"
+#include "devhost.h"
 
 zx_status_t zx_device::Create(fbl::RefPtr<zx_device>* out_dev) {
     *out_dev = fbl::AdoptRef(new zx_device());
@@ -49,6 +50,7 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
         printf("device: %p(%s): still has children! not good.\n", this, this->name);
     }
 
+    composite_.reset();
     this->event.reset();
     this->local_event.reset();
 
@@ -88,4 +90,12 @@ fbl::RefPtr<zx_device> zx_device::GetDeviceFromLocalId(uint64_t local_id) {
         return nullptr;
     }
     return fbl::WrapRefPtr(&*itr);
+}
+
+fbl::RefPtr<devmgr::CompositeDevice> zx_device::take_composite() {
+    return std::move(composite_);
+}
+
+void zx_device::set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite) {
+    composite_ = std::move(composite);
 }

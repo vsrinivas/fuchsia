@@ -269,4 +269,17 @@ public:
     void set_rxrpc(decltype(rxrpc_) hook) { rxrpc_ = std::move(hook); }
 };
 
+class IgnoreGetProtocol : public MockDeviceHooks {
+public:
+    explicit IgnoreGetProtocol() : MockDeviceHooks({}) { }
+    virtual ~IgnoreGetProtocol() = default;
+
+    void GetProtocol(HookInvocation record, uint32_t proto, GetProtocolCallback callback) override {
+        ActionList actions;
+        actions.AppendReturnStatus(ZX_ERR_NOT_SUPPORTED);
+        callback(action_list_finalizer_(std::move(actions)));
+    }
+private:
+};
+
 } // namespace libdriver_integration_test

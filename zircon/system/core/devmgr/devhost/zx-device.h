@@ -19,6 +19,7 @@
 
 namespace devmgr {
 
+class CompositeDevice;
 struct DeviceControllerConnection;
 struct ProxyIostate;
 
@@ -153,6 +154,9 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
         static bool EqualTo (const uint64_t& key1, const uint64_t& key2)  { return key1 == key2; }
     };
 
+    void set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite);
+    fbl::RefPtr<devmgr::CompositeDevice> take_composite();
+
 private:
     zx_device() = default;
 
@@ -174,6 +178,10 @@ private:
             (*op)(ctx, args...);
         }
     }
+
+    // If this device is a component of a composite, this points to the
+    // composite control structure.
+    fbl::RefPtr<devmgr::CompositeDevice> composite_;
 
     fbl::WAVLTreeNodeState<fbl::RefPtr<zx_device>> local_id_node_;
 

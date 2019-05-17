@@ -6,7 +6,11 @@
 
 #include <assert.h>
 #include <atomic>
+#include <ddk/device.h>
+#include <ddk/driver.h>
 #include <errno.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 #include <fcntl.h>
 #include <new>
 #include <stdio.h>
@@ -16,17 +20,12 @@
 #include <threads.h>
 #include <unistd.h>
 #include <utility>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
-
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
+#include "composite-device.h"
 
 namespace devmgr {
 
@@ -484,6 +483,15 @@ static void devhost_unbind_children(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_
             }
         }
     }
+
+    fbl::RefPtr<CompositeDevice> composite = dev->take_composite();
+    if (composite) {
+        fbl::RefPtr<zx_device_t> child = composite->Detach();
+        if (child && !(child->flags & DEV_FLAG_DEAD)) {
+            devhost_device_unbind(std::move(child));
+        }
+    }
+
     enum_lock_release();
 }
 

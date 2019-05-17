@@ -67,9 +67,16 @@ zx_status_t RootMockDevice::Create(const IsolatedDevmgr& devmgr,
     fidl::SynchronousInterfacePtr<fuchsia::device::test::RootDevice> test_root;
     test_root.Bind(std::move(test_root_chan));
 
+    return CreateFromTestRoot(devmgr, dispatcher, std::move(test_root), std::move(hooks), mock_out);
+}
+
+zx_status_t RootMockDevice::CreateFromTestRoot(
+        const IsolatedDevmgr& devmgr, async_dispatcher_t* dispatcher,
+        fidl::SynchronousInterfacePtr<fuchsia::device::test::RootDevice> test_root,
+        std::unique_ptr<MockDeviceHooks> hooks, std::unique_ptr<RootMockDevice>* mock_out) {
     fidl::StringPtr devpath;
     zx_status_t call_status;
-    status = test_root->CreateDevice("mock", &call_status, &devpath);
+    zx_status_t status = test_root->CreateDevice("mock", &call_status, &devpath);
     if (status != ZX_OK) {
         return status;
     }
@@ -77,12 +84,27 @@ zx_status_t RootMockDevice::Create(const IsolatedDevmgr& devmgr,
         return call_status;
     }
 
+    // Ignore the |devpath| return and construct it ourselves, since the test
+    // driver makes an assumption about where it's bound which isn't true in the
+    // case where we're testing composite devices
+    fidl::SynchronousInterfacePtr<fuchsia::device::Controller> test_root_controller;
+    test_root_controller.Bind(test_root.Unbind().TakeChannel());
+    status = test_root_controller->GetTopologicalPath(&call_status, &devpath);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (call_status != ZX_OK) {
+        return status;
+    }
+    test_root.Bind(test_root_controller.Unbind().TakeChannel());
+
     const char* kDevPrefix = "/dev/";
     if (devpath.get().find(kDevPrefix) != 0) {
         return ZX_ERR_BAD_STATE;
     }
     std::string relative_devpath(devpath.get(), strlen(kDevPrefix));
-    fd.reset(openat(devmgr.devfs_root().get(), relative_devpath.c_str(), O_RDWR));
+    relative_devpath += "/mock";
+    fbl::unique_fd fd(openat(devmgr.devfs_root().get(), relative_devpath.c_str(), O_RDWR));
     if (!fd.is_valid()) {
         return ZX_ERR_NOT_FOUND;
     }

@@ -299,6 +299,7 @@ static zx_status_t fidl_CreateDeviceStub(void* raw_ctx, zx_handle_t raw_rpc, uin
     dev->protocol_id = protocol_id;
     dev->ops = &device_default_ops;
     dev->rpc = zx::unowned_channel(rpc);
+    dev->conn.store(newconn.get());
     dev->set_local_id(device_local_id);
     newconn->dev = dev;
 
@@ -379,6 +380,7 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
             log(ERROR, "devhost: driver create() failed to create a device!");
             return ZX_ERR_BAD_STATE;
         }
+        newconn->dev->conn = newconn.get();
         newconn->dev->set_local_id(device_local_id);
     } else {
         log(ERROR, "devhost: driver create() not supported\n");
@@ -440,6 +442,7 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
     memcpy(dev->name, name_data, name_size);
     dev->name[name_size] = 0;
     dev->rpc = zx::unowned_channel(rpc);
+    dev->conn.store(newconn.get());
     dev->set_local_id(device_local_id);
 
     status = InitializeCompositeDevice(dev, std::move(components_list));

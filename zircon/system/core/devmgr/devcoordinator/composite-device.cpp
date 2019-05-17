@@ -201,6 +201,11 @@ zx_status_t CompositeDevice::TryAssemble() {
 }
 
 void CompositeDevice::UnbindComponent(CompositeDeviceComponent* component) {
+    // If the composite was fully instantiated, diassociate from it.  It will be
+    // reinstantiated when this component is re-bound.
+    if (device_ != nullptr) {
+        Remove();
+    }
     ZX_ASSERT(device_ == nullptr);
     ZX_ASSERT(component->composite() == this);
     unbound_.push_back(bound_.erase(*component));

@@ -15,14 +15,17 @@ namespace devmgr {
 
 namespace {
 
-class CompositeDevice {
+class CompositeDeviceInstance {
 public:
-    CompositeDevice(zx_device_t* zxdev, CompositeComponents&& components)
+    CompositeDeviceInstance(zx_device_t* zxdev, CompositeComponents&& components)
             : zxdev_(zxdev), components_(std::move(components)) { }
 
-    static zx_status_t Create(zx_device_t* zxdev, CompositeComponents&& components,
-                              std::unique_ptr<CompositeDevice>* device) {
-        auto dev = std::make_unique<CompositeDevice>(zxdev, std::move(components));
+    static zx_status_t Create(fbl::RefPtr<zx_device> zxdev, CompositeComponents&& components,
+                              std::unique_ptr<CompositeDeviceInstance>* device) {
+        // Leak a reference to the zxdev here.  It will be cleaned up by the
+        // device_remove() in Unbind().
+        auto dev = std::make_unique<CompositeDeviceInstance>(zxdev.leak_ref(),
+                                                             std::move(components));
         *device = std::move(dev);
         return ZX_OK;
     }
@@ -44,11 +47,14 @@ public:
     }
 
     void Unbind() {
+        components_.reset();
         device_remove(zxdev_);
     }
+
+    const CompositeComponents& components() { return components_; }
 private:
     zx_device_t* zxdev_;
-    const CompositeComponents components_;
+    CompositeComponents components_;
 };
 
 // Get the placeholder driver structure for the composite driver
@@ -74,18 +80,19 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
                                       CompositeComponents&& components) {
     static const zx_protocol_device_t composite_device_ops = []() {
         zx_protocol_device_t ops = {};
-        ops.unbind = [](void* ctx) { static_cast<CompositeDevice*>(ctx)->Unbind(); };
-        ops.release = [](void* ctx) { static_cast<CompositeDevice*>(ctx)->Release(); };
+        ops.unbind = [](void* ctx) { static_cast<CompositeDeviceInstance*>(ctx)->Unbind(); };
+        ops.release = [](void* ctx) { static_cast<CompositeDeviceInstance*>(ctx)->Release(); };
         return ops;
     }();
     static composite_protocol_ops_t composite_ops = []() {
         composite_protocol_ops_t ops = {};
         ops.get_component_count = [](void* ctx) {
-            return static_cast<CompositeDevice*>(ctx)->GetComponentCount();
+            return static_cast<CompositeDeviceInstance*>(ctx)->GetComponentCount();
         };
         ops.get_components = [](void* ctx, zx_device_t** comp_list, size_t comp_count,
                                 size_t* comp_actual) {
-            static_cast<CompositeDevice*>(ctx)->GetComponents(comp_list, comp_count, comp_actual);
+            static_cast<CompositeDeviceInstance*>(ctx)->GetComponents(comp_list, comp_count,
+                                                                      comp_actual);
         };
         return ops;
     }();
@@ -95,10 +102,17 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
         return ZX_ERR_INTERNAL;
     }
 
-    std::unique_ptr<CompositeDevice> new_device;
-    zx_status_t status = CompositeDevice::Create(dev.get(), std::move(components), &new_device);
+    auto composite = fbl::MakeRefCounted<CompositeDevice>(dev);
+
+    std::unique_ptr<CompositeDeviceInstance> new_device;
+    zx_status_t status = CompositeDeviceInstance::Create(dev, std::move(components),
+                                                         &new_device);
     if (status != ZX_OK) {
         return status;
+    }
+
+    for (auto& component : new_device->components()) {
+        component->set_composite(composite);
     }
 
     dev->protocol_id = ZX_PROTOCOL_COMPOSITE;
@@ -110,5 +124,7 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
     dev->flags |= DEV_FLAG_ADDED;
     return ZX_OK;
 }
+
+CompositeDevice::~CompositeDevice() = default;
 
 } // namespace devmgr
