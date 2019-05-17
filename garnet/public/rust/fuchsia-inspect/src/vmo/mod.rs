@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use failure::{format_err, Error};
+use fuchsia_component::server::{ServiceFs, ServiceObjTrait};
+use fuchsia_zircon::{self as zx, HandleBased};
 use mapped_vmo::Mapping;
 use parking_lot::Mutex;
 use paste;
@@ -61,8 +63,27 @@ pub struct Node {
 /// Root API for inspect. Used to create the VMO and get the root node.
 impl Inspector {
     /// Create a new Inspect VMO object with the given maximum size.
-    pub fn new(max_size: usize) -> Result<Self, Error> {
-        let (mapping, _) = Mapping::allocate(max_size)
+    pub fn new<ServiceObjTy: ServiceObjTrait>(
+        max_size: usize,
+        fs: &mut ServiceFs<ServiceObjTy>,
+    ) -> Result<Self, Error> {
+        let (vmo, root_node) = Inspector::new_root(max_size)?;
+        fs.dir("objects").add_vmo_file_at(
+            "root.inspect",
+            vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)?,
+            0, /* vmo offset */
+            max_size as u64,
+        );
+        Ok(Inspector { root_node })
+    }
+
+    /// Get the root of the VMO object.
+    pub fn root(&self) -> &Node {
+        &self.root_node
+    }
+
+    fn new_root(max_size: usize) -> Result<(zx::Vmo, Node), Error> {
+        let (mapping, vmo) = Mapping::allocate(max_size)
             .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
         let heap = Heap::new(Rc::new(mapping))?;
         let state = State::create(heap)?;
@@ -71,12 +92,7 @@ impl Inspector {
             constants::ROOT_NAME,
             constants::ROOT_PARENT_INDEX,
         )?;
-        Ok(Inspector { root_node })
-    }
-
-    /// Get the root of the VMO object.
-    pub fn root(&self) -> &Node {
-        &self.root_node
+        Ok((vmo, root_node))
     }
 }
 
@@ -254,8 +270,8 @@ mod tests {
 
     #[test]
     fn inspector() {
-        let inspector = Inspector::new(4096).unwrap();
-        let root_name_block = inspector.root().state.lock().heap.get_block(2).unwrap();
+        let (_, root_node) = Inspector::new_root(4096).unwrap();
+        let root_name_block = root_node.state.lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
     }
 
