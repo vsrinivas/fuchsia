@@ -19,6 +19,14 @@ namespace {
 using IoScheduler = ioscheduler::Scheduler;
 using SchedOp = ioscheduler::StreamOp;
 
+enum {
+    kStageInput = 0,
+    kStageAcquired,
+    kStageIssued,
+    kStageCompleted,
+    kStageReleased
+};
+
 // Wrapper around StreamOp.
 class TestOp : public fbl::DoublyLinkedListable<fbl::RefPtr<TestOp>>,
                public fbl::RefCounted<TestOp> {
@@ -38,10 +46,14 @@ public:
     SchedOp* sop() { return &sop_; }
     bool async() { return async_; }
 
+    uint32_t stage() { return stage_; }
+    void set_stage(uint32_t stage) { stage_ = stage; }
+
 private:
     uint32_t id_ = 0;
-    bool async_ = false;
-    bool should_fail_ = false;  // Issue() should fail this request.
+    bool async_ = false;        // Should the op be completed asynchronously.
+    bool should_fail_ = false;  // Should Issue() return an error for this op.
+    uint32_t stage_ = kStageInput;
     SchedOp sop_{};
 };
 
@@ -54,8 +66,10 @@ public:
 protected:
     // Called before every test of this test case.
     void SetUp() override {
+        fbl::AutoLock lock(&lock_);
         ASSERT_EQ(sched_, nullptr);
-        closed_ = false;
+        end_requested_ = false;
+        end_of_stream_ = false;
         in_total_ = 0;
         acquired_total_ = 0;
         issued_total_ = 0;
@@ -66,8 +80,10 @@ protected:
 
     // Called after every test of this test case.
     void TearDown() override {
+        fbl::AutoLock lock(&lock_);
         in_list_.clear();
         acquired_list_.clear();
+        issued_list_.clear();
         completed_list_.clear();
         released_list_.clear();
         sched_.reset();
@@ -96,53 +112,80 @@ protected:
     std::unique_ptr<IoScheduler> sched_ = nullptr;
 
 private:
+    void EndStreamLocked() __TA_REQUIRES(lock_);
+
     fbl::Mutex lock_;
-    bool closed_ = false;           // Was the op input closed?
+    bool end_requested_ __TA_GUARDED(lock_) = false;    // Request closing the stream.
+    bool end_of_stream_ __TA_GUARDED(lock_) = false;    // Stream has been closed.
 
     // Fields to track the ops passing through the stages of the pipeline.
-    uint32_t in_total_ = 0;         // Number of ops inserted into test fixture.
-    uint32_t acquired_total_ = 0;   // Number of ops pulled by scheduler via Acquire callback.
-    uint32_t issued_total_ = 0;     // Number of ops seen via the Issue callback.
-    uint32_t completed_total_ = 0;  // Number of ops whose status has been reported as completed,
-                                    // either synchronously through Issue return or via an
-                                    // AsyncComplete call.
-    uint32_t released_total_ = 0;   // Number of ops released via the Release callback.
 
-    fbl::ConditionVariable in_avail_;       // Event signalling ops are available in in_list_.
-                                            // Used by the acquire callback to block on input.
-    fbl::ConditionVariable acquired_all_;   // Event signalling all pending ops have been acquired.
-                                            // Used by test shutdown threads to drain the input
-                                            // pipeline.
+    // Number of ops inserted into test fixture.
+    uint32_t in_total_ __TA_GUARDED(lock_) = 0;
+
+    // Number of ops pulled by scheduler via Acquire callback.
+    uint32_t acquired_total_ __TA_GUARDED(lock_) = 0;
+
+    // Number of ops seen via the Issue callback.
+    uint32_t issued_total_ __TA_GUARDED(lock_) = 0;
+
+    // Number of ops whose status has been reported as completed, either synchronously through Issue
+    // return or via an AsyncComplete call.
+    uint32_t completed_total_ __TA_GUARDED(lock_) = 0;
+
+    // Number of ops released via the Release callback.
+    uint32_t released_total_ __TA_GUARDED(lock_) = 0;
+
+    // Event signalling ops are available in in_list_.
+    // Used by the acquire callback to block on input.
+    fbl::ConditionVariable in_avail_ __TA_GUARDED(lock_);
+
+    // Event signalling all pending ops have been acquired.  Used by test shutdown threads to drain
+    // the input pipeline.
+    fbl::ConditionVariable acquired_all_ __TA_GUARDED(lock_);
 
     // List of ops inserted by the test but not yet acquired.
-    fbl::DoublyLinkedList<TopRef> in_list_;
+    fbl::DoublyLinkedList<TopRef> in_list_ __TA_GUARDED(lock_);
+
     // List of ops acquired by the scheduler but not yet issued.
-    fbl::DoublyLinkedList<TopRef> acquired_list_;
+    fbl::DoublyLinkedList<TopRef> acquired_list_ __TA_GUARDED(lock_);
+
     // List of ops issued by the scheduler but not yet complete.
-    fbl::DoublyLinkedList<TopRef> issued_list_;
+    fbl::DoublyLinkedList<TopRef> issued_list_ __TA_GUARDED(lock_);
+
     // List of ops completed by the scheduler but not yet released.
-    fbl::DoublyLinkedList<TopRef> completed_list_;
+    fbl::DoublyLinkedList<TopRef> completed_list_ __TA_GUARDED(lock_);
+
     // List of ops released by the scheduler.
-    fbl::DoublyLinkedList<TopRef> released_list_;
+    fbl::DoublyLinkedList<TopRef> released_list_ __TA_GUARDED(lock_);
 };
 
 void IOSchedTestFixture::InsertOp(TopRef top) {
     fbl::AutoLock lock(&lock_);
+    ZX_DEBUG_ASSERT(end_requested_ == false);
     bool was_empty = in_list_.is_empty();
     in_list_.push_back(std::move(top));
+    in_total_++;
     if (was_empty) {
         in_avail_.Signal();
     }
-    in_total_++;
+}
+
+void IOSchedTestFixture::EndStreamLocked() {
+    // Request exit.
+    end_requested_ = true;
+    in_avail_.Signal();
 }
 
 void IOSchedTestFixture::WaitAcquire() {
     fbl::AutoLock lock(&lock_);
-    if (!in_list_.is_empty()) {
+    EndStreamLocked();
+    // Wait for acknowledgement and stream to be drained.
+    while (!end_of_stream_ || !in_list_.is_empty()) {
         acquired_all_.Wait(&lock_);
-        ZX_DEBUG_ASSERT(in_list_.is_empty());
-        ZX_DEBUG_ASSERT(in_total_ == acquired_total_);
     }
+    ZX_DEBUG_ASSERT(in_list_.is_empty());
+    ZX_DEBUG_ASSERT(in_total_ == acquired_total_);
 }
 
 void IOSchedTestFixture::CheckExpectedResult() {
@@ -151,8 +194,12 @@ void IOSchedTestFixture::CheckExpectedResult() {
     ASSERT_EQ(in_total_, issued_total_);
     ASSERT_EQ(in_total_, completed_total_);
     ASSERT_EQ(in_total_, released_total_);
+    ASSERT_TRUE(in_list_.is_empty());
+    ASSERT_TRUE(acquired_list_.is_empty());
+    ASSERT_TRUE(issued_list_.is_empty());
+    ASSERT_TRUE(completed_list_.is_empty());
     for ( ; ; ) {
-        TopRef top = in_list_.pop_front();
+        TopRef top = released_list_.pop_front();
         if (top == nullptr) {
             break;
         }
@@ -163,42 +210,40 @@ void IOSchedTestFixture::CheckExpectedResult() {
 zx_status_t IOSchedTestFixture::Acquire(SchedOp** sop_list, size_t list_count,
                                         size_t* actual_count, bool wait) {
     fbl::AutoLock lock(&lock_);
-    for ( ; ; ) {
-        if (closed_) {
+    while (in_list_.is_empty()) {
+        if (end_requested_) {
+            end_of_stream_ = true;
+            acquired_all_.Broadcast();
             return ZX_ERR_CANCELED;
-        }
-        if (!in_list_.is_empty()) {
-            break;
         }
         if (!wait) {
             return ZX_ERR_SHOULD_WAIT;
         }
         in_avail_.Wait(&lock_);
     }
+
     size_t i = 0;
     for ( ; i < list_count; i++) {
         TopRef top = in_list_.pop_front();
         if (top == nullptr) {
             break;
         }
+        top->set_stage(kStageAcquired);
         sop_list[i] = top->sop();
         acquired_list_.push_back(std::move(top));
     }
-    *actual_count = i;
     acquired_total_ += static_cast<uint32_t>(i);
-    if (in_list_.is_empty()) {
-        acquired_all_.Broadcast();
-    }
+    *actual_count = i;
     return ZX_OK;
 }
 
 zx_status_t IOSchedTestFixture::Issue(SchedOp* sop) {
     fbl::AutoLock lock(&lock_);
-    TopRef top(static_cast<TestOp*>(sop->cookie()));
-    acquired_list_.erase(*top);
     issued_total_++;
+    TopRef top = acquired_list_.erase(*static_cast<TestOp*>(sop->cookie()));
     if (top->async()) {
         // Will be completed asynchronously.
+        top->set_stage(kStageIssued);
         issued_list_.push_back(std::move(top));
         return ZX_ERR_ASYNC;
     }
@@ -210,6 +255,7 @@ zx_status_t IOSchedTestFixture::Issue(SchedOp* sop) {
     } else {
         top->set_result(ZX_OK);
     }
+    top->set_stage(kStageCompleted);
     completed_list_.push_back(std::move(top));
     completed_total_++;
     return ZX_OK;
@@ -217,16 +263,34 @@ zx_status_t IOSchedTestFixture::Issue(SchedOp* sop) {
 
 void IOSchedTestFixture::Release(SchedOp* sop) {
     fbl::AutoLock lock(&lock_);
-    TopRef top(static_cast<TestOp*>(sop->cookie()));
-    completed_list_.erase(*top);
-    released_list_.push_back(std::move(top));
+    TestOp* top = static_cast<TestOp*>(sop->cookie());
+    TopRef ref;
+    uint32_t stage = top->stage();
+    switch (stage) {
+    case kStageAcquired:
+        ref = acquired_list_.erase(*top);
+        break;
+    case kStageIssued:
+        ref = issued_list_.erase(*top);
+        break;
+    case kStageCompleted:
+        ref = completed_list_.erase(*top);
+        break;
+    default:
+        fprintf(stderr, "Invalid op stage %u\n", stage);
+        ZX_DEBUG_ASSERT(false);
+        return;
+    }
+    top->set_stage(kStageReleased);
+    released_list_.push_back(std::move(ref));
     released_total_++;
 }
 
 void IOSchedTestFixture::CancelAcquire() {
     fbl::AutoLock lock(&lock_);
-    closed_ = true;
-    in_avail_.Signal();
+    if (!end_of_stream_) {
+        EndStreamLocked();
+    }
 }
 
 void IOSchedTestFixture::Fatal() {
@@ -348,7 +412,6 @@ TEST_F(IOSchedTestFixture, ServeTestMultistream) {
     // Assert all ops completed.
     CheckExpectedResult();
 }
-
 
 } // namespace
 

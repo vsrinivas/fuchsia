@@ -85,6 +85,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/hid-parser/test",
       "$zx/system/ulib/hwreg/test",
       "$zx/system/ulib/id_allocator/test",
+      "$zx/system/ulib/io-scheduler:io-scheduler-test",
       "$zx/system/ulib/kvstore:kvstore-test",
       "$zx/system/ulib/launchpad/test",
       "$zx/system/ulib/lazy_init:lazy_init-test",

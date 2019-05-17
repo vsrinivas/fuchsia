@@ -20,7 +20,8 @@ zx_status_t Worker::Create(Scheduler* sched, uint32_t id, fbl::unique_ptr<Worker
         fprintf(stderr, "Failed to allocate worker.\n");
         return ZX_ERR_NO_MEMORY;
     }
-    if (thrd_create(&worker->thread_, worker->ThreadEntry, worker.get()) != ZX_OK) {
+    if (thrd_create_with_name(&worker->thread_, worker->ThreadEntry, worker.get(), "io-worker")
+        != thrd_success) {
         fprintf(stderr, "Failed to create worker thread.\n");
         return ZX_ERR_NO_MEMORY;
     }
