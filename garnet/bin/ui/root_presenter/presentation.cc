@@ -41,6 +41,22 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
 constexpr float kAmbient = 0.3f;
 constexpr float kNonAmbient = 1.f - kAmbient;
 
+void SendMediaButtonReportToListener(
+    const fuchsia::ui::input::InputReport& report,
+    fuchsia::ui::policy::MediaButtonsListener* listener) {
+  fuchsia::ui::input::MediaButtonsEvent event;
+  int8_t volume_gain = 0;
+  if (report.media_buttons->volume_up) {
+    volume_gain++;
+  }
+  if (report.media_buttons->volume_down) {
+    volume_gain--;
+  }
+  event.set_volume(volume_gain);
+  event.set_mic_mute(report.media_buttons->mic_mute);
+  listener->OnMediaButtonsEvent(std::move(event));
+}
+
 }  // namespace
 
 Presentation::Presentation(
@@ -429,6 +445,7 @@ void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
     state = std::make_unique<ui_input::DeviceState>(
         input_device->id(), input_device->descriptor(), std::move(callback));
   } else if (input_device->descriptor()->media_buttons) {
+    media_buttons_ids_.push_back(input_device->id());
     ui_input::OnMediaButtonsEventCallback callback =
         [this](fuchsia::ui::input::InputReport report) {
           OnMediaButtonsEvent(std::move(report));
@@ -452,6 +469,12 @@ void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
 
 void Presentation::OnDeviceRemoved(uint32_t device_id) {
   FXL_VLOG(1) << "OnDeviceRemoved: device_id=" << device_id;
+  for (size_t i = 0; i < media_buttons_ids_.size(); i++) {
+    if (media_buttons_ids_[i] == device_id) {
+      media_buttons_ids_.erase(media_buttons_ids_.begin() + i);
+      break;
+    }
+  }
   if (device_states_by_id_.count(device_id) != 0) {
     device_states_by_id_[device_id].second->OnUnregistered();
     auto it = cursors_.find(device_id);
@@ -555,6 +578,8 @@ void Presentation::SetPresentationModeListener(
   FXL_LOG(INFO) << "Presentation mode, now listening.";
 }
 
+// TODO(SCN-1405) Eventually pull this out from Presentation into something
+// else.
 void Presentation::RegisterMediaButtonsListener(
     fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener>
         listener_handle) {
@@ -572,6 +597,17 @@ void Presentation::RegisterMediaButtonsListener(
                        }),
         media_buttons_listeners_.end());
   });
+
+  // Send the last seen report to the listener so they have the information
+  // about the media button's state.
+  for (uint32_t media_buttons_id : media_buttons_ids_) {
+    const ui_input::InputDeviceImpl* device_impl =
+        std::get<0>(device_states_by_id_[media_buttons_id]);
+    const fuchsia::ui::input::InputReport* report = device_impl->LastReport();
+    if (report != nullptr) {
+      SendMediaButtonReportToListener(*report, listener.get());
+    }
+  }
 
   media_buttons_listeners_.push_back(std::move(listener));
 }
@@ -729,21 +765,13 @@ void Presentation::OnSensorEvent(uint32_t device_id,
   }
 }
 
+// TODO(SCN-1405) Eventually pull this out from Presentation into something
+// else.
 void Presentation::OnMediaButtonsEvent(fuchsia::ui::input::InputReport report) {
   FXL_CHECK(report.media_buttons);
 
   for (auto& listener : media_buttons_listeners_) {
-    fuchsia::ui::input::MediaButtonsEvent event;
-    int8_t volume_gain = 0;
-    if (report.media_buttons->volume_up) {
-      volume_gain++;
-    }
-    if (report.media_buttons->volume_down) {
-      volume_gain--;
-    }
-    event.set_volume(volume_gain);
-    event.set_mic_mute(report.media_buttons->mic_mute);
-    listener->OnMediaButtonsEvent(std::move(event));
+    SendMediaButtonReportToListener(report, listener.get());
   }
 }
 

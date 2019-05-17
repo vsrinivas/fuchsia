@@ -248,6 +248,9 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   fuchsia::ui::policy::PresentationMode presentation_mode_;
   std::unique_ptr<presentation_mode::Detector> presentation_mode_detector_;
 
+  // TODO(SCN-1405) Pull these out of a presentation since this should probably
+  // be global state.
+  std::vector<uint32_t> media_buttons_ids_;
   // A registry of listeners for media button events.
   std::vector<fuchsia::ui::policy::MediaButtonsListenerPtr>
       media_buttons_listeners_;

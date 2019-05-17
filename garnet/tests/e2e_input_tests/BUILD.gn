@@ -36,6 +36,7 @@ executable("minimal_input_test") {
   testonly = true
 
   sources = [
+    "mediabuttons_listener_test.cc",
     "minimal_input_test.cc",
   ]
 

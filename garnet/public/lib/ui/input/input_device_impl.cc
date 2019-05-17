@@ -25,6 +25,12 @@ void InputDeviceImpl::DispatchReport(fuchsia::ui::input::InputReport report) {
   TRACE_DURATION("input", "input_report_listener", "id", report.trace_id);
   TRACE_FLOW_END("input", "hid_read_to_listener", report.trace_id);
   TRACE_FLOW_BEGIN("input", "report_to_presenter", report.trace_id);
+  if (descriptor_.media_buttons) {
+    if (!last_report_) {
+      last_report_ = fuchsia::ui::input::InputReport::New();
+    }
+    fidl::Clone(report, last_report_.get());
+  }
   listener_->OnReport(this, std::move(report));
 }
 

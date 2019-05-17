@@ -19,6 +19,7 @@
             "shell-commands"
         ],
         "services": [
+            "fuchsia.tracelink.Registry",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Environment",
