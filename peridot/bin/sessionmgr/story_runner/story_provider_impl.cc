@@ -641,7 +641,8 @@ void StoryProviderImpl::OnStoryStorageUpdated(
   // If we have a StoryRuntimeContainer for this story id, update our cached
   // StoryData and get runtime state available from it.
   //
-  // Otherwise, use defaults for an unloaded story.
+  // Otherwise, use defaults for an unloaded story and send a request for the
+  // story to start running (stories should start running by default).
   fuchsia::modular::StoryState runtime_state =
       fuchsia::modular::StoryState::STOPPED;
   fuchsia::modular::StoryVisibilityState visibility_state =
@@ -651,6 +652,10 @@ void StoryProviderImpl::OnStoryStorageUpdated(
     runtime_state = i->second.model_observer->model().runtime_state();
     visibility_state = i->second.model_observer->model().visibility_state();
     i->second.current_data = CloneOptional(story_data);
+  } else {
+    fuchsia::modular::StoryControllerPtr story_controller;
+    GetController(story_id, story_controller.NewRequest());
+    story_controller->RequestStart();
   }
   NotifyStoryWatchers(&story_data, runtime_state, visibility_state);
 }

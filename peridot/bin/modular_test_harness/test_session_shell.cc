@@ -17,10 +17,7 @@
 
 namespace {
 
-// Implementation of a minimal session shell used for testing purposes. This
-// session shell listens for new stories and starts them if they are in a
-// stopped state. Note that stopping a running story will cause it to start up
-// again.
+// Implementation of a minimal session shell used for testing purposes.
 class TestSessionShellApp : public modular::ViewApp,
                             public fuchsia::modular::StoryProviderWatcher,
                             public fuchsia::modular::SessionShell {
@@ -70,14 +67,7 @@ class TestSessionShellApp : public modular::ViewApp,
   void OnChange(
       fuchsia::modular::StoryInfo story_info,
       fuchsia::modular::StoryState story_state,
-      fuchsia::modular::StoryVisibilityState story_visibility_state) override {
-    if (story_state == fuchsia::modular::StoryState::STOPPED) {
-      fuchsia::modular::StoryControllerPtr story_controller;
-      story_provider_->GetController(story_info.id,
-                                     story_controller.NewRequest());
-      story_controller->RequestStart();
-    }
-  }
+      fuchsia::modular::StoryVisibilityState story_visibility_state) override {}
 
   // |fuchsia::modular::StoryProviderWatcher|
   void OnDelete(std::string story_id) override {}

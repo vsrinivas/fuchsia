@@ -55,7 +55,7 @@ class TestApp : public modular::testing::SessionShellBase {
  private:
   // TestStoryShellAttachDetach
   //
-  // Create a story and start.
+  // Create a story, which should start running automatically.
   //
   // Verify the story shell is attached through StoryShellFactory.AttachStory()
   //
@@ -78,32 +78,6 @@ class TestApp : public modular::testing::SessionShellBase {
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));
-    story_puppet_master_->Execute(
-        [this](fuchsia::modular::ExecuteResult result) {
-          story_shell_attach_detach_create_.Pass();
-          TestStoryShellAttachDetach_RunStory();
-        });
-  }
-
-  TestPoint story_shell_attach_detach_state_before_run_{
-      "TestStoryShellAttachDetach: State before Run"};
-  TestPoint story_shell_attach_detach_state_after_run_{
-      "TestStoryShellAttachDetach: State after Run"};
-  TestPoint story_shell_attach_detach_attach_story_{
-      "TestStoryShellAttachDetach: AttachStory"};
-
-  void TestStoryShellAttachDetach_RunStory() {
-    story_provider()->GetController("story1", story_controller_.NewRequest());
-    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
-                                      fuchsia::modular::StoryState state) {
-      story_info_ = std::move(info);
-      if (state == fuchsia::modular::StoryState::STOPPED) {
-        story_shell_attach_detach_state_before_run_.Pass();
-      }
-    });
-
-    // Start and show the new story using RequestStart().
-    story_controller_->RequestStart();
 
     story_shell_factory_impl_.set_on_attach_story(
         [this](std::string,
@@ -113,6 +87,20 @@ class TestApp : public modular::testing::SessionShellBase {
           story_shell_impl_.GetHandler()(std::move(request));
         });
 
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story_shell_attach_detach_create_.Pass();
+          TestStoryShellAttachDetach_RunStory();
+        });
+  }
+
+  TestPoint story_shell_attach_detach_state_after_run_{
+      "TestStoryShellAttachDetach: State after Run"};
+  TestPoint story_shell_attach_detach_attach_story_{
+      "TestStoryShellAttachDetach: AttachStory"};
+
+  void TestStoryShellAttachDetach_RunStory() {
+    story_provider()->GetController("story1", story_controller_.NewRequest());
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
       if (state == fuchsia::modular::StoryState::RUNNING) {

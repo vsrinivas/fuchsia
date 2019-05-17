@@ -294,14 +294,13 @@ class TestApp : public modular::testing::SessionShellBase {
                                       fuchsia::modular::StoryState state) {
       story1_get_controller_.Pass();
       story_info_ = std::move(story_info);
-      TestStory1_Run();
+      TestStory1_CheckRunning();
     });
   }
 
   TestPoint story1_run_{"Story1 Run"};
-  void TestStory1_Run() {
+  void TestStory1_CheckRunning() {
     // Start and show the new story.
-    story_controller_->RequestStart();
     story1_run_.Pass();
     TestStory1_Stop();
   }
@@ -369,25 +368,13 @@ class TestApp : public modular::testing::SessionShellBase {
             story2_get_modules_.Pass();
           }
 
-          TestStory2_Run();
+          TestStory2_CheckRunning();
         });
   }
 
-  TestPoint story2_state_before_run_{"Story2 State before Run"};
   TestPoint story2_state_after_run_{"Story2 State after Run"};
 
-  void TestStory2_Run() {
-    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
-                                      fuchsia::modular::StoryState state) {
-      if (state == fuchsia::modular::StoryState::STOPPED) {
-        story2_state_before_run_.Pass();
-      }
-    });
-
-    // Start and show the new story *while* the GetInfo() call above is in
-    // flight.
-    story_controller_->RequestStart();
-
+  void TestStory2_CheckRunning() {
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
       if (state == fuchsia::modular::StoryState::RUNNING) {
@@ -474,15 +461,13 @@ class TestApp : public modular::testing::SessionShellBase {
               FXL_LOG(INFO) << item.id;
             }
           }
-          TestStory3_Run();
+          TestStory3_CheckRunning();
         });
   }
 
   TestPoint story3_run_{"Story3 Run"};
 
-  void TestStory3_Run() {
-    story_controller_->RequestStart();
-
+  void TestStory3_CheckRunning() {
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
       if (state == fuchsia::modular::StoryState::RUNNING) {
@@ -527,7 +512,7 @@ class TestApp : public modular::testing::SessionShellBase {
 
   // Test Case Story4:
   //
-  // Create a story and start it with RequestStart() rather than Start().
+  // Create a story; it should start running automatically.
   //
   // Verify the view is received through SessionShell.AttachView().
   //
@@ -550,33 +535,22 @@ class TestApp : public modular::testing::SessionShellBase {
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));
-    story_puppet_master_->Execute(
-        [this](fuchsia::modular::ExecuteResult result) {
-          story4_create_.Pass();
-          TestStory4_Run();
-        });
-  }
-
-  TestPoint story4_state_before_run_{"Story4 State before Run"};
-  TestPoint story4_state_after_run_{"Story4 State after Run"};
-  TestPoint story4_attach_view_{"Story4 attach View"};
-
-  void TestStory4_Run() {
-    story_provider()->GetController("story4", story_controller_.NewRequest());
-    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
-                                      fuchsia::modular::StoryState state) {
-      story_info_ = std::move(info);
-      if (state == fuchsia::modular::StoryState::STOPPED) {
-        story4_state_before_run_.Pass();
-      }
-    });
-
-    // Start and show the new story using RequestStart().
-    story_controller_->RequestStart();
 
     session_shell_impl()->set_on_attach_view(
         [this](ViewId) { story4_attach_view_.Pass(); });
 
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story4_create_.Pass();
+          TestStory4_CheckRunning();
+        });
+  }
+
+  TestPoint story4_state_after_run_{"Story4 State after Run"};
+  TestPoint story4_attach_view_{"Story4 attach View"};
+
+  void TestStory4_CheckRunning() {
+    story_provider()->GetController("story4", story_controller_.NewRequest());
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
       if (state == fuchsia::modular::StoryState::RUNNING) {
@@ -625,7 +599,7 @@ class TestApp : public modular::testing::SessionShellBase {
 
   // Test Case Story5:
   //
-  // Create a story and start it with RequestStart() rather than Start().
+  // Create a story; it should start running automatically.
   //
   // Verify that, when the story is stopped, a request for
   // SessionShell.DetachView() is received, and if the request is not answered,
@@ -647,35 +621,23 @@ class TestApp : public modular::testing::SessionShellBase {
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));
-    story_puppet_master_->Execute(
-        [this](fuchsia::modular::ExecuteResult result) {
-          story5_create_.Pass();
-          TestStory5_Run();
-        });
-  }
-
-  TestPoint story5_state_before_run_{"Story5 State before Run"};
-  TestPoint story5_state_after_run_{"Story5 State after Run"};
-
-  TestPoint story5_attach_view_{"Story5 attach View"};
-
-  void TestStory5_Run() {
-    story_provider()->GetController("story5", story_controller_.NewRequest());
-
-    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
-                                      fuchsia::modular::StoryState state) {
-      story_info_ = std::move(info);
-      if (state == fuchsia::modular::StoryState::STOPPED) {
-        story5_state_before_run_.Pass();
-      }
-    });
-
-    // Start and show the new story using RequestStart().
-    story_controller_->RequestStart();
 
     session_shell_impl()->set_on_attach_view(
         [this](ViewId) { story5_attach_view_.Pass(); });
 
+    story_puppet_master_->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story5_create_.Pass();
+          TestStory5_CheckRunning();
+        });
+  }
+
+  TestPoint story5_state_after_run_{"Story5 State after Run"};
+
+  TestPoint story5_attach_view_{"Story5 attach View"};
+
+  void TestStory5_CheckRunning() {
+    story_provider()->GetController("story5", story_controller_.NewRequest());
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
       if (state == fuchsia::modular::StoryState::RUNNING) {
@@ -727,7 +689,7 @@ class TestApp : public modular::testing::SessionShellBase {
 
   // Test Case Story6:
   //
-  // Create a story and start it with RequestStart() rather than Start().
+  // Create a story; it should start running automatically.
   //
   // Verify that, when the story is NOT stopped when the SessionShell is stopped
   // (such as at Logout) NO request for SessionShell.DetachView() is received.
@@ -748,35 +710,21 @@ class TestApp : public modular::testing::SessionShellBase {
     commands.push_back(std::move(command));
 
     story_puppet_master_->Enqueue(std::move(commands));
+    session_shell_impl()->set_on_attach_view(
+        [this](ViewId) { story6_attach_view_.Pass(); });
     story_puppet_master_->Execute(
         [this](fuchsia::modular::ExecuteResult result) {
           story6_create_.Pass();
-          TestStory6_Run();
+          TestStory6_CheckRunning();
         });
   }
 
-  TestPoint story6_state_before_run_{"Story6 State before Run"};
   TestPoint story6_state_after_run_{"Story6 State after Run"};
 
   TestPoint story6_attach_view_{"Story6 attach View"};
 
-  void TestStory6_Run() {
+  void TestStory6_CheckRunning() {
     story_provider()->GetController("story6", story_controller_.NewRequest());
-
-    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
-                                      fuchsia::modular::StoryState state) {
-      story_info_ = std::move(info);
-      if (state == fuchsia::modular::StoryState::STOPPED) {
-        story6_state_before_run_.Pass();
-      }
-    });
-
-    // Start and show the new story using RequestStart().
-    story_controller_->RequestStart();
-
-    session_shell_impl()->set_on_attach_view(
-        [this](ViewId) { story6_attach_view_.Pass(); });
-
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,
                                       fuchsia::modular::StoryState state) {
       if (state == fuchsia::modular::StoryState::RUNNING) {
