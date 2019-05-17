@@ -31,18 +31,7 @@ class SemanticTreeImpl
       : view_ref_(std::move(view_ref)),
         client_action_listener_(std::move(client_action_listener)),
         debug_dir_(debug_dir) {
-    if (debug_dir_) {
-      // Add Semantic Tree log file in Hub-Debug directory.
-      debug_dir_->AddEntry(std::to_string(GetKoid(view_ref_)),
-                           std::make_unique<vfs::PseudoFile>(
-                               [this](std::vector<uint8_t>* output) {
-                                 std::string buffer = LogSemanticTree();
-                                 output->resize(buffer.length());
-                                 std::copy(buffer.begin(), buffer.end(),
-                                           output->begin());
-                                 return ZX_OK;
-                               }));
-    }
+    InitializeDebugEntry(debug_dir_);
   }
 
   ~SemanticTreeImpl() override = default;
@@ -109,6 +98,10 @@ class SemanticTreeImpl
   // Internal helper function to check if a point is within a bounding box.
   bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box,
                         const escher::vec2& point) const;
+
+  // Function to create per view Log files under debug directory for debugging
+  // semantic tree.
+  void InitializeDebugEntry(vfs::PseudoDir* debug_dir);
 
   // List of committed, cached nodes for each front-end. We represent semantics
   // tree as a map of local node ids to the actual node objects. All query

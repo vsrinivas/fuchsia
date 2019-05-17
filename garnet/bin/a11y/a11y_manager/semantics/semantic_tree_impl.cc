@@ -11,6 +11,8 @@
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace a11y_manager {
+// Max file size of semantic tree log file is 1MB.
+constexpr size_t kMaxDebugFileSize = 1024 * 1024;
 const std::string kNewLine = "\n";
 const std::string::size_type kIndentSize = 4;
 const int kRootNode = 0;
@@ -211,6 +213,30 @@ void SemanticTreeImpl::DeletePointerFromParent(uint32_t node_id) {
         }
       }
     }
+  }
+}
+
+void SemanticTreeImpl::InitializeDebugEntry(vfs::PseudoDir* debug_dir) {
+  if (debug_dir_) {
+    // Add Semantic Tree log file in Hub-Debug directory.
+    debug_dir_->AddEntry(
+        std::to_string(GetKoid(view_ref_)),
+        std::make_unique<vfs::PseudoFile>(
+            kMaxDebugFileSize,
+            [this](std::vector<uint8_t>* output, size_t max_file_size) {
+              std::string buffer = LogSemanticTree();
+              size_t len = buffer.length();
+              if (len > max_file_size) {
+                FX_LOGS(WARNING)
+                    << "Semantic Tree log file ("
+                    << std::to_string(GetKoid(view_ref_)) << ") size is:" << len
+                    << " which is more than max size:" << kMaxDebugFileSize;
+                len = kMaxDebugFileSize;
+              }
+              output->resize(len);
+              std::copy(buffer.begin(), buffer.begin() + len, output->begin());
+              return ZX_OK;
+            }));
   }
 }
 
