@@ -78,10 +78,10 @@
       "required": [
         "binaries",
         "deps",
+        "dist_dir",
         "format",
         "headers",
         "include_dir",
-        "dist_dir",
         "root",
 
         "name",
