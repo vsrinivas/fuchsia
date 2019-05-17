@@ -113,6 +113,8 @@ class InputApp {
       KeyEventCommand(positional_args, duration);
     } else if (positional_args[0] == "text") {
       TextCommand(positional_args, duration);
+    } else if (positional_args[0] == "media_button") {
+      MediaButtonEventCommand(positional_args);
     } else {
       Usage();
     }
@@ -122,11 +124,13 @@ class InputApp {
   void Usage() {
     // Keep this up to date with README.md.
     // Until we have standardized usage doc formatting, let's do 100 cols.
-    std::cout << R"END(usage: input [<options>] text|keyevent|tap|swipe <args>
+    std::cout
+        << R"END(usage: input [<options>] text|keyevent|tap|swipe|media_button <args>
   input text <text>
   input keyevent <hid_usage (int)>
   input tap <x> <y>
   input swipe <x0> <y0> <x1> <y1>
+  input media_button <mic_mute> <volume_up> <volume_down> <reset>
 
 global options:
   --duration=<ms>                 the duration of the event, in milliseconds (default: 0)
@@ -157,6 +161,9 @@ commands:
                                   and will be proportionally transformed to the current display,
                                   but you can specify a virtual range for the input with the
                                   --width and --height options.
+
+  media_button                    Sends a MediaButton event. All fields are booleans and must
+                                  be either 0 or 1.
 
     options:
       --width=<w>                 the width of the display (default: 1000)
@@ -215,6 +222,87 @@ For further details, see README.md.
     FXL_VLOG(1) << "Registering " << descriptor;
     registry_->RegisterDevice(std::move(descriptor), input_device.NewRequest());
     return input_device;
+  }
+
+  fuchsia::ui::input::InputDevicePtr RegisterMediaButtons() {
+    fuchsia::ui::input::MediaButtonsDescriptorPtr mediabuttons =
+        fuchsia::ui::input::MediaButtonsDescriptor::New();
+    mediabuttons->buttons = fuchsia::ui::input::kMicMute |
+                            fuchsia::ui::input::kVolumeUp |
+                            fuchsia::ui::input::kVolumeDown;
+    fuchsia::ui::input::DeviceDescriptor descriptor;
+    descriptor.media_buttons = std::move(mediabuttons);
+
+    fuchsia::ui::input::InputDevicePtr input_device;
+    FXL_VLOG(1) << "Registering " << descriptor;
+    registry_->RegisterDevice(std::move(descriptor), input_device.NewRequest());
+    return input_device;
+  }
+
+  void MediaButtonEventCommand(const std::vector<std::string>& args) {
+    if (args.size() != 5) {
+      Usage();
+      return;
+    }
+
+    int32_t mic_mute, volume_up, volume_down, reset;
+    if (!fxl::StringToNumberWithError(args[1], &mic_mute)) {
+      Error("Invalid mic_mute number");
+      return;
+    }
+    if (mic_mute != 0 && mic_mute != 1) {
+      Error("mic_mute must be 0 or 1");
+      return;
+    }
+    if (!fxl::StringToNumberWithError(args[2], &volume_up)) {
+      Error("Invalid volume_up number");
+      return;
+    }
+    if (volume_up < 0 || volume_up > 1) {
+      Error("volume_up must be 0 or 1");
+      return;
+    }
+    if (!fxl::StringToNumberWithError(args[3], &volume_down)) {
+      Error("Invalid volume_down number");
+      return;
+    }
+    if (volume_down < 0 || volume_down > 1) {
+      Error("volume_down must be 0 or 1");
+      return;
+    }
+    if (!fxl::StringToNumberWithError(args[4], &reset)) {
+      Error("Invalid reset number");
+      return;
+    }
+    if (reset < 0 || reset > 1) {
+      Error("reset must be 0 or 1");
+      return;
+    }
+
+    fuchsia::ui::input::InputDevicePtr input_device = RegisterMediaButtons();
+    SendMediaButton(std::move(input_device), mic_mute, volume_up, volume_down,
+                    reset);
+  }
+
+  void SendMediaButton(fuchsia::ui::input::InputDevicePtr input_device,
+                       bool mic_mute, bool volume_up, bool volume_down,
+                       bool reset) {
+    TRACE_DURATION("input", "SendMediaButton");
+    fuchsia::ui::input::MediaButtonsReportPtr media_buttons =
+        fuchsia::ui::input::MediaButtonsReport::New();
+    media_buttons->mic_mute = mic_mute;
+    media_buttons->volume_up = volume_up;
+    media_buttons->volume_down = volume_down;
+    media_buttons->reset = reset;
+
+    fuchsia::ui::input::InputReport report;
+    report.event_time = InputEventTimestampNow();
+    report.media_buttons = std::move(media_buttons);
+
+    FXL_VLOG(1) << "SendMediaButton " << report;
+    TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
+    input_device->DispatchReport(std::move(report));
+    loop_->Quit();
   }
 
   void TapEventCommand(const std::vector<std::string>& args,
@@ -387,24 +475,24 @@ For further details, see README.md.
     TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
     input_device->DispatchReport(std::move(report));
 
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [this, device = std::move(input_device)] {
-                             TRACE_DURATION("input", "SendKeyPress");
-                             // RELEASED
-                             fuchsia::ui::input::KeyboardReportPtr keyboard =
-                                 fuchsia::ui::input::KeyboardReport::New();
-                             keyboard->pressed_keys.resize(0);
+    async::PostDelayedTask(
+        async_get_default_dispatcher(),
+        [this, device = std::move(input_device)] {
+          TRACE_DURATION("input", "SendKeyPress");
+          // RELEASED
+          fuchsia::ui::input::KeyboardReportPtr keyboard =
+              fuchsia::ui::input::KeyboardReport::New();
+          keyboard->pressed_keys.resize(0);
 
-                             fuchsia::ui::input::InputReport report;
-                             report.event_time = InputEventTimestampNow();
-                             report.keyboard = std::move(keyboard);
-                             FXL_VLOG(1) << "SendKeyPress " << report;
-                             TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                                              report.trace_id);
-                             device->DispatchReport(std::move(report));
-                             loop_->Quit();
-                           },
-                           duration);
+          fuchsia::ui::input::InputReport report;
+          report.event_time = InputEventTimestampNow();
+          report.keyboard = std::move(keyboard);
+          FXL_VLOG(1) << "SendKeyPress " << report;
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
+          device->DispatchReport(std::move(report));
+          loop_->Quit();
+        },
+        duration);
   }
 
   void SendText(fuchsia::ui::input::InputDevicePtr input_device,
