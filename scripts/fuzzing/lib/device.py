@@ -28,12 +28,16 @@ class Device(object):
   def from_args(cls, host, args):
     """Constructs a Device from command line arguments."""
     netaddr_cmd = ['netaddr', '--fuchsia', '--nowait']
+    default_device = '{}.device'.format(host.build_dir)
     if args.device:
       netaddr_cmd.append(args.device)
+    elif os.path.exists(default_device):
+      with open(default_device) as f:
+        netaddr_cmd.append(f.read().strip())
     try:
       netaddr = host.zircon_tool(netaddr_cmd)
     except subprocess.CalledProcessError:
-      raise RuntimeError('Unable to find device')
+      raise RuntimeError('Unable to find device; try `fx set-device`.')
     device = cls(host, netaddr)
     if not host.build_dir:
       raise Host.ConfigError('Unable to find SSH configuration.')
