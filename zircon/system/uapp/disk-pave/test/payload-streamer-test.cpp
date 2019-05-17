@@ -22,21 +22,30 @@ TEST(PayloadStreamerTest, TrivialLifetime) {
 class PayloadStreamerTest : public zxtest::Test {
 public:
     PayloadStreamerTest() : loop_(&kAsyncLoopConfigAttachToThread) {
-        char payload_template[] = "/tmp/payload.XXXXXX";
-        const char* tempfile = mktemp(payload_template);
-        zx::channel server;
-        ASSERT_OK(zx::channel::create(0, &client_, &server));
-        fbl::unique_fd src(open(tempfile, O_RDWR | O_CREAT));
+        mktemp(tempfile_name_);
+        ASSERT_NE(strlen(tempfile_name_), 0);
+
+        fbl::unique_fd src(open(tempfile_name_, O_RDWR | O_CREAT));
         ASSERT_EQ(write(src.get(), kFileData, sizeof(kFileData)), sizeof(kFileData));
         lseek(src.get(), 0, SEEK_SET);
+
+        zx::channel server;
+        ASSERT_OK(zx::channel::create(0, &client_, &server));
         streamer_.emplace(std::move(server), std::move(src));
         loop_.StartThread("payload-stream-test-loop");
+    }
+
+    ~PayloadStreamerTest() {
+        unlink(tempfile_name_);
     }
 
 protected:
     zx::channel client_;
     async::Loop loop_;
     std::optional<disk_pave::PayloadStreamer> streamer_;
+
+private:
+    char tempfile_name_[20] = "/tmp/payload.XXXXXX";
 };
 
 TEST_F(PayloadStreamerTest, RegisterVmo) {
