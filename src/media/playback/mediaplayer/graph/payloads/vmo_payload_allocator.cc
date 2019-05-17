@@ -55,7 +55,6 @@ fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::AllocatePayloadBuffer(
     vmo_index = (vmo_index + 1) % payload_vmos_.size();
     if (vmo_index == suggested_allocation_vmo_) {
       // Payload memory exhausted.
-      FXL_LOG(ERROR) << "Couldn't allocate buffer of size " << size << ".";
       return nullptr;
     }
   }

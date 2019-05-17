@@ -15,7 +15,6 @@ namespace {
 
 constexpr int64_t kDefaultMinLeadTime = ZX_MSEC(100);
 constexpr int64_t kTargetLeadTimeDeltaNs = ZX_MSEC(10);
-constexpr int64_t kWarnThresholdNs = ZX_MSEC(500);
 
 }  // namespace
 
@@ -368,17 +367,6 @@ bool FidlAudioRenderer::NeedMorePackets() {
   if (last_supplied_pts_ns_ == Packet::kNoPts ||
       presentation_time_ns + target_lead_time_ns_ > last_supplied_pts_ns_) {
     // We need more packets to meet lead time commitments.
-    if (last_departed_pts_ns_ != Packet::kNoPts &&
-        last_supplied_pts_ns_ - last_departed_pts_ns_ > kWarnThresholdNs) {
-      FXL_LOG(WARNING) << "Audio renderer holding too much content:";
-      FXL_LOG(WARNING) << "    total content "
-                       << AsNs(last_supplied_pts_ns_ - last_departed_pts_ns_);
-      FXL_LOG(WARNING) << "    arrivals lead pts by "
-                       << AsNs(last_supplied_pts_ns_ - presentation_time_ns);
-      FXL_LOG(WARNING) << "    departures trail pts by "
-                       << AsNs(presentation_time_ns - last_departed_pts_ns_);
-    }
-
     return true;
   }
 

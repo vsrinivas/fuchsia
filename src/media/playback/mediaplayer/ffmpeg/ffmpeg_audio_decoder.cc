@@ -74,7 +74,7 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
                  : AllocatePayloadBuffer(buffer_size);
 
   if (!buffer) {
-    FXL_LOG(ERROR) << "Ran out of memory for decoded audio, dropping packet.";
+      // TODO(dalesat): Record/report packet drop.
     return -1;
   }
 
@@ -157,8 +157,7 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
     // buffer for the interleaved frames, which we get from the stage.
     auto new_payload_buffer = AllocatePayloadBuffer(payload_size);
     if (!new_payload_buffer) {
-      FXL_LOG(ERROR) << "Ran out of memory for decoded, interleaved audio, "
-                        "dropping packet.";
+      // TODO(dalesat): Record/report packet drop.
       return nullptr;
     }
 
