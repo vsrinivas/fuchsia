@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/archivist_tests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/archivist"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage",
+            "shell"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
