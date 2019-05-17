@@ -21,3 +21,27 @@ driver("hid-buttons") {
     "$zx/system/ulib/zx",
   ]
 }
+
+test("hid-buttons-test") {
+  output_name = "hid-buttons-test"
+  sources = [
+    "hid-buttons-test.cpp",
+    "hid-buttons.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-gpio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

@@ -106,6 +106,14 @@ zx_status_t Bind::DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* buf, 
     return ZX_OK;
 }
 
+zx_status_t Bind::DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t* out_size) {
+    if (get_metadata_ == nullptr) {
+        return ZX_ERR_BAD_STATE;
+    }
+    *out_size = get_metadata_length_;
+    return ZX_OK;
+}
+
 void Bind::DeviceMakeVisible(zx_device_t* device) {
     if (device != kFakeDevice) {
         bad_device_ = true;
@@ -203,6 +211,13 @@ zx_status_t device_get_metadata(zx_device_t* device, uint32_t type, void* buf, s
         return ZX_ERR_NOT_SUPPORTED;
     }
     return fake_ddk::Bind::Instance()->DeviceGetMetadata(device, type, buf, buflen, actual);
+}
+
+zx_status_t device_get_metadata_size(zx_device_t* device, uint32_t type, size_t* out_size) {
+    if (!fake_ddk::Bind::Instance()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return fake_ddk::Bind::Instance()->DeviceGetMetadataSize(device, type, out_size);
 }
 
 extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {}

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "hid-buttons.h"
+
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
@@ -11,25 +13,13 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
-
-#include <hid/descriptor.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-
+#include <hid/descriptor.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
-
-#include "hid-buttons.h"
-
-// clang-format off
-// zx_port_packet::key.
-constexpr uint64_t PORT_KEY_SHUTDOWN = 0x01;
-// Start of up to kNumberOfRequiredGpios port types used for interrupts.
-constexpr uint64_t PORT_KEY_INTERRUPT_START = 0x10;
-// clang-format on
 
 namespace buttons {
 
@@ -43,12 +33,12 @@ int HidButtonsDevice::Thread() {
             return thrd_error;
         }
 
-        if (packet.key == PORT_KEY_SHUTDOWN) {
+        if (packet.key == kPortKeyShutDown) {
             zxlogf(INFO, "%s shutting down\n", __FUNCTION__);
             return thrd_success;
-        } else if (packet.key >= PORT_KEY_INTERRUPT_START &&
-                   packet.key < (PORT_KEY_INTERRUPT_START + buttons_.size())) {
-            uint32_t type = static_cast<uint32_t>(packet.key - PORT_KEY_INTERRUPT_START);
+        } else if (packet.key >= kPortKeyInterruptStart &&
+                   packet.key < (kPortKeyInterruptStart + buttons_.size())) {
+            uint32_t type = static_cast<uint32_t>(packet.key - kPortKeyInterruptStart);
             if (gpios_[type].config.type == BUTTONS_GPIO_TYPE_INTERRUPT) {
                 // We need to reconfigure the GPIO to catch the opposite polarity.
                 ReconfigurePolarity(type, packet.key);
@@ -150,17 +140,6 @@ zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, 
     buttons_input_rpt_t input_rpt = {};
     input_rpt.rpt_id = BUTTONS_RPT_ID_INPUT;
 
-    // Disable interrupts.
-    for (uint32_t i = 0; i < gpios_.size(); ++i) {
-        if (gpios_[i].config.type == BUTTONS_GPIO_TYPE_INTERRUPT) {
-            zx_status_t status = gpio_release_interrupt(&gpios_[i].gpio);
-            if (status != ZX_OK) {
-                zxlogf(ERROR, "%s gpio_release_interrupt failed %d\n", __FUNCTION__, status);
-                return status;
-            }
-        }
-    }
-
     for (size_t i = 0; i < buttons_.size(); ++i) {
         bool new_value = false; // A value true means a button is pressed.
         if (buttons_[i].type == BUTTONS_TYPE_MATRIX) {
@@ -186,15 +165,6 @@ zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, 
     auto out = static_cast<buttons_input_rpt_t*>(data);
     *out = input_rpt;
 
-    // Reenable interrupts.
-    for (uint32_t i = 0; i < gpios_.size(); ++i) {
-        if (gpios_[i].config.type == BUTTONS_GPIO_TYPE_INTERRUPT) {
-            zx_status_t status = ConfigureInterrupt(i, PORT_KEY_INTERRUPT_START + i);
-            if (status != ZX_OK) {
-                return status;
-            }
-        }
-    }
     return ZX_OK;
 }
 
@@ -273,62 +243,54 @@ zx_status_t HidButtonsDevice::Bind() {
         return status;
     }
 
-    pdev_device_info_t pdev_info;
-    status = pdev_get_device_info(&pdev, &pdev_info);
+    // Get buttons metadata.
+    size_t actual = 0;
+    status = device_get_metadata_size(parent_, DEVICE_METADATA_BUTTONS_BUTTONS, &actual);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pdev_get_device_info failed %d\n", __FUNCTION__, status);
-        return status;
+        zxlogf(ERROR, "%s device_get_metadata_size failed %d\n", __FILE__, status);
+        return ZX_OK;
     }
-
-    // TODO(andresoportus): Remove BUTTONS_ID_MAX usage below once we add metadata size probe
-    // capability to devmgr.
-
+    size_t n_buttons = actual / sizeof(buttons_button_config_t);
     fbl::AllocChecker ac;
-    // We have up to BUTTONS_ID_MAX available buttons.
-    auto buttons = fbl::Array(new (&ac) buttons_button_config_t[BUTTONS_ID_MAX], BUTTONS_ID_MAX);
+    buttons_ = fbl::Array(new (&ac) buttons_button_config_t[n_buttons], n_buttons);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    size_t actual = 0;
-    status = device_get_metadata(parent_, DEVICE_METADATA_BUTTONS_BUTTONS, buttons.get(),
-                                 buttons.size() * sizeof(buttons_button_config_t), &actual);
-    if (status != ZX_OK) {
+    actual = 0;
+    status = device_get_metadata(parent_, DEVICE_METADATA_BUTTONS_BUTTONS, buttons_.get(),
+                                 buttons_.size() * sizeof(buttons_button_config_t), &actual);
+    if (status != ZX_OK || actual != buttons_.size() * sizeof(buttons_button_config_t)) {
         zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
         return status;
     }
-    size_t n_buttons = actual / sizeof(buttons_button_config_t);
 
-    // We have up to BUTTONS_ID_MAX available gpios.
-    auto gpios_configs = fbl::Array(
-        new (&ac) buttons_gpio_config_t[BUTTONS_ID_MAX], BUTTONS_ID_MAX);
+    // Get gpios metadata.
+    actual = 0;
+    status = device_get_metadata_size(parent_, DEVICE_METADATA_BUTTONS_GPIOS, &actual);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s device_get_metadata_size failed %d\n", __FILE__, status);
+        return ZX_OK;
+    }
+    size_t n_gpios = actual / sizeof(buttons_gpio_config_t);
+    auto gpios_configs = fbl::Array(new (&ac) buttons_gpio_config_t[n_gpios], n_gpios);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
     actual = 0;
     status = device_get_metadata(parent_, DEVICE_METADATA_BUTTONS_GPIOS, gpios_configs.get(),
                                  gpios_configs.size() * sizeof(buttons_gpio_config_t), &actual);
-    if (status != ZX_OK) {
+    if (status != ZX_OK || actual != gpios_configs.size() * sizeof(buttons_gpio_config_t)) {
         zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
         return status;
     }
-    size_t n_gpios = actual / sizeof(buttons_gpio_config_t);
 
-    buttons_ = fbl::Array(new (&ac) buttons_button_config_t[n_buttons], n_buttons);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    gpios_ = fbl::Array(new (&ac) Gpio[n_gpios], n_gpios);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
+    // Check the metadata.
     for (uint32_t i = 0; i < buttons_.size(); ++i) {
-        buttons_[i] = buttons[i];
-        if (buttons_[i].gpioA_idx >= gpios_.size()) {
+        if (buttons_[i].gpioA_idx >= gpios_configs.size()) {
             zxlogf(ERROR, "%s invalid gpioA_idx %u\n", __FUNCTION__, buttons_[i].gpioA_idx);
             return ZX_ERR_INTERNAL;
         }
-        if (buttons_[i].gpioB_idx >= gpios_.size()) {
+        if (buttons_[i].gpioB_idx >= gpios_configs.size()) {
             zxlogf(ERROR, "%s invalid gpioB_idx %u\n", __FUNCTION__, buttons_[i].gpioB_idx);
             return ZX_ERR_INTERNAL;
         }
@@ -349,12 +311,17 @@ zx_status_t HidButtonsDevice::Bind() {
         }
     }
 
+    // Prepare the GPIOs.
+    gpios_ = fbl::Array(new (&ac) Gpio[n_gpios], n_gpios);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
     for (uint32_t i = 0; i < gpios_.size(); ++i) {
         gpios_[i].config = gpios_configs[i];
         size_t actual;
-        status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, i, &gpios_[i].gpio,
-                                   sizeof(gpios_[i].gpio), &actual);
-        if (status != ZX_OK) {
+        status = PdevGetGpioProtocol(&pdev, i, &gpios_[i].gpio,
+                                     sizeof(gpios_[i].gpio), &actual);
+        if (status != ZX_OK || actual != sizeof(gpios_[i].gpio)) {
             zxlogf(ERROR, "%s pdev_get_protocol failed %d\n", __FUNCTION__, status);
             return ZX_ERR_NOT_SUPPORTED;
         }
@@ -375,7 +342,7 @@ zx_status_t HidButtonsDevice::Bind() {
                 zxlogf(ERROR, "%s gpio_config_in failed %d\n", __FUNCTION__, status);
                 return ZX_ERR_NOT_SUPPORTED;
             }
-            status = ConfigureInterrupt(i, PORT_KEY_INTERRUPT_START + i);
+            status = ConfigureInterrupt(i, kPortKeyInterruptStart + i);
             if (status != ZX_OK) {
                 return status;
             }
@@ -399,7 +366,7 @@ zx_status_t HidButtonsDevice::Bind() {
 }
 
 void HidButtonsDevice::ShutDown() {
-    zx_port_packet packet = {PORT_KEY_SHUTDOWN, ZX_PKT_TYPE_USER, ZX_OK, {}};
+    zx_port_packet packet = {kPortKeyShutDown, ZX_PKT_TYPE_USER, ZX_OK, {}};
     zx_status_t status = port_.queue(&packet);
     ZX_ASSERT(status == ZX_OK);
     thrd_join(thread_, NULL);
