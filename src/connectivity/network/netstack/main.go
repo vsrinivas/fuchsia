@@ -52,7 +52,7 @@ func Main() {
 	l, err := syslog.NewLogger(syslog.LogInitOptions{
 		LogLevel:                      syslog.DebugLevel,
 		LogToSocket:                   1,
-		LogToWriter:                   0,
+		LogToWriter:                   1,
 		MinSeverityForFileAndLineInfo: syslog.InfoLevel,
 		Socket: s,
 		Tags:   []string{"netstack"},
