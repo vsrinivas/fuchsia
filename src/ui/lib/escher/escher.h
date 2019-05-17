@@ -101,7 +101,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   uint64_t GetNumGpuBytesAllocated();
 
   impl::DescriptorSetAllocator* GetDescriptorSetAllocator(
-      const impl::DescriptorSetLayout& layout);
+      const impl::DescriptorSetLayout& layout,
+      const SamplerPtr& immutable_sampler);
 
   // Do periodic housekeeping.  This is called by Renderer::EndFrame(), so you
   // don't need to call it if your application is constantly rendering.

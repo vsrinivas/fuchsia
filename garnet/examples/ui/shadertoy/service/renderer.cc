@@ -130,7 +130,7 @@ vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(
 
     channel_image_info[i].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
     channel_image_info[i].imageView = channel_texture->vk_image_view();
-    channel_image_info[i].sampler = channel_texture->vk_sampler();
+    channel_image_info[i].sampler = channel_texture->sampler()->vk();
 
     writes[i].dstSet = descriptor_set;
     writes[i].dstArrayElement = 0;
@@ -205,8 +205,8 @@ escher::TexturePtr Renderer::CreateWhiteTexture() {
                                                  1, channels);
   uploader.Submit();
 
-  return fxl::MakeRefCounted<escher::Texture>(
-      escher()->resource_recycler(), std::move(image), vk::Filter::eNearest);
+  return escher::Texture::New(escher()->resource_recycler(), std::move(image),
+                              vk::Filter::eNearest);
 }
 
 Renderer::Params::Params()

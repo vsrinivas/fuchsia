@@ -4,8 +4,8 @@
 
 #include "garnet/testing/views/background_view.h"
 
-#include <src/lib/fxl/logging.h>
 #include <lib/ui/gfx/cpp/math.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
 namespace scenic {
@@ -28,6 +28,16 @@ BackgroundView::BackgroundView(ViewContext context,
                                kBackgroundColor.b, kBackgroundColor.a);
   background_node_.SetMaterial(background_material);
   view_.AddChild(background_node_);
+}
+
+void BackgroundView::SetHostImage(zx::vmo vmo, uint64_t size,
+                                  fuchsia::images::ImageInfo info) {
+  Memory memory(&session_, std::move(vmo), size,
+                fuchsia::images::MemoryType::HOST_MEMORY);
+  Image image(&session_, memory.id(), 0, info);
+  Material background_material(&session_);
+  background_material.SetTexture(image);
+  background_node_.SetMaterial(background_material);
 }
 
 void BackgroundView::set_present_callback(

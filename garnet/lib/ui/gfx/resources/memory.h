@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_MEMORY_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+
 #include <vulkan/vulkan.hpp>
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
@@ -60,6 +61,11 @@ class Memory : public Resource {
 
   // |Resource|
   void Accept(ResourceVisitor* visitor) override;
+
+  // This function is used for tests, so they can easily detect if they should
+  // bother trying to test UMA memory flows.
+  static uint32_t HasSharedMemoryPools(vk::Device device,
+                                       vk::PhysicalDevice physical_device);
 
  private:
   Memory(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args);

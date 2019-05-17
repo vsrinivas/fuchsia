@@ -26,6 +26,10 @@ class VkSessionTest : public SessionTest {
   // |SessionTest|
   std::unique_ptr<SessionForTest> CreateSession() override;
 
+  // This function provides a mechanism for tests to inject their own objects
+  // into the SessionContext before construction.
+  virtual void OnSessionContextCreated(SessionContext* context) {}
+
  private:
   std::unique_ptr<escher::Escher> escher_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;

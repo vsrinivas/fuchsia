@@ -295,10 +295,10 @@ void CommandBuffer::BindTexture(unsigned set_index, unsigned binding,
 
   b->image.fp.imageLayout = vk_layout;
   b->image.fp.imageView = texture->vk_float_view();
-  b->image.fp.sampler = texture->vk_sampler();
+  b->image.fp.sampler = texture->sampler()->vk();
   b->image.integer.imageLayout = vk_layout;
   b->image.integer.imageView = texture->vk_integer_view();
-  b->image.integer.sampler = texture->vk_sampler();
+  b->image.integer.sampler = texture->sampler()->vk();
   set->uids[binding] = texture->uid();
   // TODO(ES-83): if we reify Samplers as a separate resource type,
   // then use the sampler's uid instead of the texture.
@@ -394,9 +394,9 @@ void CommandBuffer::FlushRenderState() {
     // The push constants were invalidated (perhaps by being explicitly set, or
     // perhaps by a change in the descriptor set layout; it doesn't matter).
     uint32_t num_ranges =
-        current_pipeline_layout_->spec().num_push_constant_ranges;
+        current_pipeline_layout_->spec().num_push_constant_ranges();
     for (unsigned i = 0; i < num_ranges; ++i) {
-      auto& range = current_pipeline_layout_->spec().push_constant_ranges[i];
+      auto& range = current_pipeline_layout_->spec().push_constant_ranges()[i];
       vk().pushConstants(current_vk_pipeline_layout_, range.stageFlags,
                          range.offset, range.size,
                          bindings_.push_constant_data + range.offset);
@@ -442,7 +442,7 @@ void CommandBuffer::FlushGraphicsPipeline() {
 void CommandBuffer::FlushDescriptorSets() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushDescriptorSets");
   auto& spec = current_pipeline_layout_->spec();
-  uint32_t sets_to_flush = spec.descriptor_set_mask & dirty_descriptor_sets_;
+  uint32_t sets_to_flush = spec.descriptor_set_mask() & dirty_descriptor_sets_;
   ForEachBitIndex(sets_to_flush, [this](uint32_t set_index) {
     FlushDescriptorSet(set_index);
   });
@@ -452,7 +452,7 @@ void CommandBuffer::FlushDescriptorSets() {
 
 void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   const impl::DescriptorSetLayout& set_layout =
-      current_pipeline_layout_->spec().descriptor_set_layouts[set_index];
+      current_pipeline_layout_->spec().descriptor_set_layouts(set_index);
 
   const auto set_bindings = GetDescriptorSetBindings(set_index);
   uint32_t num_dynamic_offsets = 0;
@@ -774,12 +774,16 @@ void CommandBuffer::ClearDepthStencilAttachmentRect(
                       value, aspect);
 }
 
-void CommandBuffer::SetShaderProgram(ShaderProgram* program) {
+void CommandBuffer::SetShaderProgram(ShaderProgram* program,
+                                     const SamplerPtr& immutable_sampler) {
   // TODO(ES-83): checking the uid() isn't really necessary since we're using
   // ref-counted pointers... a pointer comparison would be enough.  This is a
   // general difference between Escher and the original Granite code; we should
   // come up with a general design philosophy and stick to it.
-  if (current_program_ && current_program_->uid() == program->uid()) {
+  if (current_program_ && current_program_->uid() == program->uid() &&
+      current_pipeline_layout_ &&
+      current_pipeline_layout_->spec().immutable_sampler() ==
+          immutable_sampler) {
     return;
   }
 
@@ -797,7 +801,8 @@ void CommandBuffer::SetShaderProgram(ShaderProgram* program) {
   SetDirty(kDirtyPipelineBit | kDirtyDynamicBits);
 
   auto old_pipeline_layout = current_pipeline_layout_;
-  current_pipeline_layout_ = program->pipeline_layout();
+  current_pipeline_layout_ = program->ObtainPipelineLayout(immutable_sampler);
+
   current_vk_pipeline_layout_ = current_pipeline_layout_->vk();
   impl_->KeepAlive(current_pipeline_layout_);
 
@@ -810,8 +815,8 @@ void CommandBuffer::SetShaderProgram(ShaderProgram* program) {
 
     // If the push constant layout changes, all descriptor sets
     // are invalidated.
-    if (new_spec.push_constant_layout_hash !=
-        old_spec.push_constant_layout_hash) {
+    if (new_spec.push_constant_layout_hash() !=
+        old_spec.push_constant_layout_hash()) {
       dirty_descriptor_sets_ = ~0u;
       SetDirty(kDirtyPushConstantsBit);
     } else {

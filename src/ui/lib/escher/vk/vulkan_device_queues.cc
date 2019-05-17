@@ -12,7 +12,7 @@
 namespace escher {
 
 template <typename FuncT>
-static FuncT GetDeviceProcAddr(vk::Device device, const char *func_name) {
+static FuncT GetDeviceProcAddr(vk::Device device, const char* func_name) {
   FuncT func = reinterpret_cast<FuncT>(device.getProcAddr(func_name));
   FXL_CHECK(func) << "failed to find function address for: " << func_name;
   return func;
@@ -26,7 +26,7 @@ VulkanDeviceQueues::Caps::Caps(vk::PhysicalDeviceProperties props)
       max_image_height(props.limits.maxImageDimension2D) {}
 
 VulkanDeviceQueues::ProcAddrs::ProcAddrs(
-    vk::Device device, const std::set<std::string> &extension_names) {
+    vk::Device device, const std::set<std::string>& extension_names) {
   if (extension_names.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) !=
       extension_names.end()) {
     GET_DEVICE_PROC_ADDR(CreateSwapchainKHR);
@@ -49,8 +49,8 @@ struct SuitablePhysicalDeviceAndQueueFamilies {
 
 SuitablePhysicalDeviceAndQueueFamilies
 FindSuitablePhysicalDeviceAndQueueFamilies(
-    const VulkanInstancePtr &instance,
-    const VulkanDeviceQueues::Params &params) {
+    const VulkanInstancePtr& instance,
+    const VulkanDeviceQueues::Params& params) {
   auto physical_devices = ESCHER_CHECKED_VK_RESULT(
       instance->vk_instance().enumeratePhysicalDevices());
 
@@ -64,7 +64,7 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
                                    vk::QueueFlagBits::eGraphics |
                                    vk::QueueFlagBits::eCompute;
 
-  for (auto &physical_device : physical_devices) {
+  for (auto& physical_device : physical_devices) {
     // Look for a physical device that has all required extensions.
     if (!VulkanDeviceQueues::ValidateExtensions(
             physical_device, params.extension_names,
@@ -166,8 +166,8 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
   queue_info[1].queueCount = 1;
   queue_info[1].pQueuePriorities = &kQueuePriority;
 
-  std::vector<const char *> extension_names;
-  for (auto &extension : params.extension_names) {
+  std::vector<const char*> extension_names;
+  for (auto& extension : params.extension_names) {
     extension_names.push_back(extension.c_str());
   }
 
@@ -272,11 +272,11 @@ VulkanDeviceQueues::~VulkanDeviceQueues() { device_.destroy(); }
 // Helper for ValidateExtensions().
 static bool ValidateExtension(
     vk::PhysicalDevice device, const std::string name,
-    const std::vector<vk::ExtensionProperties> &base_extensions,
-    const std::set<std::string> &required_layer_names) {
+    const std::vector<vk::ExtensionProperties>& base_extensions,
+    const std::set<std::string>& required_layer_names) {
   auto found =
       std::find_if(base_extensions.begin(), base_extensions.end(),
-                   [&name](const vk::ExtensionProperties &extension) {
+                   [&name](const vk::ExtensionProperties& extension) {
                      return !strncmp(extension.extensionName, name.c_str(),
                                      VK_MAX_EXTENSION_NAME_SIZE);
                    });
@@ -285,7 +285,7 @@ static bool ValidateExtension(
 
   // Didn't find the extension in the base list of extensions.  Perhaps it is
   // implemented in a layer.
-  for (auto &layer_name : required_layer_names) {
+  for (auto& layer_name : required_layer_names) {
     auto layer_extensions = ESCHER_CHECKED_VK_RESULT(
         device.enumerateDeviceExtensionProperties(layer_name));
     FXL_LOG(INFO) << "Looking for Vulkan device extension: " << name
@@ -293,7 +293,7 @@ static bool ValidateExtension(
 
     auto found =
         std::find_if(layer_extensions.begin(), layer_extensions.end(),
-                     [&name](vk::ExtensionProperties &extension) {
+                     [&name](vk::ExtensionProperties& extension) {
                        return !strncmp(extension.extensionName, name.c_str(),
                                        VK_MAX_EXTENSION_NAME_SIZE);
                      });
@@ -306,12 +306,12 @@ static bool ValidateExtension(
 
 bool VulkanDeviceQueues::ValidateExtensions(
     vk::PhysicalDevice device,
-    const std::set<std::string> &required_extension_names,
-    const std::set<std::string> &required_layer_names) {
+    const std::set<std::string>& required_extension_names,
+    const std::set<std::string>& required_layer_names) {
   auto extensions =
       ESCHER_CHECKED_VK_RESULT(device.enumerateDeviceExtensionProperties());
 
-  for (auto &name : required_extension_names) {
+  for (auto& name : required_extension_names) {
     if (!ValidateExtension(device, name, extensions, required_layer_names)) {
       FXL_LOG(WARNING) << "Vulkan has no device extension named: " << name;
       return false;
@@ -322,7 +322,7 @@ bool VulkanDeviceQueues::ValidateExtensions(
 
 VulkanContext VulkanDeviceQueues::GetVulkanContext() const {
   return escher::VulkanContext(instance_->vk_instance(), vk_physical_device(),
-                               vk_device(), vk_main_queue(),
+                               vk_device(), dispatch_loader(), vk_main_queue(),
                                vk_main_queue_family(), vk_transfer_queue(),
                                vk_transfer_queue_family());
 }

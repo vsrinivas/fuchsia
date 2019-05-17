@@ -16,20 +16,14 @@ PipelineLayoutCache::~PipelineLayoutCache() = default;
 
 const PipelineLayoutPtr& PipelineLayoutCache::ObtainPipelineLayout(
     const PipelineLayoutSpec& spec) {
-  Hasher h;
-  h.struc(spec.descriptor_set_layouts);
-  h.struc(spec.push_constant_ranges);
-  h.u32(spec.attribute_mask);
-
-  Hash hash = h.value();
-  auto it = layouts_.find(hash);
+  auto it = layouts_.find(spec.hash());
   if (it != end(layouts_)) {
     FXL_DCHECK(it->second->spec() == spec);
     return it->second;
   }
 
   auto pair = layouts_.insert(std::make_pair(
-      hash, fxl::MakeRefCounted<PipelineLayout>(recycler_, spec)));
+      spec.hash(), fxl::MakeRefCounted<PipelineLayout>(recycler_, spec)));
   return pair.first->second;
 }
 

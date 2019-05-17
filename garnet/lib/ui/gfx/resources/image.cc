@@ -17,7 +17,7 @@ const ResourceTypeInfo Image::kTypeInfo = {
     ResourceType::kImage | ResourceType::kImageBase, "Image"};
 
 Image::Image(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
-    : ImageBase(session, id, Image::kTypeInfo) {
+    : ImageBase(session, id, type_info) {
   FXL_DCHECK(type_info.IsKindOf(Image::kTypeInfo));
 }
 

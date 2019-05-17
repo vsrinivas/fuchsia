@@ -20,6 +20,7 @@
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/images/cpp/images.h>
 #include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
@@ -35,11 +36,18 @@
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "garnet/lib/ui/yuv/yuv.h"
 
 namespace {
 
 constexpr char kEnvironment[] = "ScenicPixelTest";
 constexpr zx::duration kTimeout = zx::sec(15);
+// If you change the size of YUV buffers, make sure that the YUV test in
+// host_image_unittest.cc is also updated. Unlike that unit test,
+// scenic_pixel_test.cc has no way to confirm that it is going through the
+// direct-to-GPU path.
+// TODO(SCN-1387): This number needs to be queried via sysmem or vulkan.
+constexpr uint32_t kYuvSize = 64;
 
 // These tests need Scenic and RootPresenter at minimum, which expand to the
 // dependencies below. Using |TestWithEnvironment|, we use
@@ -173,6 +181,71 @@ TEST_F(ScenicPixelTest, SolidColor) {
 
   EXPECT_GT(histogram[scenic::BackgroundView::kBackgroundColor], 0u);
   histogram.erase(scenic::BackgroundView::kBackgroundColor);
+  // This assert is written this way so that, when it fails, it prints out all
+  // the unexpected colors
+  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram)
+      << "Unexpected colors";
+}
+
+TEST_F(ScenicPixelTest, NV12Texture) {
+  scenic::BackgroundView view(CreatePresentationContext());
+  fuchsia::images::ImageInfo image_info{
+      .width = kYuvSize,
+      .height = kYuvSize,
+      .stride = static_cast<uint32_t>(
+          kYuvSize *
+          images::StrideBytesPerWidthPixel(fuchsia::images::PixelFormat::NV12)),
+      .pixel_format = fuchsia::images::PixelFormat::NV12,
+  };
+
+  uint32_t num_pixels = image_info.width * image_info.height;
+  uint64_t image_vmo_bytes = images::ImageSize(image_info);
+  EXPECT_EQ((3 * num_pixels) / 2, image_vmo_bytes);
+
+  zx::vmo image_vmo;
+  zx_status_t status = zx::vmo::create(image_vmo_bytes, 0, &image_vmo);
+  EXPECT_EQ(ZX_OK, status);
+  uint8_t* vmo_base;
+  status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
+                                      ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                      reinterpret_cast<uintptr_t*>(&vmo_base));
+  EXPECT_EQ(ZX_OK, status);
+
+  static const uint8_t kYValue = 110;
+  static const uint8_t kUValue = 192;
+  static const uint8_t kVValue = 192;
+
+  // Set all the Y pixels at full res.
+  for (uint32_t i = 0; i < num_pixels; ++i) {
+    vmo_base[i] = kYValue;
+  }
+
+  // Set all the UV pixels pairwise at half res.
+  for (uint32_t i = num_pixels; i < num_pixels + num_pixels / 2; i += 2) {
+    vmo_base[i] = kUValue;
+    vmo_base[i + 1] = kVValue;
+  }
+
+  view.SetHostImage(std::move(image_vmo), image_vmo_bytes, image_info);
+  RunUntilPresent(&view);
+
+  fuchsia::ui::scenic::ScreenshotData screenshot = TakeScreenshot();
+
+  EXPECT_GT(screenshot.info.width, 0u);
+  EXPECT_GT(screenshot.info.height, 0u);
+
+  // We could assert on each pixel individually, but a histogram might give us a
+  // more meaningful failure.
+  std::map<scenic::Color, size_t> histogram = scenic::Histogram(screenshot);
+
+  uint8_t bgra[4];
+  yuv::YuvToBgra(kYValue, kUValue, kVValue, bgra);
+  scenic::Color color(bgra[2], bgra[1], bgra[0], bgra[3]);
+  EXPECT_GT(histogram[color], 0u);
+  histogram.erase(color);
+
+  // This assert is written this way so that, when it fails, it prints out all
+  // the unexpected colors
   EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram)
       << "Unexpected colors";
 }

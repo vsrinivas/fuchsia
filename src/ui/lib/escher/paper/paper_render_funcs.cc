@@ -68,7 +68,10 @@ void PaperRenderFuncs::RenderMesh(CommandBuffer* cb,
 
   // TODO(ES-158): this assumes that all meshes in this render-queue pass are
   // drawn exactly the same way.  We will need something better soon.
-  cb->SetShaderProgram(context->shader_program());
+  cb->SetShaderProgram(context->shader_program(),
+                       mesh_data->texture->sampler()->is_immutable()
+                           ? mesh_data->texture->sampler()
+                           : nullptr);
 
   // For each instance, set up per-instance state and draw.
   for (uint32_t i = 0; i < instance_count; ++i) {

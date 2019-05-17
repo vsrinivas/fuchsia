@@ -4,9 +4,8 @@
 
 #include "lib/media/test/frame_sink_view.h"
 
-#include "lib/media/test/frame_sink.h"
-
 #include <lib/media/codec_impl/fourcc.h>
+#include <lib/media/test/frame_sink.h>
 #include <lib/ui/scenic/cpp/commands.h>
 
 #include <iomanip>

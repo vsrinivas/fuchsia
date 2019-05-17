@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ui/scenic/cpp/host_memory.h>
+#include "lib/ui/scenic/cpp/host_memory.h"
 
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/zx/vmar.h>
@@ -25,9 +25,10 @@ std::pair<zx::vmo, std::shared_ptr<HostData>> AllocateMemory(size_t size) {
   auto data = std::make_shared<HostData>(local_vmo, 0u, size);
 
   // Drop rights before we transfer the VMO to the session manager.
-  // TODO(MA-492): Now that host-local memory may be concurrently used as
-  // device-local memory on UMA platforms, we need to keep all permissions on
-  // the duplicated vmo handle, until Vulkan can import read-only memory.
+  // TODO(MA-492, SCN-1388): Now that host-local memory may be concurrently used
+  // as device-local memory on UMA platforms, we need to keep all permissions on
+  // the duplicated vmo handle, until Vulkan can import read-only memory, and/or
+  // we know how to negotiate through sysmem for the proper permissions.
   zx::vmo remote_vmo;
   status = local_vmo.replace(ZX_RIGHT_SAME_RIGHTS, &remote_vmo);
   ZX_ASSERT_MSG(status == ZX_OK, "replace rights failed: status=%d", status);

@@ -468,6 +468,8 @@ source_set("escher") {
     "vk/render_pass.cc",
     "vk/render_pass.h",
     "vk/render_pass_info.h",
+    "vk/sampler.cc",
+    "vk/sampler.h",
     "vk/shader_module.cc",
     "vk/shader_module.h",
     "vk/shader_module_template.cc",

@@ -42,6 +42,9 @@ source_set("use_media_decoder_source_set") {
 
 executable("use_media_decoder") {
   testonly = true
+
+  output_name = "use_media_decoder"
+
   sources = [
     "main.cc",
   ]

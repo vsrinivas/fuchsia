@@ -19,9 +19,12 @@ class ImageView : public Resource {
   // Construct an ImageView, which encapsulates a newly-created VkImageView.
   // |aspect_mask| is used to create the VkImageView, and |resource_recycler|
   // guarantees that the underlying Vulkan resources are not destroyed while
-  // still referenced by a pending command buffer.
+  // still referenced by a pending command buffer. |extension_data| is used
+  // as the pNext pointer in the ImageView's construction, and is assumed to be
+  // a temporary variable.
   ImageView(ResourceRecycler* resource_recycler, ImagePtr image,
-            vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlags());
+            vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlags(),
+            void* extension_data = nullptr);
   ~ImageView() override;
 
   static ImageViewPtr New(ImagePtr image, vk::ImageAspectFlags aspect_mask =

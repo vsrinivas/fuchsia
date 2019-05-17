@@ -71,8 +71,10 @@ void CommandBufferPipelineState::BeginGraphicsOrComputeContext() {
 vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
     const PipelineLayout* pipeline_layout, ShaderProgram* program) {
   Hasher h;
+  h.u64(pipeline_layout->spec().hash().val);
+
   active_vertex_bindings_ = 0;
-  uint32_t attribute_mask = pipeline_layout->spec().attribute_mask;
+  uint32_t attribute_mask = pipeline_layout->spec().attribute_mask();
   ForEachBitIndex(attribute_mask, [&](uint32_t bit) {
     h.u32(bit);
     active_vertex_bindings_ |= 1u << vertex_attributes_[bit].binding;
@@ -136,7 +138,7 @@ void CommandBufferPipelineState::InitPipelineColorBlendStateCreateInfo(
         render_pass->GetColorAttachmentForSubpass(current_subpass, i);
 
     if (subpass_color_attachment.attachment != VK_ATTACHMENT_UNUSED &&
-        (pipeline_layout_spec.render_target_mask & (1u << i))) {
+        (pipeline_layout_spec.render_target_mask() & (1u << i))) {
       static_assert(VulkanLimits::kNumColorAttachments * 4 <=
                         sizeof(static_state.color_write_mask) * 8,
                     "not enough bits for color mask.");
@@ -288,7 +290,7 @@ vk::Pipeline CommandBufferPipelineState::BuildGraphicsPipeline(
       vertex_input_bindings[VulkanLimits::kNumVertexBuffers];
   InitPipelineVertexInputStateCreateInfo(
       &vertex_input_info, vertex_input_attribs, vertex_input_bindings,
-      pipeline_layout_spec.attribute_mask, vertex_attributes_,
+      pipeline_layout_spec.attribute_mask(), vertex_attributes_,
       vertex_bindings_);
 
   // Input assembly

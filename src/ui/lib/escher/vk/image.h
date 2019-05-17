@@ -23,11 +23,13 @@ struct ImageInfo {
   vk::MemoryPropertyFlags memory_flags =
       vk::MemoryPropertyFlagBits::eDeviceLocal;
   vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
+  bool is_mutable = true;
 
   bool operator==(const ImageInfo& other) const {
     return format == other.format && width == other.width &&
            height == other.height && sample_count == other.sample_count &&
-           usage == other.usage && memory_flags == other.memory_flags;
+           usage == other.usage && memory_flags == other.memory_flags &&
+           is_mutable == other.is_mutable;
   }
 
   // Transient images are neither loaded nor stored by render passes.  Instead

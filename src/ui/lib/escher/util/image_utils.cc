@@ -112,7 +112,8 @@ vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info) {
   create_info.usage = info.usage;
   create_info.sharingMode = vk::SharingMode::eExclusive;
   create_info.initialLayout = vk::ImageLayout::eUndefined;
-  create_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+  create_info.flags = info.is_mutable ? vk::ImageCreateFlagBits::eMutableFormat
+                                      : vk::ImageCreateFlags();
   return create_info;
 }
 

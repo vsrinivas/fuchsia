@@ -29,6 +29,7 @@
 #include <array>
 
 #include "src/ui/lib/escher/util/enum_count.h"
+#include "src/ui/lib/escher/vk/sampler.h"
 #include "src/ui/lib/escher/vk/shader_module.h"
 #include "src/ui/lib/escher/vk/shader_stage.h"
 
@@ -46,9 +47,9 @@ void GenerateShaderModuleResourceLayoutFromSpirv(
 // Generate a PipelineLayoutSpec using each non-null ShaderStage's
 // ShaderModuleResourceLayout.
 struct PipelineLayoutSpec;
-void GeneratePipelineLayoutSpec(
+PipelineLayoutSpec GeneratePipelineLayoutSpec(
     const std::array<ShaderModulePtr, EnumCount<ShaderStage>()>& shader_modules,
-    PipelineLayoutSpec* spec_out);
+    const SamplerPtr& immutable_sampler);
 
 }  // namespace impl
 }  // namespace escher

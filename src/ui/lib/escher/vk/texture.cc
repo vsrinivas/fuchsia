@@ -15,44 +15,29 @@ const ResourceTypeInfo Texture::kTypeInfo("Texture", ResourceType::kResource,
                                           ResourceType::kImageView,
                                           ResourceType::kTexture);
 
-Texture::Texture(ResourceRecycler* resource_recycler, ImagePtr image,
-                 vk::Filter filter, vk::ImageAspectFlags aspect_mask,
-                 bool use_unnormalized_coordinates)
-    : ImageView(resource_recycler, std::move(image), aspect_mask) {
-  vk::SamplerCreateInfo sampler_info = {};
-  sampler_info.magFilter = filter;
-  sampler_info.minFilter = filter;
-
-  sampler_info.anisotropyEnable = false;
-  sampler_info.maxAnisotropy = 1.0;
-  sampler_info.unnormalizedCoordinates = use_unnormalized_coordinates;
-  sampler_info.compareEnable = VK_FALSE;
-  sampler_info.compareOp = vk::CompareOp::eAlways;
-  sampler_info.mipLodBias = 0.0f;
-  sampler_info.minLod = 0.0f;
-  sampler_info.maxLod = 0.0f;
-  if (use_unnormalized_coordinates) {
-    sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
-    sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
-    sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
-    sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
-  } else {
-    sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
-    sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
-    sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
-    sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
-  }
-  sampler_ = ESCHER_CHECKED_VK_RESULT(vk_device().createSampler(sampler_info));
-}
-
-Texture::~Texture() { vk_device().destroySampler(sampler_); }
-
 TexturePtr Texture::New(ResourceRecycler* resource_recycler, ImagePtr image,
                         vk::Filter filter, vk::ImageAspectFlags aspect_mask,
                         bool use_unnormalized_coordinates) {
-  return fxl::MakeRefCounted<Texture>(resource_recycler, std::move(image),
-                                      filter, aspect_mask,
-                                      use_unnormalized_coordinates);
+  SamplerPtr sampler = fxl::MakeRefCounted<Sampler>(
+      resource_recycler, image->format(), filter, use_unnormalized_coordinates);
+
+  if (sampler->is_immutable()) {
+    FXL_LOG(WARNING)
+        << "An immutable sampler was created using Texture::New. If "
+           "this happens over and over again, the system will likely OOM. "
+           "Build a separate immutable Sampler object and share it across "
+           "multiple Texture objects.";
+  }
+
+  return fxl::MakeRefCounted<Texture>(resource_recycler, std::move(sampler),
+                                      image, aspect_mask);
 }
+
+Texture::Texture(ResourceRecycler* recycler, SamplerPtr sampler, ImagePtr image,
+                 vk::ImageAspectFlags aspect_mask)
+    : ImageView(recycler, image, aspect_mask, sampler->GetExtensionData()),
+      sampler_(std::move(sampler)) {}
+
+Texture::~Texture() {}
 
 }  // namespace escher

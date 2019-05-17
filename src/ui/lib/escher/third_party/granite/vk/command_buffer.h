@@ -224,10 +224,18 @@ class CommandBuffer : public Reffable {
   void SetToDefaultState(DefaultState state);
 
   // Set the ShaderProgram that will be used to obtain the VkPipeline to be used
-  // by the next draw-call or compute dispatch.
-  void SetShaderProgram(ShaderProgram* program);
-  void SetShaderProgram(const ShaderProgramPtr& program) {
-    SetShaderProgram(program.get());
+  // by the next draw-call or compute dispatch. If a valid vk::Sampler object is
+  // passed in, that sampler will be used as the immutable sampler for every
+  // sampler descriptor set in the associated PipelineLayout.
+  //
+  // TODO(ES-202): This code-flow assumes that ShaderPrograms source from, at
+  // most, a single sampler. This is a blocking bug for implementing, e.g.,
+  // ES-159.
+  void SetShaderProgram(ShaderProgram* program,
+                        const SamplerPtr& immutable_sampler = nullptr);
+  void SetShaderProgram(const ShaderProgramPtr& program,
+                        const SamplerPtr& immutable_sampler = nullptr) {
+    SetShaderProgram(program.get(), immutable_sampler);
   }
 
   // Set the viewport.  Must be called within a render pass.

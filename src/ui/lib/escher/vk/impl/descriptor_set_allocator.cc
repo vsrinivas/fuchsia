@@ -10,25 +10,32 @@
 namespace escher {
 namespace impl {
 
-DescriptorSetAllocator::DescriptorSetAllocator(vk::Device device,
-                                               DescriptorSetLayout layout)
-    : cache_(device, layout) {}
+DescriptorSetAllocator::DescriptorSetAllocator(
+    vk::Device device, DescriptorSetLayout layout,
+    const SamplerPtr& immutable_sampler)
+    : cache_(device, layout, immutable_sampler) {}
 
-DescriptorSetAllocator::PoolPolicy::PoolPolicy(vk::Device device,
-                                               DescriptorSetLayout layout)
-    : vk_device_(device), layout_(layout) {
+DescriptorSetAllocator::PoolPolicy::PoolPolicy(
+    vk::Device device, DescriptorSetLayout layout,
+    const SamplerPtr& immutable_sampler)
+    : vk_device_(device),
+      layout_(layout),
+      immutable_sampler_(immutable_sampler) {
   FXL_DCHECK(layout.IsValid());
 
   std::array<vk::DescriptorSetLayoutBinding, VulkanLimits::kNumBindings>
       bindings;
   size_t num_bindings = 0;
 
+  bool has_sampled_image = false;
   for (uint32_t i = 0; i < VulkanLimits::kNumBindings; i++) {
     uint32_t index_mask = 1u << i;
 
     if (index_mask & layout.sampled_image_mask) {
-      bindings[num_bindings++] = {i, vk::DescriptorType::eCombinedImageSampler,
-                                  1, layout.stages, nullptr};
+      has_sampled_image = true;
+      bindings[num_bindings++] = {
+          i, vk::DescriptorType::eCombinedImageSampler, 1, layout.stages,
+          immutable_sampler ? &(immutable_sampler->vk()) : nullptr};
       pool_sizes_.push_back({vk::DescriptorType::eCombinedImageSampler, 0});
       continue;
     }
@@ -71,6 +78,13 @@ DescriptorSetAllocator::PoolPolicy::PoolPolicy(vk::Device device,
       pool_sizes_.push_back({vk::DescriptorType::eInputAttachment, 0});
       continue;
     }
+  }
+
+  if (immutable_sampler && has_sampled_image) {
+    // TODO(ES-199): Leaving this log in for now, so we can detect when systems
+    // are OOMing due to ES-199. For most use cases, this log will trigger once.
+    FXL_LOG(INFO) << "Allocating immutable descriptor set layout, sampler = "
+                  << immutable_sampler->vk();
   }
 
   vk::DescriptorSetLayoutCreateInfo info;

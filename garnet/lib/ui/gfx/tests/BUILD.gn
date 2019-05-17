@@ -84,6 +84,7 @@ executable("unittests") {
     "gfx_command_applier_unittest.cc",
     "hardware_layer_assignment_unittest.cc",
     "hittest_global_unittest.cc",
+    "host_image_unittest.cc",
     "image_pipe_unittest.cc",
     "import_unittest.cc",
     "memory_unittest.cc",
@@ -132,6 +133,7 @@ executable("pixeltests") {
   include_dirs = [ "//src/ui/lib/escher" ]
   deps = [
     ":testing_deps",
+    "//garnet/lib/ui/yuv:yuv",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/testing/views",

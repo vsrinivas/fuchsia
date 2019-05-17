@@ -10,6 +10,7 @@
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/test/vk/vulkan_tester.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/string_utils.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
 #include "src/ui/lib/escher/vk/shader_module_template.h"
@@ -18,6 +19,9 @@
 
 namespace {
 using namespace escher;
+
+// TODO(SCN-1387): This number needs to be queried via sysmem or vulkan.
+const uint32_t kYuvSize = 64;
 
 class ShaderProgramTest : public ::testing::Test, public VulkanTester {
  protected:
@@ -211,7 +215,6 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   EXPECT_EQ(depth_readonly_pipeline, ObtainGraphicsPipeline(cb));
 
   // Changing to a mesh with a different layout results in a different pipeline.
-  // pipeline.
   mesh = sphere_mesh();
   ab = &mesh->attribute_buffer(0);
 
@@ -228,6 +231,50 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
 
   EXPECT_NE(depth_readonly_pipeline, ObtainGraphicsPipeline(cb));
   EXPECT_NE(vk::Pipeline(), ObtainGraphicsPipeline(cb));
+
+  vk::Pipeline last_pipeline = ObtainGraphicsPipeline(cb);
+
+  // Switching to an immutable sampler changes the pipeline.
+  ImageInfo info;
+  info.width = kYuvSize;
+  info.height = kYuvSize;
+  info.format = vk::Format::eG8B8R82Plane420Unorm;
+  info.usage = vk::ImageUsageFlagBits::eSampled;
+  info.is_mutable = false;
+
+  auto yuv_image = escher->image_cache()->NewImage(info);
+  auto yuv_texture = escher->NewTexture(yuv_image, vk::Filter::eLinear);
+
+  EXPECT_TRUE(yuv_texture->sampler()->is_immutable());
+
+  cb->SetShaderProgram(program, yuv_texture->sampler());
+  EXPECT_NE(last_pipeline, ObtainGraphicsPipeline(cb));
+  EXPECT_NE(vk::Pipeline(), ObtainGraphicsPipeline(cb));
+
+  auto yuv_pipeline = ObtainGraphicsPipeline(cb);
+  last_pipeline = ObtainGraphicsPipeline(cb);
+
+  // Using the same sampler does not.
+  cb->SetShaderProgram(program, yuv_texture->sampler());
+  EXPECT_EQ(last_pipeline, ObtainGraphicsPipeline(cb));
+  EXPECT_NE(vk::Pipeline(), ObtainGraphicsPipeline(cb));
+
+  last_pipeline = ObtainGraphicsPipeline(cb);
+
+  // Using a different sampler does cause the pipeline to change, because
+  // immutable samplers require custom descriptor sets, and pipelines are bound
+  // to specific descriptor sets at construction time.
+  cb->SetShaderProgram(program, noise_texture->sampler());
+  EXPECT_NE(last_pipeline, ObtainGraphicsPipeline(cb));
+  EXPECT_NE(vk::Pipeline(), ObtainGraphicsPipeline(cb));
+
+  last_pipeline = ObtainGraphicsPipeline(cb);
+
+  // Using the previous YUV sampler reuses the old pipeline.
+  cb->SetShaderProgram(program, yuv_texture->sampler());
+  EXPECT_NE(last_pipeline, ObtainGraphicsPipeline(cb));
+  EXPECT_NE(vk::Pipeline(), ObtainGraphicsPipeline(cb));
+  EXPECT_EQ(yuv_pipeline, ObtainGraphicsPipeline(cb));
 
   cb->EndRenderPass();
 

@@ -45,49 +45,31 @@ PipelineLayout::PipelineLayout(ResourceRecycler* resource_recycler,
     // TODO(ES-83): don't ask for an allocator if the set is masked?
     // Would be nice, but then we wouldn't have a layout available for the
     // skipped sets.
-    descriptor_set_allocators_[i] =
-        escher()->GetDescriptorSetAllocator(spec.descriptor_set_layouts[i]);
+    descriptor_set_allocators_[i] = escher()->GetDescriptorSetAllocator(
+        spec.descriptor_set_layouts(i), spec.immutable_sampler());
     set_layouts[i] = descriptor_set_allocators_[i]->vk_layout();
-    if (spec.descriptor_set_mask & (1u << i)) {
+    if (spec.descriptor_set_mask() & (1u << i)) {
+      // When creating a layout via vk::Device::CreatePipelineLayout(), Vulkan
+      // uses the index within the array of vk::DescriptorSetLayouts as the
+      // index of that descriptor set.  In other words, if your GLSL code
+      // mentions (descriptor_set = 3, binding = 2), then the corresponding
+      // vk::DescriptorSetLayout *must* have been at index 3 of the array passed
+      // to CreatePipelineLayout().
+      //
+      // So this counter has to equal the index of the highest-referenced
+      // descriptor set, plus one.
       num_set_layouts = i + 1;
     }
   }
-
-  unsigned num_ranges = 0;
-  vk::PushConstantRange ranges[EnumCount<ShaderStage>()];
-
-  for (auto& range : spec.push_constant_ranges) {
-    if (range.size != 0) {
-      bool unique = true;
-      for (unsigned i = 0; i < num_ranges; i++) {
-        // Try to merge equivalent ranges for multiple stages.
-        // TODO(ES-83): what to do about overlapping ranges?  Should DCHECK?
-        if (ranges[i].offset == range.offset && ranges[i].size == range.size) {
-          unique = false;
-          ranges[i].stageFlags |= range.stageFlags;
-          break;
-        }
-      }
-
-      if (unique)
-        ranges[num_ranges++] = range;
-    }
-  }
-
-  static_assert(sizeof(spec_.push_constant_ranges) == sizeof(ranges), "");
-  FXL_DCHECK(num_ranges < EnumCount<ShaderStage>());
-  memcpy(spec_.push_constant_ranges, ranges, num_ranges * sizeof(ranges[0]));
-  spec_.num_push_constant_ranges = num_ranges;
-
   vk::PipelineLayoutCreateInfo info;
   if (num_set_layouts) {
     info.setLayoutCount = num_set_layouts;
     info.pSetLayouts = set_layouts;
   }
 
-  if (num_ranges) {
-    info.pushConstantRangeCount = num_ranges;
-    info.pPushConstantRanges = ranges;
+  if (spec.num_push_constant_ranges()) {
+    info.pushConstantRangeCount = spec.num_push_constant_ranges();
+    info.pPushConstantRanges = spec.push_constant_ranges().data();
   }
 
   pipeline_layout_ =

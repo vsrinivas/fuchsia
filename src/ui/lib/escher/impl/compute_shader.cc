@@ -197,7 +197,7 @@ void ComputeShader::DispatchWithRanges(
   for (uint32_t i = 0; i < textures.size(); ++i) {
     descriptor_set_writes_[i].dstSet = descriptor_set;
     descriptor_image_info_[i].imageView = textures[i]->vk_image_view();
-    descriptor_image_info_[i].sampler = textures[i]->vk_sampler();
+    descriptor_image_info_[i].sampler = textures[i]->sampler()->vk();
     command_buffer->KeepAlive(textures[i]);
   }
   for (uint32_t i = 0; i < buffers.size(); ++i) {

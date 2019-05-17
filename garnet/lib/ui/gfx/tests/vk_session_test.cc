@@ -97,6 +97,8 @@ std::unique_ptr<SessionForTest> VkSessionTest::CreateSession() {
   session_context.escher_image_factory = image_factory_.get();
   session_context.release_fence_signaller = release_fence_signaller_.get();
 
+  OnSessionContextCreated(&session_context);
+
   return std::make_unique<SessionForTest>(1, std::move(session_context), this,
                                           error_reporter());
 }

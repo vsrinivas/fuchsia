@@ -10,6 +10,7 @@
 
 #include "src/ui/lib/escher/third_party/granite/vk/descriptor_set_layout.h"
 #include "src/ui/lib/escher/util/hash_cache.h"
+#include "src/ui/lib/escher/vk/sampler.h"
 
 namespace escher {
 namespace impl {
@@ -19,7 +20,8 @@ namespace impl {
 // with FramesUntilEviction == 2.
 class DescriptorSetAllocator {
  public:
-  DescriptorSetAllocator(vk::Device device, DescriptorSetLayout layout);
+  DescriptorSetAllocator(vk::Device device, DescriptorSetLayout layout,
+                         const SamplerPtr& immutable_sampler = nullptr);
 
   void BeginFrame() { cache_.BeginFrame(); }
   void Clear() { cache_.Clear(); }
@@ -54,7 +56,8 @@ class DescriptorSetAllocator {
   // time. Each block is associated with a separate vk::DescriptorPool.
   class PoolPolicy {
    public:
-    PoolPolicy(vk::Device device, DescriptorSetLayout layout);
+    PoolPolicy(vk::Device device, DescriptorSetLayout layout,
+               const SamplerPtr& immutable_sampler);
     ~PoolPolicy();
 
     void InitializePoolObjectBlock(CacheItem* objects, size_t block_index,
@@ -82,6 +85,8 @@ class DescriptorSetAllocator {
 
     std::vector<vk::DescriptorPoolSize> pool_sizes_;
     std::map<size_t, vk::DescriptorPool> pools_;
+
+    SamplerPtr immutable_sampler_;
   };
 
   HashCache<CacheItem, PoolPolicy, 2> cache_;

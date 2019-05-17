@@ -56,9 +56,9 @@ TexturePtr DepthToColor::Convert(const FramePtr& frame,
   ImagePtr tmp_image = image_factory_->NewImage(
       {vk::Format::eR8G8B8A8Unorm, width, width, 1,
        image_flags | vk::ImageUsageFlagBits::eStorage});
-  TexturePtr tmp_texture = fxl::MakeRefCounted<Texture>(
-      escher_->resource_recycler(), tmp_image, vk::Filter::eNearest,
-      vk::ImageAspectFlagBits::eColor, true);
+  TexturePtr tmp_texture =
+      Texture::New(escher_->resource_recycler(), tmp_image,
+                   vk::Filter::eNearest, vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
 

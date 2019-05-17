@@ -18,7 +18,7 @@ const ResourceTypeInfo ImageView::kTypeInfo("ImageView",
                                             ResourceType::kImageView);
 
 ImageView::ImageView(ResourceRecycler* resource_recycler, ImagePtr image,
-                     vk::ImageAspectFlags aspect_mask)
+                     vk::ImageAspectFlags aspect_mask, void* extension_data)
     : Resource(resource_recycler),
       image_(std::move(image)),
       width_(image_->width()),
@@ -39,6 +39,7 @@ ImageView::ImageView(ResourceRecycler* resource_recycler, ImagePtr image,
   }
 
   vk::ImageViewCreateInfo view_info;
+  view_info.pNext = extension_data;
   view_info.viewType = vk::ImageViewType::e2D;
   view_info.subresourceRange.baseMipLevel = 0;
   view_info.subresourceRange.levelCount = 1;

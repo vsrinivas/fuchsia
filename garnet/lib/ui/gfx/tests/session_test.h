@@ -5,11 +5,10 @@
 #ifndef GARNET_LIB_UI_GFX_TESTS_SESSION_TEST_H_
 #define GARNET_LIB_UI_GFX_TESTS_SESSION_TEST_H_
 
-#include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
-
 #include <lib/fit/function.h>
 
 #include "garnet/lib/ui/gfx/engine/session.h"
+#include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"

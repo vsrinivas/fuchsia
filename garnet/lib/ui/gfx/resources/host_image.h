@@ -43,10 +43,11 @@ class HostImage : public Image {
 
   void Accept(class ResourceVisitor* visitor) override;
 
-  // Re-upload host memory contents to GPU memory. Returns true if contents were
-  // updated.
+  bool IsDirectlyMapped() { return is_directly_mapped_; }
 
  protected:
+  // Re-upload host memory contents to GPU memory. Returns true if contents were
+  // updated.
   bool UpdatePixels(escher::BatchGpuUploader* gpu_uploader) override;
 
  private:
@@ -68,6 +69,8 @@ class HostImage : public Image {
   fuchsia::images::ImageInfo image_format_;
   escher::image_utils::ImageConversionFunction image_conversion_function_ =
       nullptr;
+
+  bool is_directly_mapped_ = false;
 };
 
 }  // namespace gfx

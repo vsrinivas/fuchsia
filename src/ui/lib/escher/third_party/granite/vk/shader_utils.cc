@@ -29,6 +29,7 @@
 
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/util/enum_cast.h"
+#include "src/ui/lib/escher/util/hasher.h"
 #include "src/ui/lib/escher/vk/shader_module.h"
 #include "third_party/spirv-cross/spirv_cross.hpp"
 
@@ -125,21 +126,29 @@ void GenerateShaderModuleResourceLayoutFromSpirv(
   }
 }
 
-void GeneratePipelineLayoutSpec(
+PipelineLayoutSpec GeneratePipelineLayoutSpec(
     const std::array<ShaderModulePtr, EnumCount<ShaderStage>()>& shader_modules,
-    PipelineLayoutSpec* spec) {
+    const SamplerPtr& immutable_sampler) {
+  uint32_t attribute_mask = 0;
   if (auto& vertex_module = shader_modules[EnumCast(ShaderStage::kVertex)]) {
-    spec->attribute_mask =
+    attribute_mask =
         vertex_module->shader_module_resource_layout().attribute_mask;
   }
+  uint32_t render_target_mask = 0;
   if (auto& fragment_module =
           shader_modules[EnumCast(ShaderStage::kFragment)]) {
-    spec->render_target_mask =
+    render_target_mask =
         fragment_module->shader_module_resource_layout().render_target_mask;
   }
 
-  spec->descriptor_set_mask = 0;
+  std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets>
+      descriptor_set_layouts;
 
+  // Store the initial push constant ranges locally, then de-dup further down.
+  std::array<vk::PushConstantRange, PipelineLayoutSpec::kMaxPushConstantRanges>
+      raw_ranges = {};
+  std::array<vk::PushConstantRange, PipelineLayoutSpec::kMaxPushConstantRanges>
+      push_constant_ranges = {};
   for (uint32_t i = 0; i < EnumCount<ShaderStage>(); ++i) {
     auto& module = shader_modules[i];
     if (!module)
@@ -148,7 +157,7 @@ void GeneratePipelineLayoutSpec(
     auto& module_layout = module->shader_module_resource_layout();
 
     for (uint32_t set = 0; set < VulkanLimits::kNumDescriptorSets; ++set) {
-      impl::DescriptorSetLayout& pipe_dsl = spec->descriptor_set_layouts[set];
+      impl::DescriptorSetLayout& pipe_dsl = descriptor_set_layouts[set];
       const impl::DescriptorSetLayout& mod_dsl = module_layout.sets[set];
 
       pipe_dsl.sampled_image_mask |= mod_dsl.sampled_image_mask;
@@ -161,17 +170,36 @@ void GeneratePipelineLayoutSpec(
       pipe_dsl.stages |= mod_dsl.stages;
     }
 
-    spec->push_constant_ranges[i].stageFlags =
-        ShaderStageToFlags(ShaderStage(i));
-    spec->push_constant_ranges[i].offset = module_layout.push_constant_offset;
-    spec->push_constant_ranges[i].size = module_layout.push_constant_range;
+    raw_ranges[i].stageFlags = ShaderStageToFlags(ShaderStage(i));
+    raw_ranges[i].offset = module_layout.push_constant_offset;
+    raw_ranges[i].size = module_layout.push_constant_range;
   }
 
-  for (uint32_t i = 0; i < VulkanLimits::kNumDescriptorSets; ++i) {
-    if (spec->descriptor_set_layouts[i].stages) {
-      spec->descriptor_set_mask |= 1u << i;
+  unsigned num_ranges = 0;
+  for (auto& range : raw_ranges) {
+    if (range.size != 0) {
+      bool unique = true;
+      for (unsigned i = 0; i < num_ranges; i++) {
+        // Try to merge equivalent ranges for multiple stages.
+        // TODO(ES-83): what to do about overlapping ranges?  Should DCHECK?
+        if (push_constant_ranges[i].offset == range.offset &&
+            push_constant_ranges[i].size == range.size) {
+          unique = false;
+          push_constant_ranges[i].stageFlags |= range.stageFlags;
+          break;
+        }
+      }
+
+      if (unique)
+        push_constant_ranges[num_ranges++] = range;
     }
   }
+
+  uint32_t num_push_constant_ranges = num_ranges;
+
+  return PipelineLayoutSpec(attribute_mask, render_target_mask,
+                            descriptor_set_layouts, push_constant_ranges,
+                            num_push_constant_ranges, immutable_sampler);
 }
 
 }  // namespace impl

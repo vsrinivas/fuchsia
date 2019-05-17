@@ -110,9 +110,9 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
       NewMeshManager(command_buffer_pool(), transfer_command_buffer_pool(),
                      gpu_allocator(), gpu_uploader(), resource_recycler());
   pipeline_layout_cache_ =
-      std::make_unique<impl::PipelineLayoutCache>(resource_recycler()),
+      std::make_unique<impl::PipelineLayoutCache>(resource_recycler());
   render_pass_cache_ =
-      std::make_unique<impl::RenderPassCache>(resource_recycler()),
+      std::make_unique<impl::RenderPassCache>(resource_recycler());
   framebuffer_allocator_ = std::make_unique<impl::FramebufferAllocator>(
       resource_recycler(), render_pass_cache_.get());
   shader_program_factory_ = std::make_unique<DefaultShaderProgramFactory>(
@@ -141,6 +141,7 @@ Escher::~Escher() {
   render_pass_cache_.reset();
   pipeline_layout_cache_.reset();
   mesh_manager_.reset();
+  descriptor_set_allocators_.clear();
 
   // ResourceRecyclers must be released before the CommandBufferSequencer is,
   // since they register themselves with it.
@@ -201,9 +202,8 @@ TexturePtr Escher::NewTexture(ImagePtr image, vk::Filter filter,
                               vk::ImageAspectFlags aspect_mask,
                               bool use_unnormalized_coordinates) {
   TRACE_DURATION("gfx", "Escher::NewTexture (from image)");
-  return fxl::MakeRefCounted<Texture>(resource_recycler(), std::move(image),
-                                      filter, aspect_mask,
-                                      use_unnormalized_coordinates);
+  return Texture::New(resource_recycler(), std::move(image), filter,
+                      aspect_mask, use_unnormalized_coordinates);
 }
 
 BufferPtr Escher::NewBuffer(vk::DeviceSize size,
@@ -228,9 +228,8 @@ TexturePtr Escher::NewTexture(vk::Format format, uint32_t width,
                        .usage = usage_flags};
   ImagePtr image =
       gpu_allocator()->AllocateImage(resource_recycler(), image_info);
-  return fxl::MakeRefCounted<Texture>(resource_recycler(), std::move(image),
-                                      filter, aspect_flags,
-                                      use_unnormalized_coordinates);
+  return Texture::New(resource_recycler(), std::move(image), filter,
+                      aspect_flags, use_unnormalized_coordinates);
 }
 
 TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width,
@@ -277,6 +276,10 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number,
   // TODO(ES-103): The correct solution is not to use multiple Frames per frame.
   if (requested_type != CommandBuffer::Type::kTransfer) {
     for (auto& pair : descriptor_set_allocators_) {
+      // TODO(ES-199): Nothing calls Clear() on the DescriptorSetAllocators, so
+      // their internal allocations are currently able to grow without bound.
+      // DescriptorSets are not managed by ResourceRecyclers, so just
+      // adding a call to Clear() here would be dangerous.
       pair.second->BeginFrame();
     }
   }
@@ -297,11 +300,14 @@ uint32_t Escher::GetNumOutstandingFrames() const {
 }
 
 impl::DescriptorSetAllocator* Escher::GetDescriptorSetAllocator(
-    const impl::DescriptorSetLayout& layout) {
+    const impl::DescriptorSetLayout& layout,
+    const SamplerPtr& immutable_sampler) {
   TRACE_DURATION("gfx", "escher::Escher::GetDescriptorSetAllocator");
   static_assert(sizeof(impl::DescriptorSetLayout) == 32,
                 "hash code below must be updated");
   Hasher h;
+  if (immutable_sampler)
+    h.struc(immutable_sampler->vk());
   h.u32(layout.sampled_image_mask);
   h.u32(layout.storage_image_mask);
   h.u32(layout.uniform_buffer_mask);
@@ -319,7 +325,12 @@ impl::DescriptorSetAllocator* Escher::GetDescriptorSetAllocator(
   }
 
   TRACE_DURATION("gfx", "escher::Escher::GetDescriptorSetAllocator[creation]");
-  auto new_allocator = new impl::DescriptorSetAllocator(vk_device(), layout);
+  auto new_allocator =
+      new impl::DescriptorSetAllocator(vk_device(), layout, immutable_sampler);
+
+  // TODO(ES-200): This hash table never decreases in size. Users of Escher that
+  // generate unique descriptor set layouts (e.g., with immutable samplers) can
+  // cause this system to cache unbounded amounts of memory.
   descriptor_set_allocators_.emplace_hint(it, hash, new_allocator);
   return new_allocator;
 }

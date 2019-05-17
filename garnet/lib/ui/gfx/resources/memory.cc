@@ -16,8 +16,6 @@ namespace {
 // x86 platforms, vk::Buffers come out of a separate memory pool. These helper
 // functions help make sure that there is a single valid memory pool, for
 // both images and buffers, by creating a dummy representative buffer/image.
-#if __x86_64__
-
 uint32_t GetBufferMemoryBits(vk::Device device) {
   static vk::Device cached_device;
   static uint32_t cached_bits;
@@ -75,8 +73,6 @@ uint32_t GetImageMemoryBits(vk::Device device) {
   cached_bits = reqs.memoryTypeBits;
   return cached_bits;
 }
-
-#endif  // __x86_64__
 
 }  // namespace
 
@@ -185,20 +181,20 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
 
   auto vk_physical_device = session()->resource_context().vk_physical_device;
 
-  uint32_t memoryTypeBits = handle_properties.memoryTypeBits;
+  uint32_t memory_type_bits = handle_properties.memoryTypeBits;
 
 // TODO(SCN-1368): This code should be unnecessary once we have a code flow that
 // understands how the memory is expected to be used.
 #if __x86_64__
-  memoryTypeBits &= GetBufferMemoryBits(vk_device);
-  memoryTypeBits &= GetImageMemoryBits(vk_device);
-  FXL_CHECK(memoryTypeBits != 0)
+  memory_type_bits &= GetBufferMemoryBits(vk_device);
+  memory_type_bits &= GetImageMemoryBits(vk_device);
+  FXL_CHECK(memory_type_bits != 0)
       << "This platform does not have a single memory pool that is valid for "
          "both images and buffers. Please fix SCN-1368.";
 #endif  // __x86_64__
 
   uint32_t memory_type_index = escher::impl::GetMemoryTypeIndex(
-      vk_physical_device, memoryTypeBits, required_flags);
+      vk_physical_device, memory_type_bits, required_flags);
 
   vk::PhysicalDeviceMemoryProperties memory_types =
       vk_physical_device.getMemoryProperties();
@@ -249,6 +245,23 @@ zx::vmo Memory::DuplicateVmo() {
       shared_vmo_->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &the_clone);
   ZX_ASSERT_MSG(status == ZX_OK, "duplicate failed: status=%d", status);
   return the_clone;
+}
+
+uint32_t Memory::HasSharedMemoryPools(vk::Device device,
+                                      vk::PhysicalDevice physical_device) {
+  vk::MemoryPropertyFlags required_flags =
+      vk::MemoryPropertyFlagBits::eDeviceLocal |
+      vk::MemoryPropertyFlagBits::eHostVisible;
+
+  uint32_t memory_type_bits =
+      GetBufferMemoryBits(device) & GetImageMemoryBits(device);
+
+  uint32_t memory_type_index = escher::impl::GetMemoryTypeIndex(
+      physical_device, memory_type_bits, required_flags);
+
+  vk::PhysicalDeviceMemoryProperties memory_types =
+      physical_device.getMemoryProperties();
+  return memory_type_index < memory_types.memoryTypeCount;
 }
 
 }  // namespace gfx

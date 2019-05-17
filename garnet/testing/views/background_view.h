@@ -32,6 +32,9 @@ class BackgroundView : public TestView,
   // |TestView|
   void set_present_callback(Session::PresentCallback present_callback) override;
 
+  void SetHostImage(zx::vmo vmo, uint64_t size,
+                    fuchsia::images::ImageInfo info);
+
  protected:
   Session* session() { return &session_; }
   View* view() { return &view_; }

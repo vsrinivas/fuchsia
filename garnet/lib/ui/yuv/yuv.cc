@@ -4,11 +4,14 @@
 
 #include "garnet/lib/ui/yuv/yuv.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace {
 
-uint8_t clip(int in) {
-  uint32_t out = in < 0 ? 0 : (uint32_t)in;
-  return out > 255 ? 255 : (out & 0xff);
+uint8_t NormalizedFloatToUnsignedByte(float in) {
+  int32_t out = std::roundf(in * 255.0f);
+  return static_cast<uint8_t>(std::clamp(out, 0, 255));
 }
 
 }  // namespace
@@ -17,13 +20,26 @@ namespace yuv {
 
 // Letting compiler decide whether to inline, for now.
 void YuvToBgra(uint8_t y_raw, uint8_t u_raw, uint8_t v_raw, uint8_t* bgra) {
-  int32_t y = 298 * (static_cast<int32_t>(y_raw) - 16);
+  // Convert from encoded space to normalized space assuming eItuNarrow.
+  int32_t y = static_cast<int32_t>(y_raw) - 16;
   int32_t u = static_cast<int32_t>(u_raw) - 128;
   int32_t v = static_cast<int32_t>(v_raw) - 128;
-  bgra[0] = clip(((y + 516 * u + 128) / 256));            // blue
-  bgra[1] = clip(((y - 208 * v - 100 * u + 128) / 256));  // green
-  bgra[2] = clip(((y + 409 * v + 128) / 256));            // red
-  bgra[3] = 0xff;                                         // alpha
+
+  // Note: Normally, we would clamp here. But some drivers do not clamp in the
+  // middle of their implementation, and this function is used for pixel tests.
+  float fy = static_cast<float>(y) / 219.0f;
+  float fu = static_cast<float>(u) / 224.0f;
+  float fv = static_cast<float>(v) / 224.0f;
+
+  // Convert from YUV to RGB using the coefficients for eYcbcr709.
+  float r = fy + 1.5748f * fv;
+  float g = fy - (0.13397432f / 0.7152f) * fu - (0.33480248f / 0.7152) * fv;
+  float b = fy + 1.8556f * fu;
+
+  bgra[0] = NormalizedFloatToUnsignedByte(b);  // blue
+  bgra[1] = NormalizedFloatToUnsignedByte(g);  // green
+  bgra[2] = NormalizedFloatToUnsignedByte(r);  // red
+  bgra[3] = 0xff;                              // alpha
 }
 
 }  // namespace yuv

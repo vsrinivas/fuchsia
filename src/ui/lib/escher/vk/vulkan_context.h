@@ -15,6 +15,7 @@ struct VulkanContext {
   const vk::Instance instance;
   const vk::PhysicalDevice physical_device;
   const vk::Device device;
+  const vk::DispatchLoaderDynamic loader;
   // Queue that supports both graphics and compute.
   const vk::Queue queue;
   const uint32_t queue_family_index;
@@ -23,11 +24,13 @@ struct VulkanContext {
   const uint32_t transfer_queue_family_index;
 
   VulkanContext(vk::Instance instance, vk::PhysicalDevice physical_device,
-                vk::Device device, vk::Queue queue, uint32_t queue_family_index,
+                vk::Device device, vk::DispatchLoaderDynamic loader,
+                vk::Queue queue, uint32_t queue_family_index,
                 vk::Queue transfer_queue, uint32_t transfer_queue_family_index)
       : instance(instance),
         physical_device(physical_device),
         device(device),
+        loader(loader),
         queue(queue),
         queue_family_index(queue_family_index),
         transfer_queue(transfer_queue),

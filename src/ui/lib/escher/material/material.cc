@@ -20,7 +20,7 @@ void Material::SetTexture(TexturePtr texture) {
   texture_ = texture;
   if (texture) {
     image_view_ = texture_->vk_image_view();
-    sampler_ = texture_->vk_sampler();
+    sampler_ = texture_->sampler()->vk();
   } else {
     image_view_ = nullptr;
     sampler_ = nullptr;

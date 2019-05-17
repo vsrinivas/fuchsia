@@ -10,6 +10,7 @@
 #include "src/ui/lib/escher/util/enum_count.h"
 #include "src/ui/lib/escher/util/hash.h"
 #include "src/ui/lib/escher/util/hash_map.h"
+#include "src/ui/lib/escher/vk/sampler.h"
 #include "src/ui/lib/escher/vk/shader_module.h"
 
 namespace escher {
@@ -44,8 +45,13 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
   // NOTE: The following public methods are called by the CommandBuffer
   // implementation, and are not useful to Escher clients.
 
-  // Return the pipeline layout common to all pipeline variants of this program.
-  PipelineLayout* pipeline_layout();
+  // Return the pipeline layout for this program, operating with the optional
+  // immutable sampler passed in (pass the null vk::Sampler handle to opt-out).
+  //
+  // TODO(ES-202): This code-flow assumes that ShaderPrograms source from, at
+  // most, a single sampler. This is a blocking bug for implementing, e.g.,
+  // ES-159.
+  PipelineLayout* ObtainPipelineLayout(const SamplerPtr& immutable_sampler);
 
   // Return the module corresponding to the specified shader stage, or nullptr
   // if the program has no shader for that stage (e.g. many graphics programs
@@ -63,29 +69,26 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
   ShaderProgram(ResourceRecycler* resource_recycler,
                 ShaderModulePtr shader_module);
 
-  void ObtainPipelineLayout();
-
-  // Used by OnShaderModuleUpdated() as an easy way to have the ResourceRecycler
-  // keep the obsolete pipelines alive until safe to destroy them.
+  // Used by ClearCurrentPipelineLayout() and ClearPipelineStash() as an easy
+  // way to have the ResourceRecycler keep the obsolete pipelines alive until
+  // safe to destroy them.
   explicit ShaderProgram(ResourceManager* owner);
   void OnShaderModuleUpdated(ShaderModule* shader_module) override;
+  void ClearPipelineLayout();
+  void ClearPipelineStash();
 
   std::array<ShaderModulePtr, EnumCount<ShaderStage>()> shader_modules_;
+
+  // TODO(ES-201): These are effectively strong references to vk::Pipelines --
+  // it is assumed that this object will be responsible for deleting them when
+  // they go out of scope. During normal execution (e.g., without a shader
+  // refresh) this cache is never cleared.
   HashMap<Hash, vk::Pipeline> graphics_pipelines_;
-  vk::Pipeline compute_pipeline_;
 
   PipelineLayoutPtr pipeline_layout_;
 };
 
 // Inline function definitions.
-
-inline PipelineLayout* ShaderProgram::pipeline_layout() {
-  if (!pipeline_layout_) {
-    ObtainPipelineLayout();
-  }
-  return pipeline_layout_.get();
-}
-
 inline const ShaderModulePtr& ShaderProgram::GetModuleForStage(
     ShaderStage stage) const {
   FXL_DCHECK(stage != ShaderStage::kEnumCount);

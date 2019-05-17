@@ -31,43 +31,105 @@
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/third_party/granite/vk/descriptor_set_layout.h"
+#include "src/ui/lib/escher/util/bit_ops.h"
 #include "src/ui/lib/escher/util/debug_print.h"
 #include "src/ui/lib/escher/util/enum_count.h"
-#include "src/ui/lib/escher/util/hash.h"
+#include "src/ui/lib/escher/util/hashable.h"
+#include "src/ui/lib/escher/util/hasher.h"
+#include "src/ui/lib/escher/vk/sampler.h"
 #include "src/ui/lib/escher/vk/shader_stage.h"
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
 
 namespace escher {
 namespace impl {
 
-// Aggregate the ShaderModuleResourceLayouts of all ShaderModules that are used
-// to create a pipeline.
-struct PipelineLayoutSpec {
-  uint32_t attribute_mask = 0;
+// Aggregate the ShaderModuleResourceLayouts of all ShaderModules that are
+// used to create a pipeline.
+struct PipelineLayoutSpec : public Hashable {
+ public:
+  static constexpr size_t kMaxPushConstantRanges = EnumCount<ShaderStage>();
+
+  PipelineLayoutSpec(
+      uint32_t attribute_mask, uint32_t render_target_mask,
+      const std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets>&
+          layouts,
+      const std::array<vk::PushConstantRange, kMaxPushConstantRanges>& ranges,
+      uint32_t num_ranges, SamplerPtr immutable_sampler)
+      : immutable_sampler_(immutable_sampler),
+        attribute_mask_(attribute_mask),
+        render_target_mask_(render_target_mask),
+        descriptor_set_layouts_(layouts),
+        num_push_constant_ranges_(num_ranges),
+        push_constant_ranges_(ranges) {
+
+    FXL_DCHECK(num_ranges < kMaxPushConstantRanges);
+    for (uint32_t i = 0; i < VulkanLimits::kNumDescriptorSets; ++i) {
+      if (descriptor_set_layouts_[i].stages) {
+        descriptor_set_mask_ |= 1u << i;
+      }
+    }
+
+    // Compute a hash to quickly decide whether all descriptor sets must be
+    // invalidated.
+    Hasher h;
+    for (uint32_t i = 0; i < num_ranges; ++i) {
+      h.struc(push_constant_ranges_[i]);
+    }
+    push_constant_layout_hash_ = h.value();
+  }
+
+  const SamplerPtr& immutable_sampler() const { return immutable_sampler_; }
+
+  uint32_t attribute_mask() const { return attribute_mask_; }
+  uint32_t render_target_mask() const { return render_target_mask_; }
+
+  uint32_t descriptor_set_mask() const { return descriptor_set_mask_; }
+  const DescriptorSetLayout&
+  descriptor_set_layouts(uint32_t index) const {
+    return descriptor_set_layouts_[index];
+  }
+  uint32_t num_push_constant_ranges() const {
+    return num_push_constant_ranges_;
+  }
+  const std::array<vk::PushConstantRange, kMaxPushConstantRanges>&
+  push_constant_ranges() const {
+    return push_constant_ranges_;
+  }
+
+  Hash push_constant_layout_hash() const { return push_constant_layout_hash_; }
+
+  bool operator==(const PipelineLayoutSpec& other) const;
+
+ private:
+  // |Hashable|
+  Hash GenerateHash() const override;
+
+  SamplerPtr immutable_sampler_;
+  uint32_t attribute_mask_ = 0;
   // TODO(ES-83): document.
-  uint32_t render_target_mask = 0;
-  DescriptorSetLayout descriptor_set_layouts[VulkanLimits::kNumDescriptorSets] =
-      {};
-  vk::PushConstantRange push_constant_ranges[EnumCount<ShaderStage>()] = {};
-  uint32_t num_push_constant_ranges = 0;
-  uint32_t descriptor_set_mask = 0;
+  uint32_t render_target_mask_ = 0;
+  uint32_t descriptor_set_mask_ = 0;
+  std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets>
+      descriptor_set_layouts_ = {};
+  uint32_t num_push_constant_ranges_ = 0;
+  std::array<vk::PushConstantRange, kMaxPushConstantRanges>
+      push_constant_ranges_ = {};
 
   // Allows quick comparison to decide whether the push constant ranges have
   // changed.  If so, all descriptor sets are invalidated.
   // TODO(ES-83): I remember reading why this is necessary... we should
   // make note of the section of the Vulkan spec that requires this.
-  Hash push_constant_layout_hash = {0};
-
-  bool operator==(const PipelineLayoutSpec& other) const;
+  Hash push_constant_layout_hash_ = {0};
 };
 
 // TODO(ES-83): extend downward to enclose PipelineLayout.  Cannot do this yet
 // because there is already a PipelineLayout in impl/vk.
 }  // namespace impl
 
-// A PipelineLayout encapsulates a VkPipelineLayout object, as well as an array
-// of DescriptorSetAllocators that are configured to allocate descriptor sets
-// that match the sets required, at each index, by pipelines with this layout.
+// A PipelineLayout encapsulates a VkPipelineLayout object, as well as an
+// array of DescriptorSetAllocators that are configured to allocate descriptor
+// sets that match the sets required, at each index, by pipelines with this
+// layout.
 //
 // TODO(ES-83): does this need to be a Resource?  If these are always
 // reffed by pipelines that use them, then it should suffice to keep those
@@ -93,7 +155,9 @@ class PipelineLayout : public Resource {
 
  private:
   vk::PipelineLayout pipeline_layout_;
-  impl::PipelineLayoutSpec spec_;
+  // This PipelineLayoutSpec will be used for hashes and equality tests, so it
+  // should match the construction parameter and not be mutated.
+  const impl::PipelineLayoutSpec spec_;
   impl::DescriptorSetAllocator*
       descriptor_set_allocators_[VulkanLimits::kNumDescriptorSets] = {};
 };
@@ -104,15 +168,33 @@ using PipelineLayoutPtr = fxl::RefPtr<PipelineLayout>;
 
 inline bool impl::PipelineLayoutSpec::operator==(
     const impl::PipelineLayoutSpec& other) const {
-  return attribute_mask == other.attribute_mask &&
-         render_target_mask == other.render_target_mask &&
-         descriptor_set_mask == other.descriptor_set_mask &&
-         push_constant_layout_hash == other.push_constant_layout_hash &&
-         num_push_constant_ranges == other.num_push_constant_ranges &&
-         0 == memcmp(descriptor_set_layouts, other.descriptor_set_layouts,
-                     sizeof(descriptor_set_layouts)) &&
-         0 == memcmp(push_constant_ranges, other.push_constant_ranges,
-                     sizeof(push_constant_ranges));
+  return immutable_sampler_ == other.immutable_sampler_ &&
+         attribute_mask_ == other.attribute_mask_ &&
+         render_target_mask_ == other.render_target_mask_ &&
+         descriptor_set_mask_ == other.descriptor_set_mask_ &&
+         descriptor_set_layouts_ == other.descriptor_set_layouts_ &&
+         num_push_constant_ranges_ == other.num_push_constant_ranges_ &&
+         push_constant_ranges_ == other.push_constant_ranges_ &&
+         push_constant_layout_hash_ == other.push_constant_layout_hash_;
+}
+
+inline Hash impl::PipelineLayoutSpec::GenerateHash() const {
+  Hasher h;
+
+  h.struc(immutable_sampler_);
+  h.u32(attribute_mask_);
+  h.u32(render_target_mask_);
+
+  h.u32(descriptor_set_mask_);
+  ForEachBitIndex(descriptor_set_mask_, [&](uint32_t index) {
+    h.struc(descriptor_set_layouts_[index]);
+  });
+
+  // Instead of hashing the push constant ranges again, just hash the hash of
+  // the push constant ranges that was already computed in the constructor.
+  h.u64(push_constant_layout_hash_.val);
+
+  return h.value();
 }
 
 ESCHER_DEBUG_PRINTABLE(impl::PipelineLayoutSpec);

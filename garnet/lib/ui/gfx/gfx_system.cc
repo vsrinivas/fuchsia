@@ -91,6 +91,7 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
            VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
            VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
            VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
+           VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
        },
        kRequiresSurface});
 
@@ -106,13 +107,14 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   // the display manager API to present frames directly, instead of using
   // Vulkan swapchains.
   escher::VulkanDeviceQueues::Params device_queues_params(
-      {{
-           VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
-           VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
-           VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
-           VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
-           VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME,
-       },
+      {{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
+        VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+        VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+        VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME,
+        VK_KHR_MAINTENANCE1_EXTENSION_NAME, VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
+        VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
+        VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME},
        surface_,
        escher::VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent});
   vulkan_device_queues_ =
