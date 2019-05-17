@@ -32,8 +32,12 @@ func TestFullStack(t *testing.T) {
 	tag := genTag()
 
 	ctx := context.CreateFromStartupInfo()
-	if err := syslog.InitDefaultLoggerWithTags(ctx.Connector(), tag); err != nil {
-		t.Fatal(err)
+	{
+		l, err := syslog.NewLoggerWithDefaults(ctx.Connector(), tag)
+		if err != nil {
+			t.Fatal(err)
+		}
+		syslog.SetDefaultLogger(l)
 	}
 	if err := syslog.Infof("integer: %d", 10); err != nil {
 		t.Fatal(err)
@@ -92,7 +96,7 @@ func genTag() string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return fmt.Sprintf("logger_test_%d", r)
+	return fmt.Sprintf("syslog_test_%d", r)
 }
 
 // testToStdout runs log_listener to listen for the given tag and to write its
@@ -141,7 +145,7 @@ func testDumpLogs(t *testing.T, tag, expected string) {
 // output into a temporary file. The temporary file is then checked for the
 // expected string.
 func testToFile(t *testing.T, tag, expected string) {
-	tmpfile, err := ioutil.TempFile("", "logger-test")
+	tmpfile, err := ioutil.TempFile("", "syslog-test")
 	if err != nil {
 		t.Fatal(err)
 	}

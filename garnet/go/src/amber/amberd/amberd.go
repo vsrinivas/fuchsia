@@ -48,7 +48,16 @@ func Main() {
 	}
 
 	ctx := context.CreateFromStartupInfo()
-	registerLogger(ctx)
+
+	{
+		if l, err := syslog.NewLoggerWithDefaults(ctx.Connector(), "amber"); err != nil {
+			log.Println(err)
+		} else {
+			syslog.SetDefaultLogger(l)
+			log.SetOutput(&syslog.Writer{Logger: l})
+		}
+		log.SetFlags(0)
+	}
 
 	metrics.Register(ctx)
 
@@ -113,32 +122,6 @@ func Main() {
 		go fidl.Serve()
 	}
 	fidl.Serve()
-}
-
-type logWriter struct{}
-
-func (l *logWriter) Write(data []byte) (n int, err error) {
-	origLen := len(data)
-
-	// Strip out the trailing newline the `log` library adds because the
-	// logging service also adds a trailing newline.
-	if len(data) > 0 && data[len(data)-1] == '\n' {
-		data = data[:len(data)-1]
-	}
-
-	if err := syslog.Infof("%s", data); err != nil {
-		return 0, err
-	}
-
-	return origLen, nil
-}
-
-func registerLogger(ctx *context.Context) {
-	if err := syslog.InitDefaultLoggerWithTags(ctx.Connector(), "amber"); err != nil {
-		log.Printf("error initializing syslog interface: %s", err)
-	}
-	log.SetOutput(&logWriter{})
-	log.SetFlags(0)
 }
 
 // addDefaultSourceConfigs installs source configs from a directory.

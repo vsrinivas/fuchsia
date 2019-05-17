@@ -14,10 +14,6 @@ deps = [
 
 ### Initialization
 
-Logger can only be initialized once.
-
-#### Basic initialization
-
 ```golang
 import (
     "app/context"
@@ -25,23 +21,15 @@ import (
 )
 
 func main() {
-    ctx := context.CreateFromStartupInfo()
-    err := syslog.InitDefaultLogger(ctx.Connector())
-}
-```
-
-#### Initialization with tags
-
-```golang
-import (
-    "app/context"
-    "syslog"
-)
-
-func main() {
-    ctx := context.CreateFromStartupInfo()
+  ctx := context.CreateFromStartupInfo()
+  {
     // Global tags, max 4 tags can be passed. Every log message would be tagged using these.
-    err := syslog.InitDefaultLoggerWithTags(ctx.Connector(), tag1, tag2)
+    l, err := syslog.NewLoggerWithDefaults(ctx.Connector(), tag1, tag2)
+    if err != nil {
+      panic(err)
+    }
+    syslog.SetDefaultLogger(l)
+  }
 }
 ```
 

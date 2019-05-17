@@ -6,42 +6,35 @@ package syslog
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"runtime"
-	"strings"
-	"sync"
 	"sync/atomic"
 	"syscall/zx"
+	"unicode/utf8"
 
 	"app/context"
 
-	logger_fidl "fidl/fuchsia/logger"
+	"fidl/fuchsia/logger"
+
+	"github.com/pkg/errors"
 )
 
-var (
-	ErrNotInitialized   = errors.New("default logger not initialized")
-	ErrInitialized      = errors.New("default logger is already initialized")
-	ErrInvalidArg       = errors.New("Invalid arguments to logger")
-	ErrMsgTooLongString = "Msg too long. it was truncated"
-)
-
-// This is returned when msg is truncated. It contains the truncated part.
+// ErrMsgTooLong is returned when a message is truncated.
 type ErrMsgTooLong struct {
-	Msg string // rest of the message
+	// Msg is the truncated part of the message.
+	Msg string
 }
 
-func (e ErrMsgTooLong) Error() string {
-	return ErrMsgTooLongString
+func (e *ErrMsgTooLong) Error() string {
+	return "too long message was truncated"
 }
 
 const (
-	MAX_GLOBAL_TAGS   = 4
-	MAX_TAG_LEN       = 63
-	SOCKET_BUFFER_LEN = 2032
-	SOCKET_DATAGRAM   = 1 << 0
+	MaxGlobalTags      = 4
+	MaxTagLength       = 63
+	SocketBufferLength = 2032
 )
 
 const (
@@ -75,189 +68,210 @@ func (ll LogLevel) String() string {
 	case FatalLevel:
 		return "FATAL"
 	default:
-		if int(ll) < 0 {
-			return fmt.Sprintf("VLOG(%d)", -(int(ll)))
+		if ll < 0 {
+			return fmt.Sprintf("VLOG(%d)", -ll)
 		}
-		return "INVALID"
+		return fmt.Sprintf("INVALID(%d)", ll)
 	}
+}
+
+type Writer struct {
+	*Logger
+}
+
+func (l *Writer) Write(data []byte) (n int, err error) {
+	origLen := len(data)
+
+	// Strip out the trailing newline the `log` library adds because the
+	// logging service also adds a trailing newline.
+	if len(data) > 0 && data[len(data)-1] == '\n' {
+		data = data[:len(data)-1]
+	}
+
+	if err := l.Infof("%s", data); err != nil {
+		return 0, err
+	}
+
+	return origLen, nil
+}
+
+func ConnectToLogger(c *context.Connector) (zx.Socket, error) {
+	localS, peerS, err := zx.NewSocket(zx.SocketDatagram)
+	if err != nil {
+		return zx.Socket(zx.HandleInvalid), err
+	}
+	req, logSink, err := logger.NewLogSinkInterfaceRequest()
+	if err != nil {
+		_ = localS.Close()
+		_ = peerS.Close()
+		return zx.Socket(zx.HandleInvalid), err
+	}
+	c.ConnectToEnvService(req)
+	{
+		err := logSink.Connect(peerS)
+		_ = logSink.Close()
+		if err != nil {
+			_ = localS.Close()
+			return zx.Socket(zx.HandleInvalid), err
+		}
+	}
+	return localS, nil
 }
 
 type LogInitOptions struct {
-	Connector                     *context.Connector
-	Loglevel                      LogLevel
-	ConsoleWriter                 io.Writer
-	LogServiceChannel             *zx.Socket
-	Tags                          []string
+	LogLevel                      LogLevel
+	LogToSocket                   uint32
+	LogToWriter                   uint32
 	MinSeverityForFileAndLineInfo LogLevel
-}
-
-func GetDefaultInitOptions() LogInitOptions {
-	return LogInitOptions{
-		Loglevel:          InfoLevel,
-		ConsoleWriter:     nil,
-		LogServiceChannel: nil,
-		Tags:              nil,
-		MinSeverityForFileAndLineInfo: ErrorLevel,
-	}
+	Socket                        zx.Socket
+	Tags                          []string
+	Writer                        io.Writer
 }
 
 type Logger struct {
-	logLevel                      LogLevel
-	tags                          []string
-	socket                        *zx.Socket
-	writer                        atomic.Value
-	tagString                     string
-	pid                           uint64
-	droppedLogs                   uint32
-	minSeverityForFileAndLineInfo LogLevel
-	fallbackMux                   sync.Mutex
-}
-
-func (l *Logger) setTags(tags []string) error {
-	if len(tags) > MAX_GLOBAL_TAGS {
-		return ErrInvalidArg
-	}
-	for _, tag := range tags {
-		if len(tag) > MAX_TAG_LEN {
-			return ErrInvalidArg
-		}
-	}
-	if l.writer.Load() != nil {
-		l.tagString = strings.Join(tags, ", ")
-	}
-	l.tags = tags
-	return nil
-}
-
-func (l *Logger) ActivateFallbackMode() {
-	l.fallbackMux.Lock()
-	defer l.fallbackMux.Unlock()
-	if l.writer.Load() != nil {
-		return //already active
-	}
-	if l.tagString == "" {
-		l.tagString = strings.Join(l.tags, ", ")
-	}
-	l.writer.Store(os.Stderr)
-}
-
-func connectToLogger(c *context.Connector) (*zx.Socket, error) {
-	sin, sout, err := zx.NewSocket(SOCKET_DATAGRAM)
-	if err != nil {
-		return nil, err
-	}
-	req, ls, err := logger_fidl.NewLogSinkInterfaceRequest()
-	if err != nil {
-		return nil, err
-	}
-	c.ConnectToEnvService(req)
-	err = ls.Connect(sout)
-	ls.Close()
-	return &sin, err
+	droppedLogs uint32
+	options     LogInitOptions
+	pid         uint64
 }
 
 func NewLogger(options LogInitOptions) (*Logger, error) {
-	l := Logger{
-		logLevel: options.Loglevel,
-		socket:   options.LogServiceChannel,
-		pid:      uint64(os.Getpid()),
-		minSeverityForFileAndLineInfo: options.MinSeverityForFileAndLineInfo,
+	if len(options.Tags) > MaxGlobalTags {
+		return nil, errors.Errorf("too many tags: %d/%d", len(options.Tags), MaxGlobalTags)
 	}
-	if options.ConsoleWriter == nil && options.LogServiceChannel == nil {
-		if options.Connector == nil {
-			return nil, fmt.Errorf("Init Error: Writer, LogServiceChannel or Connector needs to be provided")
+	for _, tag := range options.Tags {
+		if len(tag) > MaxTagLength {
+			return nil, errors.Errorf("tag too long: %d/%d", len(tag), MaxTagLength)
 		}
-		if sock, err := connectToLogger(options.Connector); err != nil {
-			fmt.Fprintf(os.Stderr, "not able to conenct to log sink, will write logs to stderr: %s", err)
-			l.writer.Store(os.Stderr)
-		} else {
-			l.socket = sock
-		}
-	} else if options.ConsoleWriter != nil {
-		l.writer.Store(options.ConsoleWriter)
 	}
-	if err := l.setTags(options.Tags); err != nil {
+	return &Logger{
+		options: options,
+		pid:     uint64(os.Getpid()),
+	}, nil
+}
+
+func NewLoggerWithDefaults(c *context.Connector, tags ...string) (*Logger, error) {
+	s, err := ConnectToLogger(c)
+	if err != nil {
 		return nil, err
 	}
-	return &l, nil
+	return NewLogger(LogInitOptions{
+		LogLevel:                      InfoLevel,
+		LogToSocket:                   1,
+		LogToWriter:                   0,
+		MinSeverityForFileAndLineInfo: ErrorLevel,
+		Socket: s,
+		Tags:   tags,
+	})
 }
 
 func (l *Logger) logToWriter(writer io.Writer, time zx.Time, logLevel LogLevel, tag, msg string) error {
-	if len(l.tagString) != 0 {
-		if len(tag) != 0 {
-			tag = fmt.Sprintf("%s, %s", l.tagString, tag)
-		} else {
-			tag = l.tagString
+	if writer == nil {
+		writer = os.Stderr
+	}
+	var tagsStorage [MaxGlobalTags + 1]string
+	tags := tagsStorage[:0]
+	for _, tag := range l.options.Tags {
+		if len(tag) > 0 {
+			tags = append(tags, tag)
 		}
 	}
-	_, err := io.WriteString(writer, fmt.Sprintf("[%05d.%06d][%d][0][%s] %s: %s\n", time/1000000000, (time/1000)%1000000, l.pid, tag, logLevel, msg))
+	if len(tag) > 0 {
+		tags = append(tags, tag)
+	}
+	var buffer [(MaxGlobalTags + 1) * MaxTagLength]byte
+	pos := 0
+	for i, tag := range tags {
+		if i > 0 {
+			pos += copy(buffer[pos:], ", ")
+		}
+		pos += copy(buffer[pos:], tag)
+	}
+	_, err := fmt.Fprintf(writer, "[%05d.%06d][%d][0][%s] %s: %s\n", time/1000000000, (time/1000)%1000000, l.pid, buffer[:pos], logLevel, msg)
 	return err
 }
 
 func (l *Logger) logToSocket(time zx.Time, logLevel LogLevel, tag, msg string) error {
-	var buffer [SOCKET_BUFFER_LEN]byte
-	binary.LittleEndian.PutUint64(buffer[0:8], l.pid)
-	binary.LittleEndian.PutUint64(buffer[8:16], 0) // golang doesn't have tid
-	binary.LittleEndian.PutUint64(buffer[16:24], uint64(time))
-	binary.LittleEndian.PutUint32(buffer[24:28], uint32(logLevel))
-	binary.LittleEndian.PutUint32(buffer[28:32], atomic.LoadUint32(&l.droppedLogs))
-	pos := 32
+	const golangThreadID = 0
+
+	var buffer [SocketBufferLength]byte
+
+	pos := 0
+	for _, i := range [...]uint64{
+		l.pid,
+		golangThreadID,
+		uint64(time),
+	} {
+		binary.LittleEndian.PutUint64(buffer[pos:], i)
+		pos += 8
+	}
+	for _, i := range [...]uint32{
+		uint32(logLevel),
+		atomic.LoadUint32(&l.droppedLogs),
+	} {
+		binary.LittleEndian.PutUint32(buffer[pos:], i)
+		pos += 4
+	}
 
 	// Write global tags
-	for _, tag := range l.tags {
-		length := len(tag)
-		if length == 0 {
-			continue
+	for _, tag := range l.options.Tags {
+		if length := len(tag); length != 0 {
+			buffer[pos] = byte(length)
+			pos += 1
+			pos += copy(buffer[pos:], tag)
 		}
-		buffer[pos] = byte(length)
-		pos = pos + 1
-		copy(buffer[pos:pos+length], tag)
-		pos = pos + length
 	}
 
 	// Write local tags
-	if len(tag) != 0 {
-		length := len(tag)
+	if length := len(tag); length != 0 {
 		buffer[pos] = byte(length)
-		pos = pos + 1
-		copy(buffer[pos:pos+length], tag)
-		pos = pos + length
+		pos += 1
+		pos += copy(buffer[pos:], tag)
 	}
 
-	//write msg
+	const ellipsis = "..."
+
+	// Write msg
 	buffer[pos] = 0
-	pos = pos + 1
-	errMsgTooLong := ErrMsgTooLong{""}
-	if len(msg) >= SOCKET_BUFFER_LEN-pos {
-		// truncate
-		errMsgTooLong.Msg = msg[SOCKET_BUFFER_LEN-pos-4:]
-		msg = msg[:SOCKET_BUFFER_LEN-pos-4]
-		copy(buffer[pos:], msg)
-		copy(buffer[pos+len(msg):], "...")
-		pos = pos + len(msg) + 3
-	} else {
-		copy(buffer[pos:], msg)
-		pos = pos + len(msg)
+	pos += 1
+
+	payload := msg
+	if len(payload)+1 > len(buffer)-pos {
+		payload = payload[:len(buffer)-pos-1-len(ellipsis)]
+
+		// Remove the last byte until the result is valid UTF-8.
+		for {
+			if rune, _ := utf8.DecodeLastRuneInString(payload); rune != utf8.RuneError {
+				break
+			}
+			payload = payload[:len(payload)-1]
+		}
+	}
+	pos += copy(buffer[pos:], payload)
+	if payload != msg {
+		pos += copy(buffer[pos:], ellipsis)
 	}
 
 	buffer[pos] = 0
-	if _, err := l.socket.Write(buffer[:pos+1], 0); err != nil {
+	pos += 1
+
+	if _, err := l.options.Socket.Write(buffer[:pos], 0); err != nil {
 		atomic.AddUint32(&l.droppedLogs, 1)
 		return err
 	}
-	if errMsgTooLong.Msg != "" {
-		return errMsgTooLong
+
+	if payload != msg {
+		return &ErrMsgTooLong{Msg: msg[len(payload):]}
 	}
 	return nil
 }
 
 func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format string, a ...interface{}) error {
-	if l.logLevel > logLevel {
+	if l.options.LogLevel > logLevel {
 		return nil
 	}
-	time := zx.Sys_clock_get(0) //MONOTONIC
+	time := zx.Sys_clock_get_monotonic()
 	msg := fmt.Sprintf(format, a...)
-	if logLevel >= l.minSeverityForFileAndLineInfo {
+	if logLevel >= l.options.MinSeverityForFileAndLineInfo {
 		_, file, line, ok := runtime.Caller(callDepth)
 		if !ok {
 			file = "???"
@@ -274,39 +288,38 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 		}
 		msg = fmt.Sprintf("%s(%d): %s ", file, line, msg)
 	}
-	if len(tag) > MAX_TAG_LEN {
-		tag = tag[:MAX_TAG_LEN]
+	if len(tag) > MaxTagLength {
+		tag = tag[:MaxTagLength]
 	}
 	if logLevel == FatalLevel {
 		defer os.Exit(1)
 	}
-	w := l.writer.Load()
-	if w != nil {
-		return l.logToWriter(w.(io.Writer), time, logLevel, tag, msg)
-	} else {
-		if err := l.logToSocket(time, logLevel, tag, msg); err != nil {
-			if err, ok := err.(*zx.Error); ok {
-				switch err.Status {
-				case zx.ErrPeerClosed, zx.ErrBadState:
-					l.ActivateFallbackMode()
-					w = l.writer.Load()
-					if w != nil {
-						return l.logToWriter(w.(io.Writer), time, logLevel, tag, msg)
-					}
-				}
+	if atomic.LoadUint32(&l.options.LogToSocket) != 0 {
+		switch err := l.logToSocket(time, logLevel, tag, msg).(type) {
+		case nil:
+		case *zx.Error:
+			switch err.Status {
+			case zx.ErrPeerClosed, zx.ErrBadState:
+				atomic.StoreUint32(&l.options.LogToWriter, 1)
+			default:
+				return err
 			}
+		default:
 			return err
 		}
+	}
+	if atomic.LoadUint32(&l.options.LogToWriter) != 0 {
+		return l.logToWriter(l.options.Writer, time, logLevel, tag, msg)
 	}
 	return nil
 }
 
 func (l *Logger) SetSeverity(logLevel LogLevel) {
-	l.logLevel = logLevel
+	l.options.LogLevel = logLevel
 }
 
 func (l *Logger) SetVerbosity(verbosity int) {
-	l.logLevel = LogLevel(-verbosity)
+	l.options.LogLevel = LogLevel(-verbosity)
 }
 
 func (l *Logger) Infof(format string, a ...interface{}) error {
@@ -352,12 +365,10 @@ func (l *Logger) VLogTf(verbosity int, tag, format string, a ...interface{}) err
 var defaultLogger *Logger
 
 func logf(callDepth int, logLevel LogLevel, tag string, format string, a ...interface{}) error {
-	l := GetDefaultLogger()
-	if l != nil {
+	if l := GetDefaultLogger(); l != nil {
 		return l.logf(callDepth+1, logLevel, tag, format, a...)
-	} else {
-		return ErrNotInitialized
 	}
+	return errors.New("default logger not initialized")
 }
 
 // Public APIs for default logger
@@ -366,41 +377,19 @@ func GetDefaultLogger() *Logger {
 	return defaultLogger
 }
 
-func InitDefaultLogger(c *context.Connector) error {
-	options := GetDefaultInitOptions()
-	options.Connector = c
-	return InitDefaultLoggerWithConfig(options)
-}
-
-func InitDefaultLoggerWithTags(c *context.Connector, tags ...string) error {
-	o := GetDefaultInitOptions()
-	o.Tags = tags
-	o.Connector = c
-	return InitDefaultLoggerWithConfig(o)
-}
-
-func InitDefaultLoggerWithConfig(options LogInitOptions) error {
-	if defaultLogger != nil {
-		return ErrInitialized
-	}
-
-	if l, err := NewLogger(options); err != nil {
-		return err
-	} else {
-		defaultLogger = l
-	}
-	return nil
+func SetDefaultLogger(l *Logger) {
+	defaultLogger = l
 }
 
 func SetSeverity(logLevel LogLevel) {
 	if l := GetDefaultLogger(); l != nil {
-		l.logLevel = logLevel
+		l.options.LogLevel = logLevel
 	}
 }
 
 func SetVerbosity(verbosity int) {
 	if l := GetDefaultLogger(); l != nil {
-		l.logLevel = LogLevel(-verbosity)
+		l.options.LogLevel = LogLevel(-verbosity)
 	}
 }
 
@@ -442,12 +431,4 @@ func FatalTf(tag, format string, a ...interface{}) error {
 
 func VLogTf(verbosity int, tag, format string, a ...interface{}) error {
 	return logf(2, LogLevel(-verbosity), tag, format, a...)
-}
-
-func ToErrMsgTooLong(e error) *ErrMsgTooLong {
-	if err, ok := e.(ErrMsgTooLong); ok {
-		return &err
-	} else {
-		return nil
-	}
 }

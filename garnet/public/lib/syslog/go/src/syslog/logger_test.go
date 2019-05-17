@@ -5,57 +5,84 @@
 package syslog_test
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"strings"
 	"syscall/zx"
 	"syslog"
 	"testing"
+	"unicode/utf8"
 )
 
-var (
-	Pid = uint64(os.Getpid())
-)
+var pid = uint64(os.Getpid())
 
-func TestLogSimpleWithWriter(t *testing.T) {
-	options := syslog.GetDefaultInitOptions()
+func TestLogSimple(t *testing.T) {
+	sin, sout, err := zx.NewSocket(zx.SocketDatagram)
+	if err != nil {
+		t.Fatal(err)
+	}
 	tmpFile, err := ioutil.TempFile("", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(tmpFile.Name())
-	options.ConsoleWriter = tmpFile
-	logger, err := syslog.NewLogger(options)
-	if err != nil {
-		t.Fatal(err)
-	}
-	logger.Infof("integer: %d", 10)
-	tmpFile.Sync()
-	tmpFile.Seek(0, 0)
-	var buf bytes.Buffer
-	io.Copy(&buf, tmpFile)
-	expected := "INFO: integer: 10\n"
-	got := buf.String()
-	if !strings.HasSuffix(got, expected) {
-		t.Errorf("%q should have ended in %q", got, expected)
-	}
-	if !strings.Contains(got, fmt.Sprintf("[%d]", Pid)) {
-		t.Errorf("%q should contains %d", got, Pid)
+	for _, logToSocket := range []bool{false, true} {
+		for _, logToWriter := range []bool{false, true} {
+			options :=
+				syslog.LogInitOptions{
+					MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
+					Socket: sout,
+					Writer: tmpFile,
+				}
+			if logToSocket {
+				options.LogToSocket = 1
+			}
+			if logToWriter {
+				options.LogToWriter = 1
+			}
+			logger, err := syslog.NewLogger(options)
+			if err != nil {
+				t.Fatal(err)
+			}
+			const format = "integer: %d"
+			logger.Infof(format, 10)
+			if logToSocket {
+				expectedMsg := fmt.Sprintf(format, 10)
+				checkoutput(t, sin, expectedMsg, syslog.InfoLevel)
+			}
+			if logToWriter {
+				tmpFile.Sync()
+				tmpFile.Seek(0, 0)
+				expected := "INFO: integer: 10\n"
+				b, err := ioutil.ReadAll(tmpFile)
+				if err != nil {
+					t.Fatal(err)
+				}
+				got := string(b)
+				if !strings.HasSuffix(got, expected) {
+					t.Errorf("%q should have ended in %q", got, expected)
+				}
+				if !strings.Contains(got, fmt.Sprintf("[%d]", pid)) {
+					t.Errorf("%q should contains %d", got, pid)
+				}
+			}
+			tmpFile.Truncate(0)
+		}
 	}
 }
 func setup(t *testing.T, tags ...string) (zx.Socket, *syslog.Logger) {
-	options := syslog.GetDefaultInitOptions()
-	options.Tags = tags
-	sin, sout, err := zx.NewSocket(syslog.SOCKET_DATAGRAM)
+	sin, sout, err := zx.NewSocket(zx.SocketDatagram)
 	if err != nil {
 		t.Fatal(err)
 	}
-	options.LogServiceChannel = &sout
-	log, err := syslog.NewLogger(options)
+	log, err := syslog.NewLogger(syslog.LogInitOptions{
+		LogToSocket:                   1,
+		MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
+		Socket: sout,
+		Tags:   tags,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,37 +90,37 @@ func setup(t *testing.T, tags ...string) (zx.Socket, *syslog.Logger) {
 }
 
 func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity syslog.LogLevel, tags ...string) {
-	var data [syslog.SOCKET_BUFFER_LEN]byte
+	var data [syslog.SocketBufferLength]byte
 	if n, err := sin.Read(data[:], 0); err != nil {
 		t.Fatal(err)
 	} else {
 		if n <= 32 {
 			t.Fatalf("got invalid data: %v", data[:n])
 		}
-		got_pid := binary.LittleEndian.Uint64(data[0:8])
-		got_tid := binary.LittleEndian.Uint64(data[8:16])
-		got_time := binary.LittleEndian.Uint64(data[16:24])
-		got_severity := int32(binary.LittleEndian.Uint32(data[24:28]))
-		got_dropped_logs := int32(binary.LittleEndian.Uint32(data[28:32]))
+		gotpid := binary.LittleEndian.Uint64(data[0:8])
+		gotTid := binary.LittleEndian.Uint64(data[8:16])
+		gotTime := binary.LittleEndian.Uint64(data[16:24])
+		gotSeverity := int32(binary.LittleEndian.Uint32(data[24:28]))
+		gotDroppedLogs := int32(binary.LittleEndian.Uint32(data[28:32]))
 
-		if Pid != got_pid {
-			t.Errorf("pid error, got: %d, want: %d", got_pid, Pid)
+		if pid != gotpid {
+			t.Errorf("pid error, got: %d, want: %d", gotpid, pid)
 		}
 
-		if 0 != got_tid {
-			t.Errorf("tid error, got: %d, want: %d", got_tid, 0)
+		if 0 != gotTid {
+			t.Errorf("tid error, got: %d, want: %d", gotTid, 0)
 		}
 
-		if int32(severity) != got_severity {
-			t.Errorf("severity error, got: %d, want: %d", got_severity, severity)
+		if int32(severity) != gotSeverity {
+			t.Errorf("severity error, got: %d, want: %d", gotSeverity, severity)
 		}
 
-		if got_time <= 0 {
-			t.Errorf("time %d should be greater than zero", got_time)
+		if gotTime <= 0 {
+			t.Errorf("time %d should be greater than zero", gotTime)
 		}
 
-		if 0 != got_dropped_logs {
-			t.Errorf("dropped logs error, got: %d, want: %d", got_dropped_logs, 0)
+		if 0 != gotDroppedLogs {
+			t.Errorf("dropped logs error, got: %d, want: %d", gotDroppedLogs, 0)
 		}
 		pos := 32
 		for i, tag := range tags {
@@ -102,9 +129,9 @@ func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity syslo
 				t.Fatalf("tag iteration %d: expected data to be %d at pos %d, got %d", i, length, pos, data[pos])
 			}
 			pos = pos + 1
-			got_tag := string(data[pos : pos+length])
-			if tag != got_tag {
-				t.Fatalf("tag iteration %d: expected tag %q , got %q", i, tag, got_tag)
+			gotTag := string(data[pos : pos+length])
+			if tag != gotTag {
+				t.Fatalf("tag iteration %d: expected tag %q , got %q", i, tag, gotTag)
 			}
 			pos = pos + length
 		}
@@ -113,23 +140,14 @@ func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity syslo
 			t.Fatalf("byte before msg start should be zero, got: %d, %v", data[pos], data[32:n])
 		}
 
-		msg_got := string(data[pos+1 : n-1])
-		if expectedMsg != msg_got {
-			t.Fatalf("expected msg:%q, got %q", expectedMsg, msg_got)
+		msgGot := string(data[pos+1 : n-1])
+		if expectedMsg != msgGot {
+			t.Fatalf("expected msg:%q, got %q", expectedMsg, msgGot)
 		}
 		if data[n-1] != 0 {
 			t.Fatalf("last byte should be zero, got: %d, %v", data[pos], data[32:n])
 		}
 	}
-}
-
-// Test simple logging with socket
-func TestLogSimple(t *testing.T) {
-	sin, log := setup(t)
-	format := "integer: %d"
-	log.Infof(format, 10)
-	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, syslog.InfoLevel)
 }
 
 func TestLogWithLocalTag(t *testing.T) {
@@ -177,67 +195,41 @@ func TestLoggerVerbosity(t *testing.T) {
 }
 
 func TestGlobalTagLimits(t *testing.T) {
-	options := syslog.GetDefaultInitOptions()
-	options.ConsoleWriter = os.Stdout
-	tags := [syslog.MAX_GLOBAL_TAGS + 1]string{}
+	options := syslog.LogInitOptions{
+		Writer: os.Stdout,
+	}
+	var tags [syslog.MaxGlobalTags + 1]string
 	for i := 0; i < len(tags); i++ {
 		tags[i] = "a"
 	}
 	options.Tags = tags[:]
-	if _, err := syslog.NewLogger(options); err != syslog.ErrInvalidArg {
-		t.Fatalf("expected error 'ErrInvalidArg' got: %s", err)
+	if _, err := syslog.NewLogger(options); err == nil || !strings.Contains(err.Error(), "too many tags") {
+		t.Fatalf("unexpected error: %s", err)
 	}
-	options.Tags = tags[0:syslog.MAX_GLOBAL_TAGS]
-	var tag [syslog.MAX_TAG_LEN + 1]byte
+	options.Tags = tags[:syslog.MaxGlobalTags]
+	var tag [syslog.MaxTagLength + 1]byte
 	for i := 0; i < len(tag); i++ {
 		tag[i] = 65
 	}
 	options.Tags[1] = string(tag[:])
-	if _, err := syslog.NewLogger(options); err != syslog.ErrInvalidArg {
-		t.Fatalf("expected error 'ErrInvalidArg' got: %s", err)
+	if _, err := syslog.NewLogger(options); err == nil || !strings.Contains(err.Error(), "tag too long") {
+		t.Fatalf("unexpected error: %s", err)
 	}
 }
 
 func TestLocalTagLimits(t *testing.T) {
 	sin, log := setup(t)
 	format := "integer: %d"
-	var tag [syslog.MAX_TAG_LEN + 1]byte
+	var tag [syslog.MaxTagLength + 1]byte
 	for i := 0; i < len(tag); i++ {
 		tag[i] = 65
 	}
 	log.InfoTf(string(tag[:]), format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, syslog.InfoLevel, string(tag[:syslog.MAX_TAG_LEN]))
+	checkoutput(t, sin, expectedMsg, syslog.InfoLevel, string(tag[:syslog.MaxTagLength]))
 }
 
-func TestFallback(t *testing.T) {
-	sin, log := setup(t, "gtag1", "gtag2")
-	sin.Close()
-	old := os.Stderr
-	f, err := ioutil.TempFile("", "stderr")
-	if err != nil {
-		t.Fatal(err)
-	}
-	os.Stderr = f
-	defer func() {
-		os.Stderr = old
-		os.Remove(f.Name())
-	}()
-	log.ActivateFallbackMode()
-	format := "integer: %d"
-	log.InfoTf("local_tag", format, 10)
-	expectedMsg := fmt.Sprintf("[0][gtag1, gtag2, local_tag] INFO: %s\n", fmt.Sprintf(format, 10))
-	content, err := ioutil.ReadFile(f.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := string(content)
-	if !strings.HasSuffix(got, expectedMsg) {
-		t.Fatalf("%q should have ended in %q", got, expectedMsg)
-	}
-}
-
-func TestFallbackWhenSocketCloses(t *testing.T) {
+func TestLogToWriterWhenSocketCloses(t *testing.T) {
 	sin, log := setup(t, "gtag1", "gtag2")
 	sin.Close()
 	old := os.Stderr
@@ -265,21 +257,22 @@ func TestFallbackWhenSocketCloses(t *testing.T) {
 
 func TestMessageLenLimit(t *testing.T) {
 	sin, log := setup(t)
-	msgLen := syslog.SOCKET_BUFFER_LEN - 32 - 1 - 1 // 1 for starting and ending null bytes
-	format := fmt.Sprintf("%%0%ddstart", msgLen-3)
-	if err := log.Infof(format, 10); err != nil {
-		if err2 := syslog.ToErrMsgTooLong(err); err2 == nil {
-			t.Fatal(err)
-		} else {
-			if err2.Msg != "start" {
-				t.Fatalf("expected 'start' got %q", err2.Msg)
-			}
+	// 1 for starting and ending null bytes.
+	msgLen := syslog.SocketBufferLength - 32 - 1 - 1
+
+	const stripped = '𠜎'
+	// Ensure only part of stripped fits.
+	msg := strings.Repeat("x", msgLen-(utf8.RuneLen(stripped)-1)) + string(stripped)
+	switch err := log.Infof(msg).(type) {
+	case *syslog.ErrMsgTooLong:
+		if err.Msg != string(stripped) {
+			t.Fatalf("unexpected truncation: %s", err.Msg)
 		}
+	default:
+		t.Fatalf("unexpected error: %v", err)
 	}
-	expectedMsg := fmt.Sprintf(format, 10)
-	expectedMsgBytes := []byte(expectedMsg)
-	expectedMsgBytes = expectedMsgBytes[:msgLen]
-	copy(expectedMsgBytes[msgLen-3:msgLen], "...")
-	expectedMsg = string(expectedMsgBytes[:]) // "<0000...ntimes>10..."
+
+	const ellipsis = "..."
+	expectedMsg := msg[:msgLen-len(ellipsis)] + ellipsis
 	checkoutput(t, sin, expectedMsg, syslog.InfoLevel)
 }

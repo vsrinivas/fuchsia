@@ -5,9 +5,7 @@
 package netstack
 
 import (
-	"bytes"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -38,22 +36,6 @@ import (
 	"github.com/google/netstack/tcpip/transport/udp"
 )
 
-type logWriter struct{}
-
-func (*logWriter) Write(data []byte) (n int, err error) {
-	origLen := len(data)
-
-	// Strip out the trailing newline the `log` library adds because the
-	// logging service also adds a trailing newline.
-	data = bytes.TrimSuffix(data, []byte("\n"))
-
-	if err := syslog.VLogf(syslog.DebugVerbosity, "%s", data); err != nil {
-		return 0, err
-	}
-
-	return origLen, nil
-}
-
 func Main() {
 	flags := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	sniff := flags.Bool("sniff", false, "Enable the sniffer")
@@ -63,17 +45,23 @@ func Main() {
 
 	ctx := context.CreateFromStartupInfo()
 
-	options := syslog.LogInitOptions{
-		Loglevel:  syslog.DebugLevel,
-		Connector: ctx.Connector(),
-		Tags:      []string{"netstack"},
+	s, err := syslog.ConnectToLogger(ctx.Connector())
+	if err != nil {
+		panic(err)
+	}
+	l, err := syslog.NewLogger(syslog.LogInitOptions{
+		LogLevel:                      syslog.DebugLevel,
+		LogToSocket:                   1,
+		LogToWriter:                   0,
 		MinSeverityForFileAndLineInfo: syslog.InfoLevel,
+		Socket: s,
+		Tags:   []string{"netstack"},
+	})
+	if err != nil {
+		panic(err)
 	}
-	if err := syslog.InitDefaultLoggerWithConfig(options); err != nil {
-		panic(fmt.Sprintf("netstack: failed to initialize syslog interface: %s", err))
-	}
-
-	log.SetOutput((*logWriter)(nil))
+	syslog.SetDefaultLogger(l)
+	log.SetOutput(&syslog.Writer{Logger: l})
 	log.SetFlags(log.Lshortfile)
 
 	stk := tcpipstack.New([]string{

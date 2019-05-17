@@ -11,6 +11,7 @@ import("//build/testing/environments.gni")
 go_library("syslog") {
   name = "syslog"
   deps = [
+    "//garnet/public/go/third_party:github.com/pkg/errors",
     "//garnet/public/lib/component/go/src/app($go_toolchain)",
     "//zircon/public/fidl/fuchsia-logger($go_toolchain)",
   ]

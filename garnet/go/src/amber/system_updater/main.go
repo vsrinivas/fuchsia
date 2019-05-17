@@ -185,8 +185,13 @@ func (i InitiatorValue) Set(s string) error {
 
 func Main() {
 	ctx := context.CreateFromStartupInfo()
-	if err := syslog.InitDefaultLoggerWithTags(ctx.Connector(), "system_updater"); err != nil {
-		fmt.Printf("error initializing syslog interface: %s\n", err)
+
+	{
+		if l, err := syslog.NewLoggerWithDefaults(ctx.Connector(), "system_updater"); err != nil {
+			fmt.Println(err)
+		} else {
+			syslog.SetDefaultLogger(l)
+		}
 	}
 
 	metrics.Register(ctx)
