@@ -165,6 +165,6 @@ search query. If there are multiple matches for the query the above command will
 fail, so `locate` should be invoked directly to discover the URL that should be
 provided to `run_test_component`
 
-[package_metadata]: /the-book/package_metadata.md
+[package_metadata]: /docs/the-book/package_metadata.md
 [rust_testing]: ../languages/rust/testing.md
 [test_package]: test_component.md

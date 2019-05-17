@@ -72,7 +72,7 @@ discussion.
 
 ## How to handle third-party code
 
-See the [guidelines](third_party-metadata.md) on writing the metadata for
+See the [guidelines](third-party-metadata.md) on writing the metadata for
 third-party code in README.fuchsia files.
 
 ## Troubleshooting

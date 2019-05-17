@@ -67,7 +67,7 @@ not necessary to understand all of this before you move on.
 1.  **Registration** `main()` registers `EchoImpl` to bind itself to incoming
     requests on the `Echo` protocol. `main()` returns, but the program doesn't
     exit, because an [event
-    loop](https://webdev.dartlang.org/articles/performance/event-loop) to handle
+    loop](https://dart.dev/tutorials/language/futures) to handle
     incoming requests is running.
 1.  **Service request.** The `Echo` server package receives a request to bind
     `Echo` service to a new channel, so it calls the `bind()` function passed in
@@ -138,7 +138,7 @@ information is cached in a data structure owned by the FIDL runtime, and used to
 create objects to be the endpoints for additional incoming channels.
 
 Unlike C++, Dart only has a [single
-thread](https://webdev.dartlang.org/articles/performance/event-loop#darts-single-thread-of-execution)
+thread](https://dart.dev/tutorials/language/futures)
 per isolate, so there's no possible confusion over which thread owns a channel.
 
 #### Is there really only one thread?

@@ -61,4 +61,4 @@ setupLogger(level: Level.ALL);
 will make all log statements appear in the console.
 
 
-[logger-doc]: https://www.dartdocs.org/documentation/logging/0.11.3%2B1/logging/Logger-class.html
+[logger-doc]: https://pub.dev/documentation/logging/latest/logging/Logger-class.html
