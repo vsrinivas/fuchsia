@@ -47,7 +47,8 @@ class TryNextThreadTest : public TestServer {
   bool got_unexpected_exception_ = false;
 };
 
-TEST_F(TryNextThreadTest, ResumeTryNextTest) {
+// FLK-229: disabled pending fix
+TEST_F(TryNextThreadTest, DISABLED_ResumeTryNextTest) {
   std::vector<std::string> argv{
     kTestHelperPath,
     "trigger-sw-bkpt-with-handler",
