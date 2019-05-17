@@ -16,3 +16,6 @@ pub const PERMISSION_WRITE_SIGNED_MITM: u32 = 0x100;
 /// GATT Attribute Property Values
 pub const PROPERTY_NOTIFY: u32 = 0x10;
 pub const PROPERTY_INDICATE: u32 = 0x20;
+
+/// GATT Max Attribute Length (Vol 3, Part F, 3.2.9)
+pub const GATT_MAX_ATTRIBUTE_VALUE_LENGTH: usize = 512;

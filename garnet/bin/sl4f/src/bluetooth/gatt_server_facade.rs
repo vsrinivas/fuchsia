@@ -21,9 +21,9 @@ use serde_json::value::Value;
 use std::collections::HashMap;
 
 use crate::bluetooth::constants::{
-    PERMISSION_READ_ENCRYPTED, PERMISSION_READ_ENCRYPTED_MITM, PERMISSION_WRITE_ENCRYPTED,
-    PERMISSION_WRITE_ENCRYPTED_MITM, PERMISSION_WRITE_SIGNED, PERMISSION_WRITE_SIGNED_MITM,
-    PROPERTY_INDICATE, PROPERTY_NOTIFY,
+    GATT_MAX_ATTRIBUTE_VALUE_LENGTH, PERMISSION_READ_ENCRYPTED, PERMISSION_READ_ENCRYPTED_MITM,
+    PERMISSION_WRITE_ENCRYPTED, PERMISSION_WRITE_ENCRYPTED_MITM, PERMISSION_WRITE_SIGNED,
+    PERMISSION_WRITE_SIGNED_MITM, PROPERTY_INDICATE, PROPERTY_NOTIFY,
 };
 
 #[derive(Debug)]
@@ -47,7 +47,10 @@ impl Counter {
 struct InnerGattServerFacade {
     /// attribute_value_mapping: A Hashmap that will be used for capturing
     /// and updating Characteristic and Descriptor values for each service.
-    attribute_value_mapping: HashMap<u64, Vec<u8>>,
+    /// The bool value represents whether value size of the initial Characteristic
+    /// Descriptor value should be enforced or not for prepared writes. True
+    /// for enforce, false to allow the size to grow to max values.
+    attribute_value_mapping: HashMap<u64, (Vec<u8>, bool)>,
 
     /// A generic counter GATT server attributes
     generic_id_counter: Counter,
@@ -152,7 +155,7 @@ impl GattServerFacade {
         id: u64,
         offset: i32,
         responder: LocalServiceDelegateOnReadValueResponder,
-        value_in_mapping: Option<&Vec<u8>>,
+        value_in_mapping: Option<&(Vec<u8>, bool)>,
     ) {
         let tag = "GattServerFacade::on_read_value:";
         fx_log_info!(
@@ -163,10 +166,11 @@ impl GattServerFacade {
         );
         match value_in_mapping {
             Some(v) => {
-                if v.len() < offset as usize {
+                let (value, _enforce_initial_attribute_length) = v;
+                if value.len() < offset as usize {
                     let _result = responder.send(None, gatt::ErrorCode::InvalidOffset);
                 } else {
-                    let value_to_write = v.clone().split_off(offset as usize);
+                    let value_to_write = value.clone().split_off(offset as usize);
                     let _result = responder.send(
                         Some(&mut value_to_write.to_vec().into_iter()),
                         gatt::ErrorCode::NoError,
@@ -180,12 +184,20 @@ impl GattServerFacade {
         };
     }
 
+    pub fn write_and_extend(value: &mut Vec<u8>, value_to_write: Vec<u8>, offset: usize) {
+        let split_idx = (value.len() - offset).min(value_to_write.len());
+        let (overlapping, extending) = value_to_write.split_at(split_idx);
+        let end_of_overlap = offset + overlapping.len();
+        value.splice(offset..end_of_overlap, overlapping.iter().cloned());
+        value.extend_from_slice(extending);
+    }
+
     pub fn on_write_value(
         id: u64,
         offset: u16,
-        value: Vec<u8>,
+        value_to_write: Vec<u8>,
         responder: LocalServiceDelegateOnWriteValueResponder,
-        value_in_mapping: Option<&mut Vec<u8>>,
+        value_in_mapping: Option<&mut (Vec<u8>, bool)>,
     ) {
         let tag = "GattServerFacade::on_write_value:";
         fx_log_info!(
@@ -193,17 +205,22 @@ impl GattServerFacade {
             "OnWriteValue request at id: {:?}, with offset: {:?}, with value: {:?}",
             id,
             offset,
-            value
+            value_to_write
         );
 
         match value_in_mapping {
             Some(v) => {
-                if v.len() < (value.len() + offset as usize) {
+                let (value, enforce_initial_attribute_length) = v;
+                let max_attribute_size: usize = match enforce_initial_attribute_length {
+                    true => value.len(),
+                    false => GATT_MAX_ATTRIBUTE_VALUE_LENGTH,
+                };
+                if max_attribute_size < (value_to_write.len() + offset as usize) {
                     let _result = responder.send(gatt::ErrorCode::InvalidValueLength);
-                } else if v.len() < offset as usize {
+                } else if value.len() < offset as usize {
                     let _result = responder.send(gatt::ErrorCode::InvalidOffset);
                 } else {
-                    v.splice(offset as usize.., value.into_iter());
+                    &mut GattServerFacade::write_and_extend(value, value_to_write, offset as usize);
                     let _result = responder.send(gatt::ErrorCode::NoError);
                 }
             }
@@ -217,8 +234,8 @@ impl GattServerFacade {
     pub fn on_write_without_response(
         id: u64,
         offset: u16,
-        value: Vec<u8>,
-        value_in_mapping: Option<&mut Vec<u8>>,
+        value_to_write: Vec<u8>,
+        value_in_mapping: Option<&mut (Vec<u8>, bool)>,
     ) {
         let tag = "GattServerFacade::on_write_without_response:";
         fx_log_info!(
@@ -226,18 +243,17 @@ impl GattServerFacade {
             "OnWriteWithoutResponse request at id: {:?}, with offset: {:?}, with value: {:?}",
             id,
             offset,
-            value
+            value_to_write
         );
         if let Some(v) = value_in_mapping {
-            if v.len() >= (value.len() + offset as usize) {
-                v.splice(offset as usize.., value.into_iter());
-            }
+            let (value, _enforce_initial_attribute_length) = v;
+            &mut GattServerFacade::write_and_extend(value, value_to_write, offset as usize);
         }
     }
 
     pub async fn monitor_delegate_request_stream(
         stream: LocalServiceDelegateRequestStream,
-        mut attribute_value_mapping: HashMap<u64, Vec<u8>>,
+        mut attribute_value_mapping: HashMap<u64, (Vec<u8>, bool)>,
         service_proxy: LocalServiceProxy,
     ) -> Result<(), Error> {
         use fidl_fuchsia_bluetooth_gatt::LocalServiceDelegateRequest::*;
@@ -424,6 +440,9 @@ impl GattServerFacade {
             };
             let descriptor_value = self.parse_attribute_value_to_byte_array(&descriptor["value"]);
 
+            let raw_enforce_enforce_initial_attribute_length =
+                descriptor["enforce_initial_attribute_length"].as_bool().unwrap_or(false);
+
             // No properties for descriptors.
             let properties = 0u32;
 
@@ -440,7 +459,10 @@ impl GattServerFacade {
                 .permissions_and_properties_from_raw_num(raw_descriptor_permissions, properties);
 
             let descriptor_id = self.inner.write().generic_id_counter.next();
-            self.inner.write().attribute_value_mapping.insert(descriptor_id, descriptor_value);
+            self.inner.write().attribute_value_mapping.insert(
+                descriptor_id,
+                (descriptor_value, raw_enforce_enforce_initial_attribute_length),
+            );
             let descriptor_obj = Descriptor {
                 id: descriptor_id,
                 type_: descriptor_uuid.clone(),
@@ -484,6 +506,10 @@ impl GattServerFacade {
 
             let characteristic_value =
                 self.parse_attribute_value_to_byte_array(&characteristic["value"]);
+
+            let raw_enforce_enforce_initial_attribute_length =
+                characteristic["enforce_initial_attribute_length"].as_bool().unwrap_or(false);
+
             let descriptor_list = &characteristic["descriptors"];
             let descriptors = self.generate_descriptors(descriptor_list)?;
 
@@ -491,11 +517,12 @@ impl GattServerFacade {
                 raw_characteristic_permissions,
                 characteristic_properties,
             );
+
             let characteristic_id = self.inner.write().generic_id_counter.next();
-            self.inner
-                .write()
-                .attribute_value_mapping
-                .insert(characteristic_id, characteristic_value);
+            self.inner.write().attribute_value_mapping.insert(
+                characteristic_id,
+                (characteristic_value, raw_enforce_enforce_initial_attribute_length),
+            );
             let characteristic_obj = Characteristic {
                 id: characteristic_id,
                 type_: characteristic_uuid,
