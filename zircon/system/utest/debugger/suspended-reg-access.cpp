@@ -535,9 +535,15 @@ bool SuspendedInExceptionRegAccessTest() {
     // and processed before the waiter thread exits.
     EXPECT_EQ(data.segv_count.load(), kNumSegvTries);
     EXPECT_EQ(data.suspend_count.load(), kNumSegvTries);
-    // There's an initial "RUNNING" signal that the handler will see.
-    // That is why we add one here.
-    EXPECT_EQ(data.resume_count.load(), kNumSegvTries + 1);
+    // There's an initial "RUNNING" signal that the handler could see,
+    // or it might get delayed and essentially folded into a later one.
+    // That is why we allow for potentially seeing an extra one here.
+    static const char actual_format[] = "actual resume count: %d";
+    char actual_msg[sizeof(actual_format) + 20];
+    sprintf(actual_msg, actual_format, data.resume_count.load());
+    EXPECT_TRUE(data.resume_count.load() == kNumSegvTries ||
+                data.resume_count.load() == kNumSegvTries + 1,
+                actual_msg);
 
     tu_handle_close(data.thread_handle);
     tu_handle_close(eport);
