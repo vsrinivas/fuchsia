@@ -12,7 +12,7 @@ use {
     fdio::fdio_sys,
     fidl_fuchsia_data as fdata, fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_service,
-    fuchsia_runtime::{create_handle_id, job_default, HandleType},
+    fuchsia_runtime::{job_default, HandleId, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::future::FutureObj,
     std::path::PathBuf,
@@ -75,7 +75,7 @@ fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
         }
         Ok(Some(fproc::HandleInfo {
             handle: zx::Handle::from_raw(fd_handle),
-            id: create_handle_id(HandleType::FileDescriptor, fd as u16),
+            id: HandleId::create(HandleType::FileDescriptor, fd as u16).into_raw(),
         }))
     }
 }
@@ -136,17 +136,17 @@ async fn load_launch_info(
     handle_infos.append(&mut vec![
         fproc::HandleInfo {
             handle: ll_client_chan.into_handle(),
-            id: create_handle_id(HandleType::LdsvcLoader, 0),
+            id: HandleId::create(HandleType::LdsvcLoader, 0).into_raw(),
         },
         fproc::HandleInfo {
             handle: child_job_dup.into_handle(),
-            id: create_handle_id(HandleType::JobDefault, 0),
+            id: HandleId::create(HandleType::JobDefault, 0).into_raw(),
         },
     ]);
     if let Some(outgoing_dir) = start_info.outgoing_dir {
         handle_infos.push(fproc::HandleInfo {
             handle: outgoing_dir.into_handle(),
-            id: create_handle_id(HandleType::DirectoryRequest, 0),
+            id: HandleId::create(HandleType::DirectoryRequest, 0).into_raw(),
         });
     }
     launcher.add_handles(&mut handle_infos.iter_mut())?;

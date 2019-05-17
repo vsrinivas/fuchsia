@@ -13,9 +13,13 @@
 #![deny(missing_docs)]
 
 use fuchsia_zircon::{
-    Unowned, // non-owning wrapper for handle types
-    Handle, Job, Process, Thread, Vmar, // handle types
     sys::{zx_handle_t, ZX_HANDLE_INVALID}, // handle type (primitive, non-owning)
+    Handle,
+    Job,
+    Process,
+    Thread,
+    Unowned,
+    Vmar,
 };
 
 extern "C" {
@@ -51,14 +55,32 @@ pub enum HandleType {
     __Nonexhaustive,
 }
 
-/// Creates a handle identifier from a handle type and an argument.
-///
-/// For example, a `create_handle_id(HandleType::FileDescriptor, 32)` identifies
-/// the handle as file descriptor 32.
-///
-/// Corresponds to PA_HND in C.
-pub fn create_handle_id(htype: HandleType, arg: u16) -> u32 {
-    ((htype as u32) & 0xFF) | ((arg as u32) << 16)
+/// The combination of a [`HandleType`] and an argument.
+#[repr(transparent)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct HandleId(u32);
+
+impl HandleId {
+    /// Creates a handle identifier from a handle type and an argument.
+    ///
+    /// For example, a `HandleId::create(HandleType::FileDescriptor, 32)` identifies
+    /// the handle as file descriptor 32.
+    ///
+    /// Corresponds to PA_HND in C.
+    pub fn create(htype: HandleType, arg: u16) -> Self {
+        HandleId(((htype as u32) & 0xFF) | ((arg as u32) << 16))
+    }
+
+    /// Convert handle type into a raw u32 for use with the ffi.
+    pub fn into_raw(self) -> u32 {
+        self.0
+    }
+}
+
+impl From<HandleType> for HandleId {
+    fn from(ty: HandleType) -> Self {
+        Self::create(ty, 0)
+    }
 }
 
 /// Removes the handle of type `HandleType` from the list of handles received at startup.
@@ -66,9 +88,9 @@ pub fn create_handle_id(htype: HandleType, arg: u16) -> u32 {
 /// This function will return `Some` at-most once per handle type.
 /// This function will return `None` if the requested type was not received at
 /// startup or if the handle with the provided type was already taken.
-pub fn take_startup_handle(htype: HandleType) -> Option<Handle> {
+pub fn take_startup_handle(htype: HandleId) -> Option<Handle> {
     unsafe {
-        let raw = zx_take_startup_handle(htype as u32);
+        let raw = zx_take_startup_handle(htype.0);
         if raw == ZX_HANDLE_INVALID {
             None
         } else {

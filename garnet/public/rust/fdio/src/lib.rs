@@ -278,7 +278,7 @@ impl<'a> SpawnAction<'a> {
     }
 
     /// Add the given handle to the process arguments of the spawned process.
-    pub fn add_handle(kind: fuchsia_runtime::HandleType, handle: zx::Handle) -> Self {
+    pub fn add_handle(kind: fuchsia_runtime::HandleId, handle: zx::Handle) -> Self {
         // Safety: ownership of the `handle` is consumed.
         // The prefix string must stay valid through the 'a lifetime.
         Self(
@@ -286,7 +286,7 @@ impl<'a> SpawnAction<'a> {
                 action_tag: fdio_sys::FDIO_SPAWN_ACTION_ADD_HANDLE,
                 action_value: fdio_sys::fdio_spawn_action_union_t {
                     h: fdio_sys::fdio_spawn_action_h_t {
-                        id: kind as u32,
+                        id: kind.into_raw(),
                         handle: handle.into_raw(),
                     },
                 },

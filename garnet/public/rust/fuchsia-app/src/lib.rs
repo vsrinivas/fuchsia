@@ -384,7 +384,7 @@ pub mod server {
         pub fn start(self) -> Result<FdioServer, Error> {
             let fdio_handle =
                 fuchsia_runtime::take_startup_handle(
-                    fuchsia_runtime::HandleType::DirectoryRequest
+                    fuchsia_runtime::HandleType::DirectoryRequest.into()
                 ).ok_or(MissingStartupHandle)?;
 
             self.start_on_channel(fdio_handle.into())

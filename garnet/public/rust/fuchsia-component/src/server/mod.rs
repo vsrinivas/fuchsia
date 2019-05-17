@@ -727,9 +727,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     /// Multiple calls to this function from the same component will
     /// result in `Err(MissingStartupHandle)`.
     pub fn take_and_serve_directory_handle(&mut self) -> Result<&mut Self, Error> {
-        let startup_handle =
-            fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest)
-                .ok_or(MissingStartupHandle)?;
+        let startup_handle = fuchsia_runtime::take_startup_handle(
+            fuchsia_runtime::HandleType::DirectoryRequest.into(),
+        )
+        .ok_or(MissingStartupHandle)?;
 
         self.serve_connection(zx::Channel::from(startup_handle))
     }
