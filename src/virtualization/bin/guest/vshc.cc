@@ -8,21 +8,18 @@
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <google/protobuf/message_lite.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <poll.h>
+#include <unistd.h>
 #include <zircon/status.h>
 
 #include <algorithm>
 #include <iostream>
-#include <optional>
 
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/logging.h"
+#include "src/virtualization/lib/vsh/util.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vsh.pb.h"
-
-using google::protobuf::MessageLite;
-namespace vsh = vm_tools::vsh;
 
 std::pair<int, int> init_tty(void) {
   int cols = 80;
@@ -103,13 +100,13 @@ class ConsoleIn {
       return;
     }
 
-    vsh::GuestMessage msg_out;
-    uint8_t buf[vsh_util::kMaxDataSize];
-    ssize_t actual = read(STDIN_FILENO, buf, vsh_util::kMaxDataSize);
+    vm_tools::vsh::GuestMessage msg_out;
+    uint8_t buf[vsh::kMaxDataSize];
+    ssize_t actual = read(STDIN_FILENO, buf, vsh::kMaxDataSize);
 
-    msg_out.mutable_data_message()->set_stream(vsh::STDIN_STREAM);
+    msg_out.mutable_data_message()->set_stream(vm_tools::vsh::STDIN_STREAM);
     msg_out.mutable_data_message()->set_data(buf, actual);
-    if (!vsh_util::SendMessage(zx::unowned_socket(sink_), msg_out)) {
+    if (!vsh::SendMessage(*sink_, msg_out)) {
       FXL_LOG(ERROR) << "Failed to send stdin";
       return;
     }
@@ -153,7 +150,7 @@ class ConsoleOut {
       return;
     }
 
-    vsh::HostMessage msg_in;
+    vm_tools::vsh::HostMessage msg_in;
 
     if (status != ZX_ERR_SHOULD_WAIT && bytes_left_) {
       size_t actual;
@@ -170,7 +167,7 @@ class ConsoleOut {
       msg_size_ = le32toh(sz);
       bytes_left_ = msg_size_;
 
-      FXL_CHECK(msg_size_ <= vsh_util::kMaxMessageSize)
+      FXL_CHECK(msg_size_ <= vsh::kMaxMessageSize)
           << "Message size of " << msg_size_ << " exceeds kMaxMessageSize";
 
     } else if (bytes_left_ == 0 && !reading_size_) {
@@ -182,16 +179,16 @@ class ConsoleOut {
       bytes_left_ = msg_size_;
 
       switch (msg_in.msg_case()) {
-        case vsh::HostMessage::MsgCase::kDataMessage: {
+        case vm_tools::vsh::HostMessage::MsgCase::kDataMessage: {
           auto data = msg_in.data_message().data();
           write(STDOUT_FILENO, data.data(), data.size());
         } break;
-        case vsh::HostMessage::MsgCase::kStatusMessage:
-          if (msg_in.status_message().status() != vsh::READY) {
+        case vm_tools::vsh::HostMessage::MsgCase::kStatusMessage:
+          if (msg_in.status_message().status() != vm_tools::vsh::READY) {
             loop_->Shutdown();
             loop_->Quit();
             reset_tty();
-            if (msg_in.status_message().status() == vsh::EXITED) {
+            if (msg_in.status_message().status() == vm_tools::vsh::EXITED) {
               exit(msg_in.status_message().code());
             } else {
               FXL_LOG(ERROR) << "vsh did not exit cleanly.";
@@ -212,7 +209,7 @@ class ConsoleOut {
   async::Loop* loop_;
   zx::unowned_socket source_;
 
-  uint8_t buf_[vsh_util::kMaxMessageSize];
+  uint8_t buf_[vsh::kMaxMessageSize];
   bool reading_size_;
   size_t msg_size_;
   size_t bytes_left_;
@@ -220,11 +217,11 @@ class ConsoleOut {
 
 }  // namespace
 
-static bool init_shell(zx::unowned_socket usock) {
-  vsh::SetupConnectionRequest conn_req;
-  vsh::SetupConnectionResponse conn_resp;
+static bool init_shell(const zx::socket& usock) {
+  vm_tools::vsh::SetupConnectionRequest conn_req;
+  vm_tools::vsh::SetupConnectionResponse conn_resp;
 
-  // Target can be |vsh_util::kVmShell| or the empty string for the VM.
+  // Target can be |vsh::kVmShell| or the empty string for the VM.
   // Specifying container name directly here is not supported.
   conn_req.set_target("");
   // User can be defaulted with empty string. This is chronos for vmshell and
@@ -243,20 +240,20 @@ static bool init_shell(zx::unowned_socket usock) {
   (*env)["LXD_CONF"] = "/mnt/stateful/lxd_conf";
   (*env)["LXD_UNPRIVILEGED_ONLY"] = "true";
 
-  if (!vsh_util::SendMessage(zx::unowned_socket(usock), conn_req)) {
+  if (!vsh::SendMessage(usock, conn_req)) {
     FXL_LOG(ERROR) << "Failed to send connection request";
     return false;
   }
 
   // No use setting up the async message handling if we haven't even
   // connected properly. Block on connection response.
-  if (!vsh_util::RecvMessage(zx::unowned_socket(usock), &conn_resp)) {
+  if (!vsh::RecvMessage(usock, &conn_resp)) {
     FXL_LOG(ERROR)
         << "Failed to receive response from vshd, giving up after one try";
     return false;
   }
 
-  if (conn_resp.status() != vsh::READY) {
+  if (conn_resp.status() != vm_tools::vsh::READY) {
     FXL_LOG(ERROR) << "Server was unable to set up connection properly: "
                    << conn_resp.description();
     return false;
@@ -265,10 +262,10 @@ static bool init_shell(zx::unowned_socket usock) {
   // Connection to server established.
   // Initial Configuration Phase.
   auto [cols, rows] = init_tty();
-  vsh::GuestMessage msg_out;
+  vm_tools::vsh::GuestMessage msg_out;
   msg_out.mutable_resize_message()->set_cols(cols);
   msg_out.mutable_resize_message()->set_rows(rows);
-  if (!vsh_util::SendMessage(zx::unowned_socket(usock), msg_out)) {
+  if (!vsh::SendMessage(usock, msg_out)) {
     FXL_LOG(ERROR) << "Failed to send window resize message";
     return false;
   }
@@ -279,7 +276,7 @@ static bool init_shell(zx::unowned_socket usock) {
 void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
                 std::optional<uint32_t> o_port, async::Loop* loop,
                 sys::ComponentContext* context) {
-  uint32_t env_id, cid, port = o_port.value_or(vsh_util::kVshPort);
+  uint32_t env_id, cid, port = o_port.value_or(vsh::kVshPort);
 
   fuchsia::virtualization::ManagerSyncPtr manager;
   context->svc()->Connect(manager.NewRequest());
@@ -337,7 +334,7 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   // Now |socket| is a zircon socket plumbed to a port on the guest's vsock
   // interface. The vshd service is hopefully on the other end of this pipe.
   // We communicate with the service via protobuf messages.
-  if (!init_shell(zx::unowned_socket(socket))) {
+  if (!init_shell(socket)) {
     FXL_LOG(ERROR) << "vsh SetupConnection failed.";
     return;
   }
@@ -346,11 +343,11 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   // This sleep below is to give bash some time to start after being `exec`d.
   // Otherwise the input will be duplicated in the output stream.
   usleep(100'000);
-  vsh::GuestMessage msg_out;
-  msg_out.mutable_data_message()->set_stream(vsh::STDIN_STREAM);
+  vm_tools::vsh::GuestMessage msg_out;
+  msg_out.mutable_data_message()->set_stream(vm_tools::vsh::STDIN_STREAM);
   msg_out.mutable_data_message()->set_data(
       "function stretch() { lxc exec stretch -- login -f machina ; } \n\n");
-  if (!vsh_util::SendMessage(zx::unowned_socket(socket), msg_out)) {
+  if (!vsh::SendMessage(socket, msg_out)) {
     FXL_LOG(WARNING) << "Failed to inject helper function";
   }
 

@@ -21,7 +21,6 @@ executable("bin") {
     "socat.h",
     "vshc.cc",
     "vshc.h",
-    "vshutil.cc",
   ]
 
   deps = [
@@ -30,6 +29,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
+    "//src/virtualization/lib/vsh:util",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vsh_cc_proto",
     "//third_party/protobuf:protobuf_lite",
     "//zircon/public/lib/async-loop-cpp",
