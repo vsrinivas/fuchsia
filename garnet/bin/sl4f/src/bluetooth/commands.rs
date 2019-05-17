@@ -213,6 +213,10 @@ pub async fn bt_control_method_to_fidl(
     facade: Arc<BluetoothControlFacade>,
 ) -> Result<Value, Error> {
     match BluetoothMethod::from_str(&method_name) {
+        BluetoothMethod::BluetoothAcceptPairing => {
+            let result = await!(facade.accept_pairing())?;
+            Ok(to_value(result)?)
+        }
         BluetoothMethod::BluetoothInitControl => {
             let result = await!(facade.init_control_interface_proxy())?;
             Ok(to_value(result)?)
@@ -249,6 +253,15 @@ pub async fn bt_control_method_to_fidl(
         BluetoothMethod::BluetoothRequestDiscovery => {
             let discovery = parse_arg!(args, as_bool, "discovery")?;
             let result = await!(facade.request_discovery(discovery))?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::BluetoothInputPairingPin => {
+            let pin = parse_arg!(args, as_str, "pin")?;
+            let result = await!(facade.input_pairing_pin(pin.to_string()))?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::BluetoothGetPairingPin => {
+            let result = await!(facade.get_pairing_pin())?;
             Ok(to_value(result)?)
         }
         BluetoothMethod::BluetoothGetActiveAdapterAddress => {
