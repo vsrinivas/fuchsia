@@ -8,6 +8,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -386,9 +387,7 @@ void HidButtonsDevice::DdkRelease() {
     delete this;
 }
 
-} // namespace buttons
-
-extern "C" zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
+static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto dev = fbl::make_unique_checked<buttons::HidButtonsDevice>(&ac, parent);
     if (!ac.check()) {
@@ -401,3 +400,20 @@ extern "C" zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     }
     return status;
 }
+
+static zx_driver_ops_t hid_buttons_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = hid_buttons_bind;
+    return ops;
+}();
+
+} // namespace buttons
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(hid_buttons, buttons::hid_buttons_driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_HID_BUTTONS),
+ZIRCON_DRIVER_END(hid_buttons)
+// clang-format on

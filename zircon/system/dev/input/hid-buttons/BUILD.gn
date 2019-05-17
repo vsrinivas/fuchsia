@@ -4,7 +4,6 @@
 
 driver("hid-buttons") {
   sources = [
-    "bind.c",
     "hid-buttons.cpp",
   ]
   deps = [
