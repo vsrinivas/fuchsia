@@ -210,7 +210,7 @@ int NandDriverImpl::NandWrite(uint32_t start_page, uint32_t page_count,
     zxlogf(SPEW, "FTL: Write page, start %d, len %d\n", start_page, page_count);
     status = operation.Execute(&parent_);
     if (status != ZX_OK) {
-        return ftl::kNdmError;
+        return status == ZX_ERR_IO ? ftl::kNdmError : ftl::kNdmFatalError;
     }
 
     return ftl::kNdmOk;
@@ -231,7 +231,7 @@ int NandDriverImpl::NandErase(uint32_t page_num) {
     zx_status_t status = operation.Execute(&parent_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "FTL: NandErase failed: %d\n", status);
-        return ftl::kNdmError;
+        return status == ZX_ERR_IO ? ftl::kNdmError : ftl::kNdmFatalError;
     }
 
     return ftl::kNdmOk;

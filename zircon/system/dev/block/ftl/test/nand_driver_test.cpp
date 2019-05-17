@@ -61,13 +61,13 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
             uint8_t data;
             uint64_t vmo_addr = operation->rw.offset_data_vmo * kRealPageSize;
             zx_vmo_read(operation->rw.data_vmo, &data, vmo_addr, sizeof(data));
-            if (data != 'd') {
+            if (data != 'd' && result_ == ZX_OK) {
                 result_ = ZX_ERR_IO;
             }
 
             vmo_addr = operation->rw.offset_oob_vmo * kRealPageSize;
             zx_vmo_read(operation->rw.oob_vmo, &data, vmo_addr, sizeof(data));
-            if (data != 'o') {
+            if (data != 'o' && result_ == ZX_OK) {
                 result_ = ZX_ERR_IO;
             }
         }
@@ -225,6 +225,19 @@ TEST_F(NandDriverTest, WriteFailure) {
     fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
     memset(data.get(), 'd', data.size());
     memset(oob.get(), 'e', oob.size());  // Unexpected value.
+    nand()->set_result(ZX_ERR_BAD_STATE);
+
+    ASSERT_EQ(ftl::kNdmFatalError, driver->NandWrite(5, 2, data.get(), oob.get()));
+}
+
+TEST_F(NandDriverTest, WriteFailureBadBlock) {
+    auto driver = ftl::NandDriver::Create(nand_proto(), bad_block_proto());
+    ASSERT_EQ(nullptr, driver->Init());
+
+    fbl::Array<uint8_t> data(new uint8_t[kPageSize * 2], kPageSize * 2);
+    fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
+    memset(data.get(), 'd', data.size());
+    memset(oob.get(), 'e', oob.size());  // Unexpected value.
 
     ASSERT_EQ(ftl::kNdmError, driver->NandWrite(5, 2, data.get(), oob.get()));
 }
@@ -246,6 +259,14 @@ TEST_F(NandDriverTest, EraseFailure) {
     ASSERT_EQ(nullptr, driver->Init());
 
     nand()->set_result(ZX_ERR_BAD_STATE);
+    ASSERT_EQ(ftl::kNdmFatalError, driver->NandErase(5 * kBlockSize));
+}
+
+TEST_F(NandDriverTest, EraseFailureBadBlock) {
+    auto driver = ftl::NandDriver::Create(nand_proto(), bad_block_proto());
+    ASSERT_EQ(nullptr, driver->Init());
+
+    nand()->set_result(ZX_ERR_IO);
     ASSERT_EQ(ftl::kNdmError, driver->NandErase(5 * kBlockSize));
 }
 
