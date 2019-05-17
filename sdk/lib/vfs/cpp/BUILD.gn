@@ -50,6 +50,7 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fdio",
