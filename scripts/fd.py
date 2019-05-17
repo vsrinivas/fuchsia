@@ -9,6 +9,9 @@ Use "fd.py" directly for without autocompletion.
 
 See examples by
 $ fd.py --help
+
+fd stores two helper files, fd.txt and fd.pickle in $FUCHSIA_DIR/out/.
+If that directory does not exists, fd will create one.
 """
 
 from __future__ import print_function
@@ -21,9 +24,9 @@ import termios
 import tty
 
 SEARCH_BASE = os.environ['FUCHSIA_DIR']  # or 'HOME'
-TMP_BASE = '/tmp/'
-DIRS_FILE = TMP_BASE + 'fd.txt'
-PICKLE_FILE = TMP_BASE + 'fd.pickle'
+STORE_DIR = SEARCH_BASE + '/out/'
+DIRS_FILE = STORE_DIR + 'fd.txt'
+PICKLE_FILE = STORE_DIR + 'fd.pickle'
 
 EXCLUDE_DIRS = [
     '"*/.git"', './build', './buildtools', './out', './third_party',
@@ -92,6 +95,9 @@ def build_trie():
       paths.append('{} {}'.format('-path', path))
     return (r'cd {}; find . \( {} \) -prune -o -type d -print > '
             '{}').format(SEARCH_BASE, ' -o '.join(paths), DIRS_FILE)
+
+  if not os.path.exists(STORE_DIR):
+    os.makedirs(STORE_DIR)
 
   cmd_str = build_find_cmd()
   os.system(cmd_str)
