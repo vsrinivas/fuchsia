@@ -6,6 +6,8 @@
 #define LIB_SYSLOG_CPP_LOGGER_H_
 
 #include <lib/syslog/global.h>
+#include <stdint.h>
+#include <zircon/types.h>
 
 #include <initializer_list>
 #include <ostream>
@@ -23,7 +25,7 @@ class LogMessageVoidify {
 class LogMessage {
  public:
   LogMessage(fx_log_severity_t severity, const char* file, int line,
-             const char* tag, const char* condition);
+             const char* tag, zx_status_t status, const char* condition);
   ~LogMessage();
 
   std::ostream& stream() { return stream_; }
@@ -34,6 +36,7 @@ class LogMessage {
   const char* file_;
   const int line_;
   const char* tag_;
+  const zx_status_t status_;
 
   LogMessage(const LogMessage&) = delete;
   LogMessage& operator=(const LogMessage&) = delete;
@@ -70,12 +73,13 @@ zx_status_t InitLogger();
 
 }  // namespace syslog
 
-#define _FX_LOG_STREAM(severity, tag)                                   \
+#define _FX_LOG_STREAM(severity, tag, status)                           \
   ::syslog::internal::LogMessage((severity), __FILE__, __LINE__, (tag), \
-                                 nullptr)                               \
+                                 (status), nullptr)                     \
       .stream()
 
-#define FX_LOG_STREAM(severity, tag) _FX_LOG_STREAM(FX_LOG_##severity, (tag))
+#define FX_LOG_STREAM(severity, tag, status) \
+  _FX_LOG_STREAM(FX_LOG_##severity, (tag), (status))
 
 #define FX_LOG_LAZY_STREAM(stream, condition) \
   !(condition) ? (void)0 : ::syslog::internal::LogMessageVoidify() & (stream)
@@ -85,7 +89,7 @@ zx_status_t InitLogger();
       ? (void)0                                                              \
       : FX_LOG_LAZY_STREAM(                                                  \
             ::syslog::internal::LogMessage(FX_LOG_FATAL, __FILE__, __LINE__, \
-                                           tag, #ignored)                    \
+                                           tag, INT32_MAX, #ignored)         \
                 .stream(),                                                   \
             !(ignored))
 
@@ -93,20 +97,35 @@ zx_status_t InitLogger();
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
 #define FX_LOGST(severity, tag)                      \
-  FX_LOG_LAZY_STREAM(FX_LOG_STREAM(severity, (tag)), \
+  FX_LOG_LAZY_STREAM(FX_LOG_STREAM(severity, (tag), INT32_MAX), \
+                     FX_LOG_IS_ENABLED(severity))
+
+// Writes a message to the global logger.
+// |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
+// |tag| is a tag to associated with the message, or NULL if none.
+// |status| is a zx_status_t which will be appended in decimal and string forms
+// after the message.
+#define FX_PLOGST(severity, tag, status)                       \
+  FX_LOG_LAZY_STREAM(FX_LOG_STREAM(severity, (tag), (status)), \
                      FX_LOG_IS_ENABLED(severity))
 
 // Writes a message to the global logger.
 // |severity| is one of FX_LOG_DEBUG, FX_LOG_INFO, FX_LOG_WARNING,
 // FX_LOG_ERROR, FX_LOG_FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
-#define FX_LOGST_WITH_SEVERITY(severity, tag)           \
-  FX_LOG_LAZY_STREAM(_FX_LOG_STREAM((severity), (tag)), \
+#define FX_LOGST_WITH_SEVERITY(severity, tag)                      \
+  FX_LOG_LAZY_STREAM(_FX_LOG_STREAM((severity), (tag), INT32_MAX), \
                      fx_log_is_enabled((severity)))
 
 // Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 #define FX_LOGS(severity) FX_LOGST(severity, nullptr)
+
+// Writes a message to the global logger.
+// |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
+// |status| is a zx_status_t which will be appended in decimal and string forms
+// after the message.
+#define FX_PLOGS(severity, status) FX_PLOGST(severity, nullptr, status)
 
 // Writes a message to the global logger, the first |n| times that any callsite
 // of this macro is invoked. |n| should be a positive integer literal. If a
@@ -143,11 +162,12 @@ zx_status_t InitLogger();
 
 // Writes error message to the global logger if |condition| fails.
 // |tag| is a tag to associated with the message, or NULL if none.
-#define FX_CHECKT(condition, tag)                                              \
-  FX_LOG_LAZY_STREAM(::syslog::internal::LogMessage(FX_LOG_FATAL, __FILE__,    \
-                                                    __LINE__, tag, #condition) \
-                         .stream(),                                            \
-                     !(condition))
+#define FX_CHECKT(condition, tag)                                           \
+  FX_LOG_LAZY_STREAM(                                                       \
+      ::syslog::internal::LogMessage(FX_LOG_FATAL, __FILE__, __LINE__, tag, \
+                                     INT32_MAX, #condition)                 \
+          .stream(),                                                        \
+      !(condition))
 
 // Writes error message to the global logger if |condition| fails.
 #define FX_CHECK(condition) FX_CHECKT(condition, nullptr)
@@ -163,15 +183,22 @@ zx_status_t InitLogger();
 #endif
 
 // VLOG macros log with negative verbosities.
-#define FX_VLOG_STREAM(verbose_level, tag)                                    \
+#define FX_VLOG_STREAM(verbose_level, tag, status)                            \
   ::syslog::internal::LogMessage(-(verbose_level), __FILE__, __LINE__, (tag), \
-                                 nullptr)                                     \
+                                 (status), nullptr)                           \
       .stream()
 
-#define FX_VLOGST(verbose_level, tag)                        \
-  FX_LOG_LAZY_STREAM(FX_VLOG_STREAM((verbose_level), (tag)), \
+#define FX_VLOGST(verbose_level, tag)                                   \
+  FX_LOG_LAZY_STREAM(FX_VLOG_STREAM((verbose_level), (tag), INT32_MAX), \
+                     FX_VLOG_IS_ENABLED((verbose_level)))
+
+#define FX_VPLOGST(verbose_level, tag, status)                         \
+  FX_LOG_LAZY_STREAM(FX_VLOG_STREAM((verbose_level), (tag), (status)), \
                      FX_VLOG_IS_ENABLED((verbose_level)))
 
 #define FX_VLOGS(verbose_level) FX_VLOGST((verbose_level), nullptr)
+
+#define FX_VPLOGS(verbose_level, status) \
+  FX_VPLOGST((verbose_level), nullptr, status)
 
 #endif  // LIB_SYSLOG_CPP_LOGGER_H_

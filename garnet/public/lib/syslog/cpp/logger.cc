@@ -5,6 +5,7 @@
 #include "logger.h"
 
 #include <lib/syslog/global.h>
+#include <zircon/status.h>
 
 namespace syslog {
 namespace {
@@ -28,8 +29,13 @@ const char* StripPath(const char* path) {
 namespace internal {
 
 LogMessage::LogMessage(fx_log_severity_t severity, const char* file, int line,
-                       const char* tag, const char* condition)
-    : severity_(severity), file_(file), line_(line), tag_(tag) {
+                       const char* tag, zx_status_t status,
+                       const char* condition)
+    : severity_(severity),
+      file_(file),
+      line_(line),
+      tag_(tag),
+      status_(status) {
   stream_ << (severity > FX_LOG_INFO ? StripDots(file_) : StripPath(file_))
           << "(" << line_ << "): ";
 
@@ -40,6 +46,10 @@ LogMessage::LogMessage(fx_log_severity_t severity, const char* file, int line,
 LogMessage::~LogMessage() {
   fx_logger_t* logger = fx_log_get_logger();
   if (logger) {
+    if (status_ != INT32_MAX) {
+      stream_ << ": " << status_ << " (" << zx_status_get_string(status_)
+              << ")";
+    }
     fx_logger_log(logger, severity_, tag_, stream_.str().c_str());
   }
 }

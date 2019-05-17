@@ -139,6 +139,18 @@ TEST(Logger, LogWithTag) {
                         1);
 }
 
+TEST(Logger, PLogWithTag) {
+  Cleanup cleanup;
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  FX_PLOGST(INFO, "tag", ZX_ERR_ACCESS_DENIED) << "something that failed";
+  const char* tags[] = {"tag"};
+  output_compare_helper(std::move(local), FX_LOG_INFO,
+                        "something that failed: -30 (ZX_ERR_ACCESS_DENIED)",
+                        tags, 1);
+}
+
 TEST(Logger, CheckFunction) {
   Cleanup cleanup;
   zx::socket local, remote;
@@ -192,6 +204,29 @@ TEST(Logger, VLogWithTag) {
 
   FX_VLOGST(1, tags[0]) << msg;
   output_compare_helper(std::move(local), -1, msg, tags, 1);
+}
+
+TEST(Logger, VPLogWithTag) {
+  Cleanup cleanup;
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  const char* msg = "with error";
+  const char* msg_suffixed = "with error: -40 (ZX_ERR_IO)";
+  const char* tags[] = {"tag"};
+  FX_VPLOGST(1, tags[0], ZX_ERR_IO) << msg;
+  size_t outstanding_bytes = 10u;  // init to non zero value.
+  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
+  EXPECT_EQ(0u, outstanding_bytes);
+
+  FX_LOG_SET_VERBOSITY(1);
+  FX_VPLOGST(2, tags[0], ZX_ERR_IO) << msg;
+  outstanding_bytes = 10u;  // init to non zero value.
+  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
+  EXPECT_EQ(0u, outstanding_bytes);
+
+  FX_VPLOGST(1, tags[0], ZX_ERR_IO) << msg;
+  output_compare_helper(std::move(local), -1, msg_suffixed, tags, 1);
 }
 
 // We invoke FX_LOGS_FIRST_N(msg, 31) 100 times and check that the message
