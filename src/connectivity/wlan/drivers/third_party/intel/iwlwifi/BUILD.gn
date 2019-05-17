@@ -49,13 +49,13 @@ driver_module("iwlwifi_driver") {
   ]
 
   sources = iwlwifi_core_srcs + [
-    "pcie/drv.c",
-    "pcie/internal.h",
-    "pcie/trans-gen2.c",
-    "pcie/trans.c",
-    "pcie/tx-gen2.c",
-    "pcie/tx.c",
-  ]
+              "pcie/drv.c",
+              "pcie/internal.h",
+              "pcie/trans-gen2.c",
+              "pcie/trans.c",
+              "pcie/tx-gen2.c",
+              "pcie/tx.c",
+            ]
 
   deps = [
     "//garnet/lib/wlan/protocol",
