@@ -12,6 +12,7 @@ group("tests") {
     ":basic_integration_test_app",
     ":integration_test_utils",
     ":integration_test_utils_with_trace_with_static_engine",
+    ":nested_environment_test",
     ":run_integration_test",
     ":run_test",
     ":self_contained_provider",
@@ -208,12 +209,27 @@ executable("two_providers_two_engines_test_app") {
   ]
 }
 
+executable("nested_environment_test") {
+  testonly = true
+  output_name = "nested_environment_test"
+
+  sources = [
+    "nested_environment_test.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/task-utils",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("return_1234") {
   testonly = true
   output_name = "return_1234"
 
   sources = [
-    "return_1234.cc"
+    "return_1234.cc",
   ]
 }
 
@@ -222,7 +238,7 @@ executable("return_child_result_tests") {
   output_name = "return_child_result_tests"
 
   sources = [
-    "return_child_result_tests.cc"
+    "return_child_result_tests.cc",
   ]
 
   deps = [
@@ -236,7 +252,7 @@ executable("run_awhile") {
   output_name = "run_awhile"
 
   sources = [
-    "run_awhile.cc"
+    "run_awhile.cc",
   ]
 
   deps = [
@@ -249,7 +265,7 @@ executable("detach_tests") {
   output_name = "detach_tests"
 
   sources = [
-    "detach_tests.cc"
+    "detach_tests.cc",
   ]
 
   deps = [
@@ -263,6 +279,7 @@ test_package("trace_tests") {
   deps = [
     ":basic_integration_test_app",
     ":detach_tests",
+    ":nested_environment_test",
     ":return_1234",
     ":return_child_result_tests",
     ":run_awhile",
@@ -297,6 +314,9 @@ test_package("trace_tests") {
       name = "basic_integration_test_app"
     },
     {
+      name = "nested_environment_test"
+    },
+    {
       name = "return_1234"
     },
     {
@@ -325,6 +345,10 @@ test_package("trace_tests") {
       dest = "run_integration_test.cmx"
     },
     {
+      path = rebase_path("meta/nested_environment_test.cmx")
+      dest = "nested_environment_test.cmx"
+    },
+    {
       path = rebase_path("meta/two_providers_two_engines_test_app.cmx")
       dest = "two_providers_two_engines_test_app.cmx"
     },
@@ -346,6 +370,10 @@ test_package("trace_tests") {
     {
       path = rebase_path("simple.tspec")
       dest = "simple.tspec"
+    },
+    {
+      path = rebase_path("nested_environment_test.tspec")
+      dest = "nested_environment_test.tspec"
     },
     {
       path = rebase_path("two_providers_two_engines.tspec")

@@ -55,6 +55,7 @@ const char kDuration[] = "duration";
 const char kDetach[] = "detach";
 const char kDecouple[] = "decouple";
 const char kSpawn[] = "spawn";
+const char kEnvironmentName[] = "environment-name";
 const char kReturnChildResult[] = "return-child-result";
 const char kBufferSize[] = "buffer-size";
 const char kProviderBufferSize[] = "provider-buffer-size";
@@ -94,9 +95,8 @@ zx_status_t Spawn(const std::vector<std::string>& args,
   }
   raw_args.push_back(nullptr);
 
-  return fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                    raw_args[0], raw_args.data(),
-                    subprocess->reset_and_get_address());
+  return fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, raw_args[0],
+                    raw_args.data(), subprocess->reset_and_get_address());
 }
 
 bool LookupBufferingMode(
@@ -160,12 +160,23 @@ bool CheckBufferSize(uint32_t megabytes) {
 
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   const std::unordered_set<std::string> known_options = {
-      kSpecFile,             kCategories,         kAppendArgs,
-      kOutputFile,           kBinary,             kCompress,
-      kDuration,             kDetach,             kDecouple,
-      kSpawn,                kReturnChildResult,
-      kBufferSize,           kProviderBufferSize, kBufferingMode,
-      kBenchmarkResultsFile, kTestSuite};
+      kSpecFile,
+      kCategories,
+      kAppendArgs,
+      kOutputFile,
+      kBinary,
+      kCompress,
+      kDuration,
+      kDetach,
+      kDecouple,
+      kSpawn,
+      kEnvironmentName,
+      kReturnChildResult,
+      kBufferSize,
+      kProviderBufferSize,
+      kBufferingMode,
+      kBenchmarkResultsFile,
+      kTestSuite};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -205,6 +216,8 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
       args = *spec.args;
     if (spec.spawn)
       spawn = *spec.spawn;
+    if (spec.environment_name)
+      environment_name = *spec.environment_name;
     if (spec.categories)
       categories = *spec.categories;
     if (spec.buffering_mode) {
@@ -251,7 +264,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
 
   // --binary
   if (ParseBooleanOption(command_line, kBinary, &binary) ==
-          OptionStatus::ERROR) {
+      OptionStatus::ERROR) {
     return false;
   }
   if (binary) {
@@ -260,7 +273,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
 
   // --compress
   if (ParseBooleanOption(command_line, kCompress, &compress) ==
-          OptionStatus::ERROR) {
+      OptionStatus::ERROR) {
     return false;
   }
   if (compress) {
@@ -287,13 +300,13 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
 
   // --detach
   if (ParseBooleanOption(command_line, kDetach, &detach) ==
-          OptionStatus::ERROR) {
+      OptionStatus::ERROR) {
     return false;
   }
 
   // --decouple
   if (ParseBooleanOption(command_line, kDecouple, &decouple) ==
-          OptionStatus::ERROR) {
+      OptionStatus::ERROR) {
     return false;
   }
 
@@ -312,10 +325,16 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     }
   }
 
+  // --environment-name
+  if (command_line.HasOption(kEnvironmentName, &index)) {
+    environment_name = command_line.options()[index].value;
+    CheckCommandLineOverride(kEnvironmentName,
+                             spec.environment_name);
+  }
+
   // --return-child-result=<flag>
   if (ParseBooleanOption(command_line, kReturnChildResult,
-                         &return_child_result) ==
-          OptionStatus::ERROR) {
+                         &return_child_result) == OptionStatus::ERROR) {
     return false;
   }
 
@@ -745,8 +764,7 @@ void Record::DoneTrace() {
 // This is just a log message so the result doesn't need to be executable,
 // this fact to avoid handling various complicated cases like one arg
 // containing a mix of spaces, single quotes, and double quotes.
-static std::string JoinArgsForLogging(
-    const std::vector<std::string>& args) {
+static std::string JoinArgsForLogging(const std::vector<std::string>& args) {
   std::string result;
 
   for (const auto& arg : args) {
@@ -776,7 +794,22 @@ void Record::LaunchComponentApp() {
                 << JoinArgsForLogging(options_.args);
 
   fuchsia::sys::LauncherPtr launcher;
-  context()->svc()->Connect(launcher.NewRequest());
+  if (options_.environment_name.has_value()) {
+    fuchsia::sys::EnvironmentPtr environment;
+    context()->svc()->Connect(environment.NewRequest());
+    fuchsia::sys::EnvironmentPtr nested_environment;
+    environment->CreateNestedEnvironment(
+        nested_environment.NewRequest(), environment_controller_.NewRequest(),
+        options_.environment_name.value(), nullptr,
+        fuchsia::sys::EnvironmentOptions{/*inherit_parent_services*/ true,
+                                         /*allow_parent_runners*/ true,
+                                         /*kill_on_oom*/ true,
+                                         /*delete_storage_on_death*/ true});
+
+    nested_environment->GetLauncher(launcher.NewRequest());
+  } else {
+    context()->svc()->Connect(launcher.NewRequest());
+  }
   launcher->CreateComponent(std::move(launch_info),
                             component_controller_.NewRequest());
 
@@ -830,9 +863,9 @@ void Record::LaunchSpawnedApp() {
   FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
 }
 
-void Record::OnSpawnedAppExit(
-    async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void Record::OnSpawnedAppExit(async_dispatcher_t* dispatcher,
+                              async::WaitBase* wait, zx_status_t status,
+                              const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for spawned app: status=" << status;
     StopTrace(-1);
@@ -841,9 +874,8 @@ void Record::OnSpawnedAppExit(
 
   if (signal->observed & ZX_PROCESS_TERMINATED) {
     zx_info_process_t proc_info;
-    [[maybe_unused]] zx_status_t info_status =
-      spawned_app_.get_info(ZX_INFO_PROCESS, &proc_info,
-                            sizeof(proc_info), nullptr, nullptr);
+    [[maybe_unused]] zx_status_t info_status = spawned_app_.get_info(
+        ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
     FXL_DCHECK(info_status == ZX_OK);
 
     out() << "Application exited with return code " << proc_info.return_code

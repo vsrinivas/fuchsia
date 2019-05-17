@@ -37,6 +37,16 @@ const char kRootSchema[] = R"({
     "spawn": {
       "type": "boolean"
     },
+    "environment": {
+      "type": "object",
+      "additionalProperties": "false",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["name"]
+    },
     "categories": {
       "type": "array",
       "items": {
@@ -103,6 +113,7 @@ const char kTestNameKey[] = "test_name";
 const char kAppKey[] = "app";
 const char kArgsKey[] = "args";
 const char kSpawnKey[] = "spawn";
+const char kEnvironmentKey[] = "environment";
 const char kDurationKey[] = "duration";
 const char kCategoriesKey[] = "categories";
 const char kBufferingModeKey[] = "buffering_mode";
@@ -193,6 +204,14 @@ const char kArgumentValueSchema[] = R"({
 })";
 const char kArgumentNameKey[] = "argument_name";
 const char kArgumentUnitKey[] = "argument_unit";
+
+bool DecodeEnvironmentSpecs(const rapidjson::Value& specs, Spec* result) {
+  FXL_DCHECK(result);
+  FXL_DCHECK(specs.HasMember(kNameKey));
+  result->environment_name =
+      std::make_unique<std::string>(specs[kNameKey].GetString());
+  return true;
+}
 
 bool DecodeProviderSpecs(const rapidjson::Value& specs, Spec* result) {
   FXL_DCHECK(specs.IsArray());
@@ -305,6 +324,12 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
 
   if (document.HasMember(kSpawnKey)) {
     result.spawn = std::make_unique<bool>(document[kSpawnKey].GetBool());
+  }
+
+  if (document.HasMember(kEnvironmentKey)) {
+    if (!DecodeEnvironmentSpecs(document[kEnvironmentKey], &result)) {
+      return false;
+    }
   }
 
   if (document.HasMember(kCategoriesKey)) {

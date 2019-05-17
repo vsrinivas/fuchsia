@@ -25,6 +25,8 @@ trace [options] command [command-specific options]
     --detach=[false]: Don't stop the traced program when tracing finished
     --spawn=[false]: Use fdio_spawn to run a legacy app.
         Detach will have no effect when using this option.
+    --environment-name=[none]: Create a nested environment with the given
+        name and run the app being traced under it.
     --return-child-result=[true]: Pass on the child's return code.
     --duration=[10]: Trace will be active for this many seconds after the
         session has been started. The provided value must be integral.

@@ -12,6 +12,7 @@
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
+            "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry",
             "fuchsia.tracing.controller.Controller"

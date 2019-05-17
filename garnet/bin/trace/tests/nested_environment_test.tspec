@@ -1,0 +1,11 @@
+// Run the nested_environment_test.
+{
+  "test_name": "nested-environment-test",
+  "app": "fuchsia-pkg://fuchsia.com/trace_tests#meta/nested_environment_test.cmx",
+  "environment": {
+     "name": "environment_name"
+  },
+  "categories": [ "trace:test" ],
+  "buffer_size_in_mb": 1,
+  "buffering_mode": "oneshot"
+}

@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/nested_environment_test"
+    },
+    "sandbox": {
+        "dev": [ "misc/sysinfo" ],
+        "features": [
+            "isolated-persistent-storage",
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.controller.Controller"
+        ]
+    }
+}

@@ -62,6 +62,12 @@ TEST(Spec, DecodingErrors) {
   EXPECT_FALSE(DecodeSpec(json, &result));
   json = R"({"spawn": "yikes"})";
   EXPECT_FALSE(DecodeSpec(json, &result));
+  json = R"({"environment": "yikes"})";
+  EXPECT_FALSE(DecodeSpec(json, &result));
+  json = R"({"environment": {}})";
+  EXPECT_FALSE(DecodeSpec(json, &result));
+  json = R"({"environment": {"name": 42}})";
+  EXPECT_FALSE(DecodeSpec(json, &result));
   json = R"({"categories": "many"})";
   EXPECT_FALSE(DecodeSpec(json, &result));
   json = R"({"categories": [42]})";
@@ -117,6 +123,7 @@ TEST(Spec, DecodeEmpty) {
   EXPECT_FALSE(result.app);
   EXPECT_FALSE(result.args);
   EXPECT_FALSE(result.spawn);
+  EXPECT_FALSE(result.environment_name);
   EXPECT_FALSE(result.categories);
   EXPECT_FALSE(result.buffering_mode);
   EXPECT_FALSE(result.buffer_size_in_mb);
@@ -158,6 +165,14 @@ TEST(Spec, DecodeSpawn) {
     EXPECT_TRUE(*result.spawn);
     EXPECT_TRUE(result.spawn);
   }
+}
+
+TEST(Spec, DecodeEnvironment) {
+  std::string json = R"({"environment": {"name": "env_name"}})";
+  Spec result;
+  ASSERT_TRUE(DecodeSpec(json, &result));
+  ASSERT_TRUE(result.environment_name);
+  EXPECT_EQ("env_name", *result.environment_name);
 }
 
 TEST(Spec, DecodeCategories) {

@@ -43,6 +43,10 @@ struct Spec {
   // Whether to treat "app" as a tool to be spawned or a component.
   std::unique_ptr<bool> spawn;
 
+  // If provided, the application is launched in a nested environment with the
+  // given name.
+  std::unique_ptr<std::string> environment_name;
+
   // Tracing categories enabled when tracing the application.
   std::unique_ptr<std::vector<std::string>> categories;
 

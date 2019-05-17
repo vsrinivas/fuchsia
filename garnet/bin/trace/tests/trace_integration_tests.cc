@@ -33,6 +33,11 @@ TEST(Circular, FillBuffer) { RunAndVerify("data/circular.tspec"); }
 
 TEST(Streaming, FillBuffer) { RunAndVerify("data/streaming.tspec"); }
 
+TEST(NestedTestEnvironment, Test) {
+  ASSERT_TRUE(RunTspec(g_context.get(), "data/nested_environment_test.tspec",
+                       kOutputFilePath));
+}
+
 // A class for adding an extra provider to the test.
 
 class ExtraProvider : public ::testing::Test {
