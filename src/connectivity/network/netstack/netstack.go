@@ -12,6 +12,7 @@ import (
 
 	"syslog"
 
+	"netstack/dhcp"
 	"netstack/dns"
 	"netstack/fidlconv"
 	"netstack/filter"
@@ -26,7 +27,6 @@ import (
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 
-	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/link/loopback"

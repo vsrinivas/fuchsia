@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/netstack_dhcp_test"
+    }
+}
