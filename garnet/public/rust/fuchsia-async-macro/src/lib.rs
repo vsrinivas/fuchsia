@@ -71,8 +71,10 @@ extern crate proc_macro;
 
 use {
     proc_macro::TokenStream,
+    proc_macro2::Span,
     quote::{quote, quote_spanned},
     syn::{
+        Ident,
         parse::{Error, Parse, ParseStream},
         parse_macro_input,
     },
@@ -82,7 +84,16 @@ mod kw {
     syn::custom_keyword!(test);
 }
 
-fn common(item: TokenStream, run_executor: TokenStream, test: bool) -> TokenStream {
+fn executor_ident() -> Ident {
+    Ident::new("executor", Span::call_site())
+}
+
+fn common(
+    item: TokenStream,
+    executor: Ident,
+    run_executor: TokenStream,
+    test: bool,
+) -> TokenStream {
     let item = parse_macro_input!(item as syn::ItemFn);
     let syn::ItemFn {
         attrs,
@@ -172,7 +183,8 @@ fn common(item: TokenStream, run_executor: TokenStream, test: bool) -> TokenStre
             async fn func() #ret_type {
                 #block
             }
-            let mut executor = ::fuchsia_async::Executor::new().expect("Failed to create executor");
+            let mut #executor = ::fuchsia_async::Executor::new()
+                .expect("Failed to create executor");
 
             #run_executor
           }
@@ -203,15 +215,16 @@ fn common(item: TokenStream, run_executor: TokenStream, test: bool) -> TokenStre
 #[proc_macro_attribute]
 pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
     let test = parse_macro_input!(attr as Option<kw::test>).is_some();
+    let executor = executor_ident();
     let run_executor = quote!{
         let mut fut = func();
         ::fuchsia_async::pin_mut!(fut);
-        match executor.run_until_stalled(&mut fut) {
+        match #executor.run_until_stalled(&mut fut) {
             ::core::task::Poll::Ready(result) => result,
             _ => panic!("Stalled without completing. Did you mean to use 'run_singlethreaded'?"),
         }
     };
-    common(item, run_executor.into(), test)
+    common(item, executor, run_executor.into(), test)
 }
 
 /// Define an `async` function that should run to completion on a single thread.
@@ -225,10 +238,11 @@ pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn run_singlethreaded(attr: TokenStream, item: TokenStream) -> TokenStream {
     let test = parse_macro_input!(attr as Option<kw::test>).is_some();
+    let executor = executor_ident();
     let run_executor = quote!{
-        executor.run_singlethreaded(func())
+        #executor.run_singlethreaded(func())
     };
-    common(item, run_executor.into(), test)
+    common(item, executor, run_executor.into(), test)
 }
 
 struct RunAttributes {
@@ -262,8 +276,9 @@ impl Parse for RunAttributes {
 pub fn run(attr: TokenStream, item: TokenStream) -> TokenStream {
     let RunAttributes { threads, test } = parse_macro_input!(attr as RunAttributes);
 
+    let executor = executor_ident();
     let run_executor = quote!{
-        executor.run(func(), #threads)
+        #executor.run(func(), #threads)
     };
-    common(item, run_executor.into(), test)
+    common(item, executor, run_executor.into(), test)
 }

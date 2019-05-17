@@ -10,11 +10,14 @@
 use {
     failure::Error,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_io::{DirectoryMarker, FileMarker, NodeMarker, NodeInfo, Service, SeekOrigin},
+    fidl_fuchsia_io::{
+        DirectoryMarker, FileMarker, FileProxy, NodeInfo, NodeMarker, SeekOrigin, Service,
+    },
     fuchsia_async::run_until_stalled,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::{future::try_join, FutureExt, StreamExt},
+    std::future::Future,
 };
 
 #[run_until_stalled(test)]
@@ -53,8 +56,31 @@ async fn open_service_node_reference() -> Result<(), Error> {
     Ok(())
 }
 
-#[run_until_stalled(test)]
-async fn read_from_vmo_file() -> Result<(), Error> {
+async fn assert_read<'a>(
+    file_proxy: &'a FileProxy,
+    length: u64,
+    expected: &'a [u8],
+) -> Result<(), Error> {
+    let (status, read_data) = await!(file_proxy.read(length))?;
+    zx::Status::ok(status)?;
+    assert_eq!(&*read_data, expected);
+    Ok(())
+}
+
+// close the file and check that further reads fail.
+async fn assert_close(file_proxy: &FileProxy) -> Result<(), Error> {
+    let status = await!(file_proxy.close())?;
+    zx::Status::ok(status)?;
+    assert!(await!(file_proxy.read(0)).is_err());
+    Ok(())
+}
+
+/// Sets up a new filesystem containing a vmofile.
+///
+/// Returns a future which runs the filesystem, a proxy connected to the vmofile, and the data
+/// expected to be in the file.
+fn set_up_and_connect_to_vmo_file(
+) -> Result<(impl Future<Output = Result<(), Error>>, FileProxy, Vec<u8>), Error> {
     const PATH: &str = "foo";
     const VMO_SIZE: u64 = 256;
     const VMO_FILE_OFFSET: usize = 5;
@@ -67,8 +93,6 @@ async fn read_from_vmo_file() -> Result<(), Error> {
         data_i = data_i.wrapping_add(1);
         data_i
     });
-    let file_data = &data[VMO_FILE_OFFSET..(VMO_FILE_OFFSET + VMO_FILE_LENGTH)];
-
     let mut fs = ServiceFs::new();
 
     let vmo = zx::Vmo::create(VMO_SIZE)?;
@@ -84,41 +108,87 @@ async fn read_from_vmo_file() -> Result<(), Error> {
     let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
     fs.serve_connection(dir_server_end.into_channel())?;
 
+    // Open a connection to the file within the directory
     let (file_proxy, file_server_end) = create_proxy::<FileMarker>()?;
     let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
     let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
     dir_proxy.open(flags, mode, PATH, file_server_end.into_channel().into())?;
 
-    let serve_fut = fs.collect().map(Ok);
+    // truncate `data` to just the data that appears in the file
+    data.drain(..VMO_FILE_OFFSET);
+    data.truncate(VMO_FILE_LENGTH);
+    Ok((fs.collect().map(Ok), file_proxy, data))
+}
 
-    let read_from_chunks = async {
-        let (status, read_data) = await!(file_proxy.read(VMO_FILE_LENGTH as u64))?;
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-        assert_eq!(&*read_data, file_data);
+macro_rules! async_test_with_vmo_file {
+    (
+        |$file_proxy:ident, $file_data:ident|
+        $( $test_name:ident => $test_future:expr ,)*
+    ) => { $(
+        #[run_until_stalled(test)]
+        async fn $test_name() -> Result<(), Error> {
+            let (serve_fut, $file_proxy, $file_data) = set_up_and_connect_to_vmo_file()?;
+            let $file_data = &*$file_data;
+            let test_future = $test_future;
+            let ((), ()) = await!(try_join(serve_fut, test_future))?;
+            Ok(())
+        }
+    )* }
+}
 
-        let (status, empty_read) = await!(file_proxy.read(VMO_FILE_LENGTH as u64))?;
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-        assert_eq!(&*empty_read, &[]);
+async_test_with_vmo_file![
+    |file_proxy, file_data|
+    describe_vmo_file => async {
+        // Describe the file
+        let (status, attrs) = await!(file_proxy.get_attr())?;
+        zx::Status::ok(status)?;
+        assert!(attrs.mode & fidl_fuchsia_io::MODE_TYPE_FILE != 0);
+        assert_eq!(attrs.content_size, file_data.len() as u64);
+        assert_eq!(attrs.storage_size, file_data.len() as u64);
+        drop(file_proxy);
+        Ok(())
+    },
+    read_from_vmo_file => async {
+        // Read the whole file
+        await!(assert_read(&file_proxy, file_data.len() as u64, file_data))?;
+        drop(file_proxy);
+        Ok(())
+    },
+    seek_around_vmo_file => async {
+        // Read the whole file
+        await!(assert_read(&file_proxy, file_data.len() as u64, file_data))?;
 
+        // Try and read the whole file again, while our cursor is at the end.
+        // This should return no more data.
+        await!(assert_read(&file_proxy, file_data.len() as u64, &[]))?;
+
+        // Seek back to 5 bytes from the end and read again.
         let (status, position) = await!(file_proxy.seek(-5, SeekOrigin::End))?;
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-        assert_eq!(position, VMO_FILE_LENGTH as u64 - 5);
+        zx::Status::ok(status)?;
+        assert_eq!(position, file_data.len() as u64 - 5);
 
         let read_at_count = 10usize;
         let read_at_offset = 4usize;
         let (status, read_at_data) =
             await!(file_proxy.read_at(read_at_count as u64, read_at_offset as u64))?;
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        zx::Status::ok(status)?;
         assert_eq!(&*read_at_data, &file_data[read_at_offset..(read_at_offset + read_at_count)]);
 
-        // Drop connections to allow server to close.
         drop(file_proxy);
-        drop(dir_proxy);
-
-        Ok::<_, Error>(())
-    };
-
-    let ((), ()) = await!(try_join(serve_fut, read_from_chunks))?;
-
-    Ok(())
-}
+        Ok(())
+    },
+    read_from_clone => async {
+        // Create a clone of the file
+        let (file_proxy_clone, file_clone_server_end) = create_proxy::<FileMarker>()?;
+        let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+        file_proxy.clone(flags, file_clone_server_end.into_channel().into())?;
+        // Read the whole file
+        await!(assert_read(&file_proxy, file_data.len() as u64, file_data))?;
+        await!(assert_close(&file_proxy))?;
+        // Check that our original clone was never moved from position zero nor closed.
+        await!(assert_read(&file_proxy_clone, file_data.len() as u64, file_data))?;
+        drop(file_proxy);
+        drop(file_proxy_clone);
+        Ok(())
+    },
+];

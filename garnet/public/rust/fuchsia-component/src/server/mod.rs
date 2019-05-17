@@ -12,9 +12,10 @@ use {
         endpoints::{Proxy as _, RequestStream, ServerEnd, ServiceMarker},
     },
     fidl_fuchsia_io::{
-        DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeRequestStream, FileRequest, FileRequestStream,
-        NodeAttributes, NodeInfo, NodeMarker, SeekOrigin, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, NodeRequest,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryObject, DirectoryRequest, DirectoryRequestStream, FileRequest, FileRequestStream,
+        NodeAttributes, NodeInfo, NodeMarker, NodeRequest, NodeRequestStream, SeekOrigin,
+        OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
+        OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys::{
         EnvironmentControllerProxy, EnvironmentMarker, EnvironmentOptions, LauncherProxy,
@@ -716,8 +717,7 @@ send_info_fn![
 ];
 
 fn into_async(chan: zx::Channel) -> Result<fasync::Channel, Error> {
-    Ok(fasync::Channel::from_channel(chan)
-    .context("failure to convert to async channel")?)
+    Ok(fasync::Channel::from_channel(chan).context("failure to convert to async channel")?)
 }
 
 impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
@@ -738,7 +738,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     pub fn serve_connection(&mut self, chan: zx::Channel) -> Result<&mut Self, Error> {
         match self.serve_connection_at(chan.into(), ROOT_NODE, NO_FLAGS)? {
             Some(_) => panic!("root directory connection should not return output"),
-            None => {},
+            None => {}
         }
         Ok(self)
     }
@@ -756,7 +756,9 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         // does not expect a response (eg. Directory::Open in a subdirectory),
         // the client may close chan immediately afterwards. We should keep
         // our end of the channel until we have processed all incoming requests.
-        object.channel().signal_peer(Signals::NONE, Signals::USER_0)
+        object
+            .channel()
+            .signal_peer(Signals::NONE, Signals::USER_0)
             .or_else(|e| match e {
                 zx::Status::PEER_CLOSED => Ok(()),
                 e => Err(e),
@@ -785,10 +787,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             let chan = into_async(object.into_channel())?;
             let stream = NodeRequestStream::from_channel(chan);
             send_info_node(&stream, info)?;
-            self.node_connections.push(NodeConnection::new(
-                stream,
-                NodeConnectionData { position },
-            ));
+            self.node_connections
+                .push(NodeConnection::new(stream, NodeConnectionData { position }));
             return Ok(None);
         }
 
@@ -815,9 +815,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 ));
                 Ok(None)
             }
-            ServiceFsNode::Service(service) => {
-                Ok(service.service().connect(chan))
-            },
+            ServiceFsNode::Service(service) => Ok(service.service().connect(chan)),
         }
     }
 
@@ -828,7 +826,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         position: usize,
     ) -> Option<ServiceObjTy::Output> {
         match (|| {
-            let object = handle_potentially_unsupported_flags(object, flags, CLONE_REQ_SUPPORTED_FLAGS)?;
+            let object =
+                handle_potentially_unsupported_flags(object, flags, CLONE_REQ_SUPPORTED_FLAGS)?;
             self.serve_connection_at(object, position, flags)
         })() {
             Ok(output) => output,
@@ -850,7 +849,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                 match self.handle_clone(flags, object, connection.position) {
                     Some(_) => panic!("cloning directory connection should not return output"),
-                    None => {},
+                    None => {}
                 }
             }
             DirectoryRequest::Close { responder } => {
@@ -864,7 +863,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 if path == "." {
                     match self.serve_connection_at(object, connection.position, flags) {
                         Ok(Some(_)) => panic!("serving directory '.' should not return output"),
-                        Ok(None) => {},
+                        Ok(None) => {}
                         Err(e) => eprintln!("ServiceFs failed to serve '.': {:?}", e),
                     }
                     return Ok((None, ConnectionState::Open));
@@ -946,7 +945,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             FileRequest::Clone { flags, object, control_handle: _ } => {
                 match self.handle_clone(flags, object, connection.position) {
                     Some(_) => panic!("file clone should not return output"),
-                    None => {},
+                    None => {}
                 }
             }
             FileRequest::Close { responder } => {
@@ -1048,9 +1047,9 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 }
                 match self.handle_clone(flags, object, connection.position) {
                     Some(_) => panic!("cloning node connection should not return output"),
-                    None => {},
+                    None => {}
                 }
-            },
+            }
             NodeRequest::Close { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
                 return Ok(ConnectionState::Closed);
@@ -1058,7 +1057,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             NodeRequest::Describe { responder } => {
                 let mut info = self.describe_node(connection.position)?;
                 responder.send(&mut info)?;
-            },
+            }
             NodeRequest::Sync { responder } => unsupported!(responder)?,
             NodeRequest::GetAttr { responder } => {
                 let mut attrs = self.node_attrs(connection.position);
