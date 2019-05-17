@@ -8,7 +8,7 @@ import("//build/testing/environments.gni")
 group("test") {
   testonly = true
   deps = [
-    ":audio_device_tests",
+    ":audio_device_tests_bin",
     ":audio_fidl_tests",
     ":audio_loopback_tests_bin",
   ]
