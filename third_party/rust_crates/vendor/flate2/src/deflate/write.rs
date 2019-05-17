@@ -1,5 +1,5 @@
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 
 #[cfg(feature = "tokio")]
 use futures::Poll;
@@ -169,7 +169,7 @@ impl<W: Write> Write for DeflateEncoder<W> {
 #[cfg(feature = "tokio")]
 impl<W: AsyncWrite> AsyncWrite for DeflateEncoder<W> {
     fn shutdown(&mut self) -> Poll<(), io::Error> {
-        try_nb!(self.inner.finish());
+        self.inner.finish()?;
         self.inner.get_mut().shutdown()
     }
 }
@@ -334,7 +334,7 @@ impl<W: Write> Write for DeflateDecoder<W> {
 #[cfg(feature = "tokio")]
 impl<W: AsyncWrite> AsyncWrite for DeflateDecoder<W> {
     fn shutdown(&mut self) -> Poll<(), io::Error> {
-        try_nb!(self.inner.finish());
+        self.inner.finish()?;
         self.inner.get_mut().shutdown()
     }
 }
