@@ -114,6 +114,7 @@ void launchpad_destroy(launchpad_t* lp) {
     free(lp->script_args);
     free(lp->args);
     free(lp->env);
+    free(lp->names);
     free(lp);
 }
 
