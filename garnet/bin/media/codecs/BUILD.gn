@@ -54,3 +54,11 @@ source_set("chunk_input_stream") {
     "//zircon/public/lib/zx",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "test",
+    "//garnet/examples/media:use_h264_decoder_test",
+  ]
+}

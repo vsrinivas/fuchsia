@@ -21,5 +21,6 @@ group("tests") {
 
   data_deps = [
     "audio_core:tests",
+    "//sdk/lib/media/audio_dfx/cpp:audio_dfx_tests",
   ]
 }

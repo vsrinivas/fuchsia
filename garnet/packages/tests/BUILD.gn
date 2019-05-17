@@ -378,8 +378,6 @@ group("all") {
     ":magma",
     ":mdns",
     ":media",
-    ":mediaplayer",
-    ":mediasession",
     ":memory_monitor",
     ":netcfg_tests",
     ":netemul",
@@ -771,14 +769,6 @@ group("gfxlatency") {
   ]
 }
 
-group("mediaplayer") {
-  testonly = true
-  public_deps = [
-    "//src/media/playback/mediaplayer:mediaplayer_test_util",
-    "//src/media/playback/mediaplayer:mediaplayer_tests",
-  ]
-}
-
 group("log_listener") {
   testonly = true
   public_deps = [
@@ -791,14 +781,11 @@ group("media") {
   testonly = true
   public_deps = [
     ":virtual_audio",
-    "//garnet/bin/media/codecs/test",
-    "//garnet/examples/media:use_h264_decoder_test",
-    "//garnet/packages/prod:media_audio",
-    "//garnet/packages/testing:run_test_component",
+    "//garnet/bin/media/codecs:tests",
     "//garnet/public/lib/media/timeline:media_lib_timeline_tests",
-    "//sdk/lib/media/audio_dfx/cpp:audio_dfx_tests",
-    "//src/media/audio/audio_core/mixer:audio_mixer_tests",
-    "//src/media/audio/audio_core/test:audio_fidl_tests",
+    "//src/media/audio:tests",
+    "//src/media/playback/mediaplayer:tests",
+    "//src/media/sessions:tests",
   ]
 }
 
@@ -1199,13 +1186,6 @@ group("wayland") {
   testonly = true
   public_deps = [
     "//garnet/bin/wayland:wayland_tests",
-  ]
-}
-
-group("mediasession") {
-  testonly = true
-  public_deps = [
-    "//src/media/sessions:tests",
   ]
 }
 
