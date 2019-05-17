@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/wlan_bitfield_wrapper_lib_test"
+    }
+}

@@ -5,6 +5,7 @@
 import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 declare_args() {
@@ -86,8 +87,7 @@ config_data("config") {
   }
 }
 
-package("wlancfg-tests") {
-  testonly = true
+test_package("wlancfg-tests") {
   deps = [
     ":bin",
   ]

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/wlan_mlme_lib_test"
+    }
+}

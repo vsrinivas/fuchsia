@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/wlancfg_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

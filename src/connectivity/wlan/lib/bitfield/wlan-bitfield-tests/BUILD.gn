@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 
 rustc_library("wlan-bitfield-wrapper") {
   name = "wlan-bitfield-wrapper"
@@ -17,9 +18,7 @@ rustc_library("wlan-bitfield-wrapper") {
   ]
 }
 
-package("wlan-bitfield-tests") {
-  testonly = true
-
+test_package("wlan-bitfield-tests") {
   deps = [
     ":wlan-bitfield-wrapper",
   ]
