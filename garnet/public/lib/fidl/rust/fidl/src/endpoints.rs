@@ -121,6 +121,11 @@ impl<T> ClientEnd<T> {
         ClientEnd { inner, phantom: PhantomData }
     }
 
+    /// Get a reference to the undelrying channel
+    pub fn channel(&self) -> &zx::Channel {
+        &self.inner
+    }
+
     /// Extract the inner channel.
     pub fn into_channel(self) -> zx::Channel {
         self.inner
@@ -179,6 +184,11 @@ impl<T> ServerEnd<T> {
     /// Create a new `ServerEnd` from the provided channel.
     pub fn new(inner: zx::Channel) -> ServerEnd<T> {
         ServerEnd { inner, phantom: PhantomData }
+    }
+
+    /// Get a reference to the undelrying channel
+    pub fn channel(&self) -> &zx::Channel {
+        &self.inner
     }
 
     /// Extract the inner channel.

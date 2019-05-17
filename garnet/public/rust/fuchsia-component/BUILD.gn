@@ -19,6 +19,22 @@ rustc_library("fuchsia-component") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:libc",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_library("fuchsia-component-blackbox-unit-tests") {
+  edition = "2018"
+  source_root = "blackbox_unit_tests/lib.rs"
+  with_unit_tests = true
+  deps = [
+    ":fuchsia-component",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
