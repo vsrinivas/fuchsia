@@ -35,7 +35,6 @@ source_set("use_media_decoder_source_set") {
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//src/media/audio/lib/wav_writer:wav_writer",
-    "//third_party/googletest:gtest",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
   ]
@@ -65,6 +64,7 @@ executable("use_aac_decoder_test") {
 
   deps = [
     ":use_media_decoder_source_set",
+    "//third_party/googletest:gtest_main",
   ]
 }
 
