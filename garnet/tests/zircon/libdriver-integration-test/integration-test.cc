@@ -6,12 +6,14 @@
 
 #include <fcntl.h>
 
+#include <lib/async/cpp/wait.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/bridge.h>
+#include <zircon/boot/image.h>
 #include <zircon/status.h>
 
 namespace libdriver_integration_test {
@@ -20,11 +22,41 @@ IntegrationTest::IsolatedDevmgr IntegrationTest::devmgr_;
 const zx::duration IntegrationTest::kDefaultTimeout = zx::sec(5);
 
 void IntegrationTest::SetUpTestCase() {
+    DoSetup(false /* should_create_composite */);
+}
+
+void IntegrationTest::DoSetup(bool should_create_composite) {
     // Set up the isolated devmgr instance for this test suite.  Note that we
     // only do this once for the whole suite, because it is currently an
     // expensive process.  Ideally we'd do this between every test.
     auto args = IsolatedDevmgr::DefaultArgs();
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
+    args.load_drivers.push_back("/boot/driver/component.so");
+    args.load_drivers.push_back("/boot/driver/component.proxy.so");
+
+    // Rig up a get_boot_item that will send configuration information over to
+    // the sysdev driver.
+    args.get_boot_item = [should_create_composite](uint32_t type, uint32_t extra, zx::vmo* vmo,
+                                                   uint32_t* length) {
+        vmo->reset();
+        *length = 0;
+        if (type != ZBI_TYPE_DRV_BOARD_PRIVATE || extra != 0) {
+            return ZX_OK;
+        }
+        zx::vmo data;
+        zx_status_t status = zx::vmo::create(1, 0, &data);
+        if (status != ZX_OK) {
+            return status;
+        }
+        status = data.write(reinterpret_cast<const void*>(&should_create_composite), 0,
+                            sizeof(should_create_composite));
+        if (status != ZX_OK) {
+            return status;
+        }
+        *length = sizeof(should_create_composite);
+        *vmo = std::move(data);
+        return ZX_OK;
+    };
 
     zx_status_t status = IsolatedDevmgr::Create(std::move(args), &IntegrationTest::devmgr_);
     if (status != ZX_OK) {
@@ -210,6 +242,97 @@ IntegrationTest::Promise<void> IntegrationTest::DoOpen(
     };
     devfs_->Open(fuchsia::io::OPEN_FLAG_DESCRIBE, 0, path, std::move(server));
     return bridge.consumer.promise_or(::fit::error("devfs open abandoned"));
+}
+
+namespace {
+
+class AsyncWatcher {
+public:
+    AsyncWatcher(std::string path, zx::channel watcher)
+            : path_(std::move(path)), watcher_(std::move(watcher)),
+              wait_(watcher_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                    fit::bind_member(this, &AsyncWatcher::WatcherChanged)) {}
+
+    void WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
+
+    zx_status_t Begin(async_dispatcher_t* dispatcher,
+                      fit::completer<void, IntegrationTest::Error> completer) {
+        completer_ = std::move(completer);
+        return wait_.Begin(dispatcher);
+    }
+private:
+    std::string path_;
+    zx::channel watcher_;
+    async::Wait wait_;
+    fit::completer<void, IntegrationTest::Error> completer_;
+};
+
+void AsyncWatcher::WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* wait,
+                                  zx_status_t status, const zx_packet_signal_t* signal) {
+    auto error = [&](const char* msg) {
+        completer_.complete_error(msg);
+        delete this;
+    };
+    if (status != ZX_OK) {
+        return error("watcher error");
+    }
+    if (signal->observed & ZX_CHANNEL_READABLE) {
+        char buf[fuchsia::io::MAX_FILENAME+2+1];
+        uint32_t bytes_read;
+        status = watcher_.read(0, buf, nullptr, sizeof(buf) - 1, 0, &bytes_read, nullptr);
+        if (status != ZX_OK) {
+            return error("watcher read error");
+        }
+        buf[bytes_read] = 0;
+        const char* filename = buf+2;
+
+        if (!strcmp(path_.c_str(), filename)) {
+            completer_.complete_ok();
+            delete this;
+            return;
+        }
+
+        wait->Begin(dispatcher);
+    } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
+        return error("watcher closed");
+    }
+}
+
+void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
+                 async_dispatcher_t* dispatcher, std::string path,
+                 fit::completer<void, IntegrationTest::Error> completer) {
+    zx::channel watcher, remote;
+    ASSERT_EQ(zx::channel::create(0, &watcher, &remote), ZX_OK);
+
+    auto async_watcher = std::make_unique<AsyncWatcher>(std::move(path), std::move(watcher));
+
+    dir->Watch(fuchsia::io::WATCH_MASK_ADDED | fuchsia::io::WATCH_MASK_EXISTING, 0,
+               std::move(remote),
+               [dispatcher, async_watcher=std::move(async_watcher),
+                completer=std::move(completer)](zx_status_t status) mutable {
+                   if (status == ZX_OK) {
+                       status = async_watcher->Begin(dispatcher, std::move(completer));
+                       if (status == ZX_OK) {
+                           // The async_watcher will clean this up
+                           __UNUSED auto ptr = async_watcher.release();
+                           return;
+                       }
+                   }
+                   completer.complete_error("watcher failed");
+               });
+}
+
+} // namespace
+
+IntegrationTest::Promise<void> IntegrationTest::DoWaitForPath(const std::string& path) {
+    if (path.find('/') != std::string::npos) {
+        return fit::make_error_promise(
+                std::string("DoWaitForPath with directories not yet supported"));
+    }
+    fit::bridge<void, Error> bridge;
+    WaitForPath(devfs_, loop_.dispatcher(), path, std::move(bridge.completer));
+    return bridge.consumer.promise_or(::fit::error("WaitForPath abandoned"));
 }
 
 } // namespace libdriver_integration_test

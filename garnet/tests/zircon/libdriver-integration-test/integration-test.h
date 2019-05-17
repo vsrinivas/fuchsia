@@ -101,6 +101,10 @@ public:
     // promise to be completed.
     Promise<void> DoOpen(const std::string& path, fidl::InterfacePtr<fuchsia::io::Node>* client);
 
+    // Waits for the given |path| relative to devfs to be available.  Currently
+    // waiting for paths below subdirectories is not supported.
+    Promise<void> DoWaitForPath(const std::string& path);
+
     // Joins two promises and collapses the results such that if either failed
     // the returned promise fails.
     auto JoinPromises(Promise<void> promise1, Promise<void> promise2) {
@@ -124,6 +128,8 @@ public:
     // the future.
     void RunPromise(Promise<void> promise);
 protected:
+    static void DoSetup(bool should_create_composite);
+
     using IsolatedDevmgr = devmgr_integration_test::IsolatedDevmgr;
     static IsolatedDevmgr devmgr_;
 
