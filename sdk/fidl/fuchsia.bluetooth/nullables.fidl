@@ -4,7 +4,8 @@
 
 library fuchsia.bluetooth;
 
-// Nullable primitive types:
+/// DEPRECATED: Do not use these types in new code. Prefer tables to group optional primitive
+/// fields.
 
 struct Bool {
     bool value;

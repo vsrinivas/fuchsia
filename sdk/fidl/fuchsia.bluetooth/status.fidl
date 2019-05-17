@@ -4,6 +4,9 @@
 
 library fuchsia.bluetooth;
 
+/// DEPRECATED. Do not use these types in new code. Prefer the "error" syntax, protocol-specific
+/// enums and zx.status instead.
+
 enum ErrorCode {
     UNKNOWN = 0;
     FAILED = 1;

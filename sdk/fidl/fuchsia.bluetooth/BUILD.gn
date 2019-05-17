@@ -8,7 +8,10 @@ fidl("fuchsia.bluetooth") {
   sdk_category = "partner"
 
   sources = [
+    "address.fidl",
+    "id.fidl",
     "nullables.fidl",
     "status.fidl",
+    "uuid.fidl",
   ]
 }
