@@ -1,12 +1,21 @@
 # Lint
 
 We use clang-tidy to lint C++ code and aim to keep the repository warning-clean.
-The linter is configured in the [.clang-tidy](../.clang-tidy) file.
+The linter is configured in the [.clang-tidy](/.clang-tidy) file.
 
 ## How to lint
 
-In order to run the current CL through the linter (assuming the current
-directory is `//peridot`), run:
+In order to run a specific GN target through the linter, run:
+
+```
+fx clang-tidy --target=<target>
+```
+
+You can also add `--fix` in order to automatically generate fixes for some (but
+not all) of the warnings.
+
+Alternatively, you can run the following to run the current patch through the
+linter:
 
 ```
 ../scripts/git-file-tidy [--out-dir out/debug-x64]
@@ -18,13 +27,27 @@ of the warnings.
 
 ## Suppressing warnings
 
-Any warning can be suppressed by adding a `// NOLINT` comment on the line on
-which it occurs. It is also possible to disable the check entirely within Ledger
-repository by editing the [.clang-tidy](../.clang-tidy) file.
+Any warning can be suppressed by adding a `// NOLINT(<check_name>)` or a
+`// NOLINTNEXTLINE(<check_name>)` comment to the offending line. It is also
+possible to disable the check entirely within the repository by editing the
+[.clang-tidy](/.clang-tidy) file.
 
-## Disabled checks
+## Checks
 
-This list tracks the reasons for which we disabled particular [checks]:
+There are a number of check categories enabled, and specific checks within them
+have been disabled for the reasons below. The list of enabled check categories
+is as follows:
+
+ - `bugprone-*`
+ - `clang-diagnostic-*`
+ - `clang-analyzer-*`
+ - `google-*`
+ - `misc-*`
+ - `modernize-`
+ - `performance-*`
+ - `readability-*`
+
+This list tracks the reasons for which we disabled in particular [checks]:
 
  - `clang-analyzer-core.NullDereference`, `clang-analyzer-unix.Malloc` - these
     checks are triggering memory access warnings at rapidjson callsites (despite
@@ -43,7 +66,7 @@ This list tracks the reasons for which we disabled particular [checks]:
  - `modernize-use-auto` - not all flagged callsites seemed worth converting to
     `auto`
  - `modernize-use-equals-delete` - flagging all gtest TEST_F
- - `modernize-use-equals-default` - Ledger chose not to impose a preference for
+ - `modernize-use-equals-default` - Fuchsia chose not to impose a preference for
    "= default"
  - `performance-unnecessary-value-param` - it was flagging view classes
    which we prefer to pass by value

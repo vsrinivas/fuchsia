@@ -1,4 +1,5 @@
 per-file blobstats=raggi@google.com
+per-file clang-tidy=juliehockett@google.com
 per-file dart-remote-test=zra@google.com
 per-file dart-tunnel=zra@google.com
 per-file debug-report=donosoc@google.com

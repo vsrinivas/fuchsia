@@ -1,0 +1,93 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### runs clang-tidy on specified files
+
+## Usage: fx clang-tidy [--fix] [--verbose] [--target=TARGET|--files=FILES]
+##
+##   --fix    Apply recommended fixes
+##   --target Run on a specified GN build target
+##   --files  List of files on which to run clang-tidy
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+
+function usage() {
+  fx-command-help
+}
+
+function zap-commas() {
+  echo $1 | tr ',' '\n'
+}
+
+# Removes leading //, resolves to absolute path, and resolves globs.  The first
+# argument is a path prefix, and the remaining arguments are relative to that
+# path prefix.
+function canonicalize() {
+  local root_dir="$1"
+  shift
+  for fileglob in "${@}"; do
+    # // means it comes from gn, [^/]* means it is relative
+    if [[ "${fileglob}" = //* || "${fileglob}" = [^/]* ]]; then
+      local dir="${root_dir}"/
+    else
+      local dir=""
+    fi
+    for file in "${dir}"${fileglob#"//"}; do
+      echo "${file}"
+    done
+  done
+}
+
+VERBOSE=
+FIX=
+FILES=()
+
+fx-config-read
+
+while [ $# -gt 0 ]; do
+  ARG="$1"
+  case "$1" in
+    --verbose) VERBOSE="1" ;;
+    --fix) FIX=1 ;;
+    --files=*)
+      FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}"))
+      ;;
+    --target=*)
+      FILES=$(canonicalize "${FUCHSIA_DIR}" \
+        $(fx-buildtool-run gn desc \
+            "${FUCHSIA_BUILD_DIR}" "${ARG#--target=}" sources)) ;;
+    *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
+  esac
+  shift
+done
+
+if [[ -n "${VERBOSE}" ]]; then
+  printf "Files on which to run clang-tidy:\n%s\n" "${FILES}"
+fi
+
+declare BUILDTOOLS_ROOT="${FUCHSIA_DIR}"/buildtools
+declare HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
+
+[[ "${HOST_OS}" == "darwin" ]] && HOST_OS="mac"
+case $(uname -m) in
+  x86_64) HOST_ARCH="x64" ;;
+  aarch64) HOST_ARCH="arm64" ;;
+  *) echo "Unknown arch $(uname -m)" && exit 1 ;;
+esac
+
+declare HOST_PLATFORM="${HOST_OS}-${HOST_ARCH}"
+
+declare CLANG_TIDY="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-tidy"
+declare RUN_CLANG_TIDY="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/share/clang/run-clang-tidy.py"
+
+cd "${FUCHSIA_BUILD_DIR}"
+if [[ -z "${FIX}" ]]; then
+  "${RUN_CLANG_TIDY}" -clang-tidy-binary "${CLANG_TIDY}" "${FILES}" -fix
+else
+  "${RUN_CLANG_TIDY}" -clang-tidy-binary "${CLANG_TIDY}" "${FILES}"
+fi
+cd "${FUCHSIA_DIR}"
