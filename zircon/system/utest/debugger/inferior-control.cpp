@@ -319,13 +319,19 @@ bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior) {
 bool read_packet(zx_handle_t eport, zx_port_packet_t* packet) {
     BEGIN_HELPER;
 
-    unittest_printf("Waiting for exception/signal on eport %d\n", eport);
+    unittest_printf("read_packet: waiting for exception/signal on eport %d\n", eport);
     ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet), ZX_OK, "zx_port_wait failed");
 
-    if (ZX_PKT_IS_EXCEPTION(packet->type))
+    if (ZX_PKT_IS_EXCEPTION(packet->type)) {
         ASSERT_EQ(packet->key, kExceptionPortKey);
-
-    unittest_printf("read_packet: got exception/signal %d\n", packet->type);
+        unittest_printf("read_packet: got exception 0x%x\n", packet->type);
+    } else if (ZX_PKT_IS_SIGNAL_ONE(packet->type)) {
+        unittest_printf("read_packet: got signal, observed 0x%x\n",
+                        packet->signal.observed);
+    } else {
+        // Leave it to the caller to digest these.
+        unittest_printf("read_packet: got other packet %d\n", packet->type);
+    }
 
     END_HELPER;
 }
