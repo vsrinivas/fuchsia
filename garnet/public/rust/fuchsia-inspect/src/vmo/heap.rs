@@ -7,17 +7,17 @@ use {
     failure::{format_err, Error},
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
-    std::{cmp::min, rc::Rc},
+    std::{cmp::min, sync::Arc},
 };
 
 pub struct Heap {
-    mapping: Rc<Mapping>,
+    mapping: Arc<Mapping>,
     current_size_bytes: usize,
     free_head_per_order: [u32; constants::NUM_ORDERS],
 }
 
 impl Heap {
-    pub fn new(mapping: Rc<Mapping>) -> Result<Self, Error> {
+    pub fn new(mapping: Arc<Mapping>) -> Result<Self, Error> {
         let mut heap = Heap {
             mapping: mapping,
             current_size_bytes: 0,
@@ -27,7 +27,7 @@ impl Heap {
         Ok(heap)
     }
 
-    pub fn allocate_block(&mut self, min_size: usize) -> Result<Block<Rc<Mapping>>, Error> {
+    pub fn allocate_block(&mut self, min_size: usize) -> Result<Block<Arc<Mapping>>, Error> {
         let min_fit_order = utils::fit_order(min_size);
         if min_fit_order >= constants::NUM_ORDERS {
             return Err(format_err!("order is bigger than maximum order"));
@@ -52,7 +52,7 @@ impl Heap {
         Ok(block)
     }
 
-    pub fn free_block(&mut self, block: Block<Rc<Mapping>>) -> Result<(), Error> {
+    pub fn free_block(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
         let block_type = block.block_type();
         if block_type == BlockType::Free {
             return Err(format_err!("can't free block of type {}", block_type));
@@ -77,7 +77,7 @@ impl Heap {
         Ok(())
     }
 
-    pub fn get_block(&self, index: u32) -> Result<Block<Rc<Mapping>>, Error> {
+    pub fn get_block(&self, index: u32) -> Result<Block<Arc<Mapping>>, Error> {
         let offset = utils::offset_for_index(index);
         if offset >= self.current_size_bytes {
             return Err(format_err!("invalid index"));
@@ -136,7 +136,7 @@ impl Heap {
         }
     }
 
-    fn remove_free(&mut self, block: &Block<Rc<Mapping>>) -> Result<bool, Error> {
+    fn remove_free(&mut self, block: &Block<Arc<Mapping>>) -> Result<bool, Error> {
         let order = block.order();
         let index = block.index();
         if order >= constants::NUM_ORDERS {
@@ -158,7 +158,7 @@ impl Heap {
         Ok(false)
     }
 
-    fn split_block(&mut self, block: &Block<Rc<Mapping>>) -> Result<(), Error> {
+    fn split_block(&mut self, block: &Block<Arc<Mapping>>) -> Result<(), Error> {
         if block.order() >= constants::NUM_ORDERS {
             return Err(format_err!(
                 "order {} in block {} is invalid",
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn new_heap() {
         let (mapping, _) = Mapping::allocate(4096).unwrap();
-        let heap = Heap::new(Rc::new(mapping)).unwrap();
+        let heap = Heap::new(Arc::new(mapping)).unwrap();
         assert_eq!(heap.current_size_bytes, 4096);
         assert_eq!(heap.free_head_per_order, [0; 8]);
 
@@ -232,7 +232,7 @@ mod tests {
     #[test]
     fn allocate_and_free() {
         let (mapping, _) = Mapping::allocate(4096).unwrap();
-        let mut heap = Heap::new(Rc::new(mapping)).unwrap();
+        let mut heap = Heap::new(Arc::new(mapping)).unwrap();
 
         // Allocate some small blocks and ensure they are all in order.
         for i in 0..=5 {
@@ -332,7 +332,7 @@ mod tests {
     #[test]
     fn allocate_merge() {
         let (mapping, _) = Mapping::allocate(4096).unwrap();
-        let mut heap = Heap::new(Rc::new(mapping)).unwrap();
+        let mut heap = Heap::new(Arc::new(mapping)).unwrap();
         for i in 0..=3 {
             let block = heap.allocate_block(constants::MIN_ORDER_SIZE).unwrap();
             assert_eq!(block.index(), i);
@@ -377,7 +377,7 @@ mod tests {
     #[test]
     fn extend() {
         let (mapping, _) = Mapping::allocate(8 * 2048).unwrap();
-        let mut heap = Heap::new(Rc::new(mapping)).unwrap();
+        let mut heap = Heap::new(Arc::new(mapping)).unwrap();
 
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 0);
@@ -432,7 +432,7 @@ mod tests {
     #[test]
     fn extend_fail() {
         let (mapping, _) = Mapping::allocate(4 * 2048).unwrap();
-        let mut heap = Heap::new(Rc::new(mapping)).unwrap();
+        let mut heap = Heap::new(Arc::new(mapping)).unwrap();
 
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 0);
@@ -470,8 +470,8 @@ mod tests {
     #[test]
     fn dont_reinterpret_upper_block_contents() {
         let (mapping, _) = Mapping::allocate(4096).unwrap();
-        let mapping_rc = Rc::new(mapping);
-        let mut heap = Heap::new(mapping_rc.clone()).unwrap();
+        let mapping_arc = Arc::new(mapping);
+        let mut heap = Heap::new(mapping_arc.clone()).unwrap();
 
         // Allocate 3 blocks.
         assert_eq!(heap.allocate_block(constants::MIN_ORDER_SIZE).unwrap().index(), 0);
@@ -480,7 +480,7 @@ mod tests {
         assert_eq!(heap.allocate_block(utils::order_to_size(1)).unwrap().index(), 4);
 
         // Write garbage to the second half of the order 1 block in index 2.
-        Block::new(mapping_rc.clone(), 3).write(BlockHeader(0xffffffff), Payload(0xffffffff));
+        Block::new(mapping_arc.clone(), 3).write(BlockHeader(0xffffffff), Payload(0xffffffff));
 
         // Free order 1 block in index 2.
         assert!(heap.free_block(b1).is_ok());

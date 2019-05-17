@@ -8,7 +8,6 @@ use fuchsia_zircon::{self as zx, HandleBased};
 use mapped_vmo::Mapping;
 use parking_lot::Mutex;
 use paste;
-use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::vmo::heap::Heap;
@@ -85,7 +84,7 @@ impl Inspector {
     fn new_root(max_size: usize) -> Result<(zx::Vmo, Node), Error> {
         let (mapping, vmo) = Mapping::allocate(max_size)
             .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
-        let heap = Heap::new(Rc::new(mapping))?;
+        let heap = Heap::new(Arc::new(mapping))?;
         let state = State::create(heap)?;
         let root_node = Node::allocate(
             Arc::new(Mutex::new(state)),
@@ -266,7 +265,6 @@ mod tests {
     use crate::vmo::heap::Heap;
     use mapped_vmo::Mapping;
     use num_traits::ToPrimitive;
-    use std::rc::Rc;
 
     #[test]
     fn inspector() {
@@ -277,7 +275,7 @@ mod tests {
 
     #[test]
     fn node() {
-        let mapping = Rc::new(Mapping::allocate(4096).unwrap().0);
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
         let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
@@ -295,7 +293,7 @@ mod tests {
 
     #[test]
     fn double_metric() {
-        let mapping = Rc::new(Mapping::allocate(4096).unwrap().0);
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
         let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
@@ -320,7 +318,7 @@ mod tests {
 
     #[test]
     fn int_metric() {
-        let mapping = Rc::new(Mapping::allocate(4096).unwrap().0);
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
         let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
@@ -345,7 +343,7 @@ mod tests {
 
     #[test]
     fn uint_metric() {
-        let mapping = Rc::new(Mapping::allocate(4096).unwrap().0);
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
         let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
@@ -370,7 +368,7 @@ mod tests {
 
     #[test]
     fn string_property() {
-        let mapping = Rc::new(Mapping::allocate(4096).unwrap().0);
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
         let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
@@ -393,7 +391,7 @@ mod tests {
 
     #[test]
     fn byte_vector_property() {
-        let mapping = Rc::new(Mapping::allocate(4096).unwrap().0);
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
         let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
@@ -414,7 +412,7 @@ mod tests {
         assert_eq!(node_block.child_count().unwrap(), 0);
     }
 
-    fn get_state(mapping: Rc<Mapping>) -> Arc<Mutex<State>> {
+    fn get_state(mapping: Arc<Mapping>) -> Arc<Mutex<State>> {
         let heap = Heap::new(mapping).unwrap();
         Arc::new(Mutex::new(State::create(heap).unwrap()))
     }

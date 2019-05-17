@@ -8,13 +8,13 @@ use {
     mapped_vmo::Mapping,
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::ToPrimitive,
-    std::rc::Rc,
+    std::sync::Arc,
 };
 
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
 pub struct State {
     pub(in crate::vmo) heap: Heap,
-    header: Block<Rc<Mapping>>,
+    header: Block<Arc<Mapping>>,
 }
 
 /// Format in which the property will be read.
@@ -43,7 +43,7 @@ macro_rules! metric_fns {
                 name: &str,
                 value: $type,
                 parent_index: u32,
-            ) -> Result<Block<Rc<Mapping>>, Error> {
+            ) -> Result<Block<Arc<Mapping>>, Error> {
                 with_header_lock!(self, {
                     let (block, name_block) = self.allocate_reserved_value(name, parent_index)?;
                     block.[<become_ $name _value>](value, name_block.index(), parent_index)?;
@@ -97,7 +97,7 @@ impl State {
         &mut self,
         name: &str,
         parent_index: u32,
-    ) -> Result<Block<Rc<Mapping>>, Error> {
+    ) -> Result<Block<Arc<Mapping>>, Error> {
         with_header_lock!(self, {
             let (block, name_block) = self.allocate_reserved_value(name, parent_index)?;
             block.become_node(name_block.index(), parent_index)?;
@@ -121,7 +121,7 @@ impl State {
         value: &[u8],
         format: PropertyFormat,
         parent_index: u32,
-    ) -> Result<Block<Rc<Mapping>>, Error> {
+    ) -> Result<Block<Arc<Mapping>>, Error> {
         with_header_lock!(self, {
             let (block, name_block) = self.allocate_reserved_value(name, parent_index)?;
             block.become_property(name_block.index(), parent_index, format.to_u8().unwrap())?;
@@ -161,7 +161,7 @@ impl State {
         &mut self,
         name: &str,
         parent_index: u32,
-    ) -> Result<(Block<Rc<Mapping>>, Block<Rc<Mapping>>), Error> {
+    ) -> Result<(Block<Arc<Mapping>>, Block<Arc<Mapping>>), Error> {
         let block = self.heap.allocate_block(constants::MIN_ORDER_SIZE)?;
         let mut bytes = name.as_bytes();
         let max_bytes = constants::MAX_ORDER_SIZE - constants::HEADER_SIZE_BYTES;
@@ -197,7 +197,7 @@ impl State {
         }
     }
 
-    fn delete_value(&mut self, block: Block<Rc<Mapping>>) -> Result<(), Error> {
+    fn delete_value(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
         // Decrement parent child count.
         let parent_index = block.parent_index()?;
         if parent_index != constants::HEADER_INDEX {
@@ -226,7 +226,7 @@ impl State {
 
     fn inner_set_property_value(
         &mut self,
-        block: &Block<Rc<Mapping>>,
+        block: &Block<Arc<Mapping>>,
         value: &[u8],
     ) -> Result<(), Error> {
         self.free_extents(block.property_extent_index()?)?;
@@ -653,7 +653,7 @@ mod tests {
 
     fn get_state(size: usize) -> State {
         let (mapping, _) = Mapping::allocate(size).unwrap();
-        let heap = Heap::new(Rc::new(mapping)).unwrap();
+        let heap = Heap::new(Arc::new(mapping)).unwrap();
         State::create(heap).unwrap()
     }
 }

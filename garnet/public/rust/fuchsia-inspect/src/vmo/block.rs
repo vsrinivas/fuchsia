@@ -15,8 +15,8 @@ use {
     std::{
         cmp::min,
         ptr,
-        rc::Rc,
         sync::atomic::{fence, Ordering},
+        sync::Arc,
     },
 };
 
@@ -37,7 +37,7 @@ pub trait BlockContainerEq<RHS = Self> {
     fn ptr_eq(&self, other: &RHS) -> bool;
 }
 
-impl ReadableBlockContainer for Rc<Mapping> {
+impl ReadableBlockContainer for Arc<Mapping> {
     fn read_bytes(&self, offset: usize, bytes: &mut [u8]) -> usize {
         self.read_at(offset, bytes)
     }
@@ -55,9 +55,9 @@ impl ReadableBlockContainer for &[u8] {
     }
 }
 
-impl BlockContainerEq for Rc<Mapping> {
-    fn ptr_eq(&self, other: &Rc<Mapping>) -> bool {
-        Rc::ptr_eq(&self, &other)
+impl BlockContainerEq for Arc<Mapping> {
+    fn ptr_eq(&self, other: &Arc<Mapping>) -> bool {
+        Arc::ptr_eq(&self, &other)
     }
 }
 
@@ -67,7 +67,7 @@ impl BlockContainerEq for &[u8] {
     }
 }
 
-impl WritableBlockContainer for Rc<Mapping> {
+impl WritableBlockContainer for Arc<Mapping> {
     fn write_bytes(&self, offset: usize, bytes: &[u8]) -> usize {
         self.write_at(offset, bytes)
     }
