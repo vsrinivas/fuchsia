@@ -9,7 +9,7 @@ The easiest way to get started is to make a copy of an existing test. Be sure to
 
 1. Add an entry in `BUILD.gn` to build the new test `executable()`
 1. Create a .cmx meta file in `meta/`
-1. Add both the executable binary and the meta file to the `package()` declaration in `BUILD.gn`
+1. Add both the executable binary to the `test_package()` declaration in `BUILD.gn`
 
 ## Running tests
 

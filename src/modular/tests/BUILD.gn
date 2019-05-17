@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 group("tests") {
   testonly = true
@@ -33,20 +33,11 @@ executable("last_focus_time_test") {
   ]
 }
 
-package("modular_integration_tests") {
-  testonly = true
-
+test_package("modular_integration_tests") {
   tests = [
     {
       name = "last_focus_time_test"
       environments = basic_envs
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/last_focus_time_test.cmx"
-      dest = "last_focus_time_test.cmx"
     },
   ]
 
