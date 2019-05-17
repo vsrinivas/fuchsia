@@ -24,15 +24,18 @@ sdk_source_set("test_harness_fixture") {
   public_configs = [ "//sdk/config" ]
 
   sources = [
+    "fake_component.cc",
+    "fake_component.h",
     "test_harness_fixture.cc",
     "test_harness_fixture.h",
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
   ]
 }
 
@@ -43,6 +46,7 @@ executable("test_harness_fixture_test_bin") {
   ]
   deps = [
     ":test_harness_fixture",
+    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",

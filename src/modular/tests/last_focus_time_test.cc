@@ -4,6 +4,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/modular_test_harness/cpp/fake_component.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <sdk/lib/sys/cpp/component_context.h>
 #include <sdk/lib/sys/cpp/service_directory.h>
@@ -16,46 +17,11 @@ namespace {
 
 class LastFocusTimeTest : public modular::testing::TestHarnessFixture {};
 
-constexpr char kServiceRootPath[] = "/svc";
-
-std::unique_ptr<sys::ComponentContext> CreateComponentContext(
-    fuchsia::sys::StartupInfo startup_info) {
-  fuchsia::sys::FlatNamespace& flat = startup_info.flat_namespace;
-  if (flat.paths.size() != flat.directories.size()) {
-    return nullptr;
-  }
-
-  zx::channel service_root;
-  for (size_t i = 0; i < flat.paths.size(); ++i) {
-    if (flat.paths.at(i) == kServiceRootPath) {
-      service_root = std::move(flat.directories.at(i));
-      break;
-    }
-  }
-
-  return std::make_unique<sys::ComponentContext>(
-      std::make_unique<sys::ServiceDirectory>(std::move(service_root)),
-      std::move(startup_info.launch_info.directory_request));
-}
-
-// A basic mock session shell component: gives access to services
+// A basic fake session shell component: gives access to services
 // available to session shells in their environment, as well as an
 // implementation of fuchsia::modular::SessionShell built for tests.
-class TestSessionShell {
+class TestSessionShell : public modular::testing::FakeComponent {
  public:
-  TestSessionShell(std::unique_ptr<sys::ComponentContext> component_context)
-      : component_context_(std::move(component_context)) {
-    component_context_->svc()->Connect(session_shell_context_.NewRequest());
-    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-
-    component_context_->outgoing()->AddPublicService(
-        session_shell_impl_.GetHandler());
-  }
-
-  sys::ComponentContext* component_context() {
-    return component_context_.get();
-  }
-
   modular::testing::SessionShellImpl* session_shell_impl() {
     return &session_shell_impl_;
   }
@@ -69,25 +35,18 @@ class TestSessionShell {
   }
 
  private:
-  std::unique_ptr<sys::ComponentContext> component_context_;
+  // |modular::testing::FakeComponent|
+  void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
+    component_context()->svc()->Connect(session_shell_context_.NewRequest());
+    session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+
+    component_context()->outgoing()->AddPublicService(
+        session_shell_impl_.GetHandler());
+  }
+
   modular::testing::SessionShellImpl session_shell_impl_;
   fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
-};
-
-// A basic mock module component. It doesn't do anything but the minimal
-// set of operations needed to be a module.
-class TestModule {
- public:
-  TestModule(std::unique_ptr<sys::ComponentContext> component_context)
-      : component_context_(std::move(component_context)) {}
-
-  sys::ComponentContext* component_context() {
-    return component_context_.get();
-  }
-
- private:
-  std::unique_ptr<sys::ComponentContext> component_context_;
 };
 
 // A simple story provider watcher implementation. It confirms that it sees an
@@ -163,64 +122,41 @@ class TestStoryWatcher : fuchsia::modular::StoryWatcher {
 const char kStoryName[] = "storyname";
 
 TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
-  fuchsia::modular::testing::TestHarnessSpec spec;
-  const auto test_session_shell_url = InterceptSessionShell(&spec,
-                                                            R"(
-      {
-        "sandbox": {
-          "services": [
-            "fuchsia.modular.SessionShellContext",
-            "fuchsia.modular.PuppetMaster"
-          ]
-        }
-      })");
+  modular::testing::TestHarnessBuilder builder;
 
-  // And listen for the module we're going to create.
-  const auto test_module_url = GenerateFakeUrl();
-  fuchsia::modular::testing::InterceptSpec intercept_spec;
-  intercept_spec.set_component_url(test_module_url);
-  spec.mutable_components_to_intercept()->push_back(std::move(intercept_spec));
+  TestSessionShell test_session_shell;
+  builder.InterceptSessionShell(
+      test_session_shell.GetOnCreateHandler(),
+      {.sandbox_services = {"fuchsia.modular.SessionShellContext",
+                            "fuchsia.modular.PuppetMaster"}});
 
-  // Listen for interception of components we're implementing here and
-  // assign them to local variables.
-  std::unique_ptr<TestSessionShell> test_session_shell;
-  std::unique_ptr<TestModule> test_module;
-  test_harness().events().OnNewComponent =
-      [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
-        if (startup_info.launch_info.url == test_session_shell_url) {
-          test_session_shell = std::make_unique<TestSessionShell>(
-              CreateComponentContext(std::move(startup_info)));
-        } else if (startup_info.launch_info.url == test_module_url) {
-          test_module = std::make_unique<TestModule>(
-              CreateComponentContext(std::move(startup_info)));
-        } else {
-          FXL_LOG(FATAL) << "Unexpected component URL: "
-                         << startup_info.launch_info.url;
-        }
-      };
+  // Listen for the module we're going to create.
+  modular::testing::FakeComponent test_module;
+  const auto test_module_url = builder.GenerateFakeUrl();
+  builder.InterceptComponent(test_module.GetOnCreateHandler(),
+                             {.url = test_module_url});
 
-  test_harness()->Run(std::move(spec));
+  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
+  test_harness()->Run(builder.BuildSpec());
 
   // Wait for our session shell to start.
-  RunLoopUntil([&] { return !!test_session_shell; });
+  RunLoopUntil([&] { return test_session_shell.is_running(); });
 
   // Connect to extra services also provided to session shells.
   fuchsia::modular::PuppetMasterPtr puppet_master;
-  test_session_shell->component_context()->svc()->Connect(
+  test_session_shell.component_context()->svc()->Connect(
       puppet_master.NewRequest());
 
   fuchsia::modular::FocusControllerPtr focus_controller;
   fuchsia::modular::FocusProviderPtr focus_provider;
-  test_session_shell->session_shell_context()->GetFocusController(
+  test_session_shell.session_shell_context()->GetFocusController(
       focus_controller.NewRequest());
-  test_session_shell->session_shell_context()->GetFocusProvider(
+  test_session_shell.session_shell_context()->GetFocusProvider(
       focus_provider.NewRequest());
 
   // Watch for changes to the session.
   TestStoryProviderWatcher story_provider_watcher;
-  story_provider_watcher.Watch(test_session_shell->story_provider());
+  story_provider_watcher.Watch(test_session_shell.story_provider());
 
   // Keep track of the focus timestamps that we receive for the story created
   // below so we can assert that they make sense at the end of the test.
@@ -251,7 +187,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   // Watch the story and then start it.
   TestStoryWatcher story_watcher;
   fuchsia::modular::StoryControllerPtr story_controller;
-  test_session_shell->story_provider()->GetController(
+  test_session_shell.story_provider()->GetController(
       kStoryName, story_controller.NewRequest());
   story_watcher.Watch(story_controller.get());
   story_controller->RequestStart();
@@ -266,7 +202,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   // 1) The story is created.
   // 2) The story transitions to running.
   // 3) The story is focused.
-  RunLoopUntil([&]() { return last_focus_timestamps.size() == 3; });
+  RunLoopUntil([&] { return last_focus_timestamps.size() == 3; });
   EXPECT_EQ(0, last_focus_timestamps[0]);
   EXPECT_EQ(0, last_focus_timestamps[1]);
   EXPECT_LT(0, last_focus_timestamps[2]);
