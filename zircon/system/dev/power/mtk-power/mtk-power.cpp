@@ -16,15 +16,15 @@
 
 namespace power {
 
-const fbl::Vector<uint32_t> kSupportedVoltageList1{ 1800000, 1900000, 2000000, 2200000 };
-const fbl::Vector<uint32_t> kSupportedVoltageList2{ 3300000, 3400000, 3500000, 3600000 };
-const fbl::Vector<uint32_t> kSupportedVoltageList3{ 1800000, 3300000 };
-const fbl::Vector<uint32_t> kSupportedVoltageList4{ 3000000, 3300000 };
-const fbl::Vector<uint32_t> kSupportedVoltageList5{ 1200000, 1300000, 1500000, 1800000, 2000000,
-                                                    2800000, 3000000, 3300000 };
-const fbl::Vector<uint32_t> kSupportedVoltageList6{ 1240000, 1390000 };
-const fbl::Vector<uint32_t> kSupportedVoltageList7{ 1200000, 1300000, 1500000, 1800000 };
-const fbl::Vector<uint32_t> kSupportedVoltageList8{ 1800000, 2000000 };
+const fbl::Vector<uint32_t> kSupportedVoltageList1{1800000, 1900000, 2000000, 2200000};
+const fbl::Vector<uint32_t> kSupportedVoltageList2{3300000, 3400000, 3500000, 3600000};
+const fbl::Vector<uint32_t> kSupportedVoltageList3{1800000, 3300000};
+const fbl::Vector<uint32_t> kSupportedVoltageList4{3000000, 3300000};
+const fbl::Vector<uint32_t> kSupportedVoltageList5{1200000, 1300000, 1500000, 1800000,
+                                                   2000000, 2800000, 3000000, 3300000};
+const fbl::Vector<uint32_t> kSupportedVoltageList6{1240000, 1390000};
+const fbl::Vector<uint32_t> kSupportedVoltageList7{1200000, 1300000, 1500000, 1800000};
+const fbl::Vector<uint32_t> kSupportedVoltageList8{1800000, 2000000};
 
 void MtkRegulator::WaitForIdle() {
     while (PmicWacs2RData::Get().ReadFrom(&pmic_mmio_).wacs2_fsm() !=
@@ -76,8 +76,7 @@ zx_status_t MtkRegulator::Enable() {
         zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
         return status;
     }
-    status = WritePMICReg(enable_register_,
-                          (cur_val | 1 << enable_bit_));
+    status = WritePMICReg(enable_register_, (cur_val | 1 << enable_bit_));
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
         return status;
@@ -97,14 +96,134 @@ zx_status_t MtkRegulator::Disable() {
         zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
         return status;
     }
-    status = WritePMICReg(enable_register_,
-                          (cur_val &= ~(1 << enable_bit_)));
+    status = WritePMICReg(enable_register_, (cur_val &= ~(1 << enable_bit_)));
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
         return status;
     }
 
     enabled_ = false;
+    return ZX_OK;
+}
+
+zx_status_t MtkBuckRegulator::SetVoltageSelReg() {
+    uint32_t ctrl_reg_val;
+    zx_status_t status = ReadPMICReg(buck_voltage_ctrl_reg_, &ctrl_reg_val);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    if (ctrl_reg_val & (1 << 1)) {
+        voltage_sel_reg_ = buck_voltage_on_reg_;
+    }
+    return ZX_OK;
+}
+
+zx_status_t MtkBuckRegulator::GetVoltageSelector(uint32_t set_voltage, uint32_t* actual_voltage,
+                                                 uint16_t* selector) {
+    if (!step_size_) {
+        return ZX_ERR_BAD_STATE;
+    }
+    if (set_voltage < min_voltage_) {
+        zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (set_voltage > max_voltage_) {
+        zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    uint16_t sel = static_cast<uint16_t>((set_voltage - min_voltage_) / step_size_);
+    *actual_voltage = min_voltage_ + (sel * step_size_);
+    *selector = sel;
+    return ZX_OK;
+}
+
+zx_status_t MtkBuckRegulator::RequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
+    uint16_t selector = 0;
+    zx_status_t status = GetVoltageSelector(voltage, actual_voltage, &selector);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (cur_voltage_ == *actual_voltage) {
+        return ZX_OK;
+    }
+    uint32_t cur_val;
+    status = ReadPMICReg(voltage_sel_reg_, &cur_val);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    cur_val &= ~voltage_sel_mask_;
+    cur_val |= (selector & voltage_sel_mask_);
+
+    status = WritePMICReg(voltage_sel_reg_, cur_val);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    cur_voltage_ = *actual_voltage;
+    return ZX_OK;
+}
+
+zx_status_t MtkLdoRegulator::GetVoltageSelector(uint32_t set_voltage, uint32_t* actual_voltage,
+                                                uint16_t* selector) {
+    size_t num_voltages = supported_voltages_.size();
+    if (num_voltages == 0) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (set_voltage < supported_voltages_[0] ||
+        set_voltage > supported_voltages_[num_voltages - 1]) {
+        zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    for (size_t i = 0; i < num_voltages; i++) {
+        uint32_t voltage = supported_voltages_[i];
+        if (voltage == set_voltage) {
+            *selector = static_cast<uint16_t>(i);
+            *actual_voltage = voltage;
+            return ZX_OK;
+        }
+        if (set_voltage > voltage && set_voltage < supported_voltages_[i + 1]) {
+            *selector = static_cast<uint16_t>(i);
+            *actual_voltage = voltage;
+            return ZX_OK;
+        }
+    }
+    return ZX_ERR_BAD_STATE;
+}
+
+zx_status_t MtkLdoRegulator::RequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
+    uint16_t selector = 0;
+    zx_status_t status = GetVoltageSelector(voltage, actual_voltage, &selector);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (cur_voltage_ == *actual_voltage) {
+        return ZX_OK;
+    }
+    uint32_t cur_val;
+    status = ReadPMICReg(voltage_sel_reg_, &cur_val);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    cur_val &= ~voltage_sel_mask_;
+    cur_val |= ((selector << voltage_sel_shift_) & voltage_sel_mask_);
+
+    status = WritePMICReg(voltage_sel_reg_, cur_val);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    cur_voltage_ = *actual_voltage;
     return ZX_OK;
 }
 
@@ -134,8 +253,8 @@ zx_status_t MtkPower::PowerImplGetPowerDomainStatus(uint32_t index,
     if (index >= kMt8167NumPowerDomains) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    *out_status = power_domains_[index]->enabled() ? POWER_DOMAIN_STATUS_ENABLED :
-                                                     POWER_DOMAIN_STATUS_DISABLED;
+    *out_status = power_domains_[index]->enabled() ? POWER_DOMAIN_STATUS_ENABLED
+                                                   : POWER_DOMAIN_STATUS_DISABLED;
     return ZX_OK;
 }
 
@@ -148,8 +267,11 @@ zx_status_t MtkPower::PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t
 }
 
 zx_status_t MtkPower::PowerImplRequestVoltage(uint32_t index, uint32_t voltage,
-                                              uint32_t* out_voltage) {
-    return ZX_ERR_NOT_SUPPORTED;
+                                              uint32_t* actual_voltage) {
+    if (index >= kMt8167NumPowerDomains) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return power_domains_[index]->RequestVoltage(voltage, actual_voltage);
 }
 
 zx_status_t MtkPower::PowerImplWritePmicCtrlReg(uint32_t index, uint32_t reg_addr, uint32_t value) {
@@ -176,6 +298,7 @@ struct MtkRegulatorParams {
     uint8_t enable_bit = 0;
     uint32_t select_register = 0;
     uint32_t select_mask = 0;
+    uint32_t select_shift = 0;
     uint32_t buck_voltage_control_register = 0;
     uint32_t buck_voltage_on_register = 0;
     uint32_t min_voltage = 0;
@@ -191,6 +314,7 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
                     .enable_bit = 1,
                     .select_register = kPmicVprocCon9,
                     .select_mask = 0x7f,
+                    .select_shift = 0,
                     .buck_voltage_control_register = kPmicVprocCon5,
                     .buck_voltage_on_register = kPmicVprocCon10,
                     .min_voltage = 700000,
@@ -201,6 +325,7 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
                     .enable_bit = 1,
                     .select_register = kPmicVcoreCon9,
                     .select_mask = 0x7f,
+                    .select_shift = 0,
                     .buck_voltage_control_register = kPmicVcoreCon5,
                     .buck_voltage_on_register = kPmicVcoreCon10,
                     .min_voltage = 700000,
@@ -211,6 +336,7 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
                    .enable_bit = 1,
                    .select_register = kPmicVsysCon9,
                    .select_mask = 0x7f,
+                   .select_shift = 0,
                    .buck_voltage_control_register = kPmicVsysCon5,
                    .buck_voltage_on_register = kPmicVsysCon10,
                    .min_voltage = 1400000,
@@ -230,6 +356,7 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
             .enable_bit = 14,
             .select_register = kPmicAnaLdoCon8,
             .select_mask = 0x60,
+            .select_shift = 5,
             .supported_voltage = kSupportedVoltageList1,
         },
     [kALdoVAdc18] =
@@ -253,13 +380,16 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
             .enable_bit = 15,
             .default_voltage = 2800000,
         },
-    [kVSysLdoVm] = {.type = LDO,
-                    .enable_register = kPmicDigLdoCon47,
-                    .enable_bit = 14,
-                    .select_register = kPmicDigLdoCon48,
-                    .select_mask = 0x30,
-                    .supported_voltage = kSupportedVoltageList6,
-                   },
+    [kVSysLdoVm] =
+        {
+            .type = LDO,
+            .enable_register = kPmicDigLdoCon47,
+            .enable_bit = 14,
+            .select_register = kPmicDigLdoCon48,
+            .select_mask = 0x30,
+            .select_shift = 4,
+            .supported_voltage = kSupportedVoltageList6,
+        },
     [kVSysLdoVcn18] =
         {
             .type = FIXED,
@@ -288,6 +418,7 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
             .enable_bit = 14,
             .select_register = kPmicDigLdoCon52,
             .select_mask = 0x60,
+            .select_shift = 5,
             .supported_voltage = kSupportedVoltageList7,
         },
     [kVDLdoVcn35] = {.type = LDO,
@@ -295,8 +426,8 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
                      .enable_bit = 12,
                      .select_register = kPmicAnaLdoCon16,
                      .select_mask = 0xC,
-                     .supported_voltage = kSupportedVoltageList2
-                    },
+                     .select_shift = 6,
+                     .supported_voltage = kSupportedVoltageList2},
     [kVDLdoVio28] =
         {
             .type = FIXED,
@@ -309,22 +440,22 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
                       .enable_bit = 14,
                       .select_register = kPmicDigLdoCon27,
                       .select_mask = 0x80,
-                      .supported_voltage = kSupportedVoltageList4
-                     },
+                      .select_shift = 7,
+                      .supported_voltage = kSupportedVoltageList4},
     [kVDLdoVmc] = {.type = LDO,
                    .enable_register = kPmicDigLdoCon3,
                    .enable_bit = 12,
                    .select_register = kPmicDigLdoCon24,
                    .select_mask = 0x10,
-                   .supported_voltage = kSupportedVoltageList3
-                  },
+                   .select_shift = 4,
+                   .supported_voltage = kSupportedVoltageList3},
     [kVDLdoVmch] = {.type = LDO,
                     .enable_register = kPmicDigLdoCon5,
                     .enable_bit = 14,
                     .select_register = kPmicDigLdoCon26,
                     .select_mask = 0x80,
-                    .supported_voltage = kSupportedVoltageList4
-                   },
+                    .select_shift = 7,
+                    .supported_voltage = kSupportedVoltageList4},
     [kVDLdoVUsb33] =
         {
             .type = FIXED,
@@ -337,8 +468,8 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
                     .enable_bit = 15,
                     .select_register = kPmicDigLdoCon28,
                     .select_mask = 0xE0,
-                    .supported_voltage = kSupportedVoltageList5
-                   },
+                    .select_shift = 5,
+                    .supported_voltage = kSupportedVoltageList5},
     [kVDLdoVM25] =
         {
             .type = FIXED,
@@ -351,15 +482,15 @@ MtkRegulatorParams kMtkRegulatorParams[] = {
                     .enable_bit = 15,
                     .select_register = kPmicDigLdoCon29,
                     .select_mask = 0xE0,
-                    .supported_voltage = kSupportedVoltageList5
-                   },
+                    .select_shift = 5,
+                    .supported_voltage = kSupportedVoltageList5},
     [kVDLdoVCamAf] = {.type = LDO,
                       .enable_register = kPmicDigLdoCon31,
                       .enable_bit = 15,
                       .select_register = kPmicDigLdoCon32,
                       .select_mask = 0xE0,
-                      .supported_voltage = kSupportedVoltageList5
-                     },
+                      .select_shift = 5,
+                      .supported_voltage = kSupportedVoltageList5},
 };
 
 void MtkPower::InitializePowerDomains() {
@@ -368,18 +499,20 @@ void MtkPower::InitializePowerDomains() {
         if (reg_params.type == BUCK) {
             power_domains_[i] = std::make_unique<MtkBuckRegulator>(
                 pmic_mmio_.View(0), reg_params.enable_register, reg_params.enable_bit,
-                reg_params.select_register, reg_params.select_mask,
+                reg_params.select_register, reg_params.select_mask, reg_params.select_shift,
                 reg_params.buck_voltage_control_register, reg_params.buck_voltage_on_register,
                 reg_params.min_voltage, reg_params.max_voltage, reg_params.step_size);
+            MtkBuckRegulator* buck = static_cast<MtkBuckRegulator*>(power_domains_[i].get());
+            buck->SetVoltageSelReg();
         } else if (reg_params.type == FIXED) {
-            power_domains_[i] = std::make_unique<MtkFixedRegulator>(pmic_mmio_.View(0),
-                                      reg_params.default_voltage,
-                                      reg_params.enable_register, reg_params.enable_bit);
+            power_domains_[i] = std::make_unique<MtkFixedRegulator>(
+                pmic_mmio_.View(0), reg_params.default_voltage, reg_params.enable_register,
+                reg_params.enable_bit);
         } else if (reg_params.type == LDO) {
-            power_domains_[i] = std::make_unique<MtkLdoRegulator>(pmic_mmio_.View(0),
-                                      reg_params.enable_register, reg_params.enable_bit,
-                                      reg_params.select_register, reg_params.select_mask,
-                                      reg_params.supported_voltage);
+            power_domains_[i] = std::make_unique<MtkLdoRegulator>(
+                pmic_mmio_.View(0), reg_params.enable_register, reg_params.enable_bit,
+                reg_params.select_register, reg_params.select_mask, reg_params.select_shift,
+                reg_params.supported_voltage);
         }
     }
 }

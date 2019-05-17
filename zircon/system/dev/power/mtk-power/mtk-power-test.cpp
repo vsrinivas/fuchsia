@@ -72,10 +72,31 @@ void EnableDomainHelper(ddk_mock::MockMmioRegRegion& pmic_regs, MtkRegulator& do
     WritePmicRegHelper(pmic_regs, domain.enable_register(), 1 << domain.enable_bit());
 }
 
+void InitPowerRegulatorsHelper(ddk_mock::MockMmioRegRegion& pmic_regs) {
+    ReadPmicRegHelper(pmic_regs, kPmicVprocCon5, 1 << 1);
+    ReadPmicRegHelper(pmic_regs, kPmicVcoreCon5, 1 << 1);
+    ReadPmicRegHelper(pmic_regs, kPmicVsysCon5, 1 << 1);
+}
+
+TEST(PowerTest, Init) {
+    ddk_mock::MockMmioReg pmic_reg_array[kPmicMmioRegCount];
+    ddk_mock::MockMmioRegRegion pmic_regs(pmic_reg_array, sizeof(uint32_t), kPmicMmioRegCount);
+    MtkPowerTest power_test(pmic_regs);
+
+    InitPowerRegulatorsHelper(pmic_regs);
+    power_test.InitPowerRegulators();
+
+    // Test if the buck regulators have the right voltage_sel_reg
+    MtkBuckRegulator& domain = static_cast<MtkBuckRegulator&>(power_test.GetPowerDomain(0));
+    ASSERT_EQ(domain.voltage_sel_reg(), kPmicVprocCon10);
+}
+
 TEST(PowerTest, EnablePowerDomain) {
     ddk_mock::MockMmioReg pmic_reg_array[kPmicMmioRegCount];
     ddk_mock::MockMmioRegRegion pmic_regs(pmic_reg_array, sizeof(uint32_t), kPmicMmioRegCount);
     MtkPowerTest power_test(pmic_regs);
+
+    InitPowerRegulatorsHelper(pmic_regs);
     power_test.InitPowerRegulators();
 
     // Test enabling invalid PowerDomain fails
@@ -94,6 +115,8 @@ TEST(PowerTest, DisablePowerDomain) {
     ddk_mock::MockMmioReg pmic_reg_array[kPmicMmioRegCount];
     ddk_mock::MockMmioRegRegion pmic_regs(pmic_reg_array, sizeof(uint32_t), kPmicMmioRegCount);
     MtkPowerTest power_test(pmic_regs);
+
+    InitPowerRegulatorsHelper(pmic_regs);
     power_test.InitPowerRegulators();
 
     // Test disabling invalid PowerDomain fails
@@ -123,12 +146,14 @@ TEST(PowerTest, GetSupportedVoltageRange) {
     ddk_mock::MockMmioReg pmic_reg_array[kPmicMmioRegCount];
     ddk_mock::MockMmioRegRegion pmic_regs(pmic_reg_array, sizeof(uint32_t), kPmicMmioRegCount);
     MtkPowerTest power_test(pmic_regs);
+
+    InitPowerRegulatorsHelper(pmic_regs);
     power_test.InitPowerRegulators();
-    uint32_t test_index = 0, min_voltage = 0, max_voltage = 0;
+
+    uint32_t min_voltage = 0, max_voltage = 0;
 
     // Test Buck Regulator
-    ASSERT_EQ(power_test.PowerImplGetSupportedVoltageRange(test_index, &min_voltage, &max_voltage),
-              ZX_OK);
+    ASSERT_EQ(power_test.PowerImplGetSupportedVoltageRange(0, &min_voltage, &max_voltage), ZX_OK);
     ASSERT_EQ(min_voltage, 700000);
     ASSERT_EQ(max_voltage, 1493750);
 
@@ -137,9 +162,74 @@ TEST(PowerTest, GetSupportedVoltageRange) {
     ASSERT_EQ(min_voltage, 1800000);
     ASSERT_EQ(max_voltage, 2200000);
 
-    //Test Fixed Regulator
+    // Test Fixed Regulator
     ASSERT_EQ(power_test.PowerImplGetSupportedVoltageRange(3, &min_voltage, &max_voltage),
               ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST(PowerTest, RequestVoltage) {
+    ddk_mock::MockMmioReg pmic_reg_array[kPmicMmioRegCount];
+    ddk_mock::MockMmioRegRegion pmic_regs(pmic_reg_array, sizeof(uint32_t), kPmicMmioRegCount);
+    MtkPowerTest power_test(pmic_regs);
+
+    InitPowerRegulatorsHelper(pmic_regs);
+    power_test.InitPowerRegulators();
+    pmic_regs.VerifyAll();
+
+    uint32_t out_voltage;
+    // Fixed Regulator tests
+    ASSERT_EQ(power_test.PowerImplRequestVoltage(3, 0, &out_voltage), ZX_ERR_NOT_SUPPORTED);
+
+    // BUCK Regulator tests
+    uint32_t test_index = 0;
+    // With voltage less than min voltage
+    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, 0, &out_voltage),
+              ZX_ERR_NOT_SUPPORTED);
+    // With voltage greater than max voltage
+    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, 1500000, &out_voltage),
+              ZX_ERR_NOT_SUPPORTED);
+
+    // With a supported voltage
+    uint32_t test_voltage = 706251;
+    uint16_t expected_selector = 1;
+    uint32_t expected_out_voltage = 706250;
+
+    MtkBuckRegulator& buck_domain =
+        static_cast<MtkBuckRegulator&>(power_test.GetPowerDomain(test_index));
+    uint32_t expected_write_value =
+        ((expected_selector << buck_domain.voltage_sel_shift()) & buck_domain.voltage_sel_mask());
+    ReadPmicRegHelper(pmic_regs, buck_domain.voltage_sel_reg(), 0);
+    WritePmicRegHelper(pmic_regs, buck_domain.voltage_sel_reg(), expected_write_value);
+    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage), ZX_OK);
+    ASSERT_EQ(buck_domain.cur_voltage(), out_voltage);
+    ASSERT_EQ(out_voltage, expected_out_voltage);
+
+    // With a voltage that is already set
+    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage), ZX_OK);
+
+    // LDO Regulator tests
+    test_index = 4;
+    // With voltage less than min voltage
+    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, 1700000, &out_voltage),
+              ZX_ERR_NOT_SUPPORTED);
+    // With voltage greater than max voltage
+    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, 2200500, &out_voltage),
+              ZX_ERR_NOT_SUPPORTED);
+    test_voltage = 1800500;
+    expected_selector = 0;
+    expected_out_voltage = 1800000;
+    MtkLdoRegulator& ldo_domain =
+        static_cast<MtkLdoRegulator&>(power_test.GetPowerDomain(test_index));
+    expected_write_value =
+        ((expected_selector << ldo_domain.voltage_sel_shift()) & ldo_domain.voltage_sel_mask());
+    ReadPmicRegHelper(pmic_regs, ldo_domain.voltage_sel_reg(), 0);
+    WritePmicRegHelper(pmic_regs, ldo_domain.voltage_sel_reg(), expected_write_value);
+    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage), ZX_OK);
+    ASSERT_EQ(ldo_domain.cur_voltage(), out_voltage);
+    ASSERT_EQ(out_voltage, expected_out_voltage);
+
+    // With a voltage that is already set
+    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage), ZX_OK);
 }
 
 } // namespace power
