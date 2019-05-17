@@ -162,6 +162,9 @@ Protocol InputInterpreter::ExtractProtocol(hid::Usage input) {
       {{static_cast<uint16_t>(Page::kGenericDesktop),
         static_cast<uint32_t>(GenericDesktop::kMouse)},
        Protocol::Mouse},
+      {{static_cast<uint16_t>(Page::kGenericDesktop),
+        static_cast<uint32_t>(GenericDesktop::kPointer)},
+       Protocol::Pointer},
       // Add more sensors here
   };
 
@@ -260,6 +263,14 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
         input_device.device = std::make_unique<Buttons>();
         input_device.report->media_buttons =
             fuchsia::ui::input::MediaButtonsReport::New();
+        break;
+      }
+      case Protocol::Pointer: {
+        FXL_VLOG(2) << "Device " << name() << " has HID pointer";
+
+        input_device.device = std::make_unique<Pointer>();
+        input_device.report->touchscreen =
+            fuchsia::ui::input::TouchscreenReport::New();
         break;
       }
       case Protocol::Sensor: {
@@ -372,7 +383,7 @@ bool InputInterpreter::ParseProtocol() {
     const hid::ReportDescriptor* desc = &dev_desc->report[rep];
     if (desc->input_count != 0) {
       if (!ParseHidInputReportDescriptor(desc)) {
-        return false;
+        continue;
       }
     }
     if (desc->feature_count != 0) {

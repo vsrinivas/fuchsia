@@ -71,6 +71,8 @@ source_set("device") {
     "hid_decoder.h",
     "mouse.cc",
     "mouse.h",
+    "pointer.cc",
+    "pointer.h",
     "sensor.cc",
     "sensor.h",
     "stylus.cc",

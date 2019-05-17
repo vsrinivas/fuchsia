@@ -4,6 +4,7 @@
 
 #include <hid/boot.h>
 #include <hid/buttons.h>
+#include <hid/egalax.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
 
@@ -129,6 +130,40 @@ TEST_F(ReaderInterpreterInputTest, BootKeyboard) {
   RunLoopUntilIdle();
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_Z},
             last_report_.keyboard->pressed_keys);
+}
+
+TEST_F(ReaderInterpreterInputTest, EgalaxTouchScreen) {
+  // Create the egalax report descriptor.
+  size_t desc_len;
+  const uint8_t* desc_data = get_egalax_touch_report_desc(&desc_len);
+  ASSERT_TRUE(desc_len > 0);
+  std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
+
+  // Create the MockHidDecoder with our report descriptor.
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor);
+  RunLoopUntilIdle();
+
+  // Create a single touch report.
+  egalax_touch_t touch_report = {};
+  touch_report.report_id = EGALAX_RPT_ID_TOUCH;
+  touch_report.x = 100;
+  touch_report.y = 200;
+  touch_report.button_pad = 0xFF;
+  uint8_t* touch_report_bytes = reinterpret_cast<uint8_t*>(&touch_report);
+  std::vector<uint8_t> report(touch_report_bytes,
+                              touch_report_bytes + sizeof(touch_report));
+
+  // Send the touch report.
+  device->SetHidDecoderRead(report, sizeof(touch_report));
+  RunLoopUntilIdle();
+
+  // Check that we saw one report, and that the data was sent out correctly.
+  ASSERT_EQ(1, report_count_);
+  ASSERT_TRUE(last_report_.touchscreen);
+  fuchsia::ui::input::Touch touch = last_report_.touchscreen->touches.at(0);
+  EXPECT_TRUE(touch.finger_id = 1);
+  EXPECT_TRUE(touch.x = 100);
+  EXPECT_TRUE(touch.y = 200);
 }
 
 TEST_F(ReaderInterpreterInputTest, ParadiseTouchscreen) {

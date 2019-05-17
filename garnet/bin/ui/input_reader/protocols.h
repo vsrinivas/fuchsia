@@ -12,6 +12,7 @@ enum class Protocol : uint32_t {
   Other,
   Keyboard,
   Mouse,
+  Pointer,
   Touch,
   Touchpad,
   Gamepad,
