@@ -563,13 +563,6 @@ zx_status_t OpteeClient::AllocateSharedMemory(size_t size,
     auto sh_mem_addr = reinterpret_cast<uintptr_t>(&allocated_shared_memory_.back());
     *out_mem_id = static_cast<uint64_t>(sh_mem_addr);
 
-    // TODO(godtamit): Remove when all RPC is done
-    zxlogf(INFO,
-           "optee: allocated shared memory at physical addr 0x%" PRIuPTR
-           " with id 0x%" PRIu64 "\n",
-           *out_phys_addr,
-           *out_mem_id);
-
     return status;
 }
 
@@ -581,12 +574,7 @@ zx_status_t OpteeClient::FreeSharedMemory(uint64_t mem_id) {
     }
 
     // Destructor of SharedMemory will automatically free block back into pool
-    //
-    // TODO(godtamit): Remove mem_to_free and logging when all of RPC is implemented
-    __UNUSED auto mem_to_free = allocated_shared_memory_.erase(mem_iter);
-    zxlogf(INFO,
-           "optee: successfully freed shared memory at phys 0x%" PRIuPTR "\n",
-           mem_to_free->paddr());
+    allocated_shared_memory_.erase(mem_iter);
 
     return ZX_OK;
 }
@@ -703,8 +691,6 @@ zx_status_t OpteeClient::HandleRpc(const RpcFunctionArgs& args, RpcFunctionResul
         status = HandleRpcFreeMemory(args.free_memory, &out_result->free_memory);
         break;
     case kRpcFunctionIdDeliverIrq:
-        // TODO(godtamit): Remove when all of RPC is implemented
-        zxlogf(INFO, "optee: delivering IRQ\n");
         // Foreign interrupt detected while in the secure world
         // Zircon handles this so just mark the RPC as handled
         status = ZX_OK;

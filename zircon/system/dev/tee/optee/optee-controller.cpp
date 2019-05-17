@@ -366,31 +366,13 @@ uint32_t OpteeController::CallWithMessage(const optee::Message& message,
             zxlogf(ERROR, "optee: hit thread limit, need to fix this\n");
             break;
         } else if (optee::IsReturnRpc(result.response.status)) {
-            // TODO(godtamit): Remove this when all of RPC is implemented
-            zxlogf(INFO,
-                   "optee: rpc call: %" PRIx32 " arg1: %" PRIx32
-                   " arg2: %" PRIx32 " arg3: %" PRIx32 "\n",
-                   result.response.status,
-                   result.response.arg1,
-                   result.response.arg2,
-                   result.response.arg3);
-            status = rpc_handler(result.rpc_args, &func_call.rpc_result);
-
-            // TODO(godtamit): Re-evaluate whether ZX_DEBUG_ASSERT is necessary once all supported
-            // RPC commands are implemented
-            //
-            // Crash if we run into unsupported functionality
-            // Otherwise, if status != ZX_OK, we can still call the TEE with the response and let it
-            // clean up on its end.
-            ZX_DEBUG_ASSERT(status != ZX_ERR_NOT_SUPPORTED);
+            rpc_handler(result.rpc_args, &func_call.rpc_result);
         } else {
             return_value = result.response.status;
             break;
         }
     }
 
-    // TODO(godtamit): Remove after all of RPC is implemented
-    zxlogf(INFO, "optee: CallWithMessage returning %i\n", return_value);
     return return_value;
 }
 } // namespace optee
