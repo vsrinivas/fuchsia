@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use num_derive::{FromPrimitive, ToPrimitive};
-use std::fmt;
+use {
+    num_derive::{FromPrimitive, ToPrimitive},
+    std::fmt,
+};
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, FromPrimitive, ToPrimitive)]
 pub enum BlockType {

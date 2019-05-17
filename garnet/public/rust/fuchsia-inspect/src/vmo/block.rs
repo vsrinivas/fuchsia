@@ -2,19 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use byteorder::{ByteOrder, LittleEndian};
-use failure::{format_err, Error};
-use mapped_vmo::Mapping;
-use num_traits::{FromPrimitive, ToPrimitive};
-use std::cmp::min;
-use std::ptr;
-use std::rc::Rc;
-use std::sync::atomic::{fence, Ordering};
-
-use crate::vmo::bitfields::{BlockHeader, Payload};
-use crate::vmo::block_type::BlockType;
-use crate::vmo::constants;
-use crate::vmo::utils;
+use {
+    crate::vmo::{
+        bitfields::{BlockHeader, Payload},
+        block_type::BlockType,
+        constants, utils,
+    },
+    byteorder::{ByteOrder, LittleEndian},
+    failure::{format_err, Error},
+    mapped_vmo::Mapping,
+    num_traits::{FromPrimitive, ToPrimitive},
+    std::{
+        cmp::min,
+        ptr,
+        rc::Rc,
+        sync::atomic::{fence, Ordering},
+    },
+};
 
 pub struct Block<T> {
     index: u32,

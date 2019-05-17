@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error};
-use mapped_vmo::Mapping;
-use num_traits::ToPrimitive;
-use std::{cmp::min, rc::Rc};
-
-use crate::vmo::block::Block;
-use crate::vmo::block_type::BlockType;
-use crate::vmo::constants;
-use crate::vmo::utils;
+use {
+    crate::vmo::{block::Block, block_type::BlockType, constants, utils},
+    failure::{format_err, Error},
+    mapped_vmo::Mapping,
+    num_traits::ToPrimitive,
+    std::{cmp::min, rc::Rc},
+};
 
 pub struct Heap {
     mapping: Rc<Mapping>,

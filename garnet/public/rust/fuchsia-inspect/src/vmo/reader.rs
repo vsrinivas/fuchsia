@@ -4,8 +4,7 @@
 
 #![cfg(test)]
 
-use crate::vmo::block::Block;
-use crate::vmo::utils;
+use crate::vmo::{block::Block, utils};
 
 /// Iterates over a byte array containing Inspect API blocks and returns the
 /// blocks in order.

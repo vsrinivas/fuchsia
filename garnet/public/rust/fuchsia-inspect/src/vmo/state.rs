@@ -2,17 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error};
-use mapped_vmo::Mapping;
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::ToPrimitive;
-use std::rc::Rc;
-
-use crate::vmo::block::Block;
-use crate::vmo::block_type::BlockType;
-use crate::vmo::constants;
-use crate::vmo::heap::Heap;
-use crate::vmo::utils;
+use {
+    crate::vmo::{block::Block, block_type::BlockType, constants, heap::Heap, utils},
+    failure::{format_err, Error},
+    mapped_vmo::Mapping,
+    num_derive::{FromPrimitive, ToPrimitive},
+    num_traits::ToPrimitive,
+    std::rc::Rc,
+};
 
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
 pub struct State {

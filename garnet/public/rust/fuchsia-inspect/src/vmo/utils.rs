@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::vmo::constants;
-use num_traits::ToPrimitive;
-use std::cmp::{max, min};
+use {
+    crate::vmo::constants,
+    num_traits::ToPrimitive,
+    std::cmp::{max, min},
+};
 
 /// Returns the smallest order such that (MIN_ORDER_SHIFT << order) >= size.
 /// Size must be non zero.
