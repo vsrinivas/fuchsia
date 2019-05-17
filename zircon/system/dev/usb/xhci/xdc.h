@@ -17,10 +17,10 @@
 
 namespace usb_xhci {
 
-#define TRANSFER_RING_SIZE     (PAGE_SIZE / sizeof(xhci_trb_t))
+#define TRANSFER_RING_SIZE ((PAGE_SIZE * 16) / sizeof(xhci_trb_t))
 
 // The type and length fields for a string descriptor are one byte each.
-#define STR_DESC_METADATA_LEN  2
+#define STR_DESC_METADATA_LEN 2
 #define MAX_STR_LEN            64
 
 // There are only two endpoints, one for bulk OUT and one for bulk IN.
@@ -88,49 +88,49 @@ typedef struct {
 } xdc_poll_state_t;
 
 typedef struct {
-    zx_device_t* zxdev;
+    zx_device_t* zxdev = nullptr;
 
     // Shared from XHCI.
-    zx_handle_t bti_handle;
-    void* mmio;
+    zx_handle_t bti_handle = ZX_HANDLE_INVALID;
+    void* mmio = nullptr;
 
-    xdc_debug_cap_regs_t* debug_cap_regs;
+    xdc_debug_cap_regs_t* debug_cap_regs = nullptr;
 
     // Underlying buffer for the event ring segment table
-    io_buffer_t erst_buffer;
-    erst_entry_t* erst_array;
+    io_buffer_t erst_buffer = {};
+    erst_entry_t* erst_array = nullptr;
 
     xhci_event_ring_t event_ring;
 
     // Underlying buffer for the context data and string descriptors.
-    io_buffer_t context_str_descs_buffer;
-    xdc_context_data_t* context_data;
-    xdc_str_descs_t* str_descs;
+    io_buffer_t context_str_descs_buffer = {};
+    xdc_context_data_t* context_data = nullptr;
+    xdc_str_descs_t* str_descs = nullptr;
 
-    thrd_t start_thread;
+    thrd_t start_thread = 0;
 
     // Whether to suspend all activity.
     std::atomic<bool> suspended;
 
     xdc_endpoint_t eps[NUM_EPS];
     // Whether the Debug Device is in the Configured state.
-    bool configured;
+    bool configured = false;
     // Needs to be acquired before accessing the eps and configured members.
     // TODO(jocelyndang): make these separate locks?
     mtx_t lock;
 
-    bool writable;
-    usb_request_pool_t free_write_reqs;
+    bool writable = false;
+    usb_request_pool_t free_write_reqs = {};
     mtx_t write_lock;
 
-    list_node_t free_read_reqs;
-    xdc_packet_state_t cur_read_packet;
+    list_node_t free_read_reqs = {};
+    xdc_packet_state_t cur_read_packet = {};
     mtx_t read_lock;
 
-    list_node_t instance_list;
+    list_node_t instance_list = {};
     // Streams registered by the host.
-    list_node_t host_streams;
-    mtx_t instance_list_lock;
+    list_node_t host_streams = {};
+    mtx_t instance_list_lock = {};
 
     // At least one xdc instance has been opened.
     sync_completion_t has_instance_completion;

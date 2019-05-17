@@ -62,6 +62,11 @@ int UsbDevice::CallbackThread() {
 
         // Call completion callbacks outside of the lock.
         for (auto req = temp_queue.pop(); req; req = temp_queue.pop()) {
+            if (req->operation()->reset) {
+                req->Complete(hci_.ResetEndpoint(device_id_, req->operation()->reset_address), 0,
+                              req->private_storage()->silent_completions_count);
+                continue;
+            }
             const auto& response = req->request()->response;
             req->Complete(response.status, response.actual,
                           req->private_storage()->silent_completions_count);
@@ -163,6 +168,10 @@ bool UsbDevice::UpdateEndpoint(Endpoint* ep, usb_request_t* completed_req) {
 
 // usb request completion for the requests passed down to the HCI driver
 void UsbDevice::RequestComplete(usb_request_t* req) {
+    if (req->reset) {
+        QueueCallback(req);
+        return;
+    }
     auto* ep = GetEndpoint(req->header.ep_address);
     if (!ep) {
         zxlogf(ERROR, "could not find endpoint with address 0x%x\n", req->header.ep_address);
@@ -352,6 +361,19 @@ zx_status_t UsbDevice::UsbControlIn(uint8_t request_type, uint8_t request, uint1
 
 void UsbDevice::UsbRequestQueue(usb_request_t* req, const usb_request_complete_t* complete_cb) {
     req->header.device_id = device_id_;
+    if (req->reset) {
+        // Save client's callback in private storage.
+        UnownedRequest request(req, *complete_cb, parent_req_size_);
+        *request.private_storage() = {.ready_for_client = false,
+                                      .require_callback = !req->cb_on_error_only,
+                                      .silent_completions_count = 0};
+        RequestComplete(request.take());
+        return;
+    }
+    if (req->direct) {
+        hci_.RequestQueue(req, complete_cb);
+        return;
+    }
 
     // Queue to HCI driver with our own completion callback so we can call client's completion
     // on our own thread, to avoid drivers from deadlocking the HCI driver's interrupt thread.

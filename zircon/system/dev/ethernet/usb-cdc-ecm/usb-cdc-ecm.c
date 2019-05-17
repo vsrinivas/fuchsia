@@ -24,7 +24,7 @@
 
 // The maximum amount of memory we are willing to allocate to transaction buffers
 #define MAX_TX_BUF_SZ 32768
-#define MAX_RX_BUF_SZ 32768
+#define MAX_RX_BUF_SZ 1500 * 2048
 
 #define ETHMAC_MAX_TRANSMIT_DELAY 100
 #define ETHMAC_MAX_RECV_DELAY 100
@@ -249,34 +249,61 @@ static zx_status_t send_locked(ecm_ctx_t* ctx, ethmac_netbuf_t* netbuf) {
     return ZX_OK;
 }
 
-static void usb_write_complete(void* cookie, usb_request_t* request) {
+// Write completion callback. Normally -- this will simply acquire the TX lock, release it,
+// and re-queue the USB request.
+// The error case is a bit more complicated. We set the reset bit on the request, and queue
+// a packet that triggers a reset (asynchronously). We then immediately return to the interrupt
+// thread with the lock held to allow for interrupt processing to take place. Once the reset
+// completes, this function is called again with the lock still held, and request processing
+// continues normally. It is necessary to keep the lock held after returning in the error case
+// because we do not want other packets to get queued out-of-order while the asynchronous operation
+// is in progress.
+static void usb_write_complete(void* cookie,
+                               usb_request_t* request) __TA_NO_THREAD_SAFETY_ANALYSIS {
     ecm_ctx_t* ctx = cookie;
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);
         return;
     }
-
-    mtx_lock(&ctx->tx_mutex);
-
-    // Return transmission buffer to pool
-    zx_status_t status = usb_req_list_add_tail(&ctx->tx_txn_bufs, request, ctx->parent_req_size);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-
-    if (request->response.status == ZX_ERR_IO_REFUSED) {
-        zxlogf(TRACE, "%s: resetting transmit endpoint\n", module_name);
-        usb_reset_endpoint(&ctx->usb, ctx->tx_endpoint.addr);
-    }
-
-    if (request->response.status == ZX_ERR_IO_INVALID) {
-        zxlogf(TRACE, "%s: slowing down the requests by %d usec."
-                     "Resetting the transmit endpoint\n",
-               module_name, ETHMAC_TRANSMIT_DELAY);
-        if (ctx->tx_endpoint_delay < ETHMAC_MAX_TRANSMIT_DELAY) {
-            ctx->tx_endpoint_delay += ETHMAC_TRANSMIT_DELAY;
+    // If reset, we still hold the TX mutex.
+    if (!request->reset) {
+        mtx_lock(&ctx->tx_mutex);
+        // Return transmission buffer to pool
+        zx_status_t status =
+            usb_req_list_add_tail(&ctx->tx_txn_bufs, request, ctx->parent_req_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+        if (request->response.status == ZX_ERR_IO_REFUSED) {
+            zxlogf(TRACE, "%s: resetting transmit endpoint\n", module_name);
+            request->reset = true;
+            request->reset_address = ctx->tx_endpoint.addr;
+            usb_request_complete_t complete = {
+                .callback = usb_write_complete,
+                .ctx = ctx,
+            };
+            usb_request_queue(&ctx->usb, request, &complete);
+            return;
         }
-        usb_reset_endpoint(&ctx->usb, ctx->tx_endpoint.addr);
+
+        if (request->response.status == ZX_ERR_IO_INVALID) {
+            zxlogf(TRACE,
+                   "%s: slowing down the requests by %d usec."
+                   "Resetting the transmit endpoint\n",
+                   module_name, ETHMAC_TRANSMIT_DELAY);
+            if (ctx->tx_endpoint_delay < ETHMAC_MAX_TRANSMIT_DELAY) {
+                ctx->tx_endpoint_delay += ETHMAC_TRANSMIT_DELAY;
+            }
+            request->reset = true;
+            request->reset_address = ctx->tx_endpoint.addr;
+            usb_request_complete_t complete = {
+                .callback = usb_write_complete,
+                .ctx = ctx,
+            };
+            usb_request_queue(&ctx->usb, request, &complete);
+            return;
+        }
     }
+    request->reset = false;
 
     bool additional_tx_queued = false;
     txn_info_t* txn;
@@ -321,12 +348,11 @@ static void usb_recv(ecm_ctx_t* ctx, usb_request_t* request) {
     mtx_unlock(&ctx->ethmac_mutex);
 }
 
-static void usb_read_complete(void* cookie, usb_request_t* request) {
+static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THREAD_SAFETY_ANALYSIS {
     ecm_ctx_t* ctx = cookie;
-
     if (request->response.status != ZX_OK) {
-        zxlogf(TRACE, "%s: usb_read_complete called with status %d\n",
-                module_name, (int)request->response.status);
+        zxlogf(TRACE, "%s: usb_read_complete called with status %d\n", module_name,
+               (int)request->response.status);
     }
 
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
@@ -336,20 +362,37 @@ static void usb_read_complete(void* cookie, usb_request_t* request) {
 
     if (request->response.status == ZX_ERR_IO_REFUSED) {
         zxlogf(TRACE, "%s: resetting receive endpoint\n", module_name);
-        usb_reset_endpoint(&ctx->usb, ctx->rx_endpoint.addr);
+        request->reset = true;
+        request->reset_address = ctx->rx_endpoint.addr;
+        usb_request_complete_t complete = {
+            .callback = usb_read_complete,
+            .ctx = ctx,
+        };
+        usb_request_queue(&ctx->usb, request, &complete);
+        return;
     } else if (request->response.status == ZX_ERR_IO_INVALID) {
         if (ctx->rx_endpoint_delay < ETHMAC_MAX_RECV_DELAY) {
             ctx->rx_endpoint_delay += ETHMAC_RECV_DELAY;
         }
-        zxlogf(TRACE, "%s: slowing down the requests by %d usec."
-                     "Resetting the recv endpoint\n",
+        zxlogf(TRACE,
+               "%s: slowing down the requests by %d usec."
+               "Resetting the recv endpoint\n",
                module_name, ETHMAC_RECV_DELAY);
-        usb_reset_endpoint(&ctx->usb, ctx->rx_endpoint.addr);
-    } else if (request->response.status == ZX_OK) {
+        request->reset = true;
+        request->reset_address = ctx->rx_endpoint.addr;
+        usb_request_complete_t complete = {
+            .callback = usb_read_complete,
+            .ctx = ctx,
+        };
+        usb_request_queue(&ctx->usb, request, &complete);
+        return;
+    } else if (request->response.status == ZX_OK && !request->reset) {
         usb_recv(ctx, request);
     }
-
-    zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->rx_endpoint_delay)));
+    if (ctx->rx_endpoint_delay) {
+        zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->rx_endpoint_delay)));
+    }
+    request->reset = false;
     usb_request_complete_t complete = {
         .callback = usb_read_complete,
         .ctx = ctx,
@@ -722,8 +765,9 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     size_t tx_buf_remain = MAX_TX_BUF_SZ;
     while (tx_buf_remain >= tx_buf_sz) {
         usb_request_t* tx_buf;
-        zx_status_t alloc_result = usb_request_alloc(&tx_buf, tx_buf_sz,
-                                                     ecm_ctx->tx_endpoint.addr, req_size);
+        zx_status_t alloc_result =
+            usb_request_alloc(&tx_buf, tx_buf_sz, ecm_ctx->tx_endpoint.addr, req_size);
+        tx_buf->direct = true;
         if (alloc_result != ZX_OK) {
             result = alloc_result;
             goto fail;
@@ -741,7 +785,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     }
 
     // Allocate rx transaction buffers
-    uint16_t rx_buf_sz = ecm_ctx->mtu;
+    uint32_t rx_buf_sz = ecm_ctx->mtu;
 #if MAX_TX_BUF_SZ < UINT16_MAX
     if (rx_buf_sz > MAX_RX_BUF_SZ) {
         zxlogf(ERROR, "%s: insufficient space for even a single rx buffer\n", module_name);
@@ -763,7 +807,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
             result = alloc_result;
             goto fail;
         }
-
+        rx_buf->direct = true;
         usb_request_queue(&ecm_ctx->usb, rx_buf, &complete);
         rx_buf_remain -= rx_buf_sz;
     }

@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <ddk/debug.h>
 #include <fuchsia/usb/debug/c/fidl.h>
-#include <xdc-server-utils/msg.h>
-#include <xdc-server-utils/stream.h>
-#include <zircon/hw/usb.h>
-#include <assert.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <xdc-server-utils/msg.h>
+#include <xdc-server-utils/stream.h>
+#include <zircon/hw/usb.h>
 
-#include "xdc.h"
+#include "trb-sizes.h"
 #include "xdc-transfer.h"
+#include "xdc.h"
 #include "xhci-hw.h"
 #include "xhci-util.h"
+#include <fbl/alloc_checker.h>
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -29,11 +31,9 @@ namespace usb_xhci {
 #define XDC_SERIAL_NUMBER      u""
 #define XDC_VENDOR_ID          0x18D1
 #define XDC_PRODUCT_ID         0xA0DC
-#define XDC_REVISION           0x1000
+#define XDC_REVISION 0x1000
 
 // Multi-segment event rings are not currently supported.
-#define ERST_ARRAY_SIZE        1
-#define EVENT_RING_SIZE        (PAGE_SIZE / sizeof(xhci_trb_t))
 
 // The maximum duration to transition from connected to configured state.
 #define TRANSITION_CONFIGURED_THRESHOLD ZX_SEC(5)
@@ -183,10 +183,10 @@ static zx_status_t xdc_endpoint_ctx_init(xdc_t* xdc, uint32_t ep_idx) {
     if (status != ZX_OK) {
         return status;
     }
-    zx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(&ep->transfer_ring);
+    zx_paddr_t tr_dequeue = ep->transfer_ring.buffers.front()->phys_list()[0];
 
-    uint32_t max_burst = XHCI_GET_BITS32(&xdc->debug_cap_regs->dcctrl,
-                                         DCCTRL_MAX_BURST_START, DCCTRL_MAX_BURST_BITS);
+    uint32_t max_burst = XHCI_GET_BITS32(&xdc->debug_cap_regs->dcctrl, DCCTRL_MAX_BURST_START,
+                                         DCCTRL_MAX_BURST_BITS);
     int avg_trb_length = EP_CTX_MAX_PACKET_SIZE * (max_burst + 1);
 
 
@@ -690,7 +690,7 @@ static void xdc_free(xdc_t* xdc) {
     while ((req = xdc_req_list_remove_tail(&xdc->free_read_reqs, usb_req_size)) != nullptr) {
         usb_request_release(req);
     }
-    free(xdc);
+    delete xdc;
 }
 
 static zx_status_t xdc_suspend(void* ctx, uint32_t flags) {
@@ -1286,8 +1286,9 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
 }
 
 zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio) {
-    auto* xdc = static_cast<xdc_t*>(calloc(1, sizeof(xdc_t)));
-    if (!xdc) {
+    fbl::AllocChecker ac;
+    auto* xdc = new (&ac) xdc_t();
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
     xdc->bti_handle = bti_handle;
@@ -1332,7 +1333,7 @@ zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio) {
 
 error_return:
     zxlogf(ERROR, "xdc_bind failed: %d\n", status);
-    xdc_free(xdc);
+    delete xdc;
     return status;
 }
 

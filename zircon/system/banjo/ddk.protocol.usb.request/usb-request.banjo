@@ -77,6 +77,15 @@ struct UsbRequest {
     /// |silent_completions_count| to know how many consecutive requests prior to this one
     /// (in relation to queue order for the endpoint) have completed successfully.
     bool cb_on_error_only;
+    /// Direct mode -- if set to true, this packet is handled with high priority directly
+    /// in interrupt context. It will NOT be safe to block in any callbacks, and all layers
+    /// should take the most direct path to route the packet to the requesting driver from
+    /// hardware.
+    bool direct;
+    /// If true, resets an endpoint and does not transfer any data.
+    bool reset;
+    /// The address of the endpoint to reset.
+    uint8 reset_address;
 };
 
 [Layout="ddk-callback"]

@@ -13,6 +13,7 @@
 #include <threads.h>
 
 #include "xhci-transfer.h"
+#include "xhci-trb.h"
 #include "xhci-util.h"
 
 namespace usb_xhci {
@@ -45,7 +46,7 @@ static zx_status_t xhci_reset_dequeue_ptr_locked(xhci_t* xhci, uint32_t slot_id,
         zxlogf(ERROR, "TRB_CMD_SET_TR_DEQUEUE failed cc: %d\n", cc);
         return ZX_ERR_INTERNAL;
     }
-    xhci_set_dequeue_ptr(transfer_ring, transfer_ring->current);
+    xhci_set_dequeue_ptr(transfer_ring, transfer_ring->current_trb);
 
     return ZX_OK;
 }
@@ -207,7 +208,7 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, u
     usb_setup_t* setup = (req->header.ep_address == 0 ? &req->setup : nullptr);
     if (setup) {
         // Setup Stage
-        xhci_trb_t* trb = ring->current;
+        xhci_trb_t* trb = ring->current_trb;
         xhci_clear_trb(trb);
 
         XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_REQ_TYPE_START, SETUP_TRB_REQ_TYPE_BITS,
@@ -293,7 +294,7 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
         }
 
         // Status Stage
-        xhci_trb_t* trb = ring->current;
+        xhci_trb_t* trb = ring->current_trb;
         xhci_clear_trb(trb);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
                         interrupter_target);
@@ -312,7 +313,7 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
     xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
     // if we get here, then we are ready to ring the doorbell
     // update dequeue_ptr to TRB following this transaction
-    req_int->context = ring->current;
+    req_int->context = ring->current_trb;
 
     XHCI_WRITE32(&xhci->doorbells[header->device_id], ep_index + 1);
     // it seems we need to ring the doorbell a second time when transitioning from STOPPED
@@ -643,99 +644,98 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     list_node_t completed_reqs = LIST_INITIAL_VALUE(completed_reqs);
     {
         fbl::AutoLock al(&ep->lock);
-
         zx_status_t result;
         switch (cc) {
-            case TRB_CC_SUCCESS:
-            case TRB_CC_SHORT_PACKET:
-                result = length;
-                break;
-            case TRB_CC_BABBLE_DETECTED_ERROR:
-                zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_BABBLE_DETECTED_ERROR\n");
-                result = ZX_ERR_IO_OVERRUN;
-                break;
-            case TRB_CC_TRB_ERROR:
-                zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_TRB_ERROR\n");
-                int ep_ctx_state;
-                ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
-                /*
-                 * For usb-c ethernet adapters on Intel xhci controller, we receive this error
-                 * when a packet fails with NRDY token on the bus.see NET:97 for more details.
-                 * Slow down the requests in the client when this error is received.
-                 */
-                if (ep_ctx_state == EP_CTX_STATE_ERROR) {
-                    result = ZX_ERR_IO_INVALID;
-                } else {
-                    result = ZX_ERR_IO;
-                }
-                break;
-            case TRB_CC_USB_TRANSACTION_ERROR:
-            case TRB_CC_STALL_ERROR: {
-                int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
-                zxlogf(TRACE, "xhci_handle_transfer_event: cc %d ep_ctx_state %d\n", cc,
-                       ep_ctx_state);
-                if (ep_ctx_state == EP_CTX_STATE_HALTED) {
-                    result = ZX_ERR_IO_REFUSED;
-                } else {
-                    result = ZX_ERR_IO;
-                }
-                break;
+        case TRB_CC_SUCCESS:
+        case TRB_CC_SHORT_PACKET:
+            result = length;
+            break;
+        case TRB_CC_BABBLE_DETECTED_ERROR:
+            zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_BABBLE_DETECTED_ERROR\n");
+            result = ZX_ERR_IO_OVERRUN;
+            break;
+        case TRB_CC_TRB_ERROR:
+            zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_TRB_ERROR\n");
+            int ep_ctx_state;
+            ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
+            /*
+             * For usb-c ethernet adapters on Intel xhci controller, we receive this error
+             * when a packet fails with NRDY token on the bus.see NET:97 for more details.
+             * Slow down the requests in the client when this error is received.
+             */
+            if (ep_ctx_state == EP_CTX_STATE_ERROR) {
+                result = ZX_ERR_IO_INVALID;
+            } else {
+                result = ZX_ERR_IO;
             }
-            case TRB_CC_RING_UNDERRUN:
-                // non-fatal error that happens when no transfers are available for isochronous
-                // endpoint
-                zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_RING_UNDERRUN\n");
-                return;
-            case TRB_CC_RING_OVERRUN:
-                // non-fatal error that happens when no transfers are available for isochronous
-                // endpoint
-                zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_RING_OVERRUN\n");
-                return;
-           case TRB_CC_MISSED_SERVICE_ERROR:
-                zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_MISSED_SERVICE_ERROR\n");
-                result = ZX_ERR_IO_MISSED_DEADLINE;
-                break;
-            case TRB_CC_STOPPED:
-            case TRB_CC_STOPPED_LENGTH_INVALID:
-            case TRB_CC_STOPPED_SHORT_PACKET:
-            case TRB_CC_ENDPOINT_NOT_ENABLED_ERROR:
-                switch (ep->state) {
-                case EP_STATE_PAUSED:
-                    result = ZX_ERR_CANCELED;
-                    break;
-                case EP_STATE_DISABLED:
-                    result = ZX_ERR_BAD_STATE;
-                    break;
-                case EP_STATE_DEAD:
-                    result = ZX_ERR_IO_NOT_PRESENT;
-                    break;
-                default:
-                    zxlogf(ERROR, "xhci_handle_transfer_event: bad state for stopped req: %d\n",
-                           ep->state);
-                    result = ZX_ERR_INTERNAL;
-                }
-                break;
-            default: {
-                int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
-                zxlogf(ERROR, "xhci_handle_transfer_event: unhandled transfer event condition"
-                       " code %d  ep_ctx_state %d:  %08X %08X %08X %08X\n", cc, ep_ctx_state,
-                        ((uint32_t*)trb)[0], ((uint32_t*)trb)[1], ((uint32_t*)trb)[2],
-                        ((uint32_t*)trb)[3]);
-                if (ep_ctx_state == EP_CTX_STATE_HALTED) {
-                    result = ZX_ERR_IO_REFUSED;
-                } else if (ep_ctx_state == EP_CTX_STATE_ERROR) {
-                    result = ZX_ERR_IO_INVALID;
-                } else {
-                    result = ZX_ERR_IO;
-                }
-                break;
+            break;
+        case TRB_CC_USB_TRANSACTION_ERROR:
+        case TRB_CC_STALL_ERROR: {
+            int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
+            zxlogf(TRACE, "xhci_handle_transfer_event: cc %d ep_ctx_state %d\n", cc, ep_ctx_state);
+            if (ep_ctx_state == EP_CTX_STATE_HALTED) {
+                result = ZX_ERR_IO_REFUSED;
+            } else {
+                result = ZX_ERR_IO;
             }
+            break;
+        }
+        case TRB_CC_RING_UNDERRUN:
+            // non-fatal error that happens when no transfers are available for isochronous
+            // endpoint
+            zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_RING_UNDERRUN\n");
+            return;
+        case TRB_CC_RING_OVERRUN:
+            // non-fatal error that happens when no transfers are available for isochronous
+            // endpoint
+            zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_RING_OVERRUN\n");
+            return;
+        case TRB_CC_MISSED_SERVICE_ERROR:
+            zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_MISSED_SERVICE_ERROR\n");
+            result = ZX_ERR_IO_MISSED_DEADLINE;
+            break;
+        case TRB_CC_STOPPED:
+        case TRB_CC_STOPPED_LENGTH_INVALID:
+        case TRB_CC_STOPPED_SHORT_PACKET:
+        case TRB_CC_ENDPOINT_NOT_ENABLED_ERROR:
+            switch (ep->state) {
+            case EP_STATE_PAUSED:
+                result = ZX_ERR_CANCELED;
+                break;
+            case EP_STATE_DISABLED:
+                result = ZX_ERR_BAD_STATE;
+                break;
+            case EP_STATE_DEAD:
+                result = ZX_ERR_IO_NOT_PRESENT;
+                break;
+            default:
+                zxlogf(ERROR, "xhci_handle_transfer_event: bad state for stopped req: %d\n",
+                       ep->state);
+                result = ZX_ERR_INTERNAL;
+            }
+            break;
+        default: {
+            int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
+            zxlogf(ERROR,
+                   "xhci_handle_transfer_event: unhandled transfer event condition"
+                   " code %d  ep_ctx_state %d:  %08X %08X %08X %08X\n",
+                   cc, ep_ctx_state, ((uint32_t*)trb)[0], ((uint32_t*)trb)[1], ((uint32_t*)trb)[2],
+                   ((uint32_t*)trb)[3]);
+            if (ep_ctx_state == EP_CTX_STATE_HALTED) {
+                result = ZX_ERR_IO_REFUSED;
+            } else if (ep_ctx_state == EP_CTX_STATE_ERROR) {
+                result = ZX_ERR_IO_INVALID;
+            } else {
+                result = ZX_ERR_IO;
+            }
+            break;
+        }
         }
 
         bool req_status_set = false;
 
-        if (trb->ptr && !list_is_empty(&ep->pending_reqs)
-                && ep->state != EP_STATE_DISABLED && ep->state != EP_STATE_DEAD) {
+        if (trb->ptr && !list_is_empty(&ep->pending_reqs) && ep->state != EP_STATE_DISABLED &&
+            ep->state != EP_STATE_DEAD) {
             if (control & EVT_TRB_ED) {
                 req = reinterpret_cast<usb_request_t*>(trb->ptr);
                 if (ep_index == 0) {
@@ -808,7 +808,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         }
         if (!found_req) {
             zxlogf(TRACE, "xhci_handle_transfer_event: ignoring transfer event for completed "
-                   "transfer\n");
+                          "transfer\n");
             return;
         }
 

@@ -143,10 +143,13 @@ void EthDev::RecvLocked(const void* data, size_t len, uint32_t extra) {
         if (status != ZX_OK) {
             if (status == ZX_ERR_SHOULD_WAIT) {
                 fail_receive_read_ += 1;
-                if (fail_receive_read_ == 1 ||
-                    (fail_receive_read_ % kFailureReportRate) == 0) {
-                    zxlogf(WARN, "eth [%s]: warning: no rx buffers available, frame dropped "
-                                 "(%u time%s)\n",
+                if (fail_receive_read_ == 1 || (fail_receive_read_ % kFailureReportRate) == 0) {
+                    // TODO(bbosak): Printing this warning
+                    // can result in more dropped packets.
+                    // Find a better way to log this.
+                    zxlogf(WARN,
+                           "eth [%s]: warning: no rx buffers available, frame dropped "
+                           "(%u time%s)\n",
                            name_, fail_receive_read_, fail_receive_read_ > 1 ? "s" : "");
                 }
             } else {

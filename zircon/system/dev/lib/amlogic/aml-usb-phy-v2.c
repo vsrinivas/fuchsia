@@ -10,9 +10,16 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 // from mesong12a.dtsi
-#define PLL_SETTING_0   0x09400414
-#define PLL_SETTING_1   0x927E0000
-#define PLL_SETTING_2   0xac5f49e5
+#define PLL_SETTING_0 0x09400414
+#define PLL_SETTING_1 0x927E0000
+#define PLL_SETTING_2 0xac5f49e5
+#define PLL_SETTING_3 0xfe18
+#define PLL_SETTING_4 0xfff
+#define PLL_SETTING_5 0x78000
+#define PLL_SETTING_6 0xe0004
+#define PLL_SETTING_7 0xe000c
+
+// Order PLL, tuning
 
 // set_usb_pll() in phy_aml_new_usb2_v2.c
 static zx_status_t set_usb_pll(zx_paddr_t reg_base) {
@@ -32,6 +39,24 @@ static zx_status_t set_usb_pll(zx_paddr_t reg_base) {
     writel(PLL_SETTING_2, reg + 0x48);
     zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
     writel((0x10000000 | PLL_SETTING_0), reg + 0x40);
+
+    // PLL
+
+    zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
+    writel((PLL_SETTING_3), reg + 0x50);
+    writel((PLL_SETTING_4), reg + 0x10);
+    // Recovery state
+    writel(0, reg + 0x38);
+    writel((PLL_SETTING_5), reg + 0x34);
+    // Disconnect threshold
+    writel(0x3c, reg + 0xc);
+    // Tuning
+
+    zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
+    writel(PLL_SETTING_6, reg + 0x38);
+    writel(PLL_SETTING_5, reg + 0x34);
+
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 
     mmio_buffer_release(&buf);
     return ZX_OK;

@@ -11,17 +11,14 @@ executable("netsvc") {
     "netsvc.cpp",
   ]
   if (enable_netsvc_debugging_features) {
-    sources += [
-      "debug-command-enabled.cpp",
-    ]
+    sources += [ "debug-command-enabled.cpp" ]
   } else {
-    sources += [
-      "debug-command-disabled.cpp",
-    ]
+    sources += [ "debug-command-disabled.cpp" ]
   }
   deps = [
     ":netsvc_common",
     "$zx/system/fidl/fuchsia-hardware-ethernet:c",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/inet6",
     "$zx/system/ulib/sync",
@@ -39,8 +36,8 @@ source_set("netsvc_common") {
   sources = [
     "board-name.cpp",
     "file-api.cpp",
-    "netcp.cpp",
     "netboot.cpp",
+    "netcp.cpp",
     "paver.cpp",
     "payload-streamer.cpp",
     "tftp.cpp",
@@ -51,8 +48,8 @@ source_set("netsvc_common") {
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-sysinfo:c",
-    "$zx/system/ulib/chromeos-disk-setup",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/chromeos-disk-setup",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/libzbi",

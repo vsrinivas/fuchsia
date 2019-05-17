@@ -12,10 +12,14 @@ namespace usb_xhci {
 
 void xhci_print_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
     size_t index = trb - ring->start;
-    uint32_t* ptr = (uint32_t *)trb;
-    uint64_t paddr = ring->buffer.phys() + index * sizeof(xhci_trb_t);
+    uint32_t* ptr = (uint32_t*)trb;
+    auto physmap = ring->virt_to_phys_map.get(VirtualAddress(reinterpret_cast<size_t>(trb)));
 
-    zxlogf(LSPEW, "trb[%03zu] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
+    uint64_t paddr =
+        physmap->second + (reinterpret_cast<size_t>(ring->current_trb) - physmap->first.virt_start);
+
+    zxlogf(LSPEW, "trb[%03zu] %p: %08X %08X %08X %08X\n", index, (void*)paddr, ptr[0], ptr[1],
+           ptr[2], ptr[3]);
 }
 
 void xhci_transfer_state_init(xhci_transfer_state_t* state, usb_request_t* req,
@@ -59,9 +63,10 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
     zx_paddr_t paddr;
     size_t transfer_size = 0;
     bool first_packet = (state->phys_iter.total_iterated == 0);
-    while (free_trbs > 0 && (((transfer_size = usb_request_phys_iter_next(&state->phys_iter, &paddr)) > 0) ||
-                             state->needs_transfer_trb || state->needs_zlp)) {
-        xhci_trb_t* trb = ring->current;
+    while (free_trbs > 0 &&
+           (((transfer_size = usb_request_phys_iter_next(&state->phys_iter, &paddr)) > 0) ||
+            state->needs_transfer_trb || state->needs_zlp)) {
+        xhci_trb_t* trb = ring->current_trb;
         xhci_clear_trb(trb);
         XHCI_WRITE64(&trb->ptr, paddr);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS,
@@ -121,7 +126,7 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
         }
 
         // Queue event data TRB
-        xhci_trb_t* trb = ring->current;
+        xhci_trb_t* trb = ring->current_trb;
         xhci_clear_trb(trb);
         trb->ptr = reinterpret_cast<uint64_t>(req);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,

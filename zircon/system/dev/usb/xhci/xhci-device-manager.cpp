@@ -93,10 +93,10 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
             zxlogf(ERROR, "xhci_address_device: failed to allocate io_buffer for slot\n");
             return status;
         }
-
-        status = xhci_transfer_ring_init(&ep->transfer_ring, xhci->bti_handle.get(),
-        TRANSFER_RING_SIZE);
-        if (status < 0) return status;
+        status =
+            xhci_transfer_ring_init(&ep->transfer_ring, xhci->bti_handle.get(), TRANSFER_RING_SIZE);
+        if (status < 0)
+            return status;
 
         fbl::AllocChecker ac;
         ep->transfer_state = new (&ac) xhci_transfer_state_t;
@@ -791,7 +791,7 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id,
         return status;
     }
 
-    zx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(&slot->eps[index].transfer_ring);
+    zx_paddr_t tr_dequeue = slot->eps[index].transfer_ring.buffers.front()->phys_list()[0];
 
     XHCI_SET_BITS32(&epc->epc0, EP_CTX_INTERVAL_START, EP_CTX_INTERVAL_BITS,
                     compute_interval(ep_desc, speed));

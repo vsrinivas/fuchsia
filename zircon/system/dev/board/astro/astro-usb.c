@@ -63,22 +63,6 @@ static zx_status_t astro_usb_tuning(bool host, bool default_val) {
         return status;
     }
 
-    volatile void* base = buf.vaddr;
-
-    if (default_val) {
-        writel(0, base + 0x38);
-        writel(PLL_SETTING_5, base + 0x34);
-    } else {
-        writel(PLL_SETTING_3, base + 0x50);
-        writel(PLL_SETTING_4, base + 0x10);
-        if (host) {
-            writel(PLL_SETTING_6, base + 0x38);
-        } else {
-            writel(PLL_SETTING_7, base + 0x38);
-        }
-        writel(PLL_SETTING_5, base + 0x34);
-    }
-
     mmio_buffer_release(&buf);
     return ZX_OK;
 }

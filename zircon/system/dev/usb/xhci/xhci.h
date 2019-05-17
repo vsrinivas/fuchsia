@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <ddk/io-buffer.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/usb/bus.h>
 #include <ddk/protocol/usb/request.h>
@@ -24,18 +25,13 @@
 #include <limits.h>
 #include <threads.h>
 
+#include "trb-sizes.h"
 #include "xhci-hw.h"
 #include "xhci-root-hub.h"
 #include "xhci-transfer-common.h"
 #include "xhci-trb.h"
 
 namespace usb_xhci {
-
-// choose ring sizes to allow each ring to fit in a single page
-#define COMMAND_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
-#define TRANSFER_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
-#define EVENT_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
-#define ERST_ARRAY_SIZE 1
 
 #define XHCI_RH_USB_2 0 // index of USB 2.0 virtual root hub device
 #define XHCI_RH_USB_3 1 // index of USB 2.0 virtual root hub device
@@ -154,7 +150,7 @@ struct xhci_t {
 
     // Each interrupter has an event ring.
     // Only indices up to num_interrupts will be populated.
-    xhci_event_ring_t event_rings[INTERRUPTER_COUNT] = {};
+    xhci_event_ring_t event_rings[INTERRUPTER_COUNT];
     erst_entry_t* erst_arrays[INTERRUPTER_COUNT] = {};
     zx_paddr_t erst_arrays_phys[INTERRUPTER_COUNT] = {};
 
@@ -203,6 +199,8 @@ struct xhci_t {
 
     // VMO buffer for DCBAA and ERST array
     ddk::IoBuffer dcbaa_erst_buffer;
+    ddk::IoBuffer erst_buffers[INTERRUPTER_COUNT];
+    size_t erst_sizes[INTERRUPTER_COUNT];
     // VMO buffer for input context
     ddk::IoBuffer input_context_buffer;
     // VMO buffer for scratch pad pages

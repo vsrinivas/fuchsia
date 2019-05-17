@@ -5,25 +5,28 @@
 #include "xhci.h"
 
 #include <ddk/debug.h>
-#include <hw/arch_ops.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <hw/arch_ops.h>
 #include <hw/reg.h>
-#include <zircon/types.h>
-#include <zircon/syscalls.h>
-#include <zircon/process.h>
-#include <usb/usb-request.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <usb/usb-request.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
+#include <bits/limits.h>
+#include <ddk/io-buffer.h>
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
 #include "xhci-transfer.h"
 #include "xhci-util.h"
+#include <zircon/errors.h>
 
 namespace usb_xhci {
 
@@ -179,8 +182,15 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     uint32_t scratch_pad_bufs = XHCI_GET_BITS32(hcsparams2, HCSPARAMS2_MAX_SBBUF_HI_START,
                                                 HCSPARAMS2_MAX_SBBUF_HI_BITS);
     scratch_pad_bufs <<= HCSPARAMS2_MAX_SBBUF_LO_BITS;
-    scratch_pad_bufs |= XHCI_GET_BITS32(hcsparams2, HCSPARAMS2_MAX_SBBUF_LO_START,
-                                        HCSPARAMS2_MAX_SBBUF_LO_BITS);
+    scratch_pad_bufs |=
+        XHCI_GET_BITS32(hcsparams2, HCSPARAMS2_MAX_SBBUF_LO_START, HCSPARAMS2_MAX_SBBUF_LO_BITS);
+    uint32_t max_erst_count =
+        1 << XHCI_GET_BITS32(hcsparams2, HCSPARAMS2_ERST_MAX_START, HCSPARAMS2_ERST_MAX_BITS);
+    if (max_erst_count * sizeof(erst_entry_t) > PAGE_SIZE) {
+        max_erst_count = PAGE_SIZE / sizeof(erst_entry_t);
+        // TODO(bbosak): Implement a mechanism to allocate many physically contiguous pages
+        // reliably.
+    }
     xhci->page_size = XHCI_READ32(&xhci->op_regs->pagesize) << 12;
 
     fbl::AllocChecker ac;
@@ -265,28 +275,21 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     xhci->input_context = static_cast<uint8_t*>(xhci->input_context_buffer.virt());
     xhci->input_context_phys = xhci->input_context_buffer.phys();
 
-    // DCBAA can only be 256 * sizeof(uint64_t) = 2048 bytes, so we have room for ERST array after DCBAA
-    zx_off_t erst_offset;
-    erst_offset = 256 * sizeof(uint64_t);
-
-    size_t array_bytes;
-    array_bytes = ERST_ARRAY_SIZE * sizeof(erst_entry_t);
-    // MSI only supports up to 32 interrupts, so the required ERST arrays will fit
-    // within the page. Potentially more pages will need to be allocated for MSI-X.
+    // DCBAA can only be 256 * sizeof(uint64_t) = 2048 bytes, so we have room for ERST array after
+    // DCBAA MSI only supports up to 32 interrupts, so the required ERST arrays will fit within the
+    // page. Potentially more pages will need to be allocated for MSI-X. Max number of contiguous
+    // physical pages per interrupt: 8
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
-        // Ran out of space in page.
-        if (erst_offset + array_bytes > PAGE_SIZE) {
-            zxlogf(ERROR, "only have space for %u ERST arrays, want %u\n", i,
-                    xhci->num_interrupts);
+        result = xhci->erst_buffers[i].Init(
+            xhci->bti_handle.get(), PAGE_ROUNDUP(max_erst_count * sizeof(erst_entry_t)),
+            IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
+        if (result != ZX_OK) {
+            zxlogf(ERROR, "io_buffer_init failed for xhci->erst_buffer\n");
             goto fail;
         }
-        xhci->erst_arrays[i] = reinterpret_cast<erst_entry_t*>(
-                                    reinterpret_cast<uintptr_t>(xhci->dcbaa) + erst_offset);
-        xhci->erst_arrays_phys[i] = xhci->dcbaa_phys + erst_offset;
-        // ERST arrays must be 64 byte aligned - see Table 54 in XHCI spec.
-        // dcbaa_phys is already page (and hence 64 byte) aligned, so only
-        // need to round the offset.
-        erst_offset = ROUNDUP_TO(erst_offset + array_bytes, 64);
+        xhci->erst_sizes[i] = max_erst_count;
+        xhci->erst_arrays[i] = reinterpret_cast<erst_entry_t*>(xhci->erst_buffers[i].virt());
+        xhci->erst_arrays_phys[i] = xhci->erst_buffers[i].phys();
     }
 
     if (scratch_pad_bufs > 0) {
@@ -339,7 +342,6 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
             ep->current_req = nullptr;
         }
     }
-
     // initialize virtual root hub devices
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
         result = xhci_root_hub_init(xhci, i);
@@ -439,7 +441,7 @@ zx_status_t xhci_start(xhci_t* xhci) {
     // setup operational registers
     xhci_op_regs_t* op_regs = xhci->op_regs;
     // initialize command ring
-    uint64_t crcr = xhci_transfer_ring_start_phys(&xhci->command_ring);
+    uint64_t crcr = xhci->command_ring.buffers.front()->phys_list()[0];
     if (xhci->command_ring.pcs) {
         crcr |= CRCR_RCS;
     }
@@ -533,7 +535,7 @@ zx_status_t xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint
         return ZX_ERR_NO_RESOURCES;
     }
 
-    xhci_trb_t* trb = cr->current;
+    xhci_trb_t* trb = cr->current_trb;
     auto index = trb - cr->start;
     xhci->command_contexts[index] = context;
 
@@ -542,7 +544,7 @@ zx_status_t xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint
     trb_set_control(trb, command, control_bits);
 
     xhci_increment_ring(cr);
-    context->next_trb = cr->current;
+    context->next_trb = cr->current_trb;
 
     hw_mb();
     XHCI_WRITE32(&xhci->doorbells[0], 0);
@@ -600,7 +602,6 @@ uint64_t xhci_get_current_frame(xhci_t* xhci) {
 
 static void xhci_handle_events(xhci_t* xhci, int interrupter) {
     xhci_event_ring_t* er = &xhci->event_rings[interrupter];
-
     // process all TRBs with cycle bit matching our CCS
     while ((XHCI_READ32(&er->current->control) & TRB_C) == er->ccs) {
         uint32_t type = trb_get_type(er->current);
@@ -621,12 +622,17 @@ static void xhci_handle_events(xhci_t* xhci, int interrupter) {
             zxlogf(ERROR, "xhci_handle_events: unhandled event type %d\n", type);
             break;
         }
-
-        er->current++;
-        if (er->current == er->end) {
+        fbl::AutoLock l(&er->xfer_lock);
+        if (er->current + 1 == er->end) {
             er->current = er->start;
             er->ccs ^= TRB_C;
+        } else {
+            er->current = xhci_next_evt(er, er->current);
         }
+        xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interrupter];
+        // Update the dequeue pointer to allow other events to come in
+        uint64_t erdp = xhci_event_ring_current_phys(er);
+        XHCI_WRITE64(&intr_regs->erdp, erdp);
     }
 
     // update event ring dequeue pointer and clear event handler busy flag
@@ -637,7 +643,6 @@ void xhci_handle_interrupt(xhci_t* xhci, uint32_t interrupter) {
     // clear the interrupt pending flag
     xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interrupter];
     XHCI_WRITE32(&intr_regs->iman, IMAN_IE | IMAN_IP);
-
     xhci_handle_events(xhci, interrupter);
 }
 
