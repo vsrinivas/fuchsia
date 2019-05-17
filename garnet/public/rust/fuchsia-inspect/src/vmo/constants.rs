@@ -14,8 +14,8 @@ pub const ROOT_PARENT_INDEX: u32 = 0;
 /// Index of the HEADER block.
 pub const HEADER_INDEX: u32 = 0;
 
-/// Magic number for the Header block. "INSP" in UTF-8.
-pub const HEADER_MAGIC_NUMBER: u32 = 0x494e5350;
+/// Magic number for the Header block. "INSP" in UTF-8 little-endian.
+pub const HEADER_MAGIC_NUMBER: u32 = 0x50534e49;
 
 /// Version number for the Header block.
 pub const HEADER_VERSION_NUMBER: u32 = 0;

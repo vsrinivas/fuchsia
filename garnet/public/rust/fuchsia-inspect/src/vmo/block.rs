@@ -706,7 +706,7 @@ mod tests {
         assert_eq!(block.order(), 0);
         assert_eq!(block.header_magic().unwrap(), constants::HEADER_MAGIC_NUMBER);
         assert_eq!(block.header_version().unwrap(), constants::HEADER_VERSION_NUMBER);
-        assert_eq!(container[..8], [0x20, 0x00, 0x00, 0x00, 0x50, 0x53, 0x4e, 0x49]);
+        assert_eq!(container[..8], [0x20, 0x00, 0x00, 0x00, 0x49, 0x4e, 0x53, 0x50]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
         test_ok_types(move |b| b.become_header(), &BTreeSet::from_iter(vec![BlockType::Reserved]));
@@ -718,7 +718,7 @@ mod tests {
     fn test_lock_unlock_header() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_header(&container);
-        let header_bytes: [u8; 8] = [0x20, 0x00, 0x00, 0x00, 0x50, 0x53, 0x4e, 0x49];
+        let header_bytes: [u8; 8] = [0x20, 0x00, 0x00, 0x00, 0x49, 0x4e, 0x53, 0x50];
         // Can't unlock unlocked header.
         assert!(block.unlock_header().is_err());
         assert!(block.lock_header().is_ok());
