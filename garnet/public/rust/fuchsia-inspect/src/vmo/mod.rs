@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error};
-use fuchsia_component::server::{ServiceFs, ServiceObjTrait};
-use fuchsia_zircon::{self as zx, HandleBased};
-use mapped_vmo::Mapping;
-use parking_lot::Mutex;
-use paste;
-use std::sync::Arc;
-
-use crate::vmo::heap::Heap;
-use crate::vmo::state::{PropertyFormat, State};
+use {
+    crate::vmo::{
+        heap::Heap,
+        state::{PropertyFormat, State},
+    },
+    failure::{format_err, Error},
+    fuchsia_component::server::{ServiceFs, ServiceObjTrait},
+    fuchsia_zircon::{self as zx, HandleBased},
+    mapped_vmo::Mapping,
+    parking_lot::Mutex,
+    paste,
+    std::{cmp::max, sync::Arc},
+};
 
 mod bitfields;
 mod block;
@@ -61,8 +64,17 @@ pub struct Node {
 
 /// Root API for inspect. Used to create the VMO and get the root node.
 impl Inspector {
-    /// Create a new Inspect VMO object with the given maximum size.
+    /// Create a new Inspect VMO object.
     pub fn new<ServiceObjTy: ServiceObjTrait>(
+        fs: &mut ServiceFs<ServiceObjTy>,
+    ) -> Result<Self, Error> {
+        Inspector::new_with_size(constants::DEFAULT_VMO_SIZE_BYTES, fs)
+    }
+
+    /// Create a new Inspect VMO object with the given maximum size. If the given
+    /// size is less than 4K, it will be made 4K which is the minimum size the
+    /// VMO should have.
+    pub fn new_with_size<ServiceObjTy: ServiceObjTrait>(
         max_size: usize,
         fs: &mut ServiceFs<ServiceObjTy>,
     ) -> Result<Self, Error> {
@@ -82,7 +94,8 @@ impl Inspector {
     }
 
     fn new_root(max_size: usize) -> Result<(zx::Vmo, Node), Error> {
-        let (mapping, vmo) = Mapping::allocate(max_size)
+        let size = max(constants::MINIMUM_VMO_SIZE_BYTES, max_size);
+        let (mapping, vmo) = Mapping::allocate(size)
             .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
         let heap = Heap::new(Arc::new(mapping))?;
         let state = State::create(heap)?;
@@ -259,12 +272,12 @@ property!(ByteVector, [u8], value);
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::vmo::block_type::BlockType;
-    use crate::vmo::constants;
-    use crate::vmo::heap::Heap;
-    use mapped_vmo::Mapping;
-    use num_traits::ToPrimitive;
+    use {
+        super::*,
+        crate::vmo::{block_type::BlockType, constants, heap::Heap},
+        mapped_vmo::Mapping,
+        num_traits::ToPrimitive,
+    };
 
     #[test]
     fn inspector() {

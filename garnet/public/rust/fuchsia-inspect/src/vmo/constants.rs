@@ -37,3 +37,9 @@ pub const MAX_ORDER_SIZE: usize = 1 << MAX_ORDER_SHIFT;
 
 /// Name of the root node
 pub const ROOT_NAME: &str = "root";
+
+/// Default number of bytes for the VMO: 256K
+pub const DEFAULT_VMO_SIZE_BYTES: usize = 256 * 1024;
+
+/// Minimum size for the VMO: 4K
+pub const MINIMUM_VMO_SIZE_BYTES: usize = 4 * 1024;
