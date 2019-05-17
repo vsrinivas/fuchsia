@@ -534,7 +534,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     }
 
     /// Writes the given header and payload to the block in the container.
-    fn write(&self, header: BlockHeader, payload: Payload) {
+    pub(in crate::vmo) fn write(&self, header: BlockHeader, payload: Payload) {
         self.write_header(header);
         self.write_payload(payload);
     }

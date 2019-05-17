@@ -80,7 +80,6 @@ impl Heap {
     }
 
     pub fn get_block(&self, index: u32) -> Result<Block<Rc<Mapping>>, Error> {
-        // TODO(miguelfrde): validate index
         let offset = utils::offset_for_index(index);
         if offset >= self.current_size_bytes {
             return Err(format_err!("invalid index"));
@@ -175,7 +174,7 @@ impl Heap {
         block.set_order(order - 1)?;
         block.become_free(buddy_index);
 
-        let buddy = self.get_block(buddy_index).unwrap();
+        let buddy = Block::new(self.mapping.clone(), buddy_index);
         buddy.set_order(order - 1)?;
         buddy.become_free(self.free_head_per_order[order - 1]);
         self.free_head_per_order[order - 1] = block.index();
@@ -190,6 +189,7 @@ impl Heap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vmo::bitfields::{BlockHeader, Payload};
     use crate::vmo::reader::BlockIterator;
 
     struct BlockDebug {
@@ -465,6 +465,47 @@ mod tests {
             BlockDebug { index: 128, order: 7, block_type: BlockType::Free },
             BlockDebug { index: 256, order: 7, block_type: BlockType::Free },
             BlockDebug { index: 384, order: 7, block_type: BlockType::Free },
+        ];
+        validate(&expected, &heap);
+    }
+
+    #[test]
+    fn dont_reinterpret_upper_block_contents() {
+        let (mapping, _) = Mapping::allocate(4096).unwrap();
+        let mapping_rc = Rc::new(mapping);
+        let mut heap = Heap::new(mapping_rc.clone()).unwrap();
+
+        // Allocate 3 blocks.
+        assert_eq!(heap.allocate_block(constants::MIN_ORDER_SIZE).unwrap().index(), 0);
+        let b1 = heap.allocate_block(utils::order_to_size(1)).unwrap();
+        assert_eq!(b1.index(), 2);
+        assert_eq!(heap.allocate_block(utils::order_to_size(1)).unwrap().index(), 4);
+
+        // Write garbage to the second half of the order 1 block in index 2.
+        Block::new(mapping_rc.clone(), 3).write(BlockHeader(0xffffffff), Payload(0xffffffff));
+
+        // Free order 1 block in index 2.
+        assert!(heap.free_block(b1).is_ok());
+
+        // Allocate small blocks in free order 0 blocks.
+        assert_eq!(heap.allocate_block(constants::MIN_ORDER_SIZE).unwrap().index(), 1);
+        assert_eq!(heap.allocate_block(constants::MIN_ORDER_SIZE).unwrap().index(), 2);
+
+        // This should succeed even if the bytes in this region were garbage.
+        assert_eq!(heap.allocate_block(constants::MIN_ORDER_SIZE).unwrap().index(), 3);
+
+        let expected = [
+            BlockDebug { index: 0, order: 0, block_type: BlockType::Reserved },
+            BlockDebug { index: 1, order: 0, block_type: BlockType::Reserved },
+            BlockDebug { index: 2, order: 0, block_type: BlockType::Reserved },
+            BlockDebug { index: 3, order: 0, block_type: BlockType::Reserved },
+            BlockDebug { index: 4, order: 1, block_type: BlockType::Reserved },
+            BlockDebug { index: 6, order: 1, block_type: BlockType::Free },
+            BlockDebug { index: 8, order: 3, block_type: BlockType::Free },
+            BlockDebug { index: 16, order: 4, block_type: BlockType::Free },
+            BlockDebug { index: 32, order: 5, block_type: BlockType::Free },
+            BlockDebug { index: 64, order: 6, block_type: BlockType::Free },
+            BlockDebug { index: 128, order: 7, block_type: BlockType::Free },
         ];
         validate(&expected, &heap);
     }
