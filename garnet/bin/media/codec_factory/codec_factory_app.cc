@@ -4,8 +4,6 @@
 
 #include "codec_factory_app.h"
 
-#include "codec_factory_impl.h"
-
 #include <fuchsia/hardware/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fdio/directory.h>
@@ -13,6 +11,8 @@
 #include <lib/svc/cpp/services.h>
 #include <trace-provider/provider.h>
 #include <zircon/status.h>
+
+#include "codec_factory_impl.h"
 
 namespace codec_factory {
 
@@ -47,8 +47,6 @@ CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
     FXL_LOG(ERROR) << "loop failed: " << zx_status_get_string(run_result);
     return;
   }
-  FXL_LOG(INFO)
-      << "discovery of all pre-existing devices done - serving CodecFactory";
 
   // We delay doing this until we're completely ready to add services, because
   // CreateFromStartupInfo() binds to |loop| implicitly, so we don't want any
@@ -97,37 +95,37 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
   device_watcher_ = fsl::DeviceWatcher::CreateWithIdleCallback(
       kDeviceClass,
       [this](int dir_fd, std::string filename) {
-        FXL_LOG(INFO) << "DeviceWatcher callback got filename: " << filename;
-
         std::string device_path = std::string(kDeviceClass) + "/" + filename;
         zx::channel device_channel, device_remote;
-        zx_status_t status = zx::channel::create(0, &device_channel,
-                                                 &device_remote);
+        zx_status_t status =
+            zx::channel::create(0, &device_channel, &device_remote);
         if (status != ZX_OK) {
-          FXL_LOG(INFO) << "Failed to create channel - status: " << status;
+          FXL_LOG(ERROR) << "Failed to create channel - status: " << status;
           return;
         }
         zx::channel client_factory_channel, client_factory_remote;
-        status = zx::channel::create(0, &client_factory_channel, &client_factory_remote);
+        status = zx::channel::create(0, &client_factory_channel,
+                                     &client_factory_remote);
         if (status != ZX_OK) {
-          FXL_LOG(INFO) << "Failed to create channel - status: " << status;
+          FXL_LOG(ERROR) << "Failed to create channel - status: " << status;
           return;
         }
 
-        status = fdio_service_connect(device_path.c_str(), device_remote.release());
+        status =
+            fdio_service_connect(device_path.c_str(), device_remote.release());
         if (status != ZX_OK) {
-          FXL_LOG(INFO) << "Failed to connect to device by filename -"
-                        << " status: " << status
-                        << " device_path: " << device_path;
+          FXL_LOG(ERROR) << "Failed to connect to device by filename -"
+                         << " status: " << status
+                         << " device_path: " << device_path;
           return;
         }
 
         fuchsia::hardware::mediacodec::DevicePtr device_interface;
         status = device_interface.Bind(std::move(device_channel));
         if (status != ZX_OK) {
-          FXL_LOG(INFO) << "Failed to bind to interface -"
-                        << " status: " << status
-                        << " device_path: " << device_path;
+          FXL_LOG(ERROR) << "Failed to bind to interface -"
+                         << " status: " << status
+                         << " device_path: " << device_path;
           return;
         }
         device_interface->GetCodecFactory(std::move(client_factory_remote));
@@ -144,9 +142,6 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
         discovery_entry->codec_factory->set_error_handler(
             [this, device_path, factory = discovery_entry->codec_factory.get()](
                 zx_status_t status) {
-              FXL_LOG(INFO) << "Device's CodecFactoryPtr error handler - "
-                               "cancelling discovery or de-registering: "
-                            << device_path;
               // Any given factory won't be in both lists, but will be in one or
               // the other by the time this error handler runs.
               device_discovery_queue_.remove_if(
@@ -167,8 +162,7 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
 
         discovery_entry->codec_factory->events().OnCodecList =
             [this, discovery_entry = discovery_entry.get()](
-                std::vector<fuchsia::mediacodec::CodecDescription>
-                    codec_list) {
+                std::vector<fuchsia::mediacodec::CodecDescription> codec_list) {
               discovery_entry->driver_codec_list = fidl::VectorPtr(codec_list);
               // In case discovery_entry is the first item which is now ready to
               // process, process the discovery queue.
@@ -188,7 +182,6 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
         device_discovery_queue_.emplace_back(std::move(discovery_entry));
       },
       [this] {
-        FXL_LOG(INFO) << "DeviceWatcher idle_callback";
         // The idle_callback indicates that all pre-existing devices have been
         // seen, and by the time this item reaches the front of the discovery
         // queue, all pre-existing devices have all been processed.
@@ -196,9 +189,6 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
             std::make_unique<DeviceDiscoveryEntry>());
         PostDiscoveryQueueProcessing();
       });
-
-  FXL_LOG(INFO)
-      << "CodecFactory::DiscoverMediaCodecDriversAndListenForMoreAsync() ran.";
 }
 
 void CodecFactoryApp::PostDiscoveryQueueProcessing() {

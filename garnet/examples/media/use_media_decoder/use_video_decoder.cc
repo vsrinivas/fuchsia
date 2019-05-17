@@ -642,7 +642,6 @@ static void use_video_decoder(
     if (!SHA256_Final(md_out, &sha256_ctx)) {
       assert(false);
     }
-    printf("output thread done\n");
     // output thread done
     // ~raw_video_writer
   });

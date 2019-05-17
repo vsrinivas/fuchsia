@@ -47,8 +47,7 @@ int use_video_decoder_test(
   startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
       sysmem.NewRequest());
 
-  printf("The test file is: %s\n", input_file_path);
-  printf("Decoding test file and computing sha256...\n");
+  printf("Decoding test file %s\n", input_file_path);
 
   uint8_t md[SHA256_DIGEST_LENGTH];
   std::vector<std::pair<bool, uint64_t>> timestamps;
