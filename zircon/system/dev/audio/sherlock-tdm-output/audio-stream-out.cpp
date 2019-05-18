@@ -119,7 +119,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
     if (status != ZX_OK) {
         return status;
     }
-    aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_C, FRDDR_A, MCLK_A);
+    aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_C, FRDDR_A, MCLK_C);
     if (aml_audio_ == nullptr) {
         zxlogf(ERROR, "%s failed to create tdm device\n", __func__);
         return ZX_ERR_NO_MEMORY;
