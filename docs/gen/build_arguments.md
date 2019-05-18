@@ -367,10 +367,11 @@ module_suggester is not AOT compiled in debug builds
 From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
+Allow for deduping the VM between standalone, flutter_runner and dart_runner.
 
-**Current value (from the default):** `"static_library"`
+**Current value (from the default):** `"shared_library"`
 
-From //third_party/dart/runtime/runtime_args.gni:80
+From //third_party/dart/runtime/runtime_args.gni:78
 
 ### dart_core_snapshot_kind
 Controls the kind of core snapshot linked into the standalone VM. Using a
@@ -1504,13 +1505,13 @@ From //third_party/skia/BUILD.gn:70
 
 ### skia_enable_fontmgr_custom
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //third_party/skia/BUILD.gn:68
 
 ### skia_enable_fontmgr_custom_empty
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //third_party/skia/BUILD.gn:69
 
@@ -1522,7 +1523,7 @@ From //third_party/skia/BUILD.gn:66
 
 ### skia_enable_fontmgr_fuchsia
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //third_party/skia/BUILD.gn:71
 
@@ -1683,7 +1684,7 @@ From //third_party/skia/BUILD.gn:21
 
 From //.gn:26
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:63
 
@@ -1731,7 +1732,7 @@ From //third_party/skia/BUILD.gn:27
 
 From //.gn:28
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:24
 
@@ -1763,7 +1764,7 @@ From //third_party/skia/gn/skia.gni:14
 
 ### skia_use_icu
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //third_party/skia/gn/skia.gni:13
 
@@ -1791,7 +1792,7 @@ From //third_party/skia/BUILD.gn:29
 
 From //.gn:29
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:30
 
@@ -1833,7 +1834,7 @@ From //third_party/skia/BUILD.gn:33
 
 From //.gn:30
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:64
 
@@ -1847,9 +1848,9 @@ From //third_party/skia/BUILD.gn:64
 
 ### skia_use_vulkan
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
-From //third_party/skia/BUILD.gn:88
+From //third_party/skia/BUILD.gn:86
 
 ### skia_use_wuffs
 
@@ -1863,7 +1864,7 @@ From //third_party/skia/BUILD.gn:34
 
 From //.gn:31
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:38
 
@@ -1955,7 +1956,7 @@ From //build/config/sysroot.gni:7
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"host_x64/thinlto-cache"`
+**Current value (from the default):** `"arm64-shared/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -1970,7 +1971,7 @@ From //build/config/lto/config.gni:13
 Manifest files describing target libraries from toolchains.
 Can be either // source paths or absolute system paths.
 
-**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/x86_64-linux-gnu.manifest"]`
+**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]`
 
 From //build/images/manifest.gni:11
 
