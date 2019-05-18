@@ -123,7 +123,10 @@ foreach(gen, _fidl_generators) {
 # Parameters
 #
 #   sources
-#     Required: List of `.fidl` source files.
+#     Required: List of `.fidl` source files.  Note that if any file names
+#     ending in `.test.fidl` are present, $testonly is automatically set
+#     to true and cannot be explicitly set to false.
+#     Type: list(file)
 #
 #   deps
 #     Optional: This is *not* the way to express dependencies on other FIDL
@@ -142,6 +145,11 @@ foreach(gen, _fidl_generators) {
 #     Optional: This library is exported to the SDK.
 #     Type: bool
 #     Default: false
+#
+#   testonly
+#     Optional: Usual GN meaning: dependent targets must also set $testonly.
+#     Type: bool
+#     Default: true iff $sources includes "*.test.fidl" files
 #
 template("fidl_library") {
   assert(defined(invoker.sources),
