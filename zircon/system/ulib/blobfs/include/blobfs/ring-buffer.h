@@ -177,7 +177,7 @@ public:
     ~RingBuffer() = default;
 
     // Initializes the buffer with |blocks| blocks of size kBlobfsBlockSize.
-    static zx_status_t Create(SpaceManager* space_manager, const size_t blocks,
+    static zx_status_t Create(VmoidRegistry* vmoid_registry, const size_t blocks,
                               const char* label, std::unique_ptr<RingBuffer>* out);
 
     // Reserves space for |blocks| contiguous blocks in the circular buffer.

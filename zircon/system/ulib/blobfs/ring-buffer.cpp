@@ -4,9 +4,12 @@
 
 #include <blobfs/ring-buffer.h>
 
+#include <algorithm>
 #include <utility>
 
+#include <blobfs/format.h>
 #include <fbl/auto_lock.h>
+#include <fs/trace.h>
 
 namespace blobfs {
 
@@ -220,10 +223,10 @@ void* RingBufferReservation::MutableData(size_t index) {
     return buffer_->MutableData((start_ + index) % buffer_->capacity());
 }
 
-zx_status_t RingBuffer::Create(SpaceManager* space_manager, size_t blocks, const char* label,
+zx_status_t RingBuffer::Create(VmoidRegistry* vmoid_registry, size_t blocks, const char* label,
                                std::unique_ptr<RingBuffer>* out) {
     VmoBuffer buffer;
-    zx_status_t status = buffer.Initialize(space_manager, blocks, label);
+    zx_status_t status = buffer.Initialize(vmoid_registry, blocks, label);
     if (status != ZX_OK) {
         FS_TRACE_ERROR("RingBuffer: Failed to create internal buffer\n");
         return status;

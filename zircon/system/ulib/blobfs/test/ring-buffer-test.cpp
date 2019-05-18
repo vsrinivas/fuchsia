@@ -5,6 +5,8 @@
 #include <blobfs/ring-buffer.h>
 #include <blobfs/unbuffered-operations-builder.h>
 
+#include <blobfs/format.h>
+#include <blobfs/unbuffered-operations-builder.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zxtest/zxtest.h>
@@ -12,18 +14,13 @@
 namespace blobfs {
 namespace {
 
-// TODO(smklein): This interface is larger than necessary. Can we reduce it
-// to just "attach/detach vmo"?
-class MockSpaceManager : public SpaceManager {
+class MockVmoidRegistry : public VmoidRegistry {
 public:
     vmoid_t default_vmoid() const {
         return 1;
     }
 
 private:
-    const Superblock& Info() const final {
-        ZX_ASSERT_MSG(false, "Test should not invoke function: %s\n", __FUNCTION__);
-    }
     zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
         *out = default_vmoid();
         return ZX_OK;
@@ -32,46 +29,40 @@ private:
         EXPECT_EQ(default_vmoid(), vmoid);
         return ZX_OK;
     }
-    zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final {
-        ZX_ASSERT_MSG(false, "Test should not invoke function: %s\n", __FUNCTION__);
-    }
-    zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final {
-        ZX_ASSERT_MSG(false, "Test should not invoke function: %s\n", __FUNCTION__);
-    }
 };
 
 TEST(RingBufferTest, EmptyRingBuffer) {
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, RingBuffer::Create(&space_manager, 0, "test-buffer", &buffer));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, RingBuffer::Create(&vmoid_registry, 0, "test-buffer", &buffer));
 }
 
 TEST(RingBufferTest, MakeRingBuffer) {
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
     const size_t kBlocks = 5;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, "test-buffer", &buffer));
     EXPECT_EQ(kBlocks, buffer->capacity());
 }
 
 TEST(RingBufferTest, ReserveOne) {
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
     const size_t kBlocks = 5;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, "test-buffer", &buffer));
     RingBufferReservation reservation;
     EXPECT_EQ(0, reservation.length());
     EXPECT_OK(buffer->Reserve(1, &reservation));
-    EXPECT_EQ(space_manager.default_vmoid(), reservation.vmoid());
+    EXPECT_EQ(vmoid_registry.default_vmoid(), reservation.vmoid());
     EXPECT_EQ(0, reservation.start());
     EXPECT_EQ(1, reservation.length());
 }
 
 TEST(RingBufferTest, ReserveMove) {
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
     const size_t kBlocks = 5;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, "test-buffer", &buffer));
     RingBufferReservation reservation_a;
     ASSERT_OK(buffer->Reserve(1, &reservation_a));
     EXPECT_EQ(1, reservation_a.length());
@@ -88,10 +79,10 @@ TEST(RingBufferTest, ReserveMove) {
 }
 
 TEST(RingBufferTest, ReserveAndFreeOutOfOrder) {
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
     const size_t kBlocks = 10;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, "test-buffer", &buffer));
     RingBufferReservation reservations[4];
     ASSERT_OK(buffer->Reserve(1, &reservations[0]));
     ASSERT_OK(buffer->Reserve(2, &reservations[1]));
@@ -189,9 +180,9 @@ TEST(RingBufferTest, OneRequestAtOffsetZero) {
     builder.Add(operation);
 
     const size_t kRingBufferBlocks = 5;
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kRingBufferBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, "test-buffer", &buffer));
 
     RingBufferRequests request;
     ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
@@ -227,9 +218,9 @@ TEST(RingBufferTest, OneRequestAtNonZeroOffset) {
     builder.Add(operation);
 
     const size_t kRingBufferBlocks = 5;
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kRingBufferBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, "test-buffer", &buffer));
 
     RingBufferRequests request;
     ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
@@ -272,9 +263,9 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoSameReservation) {
     builder.Add(operations[1]);
 
     const size_t kRingBufferBlocks = 5;
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kRingBufferBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, "test-buffer", &buffer));
 
     RingBufferRequests request;
     ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
@@ -307,9 +298,9 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoDifferentReservations) {
     MakeTestVmo(kVmoBlocks, seed, &vmo);
 
     const size_t kRingBufferBlocks = 5;
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kRingBufferBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, "test-buffer", &buffer));
 
     UnbufferedOperationsBuilder builder;
     UnbufferedOperation operations[2];
@@ -373,9 +364,9 @@ TEST(RingBufferTest, OneRequestFullRingBuffer) {
     builder.Add(operation);
 
     const size_t kRingBufferBlocks = 3;
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kRingBufferBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, "test-buffer", &buffer));
 
     RingBufferRequests request;
     ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
@@ -411,9 +402,9 @@ TEST(RingBufferTest, OneRequestWithRingBufferFull) {
     builder.Add(operation);
 
     const size_t kRingBufferBlocks = 3;
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kRingBufferBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, "test-buffer", &buffer));
 
     RingBufferRequests request;
     ASSERT_EQ(ZX_ERR_NO_SPACE, buffer->Reserve(BlockCount(builder.TakeOperations()), nullptr));
@@ -435,9 +426,9 @@ TEST(RingBufferTest, RingBufferWraparoundCleanly) {
     MakeTestVmo(kVmoBlocks, seed, &vmo);
 
     const size_t kRingBufferBlocks = 6;
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kRingBufferBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, "test-buffer", &buffer));
 
     UnbufferedOperationsBuilder builder;
     UnbufferedOperation operations[3];
@@ -496,9 +487,9 @@ TEST(RingBufferTest, RingBufferWraparoundSplitRequest) {
     MakeTestVmo(kVmoBlocks, seed, &vmo);
 
     const size_t kRingBufferBlocks = 6;
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
-    ASSERT_OK(RingBuffer::Create(&space_manager, kRingBufferBlocks, "test-buffer", &buffer));
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, "test-buffer", &buffer));
 
     UnbufferedOperationsBuilder builder;
     UnbufferedOperation operations[3];
@@ -558,9 +549,9 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
     MakeTestVmo(kVmoBlocks, seed, &vmo);
 
     const size_t kRingBufferBlocks = 4;
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     VmoBuffer vmo_buffer;
-    ASSERT_OK(vmo_buffer.Initialize(&space_manager, kRingBufferBlocks, "test-buffer"));
+    ASSERT_OK(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, "test-buffer"));
     auto buffer = std::make_unique<RingBuffer>(std::move(vmo_buffer));
 
     RingBufferReservation reservations[3];
@@ -631,9 +622,9 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
     MakeTestVmo(kVmoBlocks, seed_b, &vmo_b);
 
     const size_t kRingBufferBlocks = 5;
-    MockSpaceManager space_manager;
+    MockVmoidRegistry vmoid_registry;
     VmoBuffer vmo_buffer;
-    ASSERT_OK(vmo_buffer.Initialize(&space_manager, kRingBufferBlocks, "test-buffer"));
+    ASSERT_OK(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, "test-buffer"));
     auto buffer = std::make_unique<RingBuffer>(std::move(vmo_buffer));
 
     RingBufferReservation reservation;

@@ -10,8 +10,7 @@
 
 #include <utility>
 
-// TODO(ZX-4003): Required for SpaceManager interface. Can we shrink this dependency?
-#include <blobfs/allocator.h>
+#include <blobfs/vmoid-registry.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 
 namespace blobfs {
@@ -35,7 +34,7 @@ public:
     // underlying storage device.
     //
     // Should only be called on VmoBuffers which have not been initialized already.
-    zx_status_t Initialize(SpaceManager* space_manager, size_t blocks, const char* label);
+    zx_status_t Initialize(VmoidRegistry* vmoid_registry, size_t blocks, const char* label);
 
     // Returns the total amount of pending blocks which may be buffered.
     size_t capacity() const { return capacity_; }
@@ -52,7 +51,7 @@ public:
 private:
     void Reset();
 
-    SpaceManager* space_manager_ = nullptr;
+    VmoidRegistry* vmoid_registry_ = nullptr;
     fzl::OwnedVmoMapper mapper_;
     vmoid_t vmoid_ = VMOID_INVALID;
     size_t capacity_ = 0;

@@ -16,6 +16,7 @@
 #include <blobfs/format.h>
 #include <blobfs/iterator/extent-iterator.h>
 #include <blobfs/node-reserver.h>
+#include <blobfs/vmoid-registry.h>
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/vector.h>
@@ -31,7 +32,7 @@ namespace blobfs {
 using BlockRegion = fuchsia_blobfs_BlockRegion;
 
 // An interface which controls actual access to the underlying storage.
-class SpaceManager {
+class SpaceManager : public VmoidRegistry {
 public:
     virtual ~SpaceManager() = default;
 
@@ -42,12 +43,6 @@ public:
 
     // Adds space for |nblocks| blocks to |map|, extending the volume if necessary.
     virtual zx_status_t AddBlocks(uint64_t nblocks, RawBitmap* map) = 0;
-
-    // Allocates a vmoid registering a VMO with the underlying block device.
-    virtual zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) = 0;
-
-    // Releases an allocated vmoid.
-    virtual zx_status_t DetachVmo(vmoid_t vmoid) = 0;
 };
 
 // Allocates and frees both block and node entries.

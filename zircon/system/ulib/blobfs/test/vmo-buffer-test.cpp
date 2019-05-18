@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <blobfs/vmo-buffer.h>
+
+#include <blobfs/format.h>
 #include <lib/zx/vmo.h>
 #include <zxtest/zxtest.h>
 
@@ -13,17 +15,11 @@ const vmoid_t kGoldenVmoid = 5;
 const size_t kCapacity = 3;
 constexpr char kGoldenLabel[] = "test-vmo";
 
-// TODO(ZX-4003): This interface is larger than necessary. Can we reduce it
-// to just "attach/detach vmo"?
-class MockSpaceManager : public SpaceManager {
+class MockVmoidRegistry : public VmoidRegistry {
 public:
     bool detached() const { return detached_; }
 
 private:
-    const Superblock& Info() const final {
-        ZX_ASSERT_MSG(false, "Test should not invoke function: %s\n", __FUNCTION__);
-    }
-
     zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
         *out = kGoldenVmoid;
         return ZX_OK;
@@ -36,14 +32,6 @@ private:
         return ZX_OK;
     }
 
-    zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final {
-        ZX_ASSERT_MSG(false, "Test should not invoke function: %s\n", __FUNCTION__);
-    }
-
-    zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final {
-        ZX_ASSERT_MSG(false, "Test should not invoke function: %s\n", __FUNCTION__);
-    }
-
     bool detached_ = false;
 };
 
@@ -54,7 +42,7 @@ TEST(VmoBufferTest, EmptyTest) {
 }
 
 TEST(VmoBufferTest, TestLabel) {
-    class MockManager : public MockSpaceManager {
+    class MockRegistry : public MockVmoidRegistry {
         zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final {
             char name[ZX_MAX_NAME_LEN];
             EXPECT_OK(vmo.get_property(ZX_PROP_NAME, name, sizeof(name)));
@@ -62,65 +50,65 @@ TEST(VmoBufferTest, TestLabel) {
             *out = kGoldenVmoid;
             return ZX_OK;
         }
-    } manager;
+    } registry;
 
     VmoBuffer buffer;
-    ASSERT_OK(buffer.Initialize(&manager, kCapacity, kGoldenLabel));
+    ASSERT_OK(buffer.Initialize(&registry, kCapacity, kGoldenLabel));
 }
 
 TEST(VmoBufferTest, VmoidRegistration) {
-    MockSpaceManager manager;
+    MockVmoidRegistry registry;
     {
         VmoBuffer buffer;
-        ASSERT_OK(buffer.Initialize(&manager, kCapacity, kGoldenLabel));
+        ASSERT_OK(buffer.Initialize(&registry, kCapacity, kGoldenLabel));
         EXPECT_EQ(kCapacity, buffer.capacity());
         EXPECT_EQ(kGoldenVmoid, buffer.vmoid());
 
-        EXPECT_FALSE(manager.detached());
+        EXPECT_FALSE(registry.detached());
     }
-    EXPECT_TRUE(manager.detached());
+    EXPECT_TRUE(registry.detached());
 }
 
 TEST(VmoBufferTest, MoveConstructorTest) {
-    MockSpaceManager manager;
+    MockVmoidRegistry registry;
 
     {
         VmoBuffer buffer;
-        ASSERT_OK(buffer.Initialize(&manager, kCapacity, kGoldenLabel));
+        ASSERT_OK(buffer.Initialize(&registry, kCapacity, kGoldenLabel));
         EXPECT_EQ(kCapacity, buffer.capacity());
         EXPECT_EQ(kGoldenVmoid, buffer.vmoid());
 
         VmoBuffer move_constructed(std::move(buffer));
         EXPECT_EQ(kCapacity, move_constructed.capacity());
         EXPECT_EQ(kGoldenVmoid, move_constructed.vmoid());
-        EXPECT_FALSE(manager.detached());
+        EXPECT_FALSE(registry.detached());
     }
-    EXPECT_TRUE(manager.detached());
+    EXPECT_TRUE(registry.detached());
 }
 
 TEST(VmoBufferTest, MoveAssignmentTest) {
-    MockSpaceManager manager;
+    MockVmoidRegistry registry;
 
     {
         VmoBuffer buffer;
-        ASSERT_OK(buffer.Initialize(&manager, kCapacity, kGoldenLabel));
+        ASSERT_OK(buffer.Initialize(&registry, kCapacity, kGoldenLabel));
         EXPECT_EQ(kCapacity, buffer.capacity());
         EXPECT_EQ(kGoldenVmoid, buffer.vmoid());
 
         auto buffer2 = std::move(buffer);
         EXPECT_EQ(kCapacity, buffer2.capacity());
         EXPECT_EQ(kGoldenVmoid, buffer2.vmoid());
-        EXPECT_FALSE(manager.detached());
+        EXPECT_FALSE(registry.detached());
     }
-    EXPECT_TRUE(manager.detached());
+    EXPECT_TRUE(registry.detached());
 }
 
 TEST(VmoBufferTest, MoveToSelfTest) {
-    MockSpaceManager manager;
+    MockVmoidRegistry registry;
 
     {
         VmoBuffer buffer;
-        ASSERT_OK(buffer.Initialize(&manager, kCapacity, kGoldenLabel));
+        ASSERT_OK(buffer.Initialize(&registry, kCapacity, kGoldenLabel));
         EXPECT_EQ(kCapacity, buffer.capacity());
         EXPECT_EQ(kGoldenVmoid, buffer.vmoid());
 
@@ -128,16 +116,16 @@ TEST(VmoBufferTest, MoveToSelfTest) {
         *addr = std::move(buffer);
         EXPECT_EQ(kCapacity, buffer.capacity());
         EXPECT_EQ(kGoldenVmoid, buffer.vmoid());
-        EXPECT_FALSE(manager.detached());
+        EXPECT_FALSE(registry.detached());
     }
-    EXPECT_TRUE(manager.detached());
+    EXPECT_TRUE(registry.detached());
 }
 
 TEST(VmoBufferTest, MappingTest) {
-    MockSpaceManager manager;
+    MockVmoidRegistry registry;
 
     VmoBuffer buffer;
-    ASSERT_OK(buffer.Initialize(&manager, kCapacity, kGoldenLabel));
+    ASSERT_OK(buffer.Initialize(&registry, kCapacity, kGoldenLabel));
     char buf[kBlobfsBlockSize];
     memset(buf, 'a', sizeof(buf));
 
@@ -150,9 +138,9 @@ TEST(VmoBufferTest, MappingTest) {
 }
 
 TEST(VmoBufferTest, CompareVmoToMapping) {
-    MockSpaceManager manager;
+    MockVmoidRegistry registry;
     VmoBuffer buffer;
-    ASSERT_OK(buffer.Initialize(&manager, kCapacity, kGoldenLabel));
+    ASSERT_OK(buffer.Initialize(&registry, kCapacity, kGoldenLabel));
 
     // Fill |buffer| with some arbitrary data via mapping.
     char buf[kBlobfsBlockSize * 3];
