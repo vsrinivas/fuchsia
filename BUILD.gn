@@ -102,6 +102,7 @@ generated_file("tests") {
   output_conversion = "json"
   deps = [
     "//build/images:packages",
+    "//sdk",
   ]
 }
 
