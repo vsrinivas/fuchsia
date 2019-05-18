@@ -50,8 +50,10 @@ if ! is_usb "${USB_DEVICE}"; then
   exit 1
 fi
 
-echo >&2 "Changing ownership of ${USB_DEVICE} to ${USER}"
-sudo chown "${USER}" "${USB_DEVICE}"
+if ! [[ -w "${USB_DEVICE}" ]] ; then
+  echo >&2 "Changing ownership of ${USB_DEVICE} to ${USER}"
+  sudo chown "${USER}" "${USB_DEVICE}"
+fi
 
 echo >&2 "Opening device..."
 # We open the device and hold onto an fd for the duration of our modifications.
