@@ -29,7 +29,9 @@ a [standard convention][build-id].
 ### Warning flags
 
 The following flags are guaranteed to not generate any warning:
-- `-Wsemi-extra`
+- `-Wall`
+- `-Wextra-semi`
+- `-Wnewline-eof`
 - `-Wshadow`
 
 The following flags may generate warnings:
