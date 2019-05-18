@@ -4,6 +4,7 @@
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/modular_test_harness/cpp/fake_component.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -142,4 +143,69 @@ TEST_F(TestHarnessFixtureTest, SimpleSuccess) {
   test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
   test_harness()->Run(builder.BuildSpec());
   RunLoopUntil([&] { return intercepted; });
+}
+
+class TestComponent : public modular::testing::FakeComponent {
+ public:
+  TestComponent(fit::function<void()> on_created,
+                fit::function<void()> on_destroyed)
+      : on_created_(std::move(on_created)),
+        on_destroyed_(std::move(on_destroyed)) {}
+
+ protected:
+  void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
+    on_created_();
+  }
+
+  void OnDestroy() override { on_destroyed_(); }
+
+  fit::function<void()> on_created_;
+  fit::function<void()> on_destroyed_;
+};
+
+// Tests that FakeComponent receives lifecycle events when it is killed
+// by its parent.
+TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByParent) {
+  modular::testing::TestHarnessBuilder builder;
+
+  bool running = false;
+  TestComponent session_shell([&] { running = true; },
+                              [&] { running = false; });
+  builder.InterceptSessionShell(
+      session_shell.GetOnCreateHandler(),
+      {.url = builder.GenerateFakeUrl(),
+       .sandbox_services = {"fuchsia.modular.SessionShellContext"}});
+
+  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
+  test_harness()->Run(builder.BuildSpec());
+  RunLoopUntil([&] { return session_shell.is_running(); });
+  EXPECT_TRUE(running);
+
+  fuchsia::modular::SessionShellContextPtr session_shell_context;
+  session_shell.component_context()->svc()->Connect(
+      session_shell_context.NewRequest());
+  session_shell_context->Logout();
+
+  RunLoopUntil([&] { return !session_shell.is_running(); });
+  EXPECT_FALSE(running);
+}
+
+// Tests that FakeComponent receives lifecycle events when it kills
+// itself.
+TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledBySelf) {
+  modular::testing::TestHarnessBuilder builder;
+
+  bool running = false;
+  TestComponent base_shell([&] { running = true; }, [&] { running = false; });
+  builder.InterceptBaseShell(base_shell.GetOnCreateHandler(),
+                             {.url = builder.GenerateFakeUrl()});
+
+  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
+  test_harness()->Run(builder.BuildSpec());
+  RunLoopUntil([&] { return base_shell.is_running(); });
+  EXPECT_TRUE(running);
+
+  base_shell.Exit(0);
+  RunLoopUntil([&] { return !base_shell.is_running(); });
+  EXPECT_FALSE(running);
 }
