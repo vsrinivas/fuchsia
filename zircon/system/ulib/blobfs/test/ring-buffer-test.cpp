@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <blobfs/ring-buffer.h>
+#include <blobfs/unbuffered-operations-builder.h>
 
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>

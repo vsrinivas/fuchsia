@@ -10,11 +10,10 @@
 
 #include <utility>
 
+#include <blobfs/operation.h>
 #include <blobfs/vmo-buffer.h>
 #include <fbl/mutex.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-
-#include "unbuffered-operations-builder.h"
 
 namespace blobfs {
 

@@ -8,6 +8,7 @@
 #error Fuchsia-only Header
 #endif
 
+#include <fbl/vector.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 
@@ -47,5 +48,8 @@ struct BufferedOperation {
     vmoid_t vmoid;
     Operation op;
 };
+
+// Sums the |length| of all requests.
+uint64_t BlockCount(const fbl::Vector<UnbufferedOperation>& requests);
 
 } // namespace blobfs

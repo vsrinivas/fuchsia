@@ -92,12 +92,4 @@ fbl::Vector<UnbufferedOperation> UnbufferedOperationsBuilder::TakeOperations() {
     return std::move(operations_);
 }
 
-uint64_t BlockCount(const fbl::Vector<UnbufferedOperation>& operations) {
-    uint64_t total_length = 0;
-    for (const auto& operation: operations) {
-        total_length += operation.op.length;
-    }
-    return total_length;
-}
-
 } // namespace blobfs

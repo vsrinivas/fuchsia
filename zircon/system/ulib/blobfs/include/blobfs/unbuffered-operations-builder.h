@@ -49,7 +49,4 @@ private:
     uint64_t block_count_;
 };
 
-// Sums the |length| of all requests.
-uint64_t BlockCount(const fbl::Vector<UnbufferedOperation>& requests);
-
 } // namespace blobfs
