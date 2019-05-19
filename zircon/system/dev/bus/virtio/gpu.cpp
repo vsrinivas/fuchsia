@@ -174,6 +174,20 @@ zx_status_t GpuDevice::virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_hand
     return zx_vmo_create_contiguous(gd->bti().get(), size, 0, vmo_out);
 }
 
+zx_status_t GpuDevice::virtio_get_sysmem_connection(void* ctx, zx_handle_t handle) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t GpuDevice::virtio_set_buffer_collection_constraints(void* ctx, const image_t* config,
+                                                                zx_unowned_handle_t collection) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t GpuDevice::virtio_get_single_buffer_framebuffer(void* ctx, zx_handle_t* out_vmo,
+                                                            uint32_t* out_stride) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 GpuDevice::GpuDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
     : Device(bus_device, std::move(bti), std::move(backend)) {
     sem_init(&request_sem_, 0, 1);
@@ -469,6 +483,9 @@ zx_status_t GpuDevice::virtio_gpu_start() {
     display_proto_ops_.apply_configuration = virtio_gpu_apply_configuration;
     display_proto_ops_.compute_linear_stride = virtio_gpu_compute_linear_stride;
     display_proto_ops_.allocate_vmo = virtio_gpu_allocate_vmo;
+    display_proto_ops_.get_sysmem_connection = virtio_get_sysmem_connection;
+    display_proto_ops_.set_buffer_collection_constraints = virtio_set_buffer_collection_constraints;
+    display_proto_ops_.get_single_buffer_framebuffer = virtio_get_single_buffer_framebuffer;
 
     // Initialize the zx_device and publish us
     // Point the ctx of our DDK device at ourself

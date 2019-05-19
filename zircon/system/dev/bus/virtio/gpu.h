@@ -51,7 +51,11 @@ private:
     static uint32_t virtio_gpu_compute_linear_stride(
             void* ctx, uint32_t width, zx_pixel_format_t format);
     static zx_status_t virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out);
-
+    static zx_status_t virtio_get_sysmem_connection(void* ctx, zx_handle_t handle);
+    static zx_status_t virtio_set_buffer_collection_constraints(void* ctx, const image_t* config,
+                                                                zx_unowned_handle_t collection);
+    static zx_status_t virtio_get_single_buffer_framebuffer(void* ctx, zx_handle_t* out_vmo,
+                                                            uint32_t* out_stride);
 
     // Internal routines
     template <typename RequestType, typename ResponseType>
