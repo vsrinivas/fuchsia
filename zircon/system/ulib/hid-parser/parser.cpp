@@ -165,7 +165,7 @@ public:
         if (mem == nullptr)
             return kParseNoMemory;
 
-        auto dev = new (mem) DeviceDescriptor{report_count, {}};
+        auto dev = new (mem) DeviceDescriptor{report_count};
 
         mem += device_sz;
         auto dest_fields = reinterpret_cast<ReportField*>(mem);

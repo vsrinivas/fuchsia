@@ -32,7 +32,6 @@ zbi_partition_map_t MakePartitionMap(uint32_t partition_count) {
         .partition_count = partition_count,
         .reserved = 0,
         .guid = {},
-        .partitions = {},
     };
 }
 
