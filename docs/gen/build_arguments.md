@@ -367,11 +367,10 @@ module_suggester is not AOT compiled in debug builds
 From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
-Allow for deduping the VM between standalone, flutter_runner and dart_runner.
 
-**Current value (from the default):** `"shared_library"`
+**Current value (from the default):** `"static_library"`
 
-From //third_party/dart/runtime/runtime_args.gni:78
+From //third_party/dart/runtime/runtime_args.gni:80
 
 ### dart_core_snapshot_kind
 Controls the kind of core snapshot linked into the standalone VM. Using a
