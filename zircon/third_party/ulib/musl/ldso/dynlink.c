@@ -476,6 +476,7 @@ __NO_SAFESTACK NO_ASAN static void do_relocs(struct dso* dso, size_t* rel,
                 continue;
             }
         } else {
+            name = "(local)";
             sym = 0;
             def.sym = 0;
             def.dso = dso;
@@ -553,7 +554,7 @@ __NO_SAFESTACK NO_ASAN static void do_relocs(struct dso* dso, size_t* rel,
                 size_t* new = dl_alloc(2 * sizeof(size_t));
                 if (!new) {
                     error("Error relocating %s: cannot allocate TLSDESC for %s", dso->l_map.l_name,
-                          sym ? name : "(local)");
+                          name);
                     longjmp(*rtld_fail, 1);
                 }
                 new[0] = def.dso->tls_id;
