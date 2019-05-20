@@ -280,7 +280,7 @@ zx_status_t Inspector::GetRoot(std::unique_ptr<disk_inspector::DiskObject> *out)
         return ZX_ERR_IO;
     }
 
-    size_t size = stats.st_size /= minfs::kMinfsBlockSize;
+    size_t size = stats.st_size / minfs::kMinfsBlockSize;
 
     if (minfs::Bcache::Create(&bc, std::move(fd_), static_cast<uint32_t>(size)) < 0) {
         fprintf(stderr, "minfsInspector: cannot create block cache\n");
