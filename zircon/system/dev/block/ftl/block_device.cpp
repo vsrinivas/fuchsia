@@ -403,7 +403,7 @@ zx_status_t BlockDevice::Flush() {
         return status;
     }
 
-    zxlogf(INFO, "FTL: Finished flush\n");
+    zxlogf(SPEW, "FTL: Finished flush\n");
     return status;
 }
 
