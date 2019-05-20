@@ -30,7 +30,7 @@ __BEGIN_CDECLS
  */
 
 typedef struct p2ra_state {
-    Mutex             lock;
+    DECLARE_MUTEX(p2ra_state) lock;
     struct list_node  ranges;
     struct list_node  unused_blocks;
     struct list_node  allocated_blocks;

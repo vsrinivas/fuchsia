@@ -15,7 +15,7 @@
 #include <dev/interrupt.h>
 #include <err.h>
 #include <fbl/algorithm.h>
-#include <kernel/auto_lock.h>
+#include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <lib/acpi_tables.h>
@@ -35,12 +35,12 @@
 #include <trace.h>
 
 struct int_handler_struct {
-    SpinLock lock;
+    DECLARE_SPINLOCK(int_handler_struct) lock;
     int_handler handler;
     void* arg;
 };
 
-static SpinLock lock;
+DECLARE_SINGLETON_SPINLOCK(InterruptLock);
 static struct int_handler_struct int_handler_table[X86_INT_COUNT];
 static p2ra_state_t x86_irq_vector_allocator;
 
@@ -125,13 +125,13 @@ static void platform_init_apic(uint level) {
 LK_INIT_HOOK(apic, &platform_init_apic, LK_INIT_LEVEL_VM + 2)
 
 zx_status_t mask_interrupt(unsigned int vector) {
-    AutoSpinLock guard(&lock);
+    Guard<SpinLock, IrqSave> guard{InterruptLock::Get()};
     apic_io_mask_irq(vector, IO_APIC_IRQ_MASK);
     return ZX_OK;
 }
 
 zx_status_t unmask_interrupt(unsigned int vector) {
-    AutoSpinLock guard(&lock);
+    Guard<SpinLock, IrqSave> guard{InterruptLock::Get()};
     apic_io_mask_irq(vector, IO_APIC_IRQ_UNMASK);
     return ZX_OK;
 }
@@ -139,7 +139,7 @@ zx_status_t unmask_interrupt(unsigned int vector) {
 zx_status_t configure_interrupt(unsigned int vector,
                                 enum interrupt_trigger_mode tm,
                                 enum interrupt_polarity pol) {
-    AutoSpinLock guard(&lock);
+    Guard<SpinLock, IrqSave> guard{InterruptLock::Get()};
     apic_io_configure_irq(
         vector,
         tm,
@@ -155,7 +155,7 @@ zx_status_t configure_interrupt(unsigned int vector,
 zx_status_t get_interrupt_config(unsigned int vector,
                                  enum interrupt_trigger_mode* tm,
                                  enum interrupt_polarity* pol) {
-    AutoSpinLock guard(&lock);
+    Guard<SpinLock, IrqSave> guard{InterruptLock::Get()};
     return apic_io_fetch_irq_config(vector, tm, pol);
 }
 
@@ -169,7 +169,7 @@ void platform_irq(x86_iframe_t* frame) {
     struct int_handler_struct* handler = &int_handler_table[x86_vector];
 
     {
-        AutoSpinLockNoIrqSave guard(&handler->lock);
+        Guard<SpinLock, NoIrqSave> guard{&handler->lock};
         if (handler->handler) {
             handler->handler(handler->arg);
         }
@@ -184,7 +184,7 @@ zx_status_t register_int_handler(unsigned int vector, int_handler handler, void*
         return ZX_ERR_INVALID_ARGS;
     }
 
-    AutoSpinLock guard(&lock);
+    Guard<SpinLock, IrqSave> guard{InterruptLock::Get()};
     zx_status_t result = ZX_OK;
 
     /* Fetch the x86 vector currently configured for this global irq.  Force
@@ -228,7 +228,7 @@ zx_status_t register_int_handler(unsigned int vector, int_handler handler, void*
 
     {
         // No need to irq_save; we already did that when we grabbed the outer lock.
-        AutoSpinLockNoIrqSave handler_guard(&int_handler_table[x86_vector].lock);
+        Guard<SpinLock, NoIrqSave> handler_guard{&int_handler_table[x86_vector].lock};
 
         if (handler && int_handler_table[x86_vector].handler) {
             p2ra_free_range(&x86_irq_vector_allocator, x86_vector, 1);
@@ -355,7 +355,7 @@ void msi_register_handler(const msi_block_t* block, uint msi_id, int_handler han
     DEBUG_ASSERT((x86_vector >= X86_INT_PLATFORM_BASE) &&
                  (x86_vector <= X86_INT_PLATFORM_MAX));
 
-    AutoSpinLock guard(&int_handler_table[x86_vector].lock);
+    Guard<SpinLock, IrqSave> guard{&int_handler_table[x86_vector].lock};
     int_handler_table[x86_vector].handler = handler;
     int_handler_table[x86_vector].arg = handler ? ctx : NULL;
 }

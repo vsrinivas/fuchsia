@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
+#include <kernel/lockdep.h>
 #include <pow2.h>
 #include <stdlib.h>
 #include <string.h>
@@ -193,7 +193,7 @@ zx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len
     });
 
     /* Enter the lock and check for overlap with pre-existing ranges */
-    fbl::AutoLock guard(&state->lock);
+    Guard<Mutex> guard{&state->lock};
 
     p2ra_range_t* range;
     list_for_every_entry (&state->ranges, range, p2ra_range_t, node) {
@@ -301,7 +301,7 @@ zx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_
     /* Lock state during allocation */
     p2ra_block_t* block = NULL;
 
-    fbl::AutoLock guard(&state->lock);
+    Guard<Mutex> guard{&state->lock};
 
     /* Find the smallest sized chunk which can hold the allocation and is
      * compatible with the requested addressing capabilities */
@@ -362,7 +362,7 @@ void p2ra_free_range(p2ra_state_t* state, uint range_start, uint size) {
 
     uint bucket = log2_uint_floor(size);
 
-    fbl::AutoLock guard(&state->lock);
+    Guard<Mutex> guard{&state->lock};
 
     /* In a debug build, find the specific block being returned in the list of
      * allocated blocks and use it as the bookkeeping for returning to the free
