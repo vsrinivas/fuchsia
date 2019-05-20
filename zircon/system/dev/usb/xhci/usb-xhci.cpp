@@ -268,9 +268,11 @@ int UsbXhci::StartThread() {
     if (status == ZX_OK) {
         // TODO(jocelyndang): start xdc in a new process.
         status = xdc_bind(zxdev(), xhci_->bti_handle.get(), xhci_->mmio->get());
+        // XDC is not required for functioning XHCI. Not all boards support XDC.
         if (status != ZX_OK) {
             zxlogf(ERROR, "xhci_start: xdc_bind failed %d\n", status);
         }
+        status = ZX_OK;
     }
 #endif
 
