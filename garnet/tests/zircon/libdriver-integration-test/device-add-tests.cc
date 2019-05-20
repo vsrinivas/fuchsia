@@ -19,12 +19,15 @@ protected:
             std::initializer_list<zx_device_prop_t> props, zx_status_t expected_status,
             std::unique_ptr<RootMockDevice>* root_device,
             std::unique_ptr<MockDevice>* child_device) {
+        // Copy from props into a vector owned by the lambda, since a capture "by
+        // value" of props does not copy deeply.
+        std::vector<zx_device_prop_t> properties(props);
         return ExpectBind(root_device,
-            [=](HookInvocation record, Completer<void> completer) {
+            [=, properties=std::move(properties)](HookInvocation record,
+                                                  Completer<void> completer) {
                 ActionList actions;
                 actions.AppendAddMockDevice(loop_.dispatcher(), (*root_device)->path(),
-                                            "first_child",
-                                            std::vector<zx_device_prop_t>(props),
+                                            "first_child", std::move(properties),
                                             expected_status, std::move(completer), child_device);
                 actions.AppendReturnStatus(expected_status);
                 return actions;
