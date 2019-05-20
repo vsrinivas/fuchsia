@@ -18,6 +18,23 @@
 extern "C" const uint8_t push_pop_test[62];
 extern "C" const uint8_t minmax_signed_test[68];
 
+bool parse_empty_data() {
+    BEGIN_TEST;
+
+    hid::DeviceDescriptor* dev = nullptr;
+    uint8_t data[] = { 0 };
+    auto res = hid::ParseReportDescriptor(data, sizeof(data), &dev);
+    ASSERT_EQ(res, hid::ParseResult::kParseInvalidTag);
+
+    res = hid::ParseReportDescriptor(nullptr, 0, &dev);
+    ASSERT_EQ(res, hid::ParseResult::kParseMoreNeeded);
+
+    res = hid::ParseReportDescriptor(data, 0, &dev);
+    ASSERT_EQ(res, hid::ParseResult::kParseMoreNeeded);
+
+    END_TEST;
+}
+
 // Tests that the max values of the MinMax are parsed as unsigned
 // data when the min values are >= 0. Also tests that the max values
 // are parsed as signed data when the min values are < 0.
@@ -762,6 +779,7 @@ bool insert_tests() {
 }
 
 BEGIN_TEST_CASE(hidparser_helper_tests)
+RUN_TEST(parse_empty_data)
 RUN_TEST(parse_minmax_signed)
 RUN_TEST(parse_push_pop)
 RUN_TEST(usage_helper)

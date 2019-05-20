@@ -144,6 +144,11 @@ public:
         // refer to collections in the source need to be translated to pointers
         // valid within the destination memory area.
 
+        // Check if we actually have items or report ids before going forward.
+        if (report_ids_.size() == 0 || coll_.size() == 0) {
+            return kParseMoreNeeded;
+        }
+
         // If report_ids_ has just the unnumbered report, then the device
         // doesn't declare report ids.
         bool no_report_id = !report_ids_[0].has_report_id;
@@ -702,6 +707,9 @@ ParseResult ParseReportDescriptor(
     DeviceDescriptor** device) {
 
     impl::ParseState state;
+
+    if (rpt_desc == nullptr || device == nullptr)
+        return kParseMoreNeeded;
 
     if (!state.Init())
         return kParseNoMemory;
