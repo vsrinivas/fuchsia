@@ -10,6 +10,8 @@
 #include <lib/media/codec_impl/codec_impl.h>
 #include <threads.h>
 
+#include "lib/syslog/cpp/logger.h"
+
 // "is_bound_checks" - In several lambdas that just send a message, we check
 // is_bound() first, only because of ZX_POL_BAD_HANDLE ZX_POL_ACTION_EXCEPTION.
 // If it weren't for that, we really wouldn't care about passing
@@ -3072,7 +3074,7 @@ void CodecImpl::vFailLocked(bool is_fatal, const char* format, va_list args) {
   // and/or provide filtering goodness etc.
   const char* message =
       is_fatal ? "devhost will fail" : "Codec channel will close async";
-  printf("%s  --  %s\n", buffer.get(), message);
+  FX_LOGS(ERROR) << buffer.get() << " -- " << message << "\n";
 
   // TODO(dustingreen): Send string in buffer via epitaph, when possible.  First
   // we should switch to events so we'll only have the Codec channel not the

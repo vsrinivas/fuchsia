@@ -12,6 +12,8 @@
 #include <lib/media/codec_impl/codec_impl.h>
 #include <threads.h>
 
+#include "lib/syslog/cpp/logger.h"
+
 // Marker type to specify these is no adapter to serve a request.
 class NoAdapter {};
 
@@ -71,9 +73,9 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
           }
 
           if (!sysmem_) {
-            printf(
-                "VendCodecAdapter() only meant to be used once per "
-                "LocalSingleCodecFactory\n");
+            FX_LOGS(WARNING)
+                << "VendCodecAdapter() only meant to be used once per "
+                   "LocalSingleCodecFactory\n";
             // ~codec_request closes channel.
             return;
           }

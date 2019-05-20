@@ -32,6 +32,10 @@ source_set("codec_runner_sw") {
     "//garnet/lib/media/codec_impl",
     "//garnet/public/lib/component/cpp",
   ]
+
+  public_deps = [
+    "//garnet/public/lib/syslog/cpp",
+  ]
 }
 
 config("codec_adapter_sw_include_config") {
