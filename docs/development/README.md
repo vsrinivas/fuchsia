@@ -23,6 +23,7 @@ and debugging Fuchsia and programs running on Fuchsia.
 
 ## Languages
 
+ - [README](languages/README.md) - Language usage in Fuchsia
  - [C/C++](languages/c-cpp/README.md)
  - [Dart](languages/dart/README.md)
  - [FIDL](languages/fidl/README.md)
@@ -63,6 +64,7 @@ This section covers Fuchsia development hardware targets.
 
  - [Test components](tests/test_component.md)
  - [Test environments](tests/environments.md)
+ - [Testability rubrics](testability/rubric.md)
 
 ## Conventions
 

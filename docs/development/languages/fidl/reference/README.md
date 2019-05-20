@@ -20,6 +20,8 @@ Fuchsia has adopted a [readability rubric](../../../api/fidl.md) for FIDL librar
 
 ## Bindings
 
+* [Specification](bindings.md)
+
 ### C
 
 - [Documentation](../languages/c.md)

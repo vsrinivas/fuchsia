@@ -65,6 +65,10 @@ also provides core drivers and Fuchsia's libc implementation.
  - [Input manager][input-manager]
  - [Flutter (UI toolkit)][flutter]
 
+## Components
+
+ - [Component framework](components/README.md)
+
 ## Media
 
  - Audio

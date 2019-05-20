@@ -85,4 +85,4 @@ running [`fx syslog`][getting_logs].
 
 
 [logger-doc]: https://pub.dev/documentation/logging/latest/logging/Logger-class.html
-[getting_logs]: /docs/development/workflows/fx#getting_logs
+[getting_logs]: /docs/development/workflows/fx.md#getting_logs

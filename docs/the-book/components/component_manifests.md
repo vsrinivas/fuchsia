@@ -150,7 +150,7 @@ the module subscribes to.
 
 This section explains the syntax for each section of the component manifest, in
 CML format. For the full schema, see
-[cml_schema.json](/garnet/lib/rust/json/cml_schema.json).
+[cml_schema.json](/garnet/lib/rust/cm_json/cml_schema.json).
 
 ### program
 
