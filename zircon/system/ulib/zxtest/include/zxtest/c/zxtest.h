@@ -50,6 +50,18 @@ bool zxtest_runner_current_test_has_failures(void);
 void zxtest_runner_fail_current_test(bool fatal, const char* file, int line_number,
                                      const char* message);
 
+#ifdef __Fuchsia__
+// Possible expected results for the death statements.
+enum DeathResult {
+    kDeathResultRaiseException,
+    kDeathResultComplete,
+};
+
+// Returns true if |statement| execution results in |result|.
+bool zxtest_death_statement_execute(zxtest_test_fn_t statement, enum DeathResult result,
+                                    const char* file, int line, const char* message);
+#endif
+
 // Entry point for executing all tests.
 int zxtest_run_all_tests(int argc, char** argv);
 
@@ -228,22 +240,6 @@ static void zxtest_clean_buffer(char** buffer) {
         }                                                                                          \
     } while (0)
 
-#ifdef __Fuchsia__
-#define _ASSERT_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)                     \
-    do {                                                                                           \
-        const zx_status_t _actual = (const zx_status_t)(actual);                                   \
-        const zx_status_t _expected = (const zx_status_t)(expected);                               \
-        if (!(op(_actual, _expected))) {                                                           \
-            _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                     \
-            _ZXTEST_ASSERT(msg_buffer, #expected, zx_status_get_string(_expected), #actual,        \
-                           zx_status_get_string(_actual), file, line, fatal);                      \
-            _RETURN_IF_FATAL(fatal);                                                               \
-        }                                                                                          \
-    } while (0)
-#else
-#define _ASSERT_VAR_STATUS(...) _ASSERT_VAR(__VA_ARGS__)
-#endif
-
 #define _ASSERT_VAR(op, expected, actual, fatal, file, line, desc, ...)                            \
     _ASSERT_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(expected), fatal, file, line,   \
                        desc, ##__VA_ARGS__)
@@ -261,3 +257,31 @@ static void zxtest_clean_buffer(char** buffer) {
             _RETURN_IF_FATAL(fatal);                                                               \
         }                                                                                          \
     } while (0)
+
+#ifdef __Fuchsia__
+#define _ASSERT_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)                     \
+    do {                                                                                           \
+        const zx_status_t _actual = (const zx_status_t)(actual);                                   \
+        const zx_status_t _expected = (const zx_status_t)(expected);                               \
+        if (!(op(_actual, _expected))) {                                                           \
+            _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                     \
+            _ZXTEST_ASSERT(msg_buffer, #expected, zx_status_get_string(_expected), #actual,        \
+                           zx_status_get_string(_actual), file, line, fatal);                      \
+            _RETURN_IF_FATAL(fatal);                                                               \
+        }                                                                                          \
+    } while (0)
+
+#define _ZXTEST_DEATH_STATUS_COMPLETE kDeathResultComplete
+#define _ZXTEST_DEATH_STATUS_EXCEPTION kDeathResultRaiseException
+#define _ZXTEST_DEATH_STATEMENT(statement, expected_result, desc, ...)                             \
+    do {                                                                                           \
+        _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                         \
+        if (!zxtest_death_statement_execute(statement, expected_result, __FILE__, __LINE__,        \
+                                            msg_buffer)) {                                         \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
+
+#else
+#define _ASSERT_VAR_STATUS(...) _ASSERT_VAR(__VA_ARGS__)
+#endif

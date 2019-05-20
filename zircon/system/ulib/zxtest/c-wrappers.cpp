@@ -11,6 +11,10 @@
 #include <zxtest/base/test.h>
 #include <zxtest/c/zxtest.h>
 
+#ifdef __Fuchsia__
+#include <zxtest/base/death-statement.h>
+#endif
+
 namespace {
 
 class CTestWrapper : public zxtest::Test {
@@ -124,3 +128,40 @@ void zxtest_runner_fail_current_test(bool is_fatal, const char* file, int line,
     zxtest::Runner::GetInstance()->NotifyAssertion(
         zxtest::Assertion(message, {.filename = file, .line_number = line}, is_fatal));
 }
+
+#ifdef __Fuchsia__
+bool zxtest_death_statement_execute(zxtest_test_fn_t statement, enum DeathResult result,
+                                    const char* file, int line, const char* message) {
+    zxtest::internal::DeathStatement death_statement([statement]() { statement(); });
+    death_statement.Execute();
+    bool success = false;
+
+    switch (result) {
+    case DeathResult::kDeathResultComplete:
+        success = (death_statement.state() == zxtest::internal::DeathStatement::State::kSuccess);
+        break;
+    case DeathResult::kDeathResultRaiseException:
+        success = (death_statement.state() == zxtest::internal::DeathStatement::State::kException);
+        break;
+    default:
+        break;
+    }
+
+    if (success) {
+        return true;
+    }
+
+    if (death_statement.state() == zxtest::internal::DeathStatement::State::kBadState) {
+        zxtest::Runner::GetInstance()->NotifyFatalError();
+    }
+
+    // For now all death death_statements assertions are fatal.
+    std::string error_message;
+    if (!death_statement.error_message().empty()) {
+        zxtest_runner_fail_current_test(true, file, line, death_statement.error_message().data());
+    } else {
+        zxtest_runner_fail_current_test(true, file, line, message);
+    }
+    return false;
+}
+#endif

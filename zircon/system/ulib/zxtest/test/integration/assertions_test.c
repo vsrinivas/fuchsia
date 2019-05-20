@@ -664,3 +664,38 @@ TEST(ZxTestCAssertionTest, AddFatalFailure) {
     ASSERT_NO_FATAL_FAILURES();
     TEST_CHECKPOINT();
 }
+
+#ifdef __Fuchsia__
+static void Crash(void) {
+    ZX_ASSERT(false);
+}
+
+static void Success(void) {
+    ZX_ASSERT(true);
+}
+
+TEST(ZxTestCAssertionTest, AssertDeathWithCrashingStatement) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to detect crash");
+    ASSERT_DEATH(&Crash, "Crash was not raised.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionTest, AssertDeathWithSuccessfulStatement) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to detect crash");
+    ASSERT_DEATH(&Success, "Crash was not raised.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionTest, AssertNoDeathWithSuccessfulStatement) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to detect crash");
+    ASSERT_NO_DEATH(&Success, "Crash was raised.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionTest, AssertNoDeathWithCrashingStatement) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to detect crash");
+    ASSERT_NO_DEATH(&Crash, "Crash was raised.");
+    TEST_CHECKPOINT();
+}
+
+#endif

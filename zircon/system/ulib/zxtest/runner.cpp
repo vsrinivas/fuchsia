@@ -120,7 +120,7 @@ int Runner::Run(const Runner::Options& options) {
             // If there was any kind of failure, we should stop executing any other
             // test case and just finish. TearDown do get called, this is treated
             // as if everything ended here.
-            if (options.break_on_failure && test_driver_.HadAnyFailures()) {
+            if ((options.break_on_failure && test_driver_.HadAnyFailures()) || fatal_error_) {
                 end_execution = true;
                 break;
             }

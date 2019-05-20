@@ -25,8 +25,11 @@ test("zxtest") {
     "$zx/system/ulib/zxtest",
   ]
   if (is_fuchsia) {
+    sources += [ "death-statement_test.cpp" ]
+
     deps += [
       "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fit",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
     ]

@@ -829,4 +829,51 @@ TEST(ZxTestAssertionTest, AddFatalFailure) {
     TEST_CHECKPOINT();
 }
 
+#ifdef __Fuchsia__
+void Crash() {
+    ZX_ASSERT(false);
+}
+
+void Success() {
+    ZX_ASSERT(true);
+}
+
+TEST(ZxTestAssertionTest, AssertDeathWithCrashingLambdaStatement) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to detect crash");
+    ASSERT_DEATH([]() { Crash(); }, "Crash was not raised.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertDeathWithCrashingStatement) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to detect crash");
+    ASSERT_DEATH(&Crash, "Crash was not raised.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertDeathWithSuccessfulStatement) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to detect crash");
+    ASSERT_DEATH(&Success, "Crash was not raised.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertNoDeathWithSuccessfullLambdaStatement) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to detect crash");
+    ASSERT_NO_DEATH([]() { Success(); }, "Crash was raised.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertNoDeathWithSuccessfulStatement) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to detect crash");
+    ASSERT_NO_DEATH(&Success, "Crash was raised.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertNoDeathWithCrashingStatement) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to detect crash");
+    ASSERT_NO_DEATH(&Crash, "Crash was raised.");
+    TEST_CHECKPOINT();
+}
+
+#endif
+
 } // namespace

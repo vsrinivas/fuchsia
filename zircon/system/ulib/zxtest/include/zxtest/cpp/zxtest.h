@@ -16,6 +16,7 @@
 
 #ifdef __Fuchsia__
 #include <zircon/status.h>
+#include <zxtest/base/death-statement.h>
 #endif
 
 // Macro definitions for usage within CPP.
@@ -250,3 +251,23 @@ bool CompareHelper(const Actual& actual, const Expected& expected, const Compare
             _RETURN_IF_FATAL(fatal);                                                               \
         }                                                                                          \
     } while (0)
+
+#ifdef __Fuchsia__
+#define _ZXTEST_DEATH_STATUS_COMPLETE zxtest::internal::DeathStatement::State::kSuccess
+#define _ZXTEST_DEATH_STATUS_EXCEPTION zxtest::internal::DeathStatement::State::kException
+#define _ZXTEST_DEATH_STATEMENT(statement, expected_result, desc, ...)                             \
+    do {                                                                                           \
+        zxtest::internal::DeathStatement death_statement(statement);                               \
+        death_statement.Execute();                                                                 \
+        if (death_statement.state() != expected_result) {                                          \
+            if (death_statement.state() == zxtest::internal::DeathStatement::State::kBadState) {   \
+                zxtest::Runner::GetInstance()->NotifyFatalError();                                 \
+            }                                                                                      \
+            if (!death_statement.error_message().empty()) {                                        \
+                _ZXTEST_ASSERT_ERROR(true, true, death_statement.error_message().data());          \
+            } else {                                                                               \
+                _ZXTEST_ASSERT_ERROR(true, true, desc, ##__VA_ARGS__);                             \
+            }                                                                                      \
+        }                                                                                          \
+    } while (0)
+#endif

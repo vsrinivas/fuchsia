@@ -169,3 +169,32 @@
         _ZXTEST_ASSERT_ERROR(_ZXTEST_TEST_HAS_ERRORS, true,                                        \
                              "Test registered failures in " #statement ".", ##__VA_ARGS__);        \
     } while (0)
+
+#ifdef __Fuchsia__
+
+// In cpp |statement| is allowed to be a lambda. To prevent the pre processor from tokenizing lambda
+// captures or multiple argument declaration, wrap the lambda declaration in ().
+//
+// E.g.:
+// int a, b;
+// ASSERT_DEATH(([&a,&b] {
+//     int c,d;
+//     CrashNow(a,b, &c, &d);
+// }, "Failed to crash now %d %d\n", a, b);
+#define ASSERT_DEATH(statement, ...)                                                               \
+    _ZXTEST_DEATH_STATEMENT(statement, _ZXTEST_DEATH_STATUS_EXCEPTION,                             \
+                            "Exception was never raised.", ##__VA_ARGS__)
+
+// In cpp |statement| is allowed to be a lambda. To prevent the pre processor from tokenizing lambda
+// captures or multiple argument declaration, wrap the lambda declaration in ().
+//
+// E.g.:
+// int a, b;
+// ASSERT_DEATH(([&a,&b] {
+//     int c,d;
+//     CrashNow(a,b, &c, &d);
+// }, "Failed to crash now %d %d\n", a, b);
+#define ASSERT_NO_DEATH(statement, ...)                                                            \
+    _ZXTEST_DEATH_STATEMENT(statement, _ZXTEST_DEATH_STATUS_COMPLETE,                              \
+                            "Unexpected exception was raised.", ##__VA_ARGS__)
+#endif

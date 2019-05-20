@@ -40,7 +40,7 @@ public:
     virtual void TearDown() {}
 
     // Executed the current test instance.
-    void Run();
+    virtual void Run();
 
 private:
     // Actual test implementation.

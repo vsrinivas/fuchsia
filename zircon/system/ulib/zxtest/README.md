@@ -72,9 +72,51 @@ TEST(FooTestCase, FooIsBar) {
 
 Test writers should prefer helper methods over fixtures.
 
+## Death Tests - Fuchsia Only
+Deaths tests are mechanisms in which we expect that a statement may crash the executing thread.
+This useful for testing API preconditions violations that would enforce a crash.
+There are two types of death tests, those that we expect to crash and those that don't.
+
+In C, |statement| must of type (void*)(void), while in Cpp |statement| must be
+convertible to |fit::function<void()>| or closure.
+
+ASSERT_DEATH(statement, message-optional, message-arguments-options);
+ASSERT_NO_DEATH(statement, message-optional, message-arguments-options);
+
+# Cpp Example
+```cpp
+TEST(CheckPanicTest, ZxAssertFalse) {
+    ASSERT_DEATH([] {ZX_ASSERT(false);}, "Assertion Failure did not crash");
+}
+```
+
+In Cpp, we might have multiple lines, or commas within |statement|, this may cause
+the surprising behavior of an error on the macro expansion. To deal with this
+problem wrap |statement| with parenthesis().
+
+```cpp
+TEST(CheckPanicTest, ZxAssertFalse) {
+    ASSERT_DEATH(([] {
+    int a,b;
+    a = 1;
+    b = 2;
+    ZX_ASSERT(a == b);}), "Assertion Failure did not crash");
+}
+```
+
+# C Example
+```c
+TEST(CheckPanicTest, CrashingFunction) {
+    ASSERT_DEATH(&CrashingFunction, "CrashingFunction did not crash");
+}
+```
+
 ## Test Fixture -- Cpp Only
-Tests frequently required SetUp/TearDown which is different from the test logic itself. Common patterns include setting up some resource the system under test or component under test needs.
-The following example illustrates how to use a fixture to set up state before any test is executed and clean afterwards.
+Tests frequently required SetUp/TearDown which is different from the test logic itself.
+Common patterns include setting up some resource the system under test or component under test
+needs.
+The following example illustrates how to use a fixture to set up state before any test is
+executed and clean afterwards.
 ```cpp
 #include <zxtest/zxtest.h>
 

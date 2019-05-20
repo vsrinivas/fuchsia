@@ -29,19 +29,26 @@ library("zxtest") {
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
-      # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>.
-      "$zx/system/ulib/fbl:headers",
+    # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>.
+    "$zx/system/ulib/fbl:headers",
   ]
   deps = [
     "$zx/system/ulib/fbl",
   ]
   if (is_fuchsia) {
+    sources += [ "death-statement.cpp" ]
+
     public_deps += [
       # Needed for <zircon/status.h>
       "$zx/system/ulib/zircon:headers",
+
+      # Needed for <lib/zx/*>, death-statements.h
+      "$zx/system/ulib/fit:headers",
+      "$zx/system/ulib/zx:headers",
     ]
 
     deps += [
+      "$zx/system/ulib/fit",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
     ]

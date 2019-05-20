@@ -196,14 +196,14 @@ public:
     // Returns whether the current test has experienced any type of failure.
     bool CurrentTestHasFailures() const { return test_driver_.CurrentTestHasAnyFailures(); }
 
-    int random_seed() const {
-        return options_ ? options_->seed : kDefaultOptions.seed;
-    }
+    int random_seed() const { return options_ ? options_->seed : kDefaultOptions.seed; }
 
     // Set of options currently in use. By default |Runner::kDefaultOptions| will be returned.
-    const Options& options() const {
-        return options_ ? *options_ : kDefaultOptions;
-    }
+    const Options& options() const { return options_ ? *options_ : kDefaultOptions; }
+
+    // Notify the runner that the test is in a bad state, and should attempt to exit. This means
+    // end test execution.
+    void NotifyFatalError() { fatal_error_ = true; }
 
 private:
     TestRef RegisterTest(const fbl::String& test_case_name, const fbl::String& test_name,
@@ -235,6 +235,8 @@ private:
 
     // Sets of options to use for |Runner::Run| or |Runner::List|.
     const Options* options_ = nullptr;
+
+    bool fatal_error_ = false;
 };
 
 // Entry point for C++

@@ -186,7 +186,7 @@ void Reporter::OnTestFailure(const TestCase& test_case, const TestInfo& test) {
     iteration_summary_.failed++;
     iteration_summary_.failed_tests.push_back(buffer);
     fprintf(stream_, "[  FAILED  ] %s.%s (%" PRIi64 " ms)\n", test_case.name().c_str(),
-            test_case.name().c_str(), elapsed_time);
+            test.name().c_str(), elapsed_time);
 }
 
 void Reporter::OnTestSuccess(const TestCase& test_case, const TestInfo& test) {

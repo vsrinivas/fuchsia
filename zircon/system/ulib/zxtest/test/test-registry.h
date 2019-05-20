@@ -129,6 +129,13 @@ void FilterOpFilterFullNegativeMatch();
 void FilterOpFilterMultiMatch();
 void FilterOpFilterCombined();
 
+// Fuchsia only tests.
+#ifdef __Fuchsia__
+void DeathStatementCrash();
+void DeathStatementNoCrash();
+void DeathStatementInternalError();
+#endif
+
 struct RegisteredTest {
     const char* name = nullptr;
     void (*test_fn)() = nullptr;
@@ -193,6 +200,11 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(FilterOpFilterPartialMatch),
     RUN_TEST(FilterOpFilterMultiMatch),
     RUN_TEST(FilterOpFilterCombined),
+#ifdef __Fuchsia__
+    RUN_TEST(DeathStatementCrash),
+    RUN_TEST(DeathStatementNoCrash),
+    RUN_TEST(DeathStatementInternalError),
+#endif
 };
 
 #undef RUN_TEST
