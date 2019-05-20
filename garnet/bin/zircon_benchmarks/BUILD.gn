@@ -13,6 +13,7 @@ executable("bin") {
     "channels.cc",
     "events.cc",
     "expose.cc",
+    "fdio_spawn.cc",
     "fifos.cc",
     "filesystem.cc",
     "handle.cc",
@@ -50,6 +51,17 @@ executable("bin") {
   libs = [ "zircon" ]
 }
 
+# "Helper" executable used to implement the fdio_spawn benchmark.
+executable("fdio_spawn_helper") {
+  output_name = "fdio_spawn_helper"
+  testonly = true
+  sources = [
+    "fdio_spawn_helper.cc",
+  ]
+  deps = []
+  public_deps = []
+}
+
 fidl("fidl_interface") {
   testonly = true
   name = "fuchsia.zircon.benchmarks"
@@ -63,11 +75,16 @@ package("zircon_benchmarks") {
 
   deps = [
     ":bin",
+    ":fdio_spawn_helper",
   ]
 
   tests = [
     {
       name = "zircon_benchmarks"
+      environments = basic_envs
+    },
+    {
+      name = "fdio_spawn_helper"
       environments = basic_envs
     },
   ]
