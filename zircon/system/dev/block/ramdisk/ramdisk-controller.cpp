@@ -63,7 +63,7 @@ zx_status_t RamdiskController::Create(uint64_t block_size, uint64_t block_count,
     };
 
     zx::vmo vmo;
-    zx_status_t status = zx::vmo::create(block_size * block_count, 0, &vmo);
+    zx_status_t status = zx::vmo::create(block_size * block_count, ZX_VMO_RESIZABLE, &vmo);
     if (status != ZX_OK) {
         return failure_response(status);
     }

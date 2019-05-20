@@ -39,7 +39,8 @@ public:
                              const char* name,
                              zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                              fbl::RefPtr<VmarManager> vmar_manager = nullptr,
-                             uint32_t cache_policy = 0);
+                             uint32_t cache_policy = 0,
+                             uint32_t vmo_options = 0);
 
     // See |VmoMapper::Map|.
     zx_status_t Map(zx::vmo vmo,

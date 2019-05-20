@@ -176,7 +176,7 @@ bool vmo_clone_test_3() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(ZX_OK, zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo), "vm_object_create");
+    EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "vm_object_create");
 
     // map it
     EXPECT_EQ(ZX_OK,
@@ -187,7 +187,8 @@ bool vmo_clone_test_3() {
 
     // clone it
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[0]),"vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE,
+                                         0, size, &clone_vmo[0]),"vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
 
     // Attempt a non-resizable map fails.
@@ -409,7 +410,8 @@ bool vmo_clone_test_4() {
 
     // create a clone that extends beyond the parent by one page
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, PAGE_SIZE, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE,
+                                         PAGE_SIZE, size, &clone_vmo[0]), "vm_clone");
 
     // map the clone
     EXPECT_EQ(ZX_OK,
