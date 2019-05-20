@@ -9,22 +9,19 @@
 namespace fvm {
 namespace {
 
-// 8 KB
-constexpr size_t kFvmBlockSize = 1 << 13;
-
 // 256 KB
-constexpr size_t kFvmSlizeSize = 1 << 18;
+constexpr size_t kFvmSlizeSize = 8 * kBlockSize;
 
-constexpr size_t kInitialDiskSize = 256 * kFvmBlockSize;
+constexpr size_t kInitialDiskSize = 256 * kBlockSize;
 
-constexpr size_t kMaxDiskSize = 1024 * kFvmBlockSize;
+constexpr size_t kMaxDiskSize = 1024 * kBlockSize;
 
 constexpr size_t kAllocTableSize = fvm::AllocTableLength(kMaxDiskSize, kFvmSlizeSize);
 
 constexpr size_t kPartitionTableSize = fvm::kVPartTableLength;
 
-fvm_t MakeSuperBlock(size_t part_size, size_t part_table_size, size_t alloc_table_size) {
-    fvm_t superblock;
+Header MakeSuperBlock(size_t part_size, size_t part_table_size, size_t alloc_table_size) {
+    Header superblock;
     superblock.fvm_partition_size = part_size;
     superblock.vpartition_table_size = part_table_size;
     superblock.allocation_table_size = alloc_table_size;
@@ -32,7 +29,7 @@ fvm_t MakeSuperBlock(size_t part_size, size_t part_table_size, size_t alloc_tabl
     superblock.version = fvm::kMagic;
     superblock.magic = fvm::kVersion;
     superblock.generation = 1;
-    fvm_update_hash(&superblock, sizeof(fvm_t));
+    fvm_update_hash(&superblock, sizeof(Header));
     return superblock;
 }
 
@@ -43,7 +40,7 @@ size_t CalculateSliceStart(size_t part_size, size_t part_table_size, size_t allo
 }
 
 TEST(FvmInfoTest, FromSuperblockNoGaps) {
-    fvm_t superblock = MakeSuperBlock(kMaxDiskSize, kPartitionTableSize, kAllocTableSize);
+    Header superblock = MakeSuperBlock(kMaxDiskSize, kPartitionTableSize, kAllocTableSize);
     FormatInfo format_info = FormatInfo::FromSuperBlock(superblock);
 
     // When there is no gap allocated and metadata size should match.
@@ -58,10 +55,20 @@ TEST(FvmInfoTest, FromSuperblockNoGaps) {
               format_info.GetSuperblockOffset(SuperblockType::kSecondary));
     EXPECT_EQ(CalculateSliceStart(kMaxDiskSize, kPartitionTableSize, kAllocTableSize),
               format_info.GetSliceStart(1));
+    EXPECT_EQ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - AllocationTable::kOffset) /
+                  sizeof(SliceEntry),
+              format_info.GetMaxAllocatableSlices());
+    EXPECT_EQ((fvm::UsableSlicesCount(kMaxDiskSize, kFvmSlizeSize)),
+              format_info.GetMaxAddressableSlices(kMaxDiskSize));
+    EXPECT_EQ(format_info.GetSliceStart(1) +
+                  kFvmSlizeSize *
+                      ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - kAllocTableOffset) /
+                       sizeof(SliceEntry)),
+              format_info.GetMaxPartitionSize());
 }
 
 TEST(FvmInfoTest, FromSuperblockWithGaps) {
-    fvm_t superblock = MakeSuperBlock(kInitialDiskSize, kPartitionTableSize, kAllocTableSize);
+    Header superblock = MakeSuperBlock(kInitialDiskSize, kPartitionTableSize, kAllocTableSize);
     FormatInfo format_info = FormatInfo::FromSuperBlock(superblock);
 
     EXPECT_EQ(fvm::MetadataSize(kInitialDiskSize, kFvmSlizeSize), format_info.metadata_size());
@@ -75,6 +82,17 @@ TEST(FvmInfoTest, FromSuperblockWithGaps) {
               format_info.GetSuperblockOffset(SuperblockType::kSecondary));
     EXPECT_EQ(CalculateSliceStart(kMaxDiskSize, kPartitionTableSize, kAllocTableSize),
               format_info.GetSliceStart(1));
+
+    EXPECT_EQ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - AllocationTable::kOffset) /
+                  sizeof(SliceEntry),
+              format_info.GetMaxAllocatableSlices());
+    EXPECT_EQ((fvm::UsableSlicesCount(kMaxDiskSize, kFvmSlizeSize)),
+              format_info.GetMaxAddressableSlices(kMaxDiskSize));
+    EXPECT_EQ(format_info.GetSliceStart(1) +
+                  kFvmSlizeSize *
+                      ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - kAllocTableOffset) /
+                       sizeof(SliceEntry)),
+              format_info.GetMaxPartitionSize());
 }
 
 TEST(FvmInfoTest, FromDiskSize) {
@@ -92,6 +110,17 @@ TEST(FvmInfoTest, FromDiskSize) {
               format_info.GetSuperblockOffset(SuperblockType::kSecondary));
     EXPECT_EQ(CalculateSliceStart(kMaxDiskSize, kPartitionTableSize, kAllocTableSize),
               format_info.GetSliceStart(1));
+
+    EXPECT_EQ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - AllocationTable::kOffset) /
+                  sizeof(SliceEntry),
+              format_info.GetMaxAllocatableSlices());
+    EXPECT_EQ((fvm::UsableSlicesCount(kMaxDiskSize, kFvmSlizeSize)),
+              format_info.GetMaxAddressableSlices(kMaxDiskSize));
+    EXPECT_EQ(format_info.GetSliceStart(1) +
+                  kFvmSlizeSize *
+                      ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - kAllocTableOffset) /
+                       sizeof(SliceEntry)),
+              format_info.GetMaxPartitionSize());
 }
 
 TEST(FvmInfoTest, FromPreallocatedSizeWithGaps) {
@@ -109,6 +138,17 @@ TEST(FvmInfoTest, FromPreallocatedSizeWithGaps) {
               format_info.GetSuperblockOffset(SuperblockType::kSecondary));
     EXPECT_EQ(CalculateSliceStart(kMaxDiskSize, kPartitionTableSize, kAllocTableSize),
               format_info.GetSliceStart(1));
+
+    EXPECT_EQ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - AllocationTable::kOffset) /
+                  sizeof(SliceEntry),
+              format_info.GetMaxAllocatableSlices());
+    EXPECT_EQ((fvm::UsableSlicesCount(kMaxDiskSize, kFvmSlizeSize)),
+              format_info.GetMaxAddressableSlices(kMaxDiskSize));
+    EXPECT_EQ(format_info.GetSliceStart(1) +
+                  kFvmSlizeSize *
+                      ((fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize) - kAllocTableOffset) /
+                       sizeof(SliceEntry)),
+              format_info.GetMaxPartitionSize());
 }
 
 } // namespace

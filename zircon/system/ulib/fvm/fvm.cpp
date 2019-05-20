@@ -77,25 +77,26 @@ bool fvm_check_hash(const void* metadata, size_t metadata_size) {
 #ifdef __cplusplus
 
 fvm::FormatInfo fvm::FormatInfo::FromSuperBlock(const Header& superblock) {
-    fvm::FormatInfo summary;
-    summary.metadata_allocated_size_ = superblock.allocation_table_size + kAllocTableOffset;
-    summary.metadata_size_ =
+    fvm::FormatInfo format_info;
+    format_info.metadata_allocated_size_ = superblock.allocation_table_size + kAllocTableOffset;
+    format_info.metadata_size_ =
         MetadataSizeOrZero(superblock.fvm_partition_size, superblock.slice_size);
-    summary.slice_size_ = superblock.slice_size;
-    summary.slice_count_ = UsableSlicesCountOrZero(
-        superblock.fvm_partition_size, summary.metadata_allocated_size(), summary.slice_size());
-    return summary;
+    format_info.slice_size_ = superblock.slice_size;
+    format_info.slice_count_ =
+        UsableSlicesCountOrZero(superblock.fvm_partition_size,
+                                format_info.metadata_allocated_size(), format_info.slice_size());
+    return format_info;
 }
 
 fvm::FormatInfo fvm::FormatInfo::FromPreallocatedSize(size_t initial_size, size_t max_size,
                                                       size_t slice_size) {
-    fvm::FormatInfo summary;
-    summary.metadata_allocated_size_ = MetadataSizeOrZero(max_size, slice_size);
-    summary.metadata_size_ = MetadataSizeOrZero(initial_size, slice_size);
-    summary.slice_size_ = slice_size;
-    summary.slice_count_ = UsableSlicesCountOrZero(initial_size, summary.metadata_allocated_size(),
-                                                   summary.slice_size());
-    return summary;
+    fvm::FormatInfo format_info;
+    format_info.metadata_allocated_size_ = MetadataSizeOrZero(max_size, slice_size);
+    format_info.metadata_size_ = MetadataSizeOrZero(initial_size, slice_size);
+    format_info.slice_size_ = slice_size;
+    format_info.slice_count_ = UsableSlicesCountOrZero(
+        initial_size, format_info.metadata_allocated_size(), format_info.slice_size());
+    return format_info;
 }
 
 fvm::FormatInfo fvm::FormatInfo::FromDiskSize(size_t disk_size, size_t slice_size) {
