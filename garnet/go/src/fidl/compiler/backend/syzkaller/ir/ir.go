@@ -481,6 +481,10 @@ func (c *compiler) compileMessageHeader(Ordinal types.Ordinal) StructMember {
 	}
 }
 
+type result struct {
+	Inline, OutOfLine, Handles []StructMember
+}
+
 func (c *compiler) compileStruct(p types.Struct) ([]StructMember, []StructMember, []StructMember) {
 	var i, o, h []StructMember
 
@@ -617,7 +621,7 @@ func Compile(fidlData types.Root) Root {
 		structs: make(StructMap),
 		unions:  make(UnionMap),
 		enums:   make(EnumMap),
-		bits:   make(BitsMap),
+		bits:    make(BitsMap),
 		library: libraryName,
 	}
 

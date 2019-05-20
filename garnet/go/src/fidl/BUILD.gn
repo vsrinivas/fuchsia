@@ -126,3 +126,11 @@ go_test("fidlgen_syzkaller_test") {
     ":fidlgen_test_lib",
   ]
 }
+
+go_test("fidlgen_syzkaller_ir_test") {
+  gopackage = "fidl/compiler/backend/syzkaller/ir"
+
+  deps = [
+    ":fidlgen_test_lib",
+  ]
+}
