@@ -14,6 +14,8 @@ use {
     futures::StreamExt,
 };
 
+mod archive;
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["archivist"]).expect("can't init logger");
