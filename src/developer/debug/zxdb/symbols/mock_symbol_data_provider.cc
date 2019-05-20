@@ -8,10 +8,10 @@
 
 #include <algorithm>
 
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -32,19 +32,24 @@ debug_ipc::Arch MockSymbolDataProvider::GetArch() {
   return debug_ipc::Arch::kArm64;
 }
 
-std::optional<uint64_t> MockSymbolDataProvider::GetRegister(
-    debug_ipc::RegisterID id) {
-  if (GetSpecialRegisterType(id) == debug_ipc::SpecialRegisterType::kIP)
-    return ip_;
+bool MockSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
+                                         std::optional<uint64_t>* value) {
+  *value = std::nullopt;
+
+  if (GetSpecialRegisterType(id) == debug_ipc::SpecialRegisterType::kIP) {
+    *value = ip_;
+    return true;
+  }
 
   const auto& found = regs_.find(id);
   if (found == regs_.end())
-    return std::nullopt;
+    return true;  // Known to be unknown.
 
   if (!found->second.synchronous)
-    return std::nullopt;  // Force synchronous query.
+    return false;
 
-  return found->second.value;
+  *value = found->second.value;
+  return true;
 }
 
 void MockSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,

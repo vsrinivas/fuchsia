@@ -20,9 +20,10 @@ debug_ipc::Arch SymbolDataProvider::GetArch() {
   return debug_ipc::Arch::kUnknown;
 }
 
-std::optional<uint64_t> SymbolDataProvider::GetRegister(
-    debug_ipc::RegisterID id) {
-  return std::nullopt;
+bool SymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
+                                     std::optional<uint64_t>* value) {
+  *value = std::nullopt;
+  return true;  // Known to be unknown.
 }
 
 void SymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID,

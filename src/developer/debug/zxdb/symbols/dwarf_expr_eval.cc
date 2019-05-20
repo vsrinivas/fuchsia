@@ -9,13 +9,13 @@
 
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/DataExtractor.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -282,9 +282,15 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(
   // This function doesn't set the result_type_ because it is called from
   // different contexts. The callers should set the result_type_ as appropriate
   // for their operation.
-  if (auto reg_data = data_provider_->GetRegister(reg)) {
-    // Register data available synchronously.
-    Push(*reg_data + offset);
+  if (std::optional<uint64_t> reg_data;
+      data_provider_->GetRegister(reg, &reg_data)) {
+    // State known synchronously (could be available or known unavailable).
+    if (!reg_data) {
+      ReportError(fxl::StringPrintf("Register %d not available.",
+                                    dwarf_register_number));
+    } else {
+      Push(*reg_data + offset);
+    }
     return Completion::kSync;
   }
 

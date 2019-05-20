@@ -10,13 +10,11 @@
 
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
-#include "src/lib/fxl/strings/string_printf.h"
-#include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -38,9 +36,13 @@ void SymbolVariableResolver::ResolveVariable(
     return;
   }
 
-  auto ip = data_provider_->GetRegister(debug_ipc::GetSpecialRegisterID(
-      data_provider_->GetArch(), debug_ipc::SpecialRegisterType::kIP));
+  std::optional<uint64_t> ip;
+  data_provider_->GetRegister(
+      debug_ipc::GetSpecialRegisterID(data_provider_->GetArch(),
+                                      debug_ipc::SpecialRegisterType::kIP),
+      &ip);
   if (!ip) {
+    // The IP should never require an async call.
     OnComplete(state, Err("No location available."), ExprValue());
     return;
   }

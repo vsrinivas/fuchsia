@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MOCK_SYMBOL_DATA_PROVIDER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MOCK_SYMBOL_DATA_PROVIDER_H_
 
 #include <map>
 
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -25,6 +26,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // Adds the given canned result for the given register. Set synchronous if
   // the register contents should be synchronously available, false if it
   // should require a callback to retrieve.
+  //
+  // Any registers not set will be synchronously reported as unknown.
   void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous,
                         uint64_t value);
 
@@ -37,7 +40,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 
   // SymbolDataProvider implementation.
   debug_ipc::Arch GetArch() override;
-  std::optional<uint64_t> GetRegister(debug_ipc::RegisterID id) override;
+  bool GetRegister(debug_ipc::RegisterID id,
+                   std::optional<uint64_t>* value) override;
   void GetRegisterAsync(debug_ipc::RegisterID id,
                         GetRegisterCallback callback) override;
   std::optional<uint64_t> GetFrameBase() override;
@@ -75,3 +79,5 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MOCK_SYMBOL_DATA_PROVIDER_H_

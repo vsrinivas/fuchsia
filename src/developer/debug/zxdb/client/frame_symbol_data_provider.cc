@@ -36,24 +36,27 @@ void FrameSymbolDataProvider::Disown() {
   frame_ = nullptr;
 }
 
-std::optional<uint64_t> FrameSymbolDataProvider::GetRegister(
-    debug_ipc::RegisterID id) {
+bool FrameSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
+                                          std::optional<uint64_t>* value) {
+  *value = std::nullopt;
   if (!frame_)
-    return std::nullopt;
+    return true;  // Synchronously know we don't have the value.
 
   // Some common registers are known without having to do a register request.
   switch (debug_ipc::GetSpecialRegisterType(id)) {
     case debug_ipc::SpecialRegisterType::kIP:
-      return frame_->GetAddress();
+      *value = frame_->GetAddress();
+      return true;
     case debug_ipc::SpecialRegisterType::kSP:
-      return frame_->GetStackPointer();
+      *value = frame_->GetStackPointer();
+      return true;
     case debug_ipc::SpecialRegisterType::kNone:
       break;
   }
 
   // TODO(brettw) enable synchronous access if the registers are cached.
   // See GetRegisterAsync().
-  return std::nullopt;
+  return false;
 }
 
 void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,

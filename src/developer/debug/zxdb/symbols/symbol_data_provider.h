@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_DATA_PROVIDER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_DATA_PROVIDER_H_
 
 #include <stdint.h>
 
@@ -10,8 +11,8 @@
 #include <optional>
 #include <vector>
 
-#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
 
@@ -42,10 +43,17 @@ class SymbolDataProvider
 
   virtual debug_ipc::Arch GetArch();
 
-  // Request for synchronous register data. If the register data can be provided
-  // synchronously, the data will be returned. If synchronous data is not
-  // available, the caller should call GetRegisterAsync().
-  virtual std::optional<uint64_t> GetRegister(debug_ipc::RegisterID id);
+  // Request for synchronous register data. If the value is not synchronously
+  // availble, the *value will always be a nullopt.
+  //
+  // A return value of false means that the value is not known synchronously.
+  // In this case, GetRegisterAsync should be called to retrieve the value.
+  //
+  // In the synchronous case, we could have the value, but we could also know
+  // that the value is not known (e.g. when that register was not saved for the
+  // stack frame). The *value will reflect this when the return value is true.
+  virtual bool GetRegister(debug_ipc::RegisterID id,
+                           std::optional<uint64_t>* value);
 
   // Request for register data with an asynchronous callback. The callback will
   // be issued when the register data is available.
@@ -94,3 +102,5 @@ class SymbolDataProvider
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_DATA_PROVIDER_H_

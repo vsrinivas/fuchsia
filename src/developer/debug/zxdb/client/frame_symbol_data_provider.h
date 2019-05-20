@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_SYMBOL_DATA_PROVIDER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_SYMBOL_DATA_PROVIDER_H_
 
 #include "src/developer/debug/zxdb/client/process_symbol_data_provider.h"
 
@@ -19,7 +20,8 @@ class FrameSymbolDataProvider : public ProcessSymbolDataProvider {
   void Disown() override;
 
   // SymbolDataProvider implementation:
-  std::optional<uint64_t> GetRegister(debug_ipc::RegisterID id) override;
+  bool GetRegister(debug_ipc::RegisterID id,
+                   std::optional<uint64_t>* value) override;
   void GetRegisterAsync(debug_ipc::RegisterID id,
                         GetRegisterCallback callback) override;
   std::optional<uint64_t> GetFrameBase() override;
@@ -42,3 +44,5 @@ class FrameSymbolDataProvider : public ProcessSymbolDataProvider {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_SYMBOL_DATA_PROVIDER_H_

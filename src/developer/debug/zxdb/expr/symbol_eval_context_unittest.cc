@@ -178,10 +178,7 @@ TEST_F(SymbolEvalContextTest, FoundButNotEvaluatable) {
   ValueResult result;
   GetNamedValue(eval_context, "present", kQuitLoop, &result);
 
-  // Running the message loop should complete the callback.
-  loop().Run();
-
-  // The value should be not found.
+  // The value should be not found and this should be known synchronously.
   EXPECT_TRUE(result.called);
   EXPECT_TRUE(result.err.has_error());
   EXPECT_EQ(ExprValue(), result.value);
