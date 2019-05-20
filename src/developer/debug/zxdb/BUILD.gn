@@ -51,6 +51,19 @@ if (current_toolchain == host_toolchain) {
       "//third_party/googletest:gtest_main",
     ]
   }
+
+  test("zxdb_perftests") {
+    sources = [
+      "zxdb_perftests.cc",
+    ]
+
+    deps = [
+      "//src/developer/debug/zxdb/common:perf_test",
+      "//src/developer/debug/zxdb/symbols:perf_tests",
+      "//third_party/googletest:gtest",
+      "//zircon/public/lib/cmdline",
+    ]
+  }
 }
 
 install_host_tools("zxdb_host") {

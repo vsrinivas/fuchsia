@@ -51,3 +51,22 @@ source_set("tests") {
     "//third_party/googletest:gtest",
   ]
 }
+
+# Simple support library for writing perf tests. This is a much simpler variant
+# of //zircon/system/ulib/perftest that will run on the host.
+source_set("perf_test") {
+  testonly = true
+
+  sources = [
+    "perf_test.cc",
+    "perf_test.h",
+  ]
+
+  public_deps = [
+    "//third_party/googletest:gtest",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+  ]
+}

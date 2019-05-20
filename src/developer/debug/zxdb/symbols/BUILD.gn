@@ -238,3 +238,16 @@ source_set("tests") {
     test_runtime_deps = get_target_outputs(":copy_test_so")
   }
 }
+
+source_set("perf_tests") {
+  testonly = true
+
+  sources = [
+    "module_symbol_index_perftest.cc",
+  ]
+
+  deps = [
+    ":symbols",
+    "//src/developer/debug/zxdb/common:perf_test",
+  ]
+}
