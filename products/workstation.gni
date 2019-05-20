@@ -20,5 +20,4 @@ universe_package_labels += [
   "//garnet/packages/prod:media_audio",
   "//peridot/packages/prod:cloud_provider_firestore",
   "//src/modular/bundles:tools",
-  "//topaz/packages/prod:bluetooth_settings",
 ]
