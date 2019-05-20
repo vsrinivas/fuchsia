@@ -20,7 +20,9 @@ use crate::{
         },
         lifecycle::lifecycle_test,
         low_energy_central::{enable_and_disable_scan, enable_scan},
-        profile::{add_fake_profile, add_remove_profile, same_psm_twice_fails},
+        profile::{
+            add_fake_profile, add_remove_profile, connect_unknown_peer, same_psm_twice_fails,
+        },
     },
 };
 
@@ -69,6 +71,7 @@ fn main() -> Result<(), Error> {
         run_test!(add_fake_profile),
         run_test!(same_psm_twice_fails),
         run_test!(add_remove_profile),
+        run_test!(connect_unknown_peer),
     ])?;
     Ok(())
 }

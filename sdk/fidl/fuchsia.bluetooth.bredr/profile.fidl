@@ -52,7 +52,7 @@ protocol Profile {
     /// Returns the channel after it has been connected. |status| will indicate
     /// an error if the channel could not be connected.
     ConnectL2cap(string peer_id, uint16 psm)
-        -> (fuchsia.bluetooth.Status status, handle<socket> channel);
+        -> (fuchsia.bluetooth.Status status, handle<socket>? channel);
 
     /// Produced when a protocol channel is connected for this profile.
     /// |channel| contains the channel connected to, and information about the
