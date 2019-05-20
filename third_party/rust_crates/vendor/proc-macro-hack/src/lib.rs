@@ -22,7 +22,7 @@
 //! The function signature is the same as for ordinary function-like procedural
 //! macros.
 //!
-//! ```rust
+//! ```
 //! extern crate proc_macro;
 //!
 //! use proc_macro::TokenStream;
@@ -30,7 +30,6 @@
 //! use quote::quote;
 //! use syn::{parse_macro_input, Expr};
 //!
-//! /// Add one to an expression.
 //! # const IGNORE: &str = stringify! {
 //! #[proc_macro_hack]
 //! # };
@@ -55,10 +54,12 @@
 //! procedural macro from the implementation crate. The re-export also carries a
 //! \#\[proc_macro_hack\] attribute.
 //!
-//! ```rust
+//! ```
 //! use proc_macro_hack::proc_macro_hack;
 //!
 //! /// Add one to an expression.
+//! ///
+//! /// (Documentation goes here on the re-export, not in the other crate.)
 //! #[proc_macro_hack]
 //! pub use demo_hack_impl::add_one;
 //! #
@@ -87,7 +88,7 @@
 //!
 //! [> example of a downstream crate][example]
 //!
-//! ```rust
+//! ```
 //! use demo_hack::add_one;
 //!
 //! fn main() {
@@ -110,6 +111,12 @@
 //!   a proc-macro-hack macro invocation cannot contain recursive calls to the
 //!   same proc-macro-hack macro nor calls to any other proc-macro-hack macros.
 //!   Use [`proc-macro-nested`] if you require support for nested invocations.
+//!
+//! - By default, hygiene is structured such that the expanded code can't refer
+//!   to local variables other than those passed by name somewhere in the macro
+//!   input. If your macro must refer to *local* variables that don't get named
+//!   in the macro input, use `#[proc_macro_hack(fake_call_site)]` on the
+//!   re-export in your declaration crate. *Most macros won't need this.*
 //!
 //! [#10]: https://github.com/dtolnay/proc-macro-hack/issues/10
 //! [#20]: https://github.com/dtolnay/proc-macro-hack/issues/20
@@ -264,18 +271,41 @@ pub fn proc_macro_hack(
 }
 
 mod kw {
+    syn::custom_keyword!(derive);
+    syn::custom_keyword!(fake_call_site);
     syn::custom_keyword!(support_nested);
 }
 
 struct ExportArgs {
     support_nested: bool,
+    fake_call_site: bool,
 }
 
 impl Parse for ExportArgs {
     fn parse(input: ParseStream) -> Result<Self> {
-        Ok(ExportArgs {
-            support_nested: input.parse::<Option<kw::support_nested>>()?.is_some(),
-        })
+        let mut args = ExportArgs {
+            support_nested: false,
+            fake_call_site: false,
+        };
+
+        while !input.is_empty() {
+            let ahead = input.lookahead1();
+            if ahead.peek(kw::support_nested) {
+                input.parse::<kw::support_nested>()?;
+                args.support_nested = true;
+            } else if ahead.peek(kw::fake_call_site) {
+                input.parse::<kw::fake_call_site>()?;
+                args.fake_call_site = true;
+            } else {
+                return Err(ahead.error());
+            }
+            if input.is_empty() {
+                break;
+            }
+            input.parse::<Token![,]>()?;
+        }
+
+        Ok(args)
     }
 }
 
@@ -327,6 +357,51 @@ pub fn enum_hack(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     proc_macro::TokenStream::from(inner.token_stream)
 }
 
+struct FakeCallSite {
+    derive: Ident,
+    rest: TokenStream,
+}
+
+impl Parse for FakeCallSite {
+    fn parse(input: ParseStream) -> Result<Self> {
+        input.parse::<Token![#]>()?;
+        let attr;
+        bracketed!(attr in input);
+        attr.parse::<kw::derive>()?;
+        let path;
+        parenthesized!(path in attr);
+        Ok(FakeCallSite {
+            derive: path.parse()?,
+            rest: input.parse()?,
+        })
+    }
+}
+
+#[doc(hidden)]
+#[proc_macro_attribute]
+pub fn fake_call_site(
+    args: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let args = TokenStream::from(args);
+    let span = match args.into_iter().next() {
+        Some(token) => token.span(),
+        None => return input,
+    };
+
+    let input = parse_macro_input!(input as FakeCallSite);
+    let mut derive = input.derive;
+    derive.set_span(span);
+    let rest = input.rest;
+
+    let expanded = quote! {
+        #[derive(#derive)]
+        #rest
+    };
+
+    proc_macro::TokenStream::from(expanded)
+}
+
 fn expand_export(export: Export, args: ExportArgs) -> TokenStream {
     let dummy = dummy_name_for_export(&export);
 
@@ -336,10 +411,7 @@ fn expand_export(export: Export, args: ExportArgs) -> TokenStream {
         Some(_) => quote!(#[macro_export]),
         None => quote!(),
     };
-    let crate_prefix = match vis {
-        Some(_) => quote!($crate::),
-        None => quote!(),
-    };
+    let crate_prefix = vis.map(|_| quote!($crate::));
     let enum_variant = if args.support_nested {
         quote!(Nested)
     } else {
@@ -353,14 +425,15 @@ fn expand_export(export: Export, args: ExportArgs) -> TokenStream {
         .map(|Macro { name, export_as }| {
             let actual_name = actual_proc_macro_name(&name);
             let dispatch = dispatch_macro_name(&name);
+            let call_site = call_site_macro_name(&name);
 
             let export_dispatch = if args.support_nested {
-                Some(quote! {
+                quote! {
                     #[doc(hidden)]
                     #vis use proc_macro_nested::dispatch as #dispatch;
-                })
+                }
             } else {
-                None
+                quote!()
             };
 
             let proc_macro_call = if args.support_nested {
@@ -373,17 +446,44 @@ fn expand_export(export: Export, args: ExportArgs) -> TokenStream {
                 }
             };
 
+            let export_call_site = if args.fake_call_site {
+                quote! {
+                    #[doc(hidden)]
+                    #vis use proc_macro_hack::fake_call_site as #call_site;
+                }
+            } else {
+                quote!()
+            };
+
+            let do_derive = if !args.fake_call_site {
+                quote! {
+                    #[derive(#crate_prefix #actual_name)]
+                }
+            } else if crate_prefix.is_some() {
+                quote! {
+                    use #crate_prefix #actual_name;
+                    #[#crate_prefix #call_site ($($proc_macro)*)]
+                    #[derive(#actual_name)]
+                }
+            } else {
+                quote! {
+                    #[#call_site ($($proc_macro)*)]
+                    #[derive(#actual_name)]
+                }
+            };
+
             quote! {
                 #[doc(hidden)]
                 #vis use #from::#actual_name;
 
                 #export_dispatch
+                #export_call_site
 
                 #attrs
                 #macro_export
                 macro_rules! #export_as {
                     ($($proc_macro:tt)*) => {{
-                        #[derive(#crate_prefix #actual_name)]
+                        #do_derive
                         enum ProcMacroHack {
                             #enum_variant = (stringify! { $($proc_macro)* }, 0).1,
                         }
@@ -508,6 +608,11 @@ fn actual_proc_macro_name(conceptual: &Ident) -> Ident {
 
 fn dispatch_macro_name(conceptual: &Ident) -> Ident {
     let dispatch = format!("proc_macro_call_{}", conceptual);
+    Ident::new(&dispatch, Span::call_site())
+}
+
+fn call_site_macro_name(conceptual: &Ident) -> Ident {
+    let dispatch = format!("proc_macro_fake_call_site_{}", conceptual);
     Ident::new(&dispatch, Span::call_site())
 }
 

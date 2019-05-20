@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -12,7 +12,7 @@
 
 [package]
 name = "proc-macro-hack"
-version = "0.5.4"
+version = "0.5.7"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 description = "Procedural macros in expression position"
 readme = "README.md"
@@ -30,8 +30,6 @@ version = "0.6.8"
 
 [dependencies.syn]
 version = "0.15.14"
-features = ["proc-macro", "parsing", "printing"]
-default-features = false
 [dev-dependencies.demo-hack]
 version = "0.0.5"
 

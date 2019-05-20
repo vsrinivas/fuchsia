@@ -38,7 +38,6 @@ use proc_macro_hack::proc_macro_hack;
 use quote::quote;
 use syn::{parse_macro_input, Expr};
 
-/// Add one to an expression.
 #[proc_macro_hack]
 pub fn add_one(input: TokenStream) -> TokenStream {
     let expr = parse_macro_input!(input as Expr);
@@ -63,6 +62,8 @@ procedural macro from the implementation crate. The re-export also carries a
 use proc_macro_hack::proc_macro_hack;
 
 /// Add one to an expression.
+///
+/// (Documentation goes here on the re-export, not in the other crate.)
 #[proc_macro_hack]
 pub use demo_hack_impl::add_one;
 ```
@@ -112,6 +113,12 @@ fn main() {
   proc-macro-hack macro invocation cannot contain recursive calls to the same
   proc-macro-hack macro nor calls to any other proc-macro-hack macros. Use
   [`proc-macro-nested`] if you require support for nested invocations.
+
+- By default, hygiene is structured such that the expanded code can't refer to
+  local variables other than those passed by name somewhere in the macro input.
+  If your macro must refer to *local* variables that don't get named in the
+  macro input, use `#[proc_macro_hack(fake_call_site)]` on the re-export in your
+  declaration crate. *Most macros won't need this.*
 
 [#10]: https://github.com/dtolnay/proc-macro-hack/issues/10
 [#20]: https://github.com/dtolnay/proc-macro-hack/issues/20
