@@ -6,7 +6,7 @@
     },
     "expose": [
         {
-            "service": "/svc/fidl.examples.topology.echo.Echo",
+            "service": "/svc/fidl.examples.routing.echo.Echo",
             "from": "self",
         },
     ],

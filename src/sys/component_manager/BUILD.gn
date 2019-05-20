@@ -91,7 +91,7 @@ package("component_manager") {
 test_package("component_manager_tests") {
   deps = [
     ":lib",
-    "//garnet/examples/components/v2:hello_world_bin",
+    "//examples/components/basic:hello_world_bin",
   ]
 
   components =

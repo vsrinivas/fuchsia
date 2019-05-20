@@ -6,7 +6,7 @@
 
 use {
     failure::{format_err, Error, ResultExt},
-    fidl_fidl_examples_topology_echo as fecho, fuchsia_async as fasync,
+    fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
 };
 

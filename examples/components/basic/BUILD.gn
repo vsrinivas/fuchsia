@@ -23,22 +23,12 @@ rustc_binary("echo_args_bin") {
   edition = "2018"
 }
 
-deprecated_fuchsia_component("echo_args_component") {
-  manifest = rebase_path("meta/echo_args.cml")
-  deps = [
-    ":echo_args_bin",
-  ]
-
-  binary = "echo_args"
-}
-
-package("hello_world_hippo") {
+package("components_basic_example") {
   deps = [
     ":hello_world_bin",
     ":ls_root_pkg_bin",
+    ":echo_args_bin",
   ]
-
-  components = [ ":echo_args_component" ]
 
   binaries = [
     {
@@ -46,6 +36,9 @@ package("hello_world_hippo") {
     },
     {
       name = "ls_root_pkg"
+    },
+    {
+      name = "echo_args"
     },
   ]
 
@@ -57,6 +50,10 @@ package("hello_world_hippo") {
     {
       path = rebase_path("meta/ls_root_pkg.cml")
       dest = "ls_root_pkg.cm"
+    },
+    {
+      path = rebase_path("meta/echo_args.cml")
+      dest = "echo_args.cm"
     },
   ]
 }

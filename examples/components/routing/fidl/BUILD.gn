@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("echo") {
-  name = "fidl.examples.topology.echo"
+  name = "fidl.examples.routing.echo"
 
   sources = [
     "echo.fidl",

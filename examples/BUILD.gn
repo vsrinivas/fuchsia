@@ -11,6 +11,8 @@ group("examples") {
     "hello_world",
     "media",
     "speech",
+    "//examples/components/basic:components_basic_example",
+    "//examples/components/routing:components_routing_example",
   ]
 }
 

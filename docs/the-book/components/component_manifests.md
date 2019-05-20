@@ -115,7 +115,7 @@ context:
   the path by which the capability is being `offered` or `exposed` to another
   component.
 
-#### Example
+#### Examples
 
 For an example of how these keywords interact, consider the following component
 instance tree:
@@ -138,6 +138,9 @@ The routing sequence is:
   *echo_tool*.
 - *echo_tool* uses `/svc/echo`. When `echo_tool` runs, it will find `/svc/echo`
   in its namespace.
+
+A working example of capability routing can be found at
+[//examples/components/routing](/examples/components/routing).
 
 ### Facet metadata
 

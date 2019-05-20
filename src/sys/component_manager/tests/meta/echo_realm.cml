@@ -1,11 +1,11 @@
 // Realm for integration test that provisions an Echo client and service and eagerly runs the
-// client. We don't use the topology examples's echo_realm.cml because we need the component URIs
+// client. We don't use the routing examples's echo_realm.cml because we need the component URIs
 // to refer to the test package.
 {
     // Route Echo service from server to client.
     "offer": [
         {
-            "service": "/svc/fidl.examples.topology.echo.Echo",
+            "service": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_server",
             "to": [
                 {

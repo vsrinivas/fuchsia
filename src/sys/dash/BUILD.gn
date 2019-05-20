@@ -37,7 +37,7 @@ test_package("dash_test") {
   deps = [
     ":dash_test_bin",
     ":zircon-bin-manifest",
-    "//garnet/examples/components/v2:hello_world_bin",
+    "//examples/components/basic:hello_world_bin",
     "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
   ]
 
@@ -76,7 +76,7 @@ test_package("dash_test") {
 package("dash") {
   deps = [
     ":zircon-bin-manifest",
-    "//garnet/examples/components/v2:hello_world_bin",
+    "//examples/components/basic:hello_world_bin",
   ]
 
   components = [ ":dash_component" ]

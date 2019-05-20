@@ -3,7 +3,7 @@
     // Route Echo service from server to client.
     "offer": [
         {
-            "service": "/svc/fidl.examples.topology.echo.Echo",
+            "service": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_server",
             "to": [
                 {
@@ -17,11 +17,11 @@
     "children": [
         {
             "name": "echo_server",
-            "url": "fuchsia-pkg://fuchsia.com/topology_example#meta/echo_server.cm",
+            "url": "fuchsia-pkg://fuchsia.com/routing_example#meta/echo_server.cm",
         },
         {
             "name": "echo_client",
-            "url": "fuchsia-pkg://fuchsia.com/topology_example#meta/echo_client.cm",
+            "url": "fuchsia-pkg://fuchsia.com/routing_example#meta/echo_client.cm",
             "startup": "eager",
         },
     ],

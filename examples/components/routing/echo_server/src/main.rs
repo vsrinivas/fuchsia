@@ -6,7 +6,7 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fidl_examples_topology_echo as fecho, fuchsia_async as fasync,
+    fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{StreamExt, TryStreamExt},
 };

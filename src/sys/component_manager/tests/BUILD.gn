@@ -43,34 +43,46 @@ rustc_binary("mock_pkg_resolver_bin") {
   ]
 }
 
-deprecated_fuchsia_component("echo_realm") {
-  manifest = rebase_path("meta/echo_realm.cml")
-}
-
 test_package("routing_integration_test") {
   deps = [
     ":mock_pkg_resolver_bin",
     ":routing_integration_test_bin",
+    "//examples/components/routing/echo_server",
+    "//examples/components/routing/echo_client",
   ]
 
   components = [
-    ":echo_realm",
     "//src/sys/component_manager:component_manager_as_v1_component",
-    "//src/sys/examples/topology:echo_server",
-    "//src/sys/examples/topology:echo_client",
   ]
 
   meta = [
     {
-      path =
-          rebase_path("meta/mock_pkg_resolver_for_routing_integration_test.cmx")
+      path = rebase_path("meta/mock_pkg_resolver_for_routing_integration_test.cmx")
       dest = "mock_pkg_resolver.cmx"
+    },
+    {
+      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
+      dest = "echo_server.cm"
+    },
+    {
+      path = rebase_path("//examples/components/routing/meta/echo_client.cml")
+      dest = "echo_client.cm"
+    },
+    {
+      path = rebase_path("meta/echo_realm.cml")
+      dest = "echo_realm.cm"
     },
   ]
 
   binaries = [
     {
       name = "mock_pkg_resolver"
+    },
+    {
+      name = "echo_server"
+    },
+    {
+      name = "echo_client"
     },
   ]
 
@@ -102,11 +114,10 @@ test_package("elf_runner_test") {
   deps = [
     ":elf_runner_test_bin",
     ":mock_pkg_resolver_bin",
-    "//garnet/examples/components/v2:echo_args_bin",
+    "//examples/components/basic:echo_args_bin",
   ]
 
   components = [
-    "//garnet/examples/components/v2:echo_args_component",
     "//src/sys/component_manager:component_manager_as_v1_component",
   ]
 
@@ -118,6 +129,10 @@ test_package("elf_runner_test") {
     {
       path = rebase_path("meta/echo_no_args.cml")
       dest = "echo_no_args.cm"
+    },
+    {
+      path = rebase_path("//examples/components/basic/meta/echo_args.cml")
+      dest = "echo_args.cm"
     },
   ]
 
