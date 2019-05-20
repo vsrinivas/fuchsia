@@ -7,20 +7,21 @@ import("//build/package.gni")
 package("unit_tests") {
   testonly = true
   deps = [
-    ":magma_unit_tests_linux(//build/toolchain:linux_x64)",
+    ":virtmagma_unit_tests_linux(//build/toolchain:linux_x64)",
   ]
 
   resources = [
     {
-      path = rebase_path("${root_build_dir}/linux_x64/magma_unit_tests_linux")
-      dest = "magma_unit_tests_linux"
+      path =
+          rebase_path("${root_build_dir}/linux_x64/virtmagma_unit_tests_linux")
+      dest = "virtmagma_unit_tests_linux"
     },
   ]
 }
 
-executable("magma_unit_tests_linux") {
+executable("virtmagma_unit_tests_linux") {
   # TODO(MA-586): formalize guest-targeted tests
-  # testonly = true
+  testonly = true
 
   deps = [
     "//garnet/lib/magma/src/libmagma_linux",
@@ -29,6 +30,21 @@ executable("magma_unit_tests_linux") {
   include_dirs = [ "//third_party/vulkan_loader_and_validation_layers/include" ]
 
   sources = [
-    "magma_unit_tests.cc",
+    "virtmagma_unit_tests.cc",
+  ]
+}
+
+executable("virtmagma_vulkan_unit_tests") {
+  testonly = true
+
+  deps = [
+    "//third_party/googletest:gtest_main",
+    "//third_party/vulkan_loader_and_validation_layers/loader:loader_linux",
+  ]
+
+  include_dirs = [ "//third_party/vulkan_loader_and_validation_layers/include" ]
+
+  sources = [
+    "virtmagma_vulkan_unit_tests.cc",
   ]
 }

@@ -71,14 +71,20 @@ source_set("lib") {
 action("extras") {
   visibility = [ ":*" ]
   script = "mkextras.sh"
+  testonly = true
 
   deps = [
-    "//garnet/lib/magma/tests_linux/unit_tests:magma_unit_tests_linux(//build/toolchain:linux_x64)",
+    "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(//build/toolchain:linux_x64)",
+    "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(//build/toolchain:linux_x64)",
+    "//third_party/mesa/src/intel/vulkan:vulkan_intel_linux(//build/toolchain:linux_x64-shared)",
   ]
 
   args = [
     rebase_path(extras_image),
-    rebase_path("${root_build_dir}/linux_x64/magma_unit_tests_linux"),
+    rebase_path("${root_build_dir}/linux_x64-shared/libvulkan_intel_linux.so"),  # Intel Vulkan ICD
+    rebase_path("${root_build_dir}/linux_x64/virtmagma_unit_tests_linux"),
+    rebase_path("${root_build_dir}/linux_x64/virtmagma_vulkan_unit_tests"),
+    rebase_path("${root_build_dir}/linux_x64-shared/libvulkan_linux.so"),  # Vulkan Loader
   ]
 
   outputs = [
@@ -113,6 +119,7 @@ package("linux_runner") {
   ]
 
   if (linux_runner_extras) {
+    testonly = true
     deps += [ ":extras" ]
     resources = [
       {
