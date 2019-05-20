@@ -75,7 +75,7 @@ TEST_F(DiscoverTest, SyncFindPaths) {
   SchedulePromise(
       fit::make_promise([&] { locations = inspect::SyncFindPaths("/"); }));
 
-  RunLoopWithTimeoutOrUntil([&] { return !locations.empty(); });
+  RunLoopUntil([&] { return !locations.empty(); });
 
   EXPECT_THAT(locations, ::testing::UnorderedElementsAre(
                              Location{
@@ -118,8 +118,7 @@ TEST_F(DiscoverTest, SyncFindNestedPath) {
     locations2 = inspect::SyncFindPaths("/test/hub/root.inspect#child/a");
   }));
 
-  RunLoopWithTimeoutOrUntil(
-      [&] { return !locations1.empty() && !locations2.empty(); });
+  RunLoopUntil([&] { return !locations1.empty() && !locations2.empty(); });
 
   EXPECT_FALSE(locations1.empty());
   EXPECT_FALSE(locations2.empty());
@@ -149,7 +148,7 @@ TEST_F(DiscoverTest, SyncFindGlobs) {
         inspect::SyncSearchGlobs({"/*/hub/*", "/test/*", "/test/hub/*/*"});
   }));
 
-  RunLoopWithTimeoutOrUntil([&] { return !locations.empty(); });
+  RunLoopUntil([&] { return !locations.empty(); });
 
   EXPECT_FALSE(locations.empty());
 
