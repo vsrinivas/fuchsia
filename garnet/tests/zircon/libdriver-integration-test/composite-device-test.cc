@@ -84,6 +84,8 @@ TEST_F(CompositeDeviceTest, CreateTest) {
     RunPromise(std::move(promise));
 }
 
+// This test is disabled due to flakiness: FLK-247
+#if 0
 // This test creates the well-known composite, and force binds a test driver
 // stack to the composite.  It then forces one of the components to unbind.
 // It verifies that the composite mock-device's unbind hook is called.
@@ -207,5 +209,7 @@ TEST_F(CompositeDeviceTest, UnbindComponent) {
 
     RunPromise(std::move(promise));
 }
+
+#endif
 
 } // namespace libdriver_integration_test
