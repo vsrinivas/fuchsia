@@ -1962,6 +1962,17 @@ public:
     const zx::process& process() const { return process_; }
     const zx::thread& aux_thread() const { return aux_thread_; }
 
+    // Sends a message to the aux thread to crash itself.
+    //
+    // If this is used, before exiting the test either kill the aux thread or
+    // pass the exception to the unittest crash handler and block until it
+    // kills the thread.
+    //
+    // The blocking is important because otherwise there's a race where the loop
+    // process main thread can exit and kill the aux thread before the crash
+    // handler gets a chance to see the exception. If this happens, the crash
+    // handler will notice there was a registered exception that never occurred
+    // and will fail the test.
     void CrashAuxThread() {
         send_msg(process_channel_.get(), MSG_CRASH_AUX_THREAD);
     }
@@ -2179,6 +2190,9 @@ bool receive_test() {
     EXPECT_EQ(thread_info.wait_exception_port_type, expected_type, "");
 
     REGISTER_CRASH(loop.aux_thread().get());
+    exception.reset();
+    EXPECT_EQ(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr),
+              ZX_OK, "");
 
     END_TEST;
 }
@@ -2202,6 +2216,9 @@ bool exception_resume_test() {
 
     // Close the new exception without marking it handled so it bubbles up.
     REGISTER_CRASH(loop.aux_thread().get());
+    exception.reset();
+    EXPECT_EQ(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr),
+              ZX_OK, "");
 
     END_TEST;
 }
@@ -2226,6 +2243,9 @@ bool exception_state_property_test() {
     EXPECT_EQ(GetExceptionStateProperty(exception), ZX_EXCEPTION_STATE_TRY_NEXT, "");
 
     REGISTER_CRASH(loop.aux_thread().get());
+    exception.reset();
+    EXPECT_EQ(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr),
+              ZX_OK, "");
 
     END_TEST;
 }
@@ -2260,6 +2280,9 @@ bool exception_state_property_bad_args_test() {
               ZX_ERR_BUFFER_TOO_SMALL, "");
 
     REGISTER_CRASH(loop.aux_thread().get());
+    exception.reset();
+    EXPECT_EQ(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr),
+              ZX_OK, "");
 
     END_TEST;
 }
@@ -2278,6 +2301,9 @@ bool close_channel_with_exception_test() {
     // Closing the channel while it still contains the exception should pass
     // control to the next handler.
     REGISTER_CRASH(loop.aux_thread().get());
+    exception_channel.reset();
+    EXPECT_EQ(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr),
+              ZX_OK, "");
 
     END_TEST;
 }
@@ -2303,6 +2329,9 @@ bool close_channel_without_exception_test() {
     zx::nanosleep(zx::deadline_after(kTestTimeout));
 
     REGISTER_CRASH(loop.aux_thread().get());
+    exception.reset();
+    EXPECT_EQ(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr),
+              ZX_OK, "");
 
     END_TEST;
 }
@@ -2405,6 +2434,9 @@ bool exception_channel_order_test() {
     for (const zx::channel& channel : exception_channels) {
         ReadException(channel, ZX_EXCP_FATAL_PAGE_FAULT);
     }
+
+    EXPECT_EQ(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr),
+              ZX_OK, "");
 
     END_TEST;
 }
