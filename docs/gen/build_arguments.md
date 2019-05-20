@@ -364,14 +364,13 @@ module_suggester is not AOT compiled in debug builds
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/dart/dart_component.gni#51)
+From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
-Allow for deduping the VM between standalone, flutter_runner and dart_runner.
 
-**Current value (from the default):** `"shared_library"`
+**Current value (from the default):** `"static_library"`
 
-From //third_party/dart/runtime/runtime_args.gni:78
+From //third_party/dart/runtime/runtime_args.gni:80
 
 ### dart_core_snapshot_kind
 Controls the kind of core snapshot linked into the standalone VM. Using a
@@ -423,7 +422,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -431,7 +430,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -481,7 +480,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/dart/dart_component.gni#41)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -736,19 +735,19 @@ package and deduplicated by blobfs.
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/dart/dart_component.gni#27)
+From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/dart/dart_component.gni#27)
 
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/dart/dart_component.gni#32)
 
 ### flutter_runtime_mode
 The runtime mode ("debug", "profile", "release", "dynamic_profile", or "dynamic_release")
@@ -762,13 +761,13 @@ Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/dart/dart_component.gni#38)
+From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/dart/dart_component.gni#38)
 
 ### framework_packages
 
 **Current value (from the default):** `["collection", "flutter", "meta", "typed_data", "vector_math"]`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/flutter_runner/prebuilt_framework.gni#8)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/flutter_runner/prebuilt_framework.gni#8)
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -1232,13 +1231,13 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/flutter_runner/prebuilt_framework.gni#7)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/flutter_runner/prebuilt_framework.gni#7)
 
 ### prebuilt_framework_path
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/eb287aa9023af1db248212efbc5d44f772fc5a0c/runtime/flutter_runner/prebuilt_framework.gni#6)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/01b344eaed72bb329fbb7aaa27fb5b3e4f367bc7/runtime/flutter_runner/prebuilt_framework.gni#6)
 
 ### prebuilt_libvulkan_arm_path
 
@@ -1505,13 +1504,13 @@ From //third_party/skia/BUILD.gn:70
 
 ### skia_enable_fontmgr_custom
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //third_party/skia/BUILD.gn:68
 
 ### skia_enable_fontmgr_custom_empty
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //third_party/skia/BUILD.gn:69
 
@@ -1523,7 +1522,7 @@ From //third_party/skia/BUILD.gn:66
 
 ### skia_enable_fontmgr_fuchsia
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //third_party/skia/BUILD.gn:71
 
@@ -1684,7 +1683,7 @@ From //third_party/skia/BUILD.gn:21
 
 From //.gn:26
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:63
 
@@ -1732,7 +1731,7 @@ From //third_party/skia/BUILD.gn:27
 
 From //.gn:28
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:24
 
@@ -1764,7 +1763,7 @@ From //third_party/skia/gn/skia.gni:14
 
 ### skia_use_icu
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //third_party/skia/gn/skia.gni:13
 
@@ -1792,7 +1791,7 @@ From //third_party/skia/BUILD.gn:29
 
 From //.gn:29
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:30
 
@@ -1834,7 +1833,7 @@ From //third_party/skia/BUILD.gn:33
 
 From //.gn:30
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:64
 
@@ -1848,9 +1847,9 @@ From //third_party/skia/BUILD.gn:64
 
 ### skia_use_vulkan
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:86
+From //third_party/skia/BUILD.gn:88
 
 ### skia_use_wuffs
 
@@ -1864,7 +1863,7 @@ From //third_party/skia/BUILD.gn:34
 
 From //.gn:31
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:38
 
@@ -1956,7 +1955,7 @@ From //build/config/sysroot.gni:7
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"linux_x64/thinlto-cache"`
+**Current value (from the default):** `"host_x64/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
