@@ -14,10 +14,8 @@ enum Error {
     #[fail(display = "invalid JSON schema: {:?}", _0)]
     SchemaInvalid(valico::json_schema::schema::SchemaError),
     #[fail(display = "could not validate file: {}", errors)]
-    #[allow(dead_code)]  // The compiler complains about the variant not being constructed.
-    JsonFileInvalid {
-        errors: String,
-    },
+    #[allow(dead_code)] // The compiler complains about the variant not being constructed.
+    JsonFileInvalid { errors: String },
 }
 
 type Result<T> = std::result::Result<T, failure::Error>;
@@ -43,16 +41,22 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
     fn validate(&self) -> Result<()> {
         let schema = from_str(Self::get_schema())?;
         let mut scope = json_schema::Scope::new();
-        let validator = scope.compile_and_return(schema, false).map_err(Error::SchemaInvalid)?;
+        let validator = scope
+            .compile_and_return(schema, false)
+            .map_err(Error::SchemaInvalid)?;
         let value = to_value(self)?;
         let result = validator.validate(&value);
         if !result.is_valid() {
-            let mut error_messages: Vec<String> =
-                result.errors.iter()
-                    .map(|e| format!("{} at {}", e.get_title(), e.get_path()))
-                    .collect();
+            let mut error_messages: Vec<String> = result
+                .errors
+                .iter()
+                .map(|e| format!("{} at {}", e.get_title(), e.get_path()))
+                .collect();
             error_messages.sort_unstable();
-            return Err(Error::JsonFileInvalid { errors: error_messages.join(", ") }.into());
+            return Err(Error::JsonFileInvalid {
+                errors: error_messages.join(", "),
+            }
+            .into());
         }
         Ok(())
     }

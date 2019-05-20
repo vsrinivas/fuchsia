@@ -25,7 +25,9 @@ fn merge_manifests(_base: &Manifest, _complement: &Manifest) -> Result<Manifest>
     Ok(result)
 }
 
-fn merge_common_part(part: &Part, _base: &SourceTarball, _complement: &SourceTarball, _output: &OutputTarball) -> Result<()> {
+fn merge_common_part(
+    part: &Part, _base: &SourceTarball, _complement: &SourceTarball, _output: &OutputTarball,
+) -> Result<()> {
     // TODO(DX-1056): implement me.
     println!(" - {}", part);
     Ok(())
@@ -48,7 +50,8 @@ fn main() -> Result<()> {
     let complement_manifest: Manifest = complement.get_metadata(MANIFEST_PATH)?;
 
     let base_parts: HashSet<Part> = HashSet::from_iter(base_manifest.parts.iter().cloned());
-    let complement_parts: HashSet<Part> = HashSet::from_iter(complement_manifest.parts.iter().cloned());
+    let complement_parts: HashSet<Part> =
+        HashSet::from_iter(complement_manifest.parts.iter().cloned());
 
     println!("Common parts");
     for part in base_parts.intersection(&complement_parts) {
@@ -68,7 +71,7 @@ fn main() -> Result<()> {
     let merged_manifest = merge_manifests(&base_manifest, &complement_manifest)?;
     merged_manifest.validate()?;
 
-    output.write("meta/manifest.json".to_string(), merged_manifest.to_string()?)?;
+    output.write(MANIFEST_PATH.to_string(), merged_manifest.to_string()?)?;
     output.export(flags.output)?;
 
     Ok(())
@@ -76,8 +79,8 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use serde_json::{json, from_value};
     use serde_json::value::Value;
+    use serde_json::{from_value, json};
 
     use sdk_metadata::Manifest;
 
@@ -94,12 +97,14 @@ mod tests {
             fn $name() {
                 merge_test($base, $complement, $success);
             }
-        }
+        };
     }
 
     fn merge_test(base: Value, complement: Value, success: bool) {
         let base_manifest: Manifest = from_value(base).unwrap();
+        base_manifest.validate().unwrap();
         let complement_manifest: Manifest = from_value(complement).unwrap();
+        complement_manifest.validate().unwrap();
         let merged_manifest = merge_manifests(&base_manifest, &complement_manifest);
         assert_eq!(merged_manifest.is_ok(), success);
     }

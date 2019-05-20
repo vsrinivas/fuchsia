@@ -9,9 +9,9 @@ use std::io::Read;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use flate2::Compression;
-use flate2::write::GzEncoder;
 use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use tar::{Archive, Builder, EntryType, Header};
 
 use sdk_metadata::JsonObject;
@@ -29,8 +29,10 @@ impl SourceTarball {
     /// Creates a new tarball at the given path.
     pub fn new(path: String) -> Result<SourceTarball> {
         let tar_gz = File::open(path)?;
-        let tar = GzDecoder::new(tar_gz)?;
-        Ok(SourceTarball { archive: Archive::new(tar) })
+        let tar = GzDecoder::new(tar_gz);
+        Ok(SourceTarball {
+            archive: Archive::new(tar),
+        })
     }
 
     /// Reads a file from the tarball.
@@ -38,14 +40,16 @@ impl SourceTarball {
         let archive = &mut self.archive;
         let entries = archive.entries()?;
         Ok(entries
-            .filter_map(|entry| { entry.ok() })
+            .filter_map(|entry| entry.ok())
             .find(|entry| {
                 if let Ok(entry_path) = entry.path() {
-                    return entry_path.to_str() == Some(path)
+                    return entry_path.to_str() == Some(path);
                 }
                 false
             })
-            .ok_or(Error::ArchiveFileNotFound { name: path.to_string() })?)
+            .ok_or(Error::ArchiveFileNotFound {
+                name: path.to_string(),
+            })?)
     }
 
     /// Reads a metadata object from the tarball.
@@ -68,14 +72,19 @@ pub struct OutputTarball {
 impl OutputTarball {
     /// Creates a new tarball.
     pub fn new() -> OutputTarball {
-        OutputTarball { contents: HashMap::new() }
+        OutputTarball {
+            contents: HashMap::new(),
+        }
     }
 
     /// Writes the given content to the given path in the tarball.
     ///
     /// It is an error to write to the same path twice.
     pub fn write(&mut self, path: String, content: String) -> Result<()> {
-        if let Some(_) = self.contents.insert(path.clone(), TarballContent::Plain(content)) {
+        if let Some(_) = self
+            .contents
+            .insert(path.clone(), TarballContent::Plain(content))
+        {
             return Err(Error::PathAlreadyExists { path })?;
         }
         Ok(())
@@ -107,7 +116,7 @@ impl OutputTarball {
                     let epoch = start.duration_since(UNIX_EPOCH)?.as_secs();
                     header.set_mtime(epoch);
                     builder.append_data(&mut header, file_path, bytes)?;
-                },
+                }
             }
         }
         Ok(builder.finish()?)

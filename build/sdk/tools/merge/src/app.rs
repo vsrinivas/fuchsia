@@ -8,13 +8,9 @@ use failure::Fail;
 #[derive(Debug, Fail)]
 pub enum Error {
     #[fail(display = "could not find file in archive: {}", name)]
-    ArchiveFileNotFound {
-        name: String,
-    },
+    ArchiveFileNotFound { name: String },
     #[fail(display = "path already maps to a file: {}", path)]
-    PathAlreadyExists  {
-        path: String,
-    },
+    PathAlreadyExists { path: String },
 }
 
 /// Common result types for methods in this crate.
