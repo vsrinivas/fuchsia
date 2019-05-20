@@ -70,6 +70,9 @@ zedboot_binary_patterns = [
   "bin/sh",
   "bin/umount",
   "bin/unbind",
+
+  # These are used by Infra.
+  "bin/waitfor",
 ]
 
 generate_manifest("zedboot.manifest") {
