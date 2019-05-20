@@ -163,9 +163,6 @@ MATCHER_P2(MatchesAttachment, expected_key, expected_value,
 class DataProviderImplTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
-    stub_scenic_.reset(new StubScenic());
-    FXL_CHECK(service_directory_provider_.AddService(
-                  stub_scenic_->GetHandler()) == ZX_OK);
     stub_logger_.reset(new StubLogger());
     FXL_CHECK(service_directory_provider_.AddService(
                   stub_logger_->GetHandler(dispatcher())) == ZX_OK);
@@ -178,6 +175,15 @@ class DataProviderImplTest : public gtest::RealLoopFixture {
   void ResetDataProvider(const Config& config) {
     data_provider_.reset(new DataProviderImpl(
         dispatcher(), service_directory_provider_.service_directory(), config));
+  }
+
+  // Resets the underlying |scenic_| using the given |scenic|.
+  void ResetScenic(std::unique_ptr<StubScenic> stub_scenic) {
+    stub_scenic_ = std::move(stub_scenic);
+    if (stub_scenic_) {
+      FXL_CHECK(service_directory_provider_.AddService(
+                    stub_scenic_->GetHandler()) == ZX_OK);
+    }
   }
 
   GetScreenshotResponse GetScreenshot() {
@@ -205,8 +211,11 @@ class DataProviderImplTest : public gtest::RealLoopFixture {
     return out_result;
   }
 
-  void set_scenic_responses(std::vector<TakeScreenshotResponse> responses) {
-    stub_scenic_->set_take_screenshot_responses(std::move(responses));
+  uint64_t total_num_scenic_bindings() {
+    return stub_scenic_->total_num_bindings();
+  }
+  size_t current_num_scenic_bindings() {
+    return stub_scenic_->current_num_bindings();
   }
   const std::vector<TakeScreenshotResponse>& get_scenic_responses() const {
     return stub_scenic_->take_screenshot_responses();
@@ -231,7 +240,9 @@ TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px),
                                 kSuccess);
-  set_scenic_responses(std::move(scenic_responses));
+  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
+  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
+  ResetScenic(std::move(stub_scenic));
 
   GetScreenshotResponse feedback_response = GetScreenshot();
 
@@ -258,7 +269,9 @@ TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
 TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningFailure) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
-  set_scenic_responses(std::move(scenic_responses));
+  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
+  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
+  ResetScenic(std::move(stub_scenic));
 
   GetScreenshotResponse feedback_response = GetScreenshot();
 
@@ -271,7 +284,9 @@ TEST_F(DataProviderImplTest,
        GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateNonBGRA8Screenshot(), kSuccess);
-  set_scenic_responses(std::move(scenic_responses));
+  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
+  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
+  ResetScenic(std::move(stub_scenic));
 
   GetScreenshotResponse feedback_response = GetScreenshot();
 
@@ -294,7 +309,9 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
                                 kSuccess);
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
   ASSERT_EQ(scenic_responses.size(), num_calls);
-  set_scenic_responses(std::move(scenic_responses));
+  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
+  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
+  ResetScenic(std::move(stub_scenic));
 
   std::vector<GetScreenshotResponse> feedback_responses;
   for (size_t i = 0; i < num_calls; i++) {
@@ -336,6 +353,31 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
     EXPECT_TRUE(response.screenshot->image.vmo.is_valid());
     EXPECT_GE(response.screenshot->image.size, 0u);
   }
+}
+
+TEST_F(DataProviderImplTest,
+       GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
+  // We use a stub that always returns false as we are not interested in the
+  // responses.
+  ResetScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
+
+  const size_t num_calls = 5u;
+  std::vector<GetScreenshotResponse> feedback_responses;
+  for (size_t i = 0; i < num_calls; i++) {
+    data_provider_->GetScreenshot(
+        ImageEncoding::PNG,
+        [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
+          feedback_responses.push_back({std::move(screenshot)});
+        });
+  }
+  RunLoopUntil([&feedback_responses, num_calls] {
+    return feedback_responses.size() == num_calls;
+  });
+
+  EXPECT_EQ(total_num_scenic_bindings(), num_calls);
+  // The unbinding is asynchronous so we need to run the loop until all the
+  // outstanding connections are actually close in the stub.
+  RunLoopUntil([this] { return current_num_scenic_bindings() == 0u; });
 }
 
 TEST_F(DataProviderImplTest, GetData_SmokeTest) {

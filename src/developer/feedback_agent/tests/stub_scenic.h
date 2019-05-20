@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <stdint.h>
 
 #include <vector>
 
@@ -44,10 +45,13 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
  public:
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler() {
-    return bindings_.GetHandler(this);
+    return [this](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
+      total_num_bindings_++;
+      bindings_.AddBinding(this, std::move(request));
+    };
   }
 
-  // fuchsia::ui::scenic::Scenic methods.
+  // |fuchsia::ui::scenic::Scenic|.
   void CreateSession(
       fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
       fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
@@ -63,6 +67,9 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
   }
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 
+  uint64_t total_num_bindings() { return total_num_bindings_; }
+  size_t current_num_bindings() { return bindings_.size(); }
+
   // Stub injection and verification methods.
   void set_take_screenshot_responses(
       std::vector<TakeScreenshotResponse> responses) {
@@ -74,7 +81,13 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
 
  private:
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
+  uint64_t total_num_bindings_ = 0;
   std::vector<TakeScreenshotResponse> take_screenshot_responses_;
+};
+
+class StubScenicAlwaysReturnsFalse : public StubScenic {
+ public:
+  void TakeScreenshot(TakeScreenshotCallback callback) override;
 };
 
 }  // namespace feedback

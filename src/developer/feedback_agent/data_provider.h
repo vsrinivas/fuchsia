@@ -10,10 +10,9 @@
 #include <lib/async/dispatcher.h>
 #include <lib/async_promise/executor.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <stdint.h>
 
 #include <memory>
-#include <string>
-#include <vector>
 
 #include "src/developer/feedback_agent/config.h"
 
@@ -40,25 +39,15 @@ class DataProviderImpl : public DataProvider {
                      GetScreenshotCallback callback) override;
 
  private:
-  // Connects to Scenic and sets up the error handler in case we lose the
-  // connection.
-  void ConnectToScenic();
-
-  // Signals to all the pending GetScreenshot callbacks that an error occurred,
-  // most likely the loss of the connection with Scenic.
-  void TerminateAllGetScreenshotCallbacks();
+  // Closes the Scenic connection keyed by |id|.
+  void CloseScenic(uint64_t id);
 
   async::Executor executor_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   const Config config_;
 
-  // TODO(DX-1499): we should have a connection to Scenic per GetScreenshot()
-  // call, not a single one overall.
-  fuchsia::ui::scenic::ScenicPtr scenic_;
-  // We keep track of the pending GetScreenshot callbacks so we can terminate
-  // all of them when we lose the connection with Scenic.
-  std::vector<std::unique_ptr<GetScreenshotCallback>>
-      get_png_screenshot_callbacks_;
+  uint64_t next_scenic_id_ = 0;
+  std::map<uint64_t, fuchsia::ui::scenic::ScenicPtr> scenics_;
 };
 
 }  // namespace feedback

@@ -183,6 +183,13 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     return RunOneCrashAnalysis("irrelevant, just not empty");
   }
 
+  uint64_t total_num_feedback_data_provider_bindings() {
+    return stub_feedback_data_provider_->total_num_bindings();
+  }
+  size_t current_num_feedback_data_provider_bindings() {
+    return stub_feedback_data_provider_->current_num_bindings();
+  }
+
   std::unique_ptr<CrashpadAgent> agent_;
   files::ScopedTempDir database_path_;
   std::unique_ptr<StubCrashServer> crash_server_;
@@ -451,6 +458,33 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackData) {
       std::make_unique<StubFeedbackDataProviderReturnsNoData>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
   CheckAttachments({"kernel_panic_crash_log"});
+}
+
+TEST_F(CrashpadAgentTest, OneFeedbackDataProviderConnectionPerAnalysis) {
+  // We use a stub that returns no data as we are not interested in the
+  // payload, just the number of different connections to the stub.
+  ResetFeedbackDataProvider(
+      std::make_unique<StubFeedbackDataProviderReturnsNoData>());
+
+  const size_t num_calls = 5u;
+  std::vector<Analyzer_OnKernelPanicCrashLog_Result> out_results;
+  for (size_t i = 0; i < num_calls; i++) {
+    fuchsia::mem::Buffer crash_log;
+    FXL_CHECK(fsl::VmoFromString("irrelevant, just not empty", &crash_log));
+    agent_->OnKernelPanicCrashLog(
+        std::move(crash_log),
+        [&out_results](Analyzer_OnKernelPanicCrashLog_Result result) {
+          out_results.push_back(std::move(result));
+        });
+  }
+  RunLoopUntil(
+      [&out_results, num_calls] { return out_results.size() == num_calls; });
+
+  EXPECT_EQ(total_num_feedback_data_provider_bindings(), num_calls);
+  // The unbinding is asynchronous so we need to run the loop until all the
+  // outstanding connections are actually close in the stub.
+  RunLoopUntil(
+      [this] { return current_num_feedback_data_provider_bindings() == 0u; });
 }
 
 }  // namespace

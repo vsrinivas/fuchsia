@@ -16,8 +16,10 @@
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+#include <stdint.h>
 #include <zircon/status.h>
 
+#include <map>
 #include <string>
 #include <utility>
 
@@ -69,6 +71,8 @@ class CrashpadAgent : public Analyzer {
       std::string component_url, ManagedRuntimeException exception);
   fit::promise<void> OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log);
 
+  // Makes a new connection to fuchsia.feedback.DataProvider and requests
+  // asynchronously the feedback data.
   fit::promise<fuchsia::feedback::Data> GetFeedbackData();
 
   // Uploads local crash report of ID |local_report_id|, attaching either the
@@ -88,15 +92,18 @@ class CrashpadAgent : public Analyzer {
   // crashpad::CrashReportDatabase::Report::creation_time.
   void PruneDatabase();
 
+  // Closes the feedback data provider connection keyed by |id|.
+  void CloseFeedbackDataProvider(uint64_t id);
+
   async::Executor executor_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   const Config config_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
   const std::unique_ptr<CrashServer> crash_server_;
 
-  // TODO(DX-1499): we should have a connection to fuchsia.feedback.DataProvider
-  // per GetData() call, not a single one overall.
-  fuchsia::feedback::DataProviderPtr feedback_data_provider_;
+  uint64_t next_feedback_data_provider_id_ = 0;
+  std::map<uint64_t, fuchsia::feedback::DataProviderPtr>
+      feedback_data_providers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);
 };

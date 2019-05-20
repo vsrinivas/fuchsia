@@ -228,13 +228,6 @@ void CrashpadAgent::OnKernelPanicCrashLog(
 }
 
 fit::promise<Data> CrashpadAgent::GetFeedbackData() {
-  if (!feedback_data_provider_) {
-    feedback_data_provider_ =
-        services_->Connect<fuchsia::feedback::DataProvider>();
-    // TODO(DX-1469): set up set_error_handler() and call complete_error() on
-    // all the pending fit::bridges.
-  }
-
   // We use a fit::bridge to turn GetData() callback into a fit::promise.
   //
   // We use a share_ptr to share the bridge between the return value owned by
@@ -243,9 +236,18 @@ fit::promise<Data> CrashpadAgent::GetFeedbackData() {
   // TODO(DX-1469): add a timeout to the fit::bridge completion.
   std::shared_ptr<fit::bridge<Data>> get_data_done =
       std::make_shared<fit::bridge<Data>>();
-  feedback_data_provider_->GetData(
-      [get_data_done](
+
+  const uint64_t id = next_feedback_data_provider_id_++;
+
+  // TODO(DX-1469): set up set_error_handler() and call complete_error() on
+  // the pending fit::bridge.
+  feedback_data_providers_[id] =
+      services_->Connect<fuchsia::feedback::DataProvider>();
+  feedback_data_providers_[id]->GetData(
+      [this, id, get_data_done](
           fuchsia::feedback::DataProvider_GetData_Result out_result) {
+        CloseFeedbackDataProvider(id);
+
         if (out_result.is_err()) {
           FX_LOGS(WARNING) << "Failed to fetch feedback data: "
                            << out_result.err() << " ("
@@ -531,6 +533,14 @@ void CrashpadAgent::PruneDatabase() {
   crashpad::DatabaseSizePruneCondition pruning_condition(
       config_.max_crashpad_database_size_in_kb);
   crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
+}
+
+void CrashpadAgent::CloseFeedbackDataProvider(const uint64_t id) {
+  if (feedback_data_providers_.erase(id) == 0) {
+    FX_LOGS(ERROR)
+        << "No fuchsia.feedback.DataProvider connection to close with id "
+        << id;
+  }
 }
 
 }  // namespace crash

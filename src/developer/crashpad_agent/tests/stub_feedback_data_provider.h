@@ -5,6 +5,8 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <stdlib.h>
 
 #include <memory>
 #include <vector>
@@ -28,7 +30,12 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
 
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
-    return bindings_.GetHandler(this);
+    return
+        [this](
+            fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
+          total_num_bindings_++;
+          bindings_.AddBinding(this, std::move(request));
+        };
   }
 
   // |fuchsia::feedback::DataProvider|
@@ -38,6 +45,9 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
     FXL_NOTIMPLEMENTED();
   }
 
+  uint64_t total_num_bindings() { return total_num_bindings_; }
+  size_t current_num_bindings() { return bindings_.size(); }
+
   const std::vector<std::string>& attachment_keys() { return attachment_keys_; }
 
  protected:
@@ -46,6 +56,7 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
 
  private:
   fidl::BindingSet<fuchsia::feedback::DataProvider> bindings_;
+  uint64_t total_num_bindings_ = 0;
 };
 
 class StubFeedbackDataProviderReturnsNoAnnotation

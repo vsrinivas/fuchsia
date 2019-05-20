@@ -85,5 +85,10 @@ void StubScenic::TakeScreenshot(TakeScreenshotCallback callback) {
   callback(std::move(response.screenshot), response.success);
 }
 
+void StubScenicAlwaysReturnsFalse::TakeScreenshot(
+    TakeScreenshotCallback callback) {
+  callback(CreateEmptyScreenshot(), false);
+}
+
 }  // namespace feedback
 }  // namespace fuchsia

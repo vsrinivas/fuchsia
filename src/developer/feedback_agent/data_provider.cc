@@ -15,6 +15,7 @@
 #include "src/developer/feedback_agent/attachments.h"
 #include "src/developer/feedback_agent/config.h"
 #include "src/developer/feedback_agent/image_conversion.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -85,23 +86,32 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
 
 void DataProviderImpl::GetScreenshot(ImageEncoding encoding,
                                      GetScreenshotCallback callback) {
-  // We add the provided callback to the vector of pending callbacks we maintain
-  // and save a reference to pass to the Scenic callback.
-  auto& saved_callback = get_png_screenshot_callbacks_.emplace_back(
-      std::make_unique<GetScreenshotCallback>(std::move(callback)));
+  // We wrap the callback in a shared_ptr to share it between the error handler
+  // of the FIDL connection and the Scenic::TakeScreenshot() callback.
+  std::shared_ptr<GetScreenshotCallback> shared_callback =
+      std::make_shared<GetScreenshotCallback>(std::move(callback));
 
-  // If we previously lost the connection to Scenic or never connected to
-  // Scenic, we (re-)attempt to establish the connection.
-  if (!scenic_) {
-    ConnectToScenic();
-  }
+  const uint64_t id = next_scenic_id_++;
 
-  scenic_->TakeScreenshot(
-      [encoding, callback = saved_callback.get()](
+  scenics_[id] = services_->Connect<fuchsia::ui::scenic::Scenic>();
+  scenics_[id].set_error_handler(
+      [this, id, shared_callback](zx_status_t status) {
+        CloseScenic(id);
+
+        FX_LOGS(ERROR) << fxl::StringPrintf(
+            "Lost connection to Scenic service: %d (%s)", status,
+            zx_status_get_string(status));
+        (*shared_callback)(/*screenshot=*/nullptr);
+      });
+  scenics_[id]->TakeScreenshot(
+      // We pass |scenic| to the lambda to keep it alive.
+      [this, id, encoding, shared_callback](
           fuchsia::ui::scenic::ScreenshotData raw_screenshot, bool success) {
+        CloseScenic(id);
+
         if (!success) {
           FX_LOGS(ERROR) << "Scenic failed to take screenshot";
-          (*callback)(/*screenshot=*/nullptr);
+          (*shared_callback)(/*screenshot=*/nullptr);
           return;
         }
 
@@ -115,28 +125,20 @@ void DataProviderImpl::GetScreenshot(ImageEncoding encoding,
                           raw_screenshot.info.pixel_format,
                           &screenshot->image)) {
               FX_LOGS(ERROR) << "Failed to convert raw screenshot to PNG";
-              (*callback)(/*screenshot=*/nullptr);
+              (*shared_callback)(/*screenshot=*/nullptr);
               return;
             }
             break;
         }
-        (*callback)(std::move(screenshot));
+        (*shared_callback)(std::move(screenshot));
       });
 }
 
-void DataProviderImpl::ConnectToScenic() {
-  scenic_ = services_->Connect<fuchsia::ui::scenic::Scenic>();
-  scenic_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "Lost connection to Scenic service";
-    this->TerminateAllGetScreenshotCallbacks();
-  });
-}
-
-void DataProviderImpl::TerminateAllGetScreenshotCallbacks() {
-  for (const auto& callback : get_png_screenshot_callbacks_) {
-    (*callback)(/*screenshot=*/nullptr);
+void DataProviderImpl::CloseScenic(const uint64_t id) {
+  if (scenics_.erase(id) == 0) {
+    FX_LOGS(ERROR) << "No fuchsia.ui.scenic.Scenic connection to close with id "
+                   << id;
   }
-  get_png_screenshot_callbacks_.clear();
 }
 
 }  // namespace feedback
