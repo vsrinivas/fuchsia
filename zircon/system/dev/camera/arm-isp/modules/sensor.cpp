@@ -212,18 +212,16 @@ int32_t Sensor::SetDigitalGain(int32_t gain) {
     return camera_sensor_.SetDigitalGain(gain);
 }
 
-void Sensor::StartStreaming() {
-    camera_sensor_.StartStreaming();
+zx_status_t Sensor::StartStreaming() {
+    return camera_sensor_.StartStreaming();
 }
 
-void Sensor::StopStreaming() {
-    camera_sensor_.StopStreaming();
+zx_status_t Sensor::StopStreaming() {
+    return camera_sensor_.StopStreaming();
 }
 
-void Sensor::SetIntegrationTime(int32_t int_time,
-                                int32_t int_time_M,
-                                int32_t int_time_L) {
-    camera_sensor_.SetIntegrationTime(int_time, int_time_M, int_time_L);
+zx_status_t Sensor::SetIntegrationTime(int32_t int_time) {
+    return camera_sensor_.SetIntegrationTime(int_time);
 }
 
 zx_status_t Sensor::Update() {

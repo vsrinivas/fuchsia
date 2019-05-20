@@ -77,15 +77,19 @@ public:
     void DdkUnbind();
     void DdkRelease();
 
+    // Testing interface will need to use this to check
+    // the status of the sensor.
+    bool IsSensorInitialized() { return initialized_; }
+
     // Methods for ZX_PROTOCOL_CAMERA_SENSOR.
     zx_status_t CameraSensorInit();
     void CameraSensorDeInit();
     zx_status_t CameraSensorSetMode(uint8_t mode);
-    void CameraSensorStartStreaming();
-    void CameraSensorStopStreaming();
+    zx_status_t CameraSensorStartStreaming();
+    zx_status_t CameraSensorStopStreaming();
     int32_t CameraSensorSetAnalogGain(int32_t gain);
     int32_t CameraSensorSetDigitalGain(int32_t gain);
-    void CameraSensorSetIntegrationTime(int32_t int_time, int32_t int_time_M, int32_t int_time_L);
+    zx_status_t CameraSensorSetIntegrationTime(int32_t int_time);
     zx_status_t CameraSensorUpdate();
     zx_status_t CameraSensorGetInfo(sensor_info_t* out_info);
     zx_status_t CameraSensorGetSupportedModes(sensor_mode_t* out_modes_list,
@@ -104,6 +108,9 @@ private:
     ddk::ClockProtocolClient clk24_;
     ddk::MipiCsiProtocolClient mipi_;
 
+    // Sensor Status.
+    bool initialized_ = false;
+
     // I2C Helpers.
     uint8_t ReadReg(uint16_t addr);
     void WriteReg(uint16_t addr, uint8_t val);
@@ -113,5 +120,4 @@ private:
     void ShutDown();
     bool ValidateSensorID();
 };
-
 } // namespace camera

@@ -97,15 +97,15 @@ protocol CameraSensor {
     // Sets the Camera Sensor Mode to one of the supported modes.
     SetMode(uint8 mode) -> (zx.status s);
     // Start streaming from the camera sensor.
-    StartStreaming() -> ();
+    StartStreaming() -> (zx.status s);
     // Stop steaming.
-    StopStreaming() -> ();
+    StopStreaming() -> (zx.status s);
     // Change Analog Gain.
     SetAnalogGain(int32 gain) -> (int32 gain);
     // Change Digital Gain.
     SetDigitalGain(int32 gain) -> (int32 gain);
     // Set Integration Time.
-    SetIntegrationTime(int32 int_time, int32 int_time_M, int32 int_time_L) -> ();
+    SetIntegrationTime(int32 int_time) -> (zx.status s);
     // Update the sensor with new parameters.
     Update() -> (zx.status s);
     // Gets the Sensor Parameters.

@@ -182,12 +182,19 @@ zx_status_t Imx227Device::CameraSensorInit() {
     ctx_.param.integration_time_apply_delay = 2;
     ctx_.param.isp_exposure_channel_delay = 0;
 
+    initialized_ = true;
     zxlogf(INFO, "%s IMX227 Camera Sensor Brought out of reset\n", __func__);
     return ZX_OK;
 }
 
 void Imx227Device::CameraSensorDeInit() {
     mipi_.DeInit();
+    // Enable 24M clock for sensor.
+    clk24_.Disable();
+    // Reference code has it, mostly likely needed for the clock to
+    // stabalize. No other way of knowing for sure if sensor is now off.
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+    initialized_ = false;
 }
 
 zx_status_t Imx227Device::CameraSensorGetInfo(sensor_info_t* out_info) {
@@ -219,7 +226,7 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
     zxlogf(INFO, "%s IMX227 Camera Sensor Mode Set request to %d\n", __func__, mode);
 
     // Get Sensor ID to see if sensor is initialized.
-    if (!ValidateSensorID()) {
+    if (!IsSensorInitialized() || !ValidateSensorID()) {
         return ZX_ERR_INTERNAL;
     }
 
@@ -294,15 +301,23 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
     return mipi_.Init(&mipi_info, &adap_info);
 }
 
-void Imx227Device::CameraSensorStartStreaming() {
+zx_status_t Imx227Device::CameraSensorStartStreaming() {
+    if (!IsSensorInitialized()) {
+        return ZX_ERR_BAD_STATE;
+    }
     zxlogf(INFO, "%s Camera Sensor Start Streaming\n", __func__);
     ctx_.streaming_flag = 1;
     WriteReg(0x0100, 0x01);
+    return ZX_OK;
 }
 
-void Imx227Device::CameraSensorStopStreaming() {
+zx_status_t Imx227Device::CameraSensorStopStreaming() {
+    if (!IsSensorInitialized()) {
+        return ZX_ERR_BAD_STATE;
+    }
     ctx_.streaming_flag = 0;
     WriteReg(0x0100, 0x00);
+    return ZX_OK;
 }
 
 int32_t Imx227Device::CameraSensorSetAnalogGain(int32_t gain) {
@@ -313,9 +328,9 @@ int32_t Imx227Device::CameraSensorSetDigitalGain(int32_t gain) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-void Imx227Device::CameraSensorSetIntegrationTime(int32_t int_time,
-                                                  int32_t int_time_M,
-                                                  int32_t int_time_L) {
+zx_status_t Imx227Device::CameraSensorSetIntegrationTime(int32_t int_time) {
+    // TODO(braval): Add support for this.
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensorUpdate() {
@@ -357,13 +372,11 @@ zx_status_t Imx227Device::Create(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SONY},
         {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SONY_IMX227},
         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_SENSOR},
     };
-
 
     status = sensor_device->DdkAdd("imx227", 0, props, countof(props));
     if (status != ZX_OK) {

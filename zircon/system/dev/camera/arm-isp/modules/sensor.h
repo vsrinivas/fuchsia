@@ -37,11 +37,9 @@ public:
                                   size_t modes_count);
     int32_t SetAnalogGain(int32_t gain);
     int32_t SetDigitalGain(int32_t gain);
-    void StartStreaming();
-    void StopStreaming();
-    void SetIntegrationTime(int32_t int_time,
-                            int32_t int_time_M,
-                            int32_t int_time_L);
+    zx_status_t StartStreaming();
+    zx_status_t StopStreaming();
+    zx_status_t SetIntegrationTime(int32_t int_time);
 
 private:
     zx_status_t HwInit();
