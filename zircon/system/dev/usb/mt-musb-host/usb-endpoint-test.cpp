@@ -102,7 +102,6 @@ TEST_F(TransactionEndpointTest, QueueThread_StartAndHalt) {
     TestingEndpoint te(mmio_->View(0));
     EXPECT_OK(te.StartQueueThread());
     EXPECT_OK(te.Halt());
-    te.Join();
 }
 
 TEST_F(TransactionEndpointTest, QueueThread_Enqueue) {
@@ -118,7 +117,6 @@ TEST_F(TransactionEndpointTest, QueueThread_Enqueue) {
     te.Wait();
 
     EXPECT_OK(te.Halt());
-    te.Join();
     te.m_dispatch().VerifyAndClear();
 }
 
@@ -158,7 +156,6 @@ TEST_F(TransactionEndpointTest, QueueThread_EnqueueMultiBeforeThreadStarts) {
     te.Wait(5);
 
     EXPECT_OK(te.Halt());
-    te.Join();
     te.m_dispatch().VerifyAndClear();
 }
 
@@ -198,7 +195,6 @@ TEST_F(TransactionEndpointTest, QueueThread_EnqueueMultiAfterThreadStarts) {
     te.Wait(5);
 
     EXPECT_OK(te.Halt());
-    te.Join();
     te.m_dispatch().VerifyAndClear();
 }
 
@@ -238,7 +234,6 @@ TEST_F(TransactionEndpointTest, QueueThread_EnqueueMultiDuringThreadStart) {
     te.Wait(5);
 
     EXPECT_OK(te.Halt());
-    te.Join();
     te.m_dispatch().VerifyAndClear();
 }
 

@@ -65,7 +65,6 @@ void HardwareDevice::Disconnect() {
     for (uint8_t i=0; i<=kMaxEpNum; i++) {
         if (ep_[i] != nullptr) {
             ep_[i]->Halt();
-            ep_[i]->Join();
         }
     }
 }

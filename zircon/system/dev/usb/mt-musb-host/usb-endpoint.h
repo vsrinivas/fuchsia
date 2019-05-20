@@ -48,9 +48,6 @@ public:
     // Halt endpoint request processing.  All outstanding requests will result in a
     // ZX_ERR_IO_NOT_PRESENT status, and the queue thread will be shut down.
     virtual zx_status_t Halt() = 0;
-
-    // Block and wait until this endpoint is fully halted.
-    virtual void Join() = 0;
 };
 
 // A TransactionEndpoint is an Endpoint which dispatches requests to a Transaction for processing.
@@ -72,7 +69,6 @@ public:
     zx_status_t CancelAll() override;
     size_t GetMaxTransferSize() override ;
     zx_status_t Halt() override;
-    void Join() override { __UNUSED auto _ = sync_completion_wait(&complete_, ZX_TIME_INFINITE); }
 
 protected:
     // The USB register mmio.
@@ -111,9 +107,6 @@ private:
     // Queue dispatch condition and associated mutex.
     fbl::Mutex pending_lock_;
     fbl::ConditionVariable pending_cond_ TA_GUARDED(pending_lock_);
-
-    // A completion that is signaled upon completing the halt process.
-    sync_completion_t complete_;
 };
 
 // A ControlEndpoint is an Endpoint dispatching control-type transactions.

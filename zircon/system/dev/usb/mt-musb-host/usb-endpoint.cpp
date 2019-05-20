@@ -57,13 +57,27 @@ size_t TransactionEndpoint::GetMaxTransferSize() {
 }
 
 zx_status_t TransactionEndpoint::Halt() {
-    fbl::AutoLock _(&pending_lock_);
-    if (transaction_) {
-        transaction_->Cancel();
+    {
+        fbl::AutoLock _(&pending_lock_);
+        if (transaction_) {
+            transaction_->Cancel();
+        }
+
+        halted_ = true;
+        pending_cond_.Signal();
     }
 
-    halted_ = true;
-    pending_cond_.Signal();
+    if (pending_thread_) {
+        int rc;
+        int status = thrd_join(pending_thread_, &rc);
+        if (status != thrd_success) {
+            zxlogf(ERROR, "could not join pending_thread\n");
+            return ZX_ERR_INTERNAL;
+        } else if (rc != 0) {
+            zxlogf(ERROR, "pending_thread returned nonzero status: %d\n", rc);
+            return ZX_ERR_INTERNAL;
+        }
+    }
 
     return ZX_OK;
 }
@@ -77,7 +91,6 @@ int TransactionEndpoint::QueueThread() {
             fbl::AutoLock _(&pending_lock_);
             if (pending_.is_empty()) {
                 if (halted_.load()) {
-                    sync_completion_signal(&complete_);
                     return 0;
                 }
 
@@ -88,7 +101,6 @@ int TransactionEndpoint::QueueThread() {
                 pending_cond_.Wait(&pending_lock_);
 
                 if (halted_.load()) {
-                    sync_completion_signal(&complete_);
                     return 0;
                 }
             }
