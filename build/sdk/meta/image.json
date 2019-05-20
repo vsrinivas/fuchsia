@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/image.json",
   "description": "A target image",
   "type": "object",
   "allOf": [

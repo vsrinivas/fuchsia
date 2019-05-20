@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/cc_prebuilt_library.json",
   "description": "A prebuilt C/C++ library",
   "type": "object",
   "allOf": [

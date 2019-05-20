@@ -41,8 +41,15 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
     fn validate(&self) -> Result<()> {
         let schema = from_str(Self::get_schema())?;
         let mut scope = json_schema::Scope::new();
+
+        // Add the schema including all the common definitions.
+        let common_schema = from_str(include_str!("../common.json"))?;
+        scope
+            .compile(common_schema, true)
+            .map_err(Error::SchemaInvalid)?;
+
         let validator = scope
-            .compile_and_return(schema, false)
+            .compile_and_return(schema, true)
             .map_err(Error::SchemaInvalid)?;
         let value = to_value(self)?;
         let result = validator.validate(&value);
@@ -64,5 +71,41 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
     /// Serializes the object into its string representation.
     fn to_string(&self) -> Result<String> {
         Ok(to_string(self)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_derive::{Deserialize, Serialize};
+
+    use super::*;
+
+    #[derive(Deserialize, Serialize)]
+    struct Metadata {
+        target: String,
+    }
+
+    impl JsonObject for Metadata {
+        fn get_schema() -> &'static str {
+            r#"{
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "id": "http://fuchsia.com/schemas/sdk/test_metadata.json",
+                "properties": {
+                    "target": {
+                        "$ref": "common.json#/definitions/target_arch"
+                    }
+                }
+            }"#
+        }
+    }
+
+    #[test]
+    /// Checks that references to common.json are properly resolved.
+    fn test_common_reference() {
+        let metadata = Metadata {
+            target: "y128".to_string(), // Not a valid architecture.
+        };
+        let result = metadata.validate();
+        assert!(result.is_err(), "Validation did not respect common schema.");
     }
 }

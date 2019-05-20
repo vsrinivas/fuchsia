@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/fidl_library.json",
   "description": "A FIDL library",
   "type": "object",
   "allOf": [

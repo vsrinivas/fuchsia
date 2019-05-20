@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/dart_library.json",
   "description": "A Dart library",
   "type": "object",
   "allOf": [

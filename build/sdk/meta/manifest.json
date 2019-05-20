@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/manifest.json",
   "description": "The manifest describing the contents of the SDK",
   "type": "object",
   "properties": {

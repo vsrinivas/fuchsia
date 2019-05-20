@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/banjo_library.json",
   "description": "A BANJO library",
   "type": "object",
   "allOf": [

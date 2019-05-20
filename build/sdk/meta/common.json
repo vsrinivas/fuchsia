@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/common.json",
   "definitions": {
     "file": {
       "description": "Path to a file from the root of the SDK",

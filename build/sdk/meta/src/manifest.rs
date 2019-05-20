@@ -6,14 +6,8 @@ use std::fmt;
 
 use serde_derive::{Deserialize, Serialize};
 
+use crate::common::TargetArchitecture;
 use crate::json::JsonObject;
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum TargetArchitecture {
-    Arm64,
-    X64,
-}
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields)]

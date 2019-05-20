@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/loadable_module.json",
   "description": "A collection of object files that can be loaded at runtime",
   "type": "object",
   "allOf": [

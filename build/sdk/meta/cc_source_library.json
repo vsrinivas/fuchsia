@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/cc_source_library.json",
   "description": "A set of C/C++ sources",
   "type": "object",
   "allOf": [
