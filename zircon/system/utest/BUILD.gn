@@ -99,6 +99,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/pretty:pretty-test",
       "$zx/system/ulib/region-alloc/test",
       "$zx/system/ulib/simplehid/test",
+      "$zx/system/ulib/smbios:smbios-test",
       "$zx/system/ulib/storage-metrics/test",
       "$zx/system/ulib/syslog/test",
       "$zx/system/ulib/tftp:tftp-test",

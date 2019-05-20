@@ -266,7 +266,7 @@ zx_status_t EntryPoint2_1::WalkStructs(uintptr_t struct_table_virt, StructWalkCa
 
         status = cb(version(), hdr, st);
         if (status == ZX_ERR_STOP) {
-            break;
+            return ZX_OK;
         } else if (status != ZX_OK && status != ZX_ERR_NEXT) {
             return status;
         }

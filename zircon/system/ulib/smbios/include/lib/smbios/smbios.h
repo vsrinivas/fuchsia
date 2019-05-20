@@ -95,7 +95,11 @@ enum class EntryPointVersion {
     V3_0,
 };
 
-// Returning ZX_ERR_STOP aborts the walk.
+// Callback used when walking the structure table.
+// If it returns ZX_ERR_STOP, the walk is aborted and returns ZX_OK
+// If it returns ZX_OK or ZX_ERR_NEXT, the walk is continued.
+// For any other return, the walk is aborted and returns the error returned by
+// the callback.
 using StructWalkCallback = fbl::InlineFunction<zx_status_t(SpecVersion version, const Header* h,
                                                            const StringTable& st),
                                                fbl::kDefaultInlineCallableSize>;

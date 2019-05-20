@@ -12,3 +12,14 @@ library("smbios") {
     "$zx/system/ulib/fbl",
   ]
 }
+
+test("smbios-test") {
+  sources = [
+    "smbios-test.cpp",
+  ]
+  deps = [
+    ":smbios",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
+  ]
+}
