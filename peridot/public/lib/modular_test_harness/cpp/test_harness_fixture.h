@@ -32,9 +32,9 @@ namespace testing {
 //   auto component_url = GenerateFakeUrl();
 //   modular::testing::FakeComponent component;
 //   builder.InterceptComponent(
+//      component.GetOnCreateHandler(),
 //      {.url = component_url,
-//       .sandbox_services = {"foo.Service"}},
-//      component.Bind());
+//       .sandbox_services = {"foo.Service"}});
 //
 //   // Start an instance of the modular runtime in the test harness's
 //   // hermetic environment. As soon as |component_url| is created in
