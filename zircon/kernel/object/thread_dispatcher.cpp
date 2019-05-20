@@ -189,6 +189,12 @@ zx_status_t ThreadDispatcher::Start(const EntryState& entry, bool initial_thread
 
     is_initial_thread_ = initial_thread;
 
+    // add ourselves to the process, which may fail if the process is in a dead state.
+    // If the process is live then it will call our StartRunning routine.
+    return process_->AddInitializedThread(this, initial_thread, entry);
+}
+
+zx_status_t ThreadDispatcher::MakeRunnable(const EntryState& entry, bool suspended) {
     Guard<fbl::Mutex> guard{get_lock()};
 
     if (state_.lifecycle() != ThreadState::Lifecycle::INITIALIZED)
@@ -196,12 +202,6 @@ zx_status_t ThreadDispatcher::Start(const EntryState& entry, bool initial_thread
 
     // save the user space entry state
     user_entry_ = entry;
-
-    // add ourselves to the process, which may fail if the process is in a dead state
-    bool suspended;
-    auto ret = process_->AddThread(this, initial_thread, &suspended);
-    if (ret < 0)
-        return ret;
 
     // update our suspend count to account for our parent state
     if (suspended)

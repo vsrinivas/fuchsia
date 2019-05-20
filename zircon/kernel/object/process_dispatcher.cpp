@@ -318,9 +318,8 @@ void ProcessDispatcher::KillAllThreadsLocked() {
     }
 }
 
-zx_status_t ProcessDispatcher::AddThread(ThreadDispatcher* t,
-                                         bool initial_thread,
-                                         bool* suspended) {
+zx_status_t ProcessDispatcher::AddInitializedThread(ThreadDispatcher* t, bool initial_thread,
+                                                    const ThreadDispatcher::EntryState& entry) {
     LTRACE_ENTRY_OBJ;
 
     Guard<fbl::Mutex> guard{get_lock()};
@@ -335,14 +334,20 @@ zx_status_t ProcessDispatcher::AddThread(ThreadDispatcher* t,
             return ZX_ERR_BAD_STATE;
     }
 
+    // Now that we know our state is okay we can attempt to start the thread running. This is okay
+    // since as long as the thread doesn't refuse to start running then we cannot fail from here
+    // and so we will update our thread_list_ and state before we drop the lock, making this
+    // whole process atomic to any observers.
+    zx_status_t result = t->MakeRunnable(entry, suspend_count_ > 0);
+    if (result != ZX_OK) {
+        return result;
+    }
+
     // add the thread to our list
     DEBUG_ASSERT(thread_list_.is_empty() == initial_thread);
     thread_list_.push_back(t);
 
     DEBUG_ASSERT(t->process() == this);
-
-    // If we're suspended, start this thread in suspended state as well.
-    *suspended = (suspend_count_ > 0);
 
     if (initial_thread)
         SetStateLocked(State::RUNNING);

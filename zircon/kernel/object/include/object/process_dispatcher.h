@@ -328,11 +328,13 @@ private:
                                       const arch_exception_context_t* context);
 
     // Thread lifecycle support.
-    //
-    // |suspended| indicates whether the parent process is currently suspended or not. If true,
-    // the child thread must increment its own suspend count by one and transition to suspend.
     friend class ThreadDispatcher;
-    zx_status_t AddThread(ThreadDispatcher* t, bool initial_thread, bool* suspended);
+    // Takes the given ThreadDispatcher and transitions it from the INITIALIZED state to a runnable
+    // state (RUNNING or SUSPENDED depending on whether this process is suspended) by calling
+    // ThreadDispatcher::MakeRunnable. The thread is then added to the thread_list_ for this process
+    // and we transition to running if this is the initial_thread.
+    zx_status_t AddInitializedThread(ThreadDispatcher* t, bool initial_thread,
+                                     const ThreadDispatcher::EntryState& entry);
     void RemoveThread(ThreadDispatcher* t);
 
     void SetStateLocked(State) TA_REQ(get_lock());

@@ -96,7 +96,13 @@ public:
     // Performs initialization on a newly constructed ThreadDispatcher
     // If this fails, then the object is invalid and should be deleted
     zx_status_t Initialize(const char* name, size_t len);
+    // Start this thread running inside the parent process with the provided entry state, only
+    // valid to be called on a thread in the INITIALIZED state that has not yet been started.
     zx_status_t Start(const EntryState& entry, bool initial_thread);
+    // Transitions a thread from the INITIALIZED state to either the RUNNING or SUSPENDED state.
+    // Is the caller's responsibility to ensure this thread is registered with the parent process,
+    // as such this is only expected to be called from the ProcessDispatcher.
+    zx_status_t MakeRunnable(const EntryState& entry, bool suspended);
     void Exit() __NO_RETURN;
     void Kill();
 
