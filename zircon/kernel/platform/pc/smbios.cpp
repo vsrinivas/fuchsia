@@ -23,6 +23,7 @@
 namespace {
 
 smbios::EntryPointVersion kEpVersion = smbios::EntryPointVersion::Unknown;
+zx_paddr_t kEntryPointPhys;
 union {
     const uint8_t* raw;
     const smbios::EntryPoint2_1* ep2_1;
@@ -36,10 +37,12 @@ zx_status_t FindEntryPoint(const uint8_t** base, smbios::EntryPointVersion* vers
         if (!memcmp(p, SMBIOS2_ANCHOR, strlen(SMBIOS2_ANCHOR))) {
             *base = p;
             *version = smbios::EntryPointVersion::V2_1;
+            kEntryPointPhys = bootloader.smbios;
             return ZX_OK;
         } else if (!memcmp(p, SMBIOS3_ANCHOR, strlen(SMBIOS3_ANCHOR))) {
             *base = p;
             *version = smbios::EntryPointVersion::V3_0;
+            kEntryPointPhys = bootloader.smbios;
             return ZX_OK;
         }
     }
@@ -50,11 +53,13 @@ zx_status_t FindEntryPoint(const uint8_t** base, smbios::EntryPointVersion* vers
         if (!memcmp(p, SMBIOS2_ANCHOR, strlen(SMBIOS2_ANCHOR))) {
             *base = p;
             *version = smbios::EntryPointVersion::V2_1;
+            kEntryPointPhys = target;
             return ZX_OK;
         }
         if (!memcmp(p, SMBIOS3_ANCHOR, strlen(SMBIOS3_ANCHOR))) {
             *base = p;
             *version = smbios::EntryPointVersion::V3_0;
+            kEntryPointPhys = target;
             return ZX_OK;
         }
     }
@@ -149,6 +154,10 @@ void pc_init_smbios() {
     kEpVersion = version;
     kStructBase = struct_table_virt;
     cleanup_mapping.cancel();
+}
+
+zx_paddr_t pc_get_smbios_entrypoint() {
+    return kEntryPointPhys;
 }
 
 static zx_status_t DebugStructWalk(smbios::SpecVersion ver,

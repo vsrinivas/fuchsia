@@ -38,6 +38,7 @@
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>
+#include <platform/pc/smbios.h>
 #endif
 
 #include "ddk_priv.h"
@@ -271,7 +272,7 @@ zx_status_t sys_pc_firmware_tables(zx_handle_t hrsrc, user_out_ptr<zx_paddr_t> a
     if ((status = acpi_rsdp.copy_to_user(bootloader.acpi_rsdp)) != ZX_OK) {
         return status;
     }
-    if ((status = smbios.copy_to_user(bootloader.smbios)) != ZX_OK) {
+    if ((status = smbios.copy_to_user(pc_get_smbios_entrypoint())) != ZX_OK) {
         return status;
     }
 

@@ -40,6 +40,8 @@ library("pc") {
     "$zx/third_party/ulib/cksum",
   ]
   public_deps = [
+    # <platform/pc/smbios.h> has #include <lib/smbios/smbios.h>.
+    "$zx/system/ulib/smbios:headers",
     # <platform/pc/acpi.h> has #include <acpica/acpi.h>.
     "$zx/third_party/lib/acpica:headers",
   ]
