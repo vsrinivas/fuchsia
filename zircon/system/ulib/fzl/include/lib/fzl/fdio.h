@@ -18,12 +18,26 @@ namespace fzl {
 //
 // FdioCaller consumes |fd|, but the same |fd| may be re-acquired by
 // calling "release()" on the FdioCaller object.
+//
+// This class is movable, but not copyable.
 class FdioCaller {
 public:
     FdioCaller() : io_(nullptr) {}
 
     explicit FdioCaller(fbl::unique_fd fd) :
         fd_(std::move(fd)), io_(fdio_unsafe_fd_to_io(fd_.get())) {}
+
+    FdioCaller& operator=(FdioCaller&& o) {
+        fd_ = std::move(o.fd_);
+        io_ = o.io_;
+        o.io_ = nullptr;
+        return *this;
+    }
+    FdioCaller(FdioCaller&& o) : fd_(std::move(o.fd_)), io_(o.io_) {
+        o.io_ = nullptr;
+    }
+    FdioCaller(const FdioCaller&) = delete;
+    FdioCaller& operator=(const FdioCaller&) = delete;
 
     ~FdioCaller() {
         release();
@@ -63,11 +77,6 @@ public:
     zx_handle_t borrow_channel() const {
         return fdio_unsafe_borrow_channel(io_);
     }
-
-    FdioCaller& operator=(FdioCaller&& o) = delete;
-    FdioCaller(FdioCaller&& o) = delete;
-    FdioCaller(const FdioCaller&) = delete;
-    FdioCaller& operator=(const FdioCaller&) = delete;
 
 private:
     fbl::unique_fd fd_;
