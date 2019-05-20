@@ -5,11 +5,11 @@
 load("@io_bazel_rules_dart//dart/build_rules/internal:pub.bzl", "pub_repository")
 
 FLUTTER_DOWNLOAD_URL = (
-    "https://github.com/flutter/flutter/archive/9e3a0d30c98ecf55281454f47228f112c749f0fc.zip"
+    "https://github.com/flutter/flutter/archive/4aaeb4e11f62a0ea45194217d98811f42d7d429e.zip"
 )
 
 FLUTTER_SHA256 = (
-    "dc5fc6ae4dddf327fb72d2b5595fa8c0a0f0b46c7479cdec2331e6230d105a52"
+    "24f0aad42c08254b056fef74a5817300dd33668206a45cd1ecb25020cc7d0fea"
 )
 
 # TODO(alainv|DX-314): Pull dependencies automatically from
@@ -40,7 +40,7 @@ def _install_flutter_impl(repository_ctx):
         output = ".",
         sha256 = FLUTTER_SHA256,
         type = "zip",
-        stripPrefix = "flutter-9e3a0d30c98ecf55281454f47228f112c749f0fc",
+        stripPrefix = "flutter-4aaeb4e11f62a0ea45194217d98811f42d7d429e",
     )
     # Set up the BUILD file from the Fuchsia SDK.
     repository_ctx.symlink(
