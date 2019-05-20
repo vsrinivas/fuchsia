@@ -307,11 +307,14 @@ int main(int argc, char** argv) {
     }
 
     bool is_term = false;
-    if (!strncmp(getenv("TERM"), "screen", 6)) {
-        is_term = true;
-    }
-    if (!strncmp(getenv("TERM"), "xterm", 5)) {
-        is_term = true;
+    const char *term = getenv("TERM");
+    if (term != NULL) {
+        if (!strncmp(term, "screen", 6)) {
+            is_term = true;
+        }
+        if (!strncmp(term, "xterm", 5)) {
+            is_term = true;
+        }
     }
 
     // set stdin to non blocking
