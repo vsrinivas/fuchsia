@@ -7,6 +7,7 @@ extern crate serde_json;
 
 use log::warn;
 use std::fs::{self, File};
+use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use account_common::{AccountManagerError, LocalAccountId};
@@ -61,10 +62,10 @@ impl StoredAccountList {
             warn!("Created account list dir: {:?}", path);
             return Ok(StoredAccountList::new(vec![]));
         };
-        let file = File::open(path).map_err(|err| {
+        let file = BufReader::new(File::open(path).map_err(|err| {
             warn!("Failed to read account list: {:?}", err);
             AccountManagerError::new(Status::IoError).with_cause(err)
-        })?;
+        })?);
         serde_json::from_reader(file).map_err(|err| {
             warn!("Failed to parse account list: {:?}", err);
             AccountManagerError::new(Status::InternalError).with_cause(err)
@@ -87,12 +88,16 @@ impl StoredAccountList {
         let path = Self::path(account_list_dir);
         let tmp_path = Self::tmp_path(account_list_dir);
         {
-            let tmp_file = File::create(&tmp_path).map_err(|err| {
+            let mut tmp_file = BufWriter::new(File::create(&tmp_path).map_err(|err| {
                 warn!("Failed to create account tmp list: {:?}", err);
                 AccountManagerError::new(Status::IoError).with_cause(err)
+            })?);
+            serde_json::to_writer(&mut tmp_file, self).map_err(|err| {
+                warn!("Failed to serialize account list: {:?}", err);
+                AccountManagerError::new(Status::IoError).with_cause(err)
             })?;
-            serde_json::to_writer(tmp_file, self).map_err(|err| {
-                warn!("Failed to write account list: {:?}", err);
+            tmp_file.flush().map_err(|err| {
+                warn!("Failed to flush serialized account list: {:?}", err);
                 AccountManagerError::new(Status::IoError).with_cause(err)
             })?;
         }
