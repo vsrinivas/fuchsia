@@ -141,7 +141,7 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
 
 // Launches a single module with an intent. Checks that the module exposes an
 // intent handler and gets notified of the intent by the framework.
-TEST_F(IntentsTest, ModuleUsesIntentHandler) {
+TEST_F(IntentsTest, DISABLED_ModuleUsesIntentHandler) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
