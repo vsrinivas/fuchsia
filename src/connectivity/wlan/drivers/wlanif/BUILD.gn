@@ -5,35 +5,46 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-source_set("source") {
-  public = [
-    "convert.h",
-    "device.h",
-    "driver.h",
-  ]
+all_hdrs = [
+  "convert.h",
+  "device.h",
+  "driver.h",
+]
 
-  sources = [
-    "convert.cpp",
-    "device.cpp",
-    "driver.cpp",
-  ]
+all_src = [
+  "convert.cpp",
+  "device.cpp",
+  "driver.cpp"
+]
 
-  public_deps = [
-    "//garnet/lib/wlan/fidl",
-    "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
-  ]
+all_deps = [
+  "//garnet/lib/wlan/fidl",
+  "//garnet/lib/wlan/protocol",
+  "//src/connectivity/wlan/lib/common/cpp:common",
+  "//zircon/public/lib/async-cpp",
+  "//zircon/public/lib/async-loop-cpp",
+  "//zircon/public/lib/ddk",
+  "//zircon/public/lib/driver",
+]
+
+source_set("lib_source") {
+  public = all_hdrs
+  sources = all_src
+  public_deps = all_deps
+}
+
+source_set("test_source") {
+  defines = [ "WLANIF_TEST=1" ]
+  public = all_hdrs
+  sources = all_src
+  public_deps = all_deps
 }
 
 driver_module("wlanif_driver") {
   output_name = "wlanif"
 
   deps = [
-    ":source",
+    ":lib_source",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

@@ -59,7 +59,7 @@ executable("convert_unittest") {
   ]
 
   deps = [
-    "//src/connectivity/wlan/drivers/wlanif:source",
+    "//src/connectivity/wlan/drivers/wlanif:test_source",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest_main",
   ]

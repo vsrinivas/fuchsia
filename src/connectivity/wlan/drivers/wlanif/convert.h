@@ -48,5 +48,7 @@ void ConvertBandCapabilities(::fuchsia::wlan::mlme::BandCapabilities* fidl_band,
 void ConvertIfaceStats(::fuchsia::wlan::stats::IfaceStats* fidl_stats, const wlanif_stats_t& stats);
 uint32_t ConvertMgmtCaptureFlags(::fuchsia::wlan::mlme::MgmtFrameCaptureFlags fidl_flags);
 ::fuchsia::wlan::mlme::MgmtFrameCaptureFlags ConvertMgmtCaptureFlags(uint32_t ddk_flags);
+void ConvertRateSets(::std::vector<uint8_t>* basic, ::std::vector<uint8_t>* op,
+                     const wlanif_bss_description_t& wlanif_desc);
 
 }  // namespace wlanif

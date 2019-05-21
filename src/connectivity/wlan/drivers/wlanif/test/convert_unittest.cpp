@@ -62,5 +62,24 @@ TEST(ConvertTest, ToFidlBSSDescription_SsidTooLong) {
   EXPECT_EQ(status, ZX_OK);
 }
 
+TEST(ConvertTest, ToVectorRateSets_InvalidRateCount) {
+  wlanif_bss_description bss_desc = {};
+
+  constexpr uint8_t kBasicRateMask = 0b10000000;
+  size_t basic_rate_count = 0;
+
+  bss_desc.num_rates = WLAN_MAC_MAX_RATES + 1;
+  for (unsigned i = 0; i < WLAN_MAC_MAX_RATES; i++) {
+      bss_desc.rates[i] = i;
+      if (i & kBasicRateMask) { basic_rate_count++; }
+  }
+  std::vector<uint8_t> basic_rates;
+  std::vector<uint8_t> op_rates;
+  ConvertRateSets(&basic_rates, &op_rates, bss_desc);
+
+  EXPECT_EQ(basic_rates.size(), basic_rate_count);
+  EXPECT_EQ(op_rates.size(), (size_t)WLAN_MAC_MAX_RATES);
+}
+
 }  // namespace
 }  // namespace wlanif

@@ -219,12 +219,21 @@ void ConvertRateSets(::std::vector<uint8_t>* basic, ::std::vector<uint8_t>* op,
     (*basic).resize(0);
     (*op).resize(0);
 
+    uint16_t total_rate_count = wlanif_desc.num_rates;
+    if (total_rate_count > WLAN_MAC_MAX_RATES) {
+#if !WLANIF_TEST
+        warnf("num_rates is %u > max allowed size: %d\n", total_rate_count, WLAN_MAC_MAX_RATES);
+        ZX_DEBUG_ASSERT(total_rate_count <= WLAN_MAC_MAX_RATES);
+#endif
+        total_rate_count = WLAN_MAC_MAX_RATES;
+    }
+
     // TODO(eyw): Use WlanRate data structure when it is available.
 
     constexpr uint8_t kBasicRateMask = 0b10000000;
     constexpr uint8_t kHalfMbpsMask = 0b01111111;
 
-    for (uint8_t i = 0; i < wlanif_desc.num_rates; ++i) {
+    for (uint16_t i = 0; i < total_rate_count; ++i) {
         uint8_t rate = wlanif_desc.rates[i];
         if (rate & kBasicRateMask) { basic->push_back(rate & kHalfMbpsMask); }
         op->push_back(rate & kHalfMbpsMask);
