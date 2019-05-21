@@ -109,12 +109,11 @@ private:
     fbl::Canary<fbl::magic("VAAS")> canary_;
     IoBitmap io_bitmap_;
 
-    static constexpr size_t kPageTableAlign = fbl::max(alignof(X86PageTableMmu),
-                                                       alignof(X86PageTableEpt));
-    static constexpr size_t kPageTableSize = fbl::max(sizeof(X86PageTableMmu),
-                                                      sizeof(X86PageTableEpt));
     // Embedded storage for the object pointed to by |pt_|.
-    alignas(kPageTableAlign) char page_table_storage_[kPageTableSize];
+    union {
+        alignas(X86PageTableMmu) char mmu[sizeof(X86PageTableMmu)];
+        alignas(X86PageTableEpt) char ept[sizeof(X86PageTableEpt)];
+    } page_table_storage_;
 
     // This will be either a normal page table or an EPT, depending on whether
     // flags_ includes ARCH_ASPACE_FLAG_GUEST.

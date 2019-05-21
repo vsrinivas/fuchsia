@@ -596,7 +596,8 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
     base_ = base;
     size_ = size;
     if (mmu_flags & ARCH_ASPACE_FLAG_KERNEL) {
-        X86PageTableMmu* mmu = new (page_table_storage_) X86PageTableMmu();
+        X86PageTableMmu* mmu =
+            new (&page_table_storage_.mmu) X86PageTableMmu();
         pt_ = mmu;
 
         zx_status_t status = mmu->InitKernel(this);
@@ -605,7 +606,8 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
         }
         LTRACEF("kernel aspace: pt phys %#" PRIxPTR ", virt %p\n", pt_->phys(), pt_->virt());
     } else if (mmu_flags & ARCH_ASPACE_FLAG_GUEST) {
-        X86PageTableEpt* ept = new (page_table_storage_) X86PageTableEpt();
+        X86PageTableEpt* ept =
+            new (&page_table_storage_.ept) X86PageTableEpt();
         pt_ = ept;
 
         zx_status_t status = ept->Init(this);
@@ -614,7 +616,7 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
         }
         LTRACEF("guest paspace: pt phys %#" PRIxPTR ", virt %p\n", pt_->phys(), pt_->virt());
     } else {
-        X86PageTableMmu* mmu = new (page_table_storage_) X86PageTableMmu;
+        X86PageTableMmu* mmu = new (&page_table_storage_.mmu) X86PageTableMmu;
         pt_ = mmu;
 
         zx_status_t status = mmu->Init(this);
