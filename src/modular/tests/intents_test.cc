@@ -6,11 +6,10 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/modular_test_harness/cpp/fake_component.h>
+#include <lib/modular_test_harness/cpp/fake_module.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <sdk/lib/sys/cpp/component_context.h>
 #include <sdk/lib/sys/cpp/service_directory.h>
-#include <sdk/lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/testing/session_shell_impl.h"
@@ -29,58 +28,20 @@ constexpr char kModuleName[] = "mod_name";
 constexpr char kStoryName[] = "story";
 constexpr char kIntentAction[] = "action";
 
-class TestModule : public modular::testing::FakeComponent,
-                   fuchsia::modular::IntentHandler {
- public:
-  TestModule(fit::function<void()> on_intent_handled)
-      : on_intent_handled_(std::move(on_intent_handled)) {}
-
-  // Returns the module's |module_context_|
-  fuchsia::modular::ModuleContext* module_context() {
-    return module_context_.get();
-  }
-
-  // Returns the latest handled intent
-  fuchsia::modular::Intent* latest_handled_intent() {
-    return &latest_handled_intent_;
-  }
-
- private:
-  // |modular::testing::FakeComponent|
-  void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
-    component_context()->svc()->Connect(module_context_.NewRequest());
-    component_context()
-        ->outgoing()
-        ->AddPublicService<fuchsia::modular::IntentHandler>(
-            [this](fidl::InterfaceRequest<fuchsia::modular::IntentHandler>
-                       request) {
-              bindings_.AddBinding(this, std::move(request));
-            });
-  }
-
-  // |IntentHandler|
-  void HandleIntent(fuchsia::modular::Intent intent) override {
-    latest_handled_intent_ = std::move(intent);
-    on_intent_handled_();
-  };
-
-  // A callback to be executed when HandleIntent() is invoked.
-  fit::function<void()> on_intent_handled_;
-  fuchsia::modular::ModuleContextPtr module_context_;
-  fidl::BindingSet<fuchsia::modular::IntentHandler> bindings_;
-  fuchsia::modular::Intent latest_handled_intent_;
-};
-
 class IntentsTest : public modular::testing::TestHarnessFixture {
  public:
   void SetUp() override {
-    test_module_ =
-        std::make_unique<TestModule>([this]() { intent_handled_ = true; });
+    test_module_ = std::make_unique<modular::testing::FakeModule>(
+        [this](fuchsia::modular::Intent intent) {
+          latest_handled_intent_ = std::move(intent);
+          intent_handled_ = true;
+        });
     test_module_url_ = builder_.GenerateFakeUrl();
     builder_.InterceptComponent(
         test_module_->GetOnCreateHandler(),
         {.url = test_module_url_,
-         .sandbox_services = {"fuchsia.modular.ModuleContext"}});
+         .sandbox_services =
+             modular::testing::FakeModule::GetSandboxServices()});
 
     test_harness().events().OnNewComponent =
         builder_.BuildOnNewComponentHandler();
@@ -171,9 +132,10 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
     return false;
   }
 
-  std::unique_ptr<TestModule> test_module_;
+  std::unique_ptr<modular::testing::FakeModule> test_module_;
   modular::testing::TestHarnessBuilder builder_;
   std::string test_module_url_;
+  fuchsia::modular::Intent latest_handled_intent_;
   bool intent_handled_;
 };
 
@@ -188,7 +150,7 @@ TEST_F(IntentsTest, ModuleUsesIntentHandler) {
       [&] { return test_module_->is_running(); }, kTimeout));
 
   // Check that the intent handler received the intent
-  EXPECT_TRUE(IntentMatchesExpectations(test_module_->latest_handled_intent(),
+  EXPECT_TRUE(IntentMatchesExpectations(&latest_handled_intent_,
                                         kIntentParameterName,
                                         kInitialIntentParameterData));
 }
@@ -219,9 +181,8 @@ TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
   ASSERT_TRUE(
       RunLoopWithTimeoutOrUntil([&] { return intent_handled_; }, kTimeout));
 
-  EXPECT_TRUE(IntentMatchesExpectations(test_module_->latest_handled_intent(),
-                                        kIntentParameterName,
-                                        second_module_param_data));
+  EXPECT_TRUE(IntentMatchesExpectations(
+      &latest_handled_intent_, kIntentParameterName, second_module_param_data));
 }
 
 // Launches a module that exposes an intent handler service then tests that a
@@ -251,7 +212,7 @@ TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
   ASSERT_TRUE(
       RunLoopWithTimeoutOrUntil([&] { return intent_handled_; }, kTimeout));
 
-  EXPECT_TRUE(IntentMatchesExpectations(test_module_->latest_handled_intent(),
+  EXPECT_TRUE(IntentMatchesExpectations(&latest_handled_intent_,
                                         second_module_param_name,
                                         second_module_param_data));
 }
@@ -286,7 +247,7 @@ TEST_F(IntentsTest, DifferentHandler) {
 
   // Check that the intercepted_module_'s latest handled intent matches the
   // initial module
-  EXPECT_TRUE(IntentMatchesExpectations(test_module_->latest_handled_intent(),
+  EXPECT_TRUE(IntentMatchesExpectations(&latest_handled_intent_,
                                         kIntentParameterName,
                                         kInitialIntentParameterData));
 }

@@ -26,6 +26,8 @@ sdk_source_set("test_harness_fixture") {
   sources = [
     "fake_component.cc",
     "fake_component.h",
+    "fake_module.cc",
+    "fake_module.h",
     "test_harness_fixture.cc",
     "test_harness_fixture.h",
   ]
