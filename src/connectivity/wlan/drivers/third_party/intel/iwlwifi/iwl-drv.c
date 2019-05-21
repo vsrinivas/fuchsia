@@ -466,11 +466,18 @@ static zx_status_t iwl_request_firmware(struct iwl_drv* drv, bool first) {
 
     struct firmware firmware;
     zx_status_t status;
+
+#ifdef CONFIG_TEST_SIM
+    // In the test environment, there is no load_firmware() function, which is provided by zircon.
+    // This can be mocked up with another function if we want to test the zx_vmar_map() below.
+    status = ZX_OK;
+#else
     status = load_firmware(drv->zxdev, drv->firmware_name, &firmware.vmo, &firmware.size);
     if (status != ZX_OK) {
         IWL_ERR(drv, "Failed to load firmware: %s", zx_status_get_string(status));
         return status;
     }
+#endif
 
     uintptr_t vaddr;
     status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, firmware.vmo, 0, firmware.size,

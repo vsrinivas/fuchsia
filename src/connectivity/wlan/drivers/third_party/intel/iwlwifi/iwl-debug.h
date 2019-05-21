@@ -40,6 +40,12 @@
 
 #include "iwl-modparams.h"
 
+// In the simulated environment, redirect all outputs to STDIO.
+#ifdef CONFIG_TEST_SIM
+#undef zxlogf
+#define zxlogf(level, f, a...) printf("[%s] " f, #level, ##a)
+#endif  // CONFIG_TEST_SIM
+
 static inline bool iwl_have_debug_level(uint32_t level) {
 #ifdef CPTCFG_IWLWIFI_DEBUG
     return iwlwifi_mod_params.debug_level & level;
