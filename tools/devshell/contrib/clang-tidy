@@ -44,7 +44,7 @@ function canonicalize() {
 
 VERBOSE=
 FIX=
-FILES=()
+RAW_FILES=""
 
 fx-config-read
 
@@ -54,10 +54,10 @@ while [ $# -gt 0 ]; do
     --verbose) VERBOSE="1" ;;
     --fix) FIX=1 ;;
     --files=*)
-      FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}"))
+      RAW_FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}"))
       ;;
     --target=*)
-      FILES=$(canonicalize "${FUCHSIA_DIR}" \
+      RAW_FILES=$(canonicalize "${FUCHSIA_DIR}" \
         $(fx-buildtool-run gn desc \
             "${FUCHSIA_BUILD_DIR}" "${ARG#--target=}" sources)) ;;
     *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
@@ -65,8 +65,13 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+FILES=()
+while read -r line; do
+    FILES+=("${line}")
+done <<< "$RAW_FILES"
+
 if [[ -n "${VERBOSE}" ]]; then
-  printf "Files on which to run clang-tidy:\n%s\n" "${FILES}"
+  printf "Files on which to run clang-tidy:\n%s\n" "${FILES[@]}"
 fi
 
 declare BUILDTOOLS_ROOT="${FUCHSIA_DIR}"/buildtools
@@ -81,13 +86,23 @@ esac
 
 declare HOST_PLATFORM="${HOST_OS}-${HOST_ARCH}"
 
+# Specify both the clang-tidy and the clang-apply-replacements binaries to be
+# the ones in //buildtools, so that they'll work properly on the tree.
 declare CLANG_TIDY="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-tidy"
+declare CLANG_APPLY_REPLACEMENTS="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-apply-replacements"
 declare RUN_CLANG_TIDY="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/share/clang/run-clang-tidy.py"
 
 cd "${FUCHSIA_BUILD_DIR}"
-if [[ -z "${FIX}" ]]; then
-  "${RUN_CLANG_TIDY}" -clang-tidy-binary "${CLANG_TIDY}" "${FILES}" -fix
+if [[ -n "${FIX}" ]]; then
+  "${RUN_CLANG_TIDY}" \
+  -clang-tidy-binary "${CLANG_TIDY}" \
+  -clang-apply-replacements-binary "${CLANG_APPLY_REPLACEMENTS}" \
+  "${FILES[@]}" \
+  -fix
 else
-  "${RUN_CLANG_TIDY}" -clang-tidy-binary "${CLANG_TIDY}" "${FILES}"
+  "${RUN_CLANG_TIDY}" \
+  -clang-tidy-binary "${CLANG_TIDY}" \
+  -clang-apply-replacements-binary "${CLANG_APPLY_REPLACEMENTS}" \
+  "${FILES[@]}"
 fi
 cd "${FUCHSIA_DIR}"
