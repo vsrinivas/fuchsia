@@ -120,8 +120,9 @@ int emu_mkfs(const char* path) {
     off_t size = s.st_size / minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, std::move(fd), (uint32_t) size) < 0) {
-        FS_TRACE_ERROR("error: cannot create block cache\n");
+    zx_status_t status = minfs::Bcache::Create(&bc, std::move(fd), (uint32_t) size);
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("error: cannot create block cache: %d\n", status);
         return -1;
     }
 
@@ -158,8 +159,9 @@ int emu_create_bcache(const char* path, fbl::unique_ptr<minfs::Bcache>* out_bc) 
     off_t size = s.st_size / minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, std::move(fd), (uint32_t) size) != ZX_OK) {
-        FS_TRACE_ERROR("error: cannot create block cache\n");
+    zx_status_t status = minfs::Bcache::Create(&bc, std::move(fd), (uint32_t) size);
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("error: cannot create block cache: %d\n", status);
         return -1;
     }
 

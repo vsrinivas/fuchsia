@@ -139,13 +139,15 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
         const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
 #ifdef __Fuchsia__
         fuchsia_hardware_block_volume_VolumeInfo fvm_info;
-        if (bc->FVMQuery(&fvm_info) != ZX_OK) {
-            FS_TRACE_ERROR("minfs: Unable to query FVM\n");
+        zx_status_t status = bc->FVMQuery(&fvm_info);
+        if (status != ZX_OK) {
+            FS_TRACE_ERROR("minfs: unable to query FVM :%d\n", status);
             return ZX_ERR_UNAVAILABLE;
         }
 
         if (info->slice_size != fvm_info.slice_size) {
-            FS_TRACE_ERROR("minfs: Slice size did not match expected\n");
+            FS_TRACE_ERROR("minfs: slice size %lu did not match expected size %lu\n",
+                           info->slice_size, fvm_info.slice_size );
             return ZX_ERR_BAD_STATE;
         }
 
@@ -166,13 +168,14 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
                 ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
         size_t ranges_count;
 
-        if (bc->FVMVsliceQuery(&request, ranges, &ranges_count) != ZX_OK) {
-            FS_TRACE_ERROR("minfs: Unable to query FVM\n");
+        if ((status = bc->FVMVsliceQuery(&request, ranges, &ranges_count)) != ZX_OK) {
+            FS_TRACE_ERROR("minfs: unable to query FVM: %d\n", status);
             return ZX_ERR_UNAVAILABLE;
         }
 
         if (ranges_count != request.count) {
-            FS_TRACE_ERROR("minfs: Unable to query FVM\n");
+            FS_TRACE_ERROR("minfs: requested FVM range :%lu does not match received: %lu\n",
+                           request.count, ranges_count);
             return ZX_ERR_BAD_STATE;
         }
 
@@ -185,7 +188,7 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
                 // the FVM to report a slice size smaller than what is reported by Minfs. In this
                 // case, automatically fail without trying to resolve the situation, as it is
                 // possible that Minfs structures are allocated in the slices that have been lost.
-                FS_TRACE_ERROR("minfs: Mismatched slice count\n");
+                FS_TRACE_ERROR("minfs: mismatched slice count\n");
                 return ZX_ERR_IO_DATA_INTEGRITY;
             }
 
@@ -194,7 +197,6 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
                 extend_request_t shrink;
                 shrink.length = fvm_count - minfs_count;
                 shrink.offset = request.vslice_start[i] + minfs_count;
-                zx_status_t status;
                 if ((status = bc->FVMShrink(&shrink)) != ZX_OK) {
                     FS_TRACE_ERROR("minfs: Unable to shrink to expected size, status: %d\n",
                                    status);
@@ -867,7 +869,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
     uint64_t id;
     status = Minfs::CreateFsId(&id);
     if (status != ZX_OK) {
-        FS_TRACE_ERROR("minfs: failed to create fs_id:%d\n", status);
+        FS_TRACE_ERROR("minfs: failed to create fs_id: %d\n", status);
         return status;
     }
 
@@ -918,7 +920,7 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
 
     char blk[kMinfsBlockSize];
     if ((status = bc->Readblk(0, &blk)) != ZX_OK) {
-        FS_TRACE_ERROR("minfs: could not read info block\n");
+        FS_TRACE_ERROR("minfs: could not read info block: %d\n", status);
         return status;
     }
     const Superblock* info = reinterpret_cast<Superblock*>(blk);
@@ -929,7 +931,7 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
 #endif
     fbl::unique_ptr<Minfs> fs;
     if ((status = Minfs::Create(std::move(bc), info, &fs, IntegrityCheck::kAll)) != ZX_OK) {
-        FS_TRACE_ERROR("minfs: mount failed\n");
+        FS_TRACE_ERROR("minfs: failed to create filesystem object %d\n", status);
         return status;
     }
 
@@ -941,7 +943,7 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
 
     fbl::RefPtr<VnodeMinfs> vn;
     if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != ZX_OK) {
-        FS_TRACE_ERROR("minfs: cannot find root inode\n");
+        FS_TRACE_ERROR("minfs: cannot find root inode: %d\n", status);
         return status;
     }
 
@@ -959,7 +961,7 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
             status = fs->CommitTransaction(std::move(transaction));
         }
         if (status != ZX_OK) {
-            FS_TRACE_WARN("minfs: failed to unset clean flag\n");
+            FS_TRACE_WARN("minfs: failed to unset clean flag: %d\n", status);
         }
      }
 #endif
@@ -998,7 +1000,7 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
             status = CommitTransaction(std::move(transaction));
         }
         if (status != ZX_OK) {
-            FS_TRACE_WARN("minfs: Failed to set clean flag on unmount.\n");
+            FS_TRACE_WARN("minfs: Failed to set clean flag on unmount: %d\n", status);;
         }
     }
     ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
@@ -1064,7 +1066,8 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
         SetMinfsFlagFvm(info);
 
         if (info.slice_size % kMinfsBlockSize) {
-            FS_TRACE_ERROR("minfs mkfs: Slice size not multiple of minfs block\n");
+            FS_TRACE_ERROR("minfs mkfs: Slice size not multiple of minfs block: %lu\n",
+                           info.slice_size);
             return -1;
         }
 
@@ -1099,7 +1102,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
         request.length = fbl::round_up(journal_blocks, kBlocksPerSlice) / kBlocksPerSlice;
         request.offset = kFVMBlockJournalStart / kBlocksPerSlice;
         if ((status = bc->FVMExtend(&request)) != ZX_OK) {
-            FS_TRACE_ERROR("minfs mkfs: Failed to allocate journal blocks\n");
+            FS_TRACE_ERROR("minfs mkfs: Failed to allocate journal blocks: %d\n", status);
             return status;
         }
         info.journal_slices = static_cast<blk_t>(request.length);
@@ -1108,7 +1111,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
         request.length = options.fvm_data_slices;
         request.offset = kFVMBlockDataStart / kBlocksPerSlice;
         if ((status = bc->FVMExtend(&request)) != ZX_OK) {
-            FS_TRACE_ERROR("minfs mkfs: Failed to allocate data blocks\n");
+            FS_TRACE_ERROR("minfs mkfs: Failed to allocate data blocks: %d\n", status);
             return status;
         }
         info.dat_slices = options.fvm_data_slices;
@@ -1122,7 +1125,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
         blocks = bc->Maxblk();
     }
 
-    // determine how many blocks of inodes, allocation bitmaps,
+    // Determine how many blocks of inodes, allocation bitmaps,
     // and inode bitmaps there are
     uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
     uint32_t ibmblks = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
@@ -1198,32 +1201,32 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     // storage a block multiple but ensure we can't allocate beyond the last
     // real block or inode.
     if ((status = abm.Reset(fbl::round_up(info.block_count, kMinfsBlockBits))) != ZX_OK) {
-        FS_TRACE_ERROR("mkfs: Failed to allocate block bitmap\n");
+        FS_TRACE_ERROR("mkfs: Failed to allocate block bitmap: %d\n", status);
         return status;
     }
     if ((status = ibm.Reset(fbl::round_up(info.inode_count, kMinfsBlockBits))) != ZX_OK) {
-        FS_TRACE_ERROR("mkfs: Failed to allocate inode bitmap\n");
+        FS_TRACE_ERROR("mkfs: Failed to allocate inode bitmap: %d\n", status);
         return status;
     }
     if ((status = abm.Shrink(info.block_count)) != ZX_OK) {
-        FS_TRACE_ERROR("mkfs: Failed to shrink block bitmap\n");
+        FS_TRACE_ERROR("mkfs: Failed to shrink block bitmap: %d\n", status);
         return status;
     }
     if ((status = ibm.Shrink(info.inode_count)) != ZX_OK) {
-        FS_TRACE_ERROR("mkfs: Failed to shrink inode bitmap\n");
+        FS_TRACE_ERROR("mkfs: Failed to shrink inode bitmap: %d\n", status);
         return status;
     }
 
-    // write rootdir
+    // Write rootdir
     uint8_t blk[kMinfsBlockSize];
     memset(blk, 0, sizeof(blk));
     InitializeDirectory(blk, kMinfsRootIno, kMinfsRootIno);
     if ((status = bc->Writeblk(info.dat_block + 1, blk)) != ZX_OK) {
-        FS_TRACE_ERROR("mkfs: Failed to write root directory\n");
+        FS_TRACE_ERROR("mkfs: Failed to write root directory: %d\n", status);
         return status;
     }
 
-    // update inode bitmap
+    // Update inode bitmap
     ibm.Set(0, 1);
     ibm.Set(kMinfsRootIno, kMinfsRootIno + 1);
     info.alloc_inode_count += 2;
@@ -1234,7 +1237,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     abm.Set(0, 2);
     info.alloc_block_count += 2;
 
-    // write allocation bitmap
+    // Write allocation bitmap
     for (uint32_t n = 0; n < abmblks; n++) {
         void* bmdata = fs::GetBlock(kMinfsBlockSize, abm.StorageUnsafe()->GetData(), n);
         memcpy(blk, bmdata, kMinfsBlockSize);
@@ -1243,7 +1246,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
         }
     }
 
-    // write inode bitmap
+    // Write inode bitmap
     for (uint32_t n = 0; n < ibmblks; n++) {
         void* bmdata = fs::GetBlock(kMinfsBlockSize, ibm.StorageUnsafe()->GetData(), n);
         memcpy(blk, bmdata, kMinfsBlockSize);
@@ -1252,7 +1255,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
         }
     }
 
-    // write inodes
+    // Write inodes
     memset(blk, 0, sizeof(blk));
     for (uint32_t n = 0; n < inoblks; n++) {
         if ((status = bc->Writeblk(info.ino_block + n, blk)) != ZX_OK) {
@@ -1260,7 +1263,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
         }
     }
 
-    // setup root inode
+    // Setup root inode
     Inode* ino = reinterpret_cast<Inode*>(&blk[0]);
     ino[kMinfsRootIno].magic = kMinfsMagicDir;
     ino[kMinfsRootIno].size = kMinfsBlockSize;
@@ -1271,6 +1274,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     ino[kMinfsRootIno].create_time = GetTimeUTC();
     bc->Writeblk(info.ino_block, blk);
 
+    // Write the superblock at block number 0.
     memset(blk, 0, sizeof(blk));
     memcpy(blk, &info, sizeof(info));
     bc->Writeblk(0, blk);
@@ -1321,7 +1325,7 @@ zx_status_t CreateBcacheFromFd(fbl::unique_fd fd, off_t start, off_t end,
     }
 
     if (extent_lengths.size() != kExtentCount) {
-        FS_TRACE_ERROR("error: invalid number of extents\n");
+        FS_TRACE_ERROR("error: invalid number of extents : %lu\n", extent_lengths.size());
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -1342,12 +1346,12 @@ zx_status_t CreateBcacheFromFd(fbl::unique_fd fd, off_t start, off_t end,
     fbl::unique_ptr<minfs::Bcache> bc;
     if ((status = minfs::Bcache::Create(&bc, std::move(fd), static_cast<uint32_t>(size))) !=
         ZX_OK) {
-        FS_TRACE_ERROR("error: cannot create block cache\n");
+        FS_TRACE_ERROR("error: cannot create block cache: %d\n", status);
         return status;
     }
 
     if ((status = bc->SetSparse(start, extent_lengths)) != ZX_OK) {
-        FS_TRACE_ERROR("Bcache is already sparse\n");
+        FS_TRACE_ERROR("Bcache is already sparse: %d\n", status);
         return status;
     }
 

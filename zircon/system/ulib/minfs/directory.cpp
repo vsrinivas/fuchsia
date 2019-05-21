@@ -550,10 +550,10 @@ zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
     while (off + MINFS_DIRENT_SIZE < kMinfsMaxDirectorySize) {
         zx_status_t status = ReadInternal(nullptr, de, kMinfsMaxDirentSize, off, &r);
         if (status != ZX_OK) {
-            FS_TRACE_ERROR("minfs: Readdir: Unreadable dirent\n");
+            FS_TRACE_ERROR("minfs: Readdir: Unreadable dirent %d\n", status);
             goto fail;
-        } else if (ValidateDirent(de, r, off) != ZX_OK) {
-            FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent failed validation\n");
+        } else if ((status = ValidateDirent(de, r, off)) != ZX_OK) {
+            FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent failed validation %d\n", status);
             goto fail;
         }
 

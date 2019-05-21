@@ -82,11 +82,12 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint
         status = io_status;
     }
     if (status != ZX_OK) {
-        FS_TRACE_ERROR("minfs: Cannot acquire block device information: %d\n", status);
+        FS_TRACE_ERROR("minfs: cannot acquire block device information: %d\n", status);
         return status;
     }
     if (kMinfsBlockSize % bc->info_.block_size != 0) {
-        FS_TRACE_ERROR("minfs: minfs Block size not multiple of underlying block size\n");
+        FS_TRACE_ERROR("minfs: minfs Block size not multiple of underlying block size: %d\n",
+                       bc->info_.block_size);
         return ZX_ERR_BAD_STATE;
     }
 
@@ -96,10 +97,11 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint
         status = io_status;
     }
     if (status != ZX_OK) {
-        FS_TRACE_ERROR("minfs: Cannot acquire block device fifo: %d\n", status);
+        FS_TRACE_ERROR("minfs: cannot acquire block device fifo: %d\n", status);
         return status;
     }
     if ((status = block_client::Client::Create(std::move(fifo), &bc->fifo_client_)) != ZX_OK) {
+        FS_TRACE_ERROR("minfs: cannot create block client: %d\n", status);
         return status;
     }
 #endif

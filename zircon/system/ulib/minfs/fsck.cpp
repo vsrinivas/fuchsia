@@ -419,7 +419,7 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
     zx_status_t status;
 
     if ((status = GetInode(&inode, ino)) < 0) {
-        FS_TRACE_ERROR("check: ino#%u: not readable\n", ino);
+        FS_TRACE_ERROR("check: ino#%u: not readable: %d\n", ino, status);
         return status;
     }
 
@@ -478,7 +478,7 @@ zx_status_t MinfsChecker::CheckUnlinkedInodes() {
         Inode inode;
         zx_status_t status = GetInode(&inode, next_ino);
         if (status != ZX_OK) {
-            FS_TRACE_ERROR("check: ino#%u: not readable\n", next_ino);
+            FS_TRACE_ERROR("check: ino#%u: not readable: %d\n", next_ino, status);
             return status;
         }
 
@@ -504,7 +504,7 @@ zx_status_t MinfsChecker::CheckUnlinkedInodes() {
     }
 
     if (fs_->Info().unlinked_tail != last_ino) {
-        FS_TRACE_ERROR("minfs_check: Incorrect unlinked tail\n");
+        FS_TRACE_ERROR("minfs_check: Incorrect unlinked tail: %d\n", fs_->Info().unlinked_tail);
         return ZX_ERR_BAD_STATE;
     }
 
