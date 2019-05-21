@@ -9,7 +9,10 @@ mod test;
 mod creation_manifest;
 mod errors;
 mod meta_contents;
+mod meta_package;
 mod path;
 
 pub use crate::creation_manifest::CreationManifest;
 pub use crate::meta_contents::MetaContents;
+pub use crate::meta_package::MetaPackage;
+pub use crate::path::{check_package_name, check_package_variant, check_resource_path};

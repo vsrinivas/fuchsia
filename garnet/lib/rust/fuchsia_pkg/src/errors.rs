@@ -31,6 +31,39 @@ pub enum ResourcePathError {
     PathIsEmpty,
 }
 
+#[derive(Debug, Eq, Fail, PartialEq)]
+pub enum PackageNameError {
+    #[fail(display = "package names cannot be empty")]
+    Empty,
+
+    #[fail(display = "package names must be at most 100 latin-1 characters, '{}'", invalid_name)]
+    TooLong { invalid_name: String },
+
+    #[fail(
+        display = "package names must consist of only digits (0 to 9), lower-case letters (a to z), hyphen (-), and period (.), '{}'",
+        invalid_name
+    )]
+    InvalidCharacter { invalid_name: String },
+}
+
+#[derive(Debug, Eq, Fail, PartialEq)]
+pub enum PackageVariantError {
+    #[fail(display = "package variants cannot be empty")]
+    Empty,
+
+    #[fail(
+        display = "package variants must be at most 100 latin-1 characters, '{}'",
+        invalid_variant
+    )]
+    TooLong { invalid_variant: String },
+
+    #[fail(
+        display = "package variants must consist of only digits (0 to 9), lower-case letters (a to z), hyphen (-), and period (.), '{}'",
+        invalid_variant
+    )]
+    InvalidCharacter { invalid_variant: String },
+}
+
 #[derive(Debug, Fail)]
 pub enum CreationManifestError {
     #[fail(display = "manifest contains an invalid resource path '{}'. {}", path, cause)]
@@ -64,4 +97,34 @@ pub enum MetaContentsError {
 
     #[fail(display = "package external content cannot be in 'meta/' directory: '{}'", path)]
     ExternalContentInMetaDirectory { path: String },
+}
+
+#[derive(Debug, Fail)]
+pub enum MetaPackageError {
+    #[fail(display = "invalid package name '{}'", _0)]
+    PackageName(#[cause] PackageNameError),
+
+    #[fail(display = "invalid package variant '{}'", _0)]
+    PackageVariant(#[cause] PackageVariantError),
+
+    #[fail(display = "attempted to deserialize meta/package from malformed json: {}", _0)]
+    Json(#[cause] serde_json::Error),
+}
+
+impl From<PackageNameError> for MetaPackageError {
+    fn from(err: PackageNameError) -> Self {
+        MetaPackageError::PackageName(err)
+    }
+}
+
+impl From<PackageVariantError> for MetaPackageError {
+    fn from(err: PackageVariantError) -> Self {
+        MetaPackageError::PackageVariant(err)
+    }
+}
+
+impl From<serde_json::Error> for MetaPackageError {
+    fn from(err: serde_json::Error) -> Self {
+        MetaPackageError::Json(err)
+    }
 }

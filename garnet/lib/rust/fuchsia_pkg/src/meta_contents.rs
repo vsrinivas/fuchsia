@@ -97,8 +97,8 @@ mod tests {
     proptest! {
         #[test]
         fn test_reject_invalid_resource_path(
-            ref path in valid_path(1, 3),
-            ref hex in merkle_hex())
+            ref path in random_resource_path(1, 3),
+            ref hex in random_merkle_hex())
         {
             prop_assume!(!path.starts_with("meta/"));
             let invalid_path = format!("{}/", path);
@@ -116,8 +116,8 @@ mod tests {
 
         #[test]
         fn test_reject_file_in_meta(
-            ref path in valid_path(1, 3),
-            ref hex in merkle_hex())
+            ref path in random_resource_path(1, 3),
+            ref hex in random_merkle_hex())
         {
             let invalid_path = format!("meta/{}", path);
             let map = btreemap! {
@@ -132,10 +132,10 @@ mod tests {
 
         #[test]
         fn test_serialize(
-            ref path0 in valid_path(1, 3),
-            ref hex0 in merkle_hex(),
-            ref path1 in valid_path(1, 3),
-            ref hex1 in merkle_hex())
+            ref path0 in random_resource_path(1, 3),
+            ref hex0 in random_merkle_hex(),
+            ref path1 in random_resource_path(1, 3),
+            ref hex1 in random_merkle_hex())
         {
             prop_assume!(path0 != path1);
             let map = btreemap! {
