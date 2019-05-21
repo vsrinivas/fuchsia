@@ -64,9 +64,10 @@ zx::suspend_token SyncSuspendThread(zx::thread& thread) {
   zx_status_t status = thread.suspend(&token);
   EXPECT_EQ(ZX_OK, status);
 
+  // Need long timeout when running on shared bots on QEMU.
   zx_signals_t observed = 0;
   status = thread.wait_one(ZX_THREAD_SUSPENDED,
-                           zx::deadline_after(zx::msec(100)), &observed);
+                           zx::deadline_after(zx::sec(10)), &observed);
   EXPECT_TRUE(observed & ZX_THREAD_SUSPENDED);
   if (status != ZX_OK)
     return zx::suspend_token();
