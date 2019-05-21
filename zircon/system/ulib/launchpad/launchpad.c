@@ -118,9 +118,12 @@ void launchpad_destroy(launchpad_t* lp) {
     free(lp);
 }
 
-zx_status_t launchpad_create_with_process(zx_handle_t proc,
-                                          zx_handle_t vmar,
-                                          launchpad_t** result) {
+// Create a new launchpad for a given existing process handle and
+// its root VMAR handle.  On success, the launchpad takes ownership
+// of both handles.
+static zx_status_t launchpad_create_with_process(zx_handle_t proc,
+                                                 zx_handle_t vmar,
+                                                 launchpad_t** result) {
     launchpad_t* lp = calloc(1, sizeof(*lp));
     if (lp == NULL) {
         lp = &invalid_launchpad;
