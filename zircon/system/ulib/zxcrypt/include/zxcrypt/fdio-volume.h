@@ -94,39 +94,54 @@ private:
 // is often more convenient for testing.
 class FdioVolume final : public Volume {
 public:
-    explicit FdioVolume(fbl::unique_fd&& fd);
+    explicit FdioVolume(fbl::unique_fd&& block_dev_fd,
+                        fbl::unique_fd&& devfs_root_fd);
 
-
-    // Creates a new zxcrypt volume associated with the given file descriptor, |fd| and returns it
-    // via |out|, if provided.  This will format the block device as zxcrypt using the given |key|,
-    // which will be associated with key slot 0. This method takes ownership of |fd|.  Note that
-    // |key| is not strengthened and MUST have cryptographic key length of at least 128 bits.
-    static zx_status_t Create(fbl::unique_fd fd, const crypto::Secret& key,
+    // Creates a new zxcrypt volume associated with the given file descriptor,
+    // |block_dev_fd|, which must live in the device tree rooted at
+    // |devfs_root_fd|, and returns it via |out|, if provided.  This will format
+    // the block device as zxcrypt using the given |key|, which will be
+    // associated with key slot 0.  This method takes ownership of
+    // |block_dev_fd| and |devfs_root_fd|.  Note that |key| is not strengthened
+    // and MUST have cryptographic key length of at least 128 bits.
+    static zx_status_t Create(fbl::unique_fd block_dev_fd,
+                              fbl::unique_fd devfs_root_fd,
+                              const crypto::Secret& key,
                               fbl::unique_ptr<FdioVolume>* out = nullptr);
 
     // Does the same as |Create| but with the key provided by a product-defined
     // source.  The caller must have access to /boot/config/zxcrypt in its
     // namespace to use this function.
-    static zx_status_t CreateWithDeviceKey(fbl::unique_fd&& fd,
+    static zx_status_t CreateWithDeviceKey(fbl::unique_fd&& block_dev_fd,
+                                           fbl::unique_fd&& devfs_root_fd,
                                            fbl::unique_ptr<FdioVolume>* out);
 
-    // Opens a zxcrypt volume on the block device described by |fd| using the |key| corresponding to
-    // given key |slot|.  The |fd| parameter means this method can be used from libzxcrypt. This
-    // method takes ownership of |fd|.  Note that |key| is not strengthened and MUST have
-    // cryptographic key length of at least 128 bits.
-    static zx_status_t Unlock(fbl::unique_fd fd, const crypto::Secret& key, key_slot_t slot,
+    // Opens a zxcrypt volume on the block device described by |block_dev_fd|
+    // (from the device tree rooted at |devfs_root_fd|) using the |key|
+    // corresponding to given key |slot|.  The |block_dev_fd| parameter means
+    // this method can be used from libzxcrypt. This method takes ownership of
+    // |block_dev_fd| and |devfs_root_fd|.  Note that |key| is not strengthened
+    // and MUST have cryptographic key length of at least 128 bits.
+    static zx_status_t Unlock(fbl::unique_fd block_dev_fd, fbl::unique_fd devfs_root_fd,
+                              const crypto::Secret& key, key_slot_t slot,
                               fbl::unique_ptr<FdioVolume>* out);
 
-    // Opens a zxcrypt volume on the block device described by |fd| using a key
-    // from a product-defined source with the specified |slot|.  The caller must
-    // have access to /boot/config/zxcrypt in their namespace to use this
-    // function.  This method takes ownership of |fd|.
-    static zx_status_t UnlockWithDeviceKey(fbl::unique_fd fd, key_slot_t slot,
+    // Opens a zxcrypt volume on the block device described by |block_dev_fd|
+    // (from the device tree rooted at |devfs_root_fd|) using a key from a
+    // product-defined source with the specified |slot|.  The caller must have
+    // access to /boot/config/zxcrypt in their namespace to use this function.
+    // This method takes ownership of |block_dev_fd| and |devfs_root_fd|.
+    static zx_status_t UnlockWithDeviceKey(fbl::unique_fd block_dev_fd,
+                                           fbl::unique_fd devfs_root_fd,
+                                           key_slot_t slot,
                                            fbl::unique_ptr<FdioVolume>* out);
 
-    // Returns a new volume object corresponding to the block device given by |fd| and populated
-    // with the block and FVM information.
-    static zx_status_t Init(fbl::unique_fd fd, fbl::unique_ptr<FdioVolume>* out = nullptr);
+    // Returns a new volume object corresponding to the block device given by
+    // |block_dev_fd| (which must live in the device tree hosted by
+    // |devfs_root_fd|) and populated with the block and FVM information.
+    static zx_status_t Init(fbl::unique_fd block_dev_fd,
+                            fbl::unique_fd devfs_root_fd,
+                            fbl::unique_ptr<FdioVolume>* out = nullptr);
 
     // Opens a zxcrypt volume on the block device described by |fd| using the |key| corresponding to
     // given key |slot|.
@@ -174,11 +189,16 @@ private:
                                       const zx::duration& timeout,
                                       zx_handle_t* out);
 
-    // Returns the topological path of the underlying block device
-    zx_status_t TopologicalPath(fzl::UnownedFdioCaller& caller, fbl::String* out);
+    // Returns the topological path of the underlying block device, relative to
+    // |devfs_root_fd|
+    zx_status_t RelativeTopologicalPath(fzl::UnownedFdioCaller& caller, fbl::String* out);
 
     // The underlying block device, accessed over FDIO
-    fbl::unique_fd fd_;
+    fbl::unique_fd block_dev_fd_;
+
+    // The root of the device tree, needed to openat() related devices via
+    // constructing relative topological paths.
+    fbl::unique_fd devfs_root_fd_;
 };
 
 } // namespace zxcrypt

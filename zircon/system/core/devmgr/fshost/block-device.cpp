@@ -82,10 +82,12 @@ zx_status_t MountMinfs(FilesystemMounter* mounter, fbl::unique_fd fd, mount_opti
 int UnsealZxcryptThread(void* arg) {
     std::unique_ptr<int> fd_ptr(static_cast<int*>(arg));
     fbl::unique_fd fd(*fd_ptr);
+    fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
 
     zx_status_t rc;
     std::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
-    if ((rc = zxcrypt::FdioVolume::Init(std::move(fd), &zxcrypt_volume)) != ZX_OK) {
+    if ((rc = zxcrypt::FdioVolume::Init(std::move(fd), std::move(devfs_root),
+                                        &zxcrypt_volume)) != ZX_OK) {
         printf("fshost: couldn't open zxcrypt fdio volume\n");
         return ZX_OK;
     }
@@ -218,7 +220,12 @@ zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
 }
 
 zx_status_t BlockDevice::FormatZxcrypt() {
-  return zxcrypt::FdioVolume::CreateWithDeviceKey(fd_.duplicate(), nullptr);
+  fbl::unique_fd devfs_root_fd(open("/dev", O_RDONLY));
+  if (!devfs_root_fd) {
+      return ZX_ERR_NOT_FOUND;
+  }
+  return zxcrypt::FdioVolume::CreateWithDeviceKey(fd_.duplicate(), std::move(devfs_root_fd),
+                                                  nullptr);
 }
 
 bool BlockDevice::ShouldCheckFilesystems() {

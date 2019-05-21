@@ -14,6 +14,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fvm/format.h>
+#include <lib/devmgr-integration-test/fixture.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
@@ -33,6 +34,7 @@ bool TestBind(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     EXPECT_TRUE(device.Bind(version, fvm));
 
     END_TEST;
@@ -46,6 +48,7 @@ bool TestDdkGetSize(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     fbl::unique_fd parent = device.parent();
     fbl::unique_fd zxcrypt = device.zxcrypt();
@@ -67,6 +70,7 @@ bool TestBlockGetInfo(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
 
     fuchsia_hardware_block_BlockInfo parent_blk, zxcrypt_blk;
@@ -90,6 +94,7 @@ bool TestBlockFvmQuery(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     auto parent = device.parent_channel();
     auto zxcrypt = device.zxcrypt_channel();
@@ -170,6 +175,7 @@ bool TestBlockFvmVSliceQuery(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     EXPECT_TRUE(QueryLeadingFvmSlice(device, fvm));
     END_TEST;
@@ -180,6 +186,7 @@ bool TestBlockFvmShrinkAndExtend(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     auto zxcrypt = device.zxcrypt_channel();
 
@@ -217,6 +224,7 @@ bool TestFdZeroLength(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
 
     EXPECT_TRUE(device.WriteFd(0, 0));
@@ -230,6 +238,7 @@ bool TestFdFirstBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t one = device.block_size();
 
@@ -244,6 +253,7 @@ bool TestFdLastBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t n = device.size();
     size_t one = device.block_size();
@@ -259,6 +269,7 @@ bool TestFdAllBlocks(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t n = device.size();
 
@@ -273,6 +284,7 @@ bool TestFdUnaligned(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t one = device.block_size();
     ssize_t one_s = static_cast<ssize_t>(one);
@@ -304,6 +316,7 @@ bool TestFdOutOfBounds(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t n = device.size();
     ssize_t n_s = static_cast<ssize_t>(n);
@@ -350,6 +363,7 @@ bool TestFdOneToMany(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t n = device.size();
     size_t one = device.block_size();
@@ -369,6 +383,7 @@ bool TestFdManyToOne(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t n = device.size();
     size_t one = device.block_size();
@@ -389,6 +404,7 @@ bool TestVmoZeroLength(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
 
     // Zero length is illegal for the block fifo
@@ -403,6 +419,7 @@ bool TestVmoFirstBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
 
     EXPECT_TRUE(device.WriteVmo(0, 1));
@@ -416,6 +433,7 @@ bool TestVmoLastBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t n = device.block_count();
 
@@ -430,6 +448,7 @@ bool TestVmoAllBlocks(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t n = device.block_count();
 
@@ -444,6 +463,7 @@ bool TestVmoOutOfBounds(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t n = device.block_count();
 
@@ -469,6 +489,7 @@ bool TestVmoOneToMany(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t n = device.block_count();
 
@@ -486,6 +507,7 @@ bool TestVmoManyToOne(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     size_t n = device.block_count();
 
@@ -503,6 +525,7 @@ DEFINE_EACH_DEVICE(TestVmoManyToOne)
 bool TestVmoStall(Volume::Version version, bool fvm) {
     BEGIN_TEST;
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, fvm));
     auto zxcrypt = device.zxcrypt_channel();
 
@@ -537,6 +560,7 @@ bool TestWriteAfterFvmExtend(Volume::Version version) {
     BEGIN_TEST;
 
     TestDevice device;
+    ASSERT_TRUE(device.SetupDevmgr());
     ASSERT_TRUE(device.Bind(version, true));
     auto zxcrypt = device.zxcrypt_channel();
 

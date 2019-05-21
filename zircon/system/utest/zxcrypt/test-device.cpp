@@ -18,6 +18,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string.h>
+#include <fbl/string_piece.h> // for constexpr_strlen
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
@@ -68,12 +69,12 @@ char* Error(const char* fmt, ...) {
 }
 
 // Waits for the given |path| to be opened, opens it, and returns the file descriptor via |out|.
-bool WaitAndOpen(char* path, fbl::unique_fd* out) {
+bool WaitAndOpenAt(int dirfd, char* path, fbl::unique_fd* out) {
     BEGIN_HELPER;
 
-    ASSERT_EQ(wait_for_device(path, ZX_SEC(3)), ZX_OK,
+    ASSERT_EQ(wait_for_device_at(dirfd, path, ZX_SEC(3)), ZX_OK,
               Error("failed while waiting to bind %s", path));
-    fbl::unique_fd fd(open(path, O_RDWR));
+    fbl::unique_fd fd(openat(dirfd, path, O_RDWR));
     ASSERT_TRUE(fd, Error("failed to open %s", path));
     if (out) {
         out->swap(fd);
@@ -85,8 +86,8 @@ bool WaitAndOpen(char* path, fbl::unique_fd* out) {
 } // namespace
 
 TestDevice::TestDevice()
-    : ramdisk_(nullptr), block_count_(0), block_size_(0), client_(nullptr), tid_(0),
-      need_join_(false), wake_after_(0), wake_deadline_(0) {
+    : ramdisk_(nullptr), block_count_(0), block_size_(0), client_(nullptr),
+      tid_(0), need_join_(false), wake_after_(0), wake_deadline_(0) {
     memset(fvm_part_path_, 0, sizeof(fvm_part_path_));
     memset(&req_, 0, sizeof(req_));
 }
@@ -98,6 +99,45 @@ TestDevice::~TestDevice() {
         int res;
         thrd_join(tid_, &res);
     }
+}
+
+bool TestDevice::SetupDevmgr() {
+    BEGIN_HELPER;
+
+    devmgr_launcher::Args args;
+    // Assume we're using the zxcrypt.so and ramdisk driver from /boot.  It's
+    // not quite hermetic the way we might like, but it's good enough in
+    // practice -- zxcrypt is part of the bootfs anyway, so on any system you'd
+    // be able to install and use zxcrypt, you'd have the same lib in /boot.
+    args.driver_search_paths.push_back("/boot/driver");
+
+    // Preload the sysdev driver.
+    args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+    // And make sure it's the test sysdev driver.
+    args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
+
+    // Reuse the system-wide service host.  We don't need to connect to any
+    // system-global service instances, but we do wish to be able to run
+    // without the root resource handle, and spawning a separate svchost
+    // currently fails without the root resource, so prefer using the system
+    // svchost.
+    args.use_system_svchost = true;
+
+    // We explicitly bind drivers ourselves, and don't want the block watcher
+    // racing with us to call Bind.
+    args.disable_block_watcher = true;
+
+    // We have no need for the netsvc.
+    args.disable_netsvc = true;
+
+    ASSERT_EQ(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_),
+              ZX_OK);
+    fbl::unique_fd ctl;
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl",
+                                                            zx::deadline_after(zx::sec(5)),
+                                                            &ctl),
+              ZX_OK);
+    END_HELPER;
 }
 
 bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm) {
@@ -140,8 +180,23 @@ bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm) {
 bool TestDevice::Bind(Volume::Version version, bool fvm) {
     BEGIN_HELPER;
     ASSERT_TRUE(Create(kDeviceSize, kBlockSize, fvm));
-    ASSERT_OK(FdioVolume::Create(parent(), key_));
+    ASSERT_OK(FdioVolume::Create(parent(), devfs_root(), key_));
     ASSERT_TRUE(Connect());
+    END_HELPER;
+}
+
+bool TestDevice::BindFvmDriver() {
+    BEGIN_HELPER;
+    // Binds the FVM driver to the active ramdisk_.
+    fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
+    ASSERT_NONNULL(io);
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io),
+                                                       kFvmDriver, strlen(kFvmDriver),
+                                                       &call_status);
+    fdio_unsafe_release(io);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(call_status, ZX_OK);
     END_HELPER;
 }
 
@@ -150,7 +205,6 @@ bool TestDevice::Rebind() {
 
     const char* sep = strrchr(ramdisk_get_path(ramdisk_), '/');
     ASSERT_NONNULL(sep);
-    fbl::String path(ramdisk_get_path(ramdisk_), sep - ramdisk_get_path(ramdisk_));
 
     Disconnect();
     zxcrypt_.reset();
@@ -158,7 +212,12 @@ bool TestDevice::Rebind() {
 
     ASSERT_EQ(ramdisk_rebind(ramdisk_), ZX_OK);
     if (strlen(fvm_part_path_) != 0) {
-        ASSERT_TRUE(WaitAndOpen(fvm_part_path_, &fvm_part_));
+        // We need to explicitly rebind FVM here, since now that we're not
+        // relying on the system-wide block-watcher, the driver won't rebind by
+        // itself.
+        ASSERT_TRUE(BindFvmDriver());
+        fbl::unique_fd dev_root = devfs_root();
+        ASSERT_TRUE(WaitAndOpenAt(dev_root.get(), fvm_part_path_, &fvm_part_));
         parent_caller_.reset(fvm_part_.get());
     } else {
         parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
@@ -267,7 +326,7 @@ bool TestDevice::Corrupt(uint64_t blkno, key_slot_t slot) {
     ASSERT_OK(ToStatus(::read(fd.get(), block, block_size_)));
 
     fbl::unique_ptr<FdioVolume> volume;
-    ASSERT_OK(FdioVolume::Unlock(parent(), key_, 0, &volume));
+    ASSERT_OK(FdioVolume::Unlock(parent(), devfs_root(), key_, 0, &volume));
 
     zx_off_t off;
     ASSERT_OK(volume->GetSlotOffset(slot, &off));
@@ -296,7 +355,16 @@ bool TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
     ASSERT_TRUE(ac.check());
     memset(as_read_.get(), 0, block_size);
 
-    ASSERT_EQ(ramdisk_create(block_size, count, &ramdisk_), ZX_OK);
+    fbl::unique_fd devfs_root_fd = devfs_root();
+    ASSERT_EQ(ramdisk_create_at(devfs_root_fd.get(),
+                                block_size, count, &ramdisk_), ZX_OK);
+
+    fbl::unique_fd ramdisk_ignored;
+    devmgr_integration_test::RecursiveWaitForFile(devfs_root_fd,
+                                                  ramdisk_get_path(ramdisk_),
+                                                  zx::deadline_after(zx::sec(5)),
+                                                  &ramdisk_ignored);
+
     parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
 
     block_size_ = block_size;
@@ -326,23 +394,18 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     }
     ASSERT_TRUE(CreateRamdisk(device_size + (new_meta * 2), block_size));
 
-    // Format the ramdisk as FVM and bind to it
+    // Format the ramdisk as FVM
     ASSERT_OK(fvm_init(ramdisk_get_block_fd(ramdisk_), fvm::kBlockSize));
 
-    fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
-    ASSERT_NONNULL(io);
-    zx_status_t call_status;
-    zx_status_t status = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io),
-                                                       kFvmDriver, strlen(kFvmDriver),
-                                                       &call_status);
-    fdio_unsafe_release(io);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(call_status, ZX_OK);
+    // Bind the FVM driver to the now-formatted disk
+    ASSERT_TRUE(BindFvmDriver());
 
+    // Wait for the FVM driver to expose a block device, then open it
     char path[PATH_MAX];
     fbl::unique_fd fvm_fd;
     snprintf(path, sizeof(path), "%s/fvm", ramdisk_get_path(ramdisk_));
-    ASSERT_TRUE(WaitAndOpen(path, &fvm_fd));
+    fbl::unique_fd dev_root = devfs_root();
+    ASSERT_TRUE(WaitAndOpenAt(dev_root.get(), path, &fvm_fd));
 
     // Allocate a FVM partition with the last slice unallocated.
     alloc_req_t req;
@@ -353,18 +416,29 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
         req.guid[i] = i;
     }
     snprintf(req.name, NAME_LEN, "data");
-    fvm_part_.reset(fvm_allocate_partition(fvm_fd.get(), &req));
+    fvm_part_.reset(fvm_allocate_partition_with_devfs(dev_root.get(), fvm_fd.get(), &req));
     ASSERT_TRUE(fvm_part_);
     parent_caller_.reset(fvm_part_.get());
 
-    // Save the topological path for rebinding
+    // Save the topological path for rebinding.  The topological path will be
+    // consistent after rebinding the ramdisk, whereas the
+    // /dev/class/block/[NNN] will issue a new number.
     size_t out_len;
+    zx_status_t status;
+    zx_status_t call_status;
     status = fuchsia_device_ControllerGetTopologicalPath(parent_channel()->get(),
                                                          &call_status, fvm_part_path_,
                                                          sizeof(fvm_part_path_) - 1, &out_len);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(call_status, ZX_OK);
-    fvm_part_path_[out_len] = 0;
+    // Strip off the leading /dev/; because we use an isolated devmgr, we need
+    // relative paths, but ControllerGetTopologicalPath returns an absolute path
+    // with the assumption that devfs is rooted at /dev.
+    size_t header_len = fbl::constexpr_strlen("/dev/");
+    ASSERT_TRUE(out_len > header_len);
+    ASSERT_TRUE(strncmp(fvm_part_path_, "/dev/", header_len) == 0);
+    memmove(fvm_part_path_, fvm_part_path_ + header_len, out_len - header_len);
+    fvm_part_path_[out_len - header_len] = 0;
 
     END_HELPER;
 }
@@ -373,7 +447,7 @@ bool TestDevice::Connect() {
     BEGIN_HELPER;
     ZX_DEBUG_ASSERT(!zxcrypt_);
 
-    ASSERT_OK(FdioVolume::Unlock(parent(), key_, 0, &volume_));
+    ASSERT_OK(FdioVolume::Unlock(parent(), devfs_root(), key_, 0, &volume_));
     zx::channel zxc_manager_chan;
     ASSERT_OK(volume_->OpenManager(kTimeout, zxc_manager_chan.reset_and_get_address()));
     FdioVolumeManager volume_manager(std::move(zxc_manager_chan));

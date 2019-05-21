@@ -20,7 +20,7 @@
 #include <lib/fzl/fdio.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/channel.h>
-#include <ramdevice-client/ramdisk.h> // Why does wait_for_device() come from here?
+#include <ramdevice-client/ramdisk.h> // Why does wait_for_device_at() come from here?
 #include <zircon/status.h>
 #include <zxcrypt/fdio-volume.h>
 #include <zxcrypt/volume.h>
@@ -227,18 +227,24 @@ zx_status_t FdioVolumeManager::Seal() {
     return call_status;
 }
 
-FdioVolume::FdioVolume(fbl::unique_fd&& fd) : Volume(), fd_(std::move(fd)) {}
+FdioVolume::FdioVolume(fbl::unique_fd&& block_dev_fd, fbl::unique_fd&& devfs_root_fd) :
+    Volume(),
+    block_dev_fd_(std::move(block_dev_fd)),
+    devfs_root_fd_(std::move(devfs_root_fd)) {}
 
-zx_status_t FdioVolume::Init(fbl::unique_fd fd, fbl::unique_ptr<FdioVolume>* out) {
+zx_status_t FdioVolume::Init(fbl::unique_fd block_dev_fd, fbl::unique_fd devfs_root_fd,
+                             fbl::unique_ptr<FdioVolume>* out) {
     zx_status_t rc;
 
-    if (!fd || !out) {
-        xprintf("bad parameter(s): fd=%d, out=%p\n", fd.get(), out);
+    if (!block_dev_fd || !devfs_root_fd || !out) {
+        xprintf("bad parameter(s): block_dev_fd=%d, devfs_root_fd=%d out=%p\n",
+                block_dev_fd.get(), devfs_root_fd.get(), out);
         return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<FdioVolume> volume(new (&ac) FdioVolume(std::move(fd)));
+    fbl::unique_ptr<FdioVolume> volume(new (&ac) FdioVolume(std::move(block_dev_fd),
+                                                            std::move(devfs_root_fd)));
     if (!ac.check()) {
         xprintf("allocation failed: %zu bytes\n", sizeof(FdioVolume));
         return ZX_ERR_NO_MEMORY;
@@ -252,13 +258,17 @@ zx_status_t FdioVolume::Init(fbl::unique_fd fd, fbl::unique_ptr<FdioVolume>* out
     return ZX_OK;
 }
 
-zx_status_t FdioVolume::Create(fbl::unique_fd fd, const crypto::Secret& key,
-                                   fbl::unique_ptr<FdioVolume>* out) {
+zx_status_t FdioVolume::Create(fbl::unique_fd block_dev_fd,
+                               fbl::unique_fd devfs_root_fd,
+                               const crypto::Secret& key,
+                               fbl::unique_ptr<FdioVolume>* out) {
     zx_status_t rc;
 
     fbl::unique_ptr<FdioVolume> volume;
 
-    if ((rc = FdioVolume::Init(std::move(fd), &volume)) != ZX_OK) {
+    if ((rc = FdioVolume::Init(std::move(block_dev_fd),
+                               std::move(devfs_root_fd),
+                               &volume)) != ZX_OK) {
         xprintf("Init failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
@@ -281,7 +291,8 @@ zx_status_t FdioVolume::Create(fbl::unique_fd fd, const crypto::Secret& key,
     return ZX_OK;
 }
 
-zx_status_t FdioVolume::CreateWithDeviceKey(fbl::unique_fd&& fd,
+zx_status_t FdioVolume::CreateWithDeviceKey(fbl::unique_fd&& block_dev_fd,
+                                            fbl::unique_fd&& devfs_root_fd,
                                             fbl::unique_ptr<FdioVolume>* out) {
     KeySourcePolicy source;
     zx_status_t rc;
@@ -305,17 +316,20 @@ zx_status_t FdioVolume::CreateWithDeviceKey(fbl::unique_fd&& fd,
             return rc;
         }
         memcpy(inner, key_buffer.get(), key_size);
-        rc = FdioVolume::Create(std::move(fd), secret, out);
+        rc = FdioVolume::Create(std::move(block_dev_fd), std::move(devfs_root_fd), secret, out);
         return rc;
     });
 }
 
-zx_status_t FdioVolume::Unlock(fbl::unique_fd fd, const crypto::Secret& key, key_slot_t slot,
-                                   fbl::unique_ptr<FdioVolume>* out) {
+zx_status_t FdioVolume::Unlock(fbl::unique_fd block_dev_fd, fbl::unique_fd devfs_root_fd,
+                               const crypto::Secret& key, key_slot_t slot,
+                               fbl::unique_ptr<FdioVolume>* out) {
     zx_status_t rc;
 
     fbl::unique_ptr<FdioVolume> volume;
-    if ((rc = FdioVolume::Init(std::move(fd), &volume)) != ZX_OK) {
+    if ((rc = FdioVolume::Init(std::move(block_dev_fd),
+                               std::move(devfs_root_fd),
+                               &volume)) != ZX_OK) {
         xprintf("Init failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
@@ -328,7 +342,8 @@ zx_status_t FdioVolume::Unlock(fbl::unique_fd fd, const crypto::Secret& key, key
     return ZX_OK;
 }
 
-zx_status_t FdioVolume::UnlockWithDeviceKey(fbl::unique_fd fd,
+zx_status_t FdioVolume::UnlockWithDeviceKey(fbl::unique_fd block_dev_fd,
+                                            fbl::unique_fd devfs_root_fd,
                                             key_slot_t slot,
                                             fbl::unique_ptr<FdioVolume>* out) {
     KeySourcePolicy source;
@@ -351,7 +366,8 @@ zx_status_t FdioVolume::UnlockWithDeviceKey(fbl::unique_fd fd,
             return rc;
         }
         memcpy(inner, key_buffer.get(), key_size);
-        rc = FdioVolume::Unlock(std::move(fd), secret, slot, out);
+        rc = FdioVolume::Unlock(std::move(block_dev_fd), std::move(devfs_root_fd),
+                                secret, slot, out);
         return rc;
     });
 }
@@ -406,7 +422,7 @@ zx_status_t FdioVolume::Init() {
 }
 
 zx_status_t FdioVolume::OpenManager(const zx::duration& timeout, zx_handle_t* out) {
-    fzl::UnownedFdioCaller caller(fd_.get());
+    fzl::UnownedFdioCaller caller(block_dev_fd_.get());
     if (!caller) {
         xprintf("could not convert fd to io\n");
         return ZX_ERR_BAD_STATE;
@@ -418,31 +434,33 @@ zx_status_t FdioVolume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
     zx_status_t rc;
     fbl::String path_base;
 
-    fzl::UnownedFdioCaller caller(fd_.get());
+    fzl::UnownedFdioCaller caller(block_dev_fd_.get());
     if (!caller) {
         xprintf("could not convert fd to io\n");
         return ZX_ERR_BAD_STATE;
     }
 
-    if ((rc = TopologicalPath(caller, &path_base)) != ZX_OK) {
+    if ((rc = RelativeTopologicalPath(caller, &path_base)) != ZX_OK) {
         xprintf("could not get topological path: %s\n", zx_status_get_string(rc));
         return rc;
     }
     fbl::String path_block_exposed = fbl::String::Concat({path_base, "/zxcrypt/unsealed/block"});
 
     // Early return if path_block_exposed is already present in the device tree
-    fbl::unique_fd fd(open(path_block_exposed.c_str(), O_RDWR));
+    fbl::unique_fd fd(openat(devfs_root_fd_.get(), path_block_exposed.c_str(), O_RDWR));
     if (fd) {
         out->reset(fd.release());
         return ZX_OK;
     }
 
     // Wait for the unsealed and block devices to bind
-    if ((rc = wait_for_device(path_block_exposed.c_str(), timeout.get())) != ZX_OK) {
-        xprintf("timed out waiting for %s to exist: %s\n", path_block_exposed.c_str(), zx_status_get_string(rc));
+    if ((rc = wait_for_device_at(devfs_root_fd_.get(), path_block_exposed.c_str(),
+                                 timeout.get())) != ZX_OK) {
+        xprintf("timed out waiting for %s to exist: %s\n",
+                path_block_exposed.c_str(), zx_status_get_string(rc));
         return rc;
     }
-    fd.reset(open(path_block_exposed.c_str(), O_RDWR));
+    fd.reset(openat(devfs_root_fd_.get(), path_block_exposed.c_str(), O_RDWR));
     if (!fd) {
         xprintf("failed to open zxcrypt volume\n");
         return ZX_ERR_NOT_FOUND;
@@ -455,7 +473,7 @@ zx_status_t FdioVolume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
 zx_status_t FdioVolume::GetBlockInfo(BlockInfo* out) {
     zx_status_t rc;
     zx_status_t call_status;
-    fzl::UnownedFdioCaller caller(fd_.get());
+    fzl::UnownedFdioCaller caller(block_dev_fd_.get());
     if (!caller) {
         return ZX_ERR_BAD_STATE;
     }
@@ -476,7 +494,7 @@ zx_status_t FdioVolume::GetBlockInfo(BlockInfo* out) {
 zx_status_t FdioVolume::GetFvmSliceSize(uint64_t* out) {
     zx_status_t rc;
     zx_status_t call_status;
-    fzl::UnownedFdioCaller caller(fd_.get());
+    fzl::UnownedFdioCaller caller(block_dev_fd_.get());
     if (!caller) {
         return ZX_ERR_BAD_STATE;
     }
@@ -517,7 +535,7 @@ zx_status_t FdioVolume::DoBlockFvmVsliceQuery(uint64_t vslice_start,
                   "block volume slice response count must match");
     zx_status_t rc;
     zx_status_t call_status;
-    fzl::UnownedFdioCaller caller(fd_.get());
+    fzl::UnownedFdioCaller caller(block_dev_fd_.get());
     if (!caller) {
         return ZX_ERR_BAD_STATE;
     }
@@ -553,7 +571,7 @@ zx_status_t FdioVolume::DoBlockFvmVsliceQuery(uint64_t vslice_start,
 zx_status_t FdioVolume::DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count) {
     zx_status_t rc;
     zx_status_t call_status;
-    fzl::UnownedFdioCaller caller(fd_.get());
+    fzl::UnownedFdioCaller caller(block_dev_fd_.get());
     if (!caller) {
         return ZX_ERR_BAD_STATE;
     }
@@ -571,14 +589,14 @@ zx_status_t FdioVolume::DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_co
 }
 
 zx_status_t FdioVolume::Read() {
-    if (lseek(fd_.get(), offset_, SEEK_SET) < 0) {
-        xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", fd_.get(), offset_,
+    if (lseek(block_dev_fd_.get(), offset_, SEEK_SET) < 0) {
+        xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", block_dev_fd_.get(), offset_,
                 strerror(errno));
         return ZX_ERR_IO;
     }
     ssize_t res;
-    if ((res = read(fd_.get(), block_.get(), block_.len())) < 0) {
-        xprintf("read(%d, %p, %zu) failed: %s\n", fd_.get(), block_.get(), block_.len(),
+    if ((res = read(block_dev_fd_.get(), block_.get(), block_.len())) < 0) {
+        xprintf("read(%d, %p, %zu) failed: %s\n", block_dev_fd_.get(), block_.get(), block_.len(),
                 strerror(errno));
         return ZX_ERR_IO;
     }
@@ -591,14 +609,14 @@ zx_status_t FdioVolume::Read() {
 }
 
 zx_status_t FdioVolume::Write() {
-    if (lseek(fd_.get(), offset_, SEEK_SET) < 0) {
-        xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", fd_.get(), offset_,
+    if (lseek(block_dev_fd_.get(), offset_, SEEK_SET) < 0) {
+        xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", block_dev_fd_.get(), offset_,
                 strerror(errno));
         return ZX_ERR_IO;
     }
     ssize_t res;
-    if ((res = write(fd_.get(), block_.get(), block_.len())) < 0) {
-        xprintf("write(%d, %p, %zu) failed: %s\n", fd_.get(), block_.get(), block_.len(),
+    if ((res = write(block_dev_fd_.get(), block_.get(), block_.len())) < 0) {
+        xprintf("write(%d, %p, %zu) failed: %s\n", block_dev_fd_.get(), block_.get(), block_.len(),
                 strerror(errno));
         return ZX_ERR_IO;
     }
@@ -614,13 +632,13 @@ zx_status_t FdioVolume::OpenManagerWithCaller(fzl::UnownedFdioCaller& caller,
     zx_status_t rc;
     fbl::String path_base;
 
-    if ((rc = TopologicalPath(caller, &path_base)) != ZX_OK) {
+    if ((rc = RelativeTopologicalPath(caller, &path_base)) != ZX_OK) {
         xprintf("could not get topological path: %s\n", zx_status_get_string(rc));
         return rc;
     }
     fbl::String path_manager = fbl::String::Concat({path_base, "/zxcrypt"});
 
-    fbl::unique_fd fd(open(path_manager.c_str(), O_RDWR));
+    fbl::unique_fd fd(openat(devfs_root_fd_.get(), path_manager.c_str(), O_RDWR));
     if (!fd) {
         // No manager device in the /dev tree yet.  Try binding the zxcrypt
         // driver and waiting for it to appear.
@@ -636,12 +654,13 @@ zx_status_t FdioVolume::OpenManagerWithCaller(fzl::UnownedFdioCaller& caller,
         }
 
         // Await the appearance of the zxcrypt device.
-        if ((rc = wait_for_device(path_manager.c_str(), timeout.get())) != ZX_OK) {
+        if ((rc = wait_for_device_at(devfs_root_fd_.get(), path_manager.c_str(),
+                                     timeout.get())) != ZX_OK) {
             xprintf("zxcrypt driver failed to bind: %s\n", zx_status_get_string(rc));
             return rc;
         }
 
-        fd.reset(open(path_manager.c_str(), O_RDWR));
+        fd.reset(openat(devfs_root_fd_.get(), path_manager.c_str(), O_RDWR));
         if (!fd) {
             xprintf("failed to open zxcrypt manager\n");
             return ZX_ERR_NOT_FOUND;
@@ -656,7 +675,7 @@ zx_status_t FdioVolume::OpenManagerWithCaller(fzl::UnownedFdioCaller& caller,
     return ZX_OK;
 }
 
-zx_status_t FdioVolume::TopologicalPath(fzl::UnownedFdioCaller& caller, fbl::String* out) {
+zx_status_t FdioVolume::RelativeTopologicalPath(fzl::UnownedFdioCaller& caller, fbl::String* out) {
     zx_status_t rc;
 
     // Get the full device path
@@ -674,7 +693,23 @@ zx_status_t FdioVolume::TopologicalPath(fzl::UnownedFdioCaller& caller, fbl::Str
         xprintf("could not find parent device: %s\n", zx_status_get_string(rc));
         return rc;
     }
-    path.Resize(path_len);
+
+    // Verify that the path returned starts with "/dev/"
+    const char* kSlashDevSlash = "/dev/";
+    if (path_len < strlen(kSlashDevSlash)) {
+        xprintf("path_len way too short: %lu\n", path_len);
+        return ZX_ERR_INTERNAL;
+    }
+    if (strncmp(path.c_str(), kSlashDevSlash, strlen(kSlashDevSlash)) != 0) {
+        xprintf("Expected device path to start with '/dev/' but got %s\n", path.c_str());
+        return ZX_ERR_INTERNAL;
+    }
+
+    // Strip the leading "/dev/" and return the rest
+    size_t path_len_sans_dev = path_len - strlen(kSlashDevSlash);
+    memmove(path.begin(), path.begin() + strlen(kSlashDevSlash), path_len_sans_dev);
+
+    path.Resize(path_len_sans_dev);
     *out = path.ToString();
     return ZX_OK;
 }

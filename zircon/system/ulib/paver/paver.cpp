@@ -501,9 +501,12 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
     // TODO(security): ZX-1864. The created volume must marked as needing key rotation.
 
+    fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
     fbl::unique_ptr<zxcrypt::FdioVolume> volume;
-    if ((status = zxcrypt::FdioVolume::CreateWithDeviceKey(std::move(part->new_part), &volume)) !=
-        ZX_OK) {
+    if ((status =
+         zxcrypt::FdioVolume::CreateWithDeviceKey(std::move(part->new_part),
+                                                  std::move(devfs_root),
+                                                  &volume)) != ZX_OK) {
         ERROR("Could not create zxcrypt volume\n");
         return status;
     }
@@ -1129,8 +1132,13 @@ zx_status_t Paver::WriteDataFile(fbl::String filename, const fuchsia_mem_Buffer&
     case DISK_FORMAT_ZXCRYPT: {
         fbl::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
         uint8_t slot = 0;
+        // Use global devfs if one wasn't injected via set_devfs_root.
+        if (!devfs_root_) {
+            devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
+        }
         if ((status =
                  zxcrypt::FdioVolume::UnlockWithDeviceKey(std::move(part_fd),
+                                                          devfs_root_.duplicate(),
                                                           static_cast<zxcrypt::key_slot_t>(slot),
                                                           &zxc_volume)) != ZX_OK) {
             ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));

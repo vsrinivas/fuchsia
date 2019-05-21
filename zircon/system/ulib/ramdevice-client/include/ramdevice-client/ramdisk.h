@@ -21,6 +21,12 @@ typedef struct ramdisk_client ramdisk_client_t;
 // the device is not available after "timeout" has elapsed.
 zx_status_t wait_for_device(const char* path, zx_duration_t timeout);
 
+// Wait for a device at |path| relative to |dirfd| to become available.
+//
+// Returns ZX_OK if the device is ready to be opened, or ZX_ERR_TIMED_OUT if
+// the device is not available after "timeout" has elapsed.
+zx_status_t wait_for_device_at(int dirfd, const char* path, zx_duration_t timeout);
+
 // Creates a ramdisk and returns the full path to the ramdisk's block interface in ramdisk_path_out.
 // This path should be at least PATH_MAX characters long.
 zx_status_t ramdisk_create(uint64_t blk_size, uint64_t blk_count, ramdisk_client_t** out);

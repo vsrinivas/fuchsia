@@ -15,6 +15,7 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <fvm/format.h>
+#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
@@ -66,6 +67,10 @@ public:
         } else {
             return fbl::unique_fd(dup(ramdisk_get_block_fd(ramdisk_)));
         }
+    }
+
+    fbl::unique_fd devfs_root() const {
+        return devmgr_.devfs_root().duplicate();
     }
 
     // Returns a duplicated file descriptor representing t the zxcrypt volume.
@@ -139,6 +144,10 @@ public:
 
     // TEST HELPERS
 
+    // Launches an isolated devcoordinator.  Must be called before calling
+    // any other methods on TestDevice.
+    bool SetupDevmgr();
+
     // Allocates a new block device of at least |device_size| bytes grouped into blocks of
     // |block_size| bytes each.  If |fvm| is true, it will be formatted as an FVM partition with the
     // appropriates number of slices of |fvm::kBlockSize| each.  A file descriptor for the block
@@ -188,6 +197,9 @@ private:
     // device, and allocates a partition with a single slice of size fvm::kBlockSize.
     bool CreateFvmPart(size_t device_size, size_t block_size);
 
+    // Binds the FVM driver to the open ramdisk.
+    bool BindFvmDriver();
+
     // Connects the block client to the block server.
     bool Connect();
 
@@ -196,6 +208,12 @@ private:
 
     // Thread body to wake up the underlying ramdisk.
     static int WakeThread(void* arg);
+
+    // The isolated devmgr instance which we'll talk to in order to create the
+    // underlying ramdisk.  We do this so that the system's devmgr's
+    // block-watcher doesn't try to bind drivers to/mount/unseal our
+    // ramdisk-backed volumes.
+    devmgr_integration_test::IsolatedDevmgr devmgr_;
 
     // The ramdisk client
     ramdisk_client_t* ramdisk_;
