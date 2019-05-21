@@ -154,6 +154,7 @@ struct HistogramOptions : public MetricOptions {
 
     HistogramOptions() = default;
     HistogramOptions(const HistogramOptions&);
+    HistogramOptions& operator=(const HistogramOptions&);
 
     // Sanity check.
     bool IsValid() const;

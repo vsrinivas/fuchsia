@@ -122,6 +122,7 @@ void HistogramUndoFlush(BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_
 } // namespace internal
 
 HistogramOptions::HistogramOptions(const HistogramOptions&) = default;
+HistogramOptions& HistogramOptions::operator=(const HistogramOptions&) = default;
 
 HistogramOptions HistogramOptions::Exponential(uint32_t bucket_count, int64_t max) {
     return Exponential(bucket_count, 0, max);
