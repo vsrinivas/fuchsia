@@ -17,14 +17,17 @@ dart_test("screen_is_not_black_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  _untagged_envs = [nuc_env, astro_env]
+  _untagged_envs = [
+    nuc_env,
+    astro_env,
+  ]
   environments = []
   foreach(env, _untagged_envs) {
     if (!defined(env.tags)) {
       env.tags = []
     }
-    env.tags += ["e2e-terminal"]
-    environments += [env]
+    env.tags += [ "e2e-terminal" ]
+    environments += [ env ]
   }
 }
 
