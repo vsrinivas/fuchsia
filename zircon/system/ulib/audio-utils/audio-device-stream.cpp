@@ -98,7 +98,7 @@ AudioDeviceStream::AudioDeviceStream(bool input, uint32_t dev_id)
 
 AudioDeviceStream::AudioDeviceStream(bool input, const char* dev_path)
     : input_(input) {
-    strncpy(name_, dev_path, sizeof(name_));
+    strncpy(name_, dev_path, sizeof(name_) - 1);
     name_[sizeof(name_) - 1] = 0;
 }
 
