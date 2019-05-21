@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/catapult_converter_tests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.testing.runner.TestRunner"
+        ]
+    }
+}

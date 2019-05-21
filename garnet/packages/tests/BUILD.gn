@@ -1278,7 +1278,7 @@ group("linux_runner") {
 group("catapult_converter") {
   testonly = true
   public_deps = [
-    "//garnet/bin/catapult_converter:host_catapult_converter_test($host_toolchain)",
+    "//garnet/bin/catapult_converter:catapult_converter_tests($host_toolchain)",
   ]
 }
 

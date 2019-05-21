@@ -1,10 +1,5 @@
 {
     "program": {
         "binary": "bin/app"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.testing.runner.TestRunner"
-        ]
     }
 }

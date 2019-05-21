@@ -5,10 +5,10 @@
 import("//build/host.gni")
 import("//build/package.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("converter") {
-  testonly = true
   sources = [
     "converter.cc",
   ]
@@ -20,7 +20,7 @@ source_set("converter") {
 
 executable("converter_bin") {
   output_name = "catapult_converter"
-  testonly = true
+
   sources = [
     "main.cc",
   ]
@@ -30,36 +30,10 @@ executable("converter_bin") {
   ]
 }
 
-source_set("unittest") {
-  testonly = true
-  sources = [
-    "converter_unittest.cc",
-  ]
-  deps = [
-    ":converter",
-    "//src/lib/fxl",
-    "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
-    "//third_party/rapidjson",
-  ]
-}
-
-executable("unittest_bin") {
-  testonly = true
-  output_name = "catapult_converter_test"
-
-  deps = [
-    ":unittest",
-  ]
-}
-
 package("catapult_converter") {
-  testonly = true
-
   deps = [
     ":converter_bin",
-    ":host_catapult_converter",
-    ":unittest_bin",
+    ":host_tools",
   ]
 
   meta = [
@@ -75,18 +49,37 @@ package("catapult_converter") {
       shell = true
     },
   ]
+}
+
+test("catapult_converter_unittest") {
+  sources = [
+    "converter_unittest.cc",
+  ]
+
+  deps = [
+    ":converter",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+    "//third_party/rapidjson",
+  ]
+}
+
+test_package("catapult_converter_tests") {
+  deps = [
+    ":catapult_converter_unittest",
+  ]
 
   tests = [
     {
-      name = "catapult_converter_test"
+      name = "catapult_converter_unittest"
+      dest = "catapult_converter_tests"
       environments = basic_envs
     },
   ]
 }
 
-install_host_tools("host_catapult_converter") {
-  testonly = true
-
+install_host_tools("host_tools") {
   deps = [
     ":converter_bin",
   ]
@@ -94,12 +87,4 @@ install_host_tools("host_catapult_converter") {
   outputs = [
     "catapult_converter",
   ]
-}
-
-if (current_toolchain == host_toolchain) {
-  test("host_catapult_converter_test") {
-    deps = [
-      ":unittest",
-    ]
-  }
 }
