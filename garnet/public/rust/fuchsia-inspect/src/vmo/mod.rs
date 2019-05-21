@@ -29,6 +29,9 @@ mod utils;
 pub struct Inspector {
     /// The root node.
     root_node: Node,
+
+    /// The VMO backing the inspector
+    vmo: zx::Vmo,
 }
 
 /// Trait implemented by properties.
@@ -62,30 +65,35 @@ pub struct Node {
     state: Arc<Mutex<State>>,
 }
 
-/// Root API for inspect. Used to create the VMO and get the root node.
+/// Root API for inspect. Used to create the VMO, export to ServiceFs, and get
+/// the root node.
 impl Inspector {
-    /// Create a new Inspect VMO object.
-    pub fn new<ServiceObjTy: ServiceObjTrait>(
-        fs: &mut ServiceFs<ServiceObjTy>,
-    ) -> Result<Self, Error> {
-        Inspector::new_with_size(constants::DEFAULT_VMO_SIZE_BYTES, fs)
+    /// Create a new Inspect VMO object with the default maximum size.
+    pub fn new() -> Result<Self, Error> {
+        Inspector::new_with_size(constants::DEFAULT_VMO_SIZE_BYTES)
     }
 
-    /// Create a new Inspect VMO object with the given maximum size. If the given
-    /// size is less than 4K, it will be made 4K which is the minimum size the
-    /// VMO should have.
-    pub fn new_with_size<ServiceObjTy: ServiceObjTrait>(
-        max_size: usize,
-        fs: &mut ServiceFs<ServiceObjTy>,
-    ) -> Result<Self, Error> {
+    /// Create a new Inspect VMO object with the given maximum size. If the
+    /// given size is less than 4K, it will be made 4K which is the minimum size
+    /// the VMO should have.
+    pub fn new_with_size(max_size: usize) -> Result<Self, Error> {
         let (vmo, root_node) = Inspector::new_root(max_size)?;
-        fs.dir("objects").add_vmo_file_at(
+        Ok(Inspector { vmo, root_node })
+    }
+
+    /// Exports the VMO backing this Inspector at the standard location in the
+    /// supplied ServiceFs.
+    pub fn export<ServiceObjTy: ServiceObjTrait>(
+        &self,
+        service_fs: &mut ServiceFs<ServiceObjTy>,
+    ) -> Result<(), Error> {
+        service_fs.dir("objects").add_vmo_file_at(
             "root.inspect",
-            vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)?,
+            self.vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)?,
             0, /* vmo offset */
-            max_size as u64,
+            self.vmo.get_size()?,
         );
-        Ok(Inspector { root_node })
+        Ok(())
     }
 
     /// Get the root of the VMO object.
@@ -280,8 +288,26 @@ mod tests {
     };
 
     #[test]
-    fn inspector() {
-        let (_, root_node) = Inspector::new_root(4096).unwrap();
+    fn inspector_new() {
+        let test_object = Inspector::new().unwrap();
+        assert_eq!(test_object.vmo.get_size().unwrap(), constants::DEFAULT_VMO_SIZE_BYTES as u64);
+        let root_name_block = test_object.root().state.lock().heap.get_block(2).unwrap();
+        assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
+    }
+
+    #[test]
+    fn inspector_new_with_size() {
+        let test_object = Inspector::new_with_size(8192).unwrap();
+        assert_eq!(test_object.vmo.get_size().unwrap(), 8192);
+        let root_name_block = test_object.root().state.lock().heap.get_block(2).unwrap();
+        assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
+    }
+
+    #[test]
+    fn inspector_new_root() {
+        // Note, the small size we request should be rounded up to a full 4kB page.
+        let (vmo, root_node) = Inspector::new_root(100).unwrap();
+        assert_eq!(vmo.get_size().unwrap(), 4096);
         let root_name_block = root_node.state.lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
     }
