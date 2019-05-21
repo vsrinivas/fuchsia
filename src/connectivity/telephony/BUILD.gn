@@ -8,6 +8,7 @@ group("telephony") {
     "//src/connectivity/telephony/config",
     "//src/connectivity/telephony/ril-qmi",
     "//src/connectivity/telephony/telephony",
+    "//src/connectivity/telephony/tools/qmi-snoop",
     "//src/connectivity/telephony/tools/ril-ctl",
   ]
 }

@@ -5,6 +5,7 @@
 library fuchsia.hardware.telephony.transport;
 
 using zx;
+using fuchsia.telephony.snoop as qmi_snoop;
 
 [Layout = "Simple"]
 protocol Qmi {
@@ -14,4 +15,7 @@ protocol Qmi {
     /// Configure the network used by the transport
     /// Currently only sets network up/down
     SetNetwork(bool connected) -> ();
+
+    /// Pass an interface for QMI message snooping
+    SetSnoopChannel(qmi_snoop.Publisher interface) -> () error zx.status;
 };

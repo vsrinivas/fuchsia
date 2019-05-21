@@ -74,6 +74,7 @@ group("fidl") {
     "fuchsia-sysmem",
     "fuchsia-tee",
     "fuchsia-tee-manager",
+    "fuchsia-telephony-snoop",
     "fuchsia-tracelink",
     "fuchsia-tracing-kernel",
     "fuchsia-usb-debug",

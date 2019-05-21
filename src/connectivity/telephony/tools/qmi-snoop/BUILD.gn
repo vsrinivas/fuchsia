@@ -3,17 +3,34 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_binary.gni")
 
-rustc_library("qmi") {
+rustc_binary("bin") {
+  name = "qmi_snoop"
   edition = "2018"
+
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-zircon",
+    "//src/connectivity/telephony/lib/qmi",
     "//third_party/rust_crates:failure",
-    "//zircon/public/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport-rustc",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:structopt",
     "//zircon/public/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop-rustc",
+  ]
+}
+
+package("qmi-snoop") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "qmi_snoop"
+      dest = "qmi-snoop"
+      path = "rust_crates/qmi_snoop"
+      shell = true
+    },
   ]
 }

@@ -31,13 +31,14 @@ driver_module("qmi_driver") {
     "//garnet/public/lib/fsl",
     "//zircon/public/banjo/ddk.protocol.ethernet",
     "//zircon/public/banjo/ddk.protocol.usb",
+    "//zircon/public/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport_c",
+    "//zircon/public/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
-    "//zircon/public/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport_c",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

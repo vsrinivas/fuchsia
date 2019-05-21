@@ -3,11 +3,28 @@
 // found in the LICENSE file.
 #![feature(async_await, await_macro)]
 
+use fidl::endpoints::{create_endpoints, ServerEnd};
 use fidl_fuchsia_hardware_telephony_transport::QmiProxy;
+use fidl_fuchsia_telephony_snoop::PublisherMarker as QmiSnoopMarker;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use std::fs::File;
 
+/// Connect to transport driver, and pass a channel handle for snoop Qmi messages
+pub async fn connect_snoop_channel(
+    device: &File,
+) -> Result<ServerEnd<QmiSnoopMarker>, failure::Error> {
+    let qmi_channel: fasync::Channel = fasync::Channel::from_channel(fdio::clone_channel(device)?)?;
+    let interface = QmiProxy::new(qmi_channel);
+    let (client_side, server_side) = create_endpoints::<QmiSnoopMarker>()?;
+    match await!(interface.set_snoop_channel(client_side)) {
+        Ok(_r) => Ok(server_side),
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Connect to transport driver, and pass a channel handle for Tx/Rx Qmi messages
+/// to/from ril-qmi
 pub async fn connect_transport_device(device: &File) -> Result<zx::Channel, failure::Error> {
     let qmi_channel: fasync::Channel = fasync::Channel::from_channel(fdio::clone_channel(device)?)?;
     let interface = QmiProxy::new(qmi_channel);

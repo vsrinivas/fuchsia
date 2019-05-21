@@ -1,0 +1,30 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.telephony.snoop;
+
+using zx;
+
+enum Direction {
+    FROM_MODEM = 1;
+    TO_MODEM = 2;
+};
+
+struct QmiMessage {
+    zx.time timestamp;
+    Direction direction;
+    bool is_partial_copy;
+    array<uint8>:256 opaque_bytes;
+};
+
+//TODO(jiamingw): change it to xunion after transport driver is converted to llcpp
+union Message {
+    QmiMessage qmi_message;
+};
+
+/// Protocol for forwarding QMI messages from driver to Snoop CLI
+[Layout = "Simple"]
+protocol Publisher {
+    SendMessage(Message msg);
+};

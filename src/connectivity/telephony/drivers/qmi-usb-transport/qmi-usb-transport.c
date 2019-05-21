@@ -12,6 +12,7 @@
 #include <usb/usb.h>
 
 #include <fuchsia/hardware/telephony/transport/c/fidl.h>
+#include <fuchsia/telephony/snoop/c/fidl.h>
 
 #include <zircon/device/qmi-transport.h>
 #include <zircon/hw/usb/cdc.h>
@@ -58,6 +59,10 @@ typedef struct qmi_ctx {
   // Port to watch for QMI messages on
   zx_handle_t channel_port;
   zx_handle_t channel;
+
+  // Port for snoop QMI messages
+  zx_handle_t snoop_channel_port;
+  zx_handle_t snoop_channel;
 
   usb_protocol_t usb;
   zx_device_t* usb_device;
@@ -242,6 +247,46 @@ static inline zx_status_t set_async_wait(qmi_ctx_t* ctx) {
   return status;
 }
 
+static zx_status_t set_snoop_channel(qmi_ctx_t* qmi_ctx, zx_handle_t channel) {
+  zx_status_t result = ZX_OK;
+  zx_port_packet_t packet;
+  zx_status_t status;
+  // Initialize a port to watch whether the other handle of snoop channel has closed
+  if (qmi_ctx->snoop_channel_port == ZX_HANDLE_INVALID) {
+    status = zx_port_create(0, &qmi_ctx->snoop_channel_port);
+    if (status != ZX_OK) {
+        zxlogf(ERROR,
+                "qmi-usb-transport: failed to create a port to watch snoop channel: "
+                "%s\n",
+                zx_status_get_string(status));
+        return status;
+    }
+  } else {
+    status = zx_port_wait(qmi_ctx->snoop_channel_port, 0, &packet);
+    if (status == ZX_ERR_TIMED_OUT) {
+      zxlogf(ERROR, "qmi-usb-transport: timed out: %s\n",
+              zx_status_get_string(status));
+    } else if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
+      zxlogf(INFO, "qmi-usb-transport: snoop channel peer closed\n");
+      qmi_ctx->snoop_channel = ZX_HANDLE_INVALID;
+    }
+  }
+
+  if (qmi_ctx->snoop_channel != ZX_HANDLE_INVALID) {
+    zxlogf(ERROR, "snoop channel already connected\n");
+    result = ZX_ERR_ALREADY_BOUND;
+  } else if (channel == ZX_HANDLE_INVALID) {
+    zxlogf(ERROR, "get invalid snoop channel handle\n");
+    result = ZX_ERR_BAD_HANDLE;
+  } else {
+    qmi_ctx->snoop_channel = channel;
+    zx_object_wait_async(
+      qmi_ctx->snoop_channel, qmi_ctx->snoop_channel_port, 0,
+      ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+  }
+  return result;
+}
+
 #define REPLY(x) fuchsia_hardware_telephony_transport_Qmi##x##_reply
 
 static zx_status_t fidl_SetChannel(void* ctx, zx_handle_t transport, fidl_txn_t* txn) {
@@ -275,11 +320,27 @@ static zx_status_t fidl_SetNetworkStatus(void* ctx, bool connected, fidl_txn_t* 
   qmi_update_online_status(qmi_ctx, connected);
   return REPLY(SetNetwork)(txn);
 }
+
+static zx_status_t fidl_SetSnoopChannel(void* ctx, zx_handle_t snoop_channel, fidl_txn_t* txn) {
+  qmi_ctx_t* qmi_ctx = ctx;
+  zx_status_t set_snoop_channel_res;
+  fuchsia_hardware_telephony_transport_Qmi_SetSnoopChannel_Result res;
+  set_snoop_channel_res = set_snoop_channel(qmi_ctx, snoop_channel);
+  if (set_snoop_channel_res == ZX_OK) {
+    res.tag = 0;
+    res.response._reserved = 0;
+  } else {
+    res.tag = 1;
+    res.err = set_snoop_channel_res;
+  }
+  return REPLY(SetSnoopChannel)(txn, &res);
+}
 #undef REPLY
 
 static fuchsia_hardware_telephony_transport_Qmi_ops_t fidl_ops = {
   .SetChannel = fidl_SetChannel,
   .SetNetwork = fidl_SetNetworkStatus,
+  .SetSnoopChannel = fidl_SetSnoopChannel,
 };
 
 static zx_status_t qmi_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -439,6 +500,23 @@ static void qmi_handle_interrupt(qmi_ctx_t* qmi_ctx, usb_request_t* request) {
                "qmi-usb-transport: failed to write message to channel: %s\n",
                zx_status_get_string(status));
       }
+      if (qmi_ctx->snoop_channel) {
+        fuchsia_telephony_snoop_Message snoop_msg;
+        snoop_msg.tag = 0;
+        uint32_t current_length;
+        if (sizeof(buffer) > sizeof(snoop_msg.qmi_message.opaque_bytes)) {
+          current_length = sizeof(snoop_msg.qmi_message.opaque_bytes);
+          snoop_msg.qmi_message.is_partial_copy = true;
+        } else {
+          current_length = sizeof(buffer);
+          snoop_msg.qmi_message.is_partial_copy = false;
+        }
+        snoop_msg.qmi_message.direction = fuchsia_telephony_snoop_Direction_FROM_MODEM;
+        snoop_msg.qmi_message.timestamp = zx_clock_get_monotonic();
+        memcpy(snoop_msg.qmi_message.opaque_bytes, buffer, current_length);
+        fuchsia_telephony_snoop_PublisherSendMessage(
+          qmi_ctx->snoop_channel, &snoop_msg);
+      }
       return;
     default:
       zxlogf(ERROR,
@@ -507,6 +585,23 @@ static int qmi_transport_thread(void* cookie) {
         status = set_async_wait(ctx);
         if (status != ZX_OK) {
           return status;
+        }
+        if (ctx->snoop_channel) {
+          fuchsia_telephony_snoop_Message snoop_msg;
+          snoop_msg.tag = 0;
+          uint32_t current_length;
+          if (sizeof(buffer) > sizeof(snoop_msg.qmi_message.opaque_bytes)) {
+            current_length = sizeof(snoop_msg.qmi_message.opaque_bytes);
+            snoop_msg.qmi_message.is_partial_copy = true;
+          } else {
+            current_length = sizeof(buffer);
+            snoop_msg.qmi_message.is_partial_copy = false;
+          }
+          snoop_msg.qmi_message.direction = fuchsia_telephony_snoop_Direction_TO_MODEM;
+          snoop_msg.qmi_message.timestamp = zx_clock_get_monotonic();
+          memcpy(snoop_msg.qmi_message.opaque_bytes, buffer, current_length);
+          fuchsia_telephony_snoop_PublisherSendMessage(
+            ctx->snoop_channel, &snoop_msg);
         }
       } else if (packet.key == INTERRUPT_MSG) {
         if (txn->response.status == ZX_OK) {
