@@ -1213,9 +1213,9 @@ zx_status_t Lcd::Enable() {
     gpio_write(&gpio_, 1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
     gpio_write(&gpio_, 0);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
     gpio_write(&gpio_, 1);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
     // check status
     if (GetDisplayId() != ZX_OK) {
         DISP_ERROR("Cannot communicate with LCD Panel!\n");
