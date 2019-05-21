@@ -17,6 +17,7 @@ use {
     std::sync::Arc,
 };
 
+mod models;
 mod module_output;
 mod story_context_store;
 mod utils;
@@ -26,7 +27,7 @@ static SERVICE_DIRECTORY: &str = "public";
 
 enum IncomingServices {
     DiscoverRegistry(DiscoverRegistryRequestStream),
-    // TODO(miguelfrde): add additional services
+    // TODO: add additional services
 }
 
 /// Handle DiscoveryRegistry requests.
