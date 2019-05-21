@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 executable("fidl_compatibility_test_executable") {
@@ -23,6 +23,7 @@ executable("fidl_compatibility_test_executable") {
     "//sdk/lib/sys/cpp",
     "//src/lib/files",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",

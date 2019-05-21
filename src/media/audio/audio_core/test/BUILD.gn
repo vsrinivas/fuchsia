@@ -46,6 +46,7 @@ executable("audio_device_tests_bin") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.virtualaudio",
+    "//src/lib/fxl/test:test_settings",
   ]
 }
 
@@ -82,6 +83,7 @@ executable("audio_fidl_tests_bin") {
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.media",
+    "//src/lib/fxl/test:test_settings",
   ]
 }
 

@@ -4,10 +4,15 @@
 
 #include <gtest/gtest.h>
 #include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/test/test_settings.h>
 
 #include "src/lib/icu_data/cpp/icu_data.h"
 
 int main(int argc, char **argv) {
+  if (!fxl::SetTestSettings(argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
   if (!icu_data::Initialize()) {
     FXL_LOG(ERROR) << "Unable to set common ICU data. "
                    << "Timezone data unavailable.";

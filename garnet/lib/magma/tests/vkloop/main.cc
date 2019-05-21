@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/fxl/test/test_settings.h"
 #include "gtest/gtest.h"
 
 #if defined(MAGMA_USE_SHIM)
@@ -10,6 +11,10 @@
 
 int main(int argc, char** argv)
 {
+    if (!fxl::SetTestSettings(argc, argv)) {
+        return EXIT_FAILURE;
+    }
+
 #if defined(MAGMA_USE_SHIM)
     VulkanShimInit();
 #endif

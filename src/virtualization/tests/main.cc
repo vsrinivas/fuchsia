@@ -11,6 +11,7 @@
 
 #include "guest_test.h"
 #include "logger.h"
+#include "src/lib/fxl/test/test_settings.h"
 
 using ::testing::HasSubstr;
 
@@ -139,6 +140,10 @@ class LoggerOutputListener : public ::testing::EmptyTestEventListener {
 };
 
 int main(int argc, char** argv) {
+  if (!fxl::SetTestSettings(argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
   LoggerOutputListener listener;
 
   testing::InitGoogleTest(&argc, argv);

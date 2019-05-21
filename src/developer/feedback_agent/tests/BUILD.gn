@@ -76,6 +76,7 @@ executable("config_unittest") {
   deps = [
     "//garnet/public/lib/syslog/cpp",
     "//src/developer/feedback_agent:src",
+    "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
@@ -107,6 +108,7 @@ executable("data_provider_unittest") {
     "//src/developer/feedback_agent:src",
     "//src/lib/files",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
@@ -130,6 +132,7 @@ executable("log_listener_unittest") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback_agent:src",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/fidl/fuchsia-mem",

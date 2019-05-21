@@ -18,6 +18,7 @@ executable("vkext") {
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "../vkreadback:vkreadback_src",
+    "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem",
     "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",

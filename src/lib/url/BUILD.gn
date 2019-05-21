@@ -73,6 +73,7 @@ source_set("url_unittests_main") {
 
   deps = [
     "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
     "//src/lib/icu_data/cpp",
     "//third_party/googletest:gtest",
     "//third_party/icu",

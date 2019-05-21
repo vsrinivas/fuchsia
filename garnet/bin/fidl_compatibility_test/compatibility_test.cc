@@ -21,6 +21,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/utf_codecs.h"
+#include "src/lib/fxl/test/test_settings.h"
 
 using fidl::VectorPtr;
 using fidl::test::compatibility::AllTypesTable;
@@ -1638,6 +1639,10 @@ TEST(Compatibility, EchoXunions) {
 }  // namespace
 
 int main(int argc, char** argv) {
+  if (!fxl::SetTestSettings(argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
   testing::InitGoogleTest(&argc, argv);
 
   for (int i = 1; i < argc; i++) {

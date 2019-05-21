@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/fxl/test/test_settings.h"
 
 namespace zxdb {
 
@@ -15,6 +16,10 @@ std::string e2e_init_command;
 }  // namespace zxdb
 
 int main(int argc, char* argv[]) {
+  if (!fxl::SetTestSettings(argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
   testing::InitGoogleTest(&argc, argv);
 
   for (int i = 0; i < argc; i++) {

@@ -6,6 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <cstdlib>
 #include <string>
 
 #include "src/ledger/bin/testing/loop_controller_real_loop.h"
@@ -13,6 +14,7 @@
 #include "src/ledger/bin/tests/e2e_sync/ledger_app_instance_factory_e2e.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/test/test_settings.h"
 
 namespace ledger {
 namespace {
@@ -28,6 +30,10 @@ class FactoryBuilderE2eImpl : public LedgerAppInstanceFactoryBuilder {
 
 int Main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetTestSettings(command_line)) {
+    return EXIT_FAILURE;
+  }
+
   SyncParams sync_params;
 
   {

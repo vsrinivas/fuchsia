@@ -32,6 +32,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/test/test_settings.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -492,6 +493,10 @@ TEST_F(CrashpadAgentTest, OneFeedbackDataProviderConnectionPerAnalysis) {
 }  // namespace fuchsia
 
 int main(int argc, char** argv) {
+  if (!fxl::SetTestSettings(argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
   testing::InitGoogleTest(&argc, argv);
   syslog::InitLogger({"crash", "test"});
   return RUN_ALL_TESTS();

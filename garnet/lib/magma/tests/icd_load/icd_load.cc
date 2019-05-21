@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "magma_util/dlog.h"
+#include "src/lib/fxl/test/test_settings.h"
 #include "gtest/gtest.h"
 
 #if defined(MAGMA_USE_SHIM)
@@ -49,6 +50,10 @@ TEST(Vulkan, IcdLoad)
 
 int main(int argc, char** argv)
 {
+    if (!fxl::SetTestSettings(argc, argv)) {
+        return EXIT_FAILURE;
+    }
+
 #if defined(MAGMA_USE_SHIM)
     VulkanShimInit();
 #endif

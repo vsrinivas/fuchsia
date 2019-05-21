@@ -35,6 +35,7 @@ if (current_toolchain == host_toolchain) {
     deps = [
       ":e2e_test_headers",
       "//src/developer/debug/zxdb/console:e2e_tests",
+      "//src/lib/fxl/test:test_settings",
       "//third_party/googletest:gtest",
     ]
   }

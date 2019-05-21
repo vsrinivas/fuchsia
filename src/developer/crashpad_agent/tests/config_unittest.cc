@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
+#include "src/lib/fxl/test/test_settings.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace fuchsia {
@@ -84,6 +85,10 @@ TEST(ConfigTest, ParseConfig_BadConfig_MissingServerUrlWithUploadEnabled) {
 }  // namespace fuchsia
 
 int main(int argc, char** argv) {
+  if (!fxl::SetTestSettings(argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
   testing::InitGoogleTest(&argc, argv);
   syslog::InitLogger({"crash", "test"});
   return RUN_ALL_TESTS();

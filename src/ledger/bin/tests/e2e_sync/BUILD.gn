@@ -32,6 +32,7 @@ executable("e2e_sync") {
     "//src/ledger/cloud_provider_firestore/bin/testing",
     "//src/ledger/lib/firebase_auth/testing",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
   ]
 

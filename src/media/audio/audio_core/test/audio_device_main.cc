@@ -7,6 +7,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/component/cpp/environment_services_helper.h"
+#include "src/lib/fxl/test/test_settings.h"
 #include "src/media/audio/audio_core/test/audio_device_test.h"
 #include "src/media/audio/audio_core/test/virtual_audio_device_test.h"
 
@@ -64,6 +65,10 @@ class AudioDeviceEnvironment : public ::testing::Environment {
 }  // namespace media::audio::test
 
 int main(int argc, char** argv) {
+  if (!fxl::SetTestSettings(argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
   ::testing::InitGoogleTest(&argc, argv);
 
   // gtest takes ownership of registered environments: **do not delete them**!
