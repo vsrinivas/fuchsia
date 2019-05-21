@@ -13,6 +13,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 group("test") {
@@ -71,9 +72,7 @@ executable("netbuf_test") {
   ]
 }
 
-package("brcmfmac_test") {
-  testonly = true
-
+unittest_package("brcmfmac_test") {
   package_name = "brcmfmac_test"
 
   deps = [

@@ -4,6 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 fidl("interface") {
@@ -85,8 +86,7 @@ executable("package_updating_loader_test") {
   ]
 }
 
-package("integration_tests") {
-  testonly = true
+test_package("integration_tests") {
   package_name = "sysmgr_integration_tests"
 
   deps = [
@@ -124,14 +124,6 @@ package("integration_tests") {
     {
       path = rebase_path("meta/mock_resolver.cmx")
       dest = "mock_resolver.cmx"
-    },
-    {
-      path = rebase_path("meta/service_startup_test.cmx")
-      dest = "service_startup_test.cmx"
-    },
-    {
-      path = rebase_path("meta/package_updating_loader_test.cmx")
-      dest = "package_updating_loader_test.cmx"
     },
   ]
 }

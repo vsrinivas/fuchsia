@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("cpp") {
@@ -50,9 +50,7 @@ executable("unittests") {
   ]
 }
 
-package("base_view_unittests") {
-  testonly = true
-
+unittest_package("base_view_unittests") {
   deps = [
     ":unittests",
   ]

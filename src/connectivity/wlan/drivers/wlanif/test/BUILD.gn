@@ -65,9 +65,7 @@ executable("convert_unittest") {
   ]
 }
 
-package("wlanif_unittest") {
-  testonly = true
-
+unittest_package("wlanif_unittest") {
   deps = [
     ":convert_unittest",
   ]

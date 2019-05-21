@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_library("connectivity-testing") {
@@ -26,8 +27,7 @@ rustc_library("connectivity-testing") {
   ]
 }
 
-package("connectivity-testing-tests") {
-  testonly = true
+unittest_package("connectivity-testing-tests") {
   deps = [
     ":connectivity-testing",
   ]

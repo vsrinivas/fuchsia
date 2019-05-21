@@ -74,9 +74,7 @@ test_package("magma_abi_conformance_tests") {
   ]
 }
 
-package("vulkan-tests") {
-  testonly = true
-
+test_package("vulkan-tests") {
   if (have_libvulkan || use_vulkan_loader_for_tests) {
     deps = [
       "benchmark",
@@ -129,33 +127,6 @@ package("vulkan-tests") {
       {
         path = "vkloop/comp.spv"
         dest = "vkloop.spv"
-      },
-    ]
-
-    meta = [
-      {
-        path = rebase_path("meta/icd_load.cmx")
-        dest = "icd_load.cmx"
-      },
-      {
-        path = rebase_path("meta/vkext.cmx")
-        dest = "vkext.cmx"
-      },
-      {
-        path = rebase_path("meta/vkreadback.cmx")
-        dest = "vkreadback.cmx"
-      },
-      {
-        path = rebase_path("meta/vkpriority.cmx")
-        dest = "vkpriority.cmx"
-      },
-      {
-        path = rebase_path("meta/vkloop.cmx")
-        dest = "vkloop.cmx"
-      },
-      {
-        path = rebase_path("meta/vkcopy.cmx")
-        dest = "vkcopy.cmx"
       },
     ]
   }

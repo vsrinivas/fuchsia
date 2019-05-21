@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_library("dhcp") {
@@ -21,8 +22,7 @@ rustc_library("dhcp") {
   ]
 }
 
-package("dhcp_tests") {
-  testonly = true
+unittest_package("dhcp_tests") {
   deps = [
     ":dhcp",
   ]

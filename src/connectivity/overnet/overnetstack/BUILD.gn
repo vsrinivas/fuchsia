@@ -85,9 +85,7 @@ package("overnetstack") {
   ]
 }
 
-package("overnetstack_tests") {
-  testonly = true
-
+unittest_package("overnetstack_tests") {
   deps = [
     ":overnetstack_unittests",
   ]

@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_library("ethernet") {
@@ -25,9 +26,7 @@ rustc_library("ethernet") {
   ]
 }
 
-package("ethernet-tests") {
-  testonly = true
-
+unittest_package("ethernet-tests") {
   deps = [
     ":ethernet",
   ]

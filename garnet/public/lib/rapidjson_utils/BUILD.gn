@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 source_set("rapidjson_utils") {
   sources = [
@@ -33,9 +33,7 @@ executable("tests") {
   ]
 }
 
-package("rapidjson_utils_unittests") {
-  testonly = true
-
+unittest_package("rapidjson_utils_unittests") {
   deps = [
     ":tests",
   ]

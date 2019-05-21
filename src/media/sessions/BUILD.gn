@@ -5,6 +5,7 @@
 import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 group("sessions") {
@@ -55,18 +56,9 @@ rustc_binary("bin") {
   ]
 }
 
-package("mediasession_tests") {
-  testonly = true
-
+test_package("mediasession_tests") {
   deps = [
     ":bin",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/mediasession_tests.cmx")
-      dest = "mediasession_tests.cmx"
-    },
   ]
 
   tests = [

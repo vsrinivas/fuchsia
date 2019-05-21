@@ -37,9 +37,7 @@ package("module_resolver_rs") {
   ]
 }
 
-package("module_resolver_rs_tests") {
-  testonly = true
-
+unittest_package("module_resolver_rs_tests") {
   deps = [
     ":bin",
   ]

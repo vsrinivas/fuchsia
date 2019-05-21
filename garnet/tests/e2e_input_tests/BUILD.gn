@@ -2,11 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 
-package("e2e_input_tests") {
-  testonly = true
-
+test_package("e2e_input_tests") {
   deps = [
     ":minimal_input_test",
   ]
@@ -21,13 +19,6 @@ package("e2e_input_tests") {
           }
         },
       ]
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/minimal_input_test.cmx")
-      dest = "minimal_input_test.cmx"
     },
   ]
 }

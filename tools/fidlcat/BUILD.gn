@@ -4,8 +4,8 @@
 
 import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
-import("//build/package.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 if (current_toolchain == host_toolchain) {
@@ -76,8 +76,7 @@ executable("fidlcat_lib_tests") {
   ]
 }
 
-package("fidlcat_tests") {
-  testonly = true
+unittest_package("fidlcat_tests") {
   deps = [
     ":fidlcat_lib_tests",
   ]

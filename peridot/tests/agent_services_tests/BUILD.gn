@@ -1,4 +1,5 @@
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 executable("agent_services_test") {
@@ -19,20 +20,11 @@ executable("agent_services_test") {
   ]
 }
 
-package("agent_services_tests") {
-  testonly = true
-
+test_package("agent_services_tests") {
   tests = [
     {
       name = "agent_services_test"
       environments = basic_envs
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/agent_services_test.cmx"
-      dest = "agent_services_test.cmx"
     },
   ]
 

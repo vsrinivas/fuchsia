@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 # A collection of utilities useful to debuggers and similar programs.
@@ -126,9 +127,7 @@ executable("test_helper") {
   libs = [ "zircon" ]
 }
 
-package("debugger_utils_tests") {
-  testonly = true
-
+test_package("debugger_utils_tests") {
   deps = [
     ":test_helper",
     ":tests",
@@ -145,13 +144,6 @@ package("debugger_utils_tests") {
     {
       name = "debugger_utils_tests"
       environments = basic_envs
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/debugger_utils_tests.cmx")
-      dest = "debugger_utils_tests.cmx"
     },
   ]
 }

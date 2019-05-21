@@ -7,6 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 go_library("thinfs_lib") {
   name = "thinfs"
@@ -81,9 +82,7 @@ go_test("thinfs_zircon_rpc_test") {
   ]
 }
 
-package("go_thinfs_tests") {
-  testonly = true
-
+unittest_package("go_thinfs_tests") {
   deps = [
     ":thinfs_bitops_test($host_toolchain)",
     ":thinfs_block_fake_test($host_toolchain)",

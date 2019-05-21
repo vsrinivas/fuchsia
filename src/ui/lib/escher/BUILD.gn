@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
@@ -16,9 +17,7 @@ declare_args() {
   escher_use_null_vulkan_config_on_host = true
 }
 
-package("escher_tests") {
-  testonly = true
-
+test_package("escher_tests") {
   deps = [
     "test:escher_unittests",
   ]
@@ -27,13 +26,6 @@ package("escher_tests") {
     {
       name = "escher_unittests"
       environments = basic_envs
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/escher_unittests.cmx")
-      dest = "escher_unittests.cmx"
     },
   ]
 

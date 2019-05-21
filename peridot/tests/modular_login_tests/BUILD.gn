@@ -1,4 +1,5 @@
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 executable("login_override_test") {
@@ -23,20 +24,11 @@ executable("login_override_test") {
   ]
 }
 
-package("modular_login_tests") {
-  testonly = true
-
+test_package("modular_login_tests") {
   tests = [
     {
       name = "login_override_test"
       environments = basic_envs
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/login_override_test.cmx"
-      dest = "login_override_test.cmx"
     },
   ]
 

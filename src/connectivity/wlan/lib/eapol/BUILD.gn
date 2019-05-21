@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_library("eapol") {
@@ -18,9 +18,7 @@ rustc_library("eapol") {
   ]
 }
 
-package("eapol-tests") {
-  testonly = true
-
+unittest_package("eapol-tests") {
   deps = [
     ":eapol",
   ]

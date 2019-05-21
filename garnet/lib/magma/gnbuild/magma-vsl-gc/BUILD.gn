@@ -4,6 +4,7 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 group("magma-vulkan") {
@@ -87,8 +88,7 @@ if (build_libvulkan_vsl_gc != []) {
   }
 }
 
-package("nonhardware-tests") {
-  testonly = true
+unittest_package("nonhardware-tests") {
   package_name = "magma_vsl_gc_nonhardware_tests"
 
   deps = [

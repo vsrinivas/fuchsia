@@ -7,6 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
 group("performance") {
@@ -91,9 +92,7 @@ go_binary("process_gfx_trace") {
   ]
 }
 
-package("benchmark_tests") {
-  testonly = true
-
+unittest_package("benchmark_tests") {
   deps = [
       ":process_trace_helpers_test",
   ]
