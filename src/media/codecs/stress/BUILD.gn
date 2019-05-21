@@ -1,0 +1,67 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_macro.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("lib") {
+  name = "codec_stress"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//src/lib/fidl_table_validation",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
+  ]
+}
+
+test_package("codec_stress_tests") {
+  deps = [
+    ":lib",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/codec_stress_tests.cmx")
+      dest = "codec_stress_tests.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "codec_stress_lib_test"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "../../../../garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
+      dest = "bear.h264"
+    },
+  ]
+}
+
+group("stress") {
+  testonly = true
+  deps = [
+    ":codec_stress_tests",
+  ]
+}

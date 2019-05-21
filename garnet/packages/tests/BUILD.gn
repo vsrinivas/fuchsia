@@ -784,9 +784,8 @@ group("media") {
     ":virtual_audio",
     "//garnet/bin/media/codecs:tests",
     "//garnet/public/lib/media/timeline:media_lib_timeline_tests",
-    "//src/media/audio:tests",
+    "//src/media:tests",
     "//src/media/playback/mediaplayer:tests",
-    "//src/media/sessions:tests",
   ]
 }
 

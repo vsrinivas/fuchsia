@@ -7,6 +7,7 @@ group("media") {
   deps = [
     ":tests",
     "audio",
+    "codecs",
     "lib",
     "playback",
     "sessions",
@@ -19,5 +20,6 @@ group("tests") {
   data_deps = [
     "audio:tests",
     "sessions:tests",
+    "codecs:tests",
   ]
 }
