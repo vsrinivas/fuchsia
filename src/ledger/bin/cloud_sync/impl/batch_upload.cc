@@ -165,7 +165,7 @@ void BatchUpload::UploadEncryptedObject(
 
   (*page_cloud_)
       ->AddObject(
-          convert::ToArray(object_name), std::move(data).ToTransport(),
+          convert::ToArray(object_name), std::move(data).ToTransport(), {},
           callback::MakeScoped(
               weak_ptr_factory_.GetWeakPtr(),
               [this, object_identifier = std::move(object_identifier),

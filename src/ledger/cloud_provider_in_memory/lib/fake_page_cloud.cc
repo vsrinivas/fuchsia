@@ -234,6 +234,7 @@ void FakePageCloud::GetCommits(
 
 void FakePageCloud::AddObject(std::vector<uint8_t> id,
                               fuchsia::mem::Buffer data,
+                              cloud_provider::ReferencePack /*references*/,
                               AddObjectCallback callback) {
   if (MustReturnError(GetVectorSignature(id, kAddObjectSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR);

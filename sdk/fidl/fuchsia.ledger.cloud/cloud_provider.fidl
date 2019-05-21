@@ -110,6 +110,18 @@ struct Commits {
     vector<Commit> commits;
 };
 
+/// A list of references for serialization in ReferencePack.
+struct References {
+    vector<bytes> references;
+};
+
+/// Contains a Buffer containing the FIDL serialization of References.
+///
+/// If the Buffer is absent, the reference list is treated as empty.
+struct ReferencePack {
+    fuchsia.mem.Buffer? buffer;
+};
+
 /// Handler for cloud sync of a single page.
 ///
 /// Implementation of this class manages a *commit log*, which is an append-only
@@ -145,7 +157,8 @@ protocol PageCloud {
     /// Uploads the given object to the cloud under the given id.
     ///
     /// If the object already exists in the cloud this method returns OK.
-    AddObject(bytes id, fuchsia.mem.Buffer buffer) -> (Status status);
+    AddObject(bytes id, fuchsia.mem.Buffer buffer, ReferencePack references)
+        -> (Status status);
 
     /// Retrieves the object of the given id from the cloud.
     ///

@@ -226,6 +226,7 @@ void PageCloudImpl::GetCommits(
 
 void PageCloudImpl::AddObject(std::vector<uint8_t> id,
                               fuchsia::mem::Buffer data,
+                              cloud_provider::ReferencePack /*references*/,
                               AddObjectCallback callback) {
   std::string data_str;
   fsl::SizedVmo vmo;

@@ -257,7 +257,7 @@ impl PageSession {
                     }
                 }
             }
-            PageCloudRequest::AddObject { id, buffer, responder } => {
+            PageCloudRequest::AddObject { id, buffer, references: _, responder } => {
                 let mut data = Vec::new();
                 match read_buffer(buffer, &mut data) {
                     Err(_) => responder.send(Status::ArgumentError),

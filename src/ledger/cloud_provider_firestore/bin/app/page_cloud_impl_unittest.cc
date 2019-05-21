@@ -226,7 +226,7 @@ TEST_F(PageCloudImplTest, AddObject) {
   fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString("some_data", &data));
   page_cloud_->AddObject(
-      convert::ToArray("some_id"), std::move(data).ToTransport(),
+      convert::ToArray("some_id"), std::move(data).ToTransport(), {},
       callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();

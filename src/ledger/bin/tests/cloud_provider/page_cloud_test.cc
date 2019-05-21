@@ -219,8 +219,9 @@ TEST_F(PageCloudTest, AddAndGetObjects) {
   // TODO(ppi): use a fixed ID here once the cloud provider implementations
   // support erasing objects.
   const std::string id = uuid::Generate();
-  ASSERT_EQ(ZX_OK, page_cloud->AddObject(
-                       ToArray(id), std::move(data).ToTransport(), &status));
+  ASSERT_EQ(ZX_OK,
+            page_cloud->AddObject(ToArray(id), std::move(data).ToTransport(),
+                                  {}, &status));
   EXPECT_EQ(Status::OK, status);
 
   ::fuchsia::mem::BufferPtr buffer_ptr;
@@ -239,15 +240,16 @@ TEST_F(PageCloudTest, AddSameObjectTwice) {
   ASSERT_TRUE(fsl::VmoFromString("bazinga!", &data));
   Status status = Status::INTERNAL_ERROR;
   const std::string id = "some id";
-  ASSERT_EQ(ZX_OK, page_cloud->AddObject(
-                       ToArray(id), std::move(data).ToTransport(), &status));
+  ASSERT_EQ(ZX_OK,
+            page_cloud->AddObject(ToArray(id), std::move(data).ToTransport(),
+                                  {}, &status));
   EXPECT_EQ(Status::OK, status);
   // Adding the same object again must succeed as per cloud provider contract.
   fsl::SizedVmo more_data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga!", &more_data));
   ASSERT_EQ(ZX_OK,
-            page_cloud->AddObject(ToArray(id),
-                                  std::move(more_data).ToTransport(), &status));
+            page_cloud->AddObject(
+                ToArray(id), std::move(more_data).ToTransport(), {}, &status));
   EXPECT_EQ(Status::OK, status);
 }
 

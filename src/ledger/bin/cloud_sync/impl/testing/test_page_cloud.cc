@@ -80,6 +80,7 @@ void TestPageCloud::GetCommits(
 
 void TestPageCloud::AddObject(std::vector<uint8_t> id,
                               fuchsia::mem::Buffer data,
+                              cloud_provider::ReferencePack /*references*/,
                               AddObjectCallback callback) {
   add_object_calls++;
   std::string received_data;
