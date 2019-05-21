@@ -264,7 +264,7 @@ group("zxdb") {
 group("debugserver") {
   testonly = true
   public_deps = [
-    "//garnet/bin/debugserver:debugserver_tests",
+    "//garnet/bin/debugserver:tests",
     "//garnet/lib/debugger_utils:debugger_utils_tests",
     "//garnet/lib/inferior_control:inferior_control_tests",
     "//garnet/packages/prod:debugserver",

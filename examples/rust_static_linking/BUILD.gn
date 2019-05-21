@@ -2,17 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 
 rustc_library("static_linking") {
   name = "static_linking"
   with_unit_tests = true
   version = "0.1.0"
   edition = "2018"
-  non_rust_deps = [
-    ":static",
-  ]
+  non_rust_deps = [ ":static" ]
 }
 
 static_library("static") {
@@ -21,8 +19,7 @@ static_library("static") {
   ]
 }
 
-package("static_linking_tests") {
-  testonly = true
+unittest_package("static_linking_tests") {
   deps = [
     ":static_linking",
   ]

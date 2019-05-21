@@ -3,7 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 executable("fidl_llcpp_conformance_test_bin") {
   testonly = true
@@ -23,9 +24,7 @@ executable("fidl_llcpp_conformance_test_bin") {
   ]
 }
 
-package("fidl_llcpp_conformance_test") {
-  testonly = true
-
+unittest_package("fidl_llcpp_conformance_test") {
   deps = [
     ":fidl_llcpp_conformance_test_bin",
   ]
@@ -61,11 +60,9 @@ executable("fidl_llcpp_types_test_bin") {
   ]
 }
 
-package("fidl_llcpp_types_test") {
-  testonly = true
-
+unittest_package("fidl_llcpp_types_test") {
   deps = [
-    ":fidl_llcpp_types_test_bin"
+    ":fidl_llcpp_types_test_bin",
   ]
 
   tests = [
