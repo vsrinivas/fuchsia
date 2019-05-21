@@ -85,10 +85,22 @@ bool test_vmofile_basic() {
 
     h.reset();
 
-    vfs.Shutdown([](zx_status_t status) {
+    sync_completion_t completion;
+    vfs.Shutdown([&completion](zx_status_t status) {
         EXPECT_EQ(status, ZX_OK);
+        sync_completion_signal(&completion);
     });
 
+    // The following sequence of events must occur to terminate cleanly:
+    // 1) Invoke "vfs.Shutdown", passing a closure.
+    // 2) Wait for the closure to be invoked, and for |completion| to be signalled. This implies
+    // that Shutdown no longer relies on the dispatch loop, nor will it attempt to continue
+    // accessing |completion|.
+    // 3) Shutdown the dispatch loop.
+    //
+    // If the dispatch loop is terminated too before the vfs shutdown task completes, it may see
+    // "ZX_ERR_CANCELED" posted to the "vfs.Shutdown" closure instead.
+    sync_completion_wait(&completion, zx::sec(5).get());
     loop.Shutdown();
 
     END_TEST;
