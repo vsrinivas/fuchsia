@@ -243,7 +243,7 @@ func newCachedResolver(fallback Resolver) Resolver {
 					mu.Unlock()
 				})
 
-				syslog.WarnTf(tag, "%s", err)
+				syslog.VLogTf(syslog.DebugVerbosity, tag, "%s", err)
 			}
 		}
 
