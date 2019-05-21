@@ -520,6 +520,8 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 		}
 	}()
 
+	syslog.VLogTf(syslog.DebugVerbosity, "socket", "%p", ios)
+
 	return peerS
 }
 
@@ -584,14 +586,14 @@ var _ net.SocketControl = (*iostate)(nil)
 
 func tcpipErrorToCode(err *tcpip.Error) int16 {
 	if err != tcpip.ErrConnectStarted {
-		errStr := err.String()
-		if _, file, line, ok := runtime.Caller(1); ok {
+		if pc, file, line, ok := runtime.Caller(1); ok {
 			if i := strings.LastIndexByte(file, '/'); i != -1 {
 				file = file[i+1:]
 			}
-			errStr = fmt.Sprintf("%s:%d: %s", file, line, errStr)
+			syslog.VLogf(syslog.DebugVerbosity, "%s: %s:%d: %s", runtime.FuncForPC(pc).Name(), file, line, err)
+		} else {
+			syslog.VLogf(syslog.DebugVerbosity, "%s", err)
 		}
-		syslog.VLogf(syslog.DebugVerbosity, errStr)
 	}
 	switch err {
 	case tcpip.ErrUnknownDevice:
@@ -682,6 +684,19 @@ func (ios *iostate) Connect(sockaddr []uint8) (int16, error) {
 	if err := ios.ep.Connect(addr); err != nil {
 		return tcpipErrorToCode(err), nil
 	}
+
+	{
+		localAddr, err := ios.ep.GetLocalAddress()
+		if err != nil {
+			panic(err)
+		}
+		remoteAddr, err := ios.ep.GetRemoteAddress()
+		if err != nil {
+			panic(err)
+		}
+		syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
+	}
+
 	return 0, nil
 }
 
@@ -693,6 +708,15 @@ func (ios *iostate) Bind(sockaddr []uint8) (int16, error) {
 	if err := ios.ep.Bind(addr); err != nil {
 		return tcpipErrorToCode(err), nil
 	}
+
+	{
+		localAddr, err := ios.ep.GetLocalAddress()
+		if err != nil {
+			panic(err)
+		}
+		syslog.VLogTf(syslog.DebugVerbosity, "bind", "%p: local=%+v", ios, localAddr)
+	}
+
 	return 0, nil
 }
 
@@ -701,11 +725,7 @@ func (ios *iostate) Listen(backlog int16) (int16, error) {
 		return tcpipErrorToCode(err), nil
 	}
 
-	addr, err := ios.ep.GetLocalAddress()
-	if err != nil {
-		panic(err)
-	}
-	syslog.InfoTf("listen", "%p: local=%+v", ios, addr)
+	syslog.VLogTf(syslog.DebugVerbosity, "listen", "%p: backlog=%d", ios, backlog)
 
 	return 0, nil
 }
@@ -739,7 +759,7 @@ func (ios *iostate) Accept(flags int16) (int16, error) {
 	if err != nil {
 		panic(err)
 	}
-	syslog.InfoTf("accept", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
+	syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
 
 	return 0, nil
 }
