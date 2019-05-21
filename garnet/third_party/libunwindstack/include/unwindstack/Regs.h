@@ -96,23 +96,37 @@ template <typename AddressType>
 class RegsImpl : public Regs {
  public:
   RegsImpl(uint16_t total_regs, Location return_loc)
-      : Regs(total_regs, return_loc), regs_(total_regs) {}
+      : Regs(total_regs, return_loc), regs_(total_regs), regs_undefined_(total_regs) {}
   virtual ~RegsImpl() = default;
 
   bool Is32Bit() override { return sizeof(AddressType) == sizeof(uint32_t); }
 
   inline AddressType& operator[](size_t reg) { return regs_[reg]; }
 
+  inline void SetDefined(size_t reg, bool value) { regs_undefined_[reg] = !value; }
+
+  inline bool IsDefined(size_t reg) { return !regs_undefined_[reg]; }
+
   void* RawData() override { return regs_.data(); }
 
   virtual void IterateRegisters(std::function<void(const char*, uint64_t)> fn) override {
     for (size_t i = 0; i < regs_.size(); ++i) {
+      if (regs_undefined_[i]) {
+        continue;
+      }
+
       fn(std::to_string(i).c_str(), regs_[i]);
     }
   }
 
  protected:
   std::vector<AddressType> regs_;
+
+  // We store true if a register is undefined rather than defined, even though
+  // the interface exposes a bool for whether the register is defined rather
+  // than undefined, because we want to take advantage of the default
+  // initializer to set all registers to defined by default.
+  std::vector<bool> regs_undefined_;
 };
 
 }  // namespace unwindstack

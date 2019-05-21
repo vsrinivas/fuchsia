@@ -413,9 +413,13 @@ struct EvalInfo {
 
 template <typename AddressType>
 bool DwarfSectionImpl<AddressType>::EvalRegister(const DwarfLocation* loc, uint32_t reg,
-                                                 AddressType* reg_ptr, void* info) {
+                                                 AddressType* reg_ptr, bool* defined, void* info) {
   EvalInfo<AddressType>* eval_info = reinterpret_cast<EvalInfo<AddressType>*>(info);
   Memory* regular_memory = eval_info->regular_memory;
+  if (defined) {
+    *defined = false;
+  }
+
   switch (loc->type) {
     case DWARF_LOCATION_OFFSET:
       if (!regular_memory->ReadFully(eval_info->cfa + loc->values[0], reg_ptr, sizeof(AddressType))) {
@@ -461,11 +465,14 @@ bool DwarfSectionImpl<AddressType>::EvalRegister(const DwarfLocation* loc, uint3
       if (reg == eval_info->cie->return_address_register) {
         eval_info->return_address_undefined = true;
       }
-      break;
+      return true;
     default:
-      break;
+      return true;
   }
 
+  if (defined) {
+    *defined = true;
+  }
   return true;
 }
 
@@ -530,9 +537,12 @@ bool DwarfSectionImpl<AddressType>::Eval(const DwarfCie* cie, Memory* regular_me
     }
 
     reg_ptr = eval_info.regs_info.Save(reg);
-    if (!EvalRegister(&entry.second, reg, reg_ptr, &eval_info)) {
+    bool defined;
+    if (!EvalRegister(&entry.second, reg, reg_ptr, &defined, &eval_info)) {
       return false;
     }
+
+    eval_info.regs_info.regs->SetDefined(reg, defined);
   }
 
   // Find the return address location.

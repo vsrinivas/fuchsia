@@ -70,23 +70,40 @@ bool RegsX86_64::SetPcFromReturnAddress(Memory* process_memory) {
 }
 
 void RegsX86_64::IterateRegisters(std::function<void(const char*, uint64_t)> fn) {
-  fn("rax", regs_[X86_64_REG_RAX]);
-  fn("rbx", regs_[X86_64_REG_RBX]);
-  fn("rcx", regs_[X86_64_REG_RCX]);
-  fn("rdx", regs_[X86_64_REG_RDX]);
-  fn("r8", regs_[X86_64_REG_R8]);
-  fn("r9", regs_[X86_64_REG_R9]);
-  fn("r10", regs_[X86_64_REG_R10]);
-  fn("r11", regs_[X86_64_REG_R11]);
-  fn("r12", regs_[X86_64_REG_R12]);
-  fn("r13", regs_[X86_64_REG_R13]);
-  fn("r14", regs_[X86_64_REG_R14]);
-  fn("r15", regs_[X86_64_REG_R15]);
-  fn("rdi", regs_[X86_64_REG_RDI]);
-  fn("rsi", regs_[X86_64_REG_RSI]);
-  fn("rbp", regs_[X86_64_REG_RBP]);
-  fn("rsp", regs_[X86_64_REG_RSP]);
-  fn("rip", regs_[X86_64_REG_RIP]);
+  if (IsDefined(X86_64_REG_RAX))
+    fn("rax", regs_[X86_64_REG_RAX]);
+  if (IsDefined(X86_64_REG_RBX))
+    fn("rbx", regs_[X86_64_REG_RBX]);
+  if (IsDefined(X86_64_REG_RCX))
+    fn("rcx", regs_[X86_64_REG_RCX]);
+  if (IsDefined(X86_64_REG_RDX))
+    fn("rdx", regs_[X86_64_REG_RDX]);
+  if (IsDefined(X86_64_REG_R8))
+    fn("r8", regs_[X86_64_REG_R8]);
+  if (IsDefined(X86_64_REG_R9))
+    fn("r9", regs_[X86_64_REG_R9]);
+  if (IsDefined(X86_64_REG_R10))
+    fn("r10", regs_[X86_64_REG_R10]);
+  if (IsDefined(X86_64_REG_R11))
+    fn("r11", regs_[X86_64_REG_R11]);
+  if (IsDefined(X86_64_REG_R12))
+    fn("r12", regs_[X86_64_REG_R12]);
+  if (IsDefined(X86_64_REG_R13))
+    fn("r13", regs_[X86_64_REG_R13]);
+  if (IsDefined(X86_64_REG_R14))
+    fn("r14", regs_[X86_64_REG_R14]);
+  if (IsDefined(X86_64_REG_R15))
+    fn("r15", regs_[X86_64_REG_R15]);
+  if (IsDefined(X86_64_REG_RDI))
+    fn("rdi", regs_[X86_64_REG_RDI]);
+  if (IsDefined(X86_64_REG_RSI))
+    fn("rsi", regs_[X86_64_REG_RSI]);
+  if (IsDefined(X86_64_REG_RBP))
+    fn("rbp", regs_[X86_64_REG_RBP]);
+  if (IsDefined(X86_64_REG_RSP))
+    fn("rsp", regs_[X86_64_REG_RSP]);
+  if (IsDefined(X86_64_REG_RIP))
+    fn("rip", regs_[X86_64_REG_RIP]);
 }
 
 Regs* RegsX86_64::Read(void* remote_data) {

@@ -70,15 +70,24 @@ bool RegsX86::SetPcFromReturnAddress(Memory* process_memory) {
 }
 
 void RegsX86::IterateRegisters(std::function<void(const char*, uint64_t)> fn) {
-  fn("eax", regs_[X86_REG_EAX]);
-  fn("ebx", regs_[X86_REG_EBX]);
-  fn("ecx", regs_[X86_REG_ECX]);
-  fn("edx", regs_[X86_REG_EDX]);
-  fn("ebp", regs_[X86_REG_EBP]);
-  fn("edi", regs_[X86_REG_EDI]);
-  fn("esi", regs_[X86_REG_ESI]);
-  fn("esp", regs_[X86_REG_ESP]);
-  fn("eip", regs_[X86_REG_EIP]);
+  if (IsDefined(X86_REG_EAX))
+    fn("eax", regs_[X86_REG_EAX]);
+  if (IsDefined(X86_REG_EBX))
+    fn("ebx", regs_[X86_REG_EBX]);
+  if (IsDefined(X86_REG_ECX))
+    fn("ecx", regs_[X86_REG_ECX]);
+  if (IsDefined(X86_REG_EDX))
+    fn("edx", regs_[X86_REG_EDX]);
+  if (IsDefined(X86_REG_EBP))
+    fn("ebp", regs_[X86_REG_EBP]);
+  if (IsDefined(X86_REG_EDI))
+    fn("edi", regs_[X86_REG_EDI]);
+  if (IsDefined(X86_REG_ESI))
+    fn("esi", regs_[X86_REG_ESI]);
+  if (IsDefined(X86_REG_ESP))
+    fn("esp", regs_[X86_REG_ESP]);
+  if (IsDefined(X86_REG_EIP))
+    fn("eip", regs_[X86_REG_EIP]);
 }
 
 Regs* RegsX86::Read(void* user_data) {

@@ -92,22 +92,38 @@ bool RegsArm::SetPcFromReturnAddress(Memory*) {
 }
 
 void RegsArm::IterateRegisters(std::function<void(const char*, uint64_t)> fn) {
-  fn("r0", regs_[ARM_REG_R0]);
-  fn("r1", regs_[ARM_REG_R1]);
-  fn("r2", regs_[ARM_REG_R2]);
-  fn("r3", regs_[ARM_REG_R3]);
-  fn("r4", regs_[ARM_REG_R4]);
-  fn("r5", regs_[ARM_REG_R5]);
-  fn("r6", regs_[ARM_REG_R6]);
-  fn("r7", regs_[ARM_REG_R7]);
-  fn("r8", regs_[ARM_REG_R8]);
-  fn("r9", regs_[ARM_REG_R9]);
-  fn("r10", regs_[ARM_REG_R10]);
-  fn("r11", regs_[ARM_REG_R11]);
-  fn("ip", regs_[ARM_REG_R12]);
-  fn("sp", regs_[ARM_REG_SP]);
-  fn("lr", regs_[ARM_REG_LR]);
-  fn("pc", regs_[ARM_REG_PC]);
+  if (IsDefined(ARM_REG_R0))
+    fn("r0", regs_[ARM_REG_R0]);
+  if (IsDefined(ARM_REG_R1))
+    fn("r1", regs_[ARM_REG_R1]);
+  if (IsDefined(ARM_REG_R2))
+    fn("r2", regs_[ARM_REG_R2]);
+  if (IsDefined(ARM_REG_R3))
+    fn("r3", regs_[ARM_REG_R3]);
+  if (IsDefined(ARM_REG_R4))
+    fn("r4", regs_[ARM_REG_R4]);
+  if (IsDefined(ARM_REG_R5))
+    fn("r5", regs_[ARM_REG_R5]);
+  if (IsDefined(ARM_REG_R6))
+    fn("r6", regs_[ARM_REG_R6]);
+  if (IsDefined(ARM_REG_R7))
+    fn("r7", regs_[ARM_REG_R7]);
+  if (IsDefined(ARM_REG_R8))
+    fn("r8", regs_[ARM_REG_R8]);
+  if (IsDefined(ARM_REG_R9))
+    fn("r9", regs_[ARM_REG_R9]);
+  if (IsDefined(ARM_REG_R10))
+    fn("r10", regs_[ARM_REG_R10]);
+  if (IsDefined(ARM_REG_R11))
+    fn("r11", regs_[ARM_REG_R11]);
+  if (IsDefined(ARM_REG_R12))
+    fn("ip", regs_[ARM_REG_R12]);
+  if (IsDefined(ARM_REG_SP))
+    fn("sp", regs_[ARM_REG_SP]);
+  if (IsDefined(ARM_REG_LR))
+    fn("lr", regs_[ARM_REG_LR]);
+  if (IsDefined(ARM_REG_PC))
+    fn("pc", regs_[ARM_REG_PC]);
 }
 
 Regs* RegsArm::Read(void* remote_data) {
