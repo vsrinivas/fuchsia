@@ -85,7 +85,7 @@ bool read_and_write_direct_test() {
     for (auto element : Examples::map()) {
         TestLibrary library(element.first, element.second);
         std::unique_ptr<fidl::raw::File> ast;
-        EXPECT_TRUE(library.Parse(ast));
+        EXPECT_TRUE(library.Parse(&ast));
 
         NoopTreeVisitor visitor;
         visitor.OnFile(ast);

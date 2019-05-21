@@ -28,11 +28,22 @@ public:
     fidl::ErrorReporter error_reporter;
     fidl::flat::Typespace typespace;
     fidl::flat::Libraries all_libraries;
-    std::set<std::unique_ptr<fidl::SourceFile>> all_sources;
+    std::vector<std::unique_ptr<fidl::SourceFile>> all_sources_of_all_libraries;
 };
 
-class TestLibrary {
+class TestLibrary final {
 public:
+    explicit TestLibrary()
+        : TestLibrary(&owned_shared_) {}
+
+    explicit TestLibrary(SharedAmongstLibraries* shared)
+        : error_reporter_(&shared->error_reporter),
+          typespace_(&shared->typespace),
+          all_libraries_(&shared->all_libraries),
+          all_sources_of_all_libraries_(&shared->all_sources_of_all_libraries),
+          library_(std::make_unique<fidl::flat::Library>(
+              all_libraries_, error_reporter_, typespace_)) {}
+
     explicit TestLibrary(const std::string& raw_source_code)
         : TestLibrary("example.fidl", raw_source_code) {}
 
@@ -41,15 +52,14 @@ public:
 
     TestLibrary(const std::string& filename, const std::string& raw_source_code,
                 SharedAmongstLibraries* shared)
-        : error_reporter_(&shared->error_reporter),
-          typespace_(&shared->typespace),
-          all_libraries_(&shared->all_libraries),
-          all_sources_(&shared->all_sources),
-          library_(std::make_unique<fidl::flat::Library>(
-              all_libraries_, error_reporter_, typespace_)) {
+        : TestLibrary(shared) {
+        AddSource(filename, raw_source_code);
+    }
+
+    void AddSource(const std::string& filename, const std::string& raw_source_code) {
         auto source_file = MakeSourceFile(filename, raw_source_code);
-        source_file_ = source_file.get();
-        all_sources_->insert(std::move(source_file));
+        all_sources_.push_back(source_file.get());
+        all_sources_of_all_libraries_->push_back(std::move(source_file));
     }
 
     bool AddDependentLibrary(TestLibrary dependent_library) {
@@ -60,29 +70,39 @@ public:
         all_libraries_->AddAttributeSchema(name, std::move(schema));
     }
 
-    bool Parse(std::unique_ptr<fidl::raw::File>& ast_ptr) {
-        fidl::Lexer lexer(*source_file_, error_reporter_);
+    // TODO(pascallouis): remove, this does not use a library.
+    bool Parse(std::unique_ptr<fidl::raw::File>* out_ast_ptr) {
+        assert(all_sources_.size() == 1 && "parse can only be used with one source");
+        auto source_file = all_sources_.at(0);
+        fidl::Lexer lexer(*source_file, error_reporter_);
         fidl::Parser parser(&lexer, error_reporter_);
-        ast_ptr.reset(parser.Parse().release());
+        out_ast_ptr->reset(parser.Parse().release());
         return parser.Ok();
     }
 
     bool Compile() {
-        fidl::Lexer lexer(*source_file_, error_reporter_);
-        fidl::Parser parser(&lexer, error_reporter_);
-        auto ast = parser.Parse();
-        return parser.Ok() &&
-               library_->ConsumeFile(std::move(ast)) &&
-               library_->Compile();
+        for (auto source_file : all_sources_) {
+            fidl::Lexer lexer(*source_file, error_reporter_);
+            fidl::Parser parser(&lexer, error_reporter_);
+            auto ast = parser.Parse();
+            if (!parser.Ok())
+                return false;
+            if (!library_->ConsumeFile(std::move(ast)))
+                return false;
+        }
+        return library_->Compile();
     }
 
+    // TODO(pascallouis): remove, this does not use a library.
     bool Lint(fidl::Findings* findings) {
-        fidl::Lexer lexer(*source_file_, error_reporter_);
+        assert(all_sources_.size() == 1 && "lint can only be used with one source");
+        auto source_file = all_sources_.at(0);
+        fidl::Lexer lexer(*source_file, error_reporter_);
         fidl::Parser parser(&lexer, error_reporter_);
         auto ast = parser.Parse();
         if (!parser.Ok()) {
-            std::string_view beginning(source_file_->data().data(), 0);
-            fidl::SourceLocation source_location(beginning, *source_file_);
+            std::string_view beginning(source_file->data().data(), 0);
+            fidl::SourceLocation source_location(beginning, *source_file);
             findings->emplace_back(source_location, "parser-error",
                                    error_reporter_->errors().front() + "\n");
             return false;
@@ -102,16 +122,6 @@ public:
         auto json_generator = fidl::JSONGenerator(library_.get());
         auto out = json_generator.Produce();
         return out.str();
-    }
-
-    bool AddSourceFile(const std::string& filename, const std::string& raw_source_code) {
-        auto source_file = MakeSourceFile(filename, raw_source_code);
-        fidl::Lexer lexer(*source_file, error_reporter_);
-        fidl::Parser parser(&lexer, error_reporter_);
-        auto ast = parser.Parse();
-        return parser.Ok() &&
-               library_->ConsumeFile(std::move(ast)) &&
-               library_->Compile();
     }
 
     const fidl::flat::Bits* LookupBits(const std::string& name) {
@@ -186,36 +196,8 @@ public:
     }
 
     const fidl::SourceFile& source_file() const {
-        return *source_file_;
-    }
-
-    std::string filename() const {
-        return std::string(source_file().filename());
-    }
-
-    std::string FileData() const {
-        return std::string(source_file().data());
-    }
-
-    std::string FileLocation(std::string within, std::string to_find) const {
-        std::istringstream lines(within);
-        std::string line;
-        size_t line_number = 0;
-        while (std::getline(lines, line)) {
-            line_number++;
-            size_t column_index = line.find(to_find);
-            if (column_index != std::string::npos) {
-                std::stringstream position;
-                position << filename() << ":" << line_number << ":" << (column_index + 1);
-                return position.str();
-            }
-        }
-        assert(false); // Bug in test
-        return "never reached";
-    }
-
-    std::string FileLocation(std::string to_find) const {
-        return FileLocation(FileData(), to_find);
+        assert(all_sources_.size() == 1 && "convenience method only possible with single source");
+        return *all_sources_.at(0);
     }
 
     const std::vector<std::string>& errors() const {
@@ -235,8 +217,8 @@ protected:
     fidl::ErrorReporter* error_reporter_;
     fidl::flat::Typespace* typespace_;
     fidl::flat::Libraries* all_libraries_;
-    std::set<std::unique_ptr<fidl::SourceFile>>* all_sources_;
-    fidl::SourceFile* source_file_;
+    std::vector<std::unique_ptr<fidl::SourceFile>>* all_sources_of_all_libraries_;
+    std::vector<fidl::SourceFile*> all_sources_;
     std::unique_ptr<fidl::flat::Library> library_;
 };
 

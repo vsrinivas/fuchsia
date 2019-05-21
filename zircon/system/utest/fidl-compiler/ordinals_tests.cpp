@@ -81,7 +81,7 @@ protocol b {
     END_TEST;
 }
 
-bool test_clashing_ordinal_values() {
+bool clashing_ordinal_values() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -108,7 +108,7 @@ protocol b {
     END_TEST;
 }
 
-bool test_clashing_ordinal_values_with_attribute() {
+bool clashing_ordinal_values_with_attribute() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
@@ -157,7 +157,7 @@ protocol b {
     END_TEST;
 }
 
-bool test_ordinal_value_is_sha256() {
+bool ordinal_value_is_sha256() {
     BEGIN_TEST;
     TestLibrary library(R"FIDL(
 library a;
@@ -183,8 +183,8 @@ protocol b {
 
 BEGIN_TEST_CASE(ordinals_test)
 RUN_TEST(ordinal_cannot_be_zero)
-RUN_TEST(test_clashing_ordinal_values)
-RUN_TEST(test_clashing_ordinal_values_with_attribute)
+RUN_TEST(clashing_ordinal_values)
+RUN_TEST(clashing_ordinal_values_with_attribute)
 RUN_TEST(attribute_resolves_clashes)
-RUN_TEST(test_ordinal_value_is_sha256)
+RUN_TEST(ordinal_value_is_sha256)
 END_TEST_CASE(ordinals_test)

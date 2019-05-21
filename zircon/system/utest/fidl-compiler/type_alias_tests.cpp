@@ -62,6 +62,48 @@ struct Message {
     END_TEST;
 }
 
+bool invalid_no_optional_on_primitive() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library test.optionals;
+
+struct Bad {
+    int64? opt_num;
+};
+
+)FIDL");
+    ASSERT_FALSE(library.Compile());
+    const auto& errors = library.errors();
+    ASSERT_EQ(1, errors.size());
+    ASSERT_STR_STR(errors[0].c_str(),
+        "int64 cannot be nullable");
+
+    END_TEST;
+}
+
+bool invalid_no_optional_on_aliased_primitive() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library test.optionals;
+
+using alias = int64;
+
+struct Bad {
+    alias? opt_num;
+};
+
+)FIDL");
+    ASSERT_FALSE(library.Compile());
+    const auto& errors = library.errors();
+    ASSERT_EQ(1, errors.size());
+    ASSERT_STR_STR(errors[0].c_str(),
+        "int64 cannot be nullable");
+
+    END_TEST;
+}
+
 bool vector_parametrized_on_decl() {
     BEGIN_TEST;
 
@@ -304,6 +346,8 @@ using alias_of_vector_nullable = vector?;
 BEGIN_TEST_CASE(type_alias_tests)
 RUN_TEST(primitive)
 RUN_TEST(primitive_type_alias_before_use)
+RUN_TEST(invalid_no_optional_on_primitive)
+RUN_TEST(invalid_no_optional_on_aliased_primitive)
 RUN_TEST(vector_parametrized_on_decl)
 RUN_TEST(vector_parametrized_on_use)
 RUN_TEST(vector_bounded_on_decl)

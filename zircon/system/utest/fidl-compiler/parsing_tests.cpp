@@ -247,10 +247,8 @@ private:
 static bool invalid_character_test(void) {
     BEGIN_TEST;
 
-    class InvalidCharacterLibrary : public TestLibrary {
-    public:
-        InvalidCharacterLibrary()
-            : TestLibrary("invalid.character.fidl", R"FIDL(
+    LocaleSwapper swapper("de_DE.iso88591");
+    TestLibrary test_library("invalid.character.fidl", R"FIDL(
 library fidl.test.maxbytes;
 
 // This is all alphanumeric in the appropriate locale, but not a valid
@@ -259,13 +257,8 @@ struct ß {
     int32 x;
 };
 
-)FIDL") {}
-    } test_library;
-
-    {
-        LocaleSwapper("de_DE.iso88591");
-        EXPECT_FALSE(test_library.Compile());
-    }
+)FIDL");
+    ASSERT_FALSE(test_library.Compile());
 
     const auto& errors = test_library.errors();
     EXPECT_NE(errors.size(), 0);

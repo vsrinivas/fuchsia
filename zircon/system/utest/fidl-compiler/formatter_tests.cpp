@@ -23,7 +23,7 @@ void InitializeContents() {
     for (auto element : Examples::map()) {
         TestLibrary library(element.first, element.second);
         std::unique_ptr<fidl::raw::File> ast;
-        library.Parse(ast);
+        library.Parse(&ast);
 
         fidl::raw::FormattingTreeVisitor visitor;
         visitor.OnFile(ast);
@@ -39,7 +39,7 @@ bool idempotence_test() {
     for (auto element : formatted_output_) {
         TestLibrary library(element.first, element.second);
         std::unique_ptr<fidl::raw::File> ast;
-        EXPECT_TRUE(library.Parse(ast));
+        EXPECT_TRUE(library.Parse(&ast));
 
         fidl::raw::FormattingTreeVisitor visitor;
         visitor.OnFile(ast);

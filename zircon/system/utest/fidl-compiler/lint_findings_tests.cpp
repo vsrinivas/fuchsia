@@ -90,7 +90,7 @@ public:
         ASSERT_STRING_EQ(finding.subcategory(), check_id_, context);
         ASSERT_STRING_EQ(
             finding.source_location().position(),
-            library.FileLocation(source_template_.str(), "${TEST}"), context);
+            FileLocation(source_template_.str(), "${TEST}"), context);
         ASSERT_STRING_EQ(finding.message(), message_, context);
         if (!suggestion_.has_value()) {
             ASSERT_FALSE(finding.suggestion().has_value(), context);
@@ -123,6 +123,23 @@ private:
                          "Missing template substitutions");
         }
         return true;
+    }
+
+    static std::string FileLocation(const std::string& within, const std::string& to_find) {
+        std::istringstream lines(within);
+        std::string line;
+        size_t line_number = 0;
+        while (std::getline(lines, line)) {
+            line_number++;
+            size_t column_index = line.find(to_find);
+            if (column_index != std::string::npos) {
+                std::stringstream position;
+                position << "example.fidl:" << line_number << ":" << (column_index + 1);
+                return position.str();
+            }
+        }
+        assert(false); // Bug in test
+        return "never reached";
     }
 
     std::string check_id_;

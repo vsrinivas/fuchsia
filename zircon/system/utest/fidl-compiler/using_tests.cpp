@@ -39,7 +39,7 @@ struct Foo {
 
 )FIDL", &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-    EXPECT_TRUE(library.Compile());
+    ASSERT_TRUE(library.Compile());
 
     END_TEST;
 }

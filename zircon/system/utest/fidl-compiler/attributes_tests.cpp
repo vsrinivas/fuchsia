@@ -60,18 +60,18 @@ protocol A {
 bool no_two_same_attribute_on_library_test() {
     BEGIN_TEST;
 
-    TestLibrary library("dup_attributes.fidl", R"FIDL(
+    TestLibrary library;
+    library.AddSource("dup_attributes.fidl", R"FIDL(
 [dup = "first"]
 library fidl.test.dupattributes;
 
 )FIDL");
-    EXPECT_TRUE(library.Compile());
-
-    EXPECT_FALSE(library.AddSourceFile("dup_attributes_second.fidl", R"FIDL(
+    library.AddSource("dup_attributes_second.fidl", R"FIDL(
 [dup = "second"]
 library fidl.test.dupattributes;
 
-)FIDL"));
+)FIDL");
+    ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(), "duplicate attribute with name 'dup'");
