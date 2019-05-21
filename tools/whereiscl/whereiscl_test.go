@@ -55,71 +55,7 @@ func TestParseReviewURL_invalidURL(t *testing.T) {
 	}
 }
 
-func TestGetCLStatus(t *testing.T) {
-	cl := "987654321"
-	http.DefaultClient.Transport = &mockTransport{
-		cl: cl,
-		body: `)]}'
-[
-  {
-    "foo": 42,
-    "status": "MERGED"
-  }
-]`,
-	}
-	got, err := getCLStatus(queryInfo{
-		apiEndpoint: "https://fuchsia-review.googlesource.com",
-		cl:          cl,
-	})
-	if err != nil {
-		t.Fatalf("getCLStatus: %v", err)
-	}
-	want := "MERGED"
-	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("getCLStatus: mismatch (-want +got):\n%s", d)
-	}
-}
-
-func TestGetCLStatus_clNotFound(t *testing.T) {
-	cl := "987654321"
-	http.DefaultClient.Transport = &mockTransport{
-		cl: cl,
-		body: `)]}'
-[]`,
-	}
-	_, err := getCLStatus(queryInfo{
-		apiEndpoint: "https://fuchsia-review.googlesource.com",
-		cl:          cl,
-	})
-	if err == nil {
-		t.Error("getCLStatus: error expected; got nil")
-	}
-}
-
-func TestGetCLStatus_tooManyCLs(t *testing.T) {
-	cl := "987654321"
-	http.DefaultClient.Transport = &mockTransport{
-		cl: cl,
-		body: `)]}'
-[
-  {
-    "status": "ACTIVE"
-  },
-  {
-    "status": "MERGED"
-  }
-]`,
-	}
-	_, err := getCLStatus(queryInfo{
-		apiEndpoint: "https://fuchsia-review.googlesource.com",
-		cl:          cl,
-	})
-	if err == nil {
-		t.Error("getCLStatus: error expected; got nil")
-	}
-}
-
-// Fake http transport.
+// Fake http transport. This is used from other test files.
 type mockTransport struct{ cl, body string }
 
 func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -132,7 +68,12 @@ func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 				log.Fatalf("RoundTrip: invalid CL: %s", cl)
 			}
 		default:
-			log.Fatalf("RoundTrip: invalid path: %s", req.URL.Path)
+			log.Fatalf("RoundTrip: invalid changes path: %s", req.URL.Path)
+		}
+	case "fuchsia.googlesource.com":
+		manifestPrefix := "/integration/+/refs/heads/master/"
+		if !strings.HasPrefix(req.URL.Path, manifestPrefix) {
+			log.Fatalf("RoundTrip: invalid manifest path: %s", req.URL.Path)
 		}
 	default:
 		log.Fatalf("RoundTrip: invalid hostname: %s", req.URL.Hostname())
