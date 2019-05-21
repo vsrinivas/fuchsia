@@ -64,10 +64,25 @@ package("voila") {
 test_package("voila_tests") {
   deps = [
     ":bin",
+    "//peridot/bin/voila/testing/session_shell",
   ]
   tests = [
     {
       name = "voila_bin_test"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "test_session_shell"
+      source = "voila_test_session_shell"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("testing/session_shell/meta/session_shell.cmx")
+      dest = "session_shell.cmx"
     },
   ]
 }
