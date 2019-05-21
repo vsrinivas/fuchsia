@@ -161,7 +161,7 @@ It should now return a pithy quote.
 
 You can't run this sample as the other two (try to run `hello_world_cpp` or
 `hello_world_rust`). To run a Fuchsia component, you need to run it's Fuchsia
-package URI. Lucily, there are some built-in conveniences to help you find this.
+package URI. Luckily, there are some built-in conveniences to help you find this.
 You can use the `run` command:
 
 ```
