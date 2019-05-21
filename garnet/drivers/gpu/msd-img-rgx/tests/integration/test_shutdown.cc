@@ -17,7 +17,14 @@ namespace {
 
 class TestBase {
 public:
-    TestBase() { fd_ = open("/dev/class/gpu/000", O_RDONLY); }
+    TestBase()
+    {
+#if defined(NO_HARDWARE)
+        fd_ = open("/dev/test/msd-img-rgx-no-hardware", O_RDONLY);
+#else
+        fd_ = open("/dev/class/gpu/000", O_RDONLY);
+#endif
+    }
 
     int fd() { return fd_; }
 

@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/msd_img_rgx_no_hardware_integration_tests"
+    },
+    "sandbox": {
+        "dev": [
+            "test"
+        ],
+        "features": [
+            "system-temp"
+        ]
+    }
+}

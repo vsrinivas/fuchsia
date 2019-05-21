@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cipd.gni")
+import("//build/images/manifest.gni")
 import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
@@ -25,15 +27,45 @@ executable("msd_img_rgx_integration_tests_executable") {
   ]
 }
 
+executable("msd_img_rgx_no_hardware_integration_tests_executable") {
+  testonly = true
+  output_name = "msd_img_rgx_no_hardware_integration_tests"
+
+  defines = [ "NO_HARDWARE" ]
+  sources = [
+    "main.cc",
+    "test_shutdown.cc",
+  ]
+
+  public_deps = [
+    "$zircon_build_root/public/lib/fdio",
+    "//garnet/lib/magma/include:magma_abi",
+    "//garnet/lib/magma/src/libmagma",
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/tests/helper:platform_device_helper",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 test_package("msd_img_rgx_integration_tests") {
   deps = [
     ":msd_img_rgx_integration_tests_executable",
+    ":msd_img_rgx_no_hardware_integration_tests_executable",
   ]
 
   tests = [
     {
       name = "msd_img_rgx_integration_tests"
       disabled = true
+    },
+    {
+      name = "msd_img_rgx_no_hardware_integration_tests"
+
+      # Disable the test if internal_access (from //build/cipd.gni) is false,
+      # which means that the firmware wasn't downloaded and the driver can't
+      # be started.
+      disabled = !internal_access
     },
   ]
 }
