@@ -32,6 +32,19 @@ typedef struct vm_page {
 #define VM_PAGE_OBJECT_MAX_PIN_COUNT ((1ul << VM_PAGE_OBJECT_PIN_COUNT_BITS) - 1)
 
             uint8_t pin_count : VM_PAGE_OBJECT_PIN_COUNT_BITS;
+
+            // Bits used by VmObjectPaged implementation of COW clones.
+            //
+            // Pages of VmObjectPaged have two "split" bits. These bits are used to track which
+            // pages in children of hidden VMOs have diverged from their parent. There are two
+            // bits, left and right, one for each child. In a hidden parent, a 1 split bit means
+            // that page in the child has diverged from the parent and the parent's page is
+            // no longer accessible to that child.
+            //
+            // It should never be the case that both split bits are set, as the page should
+            // be moved into the child instead of setting the second bit.
+            uint8_t cow_left_split : 1;
+            uint8_t cow_right_split : 1;
         } object; // attached to a vm object
     };
 

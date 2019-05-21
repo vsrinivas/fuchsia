@@ -42,8 +42,14 @@ const char* page_state_to_string(unsigned int state) {
 }
 
 void vm_page::dump() const {
-    printf("page %p: address %#" PRIxPTR " state %s flags %#x\n", this, paddr(),
+    printf("page %p: address %#" PRIxPTR " state %s flags %#x", this, paddr(),
            page_state_to_string(state_priv), flags);
+    if (state_priv == VM_PAGE_STATE_OBJECT) {
+        printf(" pin_count %d split_bits %d%d\n",
+               object.pin_count, object.cow_left_split, object.cow_right_split);
+    } else {
+        printf("\n");
+    }
 }
 
 void vm_page::set_state(vm_page_state new_state) {

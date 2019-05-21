@@ -81,7 +81,7 @@ public:
         Guard<fbl::Mutex> guard{&lock_};
         return GetRootPageSourceLocked() != nullptr;
     }
-    bool is_hidden() const { return (options_ & kHidden); }
+    bool is_hidden() const override { return (options_ & kHidden); }
     ChildType child_type() const override {
         Guard<fbl::Mutex> guard{&lock_};
         return (original_parent_user_id_ != 0) ? ChildType::kCowClone : ChildType::kNotChild;
@@ -176,9 +176,12 @@ private:
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPaged);
 
-    // add a page to the object
+    // Add a page to the object. This operation unmaps the corresponding
+    // offset from any existing mappings.
     zx_status_t AddPage(vm_page_t* p, uint64_t offset);
-    zx_status_t AddPageLocked(vm_page_t* p, uint64_t offset) TA_REQ(lock_);
+    // If |do_range_update| is false, this function will skip updating mappings.
+    zx_status_t AddPageLocked(vm_page_t* p, uint64_t offset,
+                              bool do_range_update = true) TA_REQ(lock_);
 
     // internal page list routine
     void AddPageToArray(size_t index, vm_page_t* p);
@@ -217,6 +220,85 @@ private:
             // Walks the child chain, which confuses analysis.
             TA_NO_THREAD_SAFETY_ANALYSIS;
 
+    // GetPageLocked helper function that 'forks' the page at |offset| of the current vmo. If
+    // this function successfully inserts a page into |offset| of the current vmo, it returns
+    // a pointer to the corresponding vm_page_t struct. The only failure condition is memory
+    // allocation failure, in which case this function returns null.
+    //
+    // The source page that is being forked has already been calculated - it is |page|, which
+    // is currently in |page_owner| at offset |owner_offset|.
+    //
+    // This function is responsible for ensuring that COW clones never result in worse memory
+    // consumption than simply creating a new vmo and memcpying the content. It does this by
+    // migrating a page from a hidden vmo into one child if that page is not 'accessible' to the
+    // other child (instead of allocating a new page into the child and making the hidden vmo's
+    // page inaccessible).
+    //
+    // Whether a particular page in a hidden vmo is 'accessible' to a particular child is
+    // determined by a combination of two factors. First, if the page lies outside of the range
+    // in the hidden vmo the child can see (specified by parent_offset_ and parent_limit_), then
+    // the page is not accessible. Second, if the page has already been copied into the child,
+    // then the page in the hidden vmo is not accessible to that child. This is tracked by the
+    // cow_X_split bits in the vm_page_t structure.
+    //
+    // To handle memory allocation failure, this function performs the fork operation from the
+    // root vmo towards the leaf vmo. This allows the COW invariants to always be preserved.
+    //
+    // |page| must not be the zero-page, as there is no need to do the complex page
+    // fork logic to reduce memory consumption in that case.
+    vm_page_t* CloneCowPageLocked(uint64_t offset, list_node_t* free_list,
+                                  VmObjectPaged* page_owner, vm_page_t* page,
+                                  uint64_t owner_offset)
+            // Walking through the ancestors confuses analysis.
+            TA_NO_THREAD_SAFETY_ANALYSIS;
+
+    // Returns true if |page| (located at |offset| in this vmo) is only accessible by one
+    // child, where 'accessible' is defined by ::CloneCowPageLocked.
+    bool IsUniAccessibleLocked(vm_page_t* page, uint64_t offset) const
+            // Reaching into the children confuses analysis
+            TA_NO_THREAD_SAFETY_ANALYSIS;
+
+    // Releases this vmo's reference to any ancestor vmo's COW pages, for the range [start, end)
+    // in this vmo. This is done by either setting the pages' split bits (if something else
+    // can access the pages) or by freeing the pages onto |free_list| (if nothing else can
+    // access the pages).
+    //
+    // This function recursively invokes itself for regions of the parent vmo which are
+    // not accessible by the sibling vmo.
+    // TODO(ZX-757): Carefully constructed clone chains can blow the stack.
+    //
+    // If |update_limit| is set, then this function will recursively update parent_limit_ of
+    // this and ancestor vmos to account for the fact that this vmo will never access pages
+    // in its parent above |start|.
+    void ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, bool update_limit,
+                                     list_node_t* free_list)
+            // Calling into the parents confuses analysis
+            TA_NO_THREAD_SAFETY_ANALYSIS;
+
+    // Outside of initialization/destruction, hidden vmos always have two children. For
+    // clarity, whichever child is first in the list is the 'left' child, and whichever
+    // child is second is the 'right' child.
+    VmObjectPaged& left_child_locked() TA_REQ(lock_) {
+        DEBUG_ASSERT(is_hidden());
+        DEBUG_ASSERT(children_list_len_ == 2);
+        return children_list_.front();
+    }
+    VmObjectPaged& right_child_locked() TA_REQ(lock_) {
+        DEBUG_ASSERT(is_hidden());
+        DEBUG_ASSERT(children_list_len_ == 2);
+        return children_list_.back();
+    }
+    const VmObjectPaged& left_child_locked() const TA_REQ(lock_) {
+        DEBUG_ASSERT(is_hidden());
+        DEBUG_ASSERT(children_list_len_ == 2);
+        return children_list_.front();
+    }
+    const VmObjectPaged& right_child_locked() const TA_REQ(lock_) {
+        DEBUG_ASSERT(is_hidden());
+        DEBUG_ASSERT(children_list_len_ == 2);
+        return children_list_.back();
+    }
+
     // members
     const uint32_t options_;
     uint64_t size_ TA_GUARDED(lock_) = 0;
@@ -232,6 +314,12 @@ private:
     // Record the user_id_ of the original parent, in case we make
     // a bidirectional clone and end up changing parent_.
     uint64_t original_parent_user_id_ TA_GUARDED(lock_) = 0;
+
+    // Flag used for walking back up clone tree without recursion. See ::CloneCowPageLocked.
+    enum class StackDir {
+        Left, Right,
+    };
+    StackDir page_stack_flag_ TA_GUARDED(lock_);
 
     // The page source, if any.
     const fbl::RefPtr<PageSource> page_source_;
