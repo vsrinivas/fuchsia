@@ -57,9 +57,10 @@ in the kernel boot log. You should see something like: "cmdline: fuchsia-bootloa
 
 ## Building Zircon
 
+You'll need to build with ```-t``` to disable tests so that the image will fit in the boot partition.
+
 ```
-gn gen build-zircon
-ninja -C build-zircon
+scripts/build-zircon-arm64 -t
 ```
 
 Be sure you've already set up your network before proceeding to the next step.
@@ -95,13 +96,13 @@ Alternatively, you can get to zedboot by resetting your vim2 by pressing SW1(rig
 To netboot zircon, enter zedboot and run the following under the zircon directory:
 
 ```
-scripts/netboot-zircon ./build-arm64
+scripts/netboot-zircon-arm64 ./build-gcc
 ```
 
 To netboot garnet, run the following under the fuchsia directory:
 
 ```
-fx set arm64 --board vim2 --netboot && fx full-build && fx netboot -1
+fx set core.vim2 --netboot && fx build && fx netboot -1
 ```
 
 You should be able to see "Issued boot command to ..." message printed out if this step is successful.
@@ -111,7 +112,7 @@ You should be able to see "Issued boot command to ..." message printed out if th
 Paving is available from garnet layers and above. Run the following under the fuchsia directory:
 
 ```
-fx set arm64 --release --board vim2 && fx full-build && fx pave -1
+fx set core.vim2 --release && fx build && fx pave -1
 ```
 
 ### Fuchsia logo
