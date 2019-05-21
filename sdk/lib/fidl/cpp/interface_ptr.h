@@ -217,45 +217,6 @@ class InterfacePtr final {
   // Events for unbound callbacks are ignored.
   Proxy& events() const { return impl_->proxy; }
 
-#ifdef FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
-  // DEPRECATED: Using InterfaceSyncPtr instead. If used in a test, consider
-  // spinning the async::Loop instead.
-  //
-  // Blocks the calling thread until either a message arrives on the previously
-  // bound channel or an error occurs.
-  //
-  // Returns an error if waiting for the message, reading the message, or
-  // processing the message fails. If the error results in the channel being
-  // closed, the error handler will be called synchronously before this
-  // method returns.
-  //
-  // This method can be called only if this |InterfacePtr| is currently bound to
-  // a channel.
-  zx_status_t WaitForResponse() {
-    return WaitForResponseUntil(zx::time::infinite());
-  }
-
-  // DEPRECATED: Using InterfaceSyncPtr instead. If used in a test, consider
-  // spinning the async::Loop instead.
-  //
-  // Blocks the calling thread until either a message arrives on the previously
-  // bound channel, an error occurs, or the |deadline| is exceeded.
-  //
-  // Returns ZX_ERR_TIMED_OUT if the deadline is exceeded.
-  //
-  // Returns an error if waiting for the message, reading the message, or
-  // processing the message fails. If the error results in the channel being
-  // closed, the error handler will be called synchronously before this
-  // method returns.
-  //
-  // This method can be called only if this |InterfacePtr| is currently bound to
-  // a channel.
-  zx_status_t WaitForResponseUntil(zx::time deadline) {
-    return impl_->controller.reader().WaitAndDispatchOneMessageUntil(deadline);
-  }
-#endif
-
   // Sets an error handler that will be called if an error causes the underlying
   // channel to be closed.
   //

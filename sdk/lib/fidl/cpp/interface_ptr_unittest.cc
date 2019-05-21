@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include "lib/fidl/cpp/interface_ptr.h"
 
 #include <lib/async-loop/cpp/loop.h>
@@ -43,8 +41,6 @@ TEST(InterfacePtr, Control) {
   EXPECT_FALSE(ptr.is_bound());
   EXPECT_EQ(ZX_OK, ptr.Bind(std::move(handle)));
   EXPECT_TRUE(ptr.is_bound());
-
-  EXPECT_EQ(ZX_ERR_TIMED_OUT, ptr.WaitForResponseUntil(zx::time()));
 }
 
 TEST(InterfacePtr, BindToSpecificDispatcher) {
@@ -137,16 +133,14 @@ TEST(InterfacePtr, MoveConstructWithOutstandingTransaction) {
   EXPECT_EQ(ZX_OK, message.Write(h2.get(), 0));
 
   EXPECT_EQ(0, reply_count);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, ptr.WaitForResponse());
-  EXPECT_EQ(0, reply_count);
-  EXPECT_EQ(ZX_OK, ptr2.WaitForResponse());
+  loop.RunUntilIdle();
   EXPECT_EQ(1, reply_count);
 
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(ZX_OK, h2.write(0, "a", 1, nullptr, 0));
   EXPECT_EQ(0, error_count);
   EXPECT_TRUE(ptr2.is_bound());
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, ptr2.WaitForResponse());
+  loop.RunUntilIdle();
   EXPECT_EQ(1, reply_count);
   EXPECT_EQ(1, error_count);
   EXPECT_FALSE(ptr2.is_bound());
@@ -189,16 +183,14 @@ TEST(InterfacePtr, MoveAssignWithOutstandingTransaction) {
   EXPECT_EQ(ZX_OK, message.Write(h2.get(), 0));
 
   EXPECT_EQ(0, reply_count);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, ptr.WaitForResponse());
-  EXPECT_EQ(0, reply_count);
-  EXPECT_EQ(ZX_OK, ptr2.WaitForResponse());
+  loop.RunUntilIdle();
   EXPECT_EQ(1, reply_count);
 
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(ZX_OK, h2.write(0, "a", 1, nullptr, 0));
   EXPECT_EQ(0, error_count);
   EXPECT_TRUE(ptr2.is_bound());
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, ptr2.WaitForResponse());
+  loop.RunUntilIdle();
   EXPECT_EQ(1, reply_count);
   EXPECT_EQ(1, error_count);
   EXPECT_FALSE(ptr2.is_bound());
@@ -322,7 +314,7 @@ TEST(InterfacePtr, InterfaceCanHandleGeneratedOrdinal) {
   loop.RunUntilIdle();
   EXPECT_EQ(ZX_OK, response.Read(h3.get(), 0));
   EXPECT_EQ(ZX_OK, response.Write(h2.get(), 0));
-  EXPECT_EQ(ZX_OK, ptr.WaitForResponse());
+  loop.RunUntilIdle();
   EXPECT_EQ(1, reply_count);
 }
 
