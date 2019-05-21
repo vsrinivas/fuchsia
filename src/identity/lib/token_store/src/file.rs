@@ -9,7 +9,7 @@ use log::warn;
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::fs::{self, File};
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::result;
 
@@ -71,8 +71,12 @@ impl<S: Serializer> AuthDbFile<S> {
         // Note that we first write into a temporary staging file then rename to provide atomicity.
         // We use a fixed tempfile rather than dynamically generating filenames to ensure we
         // never accumulate multiple tempfiles.
-        let f = BufWriter::new(Self::truncate_file(&self.tmp_file_path)?);
-        self.serializer.serialize(f, self.credentials.values())?;
+        let mut buffer = BufWriter::new(Self::truncate_file(&self.tmp_file_path)?);
+        self.serializer.serialize(&mut buffer, self.credentials.values())?;
+        buffer.flush().map_err(|err| {
+            warn!("AuthDbFile failed to flush serialized file: {:?}", err);
+            AuthDbError::IoError(err)
+        })?;
         Self::rename_file(&self.tmp_file_path, &self.file_path)?;
         Ok(())
     }
