@@ -36,6 +36,8 @@ public:
 
     virtual zx_status_t Init(vaddr_t base, size_t size, uint mmu_flags) = 0;
 
+    // ::Destroy expects the aspace to be fully unmapped, as any mapped regions
+    // indicate incomplete cleanup at the higher layers.
     virtual zx_status_t Destroy() = 0;
 
     // main methods

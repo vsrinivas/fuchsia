@@ -1030,11 +1030,7 @@ void X86PageTableBase::Destroy(vaddr_t base, size_t size) {
         uint start = vaddr_to_index(top, base);
         uint end = vaddr_to_index(top, base + size - 1);
 
-        // Don't check start if that table is shared with another aspace.
-        if (!page_aligned(top, base)) {
-            start += 1;
-        }
-        // Do check the end if it fills out the table entry.
+        // Check the end if it fills out the table entry.
         if (page_aligned(top, base + size)) {
             end += 1;
         }

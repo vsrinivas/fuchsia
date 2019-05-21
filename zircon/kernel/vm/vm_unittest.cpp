@@ -1090,6 +1090,9 @@ static bool arch_noncontiguous_map() {
         status = aspace.Query(base + 4 * PAGE_SIZE, nullptr, nullptr);
         EXPECT_EQ(ZX_ERR_NOT_FOUND, status, "bad first map\n");
 
+        status = aspace.Unmap(base, fbl::count_of(phys), &mapped);
+        ASSERT_EQ(ZX_OK, status, "failed unmap\n");
+        EXPECT_EQ(fbl::count_of(phys), mapped, "weird unmap\n");
         status = aspace.Destroy();
         EXPECT_EQ(ZX_OK, status, "failed to destroy aspace\n");
     }

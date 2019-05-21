@@ -42,6 +42,9 @@ static bool mmu_tests() {
         EXPECT_EQ(aspace.pt_pages(), 4u,
                   "protect single page, split large page");
 
+        err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &mapped);
+        EXPECT_EQ(err, ZX_OK, "unmap large page");
+        EXPECT_EQ(mapped, 512u, "unmap large page");
         err = aspace.Destroy();
         EXPECT_EQ(err, ZX_OK, "destroy aspace");
     }
