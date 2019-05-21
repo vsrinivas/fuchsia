@@ -17,9 +17,12 @@ cache_package_labels += [
 
 universe_package_labels += [ "//bundles:tools" ]
 
-# TODO(IN-1097): Support a package server rather than building these
-#                into the image via preinstall+monolith.
-cache_package_labels += [ "//garnet/packages/tools:sl4f" ]
+# End to end (E2E) product test runtime dependencies. Must be added to cache,
+# not universe, so the test can run on bots where there is no package server.
+#
+# TODO(IN-1097): Support a package server on bots so this can be added to
+# universe like the tests.
+cache_package_labels += [ "//src/tests/bundles:end_to_end_deps" ]
 
 # E2E Product Tests. They don't produce fuchsia packages, but host executables,
 # and must just be included somewhere in the build configuration of the product.
