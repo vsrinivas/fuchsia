@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/story_storage_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/constants_and_utils_unittest"
+    }
+}

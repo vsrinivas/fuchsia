@@ -5,7 +5,7 @@
 import("//build/testing/environments.gni")
 import("//peridot/build/tests_package.gni")
 
-tests_package("storage_unittests") {
+hermetic_tests_package("storage_unittests") {
   deps = [
     ":constants_and_utils_unittest",
     ":session_storage_unittest",

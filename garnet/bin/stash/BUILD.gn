@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
@@ -52,9 +53,7 @@ package("stash") {
   ]
 }
 
-package("stash_tests") {
-  testonly = true
-
+test_package("stash_tests") {
   deps = [
     ":bin",
   ]
