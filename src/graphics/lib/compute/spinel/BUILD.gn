@@ -5,13 +5,11 @@
 source_set("spinel") {
   public = [
     "spinel.h",
-    "spinel_types.h",
-    "spinel_result.h",
     "spinel_assert.h",
+    "spinel_result.h",
+    "spinel_types.h",
   ]
-  friend = [
-    "platforms/vk"
-  ]
+  friend = [ "platforms/vk" ]
   sources = [
     "allocator_host.c",
     "allocator_host.h",
@@ -24,7 +22,6 @@ source_set("spinel") {
     "handle.h",
     "path_builder.c",
     "path_builder.h",
-    "platforms",
     "raster_builder.c",
     "raster_builder.h",
     "spinel.h",
@@ -40,9 +37,7 @@ source_set("spinel") {
     "weakref.c",
     "weakref.h",
   ]
-  include_dirs = [
-    "//src/graphics/lib/compute",
-  ]
+  include_dirs = [ "//src/graphics/lib/compute" ]
   deps = [
     "//src/graphics/lib/compute/common",
   ]
