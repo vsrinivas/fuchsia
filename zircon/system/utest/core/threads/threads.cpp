@@ -778,6 +778,7 @@ static bool TestSuspendMultiple() {
     // Clean up.
     clear_debugger_exception_port();
     ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
+    EXPECT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 
     END_TEST;
@@ -803,8 +804,9 @@ static bool TestSuspendAfterDeath() {
     zx_handle_t suspend_token = ZX_HANDLE_INVALID;
     EXPECT_EQ(zx_task_suspend(thread_h, &suspend_token), ZX_ERR_BAD_STATE);
     EXPECT_EQ(suspend_token, ZX_HANDLE_INVALID);
-
     EXPECT_EQ(zx_handle_close(suspend_token), ZX_OK);
+
+    EXPECT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
     EXPECT_EQ(zx_handle_close(thread_h), ZX_OK);
 
     END_TEST;
