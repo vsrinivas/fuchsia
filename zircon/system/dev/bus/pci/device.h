@@ -100,8 +100,12 @@ public:
     zx_status_t PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
     zx_status_t PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count);
     zx_status_t PciGetDeviceInfo(zx_pcie_device_info_t* out_into);
-    zx_status_t PciConfigRead(uint16_t offset, size_t width, uint32_t* out_value);
-    zx_status_t PciConfigWrite(uint16_t offset, size_t width, uint32_t value);
+    zx_status_t PciConfigRead8(uint16_t offset, uint8_t* out_value);
+    zx_status_t PciConfigRead16(uint16_t offset, uint16_t* out_value);
+    zx_status_t PciConfigRead32(uint16_t offset, uint32_t* out_value);
+    zx_status_t PciConfigWrite8(uint16_t offset, uint8_t value);
+    zx_status_t PciConfigWrite16(uint16_t offset, uint16_t value);
+    zx_status_t PciConfigWrite32(uint16_t offset, uint32_t value);
     zx_status_t PciGetNextCapability(uint8_t type, uint8_t offset, uint8_t* out_offset);
     zx_status_t PciGetFirstCapability(uint8_t type, uint8_t* out_offset);
     zx_status_t PciGetAuxdata(const char* args,

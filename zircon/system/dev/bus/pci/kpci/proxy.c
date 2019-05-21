@@ -109,6 +109,24 @@ static zx_status_t pci_op_config_read(void* ctx, uint16_t offset, size_t width, 
     return st;
 }
 
+static zx_status_t pci_op_config_read8(void* ctx, uint16_t offset, uint8_t* val) {
+    uint32_t tmp;
+    zx_status_t st = pci_op_config_read(ctx, offset, sizeof(*val), &tmp);
+    *val = tmp & UINT8_MAX;
+    return st;
+}
+
+static zx_status_t pci_op_config_read16(void* ctx, uint16_t offset, uint16_t* val) {
+    uint32_t tmp;
+    zx_status_t st = pci_op_config_read(ctx, offset, sizeof(*val), &tmp);
+    *val = tmp & UINT16_MAX;
+    return st;
+}
+
+static zx_status_t pci_op_config_read32(void* ctx, uint16_t offset, uint32_t* val) {
+    return pci_op_config_read(ctx, offset, sizeof(uint32_t), val);
+}
+
 // These reads are proxied directly over to the device's PciConfig object so the validity of the
 // widths and offsets will be validated on that end and then trickle back to this level of the
 // protocol.
@@ -127,6 +145,18 @@ static zx_status_t pci_op_config_write(void* ctx, uint16_t offset, size_t width,
     };
     pci_msg_t resp = {};
     return pci_rpc_request(dev, PCI_OP_CONFIG_WRITE, NULL, &req, &resp);
+}
+
+static zx_status_t pci_op_config_write8(void* ctx, uint16_t offset, uint8_t val) {
+    return pci_op_config_write(ctx, offset, sizeof(uint8_t), val);
+}
+
+static zx_status_t pci_op_config_write16(void* ctx, uint16_t offset, uint16_t val) {
+    return pci_op_config_write(ctx, offset, sizeof(uint16_t), val);
+}
+
+static zx_status_t pci_op_config_write32(void* ctx, uint16_t offset, uint32_t val) {
+    return pci_op_config_write(ctx, offset, sizeof(uint32_t), val);
 }
 
 static zx_status_t pci_op_get_next_capability(void* ctx, uint8_t type, uint8_t in_offset,
@@ -318,8 +348,12 @@ static pci_protocol_ops_t _pci_protocol = {
     .query_irq_mode = pci_op_query_irq_mode,
     .set_irq_mode = pci_op_set_irq_mode,
     .get_device_info = pci_op_get_device_info,
-    .config_read = pci_op_config_read,
-    .config_write = pci_op_config_write,
+    .config_read8 = pci_op_config_read8,
+    .config_read16 = pci_op_config_read16,
+    .config_read32 = pci_op_config_read32,
+    .config_write8 = pci_op_config_write8,
+    .config_write16 = pci_op_config_write16,
+    .config_write32 = pci_op_config_write32,
     .get_next_capability = pci_op_get_next_capability,
     .get_first_capability = pci_op_get_first_capability,
     .get_auxdata = pci_op_get_auxdata,

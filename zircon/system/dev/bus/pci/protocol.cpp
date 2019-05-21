@@ -31,19 +31,36 @@ zx_status_t Device::PciGetDeviceInfo(zx_pcie_device_info_t* out_into) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Device::PciConfigRead(uint16_t offset, size_t width, uint32_t* out_value) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t Device::PciConfigWrite(uint16_t offset, size_t width, uint32_t value) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t Device::PciGetFirstCapability(uint8_t type, uint8_t* out_offset) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Device::PciGetNextCapability(uint8_t type, uint8_t offset, uint8_t* out_offset) {
+zx_status_t Device::PciConfigRead8(uint16_t offset, uint8_t* out_value) {
+	return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciConfigRead16(uint16_t offset, uint16_t* out_value) {
+	return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciConfigRead32(uint16_t offset, uint32_t* out_value) {
+	return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciConfigWrite8(uint16_t offset, uint8_t value) {
+	return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciConfigWrite16(uint16_t offset, uint16_t value) {
+	return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciConfigWrite32(uint16_t offset, uint32_t value) {
+	return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::Device::PciGetNextCapability(uint8_t type, uint8_t offset,
+                                                 uint8_t* out_offset) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

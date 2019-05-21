@@ -48,17 +48,14 @@ protocol Pci {
     QueryIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode) -> (zx.status s, uint32 max_irqs);
     SetIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
     GetDeviceInfo() -> (zx.status s, zircon.syscalls.pci.ZxPcieDeviceInfo into);
-    ConfigRead(uint16 offset, usize width) -> (zx.status s, uint32 value);
-    ConfigWrite(uint16 offset, usize width, uint32 value) -> (zx.status s);
+    ConfigRead8(uint16 offset) -> (zx.status s, uint8 value);
+    ConfigRead16(uint16 offset) -> (zx.status s, uint16 value);
+    ConfigRead32(uint16 offset) -> (zx.status s, uint32 value);
+    ConfigWrite8(uint16 offset, uint8 value) -> (zx.status s);
+    ConfigWrite16(uint16 offset, uint16 value) -> (zx.status s);
+    ConfigWrite32(uint16 offset, uint32 value) -> (zx.status s);
     GetNextCapability(uint8 id, uint8 offset) -> (zx.status s, uint8 offset);
     GetFirstCapability(uint8 id) -> (zx.status s, uint8 offset);
     GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
     GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
 };
-
-// TODO: Implement the following.
-//static inline zx_status_t pci_get_auxdata(const pci_protocol_t* pci,
-//                                          const char* args, voidptr* data,
-//                                          uint32_t bytes, uint32_t* actual) {
-//    return pci->ops->get_auxdata(pci->ctx, args, data, bytes, actual);
-//}
