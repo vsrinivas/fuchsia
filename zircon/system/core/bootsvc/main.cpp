@@ -3,10 +3,6 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
-#include <sstream>
-#include <stdio.h>
-#include <utility>
-
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fuchsia/boot/c/fidl.h>
@@ -14,6 +10,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/debuglog.h>
+#include <sstream>
+#include <stdio.h>
+#include <thread>
+#include <utility>
 #include <zircon/boot/image.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
@@ -94,11 +94,6 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs, zx::
     return ZX_OK;
 }
 
-struct LaunchNextProcessArgs {
-    fbl::RefPtr<bootsvc::BootfsService> bootfs;
-    fbl::RefPtr<bootsvc::SvcfsService> svcfs;
-};
-
 // Launch the next process in the boot chain.
 // It will receive:
 // - stdout wired up via a debuglog handle
@@ -109,9 +104,9 @@ struct LaunchNextProcessArgs {
 // - A handle to each of the bootdata VMOs the kernel provided
 // - A handle to a channel containing the root resource, with type
 //   BOOTSVC_ROOT_RESOURCE_CHANNEL_HND
-int LaunchNextProcess(void* raw_ctx) {
-    fbl::unique_ptr<LaunchNextProcessArgs> args(static_cast<LaunchNextProcessArgs*>(raw_ctx));
-
+void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
+                       fbl::RefPtr<bootsvc::SvcfsService> svcfs,
+                       fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc) {
     const char* bootsvc_next = getenv("bootsvc.next");
     if (bootsvc_next == nullptr) {
         bootsvc_next = "bin/devcoordinator";
@@ -126,19 +121,19 @@ int LaunchNextProcess(void* raw_ctx) {
     zx::vmo program;
     uint64_t file_size;
     const char* next_program = next_args[0].c_str();
-    zx_status_t status = args->bootfs->Open(next_program, &program, &file_size);
+    zx_status_t status = bootfs->Open(next_program, &program, &file_size);
     ZX_ASSERT_MSG(status == ZX_OK, "bootsvc: failed to open '%s': %s\n", next_program,
                   zx_status_get_string(status));
 
     // Get the bootfs fuchsia.io.Node service channel that we will hand to the
     // next process in the boot chain.
     zx::channel bootfs_conn;
-    status = args->bootfs->CreateRootConnection(&bootfs_conn);
+    status = bootfs->CreateRootConnection(&bootfs_conn);
     ZX_ASSERT_MSG(status == ZX_OK, "bootfs conn creation failed: %s\n",
                   zx_status_get_string(status));
 
     zx::channel svcfs_conn;
-    status = args->svcfs->CreateRootConnection(&svcfs_conn);
+    status = svcfs->CreateRootConnection(&svcfs_conn);
     ZX_ASSERT_MSG(status == ZX_OK, "svcfs conn creation failed: %s\n",
                   zx_status_get_string(status));
 
@@ -147,6 +142,17 @@ int LaunchNextProcess(void* raw_ctx) {
 
     launchpad_t* lp;
     launchpad_create(0, next_program, &lp);
+    {
+        // Use the local loader service backed directly by the primary BOOTFS.
+        zx::channel local_loader_conn;
+        status = loader_svc->Connect(&local_loader_conn);
+        ZX_ASSERT_MSG(status == ZX_OK,
+                      "failed to connect to BootfsLoaderService : %s\n",
+                      zx_status_get_string(status));
+        zx_handle_t old =
+            launchpad_use_loader_service(lp, local_loader_conn.release());
+        ZX_ASSERT(old == ZX_HANDLE_INVALID);
+    }
     launchpad_load_from_vmo(lp, program.release());
     launchpad_clone(lp, LP_CLONE_DEFAULT_JOB);
 
@@ -181,20 +187,6 @@ int LaunchNextProcess(void* raw_ctx) {
     } else {
         printf("bootsvc: Launched %s\n", next_program);
     }
-    return 0;
-}
-
-void StartLaunchNextProcessThread(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
-                                  const fbl::RefPtr<bootsvc::SvcfsService>& svcfs) {
-    auto args = std::make_unique<LaunchNextProcessArgs>();
-    args->bootfs = bootfs;
-    args->svcfs = svcfs;
-
-    thrd_t t;
-    int status = thrd_create(&t, LaunchNextProcess, args.release());
-    ZX_ASSERT(status == thrd_success);
-    status = thrd_detach(t);
-    ZX_ASSERT(status == thrd_success);
 }
 
 } // namespace
@@ -258,24 +250,16 @@ int main(int argc, char** argv) {
 
     // Creating the loader service
     printf("bootsvc: Creating loader service...\n");
-    fbl::RefPtr<bootsvc::BootfsLoaderService> loader;
-    status = bootsvc::BootfsLoaderService::Create(bootfs_svc, loop.dispatcher(), &loader);
+    fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc;
+    status = bootsvc::BootfsLoaderService::Create(bootfs_svc, loop.dispatcher(), &loader_svc);
     ZX_ASSERT_MSG(status == ZX_OK, "BootfsLoaderService creation failed: %s\n",
                   zx_status_get_string(status));
-
-    // Switch to the local loader service backed directly by the primary bootfs
-    // to allow us to load the next process.
-    zx::channel local_loader_conn;
-    status = loader->Connect(&local_loader_conn);
-    ZX_ASSERT_MSG(status == ZX_OK, "failed to connect to BootfsLoaderService : %s\n",
-                  zx_status_get_string(status));
-    zx_handle_close(dl_set_loader_service(local_loader_conn.release()));
 
     // Launch the next process in the chain.  This must be in a thread, since
     // it may issue requests to the loader, which runs in the async loop that
     // starts running after this.
     printf("bootsvc: Launching next process...\n");
-    StartLaunchNextProcessThread(bootfs_svc, svcfs_svc);
+    std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc).detach();
 
     // Begin serving the bootfs fileystem and loader
     loop.Run();
