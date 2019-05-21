@@ -90,6 +90,8 @@ struct ColorSpace {
 // allocate (intentionally, to strongly discourage specifying
 // insufficiently-defined combos).
 enum ColorSpaceType {
+    // Not a valid color space type.
+    INVALID = 0;
     // sRGB
     SRGB = 1;
     // 601 NTSC ("525 line") YCbCr primaries, narrow

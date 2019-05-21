@@ -6,7 +6,7 @@
   "fidl/fuchsia.sysmem/driver_connector.fidl": "d2818e5d7c2a0eae18fb006c8d802bf4",
   "fidl/fuchsia.sysmem/format_modifier.fidl": "72bd4509f27b9581544a9b3915240aac",
   "fidl/fuchsia.sysmem/formats_deprecated.fidl": "8c47d0b4664069b45b4af650e1089dde",
-  "fidl/fuchsia.sysmem/image_formats.fidl": "802774efd1813df8fc72738e0c34199c",
+  "fidl/fuchsia.sysmem/image_formats.fidl": "e3ada1fe345acead3768ccac584a9e10",
   "fidl/fuchsia.sysmem/image_formats_deprecated.fidl": "0660023fbaed2b5abca9e5038d809df8",
   "fidl/fuchsia.sysmem/usages.fidl": "64442fca34901fc3c7e45b5b640be209"
 }
