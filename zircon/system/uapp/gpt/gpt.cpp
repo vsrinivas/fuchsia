@@ -491,7 +491,7 @@ int GetCrosPartitionArgs(char* const* argv, int argc, cros_partition_args_t* out
                 fprintf(stderr, "tries must be in the range [0, 16)\n");
                 return Usage(ZX_ERR_INVALID_ARGS);
             }
-            *(out_args->tries) = val;
+            out_args->tries = val;
             break;
         }
         case 'P': {
@@ -503,14 +503,14 @@ int GetCrosPartitionArgs(char* const* argv, int argc, cros_partition_args_t* out
                 fprintf(stderr, "priority must be in the range [0, 16)\n");
                 return Usage(ZX_ERR_INVALID_ARGS);
             }
-            *(out_args->priority) = val;
+            out_args->priority = val;
             break;
         }
         case 'S': {
             if (!strncmp(optarg, "0", 2)) {
-                *(out_args->successful) = 0;
+                out_args->successful = 0;
             } else if (!strncmp(optarg, "1", 2)) {
-                *(out_args->successful) = 1;
+                out_args->successful = 1;
             } else {
                 fprintf(stderr, "successful must be 0 or 1\n");
                 return Usage(ZX_ERR_INVALID_ARGS);
