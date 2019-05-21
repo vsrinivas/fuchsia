@@ -5,7 +5,7 @@
 use {crate::ast::BanjoAst, failure::Error, std::io};
 
 pub use self::{
-    abigen::AbigenBackend, ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppInternalBackend,
+    abigen::AbigenBackend, ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppSubtype,
     kernel::KernelBackend, kernel::KernelSubtype,
 };
 

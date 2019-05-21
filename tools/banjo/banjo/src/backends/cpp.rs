@@ -13,6 +13,24 @@ use {
     std::iter,
 };
 
+#[derive(Debug)]
+pub enum CppSubtype {
+    Base,
+    Internal,
+    Mock,
+}
+
+pub struct CppBackend<'a, W: io::Write> {
+    w: &'a mut W,
+    subtype: CppSubtype,
+}
+
+impl<'a, W: io::Write> CppBackend<'a, W> {
+    pub fn new(w: &'a mut W, subtype: CppSubtype) -> Self {
+        CppBackend { w, subtype }
+    }
+}
+
 fn to_cpp_name(name: &str) -> &str {
     // strip FQN
     name.split(".").last().unwrap()
@@ -342,6 +360,110 @@ fn get_out_args(
     ))
 }
 
+fn get_mock_out_param_types(m: &ast::Method, ast: &BanjoAst) -> Result<String, Error> {
+    if m.out_params.is_empty() {
+        Ok("void".to_string())
+    } else {
+        Ok(format!(
+            "std::tuple<{}>",
+            m.out_params
+                .iter()
+                .map(|(_name, ty)| match ty {
+                    ast::Ty::Str { .. } => "std::string".to_string(),
+                    ast::Ty::Vector { ref ty, .. } => {
+                        format!("std::vector<{}>", ty_to_cpp_str(ast, false, ty).unwrap())
+                    }
+                    _ => ty_to_cpp_str(ast, true, ty).unwrap(),
+                })
+                .collect::<Vec<_>>()
+                .join(", "),
+        ))
+    }
+}
+
+fn get_mock_param_types(m: &ast::Method, ast: &BanjoAst) -> Result<String, Error> {
+    Ok(iter::once(get_mock_out_param_types(m, ast)?)
+        .chain(m.in_params.iter().map(|(_name, ty)| match ty {
+            ast::Ty::Str { .. } => "std::string".to_string(),
+            ast::Ty::Vector { ref ty, .. } => {
+                format!("std::vector<{}>", ty_to_cpp_str(ast, false, ty).unwrap())
+            }
+            _ => ty_to_cpp_str(ast, true, ty).unwrap(),
+        }))
+        .collect::<Vec<_>>()
+        .join(", "))
+}
+
+fn get_mock_params(m: &ast::Method, ast: &BanjoAst) -> Result<String, Error> {
+    // If async, put all output parameters last and add callback and cookie. Otherwise put first
+    // output param first, then all input params, then the rest of the output params.
+    let (skip, return_param) = get_first_param(ast, m)?;
+    let has_return_value = skip && !m.attributes.has_attribute("Async");
+
+    let mut params = Vec::new();
+    if has_return_value {
+        params.push(format!("{} out_{}", return_param, m.out_params[0].0));
+    }
+
+    Ok(params
+        .into_iter()
+        .chain(m.in_params.iter().map(|(name, ty)| match ty {
+            ast::Ty::Handle { .. } => {
+                format!("const {}& {}", ty_to_cpp_str(ast, true, ty).unwrap(), name)
+            }
+            ast::Ty::Str { .. } => format!("std::string {}", name),
+            ast::Ty::Vector { ref ty, .. } => format!(
+                "std::vector<{ty}> {name}",
+                ty = ty_to_cpp_str(ast, false, ty).unwrap(),
+                name = name,
+            ),
+            _ => format!("{} {}", ty_to_cpp_str(ast, true, ty).unwrap(), name),
+        }))
+        .chain(m.out_params.iter().skip(if has_return_value { 1 } else { 0 }).map(|(name, ty)| {
+            match ty {
+                ast::Ty::Str { .. } => format!("std::string {}", name),
+                ast::Ty::Vector { ref ty, .. } => format!(
+                    "std::vector<{ty}> out_{name}",
+                    ty = ty_to_cpp_str(ast, false, ty).unwrap(),
+                    name = name,
+                ),
+                _ => format!("{} out_{}", ty_to_cpp_str(ast, true, ty).unwrap(), name),
+            }
+        }))
+        .collect::<Vec<_>>()
+        .join(", "))
+}
+
+fn get_mock_expect_args(m: &ast::Method) -> Result<String, Error> {
+    let mut args = Vec::new();
+    if !m.out_params.is_empty() {
+        args.push(format!(
+            "{{{}}}",
+            m.out_params
+                .iter()
+                .map(|(name, ty)| match ty {
+                    ast::Ty::Handle { .. } => format!("std::move(out_{})", name),
+                    ast::Ty::Str { .. } => format!("std::move(out_{})", name),
+                    ast::Ty::Vector { .. } => format!("std::move(out_{})", name),
+                    _ => format!("out_{}", name),
+                })
+                .collect::<Vec<_>>()
+                .join(", "),
+        ));
+    }
+
+    Ok(args
+        .into_iter()
+        .chain(m.in_params.iter().map(|(name, ty)| match ty {
+            ast::Ty::Handle { .. } => format!("{}.get()", name),
+            ast::Ty::Str { .. } => format!("std::move({})", name),
+            ast::Ty::Vector { .. } => format!("std::move({})", name),
+            _ => name.to_string(),
+        }))
+        .collect::<Vec<_>>()
+        .join(", "))
+}
+
 /// Checks whether a decl is an protocol, and if it is an protocol, checks that it is a "ddk-interface".
 fn filter_interface<'a>(
     decl: &'a ast::Decl,
@@ -372,17 +494,7 @@ fn filter_protocol<'a>(
     None
 }
 
-pub struct CppInternalBackend<'a, W: io::Write> {
-    w: &'a mut W,
-}
-
-impl<'a, W: io::Write> CppInternalBackend<'a, W> {
-    pub fn new(w: &'a mut W) -> Self {
-        CppInternalBackend { w }
-    }
-}
-
-impl<'a, W: io::Write> CppInternalBackend<'a, W> {
+impl<'a, W: io::Write> CppBackend<'a, W> {
     fn codegen_decls(
         &self,
         name: &str,
@@ -478,33 +590,7 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
             .collect::<Result<Vec<_>, Error>>()
             .map(|x| x.join("\n"))
     }
-}
 
-impl<'a, W: io::Write> Backend<'a, W> for CppInternalBackend<'a, W> {
-    fn codegen(&mut self, ast: BanjoAst) -> Result<(), Error> {
-        let namespace = &ast.namespaces[&ast.primary_namespace];
-        self.w.write_fmt(format_args!(
-            include_str!("templates/cpp/internal.h"),
-            protocol_static_asserts = self.codegen_protocol(namespace, &ast)?,
-            interface_static_asserts = self.codegen_interface(namespace, &ast)?,
-            namespace = &ast.primary_namespace,
-        ))?;
-
-        Ok(())
-    }
-}
-
-pub struct CppBackend<'a, W: io::Write> {
-    w: &'a mut W,
-}
-
-impl<'a, W: io::Write> CppBackend<'a, W> {
-    pub fn new(w: &'a mut W) -> Self {
-        CppBackend { w }
-    }
-}
-
-impl<'a, W: io::Write> CppBackend<'a, W> {
     fn codegen_protocol_constructor_def(
         &self,
         name: &str,
@@ -851,22 +937,352 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
             .collect::<Result<Vec<_>, Error>>()
             .map(|x| x.join(""))
     }
+
+    fn codegen_mock_definitions(
+        &self,
+        methods: &Vec<ast::Method>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        methods
+            .iter()
+            .map(|m| {
+                Ok(format!(
+                    "    mock_function::MockFunction<{param_types}> mock_{name}_;",
+                    param_types = get_mock_param_types(&m, ast)?,
+                    name = to_c_name(&m.name).as_str(),
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
+    }
+
+    fn codegen_mock_expects(
+        &self,
+        name: &str,
+        methods: &Vec<ast::Method>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        methods
+            .iter()
+            .map(|m| {
+                Ok(format!(
+                    include_str!("templates/cpp/mock_expect.h"),
+                    protocol_name = to_cpp_name(name),
+                    method_name = m.name,
+                    params = get_mock_params(&m, ast)?,
+                    method_name_snake = to_c_name(&m.name).as_str(),
+                    args = get_mock_expect_args(&m)?,
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
+    }
+
+    fn codegen_mock_verify(&self, methods: &Vec<ast::Method>) -> Result<String, Error> {
+        Ok(methods
+            .iter()
+            .map(|m| format!("        mock_{}_.VerifyAndClear();", to_c_name(m.name.as_str())))
+            .collect::<Vec<_>>()
+            .join("\n"))
+    }
+
+    fn codegen_mock_protocol_out_args(
+        &self,
+        m: &ast::Method,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        let (skip, _) = get_first_param(ast, m)?;
+        let skip_amt = if skip { 1 } else { 0 };
+
+        let mut accum = String::new();
+
+        for i in skip_amt..m.out_params.len() {
+            match m.out_params[i].1 {
+                ast::Ty::Handle { .. } => {
+                    accum.push_str(
+                        format!(
+                            "        *out_{name} = std::move(std::get<{index}>(ret));\n",
+                            name = to_c_name(&m.out_params[i].0),
+                            index = i,
+                        )
+                        .as_str(),
+                    );
+                }
+                ast::Ty::Str { .. } => {
+                    accum.push_str(
+                        format!(
+                            "        strncpy(out_{name}, std::get<{index}>(ret).c_str(), \
+                             {name}_capacity));\n",
+                            name = to_c_name(&m.out_params[i].0),
+                            index = i,
+                        )
+                        .as_str(),
+                    );
+                }
+                ast::Ty::Vector { ref ty, .. } => {
+                    let ty_name = ty_to_cpp_str(ast, false, ty).unwrap();
+                    accum.push_str(
+                        format!(
+                            "        *out_{name}_actual = std::min<size_t>(\
+                             std::get<{index}>(ret).size(), {name}_{size});\n",
+                            name = to_c_name(&m.out_params[i].0),
+                            size = name_size(&ty_name),
+                            index = i,
+                        )
+                        .as_str(),
+                    );
+                    accum.push_str(
+                        format!(
+                            "        std::move(std::get<{index}>(ret).begin(), \
+                             std::get<{index}>(ret).begin() + *out_{name}_actual, \
+                             out_{name}_{buffer});\n",
+                            name = to_c_name(&m.out_params[i].0),
+                            buffer = name_buffer(&ty_name),
+                            index = i,
+                        )
+                        .as_str(),
+                    );
+                }
+                _ => {
+                    accum.push_str(
+                        format!(
+                            "        *out_{name} = std::get<{index}>(ret);\n",
+                            name = to_c_name(&m.out_params[i].0),
+                            index = i,
+                        )
+                        .as_str(),
+                    );
+                }
+            }
+        }
+
+        if skip {
+            accum.push_str("        return std::get<0>(ret);\n");
+        }
+
+        Ok(accum)
+    }
+
+    fn codegen_mock_protocol_async_out_args(&self, m: &ast::Method) -> Result<String, Error> {
+        let mut out_args = Vec::new();
+        out_args.push("cookie".to_string());
+
+        for i in 0..m.out_params.len() {
+            match m.out_params[i].1 {
+                ast::Ty::Handle { .. } => out_args.push(format!("std::move(std::get<{}>(ret))", i)),
+                ast::Ty::Str { .. } => out_args.push(format!("std::get<{}>(ret).c_str()", i)),
+                ast::Ty::Vector { .. } => {
+                    out_args.push(format!("std::get<{}>(ret).data()", i));
+                    out_args.push(format!("std::get<{}>(ret).size()", i));
+                }
+                _ => out_args.push(format!("std::get<{}>(ret)", i)),
+            }
+        }
+
+        Ok(format!("        callback({});\n", out_args.join(", ")))
+    }
+
+    fn codegen_mock_protocol_defs(
+        &self,
+        name: &str,
+        methods: &Vec<ast::Method>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        methods
+            .iter()
+            .map(|m| {
+                let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
+                let in_params = get_in_params(&m, true, true, ast)?;
+
+                let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
+
+                let mut accum = String::new();
+
+                accum.push_str(
+                    format!(
+                        "    {return_param} {protocol_name}{function_name}({params}) {{\n",
+                        return_param = return_param,
+                        protocol_name = to_cpp_name(name),
+                        params = params,
+                        function_name = to_cpp_name(m.name.as_str()),
+                    )
+                    .as_str(),
+                );
+
+                let in_args = m
+                    .in_params
+                    .iter()
+                    .map(|(name, ty)| match ty {
+                        ast::Ty::Handle { .. } => format!("std::move({})", to_c_name(name)),
+                        ast::Ty::Str { .. } => format!("std::string({})", to_c_name(name)),
+                        ast::Ty::Vector { ref ty, .. } => {
+                            let ty_name = ty_to_cpp_str(ast, false, ty).unwrap();
+                            format!(
+                                "std::vector<{ty}>({name}_{buffer}, \
+                                 {name}_{buffer} + {name}_{size})",
+                                ty = ty_name,
+                                name = to_c_name(name),
+                                buffer = name_buffer(&ty_name),
+                                size = name_size(&ty_name),
+                            )
+                        }
+                        _ => format!("{}", to_c_name(name)),
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                accum.push_str("        ");
+
+                if !m.out_params.is_empty() {
+                    accum
+                        .push_str(format!("{} ret = ", get_mock_out_param_types(m, ast)?).as_str());
+                }
+
+                accum.push_str(
+                    format!(
+                        "mock_{name}_.Call({args});\n",
+                        name = to_c_name(m.name.as_str()),
+                        args = in_args.as_str(),
+                    )
+                    .as_str(),
+                );
+
+                if m.attributes.has_attribute("Async") {
+                    accum.push_str(self.codegen_mock_protocol_async_out_args(&m)?.as_str());
+                } else {
+                    accum.push_str(self.codegen_mock_protocol_out_args(&m, ast)?.as_str());
+                }
+
+                accum.push_str("    }\n");
+                Ok(accum)
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
+    }
+
+    fn codegen_mock(&self, namespace: &Vec<ast::Decl>, ast: &BanjoAst) -> Result<String, Error> {
+        namespace
+            .iter()
+            .filter_map(filter_protocol)
+            .map(|(name, methods, _attributes)| {
+                Ok(format!(
+                    include_str!("templates/cpp/mock.h"),
+                    protocol_name = to_cpp_name(name.name()),
+                    protocol_name_snake = to_c_name(name.name()).as_str(),
+                    mock_expects = self.codegen_mock_expects(name.name(), &methods, ast)?,
+                    mock_verify = self.codegen_mock_verify(&methods)?,
+                    protocol_definitions =
+                        self.codegen_mock_protocol_defs(name.name(), &methods, ast)?,
+                    mock_definitions = self.codegen_mock_definitions(&methods, ast)?,
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join(""))
+    }
+
+    fn codegen_mock_includes(
+        &self,
+        namespace: &Vec<ast::Decl>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        let mut need_c_string_header = false;
+        let mut need_cpp_string_header = false;
+        let mut need_cpp_tuple_header = false;
+        let mut need_cpp_vector_header = false;
+
+        namespace.iter().filter_map(filter_protocol).for_each(|(_name, methods, _attributes)| {
+            methods.iter().for_each(|m| {
+                m.in_params.iter().for_each(|(_name, ty)| match ty {
+                    ast::Ty::Str { .. } => need_cpp_string_header = true,
+                    ast::Ty::Vector { .. } => need_cpp_vector_header = true,
+                    _ => {}
+                });
+
+                if !m.out_params.is_empty() {
+                    need_cpp_tuple_header = true;
+                }
+
+                m.out_params.iter().for_each(|(_name, ty)| match ty {
+                    ast::Ty::Str { .. } => {
+                        need_cpp_string_header = true;
+                        if !m.attributes.has_attribute("Async") {
+                            need_c_string_header = true;
+                        }
+                    }
+                    ast::Ty::Vector { .. } => need_cpp_vector_header = true,
+                    _ => {}
+                });
+            });
+        });
+
+        let mut accum = String::new();
+        if need_c_string_header {
+            accum.push_str("#include <string.h>\n\n");
+        }
+        if need_cpp_string_header {
+            accum.push_str("#include <string>\n");
+        }
+        if need_cpp_tuple_header {
+            accum.push_str("#include <tuple>\n");
+        }
+        if need_cpp_vector_header {
+            accum.push_str("#include <vector>\n");
+        }
+        if need_cpp_string_header || need_cpp_tuple_header || need_cpp_vector_header {
+            accum.push_str("\n");
+        }
+
+        let mut includes = vec!["lib/mock-function/mock-function".to_string()]
+            .into_iter()
+            .chain(
+                ast.namespaces
+                    .iter()
+                    .filter(|n| n.0 != "zx")
+                    .map(|n| n.0.replace('.', "/").replace("ddk", "ddktl")),
+            )
+            .map(|n| format!("#include <{}.h>", n))
+            .collect::<Vec<_>>();
+        includes.sort();
+        accum.push_str(&includes.join("\n"));
+        Ok(accum)
+    }
 }
 
 impl<'a, W: io::Write> Backend<'a, W> for CppBackend<'a, W> {
     fn codegen(&mut self, ast: BanjoAst) -> Result<(), Error> {
         let namespace = &ast.namespaces[&ast.primary_namespace];
-        self.w.write_fmt(format_args!(
-            include_str!("templates/cpp/header.h"),
-            includes = self.codegen_includes(&ast)?,
-            examples = self.codegen_examples(namespace, &ast)?,
-            namespace = &ast.primary_namespace,
-            primary_namespace = to_c_name(&ast.primary_namespace).as_str()
-        ))?;
+        match &self.subtype {
+            CppSubtype::Base => {
+                self.w.write_fmt(format_args!(
+                    include_str!("templates/cpp/header.h"),
+                    includes = self.codegen_includes(&ast)?,
+                    examples = self.codegen_examples(namespace, &ast)?,
+                    namespace = &ast.primary_namespace,
+                    primary_namespace = to_c_name(&ast.primary_namespace).as_str()
+                ))?;
 
-        self.w.write_fmt(format_args!("{}", self.codegen_interfaces(namespace, &ast)?))?;
-        self.w.write_fmt(format_args!("{}", self.codegen_protocols(namespace, &ast)?))?;
-        self.w.write_fmt(format_args!(include_str!("templates/cpp/footer.h")))?;
+                self.w.write_fmt(format_args!("{}", self.codegen_interfaces(namespace, &ast)?))?;
+                self.w.write_fmt(format_args!("{}", self.codegen_protocols(namespace, &ast)?))?;
+                self.w.write_fmt(format_args!(include_str!("templates/cpp/footer.h")))?;
+            }
+            CppSubtype::Internal => {
+                self.w.write_fmt(format_args!(
+                    include_str!("templates/cpp/internal.h"),
+                    protocol_static_asserts = self.codegen_protocol(namespace, &ast)?,
+                    interface_static_asserts = self.codegen_interface(namespace, &ast)?,
+                    namespace = &ast.primary_namespace,
+                ))?;
+            }
+            CppSubtype::Mock => {
+                self.w.write_fmt(format_args!(
+                    include_str!("templates/cpp/mock_header.h"),
+                    includes = self.codegen_mock_includes(namespace, &ast)?,
+                    namespace = &ast.primary_namespace,
+                ))?;
+                self.w.write_fmt(format_args!("{}", self.codegen_mock(namespace, &ast)?))?;
+                self.w.write_fmt(format_args!(include_str!("templates/cpp/footer.h")))?;
+            }
+        }
 
         Ok(())
     }

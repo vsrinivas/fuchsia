@@ -74,156 +74,255 @@ mod c {
 
 mod cpp {
     use super::*;
+    use banjo_lib::backends::CppSubtype;
 
-    codegen_test!(empty, CppBackend, ["banjo/empty.test.banjo"], "cpp/empty.h");
-    codegen_test!(example_4, CppBackend, ["banjo/example-4.test.banjo"], "cpp/example-4.h");
-    codegen_test!(example_6, CppBackend, ["banjo/example-6.test.banjo"], "cpp/example-6.h");
-    codegen_test!(example_7, CppBackend, ["banjo/example-7.test.banjo"], "cpp/example-7.h");
-    codegen_test!(example_9, CppBackend, ["banjo/example-9.test.banjo"], "cpp/example-9.h");
-    codegen_test!(simple, CppBackend, ["../zx.banjo", "banjo/simple.test.banjo"], "cpp/simple.h");
-    codegen_test!(
-        view,
-        CppBackend,
-        ["banjo/point.test.banjo", "banjo/view.test.banjo"],
-        "cpp/view.h"
-    );
-    codegen_test!(
-        protocol_primitive,
-        CppBackend,
-        ["../zx.banjo", "banjo/protocol-primitive.test.banjo"],
-        "cpp/protocol-primitive.h"
-    );
-    codegen_test!(
-        protocol_base,
-        CppBackend,
-        ["../zx.banjo", "banjo/protocol-base.test.banjo"],
-        "cpp/protocol-base.h"
-    );
-    codegen_test!(
-        protocol_handle,
-        CppBackend,
-        ["../zx.banjo", "banjo/protocol-handle.test.banjo"],
-        "cpp/protocol-handle.h"
-    );
-    codegen_test!(
-        protocol_array,
-        CppBackend,
-        ["../zx.banjo", "banjo/protocol-array.test.banjo"],
-        "cpp/protocol-array.h"
-    );
-    codegen_test!(
-        protocol_vector,
-        CppBackend,
-        ["../zx.banjo", "banjo/protocol-vector.test.banjo"],
-        "cpp/protocol-vector.h"
-    );
-    codegen_test!(
-        protocol_other_types,
-        CppBackend,
-        ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
-        "cpp/protocol-other-types.h"
-    );
-    codegen_test!(
-        interface,
-        CppBackend,
-        ["../zx.banjo", "banjo/interface.test.banjo"],
-        "cpp/interface.h"
-    );
-    codegen_test!(
-        callback,
-        CppBackend,
-        ["../zx.banjo", "banjo/callback.test.banjo"],
-        "cpp/callback.h"
-    );
-}
-
-mod cpp_internal {
-    use super::*;
-
-    codegen_test!(empty, CppInternalBackend, ["banjo/empty.test.banjo"], "cpp/empty-internal.h");
+    codegen_test!(empty, CppBackend, ["banjo/empty.test.banjo"], "cpp/empty.h", CppSubtype::Base);
     codegen_test!(
         example_4,
-        CppInternalBackend,
+        CppBackend,
         ["banjo/example-4.test.banjo"],
-        "cpp/example-4-internal.h"
+        "cpp/example-4.h",
+        CppSubtype::Base
     );
     codegen_test!(
         example_6,
-        CppInternalBackend,
+        CppBackend,
         ["banjo/example-6.test.banjo"],
-        "cpp/example-6-internal.h"
+        "cpp/example-6.h",
+        CppSubtype::Base
     );
     codegen_test!(
         example_7,
-        CppInternalBackend,
+        CppBackend,
         ["banjo/example-7.test.banjo"],
-        "cpp/example-7-internal.h"
+        "cpp/example-7.h",
+        CppSubtype::Base
     );
     codegen_test!(
         example_9,
-        CppInternalBackend,
+        CppBackend,
         ["banjo/example-9.test.banjo"],
-        "cpp/example-9-internal.h"
+        "cpp/example-9.h",
+        CppSubtype::Base
     );
     codegen_test!(
         simple,
-        CppInternalBackend,
+        CppBackend,
         ["../zx.banjo", "banjo/simple.test.banjo"],
-        "cpp/simple-internal.h"
+        "cpp/simple.h",
+        CppSubtype::Base
     );
     codegen_test!(
         view,
-        CppInternalBackend,
+        CppBackend,
         ["banjo/point.test.banjo", "banjo/view.test.banjo"],
-        "cpp/view-internal.h"
+        "cpp/view.h",
+        CppSubtype::Base
     );
     codegen_test!(
         protocol_primitive,
-        CppInternalBackend,
+        CppBackend,
         ["../zx.banjo", "banjo/protocol-primitive.test.banjo"],
-        "cpp/protocol-primitive-internal.h"
+        "cpp/protocol-primitive.h",
+        CppSubtype::Base
     );
     codegen_test!(
         protocol_base,
-        CppInternalBackend,
+        CppBackend,
         ["../zx.banjo", "banjo/protocol-base.test.banjo"],
-        "cpp/protocol-base-internal.h"
+        "cpp/protocol-base.h",
+        CppSubtype::Base
     );
     codegen_test!(
         protocol_handle,
-        CppInternalBackend,
+        CppBackend,
         ["../zx.banjo", "banjo/protocol-handle.test.banjo"],
-        "cpp/protocol-handle-internal.h"
+        "cpp/protocol-handle.h",
+        CppSubtype::Base
     );
     codegen_test!(
         protocol_array,
-        CppInternalBackend,
+        CppBackend,
         ["../zx.banjo", "banjo/protocol-array.test.banjo"],
-        "cpp/protocol-array-internal.h"
+        "cpp/protocol-array.h",
+        CppSubtype::Base
     );
     codegen_test!(
         protocol_vector,
-        CppInternalBackend,
+        CppBackend,
         ["../zx.banjo", "banjo/protocol-vector.test.banjo"],
-        "cpp/protocol-vector-internal.h"
+        "cpp/protocol-vector.h",
+        CppSubtype::Base
     );
     codegen_test!(
         protocol_other_types,
-        CppInternalBackend,
+        CppBackend,
         ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
-        "cpp/protocol-other-types-internal.h"
+        "cpp/protocol-other-types.h",
+        CppSubtype::Base
     );
     codegen_test!(
         interface,
-        CppInternalBackend,
+        CppBackend,
         ["../zx.banjo", "banjo/interface.test.banjo"],
-        "cpp/interface-internal.h"
+        "cpp/interface.h",
+        CppSubtype::Base
     );
     codegen_test!(
         callback,
-        CppInternalBackend,
+        CppBackend,
         ["../zx.banjo", "banjo/callback.test.banjo"],
-        "cpp/callback-internal.h"
+        "cpp/callback.h",
+        CppSubtype::Base
+    );
+
+    codegen_test!(
+        internal_empty,
+        CppBackend,
+        ["banjo/empty.test.banjo"],
+        "cpp/empty-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_example_4,
+        CppBackend,
+        ["banjo/example-4.test.banjo"],
+        "cpp/example-4-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_example_6,
+        CppBackend,
+        ["banjo/example-6.test.banjo"],
+        "cpp/example-6-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_example_7,
+        CppBackend,
+        ["banjo/example-7.test.banjo"],
+        "cpp/example-7-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_example_9,
+        CppBackend,
+        ["banjo/example-9.test.banjo"],
+        "cpp/example-9-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_simple,
+        CppBackend,
+        ["../zx.banjo", "banjo/simple.test.banjo"],
+        "cpp/simple-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_view,
+        CppBackend,
+        ["banjo/point.test.banjo", "banjo/view.test.banjo"],
+        "cpp/view-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_protocol_primitive,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-primitive.test.banjo"],
+        "cpp/protocol-primitive-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_protocol_base,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-base.test.banjo"],
+        "cpp/protocol-base-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_protocol_handle,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-handle.test.banjo"],
+        "cpp/protocol-handle-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_protocol_array,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-array.test.banjo"],
+        "cpp/protocol-array-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_protocol_vector,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-vector.test.banjo"],
+        "cpp/protocol-vector-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_protocol_other_types,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
+        "cpp/protocol-other-types-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_interface,
+        CppBackend,
+        ["../zx.banjo", "banjo/interface.test.banjo"],
+        "cpp/interface-internal.h",
+        CppSubtype::Internal
+    );
+    codegen_test!(
+        internal_callback,
+        CppBackend,
+        ["../zx.banjo", "banjo/callback.test.banjo"],
+        "cpp/callback-internal.h",
+        CppSubtype::Internal
+    );
+
+    codegen_test!(
+        mock_protocol_array,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-array.test.banjo"],
+        "cpp/mock-protocol-array.h",
+        CppSubtype::Mock
+    );
+    codegen_test!(
+        mock_protocol_base,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-base.test.banjo"],
+        "cpp/mock-protocol-base.h",
+        CppSubtype::Mock
+    );
+    codegen_test!(
+        mock_protocol_handle,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-handle.test.banjo"],
+        "cpp/mock-protocol-handle.h",
+        CppSubtype::Mock
+    );
+    codegen_test!(
+        mock_protocol_other_types,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
+        "cpp/mock-protocol-other-types.h",
+        CppSubtype::Mock
+    );
+    codegen_test!(
+        mock_protocol_primitive,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-primitive.test.banjo"],
+        "cpp/mock-protocol-primitive.h",
+        CppSubtype::Mock
+    );
+    codegen_test!(
+        mock_protocol_vector,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-vector.test.banjo"],
+        "cpp/mock-protocol-vector.h",
+        CppSubtype::Mock
     );
 }
 

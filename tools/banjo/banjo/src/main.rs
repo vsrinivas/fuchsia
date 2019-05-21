@@ -24,8 +24,7 @@ mod parser;
 #[derive(Debug)]
 enum BackendName {
     C,
-    Cpp,
-    CppInternal,
+    Cpp(backends::CppSubtype),
     Rust,
     Json,
     Ast,
@@ -39,8 +38,9 @@ impl FromStr for BackendName {
     fn from_str(s: &str) -> Result<BackendName, Self::Err> {
         match s.to_lowercase().as_str() {
             "c" => Ok(BackendName::C),
-            "cpp" => Ok(BackendName::Cpp),
-            "cpp_i" => Ok(BackendName::CppInternal),
+            "cpp" => Ok(BackendName::Cpp(backends::CppSubtype::Base)),
+            "cpp_mock" => Ok(BackendName::Cpp(backends::CppSubtype::Mock)),
+            "cpp_i" => Ok(BackendName::Cpp(backends::CppSubtype::Internal)),
             "rust" => Ok(BackendName::Rust),
             "json" => Ok(BackendName::Json),
             "ast" => Ok(BackendName::Ast),
@@ -49,7 +49,7 @@ impl FromStr for BackendName {
             "kerneltrace" => Ok(BackendName::Kernel(backends::KernelSubtype::Trace)),
             _ => Err(format!(
                 "Unrecognized backend for banjo. Current valid ones are: \
-                 C, Cpp, Rust, Ast, Abigen, KernelNumbers, KernelTrace"
+                 C, Cpp, CppMock, Rust, Ast, Abigen, KernelNumbers, KernelTrace"
             )),
         }
     }
@@ -175,8 +175,7 @@ fn main() -> Result<(), Error> {
 
     let mut backend: Box<dyn Backend<_>> = match opt.backend {
         BackendName::C => Box::new(CBackend::new(&mut output)),
-        BackendName::Cpp => Box::new(CppBackend::new(&mut output)),
-        BackendName::CppInternal => Box::new(CppInternalBackend::new(&mut output)),
+        BackendName::Cpp(subtype) => Box::new(CppBackend::new(&mut output, subtype)),
         BackendName::Ast => Box::new(AstBackend::new(&mut output)),
         BackendName::Abigen => Box::new(AbigenBackend::new(&mut output)),
         BackendName::Kernel(subtype) => Box::new(KernelBackend::new(&mut output, subtype)),
