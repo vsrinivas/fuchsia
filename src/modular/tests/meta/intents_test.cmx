@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/intents_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.modular.ModuleContext"
+        ]
+    }
+}
