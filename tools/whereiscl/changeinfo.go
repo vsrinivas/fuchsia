@@ -5,11 +5,8 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"net/url"
 )
 
@@ -50,21 +47,8 @@ func getChangeInfo(qi queryInfo) (*changeInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.Get(q.String())
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	var cis []changeInfo
-	// Responses start with )]}' to prevent XSSI attacks. Discard them.
-	// See https://gerrit-review.googlesource.com/Documentation/rest-api.html#output
-	if err := json.Unmarshal(b[4:], &cis); err != nil {
+	if err := httpGetJSON(q.String(), &cis); err != nil {
 		return nil, err
 	}
 

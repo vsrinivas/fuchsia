@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -55,35 +56,61 @@ func TestParseReviewURL_invalidURL(t *testing.T) {
 	}
 }
 
-// Fake http transport. This is used from other test files.
-type mockTransport struct{ cl, body string }
+type reqURLRespBody struct {
+	url  *url.URL
+	body string
+}
 
-func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	switch req.URL.Hostname() {
-	case "fuchsia-review.googlesource.com":
-		switch req.URL.Path {
-		case "/changes/":
-			cl := req.URL.Query().Get("q")
-			if cl != t.cl {
-				log.Fatalf("RoundTrip: invalid CL: %s", cl)
-			}
-		default:
-			log.Fatalf("RoundTrip: invalid changes path: %s", req.URL.Path)
-		}
-	case "fuchsia.googlesource.com":
-		manifestPrefix := "/integration/+/refs/heads/master/"
-		if !strings.HasPrefix(req.URL.Path, manifestPrefix) {
-			log.Fatalf("RoundTrip: invalid manifest path: %s", req.URL.Path)
-		}
-	default:
-		log.Fatalf("RoundTrip: invalid hostname: %s", req.URL.Hostname())
+// Simplified URL equality test.
+func equalURL(u1, u2 *url.URL) bool {
+	if u1.Hostname() != u2.Hostname() {
+		return false
+	}
+	if u1.EscapedPath() != u2.EscapedPath() {
+		return false
+	}
+	if !cmp.Equal(u1.Query(), u2.Query()) {
+		return false
+	}
+	return true
+}
+
+// Fake http transport. This is used from other test files.
+type mockTransport struct {
+	responses []reqURLRespBody
+}
+
+func (t *mockTransport) addResponse(urlStr, body string) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		log.Fatalf("mockTransport.addResponse: %v", err)
 	}
 
+	t.responses = append(t.responses, reqURLRespBody{
+		url:  u,
+		body: body,
+	})
+}
+
+func (t *mockTransport) findResponse(u *url.URL) (string, bool) {
+	for _, r := range t.responses {
+		if equalURL(u, r.url) {
+			return r.body, true
+		}
+	}
+	return "", false
+}
+
+func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	body, ok := t.findResponse(req.URL)
+	if !ok {
+		log.Fatalf("RoundTrip: unrecognized URL: %v", req.URL.String())
+	}
 	resp := &http.Response{
 		StatusCode: 200,
 		Request:    req,
 		Header:     http.Header{},
-		Body:       ioutil.NopCloser(strings.NewReader(t.body)),
+		Body:       ioutil.NopCloser(strings.NewReader(body)),
 	}
 	return resp, nil
 }

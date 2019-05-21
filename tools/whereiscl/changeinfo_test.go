@@ -12,10 +12,10 @@ import (
 )
 
 func TestGetChangeInfo(t *testing.T) {
-	cl := "987654321"
-	http.DefaultClient.Transport = &mockTransport{
-		cl: cl,
-		body: `)]}'
+	transport := mockTransport{}
+	transport.addResponse(
+		"https://fuchsia-review.googlesource.com/changes/?q=987654321&o=CURRENT_REVISION",
+		`)]}'
 [
   {
     "foo": 42,
@@ -23,10 +23,12 @@ func TestGetChangeInfo(t *testing.T) {
     "current_revision": "abcdefg"
   }
 ]`,
-	}
+	)
+
+	http.DefaultClient.Transport = &transport
 	got, err := getChangeInfo(queryInfo{
 		apiEndpoint: "https://fuchsia-review.googlesource.com",
-		cl:          cl,
+		cl:          "987654321",
 	})
 	if err != nil {
 		t.Fatalf("getChangeInfo: %v", err)
@@ -41,15 +43,16 @@ func TestGetChangeInfo(t *testing.T) {
 }
 
 func TestGetChangeInfo_clNotFound(t *testing.T) {
-	cl := "987654321"
-	http.DefaultClient.Transport = &mockTransport{
-		cl: cl,
-		body: `)]}'
+	transport := mockTransport{}
+	transport.addResponse(
+		"https://fuchsia-review.googlesource.com/changes/?q=987654321&o=CURRENT_REVISION",
+		`)]}'
 []`,
-	}
+	)
+	http.DefaultClient.Transport = &transport
 	_, err := getChangeInfo(queryInfo{
 		apiEndpoint: "https://fuchsia-review.googlesource.com",
-		cl:          cl,
+		cl:          "987654321",
 	})
 	if err == nil {
 		t.Error("getChangeInfo: error expected; got nil")
@@ -57,10 +60,10 @@ func TestGetChangeInfo_clNotFound(t *testing.T) {
 }
 
 func TestGetChangeInfo_tooManyCLs(t *testing.T) {
-	cl := "987654321"
-	http.DefaultClient.Transport = &mockTransport{
-		cl: cl,
-		body: `)]}'
+	transport := mockTransport{}
+	transport.addResponse(
+		"https://fuchsia-review.googlesource.com/changes/?q=987654321&o=CURRENT_REVISION",
+		`)]}'
 [
   {
     "status": "ACTIVE",
@@ -71,10 +74,11 @@ func TestGetChangeInfo_tooManyCLs(t *testing.T) {
     "current_revision": "hijklmn"
   }
 ]`,
-	}
+	)
+	http.DefaultClient.Transport = &transport
 	_, err := getChangeInfo(queryInfo{
 		apiEndpoint: "https://fuchsia-review.googlesource.com",
-		cl:          cl,
+		cl:          "987654321",
 	})
 	if err == nil {
 		t.Error("getChangeInfo: error expected; got nil")

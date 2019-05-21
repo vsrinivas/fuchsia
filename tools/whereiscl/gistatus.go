@@ -8,8 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"net/url"
 )
 
@@ -30,20 +28,13 @@ func downloadGIManifest(name string) ([]byte, error) {
 	}
 	u.Path = "/integration/+/refs/heads/master/" + name
 	q := u.Query()
-	q.Add("format", "TEXT")
+	q.Set("format", "TEXT")
 	u.RawQuery = q.Encode()
 
-	resp, err := http.Get(u.String())
+	b, err := httpGet(u.String())
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	return base64.StdEncoding.DecodeString(string(b))
 }
 
@@ -73,6 +64,36 @@ func getGIRevision(content []byte, project string) (string, error) {
 	return "", fmt.Errorf("project %q is not found in the jiri manifest", project)
 }
 
+type gitLogs struct {
+	Log []gitLog `json:"log"`
+}
+
+type gitLog struct {
+	Commit string `json:"commit"`
+}
+
+func isAfterGI(project, clRevision, giRevision string) (bool, error) {
+	u, err := url.Parse(fuchsiaURL)
+	if err != nil {
+		return false, err
+	}
+	u.Path = fmt.Sprintf("/%s/+log/%s..HEAD", project, giRevision)
+	q := u.Query()
+	q.Set("format", "JSON")
+	u.RawQuery = q.Encode()
+
+	logs := gitLogs{}
+	if err := httpGetJSON(u.String(), &logs); err != nil {
+		return false, err
+	}
+	for _, log := range logs.Log {
+		if log.Commit == clRevision {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func getGIStatus(ci *changeInfo) (giStatus, error) {
 	var name string
 
@@ -92,11 +113,17 @@ func getGIStatus(ci *changeInfo) (giStatus, error) {
 		return giStatusUnknown, err
 	}
 
-	_, err = getGIRevision(manifest, ci.Project)
+	rev, err := getGIRevision(manifest, ci.Project)
 	if err != nil {
 		return giStatusUnknown, err
 	}
 
-	// TODO: Finish implementation.
+	after, err := isAfterGI(ci.Project, ci.CurrentRevision, rev)
+	if err != nil {
+		return giStatusUnknown, err
+	}
+	if after {
+		return giStatusPending, nil
+	}
 	return giStatusPassed, nil
 }
