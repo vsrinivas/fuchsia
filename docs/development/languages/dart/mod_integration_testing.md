@@ -317,3 +317,7 @@ The tests can then be run using
 ```bash
 $ fx run-test driver_example_mod_tests
 ```
+
+> If the test hangs after the module shows up, make sure you're building in
+> debug mode (omit `--release` from your `fx set`) as the Dart Observatory will
+> not be available in release builds.
