@@ -1,21 +1,12 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.auth.account.AccountManager": [
-                    "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx",
-                    "--dev-auth-providers"
-                ]
-            }
-        }
-    },
     "program": {
         "binary": "test/account_manager_integration_lib_test"
     },
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.auth.account.AccountManager"
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
         ]
     }
 }
