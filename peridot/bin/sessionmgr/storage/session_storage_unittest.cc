@@ -240,7 +240,11 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   // MI4-1002
 }
 
-TEST_F(SessionStorageTest, DeleteStoryDeletesStoryPage) {
+// TODO(MF-420): This test is racy: the |story_page| acquired here is different
+// from the one used internally to delete page data. The call to GetSnapshot()
+// may happen before, after, or during, the process of deleting the page
+// contents.
+TEST_F(SessionStorageTest, DISABLED_DeleteStoryDeletesStoryPage) {
   // When we call DeleteStory, we expect the story's page to be completely
   // emptied.
   auto storage = CreateStorage("page");
@@ -255,7 +259,7 @@ TEST_F(SessionStorageTest, DeleteStoryDeletesStoryPage) {
   });
   RunLoopUntil([&] { return done; });
 
-  // Add some fake content to the story's page, so that we dan show that
+  // Add some fake content to the story's page, so that we can show that
   // it is deleted when we instruct SessionStorage to delete the story.
   fuchsia::ledger::PagePtr story_page;
   story_page.set_error_handler([](zx_status_t status) {
