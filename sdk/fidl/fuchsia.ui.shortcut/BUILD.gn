@@ -9,7 +9,11 @@ fidl("fuchsia.ui.shortcut") {
 
   sources = [
     "registry.fidl",
+    "manager.fidl",
   ]
 
-  public_deps = []
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.views",
+  ]
 }

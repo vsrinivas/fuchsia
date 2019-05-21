@@ -22,15 +22,20 @@ protocol Registry {
 
 /// Shortcut descriptor.
 table Shortcut {
-    // Client-generated identifier, to distinguish shortcuts triggered.
+    /// Client-generated identifier, to distinguish shortcuts triggered.
     1: uint32 id;
 
-    // Keys or locks to be activated for triggering the shortcut.
+    /// Keys or locks to be activated for triggering the shortcut.
     2: fuchsia.ui.input.Modifiers modifiers;
 
-    // Optional: Key to be pressed to trigger the shortcut.
-    // Omit for modifier-only shortcuts.
+    /// Optional: Key to be pressed to trigger the shortcut.
+    /// Omit for modifier-only shortcuts.
     3: fuchsia.ui.input.Key key;
+
+    /// When this flag is set to true, the parent's shortcuts take priority
+    /// and are matched before those of its children.
+    /// Defaults to false.
+    4: bool use_priority;
 };
 
 /// Client should implement this protocol to get notified of shortcut activation.

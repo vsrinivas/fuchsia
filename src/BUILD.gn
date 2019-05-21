@@ -19,6 +19,7 @@ group("src") {
     "speech",
     "sys",
     "testing",
+    "ui",
     "virtualization",
   ]
 }
@@ -39,5 +40,6 @@ group("tests") {
     "recovery:tests",
     "speech:tests",
     "testing:tests",
+    "ui:tests",
   ]
 }

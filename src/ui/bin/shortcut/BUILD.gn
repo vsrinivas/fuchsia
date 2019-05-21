@@ -1,0 +1,68 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("tests") {
+  testonly = true
+
+  data_deps = [
+    ":shortcut",
+    ":shortcut_test",
+  ]
+}
+
+rustc_binary("bin") {
+  name = "shortcut"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
+package("shortcut") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "shortcut"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/shortcut_manager.cmx")
+      dest = "shortcut_manager.cmx"
+    },
+  ]
+}
+
+test_package("shortcut_test") {
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "shortcut_bin_test"
+      environments = basic_envs
+    },
+  ]
+}

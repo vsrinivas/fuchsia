@@ -121,6 +121,7 @@ group("scenic") {
     "//garnet/lib/ui/gfx/tests/rotated_square_test",
     "//garnet/packages/examples:scenic",
     "//garnet/packages/prod:scenic",
+    "//src/ui/bin/shortcut:tests",
   ]
 }
 
