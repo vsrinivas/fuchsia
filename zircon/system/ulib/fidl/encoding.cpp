@@ -99,6 +99,12 @@ public:
         return Status::kSuccess;
     }
 
+    Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
+        auto padding_ptr = padding_position.template Get<uint8_t*>(StartingPoint { bytes_ });
+        memset(padding_ptr, 0, padding_length);
+        return Status::kSuccess;
+    }
+
     Status EnterEnvelope(Position envelope_position,
                          EnvelopePointer envelope,
                          const fidl_type_t* payload_type) {
@@ -184,6 +190,10 @@ private:
             SetError("message tried to encode more than provided number of bytes");
             return false;
         }
+        // Zero the padding gaps
+        memset(&bytes_[next_out_of_line_ + size],
+               0,
+               new_offset - next_out_of_line_ - size);
         *out_position = Position{next_out_of_line_};
         next_out_of_line_ = new_offset;
         return true;

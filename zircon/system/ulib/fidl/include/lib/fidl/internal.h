@@ -60,10 +60,21 @@ inline bool AddOutOfLine(uint32_t offset, uint32_t size, uint32_t* out_offset) {
 
 struct FidlStructField {
     const fidl_type* type;
+    // If |type| is not nullptr, |offset| stores the offset of the struct member.
+    // Otherwise, |offset| stores the offset of the padding.
     uint32_t offset;
+    uint8_t padding;
 
-    constexpr FidlStructField(const fidl_type* type, uint32_t offset)
-        : type(type), offset(offset) {}
+    constexpr FidlStructField(const fidl_type* type, uint32_t offset, uint8_t padding)
+        : type(type), offset(offset), padding(padding) {}
+};
+
+struct FidlUnionField {
+    const fidl_type* type;
+    uint32_t padding;
+
+    constexpr FidlUnionField(const fidl_type* type, uint32_t padding)
+        : type(type), padding(padding) {}
 };
 
 struct FidlTableField {
@@ -140,21 +151,19 @@ struct FidlCodedTable {
         : fields(fields), field_count(field_count), name(name) {}
 };
 
-// Unlike structs, union members do not have different offsets, so this points
-// to an array of |fidl_type*| rather than |FidlStructField|.
-//
-// On-the-wire unions begin with a tag which is an index into |types|.
+// On-the-wire unions begin with a tag which is an index into |fields|.
 // |data_offset| is the offset of the data in the wire format (tag + padding).
 struct FidlCodedUnion {
-    const fidl_type* const* types;
-    const uint32_t type_count;
+    const FidlUnionField* const fields;
+    const uint32_t field_count;
     const uint32_t data_offset;
     const uint32_t size;
     const char* name; // may be nullptr if omitted at compile time
 
-    constexpr FidlCodedUnion(const fidl_type* const* types, uint32_t type_count,
+    constexpr FidlCodedUnion(const FidlUnionField* const fields, uint32_t field_count,
                              uint32_t data_offset, uint32_t size, const char* name)
-        : types(types), type_count(type_count), data_offset(data_offset), size(size), name(name) {}
+        : fields(fields), field_count(field_count), data_offset(data_offset), size(size),
+          name(name) {}
 };
 
 struct FidlCodedUnionPointer {

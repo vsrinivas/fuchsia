@@ -62,10 +62,11 @@ CodingNeeded WhichCodingNeeded(CodingContext context, CodingNeeded coding_needed
 struct Type;
 
 struct StructField {
-    StructField(const Type* type, uint32_t offset, uint32_t padding)
-        : type(type), offset(offset), padding(padding) {}
+    StructField(const Type* type, uint32_t size, uint32_t offset, uint32_t padding)
+        : type(type), size(size), offset(offset), padding(padding) {}
 
     const Type* type;
+    const uint32_t size;
     const uint32_t offset;
     const uint32_t padding;
 };

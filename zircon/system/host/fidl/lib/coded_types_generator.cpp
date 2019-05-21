@@ -215,6 +215,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                         parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
                     if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways)
                         request_fields.emplace_back(coded_parameter_type,
+                                                    parameter.fieldshape.Size(),
                                                     parameter.fieldshape.Offset(),
                                                     parameter.fieldshape.Padding());
                 }
@@ -247,6 +248,13 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                 auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
                 assert(!is_primitive && "No primitive in struct coding table!");
                 struct_fields.emplace_back(coded_member_type,
+                                           member.fieldshape.Size(),
+                                           member.fieldshape.Offset(),
+                                           member.fieldshape.Padding());
+            } else if (member.fieldshape.Padding() > 0) {
+                // The type does not need coding, but the field needs padding zeroing.
+                struct_fields.emplace_back(nullptr,
+                                           member.fieldshape.Size(),
                                            member.fieldshape.Offset(),
                                            member.fieldshape.Padding());
             }

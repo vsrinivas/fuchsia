@@ -137,6 +137,7 @@ private:
                 struct_state.fields = fidl_type->coded_struct.fields;
                 struct_state.field_count = fidl_type->coded_struct.field_count;
                 struct_state.field = 0;
+                struct_state.struct_size = fidl_type->coded_struct.size;
                 break;
             case fidl::kFidlTypeStructPointer:
                 state = kStateStructPointer;
@@ -151,9 +152,10 @@ private:
                 break;
             case fidl::kFidlTypeUnion:
                 state = kStateUnion;
-                union_state.types = fidl_type->coded_union.types;
-                union_state.type_count = fidl_type->coded_union.type_count;
+                union_state.fields = fidl_type->coded_union.fields;
+                union_state.field_count = fidl_type->coded_union.field_count;
                 union_state.data_offset = fidl_type->coded_union.data_offset;
+                union_state.union_size = fidl_type->coded_union.size;
                 break;
             case fidl::kFidlTypeUnionPointer:
                 state = kStateUnionPointer;
@@ -202,6 +204,7 @@ private:
             struct_state.fields = coded_struct->fields;
             struct_state.field_count = coded_struct->field_count;
             struct_state.field = 0;
+            struct_state.struct_size = coded_struct->size;
         }
 
         Frame(const fidl::FidlCodedTable* coded_table, Position position)
@@ -216,9 +219,10 @@ private:
         Frame(const fidl::FidlCodedUnion* coded_union, Position position)
             : position(position) {
             state = kStateUnion;
-            union_state.types = coded_union->types;
-            union_state.type_count = coded_union->type_count;
+            union_state.fields = coded_union->fields;
+            union_state.field_count = coded_union->field_count;
             union_state.data_offset = coded_union->data_offset;
+            union_state.union_size = coded_union->size;
         }
 
         Frame(const fidl::FidlCodedXUnion* coded_xunion, Position position)
@@ -293,6 +297,8 @@ private:
                 uint32_t field_count;
                 // Index of the currently processing field.
                 uint32_t field;
+                // Size of the entire struct.
+                uint32_t struct_size;
             } struct_state;
             struct {
                 const fidl::FidlCodedStruct* struct_type;
@@ -314,12 +320,14 @@ private:
             struct {
                 // Array of coding table corresponding to each union variant.
                 // The union tag counts upwards from 0 without breaks; hence it can be used to
-                // index into the |types| array.
-                const fidl_type_t* const* types;
-                // Size of the |types| array. Equal to the number of tags.
-                uint32_t type_count;
+                // index into the |fields| array.
+                const fidl::FidlUnionField* fields;
+                // Size of the |fields| array. Equal to the number of tags.
+                uint32_t field_count;
                 // Offset of the payload in the wire format (size of tag + padding).
                 uint32_t data_offset;
+                // Size of the entire union.
+                uint32_t union_size;
             } union_state;
             struct {
                 const fidl::FidlCodedUnion* union_type;
@@ -428,6 +436,24 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             const fidl::FidlStructField& field = frame->struct_state.fields[field_index];
             const fidl_type_t* field_type = field.type;
             Position field_position = frame->position + field.offset;
+            if (field.padding > 0) {
+                Position padding_position;
+                if (field_type) {
+                    padding_position = field_position + TypeSize(field_type);
+                } else {
+                    // Current type does not have coding information. |field.offset| stores the
+                    // offset of the padding.
+                    padding_position = field_position;
+                }
+                auto status = visitor.VisitInternalPadding(padding_position, field.padding);
+                FIDL_STATUS_GUARD(status);
+            }
+            if (!field_type) {
+                // Skip fields that do not contain codable types.
+                // Such fields only serve to provide padding information.
+                ZX_DEBUG_ASSERT(field.padding > 0);
+                continue;
+            }
             if (!Push(Frame(field_type, field_position))) {
                 visitor.OnError("recursion depth exceeded processing struct");
                 FIDL_STATUS_GUARD(Status::kConstraintViolationError);
@@ -534,16 +560,30 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         }
         case Frame::kStateUnion: {
             auto union_tag = *PtrTo<fidl_union_tag_t>(frame->position);
-            if (union_tag >= frame->union_state.type_count) {
+            if (union_tag >= frame->union_state.field_count) {
                 visitor.OnError("Bad union discriminant");
                 FIDL_STATUS_GUARD(Status::kConstraintViolationError);
             }
-            const fidl_type_t* member = frame->union_state.types[union_tag];
+            auto variant = frame->union_state.fields[union_tag];
+            if (variant.padding > 0) {
+                Position padding_position =
+                    frame->position + (frame->union_state.union_size - variant.padding);
+                auto status = visitor.VisitInternalPadding(padding_position, variant.padding);
+                FIDL_STATUS_GUARD(status);
+            }
+            auto data_offset = frame->union_state.data_offset;
+            ZX_DEBUG_ASSERT(data_offset == 4 || data_offset == 8);
+            if (data_offset == 8) {
+                // There is an additional 4 byte of padding after the tag.
+                auto status = visitor.VisitInternalPadding(frame->position + 4, 4);
+                FIDL_STATUS_GUARD(status);
+            }
+            const fidl_type_t* member = variant.type;
             if (!member) {
                 Pop();
                 continue;
             }
-            frame->position += frame->union_state.data_offset;
+            frame->position += data_offset;
             *frame = Frame(member, frame->position);
             continue;
         }

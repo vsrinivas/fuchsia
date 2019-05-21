@@ -173,8 +173,8 @@ void TablesGenerator::Generate(const coded::TableType& table_type) {
 }
 
 void TablesGenerator::Generate(const coded::UnionType& union_type) {
-    Emit(&tables_file_, "static const fidl_type_t* ");
-    Emit(&tables_file_, NameMembers(union_type.coded_name));
+    Emit(&tables_file_, "static const ::fidl::FidlUnionField ");
+    Emit(&tables_file_, NameFields(union_type.coded_name));
     Emit(&tables_file_, "[] = ");
     GenerateArray(union_type.members);
     Emit(&tables_file_, ";\n");
@@ -182,7 +182,7 @@ void TablesGenerator::Generate(const coded::UnionType& union_type) {
     Emit(&tables_file_, "const fidl_type_t ");
     Emit(&tables_file_, NameTable(union_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnion(");
-    Emit(&tables_file_, NameMembers(union_type.coded_name));
+    Emit(&tables_file_, NameFields(union_type.coded_name));
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, static_cast<uint32_t>(union_type.members.size()));
     Emit(&tables_file_, ", ");
@@ -339,13 +339,22 @@ void TablesGenerator::Generate(const coded::StructField& field) {
     Emit(&tables_file_, "::fidl::FidlStructField(");
     Generate(field.type);
     Emit(&tables_file_, ", ");
-    Emit(&tables_file_, field.offset);
+    if (field.type) {
+        Emit(&tables_file_, field.offset);
+    } else {
+        Emit(&tables_file_, field.offset + field.size);
+    }
+    Emit(&tables_file_, ", ");
+    Emit(&tables_file_, field.padding);
     Emit(&tables_file_, ")");
 }
 
 void TablesGenerator::Generate(const coded::UnionField& field) {
-    // TODO(FIDL-237): Emit both type and padding.
+    Emit(&tables_file_, "::fidl::FidlUnionField(");
     Generate(field.type);
+    Emit(&tables_file_, ", ");
+    Emit(&tables_file_, field.padding);
+    Emit(&tables_file_, ")");
 }
 
 void TablesGenerator::Generate(const coded::TableField& field) {

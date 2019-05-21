@@ -259,7 +259,8 @@ static const ::fidl::FidlStructField unbounded_too_large_nullable_vector_of_hand
     ::fidl::FidlStructField(
         &unbounded_too_large_nullable_vector_of_handles,
         offsetof(unbounded_too_large_nullable_vector_of_handles_message_layout,
-                 inline_struct.vector)),
+                 inline_struct.vector),
+        0),
 };
 const fidl_type_t unbounded_too_large_nullable_vector_of_handles_message_type =
     fidl_type_t(::fidl::FidlCodedStruct(

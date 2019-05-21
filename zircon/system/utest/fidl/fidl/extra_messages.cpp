@@ -9,19 +9,23 @@ extern const fidl_type_t fidl_test_coding_SmallerTableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_StructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_TableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_IntStructTable;
-extern const fidl_type_t fidl_test_coding_OlderSimpleTableTable;
-extern const fidl_type_t fidl_test_coding_NewerSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionTable;
-extern const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
+extern const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable;
+extern const fidl_type_t fidl_test_coding_OlderSimpleTableTable;
+extern const fidl_type_t fidl_test_coding_NewerSimpleTableTable;
 
+
+static const fidl_type_t HandlehandlenonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_NONE, ::fidl::kNonnullable));
+
+static const fidl_type_t VectorHandlehandlenonnullable2nonnullableTable = fidl_type_t(::fidl::FidlCodedVector(&HandlehandlenonnullableTable, 2, 4, ::fidl::kNonnullable));
 
 static const fidl_type_t Vectoruint324294967295nonnullableTable = fidl_type_t(::fidl::FidlCodedVector(nullptr, 4294967295, 4, ::fidl::kNonnullable));
 
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTable;
 static const ::fidl::FidlStructField fidl_test_coding_LinearizerTestVectorOfUint32RequestFields[] = {
-    ::fidl::FidlStructField(&Vectoruint324294967295nonnullableTable, 16)
+    ::fidl::FidlStructField(&Vectoruint324294967295nonnullableTable, 16, 0)
 };
 const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_LinearizerTestVectorOfUint32RequestFields, 1, 32, "fidl.test.coding/LinearizerTestVectorOfUint32Request"));
 
@@ -31,13 +35,9 @@ static const fidl_type_t VectorString4294967295nonnullable4294967295nonnullableT
 
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable;
 static const ::fidl::FidlStructField fidl_test_coding_LinearizerTestVectorOfStringRequestFields[] = {
-    ::fidl::FidlStructField(&VectorString4294967295nonnullable4294967295nonnullableTable, 16)
+    ::fidl::FidlStructField(&VectorString4294967295nonnullable4294967295nonnullableTable, 16, 0)
 };
 const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_LinearizerTestVectorOfStringRequestFields, 1, 32, "fidl.test.coding/LinearizerTestVectorOfStringRequest"));
-
-static const fidl_type_t HandlehandlenonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_NONE, ::fidl::kNonnullable));
-
-static const fidl_type_t VectorHandlehandlenonnullable2nonnullableTable = fidl_type_t(::fidl::FidlCodedVector(&HandlehandlenonnullableTable, 2, 4, ::fidl::kNonnullable));
 
 static const ::fidl::FidlXUnionField fidl_test_coding_SampleXUnionNullableRefFields[] = {
     ::fidl::FidlXUnionField(&::fidl::internal::kInt32Table,319709411),
@@ -48,9 +48,9 @@ const fidl_type_t fidl_test_coding_SampleXUnionNullableRefTable = fidl_type_t(::
 
 
 static const ::fidl::FidlStructField fidl_test_coding_StructWithManyHandlesFields[] = {
-    ::fidl::FidlStructField(&HandlehandlenonnullableTable, 0),
-    ::fidl::FidlStructField(&HandlehandlenonnullableTable, 4),
-    ::fidl::FidlStructField(&VectorHandlehandlenonnullable2nonnullableTable, 8)
+    ::fidl::FidlStructField(&HandlehandlenonnullableTable, 0, 0),
+    ::fidl::FidlStructField(&HandlehandlenonnullableTable, 4, 0),
+    ::fidl::FidlStructField(&VectorHandlehandlenonnullable2nonnullableTable, 8, 0)
 };
 const fidl_type_t fidl_test_coding_StructWithManyHandlesTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_StructWithManyHandlesFields, 3, 24, "fidl.test.coding/StructWithManyHandles"));
 
@@ -60,7 +60,7 @@ static const ::fidl::FidlTableField fidl_test_coding_SmallerTableOfStructWithHan
 const fidl_type_t fidl_test_coding_SmallerTableOfStructWithHandleTable = fidl_type_t(::fidl::FidlCodedTable(fidl_test_coding_SmallerTableOfStructWithHandleFields, 1, "fidl.test.coding/SmallerTableOfStructWithHandle"));
 
 static const ::fidl::FidlStructField fidl_test_coding_StructWithHandleFields[] = {
-    ::fidl::FidlStructField(&HandlehandlenonnullableTable, 0)
+    ::fidl::FidlStructField(&HandlehandlenonnullableTable, 0, 0)
 };
 const fidl_type_t fidl_test_coding_StructWithHandleTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_StructWithHandleFields, 1, 8, "fidl.test.coding/StructWithHandle"));
 
@@ -72,18 +72,6 @@ const fidl_type_t fidl_test_coding_TableOfStructWithHandleTable = fidl_type_t(::
 
 static const ::fidl::FidlStructField fidl_test_coding_IntStructFields[] = {};
 const fidl_type_t fidl_test_coding_IntStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_IntStructFields, 0, 8, "fidl.test.coding/IntStruct"));
-
-static const ::fidl::FidlTableField fidl_test_coding_OlderSimpleTableFields[] = {
-    ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,1)
-};
-const fidl_type_t fidl_test_coding_OlderSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(fidl_test_coding_OlderSimpleTableFields, 1, "fidl.test.coding/OlderSimpleTable"));
-
-static const ::fidl::FidlTableField fidl_test_coding_NewerSimpleTableFields[] = {
-    ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,1),
-    ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,5),
-    ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,6)
-};
-const fidl_type_t fidl_test_coding_NewerSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(fidl_test_coding_NewerSimpleTableFields, 3, "fidl.test.coding/NewerSimpleTable"));
 
 static const ::fidl::FidlTableField fidl_test_coding_SimpleTableFields[] = {
     ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,1),
@@ -98,14 +86,26 @@ static const ::fidl::FidlXUnionField fidl_test_coding_SampleXUnionFields[] = {
 };
 const fidl_type_t fidl_test_coding_SampleXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(3, fidl_test_coding_SampleXUnionFields, ::fidl::kNonnullable, "fidl.test.coding/SampleXUnion"));
 
+static const ::fidl::FidlStructField fidl_test_coding_SampleXUnionStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionTable, 0, 0)
+};
+const fidl_type_t fidl_test_coding_SampleXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_SampleXUnionStructFields, 1, 24, "fidl.test.coding/SampleXUnionStruct"));
+
 static const ::fidl::FidlStructField fidl_test_coding_SampleNullableXUnionStructFields[] = {
-    ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionNullableRefTable, 0)
+    ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionNullableRefTable, 0, 0)
 };
 const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_SampleNullableXUnionStructFields, 1, 24, "fidl.test.coding/SampleNullableXUnionStruct"));
 
-static const ::fidl::FidlStructField fidl_test_coding_SampleXUnionStructFields[] = {
-    ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionTable, 0)
+static const ::fidl::FidlTableField fidl_test_coding_OlderSimpleTableFields[] = {
+    ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,1)
 };
-const fidl_type_t fidl_test_coding_SampleXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_SampleXUnionStructFields, 1, 24, "fidl.test.coding/SampleXUnionStruct"));
+const fidl_type_t fidl_test_coding_OlderSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(fidl_test_coding_OlderSimpleTableFields, 1, "fidl.test.coding/OlderSimpleTable"));
+
+static const ::fidl::FidlTableField fidl_test_coding_NewerSimpleTableFields[] = {
+    ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,1),
+    ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,5),
+    ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,6)
+};
+const fidl_type_t fidl_test_coding_NewerSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(fidl_test_coding_NewerSimpleTableFields, 3, "fidl.test.coding/NewerSimpleTable"));
 
 } // extern "C"

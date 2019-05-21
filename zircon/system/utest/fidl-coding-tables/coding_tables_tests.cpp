@@ -20,8 +20,12 @@ TEST(SomeStruct, CodingTable) {
     ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, some_struct_type.type_tag);
     const fidl::FidlCodedStruct& some_struct_table = some_struct_type.coded_struct;
     ASSERT_STR_EQ("fidl.test.example.codingtables/SomeStruct", some_struct_table.name);
-    // The struct only had primitives; they will not appear in its coding table.
-    ASSERT_EQ(0, some_struct_table.field_count);
+    // The struct only had primitives; the only field |foo| is to provide padding information.
+    ASSERT_EQ(1, some_struct_table.field_count);
+    ASSERT_EQ(nullptr, some_struct_table.fields[0].type);
+    // When |type| is nullptr, |offset| stores the starting offset of the padding.
+    ASSERT_EQ(1, some_struct_table.fields[0].offset);
+    ASSERT_EQ(3, some_struct_table.fields[0].padding);
 }
 
 TEST(MyXUnion, CodingTableWhenNullable) {

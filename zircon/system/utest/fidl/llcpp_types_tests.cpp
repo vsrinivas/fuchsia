@@ -40,7 +40,8 @@ const fidl_type_t NonnullableChannelType =
     fidl_type_t(fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, fidl::kNonnullable));
 const fidl::FidlStructField NonnullableChannelMessageFields[] = {
     fidl::FidlStructField(&NonnullableChannelType,
-                          offsetof(NonnullableChannelMessage, channel)),
+                          offsetof(NonnullableChannelMessage, channel),
+                          4),
 };
 const fidl_type_t NonnullableChannelMessageType = fidl_type_t(fidl::FidlCodedStruct(
     NonnullableChannelMessageFields, /* field_count */ 1,

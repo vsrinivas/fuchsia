@@ -255,6 +255,45 @@ bool encode_single_present_handle() {
     END_TEST;
 }
 
+bool encode_single_present_handle_zero_trailing_padding() {
+    BEGIN_TEST;
+
+    // Initialize a buffer with garbage value of 0xAA.
+    constexpr size_t kBufferSize = sizeof(nonnullable_handle_message_layout);
+    uint8_t buffer[kBufferSize];
+    memset(buffer, 0xAA, sizeof(buffer));
+
+    nonnullable_handle_message_layout* message = new (&buffer[0]) nonnullable_handle_message_layout;
+    message->inline_struct.handle = dummy_handle_0;
+
+    EXPECT_EQ(buffer[kBufferSize - 4], 0xAA);
+    EXPECT_EQ(buffer[kBufferSize - 3], 0xAA);
+    EXPECT_EQ(buffer[kBufferSize - 2], 0xAA);
+    EXPECT_EQ(buffer[kBufferSize - 1], 0xAA);
+
+    zx_handle_t handles[1] = {};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status = fidl_encode(&nonnullable_handle_message_type, message, kBufferSize, handles,
+                              ArrayCount(handles), &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+    EXPECT_EQ(actual_handles, 1u);
+    EXPECT_EQ(handles[0], dummy_handle_0);
+    EXPECT_EQ(message->inline_struct.handle, FIDL_HANDLE_PRESENT);
+
+    // Last 4 bytes are trailing padding after the handle and before the end of the structure.
+    // Despite being initialized to 0xAA, these should be set to zero by the encoder.
+    EXPECT_EQ(buffer[kBufferSize - 4], 0);
+    EXPECT_EQ(buffer[kBufferSize - 3], 0);
+    EXPECT_EQ(buffer[kBufferSize - 2], 0);
+    EXPECT_EQ(buffer[kBufferSize - 1], 0);
+
+    END_TEST;
+}
+
 bool encode_too_many_bytes_specified_should_close_handles() {
     BEGIN_TEST;
 
@@ -1415,6 +1454,61 @@ bool encode_many_armed_present_nonnullable_union() {
     END_TEST;
 }
 
+bool encode_many_armed_present_nonnullable_union_zero_trailing_padding() {
+    BEGIN_TEST;
+
+    // Initialize a buffer with garbage value of 0xAA.
+    constexpr size_t kBufferSize = sizeof(array_of_nonnullable_handles_union_message_layout);
+    uint8_t buffer[kBufferSize];
+    memset(buffer, 0xAA, sizeof(buffer));
+
+    array_of_nonnullable_handles_union_message_layout* message =
+        new (&buffer[0]) array_of_nonnullable_handles_union_message_layout;
+
+    message->inline_struct.data.tag = array_of_nonnullable_handles_union_kHandle;
+    message->inline_struct.data.handle = dummy_handle_0;
+
+    // 4 bytes tag + 16 bytes largest variant + 4 bytes padding = 24
+    constexpr size_t kUnionSize = 24;
+    static_assert(sizeof(message->inline_struct.data) == kUnionSize);
+    // The union comes after the 16 byte message header.
+    constexpr size_t kUnionOffset = 16;
+    ASSERT_EQ(reinterpret_cast<uint8_t*>(&message->inline_struct.data)
+                  - reinterpret_cast<uint8_t*>(message),
+              kUnionOffset);
+    // 4 bytes tag
+    constexpr size_t kHandleOffset = 4;
+    ASSERT_EQ(reinterpret_cast<uint8_t*>(&message->inline_struct.data.handle)
+                  - reinterpret_cast<uint8_t*>(&message->inline_struct.data),
+              kHandleOffset);
+    for (size_t i = kHandleOffset + sizeof(zx_handle_t); i < kUnionSize; i++) {
+        EXPECT_EQ(buffer[kUnionOffset + i], 0xAA);
+    }
+
+    zx_handle_t handles[1] = {};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status =
+        fidl_encode(&array_of_nonnullable_handles_union_message_type, message, kBufferSize,
+                    handles, ArrayCount(handles), &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+    EXPECT_EQ(actual_handles, 1u);
+    EXPECT_EQ(message->inline_struct.data.tag,
+              array_of_nonnullable_handles_union_kHandle);
+    EXPECT_EQ(message->inline_struct.data.handle, FIDL_HANDLE_PRESENT);
+    EXPECT_EQ(handles[0], dummy_handle_0);
+
+    // Validate that padding bytes have been cleared
+    for (size_t i = kHandleOffset + sizeof(zx_handle_t); i < kUnionSize; i++) {
+        EXPECT_EQ(buffer[kUnionOffset + i], 0);
+    }
+
+    END_TEST;
+}
+
 bool encode_single_armed_present_nullable_union() {
     BEGIN_TEST;
 
@@ -1547,6 +1641,64 @@ bool encode_nested_nonnullable_structs() {
     EXPECT_EQ(handles[1], dummy_handle_1);
     EXPECT_EQ(handles[2], dummy_handle_2);
     EXPECT_EQ(handles[3], dummy_handle_3);
+
+    END_TEST;
+}
+
+bool encode_nested_nonnullable_structs_zero_padding() {
+    BEGIN_TEST;
+
+    // Initialize a buffer with garbage value of 0xAA.
+    constexpr size_t kBufferSize = sizeof(nested_structs_message_layout);
+    uint8_t buffer[kBufferSize];
+    memset(buffer, 0xAA, sizeof(buffer));
+
+    nested_structs_message_layout* message = new (&buffer[0]) nested_structs_message_layout;
+    message->inline_struct.l0.l1.handle_1 = dummy_handle_0;
+    message->inline_struct.l0.l1.l2.l3.handle_3 = dummy_handle_1;
+    message->inline_struct.l0.l1.l2.handle_2 = dummy_handle_2;
+    message->inline_struct.l0.handle_0 = dummy_handle_3;
+
+    // Wire-format:
+    // message
+    // - 16 bytes header
+    // + struct_level_0  -------------  offset 16 = 4 * 4
+    //   - uint64_t
+    //   + struct_level_1  -----------  offset 24 = 4 * 6
+    //     - zx_handle_t
+    //     - (4 bytes padding)  ------  offset 28 = 4 * 7
+    //     + struct_level_2  ---------  offset 32 = 4 * 8
+    //       - uint64_t
+    //       + struct_level_3  -------  offset 40 = 4 * 10
+    //         - uint32_t
+    //         - zx_handle_t
+    //       - zx_handle_t
+    //       - (4 bytes padding)  ----  offset 52 = 4 * 13
+    //     - uint64_t
+    //   - zx_handle_t
+    //   - (4 bytes padding)  --------  offset 68 = 4 * 17
+    static_assert(sizeof(nested_structs_message_layout) == 68 + 4);
+
+    // Read padding bytes, four bytes at a time.
+    uint32_t* dwords = reinterpret_cast<uint32_t*>(&buffer[0]);
+    EXPECT_EQ(dwords[7], 0xAAAAAAAA);
+    EXPECT_EQ(dwords[13], 0xAAAAAAAA);
+    EXPECT_EQ(dwords[17], 0xAAAAAAAA);
+
+    zx_handle_t handles[4] = {};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status = fidl_encode(&nested_structs_message_type, message, kBufferSize, handles,
+                              ArrayCount(handles), &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+
+    // Validate that all padding bytes are zero, by checking four bytes at a time.
+    EXPECT_EQ(dwords[7], 0);
+    EXPECT_EQ(dwords[13], 0);
+    EXPECT_EQ(dwords[17], 0);
 
     END_TEST;
 }
@@ -1826,6 +1978,7 @@ END_TEST_CASE(unaligned)
 
 BEGIN_TEST_CASE(handles)
 RUN_TEST(encode_single_present_handle)
+RUN_TEST(encode_single_present_handle_zero_trailing_padding)
 RUN_TEST(encode_too_many_bytes_specified_should_close_handles)
 RUN_TEST(encode_multiple_present_handles)
 RUN_TEST(encode_single_absent_handle)
@@ -1883,6 +2036,7 @@ BEGIN_TEST_CASE(unions)
 RUN_TEST(encode_bad_tagged_union_error)
 RUN_TEST(encode_single_armed_present_nonnullable_union)
 RUN_TEST(encode_many_armed_present_nonnullable_union)
+RUN_TEST(encode_many_armed_present_nonnullable_union_zero_trailing_padding)
 RUN_TEST(encode_single_armed_present_nullable_union)
 RUN_TEST(encode_many_armed_present_nullable_union)
 RUN_TEST(encode_single_armed_absent_nullable_union)
@@ -1891,6 +2045,7 @@ END_TEST_CASE(unions)
 
 BEGIN_TEST_CASE(structs)
 RUN_TEST(encode_nested_nonnullable_structs)
+RUN_TEST(encode_nested_nonnullable_structs_zero_padding)
 RUN_TEST(encode_nested_nullable_structs)
 RUN_TEST(encode_nested_struct_recursion_too_deep_error)
 END_TEST_CASE(structs)

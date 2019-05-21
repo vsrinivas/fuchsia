@@ -31,7 +31,8 @@ struct unbounded_nonnullable_string_message_layout {
 static const fidl::FidlStructField unbounded_nonnullable_string_fields[] = {
     fidl::FidlStructField(&unbounded_nonnullable_string,
                           offsetof(unbounded_nonnullable_string_message_layout,
-                                   inline_struct.string)),
+                                   inline_struct.string),
+                          0),
 
 };
 

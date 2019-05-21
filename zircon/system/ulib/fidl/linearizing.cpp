@@ -97,10 +97,6 @@ public:
 
         // Copy the pointee to the desired location in secondary storage
         memcpy(&bytes_[next_out_of_line_], *object_ptr_ptr, inline_size);
-        // Zero the padding gaps
-        memset(&bytes_[next_out_of_line_ + inline_size],
-               0,
-               new_offset - next_out_of_line_ - inline_size);
 
         // Instruct the walker to traverse the pointee afterwards.
         *out_position = Position{
@@ -123,6 +119,10 @@ public:
         }
         original_handles_[handle_idx_] = handle_position.GetFromSource<zx_handle_t>();
         handle_idx_ += 1;
+        return Status::kSuccess;
+    }
+
+    Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
         return Status::kSuccess;
     }
 

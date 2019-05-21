@@ -87,7 +87,7 @@ public:
             SetError("message tried to decode more than provided number of bytes");
             return Status::kMemoryError;
         }
-
+        // TODO(FIDL-237): Check the padding gaps are zero.
         *out_position = Position{next_out_of_line_};
         *object_ptr_ptr = reinterpret_cast<void*>(&bytes_[next_out_of_line_]);
 
@@ -115,6 +115,18 @@ public:
         }
         *handle = handles_[handle_idx_];
         handle_idx_++;
+        return Status::kSuccess;
+    }
+
+    Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
+        // TODO(FIDL-237): Turn this on after prebuilts have picked up new encoder.
+        // auto padding_ptr = padding_position.template Get<const uint8_t*>(StartingPoint{bytes_});
+        // for (uint32_t i = 0; i < padding_length; i++) {
+        //     if (padding_ptr[i] != 0) {
+        //         SetError("non-zero padding bytes detected");
+        //         return Status::kConstraintViolationError;
+        //     }
+        // }
         return Status::kSuccess;
     }
 

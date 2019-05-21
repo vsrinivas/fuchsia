@@ -71,6 +71,10 @@ public:
         return Status::kSuccess;
     }
 
+    Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
+        return Status::kSuccess;
+    }
+
     Status EnterEnvelope(Position envelope_position,
                          EnvelopePointer envelope,
                          const fidl_type_t* payload_type) {

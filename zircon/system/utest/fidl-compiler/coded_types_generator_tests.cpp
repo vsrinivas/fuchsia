@@ -302,6 +302,74 @@ struct Wrapper2 {
     END_TEST;
 }
 
+bool CodedTypesOfStructsWithPaddings() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+struct BoolAndInt32 {
+  bool foo;
+  // 3 bytes of padding here.
+  int32 bar;
+};
+
+struct Complex {
+  int32 i32;
+  bool b1;
+  // 3 bytes of padding here.
+  int64 i64;
+  int16 i16;
+  // 6 bytes of padding here.
+};
+
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+    fidl::CodedTypesGenerator gen(library.library());
+    gen.CompileCodedTypes();
+
+    ASSERT_EQ(4, gen.coded_types().size());
+
+    auto type0 = gen.coded_types().at(0).get();
+    EXPECT_STR_EQ("int32", type0->coded_name.c_str());
+    EXPECT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type0->coding_needed);
+    auto type1 = gen.coded_types().at(1).get();
+    EXPECT_STR_EQ("bool", type1->coded_name.c_str());
+    EXPECT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type1->coding_needed);
+    auto type2 = gen.coded_types().at(2).get();
+    EXPECT_STR_EQ("int64", type2->coded_name.c_str());
+    EXPECT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type2->coding_needed);
+    auto type3 = gen.coded_types().at(3).get();
+    EXPECT_STR_EQ("int16", type3->coded_name.c_str());
+    EXPECT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type3->coding_needed);
+
+    auto name_bool_and_int32 = fidl::flat::Name(library.library(), "BoolAndInt32");
+    auto type_bool_and_int32 = gen.CodedTypeFor(&name_bool_and_int32);
+    ASSERT_NONNULL(type_bool_and_int32);
+    ASSERT_STR_EQ("example_BoolAndInt32", type_bool_and_int32->coded_name.c_str());
+    auto type_bool_and_int32_struct = static_cast<const fidl::coded::StructType*>(
+        type_bool_and_int32);
+    EXPECT_EQ(type_bool_and_int32_struct->fields.size(), 1);
+    EXPECT_EQ(type_bool_and_int32_struct->fields[0].type, nullptr);
+    EXPECT_EQ(type_bool_and_int32_struct->fields[0].offset, 0);
+    EXPECT_EQ(type_bool_and_int32_struct->fields[0].padding, 3);
+
+    auto name_complex = fidl::flat::Name(library.library(), "Complex");
+    auto type_complex = gen.CodedTypeFor(&name_complex);
+    ASSERT_NONNULL(type_complex);
+    ASSERT_STR_EQ("example_Complex", type_complex->coded_name.c_str());
+    auto type_complex_struct = static_cast<const fidl::coded::StructType*>(type_complex);
+    EXPECT_EQ(type_complex_struct->fields.size(), 2);
+    EXPECT_EQ(type_complex_struct->fields[0].type, nullptr);
+    EXPECT_EQ(type_complex_struct->fields[0].offset, 4);
+    EXPECT_EQ(type_complex_struct->fields[0].padding, 3);
+    EXPECT_EQ(type_complex_struct->fields[1].type, nullptr);
+    EXPECT_EQ(type_complex_struct->fields[1].offset, 16);
+    EXPECT_EQ(type_complex_struct->fields[1].padding, 6);
+
+    END_TEST;
+}
+
 bool CodedTypesOfNullableXUnions() {
     BEGIN_TEST;
 
@@ -460,6 +528,7 @@ RUN_TEST(CodedTypesOfInterface);
 RUN_TEST(CodedTypesOfRequestOfInterface);
 RUN_TEST(CodedTypesOfXUnions);
 RUN_TEST(CodedTypesOfNullablePointers);
+RUN_TEST(CodedTypesOfStructsWithPaddings);
 RUN_TEST(CodedTypesOfNullableXUnions);
 RUN_TEST(CodedTypesOfTables);
 
