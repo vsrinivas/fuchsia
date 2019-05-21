@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FIND_NAME_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FIND_NAME_H_
 
 #include <string>
 
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 
 namespace zxdb {
@@ -13,7 +15,6 @@ namespace zxdb {
 class CodeBlock;
 class Collection;
 class DataMember;
-class Identifier;
 class IndexWalker;
 class FoundMember;
 class FoundName;
@@ -180,4 +181,15 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
                                     bool search_containing,
                                     std::vector<FoundName>* results);
 
+// In many contexts (like function parameters and local variables) an
+// identifier name can't have any :: or template parameters and can have only
+// one component. If this identifier satisfies this requirement, a pointer to
+// the single string is returned. If there is zero or more than one component
+// or any template specs, returns null.
+//
+// The returned pointer will be invalidated if the Identifier is mutated.
+const std::string* GetSingleComponentIdentifierName(const Identifier& ident);
+
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FIND_NAME_H_

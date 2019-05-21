@@ -90,7 +90,8 @@ TEST(ModuleSymbolIndex, FindPrefix) {
 
   // Something with multiple results (NOTE: if more functions are added to the
   // test file with this prefix, the expected results might change).
-  std::tie(found, end) = index.FindPrefix(Identifier("Call"));
+  std::tie(found, end) =
+      index.FindPrefix(Identifier(IdentifierComponent("Call")));
   ASSERT_NE(found, end);
   EXPECT_EQ("CallInline", found->first);
   ++found;
@@ -187,7 +188,7 @@ TEST(ModuleSymbolIndex, FindTypeAndNamespace) {
   EXPECT_EQ(1u, result.size()) << "Class not found.";
 
   // Should also have deifned an "int" type.
-  result = index.FindExact(Identifier("int"));
+  result = index.FindExact(Identifier(IdentifierComponent("int")));
   EXPECT_EQ(1u, result.size()) << "int not found.";
 }
 

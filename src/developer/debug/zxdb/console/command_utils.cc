@@ -441,7 +441,7 @@ OutputBuffer FormatInputLocation(const InputLocation& location) {
 // syntax highlighting for all the components.
 OutputBuffer FormatIdentifier(const Identifier& identifier, bool bold_last) {
   OutputBuffer result;
-  if (identifier.qualification() == Identifier::kGlobal)
+  if (identifier.qualification() == IdentifierQualification::kGlobal)
     result.Append(identifier.GetSeparator());
 
   const auto& comps = identifier.components();

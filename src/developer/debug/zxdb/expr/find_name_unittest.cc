@@ -134,7 +134,8 @@ TEST(FindName, FindLocalVariable) {
 
   // Find "::value" should match nothing.
   Identifier value_global_ident(
-      Identifier::kGlobal, Identifier::Component(var_value->GetAssignedName()));
+      IdentifierQualification::kGlobal,
+      IdentifierComponent(var_value->GetAssignedName()));
   found = FindName(function_context, value_global_ident);
   EXPECT_FALSE(found);
 
@@ -336,8 +337,8 @@ TEST(FindName, FindIndexedNameInModule) {
 
   // Now do the same search but globally qualify the input "::var" which should
   // match only the toplevel one.
-  Identifier var_global_ident(Identifier::kGlobal,
-                              Identifier::Component(kVarName));
+  Identifier var_global_ident(IdentifierQualification::kGlobal,
+                              IdentifierComponent(kVarName));
   found.clear();
   FindIndexedNameInModule(all_opts, &mod_sym, nested_ns, var_global_ident, true,
                           &found);

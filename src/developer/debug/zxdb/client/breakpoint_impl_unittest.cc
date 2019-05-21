@@ -94,7 +94,7 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   in.enabled = false;
   in.scope = BreakpointSettings::Scope::kSystem;
   in.location.type = InputLocation::Type::kSymbol;
-  in.location.symbol = Identifier(kFunctionName);
+  in.location.symbol = Identifier(IdentifierComponent(kFunctionName));
 
   // Setting the disabled settings shouldn't update the backend.
   Err err = SyncSetSettings(bp, in);

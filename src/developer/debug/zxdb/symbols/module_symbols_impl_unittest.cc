@@ -70,8 +70,8 @@ TEST(ModuleSymbols, Basic) {
 
   // MyFunction() should have one implementation.
   std::vector<Location> addrs = module.ResolveInputLocation(
-      symbol_context,
-      InputLocation(Identifier(TestSymbolModule::kMyFunctionName)));
+      symbol_context, InputLocation(Identifier(IdentifierComponent(
+                          TestSymbolModule::kMyFunctionName))));
   ASSERT_EQ(1u, addrs.size());
 
   // On one occasion Clang generated a symbol file that listed many functions
@@ -289,8 +289,8 @@ TEST(ModuleSymbols, ResolvePLTEntry) {
 
   auto addrs = module.ResolveInputLocation(
       symbol_context,
-      InputLocation(
-          Identifier(std::string(TestSymbolModule::kPltFunctionName) + "@plt")),
+      InputLocation(Identifier(IdentifierComponent(
+          std::string(TestSymbolModule::kPltFunctionName) + "@plt"))),
       ResolveOptions());
 
   ASSERT_EQ(1u, addrs.size());

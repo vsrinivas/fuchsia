@@ -27,12 +27,9 @@ namespace zxdb {
 namespace {
 
 debug_ipc::RegisterID GetRegister(const Identifier& ident) {
-  auto str = ident.GetSingleComponentName();
-
-  if (!str) {
+  auto str = GetSingleComponentIdentifierName(ident);
+  if (!str)
     return debug_ipc::RegisterID::kUnknown;
-  }
-
   return debug_ipc::StringToRegisterID(*str);
 }
 

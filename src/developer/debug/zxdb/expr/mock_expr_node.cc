@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/expr/mock_expr_node.h"
 
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

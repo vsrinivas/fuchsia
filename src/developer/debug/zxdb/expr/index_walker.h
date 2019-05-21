@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_INDEX_WALKER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_INDEX_WALKER_H_
 
 #include <string_view>
 #include <utility>
@@ -38,7 +39,7 @@ class IndexWalker {
   // This ignores the separator, so walking into "::foo" won't go back to the
   // global namespace. This is because this will be called for each
   // sub-component of an identifier, and many of them will have separators.
-  bool WalkInto(const Identifier::Component& comp);
+  bool WalkInto(const IdentifierComponent& comp);
 
   // Moves to a child of the current component that matches the given
   // identifier (following all components). Returns true if there was a match,
@@ -63,17 +64,17 @@ class IndexWalker {
   // index. This will do limited canonicalization on the index string so a
   // comparison of template parameters is possible.
   static bool ComponentMatches(const std::string& index_string,
-                               const Identifier::Component& comp);
+                               const IdentifierComponent& comp);
 
   // Returns true if the component name matches the stuff in the index string
   // before any template parameters.
   static bool ComponentMatchesNameOnly(const std::string& index_string,
-                                       const Identifier::Component& comp);
+                                       const IdentifierComponent& comp);
 
   // Returns true if the template parts of the component match a canonicalized
   // version of the template parameters extracted from the index string.
   static bool ComponentMatchesTemplateOnly(const std::string& index_string,
-                                           const Identifier::Component& comp);
+                                           const IdentifierComponent& comp);
 
   // Returns true if all templates using the given base |name| will be before
   // the given indexed name in an index sorted by ASCII string values.
@@ -88,3 +89,5 @@ class IndexWalker {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_INDEX_WALKER_H_

@@ -26,6 +26,7 @@ static_library("symbols") {
     "function.h",
     "function_type.h",
     "identifier.h",
+    "identifier_base.h",
     "inherited_from.h",
     "input_location.h",
     "lazy_symbol.h",

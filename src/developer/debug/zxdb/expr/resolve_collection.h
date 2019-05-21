@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_COLLECTION_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_COLLECTION_H_
 
 #include <functional>
 #include <optional>
@@ -11,6 +12,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/found_member.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
@@ -19,7 +21,6 @@ class CodeBlock;
 class DataMember;
 class ExprEvalContext;
 class ExprValue;
-class Identifier;
 class InheritedFrom;
 
 // Resolves a DataMember given a collection (class/struct/union) and a record
@@ -71,3 +72,5 @@ Err ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type,
                      uint64_t offset, ExprValue* out);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_COLLECTION_H_

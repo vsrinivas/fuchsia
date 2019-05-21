@@ -230,7 +230,7 @@ FoundName FindName(const FindNameContext& context,
 void FindName(const FindNameContext& context, const FindNameOptions& options,
               const Identifier& looking_for, std::vector<FoundName>* results) {
   if (options.find_vars && context.block &&
-      looking_for.qualification() == Identifier::kRelative) {
+      looking_for.qualification() == IdentifierQualification::kRelative) {
     // Search for local variables and function parameters.
     FindLocalVariable(options, context.block, looking_for, results);
     if (results->size() >= options.max_results)
@@ -288,7 +288,7 @@ void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
   // TODO(DX-1214) lookup type names defined locally in this function.
 
   // Local variables can only be simple names.
-  const std::string* name = looking_for.GetSingleComponentName();
+  const std::string* name = GetSingleComponentIdentifierName(looking_for);
   if (!name)
     return;
 
@@ -313,7 +313,7 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
 
         // Data member iteration.
         if (const std::string* looking_for_name =
-                looking_for.GetSingleComponentName();
+                GetSingleComponentIdentifierName(looking_for);
             looking_for_name && options.find_vars) {
           for (const auto& lazy : cur_collection->data_members()) {
             if (const DataMember* data = lazy.Get()->AsDataMember()) {
@@ -397,7 +397,7 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
                                     std::vector<FoundName>* results) {
   IndexWalker walker(&module_symbols->GetIndex());
   if (!current_scope.empty() &&
-      looking_for.qualification() == Identifier::kRelative) {
+      looking_for.qualification() == IdentifierQualification::kRelative) {
     // Unless the input identifier is fully qualified, start the search in the
     // current context.
     walker.WalkIntoClosest(current_scope);
@@ -417,6 +417,12 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
 
   // Current search is done, but there still may be stuff left to find.
   return VisitResult::kContinue;
+}
+
+const std::string* GetSingleComponentIdentifierName(const Identifier& ident) {
+  if (ident.components().size() != 1 || ident.components()[0].has_template())
+    return nullptr;
+  return &ident.components()[0].name();
 }
 
 }  // namespace zxdb

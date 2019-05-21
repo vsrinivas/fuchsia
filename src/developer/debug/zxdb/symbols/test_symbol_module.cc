@@ -116,7 +116,7 @@ Identifier TestSymbolModule::SplitName(std::string_view input) {
       input_index = next + separator.size();  // Skip over "::".
     }
 
-    result.AppendComponent(std::move(cur_name));
+    result.AppendComponent(IdentifierComponent(std::move(cur_name)));
   }
   return result;
 }

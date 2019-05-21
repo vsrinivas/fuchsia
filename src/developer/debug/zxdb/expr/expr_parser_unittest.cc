@@ -19,7 +19,7 @@ namespace {
 // namespace, anything beginning with "Template" is a template, and anything
 // beginning with "Type" is a type.
 FoundName TestLookupName(const Identifier& ident) {
-  const Identifier::Component& comp = ident.components().back();
+  const IdentifierComponent& comp = ident.components().back();
   const std::string& name = comp.name();
 
   if (StringBeginsWith(name, "Namespace"))

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_NODE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_NODE_H_
 
 #include <functional>
 #include <iosfwd>
@@ -264,7 +265,8 @@ class IdentifierExprNode : public ExprNode {
   IdentifierExprNode() = default;
 
   // Simple one-name identifier.
-  IdentifierExprNode(std::string name) : ident_(std::move(name)) {}
+  IdentifierExprNode(std::string name)
+      : ident_(IdentifierComponent(std::move(name))) {}
 
   IdentifierExprNode(Identifier id) : ident_(std::move(id)) {}
   ~IdentifierExprNode() override = default;
@@ -393,3 +395,5 @@ class UnaryOpExprNode : public ExprNode {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_NODE_H_

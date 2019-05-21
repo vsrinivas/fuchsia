@@ -84,7 +84,7 @@ std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
       loc.symbol.components().size() != 1)
     return std::nullopt;
 
-  const Identifier::Component& comp = loc.symbol.components()[0];
+  const IdentifierComponent& comp = loc.symbol.components()[0];
   if (comp.has_template() || !StringEndsWith(comp.name(), "@plt"))
     return std::nullopt;
 

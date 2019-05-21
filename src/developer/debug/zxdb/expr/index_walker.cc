@@ -40,7 +40,7 @@ bool IndexWalker::WalkUp() {
   return false;
 }
 
-bool IndexWalker::WalkInto(const Identifier::Component& comp) {
+bool IndexWalker::WalkInto(const IdentifierComponent& comp) {
   const ModuleSymbolIndexNode* node = path_.back();
 
   const std::string& comp_name = comp.name();
@@ -92,7 +92,7 @@ bool IndexWalker::WalkInto(const Identifier& ident) {
 }
 
 bool IndexWalker::WalkIntoClosest(const Identifier& ident) {
-  if (ident.qualification() == Identifier::kGlobal)
+  if (ident.qualification() == IdentifierQualification::kGlobal)
     path_.resize(1);  // Only keep the root.
 
   for (const auto& comp : ident.components()) {
@@ -104,7 +104,7 @@ bool IndexWalker::WalkIntoClosest(const Identifier& ident) {
 
 // static
 bool IndexWalker::ComponentMatches(const std::string& index_string,
-                                   const Identifier::Component& comp) {
+                                   const IdentifierComponent& comp) {
   if (!ComponentMatchesNameOnly(index_string, comp))
     return false;
   // Only bother with the expensive template comparison on demand.
@@ -113,7 +113,7 @@ bool IndexWalker::ComponentMatches(const std::string& index_string,
 
 // static
 bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
-                                           const Identifier::Component& comp) {
+                                           const IdentifierComponent& comp) {
   const std::string& comp_name = comp.name();
   if (comp_name.size() > index_string.size())
     return false;  // Index string can't contain the name.
@@ -129,7 +129,7 @@ bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
 
 // static
 bool IndexWalker::ComponentMatchesTemplateOnly(
-    const std::string& index_string, const Identifier::Component& comp) {
+    const std::string& index_string, const IdentifierComponent& comp) {
   auto [err, index_ident] = ExprParser::ParseIdentifier(index_string);
   if (err.has_error())
     return false;

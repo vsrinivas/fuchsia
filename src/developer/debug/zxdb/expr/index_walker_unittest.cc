@@ -11,8 +11,8 @@
 namespace zxdb {
 
 TEST(IndexWalker, ComponentMatchesNameOnly) {
-  Identifier::Component foo_comp("Foo");
-  Identifier::Component foo_template_comp("Foo", {"A", "b"});
+  IdentifierComponent foo_comp("Foo");
+  IdentifierComponent foo_template_comp("Foo", {"A", "b"});
 
   // Simple name-only comparisons.
   EXPECT_TRUE(IndexWalker::ComponentMatchesNameOnly("Foo", foo_comp));
@@ -28,9 +28,9 @@ TEST(IndexWalker, ComponentMatchesNameOnly) {
 }
 
 TEST(IndexWalker, ComponentMatchesTemplateOnly) {
-  Identifier::Component foo_comp("Foo");
-  Identifier::Component foo_template_comp("Foo", {"A", "b"});
-  Identifier::Component foo_empty_template_comp("Foo", {});
+  IdentifierComponent foo_comp("Foo");
+  IdentifierComponent foo_template_comp("Foo", {"A", "b"});
+  IdentifierComponent foo_empty_template_comp("Foo", {});
 
   // Neither inputs have templates (should be a match).
   EXPECT_TRUE(IndexWalker::ComponentMatchesTemplateOnly("Foo", foo_comp));
@@ -52,8 +52,8 @@ TEST(IndexWalker, ComponentMatchesTemplateOnly) {
 
 // Most cases are tested by ComponentMatchesNameOnly and ...TemplateOnly above.
 TEST(IndexWalker, ComponentMatches) {
-  Identifier::Component foo_comp("Foo");
-  Identifier::Component foo_template_comp("Foo", {"A", "b"});
+  IdentifierComponent foo_comp("Foo");
+  IdentifierComponent foo_template_comp("Foo", {"A", "b"});
 
   EXPECT_TRUE(IndexWalker::ComponentMatches("Foo", foo_comp));
   EXPECT_FALSE(IndexWalker::ComponentMatches("Foo<>", foo_comp));
@@ -105,12 +105,12 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_EQ(&root, walker.current());
 
   // Walk to the "Foo" component.
-  EXPECT_TRUE(walker.WalkInto(Identifier::Component("Foo")));
+  EXPECT_TRUE(walker.WalkInto(IdentifierComponent("Foo")));
   EXPECT_EQ(foo_node, walker.current());
 
   // Walk to the "NotPresent" component. The current location should be
   // unchanged.
-  EXPECT_FALSE(walker.WalkInto(Identifier::Component("NotFound")));
+  EXPECT_FALSE(walker.WalkInto(IdentifierComponent("NotFound")));
   EXPECT_EQ(foo_node, walker.current());
 
   // Walk to the "Bar<int,char>" identifier.
@@ -124,7 +124,7 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_EQ(foo_node, walker.current());
 
   // Walk to the "Bar" node.
-  EXPECT_TRUE(walker.WalkInto(Identifier::Component("Bar")));
+  EXPECT_TRUE(walker.WalkInto(IdentifierComponent("Bar")));
   EXPECT_EQ(bar_node, walker.current());
 
   // Parse the Barf identifier for the following two tests. This one has a

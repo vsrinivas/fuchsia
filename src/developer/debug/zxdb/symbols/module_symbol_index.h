@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MODULE_SYMBOL_INDEX_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MODULE_SYMBOL_INDEX_H_
 
 #include <map>
 #include <memory>
@@ -10,6 +11,7 @@
 #include <string_view>
 #include <vector>
 
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
 #include "src/lib/fxl/macros.h"
 
@@ -27,8 +29,6 @@ class ObjectFile;
 }  // namespace llvm
 
 namespace zxdb {
-
-class Identifier;
 
 // Holds the index of symbols for a given module.
 class ModuleSymbolIndex {
@@ -146,3 +146,5 @@ class ModuleSymbolIndex {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MODULE_SYMBOL_INDEX_H_
