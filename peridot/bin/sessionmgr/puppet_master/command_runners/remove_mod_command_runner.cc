@@ -45,7 +45,7 @@ class RemoveModCall : public Operation<fuchsia::modular::ExecuteResult> {
               (*module_data)->module_deleted = true;
               result_.status = fuchsia::modular::ExecuteStatus::OK;
             })
-        ->Then([this, flow] {});
+        ->Then([flow] {});
   }
 
   StoryStorage* const story_storage_;

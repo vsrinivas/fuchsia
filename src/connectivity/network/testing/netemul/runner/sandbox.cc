@@ -451,7 +451,7 @@ Sandbox::Promise Sandbox::StartEnvironmentInner(
     ConfiguringEnvironmentPtr env, const config::Environment* config) {
   ASSERT_HELPER_DISPATCHER;
   auto launcher = std::make_shared<fuchsia::sys::LauncherSyncPtr>();
-  return fit::make_promise([this, launcher, env]() -> PromiseResult {
+  return fit::make_promise([launcher, env]() -> PromiseResult {
            // get launcher
            if ((*env)->GetLauncher(launcher->NewRequest()) != ZX_OK) {
              return fit::error(

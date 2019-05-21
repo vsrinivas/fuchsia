@@ -69,7 +69,7 @@ void AgentRunner::Teardown(fit::function<void()> callback) {
   // This is called when agents are done being removed
   auto called = std::make_shared<bool>(false);
   fit::function<void(const bool)> termination_callback =
-      [this, called,
+      [called,
        callback = std::move(callback)](const bool from_timeout) mutable {
         if (*called) {
           return;

@@ -330,7 +330,7 @@ TEST_F(AudioRendererTest, PlayWithoutFormat) {
 
   audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP,
                         fuchsia::media::NO_TIMESTAMP,
-                        [this, &ref_time_received, &media_time_received](
+                        [&ref_time_received, &media_time_received](
                             int64_t ref_time, int64_t media_time) {
                           ref_time_received = ref_time;
                           media_time_received = media_time;
@@ -357,7 +357,7 @@ TEST_F(AudioRendererTest, PlayWithoutBuffers) {
 
   audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP,
                         fuchsia::media::NO_TIMESTAMP,
-                        [this, &ref_time_received, &media_time_received](
+                        [&ref_time_received, &media_time_received](
                             int64_t ref_time, int64_t media_time) {
                           ref_time_received = ref_time;
                           media_time_received = media_time;
@@ -387,7 +387,7 @@ TEST_F(AudioRendererTest, PauseWithoutFormat) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
-  audio_renderer_->Pause([this, &ref_time_received, &media_time_received](
+  audio_renderer_->Pause([&ref_time_received, &media_time_received](
                              int64_t ref_time, int64_t media_time) {
     ref_time_received = ref_time;
     media_time_received = media_time;
@@ -412,7 +412,7 @@ TEST_F(AudioRendererTest, PauseWithoutBuffers) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
-  audio_renderer_->Pause([this, &ref_time_received, &media_time_received](
+  audio_renderer_->Pause([&ref_time_received, &media_time_received](
                              int64_t ref_time, int64_t media_time) {
     ref_time_received = ref_time;
     media_time_received = media_time;

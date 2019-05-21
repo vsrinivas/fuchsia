@@ -64,7 +64,7 @@ class FindModulesCall
 
       constraint_futs_.push_back(
           GetTypesFromIntentParameter(std::move(param.data), param.name)
-              ->Map([this, name = param.name](std::vector<std::string> types) {
+              ->Map([name = param.name](std::vector<std::string> types) {
                 fuchsia::modular::FindModulesParameterConstraint constraint;
                 constraint.param_name = name;
                 constraint.param_types = std::move(types);

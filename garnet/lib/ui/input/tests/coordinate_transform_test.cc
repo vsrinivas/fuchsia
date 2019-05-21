@@ -183,7 +183,7 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
 #endif
   });
 
-  client_1.ExamineEvents([this](const std::vector<InputEvent>& events) {
+  client_1.ExamineEvents([](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 6u) << "Should receive exactly 6 input events.";
 
     // ADD
@@ -216,7 +216,7 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
                                PointerEventPhase::REMOVE, 6, 2));
   });
 
-  client_2.ExamineEvents([this](const std::vector<InputEvent>& events) {
+  client_2.ExamineEvents([](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 5u) << "Should receive exactly 5 input events.";
 
     // ADD

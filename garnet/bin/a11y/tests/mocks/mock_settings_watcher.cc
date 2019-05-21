@@ -15,7 +15,7 @@ MockSettingsWatcher::MockSettingsWatcher(
     sys::testing::ComponentContextProvider* context)
     : context_provider_(context) {
   context_provider_->context()->svc()->Connect(manager_.NewRequest());
-  manager_.set_error_handler([this](zx_status_t status) {
+  manager_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Cannot connect to SettingsManager with status:"
                    << zx_status_get_string(status);
   });

@@ -43,7 +43,7 @@ class TestModule {
 
  private:
   void ScheduleDone() {
-    auto check = [this, done = std::make_shared<int>(0)] {
+    auto check = [done = std::make_shared<int>(0)] {
       ++*done;
       if (*done == 2) {
         Signal(kParentModuleDoneSignal);

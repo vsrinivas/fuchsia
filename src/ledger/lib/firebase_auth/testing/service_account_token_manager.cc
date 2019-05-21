@@ -65,7 +65,7 @@ void ServiceAccountTokenManager::GetFirebaseToken(
     GetFirebaseTokenCallback callback) {
   service_account_token_minter_.GetFirebaseToken(
       std::move(firebase_api_key),
-      [this, callback = std::move(callback)](
+      [callback = std::move(callback)](
           const ServiceAccountTokenMinter::GetTokenResponse& response) {
         auto status = ConvertStatus(response.status);
 

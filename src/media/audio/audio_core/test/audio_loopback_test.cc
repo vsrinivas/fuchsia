@@ -197,7 +197,7 @@ void AudioLoopbackTest::CleanUpRenderer(unsigned int index) {
 
   // Flush the audio
   audio_renderer_[index]->DiscardAllPackets(
-      [this, &flushed]() { flushed = true; });
+      [&flushed]() { flushed = true; });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, &flushed]() { return error_occurred_ || flushed; },
       kDurationResponseExpected, kDurationGranularity))
@@ -306,7 +306,7 @@ TEST_F(AudioLoopbackTest, SingleStream) {
   // Get the minimum duration after submitting a packet to when we can start
   // capturing what we sent on the loopback interface
   zx_duration_t sleep_duration = 0;
-  audio_renderer_[0]->GetMinLeadTime([this, &sleep_duration](zx_duration_t t) {
+  audio_renderer_[0]->GetMinLeadTime([&sleep_duration](zx_duration_t t) {
     // Give a little wiggle room.
     sleep_duration = t + ZX_MSEC(5);
   });
@@ -330,7 +330,7 @@ TEST_F(AudioLoopbackTest, SingleStream) {
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
   audio_renderer_[0]->Play(zx_clock_get_monotonic(), 0,
-                           [this, &ref_time_received, &media_time_received](
+                           [&ref_time_received, &media_time_received](
                                int64_t ref_time, int64_t media_time) {
                              ref_time_received = ref_time;
                              media_time_received = media_time;
@@ -407,7 +407,7 @@ TEST_F(AudioLoopbackTest, DualStream) {
   // true for this test as we create the renderers with the same parameters, but
   // is not a safe assumption for the general users of this API to make.
   zx_duration_t sleep_duration = 0;
-  audio_renderer_[0]->GetMinLeadTime([this, &sleep_duration](zx_duration_t t) {
+  audio_renderer_[0]->GetMinLeadTime([&sleep_duration](zx_duration_t t) {
     // Give a little wiggle room.
     sleep_duration = t + ZX_MSEC(5);
   });
@@ -435,7 +435,7 @@ TEST_F(AudioLoopbackTest, DualStream) {
   audio_renderer_[0]->PlayNoReply(playat, 0);
   // Only get the callback for the second renderer.
   audio_renderer_[1]->Play(playat, 0,
-                           [this, &ref_time_received, &media_time_received](
+                           [&ref_time_received, &media_time_received](
                                int64_t ref_time, int64_t media_time) {
                              ref_time_received = ref_time;
                              media_time_received = media_time;

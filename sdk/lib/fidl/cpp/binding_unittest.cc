@@ -185,7 +185,7 @@ TEST(Binding, UnbindDoesNotTriggerErrorHandler) {
                                                       handle.NewRequest());
 
   int error_count = 0;
-  binding.set_error_handler([&error_count, &binding](zx_status_t status) {
+  binding.set_error_handler([&error_count](zx_status_t status) {
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
     ++error_count;
   });

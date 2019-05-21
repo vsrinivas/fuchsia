@@ -93,7 +93,7 @@ void MdnsServiceImpl::OnReady() {
     PublishServiceInstance(
         publication.service_, publication.instance_,
         publication.publication_->Clone(), true,
-        [this, service = publication.service_](
+        [service = publication.service_](
             fuchsia::net::mdns::Publisher_PublishServiceInstance_Result
                 result) {
           if (result.is_err()) {
@@ -144,7 +144,7 @@ void MdnsServiceImpl::ResolveHostName(std::string host, int64_t timeout_ns,
 
   mdns_.ResolveHostName(
       host, fxl::TimePoint::Now() + fxl::TimeDelta::FromNanoseconds(timeout_ns),
-      [this, callback = std::move(callback)](
+      [callback = std::move(callback)](
           const std::string& host, const inet::IpAddress& v4_address,
           const inet::IpAddress& v6_address) {
         callback(v4_address ? std::make_unique<fuchsia::net::Ipv4Address>(

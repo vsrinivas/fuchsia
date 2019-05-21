@@ -132,7 +132,7 @@ void CommandChannel::SendCommandSync(
   bool received = false;
   auto previous_cb = std::move(event_callback_);
 
-  auto cb = [this, &received,
+  auto cb = [&received,
              callback = std::move(callback)](const auto& event_packet) {
     if (callback) {
       callback(event_packet);

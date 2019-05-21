@@ -71,7 +71,7 @@ class TestApp : public modular::testing::SessionShellBase {
       "fuchsia::modular::Agent executed message queue task."};
   void StartStory() {
     story_provider()->GetController(kStoryName, story_controller_.NewRequest());
-    story_controller_.set_error_handler([this](zx_status_t status) {
+    story_controller_.set_error_handler([](zx_status_t status) {
       FXL_LOG(ERROR) << "Story controller for story " << kStoryName
                      << " died. Does this story exist?";
     });

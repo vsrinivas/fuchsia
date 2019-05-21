@@ -55,7 +55,7 @@ class TestModule {
 
       Await(module_name_ == kFirstModuleName ? kFirstModuleCallDone
                                              : kSecondModuleCallDone,
-            [this, module_context] { module_context->RemoveSelfFromStory(); });
+            [module_context] { module_context->RemoveSelfFromStory(); });
       Await(module_name_ == kFirstModuleName ? kFirstModuleCallStartActivity
                                              : kSecondModuleCallStartActivity,
             [this, module_context] {
@@ -65,7 +65,7 @@ class TestModule {
             });
       Await(module_name_ == kFirstModuleName ? kFirstModuleCallStopActivity
                                              : kSecondModuleCallStopActivity,
-            [this, module_context] { ongoing_activity_.Unbind(); });
+            [this] { ongoing_activity_.Unbind(); });
     });
   }
 

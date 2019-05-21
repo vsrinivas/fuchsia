@@ -114,9 +114,8 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
   // Raw .h264 has start code 00 00 01 or 00 00 00 01 before each NAL, and
   // the start codes don't alias in the middle of NALs, so we just scan
   // for NALs and send them in to the decoder.
-  auto queue_access_unit = [&codec_client, &input_bytes,
-                            &input_frame_pts_counter](uint8_t* bytes,
-                                                      size_t byte_count) {
+  auto queue_access_unit = [&codec_client, &input_frame_pts_counter](
+                               uint8_t* bytes, size_t byte_count) {
     size_t bytes_so_far = 0;
     // printf("queuing offset: %ld byte_count: %zu\n", bytes -
     // input_bytes.get(), byte_count);
@@ -206,9 +205,8 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
 void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
                     size_t input_size) {
   uint64_t input_frame_pts_counter = 0;
-  auto queue_access_unit = [&codec_client, &input_bytes,
-                            &input_frame_pts_counter](uint8_t* bytes,
-                                                      size_t byte_count) {
+  auto queue_access_unit = [&codec_client, &input_frame_pts_counter](
+                               uint8_t* bytes, size_t byte_count) {
     std::unique_ptr<fuchsia::media::Packet> packet =
         codec_client->BlockingGetFreeInputPacket();
     ZX_ASSERT(packet->has_header());

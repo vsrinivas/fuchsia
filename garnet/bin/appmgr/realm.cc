@@ -499,7 +499,7 @@ void Realm::Resolve(fidl::StringPtr name,
   auto trace_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("appmgr", "Realm::ResolveLoader::LoadUrl", trace_id, "url",
                     canon_url);
-  loader_->LoadUrl(canon_url, [this, trace_id, callback = std::move(callback)](
+  loader_->LoadUrl(canon_url, [trace_id, callback = std::move(callback)](
                                   fuchsia::sys::PackagePtr package) mutable {
     TRACE_ASYNC_END("appmgr", "Realm::ResolveLoader::LoadUrl", trace_id);
 

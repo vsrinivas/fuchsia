@@ -247,7 +247,7 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
 TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
   bool called = false;
   resource_linker_->SetOnExpiredCallback(
-      [this, &called](Resource*, ResourceLinker::ExpirationCause cause) {
+      [&called](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kResourceDestroyed, cause);
         called = true;
       });

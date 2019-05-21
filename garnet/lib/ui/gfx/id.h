@@ -20,7 +20,7 @@ struct GlobalId {
   explicit operator bool();
 
   struct Hash {
-    size_t operator()(const GlobalId& id) {
+    size_t operator()(const GlobalId& id) const {
       static_assert(sizeof(SessionId) == sizeof(uint64_t));
       static_assert(sizeof(ResourceId) == sizeof(uint32_t));
 

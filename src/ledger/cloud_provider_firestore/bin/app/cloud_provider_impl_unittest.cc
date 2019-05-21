@@ -47,7 +47,7 @@ class CloudProviderImplTest : public gtest::TestLoopFixture {
 TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
   bool on_empty_called = false;
   cloud_provider_impl_->set_on_empty(
-      [this, &on_empty_called] { on_empty_called = true; });
+      [&on_empty_called] { on_empty_called = true; });
   EXPECT_FALSE(firestore_service_->shutdown_callback);
   cloud_provider_.Unbind();
   RunLoopUntilIdle();
@@ -64,7 +64,7 @@ TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
 TEST_F(CloudProviderImplTest, EmptyWhenFirebaseAuthDisconnected) {
   bool on_empty_called = false;
   cloud_provider_impl_->set_on_empty(
-      [this, &on_empty_called] { on_empty_called = true; });
+      [&on_empty_called] { on_empty_called = true; });
   firebase_auth_->TriggerConnectionErrorHandler();
   RunLoopUntilIdle();
 

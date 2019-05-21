@@ -101,7 +101,7 @@ SessionUserProviderImpl::SessionUserProviderImpl(
 
   // Register SessionUserProvider as an AccountListener. All added accounts will
   // be logged in to a session.
-  account_listener_binding_.set_error_handler([this](zx_status_t status) {
+  account_listener_binding_.set_error_handler([](zx_status_t status) {
     FXL_LOG(FATAL) << "AccountListener disconnected with status: "
                    << zx_status_get_string(status);
   });
@@ -189,7 +189,7 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
     fuchsia::auth::account::AccountPtr account;
     account_manager_->GetAccount(
         account_id, authentication_context_provider_binding_.NewBinding(),
-        account.NewRequest(), [this](fuchsia::auth::account::Status status) {
+        account.NewRequest(), [](fuchsia::auth::account::Status status) {
           FXL_LOG(INFO) << "Got account with status: " << (uint32_t)status;
         });
 
@@ -205,7 +205,7 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
     fuchsia::auth::TokenManagerPtr ledger_token_manager;
     persona->GetTokenManager(
         kSessionUserProviderAppUrl, ledger_token_manager.NewRequest(),
-        [this](fuchsia::auth::account::Status status) {
+        [](fuchsia::auth::account::Status status) {
           FXL_LOG(INFO) << "Got token manager with status: "
                         << (uint32_t)status;
         });
@@ -213,7 +213,7 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
     fuchsia::auth::TokenManagerPtr agent_token_manager;
     persona->GetTokenManager(
         kSessionUserProviderAppUrl, agent_token_manager.NewRequest(),
-        [this](fuchsia::auth::account::Status status) {
+        [](fuchsia::auth::account::Status status) {
           FXL_LOG(INFO) << "Got token manager with status: "
                         << (uint32_t)status;
         });

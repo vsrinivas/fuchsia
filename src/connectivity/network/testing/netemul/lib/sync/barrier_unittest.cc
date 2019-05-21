@@ -96,11 +96,10 @@ TEST_F(BarrierTest, TimeoutBarrier) {
 TEST_F(BarrierTest, DestroyWithPending) {
   SyncManagerPtr sm;
   GetSyncManager(sm.NewRequest());
-  bool got_callback = false;
   // wait and timeout:
   sm->WaitForBarrierThreshold(
       kMainTestBarrier, 2, zx::msec(0).to_nsecs(),
-      [&got_callback](bool result) { FAIL() << "Shouldn't call callback"; });
+      [](bool result) { FAIL() << "Shouldn't call callback"; });
 }
 
 TEST_F(BarrierTest, ManyWaits) {

@@ -44,7 +44,7 @@ bool SessionProvider::StartSession(
 
     if (logout_users) {
       delegate_->LogoutUsers(
-          [this, delete_session_context]() { delete_session_context(); });
+          [delete_session_context]() { delete_session_context(); });
     } else {
       delete_session_context();
     }

@@ -102,7 +102,7 @@ void YuvBaseView::PresentImage(uint32_t image_id) {
   TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", image_id);
   image_pipe_->PresentImage(
       image_id, now_ns, std::move(acquire_fences), std::move(release_fences),
-      [this](fuchsia::images::PresentationInfo presentation_info) {
+      [](fuchsia::images::PresentationInfo presentation_info) {
         std::cout << "PresentImageCallback() called" << std::endl;
       });
 }

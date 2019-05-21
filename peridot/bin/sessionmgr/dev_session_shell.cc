@@ -174,7 +174,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
   void StartStoryById(const fidl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
-    story_controller_.set_error_handler([this, story_id](zx_status_t status) {
+    story_controller_.set_error_handler([story_id](zx_status_t status) {
       FXL_LOG(ERROR) << "Story controller for story " << story_id
                      << " died. Does this story exist?";
     });

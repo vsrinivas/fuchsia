@@ -32,7 +32,7 @@ class TestApp : QueuePersistenceTestService {
     component_context_->ObtainMessageQueue("Test Queue",
                                            msg_queue_.NewRequest());
     msg_queue_.RegisterReceiver(
-        [this](std::string message, fit::function<void()> ack) {
+        [](std::string message, fit::function<void()> ack) {
           ack();
           modular::testing::GetStore()->Put(
               "queue_persistence_test_agent_received_message", "", [] {});

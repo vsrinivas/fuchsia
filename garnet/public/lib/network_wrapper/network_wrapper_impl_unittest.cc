@@ -150,9 +150,8 @@ TEST_F(NetworkWrapperImplTest, SimpleRequest) {
         SetStringResponse("Hello", 200);
         return NewRequest("GET", "http://example.com");
       },
-      [this, destroy_watcher = fit::defer([&callback_destroyed] {
-               callback_destroyed = true;
-             }),
+      [destroy_watcher =
+           fit::defer([&callback_destroyed] { callback_destroyed = true; }),
        &response](http::URLResponse received_response) {
         response = std::move(received_response);
       });
@@ -171,10 +170,11 @@ TEST_F(NetworkWrapperImplTest, CancelRequest) {
         SetStringResponse("Hello", 200);
         return NewRequest("GET", "http://example.com");
       },
-      [this, &received_response,
-       destroy_watcher = fit::defer([this, &callback_destroyed] {
-         callback_destroyed = true;
-       })](http::URLResponse) { received_response = true; });
+      [&received_response, destroy_watcher = fit::defer([&callback_destroyed] {
+                             callback_destroyed = true;
+                           })](http::URLResponse) {
+        received_response = true;
+      });
 
   async::PostTask(dispatcher(), [cancel] { cancel->Cancel(); });
   cancel = nullptr;
@@ -195,7 +195,7 @@ TEST_F(NetworkWrapperImplTest, NetworkDeleted) {
         SetStringResponse("Hello", 200);
         return NewRequest("GET", "http://example.com");
       },
-      [this, &response](http::URLResponse received_response) {
+      [&response](http::URLResponse received_response) {
         response = std::move(received_response);
       });
   RunLoopUntilIdle();
@@ -217,7 +217,7 @@ TEST_F(NetworkWrapperImplTest, Redirection) {
         ++request_count;
         return NewRequest("GET", "http://example.com");
       },
-      [this, &response](http::URLResponse received_response) {
+      [&response](http::URLResponse received_response) {
         response = std::move(received_response);
       });
   RunLoopUntilIdle();
@@ -235,7 +235,7 @@ TEST_F(NetworkWrapperImplTest, CancelOnCallback) {
         SetStringResponse("Hello", 200);
         return NewRequest("GET", "http://example.com");
       },
-      [this, &request, &response](http::URLResponse received_response) mutable {
+      [&request, &response](http::URLResponse received_response) mutable {
         response = fidl::MakeOptional(std::move(received_response));
         request->Cancel();
         request = nullptr;

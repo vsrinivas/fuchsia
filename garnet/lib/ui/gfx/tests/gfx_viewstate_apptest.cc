@@ -55,7 +55,7 @@ class ViewEmbedderTest : public sys::testing::TestWithEnvironment {
         CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
 
     environment_->ConnectToService(scenic_.NewRequest());
-    scenic_.set_error_handler([this](zx_status_t status) {
+    scenic_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << status;
     });
   }

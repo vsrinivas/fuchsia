@@ -36,7 +36,7 @@ class Environment {
   void AddService(fidl::InterfaceRequestHandler<Interface> handler,
                   const std::string& service_name = Interface::Name_) {
     auto service = fbl::AdoptRef(new fs::Service(
-        [this, handler = std::move(handler)](zx::channel channel) {
+        [handler = std::move(handler)](zx::channel channel) {
           handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
           return ZX_OK;
         }));

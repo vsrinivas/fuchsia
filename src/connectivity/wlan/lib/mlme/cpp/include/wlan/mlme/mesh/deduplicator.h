@@ -32,7 +32,7 @@ class DeDuplicator {
     // sequence number into an 8-byte hash by putting mac address
     // in the top 6 bytes and the lower 2 bytes of sequence number
     // in the last 2 bytes.
-    inline std::size_t operator()(const MacAddrSeqPair& pkt) {
+    inline std::size_t operator()(const MacAddrSeqPair& pkt) const {
       return pkt.first.ToU64() + pkt.second;
     }
   };

@@ -120,7 +120,7 @@ class TestModule {
     agent_controller_.Unbind();
     agent_service_.Unbind();
     Await("queue_persistence_test_agent_stopped",
-          [this] { Signal(modular::testing::kTestShutdown); });
+          [] { Signal(modular::testing::kTestShutdown); });
   }
 
   modular::ModuleHost* module_host_;

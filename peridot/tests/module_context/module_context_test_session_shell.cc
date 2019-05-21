@@ -127,7 +127,7 @@ class TestApp : public modular::testing::SessionShellBase {
   // Starts the story and adds two modules to it.
   void StartStory() {
     story_provider()->GetController(kStoryName, story_controller_.NewRequest());
-    story_controller_.set_error_handler([this](zx_status_t status) {
+    story_controller_.set_error_handler([](zx_status_t status) {
       FXL_LOG(ERROR) << "Story controller for story " << kStoryName
                      << " died. Does this story exist?";
     });
@@ -302,11 +302,11 @@ class TestApp : public modular::testing::SessionShellBase {
   // Verifies that the story is stopped when the last module that is part of the
   // story calls ModuleContext.Done and is stopped.
   void IsStoryRunning(fit::function<void(bool)> callback) {
-    story_controller_->GetInfo([this, callback = std::move(callback)](
-                                   fuchsia::modular::StoryInfo story_info,
-                                   fuchsia::modular::StoryState state) {
-      callback(state == fuchsia::modular::StoryState::RUNNING);
-    });
+    story_controller_->GetInfo(
+        [callback = std::move(callback)](fuchsia::modular::StoryInfo story_info,
+                                         fuchsia::modular::StoryState state) {
+          callback(state == fuchsia::modular::StoryState::RUNNING);
+        });
   }
 
   // Creates an intent with one parameter, kLinkName, with the following

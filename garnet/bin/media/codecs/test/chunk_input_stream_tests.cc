@@ -165,8 +165,8 @@ TEST(ChunkInputStream, FlushIncomplete) {
   bool was_called_for_input_block = false;
   bool flush_called = false;
   auto input_block_processor =
-      [&was_called_for_input_block, &flush_called, kChunkSize,
-       kExpectedByte](ChunkInputStream::InputBlock input_block) {
+      [&was_called_for_input_block, &flush_called,
+       kChunkSize](ChunkInputStream::InputBlock input_block) {
         if (input_block.is_end_of_stream) {
           flush_called = true;
           const size_t expected[kChunkSize] = {kExpectedByte};

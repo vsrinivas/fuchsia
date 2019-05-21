@@ -20,7 +20,7 @@ int main(int argc, const char** argv) {
   auto context = sys::ComponentContext::Create();
   auto env = context->svc()->Connect<fuchsia::sys::Environment>();
   context->outgoing()->AddPublicService<fuchsia::modular::testing::TestHarness>(
-      [&loop, &context, &env, &test_harness_impl](
+      [&loop, &env, &test_harness_impl](
           fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness>
               request) {
         test_harness_impl = std::make_unique<modular::testing::TestHarnessImpl>(

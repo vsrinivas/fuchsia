@@ -188,7 +188,7 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
       });
 
   async::PostTask(dispatcher(),
-                  [this, &import, &resource, linker, &did_resolve,
+                  [this, &import, linker, &did_resolve,
                    destination = std::move(destination)]() mutable {
                     import = fxl::MakeRefCounted<Import>(
                         session_.get(), 1, ::fuchsia::ui::gfx::ImportSpec::NODE,
@@ -370,7 +370,7 @@ TEST_F(ResourceLinkerTest, ResourceDeathAutomaticallyCleansUpResourceExport) {
   bool called = false;
 
   async::PostTask(dispatcher(), [this, linker, source = std::move(source),
-                                 &destination, &called]() mutable {
+                                 &called]() mutable {
     // Register the resource.
     auto resource =
         fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);

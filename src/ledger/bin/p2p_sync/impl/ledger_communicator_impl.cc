@@ -77,7 +77,7 @@ std::unique_ptr<PageCommunicator> LedgerCommunicatorImpl::GetPageCommunicator(
                                              page_id, mesh_);
   PageCommunicatorImpl* page_ptr = page.get();
   pages_.emplace(page_id, page_ptr);
-  page->set_on_delete([this, page_id = std::move(page_id), page_ptr] {
+  page->set_on_delete([this, page_id = std::move(page_id)] {
     auto it = pages_.find(page_id);
     FXL_DCHECK(it != pages_.end());
     pages_.erase(it);

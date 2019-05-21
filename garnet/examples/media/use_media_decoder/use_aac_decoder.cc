@@ -296,8 +296,8 @@ void use_aac_decoder(async::Loop* main_loop,
         // sync.  In this case the test file is clean, so by parsing the aac
         // frame length we can skip forward and avoid getting fooled by the fake
         // syncword(s).
-        auto queue_access_unit = [&codec_client, &input_bytes](
-                                     uint8_t* bytes, size_t byte_count) {
+        auto queue_access_unit = [&codec_client](uint8_t* bytes,
+                                                 size_t byte_count) {
           size_t bytes_so_far = 0;
           // printf("queuing offset: %ld byte_count: %zu\n", bytes -
           // input_bytes.get(), byte_count);

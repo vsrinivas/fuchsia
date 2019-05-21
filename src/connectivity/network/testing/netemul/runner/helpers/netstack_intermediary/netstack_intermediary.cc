@@ -66,7 +66,7 @@ void NetstackIntermediary::AddEthernetDevice(
             fake_ep_.events().OnData = [this](std::vector<uint8_t> data) {
               eth_client_->Send(data.data(), data.size());
             };
-            fake_ep_.set_error_handler([this](zx_status_t status) {
+            fake_ep_.set_error_handler([](zx_status_t status) {
               FXL_LOG(INFO) << "FakeEndpoint encountered error: "
                             << zx_status_get_string(status);
             });
@@ -104,7 +104,7 @@ NetstackIntermediary::GetNetwork(std::string network_name) {
   (*netc)->GetNetworkManager(net_mgr->NewRequest());
   (*net_mgr)->GetNetwork(
       network_name,
-      [this, completer = std::move(bridge.completer), network_name, netc,
+      [completer = std::move(bridge.completer), network_name, netc,
        net_mgr](fidl::InterfaceHandle<fuchsia::netemul::network::Network>
                     net) mutable {
         if (net.is_valid()) {

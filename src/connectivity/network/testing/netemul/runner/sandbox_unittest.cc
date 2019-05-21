@@ -601,7 +601,7 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
   // at the end of the check closure, it'll
   // signal the root test with event code 100
   // and finish the test.
-  SetOnEvent([this, &check](EventType type) {
+  SetOnEvent([&check](EventType type) {
     if (type != EventType::OnClientAttached) {
       return;
     }

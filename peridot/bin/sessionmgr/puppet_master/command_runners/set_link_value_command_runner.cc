@@ -21,8 +21,8 @@ void SetLinkValueCommandRunner::Execute(
   AddSetLinkValueOperation(
       &operation_queue_, story_storage,
       std::move(command.set_link_value().path),
-      [this, new_value = std::move(command.set_link_value().value)](
-          fidl::StringPtr* value) {
+      [new_value =
+           std::move(command.set_link_value().value)](fidl::StringPtr* value) {
         std::string str_value;
         FXL_CHECK(fsl::StringFromVmo(*new_value, &str_value));
         *value = str_value;

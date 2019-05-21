@@ -38,7 +38,7 @@ TEST(MpscQueueTest, TwoThreads) {
   }
 
   async::Loop producer_loop(&kAsyncLoopConfigNoAttachToThread);
-  async::PostTask(producer_loop.dispatcher(), [&under_test, &expectation] {
+  async::PostTask(producer_loop.dispatcher(), [&under_test] {
     for (int i = 0; i < kElements; ++i) {
       under_test.Push(i);
     }
@@ -68,7 +68,7 @@ TEST(BlockingMpscQueueTest, TwoThreads) {
   }
 
   async::Loop producer_loop(&kAsyncLoopConfigNoAttachToThread);
-  async::PostTask(producer_loop.dispatcher(), [&under_test, &expectation] {
+  async::PostTask(producer_loop.dispatcher(), [&under_test] {
     for (int i = 0; i < kElements; ++i) {
       under_test.Push(i);
     }

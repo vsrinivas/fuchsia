@@ -45,7 +45,7 @@ CredentialsProviderImpl::~CredentialsProviderImpl() {}
 void CredentialsProviderImpl::GetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
   auto request = firebase_auth_->GetFirebaseToken(
-      [this, callback = std::move(callback)](
+      [callback = std::move(callback)](
           firebase_auth::AuthStatus auth_status, std::string auth_token) {
         switch (auth_status) {
           case firebase_auth::AuthStatus::OK:

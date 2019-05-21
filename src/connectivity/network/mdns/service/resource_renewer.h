@@ -89,7 +89,7 @@ class ResourceRenewer : public MdnsAgent {
   };
 
   struct Hash {
-    size_t operator()(const std::unique_ptr<Entry>& m) {
+    size_t operator()(const std::unique_ptr<Entry>& m) const {
       FXL_DCHECK(m);
       return std::hash<std::string>{}(m->name_) ^
              std::hash<DnsType>{}(m->type_);
@@ -98,7 +98,7 @@ class ResourceRenewer : public MdnsAgent {
 
   struct Equals {
     size_t operator()(const std::unique_ptr<Entry>& a,
-                      const std::unique_ptr<Entry>& b) {
+                      const std::unique_ptr<Entry>& b) const {
       FXL_DCHECK(a);
       FXL_DCHECK(b);
       return a->name_ == b->name_ && a->type_ == b->type_;

@@ -108,7 +108,7 @@ TEST_F(TilesTest, AddFromURL) {
   });
 
   tiles()->AddTileFromURL("test_nofocus_tile", /* allow_focus */ false, {},
-                          [&key](uint32_t _cb_key) {
+                          [](uint32_t _cb_key) {
                             // noop
                           });
   tiles()->ListTiles([](std::vector<uint32_t> keys,

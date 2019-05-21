@@ -319,7 +319,7 @@ void FidlDecoder::MaybeConfigureInput(
       physically_contiguous_required
           ? std::move(*constraints->mutable_very_temp_kludge_bti_handle())
           : zx::handle(),
-      [this, &current_set](uint64_t size, const PayloadVmos& payload_vmos) {
+      [&current_set](uint64_t size, const PayloadVmos& payload_vmos) {
         // This callback runs on an arbitrary thread.
         return current_set.AllocateBuffer(size, payload_vmos);
       });

@@ -287,7 +287,7 @@ modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteStoryCommand(
       "Sessionctl StoryPuppetMaster::Execute");
 
   story_puppet_master_->Execute(
-      [this, fut](fuchsia::modular::ExecuteResult result) mutable {
+      [fut](fuchsia::modular::ExecuteResult result) mutable {
         if (result.status == fuchsia::modular::ExecuteStatus::OK) {
           fut->Complete(false, result.story_id->c_str());
         } else {

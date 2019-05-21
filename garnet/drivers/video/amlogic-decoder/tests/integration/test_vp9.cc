@@ -258,14 +258,13 @@ class TestVP9 {
 
     uint32_t frame_count = 0;
     std::promise<void> wait_valid;
-    bool frames_returned = false;  // Protected by video->video_decoder_lock_
     std::vector<std::shared_ptr<VideoFrame>> frames_to_return;
     uint64_t next_pts = 0;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frames_to_return, &frame_count, &wait_valid,
-           &frames_returned, &next_pts](std::shared_ptr<VideoFrame> frame) {
+          [&video, &frame_count, &wait_valid,
+           &next_pts](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d, pts: %ld\n", frame_count, frame->pts);
 #if DUMP_VIDEO_TO_FILE
@@ -340,8 +339,7 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frame_count, &wait_valid,
-           filename](std::shared_ptr<VideoFrame> frame) {
+          [&video, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d\n", frame_count);
 #if DUMP_VIDEO_TO_FILE

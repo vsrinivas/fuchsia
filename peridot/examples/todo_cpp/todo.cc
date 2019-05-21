@@ -128,7 +128,7 @@ void TodoApp::OnChange(fuchsia::ledger::PageChange /*page_change*/,
 }
 
 void TodoApp::List(fuchsia::ledger::PageSnapshotPtr snapshot) {
-  GetEntries(std::move(snapshot), [this](auto entries) {
+  GetEntries(std::move(snapshot), [](auto entries) {
     std::cout << "--- To Do ---" << std::endl;
     for (auto& entry : entries) {
       std::cout << (entry.value ? ToString(*entry.value) : "<empty>")

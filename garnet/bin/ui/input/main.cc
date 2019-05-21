@@ -555,7 +555,7 @@ For further details, see README.md.
       // MOVE
       async::PostDelayedTask(
           async_get_default_dispatcher(),
-          [this, i, x0, y0, deltaX, deltaY, move_event_count] {
+          [this, i, x0, y0, deltaX, deltaY] {
             SendTouchEvent(x0 + round(i * deltaX), y0 + round(i * deltaY));
           },
           swipe_event_delay * i);

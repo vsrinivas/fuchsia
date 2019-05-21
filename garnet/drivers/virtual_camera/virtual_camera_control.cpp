@@ -209,7 +209,7 @@ VirtualCameraControlImpl::VirtualCameraStreamImpl::VirtualCameraStreamImpl(
     VirtualCameraControlImpl& owner,
     fidl::InterfaceRequest<fuchsia::camera::Stream> stream)
     : owner_(owner), binding_(this, std::move(stream)) {
-  binding_.set_error_handler([this](zx_status_t status) {
+  binding_.set_error_handler([](zx_status_t status) {
     // Anything to do here?
   });
 }

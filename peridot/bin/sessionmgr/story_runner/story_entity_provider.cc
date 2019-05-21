@@ -19,7 +19,7 @@ void StoryEntityProvider::CreateEntity(
     fit::function<void(std::string /* cookie */)> callback) {
   const std::string cookie = uuid::Generate();
   story_storage_->SetEntityData(cookie, type, std::move(data))
-      ->Then([this, cookie,
+      ->Then([cookie,
               callback = std::move(callback)](StoryStorage::Status status) {
         if (status == StoryStorage::Status::OK) {
           callback(cookie);

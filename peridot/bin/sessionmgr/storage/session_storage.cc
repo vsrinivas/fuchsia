@@ -104,8 +104,8 @@ class CreateStoryCall
     story_data_->mutable_story_info()->id = story_name_;
     story_data_->mutable_story_info()->last_focus_time = 0;
     story_data_->mutable_story_info()->extra = std::move(extra_info_);
-    operation_queue_.Add(MakeWriteStoryDataCall(page(), std::move(story_data_),
-                                                [this, flow] {}));
+    operation_queue_.Add(
+        MakeWriteStoryDataCall(page(), std::move(story_data_), [flow] {}));
   }
 
   fidl::StringPtr story_name_;

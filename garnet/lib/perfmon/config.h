@@ -120,13 +120,13 @@ class Config {
 
  private:
   struct EventHash {
-    inline std::size_t operator()(const EventConfig& event) {
-        return event.event;
+    inline std::size_t operator()(const EventConfig& event) const {
+      return event.event;
     }
   };
   struct EventEqual {
-    inline bool operator()(const EventConfig& e1, const EventConfig& e2) {
-        return e1.event == e2.event;
+    inline bool operator()(const EventConfig& e1, const EventConfig& e2) const {
+      return e1.event == e2.event;
     }
   };
 

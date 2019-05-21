@@ -251,7 +251,7 @@ class TestApp : public modular::ViewApp {
   void StoryStart() {
     FXL_LOG(INFO) << "StoryStart()";
     TRACE_ASYNC_BEGIN("benchmark", "story/start", 0);
-    story_watcher_.Continue(fuchsia::modular::StoryState::RUNNING, [this] {
+    story_watcher_.Continue(fuchsia::modular::StoryState::RUNNING, [] {
       TRACE_ASYNC_END("benchmark", "story/start", 0);
     });
 

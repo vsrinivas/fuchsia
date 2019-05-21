@@ -202,7 +202,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
 #endif
   });
 
-  client_1.ExamineEvents([this](const std::vector<InputEvent>& events) {
+  client_1.ExamineEvents([](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 5u) << "Should receive exactly 5 input events.";
 
     // ADD
@@ -232,7 +232,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
         PointerMatches(events[4].pointer(), 2u, PointerEventPhase::DOWN, 4, 4));
   });
 
-  client_2.ExamineEvents([this](const std::vector<InputEvent>& events) {
+  client_2.ExamineEvents([](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 2u) << "Should receive exactly 2 input events.";
 
     // ADD

@@ -611,7 +611,7 @@ TEST_F(ComponentBridgeTest, Hub) {
       CreateComponentBridge(component_ptr, std::move(export_dir_req));
 
   RunLoopUntil(
-      [this, &component] { return PathExists(component->hub_dir(), "out"); });
+      [&component] { return PathExists(component->hub_dir(), "out"); });
 
   EXPECT_STREQ(get_value(component->hub_dir(), "name").c_str(), "test-label");
   EXPECT_STREQ(get_value(component->hub_dir(), "args").c_str(), "test-arg");
@@ -640,7 +640,7 @@ TEST_F(ComponentBridgeTest, HubWithIncomingServices) {
       CreateComponentBridge(component_ptr, std::move(export_dir_req), ns);
 
   RunLoopUntil(
-      [this, &component] { return PathExists(component->hub_dir(), "out"); });
+      [&component] { return PathExists(component->hub_dir(), "out"); });
 
   AssertHubHasIncomingServices(component.get(), {"service_a", "service_b"});
 }

@@ -153,7 +153,7 @@ void LinkImpl::Erase(std::vector<std::string> path) {
   story_storage_
       ->UpdateLinkValue(
           link_path_,
-          [this /* for link_path_ */, path = std::move(path)](
+          [path = std::move(path)](
               fidl::StringPtr* value) { ApplyEraseOp(value, path); },
           this /* context */)
       ->Then([](StoryStorage::Status status) {

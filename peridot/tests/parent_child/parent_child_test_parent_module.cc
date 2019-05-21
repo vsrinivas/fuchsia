@@ -116,7 +116,7 @@ class TestModule {
     // since we serialize these requests in sessionmgr.
     AddModuleToStoryWithHandler(module_host_->module_context(),
                                 child_module3_.NewRequest(), kChildModuleUrl1);
-    child_module3_->Stop([this] { /* do nothing */ });
+    child_module3_->Stop([] { /* do nothing */ });
     child_module3_.events().OnStateChange =
         [this](fuchsia::modular::ModuleState module_state) {
           if (module_state == fuchsia::modular::ModuleState::RUNNING) {

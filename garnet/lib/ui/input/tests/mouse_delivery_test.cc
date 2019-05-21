@@ -196,7 +196,7 @@ TEST_F(MouseDeliveryTest, StandardTest) {
   });
 
   // Verify client 1's inputs have mouse events.
-  client_1.ExamineEvents([this](const std::vector<InputEvent>& events) {
+  client_1.ExamineEvents([](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 7u) << "Should receive exactly 7 input events.";
 
     // MOVE
@@ -235,7 +235,7 @@ TEST_F(MouseDeliveryTest, StandardTest) {
   });
 
   // Verify client 2's input has one mouse event.
-  client_2.ExamineEvents([this](const std::vector<InputEvent>& events) {
+  client_2.ExamineEvents([](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 1u) << "Should receive exactly 1 event.";
 
     // MOVE
@@ -354,7 +354,7 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
   });
 
   // Verify client 1's inputs have mouse events.
-  client_1.ExamineEvents([this](const std::vector<InputEvent>& events) {
+  client_1.ExamineEvents([](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 6u) << "Should receive exactly 6 input events.";
 
     // MOVE
@@ -389,7 +389,7 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
   });
 
   // Verify client 2's input has one mouse event.
-  client_2.ExamineEvents([this](const std::vector<InputEvent>& events) {
+  client_2.ExamineEvents([](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 1u) << "Should receive exactly 1 event.";
 
     // MOVE

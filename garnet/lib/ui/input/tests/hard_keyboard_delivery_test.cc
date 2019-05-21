@@ -154,7 +154,7 @@ TEST_F(HardKeyboardDeliveryTest, Test) {
   });
 
   // Verify client's inputs do *not* include keyboard events.
-  client.ExamineEvents([this](const std::vector<InputEvent>& events) {
+  client.ExamineEvents([](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 3u) << "Should receive exactly 3 input events.";
 
     // ADD
@@ -207,7 +207,7 @@ TEST_F(HardKeyboardDeliveryTest, Test) {
   });
 
   // Verify client's inputs include keyboard events.
-  client.ExamineEvents([this](const std::vector<InputEvent>& events) {
+  client.ExamineEvents([](const std::vector<InputEvent>& events) {
     EXPECT_EQ(events.size(), 2u) << "Should receive exactly 2 input events.";
   });
 }

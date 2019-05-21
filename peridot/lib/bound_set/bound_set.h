@@ -99,9 +99,8 @@ class BoundSet {
 
  private:
   iterator Find(UniqueType id) {
-    return std::find_if(elements_.begin(), elements_.end(), [this, id](T& e) {
-      return Identify(GetFidlType(&e)) == id;
-    });
+    return std::find_if(elements_.begin(), elements_.end(),
+                        [id](T& e) { return Identify(GetFidlType(&e)) == id; });
   }
 
   std::vector<T> elements_;

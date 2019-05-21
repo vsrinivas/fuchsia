@@ -209,7 +209,7 @@ EnclosingEnvironment::~EnclosingEnvironment() {
 }
 
 void EnclosingEnvironment::Kill(fit::function<void()> callback) {
-  env_controller_->Kill([this, callback = std::move(callback)]() {
+  env_controller_->Kill([callback = std::move(callback)]() {
     if (callback) {
       callback();
     }

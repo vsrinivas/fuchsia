@@ -80,7 +80,7 @@ class NetworkBus : public data::BusConsumer {
     } else {
       // if interceptors already have members, point onto the back for chaining
       auto* next = interceptors_.back().get();
-      return [this, next](InterceptPacket packet) {
+      return [next](InterceptPacket packet) {
         next->Intercept(std::move(packet));
       };
     }

@@ -246,7 +246,7 @@ void Runner::InitDisplay() {
   display_controller_.events().ClientOwnershipChange =
       fit::bind_member(this, &Runner::OnClientOwnershipChange);
   display_controller_.events().Vsync = fit::bind_member(this, &Runner::OnVsync);
-  display_controller_.set_error_handler([this](zx_status_t status) {
+  display_controller_.set_error_handler([](zx_status_t status) {
     ZX_ASSERT_MSG(false, "Display controller failure");
   });
 
