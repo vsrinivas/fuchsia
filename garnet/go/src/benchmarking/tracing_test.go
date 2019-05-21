@@ -88,8 +88,7 @@ func getTestTrace() []byte {
 			  "pid": 7009,
 			  "tid": 7022,
 			  "ph": "e"
-			},
-			{
+			}, {
 			  "name": "log",
 			  "ph": "i",
 			  "ts": 7055567057.312,
@@ -99,8 +98,16 @@ func getTestTrace() []byte {
 			  "args": {
 				"message": "[INFO:trace_manager.cc(66)] Stopping trace"
 			  }
+			}, {
+			  "cat": "system_metrics",
+			  "name": "cpu_usage",
+			  "ts": 35241122.375,
+			  "pid": 9234,
+			  "tid": 5678,
+				"ph": "C",
+				"args": {"average_cpu_percentage": 0.89349317793, "max_cpu_usage": 0.1234}
 			}
-		  ],
+			],
 		  "systemTraceEvents": {
 			"type": "fuchsia",
 			"events": [{
@@ -181,8 +188,7 @@ func getTestTraceNoFlows() []byte {
 			  "pid": 7009,
 			  "tid": 7022,
 			  "ph": "e"
-			},
-			{
+			}, {
 			  "name": "log",
 			  "ph": "i",
 			  "ts": 7055567057.312,
@@ -192,8 +198,16 @@ func getTestTraceNoFlows() []byte {
 			  "args": {
 				"message": "[INFO:trace_manager.cc(66)] Stopping trace"
 			  }
+			}, {
+			  "cat": "system_metrics",
+			  "name": "cpu_usage",
+			  "ts": 35241122.375,
+			  "pid": 9234,
+			  "tid": 5678,
+				"ph": "C",
+				"args": {"average_cpu_percentage": 0.89349317793, "max_cpu_usage": 0.1234}
 			}
-		  ],
+			],
 		  "systemTraceEvents": {
 			"type": "fuchsia",
 			"events": [{
@@ -214,6 +228,11 @@ func getTestTraceNoFlows() []byte {
 func TestReadTrace(t *testing.T) {
 	expectedModel := Model{
 		Processes: []Process{
+			Process{Name: "", Pid: 9234, Threads: []Thread{
+				Thread{Name: "", Tid: 5678, Events: []*Event{
+					&Event{Type: 4, Cat: "system_metrics", Name: "cpu_usage", Pid: 9234, Tid: 5678, Start: 3.5241122375e+07, Dur: 0, Id: 0, Args: map[string]interface{}{"average_cpu_percentage":0.89349317793, "max_cpu_usage":0.1234}, Parent: nil, Children: make([]*Event, 0)},
+				}},
+			}},
 			Process{Name: "root_presenter", Pid: 7009, Threads: []Thread{
 				Thread{Name: "initial-thread", Tid: 7022, Events: []*Event{
 					&Event{Type: 1, Cat: "async", Name: "ReadWrite", Pid: 7009, Tid: 7022, Start: 6.87503138e+08, Dur: 0, Id: 43, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
@@ -222,16 +241,22 @@ func TestReadTrace(t *testing.T) {
 				}},
 				Thread{Name: "", Tid: 7021, Events: []*Event{
 					&Event{Type: 0, Cat: "input", Name: "Read", Pid: 7009, Tid: 7021, Start: 6.975031389531089e+08, Dur: 322.78645980358124, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-					&Event{Type: 3, Cat: "input", Name: "ReadWriteFlow", Pid: 7009, Tid: 7021, Start: 6.975031399531089e+08, Dur: 0.0, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}},
+					&Event{Type: 3, Cat: "input", Name: "ReadWriteFlow", Pid: 7009, Tid: 7021, Start: 6.975031399531089e+08, Dur: 0.0, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
+				}},
 			}},
 			Process{Name: "", Pid: 7010, Threads: []Thread{
 				Thread{Name: "", Tid: 7023, Events: []*Event{
-					&Event{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}}}},
+					&Event{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
+				}},
+			}},
 			Process{Name: "", Pid: 5945, Threads: []Thread{
 				Thread{Name: "", Tid: 5962, Events: []*Event{
-					&Event{Type: 2, Cat: "", Name: "log", Pid: 5945, Tid: 5962, Start: 7.055567057312e+09, Dur: 0, Id: 0, Args: map[string]interface{}{"message": "[INFO:trace_manager.cc(66)] Stopping trace"}, Parent: nil, Children: make([]*Event, 0)}}}}}}}
+					&Event{Type: 2, Cat: "", Name: "log", Pid: 5945, Tid: 5962, Start: 7.055567057312e+09, Dur: 0, Id: 0, Args: map[string]interface{}{"message": "[INFO:trace_manager.cc(66)] Stopping trace"}, Parent: nil, Children: make([]*Event, 0)},
+				}},
+			}},
+		}}
 
-	p7009 := expectedModel.Processes[0]
+	p7009 := expectedModel.Processes[1]
 	t7022 := p7009.Threads[0]
 	t7021 := p7009.Threads[1]
 
@@ -252,7 +277,6 @@ func TestReadTrace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Processing the trace produced an error: %#v\n", err)
 	}
-
 	if !reflect.DeepEqual(expectedModel, model) {
 		t.Error("Generated model and expected model are different\n")
 	}
@@ -307,6 +331,13 @@ func TestFindEvents(t *testing.T) {
 	// Find events by Name and Category
 	expectedEvents = []*Event{
 		&Event{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}
+	events = model.FindEvents(EventsFilter{Name: &name, Cat: &cat})
+	compareEvents(t, "Find events by Name and Category", expectedEvents, events)
+
+	cat = "system_metrics"
+	name = "cpu_usage"
+	expectedEvents = []*Event{
+		&Event{Type: 4, Cat: "system_metrics", Name: "cpu_usage", Pid: 9234, Tid: 5678, Start: 3.5241122375e+07, Dur: 0, Id: 0, Args: map[string]interface{}{"average_cpu_percentage":0.89349317793, "max_cpu_usage":0.1234}, Parent: nil, Children: make([]*Event, 0)}}
 	events = model.FindEvents(EventsFilter{Name: &name, Cat: &cat})
 	compareEvents(t, "Find events by Name and Category", expectedEvents, events)
 }

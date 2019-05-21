@@ -102,6 +102,7 @@ const (
 	AsyncEvent    EventType = 1
 	InstantEvent  EventType = 2
 	FlowEvent     EventType = 3
+	CounterEvent  EventType = 4
 )
 
 // A struct that represents an Event in the model.
@@ -413,6 +414,12 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 				top.Children = append(top.Children, thread.Events[len(thread.Events)-1])
 			}
 			delete(liveFlowEvents, flowId)
+		case "C":
+			// Counter event.
+			counterEvent := Event{CounterEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
+				traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
+			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+			thread.Events = append(thread.Events, &counterEvent)
 		}
 	}
 }
