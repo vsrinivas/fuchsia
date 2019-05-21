@@ -127,15 +127,11 @@ impl Persona {
         };
         match token_manager_server_end.into_stream() {
             Ok(stream) => {
-                fasync::spawn(
-                    async move {
-                        await!(token_manager_clone
-                            .handle_requests_from_stream(&token_manager_context, stream))
-                        .unwrap_or_else(|err| {
-                            warn!("Error handling TokenManager channel {:?}", err)
-                        })
-                    },
-                );
+                fasync::spawn(async move {
+                    await!(token_manager_clone
+                        .handle_requests_from_stream(&token_manager_context, stream))
+                    .unwrap_or_else(|err| warn!("Error handling TokenManager channel {:?}", err))
+                });
                 Status::Ok
             }
             Err(err) => {
@@ -207,14 +203,10 @@ mod tests {
                 auth_ui_context_provider: ui_context_provider_client_end.into_proxy().unwrap(),
             };
 
-            fasync::spawn(
-                async move {
-                    await!(test_object.handle_requests_from_stream(&context, request_stream))
-                        .unwrap_or_else(|err| {
-                            panic!("Fatal error handling test request: {:?}", err)
-                        })
-                },
-            );
+            fasync::spawn(async move {
+                await!(test_object.handle_requests_from_stream(&context, request_stream))
+                    .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
+            });
 
             self.executor.run_singlethreaded(test_fn(persona_proxy)).expect("Executor run failed.")
         }

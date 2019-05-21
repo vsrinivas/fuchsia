@@ -240,12 +240,10 @@ impl Account {
             PersonaContext { auth_ui_context_provider: context.auth_ui_context_provider.clone() };
         match persona_server_end.into_stream() {
             Ok(stream) => {
-                fasync::spawn(
-                    async move {
-                        await!(persona_clone.handle_requests_from_stream(&persona_context, stream))
-                            .unwrap_or_else(|e| error!("Error handling Persona channel {:?}", e))
-                    },
-                );
+                fasync::spawn(async move {
+                    await!(persona_clone.handle_requests_from_stream(&persona_context, stream))
+                        .unwrap_or_else(|e| error!("Error handling Persona channel {:?}", e))
+                });
                 (Status::Ok, Some(self.default_persona.id().clone().into()))
             }
             Err(e) => {
@@ -406,14 +404,10 @@ mod tests {
                 auth_ui_context_provider: ui_context_provider_client_end.into_proxy().unwrap(),
             };
 
-            fasync::spawn(
-                async move {
-                    await!(test_object.handle_requests_from_stream(&context, request_stream))
-                        .unwrap_or_else(|err| {
-                            panic!("Fatal error handling test request: {:?}", err)
-                        })
-                },
-            );
+            fasync::spawn(async move {
+                await!(test_object.handle_requests_from_stream(&context, request_stream))
+                    .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
+            });
 
             self.executor.run_singlethreaded(test_fn(account_proxy)).expect("Executor run failed.")
         }

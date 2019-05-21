@@ -203,12 +203,10 @@ impl AccountHandler {
             }
         };
 
-        fasync::spawn(
-            async move {
-                await!(account.handle_requests_from_stream(&context, stream))
-                    .unwrap_or_else(|e| error!("Error handling Account channel {:?}", e))
-            },
-        );
+        fasync::spawn(async move {
+            await!(account.handle_requests_from_stream(&context, stream))
+                .unwrap_or_else(|e| error!("Error handling Account channel {:?}", e))
+        });
         Status::Ok
     }
 }
@@ -243,12 +241,10 @@ mod tests {
         let proxy = client_end.into_proxy().unwrap();
         let request_stream = server_end.into_stream().unwrap();
 
-        fasync::spawn(
-            async move {
-                await!(test_object.handle_requests_from_stream(request_stream))
-                    .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
-            },
-        );
+        fasync::spawn(async move {
+            await!(test_object.handle_requests_from_stream(request_stream))
+                .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
+        });
 
         executor.run_singlethreaded(test_fn(proxy, ahc_client_end)).expect("Executor run failed.")
     }

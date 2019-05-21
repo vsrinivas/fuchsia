@@ -40,13 +40,10 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("public").add_fidl_service(move |stream| {
         let account_handler_clone = Arc::clone(&account_handler);
-        fasync::spawn(
-            async move {
-                await!(account_handler_clone.handle_requests_from_stream(stream)).unwrap_or_else(
-                    |e| error!("Error handling AccountHandlerControl channel {:?}", e),
-                )
-            },
-        );
+        fasync::spawn(async move {
+            await!(account_handler_clone.handle_requests_from_stream(stream))
+                .unwrap_or_else(|e| error!("Error handling AccountHandlerControl channel {:?}", e))
+        });
     });
     fs.take_and_serve_directory_handle()?;
 

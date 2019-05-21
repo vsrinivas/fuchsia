@@ -42,19 +42,17 @@ impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
             }
         };
 
-        FutureObj::new(Box::new(
-            async move {
-                match await!(self
-                    .account_handler_context
-                    .get_auth_provider(auth_provider_type, server_end))
-                {
-                    Ok(fidl_fuchsia_auth_account::Status::Ok) => Ok(client_end),
-                    Ok(stat) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
-                        .with_cause(format_err!("AccountHandlerContext returned {:?}", stat))),
-                    Err(err) => Err(TokenManagerError::new(Status::UnknownError).with_cause(err)),
-                }
-            },
-        ))
+        FutureObj::new(Box::new(async move {
+            match await!(self
+                .account_handler_context
+                .get_auth_provider(auth_provider_type, server_end))
+            {
+                Ok(fidl_fuchsia_auth_account::Status::Ok) => Ok(client_end),
+                Ok(stat) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
+                    .with_cause(format_err!("AccountHandlerContext returned {:?}", stat))),
+                Err(err) => Err(TokenManagerError::new(Status::UnknownError).with_cause(err)),
+            }
+        }))
     }
 }
 
@@ -80,20 +78,18 @@ mod tests {
     ) {
         let proxy = client_end.into_proxy().unwrap();
         let auth_provider_supplier = AuthProviderSupplier::new(proxy);
-        executor.run_singlethreaded(
-            async move {
-                let result = await!(auth_provider_supplier.get(TEST_AUTH_PROVIDER_TYPE));
-                match expected_error {
-                    Some(status) => {
-                        assert!(result.is_err());
-                        assert_eq!(status, result.unwrap_err().status);
-                    }
-                    None => {
-                        assert!(result.is_ok());
-                    }
+        executor.run_singlethreaded(async move {
+            let result = await!(auth_provider_supplier.get(TEST_AUTH_PROVIDER_TYPE));
+            match expected_error {
+                Some(status) => {
+                    assert!(result.is_err());
+                    assert_eq!(status, result.unwrap_err().status);
                 }
-            },
-        );
+                None => {
+                    assert!(result.is_ok());
+                }
+            }
+        });
     }
 
     /// Spawns a trivial task to respond to the first AccountHandlerContextRequest with the
@@ -102,22 +98,20 @@ mod tests {
         server_end: ServerEnd<AccountHandlerContextMarker>,
         status: fidl_fuchsia_auth_account::Status,
     ) {
-        fasync::spawn(
-            async move {
-                let mut request_stream = server_end.into_stream().unwrap();
-                // Only respond to the first received message, only when its of the intended type.
-                if let Ok(Some(AccountHandlerContextRequest::GetAuthProvider {
-                    auth_provider_type,
-                    auth_provider: _,
-                    responder,
-                })) = await!(request_stream.try_next())
-                {
-                    if auth_provider_type == TEST_AUTH_PROVIDER_TYPE {
-                        responder.send(status).expect("Failed to send test response");
-                    }
+        fasync::spawn(async move {
+            let mut request_stream = server_end.into_stream().unwrap();
+            // Only respond to the first received message, only when its of the intended type.
+            if let Ok(Some(AccountHandlerContextRequest::GetAuthProvider {
+                auth_provider_type,
+                auth_provider: _,
+                responder,
+            })) = await!(request_stream.try_next())
+            {
+                if auth_provider_type == TEST_AUTH_PROVIDER_TYPE {
+                    responder.send(status).expect("Failed to send test response");
                 }
-            },
-        );
+            }
+        });
     }
 
     #[test]
