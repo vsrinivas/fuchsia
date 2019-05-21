@@ -23,6 +23,7 @@ bool StoreItem(uint32_t type) {
     case ZBI_TYPE_CRASHLOG:
     case ZBI_TYPE_KERNEL_DRIVER:
     case ZBI_TYPE_PLATFORM_ID:
+    case ZBI_TYPE_STORAGE_BOOTFS_FACTORY:
     case ZBI_TYPE_STORAGE_RAMDISK:
         return true;
     default:

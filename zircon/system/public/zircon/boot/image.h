@@ -112,6 +112,7 @@ typedef struct {
     macro(ZBI_TYPE_DISCARD, "DISCARD", ".bin") \
     macro(ZBI_TYPE_STORAGE_RAMDISK, "RAMDISK", ".bin") \
     macro(ZBI_TYPE_STORAGE_BOOTFS, "BOOTFS", ".bin") \
+    macro(ZBI_TYPE_STORAGE_BOOTFS_FACTORY, "BOOTFS_FACTORY", ".bin") \
     macro(ZBI_TYPE_CMDLINE, "CMDLINE", ".txt") \
     macro(ZBI_TYPE_CRASHLOG, "CRASHLOG", ".bin") \
     macro(ZBI_TYPE_NVRAM, "NVRAM", ".bin") \
@@ -298,6 +299,8 @@ typedef struct {
 // of this filesystem.
 #define ZBI_TYPE_STORAGE_BOOTFS         (0x42534642) // BFSB
 
+// Device-specific factory data, stored in BOOTFS format, specified below.
+#define ZBI_TYPE_STORAGE_BOOTFS_FACTORY (0x46534642) // BFSF
 
 // The remaining types are used to communicate information from the boot
 // loader to the kernel.  Usually these are synthesized in memory by the

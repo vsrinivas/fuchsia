@@ -10,7 +10,7 @@ To test that crashlogs are being added to bootfs, you need to add a CRASHLOG ite
 to the boot zbi.  For example, to add the contents of README.md as the crashlog:
 ```
 $ scripts/build-zircon-x64 &&
-  build-gcc/tools/zbi -o build-gcc/zircon.zbi build-gcc/zircon.zbi \
+  build-gcc/tools/zbi -o build-gcc/x64.zbi build-gcc/x64.zbi \
     -T CRASHLOG README.md &&
   scripts/run-zircon-x64 -k -c userboot=bin/bootsvc \
     -c bootsvc.next=bin/bootsvc-integration-test,testargument

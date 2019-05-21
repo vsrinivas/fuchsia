@@ -81,7 +81,7 @@ bool TestNamespace() {
 // correctly.
 //
 // As documented in TESTING, this test relies on these tests being run by using
-// a boot cmdline that includes 'bootsvc.next=bin/bootsvc-tests,testargument' so
+// a boot cmdline that includes 'bootsvc.next=bin/bootsvc-integration-test,testargument' so
 // that we can test the parsing on bootsvc.next.
 bool TestArguments() {
     BEGIN_TEST;
@@ -139,6 +139,7 @@ bool TestBootItems() {
     uint32_t types[] = {
         ZBI_TYPE_CRASHLOG,
         ZBI_TYPE_PLATFORM_ID,
+        ZBI_TYPE_STORAGE_BOOTFS_FACTORY,
         ZBI_TYPE_STORAGE_RAMDISK,
     };
     for (uint32_t type : types) {
