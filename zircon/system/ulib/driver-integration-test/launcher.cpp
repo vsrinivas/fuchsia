@@ -30,8 +30,11 @@ const zbi_platform_id_t kPlatformId = []() {
     return plat_id;
 }();
 
-zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, uint32_t type,
-                        uint32_t extra, zx::vmo* out, uint32_t* length) {
+// This function is responsible for serializing driver data. It must be kept
+// updated with the function that deserialized the data. This function
+// is TestBoard::FetchAndDeserialize.
+zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries,
+                        uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
     zx::vmo vmo;
     switch (type) {
     case ZBI_TYPE_PLATFORM_ID: {
@@ -49,20 +52,41 @@ zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, uin
     case ZBI_TYPE_DRV_BOARD_PRIVATE: {
         size_t list_size = sizeof(board_test::DeviceList);
         size_t entry_size = entries.size() * sizeof(board_test::DeviceEntry);
-        zx_status_t status = zx::vmo::create(list_size + entry_size, 0, &vmo);
+
+        size_t metadata_size = 0;
+        for (board_test::DeviceEntry& entry : entries) {
+            metadata_size += entry.metadata_size;
+        }
+
+        zx_status_t status = zx::vmo::create(list_size + entry_size + metadata_size, 0, &vmo);
         if (status != ZX_OK) {
             return status;
         }
+
+        // Write DeviceList to vmo.
         board_test::DeviceList list{.count = entries.size()};
         status = vmo.write(&list, 0, sizeof(list));
         if (status != ZX_OK) {
             return status;
         }
+
+        // Write DeviceEntries to vmo.
         status = vmo.write(entries.get(), list_size, entry_size);
         if (status != ZX_OK) {
             return status;
         }
-        *length = static_cast<uint32_t>(list_size + entry_size);
+
+        // Write Metadata to vmo.
+        size_t write_offset = list_size + entry_size;
+        for (board_test::DeviceEntry& entry : entries) {
+            status = vmo.write(entry.metadata, write_offset, entry.metadata_size);
+            if (status != ZX_OK) {
+                return status;
+            }
+            write_offset += entry.metadata_size;
+        }
+
+        *length = static_cast<uint32_t>(list_size + entry_size + metadata_size);
         break;
     }
     default:

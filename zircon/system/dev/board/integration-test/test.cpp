@@ -56,6 +56,7 @@ private:
 
     fbl::Array<uint8_t> metadata_;
 
+    fbl::Vector<pbus_metadata_t> devices_metadata_;
     fbl::Vector<pbus_dev_t> devices_;
 
     ddk::PBusProtocolClient pbus_;
@@ -67,6 +68,8 @@ void TestBoard::DdkRelease() {
     delete this;
 }
 
+// This function must be kept updated with the function that serializes the date.
+// This function is driver_integration_test::GetBootItem.
 zx_status_t TestBoard::FetchAndDeserialize() {
     size_t metadata_size;
     zx_status_t status = DdkGetMetadataSize(DEVICE_METADATA_BOARD_PRIVATE, &metadata_size);
@@ -103,13 +106,28 @@ zx_status_t TestBoard::FetchAndDeserialize() {
         return ZX_ERR_NO_MEMORY;
     }
 
+    size_t metadata_offset = (device_list->count * sizeof(DeviceEntry)) + sizeof(DeviceList);
     for (size_t i = 0; i < device_list->count; i++) {
         const auto& entry = device_list->list[i];
+        // Create the device.
         pbus_dev_t device = {};
         device.name = entry.name;
         device.vid = entry.vid;
         device.pid = entry.pid;
         device.did = entry.did;
+
+        //Create the metadata.
+        pbus_metadata_t metadata = {};
+        metadata.type = DEVICE_METADATA_TEST;
+        metadata.data_size = entry.metadata_size;
+        metadata.data_buffer = metadata_.get() + metadata_offset;
+        metadata_offset += metadata.data_size;
+
+        // Store the metadata and link the device to it.
+        devices_metadata_.push_back(std::move(metadata));
+        device.metadata_count = 1;
+        device.metadata_list = &devices_metadata_[devices_metadata_.size() - 1];
+
 
         devices_.push_back(device);
     }

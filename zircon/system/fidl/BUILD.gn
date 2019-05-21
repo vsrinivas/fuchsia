@@ -15,6 +15,7 @@ group("fidl") {
     "fuchsia-debugdata",
     "fuchsia-device",
     "fuchsia-device-manager",
+    "fuchsia-device-manager-test",
     "fuchsia-device-test",
     "fuchsia-device-vsock",
     "fuchsia-fshost",

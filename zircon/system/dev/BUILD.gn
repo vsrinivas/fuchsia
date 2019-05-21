@@ -36,6 +36,7 @@ group("dev") {
     "serial",
     "sysmem",
     "tee",
+    "test/isolateddevmgr:isolateddevmgr-test",
     "test/mock-device",
     "test/sysdev",
     "thermal",

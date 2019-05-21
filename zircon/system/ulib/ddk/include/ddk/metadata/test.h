@@ -21,6 +21,10 @@ struct DeviceEntry {
     uint32_t pid;
     // BIND_PLATFORM_DEV_DID`
     uint32_t did;
+
+    // Below metadata is passed on to the device in DEVICE_METADATA_TEST.
+    size_t metadata_size;
+    const uint8_t* metadata;
 };
 
 struct DeviceList {
@@ -30,4 +34,4 @@ struct DeviceList {
 
 } // namespace board_test
 
-#endif  // DDK_METADATA_TEST_H_
+#endif // DDK_METADATA_TEST_H_

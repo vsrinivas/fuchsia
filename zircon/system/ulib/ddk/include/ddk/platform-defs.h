@@ -187,6 +187,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_HIDCTL_TEST        4
 #define PDEV_PID_VCAMERA_TEST       5
 #define PDEV_PID_LIBDRIVER_TEST     6
+#define PDEV_PID_METADATA_TEST      7
 
 #define PDEV_DID_TEST_PARENT        1
 #define PDEV_DID_TEST_CHILD_1       2
