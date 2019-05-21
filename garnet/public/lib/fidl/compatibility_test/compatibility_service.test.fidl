@@ -16,6 +16,15 @@ union this_is_a_union {
     bool b;
 };
 
+table this_is_a_table {
+    1: string s;
+};
+
+xunion this_is_a_xunion {
+    string s;
+    bool b;
+};
+
 struct primitive_types {
     bool b;
     int8 i8;
@@ -333,6 +342,44 @@ enum u64_enum : uint64 {
     kSeven = 7;
     kEight = 8;
 };
+bits default_bits {
+    kOne = 1;
+    kTwo = 2;
+};
+bits u8_bits:uint8 {
+    kOne = 1;
+    kTwo = 2;
+    kThree = 4;
+    kFour = 8;
+    kFive = 16;
+};
+bits u16_bits:uint16 {
+    kOne = 1;
+    kTwo = 2;
+    kThree = 4;
+    kFour = 8;
+    kFive = 16;
+    kSix = 32;
+};
+bits u32_bits:uint32 {
+    kOne = 1;
+    kTwo = 2;
+    kThree = 4;
+    kFour = 8;
+    kFive = 16;
+    kSix = 32;
+    kSeven = 64;
+};
+bits u64_bits:uint64 {
+    kOne = 1;
+    kTwo = 2;
+    kThree = 4;
+    kFour = 8;
+    kFive = 16;
+    kSix = 32;
+    kSeven = 64;
+    kEight = 128;
+};
 
 struct structs {
     this_is_a_struct s;
@@ -363,9 +410,126 @@ struct Struct {
     u16_enum u16_enum;
     u32_enum u32_enum;
     u64_enum u64_enum;
+    default_bits default_bits;
+    u8_bits u8_bits;
+    u16_bits u16_bits;
+    u32_bits u32_bits;
+    u64_bits u64_bits;
     structs structs;
     unions unions;
+    this_is_a_table table;
+    this_is_a_xunion xunion;
     bool b;
+};
+
+// This struct contains arrays of all different kinds of FIDL types.
+struct ArraysStruct {
+    array<bool>:arrays_size bools;
+    array<int8>:arrays_size int8s;
+    array<int16>:arrays_size int16s;
+    array<int32>:arrays_size int32s;
+    array<int64>:arrays_size int64s;
+    array<uint8>:arrays_size uint8s;
+    array<uint16>:arrays_size uint16s;
+    array<uint32>:arrays_size uint32s;
+    array<uint64>:arrays_size uint64s;
+    array<float32>:arrays_size float32s;
+    array<float64>:arrays_size float64s;
+    array<default_enum>:arrays_size enums;
+    array<default_bits>:arrays_size bits;
+    array<handle>:arrays_size handles;
+    array<handle?>:arrays_size nullable_handles;
+    array<string>:arrays_size strings;
+    array<string?>:arrays_size nullable_strings;
+    array<this_is_a_struct>:arrays_size structs;
+    array<this_is_a_struct?>:arrays_size nullable_structs;
+    array<this_is_a_union>:arrays_size unions;
+    array<this_is_a_union?>:arrays_size nullable_unions;
+    array<array<uint32>:arrays_size>:arrays_size arrays;
+    array<vector<uint32>>:arrays_size vectors;
+    array<vector<uint32>?>:arrays_size nullable_vectors;
+    array<this_is_a_table>:arrays_size tables;
+    array<this_is_a_xunion>:arrays_size xunions;
+};
+
+// This struct contains vectors of all different kinds of FIDL types.
+struct VectorsStruct {
+    vector<bool>:vectors_size bools;
+    vector<int8>:vectors_size int8s;
+    vector<int16>:vectors_size int16s;
+    vector<int32>:vectors_size int32s;
+    vector<int64>:vectors_size int64s;
+    vector<uint8>:vectors_size uint8s;
+    vector<uint16>:vectors_size uint16s;
+    vector<uint32>:vectors_size uint32s;
+    vector<uint64>:vectors_size uint64s;
+    vector<float32>:vectors_size float32s;
+    vector<float64>:vectors_size float64s;
+    vector<default_enum>:vectors_size enums;
+    vector<default_bits>:vectors_size bits;
+    vector<handle>:vectors_size handles;
+    vector<handle?>:vectors_size nullable_handles;
+    vector<string>:vectors_size strings;
+    vector<string?>:vectors_size nullable_strings;
+    vector<this_is_a_struct>:vectors_size structs;
+    vector<this_is_a_struct?>:vectors_size nullable_structs;
+    vector<this_is_a_union>:vectors_size unions;
+    vector<this_is_a_union?>:vectors_size nullable_unions;
+    vector<array<uint32>:vectors_size>:vectors_size arrays;
+    vector<vector<uint32>>:vectors_size vectors;
+    vector<vector<uint32>?>:vectors_size nullable_vectors;
+    vector<this_is_a_table>:vectors_size tables;
+    vector<this_is_a_xunion>:vectors_size xunions;
+};
+
+// This table has members all different FIDL types.
+table AllTypesTable {
+    1: bool bool_member;
+    2: int8 int8_member;
+    3: int16 int16_member;
+    4: int32 int32_member;
+    5: int64 int64_member;
+    6: uint8 uint8_member;
+    7: uint16 uint16_member;
+    8: uint32 uint32_member;
+    9: uint64 uint64_member;
+    10: float32 float32_member;
+    11: float64 float64_member;
+    12: default_enum enum_member;
+    13: default_bits bits_member;
+    14: handle handle_member;
+    15: string string_member;
+    16: this_is_a_struct struct_member;
+    17: this_is_a_union union_member;
+    18: array<uint32>:arrays_size array_member;
+    19: vector<uint32> vector_member;
+    20: this_is_a_table table_member;
+    21: this_is_a_xunion xunion_member;
+};
+
+// This xunion has members all different FIDL types.
+xunion AllTypesXunion {
+    bool bool_member;
+    int8 int8_member;
+    int16 int16_member;
+    int32 int32_member;
+    int64 int64_member;
+    uint8 uint8_member;
+    uint16 uint16_member;
+    uint32 uint32_member;
+    uint64 uint64_member;
+    float32 float32_member;
+    float64 float64_member;
+    default_enum enum_member;
+    default_bits bits_member;
+    handle handle_member;
+    string string_member;
+    this_is_a_struct struct_member;
+    this_is_a_union union_member;
+    array<uint32>:arrays_size array_member;
+    vector<uint32> vector_member;
+    this_is_a_table table_member;
+    this_is_a_xunion xunion_member;
 };
 
 [Discoverable]
@@ -380,4 +544,16 @@ protocol Echo {
     // response, rather than a return value.
     EchoStructNoRetVal(Struct value, string forward_to_server);
     -> EchoEvent(Struct value);
+
+    [Transitional]
+    EchoArrays(ArraysStruct value, string forward_to_server) -> (ArraysStruct value);
+
+    [Transitional]
+    EchoVectors(VectorsStruct value, string forward_to_server) -> (VectorsStruct value);
+
+    [Transitional]
+    EchoTable(AllTypesTable value, string forward_to_server) -> (AllTypesTable value);
+
+    [Transitional]
+    EchoXunions(vector<AllTypesXunion> value, string forward_to_server) -> (vector<AllTypesXunion> value);
 };

@@ -33,21 +33,56 @@ class EchoClientApp {
       ::fidl::BytePart request_buffer, Struct value,
       ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
       Struct* out_value) {
-    return client_.EchoStruct(std::move(request_buffer),
-                              std::move(value), forward_to_server,
-                              std::move(response_buffer),
+    return client_.EchoStruct(std::move(request_buffer), std::move(value),
+                              forward_to_server, std::move(response_buffer),
                               out_value);
   }
 
-  zx_status_t EchoStructNoRetVal(
-      Struct value, ::fidl::StringView forward_to_server,
-      Echo::EventHandlers event_handlers) {
+  zx_status_t EchoStructNoRetVal(Struct value,
+                                 ::fidl::StringView forward_to_server,
+                                 Echo::EventHandlers event_handlers) {
     auto status =
         client_.EchoStructNoRetVal(std::move(value), forward_to_server);
     if (status != ZX_OK) {
       return status;
     }
     return client_.HandleEvents(std::move(event_handlers));
+  }
+
+  ::fidl::DecodeResult<Echo::EchoArraysResponse> EchoArrays(
+      ::fidl::BytePart request_buffer, ArraysStruct value,
+      ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
+      ArraysStruct* out_value) {
+    return client_.EchoArrays(std::move(request_buffer), std::move(value),
+                              forward_to_server, std::move(response_buffer),
+                              out_value);
+  }
+
+  ::fidl::DecodeResult<Echo::EchoVectorsResponse> EchoVectors(
+      ::fidl::BytePart request_buffer, VectorsStruct value,
+      ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
+      VectorsStruct* out_value) {
+    return client_.EchoVectors(std::move(request_buffer), std::move(value),
+                               forward_to_server, std::move(response_buffer),
+                               out_value);
+  }
+
+  ::fidl::DecodeResult<Echo::EchoTableResponse> EchoTable(
+      ::fidl::BytePart request_buffer, AllTypesTable value,
+      ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
+      AllTypesTable* out_value) {
+    return client_.EchoTable(std::move(request_buffer), std::move(value),
+                             forward_to_server, std::move(response_buffer),
+                             out_value);
+  }
+
+  ::fidl::DecodeResult<Echo::EchoXunionsResponse> EchoXunions(
+      ::fidl::BytePart request_buffer, ::fidl::VectorView<AllTypesXunion> value,
+      ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
+      ::fidl::VectorView<AllTypesXunion>* out_value) {
+    return client_.EchoXunions(std::move(request_buffer), std::move(value),
+                               forward_to_server, std::move(response_buffer),
+                               out_value);
   }
 
   EchoClientApp(const EchoClientApp&) = delete;
@@ -99,8 +134,7 @@ class EchoConnection final : public Echo::Interface {
           ::fidl::BytePart(&response_buffer[0],
                            static_cast<uint32_t>(response_buffer.size())),
           &out_value);
-      ZX_ASSERT_MSG(result.status == ZX_OK,
-                    "Forwarding failed: %s",
+      ZX_ASSERT_MSG(result.status == ZX_OK, "Forwarding failed: %s",
                     result.error);
       completer.Reply(std::move(out_value));
     }
@@ -112,26 +146,114 @@ class EchoConnection final : public Echo::Interface {
     if (forward_to_server.empty()) {
       auto status = Echo::SendEchoEventEvent(zx::unowned_channel(channel_),
                                              std::move(value));
-      ZX_ASSERT_MSG(status == ZX_OK,
-                    "Replying with event failed: %s",
+      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed: %s",
                     zx_status_get_string(status));
     } else {
       EchoClientApp app(forward_to_server);
       zx_status_t status = app.EchoStructNoRetVal(
           std::move(value), ::fidl::StringView{0, ""},
-          Echo::EventHandlers{
-              .echo_event = [&](Struct value) {
-                  return Echo::SendEchoEventEvent(zx::unowned_channel(channel_),
-                                                  std::move(value));
-              },
-              .unknown = [] {
-                  ZX_PANIC("Received unexpected event");
-                  return ZX_ERR_INVALID_ARGS;
-              }
-          });
-      ZX_ASSERT_MSG(status == ZX_OK,
-                    "Replying with event failed: %s",
+          Echo::EventHandlers{.echo_event =
+                                  [&](Struct value) {
+                                    return Echo::SendEchoEventEvent(
+                                        zx::unowned_channel(channel_),
+                                        std::move(value));
+                                  },
+                              .unknown =
+                                  [] {
+                                    ZX_PANIC("Received unexpected event");
+                                    return ZX_ERR_INVALID_ARGS;
+                                  }});
+      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed: %s",
                     zx_status_get_string(status));
+    }
+  }
+
+  void EchoArrays(ArraysStruct value, ::fidl::StringView forward_to_server,
+                  EchoArraysCompleter::Sync completer) override {
+    if (forward_to_server.empty()) {
+      completer.Reply(std::move(value));
+    } else {
+      std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      EchoClientApp app(forward_to_server);
+      ArraysStruct out_value;
+      auto result = app.EchoArrays(
+          ::fidl::BytePart(&request_buffer[0],
+                           static_cast<uint32_t>(request_buffer.size())),
+          std::move(value), ::fidl::StringView{0, ""},
+          ::fidl::BytePart(&response_buffer[0],
+                           static_cast<uint32_t>(response_buffer.size())),
+          &out_value);
+      ZX_ASSERT_MSG(result.status == ZX_OK, "Forwarding failed: %s",
+                    result.error);
+      completer.Reply(std::move(out_value));
+    }
+  }
+
+  void EchoVectors(VectorsStruct value, ::fidl::StringView forward_to_server,
+                   EchoVectorsCompleter::Sync completer) override {
+    if (forward_to_server.empty()) {
+      completer.Reply(std::move(value));
+    } else {
+      std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      EchoClientApp app(forward_to_server);
+      VectorsStruct out_value;
+      auto result = app.EchoVectors(
+          ::fidl::BytePart(&request_buffer[0],
+                           static_cast<uint32_t>(request_buffer.size())),
+          std::move(value), ::fidl::StringView{0, ""},
+          ::fidl::BytePart(&response_buffer[0],
+                           static_cast<uint32_t>(response_buffer.size())),
+          &out_value);
+      ZX_ASSERT_MSG(result.status == ZX_OK, "Forwarding failed: %s",
+                    result.error);
+      completer.Reply(std::move(out_value));
+    }
+  }
+
+  void EchoTable(AllTypesTable value, ::fidl::StringView forward_to_server,
+                 EchoTableCompleter::Sync completer) override {
+    if (forward_to_server.empty()) {
+      completer.Reply(std::move(value));
+    } else {
+      std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      EchoClientApp app(forward_to_server);
+      AllTypesTable out_value;
+      auto result = app.EchoTable(
+          ::fidl::BytePart(&request_buffer[0],
+                           static_cast<uint32_t>(request_buffer.size())),
+          std::move(value), ::fidl::StringView{0, ""},
+          ::fidl::BytePart(&response_buffer[0],
+                           static_cast<uint32_t>(response_buffer.size())),
+          &out_value);
+      ZX_ASSERT_MSG(result.status == ZX_OK, "Forwarding failed: %s",
+                    result.error);
+      completer.Reply(std::move(out_value));
+    }
+  }
+
+  void EchoXunions(fidl::VectorView<AllTypesXunion> value,
+                   ::fidl::StringView forward_to_server,
+                   EchoXunionsCompleter::Sync completer) override {
+    if (forward_to_server.empty()) {
+      completer.Reply(std::move(value));
+    } else {
+      std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      EchoClientApp app(forward_to_server);
+      fidl::VectorView<AllTypesXunion> out_value;
+      auto result = app.EchoXunions(
+          ::fidl::BytePart(&request_buffer[0],
+                           static_cast<uint32_t>(request_buffer.size())),
+          std::move(value), ::fidl::StringView{0, ""},
+          ::fidl::BytePart(&response_buffer[0],
+                           static_cast<uint32_t>(response_buffer.size())),
+          &out_value);
+      ZX_ASSERT_MSG(result.status == ZX_OK, "Forwarding failed: %s",
+                    result.error);
+      completer.Reply(std::move(out_value));
     }
   }
 

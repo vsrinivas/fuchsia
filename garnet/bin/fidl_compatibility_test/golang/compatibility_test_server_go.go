@@ -52,21 +52,20 @@ func (echo *echoImpl) getServer(url string) (*compatibility.EchoInterface, error
 }
 
 func (echo *echoImpl) EchoStruct(value compatibility.Struct, forwardURL string) (compatibility.Struct, error) {
-	if forwardURL != "" {
-		echoInterface, err := echo.getServer(forwardURL)
-		if err != nil {
-			log.Printf("Connecting to %s failed: %s", forwardURL, err)
-			return compatibility.Struct{}, err
-		}
-		response, err := echoInterface.EchoStruct(value, "")
-		if err != nil {
-			log.Printf("EchoStruct failed: %s", err)
-			return compatibility.Struct{}, err
-		}
-		return response, nil
+	if forwardURL == "" {
+		return value, nil
 	}
-
-	return value, nil
+	echoInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return compatibility.Struct{}, err
+	}
+	response, err := echoInterface.EchoStruct(value, "")
+	if err != nil {
+		log.Printf("EchoStruct failed: %s", err)
+		return compatibility.Struct{}, err
+	}
+	return response, nil
 }
 
 func (echo *echoImpl) EchoStructNoRetVal(value compatibility.Struct, forwardURL string) error {
@@ -100,6 +99,76 @@ func (echo *echoImpl) EchoStructNoRetVal(value compatibility.Struct, forwardURL 
 		}
 	}
 	return nil
+}
+
+func (echo *echoImpl) EchoArrays(value compatibility.ArraysStruct, forwardURL string) (compatibility.ArraysStruct, error) {
+	if forwardURL == "" {
+		return value, nil
+	}
+	echoInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return compatibility.ArraysStruct{}, err
+	}
+	response, err := echoInterface.EchoArrays(value, "")
+	if err != nil {
+		log.Printf("EchoArrays failed: %s", err)
+		return compatibility.ArraysStruct{}, err
+	}
+	return response, nil
+}
+
+func (echo *echoImpl) EchoVectors(value compatibility.VectorsStruct, forwardURL string) (compatibility.VectorsStruct, error) {
+	if forwardURL == "" {
+		return value, nil
+	}
+	echoInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return compatibility.VectorsStruct{}, err
+	}
+	response, err := echoInterface.EchoVectors(value, "")
+	if err != nil {
+		log.Printf("EchoVectors failed: %s", err)
+		return compatibility.VectorsStruct{}, err
+	}
+	return response, nil
+}
+
+func (echo *echoImpl) EchoTable(value compatibility.AllTypesTable, forwardURL string) (compatibility.AllTypesTable, error) {
+	if forwardURL == "" {
+		return value, nil
+	}
+	echoInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return compatibility.AllTypesTable{}, err
+	}
+	response, err := echoInterface.EchoTable(value, "")
+	if err != nil {
+		log.Printf("EchoTable failed: %s", err)
+		return compatibility.AllTypesTable{}, err
+	}
+	return response, nil
+
+}
+
+func (echo *echoImpl) EchoXunions(value []compatibility.AllTypesXunion, forwardURL string) ([]compatibility.AllTypesXunion, error) {
+	if forwardURL == "" {
+		return value, nil
+	}
+	echoInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return nil, err
+	}
+	response, err := echoInterface.EchoXunions(value, "")
+	if err != nil {
+		log.Printf("EchoXunions failed: %s", err)
+		return nil, err
+	}
+	return response, nil
+
 }
 
 var echoService compatibility.EchoService

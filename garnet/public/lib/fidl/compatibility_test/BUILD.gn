@@ -9,7 +9,7 @@ fidl("compatibility_test_service") {
   name = "fidl.test.compatibility"
 
   sources = [
-    "compatibility_test_service.fidl",
+    "compatibility_service.test.fidl",
   ]
 }
 
