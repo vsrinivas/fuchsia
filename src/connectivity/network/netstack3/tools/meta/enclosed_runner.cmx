@@ -1,12 +1,4 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack3#meta/netstack3.cmx",
-                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack3#meta/netstack3.cmx"
-            }
-        }
-    },
     "program": {
         "binary": "bin/enclosed_runner"
     },
@@ -14,11 +6,9 @@
         "dev": [
             "class/ethernet"
         ],
-        "features": [
-            "shell"
-        ],
         "services": [
-            "fuchsia.net.stack.Stack"
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
         ]
     }
 }

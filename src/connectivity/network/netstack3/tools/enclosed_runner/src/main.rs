@@ -9,12 +9,18 @@ use fdio;
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
-use fuchsia_component::client;
 use fuchsia_async as fasync;
+use fuchsia_component::{
+    client::AppBuilder,
+    server::{NestedEnvironment, ServiceFs},
+};
 use fuchsia_zircon as zx;
-use std::fs::{self, File};
+use futures::prelude::*;
+use std::fs::File;
 use std::os::unix::io::AsRawFd;
 use structopt::StructOpt;
+
+const NETSTACK_URL: &'static str = "fuchsia-pkg://fuchsia.com/netstack3#meta/netstack3.cmx";
 
 #[derive(StructOpt, Debug)]
 struct Opt {
@@ -84,8 +90,8 @@ fn copy_ip(ip: &net::IpAddress) -> net::IpAddress {
 }
 
 impl Netstack {
-    fn new() -> Result<Self, Error> {
-        Ok(Self { stack: client::connect_to_service::<StackMarker>()? })
+    fn new(env: &NestedEnvironment) -> Result<Self, Error> {
+        Ok(Self { stack: env.connect_to_service::<StackMarker>()? })
     }
 
     async fn add_ethernet(&self, path: String) -> Result<u64, Error> {
@@ -140,7 +146,23 @@ impl Netstack {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let options = Opt::from_args();
-    let stack = Netstack::new()?;
+    // create nested environment for netstack:
+
+    let mut ns_builder = AppBuilder::new(NETSTACK_URL.to_string());
+
+    let mut services = ServiceFs::new_local();
+    services
+        .add_proxy_service_to::<StackMarker, _>(ns_builder.directory_request().unwrap().clone())
+        .add_proxy_service_to::<net::SocketProviderMarker, _>(
+            ns_builder.directory_request().unwrap().clone(),
+        );
+
+    let env = services.create_nested_environment("netstack3-env")?;
+
+    let _netstack = ns_builder.spawn(env.launcher())?;
+    fasync::spawn_local(services.collect());
+
+    let stack = Netstack::new(&env)?;
     if let Some(eth_path) = options.ethernet {
         // open ethernet device and send to stack.
         let id = await!(stack.add_ethernet(eth_path))?;
@@ -153,11 +175,9 @@ async fn main() -> Result<(), Error> {
         }
     }
 
-    let env_name = fs::read_to_string("/hub/name")?;
     println!("enclosed netstack is running...");
-    println!("environment name: {}", env_name);
     println!("run:");
-    println!("chrealm /hub/r/{}/[koid]", env_name);
+    println!("chrealm /hub/r/netstack3-env/[koid]");
     println!("to shell into the tailored environment (you can use tab completions for koid)");
     println!("to stop the netstack and this environment, run:");
     println!("killall enclosed_runner.cmx");
