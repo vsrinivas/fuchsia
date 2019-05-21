@@ -415,7 +415,7 @@ struct iwl_mvm_sta {
 uint16_t iwl_mvm_tid_queued(struct iwl_mvm* mvm, struct iwl_mvm_tid_data* tid_data);
 
 static inline struct iwl_mvm_sta* iwl_mvm_sta_from_mac80211(struct ieee80211_sta* sta) {
-    return (void*)sta->drv_priv;
+    return (struct iwl_mvm_sta*)sta->drv_priv;
 }
 
 /**

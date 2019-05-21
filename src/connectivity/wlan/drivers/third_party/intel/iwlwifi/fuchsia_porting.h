@@ -107,21 +107,52 @@ typedef char* acpi_string;
 #define rcu_read_lock() do {} while (0);
 #define rcu_read_unlock() do {} while (0);
 
+// NEEDS_PORTING: Below structures are only referenced in function prototype.
+//                Doesn't need a dummy byte.
+struct dentry;
+struct device;
+struct wait_queue;
+struct wiphy;
+
 // NEEDS_PORTING: Below structures are used in code but not ported yet.
-struct delayed_work {};
-struct dentry {};
-struct device {};
-struct ewma_rate {};
-struct inet6_dev {};
-struct mac_address {};
-struct napi_struct {};
-struct rcu_head {};
-struct sk_buff_head {};
-struct timer_list {};
-struct wait_queue {};
-struct wait_queue_head {};
-struct wiphy {};
-struct work_struct {};
+// A dummy byte is required to suppress the C++ warning message for empty struct.
+struct delayed_work {
+    char dummy;
+};
+
+struct ewma_rate {
+    char dummy;
+};
+
+struct inet6_dev;
+
+struct mac_address {
+    char dummy;
+};
+
+struct napi_struct {
+    char dummy;
+};
+
+struct rcu_head {
+    char dummy;
+};
+
+struct sk_buff_head {
+    char dummy;
+};
+
+struct timer_list {
+    char dummy;
+};
+
+struct wait_queue_head {
+    char dummy;
+};
+
+struct work_struct {
+    char dummy;
+};
 
 struct firmware {
     zx_handle_t vmo;
@@ -130,7 +161,7 @@ struct firmware {
 };
 
 struct page {
-    void* virtual;
+    void* virtual_addr;
 };
 
 struct wireless_dev {
@@ -186,7 +217,7 @@ static inline bool IS_ERR_OR_NULL(const void *ptr) {
 
 static inline void *page_address(const struct page *page)
 {
-    return page->virtual;
+    return page->virtual_addr;
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

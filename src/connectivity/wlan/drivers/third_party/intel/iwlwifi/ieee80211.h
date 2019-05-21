@@ -116,27 +116,57 @@ enum ieee80211_sta_state {
     IEEE80211_STA_AUTHORIZED,
 };
 
-// empty structs
-struct cfg80211_chan_def {};
-struct cfg80211_gtk_rekey_data {};
-struct cfg80211_nan_conf {};
-struct cfg80211_nan_func {};
-struct cfg80211_scan_request {};
-struct cfg80211_sched_scan_request {};
-struct cfg80211_wowlan {};
-struct ieee80211_channel {};
-struct ieee80211_cipher_scheme {};
-struct ieee80211_hdr {};
-struct ieee80211_key_conf {};
-struct ieee80211_ops {};
-struct ieee80211_p2p_noa_desc {};
-struct ieee80211_sta_ht_cap {};
-struct ieee80211_rx_status {};
-struct ieee80211_scan_ies {};
-struct ieee80211_supported_band {};
-struct ieee80211_tdls_ch_sw_params {};
-struct ieee80211_tx_queue_params {};
-struct ieee80211_tx_rate {};
+// NEEDS_PORTING: Below structures are only referenced in function prototype.
+//                Doesn't need a dummy byte.
+struct cfg80211_gtk_rekey_data;
+struct cfg80211_nan_conf;
+struct cfg80211_nan_func;
+struct cfg80211_scan_request;
+struct cfg80211_sched_scan_request;
+struct cfg80211_wowlan;
+struct ieee80211_key_conf;
+struct ieee80211_sta_ht_cap;
+struct ieee80211_rx_status;
+struct ieee80211_scan_ies;
+struct ieee80211_tdls_ch_sw_params;
+
+// NEEDS_PORTING: Below structures are used in code but not ported yet.
+// A dummy byte is required to suppress the C++ warning message for empty struct.
+struct cfg80211_chan_def {
+    char dummy;
+};
+
+struct ieee80211_channel {
+    char dummy;
+};
+
+struct ieee80211_cipher_scheme {
+    char dummy;
+};
+
+struct ieee80211_hdr {
+    char dummy;
+};
+
+struct ieee80211_ops {
+    char dummy;
+};
+
+struct ieee80211_p2p_noa_desc {
+    char dummy;
+};
+
+struct ieee80211_supported_band {
+    char dummy;
+};
+
+struct ieee80211_tx_queue_params {
+    char dummy;
+};
+
+struct ieee80211_tx_rate {
+    char dummy;
+};
 
 // dummy structs
 struct ieee80211_hw {

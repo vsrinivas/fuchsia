@@ -61,6 +61,10 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/lte-coex.h"
 #endif
 
+#ifdef __cplusplus
+using std::atomic_int;
+#endif  // __cplusplus
+
 #define IWL_MVM_MAX_ADDRESSES 5
 /* RSSI offset for WkP */
 #define IWL_RSSI_OFFSET 50
@@ -453,7 +457,7 @@ struct iwl_mvm_vif {
 
 static inline struct iwl_mvm_vif* iwl_mvm_vif_from_mac80211(struct ieee80211_vif* vif) {
     if (!vif) { return NULL; }
-    return (void*)vif->drv_priv;
+    return (struct iwl_mvm_vif*)vif->drv_priv;
 }
 
 extern const uint8_t tid_to_mac80211_ac[];
@@ -736,8 +740,9 @@ struct iwl_mvm_baid_data {
 
 static inline struct iwl_mvm_baid_data* iwl_mvm_baid_data_from_reorder_buf(
     struct iwl_mvm_reorder_buffer* buf) {
-    return (void*)((uint8_t*)buf - offsetof(struct iwl_mvm_baid_data, reorder_buf) -
-                   sizeof(*buf) * buf->queue);
+    return (struct iwl_mvm_baid_data*)((uint8_t*)buf -
+                                       offsetof(struct iwl_mvm_baid_data, reorder_buf) -
+                                       sizeof(*buf) * buf->queue);
 }
 
 /*
@@ -790,13 +795,13 @@ struct iwl_mvm_txq {
 };
 
 static inline struct iwl_mvm_txq* iwl_mvm_txq_from_mac80211(struct ieee80211_txq* txq) {
-    return (void*)txq->drv_priv;
+    return (struct iwl_mvm_txq*)txq->drv_priv;
 }
 
 static inline struct iwl_mvm_txq* iwl_mvm_txq_from_tid(struct ieee80211_sta* sta, uint8_t tid) {
     if (tid == IWL_MAX_TID_COUNT) { tid = IEEE80211_NUM_TIDS; }
 
-    return (void*)sta->txq[tid]->drv_priv;
+    return (struct iwl_mvm_txq*)(sta->txq[tid]->drv_priv);
 }
 
 /**
