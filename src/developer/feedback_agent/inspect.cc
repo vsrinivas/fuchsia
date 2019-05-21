@@ -58,8 +58,7 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(zx::duration timeout) {
       async_get_default_dispatcher(),
       [cb = discovery_done_after_timeout->callback()] { cb(); }, timeout);
   if (post_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to post delayed task: " << post_status << " ("
-                   << zx_status_get_string(post_status) << ")";
+    FX_PLOGS(ERROR, post_status) << "Failed to post delayed task";
     FX_LOGS(ERROR) << "Skipping Inspect data collection as Inspect discovery "
                       "is not safe without a timeout";
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());

@@ -38,8 +38,7 @@ fit::promise<fuchsia::mem::Buffer> GetKernelLog() {
   const zx_status_t create_status =
       zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &log);
   if (create_status != ZX_OK) {
-    FX_LOGS(ERROR) << "zx::debuglog::create failed: " << create_status << " ("
-                   << zx_status_get_string(create_status) << ")";
+    FX_PLOGS(ERROR, create_status) << "zx::debuglog::create failed";
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
   }
 

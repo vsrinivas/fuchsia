@@ -82,9 +82,8 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     return CrashpadAgent::TryCreate(dispatcher, std::move(services),
                                     std::move(config));
   }
-  FX_LOGS(ERROR) << "failed to read default config file at "
-                 << kDefaultConfigPath << ": " << status << " ("
-                 << zx_status_get_string(status) << ")";
+  FX_PLOGS(ERROR, status) << "failed to read default config file at "
+                          << kDefaultConfigPath;
 
   FX_LOGS(FATAL) << "failed to set up crash analyzer";
   return nullptr;

@@ -35,12 +35,10 @@ class CrashAnalyzer {
     const zx_status_t status =
         analyzer->OnKernelPanicCrashLog(std::move(crashlog), &out_result);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to connect to crash analyzer: " << status
-                     << " (" << zx_status_get_string(status) << ")";
+      FX_PLOGS(ERROR, status) << "failed to connect to crash analyzer";
     } else if (out_result.is_err()) {
-      FX_LOGS(ERROR) << "failed to process kernel panic crash log: "
-                     << out_result.err() << " ("
-                     << zx_status_get_string(out_result.err()) << ")";
+      FX_PLOGS(ERROR, out_result.err())
+          << "failed to process kernel panic crash log";
     }
   }
 

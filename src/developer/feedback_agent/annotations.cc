@@ -44,9 +44,8 @@ std::optional<std::string> GetDeviceBoardName() {
   const zx_status_t channel_status =
       fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (channel_status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to open a channel at " << kSysInfoPath << ": "
-                   << channel_status << " ("
-                   << zx_status_get_string(channel_status) << ")";
+    FX_PLOGS(ERROR, channel_status)
+        << "failed to open a channel at " << kSysInfoPath;
     return std::nullopt;
   }
 
@@ -58,14 +57,12 @@ std::optional<std::string> GetDeviceBoardName() {
   const zx_status_t fidl_status =
       device->GetBoardName(&out_status, &out_board_name);
   if (fidl_status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to connect to fuchsia.sysinfo.Device: "
-                   << fidl_status << " (" << zx_status_get_string(fidl_status)
-                   << ")";
+    FX_PLOGS(ERROR, fidl_status)
+        << "failed to connect to fuchsia.sysinfo.Device";
     return std::nullopt;
   }
   if (out_status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to get device board name: " << out_status << " ("
-                   << zx_status_get_string(out_status) << ")";
+    FX_PLOGS(ERROR, out_status) << "failed to get device board name";
     return std::nullopt;
   }
   return out_board_name;

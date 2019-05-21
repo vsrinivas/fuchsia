@@ -61,16 +61,14 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener_h;
   binding_.Bind(log_listener_h.NewRequest());
   binding_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "LogListener error: " << status << " ("
-                   << zx_status_get_string(status) << ")";
+    FX_PLOGS(ERROR, status) << "LogListener error";
     done_->completer.complete_error();
     Reset();
   });
 
   fuchsia::logger::LogPtr logger = services_->Connect<fuchsia::logger::Log>();
   logger.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "Lost connection to Log service: " << status << " ("
-                   << zx_status_get_string(status) << ")";
+    FX_PLOGS(ERROR, status) << "Lost connection to Log service";
     done_->completer.complete_error();
     Reset();
   });
@@ -95,9 +93,8 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
       async_get_default_dispatcher(),
       [cb = done_after_timeout_.callback()] { cb(); }, timeout);
   if (post_status != ZX_OK) {
-    FX_LOGS(ERROR)
-        << "Failed to post delayed task, no timeout for log collection: "
-        << post_status << " (" << zx_status_get_string(post_status) << ")";
+    FX_PLOGS(ERROR, post_status)
+        << "Failed to post delayed task, no timeout for log collection";
   }
 
   return done_->consumer.promise_or(fit::error());
