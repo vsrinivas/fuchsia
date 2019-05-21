@@ -19,6 +19,7 @@ use log::{error, info};
 mod configuration;
 mod http_request;
 mod install_plan;
+mod metrics;
 
 async fn run_fidl_server(stream: IncomingServices) -> Result<(), Error> {
     match stream {
@@ -100,25 +101,25 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fuchsia_async::Executor::new().context("Error creating executor")?;
 
-    executor.run_singlethreaded(
-        async {
-            let apps = configuration::get_apps();
-            info!("Omaha apps: {:?}", apps);
-            let config = configuration::get_config();
-            info!("Update config: {:?}", config);
+    executor.run_singlethreaded(async {
+        let apps = configuration::get_apps();
+        info!("Omaha apps: {:?}", apps);
+        let config = configuration::get_config();
+        info!("Update config: {:?}", config);
 
-            let mut fs = ServiceFs::new_local();
-            fs.dir("public")
-                .add_fidl_service(IncomingServices::Manager)
-                .add_fidl_service(IncomingServices::OmahaClientConfiguration);
-            fs.take_and_serve_directory_handle()?;
-            const MAX_CONCURRENT: usize = 1000;
-            let fut = fs.for_each_concurrent(MAX_CONCURRENT, |stream| {
-                run_fidl_server(stream).unwrap_or_else(|e| error!("{:?}", e))
-            });
+        let mut fs = ServiceFs::new_local();
+        fs.dir("public")
+            .add_fidl_service(IncomingServices::Manager)
+            .add_fidl_service(IncomingServices::OmahaClientConfiguration);
+        fs.take_and_serve_directory_handle()?;
+        const MAX_CONCURRENT: usize = 1000;
+        let fidl_fut = fs.for_each_concurrent(MAX_CONCURRENT, |stream| {
+            run_fidl_server(stream).unwrap_or_else(|e| error!("{:?}", e))
+        });
 
-            await!(fut);
-            Ok(())
-        },
-    )
+        let (_metrics_reporter, cobalt_fut) = metrics::CobaltMetricsReporter::new();
+
+        await!(future::join(fidl_fut, cobalt_fut));
+        Ok(())
+    })
 }

@@ -9,7 +9,8 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.net.SocketProvider"
+            "fuchsia.net.SocketProvider",
+            "fuchsia.cobalt.LoggerFactory"
         ]
     }
 }
