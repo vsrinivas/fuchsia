@@ -134,6 +134,7 @@ set_defaults("fuzzer") {
 #     Usual GN meanings.
 template("fuzzers_package") {
   assert(defined(invoker.fuzzers), "fuzzers must be defined for $target_name}")
+  package_name = target_name
 
   if (defined(invoker.sanitizers)) {
     sanitizers = invoker.sanitizers
@@ -157,11 +158,7 @@ template("fuzzers_package") {
     deps = []
     host_deps = []
     host_outputs = []
-    metadata = {
-      fuzzers_package = target_name
-      fuzzers = []
-      fuzz_host = fuzz_host
-    }
+    fuzzers = []
   }
 
   # Collect the selected fuzzers listed in this package based on the variants
@@ -213,10 +210,7 @@ template("fuzzers_package") {
             pkg.host_deps += [ fuzzer_label ]
             pkg.host_outputs += [ fuzzer_name ]
           }
-          pkg_metadata = {
-          }
-          pkg_metadata = pkg.metadata
-          pkg_metadata.fuzzers += [ fuzzer_name ]
+          pkg.fuzzers += [ fuzzer_name ]
         }
       }
     }
@@ -233,6 +227,7 @@ template("fuzzers_package") {
       forward_variables_from(invoker,
                              "*",
                              [
+                               "fuzzers",
                                "metadata",
                                "sanitizers",
                                "visibility",
@@ -251,7 +246,13 @@ template("fuzzers_package") {
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*", [ "fuzz_spec" ])
         }
-        fuzz_spec = [ pkg.metadata ]
+        fuzz_spec = [
+          {
+            fuzzers_package = package_name
+            fuzzers = pkg.fuzzers
+            fuzz_host = fuzz_host
+          },
+        ]
       }
     }
 
@@ -270,6 +271,10 @@ template("fuzzers_package") {
     group(target_name) {
     }
     not_needed(invoker, "*")
+    not_needed([
+                 "package_name",
+                 "fuzz_host",
+               ])
   }
 }
 
