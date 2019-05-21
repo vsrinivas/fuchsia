@@ -70,6 +70,7 @@ source_set("tests") {
     "message_unittests.cc",
     "protocol_unittests.cc",
     "records_unittest.cc",
+    "register_desc_unittest.cc",
   ]
 
   deps = [

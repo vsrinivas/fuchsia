@@ -38,6 +38,8 @@ void FrameSymbolDataProvider::Disown() {
 
 bool FrameSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
                                           std::optional<uint64_t>* value) {
+  FXL_DCHECK(id != debug_ipc::RegisterID::kUnknown);
+
   *value = std::nullopt;
   if (!frame_)
     return true;  // Synchronously know we don't have the value.
