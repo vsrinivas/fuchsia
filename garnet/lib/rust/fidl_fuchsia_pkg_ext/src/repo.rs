@@ -8,18 +8,18 @@ use {
     fuchsia_uri::pkg_uri::{PkgUri, RepoUri},
     serde_derive::{Deserialize, Serialize},
     std::convert::TryFrom,
-    std::mem,
+    std::{fmt, mem},
 };
 
 /// Convenience wrapper for the FIDL RepositoryKeyConfig type
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type", content = "value", deny_unknown_fields)]
 pub enum RepositoryKey {
     Ed25519(#[serde(with = "hex_serde")] Vec<u8>),
 }
 
 /// Convenience wrapper for the FIDL RepositoryBlobConfig type
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type", content = "value", deny_unknown_fields)]
 pub enum RepositoryBlobKey {
     Aes(#[serde(with = "hex_serde")] Vec<u8>),
@@ -40,15 +40,25 @@ impl MirrorConfig {
 }
 
 /// Convenience wrapper for generating [MirrorConfig] values.
+#[derive(Clone, Debug)]
 pub struct MirrorConfigBuilder {
     config: MirrorConfig,
 }
 
 impl MirrorConfigBuilder {
-    pub fn new(mirror_url: String) -> Self {
+    pub fn new(mirror_url: impl Into<String>) -> Self {
         MirrorConfigBuilder {
-            config: MirrorConfig { mirror_url: mirror_url, subscribe: false, blob_key: None },
+            config: MirrorConfig {
+                mirror_url: mirror_url.into(),
+                subscribe: false,
+                blob_key: None,
+            },
         }
+    }
+
+    pub fn mirror_url(mut self, mirror_url: impl Into<String>) -> Self {
+        self.config.mirror_url = mirror_url.into();
+        self
     }
 
     pub fn subscribe(mut self, subscribe: bool) -> Self {
@@ -63,6 +73,12 @@ impl MirrorConfigBuilder {
 
     pub fn build(self) -> MirrorConfig {
         self.config
+    }
+}
+
+impl Into<MirrorConfig> for MirrorConfigBuilder {
+    fn into(self) -> MirrorConfig {
+        self.build()
     }
 }
 
@@ -169,6 +185,7 @@ impl Into<fidl::RepositoryConfig> for RepositoryConfig {
 }
 
 /// Convenience wrapper for generating [RepositoryConfig] values.
+#[derive(Clone, Debug)]
 pub struct RepositoryConfigBuilder {
     config: RepositoryConfig,
 }
@@ -177,7 +194,7 @@ impl RepositoryConfigBuilder {
     pub fn new(repo_url: RepoUri) -> Self {
         RepositoryConfigBuilder {
             config: RepositoryConfig {
-                repo_url: repo_url,
+                repo_url,
                 root_keys: vec![],
                 mirrors: vec![],
                 update_package_uri: None,
@@ -185,13 +202,18 @@ impl RepositoryConfigBuilder {
         }
     }
 
+    pub fn repo_url(mut self, repo_url: RepoUri) -> Self {
+        self.config.repo_url = repo_url;
+        self
+    }
+
     pub fn add_root_key(mut self, key: RepositoryKey) -> Self {
         self.config.root_keys.push(key);
         self
     }
 
-    pub fn add_mirror(mut self, mirror: MirrorConfig) -> Self {
-        self.config.mirrors.push(mirror);
+    pub fn add_mirror(mut self, mirror: impl Into<MirrorConfig>) -> Self {
+        self.config.mirrors.push(mirror.into());
         self
     }
 
@@ -202,6 +224,12 @@ impl RepositoryConfigBuilder {
 
     pub fn build(self) -> RepositoryConfig {
         self.config
+    }
+}
+
+impl Into<RepositoryConfig> for RepositoryConfigBuilder {
+    fn into(self) -> RepositoryConfig {
+        self.build()
     }
 }
 
@@ -231,6 +259,13 @@ impl Into<fidl::RepositoryKeyConfig> for RepositoryKey {
     }
 }
 
+impl fmt::Debug for RepositoryKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let RepositoryKey::Ed25519(ref value) = self;
+        f.debug_tuple("Ed25519").field(&hex::encode(value)).finish()
+    }
+}
+
 impl TryFrom<fidl::RepositoryBlobKey> for RepositoryBlobKey {
     type Error = RepositoryParseError;
     fn try_from(id: fidl::RepositoryBlobKey) -> Result<Self, RepositoryParseError> {
@@ -246,6 +281,13 @@ impl Into<fidl::RepositoryBlobKey> for RepositoryBlobKey {
         match self {
             RepositoryBlobKey::Aes(key) => fidl::RepositoryBlobKey::AesKey(key),
         }
+    }
+}
+
+impl fmt::Debug for RepositoryBlobKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let RepositoryBlobKey::Aes(ref value) = self;
+        f.debug_tuple("Aes").field(&hex::encode(value)).finish()
     }
 }
 

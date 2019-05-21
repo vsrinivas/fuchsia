@@ -30,11 +30,16 @@ pub enum RuleConfig {
 impl Rule {
     /// Creates a new `Rule`.
     pub fn new(
-        host_match: String,
-        host_replacement: String,
-        path_prefix_match: String,
-        path_prefix_replacement: String,
+        host_match: impl Into<String>,
+        host_replacement: impl Into<String>,
+        path_prefix_match: impl Into<String>,
+        path_prefix_replacement: impl Into<String>,
     ) -> Result<Self, RuleParseError> {
+        let host_match = host_match.into();
+        let host_replacement = host_replacement.into();
+        let path_prefix_match = path_prefix_match.into();
+        let path_prefix_replacement = path_prefix_replacement.into();
+
         fn validate_host(s: &str) -> Result<(), RuleParseError> {
             PkgUri::new_repository(s.to_owned()).map_err(|_err| RuleParseError::InvalidHost)?;
             Ok(())
@@ -165,13 +170,8 @@ mod serde_tests {
     macro_rules! rule {
         ($host_match:expr => $host_replacement:expr,
          $path_prefix_match:expr => $path_prefix_replacement:expr) => {
-            Rule::new(
-                $host_match.to_owned(),
-                $host_replacement.to_owned(),
-                $path_prefix_match.to_owned(),
-                $path_prefix_replacement.to_owned(),
-            )
-            .unwrap()
+            Rule::new($host_match, $host_replacement, $path_prefix_match, $path_prefix_replacement)
+                .unwrap()
         };
     }
 
@@ -322,19 +322,19 @@ mod rule_tests {
                 #[test]
                 fn $test_name() {
                     let error = Rule::new(
-                        $host_match.to_owned(),
-                        $host_replacement.to_owned(),
-                        $path_prefix_match.to_owned(),
-                        $path_prefix_replacement.to_owned()
+                        $host_match,
+                        $host_replacement,
+                        $path_prefix_match,
+                        $path_prefix_replacement,
                     )
                     .expect_err("should have failed to parse");
                     assert_eq!(error, $error);
 
                     let error = Rule::new(
-                        $host_replacement.to_owned(),
-                        $host_match.to_owned(),
-                        $path_prefix_replacement.to_owned(),
-                        $path_prefix_match.to_owned()
+                        $host_replacement,
+                        $host_match,
+                        $path_prefix_replacement,
+                        $path_prefix_match,
                     )
                     .expect_err("should have failed to parse");
                     assert_eq!(error, $error);

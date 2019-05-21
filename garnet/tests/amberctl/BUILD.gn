@@ -13,10 +13,15 @@ rustc_library("driver") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
+    "//garnet/lib/rust/fuchsia_uri",
+    "//garnet/lib/rust/fuchsia_uri_rewrite",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:hex",

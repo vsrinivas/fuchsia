@@ -7,7 +7,9 @@
             "fuchsia.amber.Control",
             "fuchsia.logger.LogSink",
             "fuchsia.net.SocketProvider",
-            "fuchsia.pkg.PackageResolver"
+            "fuchsia.pkg.PackageResolver",
+            "fuchsia.pkg.RepositoryManager",
+            "fuchsia.pkg.rewrite.Engine"
         ]
     }
 }

@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall/zx"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"fidl/fuchsia/amber"
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/pkg"
+	"fidl/fuchsia/pkg/rewrite"
 )
 
 const usage = `usage: %s <command> [opts]
@@ -101,27 +103,191 @@ func doTest(pxy *amber.ControlInterface) error {
 	return nil
 }
 
-func connectToAmber(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterfaceRequest) {
+type Services struct {
+	amber         *amber.ControlInterface
+	resolver      *pkg.PackageResolverInterface
+	repoMgr       *pkg.RepositoryManagerInterface
+	rewriteEngine *rewrite.EngineInterface
+}
+
+func connectToAmber(ctx *context.Context) *amber.ControlInterface {
 	req, pxy, err := amber.NewControlInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
 	ctx.ConnectToEnvService(req)
-	return pxy, req
+	return pxy
 }
 
-func connectToPackageResolver(ctx *context.Context) (*pkg.PackageResolverInterface, pkg.PackageResolverInterfaceRequest) {
+func connectToPackageResolver(ctx *context.Context) *pkg.PackageResolverInterface {
 	req, pxy, err := pkg.NewPackageResolverInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
 	ctx.ConnectToEnvService(req)
-	return pxy, req
+	return pxy
 }
 
-func addSource(a *amber.ControlInterface) error {
-	var cfg amber.SourceConfig
+func connectToRepositoryManager(ctx *context.Context) *pkg.RepositoryManagerInterface {
+	req, pxy, err := pkg.NewRepositoryManagerInterfaceRequest()
+	if err != nil {
+		panic(err)
+	}
+	ctx.ConnectToEnvService(req)
+	return pxy
+}
 
+func connectToRewriteEngine(ctx *context.Context) *rewrite.EngineInterface {
+	req, pxy, err := rewrite.NewEngineInterfaceRequest()
+	if err != nil {
+		panic(err)
+	}
+	ctx.ConnectToEnvService(req)
+	return pxy
+}
+
+// upgradeSourceConfig attempts to upgrade an amber.SourceConfig into a pkg.RepositoryConfig
+//
+// The two config formats are incompatible in various ways:
+//
+// * repo configs cannot be disabled. amberctl will attempt to preserve a config's disabled bit by
+// not configuring a rewrite rule for the source.
+//
+// * repo configs do not support oauth, network client config options, or polling frequency
+// overrides. If present, these options are discarded.
+//
+// * repo config mirrors do not accept different URLs for the TUF repo and the blobs. Any custom
+// blob URL is discarded.
+func upgradeSourceConfig(cfg amber.SourceConfig) pkg.RepositoryConfig {
+	repoCfg := pkg.RepositoryConfig{
+		RepoUrl:        repoUrlForId(cfg.Id),
+		RepoUrlPresent: true,
+	}
+
+	mirror := pkg.MirrorConfig{
+		MirrorUrl:        cfg.RepoUrl,
+		MirrorUrlPresent: true,
+		Subscribe:        cfg.Auto,
+		SubscribePresent: true,
+	}
+	if cfg.BlobKey != nil {
+		var blobKey pkg.RepositoryBlobKey
+		blobKey.SetAesKey(cfg.BlobKey.Data[:])
+		mirror.SetBlobKey(blobKey)
+	}
+	repoCfg.SetMirrors([]pkg.MirrorConfig{mirror})
+
+	for _, key := range cfg.RootKeys {
+		if key.Type != "ed25519" {
+			continue
+		}
+
+		var rootKey pkg.RepositoryKeyConfig
+		bytes, err := hex.DecodeString(key.Value)
+		if err != nil {
+			continue
+		}
+		rootKey.SetEd25519Key(bytes)
+
+		repoCfg.RootKeys = append(repoCfg.RootKeys, rootKey)
+		repoCfg.RootKeysPresent = true
+	}
+
+	return repoCfg
+}
+
+var invalidHostnameCharsPattern = regexp.MustCompile("[^a-zA-Z0-9_-]")
+
+func sanitizeId(id string) string {
+	return invalidHostnameCharsPattern.ReplaceAllString(id, "_")
+}
+
+func repoUrlForId(id string) string {
+	return fmt.Sprintf("fuchsia-pkg://%s", sanitizeId(id))
+}
+
+func rewriteRuleForId(id string) rewrite.Rule {
+	var rule rewrite.Rule
+	rule.SetLiteral(rewrite.LiteralRule{
+		HostMatch:             "fuchsia.com",
+		HostReplacement:       sanitizeId(id),
+		PathPrefixMatch:       "/",
+		PathPrefixReplacement: "/",
+	})
+	return rule
+}
+
+func replaceDynamicRewriteRules(rewriteEngine *rewrite.EngineInterface, rule rewrite.Rule) error {
+	return doRewriteRuleEditTransaction(rewriteEngine, func(transaction *rewrite.EditTransactionInterface) error {
+		if err := transaction.ResetAll(); err != nil {
+			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.ResetAll IPC encountered an error: %s", err)
+		}
+
+		s, err := transaction.Add(rule)
+		if err != nil {
+			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.Add IPC encountered an error: %s", err)
+		}
+		status := zx.Status(s)
+		if status != zx.ErrOk {
+			return fmt.Errorf("unable to add rewrite rule: %s", status)
+		}
+
+		return nil
+	})
+}
+
+func removeAllDynamicRewriteRules(rewriteEngine *rewrite.EngineInterface) error {
+	return doRewriteRuleEditTransaction(rewriteEngine, func(transaction *rewrite.EditTransactionInterface) error {
+		if err := transaction.ResetAll(); err != nil {
+			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.ResetAll IPC encountered an error: %s", err)
+		}
+
+		return nil
+	})
+}
+
+// doRewriteRuleEditTransaction executes a rewrite rule edit transaction using
+// the provided callback, retrying on data races a few times before giving up.
+func doRewriteRuleEditTransaction(rewriteEngine *rewrite.EngineInterface, cb func(*rewrite.EditTransactionInterface) error) error {
+	for i := 0; i < 10; i++ {
+		err, status := func() (error, zx.Status) {
+			var status zx.Status
+			req, transaction, err := rewrite.NewEditTransactionInterfaceRequest()
+			if err != nil {
+				return fmt.Errorf("creating edit transaction: %s", err), status
+			}
+			defer transaction.Close()
+			if err := rewriteEngine.StartEditTransaction(req); err != nil {
+				return fmt.Errorf("fuchsia.pkg.rewrite.Engine IPC encountered an error: %s", err), status
+			}
+
+			if err := cb(transaction); err != nil {
+				return err, status
+			}
+
+			s, err := transaction.Commit()
+			if err != nil {
+				return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.Commit IPC encountered an error: %s", err), status
+			}
+			return nil, zx.Status(s)
+		}()
+		if err != nil {
+			return err
+		}
+		switch status {
+		case zx.ErrOk:
+			return nil
+		case zx.ErrUnavailable:
+			continue
+		default:
+			return fmt.Errorf("unexpected error while committing rewrite rule transaction: %s", status)
+		}
+	}
+
+	return fmt.Errorf("unable to commit rewrite rule changes")
+}
+
+func addSource(services Services) error {
 	if len(*pkgFile) == 0 {
 		return fmt.Errorf("a url or file path (via -f) are required")
 	}
@@ -179,6 +345,7 @@ func addSource(a *amber.ControlInterface) error {
 		source = f
 	}
 
+	var cfg amber.SourceConfig
 	if err := json.NewDecoder(source).Decode(&cfg); err != nil {
 		return fmt.Errorf("failed to parse source config: %v", err)
 	}
@@ -206,16 +373,38 @@ func addSource(a *amber.ControlInterface) error {
 		cfg.BlobRepoUrl = filepath.Join(cfg.RepoUrl, "blobs")
 	}
 
-	added, err := a.AddSrc(cfg)
+	added, err := services.amber.AddSrc(cfg)
 	if err != nil {
-		return fmt.Errorf("IPC encountered an error: %s", err)
+		return fmt.Errorf("fuchsia.amber.Control IPC encountered an error: %s", err)
 	}
 	if !added {
 		return fmt.Errorf("request arguments properly formatted, but possibly otherwise invalid")
 	}
 
 	if isSourceConfigEnabled(&cfg) && !*nonExclusive {
-		if err := disableAllSources(a, cfg.Id); err != nil {
+		if err := disableAllSources(services.amber, cfg.Id); err != nil {
+			return err
+		}
+	}
+
+	repoCfg := upgradeSourceConfig(cfg)
+	s, err := services.repoMgr.Add(repoCfg)
+	if err != nil {
+		return fmt.Errorf("fuchsia.pkg.RepositoryManager IPC encountered an error: %s", err)
+	}
+	status := zx.Status(s)
+	if !(status == zx.ErrOk || status == zx.ErrAlreadyExists) {
+		return fmt.Errorf("unable to register source with RepositoryManager: %s", status)
+	}
+
+	// Nothing currently registers sources in a disabled state, but make a best effort attempt
+	// to try to prevent the source from being used anyway by only configuring a mapping of
+	// fuchsia.com to this source if it is enabled. Note that this doesn't prevent resolving a
+	// package using this config's id explicitly or calling an amber source config
+	// "fuchsia.com".
+	if isSourceConfigEnabled(&cfg) {
+		rule := rewriteRuleForId(cfg.Id)
+		if err := replaceDynamicRewriteRules(services.rewriteEngine, rule); err != nil {
 			return err
 		}
 	}
@@ -223,19 +412,19 @@ func addSource(a *amber.ControlInterface) error {
 	return nil
 }
 
-func rmSource(a *amber.ControlInterface) error {
+func rmSource(services Services) error {
 	name := strings.TrimSpace(*name)
 	if name == "" {
 		return fmt.Errorf("no source id provided")
 	}
 
-	status, err := a.RemoveSrc(name)
+	status, err := services.amber.RemoveSrc(name)
 	if err != nil {
-		return fmt.Errorf("IPC encountered an error: %s", err)
+		return fmt.Errorf("fuchsia.amber.Control IPC encountered an error: %s", err)
 	}
 	switch status {
 	case amber.StatusOk:
-		return nil
+		break
 	case amber.StatusErrNotFound:
 		return fmt.Errorf("Source not found")
 	case amber.StatusErr:
@@ -243,6 +432,25 @@ func rmSource(a *amber.ControlInterface) error {
 	default:
 		return fmt.Errorf("Unexpected status: %v", status)
 	}
+
+	// Since modifications to amber.Control, RepositoryManager, and rewrite.Engine aren't
+	// atomic and amberctl could be interrupted or encounter an error during any step,
+	// unregister the rewrite rule before removing the repo config to prevent a dangling
+	// rewrite rule to a repo that no longer exists.
+	if err := removeAllDynamicRewriteRules(services.rewriteEngine); err != nil {
+		return err
+	}
+
+	s, err := services.repoMgr.Remove(repoUrlForId(name))
+	if err != nil {
+		return fmt.Errorf("fuchsia.pkg.RepositoryManager IPC encountered an error: %s", err)
+	}
+	zxStatus := zx.Status(s)
+	if !(zxStatus == zx.ErrOk || zxStatus == zx.ErrNotFound) {
+		return fmt.Errorf("unable to remove source from RepositoryManager: %s", zxStatus)
+	}
+
+	return nil
 }
 
 func getUp(r *pkg.PackageResolverInterface) error {
@@ -322,10 +530,10 @@ func disableAllSources(a *amber.ControlInterface, except string) error {
 	return nil
 }
 
-func do(amberProxy *amber.ControlInterface, resolverProxy *pkg.PackageResolverInterface) int {
+func do(services Services) int {
 	switch os.Args[1] {
 	case "get_up":
-		if err := getUp(resolverProxy); err != nil {
+		if err := getUp(services.resolver); err != nil {
 			log.Printf("error getting an update: %s", err)
 			return 1
 		}
@@ -334,12 +542,12 @@ func do(amberProxy *amber.ControlInterface, resolverProxy *pkg.PackageResolverIn
 			log.Printf("no blob id provided")
 			return 1
 		}
-		if err := amberProxy.GetBlob(*blobID); err != nil {
+		if err := services.amber.GetBlob(*blobID); err != nil {
 			log.Printf("error requesting blob fetch: %s", err)
 			return 1
 		}
 	case "add_src":
-		if err := addSource(amberProxy); err != nil {
+		if err := addSource(services); err != nil {
 			log.Printf("error adding source: %s", err)
 			if _, ok := err.(ErrGetFile); ok {
 				return 2
@@ -348,12 +556,12 @@ func do(amberProxy *amber.ControlInterface, resolverProxy *pkg.PackageResolverIn
 			}
 		}
 	case "rm_src":
-		if err := rmSource(amberProxy); err != nil {
+		if err := rmSource(services); err != nil {
 			log.Printf("error removing source: %s", err)
 			return 1
 		}
 	case "list_srcs":
-		if err := listSources(amberProxy); err != nil {
+		if err := listSources(services.amber); err != nil {
 			log.Printf("error listing sources: %s", err)
 			return 1
 		}
@@ -361,12 +569,12 @@ func do(amberProxy *amber.ControlInterface, resolverProxy *pkg.PackageResolverIn
 		log.Printf("%q not yet supported\n", os.Args[1])
 		return 1
 	case "test":
-		if err := doTest(amberProxy); err != nil {
+		if err := doTest(services.amber); err != nil {
 			log.Printf("error testing connection to amber: %s", err)
 			return 1
 		}
 	case "system_update":
-		configured, err := amberProxy.CheckForSystemUpdate()
+		configured, err := services.amber.CheckForSystemUpdate()
 		if err != nil {
 			log.Printf("error checking for system update: %s", err)
 			return 1
@@ -382,14 +590,19 @@ func do(amberProxy *amber.ControlInterface, resolverProxy *pkg.PackageResolverIn
 			log.Printf("Error enabling source: no source id provided")
 			return 1
 		}
-		err := setSourceEnablement(amberProxy, *name, true)
+		err := setSourceEnablement(services.amber, *name, true)
 		if err != nil {
 			log.Printf("Error enabling source: %s", err)
 			return 1
 		}
+		err = replaceDynamicRewriteRules(services.rewriteEngine, rewriteRuleForId(*name))
+		if err != nil {
+			log.Printf("Error configuring rewrite rules: %s", err)
+			return 1
+		}
 		fmt.Printf("Source %q enabled\n", *name)
 		if !*nonExclusive {
-			if err := disableAllSources(amberProxy, *name); err != nil {
+			if err := disableAllSources(services.amber, *name); err != nil {
 				log.Printf("Error disabling sources: %s", err)
 				return 1
 			}
@@ -399,14 +612,19 @@ func do(amberProxy *amber.ControlInterface, resolverProxy *pkg.PackageResolverIn
 			log.Printf("Error disabling source: no source id provided")
 			return 1
 		}
-		err := setSourceEnablement(amberProxy, *name, false)
+		err := setSourceEnablement(services.amber, *name, false)
 		if err != nil {
 			log.Printf("Error disabling source: %s", err)
 			return 1
 		}
+		err = removeAllDynamicRewriteRules(services.rewriteEngine)
+		if err != nil {
+			log.Printf("Error configuring rewrite rules: %s", err)
+			return 1
+		}
 		fmt.Printf("Source %q disabled\n", *name)
 	case "gc":
-		err := amberProxy.Gc()
+		err := services.amber.Gc()
 		if err != nil {
 			log.Printf("Error collecting garbage: %s", err)
 			return 1
@@ -462,13 +680,21 @@ func Main() {
 
 	ctx := context.CreateFromStartupInfo()
 
-	amberProxy, _ := connectToAmber(ctx)
-	defer amberProxy.Close()
+	var services Services
 
-	resolverProxy, _ := connectToPackageResolver(ctx)
-	defer resolverProxy.Close()
+	services.amber = connectToAmber(ctx)
+	defer services.amber.Close()
 
-	os.Exit(do(amberProxy, resolverProxy))
+	services.resolver = connectToPackageResolver(ctx)
+	defer services.resolver.Close()
+
+	services.repoMgr = connectToRepositoryManager(ctx)
+	defer services.repoMgr.Close()
+
+	services.rewriteEngine = connectToRewriteEngine(ctx)
+	defer services.rewriteEngine.Close()
+
+	os.Exit(do(services))
 }
 
 type ErrDaemon string
