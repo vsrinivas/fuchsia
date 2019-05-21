@@ -246,7 +246,7 @@ bool decode_too_many_handles_specified_error() {
                               ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
     EXPECT_EQ(message.inline_struct.handle, dummy_handle_0);
 
     END_TEST;
@@ -273,7 +273,7 @@ bool decode_too_many_handles_specified_should_close_handles() {
                               ArrayCount(handles), &error);
 
     ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-    ASSERT_NONNULL(error, error);
+    ASSERT_NONNULL(error);
     ASSERT_EQ(message.inline_struct.handle, ep0.get());
     ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(ep1)));
 
@@ -306,7 +306,7 @@ bool decode_too_many_bytes_specified_should_close_handles() {
                               ArrayCount(handles), &error);
 
     ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-    ASSERT_NONNULL(error, error);
+    ASSERT_NONNULL(error);
     ASSERT_EQ(message.inline_struct.handle, ep0.get());
     ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(ep1)));
 
@@ -742,7 +742,7 @@ bool decode_absent_nonnullable_string_error() {
                               nullptr, 0, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
 
     END_TEST;
 }
@@ -822,7 +822,7 @@ bool decode_absent_nonnullable_bounded_string_error() {
                               sizeof(message), nullptr, 0, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
 
     END_TEST;
 }
@@ -991,7 +991,7 @@ bool decode_absent_nonnullable_vector_of_handles_error() {
                               sizeof(message), handles, ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
 
     END_TEST;
 }
@@ -1240,7 +1240,7 @@ bool decode_absent_nonnullable_vector_of_uint32_error() {
                               sizeof(message), nullptr, 0, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
 
     END_TEST;
 }

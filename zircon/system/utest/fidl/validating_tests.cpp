@@ -163,7 +163,7 @@ bool validate_too_many_handles_specified_error() {
                                 ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
     EXPECT_EQ(message.inline_struct.handle, FIDL_HANDLE_PRESENT);
 
     END_TEST;
@@ -531,7 +531,7 @@ bool validate_absent_nonnullable_string_error() {
                                 0, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
 
     END_TEST;
 }
@@ -597,7 +597,7 @@ bool validate_absent_nonnullable_bounded_string_error() {
                                 sizeof(message), 0, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
 
     END_TEST;
 }
@@ -752,7 +752,7 @@ bool validate_absent_nonnullable_vector_of_handles_error() {
                                 sizeof(message), ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
 
     END_TEST;
 }
@@ -980,7 +980,7 @@ bool validate_absent_nonnullable_vector_of_uint32_error() {
                                 sizeof(message), 0, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
 
     END_TEST;
 }
@@ -1578,7 +1578,7 @@ bool validate_empty_nonnullable_xunion() {
     auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
                                 sizeof(fidl_xunion_t), 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
     EXPECT_STR_EQ(error, "non-nullable xunion is absent");
 
     END_TEST;
@@ -1594,7 +1594,7 @@ bool validate_empty_nullable_xunion_nonzero_ordinal() {
     auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                                 sizeof(fidl_xunion_t), 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
     EXPECT_STR_EQ(error, "empty xunion must have zero as ordinal");
 
     END_TEST;
@@ -1614,7 +1614,7 @@ bool validate_nonempty_xunion_zero_ordinal() {
     auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
                                 sizeof(SampleXUnionStruct), 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
     EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
 
     END_TEST;
@@ -1634,7 +1634,7 @@ bool validate_nonempty_nullable_xunion_zero_ordinal() {
     auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                                 sizeof(SampleNullableXUnionStruct), 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error, error);
+    EXPECT_NONNULL(error);
     EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
 
     END_TEST;

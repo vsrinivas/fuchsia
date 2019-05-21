@@ -68,7 +68,7 @@ bool EncodeErrorTest() {
                               fbl::count_of(handles), &actual_handles, &error);
 
     ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-    ASSERT_NONNULL(error, error);
+    ASSERT_NONNULL(error);
     ASSERT_EQ(handles[0], ZX_HANDLE_INVALID);
     ASSERT_EQ(handles[1], event_handle);
 
@@ -99,7 +99,7 @@ bool EncodeWithNullHandlesTest() {
                                   num_handles, &actual_handles, &error);
 
         ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-        ASSERT_NONNULL(error, error);
+        ASSERT_NONNULL(error);
         ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(eventpair_b)));
     }
 
@@ -128,7 +128,7 @@ bool EncodeWithNullOutActualHandlesTest() {
                               fbl::count_of(handles), nullptr, &error);
 
     ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-    ASSERT_NONNULL(error, error);
+    ASSERT_NONNULL(error);
     ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(eventpair_b)));
 
     END_TEST;
@@ -184,7 +184,7 @@ bool DecodeErrorTest() {
                               buffer, buf_size,
                               handles, fbl::count_of(handles), &out_error);
     ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-    ASSERT_NONNULL(out_error, out_error);
+    ASSERT_NONNULL(out_error);
 
     // The peer was closed by the decoder
     ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(eventpair_a)));

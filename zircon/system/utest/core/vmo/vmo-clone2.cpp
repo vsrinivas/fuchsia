@@ -659,7 +659,7 @@ bool resize_offset_child_test() {
 
     ASSERT_EQ(vmo.set_size(0), ZX_OK);
 
-    ASSERT_TRUE(vmo_check(clone, 2), ZX_OK);
+    ASSERT_TRUE(vmo_check(clone, 2));
 
     END_TEST;
 }

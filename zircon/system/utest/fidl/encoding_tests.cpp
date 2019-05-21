@@ -275,7 +275,7 @@ bool encode_too_many_bytes_specified_should_close_handles() {
                               ArrayCount(handles), &actual_handles, &error);
 
     ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-    ASSERT_NONNULL(error, error);
+    ASSERT_NONNULL(error);
     ASSERT_EQ(actual_handles, 0);
     ASSERT_EQ(message.inline_struct.handle, FIDL_HANDLE_PRESENT);
     ASSERT_EQ(handles[0], ep0.get());

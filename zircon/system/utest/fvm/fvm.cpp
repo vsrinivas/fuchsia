@@ -3280,7 +3280,7 @@ bool TestCheckBadArguments() {
     char fvm_driver[PATH_MAX];
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0);
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
-    ASSERT_TRUE(fd, 0);
+    ASSERT_TRUE(fd);
     checker.SetDevice(std::move(fd));
     ASSERT_FALSE(checker.Validate(), "Checker should be missing block size");
 
@@ -3296,7 +3296,7 @@ bool TestCheckNewFVM() {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0);
 
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
-    ASSERT_TRUE(fd, 0);
+    ASSERT_TRUE(fd);
 
     fvm::Checker checker(std::move(fd), 512, true);
     ASSERT_TRUE(checker.Validate());
