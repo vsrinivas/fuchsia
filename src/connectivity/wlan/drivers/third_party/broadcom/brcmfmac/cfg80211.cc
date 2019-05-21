@@ -1421,7 +1421,7 @@ static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, cons
                                         uint16_t capability, uint16_t interval, uint8_t* ie,
                                         size_t ie_len, int16_t rssi_dbm) {
     struct net_device* ndev = wiphy_to_ndev(wiphy);
-    wlanif_scan_result_t result;
+    wlanif_scan_result_t result = {};
 
     if (!ndev->scan_busy) {
         return;
