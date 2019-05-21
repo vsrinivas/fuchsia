@@ -357,13 +357,10 @@ TEST(ElfLib, GetPLTFromUnstripped) {
 
   auto plt = elf->GetPLTOffsets();
 
-  EXPECT_EQ(261U, plt.size());
+  EXPECT_EQ(2U, plt.size());
 
-  // We won't check every entry, but we'll grab a few representative ones.
-  EXPECT_EQ(0x1a4df0U, plt["_ZN3fxl10LogMessageC1EiPKciS2_"]);
-  EXPECT_EQ(0x1a4e50U, plt["_ZNSt3__218condition_variableD1Ev"]);
-  EXPECT_EQ(0x1a5a00U, plt["vprintf"]);
-  EXPECT_EQ(0x1a52b0U, plt["zx_channel_write"]);
+  EXPECT_EQ(0x15d0U, plt["printf"]);
+  EXPECT_EQ(0x15e0U, plt["strlen"]);
 }
 
 TEST(ElfLib, GetPLTFromStrippedDebug) {
@@ -379,12 +376,9 @@ TEST(ElfLib, GetPLTFromStrippedDebug) {
 
   auto plt = elf->GetPLTOffsets();
 
-  EXPECT_EQ(261U, plt.size());
+  EXPECT_EQ(2U, plt.size());
 
-  // We won't check every entry, but we'll grab a few representative ones.
-  EXPECT_EQ(0x1a4df0U, plt["_ZN3fxl10LogMessageC1EiPKciS2_"]);
-  EXPECT_EQ(0x1a4e50U, plt["_ZNSt3__218condition_variableD1Ev"]);
-  EXPECT_EQ(0x1a5a00U, plt["vprintf"]);
-  EXPECT_EQ(0x1a52b0U, plt["zx_channel_write"]);
+  EXPECT_EQ(0x15d0U, plt["printf"]);
+  EXPECT_EQ(0x15e0U, plt["strlen"]);
 }
 }  // namespace elflib
