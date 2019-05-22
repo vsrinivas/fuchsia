@@ -287,6 +287,21 @@ and one for the suspension:
 
 The order does not matter.
 
+## Interaction with thread kill
+
+If [`zx_task_kill()`] is called on a thread (or its parent process/jobs) while
+it's in an exception, it will stop waiting for the exception handler and proceed
+to terminate.
+
+Similarly, a killed thread will still send a **ZX_EXCP_THREAD_EXITING**
+exception if a process debug handler is registered, but will not wait for a
+response from the handler and will instead continue to terminate.
+
+Although [`zx_task_kill()`] is generally asynchronous, meaning the thread may
+not finish terminating by the time the syscall returns, it does synchronously
+stop exception handling such that once it returns the thread cannot be resumed
+and will not pass the current exception to any other handler.
+
 ## Signals
 
 Signals are the core Zircon mechanism for observing state changes on

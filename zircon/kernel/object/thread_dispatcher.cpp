@@ -686,6 +686,19 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
 
     Guard<fbl::Mutex> guard{get_lock()};
 
+    // If both the thread was killed and the exception was resumed before we
+    // started waiting, the exception resume status (ZX_OK) might be returned,
+    // but we want thread kill to always take priority and stop exception
+    // handling immediately.
+    //
+    // Note that this logic will always trigger for ZX_EXCP_THREAD_EXITING
+    // whether the thread was killed or is exiting normally, but that's fine
+    // because that exception only ever goes to a single handler so we ignore
+    // the handler return value anyway.
+    if (IsDyingOrDeadLocked()) {
+        status = ZX_ERR_INTERNAL_INTR_KILLED;
+    }
+
     // Note: If |status| != ZX_OK, then |state_| is still
     // ThreadState::Exception::UNPROCESSED.
     switch (status) {
@@ -1019,6 +1032,20 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
     LTRACEF("received exception response %d\n", status);
 
     Guard<fbl::Mutex> guard{get_lock()};
+
+    // If both the thread was killed and the exception was resumed before we
+    // started waiting, the exception resume status (ZX_OK) might be returned,
+    // but we want thread kill to always take priority and stop exception
+    // handling immediately.
+    //
+    // Note that this logic will always trigger for ZX_EXCP_THREAD_EXITING
+    // whether the thread was killed or is exiting normally, but that's fine
+    // because that exception only ever goes to a single handler so we ignore
+    // the handler return value anyway.
+    if (IsDyingOrDeadLocked()) {
+        status = ZX_ERR_INTERNAL_INTR_KILLED;
+    }
+
     exception_.reset();
     channel_exception_wait_type_ = ExceptionPort::Type::NONE;
     state_.set(ThreadState::Exception::IDLE);

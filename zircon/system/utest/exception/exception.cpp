@@ -27,6 +27,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/job.h>
+#include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/task.h>
 #include <lib/zx/thread.h>
@@ -2773,6 +2774,76 @@ bool channel_synthetic_read_write_regs_test() {
     END_TEST;
 }
 
+void CrashThreadFunc(uintptr_t, uintptr_t) {
+    crash_me();
+    zx_thread_exit();
+}
+
+// Test killing a thread then immediately closing the exception never
+// propagates the exception (ZX-4105).
+//
+// This isn't possible to test deterministically so we just try to run it
+// for a little bit, if this looks like it's becoming flaky it probably
+// indicates a real underlying bug. Failures would manifest as the unittest
+// crash handler seeing an unregistered crash.
+constexpr zx::duration kRaceTestDuration = zx::sec(1);
+
+bool kill_thread_close_port_race_test() {
+    BEGIN_TEST;
+
+    zx::time end_time = zx::deadline_after(kRaceTestDuration);
+    while (zx::clock::get_monotonic() < end_time) {
+        zx::thread thread;
+        ASSERT_EQ(zx::thread::create(*zx::process::self(), "crasher", strlen("crasher"),
+                                     0u, &thread),
+                  ZX_OK, "");
+
+        zx::port port;
+        ASSERT_EQ(zx::port::create(0, &port), ZX_OK, "");
+        ASSERT_EQ(thread.bind_exception_port(port, 0, 0), ZX_OK, "");
+
+        alignas(16) static uint8_t thread_stack[128];
+        thread.start(&CrashThreadFunc, thread_stack + sizeof(thread_stack), 0, 0);
+
+        zx_port_packet_t packet;
+        ASSERT_EQ(port.wait(zx::time::infinite(), &packet), ZX_OK, "");
+        ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type), "");
+
+        ASSERT_EQ(thread.kill(), ZX_OK, "");
+        port.reset();
+        ASSERT_EQ(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK, "");
+    }
+
+    END_TEST;
+}
+
+bool kill_thread_close_exception_race_test() {
+    BEGIN_TEST;
+
+    zx::time end_time = zx::deadline_after(kRaceTestDuration);
+    while (zx::clock::get_monotonic() < end_time) {
+        zx::thread thread;
+        ASSERT_EQ(zx::thread::create(*zx::process::self(), "crasher", strlen("crasher"),
+                                     0u, &thread),
+                  ZX_OK, "");
+
+        zx::channel channel;
+        ASSERT_EQ(thread.create_exception_channel(0, &channel), ZX_OK, "");
+
+        alignas(16) static uint8_t thread_stack[128];
+        thread.start(&CrashThreadFunc, thread_stack + sizeof(thread_stack), 0, 0);
+
+        zx::exception exception = ReadException(channel, ZX_EXCP_FATAL_PAGE_FAULT);
+        ASSERT_TRUE(exception.is_valid(), "");
+
+        ASSERT_EQ(thread.kill(), ZX_OK, "");
+        exception.reset();
+        ASSERT_EQ(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK, "");
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(exceptions_tests)
@@ -2867,6 +2938,8 @@ RUN_TEST((channel_read_write_regs_test<&TestLoop::process, ZX_EXCEPTION_PORT_DEB
 RUN_TEST((channel_read_write_regs_test<&TestLoop::job, 0u>));
 RUN_TEST((channel_read_write_regs_test<&TestLoop::parent_job, 0u>));
 RUN_TEST(channel_synthetic_read_write_regs_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(kill_thread_close_port_race_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(kill_thread_close_exception_race_test);
 END_TEST_CASE(exceptions_tests)
 
 static void scan_argv(int argc, char** argv)
