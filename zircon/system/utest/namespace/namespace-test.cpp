@@ -383,6 +383,27 @@ bool UnbindAncestorTest() {
     END_TEST;
 }
 
+bool ExportGlobalRootTest() {
+    BEGIN_TEST;
+
+    fdio_flat_namespace_t* flat = nullptr;
+    ASSERT_EQ(ZX_OK, fdio_ns_export_root(&flat));
+    ASSERT_LE(1, flat->count);
+    fdio_ns_free_flat_ns(flat);
+
+    END_TEST;
+}
+
+bool GetInstalledTest() {
+    BEGIN_TEST;
+
+    fdio_ns_t* ns = nullptr;
+    ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&ns));
+    ASSERT_NE(nullptr, ns);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(namespace_tests)
 RUN_TEST_MEDIUM(DestroyTest)
 RUN_TEST_MEDIUM(DestroyWhileInUseTest)
@@ -397,6 +418,8 @@ RUN_TEST_MEDIUM(ChdirTest)
 RUN_TEST_MEDIUM(UnbindNonRootTest)
 RUN_TEST_MEDIUM(UnbindRootTest)
 RUN_TEST_MEDIUM(UnbindAncestorTest)
+RUN_TEST_MEDIUM(ExportGlobalRootTest)
+RUN_TEST_MEDIUM(GetInstalledTest)
 END_TEST_CASE(namespace_tests)
 
 } // namespace
