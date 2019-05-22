@@ -22,11 +22,9 @@ namespace {
 
 void ddktl_test_output_func(const char* line, int len, void* arg) {
     zx_handle_t h = *static_cast<zx_handle_t*>(arg);
-    zx::socket s(h);
+    zx::unowned_socket s(h);
     // len is not actually the number of bytes to output
-    s.write(0u, line, strlen(line), nullptr);
-    // we don't on the socket so release it before it goes out of scope
-    h = s.release();
+    s->write(0u, line, strlen(line), nullptr);
 }
 
 static void inline update_test_report(bool success, test_report_t* report) {
@@ -66,14 +64,12 @@ zx_status_t ddktl_test_func(void* cookie, test_report_t* report) {
 
 extern "C" zx_status_t ddktl_test_bind(void* ctx, zx_device_t* parent) {
     test_protocol_t proto;
-    auto status =
-        device_get_protocol(parent, ZX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_TEST, &proto);
     if (status != ZX_OK) {
         return status;
     }
 
     const test_func_t test = {ddktl_test_func, parent};
     proto.ops->set_test_func(proto.ctx, &test);
-
     return ZX_OK;
 }

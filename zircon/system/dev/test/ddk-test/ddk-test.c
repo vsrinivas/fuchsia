@@ -65,6 +65,7 @@ zx_status_t ddk_test_bind(void* ctx, zx_device_t* parent) {
     }
 
     ddk_test_dev = parent;
-    proto.ops->set_test_func(proto.ctx, &(test_func_t){ddk_test_func, parent});
+    const test_func_t test = {ddk_test_func, parent};
+    proto.ops->set_test_func(proto.ctx, &test);
     return ZX_OK;
 }
