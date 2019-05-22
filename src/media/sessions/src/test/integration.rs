@@ -151,10 +151,12 @@ impl TestService {
         let mediasession = comp::client::launch(&launcher, String::from(MEDIASESSION_URL), None)
             .context("Launching mediasession")?;
 
-        let publisher =
-            mediasession.connect_to_service::<PublisherMarker>().context("Connecting to Publisher")?;
-        let registry =
-            mediasession.connect_to_service::<RegistryMarker>().context("Connecting to Registry")?;
+        let publisher = mediasession
+            .connect_to_service::<PublisherMarker>()
+            .context("Connecting to Publisher")?;
+        let registry = mediasession
+            .connect_to_service::<RegistryMarker>()
+            .context("Connecting to Registry")?;
         let registry_events = registry.take_event_stream();
 
         Ok(Self { app: mediasession, publisher, registry, registry_events })
@@ -169,9 +171,9 @@ impl TestService {
             .expect("unwrapping registry event")
             .into_on_active_session_changed()
             .expect("Expected active session event");
-        let actual = actual.session_id.map(|session_id| {
-            session_id.as_handle_ref().get_koid().expect("taking handle KOID")
-        });
+        let actual = actual
+            .session_id
+            .map(|session_id| session_id.as_handle_ref().get_koid().expect("taking handle KOID"));
         assert_eq!(actual, expected);
     }
 
@@ -275,8 +277,8 @@ impl TestService {
                 .expect("taking registry event")
                 .expect("unwrapping registry event");
 
-            if let Some(SessionsChange { session, delta: SessionDelta::Added })
-                = event.into_on_sessions_changed()
+            if let Some(SessionsChange { session, delta: SessionDelta::Added }) =
+                event.into_on_sessions_changed()
             {
                 sessions.push(session);
             }
@@ -427,13 +429,9 @@ async fn service_routes_controls() {
     let a_event = await!(request_stream_a.try_next()).expect("taking next request from session a");
     let b_event = await!(request_stream_b.try_next()).expect("taking next request from session b");
 
-    a_event.expect("missing play event")
-        .into_play()
-        .expect("wasn't a play event");
+    a_event.expect("missing play event").into_play().expect("wasn't a play event");
 
-    b_event.expect("missing pause event")
-        .into_pause()
-        .expect("wasn't a pause event");
+    b_event.expect("missing pause event").into_pause().expect("wasn't a pause event");
 
     // Ensure the behaviour continues.
 
@@ -441,7 +439,8 @@ async fn service_routes_controls() {
 
     let b_event = await!(request_stream_b.try_next()).expect("taking next request from session b");
 
-    b_event.expect("missing play event on session b")
+    b_event
+        .expect("missing play event on session b")
         .into_play()
         .expect("wasn't a play event on session b");
 }

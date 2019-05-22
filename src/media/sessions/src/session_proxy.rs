@@ -61,26 +61,25 @@ impl Session {
             state: state.clone(),
             cancel_signal,
         };
-        fasync::spawn(
-            async move {
-                while let Ok(Some(event)) = await!(event_stream.try_next()) {
-                    if is_active_status(&event) && registration.is_local {
-                        let ref mut queue = await!(active_session_queue.lock());
-                        let active_session_changed = queue.promote_session(registration.clone());
-                        if active_session_changed {
-                            await!(active_session_sink.send(queue.active_session()));
-                        }
+        fasync::spawn(async move {
+            while let Ok(Some(event)) = await!(event_stream.try_next()) {
+                if is_active_status(&event) && registration.is_local {
+                    let ref mut queue = await!(active_session_queue.lock());
+                    let active_session_changed = queue.promote_session(registration.clone());
+                    if active_session_changed {
+                        await!(active_session_sink.send(queue.active_session()));
                     }
-                    await!(state.lock()).deref_mut().update(&event);
-                    await!(event_sender.send(Clonable(event)));
                 }
-                await!(session_list.lock()).deref_mut().remove(registration.koid);
-                await!(active_session_queue.lock()).deref_mut().remove_session(&registration);
-                await!(collection_event_sink
-                    .send((registration.clone(), SessionCollectionEvent::Removed)));
-                await!(cancel_signaller.send(()));
-            },
-        );
+                await!(state.lock()).deref_mut().update(&event);
+                await!(event_sender.send(Clonable(event)));
+            }
+            await!(session_list.lock()).deref_mut().remove(registration.koid);
+            await!(active_session_queue.lock()).deref_mut().remove_session(&registration);
+            await!(
+                collection_event_sink.send((registration.clone(), SessionCollectionEvent::Removed))
+            );
+            await!(cancel_signaller.send(()));
+        });
         Ok(session)
     }
 
@@ -94,10 +93,10 @@ impl Session {
             }
         }
 
-        fasync::spawn(try_join(
-            self.request_forwarder(request_stream),
-            self.event_forwarder(control_handle),
-        ).map(log_error_discard_result));
+        fasync::spawn(
+            try_join(self.request_forwarder(request_stream), self.event_forwarder(control_handle))
+                .map(log_error_discard_result),
+        );
         Ok(())
     }
 
