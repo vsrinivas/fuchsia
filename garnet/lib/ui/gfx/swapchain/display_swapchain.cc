@@ -353,6 +353,14 @@ DisplaySwapchain::~DisplaySwapchain() {
     const size_t idx = (i + next_frame_index_) % frames_.size();
     FrameRecord* record = frames_[idx].get();
     if (record && !record->frame_timings->finalized()) {
+      if (record->render_finished_watch.IsWatching()) {
+        // There has not been an OnFrameRendered signal. The watch will be
+        // destroyed when this function returns, and will never trigger the
+        // OnFrameRendered callback.Trigger it here to make the state consistent
+        // in FrameTimings. Record infinite time to signal unknown render time.
+        record->frame_timings->OnFrameRendered(record->swapchain_index,
+                                               FrameTimings::kTimeDropped);
+      }
       record->frame_timings->OnFrameDropped(record->swapchain_index);
     }
   }
@@ -399,7 +407,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
 
   auto record = std::make_unique<FrameRecord>();
   record->frame_timings = frame_timings;
-  record->swapchain_index = frame_timings->AddSwapchain(this);
+  record->swapchain_index = frame_timings->RegisterSwapchain();
   record->render_finished_escher_semaphore =
       std::move(render_finished_escher_semaphore);
   record->render_finished_event_id = render_finished_event_id;
@@ -544,9 +552,9 @@ void DisplaySwapchain::OnVsync(zx_time_t timestamp,
     //
     // Since there is no guaranteed order between a frame being retired here
     // and OnFrameRendered() for a given frame, and since both must be called
-    // in order for the FrameTimings to be finalzied, we don't immediately
-    // destroy the FrameRecord. It will eventually be replaced by
-    // DrawAndPresentFrame(), when a new frame is rendered into this index.
+    // for the FrameTimings to be finalized, we don't immediately destroy the
+    // FrameRecord. It will eventually be replaced by DrawAndPresentFrame(),
+    // when a new frame is rendered into this index.
     if (!match) {
       presented_frame_idx_ = (presented_frame_idx_ + 1) % kSwapchainImageCount;
       outstanding_frame_count_--;

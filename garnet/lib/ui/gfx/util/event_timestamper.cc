@@ -119,6 +119,11 @@ const zx::event& EventTimestamper::Watch::event() const {
   return waiter_ ? waiter_->event() : null_handle;
 }
 
+bool EventTimestamper::Watch::IsWatching() const {
+  FXL_DCHECK(waiter_) << "invalid Watch (was it std::move()d?).";
+  return waiter_->state() == Waiter::State::STARTED;
+}
+
 EventTimestamper::Waiter::Waiter(async_dispatcher_t* dispatcher,
                                  zx::event event, zx_status_t trigger,
                                  Callback callback)

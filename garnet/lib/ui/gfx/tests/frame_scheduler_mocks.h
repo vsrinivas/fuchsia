@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_TESTS_FRAME_SCHEDULER_MOCKS_H_
 #define GARNET_LIB_UI_GFX_TESTS_FRAME_SCHEDULER_MOCKS_H_
 
+#include <unordered_map>
+
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
@@ -65,7 +67,7 @@ class MockSessionUpdater : public SessionUpdater {
 
   void SignalSuccessfulPresentCallbacks(
       fuchsia::images::PresentationInfo) override {
-    ++signal_previous_frames_presented_call_count_;
+    ++signal_successful_present_callback_count_;
   }
 
   // Manually set value returned from UpdateSessions.
@@ -77,8 +79,8 @@ class MockSessionUpdater : public SessionUpdater {
 
   uint32_t ratchet_present_call_count() { return ratchet_present_call_count_; }
 
-  uint32_t signal_previous_frames_presented_call_count() {
-    return signal_previous_frames_presented_call_count_;
+  uint32_t signal_successful_present_callback_count() {
+    return signal_successful_present_callback_count_;
   }
 
   fxl::WeakPtr<MockSessionUpdater> GetWeakPtr() {
@@ -90,7 +92,7 @@ class MockSessionUpdater : public SessionUpdater {
                                                                      true};
 
   uint32_t update_sessions_call_count_ = 0;
-  uint32_t signal_previous_frames_presented_call_count_ = 0;
+  uint32_t signal_successful_present_callback_count_ = 0;
   uint32_t ratchet_present_call_count_ = 0;
 
   fxl::WeakPtrFactory<MockSessionUpdater> weak_factory_;  // must be last
@@ -107,16 +109,16 @@ class MockFrameRenderer : public FrameRenderer {
   // Need to call this in order to trigger the OnFramePresented() callback in
   // FrameScheduler, but is not valid to do until after RenderFrame has returned
   // to FrameScheduler. Hence this separate method.
-  void EndFrame(size_t frame_index);
+  void EndFrame(size_t frame_index, zx_time_t time_done);
 
   // Signal frame |frame_index| that it has been rendered.
-  void SignalFrameRendered(size_t frame_index);
+  void SignalFrameRendered(uint64_t frame_number, zx_time_t time_done);
 
   // Signal frame |frame_index| that it has been presented.
-  void SignalFramePresented(size_t frame_index);
+  void SignalFramePresented(uint64_t frame_number, zx_time_t time_done);
 
   // Signal frame |frame_index| that it has been dropped.
-  void SignalFrameDropped(size_t frame_index);
+  void SignalFrameDropped(uint64_t frame_number);
 
   // Manually set value returned from RenderFrame.
   void SetRenderFrameReturnValue(bool new_value) {
@@ -130,15 +132,18 @@ class MockFrameRenderer : public FrameRenderer {
   }
 
  private:
+  void CleanUpFrame(uint64_t frame_number);
+
   bool render_frame_return_value_ = true;
   uint32_t render_frame_call_count_ = 0;
 
   struct Timings {
     FrameTimingsPtr frame_timings;
+    size_t swapchain_index = -1;
     uint32_t frame_rendered = false;
     uint32_t frame_presented = false;
   };
-  std::vector<Timings> frames_;
+  std::unordered_map<uint64_t, Timings> frames_;
 
   uint64_t last_frame_number_ = -1;
 

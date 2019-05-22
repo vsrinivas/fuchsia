@@ -38,7 +38,7 @@ DefaultFrameScheduler::~DefaultFrameScheduler() {}
 void DefaultFrameScheduler::OnFrameRendered(const FrameTimings& timings) {
   TRACE_INSTANT("gfx", "DefaultFrameScheduler::OnFrameRendered",
                 TRACE_SCOPE_PROCESS, "Timestamp",
-                timings.rendering_finished_time(), "frame_number",
+                timings.GetTimestamps().render_done_time, "frame_number",
                 timings.frame_number());
 }
 
@@ -198,8 +198,9 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
   delegate_.session_updater->RatchetPresentCallbacks();
 
   const zx_time_t frame_render_start_time = async_now(dispatcher_);
-  auto frame_timings = fxl::MakeRefCounted<FrameTimings>(
-      this, frame_number_, presentation_time, frame_render_start_time);
+  auto frame_timings =
+      fxl::MakeRefCounted<FrameTimings>(this, frame_number_, presentation_time,
+                                        wakeup_time_, frame_render_start_time);
   inspect_frame_number_.Set(frame_number_);
 
   // Render the frame.
@@ -287,30 +288,35 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
   // receiving signals out-of-order and is therefore generating bogus data.
   FXL_DCHECK(outstanding_frames_[0].get() == &timings) << "out-of-order.";
 
-  if (timings.frame_was_dropped()) {
+  FXL_DCHECK(timings.finalized());
+
+  if (timings.FrameWasDropped()) {
     TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number",
                   timings.frame_number());
   } else {
+    FrameTimings::Timestamps timestamps = timings.GetTimestamps();
+
     if (TRACE_CATEGORY_ENABLED("gfx")) {
       // Log trace data..
-      zx_duration_t target_vs_actual = timings.actual_presentation_time() -
-                                       timings.target_presentation_time();
+      zx_duration_t target_vs_actual = timestamps.actual_presentation_time -
+                                       timestamps.target_presentation_time;
 
       zx_time_t now = async_now(dispatcher_);
-      FXL_DCHECK(now >= timings.actual_presentation_time());
       zx_duration_t elapsed_since_presentation =
-          now - timings.actual_presentation_time();
+          now - timestamps.actual_presentation_time;
+      FXL_DCHECK(elapsed_since_presentation >= 0);
 
       TRACE_INSTANT("gfx", "FramePresented", TRACE_SCOPE_PROCESS,
                     "frame_number", timings.frame_number(), "presentation time",
-                    timings.actual_presentation_time(), "target time missed by",
-                    target_vs_actual, "elapsed time since presentation",
+                    timestamps.actual_presentation_time,
+                    "target time missed by", target_vs_actual,
+                    "elapsed time since presentation",
                     elapsed_since_presentation);
     }
 
     FXL_DCHECK(delegate_.session_updater);
     auto presentation_info = fuchsia::images::PresentationInfo();
-    presentation_info.presentation_time = timings.actual_presentation_time();
+    presentation_info.presentation_time = timestamps.actual_presentation_time;
     presentation_info.presentation_interval = display_->GetVsyncInterval();
     delegate_.session_updater->SignalSuccessfulPresentCallbacks(
         std::move(presentation_info));

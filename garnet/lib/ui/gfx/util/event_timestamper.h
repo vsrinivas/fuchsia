@@ -58,6 +58,10 @@ class EventTimestamper {
     // Return the watched event (or a null handle, if this Watch was moved).
     const zx::event& event() const;
 
+    // Returns true if the Watch has been started and has not yet observed the
+    // signal or called the callback.
+    bool IsWatching() const;
+
    private:
     Waiter* waiter_;
     EventTimestamper* timestamper_;
