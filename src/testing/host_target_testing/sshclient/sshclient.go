@@ -27,7 +27,7 @@ type Client struct {
 	mu                     sync.Mutex
 	client                 *ssh.Client
 	conn                   net.Conn
-	disconnectionListeners []chan struct{}
+	disconnectionListeners []*sync.WaitGroup
 }
 
 // NewClient creates a new ssh client to the address.
@@ -97,15 +97,14 @@ func (c *Client) Close() {
 	c.disconnect()
 }
 
-// WaitUntilDisconnected blocks until the ssh client is disconnected.
-func (c *Client) WaitUntilDisconnected() {
-	disconnected := make(chan struct{})
+// RegisterDisconnectListener adds a waiter that gets notified when the ssh
+// client is disconnected.
+func (c *Client) RegisterDisconnectListener(wg *sync.WaitGroup) {
+	wg.Add(1)
 
 	c.mu.Lock()
-	c.disconnectionListeners = append(c.disconnectionListeners, disconnected)
+	c.disconnectionListeners = append(c.disconnectionListeners, wg)
 	c.mu.Unlock()
-
-	<-disconnected
 }
 
 // IsConnected checks if we are currently connected to the server.
@@ -127,9 +126,9 @@ func (c *Client) disconnect() {
 	}
 
 	for _, listener := range c.disconnectionListeners {
-		close(listener)
+		listener.Done()
 	}
-	c.disconnectionListeners = []chan struct{}{}
+	c.disconnectionListeners = []*sync.WaitGroup{}
 }
 
 // Make a single attempt to reconnect to the ssh server.

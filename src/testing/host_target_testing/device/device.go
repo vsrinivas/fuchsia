@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"sync"
 	"testing"
 	"time"
 
@@ -111,6 +112,12 @@ func (c *Client) WaitForDeviceToBeUp(t *testing.T) {
 	log.Printf("device up")
 }
 
+// RegisterDisconnectListener adds a waiter that gets notified when the ssh
+// client is disconnected.
+func (c *Client) RegisterDisconnectListener(wg *sync.WaitGroup) {
+	c.sshClient.RegisterDisconnectListener(wg)
+}
+
 // GetBuildSnapshot fetch the device's current system version, as expressed by the file
 // /config/build-info/snapshot.
 func (c *Client) GetBuildSnapshot(t *testing.T) []byte {
@@ -127,13 +134,15 @@ func (c *Client) GetBuildSnapshot(t *testing.T) []byte {
 func (c *Client) TriggerSystemOTA(t *testing.T) {
 	log.Printf("triggering OTA")
 
+	var wg sync.WaitGroup
+	c.RegisterDisconnectListener(&wg)
+
 	if err := c.Run("amberctl system_update", os.Stdout, os.Stderr); err != nil {
 		t.Fatalf("failed to trigger OTA: %s", err)
 	}
 
 	// Wait until we get a signal that we have disconnected
-	c.sshClient.WaitUntilDisconnected()
-	log.Printf("disconnected from device")
+	wg.Wait()
 
 	c.WaitForDeviceToBeUp(t)
 	log.Printf("device rebooted")
