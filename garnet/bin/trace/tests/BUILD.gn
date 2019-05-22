@@ -108,6 +108,7 @@ executable("trace_integration_tests") {
   deps = [
     ":run_test",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -243,6 +244,7 @@ executable("return_child_result_tests") {
 
   deps = [
     ":run_test",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
 }
@@ -270,6 +272,7 @@ executable("detach_tests") {
 
   deps = [
     ":run_test",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]

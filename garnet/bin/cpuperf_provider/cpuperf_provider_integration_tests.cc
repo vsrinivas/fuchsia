@@ -7,8 +7,8 @@
 #include <lib/zx/process.h>
 #include <src/developer/tracing/lib/test_utils/spawn_and_wait.h>
 #include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/test/test_settings.h>
 #include <trace-reader/file_reader.h>
 
 #include "garnet/lib/perfmon/controller.h"
@@ -79,7 +79,7 @@ TEST(CpuperfProvider, IntegrationTest) {
 // Provide our own main so that --verbose,etc. are recognized.
 int main(int argc, char** argv) {
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(cl))
+  if (!fxl::SetTestSettings(cl))
     return EXIT_FAILURE;
 
   if (!perfmon::Controller::IsSupported()) {

@@ -4,8 +4,6 @@
 
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-test-utils/fixture.h>
 
@@ -214,15 +212,3 @@ TEST_F(TestImporter, ContextSwitch) {
 
 }  // namespace
 }  // namespace ktrace_provider
-
-// Provide our own main so that --verbose,etc. are recognized.
-int main(int argc, char** argv) {
-  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(cl)) {
-    return EXIT_FAILURE;
-  }
-
-  testing::InitGoogleTest(&argc, argv);
-
-  return RUN_ALL_TESTS();
-}

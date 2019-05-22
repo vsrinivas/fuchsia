@@ -77,6 +77,7 @@ executable("importer_test_app") {
   deps = [
     ":importer",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace-engine",
@@ -86,7 +87,7 @@ executable("importer_test_app") {
 
 test_package("ktrace_provider_tests") {
   deps = [
-    ":importer_test_app"
+    ":importer_test_app",
   ]
 
   tests = [

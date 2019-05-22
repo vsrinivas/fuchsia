@@ -75,12 +75,12 @@ executable("perfmon_tests_app") {
 
   sources = [
     "config_unittest.cc",
-    "test_main.cc",
   ]
 
   deps = [
     ":perfmon",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",

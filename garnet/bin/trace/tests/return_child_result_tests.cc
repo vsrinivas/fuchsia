@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
-
 #include "garnet/bin/trace/tests/run_test.h"
 #include "gtest/gtest.h"
 
@@ -40,15 +36,4 @@ TEST(ReturnChildResult, True) {
   ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code),
             ZX_OK);
   EXPECT_EQ(return_code, kChildReturnCode);
-}
-
-// Provide our own main so that --verbose,etc. are recognized.
-int main(int argc, char** argv) {
-  fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(cl))
-    return EXIT_FAILURE;
-
-  testing::InitGoogleTest(&argc, argv);
-
-  return RUN_ALL_TESTS();
 }

@@ -115,6 +115,8 @@ if (current_cpu == "x64") {
     deps = [
       "//garnet/lib/perfmon",
       "//src/developer/tracing/lib/test_utils",
+      "//src/lib/fxl",
+      "//src/lib/fxl/test:test_settings",
       "//third_party/googletest:gtest",
       "//zircon/public/lib/trace-reader",
       "//zircon/public/lib/zx",
