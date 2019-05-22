@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/testing/launcher_impl.h>
-
 #include <lib/sys/cpp/file_descriptor.h>
+#include <lib/sys/cpp/testing/launcher_impl.h>
 #include <unistd.h>
 
-namespace sys {
-namespace testing {
+namespace sys::testing {
 
 void LauncherImpl::CreateComponent(
     fuchsia::sys::LaunchInfo launch_info,
@@ -22,5 +20,4 @@ void LauncherImpl::CreateComponent(
   launcher_->CreateComponent(std::move(launch_info), std::move(request));
 }
 
-}  // namespace testing
-}  // namespace sys
+}  // namespace sys::testing

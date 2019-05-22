@@ -5,15 +5,14 @@
 #ifndef LIB_SYS_CPP_TESTING_COMPONENT_INTERCEPTOR_H_
 #define LIB_SYS_CPP_TESTING_COMPONENT_INTERCEPTOR_H_
 
-#include <mutex>
-#include <string>
-
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 
-namespace sys {
-namespace testing {
+#include <mutex>
+#include <string>
+
+namespace sys::testing {
 
 using fuchsia::sys::TerminationReason;
 
@@ -46,6 +45,9 @@ class InterceptedComponent : public fuchsia::sys::ComponentController {
   // Calls |on_kill_| and call Terminated event on component before clearing the
   // bindings
   void Kill() override;
+
+ private:
+  void KillImpl();
 
   fidl::Binding<fuchsia::sys::ComponentController> binding_;
   TerminationReason termination_reason_;
@@ -140,7 +142,6 @@ class ComponentInterceptor : fuchsia::sys::Loader, fuchsia::sys::Runner {
   std::unique_ptr<EnclosingEnvironment> env_;
 };
 
-}  // namespace testing
-}  // namespace sys
+}  // namespace sys::testing
 
 #endif  // LIB_SYS_CPP_TESTING_COMPONENT_INTERCEPTOR_H_

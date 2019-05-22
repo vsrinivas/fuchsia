@@ -45,7 +45,7 @@ class EnvironmentServices {
 
     ParentOverrides(const ParentOverrides&) = delete;
     ParentOverrides& operator=(const ParentOverrides&) = delete;
-    ParentOverrides(ParentOverrides&&);
+    ParentOverrides(ParentOverrides&&) noexcept;
 
     std::shared_ptr<vfs::Service> loader_service_;
     std::shared_ptr<vfs::Service> debug_data_service_;
@@ -271,7 +271,7 @@ class EnclosingEnvironment {
   }
 
  private:
-  EnclosingEnvironment(const std::string& label,
+  EnclosingEnvironment(std::string label,
                        const fuchsia::sys::EnvironmentPtr& parent_env,
                        std::unique_ptr<EnvironmentServices> services,
                        const fuchsia::sys::EnvironmentOptions& options);

@@ -16,11 +16,10 @@
 
 #include <memory>
 
-namespace sys {
-namespace testing {
+namespace sys::testing {
 
-EnvironmentServices::ParentOverrides::ParentOverrides(ParentOverrides&&) =
-    default;
+EnvironmentServices::ParentOverrides::ParentOverrides(
+    ParentOverrides&&) noexcept = default;
 
 EnvironmentServices::ParentOverrides::ParentOverrides() = default;
 
@@ -32,14 +31,14 @@ EnvironmentServices::EnvironmentServices(
   parent_svc_ = sys::ServiceDirectory::CreateWithRequest(&request);
   parent_env->GetDirectory(std::move(request));
   if (parent_overrides.loader_service_) {
-    AddSharedService(std::move(parent_overrides.loader_service_),
+    AddSharedService(parent_overrides.loader_service_,
                      fuchsia::sys::Loader::Name_);
   } else {
     AllowParentService(fuchsia::sys::Loader::Name_);
   }
 
   if (parent_overrides.debug_data_service_) {
-    AddSharedService(std::move(parent_overrides.debug_data_service_),
+    AddSharedService(parent_overrides.debug_data_service_,
                      fuchsia::debugdata::DebugData::Name_);
   } else {
     AllowParentService(fuchsia::debugdata::DebugData::Name_);
@@ -97,7 +96,7 @@ zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
       [this, service_name, handler = std::move(handler),
        singleton_id = std::move(singleton_id),
        controller = fuchsia::sys::ComponentControllerPtr()](
-          zx::channel client_handle, async_dispatcher_t* dispatcher) mutable {
+          zx::channel client_handle, async_dispatcher_t* /*unused*/) mutable {
         auto it = singleton_services_.find(singleton_id);
         if (it == singleton_services_.end()) {
           fuchsia::sys::LaunchInfo launch_info = handler();
@@ -107,8 +106,8 @@ zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
           enclosing_env_->CreateComponent(std::move(launch_info),
                                           controller.NewRequest());
           controller.set_error_handler(
-              [this, singleton_id, &controller](zx_status_t status) {
-                // TODO: show error? where on stderr?
+              [this, singleton_id, &controller](zx_status_t /*unused*/) {
+                // TODO(unknown): show error? where on stderr?
                 controller.Unbind();  // kills the singleton application
                 singleton_services_.erase(singleton_id);
               });
@@ -135,12 +134,12 @@ zx_status_t EnvironmentServices::AllowParentService(
     const std::string& service_name) {
   svc_names_.push_back(service_name);
   return svc_.AddEntry(
-      service_name.c_str(),
-      std::make_unique<vfs::Service>(
-          [this, service_name](zx::channel channel,
-                               async_dispatcher_t* dispatcher) {
-            parent_svc_->Connect(service_name, std::move(channel));
-          }));
+      service_name, std::make_unique<vfs::Service>(
+                        [this, service_name](zx::channel channel,
+                                             async_dispatcher_t* /*unused*/) {
+                          parent_svc_->Connect(service_name,
+                                               std::move(channel));
+                        }));
 }
 
 fidl::InterfaceHandle<fuchsia::io::Directory>
@@ -161,10 +160,10 @@ zx_status_t EnvironmentServices::ServeServiceDir(zx::channel request,
 }
 
 EnclosingEnvironment::EnclosingEnvironment(
-    const std::string& label, const fuchsia::sys::EnvironmentPtr& parent_env,
+    std::string label, const fuchsia::sys::EnvironmentPtr& parent_env,
     std::unique_ptr<EnvironmentServices> services,
     const fuchsia::sys::EnvironmentOptions& options)
-    : label_(label), services_(std::move(services)) {
+    : label_(std::move(label)), services_(std::move(services)) {
   services_->set_enclosing_env(this);
 
   // Start environment with services.
@@ -177,7 +176,7 @@ EnclosingEnvironment::EnclosingEnvironment(
                                       env_controller_.NewRequest(), label_,
                                       std::move(service_list), options);
   env_controller_.set_error_handler(
-      [this](zx_status_t status) { SetRunning(false); });
+      [this](zx_status_t /*unused*/) { SetRunning(false); });
   // Connect to launcher
   env->GetLauncher(launcher_.NewRequest());
 
@@ -252,5 +251,4 @@ void EnclosingEnvironment::SetRunning(bool running) {
   }
 }
 
-}  // namespace testing
-}  // namespace sys
+}  // namespace sys::testing
