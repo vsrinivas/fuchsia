@@ -54,7 +54,7 @@ void Paver::reset_exit_code() {
 }
 
 int Paver::StreamBuffer() {
-  zx::time last_reported = zx::clock::get_monotonic();
+    zx::time last_reported = zx::clock::get_monotonic();
     int result = 0;
     auto callback = [this, &last_reported, &result](void* buf, size_t read_offset,
                                                     size_t size, size_t* actual) {
@@ -69,7 +69,7 @@ int Paver::StreamBuffer() {
             // a connection is dropped, so we should wait at least that long before giving up.
             auto status = sync_completion_wait(&data_ready_, timeout_.get());
             if (status != ZX_OK) {
-                printf("netsvc: timed out while waiting for data in paver-copy thread\n");
+                printf("netsvc: 1 timed out while waiting for data in paver-copy thread\n");
                 exit_code_.store(status);
                 result = TFTP_ERR_TIMED_OUT;
                 return ZX_ERR_TIMED_OUT;
@@ -151,7 +151,7 @@ int Paver::MonitorBuffer() {
         // a connection is dropped, so we should wait at least that long before giving up.
         auto status = sync_completion_wait(&data_ready_, timeout_.get());
         if (status != ZX_OK) {
-            printf("netsvc: timed out while waiting for data in paver-copy thread\n");
+            printf("netsvc: 2 timed out while waiting for data in paver-copy thread\n");
             exit_code_.store(status);
             result = TFTP_ERR_TIMED_OUT;
             return result;

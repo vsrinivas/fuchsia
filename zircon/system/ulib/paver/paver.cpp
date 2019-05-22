@@ -200,6 +200,8 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
             vmo_sz += actual;
             bytes_left -= actual;
 
+            LOG("Progress: %zu, left: %zu\n", vmo_sz, bytes_left);
+
             if (vmo_sz == 0) {
                 ERROR("Read nothing from src_fd; %zu bytes left\n", bytes_left);
                 return ZX_ERR_IO;
@@ -888,7 +890,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd,
         status = StreamFvmPartition(reader.get(), &parts[p], mapping, client, block_size, &request);
         LOG("Done streaming partition %zu\n", p);
         if (status != ZX_OK) {
-            ERROR("Failed to stream partition\n");
+            ERROR("Failed to stream partition status=%d\n", status);
             return status;
         }
         if ((status = FlushClient(client)) != ZX_OK) {
