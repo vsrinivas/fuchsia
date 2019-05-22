@@ -55,7 +55,7 @@ lazy_static! {
     static ref DEV_AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {
         vec![AuthProviderConfig {
             auth_provider_type: "dev_auth_provider".to_string(),
-            url: "fuchsia-pkg://fuchsia.com/dev_auth_provider#meta/dev_auth_provider.cmx"
+            url: fuchsia_single_component_package_url!("dev_auth_provider")
             .to_string(),
             params: None
         }]

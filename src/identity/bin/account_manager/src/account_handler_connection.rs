@@ -14,6 +14,7 @@ use fidl_fuchsia_auth_account_internal::{
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
 use fuchsia_async as fasync;
 use fuchsia_component::client::App;
+use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
@@ -21,8 +22,7 @@ use log::{error, info, warn};
 use std::sync::Arc;
 
 /// The url used to launch new AccountHandler component instances.
-const ACCOUNT_HANDLER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/account_handler#meta/account_handler.cmx";
+const ACCOUNT_HANDLER_URL: &str = fuchsia_single_component_package_url!("account_handler");
 
 /// The information necessary to maintain a connection to an AccountHandler component instance.
 pub struct AccountHandlerConnection {
