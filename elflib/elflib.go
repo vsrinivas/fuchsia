@@ -112,13 +112,29 @@ func forEachNote(note []byte, endian binary.ByteOrder, entryFn func(noteEntry)) 
 	}
 }
 
+func getBuildIDs(filename string, endian binary.ByteOrder, data io.ReaderAt, size uint64) ([][]byte, error) {
+	noteBytes := make([]byte, size)
+	_, err := data.ReadAt(noteBytes, 0)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing section header in %s: %v", filename, err)
+	}
+	out := [][]byte{}
+	err = forEachNote(noteBytes, endian, func(entry noteEntry) {
+		if entry.noteType != NT_GNU_BUILD_ID || entry.name != "GNU\000" {
+			return
+		}
+		out = append(out, entry.desc)
+	})
+	return out, err
+}
+
 func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 	elfFile, err := elf.NewFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse ELF file %s: %v", filename, err)
 	}
-	if len(elfFile.Progs) == 0 {
-		return nil, fmt.Errorf("no program headers in %s", filename)
+	if len(elfFile.Progs) == 0 && len(elfFile.Sections) == 0 {
+		return nil, fmt.Errorf("no program headers or sections in %s", filename)
 	}
 	var endian binary.ByteOrder
 	if elfFile.Data == elf.ELFDATA2LSB {
@@ -127,26 +143,32 @@ func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 		endian = binary.BigEndian
 	}
 	out := [][]byte{}
+	// Check every SHT_NOTE section.
+	for _, section := range elfFile.Sections {
+		if section == nil || section.Type != elf.SHT_NOTE {
+			continue
+		}
+		buildIDs, err := getBuildIDs(filename, endian, section, section.Size)
+		if err != nil {
+			return out, err
+		}
+		out = append(out, buildIDs...)
+	}
+	// If we found what we were looking for with sections, don't reparse the program
+	// headers.
+	if len(out) > 0 {
+		return out, nil
+	}
 	// Check every PT_NOTE segment.
 	for _, prog := range elfFile.Progs {
 		if prog == nil || prog.Type != elf.PT_NOTE {
 			continue
 		}
-		noteBytes := make([]byte, prog.Filesz)
-		_, err := prog.ReadAt(noteBytes, 0)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing program header in %s: %v", filename, err)
-		}
-		// While the part of the note segment we're looking at doesn't have more valid data.
-		err = forEachNote(noteBytes, endian, func(entry noteEntry) {
-			if entry.noteType != NT_GNU_BUILD_ID || entry.name != "GNU\000" {
-				return
-			}
-			out = append(out, entry.desc)
-		})
+		buildIDs, err := getBuildIDs(filename, endian, prog, prog.Filesz)
 		if err != nil {
 			return out, err
 		}
+		out = append(out, buildIDs...)
 	}
 	return out, nil
 }
