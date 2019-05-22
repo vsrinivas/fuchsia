@@ -60,8 +60,8 @@ zx_status_t RegsFuchsia::Read(zx_handle_t thread) {
 }
 
 uint64_t RegsFuchsia::GetPcAdjustment(uint64_t rel_pc, Elf* elf) {
-  // TODO(brettw) I have no idea what this means. If we return 1 here like
-  // the Android one does sometimes, return addresses are off-by-one.
+  // Android uses this to "fix" the IP (source of the call instead of the
+  // return address). But we expect no adjustment.
   return 0;
 }
 

@@ -80,7 +80,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     finish_.reset();
   } else {
     if (auto op = step_into_->OnThreadStop(stop_type, {}); op != kStopDone) {
-      Log("Still in range after stepping out.");
+      Log("Still in range after stepping.");
       return op;
     }
   }
