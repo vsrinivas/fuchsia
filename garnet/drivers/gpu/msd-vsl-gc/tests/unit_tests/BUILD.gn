@@ -7,7 +7,6 @@ executable("nonhardware_tests") {
   output_name = "msd_vsl_gc_nonhardware_tests"
 
   sources = [
-    "main.cc",
     "test_address_space.cc",
     "test_address_space_base.cc",
     "test_connection.cc",
@@ -18,6 +17,7 @@ executable("nonhardware_tests") {
     "//garnet/drivers/gpu/msd-vsl-gc/src",
     "//garnet/lib/magma/tests/mock:bus_mapper",
     "//garnet/lib/magma/tests/mock:mmio",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
   ]

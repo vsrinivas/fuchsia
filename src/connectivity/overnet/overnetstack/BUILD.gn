@@ -19,12 +19,11 @@ source_set("overnet_fuchsia_compatibility") {
 executable("overnetstack_unittests") {
   testonly = true
 
-  sources = [
-    "run_all_tests.cc",
-  ]
+  sources = []
 
   deps = [
     "//sdk/fidl/fuchsia.overnet",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

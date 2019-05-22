@@ -7,12 +7,11 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 executable("msd_arm_mali_nonhardware_tests") {
   testonly = true
 
-  sources = [
-    "main.cc",
-  ]
+  sources = []
 
   public_deps = [
     ":tests_not_requiring_hardware",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
   ]

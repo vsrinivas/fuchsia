@@ -10,7 +10,6 @@ executable("msd_img_rgx_nonhardware_tests_executable") {
   output_name = "msd_img_rgx_nonhardware_tests"
 
   sources = [
-    "main.cc",
     "mt8167-test.cc",
   ]
 
@@ -19,6 +18,7 @@ executable("msd_img_rgx_nonhardware_tests_executable") {
   ]
 
   public_deps = [
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
   ]

@@ -7,12 +7,11 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 executable("msd_intel_gen_nonhardware_tests") {
   testonly = true
 
-  sources = [
-    "main.cc",
-  ]
+  sources = []
 
   public_deps = [
     ":nonhardware_tests",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
 }

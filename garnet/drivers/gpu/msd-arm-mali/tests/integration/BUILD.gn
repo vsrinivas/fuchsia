@@ -16,7 +16,6 @@ executable("msd_arm_mali_integration_tests") {
   testonly = true
 
   sources = [
-    "main.cc",
     "test_fault_recovery.cc",
     "test_shutdown.cc",
   ]
@@ -28,6 +27,7 @@ executable("msd_arm_mali_integration_tests") {
     "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/tests/helper:platform_device_helper",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
 

@@ -19,14 +19,13 @@ executable("unit_tests") {
   testonly = true
   output_name = "magma_unit_tests"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = []
 
   deps = [
     ":magma_platform_tests",
     ":magma_system_tests",
     ":magma_util_tests",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
 }
