@@ -13,7 +13,6 @@ group("bin") {
     "sessionctl",
     "sessionmgr",
     "suggestion_engine",
-    "test_driver",
     "voila",
   ]
 }
