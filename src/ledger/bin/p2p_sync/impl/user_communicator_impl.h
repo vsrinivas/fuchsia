@@ -25,6 +25,8 @@
 namespace p2p_sync {
 class LedgerCommunicatorImpl;
 
+// TODO(LE-768): Document the contract of this class in relationship with
+// p2p_provider::P2PProvider
 class UserCommunicatorImpl : public UserCommunicator,
                              public DeviceMesh,
                              public p2p_provider::P2PProvider::Client {
@@ -56,8 +58,6 @@ class UserCommunicatorImpl : public UserCommunicator,
   std::set<std::string, convert::StringViewComparator> devices_;
 
   bool started_ = false;
-  std::string user_token_;
-  std::unique_ptr<component::ServiceProviderImpl> network_service_provider_;
 
   std::unique_ptr<p2p_provider::P2PProvider> p2p_provider_;
   coroutine::CoroutineService* const coroutine_service_;

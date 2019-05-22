@@ -8,6 +8,7 @@
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 
+#include "flatbuffers/flatbuffers.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
@@ -142,9 +143,7 @@ PageCommunicatorImpl::~PageCommunicatorImpl() {
   }
 
   BuildWatchStopBuffer(&buffer);
-  for (const auto& device : interested_devices_) {
-    mesh_->Send(device, buffer);
-  }
+  SendToInterestedDevices(buffer);
 
   if (on_delete_) {
     on_delete_();
@@ -160,6 +159,8 @@ void PageCommunicatorImpl::Start() {
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer);
 
+  // DeviceMesh::GetDeviceList makes a copy, so we can iterate without issue
+  // here.
   for (const auto& device : mesh_->GetDeviceList()) {
     mesh_->Send(device, buffer);
   }
@@ -326,20 +327,19 @@ void PageCommunicatorImpl::GetObject(
                        storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
-  auto request_holder = pending_object_requests_.emplace(
+  auto [request_holder, is_new_request] = pending_object_requests_.emplace(
       object_identifier, PendingObjectRequestHolder());
-  request_holder.first->second.AddCallback(std::move(callback));
+  request_holder->second.AddCallback(std::move(callback));
 
-  if (request_holder.second) {
+  if (is_new_request) {
     flatbuffers::FlatBufferBuilder buffer;
     BuildObjectRequestBuffer(&buffer, std::move(object_identifier));
 
     for (const auto& device : interested_devices_) {
-      request_holder.first->second.AddNewPendingRequest(device);
+      request_holder->second.AddNewPendingRequest(device);
     }
-    for (const auto& device : interested_devices_) {
-      mesh_->Send(device, buffer);
-    }
+
+    SendToInterestedDevices(buffer);
   }
 }
 
@@ -372,9 +372,7 @@ void PageCommunicatorImpl::OnNewCommits(
   flatbuffers::FlatBufferBuilder buffer;
   BuildCommitBuffer(&buffer, commits_to_upload_);
 
-  for (const auto& device : interested_devices_) {
-    mesh_->Send(device, buffer);
-  }
+  SendToInterestedDevices(buffer);
   commits_to_upload_.clear();
 }
 
@@ -682,6 +680,18 @@ void PageCommunicatorImpl::MarkSyncedToPeer(
         }
         callback(status);
       });
+}
+
+void PageCommunicatorImpl::SendToInterestedDevices(
+    convert::ExtendedStringView data) {
+  for (auto it = interested_devices_.begin();
+       it != interested_devices_.end();) {
+    // mesh_->Send() may invalidate the current iterator. Thus here, we make a
+    // copy and increment it. If mesh_->Send() invalidates the iterator
+    // |device|, |it| will not be affected.
+    auto device = it++;
+    mesh_->Send(*device, data);
+  }
 }
 
 }  // namespace p2p_sync

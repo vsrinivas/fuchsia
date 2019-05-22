@@ -112,6 +112,9 @@ class PageCommunicatorImpl : public PageCommunicator,
   // call to MarkSyncedToPeer, the given |callback| will be called immediately.
   void MarkSyncedToPeer(fit::function<void(storage::Status)> callback);
 
+  // Sends a single message to all interested devices.
+  void SendToInterestedDevices(convert::ExtendedStringView data);
+
   // Map of pending requests for objects.
   callback::AutoCleanableMap<storage::ObjectIdentifier,
                              PendingObjectRequestHolder>

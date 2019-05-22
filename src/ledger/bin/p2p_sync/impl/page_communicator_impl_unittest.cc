@@ -5,7 +5,10 @@
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include <algorithm>
 #include <map>
@@ -15,11 +18,8 @@
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
-#include <lib/gtest/test_loop_fixture.h>
-
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
 #include "src/ledger/bin/p2p_sync/impl/encoding.h"
@@ -189,16 +189,26 @@ class FakeDeviceMesh : public DeviceMesh {
   FakeDeviceMesh() {}
   ~FakeDeviceMesh() override {}
 
+  void OnNextSend(std::string device_name, fit::closure callback) {
+    callbacks_[device_name] = std::move(callback);
+  }
+
   DeviceSet GetDeviceList() override { return devices_; }
 
   void Send(fxl::StringView device_name,
             convert::ExtendedStringView data) override {
     messages_.emplace_back(
         std::forward_as_tuple(device_name.ToString(), data.ToString()));
+    auto it = callbacks_.find(device_name);
+    if (it != callbacks_.end()) {
+      it->second();
+      callbacks_.erase(it);
+    }
   }
 
   DeviceSet devices_;
   std::vector<std::pair<std::string, std::string>> messages_;
+  std::map<std::string, fit::closure, convert::StringViewComparator> callbacks_;
 };
 
 void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer,
@@ -328,6 +338,20 @@ void BuildCommitRequestBuffer(flatbuffers::FlatBufferBuilder* buffer,
   buffer->Finish(fb_message);
 }
 
+void ConnectToDevice(PageCommunicatorImpl* page_communicator,
+                     fxl::StringView device, fxl::StringView ledger,
+                     fxl::StringView page) {
+  flatbuffers::FlatBufferBuilder buffer;
+  BuildWatchStartBuffer(&buffer, ledger, page);
+  MessageHolder<Message> message = *CreateMessageHolder<Message>(
+      convert::ToStringView(buffer), &ParseMessage);
+  page_communicator->OnNewRequest(
+      device,
+      std::move(message).TakeAndMap<Request>([](const Message* message) {
+        return static_cast<const Request*>(message->message());
+      }));
+}
+
 class PageCommunicatorImplTest : public gtest::TestLoopFixture {
  public:
   PageCommunicatorImplTest() {}
@@ -415,15 +439,7 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
                                          &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
-  flatbuffers::FlatBufferBuilder buffer;
-  BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> new_device_message = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator.OnNewRequest(
-      "device2", std::move(new_device_message)
-                     .TakeAndMap<Request>([](const Message* message) {
-                       return static_cast<const Request*>(message->message());
-                     }));
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called;
   storage::Status status;
@@ -470,18 +486,11 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
                                          &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
-  flatbuffers::FlatBufferBuilder buffer;
-  BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> new_device_message = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
   // If storage fails to mark the page as synced to a peer, the mesh should not
   // be updated.
   storage.mark_synced_to_peer_status = storage::Status::IO_ERROR;
-  page_communicator.OnNewRequest(
-      "device2", std::move(new_device_message)
-                     .TakeAndMap<Request>([](const Message* message) {
-                       return static_cast<const Request*>(message->message());
-                     }));
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+
   bool called;
   storage::Status status;
   storage::ChangeSource source;
@@ -613,15 +622,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
                                          &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
-  flatbuffers::FlatBufferBuilder buffer;
-  BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> new_device_message = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator.OnNewRequest(
-      "device2", std::move(new_device_message)
-                     .TakeAndMap<Request>([](const Message* message) {
-                       return static_cast<const Request*>(message->message());
-                     }));
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called;
   storage::Status status;
@@ -664,15 +665,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
                                          &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
-  flatbuffers::FlatBufferBuilder buffer;
-  BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> new_device_message = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator.OnNewRequest(
-      "device2", std::move(new_device_message)
-                     .TakeAndMap<Request>([](const Message* message) {
-                       return static_cast<const Request*>(message->message());
-                     }));
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called;
   storage::Status status;
@@ -714,15 +707,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
                                          &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
-  flatbuffers::FlatBufferBuilder buffer;
-  BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator.OnNewRequest(
-      "device2",
-      std::move(message).TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called;
   storage::Status status;
@@ -763,22 +748,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
                                          &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
-  flatbuffers::FlatBufferBuilder buffer;
-  BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator.OnNewRequest(
-      "device2",
-      std::move(message).TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
-  MessageHolder<Message> message_copy = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator.OnNewRequest(
-      "device3",
-      std::move(message_copy).TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, "device3", "ledger", "page");
 
   bool called;
   storage::Status status;
@@ -832,22 +803,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
                                          &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
-  flatbuffers::FlatBufferBuilder buffer;
-  BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator.OnNewRequest(
-      "device2",
-      std::move(message).TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
-  MessageHolder<Message> message_copy = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator.OnNewRequest(
-      "device3",
-      std::move(message_copy).TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, "device3", "ledger", "page");
 
   bool called;
   storage::Status status;
@@ -960,15 +917,7 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
                                            &storage_1, "ledger", "page", &mesh);
   page_communicator_1.Start();
 
-  flatbuffers::FlatBufferBuilder buffer;
-  BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator_1.OnNewRequest(
-      "device2",
-      std::move(message).TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+  ConnectToDevice(&page_communicator_1, "device2", "ledger", "page");
   RunLoopUntilIdle();
 
   FakePageStorage storage_2(dispatcher(), "page");
@@ -1038,15 +987,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
                                          &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
-  flatbuffers::FlatBufferBuilder buffer;
-  BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator.OnNewRequest(
-      "device2",
-      std::move(message).TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
 
   bool called1, called2, called3, called4;
   storage::Status status1, status2, status3, status4;
@@ -1176,15 +1117,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
                                            &storage_1, "ledger", "page", &mesh);
   page_communicator_1.Start();
 
-  flatbuffers::FlatBufferBuilder buffer;
-  BuildWatchStartBuffer(&buffer, "ledger", "page");
-  MessageHolder<Message> message = *CreateMessageHolder<Message>(
-      convert::ToStringView(buffer), &ParseMessage);
-  page_communicator_1.OnNewRequest(
-      "device2",
-      std::move(message).TakeAndMap<Request>([](const Message* message) {
-        return static_cast<const Request*>(message->message());
-      }));
+  ConnectToDevice(&page_communicator_1, "device2", "ledger", "page");
   RunLoopUntilIdle();
 
   FakePageStorage storage_2(dispatcher(), "page");
@@ -1299,5 +1232,88 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   // Verify we don't crash on response from storage
   storage_2.commits_from_sync_[1].second(storage::Status::OK, {});
 }
+
+// Removes a device while we are performing the GetObject call.
+TEST_F(PageCommunicatorImplTest, GetObjectRemoveDevice) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
+  page_communicator.Start();
+
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, "device3", "ledger", "page");
+  ConnectToDevice(&page_communicator, "device4", "ledger", "page");
+
+  bool called;
+  storage::Status status;
+  storage::ChangeSource source;
+  storage::IsObjectSynced is_object_synced;
+  std::unique_ptr<storage::DataSource::DataChunk> data;
+
+  mesh.OnNextSend("device3", [&page_communicator]() {
+    page_communicator.OnDeviceChange("device3",
+                                     p2p_provider::DeviceChangeType::DELETED);
+  });
+
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo1"),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &is_object_synced, &data));
+
+  // The previous call to GetObject should return and not result in an
+  // exception. Note that it is expected for GetObject callback to not be
+  // called.
+}
+
+// Removes a device while we are performing the OnNewCommits call.
+TEST_F(PageCommunicatorImplTest, OnNewCommitsRemoveDevice) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
+  page_communicator.Start();
+
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, "device3", "ledger", "page");
+  ConnectToDevice(&page_communicator, "device4", "ledger", "page");
+
+  mesh.OnNextSend("device3", [&page_communicator]() {
+    page_communicator.OnDeviceChange("device3",
+                                     p2p_provider::DeviceChangeType::DELETED);
+  });
+
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.emplace_back(std::make_unique<FakeCommit>("id 1", "data 1"));
+  commits.emplace_back(std::make_unique<FakeCommit>("id 2", "data 2"));
+  ASSERT_NE(nullptr, storage.watcher_);
+  storage.watcher_->OnNewCommits(commits, storage::ChangeSource::LOCAL);
+
+  // The previous call to OnNewCommits should return and not result in an
+  // exception.
+}
+
+// Removes a device while destroying PageCommunicatorImpl.
+TEST_F(PageCommunicatorImplTest, DestructionRemoveDevice) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
+  page_communicator.Start();
+
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+  ConnectToDevice(&page_communicator, "device3", "ledger", "page");
+  ConnectToDevice(&page_communicator, "device4", "ledger", "page");
+
+  mesh.OnNextSend("device3", [&page_communicator]() {
+    page_communicator.OnDeviceChange("device3",
+                                     p2p_provider::DeviceChangeType::DELETED);
+  });
+
+  // The destructor of PageCommunicatorImpl sends messages to connected devices.
+  // This test succeeds if this destructor completes without throwing an
+  // exception.
+}
+
 }  // namespace
 }  // namespace p2p_sync
