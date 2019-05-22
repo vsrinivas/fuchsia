@@ -10,27 +10,27 @@ import("//src/graphics/lib/compute/hotsort/platforms/vk/targets/hotsort_target.g
 # $HS_GEN -v -a "glsl" -D HS_AMD_GCN3 -t 2 -w 64 -r 8 -s 32768 -S 32768 -b 16 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
 #
 
-hotsort_target("generate")
-{
-  hotsort_target_vendor_dir = "//src/graphics/lib/compute/hotsort/platforms/vk/targets/vendors/amd"
+hotsort_target("generate") {
   hotsort_target_name = "hs_amd_gcn3_u64"
+  hotsort_target_config_files = [
+    "//src/graphics/lib/compute/hotsort/platforms/vk/targets/configs/amd/hs_glsl_macros_config.h"
+  ]
   hotsort_target_args = [
     # "-v",
-    "-o" , rebase_path(target_gen_dir,root_build_dir),
-    "-a" , "glsl",
-    "-t" , "2",
-    "-w" , "64",
-    "-r" , "8",
-    "-s" , "32768",
-    "-S" , "32768",
-    "-b" , "16",
-    "-m" , "1",
-    "-M" , "1",
-    "-f" , "1",
-    "-F" , "1",
-    "-c" , "1",
-    "-C" , "1",
-    "-L" , "0,1,0,0",
-    "-z"
+    "-a", "glsl",
+    "-t", "2",
+    "-w", "64",
+    "-r", "8",
+    "-s", "32768",
+    "-S", "32768",
+    "-b", "16",
+    "-m", "1",
+    "-M", "1",
+    "-f", "1",
+    "-F", "1",
+    "-c", "1",
+    "-C", "1",
+    "-L", "0,1,0,0",
+    "-z",
   ]
 }

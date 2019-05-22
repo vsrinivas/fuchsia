@@ -9,7 +9,6 @@ source_set("vk") {
   sources = [
     "hotsort_vk.c",
     "hotsort_vk.h",
-    "hotsort_vk_target.h",
   ]
   include_dirs = [ "//src/graphics/lib/compute" ]
   deps = [

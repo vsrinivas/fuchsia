@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 //
-// Dump 'struct hotsort_vk_target HS_TARGET_NAME' to a file
+// Dump 'struct hotsort_vk_target' to file name argv[1]
 //
 
 int
@@ -22,14 +22,14 @@ main(int argc, char const * argv[])
       return EXIT_FAILURE;
     }
 
-  size_t const size_config = sizeof(HS_TARGET_NAME.config);
+  size_t const size_config = sizeof(HS_TARGET_NAME->config);
 
-  if (fwrite(&HS_TARGET_NAME.config, 1, size_config, file) != size_config)
+  if (fwrite(&HS_TARGET_NAME->config, 1, size_config, file) != size_config)
     {
       return EXIT_FAILURE;
     }
 
-  uint32_t const * modules = HS_TARGET_NAME.modules;
+  uint32_t const * modules = HS_TARGET_NAME->modules;
   uint32_t         dwords  = modules[0];
 
   while (dwords > 0)

@@ -11,29 +11,29 @@ import("//src/graphics/lib/compute/hotsort/platforms/vk/targets/hotsort_target.g
 # NEW: $HS_GEN -v -a "glsl" -D HS_NVIDIA_SM35 -t 1 -w 32 -r 16 -s 32768 -S 32768 -b 16 -m 1 -M 1 -p 1 -P 1 -f 0 -F 0 -c 0 -C 0 -z
 #
 
-hotsort_target("generate")
-{
-  hotsort_target_vendor_dir = "//src/graphics/lib/compute/hotsort/platforms/vk/targets/vendors/nvidia"
+hotsort_target("generate") {
   hotsort_target_name = "hs_nvidia_sm35_u32"
+  hotsort_target_config_files = [
+    "//src/graphics/lib/compute/hotsort/platforms/vk/targets/configs/nvidia/hs_glsl_macros_config.h"
+  ]
   hotsort_target_args = [
     # "-v",
-    "-o" , rebase_path(target_gen_dir,root_build_dir),
-    "-a" , "glsl",
-    "-t" , "1",
-    "-w" , "32",
-    "-r" , "16",
-    "-s" , "32768",
-    "-S" , "32768",
-    "-b" , "16",
-    "-m" , "1",
-    "-M" , "1",
-    "-p" , "1",
-    "-P" , "1",
-    "-f" , "0",
-    "-F" , "0",
-    "-c" , "0",
-    "-C" , "0",
-    "-L" , "0,1,0,0",
-    "-z"
+    "-a", "glsl",
+    "-t", "1",
+    "-w", "32",
+    "-r", "16",
+    "-s", "32768",
+    "-S", "32768",
+    "-b", "16",
+    "-m", "1",
+    "-M", "1",
+    "-p", "1",
+    "-P", "1",
+    "-f", "0",
+    "-F", "0",
+    "-c", "0",
+    "-C", "0",
+    "-L", "0,1,0,0",
+    "-z",
   ]
 }

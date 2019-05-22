@@ -38,6 +38,12 @@
 #include "targets/nvidia/sm35/u64/hs_target.h"
 
 //
+// This test reads the target's architectural configuration
+//
+
+#include "targets/hotsort_vk_target.h"
+
+//
 //
 //
 
@@ -276,9 +282,9 @@ is_matching_device(VkPhysicalDeviceProperties const * const phy_device_props,
       // device id here...
       //
       if (key_val_words == 1)
-        *hs_target = &hs_nvidia_sm35_u32;
+        *hs_target = hs_nvidia_sm35_u32;
       else
-        *hs_target = &hs_nvidia_sm35_u64;
+        *hs_target = hs_nvidia_sm35_u64;
     }
   else if (phy_device_props->vendorID == 0x8086)
     {
@@ -290,9 +296,9 @@ is_matching_device(VkPhysicalDeviceProperties const * const phy_device_props,
       // rigorous rejection by device id here...
       //
       if (key_val_words == 1)
-        *hs_target = &hs_intel_gen8_u32;
+        *hs_target = hs_intel_gen8_u32;
       else
-        *hs_target = &hs_intel_gen8_u64;
+        *hs_target = hs_intel_gen8_u64;
     }
   else if (phy_device_props->vendorID == 0x1002)
     {
@@ -300,9 +306,9 @@ is_matching_device(VkPhysicalDeviceProperties const * const phy_device_props,
       // AMD GCN
       //
       if (key_val_words == 1)
-        *hs_target = &hs_amd_gcn3_u32;
+        *hs_target = hs_amd_gcn3_u32;
       else
-        *hs_target = &hs_amd_gcn3_u64;
+        *hs_target = hs_amd_gcn3_u64;
     }
   else
     {

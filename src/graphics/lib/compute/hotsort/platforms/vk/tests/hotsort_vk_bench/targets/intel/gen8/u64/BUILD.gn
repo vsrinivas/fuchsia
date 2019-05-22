@@ -10,28 +10,28 @@ import("//src/graphics/lib/compute/hotsort/platforms/vk/targets/hotsort_target.g
 # $HS_GEN -v -a "glsl" -D HS_INTEL_GEN8 -t 2 -w 8 -r 16 -s 21504 -S 65536 -b 16 -B 48 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
 #
 
-hotsort_target("generate")
-{
-  hotsort_target_vendor_dir = "//src/graphics/lib/compute/hotsort/platforms/vk/targets/vendors/intel"
+hotsort_target("generate") {
   hotsort_target_name = "hs_intel_gen8_u64"
+  hotsort_target_config_files = [
+    "//src/graphics/lib/compute/hotsort/platforms/vk/targets/configs/intel/hs_glsl_macros_config.h"
+  ]
   hotsort_target_args = [
     # "-v",
-    "-o" , rebase_path(target_gen_dir,root_build_dir),
-    "-a" , "glsl",
-    "-t" , "2",
-    "-w" , "8",
-    "-r" , "16",
-    "-s" , "21504",
-    "-S" , "65536",
-    "-b" , "16",
-    "-B" , "48",
-    "-m" , "1",
-    "-M" , "1",
-    "-f" , "1",
-    "-F" , "1",
-    "-c" , "1",
-    "-C" , "1",
-    "-L" , "0,1,0,0",
-    "-z"
+    "-a", "glsl",
+    "-t", "2",
+    "-w", "8",
+    "-r", "16",
+    "-s", "21504",
+    "-S", "65536",
+    "-b", "16",
+    "-B", "48",
+    "-m", "1",
+    "-M", "1",
+    "-f", "1",
+    "-F", "1",
+    "-c", "1",
+    "-C", "1",
+    "-L", "0,1,0,0",
+    "-z",
   ]
 }

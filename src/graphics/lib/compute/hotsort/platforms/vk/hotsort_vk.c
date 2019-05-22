@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
+#include "hotsort_vk.h"
 
 #include "common/macros.h"
 #include "common/util.h"
 #include "common/vk/vk_assert.h"
 #include "common/vk/vk_barrier.h"
+#include "targets/hotsort_vk_target.h"
 
 #if defined(HOTSORT_VK_SHADER_INFO_AMD_STATISTICS) ||                                              \
   defined(HOTSORT_VK_SHADER_INFO_AMD_DISASSEMBLY)
 #include "common/vk/vk_shader_info_amd.h"
 #endif
 
-#include "hotsort_vk.h"
-#include "hotsort_vk_target.h"
+#include <inttypes.h>
+#include <stdlib.h>
+#include <string.h>
 
 //
 // We want concurrent kernel execution to occur in a few places.

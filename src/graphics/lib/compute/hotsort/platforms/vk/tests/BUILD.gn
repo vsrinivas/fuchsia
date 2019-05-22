@@ -4,6 +4,6 @@
 
 group("tests") {
   public_deps = [
-    "hotsort_vk_bench"
+    "hotsort_vk_bench",
   ]
 }

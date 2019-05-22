@@ -2,22 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_HOTSORT_VK_TARGET_H_
-#define SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_HOTSORT_VK_TARGET_H_
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_TARGETS_HOTSORT_VK_TARGET_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_TARGETS_HOTSORT_VK_TARGET_H_
 
 //
 //
 //
 
 #include <stdint.h>
-
-//
-//
-//
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 //
 // This structure packages target-specific HotSort parameters and
@@ -81,12 +73,4 @@ struct hotsort_vk_target
 //
 //
 
-#ifdef __cplusplus
-}
-#endif
-
-//
-//
-//
-
-#endif  // SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_HOTSORT_VK_TARGET_H_
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_HOTSORT_PLATFORMS_VK_TARGETS_HOTSORT_VK_TARGET_H_

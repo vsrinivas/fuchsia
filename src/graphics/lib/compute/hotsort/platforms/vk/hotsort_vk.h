@@ -28,12 +28,6 @@ extern "C" {
 #endif
 
 //
-//
-//
-
-#include "hotsort_vk_target.h"
-
-//
 // HotSort/VK relies on pipeline layout compatibility:
 //
 //   Push constants:
@@ -61,6 +55,16 @@ extern "C" {
 //
 
 //
+// A HotSort target is an opaque structure containing target-specific
+// configuration parameters and a bundle of SPIR-V modules.
+//
+// Targets are generated and specific to a particular device vendor,
+// architecture and key-val configuration.
+//
+
+struct hotsort_vk_target;
+
+//
 // HotSort push constants are expected at offset 0
 //
 
@@ -71,9 +75,11 @@ struct hotsort_vk_push
   uint32_t kv_count;
 };
 
+// clang-format off
 #define HOTSORT_VK_PUSH_CONSTANT_RANGE_STAGE_FLAGS VK_SHADER_STAGE_COMPUTE_BIT
-#define HOTSORT_VK_PUSH_CONSTANT_RANGE_OFFSET 0
-#define HOTSORT_VK_PUSH_CONSTANT_RANGE_SIZE sizeof(struct hotsort_vk_push)
+#define HOTSORT_VK_PUSH_CONSTANT_RANGE_OFFSET      0
+#define HOTSORT_VK_PUSH_CONSTANT_RANGE_SIZE        sizeof(struct hotsort_vk_push)
+// clang-format on
 
 //
 // Declare the offsets of the key-value arrays before sorting.
