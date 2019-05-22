@@ -104,6 +104,19 @@ pub fn transfer_fd(file: std::fs::File) -> Result<zx::Handle, zx::Status> {
     }
 }
 
+/// Create a open file descriptor from a Handle.
+///
+/// Afterward, the handle is owned by fdio, and will close with the File.
+/// See `transfer_fd` for a way to get it back.
+pub fn create_fd(handle: zx::Handle) -> Result<File, zx::Status> {
+    unsafe {
+        let mut raw_fd = -1;
+        let status = fdio_sys::fdio_fd_create(handle.into_raw(), &mut raw_fd);
+        zx::Status::ok(status)?;
+        Ok(File::from_raw_fd(raw_fd))
+    }
+}
+
 /// Open a new connection to `file` by sending a request to open
 /// a new connection to the sever.
 pub fn clone_channel(file: &std::fs::File) -> Result<zx::Channel, zx::Status> {
