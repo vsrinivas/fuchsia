@@ -243,6 +243,7 @@ mod tests {
     use std::io::Write;
 
     #[test]
+    #[ignore] // FIXME(CONN-121)
     fn test_get_stable_name() {
         struct TestCase {
             topological_path: String,
