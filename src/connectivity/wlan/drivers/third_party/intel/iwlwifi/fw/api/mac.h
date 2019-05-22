@@ -51,11 +51,11 @@
 #define IWL_MVM_INVALID_STA 0xFF
 
 enum iwl_ac {
-    AC_BK,
-    AC_BE,
-    AC_VI,
-    AC_VO,
-    AC_NUM,
+  AC_BK,
+  AC_BE,
+  AC_VI,
+  AC_VO,
+  AC_NUM,
 };
 
 /**
@@ -68,10 +68,10 @@ enum iwl_ac {
  * @MAC_PROT_FLG_SELF_CTS_EN: allow CTS2self
  */
 enum iwl_mac_protection_flags {
-    MAC_PROT_FLG_TGG_PROTECT = BIT(3),
-    MAC_PROT_FLG_HT_PROT = BIT(23),
-    MAC_PROT_FLG_FAT_PROT = BIT(24),
-    MAC_PROT_FLG_SELF_CTS_EN = BIT(30),
+  MAC_PROT_FLG_TGG_PROTECT = BIT(3),
+  MAC_PROT_FLG_HT_PROT = BIT(23),
+  MAC_PROT_FLG_FAT_PROT = BIT(24),
+  MAC_PROT_FLG_SELF_CTS_EN = BIT(30),
 };
 
 #define MAC_FLG_SHORT_SLOT BIT(4)
@@ -92,17 +92,17 @@ enum iwl_mac_protection_flags {
  * @FW_MAC_TYPE_MAX: highest support MAC type
  */
 enum iwl_mac_types {
-    FW_MAC_TYPE_FIRST = 1,
-    FW_MAC_TYPE_AUX = FW_MAC_TYPE_FIRST,
-    FW_MAC_TYPE_LISTENER,
-    FW_MAC_TYPE_PIBSS,
-    FW_MAC_TYPE_IBSS,
-    FW_MAC_TYPE_BSS_STA,
-    FW_MAC_TYPE_P2P_DEVICE,
-    FW_MAC_TYPE_P2P_STA,
-    FW_MAC_TYPE_GO,
-    FW_MAC_TYPE_TEST,
-    FW_MAC_TYPE_MAX = FW_MAC_TYPE_TEST
+  FW_MAC_TYPE_FIRST = 1,
+  FW_MAC_TYPE_AUX = FW_MAC_TYPE_FIRST,
+  FW_MAC_TYPE_LISTENER,
+  FW_MAC_TYPE_PIBSS,
+  FW_MAC_TYPE_IBSS,
+  FW_MAC_TYPE_BSS_STA,
+  FW_MAC_TYPE_P2P_DEVICE,
+  FW_MAC_TYPE_P2P_STA,
+  FW_MAC_TYPE_GO,
+  FW_MAC_TYPE_TEST,
+  FW_MAC_TYPE_MAX = FW_MAC_TYPE_TEST
 }; /* MAC_CONTEXT_TYPE_API_E_VER_1 */
 
 /**
@@ -114,11 +114,11 @@ enum iwl_mac_types {
  * @NUM_TSF_IDS: number of TSF timers available
  */
 enum iwl_tsf_id {
-    TSF_ID_A = 0,
-    TSF_ID_B = 1,
-    TSF_ID_C = 2,
-    TSF_ID_D = 3,
-    NUM_TSF_IDS = 4,
+  TSF_ID_A = 0,
+  TSF_ID_B = 1,
+  TSF_ID_C = 2,
+  TSF_ID_D = 3,
+  NUM_TSF_IDS = 4,
 }; /* TSF_ID_API_E_VER_1 */
 
 /**
@@ -134,14 +134,14 @@ enum iwl_tsf_id {
  * @beacon_template: beacon template ID
  */
 struct iwl_mac_data_ap {
-    __le32 beacon_time;
-    __le64 beacon_tsf;
-    __le32 bi;
-    __le32 reserved1;
-    __le32 dtim_interval;
-    __le32 reserved2;
-    __le32 mcast_qid;
-    __le32 beacon_template;
+  __le32 beacon_time;
+  __le64 beacon_tsf;
+  __le32 bi;
+  __le32 reserved1;
+  __le32 dtim_interval;
+  __le32 reserved2;
+  __le32 mcast_qid;
+  __le32 beacon_template;
 } __packed; /* AP_MAC_DATA_API_S_VER_2 */
 
 /**
@@ -153,11 +153,11 @@ struct iwl_mac_data_ap {
  * @beacon_template: beacon template ID
  */
 struct iwl_mac_data_ibss {
-    __le32 beacon_time;
-    __le64 beacon_tsf;
-    __le32 bi;
-    __le32 reserved;
-    __le32 beacon_template;
+  __le32 beacon_time;
+  __le64 beacon_tsf;
+  __le32 bi;
+  __le32 reserved;
+  __le32 beacon_template;
 } __packed; /* IBSS_MAC_DATA_API_S_VER_1 */
 
 /**
@@ -165,7 +165,7 @@ struct iwl_mac_data_ibss {
  * @TWT_SUPPORTED: twt is supported
  */
 enum iwl_mac_data_policy {
-    TWT_SUPPORTED = BIT(0),
+  TWT_SUPPORTED = BIT(0),
 };
 
 /**
@@ -182,16 +182,16 @@ enum iwl_mac_data_policy {
  * @assoc_beacon_arrive_time: TSF of first beacon after association
  */
 struct iwl_mac_data_sta {
-    __le32 is_assoc;
-    __le32 dtim_time;
-    __le64 dtim_tsf;
-    __le32 bi;
-    __le32 reserved1;
-    __le32 dtim_interval;
-    __le32 data_policy;
-    __le32 listen_interval;
-    __le32 assoc_id;
-    __le32 assoc_beacon_arrive_time;
+  __le32 is_assoc;
+  __le32 dtim_time;
+  __le64 dtim_tsf;
+  __le32 bi;
+  __le32 reserved1;
+  __le32 dtim_interval;
+  __le32 data_policy;
+  __le32 listen_interval;
+  __le32 assoc_id;
+  __le32 assoc_beacon_arrive_time;
 } __packed; /* STA_MAC_DATA_API_S_VER_2 */
 
 /**
@@ -202,9 +202,9 @@ struct iwl_mac_data_sta {
  * @opp_ps_enabled: indicate that opportunistic PS allowed
  */
 struct iwl_mac_data_go {
-    struct iwl_mac_data_ap ap;
-    __le32 ctwin;
-    __le32 opp_ps_enabled;
+  struct iwl_mac_data_ap ap;
+  __le32 ctwin;
+  __le32 opp_ps_enabled;
 } __packed; /* GO_MAC_DATA_API_S_VER_1 */
 
 /**
@@ -214,8 +214,8 @@ struct iwl_mac_data_go {
  *  0 indicates that there is no CT window.
  */
 struct iwl_mac_data_p2p_sta {
-    struct iwl_mac_data_sta sta;
-    __le32 ctwin;
+  struct iwl_mac_data_sta sta;
+  __le32 ctwin;
 } __packed; /* P2P_STA_MAC_DATA_API_S_VER_2 */
 
 /**
@@ -223,7 +223,7 @@ struct iwl_mac_data_p2p_sta {
  * @stats_interval: interval in TU between statistics notifications to host.
  */
 struct iwl_mac_data_pibss {
-    __le32 stats_interval;
+  __le32 stats_interval;
 } __packed; /* PIBSS_MAC_DATA_API_S_VER_1 */
 
 /*
@@ -237,7 +237,7 @@ struct iwl_mac_data_pibss {
  *  all macs.
  */
 struct iwl_mac_data_p2p_dev {
-    __le32 is_disc_extended;
+  __le32 is_disc_extended;
 } __packed; /* _P2P_DEV_MAC_DATA_API_S_VER_1 */
 
 /**
@@ -255,19 +255,19 @@ struct iwl_mac_data_p2p_dev {
  * @MAC_FILTER_IN_PROBE_REQUEST: pass probe requests to host
  */
 enum iwl_mac_filter_flags {
-    MAC_FILTER_IN_PROMISC = BIT(0),
-    MAC_FILTER_IN_CONTROL_AND_MGMT = BIT(1),
-    MAC_FILTER_ACCEPT_GRP = BIT(2),
-    MAC_FILTER_DIS_DECRYPT = BIT(3),
-    MAC_FILTER_DIS_GRP_DECRYPT = BIT(4),
-    MAC_FILTER_IN_BEACON = BIT(6),
-    MAC_FILTER_OUT_BCAST = BIT(8),
-    MAC_FILTER_IN_CRC32 = BIT(11),
-    MAC_FILTER_IN_PROBE_REQUEST = BIT(12),
-    /**
-     * @MAC_FILTER_IN_11AX: mark BSS as supporting 802.11ax
-     */
-    MAC_FILTER_IN_11AX = BIT(14),
+  MAC_FILTER_IN_PROMISC = BIT(0),
+  MAC_FILTER_IN_CONTROL_AND_MGMT = BIT(1),
+  MAC_FILTER_ACCEPT_GRP = BIT(2),
+  MAC_FILTER_DIS_DECRYPT = BIT(3),
+  MAC_FILTER_DIS_GRP_DECRYPT = BIT(4),
+  MAC_FILTER_IN_BEACON = BIT(6),
+  MAC_FILTER_OUT_BCAST = BIT(8),
+  MAC_FILTER_IN_CRC32 = BIT(11),
+  MAC_FILTER_IN_PROBE_REQUEST = BIT(12),
+  /**
+   * @MAC_FILTER_IN_11AX: mark BSS as supporting 802.11ax
+   */
+  MAC_FILTER_IN_11AX = BIT(14),
 };
 
 /**
@@ -278,9 +278,9 @@ enum iwl_mac_filter_flags {
  *
  */
 enum iwl_mac_qos_flags {
-    MAC_QOS_FLG_UPDATE_EDCA = BIT(0),
-    MAC_QOS_FLG_TGN = BIT(1),
-    MAC_QOS_FLG_TXOP_TYPE = BIT(4),
+  MAC_QOS_FLG_UPDATE_EDCA = BIT(0),
+  MAC_QOS_FLG_TGN = BIT(1),
+  MAC_QOS_FLG_TXOP_TYPE = BIT(4),
 };
 
 /**
@@ -302,11 +302,11 @@ enum iwl_mac_qos_flags {
  * value, to cap the CW value.
  */
 struct iwl_ac_qos {
-    __le16 cw_min;
-    __le16 cw_max;
-    uint8_t aifsn;
-    uint8_t fifos_mask;
-    __le16 edca_txop;
+  __le16 cw_min;
+  __le16 cw_max;
+  uint8_t aifsn;
+  uint8_t fifos_mask;
+  __le16 edca_txop;
 } __packed; /* AC_QOS_API_S_VER_2 */
 
 /**
@@ -330,44 +330,44 @@ struct iwl_ac_qos {
  * @ac: one iwl_mac_qos configuration for each AC
  */
 struct iwl_mac_ctx_cmd {
-    /* COMMON_INDEX_HDR_API_S_VER_1 */
-    __le32 id_and_color;
-    __le32 action;
-    /* MAC_CONTEXT_COMMON_DATA_API_S_VER_1 */
-    __le32 mac_type;
-    __le32 tsf_id;
-    uint8_t node_addr[6];
-    __le16 reserved_for_node_addr;
-    uint8_t bssid_addr[6];
-    __le16 reserved_for_bssid_addr;
-    __le32 cck_rates;
-    __le32 ofdm_rates;
-    __le32 protection_flags;
-    __le32 cck_short_preamble;
-    __le32 short_slot;
-    __le32 filter_flags;
-    /* MAC_QOS_PARAM_API_S_VER_1 */
-    __le32 qos_flags;
-    struct iwl_ac_qos ac[AC_NUM + 1];
-    /* MAC_CONTEXT_COMMON_DATA_API_S */
-    union {
-        struct iwl_mac_data_ap ap;
-        struct iwl_mac_data_go go;
-        struct iwl_mac_data_sta sta;
-        struct iwl_mac_data_p2p_sta p2p_sta;
-        struct iwl_mac_data_p2p_dev p2p_dev;
-        struct iwl_mac_data_pibss pibss;
-        struct iwl_mac_data_ibss ibss;
-    };
+  /* COMMON_INDEX_HDR_API_S_VER_1 */
+  __le32 id_and_color;
+  __le32 action;
+  /* MAC_CONTEXT_COMMON_DATA_API_S_VER_1 */
+  __le32 mac_type;
+  __le32 tsf_id;
+  uint8_t node_addr[6];
+  __le16 reserved_for_node_addr;
+  uint8_t bssid_addr[6];
+  __le16 reserved_for_bssid_addr;
+  __le32 cck_rates;
+  __le32 ofdm_rates;
+  __le32 protection_flags;
+  __le32 cck_short_preamble;
+  __le32 short_slot;
+  __le32 filter_flags;
+  /* MAC_QOS_PARAM_API_S_VER_1 */
+  __le32 qos_flags;
+  struct iwl_ac_qos ac[AC_NUM + 1];
+  /* MAC_CONTEXT_COMMON_DATA_API_S */
+  union {
+    struct iwl_mac_data_ap ap;
+    struct iwl_mac_data_go go;
+    struct iwl_mac_data_sta sta;
+    struct iwl_mac_data_p2p_sta p2p_sta;
+    struct iwl_mac_data_p2p_dev p2p_dev;
+    struct iwl_mac_data_pibss pibss;
+    struct iwl_mac_data_ibss ibss;
+  };
 } __packed; /* MAC_CONTEXT_CMD_API_S_VER_1 */
 
 #define IWL_NONQOS_SEQ_GET 0x1
 #define IWL_NONQOS_SEQ_SET 0x2
 struct iwl_nonqos_seq_query_cmd {
-    __le32 get_set_flag;
-    __le32 mac_id_n_color;
-    __le16 value;
-    __le16 reserved;
+  __le32 get_set_flag;
+  __le32 mac_id_n_color;
+  __le16 value;
+  __le16 reserved;
 } __packed; /* NON_QOS_TX_COUNTER_GET_SET_API_S_VER_1 */
 
 /**
@@ -381,11 +381,11 @@ struct iwl_nonqos_seq_query_cmd {
  * @num_recvd_beacons: number of received beacons
  */
 struct iwl_missed_beacons_notif {
-    __le32 mac_id;
-    __le32 consec_missed_beacons_since_last_rx;
-    __le32 consec_missed_beacons;
-    __le32 num_expected_beacons;
-    __le32 num_recvd_beacons;
+  __le32 mac_id;
+  __le32 consec_missed_beacons_since_last_rx;
+  __le32 consec_missed_beacons;
+  __le32 num_expected_beacons;
+  __le32 num_recvd_beacons;
 } __packed; /* MISSED_BEACON_NTFY_API_S_VER_3 */
 
 /**
@@ -402,10 +402,10 @@ struct iwl_missed_beacons_notif {
  * @mu_time: MU time in 8TU units
  */
 struct iwl_he_backoff_conf {
-    __le16 cwmin;
-    __le16 cwmax;
-    __le16 aifsn;
-    __le16 mu_time;
+  __le16 cwmin;
+  __le16 cwmax;
+  __le16 aifsn;
+  __le16 mu_time;
 } __packed; /* AC_QOS_DOT11AX_API_S */
 
 #define MAX_HE_SUPP_NSS 2
@@ -432,7 +432,7 @@ struct iwl_he_backoff_conf {
  *  (0-low_th, 1-high_th)
  */
 struct iwl_he_pkt_ext {
-    uint8_t pkt_ext_qam_th[MAX_HE_SUPP_NSS][MAX_HE_CHANNEL_BW_INDX][2];
+  uint8_t pkt_ext_qam_th[MAX_HE_SUPP_NSS][MAX_HE_CHANNEL_BW_INDX][2];
 } __packed; /* PKT_EXT_DOT11AX_API_S */
 
 /**
@@ -459,16 +459,16 @@ struct iwl_he_pkt_ext {
  *  len delim to determine if AGG or single.
  */
 enum iwl_he_sta_ctxt_flags {
-    STA_CTXT_HE_REF_BSSID_VALID = BIT(4),
-    STA_CTXT_HE_BSS_COLOR_DIS = BIT(5),
-    STA_CTXT_HE_PARTIAL_BSS_COLOR = BIT(6),
-    STA_CTXT_HE_32BIT_BA_BITMAP = BIT(7),
-    STA_CTXT_HE_PACKET_EXT = BIT(8),
-    STA_CTXT_HE_TRIG_RND_ALLOC = BIT(9),
-    STA_CTXT_HE_CONST_TRIG_RND_ALLOC = BIT(10),
-    STA_CTXT_HE_ACK_ENABLED = BIT(11),
-    STA_CTXT_HE_MU_EDCA_CW = BIT(12),
-    STA_CTXT_HE_NIC_NOT_ACK_ENABLED = BIT(13),
+  STA_CTXT_HE_REF_BSSID_VALID = BIT(4),
+  STA_CTXT_HE_BSS_COLOR_DIS = BIT(5),
+  STA_CTXT_HE_PARTIAL_BSS_COLOR = BIT(6),
+  STA_CTXT_HE_32BIT_BA_BITMAP = BIT(7),
+  STA_CTXT_HE_PACKET_EXT = BIT(8),
+  STA_CTXT_HE_TRIG_RND_ALLOC = BIT(9),
+  STA_CTXT_HE_CONST_TRIG_RND_ALLOC = BIT(10),
+  STA_CTXT_HE_ACK_ENABLED = BIT(11),
+  STA_CTXT_HE_MU_EDCA_CW = BIT(12),
+  STA_CTXT_HE_NIC_NOT_ACK_ENABLED = BIT(13),
 };
 
 /**
@@ -481,11 +481,11 @@ enum iwl_he_sta_ctxt_flags {
  * @IWL_HE_HTC_BQR_SUPP: A-BQR support in A-control field
  */
 enum iwl_he_htc_flags {
-    IWL_HE_HTC_SUPPORT = BIT(0),
-    IWL_HE_HTC_UL_MU_RESP_SCHED = BIT(3),
-    IWL_HE_HTC_BSR_SUPP = BIT(4),
-    IWL_HE_HTC_OMI_SUPP = BIT(5),
-    IWL_HE_HTC_BQR_SUPP = BIT(6),
+  IWL_HE_HTC_SUPPORT = BIT(0),
+  IWL_HE_HTC_UL_MU_RESP_SCHED = BIT(3),
+  IWL_HE_HTC_BSR_SUPP = BIT(4),
+  IWL_HE_HTC_OMI_SUPP = BIT(5),
+  IWL_HE_HTC_BQR_SUPP = BIT(6),
 };
 
 /*
@@ -524,39 +524,39 @@ enum iwl_he_htc_flags {
  * @trig_based_txf: MU EDCA Parameter set for the trigger based traffic queues
  */
 struct iwl_he_sta_context_cmd {
-    uint8_t sta_id;
-    uint8_t tid_limit;
-    uint8_t reserved1;
-    uint8_t reserved2;
-    __le32 flags;
+  uint8_t sta_id;
+  uint8_t tid_limit;
+  uint8_t reserved1;
+  uint8_t reserved2;
+  __le32 flags;
 
-    /* The below fields are set via Multiple BSSID IE */
-    uint8_t ref_bssid_addr[6];
-    __le16 reserved0;
+  /* The below fields are set via Multiple BSSID IE */
+  uint8_t ref_bssid_addr[6];
+  __le16 reserved0;
 
-    /* The below fields are set via HE-capabilities IE */
-    __le32 htc_flags;
+  /* The below fields are set via HE-capabilities IE */
+  __le32 htc_flags;
 
-    uint8_t frag_flags;
-    uint8_t frag_level;
-    uint8_t frag_max_num;
-    uint8_t frag_min_size;
+  uint8_t frag_flags;
+  uint8_t frag_level;
+  uint8_t frag_max_num;
+  uint8_t frag_min_size;
 
-    /* The below fields are set via PPE thresholds element */
-    struct iwl_he_pkt_ext pkt_ext;
+  /* The below fields are set via PPE thresholds element */
+  struct iwl_he_pkt_ext pkt_ext;
 
-    /* The below fields are set via HE-Operation IE */
-    uint8_t bss_color;
-    uint8_t htc_trig_based_pkt_ext;
-    __le16 frame_time_rts_th;
+  /* The below fields are set via HE-Operation IE */
+  uint8_t bss_color;
+  uint8_t htc_trig_based_pkt_ext;
+  __le16 frame_time_rts_th;
 
-    /* Random access parameter set (i.e. RAPS) */
-    uint8_t rand_alloc_ecwmin;
-    uint8_t rand_alloc_ecwmax;
-    __le16 reserved3;
+  /* Random access parameter set (i.e. RAPS) */
+  uint8_t rand_alloc_ecwmin;
+  uint8_t rand_alloc_ecwmax;
+  __le16 reserved3;
 
-    /* The below fields are set via MU EDCA parameter set element */
-    struct iwl_he_backoff_conf trig_based_txf[AC_NUM];
+  /* The below fields are set via MU EDCA parameter set element */
+  struct iwl_he_backoff_conf trig_based_txf[AC_NUM];
 } __packed; /* STA_CONTEXT_DOT11AX_API_S */
 
 /**
@@ -567,10 +567,10 @@ struct iwl_he_sta_context_cmd {
  * @reserved2: reserved for future use
  */
 struct iwl_he_monitor_cmd {
-    uint8_t bssid[6];
-    __le16 reserved1;
-    __le16 aid;
-    uint8_t reserved2[6];
+  uint8_t bssid[6];
+  __le16 reserved1;
+  __le16 aid;
+  uint8_t reserved2[6];
 } __packed; /* HE_AIR_SNIFFER_CONFIG_CMD_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_MAC_H_

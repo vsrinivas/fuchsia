@@ -32,88 +32,88 @@
 #define IEEE80211_NUM_TIDS 16
 
 enum nl80211_band {
-    NL80211_BAND_2GHZ,
-    NL80211_BAND_5GHZ,
-    NL80211_BAND_60GHZ,
+  NL80211_BAND_2GHZ,
+  NL80211_BAND_5GHZ,
+  NL80211_BAND_60GHZ,
 
-    NUM_NL80211_BANDS,
+  NUM_NL80211_BANDS,
 };
 
 enum nl80211_chan_width {
-    NL80211_CHAN_WIDTH_20_NOHT,
-    NL80211_CHAN_WIDTH_20,
-    NL80211_CHAN_WIDTH_40,
-    NL80211_CHAN_WIDTH_80,
-    NL80211_CHAN_WIDTH_80P80,
-    NL80211_CHAN_WIDTH_160,
-    NL80211_CHAN_WIDTH_5,
-    NL80211_CHAN_WIDTH_10,
+  NL80211_CHAN_WIDTH_20_NOHT,
+  NL80211_CHAN_WIDTH_20,
+  NL80211_CHAN_WIDTH_40,
+  NL80211_CHAN_WIDTH_80,
+  NL80211_CHAN_WIDTH_80P80,
+  NL80211_CHAN_WIDTH_160,
+  NL80211_CHAN_WIDTH_5,
+  NL80211_CHAN_WIDTH_10,
 };
 
 enum nl80211_iftype {
-    NL80211_IFTYPE_UNSPECIFIED,
-    NL80211_IFTYPE_ADHOC,
-    NL80211_IFTYPE_STATION,
-    NL80211_IFTYPE_AP,
-    NL80211_IFTYPE_AP_VLAN,
-    NL80211_IFTYPE_WDS,
-    NL80211_IFTYPE_MONITOR,
-    NL80211_IFTYPE_MESH_POINT,
-    NL80211_IFTYPE_P2P_CLIENT,
-    NL80211_IFTYPE_P2P_GO,
-    NL80211_IFTYPE_P2P_DEVICE,
-    NL80211_IFTYPE_OCB,
-    NL80211_IFTYPE_NAN,
+  NL80211_IFTYPE_UNSPECIFIED,
+  NL80211_IFTYPE_ADHOC,
+  NL80211_IFTYPE_STATION,
+  NL80211_IFTYPE_AP,
+  NL80211_IFTYPE_AP_VLAN,
+  NL80211_IFTYPE_WDS,
+  NL80211_IFTYPE_MONITOR,
+  NL80211_IFTYPE_MESH_POINT,
+  NL80211_IFTYPE_P2P_CLIENT,
+  NL80211_IFTYPE_P2P_GO,
+  NL80211_IFTYPE_P2P_DEVICE,
+  NL80211_IFTYPE_OCB,
+  NL80211_IFTYPE_NAN,
 
-    /* keep last */
-    NUM_NL80211_IFTYPES,
-    NL80211_IFTYPE_MAX = NUM_NL80211_IFTYPES - 1
+  /* keep last */
+  NUM_NL80211_IFTYPES,
+  NL80211_IFTYPE_MAX = NUM_NL80211_IFTYPES - 1
 };
 
 enum ieee80211_ac_numbers {
-    IEEE80211_AC_VO     = 0,
-    IEEE80211_AC_VI     = 1,
-    IEEE80211_AC_BE     = 2,
-    IEEE80211_AC_BK     = 3,
+  IEEE80211_AC_VO = 0,
+  IEEE80211_AC_VI = 1,
+  IEEE80211_AC_BE = 2,
+  IEEE80211_AC_BK = 3,
 };
 
 enum ieee80211_frame_release_type {
-    IEEE80211_FRAME_RELEASE_PSPOLL,
-    IEEE80211_FRAME_RELEASE_UAPSD,
+  IEEE80211_FRAME_RELEASE_PSPOLL,
+  IEEE80211_FRAME_RELEASE_UAPSD,
 };
 
 // IEEE Std 802.11-2016, 9.4.2.56.3, Table 9-163
 enum ieee80211_max_ampdu_length_exp {
-    IEEE80211_HT_MAX_AMPDU_8K = 0,
-    IEEE80211_HT_MAX_AMPDU_16K = 1,
-    IEEE80211_HT_MAX_AMPDU_32K = 2,
-    IEEE80211_HT_MAX_AMPDU_64K = 3
+  IEEE80211_HT_MAX_AMPDU_8K = 0,
+  IEEE80211_HT_MAX_AMPDU_16K = 1,
+  IEEE80211_HT_MAX_AMPDU_32K = 2,
+  IEEE80211_HT_MAX_AMPDU_64K = 3
 };
 
 enum ieee80211_roc_type {
-    IEEE80211_ROC_TYPE_NORMAL = 0,
-    IEEE80211_ROC_TYPE_MGMT_TX,
+  IEEE80211_ROC_TYPE_NORMAL = 0,
+  IEEE80211_ROC_TYPE_MGMT_TX,
 };
 
 enum ieee80211_rssi_event_data {
-    RSSI_EVENT_HIGH,
-    RSSI_EVENT_LOW,
+  RSSI_EVENT_HIGH,
+  RSSI_EVENT_LOW,
 };
 
 enum ieee80211_smps_mode {
-    IEEE80211_SMPS_AUTOMATIC,
-    IEEE80211_SMPS_OFF,
-    IEEE80211_SMPS_STATIC,
-    IEEE80211_SMPS_DYNAMIC,
-    IEEE80211_SMPS_NUM_MODES,
+  IEEE80211_SMPS_AUTOMATIC,
+  IEEE80211_SMPS_OFF,
+  IEEE80211_SMPS_STATIC,
+  IEEE80211_SMPS_DYNAMIC,
+  IEEE80211_SMPS_NUM_MODES,
 };
 
 enum ieee80211_sta_state {
-    IEEE80211_STA_NOTEXIST,
-    IEEE80211_STA_NONE,
-    IEEE80211_STA_AUTH,
-    IEEE80211_STA_ASSOC,
-    IEEE80211_STA_AUTHORIZED,
+  IEEE80211_STA_NOTEXIST,
+  IEEE80211_STA_NONE,
+  IEEE80211_STA_AUTH,
+  IEEE80211_STA_ASSOC,
+  IEEE80211_STA_AUTHORIZED,
 };
 
 // NEEDS_PORTING: Below structures are only referenced in function prototype.
@@ -131,69 +131,70 @@ struct ieee80211_scan_ies;
 struct ieee80211_tdls_ch_sw_params;
 
 // NEEDS_PORTING: Below structures are used in code but not ported yet.
-// A dummy byte is required to suppress the C++ warning message for empty struct.
+// A dummy byte is required to suppress the C++ warning message for empty
+// struct.
 struct cfg80211_chan_def {
-    char dummy;
+  char dummy;
 };
 
 struct ieee80211_channel {
-    char dummy;
+  char dummy;
 };
 
 struct ieee80211_cipher_scheme {
-    char dummy;
+  char dummy;
 };
 
 struct ieee80211_hdr {
-    char dummy;
+  char dummy;
 };
 
 struct ieee80211_ops {
-    char dummy;
+  char dummy;
 };
 
 struct ieee80211_p2p_noa_desc {
-    char dummy;
+  char dummy;
 };
 
 struct ieee80211_supported_band {
-    char dummy;
+  char dummy;
 };
 
 struct ieee80211_tx_queue_params {
-    char dummy;
+  char dummy;
 };
 
 struct ieee80211_tx_rate {
-    char dummy;
+  char dummy;
 };
 
 // dummy structs
 struct ieee80211_hw {
-    void* priv;
+  void* priv;
 };
 
 struct ieee80211_txq;
 struct ieee80211_sta {
-    void* drv_priv;
-    struct ieee80211_txq *txq[IEEE80211_NUM_TIDS + 1];
+  void* drv_priv;
+  struct ieee80211_txq* txq[IEEE80211_NUM_TIDS + 1];
 };
 
 struct ieee80211_tx_info {
-    void* driver_data[8];
+  void* driver_data[8];
 };
 
 struct ieee80211_txq {
-    void* drv_priv;
+  void* drv_priv;
 };
 
 struct ieee80211_vif {
-    void* drv_priv;
+  void* drv_priv;
 };
 
-static inline struct ieee80211_hw *ieee80211_alloc_hw(size_t priv_data_len,
-                                                      const struct ieee80211_ops *ops) {
-    return NULL;  // NEEDS_PORTING
+static inline struct ieee80211_hw* ieee80211_alloc_hw(
+    size_t priv_data_len, const struct ieee80211_ops* ops) {
+  return NULL;  // NEEDS_PORTING
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IEEE80211_H_

@@ -27,12 +27,11 @@ extern "C" {
 namespace {
 
 class DummyTest : public testing::Test {
-   public:
-    DummyTest() {}
-    ~DummyTest() {}
+ public:
+  DummyTest() {}
+  ~DummyTest() {}
 };
 
-TEST_F(DummyTest, DummyTestFunction) {
-}
+TEST_F(DummyTest, DummyTestFunction) {}
 
 }  // namespace

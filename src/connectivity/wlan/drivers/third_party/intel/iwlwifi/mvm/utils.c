@@ -40,7 +40,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 /*
  * Will return 0 even if the cmd failed when RFKILL is asserted unless
  * CMD_WANT_SKB is set in cmd->flags.
@@ -175,49 +175,52 @@ int iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16_t len, 
  * Translate from fw_rate_index (IWL_RATE_XXM_INDEX) to PLCP
  */
 static const uint8_t fw_rate_idx_to_plcp[IWL_RATE_COUNT] = {
-    IWL_DECLARE_RATE_INFO(1),  IWL_DECLARE_RATE_INFO(2),  IWL_DECLARE_RATE_INFO(5),
-    IWL_DECLARE_RATE_INFO(11), IWL_DECLARE_RATE_INFO(6),  IWL_DECLARE_RATE_INFO(9),
-    IWL_DECLARE_RATE_INFO(12), IWL_DECLARE_RATE_INFO(18), IWL_DECLARE_RATE_INFO(24),
-    IWL_DECLARE_RATE_INFO(36), IWL_DECLARE_RATE_INFO(48), IWL_DECLARE_RATE_INFO(54),
+    IWL_DECLARE_RATE_INFO(1),  IWL_DECLARE_RATE_INFO(2),
+    IWL_DECLARE_RATE_INFO(5),  IWL_DECLARE_RATE_INFO(11),
+    IWL_DECLARE_RATE_INFO(6),  IWL_DECLARE_RATE_INFO(9),
+    IWL_DECLARE_RATE_INFO(12), IWL_DECLARE_RATE_INFO(18),
+    IWL_DECLARE_RATE_INFO(24), IWL_DECLARE_RATE_INFO(36),
+    IWL_DECLARE_RATE_INFO(48), IWL_DECLARE_RATE_INFO(54),
 };
 
-zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, enum nl80211_band band,
+zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags,
+                                                enum nl80211_band band,
                                                 int* ptr_idx) {
-    int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
-    int idx;
-    int band_offset = 0;
+  int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
+  int idx;
+  int band_offset = 0;
 
-    // Sanity-check
-    if (band >= NUM_NL80211_BANDS) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    if (!ptr_idx) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (band == NL80211_BAND_60GHZ) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+  // Sanity-check
+  if (band >= NUM_NL80211_BANDS) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  if (!ptr_idx) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (band == NL80211_BAND_60GHZ) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    /* Legacy rate format, search for match in table */
-    if (band == NL80211_BAND_5GHZ) {
-        band_offset = IWL_FIRST_OFDM_RATE;
+  /* Legacy rate format, search for match in table */
+  if (band == NL80211_BAND_5GHZ) {
+    band_offset = IWL_FIRST_OFDM_RATE;
+  }
+  for (idx = band_offset; idx < IWL_RATE_COUNT_LEGACY; idx++) {
+    if (fw_rate_idx_to_plcp[idx] == rate) {
+      *ptr_idx = idx - band_offset;
+      return ZX_OK;
     }
-    for (idx = band_offset; idx < IWL_RATE_COUNT_LEGACY; idx++) {
-        if (fw_rate_idx_to_plcp[idx] == rate) {
-            *ptr_idx = idx - band_offset;
-            return ZX_OK;
-        }
-    }
+  }
 
-    return ZX_ERR_NOT_FOUND;
+  return ZX_ERR_NOT_FOUND;
 }
 
 uint8_t iwl_mvm_mac80211_idx_to_hwrate(int rate_idx) {
-    /* Get PLCP rate for tx_cmd->rate_n_flags */
-    return fw_rate_idx_to_plcp[rate_idx];
+  /* Get PLCP rate for tx_cmd->rate_n_flags */
+  return fw_rate_idx_to_plcp[rate_idx];
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 void iwl_mvm_rx_fw_error(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_error_resp* err_resp = (void*)pkt->data;

@@ -15,11 +15,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
 
+#include <netinet/if_ether.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <netinet/if_ether.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -58,7 +57,9 @@ typedef char* acpi_string;
 
 #define IS_ENABLED(x) (false)
 
-#define lockdep_assert_held(x) do {} while (0)
+#define lockdep_assert_held(x) \
+  do {                         \
+  } while (0)
 #define pr_err(fmt, args...) zxlogf(ERROR, fmt, args)
 #define __aligned(x) __attribute__((aligned(x)))
 #define __bitwise
@@ -67,7 +68,7 @@ typedef char* acpi_string;
 #define __init
 #define __must_check __attribute__((warn_unused_result))
 #define __packed __PACKED
-#define __rcu  // NEEDS_PORTING
+#define __rcu                         // NEEDS_PORTING
 #define ____cacheline_aligned_in_smp  // NEEDS_PORTING
 
 // NEEDS_PORTING: Need to check if 'x' is static array.
@@ -75,26 +76,28 @@ typedef char* acpi_string;
 
 // NEEDS_PORTING
 #define WARN(x, y, z) \
-    do {              \
-    } while (0)
+  do {                \
+  } while (0)
 #define WARN_ON(x) (false)
 #define WARN_ON_ONCE(x) (false)
 #define BUILD_BUG_ON(x) (false)
 
-#define offsetofend(type, member) (offsetof(type, member) + sizeof(((type*)NULL)->member))
+#define offsetofend(type, member) \
+  (offsetof(type, member) + sizeof(((type*)NULL)->member))
 
 // NEEDS_PORTING: need to be generic
-#define roundup_pow_of_two(x)     \
-    (x >= 0x100 ? 0xFFFFFFFF :    \
-     x >= 0x080 ? 0x100 :         \
-     x >= 0x040 ? 0x080 :         \
-     x >= 0x020 ? 0x040 :         \
-     x >= 0x010 ? 0x020 :         \
-     x >= 0x008 ? 0x010 :         \
-     x >= 0x004 ? 0x008 :         \
-     x >= 0x002 ? 0x004 :         \
-     x >= 0x001 ? 0x002 : 1)
-
+// clang-format off
+#define roundup_pow_of_two(x)  \
+  (x >= 0x100 ? 0xFFFFFFFF :   \
+   x >= 0x080 ? 0x100 :        \
+   x >= 0x040 ? 0x080 :        \
+   x >= 0x020 ? 0x040 :        \
+   x >= 0x010 ? 0x020 :        \
+   x >= 0x008 ? 0x010 :        \
+   x >= 0x004 ? 0x008 :        \
+   x >= 0x002 ? 0x004 :        \
+   x >= 0x001 ? 0x002 : 1)
+// clang-format on
 
 // NEEDS_PORTING: need protection while accessing the variable.
 #define rcu_dereference(p) (p)
@@ -104,8 +107,12 @@ typedef char* acpi_string;
 #define READ_ONCE(x) (x)
 
 // NEEDS_PORTING: implement this
-#define rcu_read_lock() do {} while (0);
-#define rcu_read_unlock() do {} while (0);
+#define rcu_read_lock() \
+  do {                  \
+  } while (0);
+#define rcu_read_unlock() \
+  do {                    \
+  } while (0);
 
 // NEEDS_PORTING: Below structures are only referenced in function prototype.
 //                Doesn't need a dummy byte.
@@ -115,57 +122,58 @@ struct wait_queue;
 struct wiphy;
 
 // NEEDS_PORTING: Below structures are used in code but not ported yet.
-// A dummy byte is required to suppress the C++ warning message for empty struct.
+// A dummy byte is required to suppress the C++ warning message for empty
+// struct.
 struct delayed_work {
-    char dummy;
+  char dummy;
 };
 
 struct ewma_rate {
-    char dummy;
+  char dummy;
 };
 
 struct inet6_dev;
 
 struct mac_address {
-    char dummy;
+  char dummy;
 };
 
 struct napi_struct {
-    char dummy;
+  char dummy;
 };
 
 struct rcu_head {
-    char dummy;
+  char dummy;
 };
 
 struct sk_buff_head {
-    char dummy;
+  char dummy;
 };
 
 struct timer_list {
-    char dummy;
+  char dummy;
 };
 
 struct wait_queue_head {
-    char dummy;
+  char dummy;
 };
 
 struct work_struct {
-    char dummy;
+  char dummy;
 };
 
 struct firmware {
-    zx_handle_t vmo;
-    uint8_t* data;
-    size_t size;
+  zx_handle_t vmo;
+  uint8_t* data;
+  size_t size;
 };
 
 struct page {
-    void* virtual_addr;
+  void* virtual_addr;
 };
 
 struct wireless_dev {
-    enum nl80211_iftype iftype;
+  enum nl80211_iftype iftype;
 };
 
 ////
@@ -179,45 +187,38 @@ typedef struct wait_queue_head wait_queue_head_t;
 ////
 
 static inline int test_bit(int nbits, const volatile unsigned long* addr) {
-    return 1UL & (addr[nbits / BITS_PER_LONG] >> (nbits % BITS_PER_LONG));
+  return 1UL & (addr[nbits / BITS_PER_LONG] >> (nbits % BITS_PER_LONG));
 }
 
 static inline void set_bit(int nbits, unsigned long* addr) {
-    addr[nbits / BITS_PER_LONG] |= 1UL << (nbits % BITS_PER_LONG);
+  addr[nbits / BITS_PER_LONG] |= 1UL << (nbits % BITS_PER_LONG);
 }
 #define __set_bit set_bit
 
 static inline void clear_bit(int nbits, volatile unsigned long* addr) {
-    addr[nbits / BITS_PER_LONG] &= ~(1UL << (nbits % BITS_PER_LONG));
+  addr[nbits / BITS_PER_LONG] &= ~(1UL << (nbits % BITS_PER_LONG));
 }
 
 static inline void might_sleep() {}
 
-static inline void* vmalloc(unsigned long size) {
-    return malloc(size);
-}
+static inline void* vmalloc(unsigned long size) { return malloc(size); }
 
 static inline void* kmemdup(const void* src, size_t len) {
-    void* dst = malloc(len);
-    memcpy(dst, src, len);
-    return dst;
+  void* dst = malloc(len);
+  memcpy(dst, src, len);
+  return dst;
 }
 
-static inline void vfree(const void* addr) {
-    free((void*)addr);
+static inline void vfree(const void* addr) { free((void*)addr); }
+
+static inline void kfree(void* addr) { free(addr); }
+
+static inline bool IS_ERR_OR_NULL(const void* ptr) {
+  return !ptr || (((unsigned long)ptr) >= (unsigned long)-4095);
 }
 
-static inline void kfree(void* addr) {
-    free(addr);
-}
-
-static inline bool IS_ERR_OR_NULL(const void *ptr) {
-    return !ptr || (((unsigned long)ptr) >= (unsigned long)-4095);
-}
-
-static inline void *page_address(const struct page *page)
-{
-    return page->virtual_addr;
+static inline void* page_address(const struct page* page) {
+  return page->virtual_addr;
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
