@@ -671,7 +671,7 @@ where
             }
         }
 
-        writeln!(self.writer, "{}", self.decorator.decorate(line)).expect("should not fail");
+        writeln!(self.writer, "{}", self.decorator.decorate(line)).expect("log_listener: not able to write logs");
 
         if message.dropped_logs > 0
             && self
@@ -689,7 +689,7 @@ where
                 tags,
                 message.dropped_logs
             )
-            .expect("should not fail");
+            .expect("log_listener: not able to write dropped logs count");
             self.dropped_logs.insert(message.pid, message.dropped_logs);
         }
     }
@@ -799,10 +799,10 @@ mod tests {
 
     #[test]
     fn test_log_fn() {
-        let _executor = fasync::Executor::new().expect("unable to create executor");
-        let tmp_dir = TempDir::new().expect("should have created tempdir");
+        let _executor = fasync::Executor::new().expect("log_listener: unable to create executor");
+        let tmp_dir = TempDir::new().expect("log_listener: should have created tempdir");
         let file_path = tmp_dir.path().join("tmp_file");
-        let tmp_file = File::create(&file_path).expect("should have created file");
+        let tmp_file = File::create(&file_path).expect("log_listener: should have created file");
 
         let mut l = Listener::new(tmp_file, LocalOptions::default(), Decorator::new());
 
