@@ -47,7 +47,6 @@ impl CloudSessionShared {
         self.network_state.get()
     }
 
-    #[allow(unused)]
     pub fn set_network_state(&self, new_state: ConnectionState) {
         if new_state == self.network_state.get() {
             return;

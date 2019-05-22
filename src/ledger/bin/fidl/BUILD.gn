@@ -39,3 +39,15 @@ source_set("error_notifier") {
 
   configs += [ "//src/ledger:ledger_config" ]
 }
+
+fidl("cloud-test") {
+  name = "fuchsia.ledger.cloud.test"
+
+  sources = [
+    "cloud_controller.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ledger.cloud",
+  ]
+}
