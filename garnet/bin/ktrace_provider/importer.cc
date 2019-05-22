@@ -30,6 +30,9 @@ constexpr trace_ticks_t kInheritPriorityFlowOffset = 10;
 // Synthetic width for the futex events.
 constexpr trace_ticks_t kFutexOpPriorityDurationWidth = 50;
 
+// Synthetic width for the kernel mutex events.
+constexpr trace_ticks_t kKernelMutexOpPriorityDurationWidth = 50;
+
 // The kernel reports different thread state values through ktrace.
 // These values must line up with those in "kernel/include/kernel/thread.h".
 constexpr trace_thread_state_t ToTraceThreadState(int value) {
@@ -102,6 +105,19 @@ Importer::Importer(trace_context_t* context)
       futex_count_name_ref_(MAKE_STRING("count")),
       futex_was_requeue_name_ref_(MAKE_STRING("was_requeue")),
       futex_was_active_name_ref_(MAKE_STRING("futex_was_active")),
+      // Kernel Mutex operation related strings
+      kernel_mutex_acquire_name_ref_(MAKE_STRING("kernel_mutex_acquire")),
+      kernel_mutex_block_name_ref_(MAKE_STRING("kernel_mutex_block")),
+      kernel_mutex_release_name_ref_(MAKE_STRING("kernel_mutex_release")),
+      kernel_mutex_mutex_id_name_ref_(MAKE_STRING("mutex_id")),
+      kernel_mutex_tid_name_ref_(MAKE_STRING("tid")),
+      kernel_mutex_tid_type_ref_(MAKE_STRING("tid_type")),
+      kernel_mutex_tid_type_user_ref_(MAKE_STRING("user_mode")),
+      kernel_mutex_tid_type_kernel_ref_(MAKE_STRING("kernel_mode")),
+      kernel_mutex_tid_type_none_ref_(MAKE_STRING("none")),
+      kernel_mutex_waiter_count_name_ref_(MAKE_STRING("waiter_count")),
+      // misc strings
+      misc_unknown_name_ref_(MAKE_STRING("unknown")),
       kUnknownThreadRef(trace_make_unknown_thread_ref()) {}
 
 #undef MAKE_STRING
@@ -206,7 +222,8 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
               << record->a << ", b=0x" << record->b << ", c=0x" << record->c
               << ", d=0x" << record->d;
 
-  switch (KTRACE_EVENT(record->tag)) {
+  const uint32_t event_id = KTRACE_EVENT(record->tag);
+  switch (event_id) {
     case KTRACE_EVENT(TAG_VERSION):
       version_ = record->a;
       return true;
@@ -302,6 +319,16 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
 
       return HandleFutexRequeue(record->ts, futex_id, owner_tid, count, flags,
                                 cpu);
+    }
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_ACQUIRE):
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_RELEASE):
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_BLOCK): {
+      auto cpu = static_cast<trace_cpu_number_t>(
+          record->d & KTRACE_FLAGS_KERNEL_MUTEX_CPUID_MASK);
+      uint32_t flags = (record->d & KTRACE_FLAGS_KERNEL_MUTEX_FLAGS_MASK);
+
+      return HandleKernelMutexEvent(record->ts, event_id, record->a, record->b,
+                                    record->c, flags, cpu);
     }
     case KTRACE_EVENT(TAG_OBJECT_DELETE):
       return HandleObjectDelete(record->ts, record->tid, record->a);
@@ -805,6 +832,56 @@ bool Importer::HandleFutexRequeue(trace_ticks_t event_time, uint64_t futex_id,
   trace_context_write_duration_event_record(
       context_, event_time, end_time, &thread_ref, &sched_category_ref_,
       &futex_requeue_name_ref_, args, fbl::count_of(args));
+
+  return true;
+}
+
+bool Importer::HandleKernelMutexEvent(trace_ticks_t event_time,
+                                      uint32_t which_event, uint32_t mutex_id,
+                                      uint32_t tid, uint32_t waiter_count,
+                                      uint32_t flags,
+                                      trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  auto tid_type = trace_make_string_arg_value(kernel_mutex_tid_type_none_ref_);
+  if (tid != 0) {
+    tid_type =
+        (flags & KTRACE_FLAGS_KERNEL_MUTEX_USER_MODE_TID)
+            ? trace_make_string_arg_value(kernel_mutex_tid_type_user_ref_)
+            : trace_make_string_arg_value(kernel_mutex_tid_type_kernel_ref_);
+  }
+
+  trace_arg_t args[] = {
+      trace_make_arg(kernel_mutex_mutex_id_name_ref_,
+                     trace_make_uint32_arg_value(mutex_id)),
+      trace_make_arg(kernel_mutex_tid_name_ref_,
+                     trace_make_uint32_arg_value(tid)),
+      trace_make_arg(kernel_mutex_tid_type_ref_, tid_type),
+      trace_make_arg(kernel_mutex_waiter_count_name_ref_,
+                     trace_make_uint32_arg_value(waiter_count)),
+  };
+
+  const trace_ticks_t end_time =
+      event_time + kKernelMutexOpPriorityDurationWidth;
+
+  const trace_string_ref_t* event_name = nullptr;
+  switch (which_event) {
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_ACQUIRE):
+      event_name = &kernel_mutex_acquire_name_ref_;
+      break;
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_RELEASE):
+      event_name = &kernel_mutex_release_name_ref_;
+      break;
+    case KTRACE_EVENT(TAG_KERNEL_MUTEX_BLOCK):
+      event_name = &kernel_mutex_block_name_ref_;
+      break;
+    default:
+      event_name = &misc_unknown_name_ref_;
+      break;
+  }
+
+  trace_context_write_duration_event_record(
+      context_, event_time, end_time, &thread_ref, &sched_category_ref_,
+      event_name, args, fbl::count_of(args));
 
   return true;
 }

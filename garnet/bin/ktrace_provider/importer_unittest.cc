@@ -187,6 +187,15 @@ class TestImporter : public ::testing::Test {
                        assigned_owner_tid, flags);
   }
 
+  void EmitKernelMutexRecord(uint32_t tag, uint64_t ts, uint32_t mutex_addr,
+                             uint32_t tid, uint32_t threads_blocked,
+                             uint8_t cpu_id, bool user_mode_tid) {
+    uint32_t flags =
+        cpu_id | (user_mode_tid ? KTRACE_FLAGS_KERNEL_MUTEX_USER_MODE_TID : 0);
+
+    EmitKtrace32Record(tag, 0, ts, mutex_addr, tid, threads_blocked, flags);
+  }
+
   bool StopTracingAndImportRecords(fbl::Vector<trace::Record>* out_records) {
     TestReader reader{ktrace_buffer(), ktrace_buffer_written()};
     Importer importer{context()};
@@ -482,5 +491,68 @@ TEST_F(TestImporter, FutexRecords) {
   }
 }
 
+TEST_F(TestImporter, KernelMutexRecords) {
+  // Emit records of the three main type: Acquire, Release, and Block
+  const uint32_t TAGS[] = {
+      TAG_KERNEL_MUTEX_ACQUIRE,
+      TAG_KERNEL_MUTEX_RELEASE,
+      TAG_KERNEL_MUTEX_BLOCK,
+  };
+
+  uint64_t ts = 0;
+  for (auto tag : TAGS) {
+    ts += 100;
+    EmitKernelMutexRecord(tag,
+                          ts,        // ts
+                          87654321,  // mutex addr
+                          77777777,  // tid
+                          0,         // threads blocked
+                          0,         // cpu_id
+                          false);    // is user mode id
+
+    ts += 100;
+    EmitKernelMutexRecord(tag,
+                          ts,        // ts
+                          87654321,  // mutex addr
+                          22222222,  // tid
+                          1,         // threads blocked
+                          1,         // cpu_id
+                          true);     // is user mode id
+  }
+
+  static const char* const expected[] = {
+      "Event(ts: 100, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"kernel_mutex_acquire\", DurationComplete(end_ts: 150), {mutex_id: "
+      "uint32(87654321), tid: uint32(77777777), tid_type: "
+      "string(\"kernel_mode\"), waiter_count: uint32(0)})",
+      "Event(ts: 200, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"kernel_mutex_acquire\", DurationComplete(end_ts: 250), {mutex_id: "
+      "uint32(87654321), tid: uint32(22222222), tid_type: "
+      "string(\"user_mode\"), waiter_count: uint32(1)})",
+      "Event(ts: 300, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"kernel_mutex_release\", DurationComplete(end_ts: 350), {mutex_id: "
+      "uint32(87654321), tid: uint32(77777777), tid_type: "
+      "string(\"kernel_mode\"), waiter_count: uint32(0)})",
+      "Event(ts: 400, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"kernel_mutex_release\", DurationComplete(end_ts: 450), {mutex_id: "
+      "uint32(87654321), tid: uint32(22222222), tid_type: "
+      "string(\"user_mode\"), waiter_count: uint32(1)})",
+      "Event(ts: 500, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"kernel_mutex_block\", DurationComplete(end_ts: 550), {mutex_id: "
+      "uint32(87654321), tid: uint32(77777777), tid_type: "
+      "string(\"kernel_mode\"), waiter_count: uint32(0)})",
+      "Event(ts: 600, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"kernel_mutex_block\", DurationComplete(end_ts: 650), {mutex_id: "
+      "uint32(87654321), tid: uint32(22222222), tid_type: "
+      "string(\"user_mode\"), waiter_count: uint32(1)})",
+  };
+
+  fbl::Vector<trace::Record> records;
+  ASSERT_TRUE(StopTracingAndImportRecords(&records));
+  ASSERT_EQ(records.size(), fbl::count_of(expected));
+  for (size_t i = 0; i < records.size(); ++i) {
+    CompareRecord(records[i], expected[i]);
+  }
+}
 }  // namespace
 }  // namespace ktrace_provider

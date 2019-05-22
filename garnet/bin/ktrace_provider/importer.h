@@ -100,6 +100,10 @@ class Importer {
   bool HandleFutexRequeue(trace_ticks_t event_time, uint64_t futex_id,
                           uint32_t new_owner_tid, uint32_t count,
                           uint32_t flags, trace_cpu_number_t cpu_number);
+  bool HandleKernelMutexEvent(trace_ticks_t event_time, uint32_t which_event,
+                              uint32_t mutex_id, uint32_t tid,
+                              uint32_t waiter_count, uint32_t flags,
+                              trace_cpu_number_t cpu_number);
   bool HandleObjectDelete(trace_ticks_t event_time, zx_koid_t thread,
                           zx_koid_t object);
   bool HandleThreadCreate(trace_ticks_t event_time, zx_koid_t thread,
@@ -232,6 +236,17 @@ class Importer {
   trace_string_ref_t const futex_count_name_ref_;
   trace_string_ref_t const futex_was_requeue_name_ref_;
   trace_string_ref_t const futex_was_active_name_ref_;
+  trace_string_ref_t const kernel_mutex_acquire_name_ref_;
+  trace_string_ref_t const kernel_mutex_block_name_ref_;
+  trace_string_ref_t const kernel_mutex_release_name_ref_;
+  trace_string_ref_t const kernel_mutex_mutex_id_name_ref_;
+  trace_string_ref_t const kernel_mutex_tid_name_ref_;
+  trace_string_ref_t const kernel_mutex_tid_type_ref_;
+  trace_string_ref_t const kernel_mutex_tid_type_user_ref_;
+  trace_string_ref_t const kernel_mutex_tid_type_kernel_ref_;
+  trace_string_ref_t const kernel_mutex_tid_type_none_ref_;
+  trace_string_ref_t const kernel_mutex_waiter_count_name_ref_;
+  trace_string_ref_t const misc_unknown_name_ref_;
 
   uint32_t version_ = 0u;
 
