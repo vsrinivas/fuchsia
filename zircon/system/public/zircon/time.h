@@ -111,6 +111,10 @@ __CONSTEXPR static inline zx_duration_t zx_duration_mul_int64(zx_duration_t dura
     return x;
 }
 
+__CONSTEXPR static inline int64_t zx_nsec_from_duration(zx_duration_t n) {
+    return n;
+}
+
 __CONSTEXPR static inline zx_duration_t zx_duration_from_nsec(int64_t n) {
     return zx_duration_mul_int64(1, n);
 }

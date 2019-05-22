@@ -31,6 +31,9 @@ typedef struct zxs_socket {
     // Flags that describe how the |zxs| library will interact with the kernel
     // socket object.
     zxs_flags_t flags;
+
+    // Used to implement SO_RCVTIMEO. See `man 7 socket` for details.
+    zx_duration_t rcvtimeo;
 } zxs_socket_t;
 
 // Create a |zxs_socket_t|.

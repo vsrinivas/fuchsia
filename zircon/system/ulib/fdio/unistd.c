@@ -1031,12 +1031,16 @@ ssize_t read(int fd, void* buf, size_t count) {
     bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
     size_t actual = 0u;
     zx_status_t status;
+    zx_duration_t duration = fdio_get_ops(io)->get_rcvtimeo(io);
+    zx_time_t deadline = zx_deadline_after(duration);
     for (;;) {
         status = zxio_read(fdio_get_zxio(io), buf, count, &actual);
         if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
-        fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+        if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) == ZX_ERR_TIMED_OUT) {
+            break;
+        }
     }
     fdio_release(io);
     return status != ZX_OK ? ERROR(status) : (ssize_t)actual;
@@ -1110,12 +1114,16 @@ ssize_t pread(int fd, void* buf, size_t size, off_t ofs) {
     bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
     size_t actual = 0u;
     zx_status_t status;
+    zx_duration_t duration = fdio_get_ops(io)->get_rcvtimeo(io);
+    zx_time_t deadline = zx_deadline_after(duration);
     for (;;) {
         status = zxio_read_at(fdio_get_zxio(io), ofs, buf, size, &actual);
         if ((status != ZX_ERR_SHOULD_WAIT) || nonblocking) {
             break;
         }
-        fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+        if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) == ZX_ERR_TIMED_OUT) {
+            break;
+        }
     }
     fdio_release(io);
     return status != ZX_OK ? ERROR(status) : (ssize_t)actual;
@@ -2341,12 +2349,16 @@ ssize_t recvfrom(int fd, void* restrict buf, size_t buflen, int flags, struct so
     }
     bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
     zx_status_t status;
+    zx_duration_t duration = fdio_get_ops(io)->get_rcvtimeo(io);
+    zx_time_t deadline = zx_deadline_after(duration);
     for (;;) {
         status = fdio_get_ops(io)->recvfrom(io, buf, buflen, flags, addr, addrlen);
         if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
-        fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+        if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) == ZX_ERR_TIMED_OUT) {
+            break;
+        }
     }
     fdio_release(io);
     return status < 0 ? STATUS(status) : status;
@@ -2383,12 +2395,16 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
     }
     bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
     zx_status_t status;
+    zx_duration_t duration = fdio_get_ops(io)->get_rcvtimeo(io);
+    zx_time_t deadline = zx_deadline_after(duration);
     for (;;) {
         status = fdio_get_ops(io)->recvmsg(io, msg, flags);
         if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
-        fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+        if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) == ZX_ERR_TIMED_OUT) {
+            break;
+        }
     }
     fdio_release(io);
     return status < 0 ? STATUS(status) : status;

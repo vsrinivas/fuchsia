@@ -11,6 +11,8 @@
 
 const int32_t kTimeout = 10000;  // 10 seconds
 
+void NotifySuccess(int ntfyfd);
+void NotifyFail(int ntfyfd);
 bool WaitSuccess(int ntfyfd, int timeout);
 void StreamAcceptRead(int acptfd, std::string* out, int ntfyfd);
 void StreamConnectRead(struct sockaddr_in* addr, std::string* out, int ntfyfd);

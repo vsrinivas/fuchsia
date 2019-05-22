@@ -315,6 +315,10 @@ static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
     return zx_socket_shutdown(sio->socket.socket, options);
 }
 
+static zx_duration_t fdio_socket_get_rcvtimeo(fdio_t * io) {
+    return fdio_get_zxio_socket(io)->socket.rcvtimeo;
+}
+
 static fdio_ops_t fdio_socket_stream_ops = {
     .close = zxsio_close,
     .open = fdio_default_open,
@@ -341,6 +345,7 @@ static fdio_ops_t fdio_socket_stream_ops = {
     .recvmsg = zxsio_recvmsg_stream,
     .sendmsg = zxsio_sendmsg_stream,
     .shutdown = fdio_socket_shutdown,
+    .get_rcvtimeo = fdio_socket_get_rcvtimeo,
 };
 
 static fdio_ops_t fdio_socket_dgram_ops = {
@@ -369,6 +374,7 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .recvmsg = zxsio_recvmsg_dgram,
     .sendmsg = zxsio_sendmsg_dgram,
     .shutdown = fdio_socket_shutdown,
+    .get_rcvtimeo = fdio_socket_get_rcvtimeo,
 };
 
 static fdio_t* fdio_socket_create(zx_handle_t socket, int flags,
@@ -382,6 +388,7 @@ static fdio_t* fdio_socket_create(zx_handle_t socket, int flags,
     zxs_socket_t zs = {
         .socket = socket,
         .flags = ops == &fdio_socket_dgram_ops ? ZXS_FLAG_DATAGRAM : 0u,
+        .rcvtimeo = ZX_TIME_INFINITE,
     };
     zx_status_t status = zxio_socket_init(fdio_get_zxio_storage(io), zs);
     if (status != ZX_OK) {

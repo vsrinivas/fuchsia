@@ -589,6 +589,25 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
         return ERRNO(EBADF);
     }
 
+    // Handle client-maintained socket options.
+    if (level == SOL_SOCKET && optname == SO_RCVTIMEO) {
+        if (optlen == NULL || *optlen < sizeof(struct timeval)) {
+            return ERRNO(EINVAL);
+        }
+        *optlen = sizeof(struct timeval);
+        struct timeval* duration_tv = static_cast<struct timeval*>(optval);
+        if (socket->rcvtimeo == ZX_TIME_INFINITE) {
+            duration_tv->tv_usec = 0;
+            duration_tv->tv_sec = 0;
+            return 0;
+        }
+        int64_t nanos = zx_nsec_from_duration(socket->rcvtimeo);
+        int64_t micros = nanos / 1000;
+        duration_tv->tv_usec = micros % 1000000;
+        duration_tv->tv_sec = micros / 1000000;
+        return 0;
+    }
+
     int16_t out_code;
     size_t actual;
     zx_status_t status = fuchsia_net_SocketControlGetSockOpt(
@@ -617,6 +636,21 @@ int setsockopt(int fd, int level, int optname, const void* optval,
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
+    }
+
+    // Handle client-maintained socket options.
+    if (level == SOL_SOCKET && optname == SO_RCVTIMEO) {
+        if (optlen < sizeof(struct timeval)) {
+            return ERRNO(EINVAL);
+        }
+        const struct timeval* duration_tv = static_cast<const struct timeval*>(optval);
+        zx_duration_t duration_zx = ZX_SEC(duration_tv->tv_sec);
+        duration_zx = zx_duration_add_duration(duration_zx, ZX_USEC(duration_tv->tv_usec));
+        if (duration_zx == 0) {
+            duration_zx = ZX_TIME_INFINITE;
+        }
+        const_cast<zxs_socket_t*>(socket)->rcvtimeo = duration_zx;
+        return 0;
     }
 
     int16_t out_code;

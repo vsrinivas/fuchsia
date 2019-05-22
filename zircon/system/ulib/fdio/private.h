@@ -65,6 +65,7 @@ typedef struct fdio_ops {
     ssize_t (*recvmsg)(fdio_t* io, struct msghdr* msg, int flags);
     ssize_t (*sendmsg)(fdio_t* io, const struct msghdr* msg, int flags);
     zx_status_t (*shutdown)(fdio_t* io, int how);
+    zx_duration_t (*get_rcvtimeo)(fdio_t* io);
 } fdio_ops_t;
 
 // fdio_t ioflag values
@@ -260,6 +261,7 @@ void fdio_default_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
 void fdio_default_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events);
 zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle);
 zx_status_t fdio_default_shutdown(fdio_t* io, int how);
+zx_duration_t fdio_default_get_rcvtimeo(fdio_t* io);
 ssize_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out);
 

@@ -98,6 +98,10 @@ zx_status_t fdio_default_shutdown(fdio_t* io, int how) {
     return ZX_ERR_WRONG_TYPE;
 }
 
+zx_duration_t fdio_default_get_rcvtimeo(fdio_t* io) {
+    return ZX_TIME_INFINITE;
+}
+
 zx_status_t fdio_default_close(fdio_t* io) {
     return ZX_OK;
 }

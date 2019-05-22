@@ -151,6 +151,7 @@ fdio_ops_t fdio_zxio_ops = {
     .recvmsg = fdio_default_recvmsg,
     .sendmsg = fdio_default_sendmsg,
     .shutdown = fdio_default_shutdown,
+    .get_rcvtimeo = fdio_default_get_rcvtimeo,
 };
 
 __EXPORT
@@ -387,6 +388,7 @@ static fdio_ops_t fdio_zxio_remote_ops = {
     .recvmsg = fdio_default_recvmsg,
     .sendmsg = fdio_default_sendmsg,
     .shutdown = fdio_default_shutdown,
+    .get_rcvtimeo = fdio_default_get_rcvtimeo,
 };
 
 fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
@@ -551,6 +553,7 @@ fdio_ops_t fdio_zxio_vmofile_ops = {
     .recvmsg = fdio_default_recvmsg,
     .sendmsg = fdio_default_sendmsg,
     .shutdown = fdio_default_shutdown,
+    .get_rcvtimeo = fdio_default_get_rcvtimeo,
 };
 
 fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
@@ -699,6 +702,7 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
     .recvmsg = fdio_zxio_pipe_recvmsg,
     .sendmsg = fdio_zxio_pipe_sendmsg,
     .shutdown = fdio_zxio_pipe_shutdown,
+    .get_rcvtimeo = fdio_default_get_rcvtimeo,
 };
 
 fdio_t* fdio_pipe_create(zx_handle_t socket) {
