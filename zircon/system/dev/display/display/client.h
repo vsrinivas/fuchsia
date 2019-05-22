@@ -127,6 +127,10 @@ private:
 class Client : private FenceCallback {
 public:
     Client(Controller* controller, ClientProxy* proxy, bool is_vc);
+
+    // This is used for testing
+    Client(Controller* controller, ClientProxy* proxy, bool is_vc, zx_handle_t server_handle);
+
     ~Client();
     zx_status_t Init(zx_handle_t server_handle);
 
@@ -141,6 +145,9 @@ public:
     void OnRefForFenceDead(Fence* fence) override;
 
     void TearDown();
+
+    // This is used for testing
+    void TearDownTest();
 
     bool IsValid() { return server_handle_ != ZX_HANDLE_INVALID; }
 private:
@@ -272,6 +279,10 @@ using ClientParent = ddk::Device<ClientProxy, ddk::Closable>;
 class ClientProxy : public ClientParent {
 public:
     ClientProxy(Controller* controller, bool is_vc);
+
+    // This is used for testing
+    ClientProxy(Controller* controller, bool is_vc, zx::channel server_channel);
+
     ~ClientProxy();
     zx_status_t Init(zx::channel server_channel);
 
@@ -279,7 +290,7 @@ public:
     void DdkRelease();
 
     // Requires holding controller_->mtx() lock
-    void OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+    zx_status_t OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                         uint64_t* image_ids, size_t count);
     void OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
                            const uint64_t* displays_removed, size_t removed_count);
@@ -294,13 +305,21 @@ public:
     }
     void OnClientDead();
     void Close();
+
+    // This is used for testing
+    void CloseTest();
+
 private:
     Controller* controller_;
     bool is_vc_;
+    zx::channel server_channel_;
     Client handler_;
     bool enable_vsync_ = false;
 
-    zx::channel server_channel_;
+    // This variable is used to limit the number of errors logged in case of channel oom error
+    static constexpr uint32_t kChannelOomPrintFreq = 600; // 1 per 10 seconds (assuming 60fps)
+    uint32_t chn_oom_print_freq_ = 0;
+    uint64_t total_oom_errors_ = 0;
 };
 
 } // namespace display

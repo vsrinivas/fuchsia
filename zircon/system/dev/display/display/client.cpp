@@ -1713,6 +1713,10 @@ void Client::TearDown() {
     proxy_->OnClientDead();
 }
 
+void Client::TearDownTest() {
+    server_handle_ = ZX_HANDLE_INVALID;
+}
+
 bool Client::CleanUpImage(Image* image) {
     // Clean up any fences associated with the image
     {
@@ -1802,6 +1806,9 @@ zx_status_t Client::Init(zx_handle_t server_handle) {
 Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc)
         : controller_(controller), proxy_(proxy), is_vc_(is_vc) { }
 
+Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, zx_handle_t server_handle)
+        : controller_(controller), proxy_(proxy), is_vc_(is_vc), server_handle_(server_handle) {}
+
 Client::~Client() {
     ZX_DEBUG_ASSERT(server_handle_ == ZX_HANDLE_INVALID);
 }
@@ -1846,12 +1853,12 @@ void ClientProxy::ReapplyConfig() {
     task->Post(controller_->loop().dispatcher());
 }
 
-void ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                                  uint64_t* image_ids, size_t count) {
     ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
     if (!enable_vsync_) {
-        return;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     uint32_t size = static_cast<uint32_t>(sizeof(fuchsia_hardware_display_ControllerVsyncEvent) +
                                           sizeof(uint64_t) * count);
@@ -1870,8 +1877,23 @@ void ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
 
     zx_status_t status = server_channel_.write(0, data, size, nullptr, 0);
     if (status != ZX_OK) {
-        zxlogf(WARN, "Failed to send vsync event %d\n", status);
+        if (status == ZX_ERR_NO_MEMORY) {
+            total_oom_errors_++;
+            // OOM errors are most likely not recoverable. Print the error message
+            // once every kChannelErrorPrintFreq cycles
+            if (chn_oom_print_freq_++ == 0) {
+                zxlogf(ERROR, "Failed to send vsync event (OOM) (total occurrences: %lu)\n",
+                       total_oom_errors_);
+            }
+            if (chn_oom_print_freq_ >= kChannelOomPrintFreq) {
+                chn_oom_print_freq_ = 0;
+            }
+        } else {
+            zxlogf(WARN, "Failed to send vsync event %d\n", status);
+        }
     }
+
+    return status;
 }
 
 void ClientProxy::OnClientDead() {
@@ -1920,6 +1942,10 @@ void ClientProxy::Close() {
     }
 }
 
+void ClientProxy::CloseTest() {
+    handler_.TearDownTest();
+}
+
 zx_status_t ClientProxy::DdkClose(uint32_t flags) {
     printf("DdkClose\n");
     Close();
@@ -1938,6 +1964,12 @@ zx_status_t ClientProxy::Init(zx::channel server_channel) {
 ClientProxy::ClientProxy(Controller* controller, bool is_vc)
         : ClientParent(controller->zxdev()),
           controller_(controller), is_vc_(is_vc), handler_(controller_, this, is_vc_) {}
+
+ClientProxy::ClientProxy(Controller* controller, bool is_vc, zx::channel server_channel)
+        : ClientParent(nullptr),
+          controller_(controller), is_vc_(is_vc),
+          server_channel_(std::move(server_channel)),
+          handler_(controller_, this, is_vc_, server_channel_.get()) {}
 
 ClientProxy::~ClientProxy() { }
 
