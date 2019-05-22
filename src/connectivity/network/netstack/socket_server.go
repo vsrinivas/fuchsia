@@ -203,9 +203,6 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 		for {
 			var err *tcpip.Error
 			v, _, err = ios.ep.Read(&sender)
-			if err == tcpip.ErrClosedForReceive {
-				return nil
-			}
 			if err == tcpip.ErrInvalidEndpointState {
 				if connected {
 					panic(fmt.Sprintf("connected endpoint returned %s", err))
@@ -238,7 +235,7 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 			} else if !connected {
 				var signals zx.Signals = mxnet.MXSIO_SIGNAL_OUTGOING
 				switch err {
-				case nil, tcpip.ErrWouldBlock:
+				case nil, tcpip.ErrWouldBlock, tcpip.ErrClosedForReceive:
 					connected = true
 					ios.wq.EventUnregister(&outEntry)
 
@@ -257,6 +254,8 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 			}
 			switch err {
 			case nil:
+			case tcpip.ErrClosedForReceive:
+				return nil
 			case tcpip.ErrConnectionRefused:
 				// Linux allows sockets with connection errors to be reused. If the
 				// client calls connect() again (and the underlying Endpoint correctly
