@@ -47,11 +47,13 @@ class Log(object):
     except subprocess.CalledProcessError:
       pass
     units = []
-    pattern = re.compile(r'Test unit written to (\S*)$')
+    pattern = re.compile(r'Test unit written to data/(\S*)$')
     for log in os.listdir(self.fuzzer.results()):
       if log.startswith('fuzz-') and log.endswith('.log'):
         with open(self.fuzzer.results(log), 'r') as f:
-          matches = [pattern.match(line) for line in f.readlines()]
-          units.extend([m.group(1) for m in matches if m])
+          for line in f:
+            m = pattern.search(line)
+            if m:
+              units.append(self.fuzzer.data_path(m.group(1)))
     for unit in units:
       self.device.fetch(unit, self.fuzzer.results())
