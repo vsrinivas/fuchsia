@@ -28,6 +28,12 @@ int blind_read(volatile unsigned int* addr) {
     return (int)(*addr);
 }
 
+int blind_execute(volatile unsigned int* addr) {
+    void (*func)(void) = (void*)addr;
+    func();
+    return 0;
+}
+
 int ro_write(volatile unsigned int* addr) {
     // test that we cannot write to RO code memory
     volatile unsigned int* p = (volatile unsigned int*)&ro_write;
@@ -174,6 +180,7 @@ int blind_write_multithreaded(volatile unsigned int* addr) {
 command_t commands[] = {
     {"write0", blind_write, "write to address 0x0"},
     {"read0", blind_read, "read address 0x0"},
+    {"execute0", blind_execute, "execute address 0x0"},
     {"writero", ro_write, "write to read only code segment"},
     {"stackov", stack_overflow, "overflow the stack (recursive)"},
     {"stackbuf", stack_buf_overrun, "overrun a buffer on the stack"},

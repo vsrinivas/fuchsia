@@ -145,7 +145,58 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
 
     printf("<== %sexception: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", fatal,
            process_name, pid, thread_name, tid);
-    printf("<== %s, PC at 0x%" PRIxPTR "\n", excp_type_to_str(report.header.type), pc);
+
+    if (report.header.type == ZX_EXCP_FATAL_PAGE_FAULT) {
+        const char* access_type;
+        const char* violation;
+#if defined(__x86_64__)
+        static constexpr uint32_t kErrCodeInstrFetch = (1 << 4);
+        static constexpr uint32_t kErrCodeWrite = (1 << 1);
+        static constexpr uint32_t kErrCodeProtectionViolation = (1 << 0);
+        if (context.arch.u.x86_64.err_code & kErrCodeInstrFetch) {
+            access_type = "execute";
+        } else if (context.arch.u.x86_64.err_code & kErrCodeWrite) {
+            access_type = "write";
+        } else {
+            access_type = "read";
+        }
+
+        if (context.arch.u.x86_64.err_code & kErrCodeProtectionViolation) {
+            violation = "protection";
+        } else {
+            violation = "not-present";
+        }
+#elif defined(__aarch64__)
+        // The one ec bit that's different between a data and instruction abort
+        static constexpr uint32_t kEcDataAbortBit = (1 << 28);
+        static constexpr uint32_t kIssCacheOp = (1 << 8);
+        static constexpr uint32_t kIssWrite = (1 << 6);
+        static constexpr uint32_t kDccNoLvlMask = 0b111100;
+        static constexpr uint32_t kDccPermissionFault = 0b1100;
+
+        if (context.arch.u.arm_64.esr & kEcDataAbortBit) {
+            if (context.arch.u.arm_64.esr & kIssWrite
+                    && !(context.arch.u.arm_64.esr & kIssCacheOp)) {
+                access_type = "write";
+            } else {
+                access_type = "read";
+            }
+        } else {
+            access_type = "execute";
+        }
+
+        if ((context.arch.u.arm_64.esr & kDccNoLvlMask) == kDccPermissionFault) {
+            violation = "protection";
+        } else {
+            violation = "not-present";
+        }
+#else
+#error unsupported architecture
+#endif
+        printf("<== %s %s page fault, PC at 0x%" PRIxPTR "\n", access_type, violation , pc);
+    } else {
+        printf("<== %s, PC at 0x%" PRIxPTR "\n", excp_type_to_str(report.header.type), pc);
+    }
 
 #if defined(__x86_64__)
     inspector_print_general_regs(stdout, regs, &context.arch.u.x86_64);
