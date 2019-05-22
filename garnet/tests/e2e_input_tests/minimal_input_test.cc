@@ -1,6 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.#include <cstdio>
+// found in the LICENSE file.
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -15,14 +15,18 @@
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "src/lib/fxl/logging.h"
+
+// NOTE WELL. Run each of these e2e tests in its own executable.  They each
+// consume and maintain process-global context, so it's better to keep them
+// separate.  Plus, separation means they start up components in a known good
+// state, instead of reusing component state possibly dirtied by other tests.
 
 namespace {
 
@@ -214,7 +218,7 @@ class MinimalInputTest : public gtest::RealLoopFixture {
   bool test_was_run_ = false;
 };
 
-TEST_F(MinimalInputTest, DISABLED_Tap) {
+TEST_F(MinimalInputTest, Tap) {
   // Set up inputs. Fires when display and content are available.
   SetInjectInputCallback([this] {
     InjectInput({"tap",  // Tap at the center of the display
@@ -240,7 +244,7 @@ TEST_F(MinimalInputTest, DISABLED_Tap) {
         EXPECT_EQ(observed[4].pointer().phase, Phase::REMOVE);
 
         QuitLoop();
-        // Today, we can't quietly break the View/ViewHolder connection.
+        // TODO(SCN-1449): Cleanly break the View/ViewHolder connection.
       });
 
   RunLoop();  // Go!
