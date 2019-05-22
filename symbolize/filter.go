@@ -224,6 +224,10 @@ func (f *filterVisitor) warn(err error) {
 	logger.Warningf(f.ctx, "on line %d: %v", f.lineno, err)
 }
 
+func (f *filterVisitor) debug(err error) {
+	logger.Debugf(f.ctx, "on line %d: %v", f.lineno, err)
+}
+
 func (f *filterVisitor) VisitBt(elem *BacktraceElement) {
 
 	// From //zircon/docs/symbolizer_markup.md:
@@ -247,7 +251,9 @@ func (f *filterVisitor) VisitBt(elem *BacktraceElement) {
 	info, err := f.filter.findInfoForAddress(vaddr)
 	if err != nil {
 		// Don't be noisy about missing objects.
-		if _, ok := err.(*missingObjError); !ok {
+		if _, ok := err.(*missingObjError); ok {
+			f.debug(err)
+		} else {
 			f.warn(err)
 		}
 	}
