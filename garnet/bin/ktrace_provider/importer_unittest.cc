@@ -148,6 +148,45 @@ class TestImporter : public ::testing::Test {
                        flags);
   }
 
+  void EmitFutexWaitRecord(uint64_t ts, uint32_t futex_id_lo,
+                           uint32_t futex_id_hi, uint32_t new_owner_tid,
+                           uint8_t cpu_id) {
+    EmitKtrace32Record(TAG_FUTEX_WAIT, 0, ts, futex_id_lo, futex_id_hi,
+                       new_owner_tid, cpu_id);
+  }
+
+  void EmitFutexWokeRecord(uint64_t ts, uint32_t futex_id_lo,
+                           uint32_t futex_id_hi, zx_status_t wait_result,
+                           uint8_t cpu_id) {
+    EmitKtrace32Record(TAG_FUTEX_WOKE, 0, ts, futex_id_lo, futex_id_hi,
+                       static_cast<uint32_t>(wait_result), cpu_id);
+  }
+
+  void EmitFutexWakeRecord(uint64_t ts, uint32_t futex_id_lo,
+                           uint32_t futex_id_hi, uint32_t assigned_owner_tid,
+                           uint8_t cpu_id, uint8_t count, bool requeue_op,
+                           bool futex_was_active) {
+    uint32_t flags =
+        cpu_id |
+        (static_cast<uint32_t>(count) << KTRACE_FLAGS_FUTEX_COUNT_SHIFT) |
+        (requeue_op ? KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG : 0) |
+        (futex_was_active ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
+    EmitKtrace32Record(TAG_FUTEX_WAKE, 0, ts, futex_id_lo, futex_id_hi,
+                       assigned_owner_tid, flags);
+  }
+
+  void EmitFutexRequeueRecord(uint64_t ts, uint32_t futex_id_lo,
+                              uint32_t futex_id_hi, uint32_t assigned_owner_tid,
+                              uint8_t cpu_id, uint8_t count,
+                              bool futex_was_active) {
+    uint32_t flags =
+        cpu_id |
+        (static_cast<uint32_t>(count) << KTRACE_FLAGS_FUTEX_COUNT_SHIFT) |
+        (futex_was_active ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
+    EmitKtrace32Record(TAG_FUTEX_REQUEUE, 0, ts, futex_id_lo, futex_id_hi,
+                       assigned_owner_tid, flags);
+  }
+
   bool StopTracingAndImportRecords(fbl::Vector<trace::Record>* out_records) {
     TestReader reader{ktrace_buffer(), ktrace_buffer_written()};
     Importer importer{context()};
@@ -281,6 +320,158 @@ TEST_F(TestImporter, InheritPriority) {
       "int32(18), new_effective_prio: int32(20)})",
       "Event(ts: 310, pt: 0/8765432, category: \"kernel:sched\", name: "
       "\"inherit_prio\", FlowEnd(id: 12345), {})",
+  };
+
+  fbl::Vector<trace::Record> records;
+  ASSERT_TRUE(StopTracingAndImportRecords(&records));
+  ASSERT_EQ(records.size(), fbl::count_of(expected));
+  for (size_t i = 0; i < records.size(); ++i) {
+    CompareRecord(records[i], expected[i]);
+  }
+}
+
+TEST_F(TestImporter, FutexRecords) {
+  // Simulate a record of a thread waiting on a futex and declaring no owner.
+  // futex_id should be 5 + (6 << 32) == 25769803781
+  EmitFutexWaitRecord(100,  // ts
+                      5,    // futex_lo
+                      6,    // futex_hi
+                      0,    // new owner tid
+                      1);   // cpu_id
+
+  // Simulate a record of a thread waiting on a futex and declaring an owner
+  // tid == 12345
+  EmitFutexWaitRecord(200,    // ts
+                      5,      // futex_lo
+                      6,      // futex_hi
+                      12345,  // new owner tid
+                      1);     // cpu_id
+
+  // Simulate records of wake events.  Make sure to exercise cases where...
+  // 1) Ownership is assigned to a specific thread vs. no thread.
+  // 2) Finite specific wake counts, finite indeterminate counts, and unlimited
+  //    counts.
+  // 3) Wake events as part of a requeue op vs. wake ops
+  // 4) Wake events where the futex was not active.
+  EmitFutexWakeRecord(300,    // ts
+                      5,      // futex_lo
+                      6,      // futex_hi
+                      12345,  // assigned owner tid
+                      2,      // cpu_id
+                      1,      // a finite count of 1
+                      false,  // wake operation
+                      true);  // active futex
+
+  EmitFutexWakeRecord(400,    // ts
+                      5,      // futex_lo
+                      6,      // futex_hi
+                      0,      // no owner assigned
+                      2,      // cpu_id
+                      0xFE,   // a finite, but indeterminate, count
+                      true,   // requeue operation
+                      true);  // active futex
+
+  EmitFutexWakeRecord(500,     // ts
+                      5,       // futex_lo
+                      6,       // futex_hi
+                      0,       // no owner assigned
+                      3,       // cpu_id
+                      0xFF,    // unlimited count
+                      false,   // wake operation
+                      false);  // inactive futex
+
+  // Simulate records of a woke events.  Exercise a case where the woke record
+  // reports a successful wait, and one where the wait timed out.  Switch up the
+  // futex ID while we are at it.  We expect 45 + (88 << 32) == 377957122093
+  EmitFutexWokeRecord(600,    // ts
+                      45,     // futex_lo
+                      88,     // futex_hi
+                      ZX_OK,  // success status,
+                      0);     // cpu_id
+
+  EmitFutexWokeRecord(700,               // ts
+                      45,                // futex_lo
+                      88,                // futex_hi
+                      ZX_ERR_TIMED_OUT,  // timeout status,
+                      1);                // cpu_id
+
+  // Simulate records of requeue events.  Make sure to exercise cases where...
+  // 1) Ownership is assigned to a specific thread vs. no thread.
+  // 2) Finite specific requeue counts, finite indeterminate counts, and
+  //    unlimited counts.
+  // 3) Requeue events where the futex was not active.
+  EmitFutexRequeueRecord(800,    // ts
+                         45,     // futex_lo
+                         88,     // futex_hi
+                         54321,  // assigned owner tid
+                         2,      // cpu_id
+                         1,      // a finite count of 1
+                         true);  // active futex
+
+  EmitFutexRequeueRecord(900,    // ts
+                         45,     // futex_lo
+                         88,     // futex_hi
+                         0,      // no owner assigned
+                         2,      // cpu_id
+                         0xFE,   // a finite, but indeterminate, count
+                         true);  // active futex
+
+  EmitFutexRequeueRecord(1000,    // ts
+                         45,      // futex_lo
+                         88,      // futex_hi
+                         0,       // no owner assigned
+                         3,       // cpu_id
+                         0xFF,    // unlimited count
+                         false);  // inactive futex
+
+  static const char* const expected[] = {
+      // Wait events
+      "Event(ts: 100, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"futex_wait\", DurationComplete(end_ts: 150), {futex_id: "
+      "uint64(25769803781), new_owner_TID: uint32(0)})",
+
+      "Event(ts: 200, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"futex_wait\", DurationComplete(end_ts: 250), {futex_id: "
+      "uint64(25769803781), new_owner_TID: uint32(12345)})",
+
+      // Wake events
+      "Event(ts: 300, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"futex_wake\", DurationComplete(end_ts: 350), {futex_id: "
+      "uint64(25769803781), new_owner_TID: uint32(12345), count: uint32(1), "
+      "was_requeue: bool(false), futex_was_active: bool(true)})",
+
+      "Event(ts: 400, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"futex_wake\", DurationComplete(end_ts: 450), {futex_id: "
+      "uint64(25769803781), new_owner_TID: uint32(0), count: uint32(254), "
+      "was_requeue: bool(true), futex_was_active: bool(true)})",
+
+      "Event(ts: 500, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"futex_wake\", DurationComplete(end_ts: 550), {futex_id: "
+      "uint64(25769803781), new_owner_TID: uint32(0), count: "
+      "uint32(4294967295), was_requeue: bool(false), futex_was_active: "
+      "bool(false)})",
+
+      // Woke events
+      "Event(ts: 600, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"Thread_woke_from_futex_wait\", DurationComplete(end_ts: 650), "
+      "{futex_id: uint64(377957122093), wait_result: int32(0)})",
+      "Event(ts: 700, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"Thread_woke_from_futex_wait\", DurationComplete(end_ts: 750), "
+      "{futex_id: uint64(377957122093), wait_result: int32(-21)})",
+
+      // Requeue events
+      "Event(ts: 800, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"futex_requeue\", DurationComplete(end_ts: 850), {futex_id: "
+      "uint64(377957122093), new_owner_TID: uint32(54321), count: uint32(1), "
+      "futex_was_active: bool(true)})",
+      "Event(ts: 900, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"futex_requeue\", DurationComplete(end_ts: 950), {futex_id: "
+      "uint64(377957122093), new_owner_TID: uint32(0), count: uint32(254), "
+      "futex_was_active: bool(true)})",
+      "Event(ts: 1000, pt: 0/0, category: \"kernel:sched\", name: "
+      "\"futex_requeue\", DurationComplete(end_ts: 1050), {futex_id: "
+      "uint64(377957122093), new_owner_TID: uint32(0), count: "
+      "uint32(4294967295), futex_was_active: bool(false)})",
   };
 
   fbl::Vector<trace::Record> records;

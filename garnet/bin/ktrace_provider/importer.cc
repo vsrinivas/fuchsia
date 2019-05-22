@@ -27,6 +27,9 @@ constexpr uint64_t ToUInt64(uint32_t lo, uint32_t hi) {
 constexpr trace_ticks_t kInheritPriorityDurationWidth = 50;
 constexpr trace_ticks_t kInheritPriorityFlowOffset = 10;
 
+// Synthetic width for the futex events.
+constexpr trace_ticks_t kFutexOpPriorityDurationWidth = 50;
+
 // The kernel reports different thread state values through ktrace.
 // These values must line up with those in "kernel/include/kernel/thread.h".
 constexpr trace_thread_state_t ToTraceThreadState(int value) {
@@ -88,6 +91,17 @@ Importer::Importer(trace_context_t* context)
       inherit_prio_new_ip_name_ref_(MAKE_STRING("new_inherited_prio")),
       inherit_prio_old_ep_name_ref_(MAKE_STRING("old_effective_prio")),
       inherit_prio_new_ep_name_ref_(MAKE_STRING("new_effective_prio")),
+      // Futex operation related strings
+      futex_wait_name_ref_(MAKE_STRING("futex_wait")),
+      futex_woke_name_ref_(MAKE_STRING("Thread_woke_from_futex_wait")),
+      futex_wake_name_ref_(MAKE_STRING("futex_wake")),
+      futex_requeue_name_ref_(MAKE_STRING("futex_requeue")),
+      futex_id_name_ref_(MAKE_STRING("futex_id")),
+      futex_owner_name_ref_(MAKE_STRING("new_owner_TID")),
+      futex_wait_res_name_ref_(MAKE_STRING("wait_result")),
+      futex_count_name_ref_(MAKE_STRING("count")),
+      futex_was_requeue_name_ref_(MAKE_STRING("was_requeue")),
+      futex_was_active_name_ref_(MAKE_STRING("futex_was_active")),
       kUnknownThreadRef(trace_make_unknown_thread_ref()) {}
 
 #undef MAKE_STRING
@@ -241,7 +255,54 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
                                    old_inherited_prio, new_inherited_prio,
                                    old_effective_prio, new_effective_prio);
     }
+    case KTRACE_EVENT(TAG_FUTEX_WAIT): {
+      auto cpu = static_cast<trace_cpu_number_t>(record->d &
+                                                 KTRACE_FLAGS_FUTEX_CPUID_MASK);
+      uint32_t owner_tid = record->c;
+      uint64_t futex_id = (static_cast<uint64_t>(record->b) << 32) | record->a;
 
+      return HandleFutexWait(record->ts, futex_id, owner_tid, cpu);
+    }
+    case KTRACE_EVENT(TAG_FUTEX_WOKE): {
+      auto cpu = static_cast<trace_cpu_number_t>(record->d &
+                                                 KTRACE_FLAGS_FUTEX_CPUID_MASK);
+      uint64_t futex_id = (static_cast<uint64_t>(record->b) << 32) | record->a;
+      zx_status_t wait_result = static_cast<zx_status_t>(record->c);
+
+      return HandleFutexWoke(record->ts, futex_id, wait_result, cpu);
+    }
+    case KTRACE_EVENT(TAG_FUTEX_WAKE): {
+      uint64_t futex_id = (static_cast<uint64_t>(record->b) << 32) | record->a;
+      uint32_t owner_tid = record->c;
+      auto cpu = static_cast<trace_cpu_number_t>(record->d &
+                                                 KTRACE_FLAGS_FUTEX_CPUID_MASK);
+      uint32_t count = (record->d >> KTRACE_FLAGS_FUTEX_COUNT_SHIFT) &
+                       KTRACE_FLAGS_FUTEX_COUNT_MASK;
+      uint32_t flags = (record->d & KTRACE_FLAGS_FUTEX_FLAGS_MASK);
+
+      if (count == KTRACE_FLAGS_FUTEX_UNBOUND_COUNT_VAL) {
+        count = std::numeric_limits<uint32_t>::max();
+      }
+
+      return HandleFutexWake(record->ts, futex_id, owner_tid, count, flags,
+                             cpu);
+    }
+    case KTRACE_EVENT(TAG_FUTEX_REQUEUE): {
+      uint64_t futex_id = (static_cast<uint64_t>(record->b) << 32) | record->a;
+      uint32_t owner_tid = record->c;
+      auto cpu = static_cast<trace_cpu_number_t>(record->d &
+                                                 KTRACE_FLAGS_FUTEX_CPUID_MASK);
+      uint32_t count = (record->d >> KTRACE_FLAGS_FUTEX_COUNT_SHIFT) &
+                       KTRACE_FLAGS_FUTEX_COUNT_MASK;
+      uint32_t flags = (record->d & KTRACE_FLAGS_FUTEX_FLAGS_MASK);
+
+      if (count == KTRACE_FLAGS_FUTEX_UNBOUND_COUNT_VAL) {
+        count = std::numeric_limits<uint32_t>::max();
+      }
+
+      return HandleFutexRequeue(record->ts, futex_id, owner_tid, count, flags,
+                                cpu);
+    }
     case KTRACE_EVENT(TAG_OBJECT_DELETE):
       return HandleObjectDelete(record->ts, record->tid, record->a);
     case KTRACE_EVENT(TAG_THREAD_CREATE):
@@ -654,6 +715,96 @@ bool Importer::HandleInheritPriority(trace_ticks_t event_time, uint32_t id,
 
   trace_thunk(context_, flow_time, &thread_ref, &sched_category_ref_,
               &inherit_prio_name_ref_, id, nullptr, 0);
+
+  return true;
+}
+
+bool Importer::HandleFutexWait(trace_ticks_t event_time, uint64_t futex_id,
+                               uint32_t new_owner_tid,
+                               trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  trace_arg_t args[] = {
+      trace_make_arg(futex_id_name_ref_, trace_make_uint64_arg_value(futex_id)),
+      trace_make_arg(futex_owner_name_ref_,
+                     trace_make_uint32_arg_value(new_owner_tid)),
+  };
+
+  const trace_ticks_t end_time = event_time + kFutexOpPriorityDurationWidth;
+
+  trace_context_write_duration_event_record(
+      context_, event_time, end_time, &thread_ref, &sched_category_ref_,
+      &futex_wait_name_ref_, args, fbl::count_of(args));
+
+  return true;
+}
+
+bool Importer::HandleFutexWoke(trace_ticks_t event_time, uint64_t futex_id,
+                               zx_status_t wait_result,
+                               trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  trace_arg_t args[] = {
+      trace_make_arg(futex_id_name_ref_, trace_make_uint64_arg_value(futex_id)),
+      trace_make_arg(futex_wait_res_name_ref_,
+                     trace_make_int32_arg_value(wait_result)),
+  };
+
+  const trace_ticks_t end_time = event_time + kFutexOpPriorityDurationWidth;
+
+  trace_context_write_duration_event_record(
+      context_, event_time, end_time, &thread_ref, &sched_category_ref_,
+      &futex_woke_name_ref_, args, fbl::count_of(args));
+
+  return true;
+}
+
+bool Importer::HandleFutexWake(trace_ticks_t event_time, uint64_t futex_id,
+                               uint32_t new_owner_tid, uint32_t count,
+                               uint32_t flags, trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  const bool was_requeue = (flags & KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG) != 0;
+  const bool was_active = (flags & KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG) != 0;
+
+  trace_arg_t args[] = {
+      trace_make_arg(futex_id_name_ref_, trace_make_uint64_arg_value(futex_id)),
+      trace_make_arg(futex_owner_name_ref_,
+                     trace_make_uint32_arg_value(new_owner_tid)),
+      trace_make_arg(futex_count_name_ref_, trace_make_uint32_arg_value(count)),
+      trace_make_arg(futex_was_requeue_name_ref_,
+                     trace_make_bool_arg_value(was_requeue)),
+      trace_make_arg(futex_was_active_name_ref_,
+                     trace_make_bool_arg_value(was_active)),
+  };
+
+  const trace_ticks_t end_time = event_time + kFutexOpPriorityDurationWidth;
+
+  trace_context_write_duration_event_record(
+      context_, event_time, end_time, &thread_ref, &sched_category_ref_,
+      &futex_wake_name_ref_, args, fbl::count_of(args));
+
+  return true;
+}
+
+bool Importer::HandleFutexRequeue(trace_ticks_t event_time, uint64_t futex_id,
+                                  uint32_t new_owner_tid, uint32_t count,
+                                  uint32_t flags,
+                                  trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  const bool was_active = (flags & KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG) != 0;
+
+  trace_arg_t args[] = {
+      trace_make_arg(futex_id_name_ref_, trace_make_uint64_arg_value(futex_id)),
+      trace_make_arg(futex_owner_name_ref_,
+                     trace_make_uint32_arg_value(new_owner_tid)),
+      trace_make_arg(futex_count_name_ref_, trace_make_uint32_arg_value(count)),
+      trace_make_arg(futex_was_active_name_ref_,
+                     trace_make_bool_arg_value(was_active)),
+  };
+
+  const trace_ticks_t end_time = event_time + kFutexOpPriorityDurationWidth;
+
+  trace_context_write_duration_event_record(
+      context_, event_time, end_time, &thread_ref, &sched_category_ref_,
+      &futex_requeue_name_ref_, args, fbl::count_of(args));
 
   return true;
 }

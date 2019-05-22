@@ -90,6 +90,16 @@ class Importer {
                              uint32_t tid, uint32_t flags,
                              int old_inherited_prio, int new_inherited_prio,
                              int old_effective_prio, int new_effective_prio);
+  bool HandleFutexWait(trace_ticks_t event_time, uint64_t futex_id,
+                       uint32_t new_owner_tid, trace_cpu_number_t cpu_number);
+  bool HandleFutexWoke(trace_ticks_t event_time, uint64_t futex_id,
+                       zx_status_t wait_result, trace_cpu_number_t cpu_number);
+  bool HandleFutexWake(trace_ticks_t event_time, uint64_t futex_id,
+                       uint32_t new_owner_tid, uint32_t count, uint32_t flags,
+                       trace_cpu_number_t cpu_number);
+  bool HandleFutexRequeue(trace_ticks_t event_time, uint64_t futex_id,
+                          uint32_t new_owner_tid, uint32_t count,
+                          uint32_t flags, trace_cpu_number_t cpu_number);
   bool HandleObjectDelete(trace_ticks_t event_time, zx_koid_t thread,
                           zx_koid_t object);
   bool HandleThreadCreate(trace_ticks_t event_time, zx_koid_t thread,
@@ -212,6 +222,16 @@ class Importer {
   trace_string_ref_t const inherit_prio_new_ip_name_ref_;
   trace_string_ref_t const inherit_prio_old_ep_name_ref_;
   trace_string_ref_t const inherit_prio_new_ep_name_ref_;
+  trace_string_ref_t const futex_wait_name_ref_;
+  trace_string_ref_t const futex_woke_name_ref_;
+  trace_string_ref_t const futex_wake_name_ref_;
+  trace_string_ref_t const futex_requeue_name_ref_;
+  trace_string_ref_t const futex_id_name_ref_;
+  trace_string_ref_t const futex_owner_name_ref_;
+  trace_string_ref_t const futex_wait_res_name_ref_;
+  trace_string_ref_t const futex_count_name_ref_;
+  trace_string_ref_t const futex_was_requeue_name_ref_;
+  trace_string_ref_t const futex_was_active_name_ref_;
 
   uint32_t version_ = 0u;
 
