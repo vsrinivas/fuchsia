@@ -18,6 +18,7 @@ mod account_event_emitter;
 mod account_handler_connection;
 mod account_handler_context;
 mod account_manager;
+pub mod inspect;
 mod stored_account_list;
 
 use crate::account_manager::AccountManager;
@@ -26,16 +27,17 @@ use fidl_fuchsia_auth::AuthProviderConfig;
 use fuchsia_async as fasync;
 use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_inspect::vmo::Inspector;
 use futures::StreamExt;
 use lazy_static::lazy_static;
 use log::{error, info};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-// This flag (prefixed with `--`) results in a set of hermetic auth providers.
+/// This flag (prefixed with `--`) results in a set of hermetic auth providers.
 const DEV_AUTH_PROVIDERS_FLAG: &str = "dev-auth-providers";
 
-// Default data directory for the AccountManager.
+/// Default data directory for the AccountManager.
 const DATA_DIR: &str = "/data";
 
 lazy_static! {
@@ -79,16 +81,20 @@ fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting account manager");
 
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
-
-    let account_manager = AccountManager::new(PathBuf::from(DATA_DIR), &auth_provider_config)
-        .map_err(|e| {
-            error!("Error initializing AccountManager {:?}", e);
-            e
-        })?;
-    let account_manager = Arc::new(account_manager);
-
     let mut fs = ServiceFs::new();
+    let inspector = Inspector::new()?;
+    inspector.export(&mut fs)?;
+
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let account_manager = Arc::new(
+        AccountManager::new(PathBuf::from(DATA_DIR), &auth_provider_config, &inspector).map_err(
+            |e| {
+                error!("Error initializing AccountManager {:?}", e);
+                e
+            },
+        )?,
+    );
+
     fs.dir("public").add_fidl_service(move |stream| {
         let account_manager_clone = Arc::clone(&account_manager);
         fasync::spawn(async move {

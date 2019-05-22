@@ -21,6 +21,7 @@ use fidl_fuchsia_auth_account::{
     AccountManagerRequestStream, AccountMarker, Status,
 };
 use fuchsia_component::fuchsia_single_component_package_url;
+use fuchsia_inspect::vmo::{Inspector, Metric, Property};
 use futures::lock::Mutex;
 use futures::prelude::*;
 use lazy_static::lazy_static;
@@ -32,6 +33,7 @@ use std::sync::Arc;
 use crate::account_event_emitter::{AccountEvent, AccountEventEmitter};
 use crate::account_handler_connection::AccountHandlerConnection;
 use crate::account_handler_context::AccountHandlerContext;
+use crate::inspect;
 use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
 
 const SELF_URL: &str = fuchsia_single_component_package_url!("account_manager");
@@ -69,6 +71,13 @@ pub struct AccountManager {
 
     /// Root directory containing persistent resources for an AccountManager instance.
     data_dir: PathBuf,
+
+    /// Helper for outputting account information via fuchsia_inspect.
+    accounts_inspect: inspect::Accounts,
+
+    /// Helper for outputting auth_provider information via fuchsia_inspect. Must be retained
+    /// to avoid dropping the static properties it contains.
+    _auth_providers_inspect: inspect::AuthProviders,
 }
 
 impl AccountManager {
@@ -77,18 +86,34 @@ impl AccountManager {
     pub fn new(
         data_dir: PathBuf,
         auth_provider_config: &[AuthProviderConfig],
+        inspector: &Inspector,
     ) -> Result<AccountManager, Error> {
         let context = Arc::new(AccountHandlerContext::new(auth_provider_config));
+
+        // Initialize the map of Account IDs to handlers with IDs read from disk and initially no
+        // handlers. Account handlers will be constructed later when needed.
         let mut ids_to_handlers = AccountMap::new();
         let account_list = StoredAccountList::load(&data_dir)?;
         for account in account_list.accounts().into_iter() {
             ids_to_handlers.insert(account.account_id().clone(), None);
         }
+
+        // Initialize the structs used to output state through the inspect system.
+        let auth_providers_inspect = inspect::AuthProviders::new(inspector.root())?;
+        let auth_provider_types: Vec<String> =
+            auth_provider_config.iter().map(|apc| apc.auth_provider_type.clone()).collect();
+        let _ = auth_providers_inspect.types.set(&auth_provider_types.join(","));
+        let accounts_inspect = inspect::Accounts::new(inspector.root())?;
+        let _ = accounts_inspect.total.set(ids_to_handlers.len() as u64);
+        let event_emitter = AccountEventEmitter::new(inspector.root())?;
+
         Ok(Self {
             ids_to_handlers: Mutex::new(ids_to_handlers),
             context,
-            event_emitter: AccountEventEmitter::new(),
+            event_emitter,
             data_dir,
+            accounts_inspect,
+            _auth_providers_inspect: auth_providers_inspect,
         })
     }
 
@@ -157,6 +182,7 @@ impl AccountManager {
             Arc::clone(&self.context)
         ))?);
         ids_to_handlers_lock.insert(account_id.clone(), Some(Arc::clone(&new_handler)));
+        let _ = self.accounts_inspect.active.set(count_populated(&ids_to_handlers_lock) as u64);
         Ok(new_handler)
     }
 
@@ -255,6 +281,8 @@ impl AccountManager {
         let event = AccountEvent::AccountRemoved(id.clone());
         await!(self.event_emitter.publish(&event));
         ids_to_handlers.remove(&id);
+        let _ = self.accounts_inspect.total.set(ids_to_handlers.len() as u64);
+        let _ = self.accounts_inspect.active.set(count_populated(&ids_to_handlers) as u64);
         Status::Ok
     }
 
@@ -406,8 +434,15 @@ impl AccountManager {
         ids_to_handlers_lock.insert(account_id.clone(), Some(account_handler));
         let event = AccountEvent::AccountAdded(account_id.clone());
         await!(self.event_emitter.publish(&event));
+        let _ = self.accounts_inspect.total.set(ids_to_handlers_lock.len() as u64);
+        let _ = self.accounts_inspect.active.set(count_populated(&ids_to_handlers_lock) as u64);
         Ok(())
     }
+}
+
+/// Returns the number of values in a BTreeMap of Option<> that are not None.
+fn count_populated<K, V>(map: &BTreeMap<K, Option<V>>) -> usize {
+    map.values().filter(|v| v.is_some()).count()
 }
 
 #[cfg(test)]
@@ -452,7 +487,8 @@ mod tests {
         executor.run_singlethreaded(test_fn(proxy)).expect("Executor run failed.")
     }
 
-    fn create_test_object(existing_ids: Vec<u64>, data_dir: &Path) -> AccountManager {
+    // Manually contructs an account manager initialized with the supplied set of accounts.
+    fn create_accounts(existing_ids: Vec<u64>, data_dir: &Path) -> AccountManager {
         let stored_account_list = existing_ids
             .iter()
             .map(|&id| StoredAccountMetadata::new(LocalAccountId::new(id)))
@@ -460,14 +496,24 @@ mod tests {
         StoredAccountList::new(stored_account_list)
             .save(data_dir)
             .expect("Couldn't write account list");
+        let inspector = Inspector::new().unwrap();
+
         AccountManager {
             ids_to_handlers: Mutex::new(
                 existing_ids.into_iter().map(|id| (LocalAccountId::new(id), None)).collect(),
             ),
             context: Arc::new(AccountHandlerContext::new(&vec![])),
-            event_emitter: AccountEventEmitter::new(),
+            event_emitter: AccountEventEmitter::new(inspector.root()).unwrap(),
             data_dir: data_dir.to_path_buf(),
+            accounts_inspect: inspect::Accounts::new(inspector.root()).unwrap(),
+            _auth_providers_inspect: inspect::AuthProviders::new(inspector.root()).unwrap(),
         }
+    }
+
+    // Contructs an account manager that reads its accounts from the supplied directory.
+    fn read_accounts(data_dir: &Path) -> AccountManager {
+        let inspector = Inspector::new().unwrap();
+        AccountManager::new(data_dir.to_path_buf(), &AUTH_PROVIDER_CONFIG, &inspector).unwrap()
     }
 
     fn fidl_local_id_vec(ints: Vec<u64>) -> Vec<FidlLocalAccountId> {
@@ -480,10 +526,12 @@ mod tests {
     /// behavior with this unit-test.
 
     #[test]
-    fn test_initially_empty() {
+    fn test_new() {
+        let inspector = Inspector::new().unwrap();
         let data_dir = TempDir::new().unwrap();
+
         request_stream_test(
-            AccountManager::new(data_dir.path().into(), &AUTH_PROVIDER_CONFIG).unwrap(),
+            AccountManager::new(data_dir.path().into(), &AUTH_PROVIDER_CONFIG, &inspector).unwrap(),
             async move |proxy| {
                 assert_eq!(await!(proxy.get_account_ids())?, vec![]);
                 assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
@@ -493,10 +541,20 @@ mod tests {
     }
 
     #[test]
+    fn test_initially_empty() {
+        let data_dir = TempDir::new().unwrap();
+        request_stream_test(create_accounts(vec![], data_dir.path()), async move |proxy| {
+            assert_eq!(await!(proxy.get_account_ids())?, vec![]);
+            assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
+            Ok(())
+        });
+    }
+
+    #[test]
     fn test_remove_missing_account() {
         // Manually create an account manager with one account.
         let data_dir = TempDir::new().unwrap();
-        let test_object = create_test_object(vec![1], data_dir.path());
+        let test_object = create_accounts(vec![1], data_dir.path());
         request_stream_test(test_object, async move |proxy| {
             // Try to delete a very different account from the one we added.
             assert_eq!(
@@ -516,9 +574,7 @@ mod tests {
         ]);
         stored_account_list.save(data_dir.path()).unwrap();
         // Manually create an account manager from an account_list_dir with two pre-populated dirs.
-        let account_manager =
-            AccountManager::new(data_dir.path().to_owned(), &AUTH_PROVIDER_CONFIG).unwrap();
-
+        let account_manager = read_accounts(data_dir.path());
         request_stream_test(account_manager, async move |proxy| {
             // Try to remove the first account.
             assert_eq!(await!(proxy.remove_account(LocalAccountId::new(1).as_mut()))?, Status::Ok);
@@ -529,8 +585,7 @@ mod tests {
         });
         // Now create another account manager using the same directory, which should pick up the new
         // state from the operations of the first account manager.
-        let account_manager =
-            AccountManager::new(data_dir.path().to_owned(), &AUTH_PROVIDER_CONFIG).unwrap();
+        let account_manager = read_accounts(data_dir.path());
         request_stream_test(account_manager, async move |proxy| {
             // Verify the only the second account is present.
             assert_eq!(await!(proxy.get_account_ids())?, fidl_local_id_vec(vec![2]));
@@ -549,7 +604,7 @@ mod tests {
         };
 
         let data_dir = TempDir::new().unwrap();
-        let test_object = create_test_object(vec![1, 2], data_dir.path());
+        let test_object = create_accounts(vec![1, 2], data_dir.path());
         // TODO(dnordstrom): Use run_until_stalled macro instead.
         request_stream_test(test_object, async move |proxy| {
             let (client_end, mut stream) =

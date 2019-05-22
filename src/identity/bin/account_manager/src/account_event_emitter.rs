@@ -7,10 +7,14 @@
 //! presence and states during their lifetime.
 
 use account_common::{AccountAuthState, FidlAccountAuthState, LocalAccountId};
+use failure::Error;
 use fidl_fuchsia_auth_account::{AccountListenerOptions, AccountListenerProxy};
+use fuchsia_inspect::vmo::{Metric, Node};
 use futures::future::*;
 use futures::lock::Mutex;
 use std::pin::Pin;
+
+use crate::inspect;
 
 /// Events emitted on account listeners
 pub enum AccountEvent {
@@ -76,15 +80,20 @@ impl Client {
     }
 }
 
-/// Collection of account listener emitters.
+/// A type to maintain the set of account listener clients and distribute events to them.
 pub struct AccountEventEmitter {
+    /// Collection of account listener clients.
     clients: Mutex<Vec<Client>>,
+
+    /// Helper for outputting listener information via fuchsia_inspect.
+    inspect: inspect::Listeners,
 }
 
 impl AccountEventEmitter {
     /// Create a new emitter with no clients.
-    pub fn new() -> AccountEventEmitter {
-        Self { clients: Mutex::new(Vec::new()) }
+    pub fn new(parent: &Node) -> Result<AccountEventEmitter, Error> {
+        let inspect = inspect::Listeners::new(parent)?;
+        Ok(Self { clients: Mutex::new(Vec::new()), inspect })
     }
 
     /// Send an event to all active listeners filtered by their respective options. Awaits until
@@ -99,6 +108,7 @@ impl AccountEventEmitter {
         let all_futures = join_all(futures);
         std::mem::drop(clients_lock);
         await!(all_futures);
+        let _ = self.inspect.events.add(1);
     }
 
     /// Add a new listener to the collection.
@@ -119,6 +129,7 @@ impl AccountEventEmitter {
             FutureObj::new(Box::pin(ok(())))
         };
         clients_lock.push(Client::new(listener, options));
+        let _ = self.inspect.active.set(clients_lock.len() as u64);
         std::mem::drop(clients_lock);
         await!(future)
     }
@@ -130,6 +141,7 @@ mod tests {
     use fidl::endpoints::*;
     use fidl_fuchsia_auth::AuthChangeGranularity;
     use fidl_fuchsia_auth_account::{AccountListenerMarker, AccountListenerRequest};
+    use fuchsia_inspect::vmo::Inspector;
     use futures::prelude::*;
     use lazy_static::lazy_static;
 
@@ -144,6 +156,12 @@ mod tests {
         static ref AUTH_STATE: AccountAuthState =
             AccountAuthState { account_id: LocalAccountId::new(6) };
         static ref AUTH_STATES: Vec<AccountAuthState> = vec![AUTH_STATE.clone()];
+    }
+
+    /// Creates a new AccountEventEmitter whose inspect interface is not exported
+    fn create_account_event_emitter() -> AccountEventEmitter {
+        let inspector = Inspector::new().unwrap();
+        AccountEventEmitter::new(inspector.root()).unwrap()
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -244,7 +262,7 @@ mod tests {
             create_request_stream::<AccountListenerMarker>().unwrap();
         let listener_1 = client_end_1.into_proxy().unwrap();
         let listener_2 = client_end_2.into_proxy().unwrap();
-        let account_event_emitter = AccountEventEmitter::new();
+        let account_event_emitter = create_account_event_emitter();
 
         let serve_fut_1 = async move {
             let request = await!(stream_1.try_next()).unwrap();
@@ -314,7 +332,7 @@ mod tests {
         };
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();
         let listener = client_end.into_proxy().unwrap();
-        let account_event_emitter = AccountEventEmitter::new();
+        let account_event_emitter = create_account_event_emitter();
         assert!(await!(account_event_emitter.add_listener(listener, options, &AUTH_STATES)).is_ok());
 
         let serve_fut = async move {
