@@ -8,12 +8,9 @@ import("//build/testing/environments.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 
 group("wlanstack") {
-  testonly = true
   deps = [
-    ":bin",
     ":wlan_metrics_registry",
     ":wlanstack2",
-    ":wlanstack2-tests",
   ]
 }
 
