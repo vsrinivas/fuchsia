@@ -50,7 +50,7 @@ TYPED_TEST_SUITE(GuestTest, GuestTypes);
 
 TYPED_TEST(GuestTest, LaunchGuest) {
   std::string result;
-  EXPECT_EQ(this->Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(this->Execute({"echo", "test"}, &result), ZX_OK);
   EXPECT_EQ(result, "test\n");
 }
 
@@ -64,7 +64,7 @@ TYPED_TEST(GuestTest, VirtioConsole) {
   // Test many small packets.
   std::string result;
   for (size_t i = 0; i != kVirtioConsoleMessageCount; ++i) {
-    EXPECT_EQ(this->Execute("echo \"test\"", &result), ZX_OK);
+    EXPECT_EQ(this->Execute({"echo", "test"}, &result), ZX_OK);
     EXPECT_EQ(result, "test\n");
   }
 
@@ -72,11 +72,9 @@ TYPED_TEST(GuestTest, VirtioConsole) {
   // which is the maximum line length for dash.
   std::string test_data = "";
   for (size_t i = 0; i != kVirtioConsoleMessageCount; ++i) {
-    test_data.append("Lorem ipsum dolor sit amet consectetur ");
+    test_data.append("Lorem ipsum dolor sit amet consectetur");
   }
-  std::string cmd = fxl::StringPrintf("echo \"%s\"", test_data.c_str());
-
-  EXPECT_EQ(this->Execute(cmd, &result), ZX_OK);
+  EXPECT_EQ(this->Execute({"echo", test_data.c_str()}, &result), ZX_OK);
   test_data.append("\n");
   EXPECT_EQ(result, test_data);
 }
@@ -85,7 +83,7 @@ using VirtioBalloonGuestTest = GuestTest<DebianEnclosedGuest>;
 
 TEST_F(VirtioBalloonGuestTest, VirtioBalloon) {
   std::string result;
-  EXPECT_EQ(this->Execute("echo \"test\"", &result), ZX_OK);
+  EXPECT_EQ(this->Execute({"echo", "test"}, &result), ZX_OK);
   EXPECT_EQ(result, "test\n");
 
   fuchsia::virtualization::BalloonControllerSyncPtr balloon_controller;

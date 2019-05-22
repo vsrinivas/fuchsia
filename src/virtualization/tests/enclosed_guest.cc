@@ -45,6 +45,13 @@ static std::string JoinArgVector(const std::vector<std::string>& argv) {
   return result;
 }
 
+// Execute |command| on the guest serial and wait for the |result|.
+zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
+                                   std::string* result) {
+  auto command = JoinArgVector(argv);
+  return serial_.ExecuteBlocking(command, SerialPrompt(), result);
+}
+
 zx_status_t EnclosedGuest::Start() {
   Logger::Get().Reset();
 
@@ -123,7 +130,7 @@ zx_status_t ZirconEnclosedGuest::LaunchInfo(
 zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
   for (size_t i = 0; i != kNumRetries; ++i) {
     std::string ps;
-    zx_status_t status = Execute("ps", &ps);
+    zx_status_t status = Execute({"ps"}, &ps);
     if (status != ZX_OK) {
       continue;
     }
@@ -141,11 +148,12 @@ zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
 zx_status_t ZirconEnclosedGuest::RunUtil(const std::string& util,
                                          const std::vector<std::string>& argv,
                                          std::string* result) {
-  auto args = JoinArgVector(argv);
-  std::string cmd =
-      fxl::StringPrintf("/bin/run %s#meta/%s.cmx %s", kFuchsiaTestUtilsUrl,
-                        util.c_str(), args.c_str());
-  return Execute(cmd, result);
+  std::string fuchsia_url =
+      fxl::StringPrintf("%s#meta/%s.cmx", kFuchsiaTestUtilsUrl, util.c_str());
+
+  std::vector<std::string> exec_argv = {"/bin/run", fuchsia_url};
+  exec_argv.insert(exec_argv.end(), argv.begin(), argv.end());
+  return Execute(exec_argv, result);
 }
 
 zx_status_t DebianEnclosedGuest::LaunchInfo(
@@ -158,7 +166,7 @@ zx_status_t DebianEnclosedGuest::LaunchInfo(
 zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
   for (size_t i = 0; i != kNumRetries; ++i) {
     std::string response;
-    zx_status_t status = Execute("echo guest ready", &response);
+    zx_status_t status = Execute({"echo", "guest ready"}, &response);
     if (status != ZX_OK) {
       continue;
     }
@@ -176,8 +184,10 @@ zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
 zx_status_t DebianEnclosedGuest::RunUtil(const std::string& util,
                                          const std::vector<std::string>& argv,
                                          std::string* result) {
-  auto args = JoinArgVector(argv);
-  std::string cmd = fxl::StringPrintf("%s/%s %s", kDebianTestUtilDir,
-                                      util.c_str(), args.c_str());
-  return Execute(cmd, result);
+  std::string bin_path =
+      fxl::StringPrintf("%s/%s", kDebianTestUtilDir, util.c_str());
+
+  std::vector<std::string> exec_argv = {bin_path};
+  exec_argv.insert(exec_argv.end(), argv.begin(), argv.end());
+  return Execute(exec_argv, result);
 }

@@ -36,9 +36,9 @@ class GuestTest : public ::testing::Test {
     ASSERT_TRUE(enclosed_guest_->Ready()) << "Guest setup failed";
   }
 
-  static zx_status_t Execute(const std::string& message,
+  static zx_status_t Execute(const std::vector<std::string>& argv,
                              std::string* result = nullptr) {
-    return enclosed_guest_->Execute(message, result);
+    return enclosed_guest_->Execute(argv, result);
   }
 
   static zx_status_t RunUtil(const std::string& util,

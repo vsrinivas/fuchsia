@@ -126,10 +126,11 @@ TEST_F(VirtioNetDebianGuestTest, ReceiveAndSend) {
   });
 
   // Configure the guest IPv4 address.
-  EXPECT_EQ(this->Execute("ifconfig enp0s5 192.168.0.10"), ZX_OK);
+  EXPECT_EQ(this->Execute({"ifconfig", "enp0s5", "192.168.0.10"}), ZX_OK);
 
   // Manually add a route to the host.
-  EXPECT_EQ(this->Execute("arp -s 192.168.0.1 02:1a:11:00:00:00"), ZX_OK);
+  EXPECT_EQ(this->Execute({"arp", "-s", "192.168.0.1", "02:1a:11:00:00:00"}),
+            ZX_OK);
 
   std::string result;
   EXPECT_EQ(this->RunUtil(kVirtioNetUtil,

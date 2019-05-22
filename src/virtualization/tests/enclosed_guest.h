@@ -43,10 +43,8 @@ class EnclosedGuest {
   bool Ready() const { return ready_; }
 
   // Execute |command| on the guest serial and wait for the |result|.
-  zx_status_t Execute(const std::string& command,
-                      std::string* result = nullptr) {
-    return serial_.ExecuteBlocking(command, SerialPrompt(), result);
-  }
+  virtual zx_status_t Execute(const std::vector<std::string>& argv,
+                              std::string* result = nullptr);
 
   // Run a test util named |util| with |args| in the guest and wait for the
   // |result|. |args| are specified as a single string with individual arguments
