@@ -39,7 +39,6 @@ rustc_library("driver") {
 test_package("systemupdater-tests") {
   deps = [
     ":driver",
-    "//garnet/go/src/amber:cobalt_sw_delivery_registry",
     "//garnet/go/src/grand_unified_binary",
   ]
 
@@ -51,13 +50,6 @@ test_package("systemupdater-tests") {
   ]
 
   resources = [
-    {
-      path =
-          rebase_path(get_label_info(
-                          "//garnet/go/src/amber:cobalt_sw_delivery_registry",
-                          "target_gen_dir") + "/cobalt_sw_delivery_registry.pb")
-      dest = "cobalt_config.pb"
-    },
     {
       path = rebase_path("//garnet/go/src/amber/system_updater/images")
       dest = "images"

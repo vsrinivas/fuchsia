@@ -283,24 +283,10 @@ async fn test_system_update() {
     ]);
 
     let loggers = env.logger_factory.loggers.lock().clone();
-    assert_eq!(loggers.len(), 1);
-    let logger = loggers.into_iter().next().unwrap();
-    let custom_events = logger.custom_events.lock().clone();
-    assert_eq!(custom_events.len(), 1);
-    let ev = custom_events.into_iter().next().unwrap();
-    assert_eq!(ev.metric_id, 3);
-    assert_eq!(
-        ev.values.iter().filter(|v| v.dimension_name == "target").map(|v| v.value.clone()).next(),
-        Some(fidl_fuchsia_cobalt::Value::StringValue("m3rk13".into()))
-    );
-    assert_eq!(
-        ev.values
-            .iter()
-            .filter(|v| v.dimension_name == "error_code")
-            .map(|v| v.value.clone())
-            .next(),
-        Some(fidl_fuchsia_cobalt::Value::IntValue(0))
-    );
+    // NOTE(rudominer) Logging to Cobalt from Amber has temporarily been disabled.
+    // It will be re-enabled when https://fuchsia-review.googlesource.com/c/fuchsia/+/272921
+    // is landed. This is being tracked by PKG-723.
+    assert_eq!(loggers.len(), 0);
 
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }

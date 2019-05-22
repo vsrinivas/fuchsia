@@ -24,8 +24,8 @@ rustc_library("driver") {
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
@@ -38,7 +38,6 @@ test_package("amberctl-tests") {
   deps = [
     ":driver",
     "//garnet/go/src/grand_unified_binary",
-    "//garnet/go/src/amber:cobalt_sw_delivery_registry",
   ]
 
   binaries = [
@@ -61,17 +60,12 @@ test_package("amberctl-tests") {
       path = rebase_path("data/test.json")
       dest = "sources/test.json"
     },
-    {
-      path = rebase_path(
-              get_label_info("//garnet/go/src/amber:cobalt_sw_delivery_registry", "target_gen_dir") +
-              "/cobalt_sw_delivery_registry.pb")
-      dest = "cobalt_config.pb"
-    },
   ]
 
   meta = [
     {
-      path = rebase_path("//garnet/go/src/amber/meta/amber_with_isolated_storage.cmx")
+      path = rebase_path(
+              "//garnet/go/src/amber/meta/amber_with_isolated_storage.cmx")
       dest = "amber_with_isolated_storage.cmx"
     },
     {

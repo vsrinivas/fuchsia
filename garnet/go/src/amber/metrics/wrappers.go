@@ -3,19 +3,11 @@ package metrics
 import (
 	"app/context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"strings"
-	"syscall/zx"
 	"time"
 
 	"fidl/fuchsia/cobalt"
-	"fidl/fuchsia/mem"
-)
-
-const (
-	metricConfigPath = "/pkg/data/cobalt_config.pb"
-	releaseStage     = cobalt.ReleaseStageDebug
 )
 
 var (
@@ -90,64 +82,15 @@ func newDoubleValue(name string, value float64) cobalt.CustomEventValue {
 	}
 }
 
-func connect() error {
-	config, err := ioutil.ReadFile(metricConfigPath)
-	if err != nil {
-		return fmt.Errorf("read cobalt config: %s", err)
-	}
-
-	configVmo, err := zx.NewVMO(uint64(len(config)), 0)
-	if err != nil {
-		return err
-	}
-	if err := configVmo.Write(config, 0); err != nil {
-		configVmo.Close()
-		return fmt.Errorf("write cobalt vmo: %s", err)
-	}
-
-	factoryRequest, factory, err := cobalt.NewLoggerFactoryInterfaceRequest()
-	if err != nil {
-		configVmo.Close()
-		return err
-	}
-	ctx.ConnectToEnvService(factoryRequest)
-	defer factory.Close()
-
-	loggerRequest, proxy, err := cobalt.NewLoggerInterfaceRequest()
-	if err != nil {
-		configVmo.Close()
-		return err
-	}
-
-	profile := cobalt.ProjectProfile{
-		Config: mem.Buffer{
-			Vmo:  configVmo,
-			Size: uint64(len(config)),
-		},
-		ReleaseStage: releaseStage,
-	}
-
-	status, err := factory.CreateLogger(profile, loggerRequest)
-	if err != nil {
-		proxy.Close()
-		return err
-	} else if err := mapErrCobalt(status); err != nil {
-		proxy.Close()
-		return err
-	}
-
-	logger = proxy
-
-	return nil
-}
-
 func ensureConnection() bool {
-	if logger == nil {
-		if err := connect(); err != nil {
-			log.Printf("connect to cobalt: %s", err)
-		}
-	}
-	return logger != nil
+	// Note(rudominer) Cobalt support for legacy 0.1 projects has been
+	// removed so we cannot log to Cobalt using Amber's old Cobalt 0.1 project
+	// or Cobalt will return an error. The following CL will move Amber to a new
+	// Cobalt 1.0 project:
+	// https://fuchsia-review.googlesource.com/c/fuchsia/+/272921.
+	// Until that CL can be submitted, we disable logging to Cobalt.
+	logger = nil
+	return false
 }
 
 func logString(metric metricID, value string) {

@@ -11,7 +11,6 @@ import("//build/images/manifest.gni")
 import("//build/package.gni")
 import("//build/package/component.gni")
 import("//build/testing/environments.gni")
-import("//third_party/cobalt_config/metrics_registry.gni")
 
 go_library("metrics_lib") {
   name = "metrics"
@@ -41,11 +40,6 @@ go_library("lib") {
     "//zircon/public/fidl/fuchsia-cobalt($go_toolchain)",
     "//zircon/public/fidl/fuchsia-mem($go_toolchain)",
   ]
-}
-
-metrics_registry("cobalt_sw_delivery_registry") {
-  project_id = 108
-  use_target_name = true
 }
 
 # Include install-disk-image in the build, which comes from Zircon
@@ -86,7 +80,6 @@ package("amber") {
   extra = [ manifest_file ]
 
   deps = [
-    ":cobalt_sw_delivery_registry",
     ":install-disk-image.manifest",
     "//garnet/go/src/grand_unified_binary",
   ]
@@ -118,12 +111,6 @@ package("amber") {
     {
       path = rebase_path("keys/root_sig.json")
       dest = "keys"
-    },
-    {
-      path = rebase_path(
-              get_label_info(":cobalt_sw_delivery_registry", "target_gen_dir") +
-              "/cobalt_sw_delivery_registry.pb")
-      dest = "cobalt_config.pb"
     },
     {
       path = rebase_path("system_updater/images")
@@ -166,6 +153,10 @@ test_targets = [
   {
     name = "amber_daemon_test"
     gopkg = "amber/daemon"
+  },
+  {
+    name = "amber_metrics_test"
+    gopkg = "amber/metrics"
   },
   {
     name = "amber_source_test"
