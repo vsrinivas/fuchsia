@@ -37,7 +37,7 @@ std::unique_ptr<Field> RawType::Decode(MessageDecoder* decoder,
                                        std::string_view name,
                                        uint64_t offset) const {
   return std::make_unique<RawField>(
-      name, decoder->GetAddress(offset, inline_size_), inline_size_);
+      name, this, decoder->GetAddress(offset, inline_size_), inline_size_);
 }
 
 std::unique_ptr<Field> StringType::Decode(MessageDecoder* decoder,
@@ -47,7 +47,7 @@ std::unique_ptr<Field> StringType::Decode(MessageDecoder* decoder,
   decoder->GetValueAt(offset, &string_length);
   offset += sizeof(string_length);
 
-  auto result = std::make_unique<StringField>(name, string_length);
+  auto result = std::make_unique<StringField>(name, this, string_length);
   result->DecodeNullable(decoder, offset);
   return result;
 }
@@ -56,7 +56,7 @@ std::unique_ptr<Field> BoolType::Decode(MessageDecoder* decoder,
                                         std::string_view name,
                                         uint64_t offset) const {
   return std::make_unique<BoolField>(
-      name, decoder->GetAddress(offset, sizeof(uint8_t)));
+      name, this, decoder->GetAddress(offset, sizeof(uint8_t)));
 }
 
 size_t StructType::InlineSize() const { return struct_.size(); }
@@ -64,7 +64,7 @@ size_t StructType::InlineSize() const { return struct_.size(); }
 std::unique_ptr<Field> StructType::Decode(MessageDecoder* decoder,
                                           std::string_view name,
                                           uint64_t offset) const {
-  return struct_.DecodeObject(decoder, name, offset, nullable_);
+  return struct_.DecodeObject(decoder, name, this, offset, nullable_);
 }
 
 size_t TableType::InlineSize() const { return table_.size(); }
@@ -76,7 +76,7 @@ std::unique_ptr<Field> TableType::Decode(MessageDecoder* decoder,
   decoder->GetValueAt(offset, &size);
   offset += sizeof(size);
 
-  auto result = std::make_unique<TableField>(name, table_, size);
+  auto result = std::make_unique<TableField>(name, this, table_, size);
   if (result->DecodeNullable(decoder, offset)) {
     if (result->is_null()) {
       FXL_LOG(ERROR) << "invalid null value for table pointer";
@@ -93,7 +93,7 @@ size_t UnionType::InlineSize() const { return union_.size(); }
 std::unique_ptr<Field> UnionType::Decode(MessageDecoder* decoder,
                                          std::string_view name,
                                          uint64_t offset) const {
-  return union_.DecodeUnion(decoder, name, offset, nullable_);
+  return union_.DecodeUnion(decoder, name, this, offset, nullable_);
 }
 
 XUnionType::XUnionType(const XUnion& uni, bool is_nullable)
@@ -113,7 +113,7 @@ std::unique_ptr<Field> XUnionType::Decode(MessageDecoder* decoder,
   offset += sizeof(uint64_t);  // Skips ordinal + padding.
 
   std::unique_ptr<XUnionField> result =
-      std::make_unique<XUnionField>(name, xunion_);
+      std::make_unique<XUnionField>(name, this, xunion_);
 
   std::unique_ptr<EnvelopeField> envelope;
   const UnionMember* member = xunion_.MemberWithOrdinal(ordinal);
@@ -139,7 +139,7 @@ ArrayType::ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count)
 std::unique_ptr<Field> ArrayType::Decode(MessageDecoder* decoder,
                                          std::string_view name,
                                          uint64_t offset) const {
-  auto result = std::make_unique<ArrayField>(name);
+  auto result = std::make_unique<ArrayField>(name, this);
   for (uint64_t i = 0; i < count_; ++i) {
     result->AddField(component_type_->Decode(decoder, "", offset));
     offset += component_type_->InlineSize();
@@ -158,7 +158,7 @@ std::unique_ptr<Field> VectorType::Decode(MessageDecoder* decoder,
   offset += sizeof(size);
 
   auto result =
-      std::make_unique<VectorField>(name, size, component_type_.get());
+      std::make_unique<VectorField>(name, this, size, component_type_.get());
   result->DecodeNullable(decoder, offset);
   return result;
 }
@@ -169,7 +169,7 @@ std::unique_ptr<Field> EnumType::Decode(MessageDecoder* decoder,
                                         std::string_view name,
                                         uint64_t offset) const {
   return std::make_unique<EnumField>(
-      name, decoder->GetAddress(offset, enum_.size()), enum_);
+      name, this, decoder->GetAddress(offset, enum_.size()), enum_);
 }
 
 std::unique_ptr<Field> HandleType::Decode(MessageDecoder* decoder,
@@ -180,12 +180,12 @@ std::unique_ptr<Field> HandleType::Decode(MessageDecoder* decoder,
   if ((handle != FIDL_HANDLE_ABSENT) && (handle != FIDL_HANDLE_PRESENT)) {
     FXL_LOG(ERROR) << "invalid value <" << std::hex << handle << std::dec
                    << "> for handle";
-    return std::make_unique<HandleField>(name, FIDL_HANDLE_ABSENT);
+    return std::make_unique<HandleField>(name, this, FIDL_HANDLE_ABSENT);
   }
   if (handle != FIDL_HANDLE_ABSENT) {
     handle = decoder->GetNextHandle();
   }
-  return std::make_unique<HandleField>(name, handle);
+  return std::make_unique<HandleField>(name, this, handle);
 }
 
 std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name,

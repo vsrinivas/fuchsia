@@ -6,6 +6,8 @@
 
 #include <cmdline/args_parser.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 #include <filesystem>
 #include <fstream>
@@ -25,14 +27,14 @@ Options:
 
 )";
 
-const char kRemoteHostHelp[] = R"(--connect
+const char kRemoteHostHelp[] = R"(  --connect
       The host and port of the target Fuchsia instance, of the form
       [<ipv6_addr>]:port.)";
 
-const char kRemotePidHelp[] = R"(--remote-pid
+const char kRemotePidHelp[] = R"(  --remote-pid
       The koid of the remote process.)";
 
-const char kFidlIrPathHelp[] = R"(--fidl-ir-path=<path>|@argfile
+const char kFidlIrPathHelp[] = R"(  --fidl-ir-path=<path>|@argfile
       Adds the given path as a repository for FIDL IR, in the form of .fidl.json
       files.  Passing a file adds the given file.  Passing a directory adds all
       of the .fidl.json files in that directory and any directory transitively
@@ -41,10 +43,6 @@ const char kFidlIrPathHelp[] = R"(--fidl-ir-path=<path>|@argfile
       an argfile (starting with the '@' character) adds all files listed in that
       argfile.  This switch can be passed multiple times to add multiple
       locations.)";
-
-const char kHelpHelp[] = R"(  --help
-  -h
-      Prints all command-line switches.)";
 
 const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
   -s <path>
@@ -56,6 +54,23 @@ const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
       of all ELF files within. When a .txt file is passed, it will be treated
       as a mapping database from build ID to file path. Otherwise, the path
       will be loaded as an ELF file (if possible).)";
+
+const char kPrettyPrintHelp[] = R"(  --pretty-print
+      Use a formated print instead of JSON.)";
+
+const char kColorsHelp[] = R"(  --colors=[never|auto|always]
+      For pretty print, use colors:
+      - never
+      - auto: only if running in a terminal
+      - always (default value))";
+
+const char kColumnsHelp[] = R"(  --columns=<size>
+      For pretty print, width of the display. By default, on a terminal, use
+      the terminal width.)";
+
+const char kHelpHelp[] = R"(  --help
+  -h
+      Prints all command-line switches.)";
 
 cmdline::Status ParseCommandLine(int argc, const char* argv[],
                                  CommandLineOptions* options,
@@ -70,6 +85,10 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[],
                    &CommandLineOptions::fidl_ir_paths);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp,
                    &CommandLineOptions::symbol_paths);
+  parser.AddSwitch("pretty-print", 0, kPrettyPrintHelp,
+                   &CommandLineOptions::pretty_print);
+  parser.AddSwitch("colors", 0, kColorsHelp, &CommandLineOptions::colors);
+  parser.AddSwitch("columns", 0, kColumnsHelp, &CommandLineOptions::columns);
   bool requested_help = false;
   parser.AddGeneralSwitch("help", 'h', kHelpHelp,
                           [&requested_help]() { requested_help = true; });
@@ -81,6 +100,21 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[],
 
   if (requested_help) {
     return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
+  }
+
+  struct winsize term_size;
+  term_size.ws_col = 0;
+  int ioctl_result = ioctl(STDOUT_FILENO, TIOCGWINSZ, &term_size);
+  if (options->columns == 0) {
+    options->columns = term_size.ws_col;
+    options->columns = std::max(options->columns, 80);
+  }
+
+  if (options->pretty_print) {
+    if ((options->colors == "always") ||
+        ((options->colors == "auto") && (ioctl_result != -1))) {
+      options->needs_colors = true;
+    }
   }
 
   return cmdline::Status::Ok();

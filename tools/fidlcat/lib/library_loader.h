@@ -136,7 +136,8 @@ class Union {
 
   std::unique_ptr<UnionField> DecodeUnion(MessageDecoder* decoder,
                                           std::string_view name,
-                                          uint64_t offset, bool nullable) const;
+                                          const Type* type, uint64_t offset,
+                                          bool nullable) const;
 
  private:
   Union(const Library& enclosing_library, const rapidjson::Value& value);
@@ -185,14 +186,15 @@ class Struct {
   friend class InterfaceMethod;
 
   const Library& enclosing_library() const { return enclosing_library_; }
+  const std::string& name() const { return name_; }
   uint32_t size() const { return size_; }
   const std::vector<std::unique_ptr<StructMember>>& members() const {
     return members_;
   }
 
   std::unique_ptr<Object> DecodeObject(MessageDecoder* decoder,
-                                       std::string_view name, uint64_t offset,
-                                       bool nullable) const;
+                                       std::string_view name, const Type* type,
+                                       uint64_t offset, bool nullable) const;
 
  private:
   Struct(const Library& enclosing_library, const rapidjson::Value& value);

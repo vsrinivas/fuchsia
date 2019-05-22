@@ -93,10 +93,11 @@ const UnionMember* Union::MemberWithOrdinal(Ordinal ordinal) const {
 
 std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder,
                                                std::string_view name,
+                                               const Type* type,
                                                uint64_t offset,
                                                bool nullable) const {
   std::unique_ptr<UnionField> result =
-      std::make_unique<UnionField>(name, *this);
+      std::make_unique<UnionField>(name, type, *this);
   if (nullable) {
     result->DecodeNullable(decoder, offset);
   } else {
@@ -147,9 +148,9 @@ void Struct::DecodeResponseTypes() {
 
 std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder,
                                              std::string_view name,
-                                             uint64_t offset,
+                                             const Type* type, uint64_t offset,
                                              bool nullable) const {
-  std::unique_ptr<Object> result = std::make_unique<Object>(name, *this);
+  std::unique_ptr<Object> result = std::make_unique<Object>(name, type, *this);
   if (nullable) {
     result->DecodeNullable(decoder, offset);
   } else {

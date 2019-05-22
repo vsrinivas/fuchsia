@@ -34,8 +34,8 @@ MessageDecoder::MessageDecoder(const MessageDecoder* container,
 std::unique_ptr<Object> MessageDecoder::DecodeMessage(
     const Struct& message_format) {
   std::unique_ptr<Object> result =
-      message_format.DecodeObject(this, /*name=*/"", /*offset=*/0,
-                                  /*nullable=*/false);
+      message_format.DecodeObject(this, /*name=*/"", /*type=*/nullptr,
+                                  /*offset=*/0, /*nullable=*/false);
   GotoNextObjectOffset(message_format.size());
   for (size_t i = 0; i < secondary_objects_.size(); ++i) {
     secondary_objects_[i]->DecodeContent(this);

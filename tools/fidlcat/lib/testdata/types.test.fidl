@@ -11,46 +11,54 @@ protocol this_is_an_interface {
     Int16(int16 i16);
     Int32(int32 i32);
     Int64(int64 i64);
-    Uint8(uint8 i8);
-    Uint16(uint16 i16);
-    Uint32(uint32 i32);
-    Uint64(uint64 i64);
+    Uint8(uint8 ui8);
+    Uint16(uint16 ui16);
+    Uint32(uint32 ui32);
+    Uint64(uint64 ui64);
     Float32(float32 f32);
     Float64(float64 f64);
-    Struct(primitive_types p);
-    NullableStruct(primitive_types? p);
-    NullableStructAndInt(primitive_types? p, int32 i);
-    Array1(array<int32>:1 b_1);
-    Array2(array<int32>:2 b_2);
-    Vector(vector<int32>? v_1);
-    DefaultEnum(default_enum ev);
-    I8Enum(i8_enum ev);
-    I16Enum(i16_enum ev);
-    Handle(handle<channel> ch);
-    NullableHandle(handle<channel>? ch);
 
     Complex(int32 real, int32 imaginary);
     StringInt(string s, int32 i32);
-    TwoStringStructInt(two_string_struct s, int32 i32);
+
+    Array1(array<int32>:1 b_1);
+    Array2(array<int32>:2 b_2);
+    Vector(vector<int32>? v_1);
+
     TwoStringArrayInt(array<string>:2 arr, int32 i32);
     TwoStringVectorInt(vector<string> vec, int32 i32);
+
+    Struct(primitive_types p);
+    NullableStruct(primitive_types? p);
+    NullableStructAndInt(primitive_types? p, int32 i);
+
+    TwoStringStructInt(two_string_struct s, int32 i32);
     TwoStringNullableStructInt(two_string_struct? s, int32 i32);
-    HandleStruct(handle_struct hs);
 
     Union(int_struct_union isu, int32 i);
     NullableUnion(int_struct_union? isu, int32 i);
     NullableUnionIntFirst(int32 i, int_struct_union? isu);
-    ShortUnion(u8_u16_union u, int32 i);
 
     XUnion(int_struct_xunion isu, int32 i);
     NullableXUnion(int_struct_xunion? isu, int32 i);
     NullableXUnionIntFirst(int32 i, int_struct_xunion? isu);
+
+    ShortUnion(u8_u16_union u, int32 i);
     ShortXUnion(u8_u16_xunion u, int32 i);
 
+    DefaultEnum(default_enum ev);
+    I8Enum(i8_enum ev);
+    I16Enum(i16_enum ev);
+
     Table(value_table table, int32 i);
+
+    Handle(handle<channel> ch);
+    NullableHandle(handle<channel>? ch);
+    HandleStruct(handle_struct hs);
 };
 
 struct primitive_types {
+    string s;
     bool b;
     int8 i8;
     int16 i16;
@@ -62,6 +70,31 @@ struct primitive_types {
     uint64 u64;
     float32 f32;
     float64 f64;
+};
+
+struct two_string_struct {
+    string value1;
+    string value2;
+};
+
+union int_struct_union {
+    int32 variant_i;
+    two_string_struct variant_tss;
+};
+
+xunion int_struct_xunion {
+    int32 variant_i;
+    two_string_struct variant_tss;
+};
+
+union u8_u16_union {
+    uint8 variant_u8;
+    uint16 variant_u16;
+};
+
+xunion u8_u16_xunion {
+    uint8 variant_u8;
+    uint16 variant_u16;
 };
 
 enum default_enum {
@@ -76,39 +109,14 @@ enum i16_enum : int16 {
     x = -23;
 };
 
-struct two_string_struct {
-    string value1;
-    string value2;
+table value_table {
+    1: int16 first_int16;
+    2: two_string_struct second_struct;
+    3: int_struct_union third_union;
 };
 
 struct handle_struct {
     handle<channel> h1;
     handle<channel> h2;
     handle<channel> h3;
-};
-
-union int_struct_union {
-    int32 variant_i;
-    two_string_struct variant_tss;
-};
-
-union u8_u16_union {
-    uint8 variant_u8;
-    uint16 variant_u16;
-};
-
-xunion int_struct_xunion {
-    int32 variant_i;
-    two_string_struct variant_tss;
-};
-
-xunion u8_u16_xunion {
-    uint8 variant_u8;
-    uint16 variant_u16;
-};
-
-table value_table {
-    1: int16 first_int16;
-    2: two_string_struct second_struct;
-    3: int_struct_union third_union;
 };

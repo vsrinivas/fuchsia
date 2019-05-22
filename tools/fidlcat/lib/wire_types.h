@@ -37,6 +37,9 @@ class Type {
   // Return true if the type is a RawType.
   virtual bool IsRaw() const { return false; }
 
+  // Return a readable representation of the type.
+  virtual std::string Name() const = 0;
+
   // Takes a pointer |bytes| and length of the data part |length|, and
   // returns whether that is equal to the Value represented by |value| according
   // to this type.
@@ -90,6 +93,8 @@ class RawType : public Type {
 
   bool IsRaw() const override { return true; }
 
+  std::string Name() const override { return "unknown"; }
+
   virtual size_t InlineSize() const override { return inline_size_; }
 
   std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
@@ -101,6 +106,8 @@ class RawType : public Type {
 
 class StringType : public Type {
  public:
+  std::string Name() const override { return "string"; }
+
   virtual size_t InlineSize() const override {
     return sizeof(uint64_t) + sizeof(uint64_t);
   }
@@ -134,12 +141,64 @@ class NumericType : public Type {
   std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
                                 uint64_t offset) const override {
     return std::make_unique<NumericField<T>>(
-        name, decoder->GetAddress(offset, sizeof(T)));
+        name, this, decoder->GetAddress(offset, sizeof(T)));
   }
+};
+
+class Float32Type : public NumericType<float> {
+ public:
+  std::string Name() const override { return "float32"; }
+};
+
+class Float64Type : public NumericType<double> {
+ public:
+  std::string Name() const override { return "float64"; }
+};
+
+class Int8Type : public NumericType<int8_t> {
+ public:
+  std::string Name() const override { return "int8"; }
+};
+
+class Int16Type : public NumericType<int16_t> {
+ public:
+  std::string Name() const override { return "int16"; }
+};
+
+class Int32Type : public NumericType<int32_t> {
+ public:
+  std::string Name() const override { return "int32"; }
+};
+
+class Int64Type : public NumericType<int64_t> {
+ public:
+  std::string Name() const override { return "int64"; }
+};
+
+class Uint8Type : public NumericType<uint8_t> {
+ public:
+  std::string Name() const override { return "uint8"; }
+};
+
+class Uint16Type : public NumericType<uint16_t> {
+ public:
+  std::string Name() const override { return "uint16"; }
+};
+
+class Uint32Type : public NumericType<uint32_t> {
+ public:
+  std::string Name() const override { return "uint32"; }
+};
+
+class Uint64Type : public NumericType<uint64_t> {
+ public:
+  std::string Name() const override { return "uint64"; }
 };
 
 class BoolType : public Type {
  public:
+  std::string Name() const override { return "bool"; }
+
   virtual size_t InlineSize() const override { return sizeof(uint8_t); }
 
   std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
@@ -150,6 +209,8 @@ class StructType : public Type {
  public:
   StructType(const Struct& str, bool nullable)
       : struct_(str), nullable_(nullable) {}
+
+  std::string Name() const override { return struct_.name(); }
 
   virtual size_t InlineSize() const override;
 
@@ -165,6 +226,8 @@ class TableType : public Type {
  public:
   TableType(const Table& tab) : table_(tab) {}
 
+  std::string Name() const override { return table_.name(); }
+
   virtual size_t InlineSize() const override;
 
   std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
@@ -177,6 +240,8 @@ class TableType : public Type {
 class UnionType : public Type {
  public:
   UnionType(const Union& uni, bool nullable);
+
+  std::string Name() const override { return union_.name(); }
 
   virtual size_t InlineSize() const override;
 
@@ -191,6 +256,8 @@ class UnionType : public Type {
 class XUnionType : public Type {
  public:
   XUnionType(const XUnion& uni, bool is_nullable);
+
+  std::string Name() const override { return xunion_.name(); }
 
   virtual size_t InlineSize() const override;
 
@@ -214,6 +281,10 @@ class ArrayType : public ElementSequenceType {
  public:
   ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count);
 
+  std::string Name() const override {
+    return std::string("array<") + component_type_->Name() + ">";
+  }
+
   virtual size_t InlineSize() const override {
     return component_type_->InlineSize() * count_;
   }
@@ -229,6 +300,10 @@ class VectorType : public ElementSequenceType {
  public:
   VectorType(std::unique_ptr<Type>&& component_type);
 
+  std::string Name() const override {
+    return std::string("vector<") + component_type_->Name() + ">";
+  }
+
   virtual size_t InlineSize() const override {
     return sizeof(uint64_t) + sizeof(uint64_t);
   }
@@ -240,6 +315,8 @@ class VectorType : public ElementSequenceType {
 class EnumType : public Type {
  public:
   EnumType(const Enum& e);
+
+  std::string Name() const override { return enum_.name(); }
 
   virtual size_t InlineSize() const override { return enum_.size(); }
 
@@ -254,22 +331,13 @@ class HandleType : public Type {
  public:
   HandleType() {}
 
+  std::string Name() const override { return "handle"; }
+
   virtual size_t InlineSize() const override { return sizeof(zx_handle_t); }
 
   std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
                                 uint64_t offset) const override;
 };
-
-using Float32Type = NumericType<float>;
-using Float64Type = NumericType<double>;
-using Int8Type = NumericType<int8_t>;
-using Int16Type = NumericType<int16_t>;
-using Int32Type = NumericType<int32_t>;
-using Int64Type = NumericType<int64_t>;
-using Uint8Type = NumericType<uint8_t>;
-using Uint16Type = NumericType<uint16_t>;
-using Uint32Type = NumericType<uint32_t>;
-using Uint64Type = NumericType<uint64_t>;
 
 }  // namespace fidlcat
 

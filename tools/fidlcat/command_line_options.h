@@ -14,6 +14,10 @@ struct CommandLineOptions {
   std::optional<std::string> remote_pid;
   std::vector<std::string> symbol_paths;
   std::vector<std::string> fidl_ir_paths;
+  bool pretty_print = false;
+  std::string colors = "always";
+  int columns = 0;
+  bool needs_colors = false;
 };
 
 // Parses the given |argc| and |argv| into the well-defined |options|.  If there

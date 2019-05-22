@@ -51,30 +51,29 @@ namespace {
 // JSON object which represents the message. The format of the message is
 // specified by str.
 // Returns true on success, false on failure.
-bool MessageToJSON(const Struct& str, const fidl::Message& message,
-                   rapidjson::Document& result) {
+bool DecodeMessage(const Struct& str, const fidl::Message& message,
+                   std::unique_ptr<Object>* decoded_object) {
   MessageDecoder decoder(message);
-  std::unique_ptr<Object> object = decoder.DecodeMessage(str);
-  object->ExtractJson(result.GetAllocator(), result);
+  *decoded_object = decoder.DecodeMessage(str);
   return !decoder.HasError();
 }
 
 }  // anonymous namespace
 
-bool RequestToJSON(const InterfaceMethod* method, const fidl::Message& message,
-                   rapidjson::Document& request) {
+bool DecodeRequest(const InterfaceMethod* method, const fidl::Message& message,
+                   std::unique_ptr<Object>* decoded_object) {
   if (method->request() == nullptr) {
     return false;
   }
-  return MessageToJSON(*method->request(), message, request);
+  return DecodeMessage(*method->request(), message, decoded_object);
 }
 
-bool ResponseToJSON(const InterfaceMethod* method, const fidl::Message& message,
-                    rapidjson::Document& response) {
+bool DecodeResponse(const InterfaceMethod* method, const fidl::Message& message,
+                    std::unique_ptr<Object>* decoded_object) {
   if (method->response() == nullptr) {
     return false;
   }
-  return MessageToJSON(*method->response(), message, response);
+  return DecodeMessage(*method->response(), message, decoded_object);
 }
 
 }  // namespace fidlcat
