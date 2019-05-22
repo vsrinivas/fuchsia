@@ -101,6 +101,7 @@ void EventBroadcasterOnProgramEnd();
 // Verify that Runner behaves appropiately with the defined options.
 void RunnerRegisterTest();
 void RunnerRegisterTestWithCustomFactory();
+void RunnerLifecycleObserversRegisteredAndNotified();
 void RunnerRunAllTests();
 void RunnerRunAllTestsUntilFailure();
 void RunnerRunAllTestsSameTestCase();
@@ -181,6 +182,7 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(EventBroadcasterOnProgramEnd),
     RUN_TEST(RunnerRegisterTest),
     RUN_TEST(RunnerRegisterTestWithCustomFactory),
+    RUN_TEST(RunnerLifecycleObserversRegisteredAndNotified),
     RUN_TEST(RunnerRunAllTests),
     RUN_TEST(RunnerRunAllTestsUntilFailure),
     RUN_TEST(RunnerRunAllTestsSameTestCase),

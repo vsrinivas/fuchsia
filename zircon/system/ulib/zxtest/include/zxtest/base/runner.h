@@ -198,6 +198,10 @@ public:
 
     int random_seed() const { return options_ ? options_->seed : kDefaultOptions.seed; }
 
+    void AddObserver(LifecycleObserver* observer) {
+        event_broadcaster_.Subscribe(observer);
+    }
+
     // Set of options currently in use. By default |Runner::kDefaultOptions| will be returned.
     const Options& options() const { return options_ ? *options_ : kDefaultOptions; }
 

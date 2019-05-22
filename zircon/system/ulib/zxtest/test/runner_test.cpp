@@ -292,6 +292,69 @@ void RunnerRunOnlyFilteredTests() {
     ZX_ASSERT_MSG(test_2_counter == 0, "test_2 was not filtered.\n");
 }
 
+#define OBSERVER_EVENT_HANDLER(Event, Params...)                                                          \
+    void On##Event(Params) final { Event##Cnt++; }                                                     \
+    int Event##Cnt = 0
+
+class FakeObserver1 : public LifecycleObserver {
+public:
+    OBSERVER_EVENT_HANDLER(ProgramStart, const Runner&);
+    OBSERVER_EVENT_HANDLER(IterationStart, const Runner&, int);
+    OBSERVER_EVENT_HANDLER(EnvironmentSetUp, const Runner&);
+    OBSERVER_EVENT_HANDLER(EnvironmentTearDown, const Runner&);
+    OBSERVER_EVENT_HANDLER(IterationEnd, const Runner&, int);
+    OBSERVER_EVENT_HANDLER(ProgramEnd, const Runner&);
+    OBSERVER_EVENT_HANDLER(Assertion, const Assertion&);
+};
+
+class FakeObserver2 : public LifecycleObserver {
+public:
+    OBSERVER_EVENT_HANDLER(TestCaseStart, const TestCase&);
+    OBSERVER_EVENT_HANDLER(TestStart, const TestCase&, const TestInfo&);
+    OBSERVER_EVENT_HANDLER(TestSuccess, const TestCase&, const TestInfo&);
+    OBSERVER_EVENT_HANDLER(TestFailure, const TestCase&, const TestInfo&);
+    OBSERVER_EVENT_HANDLER(TestCaseEnd, const TestCase&);
+};
+
+void RunnerLifecycleObserversRegisteredAndNotified() {
+    int test_counter;
+    FakeObserver1 obs;
+    FakeObserver2 obs2;
+
+    Runner runner(Reporter(/*stream*/ nullptr));
+    runner.AddObserver(&obs);
+    runner.AddObserver(&obs2);
+    runner.RegisterTest<Test, FakeTest>(kTestCaseName, kTestName, kFileName, kLineNumber,
+                                        FakeTest::MakeFactory(&test_counter));
+    runner.RegisterTest<Test, FailingTest>(kTestCaseName, kTestName2, kFileName, kLineNumber,
+                                           FailingTest::MakeFactory(&runner));
+    runner.RegisterTest<Test, FakeTest>(kTestCaseName2, kTestName, kFileName, kLineNumber,
+                                        FakeTest::MakeFactory(&test_counter));
+    runner.RegisterTest<Test, FakeTest>(kTestCaseName2, kTestName2, kFileName, kLineNumber,
+                                        FakeTest::MakeFactory(&test_counter));
+
+    Runner::Options options = Runner::kDefaultOptions;
+    options.repeat = 2; // Iterate twice
+
+    // For each type of notification ensure that it only notified the appropriate
+    // LifecycleObserver the correct number of times.
+    ZX_ASSERT_MSG(runner.Run(options) != 0, "Test Execution Failed.\n");
+    // |obs| received all notifications related to execution and environment.
+    ZX_ASSERT_MSG(obs.ProgramStartCnt == 1, "ProgramStart notified incorrectly.\n");
+    ZX_ASSERT_MSG(obs.IterationStartCnt == 2, "IterationStart notified incorrectly.\n");
+    ZX_ASSERT_MSG(obs.EnvironmentSetUpCnt == 2, "EnvironmentSetup notified incorrectly.\n");
+    ZX_ASSERT_MSG(obs.EnvironmentTearDownCnt == 2, "EnvironmentTearDown notified incorrectly.\n");
+    ZX_ASSERT_MSG(obs.IterationEndCnt == 2, "IterationEnd notified incorrectly.\n");
+    ZX_ASSERT_MSG(obs.ProgramEndCnt == 1, "ProgramEnd notified incorrectly.\n");
+    ZX_ASSERT_MSG(obs.AssertionCnt == 2, "Assertion notified incorrectly.\n");
+    // |obs2| received all notifications related to tests.
+    ZX_ASSERT_MSG(obs2.TestCaseStartCnt == 4, "TestCaseStart notified incorrectly.\n");
+    ZX_ASSERT_MSG(obs2.TestStartCnt == 8, "TestStart notified incorrectly.\n");
+    ZX_ASSERT_MSG(obs2.TestSuccessCnt == 6, "TestSuccess notified incorrectly.\n");
+    ZX_ASSERT_MSG(obs2.TestFailureCnt == 2, "TestFailure notified incorrectly.\n");
+    ZX_ASSERT_MSG(obs2.TestCaseEndCnt == 4, "TestCaseEnd notified incorrectly.\n");
+}
+
 void RunnerRunAllTestsSameTestCase() {
     Runner runner(Reporter(/*stream*/ nullptr));
     int test_counter = 0;
