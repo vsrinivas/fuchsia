@@ -80,6 +80,7 @@ group("all") {
     "//garnet/packages/examples:eth-rs",
     "//garnet/packages/examples:fidl",
     "//garnet/packages/examples:http",
+    "//garnet/packages/examples:inspection",
     "//garnet/packages/examples:intl",
     "//garnet/packages/examples:media",
     "//garnet/packages/examples:mediaplayer",
@@ -140,6 +141,14 @@ group("fidl") {
   ]
 }
 
+group("inspection") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/inspection:example_server",
+    "//garnet/examples/inspection:example_server_unittests",
+  ]
+}
+
 group("overnet") {
   testonly = true
   public_deps = [
@@ -158,15 +167,15 @@ group("mediaplayer") {
 group("media") {
   testonly = true
   public_deps = [
-    "//garnet/examples/camera/camera_client:camera_client",
     "//examples/media/audio/fx",
     "//examples/media/audio/simple_sine",
     "//examples/media/audio/sync_sine",
     "//examples/media/audio/tones",
     "//examples/media/audio/vu_meter",
+    "//garnet/examples/camera/camera_client:camera_client",
     "//garnet/examples/media:use_h264_decoder_test",
-    "//garnet/examples/media:use_vp9_decoder_test",
     "//garnet/examples/media:use_media_decoder",
+    "//garnet/examples/media:use_vp9_decoder_test",
   ]
 }
 
