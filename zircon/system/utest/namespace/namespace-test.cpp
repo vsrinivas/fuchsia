@@ -13,10 +13,12 @@
 
 #include <fbl/algorithm.h>
 #include <launchpad/launchpad.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
+#include <lib/zx/channel.h>
+#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
-#include <unittest/unittest.h>
 
 namespace {
 
@@ -90,6 +92,20 @@ bool BindRootTest() {
     ASSERT_GT(fd, 0);
     ASSERT_EQ(fdio_ns_bind_fd(ns, "/", fd), ZX_OK);
     ASSERT_EQ(close(fd), 0);
+    fdio_ns_destroy(ns);
+
+    END_TEST;
+}
+
+bool BindRootHandleTest() {
+    BEGIN_TEST;
+
+    fdio_ns_t* ns;
+    ASSERT_EQ(fdio_ns_create(&ns), ZX_OK);
+    zx::channel h1, h2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+    ASSERT_EQ(ZX_OK, fdio_service_connect("/boot/bin", h1.release()));
+    ASSERT_EQ(fdio_ns_bind(ns, "/", h2.release()), ZX_OK);
     fdio_ns_destroy(ns);
 
     END_TEST;
@@ -372,6 +388,7 @@ BEGIN_TEST_CASE(namespace_tests)
 RUN_TEST_MEDIUM(DestroyTest)
 RUN_TEST_MEDIUM(DestroyWhileInUseTest)
 RUN_TEST_MEDIUM(BindRootTest)
+RUN_TEST_MEDIUM(BindRootHandleTest)
 RUN_TEST_MEDIUM(ShadowRootTest)
 RUN_TEST_MEDIUM(ShadowNonRootTest)
 RUN_TEST_MEDIUM(ExportEmptyTest)
