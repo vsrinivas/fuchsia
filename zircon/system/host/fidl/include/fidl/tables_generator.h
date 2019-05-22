@@ -61,6 +61,7 @@ private:
 
     void Generate(const coded::Type* type);
     void Generate(const coded::StructField& field);
+    void Generate(const coded::UnionField& field);
     void Generate(const coded::TableField& field);
     void Generate(const coded::XUnionField& field);
 

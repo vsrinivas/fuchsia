@@ -31,10 +31,12 @@ private:
     uint32_t max_out_of_line_;
 };
 
+// |FieldShape| describes a |TypeShape| that is embedded in a struct or (x)union as a member field.
+// It contains additional offset and padding information.
 class FieldShape {
 public:
-    explicit FieldShape(TypeShape typeshape, uint32_t offset = 0u)
-        : typeshape_(typeshape), offset_(offset) {}
+    explicit FieldShape(TypeShape typeshape, uint32_t offset = 0, uint32_t padding = 0)
+        : typeshape_(typeshape), offset_(offset), padding_(padding) {}
     FieldShape()
         : FieldShape(TypeShape()) {}
 
@@ -45,14 +47,18 @@ public:
     uint32_t Alignment() const { return typeshape_.Alignment(); }
     uint32_t Depth() const { return typeshape_.Depth(); }
     uint32_t Offset() const { return offset_; }
+    // Padding after this field until the next field or the end of the container.
+    uint32_t Padding() const { return padding_; }
     uint32_t MaxHandles() const { return typeshape_.MaxHandles(); }
     uint32_t MaxOutOfLine() const { return typeshape_.MaxOutOfLine(); }
 
     void SetOffset(uint32_t offset) { offset_ = offset; }
+    void SetPadding(uint32_t padding) { padding_ = padding; }
 
 private:
     TypeShape typeshape_;
     uint32_t offset_;
+    uint32_t padding_;
 };
 
 #endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TYPE_SHAPE_H_

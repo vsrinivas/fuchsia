@@ -116,10 +116,20 @@ uint32_t ClampedAdd(uint32_t a, uint32_t b) {
                  static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())));
 }
 
-TypeShape AlignTypeshape(TypeShape shape, uint32_t alignment) {
+TypeShape AlignTypeshape(TypeShape shape, std::vector<FieldShape*>* fields, uint32_t alignment) {
     uint32_t new_alignment = std::max(shape.Alignment(), alignment);
     uint32_t new_size = AlignTo(shape.Size(), new_alignment);
-    return TypeShape(new_size, new_alignment, shape.Depth(), shape.MaxHandles(), shape.MaxOutOfLine());
+    auto typeshape = TypeShape(new_size,
+                               new_alignment,
+                               shape.Depth(),
+                               shape.MaxHandles(),
+                               shape.MaxOutOfLine());
+    // Fix-up padding in the last field according to the new typeshape.
+    if (!fields->empty()) {
+        auto& last = fields->back();
+        last->SetPadding(typeshape.Size() - last->Offset() - last->Size());
+    }
+    return typeshape;
 }
 
 TypeShape Struct::Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles) {
@@ -152,18 +162,30 @@ TypeShape Struct::Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles
         size = 1;
     }
 
-    return TypeShape(size, alignment, depth, max_handles, max_out_of_line);
+    // Struct padding is between one member and the next, or the end of the struct.
+    auto typeshape = TypeShape(size, alignment, depth, max_handles, max_out_of_line);
+    for (size_t i = 0; i + 1 < fields->size(); i++) {
+        auto& current = fields->at(i);
+        auto& next = fields->at(i + 1);
+        current->SetPadding(next->Offset() - current->Offset() - current->Size());
+    }
+    if (!fields->empty()) {
+        auto& last = fields->back();
+        last->SetPadding(typeshape.Size() - last->Offset() - last->Size());
+    }
+
+    return typeshape;
 }
 
-TypeShape Union::Shape(const std::vector<flat::Union::Member>& members) {
+TypeShape Union::Shape(std::vector<FieldShape*>* fields) {
     uint32_t size = 0u;
     uint32_t alignment = 1u;
     uint32_t depth = 0u;
     uint32_t max_handles = 0u;
     uint32_t max_out_of_line = 0u;
 
-    for (const auto& member : members) {
-        const auto& fieldshape = member.fieldshape;
+    for (const auto& field : *fields) {
+        auto& fieldshape = *field;
         size = std::max(size, fieldshape.Size());
         alignment = std::max(alignment, fieldshape.Alignment());
         depth = std::max(depth, fieldshape.Depth());
@@ -172,12 +194,31 @@ TypeShape Union::Shape(const std::vector<flat::Union::Member>& members) {
     }
 
     size = AlignTo(size, alignment);
-    return TypeShape(size, alignment, depth, max_handles, max_out_of_line);
+    auto member_typeshape = TypeShape(size, alignment, depth, max_handles, max_out_of_line);
+    auto member_fieldshape = FieldShape(member_typeshape);
+
+    auto tag = FieldShape(PrimitiveType::Shape(types::PrimitiveSubtype::kUint32));
+    std::vector<FieldShape*> fidl_union = {&tag, &member_fieldshape};
+    // Update offset in membershape.
+    auto typeshape = Struct::Shape(&fidl_union, 0);
+
+    // This is either 4 or 8, depending on whether any union members have alignment 8.
+    auto offset = member_fieldshape.Offset();
+    for (auto& field : *fields) {
+        field->SetOffset(offset);
+    }
+
+    // Union padding is from end of member to end of the entire union.
+    for (auto& field : *fields) {
+        field->SetPadding(typeshape.Size() - offset - field->Size());
+    }
+
+    return member_typeshape;
 }
 
 TypeShape FidlMessageTypeShape(std::vector<FieldShape*>* fields) {
     auto struct_shape = Struct::Shape(fields);
-    return AlignTypeshape(struct_shape, kMessageAlign);
+    return AlignTypeshape(struct_shape, fields, kMessageAlign);
 }
 
 TypeShape PointerTypeShape(const TypeShape& element, uint32_t max_element_count = 1u) {
@@ -238,20 +279,27 @@ TypeShape Table::Shape(std::vector<TypeShape*>* fields, uint32_t extra_handles) 
     return Struct::Shape(&header, extra_handles);
 }
 
-TypeShape XUnion::Shape(const std::vector<flat::XUnion::Member>& members, uint32_t extra_handles) {
+TypeShape XUnion::Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles) {
     uint32_t depth = 0u;
     uint32_t max_handles = 0u;
     uint32_t max_out_of_line = 0u;
 
-    for (const auto& member : members) {
-        const auto& envelope = CEnvelopeTypeShape(member.fieldshape.Typeshape());
+    for (auto& field : *fields) {
+        const auto& envelope = CEnvelopeTypeShape(field->Typeshape());
 
         depth = ClampedAdd(depth, envelope.Depth());
         max_handles = ClampedAdd(max_handles, envelope.MaxHandles());
         max_out_of_line = std::max(max_out_of_line, envelope.MaxOutOfLine());
     }
 
-    return TypeShape(24u, 8u, depth, max_handles, max_out_of_line);
+    auto typeshape = TypeShape(24u, 8u, depth, max_handles, max_out_of_line);
+
+    // XUnion payload is aligned to 8 bytes.
+    for (auto& field : *fields) {
+        field->SetPadding(AlignTo(field->Size(), 8) - field->Size());
+    }
+
+    return typeshape;
 }
 
 TypeShape ArrayType::Shape(TypeShape element, uint32_t count) {
@@ -3102,20 +3150,17 @@ bool Library::CompileUnion(Union* union_declaration) {
     }
 
     auto tag = FieldShape(PrimitiveType::Shape(types::PrimitiveSubtype::kUint32));
-    union_declaration->membershape = FieldShape(Union::Shape(union_declaration->members));
+    std::vector<FieldShape*> fields;
+    for (auto& member : union_declaration->members) {
+        fields.push_back(&member.fieldshape);
+    }
+    union_declaration->membershape = FieldShape(Union::Shape(&fields));
     uint32_t extra_handles = 0;
     if (union_declaration->recursive && union_declaration->membershape.MaxHandles()) {
         extra_handles = std::numeric_limits<uint32_t>::max();
     }
     std::vector<FieldShape*> fidl_union = {&tag, &union_declaration->membershape};
     union_declaration->typeshape = Struct::Shape(&fidl_union, extra_handles);
-
-    // This is either 4 or 8, depending on whether any union members
-    // have alignment 8.
-    auto offset = union_declaration->membershape.Offset();
-    for (auto& member : union_declaration->members) {
-        member.fieldshape.SetOffset(offset);
-    }
 
     return true;
 }
@@ -3149,7 +3194,11 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
         max_member_handles = 0u;
     }
 
-    xunion_declaration->typeshape = XUnion::Shape(xunion_declaration->members, max_member_handles);
+    std::vector<FieldShape*> fields;
+    for (auto& member : xunion_declaration->members) {
+        fields.push_back(&member.fieldshape);
+    }
+    xunion_declaration->typeshape = XUnion::Shape(&fields, max_member_handles);
 
     return true;
 }

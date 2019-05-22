@@ -215,11 +215,11 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                         parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
                     if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways)
                         request_fields.emplace_back(coded_parameter_type,
-                                                    parameter.fieldshape.Offset());
+                                                    parameter.fieldshape.Offset(),
+                                                    parameter.fieldshape.Padding());
                 }
                 // We move the coded_message to coded_types_ so that we'll generate tables for the
-                // message
-                // in the proper order.
+                // message in the proper order.
                 coded_types_.push_back(std::move(coded_message));
             };
             if (method.maybe_request) {
@@ -246,7 +246,9 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
             if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
                 auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
                 assert(!is_primitive && "No primitive in struct coding table!");
-                struct_fields.emplace_back(coded_member_type, member.fieldshape.Offset());
+                struct_fields.emplace_back(coded_member_type,
+                                           member.fieldshape.Offset(),
+                                           member.fieldshape.Padding());
             }
         }
         break;
@@ -255,7 +257,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         auto union_decl = static_cast<const flat::Union*>(decl);
         coded::UnionType* union_struct =
             static_cast<coded::UnionType*>(named_coded_types_[&decl->name].get());
-        std::vector<const coded::Type*>& union_members = union_struct->types;
+        std::vector<coded::UnionField>& union_members = union_struct->members;
         for (const auto& member : union_decl->members) {
             std::string member_name =
                 union_struct->coded_name + "_" + std::string(member.name.data());
@@ -264,11 +266,11 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
             if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
                 auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
                 assert(!is_primitive && "No primitive in union coding table!");
-                union_members.push_back(coded_member_type);
+                union_members.emplace_back(coded_member_type, member.fieldshape.Padding());
             } else {
                 // We need union_members.size() to match union_decl->members.size() because
                 // the coding tables will use the union |tag| to index into the member array.
-                union_members.push_back(nullptr);
+                union_members.emplace_back(nullptr, member.fieldshape.Padding());
             }
         }
         break;
@@ -406,7 +408,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         std::string union_name = NameCodedUnion(union_decl);
         named_coded_types_.emplace(
             &decl->name, std::make_unique<coded::UnionType>(
-                             std::move(union_name), std::vector<const coded::Type*>(),
+                             std::move(union_name), std::vector<coded::UnionField>(),
                              union_decl->membershape.Offset(), union_decl->typeshape.Size(),
                              NameName(union_decl->name, ".", "/")));
         break;

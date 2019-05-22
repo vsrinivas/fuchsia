@@ -31,6 +31,124 @@ bool CheckTypeShape(const TypeShape& actual, Expected expected) {
     END_HELPER;
 }
 
+struct ExpectedField {
+    uint32_t offset = 0;
+    uint32_t padding = 0;
+};
+
+bool CheckFieldShape(const FieldShape& actual, ExpectedField expected) {
+    BEGIN_HELPER;
+    EXPECT_EQ(actual.Offset(), expected.offset);
+    EXPECT_EQ(actual.Padding(), expected.padding);
+    END_HELPER;
+}
+
+static bool empty_struct() {
+    BEGIN_TEST;
+
+    TestLibrary test_library(R"FIDL(
+library example;
+
+struct Empty {};
+
+    )FIDL");
+    ASSERT_TRUE(test_library.Compile());
+
+    auto empty = test_library.LookupStruct("Empty");
+    ASSERT_NONNULL(empty);
+    EXPECT_TRUE(CheckTypeShape(empty->typeshape, Expected {
+        .size = 1,
+        .alignment = 1,
+    }));
+    ASSERT_EQ(empty->members.size(), 0);
+
+    END_TEST;
+}
+
+static bool empty_struct_within_another_struct() {
+    BEGIN_TEST;
+
+    TestLibrary test_library(R"FIDL(
+library example;
+
+struct Empty {};
+
+// Size = 1 byte for |bool a|
+//      + 1 byte for |Empty b|
+//      + 2 bytes for |int16 c|
+//      + 1 bytes for |Empty d|
+//      + 3 bytes padding
+//      + 4 bytes for |int32 e|
+//      + 2 bytes for |int16 f|
+//      + 1 byte for |Empty g|
+//      + 1 byte for |Empty h|
+//      = 16 bytes
+//
+// Alignment = 4 bytes stemming from largest member (int32).
+//
+struct EmptyWithOtherThings {
+  bool a;
+  // no padding
+  Empty b;
+  // no padding
+  int16 c;
+  // no padding
+  Empty d;
+  // 3 bytes padding
+  int32 e;
+  // no padding
+  int16 f;
+  // no padding
+  Empty g;
+  // no padding
+  Empty h;
+};
+
+    )FIDL");
+    ASSERT_TRUE(test_library.Compile());
+
+    auto empty_with_other_things = test_library.LookupStruct("EmptyWithOtherThings");
+    ASSERT_NONNULL(empty_with_other_things);
+    EXPECT_TRUE(CheckTypeShape(empty_with_other_things->typeshape, Expected {
+        .size = 16,
+        .alignment = 4,
+    }));
+    ASSERT_EQ(empty_with_other_things->members.size(), 8);
+    // bool a;
+    EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[0].fieldshape, ExpectedField {}));
+    // Empty b;
+    EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[1].fieldshape, ExpectedField {
+        .offset = 1,
+    }));
+    // int16 c;
+    EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[2].fieldshape, ExpectedField {
+        .offset = 2,
+    }));
+    // Empty d;
+    EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[3].fieldshape, ExpectedField {
+        .offset = 4,
+        .padding = 3
+    }));
+    // int32 e;
+    EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[4].fieldshape, ExpectedField {
+        .offset = 8,
+    }));
+    // int16 f;
+    EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[5].fieldshape, ExpectedField {
+        .offset = 12,
+    }));
+    // Empty g;
+    EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[6].fieldshape, ExpectedField {
+        .offset = 14,
+    }));
+    // Empty h;
+    EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[7].fieldshape, ExpectedField {
+        .offset = 15,
+    }));
+
+    END_TEST;
+}
+
 static bool simple_structs() {
     BEGIN_TEST;
 
@@ -64,12 +182,19 @@ struct BoolAndU64 {
         .size = 1,
         .alignment = 1,
     }));
+    ASSERT_EQ(one_bool->members.size(), 1);
+    EXPECT_TRUE(CheckFieldShape(one_bool->members[0].fieldshape, ExpectedField {}));
 
     auto two_bools = test_library.LookupStruct("TwoBools");
     ASSERT_NONNULL(two_bools);
     EXPECT_TRUE(CheckTypeShape(two_bools->typeshape, Expected {
         .size = 2,
         .alignment = 1,
+    }));
+    ASSERT_EQ(two_bools->members.size(), 2);
+    EXPECT_TRUE(CheckFieldShape(two_bools->members[0].fieldshape, ExpectedField {}));
+    EXPECT_TRUE(CheckFieldShape(two_bools->members[1].fieldshape, ExpectedField {
+        .offset = 1,
     }));
 
     auto bool_and_u32 = test_library.LookupStruct("BoolAndU32");
@@ -78,12 +203,26 @@ struct BoolAndU64 {
         .size = 8,
         .alignment = 4,
     }));
+    ASSERT_EQ(bool_and_u32->members.size(), 2);
+    EXPECT_TRUE(CheckFieldShape(bool_and_u32->members[0].fieldshape, ExpectedField {
+        .padding = 3
+    }));
+    EXPECT_TRUE(CheckFieldShape(bool_and_u32->members[1].fieldshape, ExpectedField {
+        .offset = 4,
+    }));
 
     auto bool_and_u64 = test_library.LookupStruct("BoolAndU64");
     ASSERT_NONNULL(bool_and_u64);
     EXPECT_TRUE(CheckTypeShape(bool_and_u64->typeshape, Expected {
         .size = 16,
         .alignment = 8,
+    }));
+    ASSERT_EQ(bool_and_u64->members.size(), 2);
+    EXPECT_TRUE(CheckFieldShape(bool_and_u64->members[0].fieldshape, ExpectedField {
+        .padding = 7
+    }));
+    EXPECT_TRUE(CheckFieldShape(bool_and_u64->members[1].fieldshape, ExpectedField {
+        .offset = 8,
     }));
 
     END_TEST;
@@ -120,6 +259,8 @@ struct ThreeHandlesOneOptional {
         .alignment = 4,
         .max_handles = 1,
     }));
+    ASSERT_EQ(one_handle->members.size(), 1);
+    EXPECT_TRUE(CheckFieldShape(one_handle->members[0].fieldshape, ExpectedField {}));
 
     auto two_handles = test_library.LookupStruct("TwoHandles");
     ASSERT_NONNULL(two_handles);
@@ -128,6 +269,11 @@ struct ThreeHandlesOneOptional {
         .alignment = 4,
         .max_handles = 2,
     }));
+    ASSERT_EQ(two_handles->members.size(), 2);
+    EXPECT_TRUE(CheckFieldShape(two_handles->members[0].fieldshape, ExpectedField {}));
+    EXPECT_TRUE(CheckFieldShape(two_handles->members[1].fieldshape, ExpectedField {
+        .offset = 4,
+    }));
 
     auto three_handles_one_optional = test_library.LookupStruct("ThreeHandlesOneOptional");
     ASSERT_NONNULL(three_handles_one_optional);
@@ -135,6 +281,15 @@ struct ThreeHandlesOneOptional {
         .size = 12,
         .alignment = 4,
         .max_handles = 3,
+    }));
+    ASSERT_EQ(three_handles_one_optional->members.size(), 3);
+    EXPECT_TRUE(CheckFieldShape(three_handles_one_optional->members[0].fieldshape,
+                                ExpectedField {}));
+    EXPECT_TRUE(CheckFieldShape(three_handles_one_optional->members[1].fieldshape, ExpectedField {
+        .offset = 4,
+    }));
+    EXPECT_TRUE(CheckFieldShape(three_handles_one_optional->members[2].fieldshape, ExpectedField {
+        .offset = 8,
     }));
 
     END_TEST;
@@ -514,6 +669,15 @@ table TableWithOptionalUnion {
         .size = 24,
         .alignment = 8,
     }));
+    ASSERT_EQ(a_union->members.size(), 2);
+    EXPECT_TRUE(CheckFieldShape(a_union->members[0].fieldshape, ExpectedField {
+        .offset = 8,
+        .padding = 15  // The other variant, |BoolAndU64|, has a size of 16 bytes.
+    }));
+    EXPECT_TRUE(CheckFieldShape(a_union->members[1].fieldshape, ExpectedField {
+        .offset = 8,
+        .padding = 0   // This is the biggest variant.
+    }));
 
     auto optional_union = test_library.LookupStruct("OptionalUnion");
     ASSERT_NONNULL(optional_union);
@@ -564,6 +728,19 @@ union ManyHandleUnion {
         .alignment = 4,
         .max_handles = 1,
     }));
+    ASSERT_EQ(one_handle_union->members.size(), 3);
+    EXPECT_TRUE(CheckFieldShape(one_handle_union->members[0].fieldshape, ExpectedField {
+        .offset = 4,
+        .padding = 0   // This is the biggest variant.
+    }));
+    EXPECT_TRUE(CheckFieldShape(one_handle_union->members[1].fieldshape, ExpectedField {
+        .offset = 4,
+        .padding = 3   // The other variants all have size of 4.
+    }));
+    EXPECT_TRUE(CheckFieldShape(one_handle_union->members[2].fieldshape, ExpectedField {
+        .offset = 4,
+        .padding = 0   // This is the biggest variant.
+    }));
 
     auto many_handle_union = test_library.LookupUnion("ManyHandleUnion");
     ASSERT_NONNULL(many_handle_union);
@@ -573,6 +750,19 @@ union ManyHandleUnion {
         .max_out_of_line = 32,
         .max_handles = 8,
         .depth = 1,
+    }));
+    ASSERT_EQ(many_handle_union->members.size(), 3);
+    EXPECT_TRUE(CheckFieldShape(many_handle_union->members[0].fieldshape, ExpectedField {
+        .offset = 8,
+        .padding = 28   // The biggest variant, |array<handle>:8|, has a size of 32.
+    }));
+    EXPECT_TRUE(CheckFieldShape(many_handle_union->members[1].fieldshape, ExpectedField {
+        .offset = 8,
+        .padding = 0   // This is the biggest variant.
+    }));
+    EXPECT_TRUE(CheckFieldShape(many_handle_union->members[2].fieldshape, ExpectedField {
+        .offset = 8,
+        .padding = 16   // This biggest variant, |array<handle>:8|, has a size of 32.
     }));
 
     END_TEST;
@@ -1015,6 +1205,10 @@ struct StructWithOptionalEmptyXUnion {
         .max_out_of_line = 8,
         .depth = 1, // TODO(FIDL-457): wrong.
     }));
+    ASSERT_EQ(one_bool->members.size(), 1);
+    EXPECT_TRUE(CheckFieldShape(one_bool->members[0].fieldshape, ExpectedField {
+        .padding = 7
+    }));
 
     auto xu = test_library.LookupXUnion("XUnionWithBoundedOutOfLineObject");
     ASSERT_NONNULL(xu);
@@ -1200,6 +1394,8 @@ protocol MessagePort {
       .alignment = 4,
       .max_handles = 1,
   }));
+  ASSERT_EQ(web_message->members.size(), 1);
+  EXPECT_TRUE(CheckFieldShape(web_message->members[0].fieldshape, ExpectedField {}));
 
   auto message_port = library.LookupInterface("MessagePort");
   ASSERT_NONNULL(message_port);
@@ -1211,6 +1407,11 @@ protocol MessagePort {
       .size = 24,
       .alignment = 8,
       .max_handles = 1,
+  }));
+  ASSERT_EQ(post_message_request->members.size(), 1);
+  EXPECT_TRUE(CheckFieldShape(post_message_request->members[0].fieldshape, ExpectedField {
+      .offset = 16,
+      .padding = 4
   }));
 
   END_TEST;
@@ -1356,6 +1557,8 @@ struct TheStruct {
       .max_handles = std::numeric_limits<uint32_t>::max(),
       .depth = std::numeric_limits<uint32_t>::max(),
   }));
+  ASSERT_EQ(the_struct->members.size(), 1);
+  EXPECT_TRUE(CheckFieldShape(the_struct->members[0].fieldshape, ExpectedField {}));
 
   END_TEST;
 }
@@ -1621,6 +1824,8 @@ protocol Child {
 } // namespace
 
 BEGIN_TEST_CASE(typeshape_tests)
+RUN_TEST(empty_struct)
+RUN_TEST(empty_struct_within_another_struct)
 RUN_TEST(simple_structs)
 RUN_TEST(simple_structs_with_handles)
 RUN_TEST(simple_tables)

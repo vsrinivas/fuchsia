@@ -827,7 +827,7 @@ struct Union : public TypeDecl {
     // it here as well.
     FieldShape membershape;
 
-    static TypeShape Shape(const std::vector<flat::Union::Member>& members);
+    static TypeShape Shape(std::vector<FieldShape*>* fields);
 };
 
 struct XUnion : public TypeDecl {
@@ -848,7 +848,7 @@ struct XUnion : public TypeDecl {
 
     std::vector<Member> members;
 
-    static TypeShape Shape(const std::vector<flat::XUnion::Member>& members, uint32_t extra_handles = 0u);
+    static TypeShape Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u);
 };
 
 struct Interface : public TypeDecl {

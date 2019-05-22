@@ -62,11 +62,20 @@ CodingNeeded WhichCodingNeeded(CodingContext context, CodingNeeded coding_needed
 struct Type;
 
 struct StructField {
-    StructField(const Type* type, uint32_t offset)
-        : type(type), offset(offset) {}
+    StructField(const Type* type, uint32_t offset, uint32_t padding)
+        : type(type), offset(offset), padding(padding) {}
 
     const Type* type;
     const uint32_t offset;
+    const uint32_t padding;
+};
+
+struct UnionField {
+    UnionField(const Type* type, uint32_t padding)
+        : type(type), padding(padding) {}
+
+    const Type* type;
+    const uint32_t padding;
 };
 
 // This carries the same information as the XUnionField struct below and
@@ -177,13 +186,13 @@ struct StructType : public Type {
 };
 
 struct UnionType : public Type {
-    UnionType(std::string name, std::vector<const Type*> types, uint32_t data_offset, uint32_t size,
-              std::string qname)
-        : Type(Kind::kUnion, std::move(name), size, CodingNeeded::kAlways), types(std::move(types)),
-          data_offset(data_offset), qname(std::move(qname)) {
+    UnionType(std::string name, std::vector<UnionField> members, uint32_t data_offset,
+              uint32_t size, std::string qname)
+        : Type(Kind::kUnion, std::move(name), size, CodingNeeded::kAlways),
+          members(std::move(members)), data_offset(data_offset), qname(std::move(qname)) {
     }
 
-    std::vector<const Type*> types;
+    std::vector<UnionField> members;
     const uint32_t data_offset;
     std::string qname;
     PointerType* maybe_reference_type = nullptr;
