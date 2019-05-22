@@ -109,6 +109,7 @@ impl AsyncResponse {
 pub enum FacadeType {
     AudioFacade,
     AuthFacade,
+    BaseManagerFacade,
     BleAdvertiseFacade,
     Bluetooth,
     BluetoothControlFacade,
@@ -128,6 +129,7 @@ impl FacadeType {
         match facade.as_ref() {
             "audio_facade" => FacadeType::AudioFacade,
             "auth_facade" => FacadeType::AuthFacade,
+            "basemgr_facade" => FacadeType::BaseManagerFacade,
             "ble_advertise_facade" => FacadeType::BleAdvertiseFacade,
             "bluetooth" => FacadeType::Bluetooth,
             "bt_control_facade" => FacadeType::BluetoothControlFacade,
