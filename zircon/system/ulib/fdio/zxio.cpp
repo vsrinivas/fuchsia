@@ -743,34 +743,7 @@ int fdio_pipe_pair(fdio_t** _a, fdio_t** _b) {
 }
 
 __EXPORT
-zx_status_t fdio_pipe_half(zx_handle_t* handle, uint32_t* type) {
-    zx_handle_t h0, h1;
-    zx_status_t r;
-    fdio_t* io;
-    int fd;
-    if ((r = zx_socket_create(0, &h0, &h1)) < 0) {
-        return r;
-    }
-    if ((io = fdio_pipe_create(h0)) == NULL) {
-        r = ZX_ERR_NO_MEMORY;
-        goto fail;
-    }
-    if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
-        fdio_release(io);
-        r = ZX_ERR_NO_RESOURCES;
-        goto fail;
-    }
-    *handle = h1;
-    *type = PA_FD;
-    return fd;
-
-fail:
-    zx_handle_close(h1);
-    return r;
-}
-
-__EXPORT
-zx_status_t fdio_pipe_half2(int* out_fd, zx_handle_t* out_handle) {
+zx_status_t fdio_pipe_half(int* out_fd, zx_handle_t* out_handle) {
     zx_handle_t h0, h1;
     zx_status_t r;
     fdio_t* io;
@@ -792,6 +765,11 @@ zx_status_t fdio_pipe_half2(int* out_fd, zx_handle_t* out_handle) {
 fail:
     zx_handle_close(h1);
     return r;
+}
+
+__EXPORT
+zx_status_t fdio_pipe_half2(int* out_fd, zx_handle_t* out_handle) {
+    return fdio_pipe_half(out_fd, out_handle);
 }
 
 // Debuglog --------------------------------------------------------------------
