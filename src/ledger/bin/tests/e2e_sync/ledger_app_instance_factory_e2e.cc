@@ -73,6 +73,7 @@ void LedgerAppInstanceImpl::Init(
   launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
   launch_info.directory_request = child_services.NewRequest();
   launch_info.arguments.push_back("--disable_reporting");
+  launch_info.arguments.push_back("--disable_p2p_sync");
   launch_info.arguments.push_back("--firebase_api_key=" + sync_params_.api_key);
   fuchsia::sys::LauncherPtr launcher;
   component_context_->svc()->Connect(launcher.NewRequest());

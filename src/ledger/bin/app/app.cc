@@ -35,10 +35,12 @@ namespace ledger {
 namespace {
 
 constexpr fxl::StringView kNoStatisticsReportingFlag = "disable_reporting";
+constexpr fxl::StringView kNoPeerToPeerSync = "disable_p2p_sync";
 constexpr fxl::StringView kFirebaseApiKeyFlag = "firebase_api_key";
 
 struct AppParams {
   bool disable_statistics = false;
+  bool disable_p2p_sync = false;
   std::string firebase_api_key = "";
 };
 
@@ -107,9 +109,13 @@ class App : public ledger_internal::LedgerController {
             .SetIOAsync(io_loop_.dispatcher())
             .SetStartupContext(component_context_.get())
             .Build());
-    auto user_communicator_factory =
-        std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(
-            environment_.get());
+    std::unique_ptr<p2p_sync::UserCommunicatorFactoryImpl>
+        user_communicator_factory;
+    if (!app_params_.disable_p2p_sync) {
+      user_communicator_factory =
+          std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(
+              environment_.get());
+    }
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         environment_.get(), std::move(user_communicator_factory),
@@ -163,6 +169,7 @@ int Main(int argc, const char** argv) {
   AppParams app_params;
   app_params.disable_statistics =
       command_line.HasOption(kNoStatisticsReportingFlag);
+  app_params.disable_p2p_sync = command_line.HasOption(kNoPeerToPeerSync);
   if (command_line.HasOption(kFirebaseApiKeyFlag)) {
     if (!command_line.GetOptionValue(kFirebaseApiKeyFlag,
                                      &app_params.firebase_api_key)) {
