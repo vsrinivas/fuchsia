@@ -16,7 +16,7 @@
 
 namespace {
 
-constexpr zx::duration kTimeout = zx::sec(15);
+constexpr zx::duration kTimeout = zx::sec(30);
 
 // The name of the intent parameter which contains a string which the second
 // module is to append to its signal.
@@ -31,6 +31,7 @@ constexpr char kIntentAction[] = "action";
 class IntentsTest : public modular::testing::TestHarnessFixture {
  public:
   void SetUp() override {
+    intent_handled_ = false;
     test_module_ = std::make_unique<modular::testing::FakeModule>(
         [this](fuchsia::modular::Intent intent) {
           latest_handled_intent_ = std::move(intent);
@@ -141,13 +142,13 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
 
 // Launches a single module with an intent. Checks that the module exposes an
 // intent handler and gets notified of the intent by the framework.
-TEST_F(IntentsTest, DISABLED_ModuleUsesIntentHandler) {
+TEST_F(IntentsTest, ModuleUsesIntentHandler) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
   ExecutePuppetMasterAddMod(std::move(initial_module_intent));
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return test_module_->is_running(); }, kTimeout));
+      [&] { return intent_handled_; }, kTimeout));
 
   // Check that the intent handler received the intent
   EXPECT_TRUE(IntentMatchesExpectations(&latest_handled_intent_,
