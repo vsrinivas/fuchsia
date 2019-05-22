@@ -11,6 +11,8 @@ pub enum Error {
     ArchiveFileNotFound { name: String },
     #[fail(display = "path already maps to a file: {}", path)]
     PathAlreadyExists { path: String },
+    #[fail(display = "could not merge: {}", error)]
+    CannotMerge { error: String },
 }
 
 /// Common result types for methods in this crate.

@@ -16,7 +16,7 @@ pub struct Architectures {
     pub target: Vec<TargetArchitecture>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum ElementType {
     BanjoLibrary,
@@ -31,7 +31,7 @@ pub enum ElementType {
     Sysroot,
 }
 
-#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
 #[serde(deny_unknown_fields)]
 pub struct Part {
     pub meta: String,
