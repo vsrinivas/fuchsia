@@ -7,14 +7,31 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 
-go_library("whereiscl_lib") {
-  name = "whereiscl_lib"
+go_library("lib") {
+  name = "fuchsia.googlesource.com/fuchsia/tools/whereiscl/lib"
+  source_dir = "lib"
+  deps = [
+    ":netutil",
+  ]
+}
+
+go_library("main") {
+  name = "main"
+  source_dir = "."
+  deps = [
+    ":lib",
+  ]
+}
+
+go_library("netutil") {
+  name = "fuchsia.googlesource.com/fuchsia/tools/whereiscl/netutil"
+  source_dir = "netutil"
 }
 
 go_binary("whereiscl") {
-  gopackage = "whereiscl_lib"
+  gopackage = "main"
   deps = [
-    ":whereiscl_lib",
+    ":main",
   ]
 }
 
@@ -27,10 +44,16 @@ install_host_tools("host") {
   ]
 }
 
+go_library("testhelper") {
+  name = "fuchsia.googlesource.com/fuchsia/tools/whereiscl/testhelper"
+  source_dir = "testhelper"
+}
+
 go_test("whereiscl_test") {
-  gopackage = "whereiscl_lib"
+  gopackage = "fuchsia.googlesource.com/fuchsia/tools/whereiscl/lib"
   deps = [
-    ":whereiscl_lib",
+    ":lib",
+    ":testhelper",
     "//garnet/public/go/third_party:github.com/google/go-cmp",
   ]
 }

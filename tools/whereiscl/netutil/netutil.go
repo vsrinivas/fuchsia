@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+// Package netutil provides network-related helper functions.
+package netutil
 
 import (
 	"encoding/json"
@@ -10,8 +11,8 @@ import (
 	"net/http"
 )
 
-// httpGet gets a response from the given URL and returns it as a byte slice.
-func httpGet(url string) ([]byte, error) {
+// HTTPGet gets a response from the given URL and returns it as a byte slice.
+func HTTPGet(url string) ([]byte, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -21,10 +22,10 @@ func httpGet(url string) ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
-// httpGetJSON gets a response from the given URL and stores it in jsonData.
+// HTTPGetJSON gets a response from the given URL and stores it in jsonData.
 // It is the caller's responsibility to make sure the response is in JSON format.
-func httpGetJSON(url string, jsonData interface{}) error {
-	b, err := httpGet(url)
+func HTTPGetJSON(url string, jsonData interface{}) error {
+	b, err := HTTPGet(url)
 	if err != nil {
 		return err
 	}

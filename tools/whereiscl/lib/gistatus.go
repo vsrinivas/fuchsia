@@ -2,21 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package lib
 
 import (
 	"encoding/base64"
 	"encoding/xml"
 	"fmt"
 	"net/url"
+
+	"fuchsia.googlesource.com/fuchsia/tools/whereiscl/netutil"
 )
 
 const fuchsiaURL = "https://fuchsia.googlesource.com"
 
-type giStatus string
+// GIStatus represents the status of a CL in Global Integration.
+type GIStatus string
 
 const (
-	giStatusUnknown giStatus = "UNKNOWN"
+	giStatusUnknown GIStatus = "UNKNOWN"
 	giStatusPassed           = "PASSED"
 	giStatusPending          = "PENDING"
 )
@@ -31,7 +34,7 @@ func downloadGIManifest(name string) ([]byte, error) {
 	q.Set("format", "TEXT")
 	u.RawQuery = q.Encode()
 
-	b, err := httpGet(u.String())
+	b, err := netutil.HTTPGet(u.String())
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +86,7 @@ func isAfterGI(project, clRevision, giRevision string) (bool, error) {
 	u.RawQuery = q.Encode()
 
 	logs := gitLogs{}
-	if err := httpGetJSON(u.String(), &logs); err != nil {
+	if err := netutil.HTTPGetJSON(u.String(), &logs); err != nil {
 		return false, err
 	}
 	for _, log := range logs.Log {
@@ -94,7 +97,8 @@ func isAfterGI(project, clRevision, giRevision string) (bool, error) {
 	return false, nil
 }
 
-func getGIStatus(ci *changeInfo) (giStatus, error) {
+// GetGIStatus returns whether a given ChangeInfo passed Global Integration.
+func GetGIStatus(ci *ChangeInfo) (GIStatus, error) {
 	var name string
 
 	switch ci.Project {

@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// whereiscl is a command-line utility that answers "Where is my CL?".
+// Given a Gerrit review URL, it will answer
+//   - Whether the CL was merged (or abandoned)
+//   - Whether the CL passed Global Integration (if merged)
 package main
 
 import (
@@ -10,6 +14,8 @@ import (
 	"log"
 	"os"
 	"regexp"
+
+	"fuchsia.googlesource.com/fuchsia/tools/whereiscl/lib"
 )
 
 const fuchsiaReviewURL = "https://fuchsia-review.googlesource.com"
@@ -22,16 +28,16 @@ const fuchsiaReviewURL = "https://fuchsia-review.googlesource.com"
 //   - fxr/123456789/some/file
 var fuchsiaRE = regexp.MustCompile(`^(?:https?://)?(?:fxr|fuchsia-review.googlesource.com/c/.+/\+)/(\d+).*`)
 
-func parseReviewURL(str string) (queryInfo, error) {
+func parseReviewURL(str string) (lib.QueryInfo, error) {
 	match := fuchsiaRE.FindStringSubmatch(str)
 	if match != nil {
-		return queryInfo{
-			apiEndpoint: fuchsiaReviewURL,
-			cl:          match[1],
+		return lib.QueryInfo{
+			APIEndpoint: fuchsiaReviewURL,
+			CL:          match[1],
 		}, nil
 	}
 
-	return queryInfo{}, errors.New("not a valid review URL")
+	return lib.QueryInfo{}, errors.New("not a valid review URL")
 }
 
 func main() {
@@ -47,17 +53,17 @@ func main() {
 		log.Fatalf("Error parsing the review URL: %v", err)
 	}
 
-	ci, err := getChangeInfo(queryInfo)
+	ci, err := lib.GetChangeInfo(queryInfo)
 	if err != nil {
 		log.Fatalf("Error getting change info: %v", err)
 	}
 	fmt.Printf("CL status: %v\n", ci.Status)
 
-	if ci.Status != clStatusMerged {
+	if ci.Status != lib.CLStatusMerged {
 		return
 	}
 
-	gs, err := getGIStatus(ci)
+	gs, err := lib.GetGIStatus(ci)
 	if err != nil {
 		log.Fatalf("Error getting GI status: %v", err)
 	}

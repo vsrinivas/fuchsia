@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package lib
 
 import (
 	"net/http"
 	"testing"
 
+	th "fuchsia.googlesource.com/fuchsia/tools/whereiscl/testhelper"
 	"github.com/google/go-cmp/cmp"
 )
 
 func TestGetChangeInfo(t *testing.T) {
-	transport := mockTransport{}
-	transport.addResponse(
+	transport := th.MockTransport{}
+	transport.AddResponse(
 		"https://fuchsia-review.googlesource.com/changes/?q=987654321&o=CURRENT_REVISION",
 		`)]}'
 [
@@ -26,42 +27,42 @@ func TestGetChangeInfo(t *testing.T) {
 	)
 
 	http.DefaultClient.Transport = &transport
-	got, err := getChangeInfo(queryInfo{
-		apiEndpoint: "https://fuchsia-review.googlesource.com",
-		cl:          "987654321",
+	got, err := GetChangeInfo(QueryInfo{
+		APIEndpoint: "https://fuchsia-review.googlesource.com",
+		CL:          "987654321",
 	})
 	if err != nil {
-		t.Fatalf("getChangeInfo: %v", err)
+		t.Fatalf("GetChangeInfo: %v", err)
 	}
-	want := &changeInfo{
-		Status:          clStatusMerged,
+	want := &ChangeInfo{
+		Status:          CLStatusMerged,
 		CurrentRevision: "abcdefg",
 	}
 	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("getChangeInfo: mismatch (-want +got):\n%s", d)
+		t.Errorf("GetChangeInfo: mismatch (-want +got):\n%s", d)
 	}
 }
 
 func TestGetChangeInfo_clNotFound(t *testing.T) {
-	transport := mockTransport{}
-	transport.addResponse(
+	transport := th.MockTransport{}
+	transport.AddResponse(
 		"https://fuchsia-review.googlesource.com/changes/?q=987654321&o=CURRENT_REVISION",
 		`)]}'
 []`,
 	)
 	http.DefaultClient.Transport = &transport
-	_, err := getChangeInfo(queryInfo{
-		apiEndpoint: "https://fuchsia-review.googlesource.com",
-		cl:          "987654321",
+	_, err := GetChangeInfo(QueryInfo{
+		APIEndpoint: "https://fuchsia-review.googlesource.com",
+		CL:          "987654321",
 	})
 	if err == nil {
-		t.Error("getChangeInfo: error expected; got nil")
+		t.Error("GetChangeInfo: error expected; got nil")
 	}
 }
 
 func TestGetChangeInfo_tooManyCLs(t *testing.T) {
-	transport := mockTransport{}
-	transport.addResponse(
+	transport := th.MockTransport{}
+	transport.AddResponse(
 		"https://fuchsia-review.googlesource.com/changes/?q=987654321&o=CURRENT_REVISION",
 		`)]}'
 [
@@ -76,11 +77,11 @@ func TestGetChangeInfo_tooManyCLs(t *testing.T) {
 ]`,
 	)
 	http.DefaultClient.Transport = &transport
-	_, err := getChangeInfo(queryInfo{
-		apiEndpoint: "https://fuchsia-review.googlesource.com",
-		cl:          "987654321",
+	_, err := GetChangeInfo(QueryInfo{
+		APIEndpoint: "https://fuchsia-review.googlesource.com",
+		CL:          "987654321",
 	})
 	if err == nil {
-		t.Error("getChangeInfo: error expected; got nil")
+		t.Error("GetChangeInfo: error expected; got nil")
 	}
 }
