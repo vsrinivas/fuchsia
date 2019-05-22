@@ -35,6 +35,10 @@ Rust      | [//garnet/go/src/fidl/compiler/backend/rust/][be-rust] | [//garnet/p
 Dart      | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]
 JavaScipt | [chromium:build/fuchsia/fidlgen_fs][be-js]             | [chromium:build/fuchsia/fidlgen_js/runtime][rtl-js]
 
+### Other Tools
+
+**TBD: linter, formatter, gidl, difl, regen scripts, etc.**
+
 ## General Setup
 
 ### Fuchsia Setup
@@ -152,7 +156,7 @@ Tab 2> fx run -kN
 Tab 3> fx run-test fidl_bindings_test
 ```
 
-#### Compatibility Test
+### Compatibility Test
 
 The language bindings compatibility test is located in
 [//topaz/bin/fidl_compatibility_test][compatibility_test],
