@@ -1,0 +1,63 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("bugreport") {
+  binaries = [
+    {
+      name = "bugreport"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/bugreport.cmx"
+      dest = "bugreport.cmx"
+    },
+  ]
+
+  deps = [
+    ":main",
+  ]
+}
+
+executable("main") {
+  output_name = "bugreport"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":src",
+    "//sdk/lib/sys/cpp",
+  ]
+}
+
+source_set("src") {
+  sources = [
+    "bug_reporter.cc",
+    "bug_reporter.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+  ]
+
+  deps = [
+    ":bug_report_schema",
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.feedback",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("bug_report_schema") {
+  sources = [
+    "bug_report_schema.h",
+  ]
+}

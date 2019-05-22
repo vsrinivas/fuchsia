@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/bugreport_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}
+

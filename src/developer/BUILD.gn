@@ -6,6 +6,7 @@ group("developer") {
   testonly = true
   deps = [
     ":tests",
+    "bugreport",
     "crashpad_agent",
     "debug",
     "feedback_agent",
@@ -18,6 +19,7 @@ group("tests") {
   testonly = true
 
   data_deps = [
+    "//src/developer/bugreport/tests:bugreport_tests",
     "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
     "//src/developer/feedback_agent/tests:feedback_agent_tests",
     "//src/developer/tracing:tests",

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/bugreport"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.feedback.DataProvider"
+        ]
+    }
+}
