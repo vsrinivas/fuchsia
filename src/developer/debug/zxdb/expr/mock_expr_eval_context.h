@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EXPR_EVAL_CONTEXT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EXPR_EVAL_CONTEXT_H_
 
 #include <map>
 #include <string>
@@ -25,7 +26,7 @@ class MockExprEvalContext : public ExprEvalContext {
 
   // ExprEvalContext implementation.
   void GetNamedValue(
-      const Identifier& ident,
+      const ParsedIdentifier& ident,
       std::function<void(const Err&, fxl::RefPtr<Symbol>, ExprValue)> cb)
       override;
   SymbolVariableResolver& GetVariableResolver() override;
@@ -39,3 +40,5 @@ class MockExprEvalContext : public ExprEvalContext {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EXPR_EVAL_CONTEXT_H_

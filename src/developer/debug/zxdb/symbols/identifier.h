@@ -30,6 +30,14 @@ class IdentifierComponent {
         has_template_(true),
         template_contents_(std::move(template_contents)) {}
 
+  bool operator==(const IdentifierComponent& other) const {
+    return name_ == other.name_ && has_template_ == other.has_template_ &&
+           template_contents_ == other.template_contents_;
+  }
+  bool operator!=(const IdentifierComponent& other) const {
+    return !operator==(other);
+  }
+
   bool has_template() const { return has_template_; }
 
   const std::string& name() const { return name_; }

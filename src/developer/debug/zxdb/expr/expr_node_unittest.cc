@@ -363,7 +363,8 @@ TEST_F(ExprNodeTest, MemberAccess) {
   auto struct_node = fxl::MakeRefCounted<MockExprNode>(
       true, ExprValue(sc, {0x78, 0x56, 0x34, 0x12}));
   auto access_node = fxl::MakeRefCounted<MemberAccessExprNode>(
-      struct_node, ExprToken(ExprTokenType::kDot, ".", 0), Identifier("a"));
+      struct_node, ExprToken(ExprTokenType::kDot, ".", 0),
+      ParsedIdentifier("a"));
 
   // Do the call.
   bool called = false;
@@ -398,7 +399,7 @@ TEST_F(ExprNodeTest, MemberAccess) {
                        {0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}));
   auto access_ptr_node = fxl::MakeRefCounted<MemberAccessExprNode>(
       struct_ptr_node, ExprToken(ExprTokenType::kArrow, "->", 0),
-      Identifier("b"));
+      ParsedIdentifier("b"));
 
   // Do the call.
   called = false;

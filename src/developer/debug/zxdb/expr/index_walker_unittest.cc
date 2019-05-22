@@ -11,8 +11,8 @@
 namespace zxdb {
 
 TEST(IndexWalker, ComponentMatchesNameOnly) {
-  IdentifierComponent foo_comp("Foo");
-  IdentifierComponent foo_template_comp("Foo", {"A", "b"});
+  ParsedIdentifierComponent foo_comp("Foo");
+  ParsedIdentifierComponent foo_template_comp("Foo", {"A", "b"});
 
   // Simple name-only comparisons.
   EXPECT_TRUE(IndexWalker::ComponentMatchesNameOnly("Foo", foo_comp));
@@ -28,9 +28,9 @@ TEST(IndexWalker, ComponentMatchesNameOnly) {
 }
 
 TEST(IndexWalker, ComponentMatchesTemplateOnly) {
-  IdentifierComponent foo_comp("Foo");
-  IdentifierComponent foo_template_comp("Foo", {"A", "b"});
-  IdentifierComponent foo_empty_template_comp("Foo", {});
+  ParsedIdentifierComponent foo_comp("Foo");
+  ParsedIdentifierComponent foo_template_comp("Foo", {"A", "b"});
+  ParsedIdentifierComponent foo_empty_template_comp("Foo", {});
 
   // Neither inputs have templates (should be a match).
   EXPECT_TRUE(IndexWalker::ComponentMatchesTemplateOnly("Foo", foo_comp));
@@ -52,8 +52,8 @@ TEST(IndexWalker, ComponentMatchesTemplateOnly) {
 
 // Most cases are tested by ComponentMatchesNameOnly and ...TemplateOnly above.
 TEST(IndexWalker, ComponentMatches) {
-  IdentifierComponent foo_comp("Foo");
-  IdentifierComponent foo_template_comp("Foo", {"A", "b"});
+  ParsedIdentifierComponent foo_comp("Foo");
+  ParsedIdentifierComponent foo_template_comp("Foo", {"A", "b"});
 
   EXPECT_TRUE(IndexWalker::ComponentMatches("Foo", foo_comp));
   EXPECT_FALSE(IndexWalker::ComponentMatches("Foo<>", foo_comp));
@@ -105,17 +105,18 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_EQ(&root, walker.current());
 
   // Walk to the "Foo" component.
-  EXPECT_TRUE(walker.WalkInto(IdentifierComponent("Foo")));
+  EXPECT_TRUE(walker.WalkInto(ParsedIdentifierComponent("Foo")));
   EXPECT_EQ(foo_node, walker.current());
 
   // Walk to the "NotPresent" component. The current location should be
   // unchanged.
-  EXPECT_FALSE(walker.WalkInto(IdentifierComponent("NotFound")));
+  EXPECT_FALSE(walker.WalkInto(ParsedIdentifierComponent("NotFound")));
   EXPECT_EQ(foo_node, walker.current());
 
   // Walk to the "Bar<int,char>" identifier.
-  auto [err1, bar_int_char] = ExprParser::ParseIdentifier("Bar < int , char >");
-  EXPECT_FALSE(err1.has_error()) << err1.msg();
+  ParsedIdentifier bar_int_char;
+  Err err = ExprParser::ParseIdentifier("Bar < int , char >", &bar_int_char);
+  EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_TRUE(walker.WalkInto(bar_int_char));
   EXPECT_EQ(bar_int_char_node, walker.current());
 
@@ -124,19 +125,21 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_EQ(foo_node, walker.current());
 
   // Walk to the "Bar" node.
-  EXPECT_TRUE(walker.WalkInto(IdentifierComponent("Bar")));
+  EXPECT_TRUE(walker.WalkInto(ParsedIdentifierComponent("Bar")));
   EXPECT_EQ(bar_node, walker.current());
 
   // Parse the Barf identifier for the following two tests. This one has a
   // toplevel scope.
-  auto [err2, barf] = ExprParser::ParseIdentifier("::Foo::Barf<int>");
-  EXPECT_FALSE(err2.has_error()) << err2.msg();
+  ParsedIdentifier barf;
+  err = ExprParser::ParseIdentifier("::Foo::Barf<int>", &barf);
+  EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Walk to the "Foo::Bar9<int>" with copying the walker.
   {
     IndexWalker nested_walker(walker);
-    auto [err2, bar9] = ExprParser::ParseIdentifier(":: Foo :: Bar9 < int >");
-    EXPECT_FALSE(err2.has_error()) << err2.msg();
+    ParsedIdentifier bar9;
+    err = ExprParser::ParseIdentifier(":: Foo :: Bar9 < int >", &bar9);
+    EXPECT_FALSE(err.has_error()) << err.msg();
     EXPECT_TRUE(nested_walker.WalkInto(bar9));
     EXPECT_EQ(bar9_node, nested_walker.current());
   }

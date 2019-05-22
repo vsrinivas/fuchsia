@@ -40,7 +40,7 @@ bool IndexWalker::WalkUp() {
   return false;
 }
 
-bool IndexWalker::WalkInto(const IdentifierComponent& comp) {
+bool IndexWalker::WalkInto(const ParsedIdentifierComponent& comp) {
   const ModuleSymbolIndexNode* node = path_.back();
 
   const std::string& comp_name = comp.name();
@@ -81,7 +81,7 @@ bool IndexWalker::WalkInto(const IdentifierComponent& comp) {
   return false;
 }
 
-bool IndexWalker::WalkInto(const Identifier& ident) {
+bool IndexWalker::WalkInto(const ParsedIdentifier& ident) {
   IndexWalker sub(*this);
   if (!sub.WalkIntoClosest(ident))
     return false;
@@ -91,7 +91,7 @@ bool IndexWalker::WalkInto(const Identifier& ident) {
   return true;
 }
 
-bool IndexWalker::WalkIntoClosest(const Identifier& ident) {
+bool IndexWalker::WalkIntoClosest(const ParsedIdentifier& ident) {
   if (ident.qualification() == IdentifierQualification::kGlobal)
     path_.resize(1);  // Only keep the root.
 
@@ -104,7 +104,7 @@ bool IndexWalker::WalkIntoClosest(const Identifier& ident) {
 
 // static
 bool IndexWalker::ComponentMatches(const std::string& index_string,
-                                   const IdentifierComponent& comp) {
+                                   const ParsedIdentifierComponent& comp) {
   if (!ComponentMatchesNameOnly(index_string, comp))
     return false;
   // Only bother with the expensive template comparison on demand.
@@ -112,8 +112,8 @@ bool IndexWalker::ComponentMatches(const std::string& index_string,
 }
 
 // static
-bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
-                                           const IdentifierComponent& comp) {
+bool IndexWalker::ComponentMatchesNameOnly(
+    const std::string& index_string, const ParsedIdentifierComponent& comp) {
   const std::string& comp_name = comp.name();
   if (comp_name.size() > index_string.size())
     return false;  // Index string can't contain the name.
@@ -129,8 +129,9 @@ bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
 
 // static
 bool IndexWalker::ComponentMatchesTemplateOnly(
-    const std::string& index_string, const IdentifierComponent& comp) {
-  auto [err, index_ident] = ExprParser::ParseIdentifier(index_string);
+    const std::string& index_string, const ParsedIdentifierComponent& comp) {
+  ParsedIdentifier index_ident;
+  Err err = ExprParser::ParseIdentifier(index_string, &index_ident);
   if (err.has_error())
     return false;
 

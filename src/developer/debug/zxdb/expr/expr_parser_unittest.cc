@@ -18,8 +18,8 @@ namespace {
 // This name looker-upper declares anything beginning with "Namespace" is a
 // namespace, anything beginning with "Template" is a template, and anything
 // beginning with "Type" is a type.
-FoundName TestLookupName(const Identifier& ident) {
-  const IdentifierComponent& comp = ident.components().back();
+FoundName TestLookupName(const ParsedIdentifier& ident) {
+  const ParsedIdentifierComponent& comp = ident.components().back();
   const std::string& name = comp.name();
 
   if (StringBeginsWith(name, "Namespace"))
@@ -616,32 +616,39 @@ TEST_F(ExprParserTest, CppCast) {
 }
 
 TEST_F(ExprParserTest, ParseIdentifier) {
+  Err err;
+
   // Empty input.
-  auto [empty_err, empty_ident] = ExprParser::ParseIdentifier("");
-  EXPECT_TRUE(empty_err.has_error());
-  EXPECT_EQ("No input to parse.", empty_err.msg());
+  ParsedIdentifier empty_ident;
+  err = ExprParser::ParseIdentifier("", &empty_ident);
+  EXPECT_TRUE(err.has_error());
+  EXPECT_EQ("No input to parse.", err.msg());
   EXPECT_EQ("", empty_ident.GetDebugName());
 
   // Normal word.
-  auto [word_err, word_ident] = ExprParser::ParseIdentifier("foo");
-  EXPECT_FALSE(word_err.has_error()) << word_err.msg();
+  ParsedIdentifier word_ident;
+  err = ExprParser::ParseIdentifier("foo", &word_ident);
+  EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ("\"foo\"", word_ident.GetDebugName());
 
   // Destructor.
-  auto [destr_err, destr_ident] = ExprParser::ParseIdentifier("Foo::~Foo");
-  EXPECT_FALSE(destr_err.has_error()) << destr_err.msg();
+  ParsedIdentifier destr_ident;
+  err = ExprParser::ParseIdentifier("Foo::~Foo", &destr_ident);
+  EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(R"("Foo"; ::"~Foo")", destr_ident.GetDebugName());
 
   // Complicated identifier (copied from STL).
-  auto [complex_err, complex_ident] = ExprParser::ParseIdentifier(
+  ParsedIdentifier complex_ident;
+  err = ExprParser::ParseIdentifier(
       "std::unordered_map<"
       "std::__2::basic_string<char>, "
       "unsigned long, "
       "std::__2::hash<std::__2::basic_string<char> >, "
       "std::__2::equal_to<std::__2::basic_string<char> >, "
       "std::__2::allocator<std::__2::pair<const std::__2::basic_string<char>, "
-      "unsigned long> >>");
-  EXPECT_FALSE(complex_err.has_error());
+      "unsigned long> >>",
+      &complex_ident);
+  EXPECT_FALSE(err.has_error());
   EXPECT_EQ(
       "\"std\"; "
       "::"
@@ -657,10 +664,10 @@ TEST_F(ExprParserTest, ParseIdentifier) {
 
 TEST_F(ExprParserTest, FromStringError) {
   // Error from input.
-  auto [bad_err, bad_ident] = ExprParser::ParseIdentifier("Foo<Bar");
-  EXPECT_TRUE(bad_err.has_error());
-  EXPECT_EQ("Expected '>' to match. Hit the end of input instead.",
-            bad_err.msg());
+  Identifier bad_ident;
+  Err err = ExprParser::ParseIdentifier("Foo<Bar", &bad_ident);
+  EXPECT_TRUE(err.has_error());
+  EXPECT_EQ("Expected '>' to match. Hit the end of input instead.", err.msg());
   EXPECT_EQ("", bad_ident.GetDebugName());
 }
 
@@ -669,7 +676,8 @@ TEST_F(ExprParserTest, FromStringError) {
 // not a valid C++ name. This can be changed in the future if we have a better
 // way of identifying these.
 TEST_F(ExprParserTest, PltName) {
-  auto [err, ident] = ExprParser::ParseIdentifier("__stack_chk_fail@plt");
+  Identifier ident;
+  Err err = ExprParser::ParseIdentifier("__stack_chk_fail@plt", &ident);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ("\"__stack_chk_fail@plt\"", ident.GetDebugName());
 }

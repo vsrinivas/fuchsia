@@ -8,7 +8,7 @@
 #include <functional>
 
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
-#include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
@@ -41,7 +41,7 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   // The callback may be issued asynchronously in the future if communication
   // with the remote debugged application is required. The callback may be
   // issued reentrantly for synchronously available data.
-  virtual void GetNamedValue(const Identifier& identifier,
+  virtual void GetNamedValue(const ParsedIdentifier& identifier,
                              ValueCallback cb) = 0;
 
   // Returns the SymbolVariableResolver used to create variables from

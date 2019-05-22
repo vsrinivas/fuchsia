@@ -408,7 +408,8 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
         "symbol to look up.");
   }
 
-  auto [err, identifier] = ExprParser::ParseIdentifier(cmd.args()[0]);
+  ParsedIdentifier identifier;
+  Err err = ExprParser::ParseIdentifier(cmd.args()[0], &identifier);
   if (err.has_error())
     return err;
 

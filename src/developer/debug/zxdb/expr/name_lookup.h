@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_NAME_LOOKUP_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_NAME_LOOKUP_H_
 
 #include <functional>
 
 #include "src/developer/debug/zxdb/expr/found_name.h"
-#include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 
 namespace zxdb {
@@ -23,6 +24,8 @@ namespace zxdb {
 // either a type name or a variable. This happens with "sizeof(X)". The first
 // thing (type or variable) matching "X" is used. With this API, we'll see if
 // it could possibly be a type and always give the result for the type.
-using NameLookupCallback = std::function<FoundName(const Identifier&)>;
+using NameLookupCallback = std::function<FoundName(const ParsedIdentifier&)>;
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_NAME_LOOKUP_H_

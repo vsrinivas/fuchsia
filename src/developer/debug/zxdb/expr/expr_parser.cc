@@ -155,26 +155,33 @@ fxl::RefPtr<ExprNode> ExprParser::Parse() {
 }
 
 // static
-std::pair<Err, Identifier> ExprParser::ParseIdentifier(
-    const std::string& input) {
+Err ExprParser::ParseIdentifier(const std::string& input, Identifier* output) {
+  ParsedIdentifier parsed;
+  Err err = ParseIdentifier(input, &parsed);
+  if (err.has_error())
+    return err;
+  *output = ToIdentifier(parsed);
+  return Err();
+}
+
+// static
+Err ExprParser::ParseIdentifier(const std::string& input,
+                                ParsedIdentifier* output) {
   ExprTokenizer tokenizer(input);
   if (!tokenizer.Tokenize())
-    return std::make_pair(tokenizer.err(), Identifier());
+    return tokenizer.err();
 
   ExprParser parser(tokenizer.TakeTokens());
   auto root = parser.Parse();
   if (!root)
-    return std::make_pair(parser.err(), Identifier());
+    return parser.err();
 
   auto identifier_node = root->AsIdentifier();
-  if (!identifier_node) {
-    return std::make_pair(Err("Input did not parse as an identifier."),
-                          Identifier());
-  }
+  if (!identifier_node)
+    return Err("Input did not parse as an identifier.");
 
-  return std::make_pair(
-      Err(),
-      const_cast<IdentifierExprNode*>(identifier_node)->TakeIdentifier());
+  *output = const_cast<IdentifierExprNode*>(identifier_node)->TakeIdentifier();
+  return Err();
 }
 
 fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
@@ -267,7 +274,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
 
         mode = kColonColon;
         if (result.ident.empty())  // Globally qualified (starts with "::").
-          result.ident = Identifier(IdentifierQualification::kGlobal);
+          result.ident = ParsedIdentifier(IdentifierQualification::kGlobal);
         result.type = nullptr;  // No longer a type.
         break;
       }
@@ -308,8 +315,8 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
 
         // Construct a replacement for the last component of the identifier
         // with the template arguments added.
-        IdentifierComponent& back = result.ident.components().back();
-        back = IdentifierComponent(back.name(), std::move(list));
+        ParsedIdentifierComponent& back = result.ident.components().back();
+        back = ParsedIdentifierComponent(back.name(), std::move(list));
 
         // The thing we just made is either a type or a name, look it up.
         if (name_lookup_callback_) {
@@ -348,10 +355,10 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
           return ParseNameResult();
         } else if (mode == kBegin) {
           // Found an identifier name with nothing before it.
-          result.ident = Identifier(token.value());
+          result.ident = ParsedIdentifier(token.value());
         } else if (mode == kColonColon) {
           result.ident.AppendComponent(
-              IdentifierComponent(cur_token().value()));
+              ParsedIdentifierComponent(cur_token().value()));
         } else {
           // Anything else like "std::vector foo" or "foo bar".
           SetError(token, "Unexpected identifier, did you forget an operator?");
@@ -659,7 +666,7 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenInfix(fxl::RefPtr<ExprNode> left,
   }
   // Const cast is required because the type conversions only have const
   // versions, although our object is not const.
-  Identifier name =
+  ParsedIdentifier name =
       const_cast<IdentifierExprNode*>(left_ident_node)->TakeIdentifier();
 
   // Read the function parameters.

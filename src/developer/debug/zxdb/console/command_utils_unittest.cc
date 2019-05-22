@@ -194,7 +194,8 @@ TEST(CommandUtils, FormatIdentifier) {
   EXPECT_EQ("kHeading \"ThisIsAName\"", output.GetDebugString());
 
   // Hierarchical name.
-  auto [err, ident] = ExprParser::ParseIdentifier("::Foo<int, char*>::Bar<Baz>");
+  ParsedIdentifier ident;
+  Err err = ExprParser::ParseIdentifier("::Foo<int, char*>::Bar<Baz>", &ident);
   ASSERT_FALSE(err.has_error());
   EXPECT_EQ(
       "kNormal \"::Foo\", "

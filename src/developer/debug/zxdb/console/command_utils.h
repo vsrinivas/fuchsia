@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_ZXDB_CONSOLE_COMMAND_UTILS_H_
-#define GARNET_BIN_ZXDB_CONSOLE_COMMAND_UTILS_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_UTILS_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_UTILS_H_
 
 #include <initializer_list>
 #include <optional>
@@ -17,6 +17,7 @@
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 
 namespace zxdb {
 
@@ -109,6 +110,7 @@ OutputBuffer FormatInputLocation(const InputLocation& location);
 // Formats the given string as an identifier, with any template annotations
 // dimmed. If bold_last is set, the last identifier component will be bolded.
 OutputBuffer FormatIdentifier(const Identifier& str, bool bold_last);
+OutputBuffer FormatIdentifier(const ParsedIdentifier& str, bool bold_last);
 
 // Formats the function name with syntax highlighting. If show_params is true,
 // the types of the function parameters will be output. Otherwise the
@@ -187,4 +189,4 @@ Err EvalCommandAddressExpression(
 
 }  // namespace zxdb
 
-#endif  // GARNET_BIN_ZXDB_CONSOLE_COMMAND_UTILS_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_UTILS_H_

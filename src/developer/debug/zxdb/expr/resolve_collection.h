@@ -12,7 +12,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/found_member.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
-#include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
@@ -38,7 +38,7 @@ Err ResolveMember(const ExprValue& base, const DataMember* member,
 // matches.
 //
 // Returns an error if the name isn't found.
-Err ResolveMember(const ExprValue& base, const Identifier& identifier,
+Err ResolveMember(const ExprValue& base, const ParsedIdentifier& identifier,
                   ExprValue* out);
 
 // The variant takes an ExprValue which is a pointer to the base/struct or
@@ -53,7 +53,7 @@ void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
 // matched.
 void ResolveMemberByPointer(
     fxl::RefPtr<ExprEvalContext> context, const ExprValue& base_ptr,
-    const Identifier& identifier,
+    const ParsedIdentifier& identifier,
     std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb);
 
 // Takes a Collection value and a base class inside of it, computes the value

@@ -29,6 +29,9 @@ enum class IdentifierQualification { kGlobal, kRelative };
 //      ComponentType(const std::string&)
 //  - Conversion to a string:
 //      std::string GetName(bool include_debug)
+//  - Comparison:
+//      operator==
+//      operator!=
 template <class ComponentType>
 class IdentifierBase {
  public:
@@ -55,6 +58,14 @@ class IdentifierBase {
   template <class InputIterator>
   IdentifierBase(Qualification qual, InputIterator first, InputIterator last)
       : qualification_(qual), components_(first, last) {}
+
+  bool operator==(const IdentifierBase<ComponentType>& other) const {
+    return qualification_ == other.qualification_ &&
+           components_ == other.components_;
+  }
+  bool operator!=(const IdentifierBase<ComponentType>& other) const {
+    return !operator==(other);
+  }
 
   std::vector<ComponentType>& components() { return components_; }
   const std::vector<ComponentType>& components() const { return components_; }

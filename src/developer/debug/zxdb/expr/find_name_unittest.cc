@@ -121,7 +121,7 @@ TEST(FindName, FindLocalVariable) {
   // ACTUAL TEST CODE ----------------------------------------------------------
 
   // Find "value" in the nested block should give the block's one.
-  Identifier value_ident(var_value->GetAssignedName());
+  ParsedIdentifier value_ident(var_value->GetAssignedName());
   FoundName found = FindName(block_context, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_value.get(), found.variable());
@@ -133,9 +133,9 @@ TEST(FindName, FindLocalVariable) {
   EXPECT_EQ(var_value->GetAssignedName(), found.GetName());
 
   // Find "::value" should match nothing.
-  Identifier value_global_ident(
+  ParsedIdentifier value_global_ident(
       IdentifierQualification::kGlobal,
-      IdentifierComponent(var_value->GetAssignedName()));
+      ParsedIdentifierComponent(var_value->GetAssignedName()));
   found = FindName(function_context, value_global_ident);
   EXPECT_FALSE(found);
 
@@ -144,7 +144,7 @@ TEST(FindName, FindLocalVariable) {
   FindNameOptions prefix_options(FindNameOptions::kAllKinds);
   prefix_options.how = FindNameOptions::kPrefix;
   prefix_options.max_results = 100;
-  Identifier va_identifier("va");
+  ParsedIdentifier va_identifier("va");
   FindLocalVariable(prefix_options, block.get(), va_identifier, &found_vector);
   ASSERT_EQ(3u, found_vector.size());
 
@@ -156,7 +156,7 @@ TEST(FindName, FindLocalVariable) {
 
   // Find "block_local" in the block should be found, but in the function it
   // should not be.
-  Identifier block_local_ident(block_other->GetAssignedName());
+  ParsedIdentifier block_local_ident(block_other->GetAssignedName());
   found = FindName(block_context, block_local_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_other.get(), found.variable());
@@ -165,7 +165,7 @@ TEST(FindName, FindLocalVariable) {
   EXPECT_FALSE(found);
 
   // Finding the other function parameter in the block should work.
-  Identifier other_param_ident(param_other->GetAssignedName());
+  ParsedIdentifier other_param_ident(param_other->GetAssignedName());
   found = FindName(block_context, other_param_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(param_other.get(), found.variable());
@@ -173,7 +173,7 @@ TEST(FindName, FindLocalVariable) {
   // Look up the variable "ns::ns_value" using the name "ns_value" (no
   // namespace) from within the context of the "ns::function()" function.
   // The namespace of the function should be implicitly picked up.
-  Identifier ns_value_ident(kNsVarName);
+  ParsedIdentifier ns_value_ident(kNsVarName);
   found = FindName(block_context, ns_value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(ns_value.var.get(), found.variable());
@@ -201,7 +201,7 @@ TEST(FindName, FindMember) {
   FindNameOptions exact_var(FindNameOptions::kAllKinds);
 
   // The two base classes each have a "b" member.
-  Identifier b_ident("b");
+  ParsedIdentifier b_ident("b");
 
   // Finding one member "b" should find the first one (Base1) because the
   // options find the first match by default.
@@ -235,10 +235,10 @@ TEST(FindName, FindIndexedName) {
   const char kVar2Name[] = "var2";      // Only in module 2
   const char kNotFoundName[] = "notfound";
 
-  Identifier global_ident(kGlobalName);
-  Identifier var1_ident(kVar1Name);
-  Identifier var2_ident(kVar2Name);
-  Identifier notfound_ident(kNotFoundName);
+  ParsedIdentifier global_ident(kGlobalName);
+  ParsedIdentifier var1_ident(kVar1Name);
+  ParsedIdentifier var2_ident(kVar2Name);
+  ParsedIdentifier notfound_ident(kNotFoundName);
 
   // Module 1.
   auto mod1 = std::make_unique<MockModuleSymbols>("mod1.so");
@@ -264,8 +264,8 @@ TEST(FindName, FindIndexedName) {
   // Searching for "global" in module1's context should give the global in that
   // module.
   FindNameContext mod1_context(&setup.process(), symbol_context1);
-  FindIndexedName(mod1_context, all_opts, Identifier(), global_ident, true,
-                  &found);
+  FindIndexedName(mod1_context, all_opts, ParsedIdentifier(), global_ident,
+                  true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global1.var.get(), found[0].variable());
 
@@ -273,23 +273,23 @@ TEST(FindName, FindIndexedName) {
   // module.
   found.clear();
   FindNameContext mod2_context(&setup.process(), symbol_context2);
-  FindIndexedName(mod2_context, all_opts, Identifier(), global_ident, true,
-                  &found);
+  FindIndexedName(mod2_context, all_opts, ParsedIdentifier(), global_ident,
+                  true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global2.var.get(), found[0].variable());
 
   // Searching for "var1" in module2's context should still find it even though
   // its in the other module.
   found.clear();
-  FindIndexedName(mod2_context, all_opts, Identifier(), var1_ident, true,
+  FindIndexedName(mod2_context, all_opts, ParsedIdentifier(), var1_ident, true,
                   &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(var1.var.get(), found[0].variable());
 
   // Searching for "var2" with only target-level symbols should still find it.
   found.clear();
-  FindIndexedName(FindNameContext(&setup.target()), all_opts, Identifier(),
-                  var2_ident, true, &found);
+  FindIndexedName(FindNameContext(&setup.target()), all_opts,
+                  ParsedIdentifier(), var2_ident, true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(var2.var.get(), found[0].variable());
 }
@@ -308,15 +308,15 @@ TEST(FindName, FindIndexedNameInModule) {
   // Make a global variable in the toplevel namespace.
   TestIndexedGlobalVariable global(&mod_sym, &root, kVarName);
 
-  Identifier var_ident(kVarName);
-  FindIndexedNameInModule(all_opts, &mod_sym, Identifier(), var_ident, true,
-                          &found);
+  ParsedIdentifier var_ident(kVarName);
+  FindIndexedNameInModule(all_opts, &mod_sym, ParsedIdentifier(), var_ident,
+                          true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global.var.get(), found[0].variable());
 
   // Say we're in some nested namespace and search for the same name. It should
   // find the variable in the upper namespace.
-  Identifier nested_ns(kNsName);
+  ParsedIdentifier nested_ns(kNsName);
   found.clear();
   FindIndexedNameInModule(all_opts, &mod_sym, nested_ns, var_ident, true,
                           &found);
@@ -337,8 +337,8 @@ TEST(FindName, FindIndexedNameInModule) {
 
   // Now do the same search but globally qualify the input "::var" which should
   // match only the toplevel one.
-  Identifier var_global_ident(IdentifierQualification::kGlobal,
-                              IdentifierComponent(kVarName));
+  ParsedIdentifier var_global_ident(IdentifierQualification::kGlobal,
+                                    ParsedIdentifierComponent(kVarName));
   found.clear();
   FindIndexedNameInModule(all_opts, &mod_sym, nested_ns, var_global_ident, true,
                           &found);
@@ -356,7 +356,7 @@ TEST(FindName, FindTypeName) {
   const char kChildTypeName[] = "ChildType";  // "GlobalType::ChildType".
 
   // Global class name.
-  Identifier global_type_name(kGlobalTypeName);
+  ParsedIdentifier global_type_name(kGlobalTypeName);
   auto global_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   global_type->set_assigned_name(kGlobalTypeName);
   TestIndexedSymbol global_indexed(mod.get(), &root, kGlobalTypeName,
@@ -364,9 +364,10 @@ TEST(FindName, FindTypeName) {
 
   // Child type definition inside the global class name. Currently types don't
   // have child types and everything is found via the index.
-  Identifier child_type_name(kChildTypeName);
-  auto [err, full_child_type_name] =
-      ExprParser::ParseIdentifier("GlobalType::ChildType");
+  ParsedIdentifier child_type_name(kChildTypeName);
+  ParsedIdentifier full_child_type_name;
+  Err err = ExprParser::ParseIdentifier("GlobalType::ChildType",
+                                        &full_child_type_name);
   ASSERT_FALSE(err.has_error());
   auto child_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   child_type->set_assigned_name(kChildTypeName);
@@ -421,7 +422,7 @@ TEST(FindName, FindTypeName) {
   prefix_opts.how = FindNameOptions::kPrefix;
   prefix_opts.max_results = 10000;
   std::vector<FoundName> found_vect;
-  Identifier global_type_prefix("Gl");
+  ParsedIdentifier global_type_prefix("Gl");
   FindName(function_context, prefix_opts, global_type_prefix, &found_vect);
   ASSERT_EQ(1u, found_vect.size());
   EXPECT_EQ(global_type.get(), found_vect[0].type().get());
@@ -451,8 +452,8 @@ TEST(FindName, FindTemplateName) {
   const char kTemplateIntName[] = "Template<int>";
   const char kTemplateNotName[] = "TemplateNot";
 
-  Identifier template_int_name(kTemplateIntName);
-  Identifier template_not_name(kTemplateNotName);
+  ParsedIdentifier template_int_name(kTemplateIntName);
+  ParsedIdentifier template_not_name(kTemplateNotName);
 
   auto template_int = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   template_int->set_assigned_name(kTemplateIntName);
@@ -474,7 +475,7 @@ TEST(FindName, FindTemplateName) {
   setup.InjectModule("mod", "1234", kLoadAddress, std::move(mod));
 
   // The string "Template" should be identified as one.
-  Identifier template_name("Template");
+  ParsedIdentifier template_name("Template");
   auto found = FindName(context, template_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kTemplate, found.kind());
@@ -502,7 +503,7 @@ TEST(FindName, FindTemplateName) {
   FindNameOptions all_prefixes(FindNameOptions::kAllKinds);
   all_prefixes.how = FindNameOptions::kPrefix;
   all_prefixes.max_results = 100;
-  Identifier templ_name("Templ");
+  ParsedIdentifier templ_name("Templ");
   FindName(context, all_prefixes, templ_name, &found_vect);
   ASSERT_EQ(2u, found_vect.size());
   // Both results are types.

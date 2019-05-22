@@ -27,8 +27,8 @@ namespace {
 // A wrapper around FindMember that issues errors rather than returning
 // an optional. The base can be null for the convenience of the caller. On
 // error, the output FoundMember will be untouched.
-Err FindMemberWithErr(const Collection* base, const Identifier& identifier,
-                      FoundMember* out) {
+Err FindMemberWithErr(const Collection* base,
+                      const ParsedIdentifier& identifier, FoundMember* out) {
   if (!base) {
     return Err("Can't resolve '%s' on non-struct/class/union value.",
                identifier.GetFullName().c_str());
@@ -152,7 +152,7 @@ Err ResolveMember(const ExprValue& base, const DataMember* member,
                          out);
 }
 
-Err ResolveMember(const ExprValue& base, const Identifier& identifier,
+Err ResolveMember(const ExprValue& base, const ParsedIdentifier& identifier,
                   ExprValue* out) {
   if (!base.type())
     return Err("No type information.");
@@ -182,7 +182,7 @@ void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
 
 void ResolveMemberByPointer(
     fxl::RefPtr<ExprEvalContext> context, const ExprValue& base_ptr,
-    const Identifier& identifier,
+    const ParsedIdentifier& identifier,
     std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb) {
   const Collection* coll = nullptr;
   Err err = GetPointedToCollection(base_ptr.type(), &coll);

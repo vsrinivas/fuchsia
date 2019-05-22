@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_SYMBOL_EVAL_CONTEXT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_SYMBOL_EVAL_CONTEXT_H_
 
 #include <optional>
 #include <vector>
@@ -10,12 +11,9 @@
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
-#include "src/developer/debug/zxdb/expr/found_name.h"
-#include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -51,7 +49,7 @@ class SymbolEvalContext : public ExprEvalContext {
   ~SymbolEvalContext() override;
 
   // ExprEvalContext implementation.
-  void GetNamedValue(const Identifier& name, ValueCallback cb) override;
+  void GetNamedValue(const ParsedIdentifier& name, ValueCallback cb) override;
   SymbolVariableResolver& GetVariableResolver() override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;
@@ -86,7 +84,7 @@ class SymbolEvalContext : public ExprEvalContext {
   void DoResolve(FoundName found, ValueCallback cb) const;
 
   // Implements type name lookup on the target's symbol index.
-  FoundName DoTargetSymbolsNameLookup(const Identifier& ident);
+  FoundName DoTargetSymbolsNameLookup(const ParsedIdentifier& ident);
 
   fxl::WeakPtr<const ProcessSymbols> process_symbols_;  // Possibly null.
   SymbolContext symbol_context_;
@@ -101,3 +99,5 @@ class SymbolEvalContext : public ExprEvalContext {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_SYMBOL_EVAL_CONTEXT_H_

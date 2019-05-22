@@ -22,7 +22,7 @@ void MockExprEvalContext::AddVariable(const std::string& name, ExprValue v) {
 
 // ExprEvalContext implementation.
 void MockExprEvalContext::GetNamedValue(
-    const Identifier& ident,
+    const ParsedIdentifier& ident,
     std::function<void(const Err&, fxl::RefPtr<Symbol>, ExprValue)> cb) {
   // Can ignore the symbol output for this test, it's not needed by the
   // expression evaluation system.
@@ -43,7 +43,7 @@ fxl::RefPtr<SymbolDataProvider> MockExprEvalContext::GetDataProvider() {
 
 NameLookupCallback MockExprEvalContext::GetSymbolNameLookupCallback() {
   // This mock version just integrates with builtin types.
-  return [](const Identifier& ident) {
+  return [](const ParsedIdentifier& ident) {
     if (auto type = GetBuiltinType(ident.GetFullName()))
       return FoundName(std::move(type));
     return FoundName();

@@ -137,15 +137,17 @@ VisitResult VisitPerModule(
 VisitResult FindPerIndexNode(const FindNameOptions& options,
                              const ModuleSymbols* module_symbols,
                              const IndexWalker& walker,
-                             const Identifier& looking_for,
+                             const ParsedIdentifier& looking_for,
                              std::vector<FoundName>* results) {
   if (looking_for.empty())
     return VisitResult::kDone;
 
+  ParsedIdentifier looking_for_scope = looking_for.GetScope();
+
   // Walk into all but the last node of the identifier (the last one is
   // the part that needs completion).
   IndexWalker prefix_walker(walker);
-  if (!prefix_walker.WalkInto(looking_for.GetScope()))
+  if (!prefix_walker.WalkInto(looking_for_scope))
     return VisitResult::kContinue;
 
   // Now search that node for anything with the given prefix. This also handles
@@ -174,7 +176,7 @@ VisitResult FindPerIndexNode(const FindNameOptions& options,
     // Walk into all but the last node of the identifier (the last one is
     // potentially the template).
     IndexWalker template_walker(walker);
-    if (!template_walker.WalkInto(looking_for.GetScope()))
+    if (!template_walker.WalkInto(looking_for_scope))
       return VisitResult::kContinue;
 
     // Now search that node for anything that could be a template.
@@ -218,7 +220,7 @@ FindNameContext::FindNameContext(const TargetSymbols* ts)
     : target_symbols(ts) {}
 
 FoundName FindName(const FindNameContext& context,
-                   const Identifier& identifier) {
+                   const ParsedIdentifier& identifier) {
   std::vector<FoundName> results;
   FindName(context, FindNameOptions(FindNameOptions::kAllKinds), identifier,
            &results);
@@ -228,7 +230,8 @@ FoundName FindName(const FindNameContext& context,
 }
 
 void FindName(const FindNameContext& context, const FindNameOptions& options,
-              const Identifier& looking_for, std::vector<FoundName>* results) {
+              const ParsedIdentifier& looking_for,
+              std::vector<FoundName>* results) {
   if (options.find_vars && context.block &&
       looking_for.qualification() == IdentifierQualification::kRelative) {
     // Search for local variables and function parameters.
@@ -248,13 +251,11 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
     // we'll be left with an empty current scope. This is non-fatal: it just
     // means we won't implicitly search the current namespace and will search
     // only the global one.
-    Identifier current_scope;
+    ParsedIdentifier current_scope;
     if (context.block) {
       if (const Function* function = context.block->GetContainingFunction()) {
-        auto [err, func_name] =
-            ExprParser::ParseIdentifier(function->GetFullName());
-        if (!err.has_error())
-          current_scope = func_name.GetScope();
+        current_scope =
+            ToParsedIdentifier(function->GetIdentifier()).GetScope();
       }
     }
     FindIndexedName(context, options, current_scope, looking_for, true,
@@ -283,7 +284,7 @@ VisitResult VisitLocalVariables(
 }
 
 void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
-                       const Identifier& looking_for,
+                       const ParsedIdentifier& looking_for,
                        std::vector<FoundName>* results) {
   // TODO(DX-1214) lookup type names defined locally in this function.
 
@@ -303,7 +304,7 @@ void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
 }
 
 void FindMember(const FindNameContext& context, const FindNameOptions& options,
-                const Collection* object, const Identifier& looking_for,
+                const Collection* object, const ParsedIdentifier& looking_for,
                 const Variable* optional_object_ptr,
                 std::vector<FoundName>* result) {
   VisitClassHierarchy(
@@ -334,17 +335,16 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
 
         // Index node iteration for this class' scope.
         if (OptionsRequiresIndex(options)) {
-          auto [err, container_name] =
-              ExprParser::ParseIdentifier(cur_collection->GetFullName());
-          if (!err.has_error()) {
-            // Don't search previous scopes (pass |search_containing| = false).
-            // If a class derives from a class in another namespace, that
-            // doesn't bring the other namespace in the current scope.
-            VisitResult vr = FindIndexedName(context, options, container_name,
-                                             looking_for, false, result);
-            if (vr != VisitResult::kContinue)
-              return vr;
-          }
+          ParsedIdentifier container_name =
+              ToParsedIdentifier(cur_collection->GetIdentifier());
+
+          // Don't search previous scopes (pass |search_containing| = false).
+          // If a class derives from a class in another namespace, that
+          // doesn't bring the other namespace in the current scope.
+          VisitResult vr = FindIndexedName(context, options, container_name,
+                                           looking_for, false, result);
+          if (vr != VisitResult::kContinue)
+            return vr;
         }
 
         return VisitResult::kContinue;
@@ -353,7 +353,7 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
 
 void FindMemberOnThis(const FindNameContext& context,
                       const FindNameOptions& options,
-                      const Identifier& looking_for,
+                      const ParsedIdentifier& looking_for,
                       std::vector<FoundName>* result) {
   if (!context.block)
     return;  // No current code.
@@ -375,8 +375,8 @@ void FindMemberOnThis(const FindNameContext& context,
 
 VisitResult FindIndexedName(const FindNameContext& context,
                             const FindNameOptions& options,
-                            const Identifier& current_scope,
-                            const Identifier& looking_for,
+                            const ParsedIdentifier& current_scope,
+                            const ParsedIdentifier& looking_for,
                             bool search_containing,
                             std::vector<FoundName>* results) {
   return VisitPerModule(
@@ -391,8 +391,8 @@ VisitResult FindIndexedName(const FindNameContext& context,
 
 VisitResult FindIndexedNameInModule(const FindNameOptions& options,
                                     const ModuleSymbols* module_symbols,
-                                    const Identifier& current_scope,
-                                    const Identifier& looking_for,
+                                    const ParsedIdentifier& current_scope,
+                                    const ParsedIdentifier& looking_for,
                                     bool search_containing,
                                     std::vector<FoundName>* results) {
   IndexWalker walker(&module_symbols->GetIndex());
@@ -419,7 +419,8 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
   return VisitResult::kContinue;
 }
 
-const std::string* GetSingleComponentIdentifierName(const Identifier& ident) {
+const std::string* GetSingleComponentIdentifierName(
+    const ParsedIdentifier& ident) {
   if (ident.components().size() != 1 || ident.components()[0].has_template())
     return nullptr;
   return &ident.components()[0].name();

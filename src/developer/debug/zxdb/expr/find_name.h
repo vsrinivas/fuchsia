@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 
 namespace zxdb {
@@ -104,9 +104,10 @@ struct FindNameOptions {
 // version finds the first exact match of any type, the second uses the
 // options to customize what and how many results are returned.
 FoundName FindName(const FindNameContext& context,
-                   const Identifier& identifier);
+                   const ParsedIdentifier& identifier);
 void FindName(const FindNameContext& context, const FindNameOptions& options,
-              const Identifier& looking_for, std::vector<FoundName>* results);
+              const ParsedIdentifier& looking_for,
+              std::vector<FoundName>* results);
 
 // Type-specific finding -------------------------------------------------------
 
@@ -122,7 +123,7 @@ VisitResult VisitLocalVariables(
     const CodeBlock* block,
     const std::function<VisitResult(const Variable*)>& visitor);
 void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
-                       const Identifier& looking_for,
+                       const ParsedIdentifier& looking_for,
                        std::vector<FoundName>* results);
 
 // Searches for the named variable or type on the given collection. This is the
@@ -140,7 +141,7 @@ void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
 // construct the FoundName object. It can be null if the caller does not have
 // a variable for the object it's looking up (just doing a type query).
 void FindMember(const FindNameContext& context, const FindNameOptions& options,
-                const Collection* object, const Identifier& looking_for,
+                const Collection* object, const ParsedIdentifier& looking_for,
                 const Variable* optional_object_ptr,
                 std::vector<FoundName>* result);
 
@@ -156,7 +157,7 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
 // will be used to prioritize symbol searching to the current module if given.
 void FindMemberOnThis(const FindNameContext& context,
                       const FindNameOptions& options,
-                      const Identifier& looking_for,
+                      const ParsedIdentifier& looking_for,
                       std::vector<FoundName>* result);
 
 // Attempts to resolve the named |looking_for| in the index.
@@ -166,8 +167,8 @@ void FindMemberOnThis(const FindNameContext& context,
 // searched, otherwise only exact matches in that scope will be found.
 VisitResult FindIndexedName(const FindNameContext& context,
                             const FindNameOptions& options,
-                            const Identifier& current_scope,
-                            const Identifier& looking_for,
+                            const ParsedIdentifier& current_scope,
+                            const ParsedIdentifier& looking_for,
                             bool search_containing,
                             std::vector<FoundName>* results);
 
@@ -176,8 +177,8 @@ VisitResult FindIndexedName(const FindNameContext& context,
 // class from where to start the search.
 VisitResult FindIndexedNameInModule(const FindNameOptions& options,
                                     const ModuleSymbols* module_symbols,
-                                    const Identifier& current_scope,
-                                    const Identifier& looking_for,
+                                    const ParsedIdentifier& current_scope,
+                                    const ParsedIdentifier& looking_for,
                                     bool search_containing,
                                     std::vector<FoundName>* results);
 
@@ -188,7 +189,8 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
 // or any template specs, returns null.
 //
 // The returned pointer will be invalidated if the Identifier is mutated.
-const std::string* GetSingleComponentIdentifierName(const Identifier& ident);
+const std::string* GetSingleComponentIdentifierName(
+    const ParsedIdentifier& ident);
 
 }  // namespace zxdb
 

@@ -8,6 +8,7 @@
 #include <string_view>
 #include <utility>
 
+#include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 
 namespace zxdb {
@@ -39,7 +40,7 @@ class IndexWalker {
   // This ignores the separator, so walking into "::foo" won't go back to the
   // global namespace. This is because this will be called for each
   // sub-component of an identifier, and many of them will have separators.
-  bool WalkInto(const IdentifierComponent& comp);
+  bool WalkInto(const ParsedIdentifierComponent& comp);
 
   // Moves to a child of the current component that matches the given
   // identifier (following all components). Returns true if there was a match,
@@ -48,7 +49,7 @@ class IndexWalker {
   // NOTE: this does not treat identifiers that start with "::" differently,
   // so will always attempt to do a relative name resolution. Handling which
   // scopes to search in is the job of the caller.
-  bool WalkInto(const Identifier& ident);
+  bool WalkInto(const ParsedIdentifier& ident);
 
   // Like WalkInto but does a best effort and always commits the results. This
   // is typically used to move to the starting point in an index for searching:
@@ -58,23 +59,23 @@ class IndexWalker {
   // If given "foo::Bar", and "foo" exists but has no "Bar inside of it,
   // this will walk to "foo" and returns false. If "Bar" did exist, it would
   // walk into it and return true.
-  bool WalkIntoClosest(const Identifier& ident);
+  bool WalkIntoClosest(const ParsedIdentifier& ident);
 
   // Returns true if the given component matches the given string from the
   // index. This will do limited canonicalization on the index string so a
   // comparison of template parameters is possible.
   static bool ComponentMatches(const std::string& index_string,
-                               const IdentifierComponent& comp);
+                               const ParsedIdentifierComponent& comp);
 
   // Returns true if the component name matches the stuff in the index string
   // before any template parameters.
   static bool ComponentMatchesNameOnly(const std::string& index_string,
-                                       const IdentifierComponent& comp);
+                                       const ParsedIdentifierComponent& comp);
 
   // Returns true if the template parts of the component match a canonicalized
   // version of the template parameters extracted from the index string.
-  static bool ComponentMatchesTemplateOnly(const std::string& index_string,
-                                           const IdentifierComponent& comp);
+  static bool ComponentMatchesTemplateOnly(
+      const std::string& index_string, const ParsedIdentifierComponent& comp);
 
   // Returns true if all templates using the given base |name| will be before
   // the given indexed name in an index sorted by ASCII string values.

@@ -26,7 +26,7 @@
 namespace zxdb {
 namespace {
 
-debug_ipc::RegisterID GetRegister(const Identifier& ident) {
+debug_ipc::RegisterID GetRegister(const ParsedIdentifier& ident) {
   auto str = GetSingleComponentIdentifierName(ident);
   if (!str)
     return debug_ipc::RegisterID::kUnknown;
@@ -69,7 +69,7 @@ SymbolEvalContext::SymbolEvalContext(
 
 SymbolEvalContext::~SymbolEvalContext() = default;
 
-void SymbolEvalContext::GetNamedValue(const Identifier& identifier,
+void SymbolEvalContext::GetNamedValue(const ParsedIdentifier& identifier,
                                       ValueCallback cb) {
   if (FoundName found = FindName(FindNameContext(process_symbols_.get(),
                                                  symbol_context_, block_.get()),
@@ -123,7 +123,7 @@ fxl::RefPtr<SymbolDataProvider> SymbolEvalContext::GetDataProvider() {
 NameLookupCallback SymbolEvalContext::GetSymbolNameLookupCallback() {
   // The contract for this function is that the callback must not be stored
   // so the callback can reference |this|.
-  return [this](const Identifier& ident) -> FoundName {
+  return [this](const ParsedIdentifier& ident) -> FoundName {
     // Look up the symbols in the symbol table if possible.
     FoundName result = DoTargetSymbolsNameLookup(ident);
 
@@ -178,7 +178,7 @@ void SymbolEvalContext::DoResolve(FoundName found, ValueCallback cb) const {
 }
 
 FoundName SymbolEvalContext::DoTargetSymbolsNameLookup(
-    const Identifier& ident) {
+    const ParsedIdentifier& ident) {
   return FindName(
       FindNameContext(process_symbols_.get(), symbol_context_, block_.get()),
       ident);

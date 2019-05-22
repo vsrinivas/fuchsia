@@ -92,12 +92,12 @@ Err ParseInputLocation(const Frame* frame, const std::string& input,
   }
 
   // Anything else, assume its an identifier.
-  auto [ident_err, ident] = ExprParser::ParseIdentifier(input);
-  if (ident_err.has_error())
-    return ident_err;
+  Identifier ident;
+  err = ExprParser::ParseIdentifier(input, &location->symbol);
+  if (err.has_error())
+    return err;
 
   location->type = InputLocation::Type::kSymbol;
-  location->symbol = std::move(ident);
   return Err();
 }
 
@@ -246,7 +246,8 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
   FindNameOptions options(FindNameOptions::kNoKinds);
   options.how = FindNameOptions::kPrefix;
 
-  auto [err, prefix_identifier] = ExprParser::ParseIdentifier(prefix);
+  ParsedIdentifier prefix_identifier;
+  Err err = ExprParser::ParseIdentifier(prefix, &prefix_identifier);
   if (err.has_error())
     return;  // Can't match identifier names.
 

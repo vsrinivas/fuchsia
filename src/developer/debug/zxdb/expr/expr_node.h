@@ -12,7 +12,7 @@
 #include "src/developer/debug/zxdb/expr/cast.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -225,7 +225,7 @@ class FunctionCallExprNode : public ExprNode {
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
-  const Identifier& name() const { return name_; }
+  const ParsedIdentifier& name() const { return name_; }
   const std::vector<fxl::RefPtr<ExprNode>>& args() const { return args_; }
 
  private:
@@ -233,11 +233,12 @@ class FunctionCallExprNode : public ExprNode {
   FRIEND_MAKE_REF_COUNTED(FunctionCallExprNode);
 
   FunctionCallExprNode();
-  FunctionCallExprNode(Identifier name, std::vector<fxl::RefPtr<ExprNode>> args)
+  FunctionCallExprNode(ParsedIdentifier name,
+                       std::vector<fxl::RefPtr<ExprNode>> args)
       : name_(std::move(name)), args_(std::move(args)) {}
   ~FunctionCallExprNode() override = default;
 
-  Identifier name_;
+  ParsedIdentifier name_;
   std::vector<fxl::RefPtr<ExprNode>> args_;
 };
 
@@ -249,14 +250,14 @@ class IdentifierExprNode : public ExprNode {
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
-  Identifier& ident() { return ident_; }
-  const Identifier& ident() const { return ident_; }
+  ParsedIdentifier& ident() { return ident_; }
+  const ParsedIdentifier& ident() const { return ident_; }
 
   // Destructively moves the identifier out of this class. This unusual
   // mutating getter is implemented because the expression parser is also used
   // to parse identifiers, and this will hold the result which we would prefer
   // not to copy to get out.
-  Identifier TakeIdentifier() { return std::move(ident_); }
+  ParsedIdentifier TakeIdentifier() { return std::move(ident_); }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(IdentifierExprNode);
@@ -266,12 +267,12 @@ class IdentifierExprNode : public ExprNode {
 
   // Simple one-name identifier.
   IdentifierExprNode(std::string name)
-      : ident_(IdentifierComponent(std::move(name))) {}
+      : ident_(ParsedIdentifierComponent(std::move(name))) {}
 
-  IdentifierExprNode(Identifier id) : ident_(std::move(id)) {}
+  IdentifierExprNode(ParsedIdentifier id) : ident_(std::move(id)) {}
   ~IdentifierExprNode() override = default;
 
-  Identifier ident_;
+  ParsedIdentifier ident_;
 };
 
 // Implements a literal like a number or a boolean.
@@ -313,7 +314,7 @@ class MemberAccessExprNode : public ExprNode {
   const ExprToken& accessor() const { return accessor_; }
 
   // The name of the data member.
-  const Identifier& member() const { return member_; }
+  const ParsedIdentifier& member() const { return member_; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(MemberAccessExprNode);
@@ -321,13 +322,13 @@ class MemberAccessExprNode : public ExprNode {
 
   MemberAccessExprNode() = default;
   MemberAccessExprNode(fxl::RefPtr<ExprNode> left, const ExprToken& access,
-                       const Identifier& member)
+                       const ParsedIdentifier& member)
       : left_(std::move(left)), accessor_(access), member_(member) {}
   ~MemberAccessExprNode() override = default;
 
   fxl::RefPtr<ExprNode> left_;
   ExprToken accessor_;
-  Identifier member_;
+  ParsedIdentifier member_;
 };
 
 class SizeofExprNode : public ExprNode {

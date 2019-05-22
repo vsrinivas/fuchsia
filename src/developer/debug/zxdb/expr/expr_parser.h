@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_PARSER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_PARSER_H_
 
 #include <memory>
 #include <vector>
@@ -29,9 +30,11 @@ class ExprParser {
   // ad error_token()
   fxl::RefPtr<ExprNode> Parse();
 
-  // Attempts to parse the given string as an identifier. Returns either a
-  // set Err or the resulting Identifier when the Err is not set.
-  static std::pair<Err, Identifier> ParseIdentifier(const std::string& input);
+  // Attempts to parse the given string as an identifier. The returned err
+  // indicates whether the output identifier is valid.
+  static Err ParseIdentifier(const std::string& input, Identifier* output);
+  static Err ParseIdentifier(const std::string& input,
+                             ParsedIdentifier* output);
 
   // The result of parsing. Since this does not have access to the initial
   // string, it will not indicate context for the error. That can be generated
@@ -69,7 +72,7 @@ class ExprParser {
     ParseNameResult() = default;
 
     // On success, always contains the identifier name.
-    Identifier ident;
+    ParsedIdentifier ident;
 
     // When the result is a type, this will contain the resolved type. When
     // null, the result is a non-type or an error.
@@ -179,3 +182,5 @@ class ExprParser {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_PARSER_H_

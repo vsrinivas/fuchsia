@@ -437,9 +437,14 @@ OutputBuffer FormatInputLocation(const InputLocation& location) {
   return OutputBuffer();
 }
 
+OutputBuffer FormatIdentifier(const Identifier& identifier, bool bold_last) {
+  return FormatIdentifier(ToParsedIdentifier(identifier), bold_last);
+}
+
 // This annoyingly duplicates Identifier::GetName but is required to get
 // syntax highlighting for all the components.
-OutputBuffer FormatIdentifier(const Identifier& identifier, bool bold_last) {
+OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
+                              bool bold_last) {
   OutputBuffer result;
   if (identifier.qualification() == IdentifierQualification::kGlobal)
     result.Append(identifier.GetSeparator());
@@ -475,14 +480,7 @@ OutputBuffer FormatIdentifier(const Identifier& identifier, bool bold_last) {
 }
 
 OutputBuffer FormatFunctionName(const Function* function, bool show_params) {
-  auto [err, ident] = ExprParser::ParseIdentifier(function->GetFullName());
-  OutputBuffer result;
-  if (err.has_error()) {
-    // Can't parse the name, just pass through.
-    result = OutputBuffer(function->GetFullName());
-  } else {
-    result = FormatIdentifier(ident, true);
-  }
+  OutputBuffer result = FormatIdentifier(function->GetIdentifier(), true);
 
   const auto& params = function->parameters();
   std::string params_str;
