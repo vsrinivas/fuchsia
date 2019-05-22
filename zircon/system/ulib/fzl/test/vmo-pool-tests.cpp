@@ -23,7 +23,7 @@
 namespace {
 
 static constexpr size_t kVmoTestSize = 512 << 10;    // 512KB
-static constexpr size_t kNumVmos = 20;               // 512KB
+static constexpr uint32_t kNumVmos = 20;             // 512KB
 
 // Create vmos for each handle in an array of vmo handles:
 bool AssignVmos(size_t num_vmos, size_t vmo_size, zx::vmo* vmos) {

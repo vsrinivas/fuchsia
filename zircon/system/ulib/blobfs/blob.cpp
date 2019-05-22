@@ -461,7 +461,7 @@ zx_status_t Blob::WriteMetadata() {
         ZX_ASSERT(populator.Walk(on_node, on_extent) == ZX_OK);
 
         // Ensure all non-allocation flags are propagated to the inode.
-        const uint32_t non_allocation_flags = kBlobFlagZSTDCompressed | kBlobFlagLZ4Compressed;
+        const uint16_t non_allocation_flags = kBlobFlagZSTDCompressed | kBlobFlagLZ4Compressed;
         mapped_inode->header.flags |= (inode_.header.flags & non_allocation_flags);
     } else {
         // Special case: Empty node.
