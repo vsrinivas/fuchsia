@@ -38,7 +38,7 @@ sdk_documentation("meta") {
 }
 
 source_set("schemas") {
-  sources = schemas
+  inputs = schemas
 }
 
 rustc_library("rust") {
