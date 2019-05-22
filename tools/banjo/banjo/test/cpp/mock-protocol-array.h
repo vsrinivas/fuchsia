@@ -16,7 +16,7 @@ namespace ddk {
 
 class MockArray : ddk::ArrayProtocol<MockArray> {
 public:
-    MockArray : proto_{&array_protocol_ops_, this} {}
+    MockArray() : proto_{&array_protocol_ops_, this} {}
 
     const array_protocol_t* GetProto() const { return &proto_; }
 
@@ -173,7 +173,7 @@ private:
 
 class MockArray2 : ddk::Array2Protocol<MockArray2> {
 public:
-    MockArray2 : proto_{&array2_protocol_ops_, this} {}
+    MockArray2() : proto_{&array2_protocol_ops_, this} {}
 
     const array2_protocol_t* GetProto() const { return &proto_; }
 
@@ -330,7 +330,7 @@ private:
 
 class MockArrayofArrays : ddk::ArrayofArraysProtocol<MockArrayofArrays> {
 public:
-    MockArrayofArrays : proto_{&arrayof_arrays_protocol_ops_, this} {}
+    MockArrayofArrays() : proto_{&arrayof_arrays_protocol_ops_, this} {}
 
     const arrayof_arrays_protocol_t* GetProto() const { return &proto_; }
 
@@ -484,6 +484,5 @@ private:
     mock_function::MockFunction<std::tuple<double>, double> mock_float64_;
     mock_function::MockFunction<std::tuple<zx::handle>, zx::handle> mock_handle_;
 };
-
 
 } // namespace ddk

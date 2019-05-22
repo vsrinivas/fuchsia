@@ -16,7 +16,7 @@ namespace ddk {
 
 class MockSynchronousBase : ddk::SynchronousBaseProtocol<MockSynchronousBase> {
 public:
-    MockSynchronousBase : proto_{&synchronous_base_protocol_ops_, this} {}
+    MockSynchronousBase() : proto_{&synchronous_base_protocol_ops_, this} {}
 
     const synchronous_base_protocol_t* GetProto() const { return &proto_; }
 
@@ -146,7 +146,7 @@ private:
 
 class MockAsyncBase : ddk::AsyncBaseProtocol<MockAsyncBase> {
 public:
-    MockAsyncBase : proto_{&async_base_protocol_ops_, this} {}
+    MockAsyncBase() : proto_{&async_base_protocol_ops_, this} {}
 
     const async_base_protocol_t* GetProto() const { return &proto_; }
 
@@ -264,6 +264,5 @@ private:
     mock_function::MockFunction<std::tuple<zx_gpaddr_t, zx_gpaddr_t>, zx_gpaddr_t> mock_gpaddr_;
     mock_function::MockFunction<std::tuple<zx_off_t, zx_off_t>, zx_off_t> mock_off_;
 };
-
 
 } // namespace ddk

@@ -10,4 +10,3 @@
 {includes}
 
 namespace ddk {{
-

@@ -16,7 +16,7 @@ namespace ddk {
 
 class MockSynchronousPrimitive : ddk::SynchronousPrimitiveProtocol<MockSynchronousPrimitive> {
 public:
-    MockSynchronousPrimitive : proto_{&synchronous_primitive_protocol_ops_, this} {}
+    MockSynchronousPrimitive() : proto_{&synchronous_primitive_protocol_ops_, this} {}
 
     const synchronous_primitive_protocol_t* GetProto() const { return &proto_; }
 
@@ -172,7 +172,7 @@ private:
 
 class MockAsyncPrimitive : ddk::AsyncPrimitiveProtocol<MockAsyncPrimitive> {
 public:
-    MockAsyncPrimitive : proto_{&async_primitive_protocol_ops_, this} {}
+    MockAsyncPrimitive() : proto_{&async_primitive_protocol_ops_, this} {}
 
     const async_primitive_protocol_t* GetProto() const { return &proto_; }
 
@@ -314,6 +314,5 @@ private:
     mock_function::MockFunction<std::tuple<float, float>, float> mock_float32_;
     mock_function::MockFunction<std::tuple<double, double>, double> mock_float64_;
 };
-
 
 } // namespace ddk

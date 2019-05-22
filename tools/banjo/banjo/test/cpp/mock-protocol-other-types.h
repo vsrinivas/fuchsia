@@ -19,7 +19,7 @@ namespace ddk {
 
 class MockOtherTypes : ddk::OtherTypesProtocol<MockOtherTypes> {
 public:
-    MockOtherTypes : proto_{&other_types_protocol_ops_, this} {}
+    MockOtherTypes() : proto_{&other_types_protocol_ops_, this} {}
 
     const other_types_protocol_t* GetProto() const { return &proto_; }
 
@@ -104,7 +104,7 @@ private:
 
 class MockOtherTypesAsync : ddk::OtherTypesAsyncProtocol<MockOtherTypesAsync> {
 public:
-    MockOtherTypesAsync : proto_{&other_types_async_protocol_ops_, this} {}
+    MockOtherTypesAsync() : proto_{&other_types_async_protocol_ops_, this} {}
 
     const other_types_async_protocol_t* GetProto() const { return &proto_; }
 
@@ -189,7 +189,7 @@ private:
 
 class MockOtherTypesReference : ddk::OtherTypesReferenceProtocol<MockOtherTypesReference> {
 public:
-    MockOtherTypesReference : proto_{&other_types_reference_protocol_ops_, this} {}
+    MockOtherTypesReference() : proto_{&other_types_reference_protocol_ops_, this} {}
 
     const other_types_reference_protocol_t* GetProto() const { return &proto_; }
 
@@ -262,7 +262,7 @@ private:
 
 class MockOtherTypesAsyncReference : ddk::OtherTypesAsyncReferenceProtocol<MockOtherTypesAsyncReference> {
 public:
-    MockOtherTypesAsyncReference : proto_{&other_types_async_reference_protocol_ops_, this} {}
+    MockOtherTypesAsyncReference() : proto_{&other_types_async_reference_protocol_ops_, this} {}
 
     const other_types_async_reference_protocol_t* GetProto() const { return &proto_; }
 
@@ -335,7 +335,7 @@ private:
 
 class MockInterface : ddk::InterfaceProtocol<MockInterface> {
 public:
-    MockInterface : proto_{&interface_protocol_ops_, this} {}
+    MockInterface() : proto_{&interface_protocol_ops_, this} {}
 
     const interface_protocol_t* GetProto() const { return &proto_; }
 
@@ -393,6 +393,5 @@ private:
     mock_function::MockFunction<std::tuple<other_types_protocol_t>, other_types_protocol_t> mock_async_;
     mock_function::MockFunction<std::tuple<other_types_protocol_t>, other_types_protocol_t> mock_async_refernce_;
 };
-
 
 } // namespace ddk

@@ -16,7 +16,7 @@ namespace ddk {
 
 class MockSynchronousHandle : ddk::SynchronousHandleProtocol<MockSynchronousHandle> {
 public:
-    MockSynchronousHandle : proto_{&synchronous_handle_protocol_ops_, this} {}
+    MockSynchronousHandle() : proto_{&synchronous_handle_protocol_ops_, this} {}
 
     const synchronous_handle_protocol_t* GetProto() const { return &proto_; }
 
@@ -263,7 +263,7 @@ private:
 
 class MockAsyncHandle : ddk::AsyncHandleProtocol<MockAsyncHandle> {
 public:
-    MockAsyncHandle : proto_{&async_handle_protocol_ops_, this} {}
+    MockAsyncHandle() : proto_{&async_handle_protocol_ops_, this} {}
 
     const async_handle_protocol_t* GetProto() const { return &proto_; }
 
@@ -489,6 +489,5 @@ private:
     mock_function::MockFunction<std::tuple<zx::timer, zx::timer>, zx::timer> mock_timer_;
     mock_function::MockFunction<std::tuple<zx::profile, zx::profile>, zx::profile> mock_profile_;
 };
-
 
 } // namespace ddk

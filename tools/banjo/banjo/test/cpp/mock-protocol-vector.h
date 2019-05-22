@@ -17,7 +17,7 @@ namespace ddk {
 
 class MockVector : ddk::VectorProtocol<MockVector> {
 public:
-    MockVector : proto_{&vector_protocol_ops_, this} {}
+    MockVector() : proto_{&vector_protocol_ops_, this} {}
 
     const vector_protocol_t* GetProto() const { return &proto_; }
 
@@ -186,7 +186,7 @@ private:
 
 class MockVector2 : ddk::Vector2Protocol<MockVector2> {
 public:
-    MockVector2 : proto_{&vector2_protocol_ops_, this} {}
+    MockVector2() : proto_{&vector2_protocol_ops_, this} {}
 
     const vector2_protocol_t* GetProto() const { return &proto_; }
 
@@ -355,7 +355,7 @@ private:
 
 class MockVectorOfVectors : ddk::VectorOfVectorsProtocol<MockVectorOfVectors> {
 public:
-    MockVectorOfVectors : proto_{&vector_of_vectors_protocol_ops_, this} {}
+    MockVectorOfVectors() : proto_{&vector_of_vectors_protocol_ops_, this} {}
 
     const vector_of_vectors_protocol_t* GetProto() const { return &proto_; }
 
@@ -521,6 +521,5 @@ private:
     mock_function::MockFunction<std::tuple<std::vector<double>>, std::vector<double>> mock_float64_;
     mock_function::MockFunction<std::tuple<std::vector<zx_handle_t>>, std::vector<zx_handle_t>> mock_handle_;
 };
-
 
 } // namespace ddk
