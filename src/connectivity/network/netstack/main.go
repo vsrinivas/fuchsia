@@ -46,7 +46,7 @@ func Main() {
 	ctx := context.CreateFromStartupInfo()
 
 	l, err := syslog.NewLogger(syslog.LogInitOptions{
-		LogLevel:                      syslog.DebugLevel,
+		LogLevel:                      syslog.InfoLevel,
 		MinSeverityForFileAndLineInfo: syslog.InfoLevel,
 		Tags: []string{"netstack"},
 	})
