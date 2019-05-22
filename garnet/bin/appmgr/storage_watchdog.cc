@@ -109,15 +109,25 @@ size_t StorageWatchdog::GetStorageUsage() {
   zx_status_t io_status = fuchsia_io_DirectoryAdminQueryFilesystem(
       caller.borrow_channel(), &status, &info);
   if (io_status != ZX_OK || status != ZX_OK) {
-    FXL_LOG(WARNING) << "storage_watchdog: cannot query filesysten: "
+    FXL_LOG(WARNING) << "storage_watchdog: cannot query filesystem: "
                      << io_status << " OR " << status;
     return 0;
   }
   info.name[fuchsia_io_MAX_FS_NAME_BUFFER - 1] = '\0';
 
-  size_t bytes_total = info.total_bytes;
-  size_t bytes_used = info.used_bytes;
-  size_t use_percentage = bytes_used * 100 / bytes_total;
+  // The number of bytes which may be allocated plus the number of bytes which
+  // have been allocated
+  size_t free_plus_allocated = info.free_shared_pool_bytes + info.total_bytes;
+
+  if (free_plus_allocated == 0) {
+    FXL_LOG(WARNING) << "storage_watchdog: unable to determine storage "
+                     << "pressure";
+    return 0;
+  }
+
+  // The number of used bytes (*100, because we want a percent) over the number
+  // of bytes which may be used
+  size_t use_percentage = info.used_bytes * 100 / free_plus_allocated;
 
   return use_percentage;
 }
