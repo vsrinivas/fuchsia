@@ -1,0 +1,50 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/virtualization/packages/guest_package.gni")
+
+declare_args() {
+  # The termina kernel image.
+  #
+  # Defaults to the kernel image from CIPD, but can be overridden to use a
+  # custom kernel for development purposes.
+  termina_kernel = "//prebuilt/virtualization/packages/termina_guest/images/${target_cpu}/vm_kernel"
+
+  # The termina disk image.
+  #
+  # Defaults to the disk image from CIPD, but can be overridden to use a
+  # custom disk for development purposes.
+  termina_disk = "//prebuilt/virtualization/packages/termina_guest/images/${target_cpu}/vm_rootfs.img"
+}
+
+_kernel_artifact_path = "${target_out_dir}/vm_kernel"
+_rootfs_artifact_path = "${target_out_dir}/vm_rootfs"
+
+guest_prebuilt("kernel") {
+  source = termina_kernel
+  output = _kernel_artifact_path
+}
+
+guest_prebuilt("rootfs") {
+  source = termina_disk
+  output = _rootfs_artifact_path
+}
+
+guest_package("termina_guest") {
+  deps = [
+    ":kernel",
+    ":rootfs",
+  ]
+  cmdline = "console=hvc0 root=/dev/vda rw"
+  linux = _kernel_artifact_path
+
+  rootfs_name = "rootfs.img"
+  resources = [
+    {
+      path = _rootfs_artifact_path
+      dest = "${rootfs_name}"
+    },
+  ]
+  block_devices = [ "/guest/data/${rootfs_name},ro" ]
+}
