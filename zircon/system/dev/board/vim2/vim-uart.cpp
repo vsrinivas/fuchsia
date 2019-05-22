@@ -10,11 +10,11 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/serial.h>
+#include <fuchsia/hardware/serial/c/fidl.h>
 #include <hw/reg.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 #include <unistd.h>
-#include <zircon/device/serial.h>
 
 #include "vim.h"
 
@@ -43,7 +43,7 @@ static const pbus_irq_t bt_uart_irqs[] = {
 };
 
 static const serial_port_info_t bt_uart_serial_info = {
-    .serial_class = SERIAL_CLASS_BLUETOOTH_HCI,
+    .serial_class = fuchsia_hardware_serial_Class_BLUETOOTH_HCI,
     .serial_vid = PDEV_VID_BROADCOM,
     .serial_pid = PDEV_PID_BCM4356,
 };
@@ -90,7 +90,7 @@ static const pbus_irq_t header_uart_irqs[] = {
 
 static const serial_port_info_t header_serial_info = []() {
     serial_port_info_t serial_port_info;
-    serial_port_info.serial_class = SERIAL_CLASS_GENERIC;
+    serial_port_info.serial_class = fuchsia_hardware_serial_Class_GENERIC;
     return serial_port_info;
 }();
 

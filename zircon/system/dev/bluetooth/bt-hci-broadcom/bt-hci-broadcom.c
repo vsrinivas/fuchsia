@@ -11,16 +11,16 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/bt/hci.h>
 #include <ddk/protocol/serial.h>
+#include <endian.h>
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/random.h>
 #include <threads.h>
 #include <zircon/assert.h>
-#include <zircon/device/serial.h>
 #include <zircon/status.h>
 #include <zircon/threads.h>
-#include <fuchsia/hardware/bluetooth/c/fidl.h>
 
 // TODO: how can we parameterize this?
 #define TARGET_BAUD_RATE    2000000

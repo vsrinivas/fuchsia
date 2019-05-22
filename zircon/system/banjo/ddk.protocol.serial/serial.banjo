@@ -6,7 +6,36 @@ library ddk.protocol.serial;
 
 using zx;
 
+// Flags that can be passed to Serial/Config()
+
+// Select the character width
+const uint32 SERIAL_DATA_BITS_5    = 0x0;
+const uint32 SERIAL_DATA_BITS_6    = 0x1;
+const uint32 SERIAL_DATA_BITS_7    = 0x2;
+const uint32 SERIAL_DATA_BITS_8    = 0x3;
+const uint32 SERIAL_DATA_BITS_MASK = 0x3;
+
+// Select the number of stop bits
+const uint32 SERIAL_STOP_BITS_1    = 0x0;
+const uint32 SERIAL_STOP_BITS_2    = 0x4;
+const uint32 SERIAL_STOP_BITS_MASK = 0x4;
+
+// Select the parity mechanism
+const uint32 SERIAL_PARITY_NONE = 0x00;
+const uint32 SERIAL_PARITY_EVEN = 0x08;
+const uint32 SERIAL_PARITY_ODD  = 0x10;
+const uint32 SERIAL_PARITY_MASK = 0x18;
+
+// Select the flow control mechanism
+const uint32 SERIAL_FLOW_CTRL_NONE    = 0x00;
+const uint32 SERIAL_FLOW_CTRL_CTS_RTS = 0x20;
+const uint32 SERIAL_FLOW_CTRL_MASK    = 0x20;
+
+// Set this flag to change baud rate but leave other properties unchanged
+const uint32 SERIAL_SET_BAUD_RATE_ONLY = 0x80000000;
+
 struct SerialPortInfo {
+    /// Values from the FIDL enum fuchsia.hardware.serial.Class
     uint32 serial_class;
     /// Vendor and product ID of hardware attached to this serial port,
     /// or zero if not applicable.

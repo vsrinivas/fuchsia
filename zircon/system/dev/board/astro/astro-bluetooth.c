@@ -11,10 +11,10 @@
 #include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/serial.h>
+#include <fuchsia/hardware/serial/c/fidl.h>
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
-#include <zircon/device/serial.h>
 
 #include "astro.h"
 
@@ -36,7 +36,7 @@ static const pbus_irq_t bt_uart_irqs[] = {
 };
 
 static const serial_port_info_t bt_uart_serial_info = {
-    .serial_class = SERIAL_CLASS_BLUETOOTH_HCI,
+    .serial_class = fuchsia_hardware_serial_Class_BLUETOOTH_HCI,
     .serial_vid = PDEV_VID_BROADCOM,
     .serial_pid = PDEV_PID_BCM43458,
 };

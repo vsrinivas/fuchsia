@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-#include <zircon/device/serial.h>
-
-#include <errno.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
-#include <stdlib.h>
+#include <fuchsia/hardware/serial/c/fidl.h>
+#include <lib/fdio/unsafe.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <threads.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <zircon/syscalls.h>
 
 #define DEV_SERIAL "/dev/class/serial"
 
@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
     }
 
     int fd = -1;
-   char path[100];
+    char path[100];
 
     while ((de = readdir(dir)) != NULL) {
         if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
@@ -44,8 +44,12 @@ int main(int argc, char** argv) {
             continue;
         }
 
-        uint32_t serial_class;
-        if (ioctl_serial_get_class(fd, &serial_class) < 0 || serial_class != SERIAL_CLASS_GENERIC) {
+        fuchsia_hardware_serial_Class device_class;
+        fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
+        zx_status_t status = fuchsia_hardware_serial_DeviceGetClass(
+                fdio_unsafe_borrow_channel(fdio), &device_class);
+        fdio_unsafe_release(fdio);
+        if (status != ZX_OK || device_class != fuchsia_hardware_serial_Class_GENERIC) {
             close(fd);
             continue;
         } else {

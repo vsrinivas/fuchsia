@@ -8,9 +8,9 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/serialimpl.h>
 #include <ddk/protocol/usb.h>
+#include <fuchsia/hardware/serial/c/fidl.h>
 #include <usb/usb.h>
 #include <usb/usb-request.h>
-#include <zircon/device/serial.h>
 #include <zircon/listnode.h>
 #include <zircon/hw/usb.h>
 
@@ -448,7 +448,7 @@ static zx_status_t ftdi_bind(void* ctx, zx_device_t* device) {
         goto fail;
     }
 
-    ftdi->serial_port_info.serial_class = SERIAL_CLASS_GENERIC;
+    ftdi->serial_port_info.serial_class = fuchsia_hardware_serial_Class_GENERIC;
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

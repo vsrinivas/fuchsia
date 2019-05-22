@@ -33,6 +33,7 @@ driver("vim2") {
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/broadcom",
     "$zx/system/dev/lib/mmio",
+    "$zx/system/fidl/fuchsia-hardware-serial:c",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

@@ -1,0 +1,61 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.serial;
+
+using zx;
+
+/// Description of what type of serial device this is
+enum Class : uint8 {
+    GENERIC = 1;
+    /// A Bluetooth host controller
+    BLUETOOTH_HCI = 2;
+    /// An interactive console
+    CONSOLE = 3;
+};
+
+/// Number of bits per character
+enum CharacterWidth : uint8 {
+    BITS_5 = 1;
+    BITS_6 = 2;
+    BITS_7 = 3;
+    BITS_8 = 4;
+};
+
+/// Number of stop bits
+enum StopWidth : uint8 {
+    BITS_1 = 1;
+    BITS_2 = 2;
+};
+
+/// Which parity computation to use, if any.
+enum Parity : uint8 {
+    NONE = 1;
+    EVEN = 2;
+    ODD = 3;
+};
+
+/// What flow control mechanism to use
+enum FlowControl : uint8 {
+    NONE = 1;
+    /// Clear To Send/Request To Send
+    CTS_RTS = 2;
+};
+
+struct Config {
+    CharacterWidth character_width;
+    StopWidth stop_width;
+    Parity parity;
+    FlowControl control_flow;
+    uint32 baud_rate;
+};
+
+[Layout = "Simple"]
+protocol Device {
+    /// Lookup what type of serial device this is.
+    GetClass() -> (Class device_class);
+
+    /// Set the configuration of this serial device.
+    SetConfig(Config config) -> (zx.status s);
+};

@@ -9,8 +9,8 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/bt/hci.h>
 #include <ddk/protocol/serial.h>
+#include <fuchsia/hardware/serial/c/fidl.h>
 #include <zircon/device/bt-hci.h>
-#include <zircon/device/serial.h>
 #include <zircon/status.h>
 
 #include <assert.h>
@@ -524,8 +524,8 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "hci_bind: serial_get_info failed\n");
         goto fail;
     }
-    if (info.serial_class != SERIAL_CLASS_BLUETOOTH_HCI) {
-        zxlogf(ERROR, "hci_bind: info.device_class != SERIAL_CLASS_BLUETOOTH_HCI\n");
+    if (info.serial_class != fuchsia_hardware_serial_Class_BLUETOOTH_HCI) {
+        zxlogf(ERROR, "hci_bind: info.device_class != BLUETOOTH_HCI\n");
         status = ZX_ERR_INTERNAL;
         goto fail;
     }
@@ -567,5 +567,5 @@ static zx_driver_ops_t bt_hci_driver_ops = {
 // clang-format off
 ZIRCON_DRIVER_BEGIN(bt_transport_uart, bt_hci_driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SERIAL),
-    BI_MATCH_IF(EQ, BIND_SERIAL_CLASS, SERIAL_CLASS_BLUETOOTH_HCI),
+    BI_MATCH_IF(EQ, BIND_SERIAL_CLASS, fuchsia_hardware_serial_Class_BLUETOOTH_HCI),
 ZIRCON_DRIVER_END(bt_transport_uart)

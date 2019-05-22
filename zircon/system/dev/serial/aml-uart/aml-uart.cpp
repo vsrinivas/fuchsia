@@ -20,7 +20,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hwreg/mmio.h>
-#include <zircon/device/serial.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
 

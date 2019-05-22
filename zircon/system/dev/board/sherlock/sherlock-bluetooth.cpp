@@ -7,10 +7,10 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/serial.h>
 #include <ddktl/protocol/gpioimpl.h>
+#include <fuchsia/hardware/serial/c/fidl.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 #include <unistd.h>
-#include <zircon/device/serial.h>
 
 #include "sherlock.h"
 
@@ -35,7 +35,7 @@ constexpr pbus_irq_t bt_uart_irqs[] = {
 };
 
 constexpr serial_port_info_t bt_uart_port_info = {
-    .serial_class = SERIAL_CLASS_BLUETOOTH_HCI,
+    .serial_class = fuchsia_hardware_serial_Class_BLUETOOTH_HCI,
     .serial_vid = PDEV_VID_BROADCOM,
     .serial_pid = PDEV_PID_BCM43458,
 };

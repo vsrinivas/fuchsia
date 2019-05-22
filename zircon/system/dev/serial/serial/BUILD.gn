@@ -9,6 +9,7 @@ driver("serial") {
   deps = [
     "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/banjo/ddk.protocol.serialimpl",
+    "$zx/system/fidl/fuchsia-hardware-serial:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

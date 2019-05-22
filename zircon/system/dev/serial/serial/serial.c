@@ -8,7 +8,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/serial.h>
 #include <ddk/protocol/serialimpl.h>
-#include <zircon/device/serial.h>
+#include <fuchsia/hardware/serial/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 #include <stdlib.h>
@@ -310,28 +310,50 @@ static zx_status_t serial_write(void* ctx, const void* buf, size_t count, zx_off
     return serial_impl_write(&port->serial, buf, count, actual);
 }
 
+static zx_status_t fidl_GetClass(void* ctx, fidl_txn_t* txn) {
+    serial_port_t* port = ctx;
+    return fuchsia_hardware_serial_DeviceGetClass_reply(txn, port->serial_class);
+}
 
-static zx_status_t serial_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                     void* out_buf, size_t out_len, size_t* out_actual) {
+static zx_status_t fidl_SetConfig(void* ctx, const fuchsia_hardware_serial_Config* config,
+                                  fidl_txn_t* txn) {
     serial_port_t* port = ctx;
 
-    switch (op) {
-    case IOCTL_SERIAL_CONFIG:
-        if (in_len != sizeof(serial_config_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        serial_config_t* config = (serial_config_t *)in_buf;
-        return serial_impl_config(&port->serial, config->baud_rate, config->flags);
-    case IOCTL_SERIAL_GET_CLASS:
-        if (out_len != sizeof(uint32_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        *((uint32_t *)out_buf) = port->serial_class;
-        return ZX_OK;
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
+    uint32_t flags = 0;
+    switch (config->character_width) {
+    case fuchsia_hardware_serial_CharacterWidth_BITS_5: flags |= SERIAL_DATA_BITS_5; break;
+    case fuchsia_hardware_serial_CharacterWidth_BITS_6: flags |= SERIAL_DATA_BITS_6; break;
+    case fuchsia_hardware_serial_CharacterWidth_BITS_7: flags |= SERIAL_DATA_BITS_7; break;
+    case fuchsia_hardware_serial_CharacterWidth_BITS_8: flags |= SERIAL_DATA_BITS_8; break;
     }
+
+    switch (config->stop_width) {
+    case fuchsia_hardware_serial_StopWidth_BITS_1: flags |= SERIAL_STOP_BITS_1; break;
+    case fuchsia_hardware_serial_StopWidth_BITS_2: flags |= SERIAL_STOP_BITS_2; break;
+    }
+
+    switch (config->parity) {
+    case fuchsia_hardware_serial_Parity_NONE: flags |= SERIAL_PARITY_NONE; break;
+    case fuchsia_hardware_serial_Parity_EVEN: flags |= SERIAL_PARITY_EVEN; break;
+    case fuchsia_hardware_serial_Parity_ODD: flags |= SERIAL_PARITY_ODD; break;
+    }
+
+    switch (config->control_flow) {
+    case fuchsia_hardware_serial_FlowControl_NONE: flags |= SERIAL_FLOW_CTRL_NONE; break;
+    case fuchsia_hardware_serial_FlowControl_CTS_RTS: flags |= SERIAL_FLOW_CTRL_CTS_RTS; break;
+    }
+
+    zx_status_t status = serial_impl_config(&port->serial, config->baud_rate, flags);
+    return fuchsia_hardware_serial_DeviceSetConfig_reply(txn, status);
 }
+
+static zx_status_t serial_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    static const fuchsia_hardware_serial_Device_ops_t ops = {
+        .GetClass = fidl_GetClass,
+        .SetConfig = fidl_SetConfig,
+    };
+    return fuchsia_hardware_serial_Device_dispatch(ctx, txn, msg, &ops);
+};
 
 static void serial_release(void* ctx) {
     serial_port_t* port = ctx;
@@ -349,7 +371,7 @@ static zx_protocol_device_t serial_device_proto = {
     .close = serial_close,
     .read = serial_read,
     .write = serial_write,
-    .ioctl = serial_ioctl,
+    .message = serial_message,
     .release = serial_release,
 };
 
