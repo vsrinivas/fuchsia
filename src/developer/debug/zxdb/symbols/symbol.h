@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_H_
 
+#include <optional>
 #include <string>
 #include <vector>
 
-#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
+#include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/lazy_symbol.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
 
@@ -95,11 +98,28 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   virtual const std::string& GetAssignedName() const;
 
   // Returns the fully-qualified user-visible name for this symbol. This will
-  // include all namespace and struct qualifications.
+  // include all namespace and struct qualifications, and will include things
+  // like const and "*" qualifiers on modified types.
   //
   // This implements caching. Derived classes override ComputeFullName() to
   // control how the full name is presented.
+  //
+  // See also GetIdentifier().
   const std::string& GetFullName() const;
+
+  // Returns the name of this symbol as an identifier if possible.
+  //
+  // Many symbols have identifier names, this normally includes anything with
+  // an assigned name: functions, structs, typedefs and base types.
+  //
+  // Some things don't have names that can be made into identifiers, this
+  // includes modified types such as "const Foo*" since the "const" and the "*"
+  // don't fit into the normal identifier scheme. These types will report an
+  // empty Identifier for GetIdentifier().
+  //
+  // See also GetFullName(). GetFullName() will work for the modified type
+  // cases above since it just returns a string, but it's not parseable.
+  const Identifier& GetIdentifier() const;
 
   // Manual RTTI.
   virtual const ArrayType* AsArrayType() const;
@@ -184,21 +204,27 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   explicit Symbol(DwarfTag tag);
   virtual ~Symbol();
 
-  // Computes the full name. Used by GetFullName() which adds a caching layer.
-  // Derived classes should override this to control how the name is presented.
-  // This implementation returns the scope prefix (namespaces, structs) +
-  // assigned name.
+  // Computes the full name and identifier. Used by GetFullName() and
+  // GetIdentifier() which add a caching layer.
+  //
+  // Derived classes should override these to control how the name is
+  // presented. The default implementation of ComputeIdentifier() returns the
+  // scope prefix (namespaces, structs) + the assigned name. The default
+  // implementation of ComputeFullName() returns the stringified version of the
+  // identifier.
   virtual std::string ComputeFullName() const;
+  virtual Identifier ComputeIdentifier() const;
 
  private:
   DwarfTag tag_ = DwarfTag::kNone;
 
   LazySymbol parent_;
 
-  // Lazily computed full symbol name.
-  // TODO(brettw) use std::optional when we can use C++17.
-  mutable bool computed_full_name_ = false;
-  mutable std::string full_name_;
+  // Lazily computed full symbol name and identifier name.
+  mutable std::optional<std::string> full_name_;
+  mutable std::optional<Identifier> identifier_;
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_H_

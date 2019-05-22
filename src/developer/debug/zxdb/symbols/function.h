@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_FUNCTION_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_FUNCTION_H_
 
 #include <string>
 
@@ -139,7 +140,7 @@ class Function final : public CodeBlock {
   ~Function();
 
   // Symbol protected overrides.
-  std::string ComputeFullName() const override;
+  Identifier ComputeIdentifier() const override;
 
   LazySymbol containing_block_;
   std::string assigned_name_;
@@ -153,3 +154,5 @@ class Function final : public CodeBlock {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_FUNCTION_H_

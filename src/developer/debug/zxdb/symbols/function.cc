@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/symbols/function.h"
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -45,8 +45,10 @@ const Variable* Function::GetObjectPointerVariable() const {
   return var;
 }
 
-std::string Function::ComputeFullName() const {
-  return GetSymbolScopePrefix(this) + GetAssignedName();
+Identifier Function::ComputeIdentifier() const {
+  Identifier result = GetSymbolScopePrefix(this);
+  result.AppendComponent(IdentifierComponent(GetAssignedName()));
+  return result;
 }
 
 }  // namespace zxdb

@@ -13,11 +13,15 @@ Namespace::~Namespace() = default;
 
 const Namespace* Namespace::AsNamespace() const { return this; }
 
-std::string Namespace::ComputeFullName() const {
+Identifier Namespace::ComputeIdentifier() const {
   const std::string& assigned = GetAssignedName();
+
+  Identifier result = GetSymbolScopePrefix(this);
   if (assigned.empty())
-    return GetSymbolScopePrefix(this) + "(anon)";
-  return GetSymbolScopePrefix(this) + assigned;
+    result.AppendComponent(IdentifierComponent("(anon)"));
+  else
+    result.AppendComponent(IdentifierComponent(assigned));
+  return result;
 }
 
 }  // namespace zxdb

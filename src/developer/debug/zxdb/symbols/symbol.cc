@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/type.h"
-
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
+#include "src/developer/debug/zxdb/symbols/type.h"
 
 namespace zxdb {
 
@@ -18,11 +17,15 @@ const std::string& Symbol::GetAssignedName() const {
 }
 
 const std::string& Symbol::GetFullName() const {
-  if (!computed_full_name_) {
-    computed_full_name_ = true;
+  if (!full_name_)
     full_name_ = ComputeFullName();
-  }
-  return full_name_;
+  return *full_name_;
+}
+
+const Identifier& Symbol::GetIdentifier() const {
+  if (!identifier_)
+    identifier_ = ComputeIdentifier();
+  return *identifier_;
 }
 
 const ArrayType* Symbol::AsArrayType() const { return nullptr; }
@@ -42,17 +45,23 @@ const Value* Symbol::AsValue() const { return nullptr; }
 const Variable* Symbol::AsVariable() const { return nullptr; }
 
 std::string Symbol::ComputeFullName() const {
+  return GetIdentifier().GetFullName();
+}
+
+Identifier Symbol::ComputeIdentifier() const {
   const std::string& assigned_name = GetAssignedName();
   if (assigned_name.empty()) {
     // When a thing doesn't have a name, don't try to qualify it, since
     // returning "foo::" for the name of something like a lexical block is
     // actively confusing.
-    return std::string();
+    return Identifier();
   }
 
   // This base type class just uses the qualified name for the full name.
   // Derived classes will override this function to apply modifiers.
-  return GetSymbolScopePrefix(this) + assigned_name;
+  Identifier result = GetSymbolScopePrefix(this);
+  result.AppendComponent(IdentifierComponent(assigned_name));
+  return result;
 }
 
 }  // namespace zxdb

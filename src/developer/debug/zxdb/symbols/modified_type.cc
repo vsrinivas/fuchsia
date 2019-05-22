@@ -79,7 +79,7 @@ std::string ModifiedType::ComputeFullName() const {
   // Typedefs are special and just use the assigned name. Every other modifier
   // below is based on the underlying type name.
   if (tag() == DwarfTag::kTypedef)
-    return GetAssignedName();
+    return GetIdentifier().GetFullName();
 
   const Type* modified_type = nullptr;
   std::string modified_name;
@@ -139,6 +139,16 @@ std::string ModifiedType::ComputeFullName() const {
     default:
       return kUnknown;
   }
+}
+
+Identifier ModifiedType::ComputeIdentifier() const {
+  // Typedefs are special and just use the assigned name.
+  if (tag() == DwarfTag::kTypedef)
+    return Symbol::ComputeIdentifier();
+
+  // Every other modifier has decorations around it that means it can't have an
+  // identifier.
+  return Identifier();
 }
 
 }  // namespace zxdb

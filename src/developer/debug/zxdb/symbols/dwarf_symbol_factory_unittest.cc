@@ -529,7 +529,7 @@ TEST(DwarfSymbolFactory, NullPtrTTypedef) {
   // The return type should be nullptr_t.
   auto* nullptr_t_type = function->return_type().Get()->AsType();
   ASSERT_TRUE(nullptr_t_type);
-  EXPECT_EQ("nullptr_t", nullptr_t_type->GetFullName());
+  EXPECT_EQ("std::nullptr_t", nullptr_t_type->GetFullName());
 
   // The standard defined nullptr_t as "typedef decltype(nullptr) nullptr_t"
   auto* typedef_type = nullptr_t_type->AsModifiedType();
