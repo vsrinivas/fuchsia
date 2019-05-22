@@ -69,7 +69,7 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
   for (uint32_t i = 0; i < num_buffers; ++i) {
     status = zx::vmo::create(buffer_size, 0, &buffer_collection->vmos[i]);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to allocate Buffer Collection";
+      FXL_PLOG(ERROR, status) << "Failed to allocate Buffer Collection";
       return status;
     }
   }
@@ -117,7 +117,7 @@ zx_status_t VideoDisplay::SetupBuffers(
     zx_status_t status =
         buffer_collection.vmos[id].duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to duplicate vmo (status: " << status << ").";
+      FXL_PLOG(ERROR, status) << "Failed to duplicate vmo";
       return status;
     }
     image_pipe_->AddImage(id + 1, image_info, std::move(vmo_dup), 0,
@@ -183,8 +183,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
       status = camera_client_->manager_->GetFormats(
           camera_id, format_index, &formats_ptr, &total_format_count);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Couldn't get camera formats (status " << status
-                       << ")";
+        FXL_PLOG(ERROR, status) << "Couldn't get camera formats";
         DisconnectFromCamera();
         return status;
       }
@@ -215,14 +214,14 @@ zx_status_t VideoDisplay::ConnectToCamera(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection;
     status = Gralloc(chosen_format, kNumberOfBuffers, &buffer_collection);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Couldn't allocate buffers. status: " << status;
+      FXL_PLOG(ERROR, status) << "Couldn't allocate buffers";
       DisconnectFromCamera();
       return status;
     }
 
     status = SetupBuffers(buffer_collection);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Couldn't set up buffers. status: " << status;
+      FXL_PLOG(ERROR, status) << "Couldn't set up buffers";
       DisconnectFromCamera();
       return status;
     }
@@ -233,7 +232,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
     zx::eventpair driver_token;
     status = zx::eventpair::create(0, &stream_token_, &driver_token);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Couldn't create driver token. status: " << status;
+      FXL_PLOG(ERROR, status) << "Couldn't create driver token";
       DisconnectFromCamera();
       return status;
     }
@@ -245,7 +244,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
         request, std::move(buffer_collection),
         camera_client_->stream_.NewRequest(), std::move(driver_token));
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Couldn't set camera format. status: " << status;
+      FXL_PLOG(ERROR, status) << "Couldn't set camera format";
       DisconnectFromCamera();
       return status;
     }
