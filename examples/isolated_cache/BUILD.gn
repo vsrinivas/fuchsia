@@ -1,0 +1,65 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+group("isolated_cache") {
+  deps = [
+    ":isolated_cache_example",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":isolated_cache_example_tests",
+  ]
+}
+
+rustc_binary("bin") {
+  name = "isolated_cache_example"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test-rustc",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+package("isolated_cache_example") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "isolated_cache_example"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/isolated_cache_example.cmx")
+      dest = "isolated_cache_example.cmx"
+    },
+  ]
+}
+
+test_package("isolated_cache_example_tests") {
+  deps = [
+    ":bin",
+  ]
+  tests = [
+    {
+      name = "isolated_cache_example_bin_test"
+      dest = "isolated_cache_example_tests"
+    },
+  ]
+}

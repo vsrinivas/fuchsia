@@ -1,0 +1,9 @@
+{
+    "program": {
+        "binary": "test/isolated_cache_example_tests"
+    },
+    "sandbox": {
+        "features": [ "isolated-cache-storage" ],
+        "services": [ "fuchsia.sys.test.CacheControl" ]
+    }
+}
