@@ -177,6 +177,8 @@ static zx_status_t machina_board_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    return status;
+
 fail:
     printf("machina_board_bind failed %d\n", status);
     machina_board_release(bus);
