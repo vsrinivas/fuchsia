@@ -9,7 +9,7 @@ The following topics are presented:
 * [Tutorial](tutorial/README.md) &mdash; language-specific "how-to"s based on the Guides
 * [Effective FIDL] &mdash; specific advice about best practices
 * [Reference](reference/README.md) &mdash; a technical deep dive for the interested developer,
-	featuring FIDL grammar, language features, on-wire format, building, and so on.
+  featuring FIDL grammar, language features, on-wire format, building, and so on.
 
 # Supported Languages
 
@@ -18,3 +18,6 @@ The following topics are presented:
 * [Dart](tutorial/tutorial-dart.md)
 * [Go](tutorial/tutorial-go.md)
 * [Rust](tutorial/tutorial-rust.md)
+
+# Contributing
+Please read the [CONTRIBUTING](CONTRIBUTING.md) chapter for more information.
