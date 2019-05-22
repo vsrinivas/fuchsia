@@ -10,3 +10,10 @@ group("compute") {
     "spinel/platforms/vk",
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    "tests/vk/vk_subgroup_info",
+  ]
+}
