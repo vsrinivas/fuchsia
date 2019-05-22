@@ -5,16 +5,18 @@
 driver("virtual_camera") {
   sources = [
     "virtual_camera_device.cpp",
+    "virtual_camera_stream.cpp",
   ]
 
   deps = [
     "$zx/system/fidl/fuchsia-hardware-camera:c",
     "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zx",
   ]
 }

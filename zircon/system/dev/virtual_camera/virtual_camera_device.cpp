@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "virtual_camera_device.h"
+// #include "virtual_camera_stream.h"
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -42,30 +43,13 @@ void VirtualCameraDevice::DdkRelease() {
 }
 
 zx_status_t VirtualCameraDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    zx_status_t status = fuchsia_hardware_camera_Stream_try_dispatch(
-        this, txn, msg, &stream_ops);
-
-    if (status == ZX_ERR_NOT_SUPPORTED) {
-        status = fuchsia_hardware_camera_Control_try_dispatch(this, txn, msg,
-                                                              &control_ops);
-    }
+    zx_status_t status = fuchsia_hardware_camera_ControlV2_try_dispatch(
+        this, txn, msg, &control_ops);
     return status;
 }
 
-zx_status_t VirtualCameraDevice::StartStreaming() {
-    zxlogf(INFO, "virtual_camera_device: StartStreaming is not yet supported\n");
-    // Return ok since the function doesn't send a message back to the client.
-    return ZX_OK;
-}
-
-zx_status_t VirtualCameraDevice::StopStreaming() {
-    zxlogf(INFO, "virtual_camera_device: StopStreaming is not yet supported\n");
-    // Return ok since the function doesn't send a message back to the client.
-    return ZX_OK;
-}
-
-zx_status_t VirtualCameraDevice::ReleaseFrame(uint32_t buffer_id) {
-    return buffers_.BufferRelease(buffer_id);
+void VirtualCameraDevice::RemoveStream(uint64_t stream_id) {
+  streams_.erase(stream_id);
 }
 
 zx_status_t VirtualCameraDevice::GetFormats(uint32_t index, fidl_txn_t* txn) {
@@ -100,9 +84,29 @@ zx_status_t VirtualCameraDevice::GetFormats(uint32_t index, fidl_txn_t* txn) {
 
 zx_status_t VirtualCameraDevice::CreateStream(
     const fuchsia_sysmem_BufferCollectionInfo* buffer_collection_info,
-    const fuchsia_hardware_camera_FrameRate* rate, zx_handle_t stream,
+    const fuchsia_camera_common_FrameRate* rate, zx_handle_t stream,
     zx_handle_t stream_token) {
-    return ZX_ERR_NOT_SUPPORTED;
+    zx::eventpair stream_event_token = zx::eventpair(stream_token);
+    zx::channel stream_channel = zx::channel(stream);
+    fbl::AllocChecker ac;
+    auto new_stream = fbl::make_unique_checked<VirtualCameraStream>(
+        &ac, this, count_, std::move(stream_event_token));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    zx_status_t status = new_stream->Bind(async_get_default_dispatcher(), std::move(stream_channel));
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    status = new_stream->Init(buffer_collection_info);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    streams_[count_] = std::move(new_stream);
+    count_++;
+    return status;
 }
 
 zx_status_t VirtualCameraDevice::GetDeviceInfo(fidl_txn_t* txn) {
