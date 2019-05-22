@@ -324,7 +324,7 @@ From //build/config/BUILD.gn:9
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/5ea6551baeb4404f47ebf89e23cf2aedb716ed73/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/7b0155760628923bad5321c896af1ab2965c6d2a/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 TODO(scottmg): https://crbug.com/crashpad/266 fuchsia:DX-690: BoringSSL
@@ -333,7 +333,7 @@ a BoringSSL lib again.
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/5ea6551baeb4404f47ebf89e23cf2aedb716ed73/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/7b0155760628923bad5321c896af1ab2965c6d2a/util/net/tls.gni#21)
 
 ### create_kernel_service_snapshot
 
@@ -367,11 +367,10 @@ module_suggester is not AOT compiled in debug builds
 From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/7e6e58b5c81c40b1e943ac58a37caa57576bf021/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
-Allow for deduping the VM between standalone, flutter_runner and dart_runner.
 
-**Current value (from the default):** `"shared_library"`
+**Current value (from the default):** `"static_library"`
 
-From //third_party/dart/runtime/runtime_args.gni:78
+From //third_party/dart/runtime/runtime_args.gni:80
 
 ### dart_core_snapshot_kind
 Controls the kind of core snapshot linked into the standalone VM. Using a
@@ -850,7 +849,7 @@ From //build/go/go_build.gni:20
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/host_x64/.gocache"`
 
 From //build/go/go_build.gni:16
 
@@ -1517,13 +1516,13 @@ From //third_party/skia/BUILD.gn:70
 
 ### skia_enable_fontmgr_custom
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //third_party/skia/BUILD.gn:68
 
 ### skia_enable_fontmgr_custom_empty
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //third_party/skia/BUILD.gn:69
 
@@ -1535,7 +1534,7 @@ From //third_party/skia/BUILD.gn:66
 
 ### skia_enable_fontmgr_fuchsia
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //third_party/skia/BUILD.gn:71
 
@@ -1690,7 +1689,7 @@ From //third_party/skia/BUILD.gn:21
 
 From //.gn:26
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:63
 
@@ -1698,7 +1697,7 @@ From //third_party/skia/BUILD.gn:63
 
 From //.gn:26
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:63
 
@@ -1744,7 +1743,7 @@ From //third_party/skia/BUILD.gn:28
 
 From //.gn:28
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:25
 
@@ -1752,7 +1751,7 @@ From //third_party/skia/BUILD.gn:25
 
 From //.gn:28
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:25
 
@@ -1776,7 +1775,7 @@ From //third_party/skia/gn/skia.gni:14
 
 ### skia_use_icu
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //third_party/skia/gn/skia.gni:13
 
@@ -1804,7 +1803,7 @@ From //third_party/skia/BUILD.gn:30
 
 From //.gn:29
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:31
 
@@ -1812,7 +1811,7 @@ From //third_party/skia/BUILD.gn:31
 
 From //.gn:29
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:31
 
@@ -1846,7 +1845,7 @@ From //third_party/skia/BUILD.gn:34
 
 From //.gn:30
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:64
 
@@ -1854,15 +1853,15 @@ From //third_party/skia/BUILD.gn:64
 
 From //.gn:30
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:64
 
 ### skia_use_vulkan
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:86
+From //third_party/skia/BUILD.gn:88
 
 ### skia_use_wuffs
 
@@ -1876,7 +1875,7 @@ From //third_party/skia/BUILD.gn:35
 
 From //.gn:31
 
-**Overridden from the default:** `false`
+**Overridden from the default:** `true`
 
 From //third_party/skia/BUILD.gn:39
 
@@ -1884,7 +1883,7 @@ From //third_party/skia/BUILD.gn:39
 
 From //.gn:31
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:39
 
@@ -1983,7 +1982,7 @@ From //build/config/lto/config.gni:13
 Manifest files describing target libraries from toolchains.
 Can be either // source paths or absolute system paths.
 
-**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]`
+**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/x86_64-linux-gnu.manifest"]`
 
 From //build/images/manifest.gni:11
 
