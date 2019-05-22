@@ -18,7 +18,6 @@ import("//build/testing/environments.gni")
 group("test") {
   testonly = true
   deps = [
-    ":dummy_test",
     ":iwlwifi_test",
   ]
 }
