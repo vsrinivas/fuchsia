@@ -15,7 +15,6 @@
 #include <memory>
 
 namespace netemul {
-
 namespace internal {
 
 // LogListenerImpl
@@ -24,13 +23,11 @@ namespace internal {
 // This is not a replacement for ManagedLogger, as ManagedLogger
 // is used to handle the stdout and stderr of processes. This is
 // used to handle the logs sent to the LogSink service
-class LogListenerImpl final : public fuchsia::logger::LogListener {
+class LogListenerImpl : public fuchsia::logger::LogListener {
  public:
-  explicit LogListenerImpl(
-      fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
-      std::string prefix, std::ostream* stream, bool klogs_enabled,
-      async_dispatcher_t* dispatcher = nullptr,
-      zx::socket log_sink = zx::socket());
+  LogListenerImpl(fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
+                  std::string prefix, bool klogs_enabled,
+                  async_dispatcher_t* dispatcher = nullptr);
 
   /* Actual implementation (overrides) of fuchsia::logger::LogListener stubs */
 
@@ -40,21 +37,8 @@ class LogListenerImpl final : public fuchsia::logger::LogListener {
 
   virtual void Done() override;
 
- private:
-  // FormatTime
-  //
-  // Format the time to monotomic and send it to |stream_|.
-  void FormatTime(const zx_time_t timestamp);
-
-  // FormatTags
-  //
-  // Format the tags and send it to |stream_|.
-  void FormatTags(const std::vector<std::string>& tags);
-
-  // FormatLogLevel
-  //
-  // Format the log level and send it to |stream_|.
-  void FormatLogLevel(const int32_t severity);
+ protected:
+  virtual void LogImpl(fuchsia::logger::LogMessage m) = 0;
 
   // binding_
   //
@@ -67,17 +51,6 @@ class LogListenerImpl final : public fuchsia::logger::LogListener {
   //
   // Prefix to print before each and every log.
   std::string prefix_;
-
-  // stream_
-  //
-  // Output stream where formatted logs will be sent to.
-  std::ostream* stream_;
-
-  // log_sock_
-  //
-  // System log socket that will be redirected to if stream_
-  // is not available.
-  zx::socket log_sock_;
 
   // dropped_logs_
   //
@@ -97,29 +70,45 @@ class LogListenerImpl final : public fuchsia::logger::LogListener {
 
 // LogListener
 //
-// This class implements a log listener to get logs from a provided
+// This class holds a LogListenerImpl to get logs from a provided
 // ManagedEnvironment which starts a Log service (fuchsia.logger.Log)
 class LogListener final {
  public:
   // LogListener
   //
-  // Constructs the LogListener object. All logs will be sent
-  // to `stream`. `prefix` will appear before each and every log
-  LogListener(std::unique_ptr<internal::LogListenerImpl> impl);
+  // Constructs the LogListener object.
+  LogListener(
+      std::unique_ptr<fuchsia::logger::LogFilterOptions> log_filter_options,
+      fidl::InterfaceHandle<fuchsia::logger::LogListener> loglistener_handle,
+      std::shared_ptr<internal::LogListenerImpl> impl);
 
-  // Create
+  // Returns true if we can bind to a LogSink in a managed environment.
+  bool Bindable() const;
+
+  // Binds our log listener to a log service
+  void BindToLogService(fuchsia::netemul::environment::ManagedEnvironment* env);
+
+  // Returns our LogListenerImpl.
+  std::shared_ptr<internal::LogListenerImpl> GetLogListenerImpl() const;
+
+  // Create a LogListener in the managed environment |env|.
   //
   // Create a LogListener instance that listens to logs
-  // from the ManagedEnvironment `env`. `prefix` will be prepended
+  // from the ManagedEnvironment |env|. |prefix| will be prepended
   // before each and every log from the created log listener.
   static std::unique_ptr<LogListener> Create(
-      fuchsia::netemul::environment::ManagedEnvironment* env,
-      const fuchsia::netemul::environment::LoggerOptions& logger_options,
+      fuchsia::netemul::environment::LoggerOptions logger_options,
       const std::string& prefix, async_dispatcher_t* dispatcher = nullptr);
 
  private:
+  // Log filter options for when we bind.
+  std::unique_ptr<fuchsia::logger::LogFilterOptions> log_filter_options_;
+
+  // Client handle for log listener.
+  fidl::InterfaceHandle<fuchsia::logger::LogListener> loglistener_handle_;
+
   // Implementation of the LogListener interface (fuchsia.logger.LogListener)
-  std::unique_ptr<internal::LogListenerImpl> loglistener_impl_;
+  std::shared_ptr<internal::LogListenerImpl> loglistener_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LogListener);
 };

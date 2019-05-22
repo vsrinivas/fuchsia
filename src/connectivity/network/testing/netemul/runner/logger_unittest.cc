@@ -8,16 +8,14 @@
 #include <src/lib/fxl/strings/string_printf.h>
 
 #include "log_listener.h"
+#include "log_listener_log_sink.h"
+#include "log_listener_test_helpers.h"
 
 namespace netemul {
 namespace testing {
 
 constexpr const char* kLoggerUrl =
     "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
-constexpr uint64_t kDummyTid = 0xAA;
-constexpr uint64_t kDummyPid = 0xBB;
-constexpr int64_t kDummyTime = 0xCCAACC;
-constexpr int32_t kDummySeverity = 3;
 
 class TestListener : public fuchsia::logger::LogListener {
  public:
@@ -73,9 +71,9 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
     zx::socket mine, remote;
     ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &mine, &remote));
     sink->Connect(std::move(remote));
-    log_listener = std::make_unique<internal::LogListenerImpl>(
-        proxy.NewRequest(dispatcher()), std::move(env_name), nullptr, false,
-        dispatcher(), std::move(mine));
+    log_listener.reset(new internal::LogListenerLogSinkImpl(
+        proxy.NewRequest(dispatcher()), std::move(env_name), false,
+        std::move(mine), dispatcher()));
     fuchsia::logger::LogPtr syslog;
     syslog.set_error_handler(
         [](zx_status_t err) { FAIL() << "Lost connection to syslog"; });
@@ -84,17 +82,6 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
     fidl::InterfaceHandle<fuchsia::logger::LogListener> test_handle;
     test_listener = std::make_unique<TestListener>(test_handle.NewRequest());
     syslog->Listen(std::move(test_handle), nullptr);
-  }
-
-  fuchsia::logger::LogMessage CreateLogMessage(std::vector<std::string> tags,
-                                               std::string message) {
-    return fuchsia::logger::LogMessage{.severity = kDummySeverity,
-                                       .time = kDummyTime,
-                                       .pid = kDummyPid,
-                                       .tid = kDummyTid,
-                                       .dropped_logs = 0,
-                                       .tags = std::move(tags),
-                                       .msg = std::move(message)};
   }
 
   void ValidateMessage(const fuchsia::logger::LogMessage& msg,

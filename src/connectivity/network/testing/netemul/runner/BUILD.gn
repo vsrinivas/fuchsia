@@ -25,6 +25,10 @@ source_set("src") {
     "format.h",
     "log_listener.cc",
     "log_listener.h",
+    "log_listener_log_sink.cc",
+    "log_listener_log_sink.h",
+    "log_listener_ostream.cc",
+    "log_listener_ostream.h",
     "managed_environment.cc",
     "managed_environment.h",
     "managed_launcher.cc",
@@ -99,6 +103,9 @@ executable("bin") {
 executable("sandbox_unittest") {
   testonly = true
   sources = [
+    "log_listener_ostream_unittest.cc",
+    "log_listener_test_helpers.cc",
+    "log_listener_test_helpers.h",
     "logger_unittest.cc",
     "sandbox_unittest.cc",
   ]

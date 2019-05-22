@@ -18,9 +18,6 @@
 namespace netemul {
 
 static constexpr int BufferSize = 4096;
-static const char* kLogEnvNamePrefix = "[%s]";
-static const char* kLogPrefixOut = "[%s:%d] ";
-static const char* kLogPrefixErr = "[%s:%d][err] ";
 
 static std::string ExtractLabel(const std::string& url) {
   size_t last_slash = url.rfind('/');
@@ -29,13 +26,14 @@ static std::string ExtractLabel(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-ManagedLogger::ManagedLogger(std::string env_name, std::string prefix,
-                             std::ostream* stream)
+ManagedLogger::ManagedLogger(
+    std::string name, bool is_err,
+    std::shared_ptr<internal::LogListenerImpl> loglistener_impl)
     : dispatcher_(async_get_default_dispatcher()),
-      stream_(stream),
-      env_name_(std::move(env_name)),
-      prefix_(std::move(prefix)),
-      wait_(this) {}
+      name_(std::move(name)),
+      is_err_(is_err),
+      wait_(this),
+      loglistener_impl_(std::move(loglistener_impl)) {}
 
 zx::handle ManagedLogger::CreateHandle() {
   ZX_ASSERT(!out_.is_valid());
@@ -83,6 +81,12 @@ void ManagedLogger::OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait,
 }
 
 void ManagedLogger::ConsumeBuffer() {
+  // Do nothing if we dont have a log listener to output to
+  if (!loglistener_impl_) {
+    buffer_pos_ = 0;
+    return;
+  }
+
   // find newlines and print:
   char* ptr = buffer_.get();
   char* end = buffer_.get() + buffer_pos_;
@@ -96,9 +100,7 @@ void ManagedLogger::ConsumeBuffer() {
     // newline found, print it
     if (*ptr == '\n') {
       *ptr = 0x00;
-      (*stream_) << env_name_;
-      FormatTime();
-      (*stream_) << prefix_ << mark << std::endl;
+      LogMessage(mark);
       mark = ptr + 1;
     }
   }
@@ -115,16 +117,26 @@ void ManagedLogger::ConsumeBuffer() {
   } else if (ptr == full) {
     // buffer filled up, just print everything
     *ptr = 0x00;
-    (*stream_) << env_name_;
-    FormatTime();
-    (*stream_) << prefix_ << buffer_.get() << std::endl;
+    LogMessage(buffer_.get());
     buffer_pos_ = 0;
   }
 }
 
-void ManagedLogger::FormatTime() {
-  zx_time_t timestamp = zx_clock_get_monotonic();
-  internal::FormatTime(stream_, timestamp);
+void ManagedLogger::LogMessage(std::string msg) {
+  fuchsia::logger::LogMessage m;
+
+  m.pid = 0;
+  m.tid = 0;
+  m.time = zx_clock_get_monotonic();
+  m.severity = (int32_t)(is_err_ ? fuchsia::logger::LogLevelFilter::INFO
+                                 : fuchsia::logger::LogLevelFilter::ERROR);
+  m.dropped_logs = 0;
+  m.tags = std::vector<std::string>{"@" + name_};
+  m.msg = std::move(msg);
+
+  // Should never end up here if loglistener_impl_ is a nullptr
+  ZX_ASSERT(loglistener_impl_);
+  loglistener_impl_->Log(std::move(m));
 }
 
 void ManagedLogger::Start(netemul::ManagedLogger::ClosedCallback callback) {
@@ -137,14 +149,9 @@ void ManagedLogger::Start(netemul::ManagedLogger::ClosedCallback callback) {
 
 fuchsia::sys::FileDescriptorPtr ManagedLoggerCollection::CreateLogger(
     const std::string& url, bool err) {
-  auto env_name =
-      fxl::StringPrintf(kLogEnvNamePrefix, environment_name_.c_str());
-  auto prefix = fxl::StringPrintf(err ? kLogPrefixErr : kLogPrefixOut,
-                                  ExtractLabel(url).c_str(), counter_);
-
-  auto* stream = err ? &std::cerr : &std::cout;
   auto& logger = loggers_.emplace_back(std::make_unique<ManagedLogger>(
-      std::move(env_name), std::move(prefix), stream));
+      ExtractLabel(url).c_str(), err, loglistener_impl_));
+
   auto handle = logger->CreateHandle();
   logger->Start([this](ManagedLogger* logger) {
     for (auto i = loggers_.begin(); i != loggers_.end(); i++) {
