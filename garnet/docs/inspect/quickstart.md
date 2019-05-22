@@ -144,9 +144,72 @@ class Parent {
 > TODO(crjohns,miguelfrde)
 
 ## Dart
-> Dart support for inspect is currently in development.
->
-> TODO(cphoenix)
+
+This example obtains and adds several data types and nested children to the
+root Inspect node.
+
+BUILD.gn:
+```
+flutter_app("inspect_mod") {
+[...]
+  deps = [
+    [...]
+    "//topaz/public/dart/fuchsia_inspect",
+    [...]
+  ]
+[...]
+
+```
+root_intent_handler.dart:
+```dart {highlight="lines:6"}
+import 'package:fuchsia_inspect/inspect.dart' as inspect;
+[...]
+class RootIntentHandler extends IntentHandler {
+  @override
+  void handleIntent(Intent intent) {
+    var inspectNode = inspect.Inspect().root;
+    runApp(InspectExampleApp(inspectNode));
+  }
+}
+```
+inspect_example_app.dart:
+```dart {highlight="lines:4,7-10,16"}
+import 'package:fuchsia_inspect/inspect.dart' as inspect;
+
+class InspectExampleApp extends StatelessWidget {
+  final inspect.Node _inspectNode;
+
+  InspectExampleApp(this._inspectNode) {
+    _inspectNode.stringProperty('greeting').setValue('Hello World');
+    _inspectNode.doubleProperty('double down')..setValue(1.23)..add(2);
+    _inspectNode.intProperty('interesting')..setValue(123)..subtract(5);
+    _inspectNode.byteDataProperty('bytes').setValue(ByteData(4)..setUint32(0, 0x01020304));
+  }
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: _InspectHomePage(
+          inspectNode: _inspectNode.child('home-page')),
+      [...]
+  }
+```
+You can call `delete()` on a Node or Property when you're done with it.
+ Deleting a node deletes everything under it.
+
+`delete()` can also be triggered by a Future completing or broadcast Stream
+closing:
+```dart
+var answerFuture = _answerFinder.getTheAnswer();
+var wait = _inspectNode.stringProperty('waiting')..setValue('for a hint');
+answerFuture.whenComplete(wait.delete);
+
+stream.listen((_) {}, onDone: node.delete);
+
+// FIDL proxies contain a future that completes when the connection closes:
+final _proxy = my_fidl_import.MyServiceProxy();
+_proxy.ctrl.whenClosed.whenComplete(node.delete);
+
+```
 
 # Viewing Inspect Data
 
