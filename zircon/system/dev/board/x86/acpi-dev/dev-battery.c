@@ -24,6 +24,9 @@
 #define ACPI_BATTERY_STATE_CHARGING (1 << 1)
 #define ACPI_BATTERY_STATE_CRITICAL (1 << 2)
 
+// function pointer for testability, used to mock out AcpiEvaluateObject where necessary
+typedef ACPI_STATUS (*AcpiObjectEvalFunc)(ACPI_HANDLE, char*, ACPI_OBJECT_LIST*, ACPI_BUFFER*);
+
 typedef struct acpi_battery_device {
     zx_device_t* zxdev;
 
@@ -44,6 +47,8 @@ typedef struct acpi_battery_device {
     battery_info_t battery_info;
 
     atomic_bool shutdown;
+
+    AcpiObjectEvalFunc acpi_eval;
 } acpi_battery_device_t;
 
 // Returns the current ON/OFF status for a power resource
@@ -55,12 +60,12 @@ static zx_status_t call_STA(acpi_battery_device_t* dev) {
         .Length = sizeof(obj),
         .Pointer = &obj,
     };
-    ACPI_STATUS acpi_status = AcpiEvaluateObject(dev->acpi_handle, (char*)"_STA", NULL, &buffer);
+    ACPI_STATUS acpi_status = dev->acpi_eval(dev->acpi_handle, (char*)"_STA", NULL, &buffer);
     if (acpi_status != AE_OK) {
         return acpi_to_zx_status(acpi_status);
     }
 
-    zxlogf(TRACE, "acpi_battery: _STA returned 0x%llx\n", obj.Integer.Value);
+    zxlogf(TRACE, "acpi-battery: _STA returned 0x%llx\n", obj.Integer.Value);
 
     mtx_lock(&dev->lock);
     uint32_t old = dev->power_info.state;
@@ -80,7 +85,7 @@ static zx_status_t call_STA(acpi_battery_device_t* dev) {
 static zx_status_t call_BIF(acpi_battery_device_t* dev) {
     mtx_lock(&dev->lock);
 
-    ACPI_STATUS acpi_status = AcpiEvaluateObject(dev->acpi_handle,
+    ACPI_STATUS acpi_status = dev->acpi_eval(dev->acpi_handle,
                                                  (char*)"_BIF", NULL, &dev->bif_buffer);
     if (acpi_status != AE_OK) {
         zxlogf(TRACE, "acpi-battery: acpi error 0x%x in _BIF\n", acpi_status);
@@ -126,7 +131,7 @@ err:
 static zx_status_t call_BST(acpi_battery_device_t* dev) {
     mtx_lock(&dev->lock);
 
-    ACPI_STATUS acpi_status = AcpiEvaluateObject(dev->acpi_handle,
+    ACPI_STATUS acpi_status = dev->acpi_eval(dev->acpi_handle,
                                                  (char*)"_BST", NULL, &dev->bst_buffer);
     if (acpi_status != AE_OK) {
         zxlogf(TRACE, "acpi-battery: acpi error 0x%x in _BST\n", acpi_status);
@@ -147,7 +152,7 @@ static zx_status_t call_BST(acpi_battery_device_t* dev) {
     }
 
     power_info_t* pinfo = &dev->power_info;
-    uint32_t old = pinfo->state;
+    uint32_t old_state = pinfo->state;
     uint32_t astate = bst_elem[0].Integer.Value;
     if (astate & ACPI_BATTERY_STATE_DISCHARGING) {
         pinfo->state |= POWER_STATE_DISCHARGING;
@@ -165,8 +170,6 @@ static zx_status_t call_BST(acpi_battery_device_t* dev) {
         pinfo->state &= ~POWER_STATE_CRITICAL;
     }
 
-    zxlogf(DEBUG1, "acpi-battery: 0x%x -> 0x%x\n", old, pinfo->state);
-
     battery_info_t* binfo = &dev->battery_info;
 
     // valid values are 0-0x7fffffff so converting to int32_t is safe
@@ -175,10 +178,29 @@ static zx_status_t call_BST(acpi_battery_device_t* dev) {
         binfo->present_rate = bst_elem[1].Integer.Value * -1;
     }
 
+    uint32_t old_charge = binfo->remaining_capacity;
+    if (binfo->last_full_capacity) {
+        old_charge = (binfo->remaining_capacity * 100 / binfo->last_full_capacity);
+    }
+
     binfo->remaining_capacity = bst_elem[2].Integer.Value;
     binfo->present_voltage = bst_elem[3].Integer.Value;
 
-    if (old != pinfo->state) {
+    uint32_t new_charge = binfo->remaining_capacity;
+    if (binfo->last_full_capacity) {
+        new_charge = (binfo->remaining_capacity * 100 / binfo->last_full_capacity);
+    }
+
+    // signal on change of charging state (e.g charging vs discharging) as well as significant
+    // change in charge (percentage point).
+    if (old_state != pinfo->state || old_charge != new_charge) {
+        if (old_state != pinfo->state) {
+        zxlogf(TRACE, "acpi-battery: state 0x%x -> 0x%x\n", old_state, pinfo->state);
+        }
+        if (old_charge != new_charge) {
+        zxlogf(TRACE, "acpi-battery: %% charged %d -> %d\n",
+                                    old_charge, new_charge);
+        }
         zx_object_signal(dev->event, 0, ZX_USER_SIGNAL_0);
     }
 
@@ -326,7 +348,19 @@ out:
 }
 
 zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
-    zxlogf(TRACE, "acpi-battery: init\n");
+
+    // driver trace logging can be enabled for debug as needed
+    // driver_set_log_flags(driver_get_log_flags() | DDK_LOG_TRACE);
+
+    zxlogf(TRACE, "acpi-battery: init with ACPI_HANDLE %p\n", acpi_handle);
+
+    ACPI_BUFFER name_buffer;
+    name_buffer.Length = ACPI_ALLOCATE_BUFFER;
+    name_buffer.Pointer = NULL;
+
+    AcpiGetName(acpi_handle, ACPI_FULL_PATHNAME, &name_buffer);
+
+    zxlogf(TRACE, "acpi-battery: path for acpi handle is %s\n", (char *)name_buffer.Pointer);
 
     acpi_battery_device_t* dev = calloc(1, sizeof(acpi_battery_device_t));
     if (!dev) {
@@ -349,6 +383,9 @@ zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     dev->bif_buffer.Pointer = NULL;
 
     dev->power_info.type = POWER_TYPE_BATTERY;
+
+    // use real AcpiEvaluateObject
+    dev->acpi_eval = &AcpiEvaluateObject;
 
     // get initial values
     call_STA(dev);
@@ -388,7 +425,7 @@ zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
         return status;
     }
 
-    zxlogf(TRACE, "acpi-battery: initialized\n");
+    zxlogf(TRACE, "acpi-battery: initialized device %s\n", device_get_name(dev->zxdev));
 
     return ZX_OK;
 }

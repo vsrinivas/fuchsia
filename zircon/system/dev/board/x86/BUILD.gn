@@ -71,6 +71,34 @@ driver("platform-bus-x86") {
     "$zx/system/fidl/fuchsia-hardware-power:c",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/pci",
+    "$zx/system/ulib/region-alloc",
+    "$zx/system/ulib/zircon",
+    "$zx/third_party/lib/acpica",
+    "$zx/third_party/ulib/chromiumos-platform-ec",
+  ]
+}
+
+test("x86-battery-test") {
+  output_name = "x86-battery-test"
+  test_group = "ddk"
+  sources = [
+    "acpi-dev/dev-battery-test.c",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/banjo/ddk.protocol.pciroot",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.scpi",
+    "$zx/system/banjo/ddk.protocol.sysmem",
+    "$zx/system/fidl/fuchsia-hardware-power:c",
+    "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -78,6 +106,7 @@ driver("platform-bus-x86") {
     "$zx/system/ulib/pci",
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/chromiumos-platform-ec",
   ]
