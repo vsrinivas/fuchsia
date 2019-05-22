@@ -63,7 +63,7 @@ func doSystemOTA(t *testing.T, repo *packages.Repository) {
 	device.WaitForDeviceToBeUp(t)
 
 	// Extract the "data/snapshot" file from the "build-info" package.
-	p, err := repo.OpenPackage("/build-info/0")
+	p, err := repo.OpenPackage("build-info/0")
 	if err != nil {
 		t.Fatal(err)
 	}

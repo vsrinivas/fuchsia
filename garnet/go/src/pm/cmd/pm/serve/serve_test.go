@@ -311,7 +311,7 @@ func hasTarget(baseURL, target string) bool {
 	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
 		panic(err)
 	}
-	// G1 -> G2 migration of TUF metadata.
+	// FIXME(PKG-753) G1 -> G2 migration of TUF metadata.
 	for _, target := range []string{"/" + target, target} {
 		if _, found := m.Signed.Targets[target]; found {
 			return true
