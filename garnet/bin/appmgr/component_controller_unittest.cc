@@ -76,6 +76,7 @@ std::vector<std::string> GetDefaultNamespaceServiceEntries() {
       fuchsia::scheduler::ProfileProvider::Name_,
       fuchsia::sys::Environment::Name_,
       fuchsia::virtualconsole::SessionManager::Name_,
+      fuchsia::sys::test::CacheControl::Name_,
   };
 }
 

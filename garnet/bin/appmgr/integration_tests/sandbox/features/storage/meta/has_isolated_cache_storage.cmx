@@ -6,7 +6,11 @@
         "features": [
             "isolated-cache-storage"
         ],
-        "services": ["fuchsia.sys.Environment", "fuchsia.logger.LogSink"]
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.test.CacheControl"
+        ]
     }
 }
 

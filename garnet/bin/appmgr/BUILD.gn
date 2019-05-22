@@ -55,6 +55,7 @@ source_set("lib") {
     "//garnet/public/lib/inspect",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys.test",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
@@ -91,6 +92,7 @@ source_set("appmgr_for_test") {
   public_deps = [
     ":lib",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys.test",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/fs",

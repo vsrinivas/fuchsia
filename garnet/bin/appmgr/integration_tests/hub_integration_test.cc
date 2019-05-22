@@ -95,6 +95,7 @@ TEST_F(HubTest, Services) {
         "fuchsia.sys.Environment",
         "fuchsia.sys.Launcher",
         "fuchsia.sys.Loader",
+        "fuchsia.sys.test.CacheControl",
         "fuchsia.virtualconsole.SessionManager"};
     sysmgr::Config config;
     ASSERT_TRUE(config.ParseFromDirectory("/system/data/sysmgr"));

@@ -1,0 +1,13 @@
+// Copyright 2019 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys.test;
+
+/// An interface for interacting with the isolated system cache. Typically only
+/// accessed from tests.
+[Discoverable]
+protocol CacheControl {
+    /// Causes all isolated caches for the system to be cleared.
+    Clear() -> ();
+};

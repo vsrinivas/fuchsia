@@ -47,7 +47,9 @@ sandbox_test_package("has_isolated_cache_storage") {
 
   deps = [
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
+    "//sdk/fidl/fuchsia.sys.test",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
   ]
   environments = basic_envs
 }

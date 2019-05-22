@@ -20,6 +20,7 @@
 #include "garnet/bin/appmgr/job_provider_impl.h"
 #include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/util.h"
+#include "garnet/bin/appmgr/storage_watchdog.h"
 
 namespace component {
 
@@ -134,6 +135,13 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                 std::move(channel)));
         return ZX_OK;
       })));
+  services_->AddService(
+      CacheControl::Name_,
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        test_cache_bindings_.AddBinding(
+            this, fidl::InterfaceRequest<CacheControl>(std::move(channel)));
+        return ZX_OK;
+      })));
 }
 
 Namespace::~Namespace() {}
@@ -177,6 +185,16 @@ void Namespace::CreateComponent(
       [cc_trace_id](std::weak_ptr<ComponentControllerImpl> component) {
         TRACE_ASYNC_END("appmgr", "Namespace::CreateComponent", cc_trace_id);
       });
+}
+
+void Namespace::Clear(ClearCallback callback) {
+  auto cc_trace_id = TRACE_NONCE();
+  TRACE_ASYNC_BEGIN("appmgr", "Namespace::Clear", cc_trace_id);
+
+  StorageWatchdog storage_watchdog = StorageWatchdog("/data", "/data/cache");
+  storage_watchdog.PurgeCache();
+
+  callback();
 }
 
 zx::channel Namespace::OpenServicesAsDirectory() {

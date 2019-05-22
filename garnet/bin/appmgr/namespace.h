@@ -13,6 +13,7 @@
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/sys/test/cpp/fidl.h>
 #include "garnet/bin/appmgr/job_provider_impl.h"
 #include "garnet/bin/appmgr/service_provider_dir_impl.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -25,6 +26,7 @@ class Realm;
 
 class Namespace : public fuchsia::sys::Environment,
                   public fuchsia::sys::Launcher,
+                  public fuchsia::sys::test::CacheControl,
                   public fuchsia::process::Resolver,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
@@ -78,6 +80,11 @@ class Namespace : public fuchsia::sys::Environment,
                        fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                            controller) override;
 
+  //
+  // fuchsia::sys::test::CacheControl implementation:
+  //
+  void Clear(ClearCallback callback) override;
+
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);
   Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
@@ -89,6 +96,7 @@ class Namespace : public fuchsia::sys::Environment,
 
   fidl::BindingSet<fuchsia::sys::Environment> environment_bindings_;
   fidl::BindingSet<fuchsia::sys::Launcher> launcher_bindings_;
+  fidl::BindingSet<fuchsia::sys::test::CacheControl> test_cache_bindings_;
   fidl::BindingSet<fuchsia::process::Resolver> resolver_bindings_;
 
   fs::SynchronousVfs vfs_;
