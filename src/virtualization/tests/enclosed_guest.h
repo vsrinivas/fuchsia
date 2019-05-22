@@ -52,7 +52,8 @@ class EnclosedGuest {
   // |result|. |args| are specified as a single string with individual arguments
   // separated by spaces, just as you would expect on the command line. The
   // implementation is guest specific.
-  virtual zx_status_t RunUtil(const std::string& util, const std::string& args,
+  virtual zx_status_t RunUtil(const std::string& util,
+                              const std::vector<std::string>& args,
                               std::string* result = nullptr) = 0;
 
   virtual GuestKernel GetGuestKernel() = 0;
@@ -99,7 +100,8 @@ class EnclosedGuest {
 
 class ZirconEnclosedGuest : public EnclosedGuest {
  public:
-  zx_status_t RunUtil(const std::string& util, const std::string& args,
+  zx_status_t RunUtil(const std::string& util,
+                      const std::vector<std::string>& args,
                       std::string* result = nullptr) override;
 
   GuestKernel GetGuestKernel() override { return GuestKernel::ZIRCON; }
@@ -113,7 +115,8 @@ class ZirconEnclosedGuest : public EnclosedGuest {
 
 class DebianEnclosedGuest : public EnclosedGuest {
  public:
-  zx_status_t RunUtil(const std::string& util, const std::string& args,
+  zx_status_t RunUtil(const std::string& util,
+                      const std::vector<std::string>& args,
                       std::string* result = nullptr) override;
 
   GuestKernel GetGuestKernel() override { return GuestKernel::LINUX; }

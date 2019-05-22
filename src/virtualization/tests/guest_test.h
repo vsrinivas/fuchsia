@@ -41,9 +41,10 @@ class GuestTest : public ::testing::Test {
     return enclosed_guest_->Execute(message, result);
   }
 
-  static zx_status_t RunUtil(const std::string& util, const std::string& args,
+  static zx_status_t RunUtil(const std::string& util,
+                             const std::vector<std::string>& argv,
                              std::string* result = nullptr) {
-    return enclosed_guest_->RunUtil(util, args, result);
+    return enclosed_guest_->RunUtil(util, argv, result);
   }
 
   GuestKernel GetGuestKernel() { return enclosed_guest_->GetGuestKernel(); }

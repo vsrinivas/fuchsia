@@ -56,7 +56,7 @@ TYPED_TEST(GuestTest, LaunchGuest) {
 
 TYPED_TEST(GuestTest, VirtioRng) {
   std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioRngUtil, "", &result), ZX_OK);
+  EXPECT_EQ(this->RunUtil(kVirtioRngUtil, {}, &result), ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 

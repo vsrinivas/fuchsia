@@ -103,10 +103,15 @@ TEST_F(VirtioNetZirconGuestTest, ReceiveAndSend) {
     TestThread(*netstack, 0xab, 0xba, true /* use_raw_packets */);
   });
 
-  std::string args =
-      fxl::StringPrintf("%u %u %zu", 0xab, 0xba, kTestPacketSize);
   std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioNetUtil, args, &result), ZX_OK);
+  EXPECT_EQ(this->RunUtil(kVirtioNetUtil,
+                          {
+                              fxl::StringPrintf("%u", 0xab),
+                              fxl::StringPrintf("%u", 0xba),
+                              fxl::StringPrintf("%zu", kTestPacketSize),
+                          },
+                          &result),
+            ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
 
   handle.wait();
@@ -126,10 +131,15 @@ TEST_F(VirtioNetDebianGuestTest, ReceiveAndSend) {
   // Manually add a route to the host.
   EXPECT_EQ(this->Execute("arp -s 192.168.0.1 02:1a:11:00:00:00"), ZX_OK);
 
-  std::string args =
-      fxl::StringPrintf("%u %u %zu", 0xab, 0xba, kTestPacketSize);
   std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioNetUtil, args, &result), ZX_OK);
+  EXPECT_EQ(this->RunUtil(kVirtioNetUtil,
+                          {
+                              fxl::StringPrintf("%u", 0xab),
+                              fxl::StringPrintf("%u", 0xba),
+                              fxl::StringPrintf("%zu", kTestPacketSize),
+                          },
+                          &result),
+            ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
 
   handle.wait();

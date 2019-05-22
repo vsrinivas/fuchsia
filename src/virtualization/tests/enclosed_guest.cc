@@ -36,6 +36,15 @@ static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition) {
   return condition();
 }
 
+static std::string JoinArgVector(const std::vector<std::string>& argv) {
+  std::string result;
+  for (const auto& arg : argv) {
+    result += arg;
+    result += " ";
+  }
+  return result;
+}
+
 zx_status_t EnclosedGuest::Start() {
   Logger::Get().Reset();
 
@@ -130,8 +139,9 @@ zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
 }
 
 zx_status_t ZirconEnclosedGuest::RunUtil(const std::string& util,
-                                         const std::string& args,
+                                         const std::vector<std::string>& argv,
                                          std::string* result) {
+  auto args = JoinArgVector(argv);
   std::string cmd =
       fxl::StringPrintf("/bin/run %s#meta/%s.cmx %s", kFuchsiaTestUtilsUrl,
                         util.c_str(), args.c_str());
@@ -164,8 +174,9 @@ zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
 }
 
 zx_status_t DebianEnclosedGuest::RunUtil(const std::string& util,
-                                         const std::string& args,
+                                         const std::vector<std::string>& argv,
                                          std::string* result) {
+  auto args = JoinArgVector(argv);
   std::string cmd = fxl::StringPrintf("%s/%s %s", kDebianTestUtilDir,
                                       util.c_str(), args.c_str());
   return Execute(cmd, result);

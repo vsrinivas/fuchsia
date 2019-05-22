@@ -134,7 +134,7 @@ TYPED_TEST(VsockGuestTest, ConnectDisconnect) {
   auto handle = std::async(std::launch::async, [this] { this->TestThread(); });
 
   std::string result;
-  EXPECT_EQ(this->RunUtil("virtio_vsock_test_util", "", &result), ZX_OK);
+  EXPECT_EQ(this->RunUtil("virtio_vsock_test_util", {}, &result), ZX_OK);
 
   handle.wait();
 

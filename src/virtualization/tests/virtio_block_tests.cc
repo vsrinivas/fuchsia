@@ -222,10 +222,12 @@ using RawGuestTypes = ::testing::Types<
 TYPED_TEST_SUITE(RawVirtioBlockGuestTest, RawGuestTypes);
 
 TYPED_TEST(RawVirtioBlockGuestTest, BlockDeviceExists) {
-  std::string args =
-      fxl::StringPrintf("%lu %u check", kBlockSectorSize, kVirtioBlockCount);
   std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
+  EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
+                          {fxl::StringPrintf("%lu", kBlockSectorSize),
+                           fxl::StringPrintf("%u", kVirtioBlockCount), "check"},
+                          &result),
+            ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
@@ -240,11 +242,18 @@ TYPED_TEST(RawVirtioBlockGuestTest, Read) {
     ASSERT_EQ(
         pwrite(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
         static_cast<ssize_t>(kBlockSectorSize));
-    std::string args =
-        fxl::StringPrintf("%lu %u read %d %d", kBlockSectorSize,
-                          kVirtioBlockCount, static_cast<int>(offset), 0xab);
     std::string result;
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
+    EXPECT_EQ(
+        this->RunUtil(kVirtioBlockUtil,
+                      {
+                          fxl::StringPrintf("%lu", kBlockSectorSize),
+                          fxl::StringPrintf("%u", kVirtioBlockCount),
+                          "read",
+                          fxl::StringPrintf("%d", static_cast<int>(offset)),
+                          fxl::StringPrintf("%d", 0xab),
+                      },
+                      &result),
+        ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
   }
 }
@@ -263,11 +272,18 @@ TYPED_TEST(RawVirtioBlockGuestTest, Write) {
         static_cast<ssize_t>(kBlockSectorSize));
 
     // Tell the guest to write bytes to the block.
-    std::string args =
-        fxl::StringPrintf("%lu %u write %d %d", kBlockSectorSize,
-                          kVirtioBlockCount, static_cast<int>(offset), 0xab);
     std::string result;
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
+    EXPECT_EQ(
+        this->RunUtil(kVirtioBlockUtil,
+                      {
+                          fxl::StringPrintf("%lu", kBlockSectorSize),
+                          fxl::StringPrintf("%u", kVirtioBlockCount),
+                          "write",
+                          fxl::StringPrintf("%d", static_cast<int>(offset)),
+                          fxl::StringPrintf("%d", 0xab),
+                      },
+                      &result),
+        ZX_OK);
 
     // TODO(MAC-234): The virtio-block driver on Zircon currently doesn't inform
     // the rest of the system when the device is read only.
@@ -295,10 +311,17 @@ TYPED_TEST(RawVirtioBlockGuestTest, Write) {
     }
 
     // Check the value when read from the guest.
-    args = fxl::StringPrintf("%lu %u read %d %d", kBlockSectorSize,
-                             kVirtioBlockCount, static_cast<int>(offset),
-                             expected_guest_read);
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
+    EXPECT_EQ(
+        this->RunUtil(kVirtioBlockUtil,
+                      {
+                          fxl::StringPrintf("%lu", kBlockSectorSize),
+                          fxl::StringPrintf("%u", kVirtioBlockCount),
+                          "read",
+                          fxl::StringPrintf("%d", static_cast<int>(offset)),
+                          fxl::StringPrintf("%d", expected_guest_read),
+                      },
+                      &result),
+        ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
 
     // Check the value when read from the host file.
@@ -326,21 +349,30 @@ using QcowGuestTypes = ::testing::Types<
 TYPED_TEST_SUITE(QcowVirtioBlockGuestTest, QcowGuestTypes);
 
 TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {
-  std::string args = fxl::StringPrintf("%lu %u check", kBlockSectorSize,
-                                       kVirtioQcowBlockCount);
   std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
+  EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
+                          {fxl::StringPrintf("%lu", kBlockSectorSize),
+                           fxl::StringPrintf("%u", kVirtioQcowBlockCount), "check"},
+                          &result),
+            ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
 TYPED_TEST(QcowVirtioBlockGuestTest, ReadMappedCluster) {
   for (off_t offset = 0; offset != kClusterSize / kBlockSectorSize;
        offset += kVirtioTestStep) {
-    std::string args = fxl::StringPrintf("%lu %u read %d %d", kBlockSectorSize,
-                                         kVirtioQcowBlockCount,
-                                         static_cast<int>(offset), 0xab);
     std::string result;
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
+    EXPECT_EQ(
+        this->RunUtil(kVirtioBlockUtil,
+                      {
+                          fxl::StringPrintf("%lu", kBlockSectorSize),
+                          fxl::StringPrintf("%u", kVirtioQcowBlockCount),
+                          "read",
+                          fxl::StringPrintf("%d", static_cast<int>(offset)),
+                          fxl::StringPrintf("%d", 0xab),
+                      },
+                      &result),
+        ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
   }
 }
@@ -349,11 +381,18 @@ TYPED_TEST(QcowVirtioBlockGuestTest, ReadUnmappedCluster) {
   for (off_t offset = kClusterSize;
        offset != kClusterSize + (kClusterSize / kBlockSectorSize);
        offset += kVirtioTestStep) {
-    std::string args =
-        fxl::StringPrintf("%lu %u read %d %d", kBlockSectorSize,
-                          kVirtioQcowBlockCount, static_cast<int>(offset), 0);
     std::string result;
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
+    EXPECT_EQ(
+        this->RunUtil(kVirtioBlockUtil,
+                      {
+                          fxl::StringPrintf("%lu", kBlockSectorSize),
+                          fxl::StringPrintf("%u", kVirtioQcowBlockCount),
+                          "read",
+                          fxl::StringPrintf("%d", static_cast<int>(offset)),
+                          fxl::StringPrintf("%d", 0),
+                      },
+                      &result),
+        ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
   }
 }
@@ -362,11 +401,18 @@ TYPED_TEST(QcowVirtioBlockGuestTest, Write) {
   for (off_t offset = kClusterSize;
        offset != kClusterSize + (kClusterSize / kBlockSectorSize);
        offset += kVirtioTestStep) {
-    std::string args = fxl::StringPrintf("%lu %u write %d %d", kBlockSectorSize,
-                                         kVirtioQcowBlockCount,
-                                         static_cast<int>(offset), 0xab);
     std::string result;
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
+    EXPECT_EQ(
+        this->RunUtil(kVirtioBlockUtil,
+                      {
+                          fxl::StringPrintf("%lu", kBlockSectorSize),
+                          fxl::StringPrintf("%u", kVirtioQcowBlockCount),
+                          "write",
+                          fxl::StringPrintf("%d", static_cast<int>(offset)),
+                          fxl::StringPrintf("%d", 0xab),
+                      },
+                      &result),
+        ZX_OK);
 
     // TODO(MAC-234): The virtio-block driver on Zircon currently doesn't inform
     // the rest of the system when the device is read only.
@@ -391,10 +437,17 @@ TYPED_TEST(QcowVirtioBlockGuestTest, Write) {
         break;
     }
 
-    args = fxl::StringPrintf("%lu %u read %d %d", kBlockSectorSize,
-                             kVirtioQcowBlockCount, static_cast<int>(offset),
-                             expected_read);
-    EXPECT_EQ(this->RunUtil(kVirtioBlockUtil, args, &result), ZX_OK);
+    EXPECT_EQ(
+        this->RunUtil(kVirtioBlockUtil,
+                      {
+                          fxl::StringPrintf("%lu", kBlockSectorSize),
+                          fxl::StringPrintf("%u", kVirtioQcowBlockCount),
+                          "read",
+                          fxl::StringPrintf("%d", static_cast<int>(offset)),
+                          fxl::StringPrintf("%d", expected_read),
+                      },
+                      &result),
+        ZX_OK);
     EXPECT_THAT(result, HasSubstr("PASS"));
   }
 }
