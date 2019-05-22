@@ -44,6 +44,9 @@ var (
 // minSize is the minimum image size, as the tool currently always builds fat32.
 const minSize = 63 * 1024 * 1024
 
+// Fudge factor (percentage) to account for filesystem metadata.
+const fudgeFactor = 5
+
 type fixedClock struct {
 	now time.Time
 }
@@ -320,6 +323,7 @@ func computeSize(dstSrc map[string]string) uint64 {
 	for _, src := range dstSrc {
 		total += getSize(src)
 	}
+	total += total * 100 / fudgeFactor
 	pad := total % 63
 	if pad != 0 {
 		total += pad
