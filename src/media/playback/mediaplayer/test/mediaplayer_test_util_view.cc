@@ -24,10 +24,10 @@ namespace {
 constexpr int32_t kDefaultWidth = 640;
 constexpr int32_t kDefaultHeight = 100;
 
-constexpr float kBackgroundElevation = 0.f;
-constexpr float kVideoElevation = 1.0f;
-constexpr float kProgressBarElevation = 1.0f;
-constexpr float kProgressBarSliderElevation = 2.0f;
+constexpr float kBackgroundElevation = 0.0f;
+constexpr float kVideoElevation = -1.0f;
+constexpr float kProgressBarElevation = -1.0f;
+constexpr float kProgressBarSliderElevation = -2.0f;
 
 constexpr float kControlsGap = 12.0f;
 constexpr float kControlsHeight = 36.0f;
@@ -284,8 +284,8 @@ void MediaPlayerTestUtilView::Layout() {
                                      logical_size().y);
   background_node_.SetShape(background_shape);
 
-  background_node_.SetTranslation(
-      logical_size().x * .5f, logical_size().y * .5f, -kBackgroundElevation);
+  background_node_.SetTranslation(logical_size().x * .5f,
+                                  logical_size().y * .5f, kBackgroundElevation);
 
   // Compute maximum size of video content after reserving space
   // for decorations.
@@ -328,7 +328,7 @@ void MediaPlayerTestUtilView::Layout() {
   progress_bar_node_.SetShape(progress_bar_shape);
   progress_bar_node_.SetTranslation(
       controls_rect_.x + controls_rect_.width * 0.5f,
-      controls_rect_.y + controls_rect_.height * 0.5f, -kProgressBarElevation);
+      controls_rect_.y + controls_rect_.height * 0.5f, kProgressBarElevation);
 
   // Put the progress bar slider on top of the progress bar.
   scenic::Rectangle progress_bar_slider_shape(session(), controls_rect_.width,
@@ -337,7 +337,7 @@ void MediaPlayerTestUtilView::Layout() {
   progress_bar_slider_node_.SetTranslation(
       controls_rect_.x + controls_rect_.width * 0.5f,
       controls_rect_.y + controls_rect_.height * 0.5f,
-      -kProgressBarSliderElevation);
+      kProgressBarSliderElevation);
 
   // Ask the view to fill the space.
   video_view_holder_->SetViewProperties(0, 0, 0, content_rect_.width,
@@ -359,7 +359,7 @@ void MediaPlayerTestUtilView::OnSceneInvalidated(
     //     content_rect_.x + content_rect_.width * 0.5f,
     //     content_rect_.y + content_rect_.height * 0.5f, kVideoElevation);
     video_host_node_->SetTranslation(content_rect_.x, content_rect_.y,
-                                     -kVideoElevation);
+                                     kVideoElevation);
   }
 
   float progress_bar_slider_width =
@@ -370,7 +370,7 @@ void MediaPlayerTestUtilView::OnSceneInvalidated(
   progress_bar_slider_node_.SetTranslation(
       controls_rect_.x + progress_bar_slider_width * 0.5f,
       controls_rect_.y + controls_rect_.height * 0.5f,
-      -kProgressBarSliderElevation);
+      kProgressBarSliderElevation);
 
   if (state_ == State::kPlaying) {
     InvalidateScene();

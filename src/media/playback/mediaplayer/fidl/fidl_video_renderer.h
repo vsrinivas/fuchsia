@@ -150,7 +150,6 @@ class FidlVideoRenderer : public VideoRenderer {
     std::shared_ptr<FidlVideoRenderer> renderer_;
 
     scenic::EntityNode entity_node_;
-    scenic::ShapeNode clip_node_;
     scenic::ShapeNode image_pipe_node_;
     scenic::Material image_pipe_material_;
 

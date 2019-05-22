@@ -16,6 +16,8 @@
 namespace media_player {
 namespace {
 
+constexpr float kVideoElevation = 0.0f;
+
 // TODO(dalesat): |ZX_RIGHT_WRITE| shouldn't be required, but it is.
 static constexpr zx_rights_t kVmoDupRights =
     ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE |
@@ -463,7 +465,6 @@ FidlVideoRenderer::View::View(scenic::ViewContext context,
     : scenic::BaseView(std::move(context), "Video Renderer"),
       renderer_(renderer),
       entity_node_(session()),
-      clip_node_(session()),
       image_pipe_node_(session()),
       image_pipe_material_(session()) {
   FXL_DCHECK(renderer_);
@@ -491,21 +492,9 @@ FidlVideoRenderer::View::View(scenic::ViewContext context,
   material.SetColor(0x00, 0x00, 0x00, 0xff);
   image_pipe_node_.SetMaterial(material);
 
-  // Initialize |clip_node_|, which provides the geometry for |entity_node_|'s
-  // clipping of |image_pipe_material_|. See the comment in
-  // |OnSceneInvalidate| for why that's needed.
-  scenic::Material clip_material(session());
-  clip_material.SetColor(0x00, 0x00, 0x00, 0xff);
-  clip_node_.SetMaterial(clip_material);
-
   // Connect the nodes up.
-  entity_node_.AddPart(clip_node_);
   entity_node_.AddChild(image_pipe_node_);
   root_node().AddChild(entity_node_);
-
-  // Turn clipping on. We specify clip-to-self here, which really means, clip-
-  // to-part (|clip_node_|, in this case), evidently.
-  entity_node_.SetClip(0, true);
 }
 
 FidlVideoRenderer::View::~View() {}
@@ -641,7 +630,7 @@ void FidlVideoRenderer::View::PresentImage(
 
 void FidlVideoRenderer::View::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {
-  if (!has_logical_size()) {
+  if (!has_logical_size() || display_width_ == 0 || display_height_ == 0) {
     return;
   }
 
@@ -650,22 +639,17 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   // |image_pipe_node_| so it extends beyond the view to the right and at the
   // bottom by |image_width_ - display_width_| and |image_height_ -
   // display_height_|, respectively, and clip off the pixels we don't want to
-  // display. |entity_node_| does the clipping based on the geometry of
-  // |clip_node_|.
+  // display.
   // TODO(dalesat): Remove this once SCN-862 and SCN-141 are fixed.
   image_pipe_node_.SetMaterial(image_pipe_material_);
 
-  // Configure |clip_node_| to express the geometry of the clipping region.
-  clip_node_.SetShape(
-      scenic::Rectangle(session(), display_width_, display_height_));
-
-  // Position |image_pipe_node_| so it overlaps the edge of |clip_node_| by
-  // just enough to remove the parts we don't want to see.
+  // Position |image_pipe_node_| so the unwanted parts are clipped off.
   image_pipe_node_.SetShape(
       scenic::Rectangle(session(), image_width_, image_height_));
   image_pipe_node_.SetTranslation(
       static_cast<float>(image_width_ - display_width_) / 2.0f,
-      static_cast<float>(image_height_ - display_height_) / 2.0f, 0.0f);
+      static_cast<float>(image_height_ - display_height_) / 2.0f,
+      kVideoElevation);
 
   // Scale |entity_node_| to fill the view.
   float width_scale = logical_size().x / display_width_;
@@ -688,7 +672,19 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   // TODO(dalesat): Remove this and update C++ parent views when SCN-1041 is
   // fixed.
   entity_node_.SetTranslation(logical_size().x * .5f, logical_size().y * .5f,
-                              0.f);
+                              0.0f);
+
+  // Clip |entity_node_| to get rid of the unwanted parts of the video on the
+  // right and bottom. Each plane is described as a normal vector and a position
+  // relative to the parent's origin represented as a scalar multiple of the
+  // normal. The region in the direction of the normal is visible. To clip on
+  // the right, we use a normal that points in the -x (left) direction. To clip
+  // on the bottom, we use a normal that points in the -y (up) direction. The
+  // scalars are negative to get a positive x and y offset, respectively, when
+  // multiplied by the respective normals.
+  entity_node_.SetClipPlanes(
+      {{{-1.0f, 0.0f, 0.0f}, static_cast<float>(display_width_) / -2.0f},
+       {{0.0f, -1.0f, 0.0f}, static_cast<float>(display_height_) / -2.0f}});
 }
 
 }  // namespace media_player
