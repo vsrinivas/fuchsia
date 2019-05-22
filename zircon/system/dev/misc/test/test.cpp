@@ -149,9 +149,9 @@ static zx_status_t fidl_Destroy(void* ctx) {
 
 zx_status_t TestDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     static const fuchsia_device_test_Device_ops_t kOps = {
+        .RunTests = fidl_RunTests,
         .SetOutputSocket = fidl_SetOutputSocket,
         .SetChannel = fidl_SetChannel,
-        .RunTests = fidl_RunTests,
         .Destroy = fidl_Destroy,
     };
     return fuchsia_device_test_Device_dispatch(this, txn, msg, &kOps);
