@@ -12,7 +12,6 @@
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
-#include <launchpad/launchpad.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>

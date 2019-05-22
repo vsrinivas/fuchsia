@@ -9,7 +9,6 @@ test("namespace") {
   deps = [
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/launchpad",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
