@@ -122,7 +122,7 @@ class SessionShellTest : public modular::testing::TestHarnessFixture {
   MockSessionShell mock_session_shell_;
 };
 
-TEST_F(SessionShellTest, GetPackageName) {
+TEST_F(SessionShellTest, DISABLED_GetPackageName) {
   fuchsia::modular::testing::TestHarnessSpec spec;
   test_harness()->Run(std::move(spec));
 
@@ -140,7 +140,7 @@ TEST_F(SessionShellTest, GetPackageName) {
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return got_name; }, zx::sec(10)));
 }
 
-TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
+TEST_F(SessionShellTest, DISABLED_GetStoryInfoNonexistentStory) {
   RunHarnessAndInterceptSessionShell();
 
   fuchsia::modular::StoryProvider* story_provider =
@@ -158,7 +158,7 @@ TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
                                         zx::sec(10)));
 }
 
-TEST_F(SessionShellTest, GetLink) {
+TEST_F(SessionShellTest, DISABLED_GetLink) {
   RunHarnessAndInterceptSessionShell();
 
   fuchsia::modular::SessionShellContext* session_shell_context;
@@ -177,7 +177,7 @@ TEST_F(SessionShellTest, GetLink) {
       RunLoopWithTimeoutOrUntil([&] { return called_get_link; }, zx::sec(10)));
 }
 
-TEST_F(SessionShellTest, GetStoriesEmpty) {
+TEST_F(SessionShellTest, DISABLED_GetStoriesEmpty) {
   RunHarnessAndInterceptSessionShell();
 
   fuchsia::modular::StoryProvider* story_provider =
@@ -196,7 +196,7 @@ TEST_F(SessionShellTest, GetStoriesEmpty) {
                                         zx::sec(10)));
 }
 
-TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
+TEST_F(SessionShellTest, DISABLED_StartAndStopStoryWithExtraInfoMod) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell,
@@ -270,7 +270,7 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
                                    StoryState::STOPPING, StoryState::STOPPED));
 }
 
-TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
+TEST_F(SessionShellTest, DISABLED_StoryInfoBeforeAndAfterDelete) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell.
@@ -330,7 +330,7 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
       RunLoopWithTimeoutOrUntil([&] { return delete_called; }, zx::sec(10)));
 }
 
-TEST_F(SessionShellTest, KindOfProtoStoryNotInStoryList) {
+TEST_F(SessionShellTest, DISABLED_KindOfProtoStoryNotInStoryList) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell,
@@ -370,7 +370,7 @@ TEST_F(SessionShellTest, KindOfProtoStoryNotInStoryList) {
                                         zx::sec(10)));
 }
 
-TEST_F(SessionShellTest, AttachesAndDetachesView) {
+TEST_F(SessionShellTest, DISABLED_AttachesAndDetachesView) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and start a new story shell.
@@ -444,7 +444,7 @@ TEST_F(SessionShellTest, AttachesAndDetachesView) {
                                    StoryState::STOPPING, StoryState::STOPPED));
 }
 
-TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
+TEST_F(SessionShellTest, DISABLED_StoryStopDoesntWaitOnDetachView) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and start a new story shell.
