@@ -385,6 +385,13 @@ template("rustc_artifact") {
           invoker.__unstable_recovery_netstack_only_specialization_bypass
     }
 
+
+    # Make builds independent of absolute file path.  The file names
+    # embedded in debugging information will be expressed as relative to
+    # the build directory, e.g. "../.." for an "out/subdir" under //.
+    absolute_path = rebase_path("//.")
+    relative_path = rebase_path("//.", root_build_dir)
+
     args = [
       "--crate-root",
       rebase_path(root_file),
@@ -416,6 +423,8 @@ template("rustc_artifact") {
       edition,
       "--warnings",
       rust_warnings,
+      "--remap-path-prefix",
+      "$absolute_path=$relative_path",
     ]
 
     if (defined(invoker.features)) {

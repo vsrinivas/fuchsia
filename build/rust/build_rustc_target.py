@@ -146,6 +146,10 @@ def main():
                         action="append",
                         dest="features",
                         required=False)
+    parser.add_argument("--remap-path-prefix",
+                        help="Remap source names in output",
+                        action="append",
+                        required=False)
 
     parser.add_argument
     args = parser.parse_args()
@@ -187,6 +191,9 @@ def main():
     if args.features:
         for feature in args.features:
             call_args += ["--cfg", "feature=\"%s\"" % feature]
+    if args.remap_path_prefix:
+        for path_prefix in args.remap_path_prefix:
+            call_args += ["--remap-path-prefix", path_prefix]
 
     if args.target.endswith("fuchsia"):
         call_args += [
