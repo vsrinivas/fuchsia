@@ -3,124 +3,146 @@
 // found in the LICENSE file.
 
 #include <limits.h>
-#include <zircon/syscalls.h>
-#include <pthread.h>
-#include <runtime/tls.h>
 #include <stdint.h>
 #include <threads.h>
 #include <unistd.h>
-#include <unittest/unittest.h>
+#include <pthread.h>
+
+#include <zircon/syscalls.h>
+#include <runtime/tls.h>
+#include <zxtest/zxtest.h>
+
+namespace {
 
 // We request one-page stacks, so collisions are easy to catch.
-static uintptr_t page_of(const void* ptr) {
-    return (uintptr_t)ptr & -PAGE_SIZE;
+uintptr_t PageOf(const void* ptr) {
+    return reinterpret_cast<uintptr_t>(ptr) & -PAGE_SIZE;
 }
 
-static bool do_stack_tests(bool is_main_thread) {
-    BEGIN_TEST;
+struct StackTestInfo {
+    bool is_pthread;
+    char** environ;
+    const void* safe_stack;
+    const char* unsafe_stack;
+    const char* tls_buf;
+    const void* tp;
+    const void* unsafe_start;
+    const void* unsafe_ptr;
+};
 
-    const void* safe_stack = __builtin_frame_address(0);
+void* DoStackTest(void *arg) {
+
+    StackTestInfo* info = reinterpret_cast<StackTestInfo*>(arg);
+
+    info->safe_stack = __builtin_frame_address(0);
 
     // The compiler sees this pointer escape, so it should know
     // that this belongs on the unsafe stack.
     char unsafe_stack[64];
-    (void)zx_system_get_version(unsafe_stack, sizeof(unsafe_stack));
+    zx_system_get_version(unsafe_stack, sizeof(unsafe_stack));
 
     // Likewise, the tls_buf is used.
     static thread_local char tls_buf[64];
-    (void)zx_system_get_version(tls_buf, sizeof(tls_buf));
+    zx_system_get_version(tls_buf, sizeof(tls_buf));
 
-    const void* tp = zxr_tp_get();
+    info->tp = zxr_tp_get();
 
-    EXPECT_NONNULL(environ, "environ unset");
-    EXPECT_NONNULL(safe_stack, "CFA is null");
-    EXPECT_NONNULL(unsafe_stack, "local's taken address is null");
-    EXPECT_NONNULL(tls_buf, "thread_local's taken address is null");
-    EXPECT_NONNULL(tp, "thread pointer is null");
+    info->environ = environ;
+    info->unsafe_stack = unsafe_stack;
+    info->tls_buf = tls_buf;
 
-    if (__has_feature(safe_stack) || !is_main_thread) {
-        EXPECT_NE(page_of(safe_stack), page_of(environ),
+#ifdef __clang__
+# if __has_feature(safe_stack)
+    info->unsafe_start = __builtin___get_unsafe_stack_start();
+    info->unsafe_ptr = __builtin___get_unsafe_stack_ptr();
+# endif
+#endif
+    return nullptr;
+}
+
+void CheckThreadStackInfo(StackTestInfo* info) {
+
+    EXPECT_NOT_NULL(info->environ, "environ unset");
+    EXPECT_NOT_NULL(info->safe_stack, "CFA is null");
+    EXPECT_NOT_NULL(info->unsafe_stack, "local's taken address is null");
+    EXPECT_NOT_NULL(info->tls_buf, "thread_local's taken address is null");
+
+    if (__has_feature(safe_stack) || info->is_pthread) {
+        EXPECT_NE(PageOf(info->safe_stack), PageOf(info->environ),
                   "safe stack collides with environ");
     }
 
     // The environ array sits on the main thread's unsafe stack.  But we can't
-    // verify that it does since it might not be on the same page.
-    if (!is_main_thread) {
-        EXPECT_NE(page_of(unsafe_stack), page_of(environ),
+    // verify that it does since it might not be on the same page. So just check
+    // on the pThread
+    if (info->is_pthread) {
+        EXPECT_NE(PageOf(info->unsafe_stack), PageOf(info->environ),
                   "unsafe stack collides with environ");
     }
 
-    EXPECT_NE(page_of(tls_buf), page_of(environ),
+    EXPECT_NE(PageOf(info->tls_buf), PageOf(info->environ),
               "TLS collides with environ");
 
-    EXPECT_NE(page_of(tls_buf), page_of(safe_stack),
+    EXPECT_NE(PageOf(info->tls_buf), PageOf(info->safe_stack),
               "TLS collides with safe stack");
 
-    EXPECT_NE(page_of(tls_buf), page_of(unsafe_stack),
+    EXPECT_NE(PageOf(info->tls_buf), PageOf(info->unsafe_stack),
               "TLS collides with unsafe stack");
 
-    EXPECT_NE(page_of(tp), page_of(environ),
+    EXPECT_NE(PageOf(info->tp), PageOf(info->environ),
               "thread pointer collides with environ");
 
-    EXPECT_NE(page_of(tp), page_of(safe_stack),
+    EXPECT_NE(PageOf(info->tp), PageOf(info->safe_stack),
               "thread pointer collides with safe stack");
 
-    EXPECT_NE(page_of(tp), page_of(unsafe_stack),
+    EXPECT_NE(PageOf(info->tp), PageOf(info->unsafe_stack),
               "thread pointer collides with unsafe stack");
 
 #ifdef __clang__
 # if __has_feature(safe_stack)
-    const void* unsafe_start = __builtin___get_unsafe_stack_start();
-    const void* unsafe_ptr = __builtin___get_unsafe_stack_ptr();
-
-    if (!is_main_thread) {
-        EXPECT_EQ(page_of(unsafe_start), page_of(unsafe_ptr),
+    if (info->is_pthread) {
+        EXPECT_EQ(PageOf(info->unsafe_start), PageOf(info->unsafe_ptr),
                   "reported unsafe start and ptr not nearby");
     }
 
-    EXPECT_EQ(page_of(unsafe_stack), page_of(unsafe_ptr),
+    EXPECT_EQ(PageOf(info->unsafe_stack), PageOf(info->unsafe_ptr),
               "unsafe stack and reported ptr not nearby");
 
-    EXPECT_NE(page_of(unsafe_stack), page_of(safe_stack),
+    EXPECT_NE(PageOf(info->unsafe_stack), PageOf(info->safe_stack),
               "unsafe stack collides with safe stack");
 # endif
 #endif
-
-    END_TEST;
 }
+
 
 // This instance of the test is lossy, because it's possible
 // one of our single stacks spans multiple pages.  We can't
 // get the main thread's stack down to a single page because
 // the unittest machinery needs more than that.
-static bool main_thread_stack_tests(void) {
-    return do_stack_tests(true);
-}
+TEST(StackTest, MainThreadStack) {
+    StackTestInfo info;
+    info.is_pthread = false;
 
-static void* thread_stack_tests(void* arg) {
-    return (void*)(uintptr_t)do_stack_tests(false);
+    DoStackTest(&info);
+
+    CheckThreadStackInfo(&info);
 }
 
 // Spawn a thread with a one-page stack.
-static bool other_thread_stack_tests(void) {
-    BEGIN_TEST;
+TEST(StackTest, ThreadStack) {
 
-    EXPECT_LE(PTHREAD_STACK_MIN, PAGE_SIZE, "");
+    EXPECT_LE(PTHREAD_STACK_MIN, PAGE_SIZE);
 
     pthread_attr_t attr;
-    ASSERT_EQ(0, pthread_attr_init(&attr), "");
-    ASSERT_EQ(0, pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN), "");
+    ASSERT_EQ(0, pthread_attr_init(&attr));
+    ASSERT_EQ(0, pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN));
     pthread_t thread;
-    ASSERT_EQ(0, pthread_create(&thread, &attr, &thread_stack_tests, 0), "");
-    void* result;
-    ASSERT_EQ(0, pthread_join(thread, &result), "");
-    bool other_thread_ok = (uintptr_t)result;
-    EXPECT_TRUE(other_thread_ok, "");
 
-    END_TEST;
+    StackTestInfo info;
+    info.is_pthread = true;
+    ASSERT_EQ(0, pthread_create(&thread, &attr, &DoStackTest, &info));
+    ASSERT_EQ(0, pthread_join(thread, nullptr));
+    CheckThreadStackInfo(&info);
 }
 
-BEGIN_TEST_CASE(stack_tests)
-RUN_TEST(main_thread_stack_tests)
-RUN_TEST(other_thread_stack_tests)
-END_TEST_CASE(stack_tests)
+} // namespace

@@ -11,7 +11,7 @@ source_set("stack") {
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/runtime:headers",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
   ]
 }
