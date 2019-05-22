@@ -39,6 +39,7 @@ if (current_cpu != "") {
       "$zx/system/dev/camera/arm-isp/test:arm-isp",
       "$zx/system/dev/clk/amlogic-clk:amlogic-clk-test",
       "$zx/system/dev/clk/msm8x53-clk:msm8x53-clk-test",
+      "$zx/system/dev/display/display/test",
       "$zx/system/dev/display/mt8167s-display:tests",
       "$zx/system/dev/gpio/as370-gpio:as370-gpio-test",
       "$zx/system/dev/gpio/mt-8167:mtk-gpio",

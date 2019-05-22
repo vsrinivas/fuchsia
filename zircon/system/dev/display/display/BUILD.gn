@@ -3,13 +3,21 @@
 # found in the LICENSE file.
 
 driver("display") {
+  deps = [
+    ":shared",
+  ]
+}
+
+# Also used by test/.
+source_set("shared") {
+  visibility = [ "./*" ]
   sources = [
     "client.cpp",
     "controller.cpp",
     "fence.cpp",
     "image.cpp",
   ]
-  deps = [
+  public_deps = [
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.i2cimpl",
     "$zx/system/dev/lib/mmio",
