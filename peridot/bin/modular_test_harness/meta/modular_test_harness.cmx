@@ -5,6 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.net.SocketProvider",
+            "fuchsia.setui.SetUiService",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.auth.account.AccountManager",
