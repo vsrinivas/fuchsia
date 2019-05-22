@@ -32,6 +32,7 @@ type Config struct {
 	downgradeBuilderName   string
 	downgradeBuildID       string
 	downgradeAmberFilesDir string
+	upgradeBuilderName     string
 	upgradeBuildID         string
 	upgradeAmberFilesDir   string
 	archive                *artifacts.Archive
@@ -59,6 +60,7 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.downgradeBuilderName, "downgrade-builder-name", "", "downgrade to the latest version of this builder")
 	fs.StringVar(&c.downgradeBuildID, "downgrade-build-id", "", "downgrade to this specific build id")
 	fs.StringVar(&c.downgradeAmberFilesDir, "downgrade-amber-files", "", "Path to the downgrade amber-files repository")
+	fs.StringVar(&c.upgradeBuilderName, "upgrade-builder-name", "", "upgrade to the latest version of this builder")
 	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
 	fs.StringVar(&c.upgradeAmberFilesDir, "upgrade-amber-files", "", "Path to the upgrade amber-files repository")
 
@@ -77,13 +79,13 @@ func (c *Config) Validate() error {
 	}
 
 	defined = 0
-	for _, s := range []string{c.upgradeBuildID, c.upgradeAmberFilesDir} {
+	for _, s := range []string{c.upgradeBuilderName, c.upgradeBuildID, c.upgradeAmberFilesDir} {
 		if s != "" {
 			defined += 1
 		}
 	}
 	if defined != 1 {
-		return fmt.Errorf("exactly one of -upgrade-build-id or -upgrade-amber-files must be specified")
+		return fmt.Errorf("exactly one of -upgrade-builder-name, -upgrade-build-id, or -upgrade-amber-files must be specified")
 	}
 
 	return nil
@@ -137,6 +139,15 @@ func (c *Config) GetDowngradeRepository() (*packages.Repository, error) {
 }
 
 func (c *Config) GetUpgradeRepository() (*packages.Repository, error) {
+	if c.upgradeBuilderName != "" && c.upgradeBuildID == "" {
+		a := c.BuildArchive()
+		id, err := a.LookupBuildID(c.upgradeBuilderName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to lookup build id: %s", err)
+		}
+		c.upgradeBuildID = id
+	}
+
 	if c.upgradeBuildID != "" {
 		build, err := c.BuildArchive().GetBuildByID(c.upgradeBuildID)
 		if err != nil {
