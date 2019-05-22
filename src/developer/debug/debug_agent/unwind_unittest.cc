@@ -75,7 +75,7 @@ zx::suspend_token SyncSuspendThread(zx::thread& thread) {
   return token;
 }
 
-void DoUnwindTest() {
+void DoUnwindTest(bool expect_registers) {
   ThreadData data;
   std::thread background(ThreadFunc1, &data);
 
@@ -122,6 +122,10 @@ void DoUnwindTest() {
   EXPECT_TRUE(stack[0].ip != 0);
   EXPECT_TRUE(stack[0].regs.size() >= 8);
 
+  if (expect_registers) {
+    EXPECT_TRUE(stack[1].regs.size() >= 8);
+  }
+
   // TODO: It might be nice to write the thread functions in assembly so we can
   // know what the addresses are supposed to be.
 }
@@ -130,12 +134,12 @@ void DoUnwindTest() {
 
 TEST(Unwind, Android) {
   SetUnwinderType(UnwinderType::kAndroid);
-  DoUnwindTest();
+  DoUnwindTest(true);
 }
 
 TEST(Unwind, NG) {
   SetUnwinderType(UnwinderType::kNgUnwind);
-  DoUnwindTest();
+  DoUnwindTest(false);
 }
 
 }  // namespace debug_agent

@@ -59,6 +59,10 @@ void Unwinder::FillInDexFrame() {
   frame->pc = dex_pc;
   frame->sp = regs_->sp();
 
+  if (save_regs_) {
+    frame->regs = std::unique_ptr<Regs>(regs_->Clone());
+  }
+
   MapInfo* info = maps_->Find(dex_pc);
   if (info != nullptr) {
     frame->map_start = info->start;
@@ -98,6 +102,10 @@ void Unwinder::FillInFrame(MapInfo* map_info, Elf* elf, uint64_t rel_pc, uint64_
   frame->sp = regs_->sp();
   frame->rel_pc = rel_pc - pc_adjustment;
   frame->pc = regs_->pc() - pc_adjustment;
+
+  if (save_regs_) {
+    frame->regs = std::unique_ptr<Regs>(regs_->Clone());
+  }
 
   if (map_info == nullptr) {
     return;

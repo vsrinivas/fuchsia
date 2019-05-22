@@ -67,7 +67,7 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
   auto memory = std::make_shared<unwindstack::MemoryFuchsia>(process.get());
 
   unwindstack::Unwinder unwinder(max_depth, &maps, &unwind_regs,
-                                 std::move(memory));
+                                 std::move(memory), true);
   unwinder.Unwind();
 
   stack->resize(unwinder.NumFrames());
@@ -76,6 +76,16 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
     debug_ipc::StackFrame* dest = &(*stack)[i];
     dest->ip = src.pc;
     dest->sp = src.sp;
+    if (src.regs) {
+      src.regs->IterateRegisters([&dest](const char* name, uint64_t val) {
+        // TODO(sadmac): It'd be nice to be using some sort of ID constant
+        // instead of a converted string here.
+        auto id = debug_ipc::StringToRegisterID(name);
+        if (id != debug_ipc::RegisterID::kUnknown) {
+          dest->regs.emplace_back(id, val);
+        }
+      });
+    }
   }
 
   // Add all registers to the top stack frame.

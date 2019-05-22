@@ -43,6 +43,7 @@ struct FrameData {
   uint64_t rel_pc;
   uint64_t pc;
   uint64_t sp;
+  std::unique_ptr<Regs> regs;
 
   std::string function_name;
   uint64_t function_offset = 0;
@@ -58,7 +59,9 @@ struct FrameData {
 class Unwinder {
  public:
   Unwinder(size_t max_frames, Maps* maps, Regs* regs, std::shared_ptr<Memory> process_memory)
-      : max_frames_(max_frames), maps_(maps), regs_(regs), process_memory_(process_memory) {
+      : Unwinder(max_frames, maps, regs, process_memory, false) {}
+  Unwinder(size_t max_frames, Maps* maps, Regs* regs, std::shared_ptr<Memory> process_memory, bool save_regs)
+      : max_frames_(max_frames), maps_(maps), regs_(regs), process_memory_(process_memory), save_regs_(save_regs) {
     frames_.reserve(max_frames);
   }
   ~Unwinder() = default;
@@ -97,6 +100,7 @@ class Unwinder {
   std::vector<FrameData> frames_;
   std::shared_ptr<Memory> process_memory_;
   JitDebug* jit_debug_ = nullptr;
+  bool save_regs_ = false;
 #if !defined(NO_LIBDEXFILE_SUPPORT)
   DexFiles* dex_files_ = nullptr;
 #endif
