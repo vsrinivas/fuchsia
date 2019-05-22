@@ -62,7 +62,8 @@ ssize_t RecvSockBlocking(const zx::socket& socket, uint8_t* buf,
 
   bytes_left = {buf_size};  // prevent narrowing conversion
   while (bytes_left > 0) {
-    status = socket.wait_one(ZX_SOCKET_READABLE, zx::time::infinite(), nullptr);
+    status = socket.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                             zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Something happened to the socket while waiting: "
                      << zx_status_get_string(status);

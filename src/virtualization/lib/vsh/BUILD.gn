@@ -16,17 +16,39 @@ source_set("util") {
   ]
 }
 
+source_set("client") {
+  sources = [
+    "client.cc",
+    "client.h",
+    "command_runner.cc",
+    "command_runner.h",
+  ]
+  deps = [
+    ":util",
+    "//sdk/fidl/fuchsia.virtualization",
+    "//src/lib/fxl",
+    "//src/virtualization/packages/biscotti_guest/third_party/protos:vsh_cc_proto",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("vsh_unittest") {
   visibility = [ "*:*" ]
   testonly = true
 
   sources = [
+    "command_runner_unittest.cc",
     "util_unittest.cc",
   ]
 
   deps = [
+    ":client",
     ":util",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/virtualization/testing",
     "//src/lib/fxl/test:gtest_main",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vsh_cc_proto",
   ]
