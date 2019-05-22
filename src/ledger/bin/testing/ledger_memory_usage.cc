@@ -4,6 +4,7 @@
 
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
 
+#include <lib/zx/job.h>
 #include <lib/zx/object.h>
 #include <lib/zx/process.h>
 #include <src/lib/fxl/logging.h>
@@ -12,6 +13,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <set>
 #include <string>
 
 namespace ledger {
@@ -48,24 +50,51 @@ bool GetMemoryUsageForTask(zx::process& task, uint64_t* memory) {
 
 // |Walker| is a |TaskEnumerator| used to find the Ledger process and the
 // corresponding handle.
+//
+// It assumes that the default job (as defined in zx::default_job()) has as
+// parent a test environment, which contains the Ledger process as its
+// descendent at depth 2. I.e. `ps` command would return:
+//
+//   j:...       <trace_environment_name>         # this has koid test_env_koid_
+//     j:...                                      # this is the default job
+//       p:...   <benchmark_name>.cmx
+//     j:...
+//       p:...   ledger.cmx
 class Walker final : public TaskEnumerator {
  public:
-  Walker() = default;
+  Walker() {
+    zx_info_handle_basic_t info;
+    FXL_CHECK(zx::job::default_job()->get_info(ZX_INFO_HANDLE_BASIC, &info,
+                                               sizeof(info), nullptr,
+                                               nullptr) == ZX_OK);
+    test_env_koid_ = info.related_koid;
+  }
+
   ~Walker() = default;
 
   // TaskEnumerator:
-  zx_status_t OnProcess(int depth, zx_handle_t task, zx_koid_t koid,
-                        zx_koid_t /*pkoid*/) override {
+  zx_status_t OnJob(int /*depth*/, zx_handle_t /*job*/, zx_koid_t koid,
+                    zx_koid_t parent_koid) override {
+    if (parent_koid == test_env_koid_) {
+      test_env_children_.insert(koid);
+    }
+    return ZX_OK;
+  }
+
+  zx_status_t OnProcess(int /*depth*/, zx_handle_t task, zx_koid_t koid,
+                        zx_koid_t parent_koid) override {
     zx::unowned<zx::process> unowned_task(task);
     std::string process_name;
     FXL_CHECK(GetTaskName(unowned_task, &process_name));
-    if (process_name == kLedgerBinaryName) {
+    // The parent of the Ledger process must be a child of |test_env_koid_|.
+    if (process_name == kLedgerBinaryName &&
+        test_env_children_.find(parent_koid) != test_env_children_.end()) {
       if (ledger_handle_.is_valid()) {
         // This is the second Ledger process we find: interrupt the iteration by
         // returning a status different than |ZK_OK|.
         return ZX_ERR_ALREADY_EXISTS;
       }
-      // This process corresponds to Ledger.
+      // This process corresponds to the right instance of Ledger.
       FXL_CHECK(unowned_task->duplicate(ZX_RIGHT_SAME_RIGHTS,
                                         &ledger_handle_) == ZX_OK);
     }
@@ -80,9 +109,16 @@ class Walker final : public TaskEnumerator {
 
  protected:
   // TaskEnumerator:
+  bool has_on_job() const override { return true; }
   bool has_on_process() const override { return true; }
 
  private:
+  // The koid of the parent of the default job. The Ledger process should also
+  // have as grand-parent the process that corresponds to it.
+  zx_koid_t test_env_koid_;
+  // The set of the koids of jobs that are children of |test_env_koid_|.
+  std::set<zx_koid_t> test_env_children_;
+
   zx::process ledger_handle_;
 };
 
@@ -96,9 +132,8 @@ bool LedgerMemoryEstimator::Init() {
   Walker walker;
   zx_status_t status = walker.WalkRootJobTree();
   if (status == ZX_ERR_ALREADY_EXISTS) {
-    // TODO(nellyv): Update so that we know how which Ledger corresponds to the
-    // test being executed.
-    FXL_LOG(ERROR) << "More than one Ledger processes are running.";
+    FXL_LOG(ERROR)
+        << "More than one Ledger processes are running in this test.";
     return false;
   }
   ledger_task_ = walker.TakeLedgerHandle();

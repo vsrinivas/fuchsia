@@ -12,12 +12,13 @@
         }
     },
     "program": {
-        "binary": "test/ledger_unittests"
+        "binary": "bin/memory_usage_test_benchmark"
     },
     "sandbox": {
         "dev": [ "misc/sysinfo" ],
         "features": [
-            "isolated-persistent-storage"
+            "isolated-persistent-storage",
+            "system-temp"
         ],
         "services": [
             "fuchsia.tracing.controller.Controller",

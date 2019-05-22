@@ -154,9 +154,11 @@ source_set("unittests") {
   sources = [
     "blocking_callback_waiter_unittest.cc",
     "ledger_matcher_unittest.cc",
+    "ledger_memory_usage_unittest.cc",
   ]
 
   deps = [
+    ":get_ledger",
     ":ledger_instance_factory",
     ":lib",
     "//garnet/public/lib/callback",
@@ -165,4 +167,20 @@ source_set("unittests") {
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
+}
+
+executable("memory_usage_test_benchmark") {
+  testonly = true
+
+  sources = [
+    "memory_usage_test_benchmark.cc",
+  ]
+
+  deps = [
+    ":get_ledger",
+    ":lib",
+    "//garnet/public/lib/svc/cpp",
+    "//peridot/lib/scoped_tmpfs",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
 }
