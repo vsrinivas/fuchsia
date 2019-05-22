@@ -40,7 +40,7 @@ class PinnedVmo {
         return *this;
     }
 
-    zx_status_t Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t rights);
+    zx_status_t Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t options);
     void Unpin();
 
     uint32_t region_count() const { return region_count_; }

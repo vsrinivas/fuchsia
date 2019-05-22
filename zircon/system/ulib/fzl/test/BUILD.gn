@@ -6,6 +6,29 @@ group("test") {
   testonly = true
   deps = [
     ":fzl",
+    ":fzl-zxtest",
+  ]
+}
+
+test("fzl-zxtest") {
+  sources = [
+    "pinned-vmo-tests.cpp",
+  ]
+  deps = [
+    "$zx/system/dev/lib/fake-bti",
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async:async-default",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/memfs",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
 

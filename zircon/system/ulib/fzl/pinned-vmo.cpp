@@ -9,7 +9,7 @@
 
 namespace fzl {
 
-zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t rights) {
+zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t options) {
     // If we are holding a pinned memory token, then we are already holding a
     // pinned VMO.  It is an error to try and pin a new VMO without first
     // explicitly unpinning the old one.
@@ -19,9 +19,9 @@ zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t righ
         return ZX_ERR_BAD_STATE;
     }
 
-    // Check our args, read/write is all that users may ask for.
-    constexpr uint32_t kAllowedRights = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE;
-    if (((rights & kAllowedRights) != rights) || !vmo.is_valid() || !bti.is_valid()) {
+    // Check our args, read/write/bti_contiguous is all that users may ask for.
+    constexpr uint32_t kAllowedOptions = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS;
+    if (((options & kAllowedOptions) != options) || !vmo.is_valid() || !bti.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -38,13 +38,17 @@ zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t righ
     ZX_DEBUG_ASSERT((vmo_size / PAGE_SIZE) < std::numeric_limits<uint32_t>::max());
     fbl::AllocChecker ac;
     uint32_t page_count = static_cast<uint32_t>(vmo_size / PAGE_SIZE);
+    if (options & ZX_BTI_CONTIGUOUS) {
+        page_count = 1;
+    }
+
     fbl::unique_ptr<zx_paddr_t[]> addrs(new (&ac) zx_paddr_t[page_count]);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
     // Now actually pin the region.
-    res = bti.pin(rights, vmo, 0, vmo_size, addrs.get(), page_count, &pmt_);
+    res = bti.pin(options, vmo, 0, vmo_size, addrs.get(), page_count, &pmt_);
     if (res != ZX_OK) {
         return res;
     }
@@ -120,4 +124,4 @@ void PinnedVmo::UnpinInternal() {
     region_count_ = 0;
 }
 
-}  // namespace fzl
+} // namespace fzl
