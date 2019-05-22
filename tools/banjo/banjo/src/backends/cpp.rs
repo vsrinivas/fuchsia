@@ -1100,7 +1100,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
                 accum.push_str(
                     format!(
-                        "    {return_param} {protocol_name}{function_name}({params}) {{\n",
+                        "    virtual {return_param} {protocol_name}{function_name}({params}) {{\n",
                         return_param = return_param,
                         protocol_name = to_cpp_name(name),
                         params = params,
@@ -1126,7 +1126,19 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                                 size = name_size(&ty_name),
                             )
                         }
-                        _ => format!("{}", to_c_name(name)),
+                        ast::Ty::Identifier { id, .. } => {
+                            if id.is_base_type() {
+                                to_c_name(name)
+                            } else {
+                                match ast.id_to_type(id) {
+                                    ast::Ty::Struct | ast::Ty::Union => {
+                                        format!("*{}", to_c_name(name))
+                                    }
+                                    _ => to_c_name(name),
+                                }
+                            }
+                        }
+                        _ => to_c_name(name),
                     })
                     .collect::<Vec<_>>()
                     .join(", ");
