@@ -5,8 +5,11 @@
 test("fdio") {
   sources = [
     "fdio_atexit.cpp",
+    "fdio_directory.cpp",
     "fdio_fd.cpp",
+    "fdio_fdio.cpp",
     "fdio_handle_fd.c",
+    "fdio_io.cpp",
     "fdio_open_max.c",
     "fdio_path_canonicalize.c",
     "fdio_root.c",
@@ -14,6 +17,9 @@ test("fdio") {
     "fdio_socketpair.c",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-process:c",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
