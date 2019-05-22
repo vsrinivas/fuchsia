@@ -56,6 +56,12 @@ public:
     virtual zx_status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) = 0;
 
     // Change the page protections on the given virtual address range
+    //
+    // If this requires splitting a large page and the next level page table
+    // allocation fails, it will instead unmap the entire large page and rely
+    // on subsequent page faults to reestablish the mapping.
+    //
+    // TODO: Handle allocation failure more gracefully.
     virtual zx_status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) = 0;
 
     virtual zx_status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) = 0;

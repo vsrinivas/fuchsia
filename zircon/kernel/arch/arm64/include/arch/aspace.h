@@ -51,8 +51,8 @@ private:
     }
 
     // Page table management.
-    volatile pte_t* GetPageTable(vaddr_t index, uint page_size_shift,
-                                 volatile pte_t* page_table) TA_REQ(lock_);
+    volatile pte_t* GetPageTable(uint page_size_shift,
+                                 vaddr_t pt_index, volatile pte_t* page_table) TA_REQ(lock_);
 
     zx_status_t AllocPageTable(paddr_t* paddrp, uint page_size_shift) TA_REQ(lock_);
 
@@ -67,9 +67,19 @@ private:
                            uint index_shift, uint page_size_shift,
                            volatile pte_t* page_table) TA_REQ(lock_);
 
-    int ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, size_t size_in,
-                         pte_t attrs, uint index_shift, uint page_size_shift,
-                         volatile pte_t* page_table) TA_REQ(lock_);
+    zx_status_t ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, size_t size_in,
+                                 pte_t attrs, uint index_shift, uint page_size_shift,
+                                 volatile pte_t* page_table) TA_REQ(lock_);
+
+    // Splits a descriptor block into a set of next-level-down page blocks/pages.
+    //
+    // |vaddr| is the virtual address of the start of the block being split. |index_shift| is
+    // the index shift of the page table entry of the descriptor blocking being split.
+    // |page_size_shift| is the page size shift of the current aspace. |page_table| is the
+    // page table that contains the descriptor block being split, and |pt_index| is the index
+    // into that table.
+    zx_status_t SplitLargePage(vaddr_t vaddr, uint index_shift, uint page_size_shift,
+                               vaddr_t pt_index, volatile pte_t* page_table) TA_REQ(lock_);
 
     void MmuParamsFromFlags(uint mmu_flags,
                             pte_t* attrs, vaddr_t* vaddr_base,

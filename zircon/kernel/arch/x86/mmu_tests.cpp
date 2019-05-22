@@ -14,45 +14,6 @@
 #include <vm/pmm.h>
 #include <zircon/types.h>
 
-static bool mmu_tests() {
-    BEGIN_TEST;
-    unittest_printf("creating large vm region, and change permissions\n");
-    {
-        ArchVmAspace aspace;
-        vaddr_t base = 1UL << 20;
-        size_t size = (1UL << 47) - base - (1UL << 20);
-        zx_status_t err = aspace.Init(1UL << 20, size, 0);
-        EXPECT_EQ(err, ZX_OK, "init aspace");
-        EXPECT_EQ(aspace.pt_pages(), 1u, "single page for PML4 table");
-
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-
-        vaddr_t va = 1UL << PDP_SHIFT;
-        // Force a large page.
-        static const size_t alloc_size = 1UL << PD_SHIFT;
-
-        size_t mapped;
-        err = aspace.MapContiguous(va, 0, alloc_size / PAGE_SIZE, arch_rw_flags, &mapped);
-        EXPECT_EQ(err, ZX_OK, "map large page");
-        EXPECT_EQ(mapped, 512u, "map large page");
-        EXPECT_EQ(aspace.pt_pages(), 3u, "map large page");
-
-        err = aspace.Protect(va + PAGE_SIZE, 1, ARCH_MMU_FLAG_PERM_READ);
-        EXPECT_EQ(err, ZX_OK, "protect single page");
-        EXPECT_EQ(aspace.pt_pages(), 4u,
-                  "protect single page, split large page");
-
-        err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &mapped);
-        EXPECT_EQ(err, ZX_OK, "unmap large page");
-        EXPECT_EQ(mapped, 512u, "unmap large page");
-        err = aspace.Destroy();
-        EXPECT_EQ(err, ZX_OK, "destroy aspace");
-    }
-
-    unittest_printf("done with mmu tests\n");
-    END_TEST;
-}
-
 static bool check_virtual_address_mapped(uint64_t* pml4, vaddr_t va) {
     constexpr uint kPageTableLevels = 4;
 
@@ -129,6 +90,5 @@ static bool x86_arch_vmaspace_usermmu_tests()
 }
 
 UNITTEST_START_TESTCASE(x86_mmu_tests)
-UNITTEST("mmu tests", mmu_tests)
 UNITTEST("user-aspace page table tests", x86_arch_vmaspace_usermmu_tests)
 UNITTEST_END_TESTCASE(x86_mmu_tests, "x86_mmu", "x86 mmu tests");

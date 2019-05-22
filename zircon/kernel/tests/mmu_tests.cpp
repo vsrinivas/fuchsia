@@ -24,7 +24,6 @@
 
 static bool test_large_unaligned_region() {
     BEGIN_TEST;
-    unittest_printf("creating large un-aligned vm region, and unmap it without mapping, make sure no leak (ZX-315)\n");
         ArchVmAspace aspace;
         vaddr_t base = 1UL << 20;
         size_t size = (1UL << 47) - base - (1UL << 20);
@@ -81,7 +80,6 @@ static bool test_large_unaligned_region() {
 static bool test_large_unaligned_region_without_map() {
     BEGIN_TEST;
 
-    unittest_printf("creating large un-aligned vm region, and unmap it without mapping (ZX-315)\n");
     {
         ArchVmAspace aspace;
         vaddr_t base = 1UL << 20;
@@ -124,8 +122,58 @@ static bool test_large_unaligned_region_without_map() {
     END_TEST;
 }
 
+static bool test_large_region_protect() {
+    BEGIN_TEST;
+
+    static const vaddr_t va = 1UL << PGTABLE_L1_SHIFT;
+    // Force a large page.
+    static const size_t alloc_size = 1UL << PGTABLE_L2_SHIFT;
+    static const vaddr_t alloc_end = va + alloc_size;
+
+    vaddr_t target_vaddrs[] = {
+        va, va + PAGE_SIZE, va + 2 * PAGE_SIZE,
+        alloc_end - 3 * PAGE_SIZE, alloc_end - 2 * PAGE_SIZE, alloc_end - PAGE_SIZE,
+    };
+
+    for (unsigned i = 0; i < fbl::count_of(target_vaddrs); i++) {
+        ArchVmAspace aspace;
+        vaddr_t base = 1UL << 20;
+        size_t size = (1UL << 47) - base - (1UL << 20);
+        zx_status_t err = aspace.Init(1UL << 20, size, 0);
+        EXPECT_EQ(err, ZX_OK, "init aspace");
+
+        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+        size_t mapped;
+        err = aspace.MapContiguous(va, 0, alloc_size / PAGE_SIZE, arch_rw_flags, &mapped);
+        EXPECT_EQ(err, ZX_OK, "map large page");
+        EXPECT_EQ(mapped, 512u, "map large page");
+
+        err = aspace.Protect(target_vaddrs[i], 1, ARCH_MMU_FLAG_PERM_READ);
+        EXPECT_EQ(err, ZX_OK, "protect single page");
+
+        for (unsigned j = 0; j < fbl::count_of(target_vaddrs); j++) {
+            uint retrieved_flags = 0;
+            paddr_t pa;
+            EXPECT_EQ(ZX_OK, aspace.Query(target_vaddrs[j], &pa, &retrieved_flags), "");
+            EXPECT_EQ(target_vaddrs[j] - va, pa, "");
+
+            EXPECT_EQ(i == j ? ARCH_MMU_FLAG_PERM_READ : arch_rw_flags, retrieved_flags, "");
+        }
+
+        err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &mapped);
+        EXPECT_EQ(err, ZX_OK, "unmap large page");
+        EXPECT_EQ(mapped, 512u, "unmap large page");
+        err = aspace.Destroy();
+        EXPECT_EQ(err, ZX_OK, "destroy aspace");
+    }
+
+    END_TEST;
+}
+
 UNITTEST_START_TESTCASE(mmu_tests)
 UNITTEST("create large unaligned region and ensure it can be unmapped", test_large_unaligned_region)
 UNITTEST("create large unaligned region without mapping and ensure it can be unmapped",
          test_large_unaligned_region_without_map)
+UNITTEST("creating large vm region, and change permissions", test_large_region_protect)
 UNITTEST_END_TESTCASE(mmu_tests, "mmu", "mmu tests");
