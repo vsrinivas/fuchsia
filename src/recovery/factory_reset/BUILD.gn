@@ -102,7 +102,7 @@ test("factory_reset_unittests") {
 
   deps = [
     ":lib",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/fidl/fuchsia-hardware-block-volume:fuchsia-hardware-block-volume_c",
     "//zircon/public/lib/async-loop-cpp",

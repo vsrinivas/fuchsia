@@ -30,7 +30,7 @@ executable("tracing_test_utils_tests_app") {
 
   deps = [
     ":test_utils",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -38,7 +38,7 @@ executable("tracing_test_utils_return_1234") {
   testonly = true
 
   sources = [
-    "return_1234.cc"
+    "return_1234.cc",
   ]
 }
 
@@ -46,7 +46,7 @@ executable("tracing_test_utils_signal_peer") {
   testonly = true
 
   sources = [
-    "signal_peer.cc"
+    "signal_peer.cc",
   ]
 
   deps = [
@@ -56,9 +56,9 @@ executable("tracing_test_utils_signal_peer") {
 
 test_package("tracing_test_utils_tests") {
   deps = [
-    ":tracing_test_utils_tests_app",
     ":tracing_test_utils_return_1234",
     ":tracing_test_utils_signal_peer",
+    ":tracing_test_utils_tests_app",
   ]
 
   binaries = [

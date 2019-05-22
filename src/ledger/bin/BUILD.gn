@@ -48,7 +48,7 @@ executable("ledger_unittests") {
     "//src/ledger/bin/testing:unittests",
     "//src/ledger/bin/testing/netconnector:unittests",
     "//src/lib/fxl:printers",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

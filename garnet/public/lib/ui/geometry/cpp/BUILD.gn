@@ -29,6 +29,6 @@ executable("tests") {
   deps = [
     ":cpp",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

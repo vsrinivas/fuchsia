@@ -32,7 +32,7 @@ executable("trace_tests_bin") {
   deps = [
     "//garnet/bin/trace:unittests",
     "//garnet/lib/measure:unittests",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

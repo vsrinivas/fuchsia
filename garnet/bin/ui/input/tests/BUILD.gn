@@ -21,7 +21,7 @@ executable("input_tool_unittests") {
 
   deps = [
     "//garnet/bin/ui/input:inverse_keymap",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/hid",
   ]
 }

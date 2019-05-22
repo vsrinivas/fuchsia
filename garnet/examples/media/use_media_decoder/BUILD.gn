@@ -67,7 +67,7 @@ executable("use_aac_decoder_test") {
 
   deps = [
     ":use_media_decoder_source_set",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

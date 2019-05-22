@@ -27,7 +27,7 @@ source_set("testing_deps") {
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -50,8 +50,8 @@ source_set("mocks") {
   ]
   deps = [
     ":dummy_system",
-    "//garnet/public/lib/inspect",
     "//garnet/lib/ui/gfx",
+    "//garnet/public/lib/inspect",
   ]
 }
 
@@ -65,5 +65,6 @@ executable("unittests") {
     ":dummy_system",
     ":mocks",
     ":testing_deps",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

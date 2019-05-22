@@ -30,7 +30,7 @@ executable("unittests") {
     "//src/ledger/cloud_provider_firestore/bin/app:unittests",
     "//src/ledger/cloud_provider_firestore/bin/firestore:unittests",
     "//src/ledger/cloud_provider_firestore/bin/grpc:unittests",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

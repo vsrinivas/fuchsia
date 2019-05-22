@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
-#include <unordered_set>
+#include "garnet/bin/cpuperf_provider/categories.h"
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
 
-#include "garnet/bin/cpuperf_provider/categories.h"
+#include <string>
+#include <unordered_set>
 
 namespace cpuperf_provider {
 
@@ -18,9 +16,8 @@ namespace {
 class CategoryTest : public ::testing::Test {
  public:
   CategoryTest()
-    : model_event_manager_(
-          perfmon::ModelEventManager::Create(perfmon::GetDefaultModelName())) {
-  }
+      : model_event_manager_(perfmon::ModelEventManager::Create(
+            perfmon::GetDefaultModelName())) {}
 
   perfmon::ModelEventManager* model_event_manager() const {
     return model_event_manager_.get();
@@ -32,11 +29,10 @@ class CategoryTest : public ::testing::Test {
 
 TEST_F(CategoryTest, Os) {
   const std::unordered_set<std::string> categories{
-    "cpu:os",
+      "cpu:os",
   };
-  TraceConfig::IsCategoryEnabledFunc func =
-    [&categories](const char* name) {
-      return categories.find(name) != categories.end();
+  TraceConfig::IsCategoryEnabledFunc func = [&categories](const char* name) {
+    return categories.find(name) != categories.end();
   };
   auto config = TraceConfig::Create(model_event_manager(), func);
   ASSERT_TRUE(config);
@@ -54,11 +50,10 @@ TEST_F(CategoryTest, Os) {
 
 TEST_F(CategoryTest, User) {
   const std::unordered_set<std::string> categories{
-    "cpu:user",
+      "cpu:user",
   };
-  TraceConfig::IsCategoryEnabledFunc func =
-    [&categories](const char* name) {
-      return categories.find(name) != categories.end();
+  TraceConfig::IsCategoryEnabledFunc func = [&categories](const char* name) {
+    return categories.find(name) != categories.end();
   };
   auto config = TraceConfig::Create(model_event_manager(), func);
   ASSERT_TRUE(config);
@@ -75,18 +70,17 @@ TEST_F(CategoryTest, User) {
 }
 
 TEST_F(CategoryTest, NeitherOsNorUser) {
-  const std::unordered_set<std::string> categories{
+  const std::unordered_set<std::string> categories {
     "cpu:pc",
 #if defined(__x86_64__)
-    "cpu:fixed:instructions_retired",
+        "cpu:fixed:instructions_retired",
 #elif defined(__aarch64__)
-    "cpu:fixed:cycle_counter",
+        "cpu:fixed:cycle_counter",
 #endif
-    "cpu:sample:1000",
+        "cpu:sample:1000",
   };
-  TraceConfig::IsCategoryEnabledFunc func =
-    [&categories](const char* name) {
-      return categories.find(name) != categories.end();
+  TraceConfig::IsCategoryEnabledFunc func = [&categories](const char* name) {
+    return categories.find(name) != categories.end();
   };
   auto config = TraceConfig::Create(model_event_manager(), func);
   ASSERT_TRUE(config);
@@ -100,20 +94,18 @@ TEST_F(CategoryTest, NeitherOsNorUser) {
 }
 
 TEST_F(CategoryTest, Timebase) {
-  const std::unordered_set<std::string> categories{
+  const std::unordered_set<std::string> categories {
     "cpu:pc",
 #if defined(__x86_64__)
-    "cpu:timebase:fixed:instructions_retired",
-    "cpu:fixed:instructions_retired",
+        "cpu:timebase:fixed:instructions_retired",
+        "cpu:fixed:instructions_retired",
 #elif defined(__aarch64__)
-    "cpu:timebase:fixed:cycle_counter",
-    "cpu:fixed:cycle_counter",
+        "cpu:timebase:fixed:cycle_counter", "cpu:fixed:cycle_counter",
 #endif
-    "cpu:sample:1000",
+        "cpu:sample:1000",
   };
-  TraceConfig::IsCategoryEnabledFunc func =
-    [&categories](const char* name) {
-      return categories.find(name) != categories.end();
+  TraceConfig::IsCategoryEnabledFunc func = [&categories](const char* name) {
+    return categories.find(name) != categories.end();
   };
   auto config = TraceConfig::Create(model_event_manager(), func);
   ASSERT_TRUE(config);
@@ -129,14 +121,3 @@ TEST_F(CategoryTest, Timebase) {
 }  // namespace
 
 }  // namespace cpuperf_provider
-
-// Provide our own main so that --verbose,etc. are recognized.
-int main(int argc, char** argv) {
-  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(cl))
-    return EXIT_FAILURE;
-
-  testing::InitGoogleTest(&argc, argv);
-
-  return RUN_ALL_TESTS();
-}

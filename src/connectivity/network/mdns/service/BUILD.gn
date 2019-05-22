@@ -130,7 +130,7 @@ test("tests") {
 
   deps = [
     ":source_set",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

@@ -19,7 +19,7 @@ executable("input_apptests") {
   deps = [
     ":end_to_end_tests",
     ":interface_tests",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -110,7 +110,7 @@ executable("input_reader_unittests") {
   deps = [
     "//garnet/bin/ui/input_reader",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
   ]

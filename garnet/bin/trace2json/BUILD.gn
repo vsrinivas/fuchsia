@@ -76,8 +76,8 @@ test("trace2json_tests") {
 
   deps = [
     ":trace_parser",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 
   data_deps = [

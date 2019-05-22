@@ -72,7 +72,7 @@ executable("guest_manager_unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

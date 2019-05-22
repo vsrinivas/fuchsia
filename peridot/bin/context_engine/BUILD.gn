@@ -59,7 +59,7 @@ executable("context_index_unittest") {
     "//garnet/public/lib/fsl",
     "//peridot/public/lib/context/cpp:context_helper",
     "//sdk/fidl/fuchsia.modular",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -111,7 +111,7 @@ executable("context_repository_unittest") {
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//sdk/fidl/fuchsia.modular",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

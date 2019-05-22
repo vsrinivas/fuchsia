@@ -75,7 +75,7 @@ executable("sessionctl_unittest") {
     "//peridot/lib/testing:test_story_command_executor",
     "//peridot/lib/testing:test_with_session_storage",
     "//sdk/fidl/fuchsia.modular",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

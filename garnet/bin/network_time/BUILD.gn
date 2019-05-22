@@ -105,8 +105,8 @@ executable("tests") {
     ":lib",
     "//src/lib/files",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/boringssl",
-    "//third_party/googletest:gtest_main",
     "//third_party/roughtime:client_lib",
     "//zircon/public/lib/zx",
   ]

@@ -32,7 +32,7 @@ executable("virtualization_lib_unittests") {
     ":virtualization",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

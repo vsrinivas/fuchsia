@@ -53,6 +53,6 @@ executable("linear_ranker_unittest") {
   deps = [
     ":linear_ranker",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

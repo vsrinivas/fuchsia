@@ -65,7 +65,7 @@ executable("clipboard_impl_unittest") {
     "//garnet/public/lib/gtest",
     "//peridot/lib/testing:test_with_ledger",
     "//sdk/fidl/fuchsia.modular",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

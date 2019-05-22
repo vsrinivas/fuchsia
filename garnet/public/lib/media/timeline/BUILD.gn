@@ -41,7 +41,7 @@ executable("test_bin") {
 
   deps = [
     ":timeline",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

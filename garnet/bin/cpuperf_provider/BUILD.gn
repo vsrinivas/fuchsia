@@ -99,7 +99,7 @@ executable("cpuperf_provider_tests_bin") {
 
   deps = [
     ":categories",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

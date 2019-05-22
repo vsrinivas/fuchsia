@@ -4,12 +4,17 @@
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/test/test_settings.h"
 #include "src/media/audio/audio_core/mixer/test/audio_performance.h"
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+
+  if (!fxl::SetTestSettings(command_line)) {
+    return EXIT_FAILURE;
+  }
 
   // --full     Display results for the full frequency spectrum.
   // --dump     Display results in importable format.

@@ -95,7 +95,7 @@ executable("http_service_tests_bin") {
 
   deps = [
     ":lib",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

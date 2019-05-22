@@ -183,6 +183,6 @@ executable("suggestion_engine_impl_unittest") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

@@ -47,8 +47,8 @@ if (current_toolchain == host_toolchain) {
       "//src/developer/debug/zxdb/common:tests",
       "//src/developer/debug/zxdb/console:tests",
       "//src/developer/debug/zxdb/expr:tests",
+      "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",
-      "//third_party/googletest:gtest_main",
     ]
   }
 

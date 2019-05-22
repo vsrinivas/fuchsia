@@ -24,7 +24,7 @@ executable("fake_failing_test") {
   testonly = true
 
   deps = [
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 
   sources = [
@@ -36,7 +36,7 @@ executable("fake_passing_test") {
   testonly = true
 
   deps = [
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 
   sources = [

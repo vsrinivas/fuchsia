@@ -97,7 +97,7 @@ executable("config_unittest") {
   deps = [
     "//garnet/public/lib/syslog/cpp",
     "//src/developer/crashpad_agent:src",
-    "//third_party/googletest:gtest_main",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -130,7 +130,7 @@ executable("crashpad_agent_unittest") {
     "//src/lib/fxl",
     "//third_party/crashpad/util",
     "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest_main",
+    "//third_party/googletest:gtest",
     "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/fidl/fuchsia-mem",
     "//zircon/public/lib/zx",

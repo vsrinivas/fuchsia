@@ -48,8 +48,8 @@ test("elflib_tests") {
 
   deps = [
     ":elflib",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 
   data_deps = [

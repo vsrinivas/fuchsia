@@ -20,7 +20,7 @@ executable("netstack_no_network_test_client") {
 
   deps = [
     "//garnet/lib/inet",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -57,7 +57,7 @@ test("netstack_bsdsocket_c_api_test") {
   }
 
   deps = [
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -71,7 +71,7 @@ test("netstack_fuchsia_c_api_test") {
 
   deps = [
     "//garnet/public/lib/netstack/c",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/fidl/fuchsia-net:fuchsia-net_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",

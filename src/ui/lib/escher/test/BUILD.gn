@@ -14,7 +14,7 @@ if (is_mac) {
       "no_op_mac_unittest.cc",
     ]
     deps = [
-      "//third_party/googletest:gtest_main",
+      "//src/lib/fxl/test:gtest_main",
     ]
   }
 } else {

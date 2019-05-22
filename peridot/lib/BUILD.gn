@@ -46,7 +46,7 @@ executable("peridot_lib_unittests") {
     "//peridot/lib/scoped_tmpfs:unittests",
     "//peridot/lib/socket:unittests",
     "//peridot/lib/util:unittests",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

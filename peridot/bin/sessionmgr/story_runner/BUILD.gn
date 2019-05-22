@@ -129,7 +129,7 @@ executable("story_controller_impl_unittest") {
   deps = [
     ":story_runner",
     "//peridot/lib/fidl:clone",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -146,6 +146,6 @@ executable("link_impl_unittest") {
     "//peridot/lib/fidl:clone",
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib/entity/cpp:json",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

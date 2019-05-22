@@ -50,8 +50,8 @@ executable("constants_and_utils_unittest") {
     ":constants_and_utils",
     "//garnet/public/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -105,7 +105,7 @@ executable("session_storage_unittest") {
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.ledger",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/system/public",
   ]
 }
@@ -159,6 +159,6 @@ executable("story_storage_unittest") {
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.ledger",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

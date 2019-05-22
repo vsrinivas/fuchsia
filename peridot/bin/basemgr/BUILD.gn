@@ -223,7 +223,7 @@ executable("auto_login_base_shell_test_bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -265,7 +265,7 @@ executable("session_context_impl_unittest") {
     "//garnet/public/lib/gtest",
     "//peridot/lib/fidl:clone",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

@@ -59,8 +59,8 @@ test("catapult_converter_unittest") {
   deps = [
     ":converter",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
     "//third_party/rapidjson",
   ]
 }

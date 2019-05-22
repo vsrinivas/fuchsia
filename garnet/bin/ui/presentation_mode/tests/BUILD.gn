@@ -17,6 +17,6 @@ executable("unittests") {
   ]
   deps = [
     "//garnet/bin/ui/presentation_mode",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

@@ -20,7 +20,7 @@ executable("cpuperf_tests_bin") {
 
   deps = [
     "//garnet/bin/cpuperf:unittests",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

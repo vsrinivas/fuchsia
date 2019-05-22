@@ -67,7 +67,7 @@ executable("agent_runner_unittest") {
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/trace",
   ]
 }

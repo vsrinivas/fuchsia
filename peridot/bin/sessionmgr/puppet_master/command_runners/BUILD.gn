@@ -65,7 +65,7 @@ executable("set_link_value_command_runner_unittest") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/testing:test_with_session_storage",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -104,7 +104,7 @@ executable("add_mod_command_runner_unittest") {
     "//peridot/lib/testing:test_with_session_storage",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -135,7 +135,7 @@ executable("remove_mod_command_runner_unittest") {
     ":remove_mod_command_runner",
     "//garnet/public/lib/gtest",
     "//peridot/lib/testing:test_with_session_storage",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -164,7 +164,7 @@ executable("set_focus_state_command_runner_unittest") {
   deps = [
     ":set_focus_state_command_runner",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -190,7 +190,7 @@ executable("focus_mod_command_runner_unittest") {
   deps = [
     ":focus_mod_command_runner",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -221,6 +221,6 @@ executable("set_kind_of_proto_story_option_command_runner_unittest") {
     ":set_kind_of_proto_story_option_command_runner",
     "//garnet/public/lib/gtest",
     "//peridot/lib/testing:test_with_session_storage",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

@@ -28,7 +28,7 @@ executable("a11y_manager_apptests") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 
   # This is a dependency of the semantic tree to perform certain matrix transform operations.

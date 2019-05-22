@@ -7,6 +7,6 @@ import("//build/test.gni")
 test("system_monitor_tests") {
   deps = [
     "//garnet/lib/system_monitor/dockyard:tests",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

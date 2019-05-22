@@ -50,7 +50,7 @@ executable("bin") {
     "//src/virtualization/bin/vmm/device",
     "//src/virtualization/bin/vmm/device:qcow_test_data",
     "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest_main",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
   ]
 }

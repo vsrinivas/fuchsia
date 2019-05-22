@@ -12,7 +12,7 @@ source_set("testing") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/vfs/cpp",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/fidl/fuchsia-io",
   ]
 }

@@ -45,7 +45,7 @@ executable("google_auth_provider_unittests") {
 
   deps = [
     ":unittests",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -66,7 +66,7 @@ source_set("unittests") {
     "//sdk/fidl/fuchsia.auth",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl:printers",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

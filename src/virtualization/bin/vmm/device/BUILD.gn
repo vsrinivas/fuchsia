@@ -316,7 +316,7 @@ executable("device_tests") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace-provider",
     "//zircon/public/lib/virtio",
@@ -347,7 +347,7 @@ executable("device_unittests") {
   deps = [
     ":qcow_test_data",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
 }

@@ -164,7 +164,7 @@ executable("sparse_array_tests") {
   ]
 
   deps = [
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -178,7 +178,7 @@ executable("bitarr_tests") {
   ]
 
   deps = [
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

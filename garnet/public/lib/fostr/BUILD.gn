@@ -66,7 +66,7 @@ test("tests") {
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

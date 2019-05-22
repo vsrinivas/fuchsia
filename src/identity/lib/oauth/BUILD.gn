@@ -29,7 +29,7 @@ executable("oauth_unittests") {
 
   deps = [
     ":unittests",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

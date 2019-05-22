@@ -68,7 +68,7 @@ executable("puppet_master_impl_unittest") {
     "//peridot/lib/testing:test_story_command_executor",
     "//peridot/lib/testing:test_with_session_storage",
     "//sdk/fidl/fuchsia.modular",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -94,7 +94,7 @@ executable("story_command_executor_unittest") {
   deps = [
     ":story_command_executor",
     "//sdk/fidl/fuchsia.modular",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -124,7 +124,7 @@ executable("dispatch_story_command_executor_unittest") {
     ":dispatch_story_command_executor",
     "//peridot/lib/testing:test_with_ledger",
     "//sdk/fidl/fuchsia.modular",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

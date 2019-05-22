@@ -16,7 +16,7 @@ executable("agent_services_test") {
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

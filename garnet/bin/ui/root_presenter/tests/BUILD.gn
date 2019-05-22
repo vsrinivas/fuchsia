@@ -22,6 +22,6 @@ executable("root_presenter_unittests") {
   deps = [
     "//garnet/bin/ui/root_presenter:displays",
     "//sdk/fidl/fuchsia.ui.policy",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

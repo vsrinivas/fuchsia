@@ -49,7 +49,7 @@ if (current_toolchain == host_toolchain) {
     deps = [
       ":host_tests",
       ":lib",
-      "//third_party/googletest:gtest_main",
+      "//src/lib/fxl/test:gtest_main",
       "//tools/fidlcat/lib:host_tests",
     ]
   }

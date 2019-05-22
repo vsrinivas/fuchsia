@@ -41,6 +41,6 @@ executable("peridot_public_lib_unittests") {
     "async/cpp:unittests",
     "entity/cpp:unittests",
     "modular_test_harness/cpp:unittests",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

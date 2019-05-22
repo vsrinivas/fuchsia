@@ -83,8 +83,8 @@ executable("apply_mutations_unittest") {
 
   deps = [
     ":apply_mutations",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -140,8 +140,8 @@ executable("ledger_story_model_storage_unittest") {
     "//garnet/public/lib/async_promise",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/testing:test_with_ledger",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -176,7 +176,7 @@ executable("story_model_owner_unittest") {
     ":story_model_owner",
     ":story_model_storage",
     "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 }

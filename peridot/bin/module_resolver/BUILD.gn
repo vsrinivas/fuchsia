@@ -72,6 +72,6 @@ executable("local_module_resolver_unittest") {
     "//peridot/lib/testing:entity_resolver_fake",
     "//peridot/public/lib/entity/cpp:json",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

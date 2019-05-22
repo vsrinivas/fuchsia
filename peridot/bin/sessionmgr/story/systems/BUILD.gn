@@ -49,8 +49,8 @@ executable("story_visibility_system_unittest") {
     ":story_visibility_system",
     "//peridot/bin/sessionmgr/story/model",
     "//peridot/bin/sessionmgr/story/model/testing",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 }

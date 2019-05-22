@@ -29,7 +29,7 @@ executable("last_focus_time_test") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -48,8 +48,8 @@ executable("session_shell_test") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -72,7 +72,7 @@ executable("intents_test") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -96,8 +96,7 @@ executable("story_shell_factory_test") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

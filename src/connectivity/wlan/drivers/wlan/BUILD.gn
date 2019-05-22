@@ -61,7 +61,7 @@ executable("wlan_minstrel_unittest") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/connectivity/wlan/lib/mlme/cpp/tests:test_main",
-    "//third_party/googletest:gtest_main",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
   ]
 

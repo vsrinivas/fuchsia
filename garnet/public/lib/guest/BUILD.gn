@@ -32,7 +32,7 @@ executable("guest_lib_unittests") {
     ":guest",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

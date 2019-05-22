@@ -58,7 +58,7 @@ executable("annoyance_ranking_feature_unittest") {
   deps = [
     ":annoyance_ranking_feature",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -86,7 +86,7 @@ executable("affinity_ranking_feature_unittest") {
   deps = [
     ":affinity_ranking_feature",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -112,7 +112,7 @@ executable("interrupting_ranking_feature_unittest") {
   deps = [
     ":interrupting_ranking_feature",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -138,7 +138,7 @@ executable("kronk_ranking_feature_unittest") {
   deps = [
     ":kronk_ranking_feature",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -170,7 +170,7 @@ executable("mod_pair_ranking_feature_unittest") {
   deps = [
     ":mod_pair_ranking_feature",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -196,7 +196,7 @@ executable("proposal_hint_ranking_feature_unittest") {
   deps = [
     ":proposal_hint_ranking_feature",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -222,7 +222,7 @@ executable("query_match_ranking_feature_unittest") {
   deps = [
     ":query_match_ranking_feature",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -248,6 +248,6 @@ executable("dead_story_ranking_feature_unittest") {
   deps = [
     ":dead_story_ranking_feature",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

@@ -72,7 +72,7 @@ executable("conjugate_ranked_passive_filter_unittest") {
   deps = [
     ":conjugate_ranked_passive_filter",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -102,7 +102,7 @@ executable("ranked_passive_filter_unittest") {
   deps = [
     ":ranked_passive_filter",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -132,6 +132,6 @@ executable("ranked_active_filter_unittest") {
   deps = [
     ":ranked_active_filter",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

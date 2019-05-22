@@ -120,6 +120,7 @@ executable("apptests") {
   ]
   deps = [
     ":testing_deps",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -145,9 +146,9 @@ executable("pixeltests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",
-    "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-cpp",
   ]
 }
@@ -171,8 +172,8 @@ executable("viewstate_apptests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//src/ui/lib/glm_workaround",
-    "//third_party/googletest:gtest_main",
   ]
 }
 

@@ -44,7 +44,7 @@ test("svc_unittests") {
   deps = [
     ":svc",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]

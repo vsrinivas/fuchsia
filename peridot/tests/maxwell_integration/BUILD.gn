@@ -43,7 +43,7 @@ executable("context_engine_test") {
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//sdk/fidl/fuchsia.modular",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -65,7 +65,7 @@ executable("suggestion_engine_test") {
     "//peridot/lib/testing:wait_until_idle",
     "//peridot/public/lib/context/cpp:context_helper",
     "//sdk/fidl/fuchsia.modular",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

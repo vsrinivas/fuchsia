@@ -46,7 +46,7 @@ executable("integration") {
     "//src/ledger/cloud_provider_in_memory/lib",
     "//src/ledger/lib/firebase_auth/testing",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

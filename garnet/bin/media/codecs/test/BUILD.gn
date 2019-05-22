@@ -50,7 +50,6 @@ executable("raw_frames_test_bin") {
     "//garnet/public/lib/component/cpp",
     "//src/lib/fxl",
     "//third_party/boringssl:crypto",
-    "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -87,7 +86,7 @@ executable("timestamp_extrapolator_test_bin") {
 
   deps = [
     "//garnet/bin/media/codecs:timestamp_extrapolator",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -116,7 +115,7 @@ executable("mpsc_queue_test_bin") {
   deps = [
     "//garnet/bin/media/codecs:mpsc_queue",
     "//garnet/public/lib/fsl",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -146,7 +145,7 @@ executable("chunk_input_stream_test_bin") {
   deps = [
     "//garnet/bin/media/codecs:chunk_input_stream",
     "//src/lib/fxl",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
