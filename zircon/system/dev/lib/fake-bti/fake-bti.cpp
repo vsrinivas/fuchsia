@@ -17,6 +17,9 @@
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
 
+// Normally just defined in the kernel:
+#define PAGE_SIZE_SHIFT 12
+
 namespace {
 
 enum class HandleType {
@@ -40,6 +43,7 @@ public:
     }
 
     HandleType type() const final { return HandleType::BTI; }
+
 private:
     Bti() = default;
 };
@@ -60,9 +64,10 @@ public:
     }
 
     HandleType type() const final { return HandleType::PMT; }
+
 private:
     Pmt(zx::vmo vmo, uint64_t offset, uint64_t size)
-            : vmo_(std::move(vmo)), offset_(offset), size_(size) { }
+        : vmo_(std::move(vmo)), offset_(offset), size_(size) {}
 
     zx::vmo vmo_;
     uint64_t offset_;
@@ -133,14 +138,15 @@ public:
         *out = IndexToHandle(handles_.size() - 1);
         return ZX_OK;
     }
+
 private:
     static size_t HandleToIndex(zx_handle_t handle) {
         ZX_ASSERT(IsValidFakeHandle(handle));
-        return handle >> 1;
+        return (handle >> 1) - 1;
     }
 
     static zx_handle_t IndexToHandle(size_t idx) {
-        return static_cast<zx_handle_t>(idx << 1);
+        return static_cast<zx_handle_t>((idx + 1) << 1);
     }
 
     fbl::Mutex lock_;
@@ -298,29 +304,54 @@ zx_status_t zx_object_get_info(zx_handle_t handle, uint32_t topic, void* buffer,
 
     if (obj->type() == HandleType::BTI) {
         switch (topic) {
-            case ZX_INFO_BTI: {
-                if (avail_count) {
-                    *avail_count = 1;
-                }
-                if (actual_count) {
-                    *actual_count = 0;
-                }
-                if (buffer_size < sizeof(zx_info_bti_t)) {
-                    return ZX_ERR_BUFFER_TOO_SMALL;
-                }
-                zx_info_bti_t info = {
-                    .minimum_contiguity = ZX_PAGE_SIZE,
-                    .aspace_size = UINT64_MAX,
-                };
-                memcpy(buffer, &info, sizeof(info));
-                if (actual_count) {
-                    *actual_count = 1;
-                }
-                return ZX_OK;
+        case ZX_INFO_BTI: {
+            if (avail_count) {
+                *avail_count = 1;
             }
-            default:
-                ZX_ASSERT_MSG(false, "fake object_get_info: Unsupported BTI topic %u\n", topic);
+            if (actual_count) {
+                *actual_count = 0;
+            }
+            if (buffer_size < sizeof(zx_info_bti_t)) {
+                return ZX_ERR_BUFFER_TOO_SMALL;
+            }
+            zx_info_bti_t info = {
+                .minimum_contiguity = ZX_PAGE_SIZE,
+                .aspace_size = UINT64_MAX,
+            };
+            memcpy(buffer, &info, sizeof(info));
+            if (actual_count) {
+                *actual_count = 1;
+            }
+            return ZX_OK;
+        }
+        default:
+            ZX_ASSERT_MSG(false, "fake object_get_info: Unsupported BTI topic %u\n", topic);
         }
     }
     ZX_ASSERT_MSG(false, "fake object_get_info: Unsupported PMT topic %u\n", topic);
+}
+
+// A fake version of zx_vmo_create_contiguous.  This version just creates a normal vmo.
+zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32_t alignment_log2,
+                                     zx_handle_t* out) {
+    if (size == 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (alignment_log2 == 0) {
+        alignment_log2 = PAGE_SIZE_SHIFT;
+    }
+    // catch obviously wrong values
+    if (alignment_log2 < PAGE_SIZE_SHIFT || alignment_log2 >= (8 * sizeof(uint64_t))) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Make sure this is a valid fake bti:
+    fbl::RefPtr<Object> bti_obj;
+    zx_status_t status = gHandleTable.Get(bti_handle, &bti_obj);
+    ZX_ASSERT_MSG(status == ZX_OK && bti_obj->type() == HandleType::BTI,
+                  "fake bti_pin: Bad handle %u\n", bti_handle);
+
+    // For this fake implementation, just create a normal vmo:
+    return zx_vmo_create(size, 0, out);
 }
