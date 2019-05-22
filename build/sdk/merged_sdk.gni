@@ -1,0 +1,95 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("config.gni")
+
+# Aggregates multiple SDKs into a single archive.
+#
+# Parameters
+#
+#   deps (required)
+#     List of labels representing SDKs to merge.
+#     A label may point to an `sdk` or a `merged_sdk` instance.
+
+template("merged_sdk") {
+  assert(defined(invoker.deps), "Must define a 'deps' parameter")
+  assert(invoker.deps != [], "'deps' may not be empty")
+
+  if (!build_sdk_archives) {
+    # This template is a no-op if SDK archives are not emitted.
+    group(target_name) {
+      deps = invoker.deps
+    }
+  } else {
+    index = 0
+    latest_archive = ""
+    latest_step = ""
+    foreach(dep, invoker.deps) {
+      gen_dir = get_label_info(dep, "target_gen_dir")
+      name = get_label_info(dep, "name")
+      dep_archive = "$gen_dir/$name.tar.gz"
+
+      if (index == 0) {
+        latest_archive = dep_archive
+      } else {
+        merged_archive = "$target_gen_dir/$target_name.$index.tar.gz"
+        step = "${target_name}_merge_${index}"
+
+        compiled_action(step) {
+          forward_variables_from(invoker, [ "testonly" ])
+
+          tool = "//build/sdk/tools/merge:merge_sdk"
+
+          inputs = [
+            dep_archive,
+            latest_archive,
+          ]
+
+          outputs = [
+            merged_archive,
+          ]
+
+          args = [
+            "--base-archive",
+            rebase_path(latest_archive),
+            "--complement-archive",
+            rebase_path(dep_archive),
+            "--output-archive",
+            rebase_path(merged_archive),
+          ]
+
+          if (index == 1) {
+            public_deps = invoker.deps
+          } else {
+            public_deps = [
+              ":$latest_step",
+            ]
+          }
+        }
+
+        latest_archive = merged_archive
+        latest_step = step
+      }
+
+      index = index + 1
+    }
+
+    copy(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      sources = [
+        latest_archive,
+      ]
+
+      outputs = [
+        "$target_gen_dir/$target_name.tar.gz",
+      ]
+
+      public_deps = [
+        ":$latest_step",
+      ]
+    }
+  }
+}

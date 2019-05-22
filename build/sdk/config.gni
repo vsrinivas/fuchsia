@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 declare_args() {
+  # Whether to build SDK tarballs.
+  build_sdk_archives = false
+
   # Whether to only warn when an SDK has been modified.
   # If false, any unacknowledged SDK change will cause a build failure.
   warn_on_sdk_changes = false

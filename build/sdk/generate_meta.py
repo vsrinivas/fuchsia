@@ -26,7 +26,7 @@ def main():
                         required=True)
     parser.add_argument('--id',
                         help='Opaque identifier for the SDK',
-                        required=True)
+                        default='')
     parser.add_argument('--schema-version',
                         help='Opaque identifier for the metadata schemas',
                         required=True)

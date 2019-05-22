@@ -8,11 +8,6 @@ import("config.gni")
 import("meta/version.gni")
 import("sdk_molecule.gni")
 
-declare_args() {
-  # Whether to build SDK tarballs.
-  build_sdk_archives = false
-}
-
 # A collection of elements to be published in an SDK.
 #
 # Parameters
@@ -23,7 +18,7 @@ declare_args() {
 #
 #   id (optional)
 #     An opaque identifier for the SDK.
-#     Defaults to "notavalidid".
+#     Defaults to the empty string.
 #
 #   api (required)
 #     Path to the file representing the canonical contents of this SDK.
@@ -81,11 +76,6 @@ template("sdk") {
   sdk_name = target_name
   if (defined(invoker.name)) {
     sdk_name = invoker.name
-  }
-
-  sdk_id = "notavalidid"
-  if (defined(invoker.id) && invoker.id != "") {
-    sdk_id = invoker.id
   }
 
   # Generates the manifest.
@@ -208,11 +198,16 @@ template("sdk") {
       target_triple,
       "--host-arch",
       host_triple,
-      "--id",
-      sdk_id,
       "--schema-version",
       sdk_metadata_schema_version,
     ]
+
+    if (defined(invoker.id) && invoker.id != "") {
+      args += [
+        "--id",
+        invoker.id,
+      ]
+    }
 
     public_deps = [
       ":$copy_target_name",
@@ -284,9 +279,11 @@ template("sdk") {
 
   if (build_sdk_archives) {
     # Generates the final archive.
-    final_archive = "$root_out_dir/sdk/archive/$sdk_name.tar.gz"
+    local_archive = "$target_gen_dir/$target_name.tar.gz"
 
-    compiled_action(archive_target_name) {
+    archive_generate_target_name = "${archive_target_name}_generate"
+
+    compiled_action(archive_generate_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
       tool = "//build/tools/tar_maker"
@@ -296,18 +293,34 @@ template("sdk") {
       ]
 
       outputs = [
-        final_archive,
+        local_archive,
       ]
 
       args = [
         "-manifest",
         rebase_path(archive_manifest_file),
         "-output",
-        rebase_path(final_archive),
+        rebase_path(local_archive),
       ]
 
       deps = [
         ":$archive_manifest_target_name",
+      ]
+    }
+
+    copy(archive_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      sources = [
+        local_archive,
+      ]
+
+      outputs = [
+        "$root_out_dir/sdk/archive/$sdk_name.tar.gz",
+      ]
+
+      public_deps = [
+        ":$archive_generate_target_name",
       ]
     }
   } else {
@@ -323,7 +336,7 @@ template("sdk") {
   group(main_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    deps = [
+    public_deps = [
       ":$archive_target_name",
     ]
   }
