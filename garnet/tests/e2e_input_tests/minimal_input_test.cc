@@ -218,7 +218,7 @@ class MinimalInputTest : public gtest::RealLoopFixture {
   bool test_was_run_ = false;
 };
 
-TEST_F(MinimalInputTest, Tap) {
+TEST_F(MinimalInputTest, DISABLED_Tap) {
   // Set up inputs. Fires when display and content are available.
   SetInjectInputCallback([this] {
     InjectInput({"tap",  // Tap at the center of the display
