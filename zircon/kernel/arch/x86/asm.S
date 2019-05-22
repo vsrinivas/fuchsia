@@ -32,46 +32,6 @@ FUNCTION(x86_64_context_switch)
     retq
 END_FUNCTION(x86_64_context_switch)
 
-#include <arch/x86/mp.h>
-
-/* void arch_spin_lock(unsigned long *lock) */
-FUNCTION(arch_spin_lock)
-    /* fetch the current cpu number + 1 */
-    mov %gs:PERCPU_CPU_NUM_OFFSET, %rsi
-    inc %rsi
-
-.Ltake_lock:
-    xor %rax, %rax
-    lock cmpxchg %rsi, (%rdi)
-    jnz .Lspin
-    ret
-
-.Lspin:
-    pause
-    cmpq $0, (%rdi)
-    je .Ltake_lock
-    jmp .Lspin
-END_FUNCTION(arch_spin_lock)
-
-/* int arch_spin_trylock(unsigned long *lock) */
-FUNCTION(arch_spin_trylock)
-    /* fetch the current cpu number + 1 */
-    mov %gs:PERCPU_CPU_NUM_OFFSET, %rsi
-    inc %rsi
-
-    xor %rax, %rax
-    lock cmpxchg %rsi, (%rdi)
-    /* we return 0 to indicate success. %rax contains the value found by cmpxchg,
-     * which is already 0 if we got the lock */
-    ret
-END_FUNCTION(arch_spin_trylock)
-
-/* void arch_spin_unlock(spin_lock_t *lock) */
-FUNCTION(arch_spin_unlock)
-    movq $0, (%rdi)
-    ret
-END_FUNCTION(arch_spin_unlock)
-
 /* rep stos version of page zero */
 FUNCTION(arch_zero_page)
     xorl    %eax, %eax /* set %rax = 0 */

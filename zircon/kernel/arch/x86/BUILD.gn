@@ -98,6 +98,7 @@ library("x86") {
     "pvclock.cpp",
     "registers.cpp",
     "smp.cpp",
+    "spinlock.cpp",
     "start.S",
     "start16.S",
     "system_topology.cpp",
