@@ -12,10 +12,16 @@ constexpr char kBugReportJsonSchema[] = R"({
   "type": "object",
   "properties": {
     "annotations": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties" : {
+        "type" : "string"
+      }
     },
     "attachments": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties" : {
+        "type" : "string"
+      }
     }
   },
   "required": [
