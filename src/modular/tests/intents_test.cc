@@ -158,7 +158,7 @@ TEST_F(IntentsTest, DISABLED_ModuleUsesIntentHandler) {
 // Launches a module that exposes an intent handler service then tests that a
 // second intent sent to an already running module with the same parameters but
 // different data notifies the intent handler of the new intent.
-TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
+TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerSameParamName) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
@@ -188,7 +188,7 @@ TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
 // Launches a module that exposes an intent handler service then tests that a
 // second intent with different parameters is delivered to to the already
 // running intent handler.
-TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
+TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerDifferentParam) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
@@ -220,7 +220,7 @@ TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
 // Launches a module that exposes an intent handler service then tests that a
 // second intent with different handler is not delivered to the running
 // intent handler.
-TEST_F(IntentsTest, DifferentHandler) {
+TEST_F(IntentsTest, DISABLED_DifferentHandler) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
