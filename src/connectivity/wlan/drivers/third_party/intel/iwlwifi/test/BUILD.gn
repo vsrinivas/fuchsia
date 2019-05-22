@@ -36,6 +36,20 @@ executable("dummy_test") {
   ]
 }
 
+executable("utils_test") {
+  output_name = "utils_test"
+  testonly = true
+
+  sources = [
+    "utils_test.cc",
+  ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi_sim_trans_ss",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 package("iwlwifi_test") {
   testonly = true
 
@@ -43,11 +57,16 @@ package("iwlwifi_test") {
 
   deps = [
     ":dummy_test",
+    ":utils_test",
   ]
 
   tests = [
     {
       name = "dummy_test"
+      environments = basic_envs
+    },
+    {
+      name = "utils_test"
       environments = basic_envs
     },
   ]

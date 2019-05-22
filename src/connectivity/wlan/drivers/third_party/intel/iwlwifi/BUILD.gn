@@ -38,6 +38,7 @@ iwlwifi_core_srcs = [
   "mvm/tof.c",
   "mvm/tt.c",
   "mvm/tx.c",
+  "mvm/utils.c",
 ]
 
 driver_module("iwlwifi_driver") {

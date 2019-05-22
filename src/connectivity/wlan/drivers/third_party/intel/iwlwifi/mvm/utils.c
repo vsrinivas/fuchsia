@@ -33,15 +33,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <net/mac80211.h>
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/rs.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
-#include "fw/api/rs.h"
-#include "iwl-csr.h"
-#include "iwl-debug.h"
-#include "iwl-io.h"
-#include "iwl-prph.h"
-#include "mvm.h"
-
+#if 0   // NEEDS_PORTING
 /*
  * Will return 0 even if the cmd failed when RFKILL is asserted unless
  * CMD_WANT_SKB is set in cmd->flags.
@@ -168,6 +167,7 @@ int iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16_t len, 
 
     return iwl_mvm_send_cmd_status(mvm, &cmd, status);
 }
+#endif  // NEEDS_PORTING
 
 #define IWL_DECLARE_RATE_INFO(r) [IWL_RATE_##r##M_INDEX] = IWL_RATE_##r##M_PLCP
 
@@ -181,17 +181,35 @@ static const uint8_t fw_rate_idx_to_plcp[IWL_RATE_COUNT] = {
     IWL_DECLARE_RATE_INFO(36), IWL_DECLARE_RATE_INFO(48), IWL_DECLARE_RATE_INFO(54),
 };
 
-int iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, enum nl80211_band band) {
+zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, enum nl80211_band band,
+                                                int* ptr_idx) {
     int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
     int idx;
     int band_offset = 0;
 
-    /* Legacy rate format, search for match in table */
-    if (band == NL80211_BAND_5GHZ) { band_offset = IWL_FIRST_OFDM_RATE; }
-    for (idx = band_offset; idx < IWL_RATE_COUNT_LEGACY; idx++)
-        if (fw_rate_idx_to_plcp[idx] == rate) { return idx - band_offset; }
+    // Sanity-check
+    if (band >= NUM_NL80211_BANDS) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    if (!ptr_idx) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (band == NL80211_BAND_60GHZ) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
-    return -1;
+    /* Legacy rate format, search for match in table */
+    if (band == NL80211_BAND_5GHZ) {
+        band_offset = IWL_FIRST_OFDM_RATE;
+    }
+    for (idx = band_offset; idx < IWL_RATE_COUNT_LEGACY; idx++) {
+        if (fw_rate_idx_to_plcp[idx] == rate) {
+            *ptr_idx = idx - band_offset;
+            return ZX_OK;
+        }
+    }
+
+    return ZX_ERR_NOT_FOUND;
 }
 
 uint8_t iwl_mvm_mac80211_idx_to_hwrate(int rate_idx) {
@@ -199,6 +217,7 @@ uint8_t iwl_mvm_mac80211_idx_to_hwrate(int rate_idx) {
     return fw_rate_idx_to_plcp[rate_idx];
 }
 
+#if 0   // NEEDS_PORTING
 void iwl_mvm_rx_fw_error(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_error_resp* err_resp = (void*)pkt->data;
@@ -1293,3 +1312,4 @@ void iwl_mvm_get_sync_time(struct iwl_mvm* mvm, uint32_t* gp2, uint64_t* boottim
         iwl_mvm_power_update_device(mvm);
     }
 }
+#endif  // NEEDS_PORTING

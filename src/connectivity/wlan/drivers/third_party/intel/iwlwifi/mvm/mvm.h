@@ -1465,7 +1465,8 @@ int __iwl_mvm_mac_start(struct iwl_mvm* mvm);
 zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm);
 
 /* Utils */
-int iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, enum nl80211_band band);
+zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, enum nl80211_band band,
+                                                int* idx);
 void iwl_mvm_hwrate_to_tx_rate(uint32_t rate_n_flags, enum nl80211_band band,
                                struct ieee80211_tx_rate* r);
 uint8_t iwl_mvm_mac80211_idx_to_hwrate(int rate_idx);
