@@ -91,7 +91,21 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 				args.output <- LLVMSymbolizeResult{nil, err}
 				continue
 			}
-			fmt.Fprintf(s.stdin, "%s 0x%x\n", args.file, args.modRelAddr)
+			// From //zircon/docs/symbolizer_markup.md:
+			// In frames after frame zero, this code location identifies a call site.
+			// Some emitters may subtract one byte or one instruction length from the
+			// actual return address for the call site, with the intent that the address
+			// logged can be translated directly to a source location for the call site
+			// and not for the apparent return site thereafter (which can be confusing).
+			// It‘s recommended that emitters not do this, so that each frame’s code
+			// location is the exact return address given to its callee and e.g. could be
+			// highlighted in instruction-level disassembly. The symbolizing filter can do
+			// the adjustment to the address it translates into a source location. Assuming
+			// that a call instruction is longer than one byte on all supported machines,
+			// applying the "subtract one byte" adjustment a second time still results in an
+			// address somewhere in the call instruction, so a little sloppiness here does
+			// no harm.
+			fmt.Fprintf(s.stdin, "%s 0x%x\n", args.file, args.modRelAddr-1)
 			out := []SourceLocation{}
 			scanner := bufio.NewScanner(s.stdout)
 			for scanner.Scan() {

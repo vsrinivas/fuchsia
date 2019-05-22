@@ -136,7 +136,7 @@ func TestBacktrace(t *testing.T) {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
 		{"testdata/libc.elf", map[uint64][]SourceLocation{
-			0x44987: {{NewOptStr("duff.h"), 64, NewOptStr("duffcopy")}, {NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
+			0x44988: {{NewOptStr("duff.h"), 64, NewOptStr("duffcopy")}, {NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
 	})
 

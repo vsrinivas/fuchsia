@@ -243,7 +243,7 @@ func TestMsgSimpleBacktrace(t *testing.T) {
 	buf := new(bytes.Buffer)
 	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{},
 		NewBacktracePresenter(buf, NewBasicPresenter(buf, false))))
-	expected := "    #0    0x00000000deadbeee in <>+0xdeadbeee this is a message\n"
+	expected := "    #0    0x00000000deadbeef in <>+0xdeadbeef this is a message\n"
 	actual := buf.String()
 	if actual != expected {
 		t.Errorf("want %q got %q", expected, actual)
@@ -264,7 +264,7 @@ func ExampleMsgBacktrace() {
 	// define a little message that will need to be parsed
 	msg := "{{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
 		"{{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}\n" +
-		"{{{bt:0:0x12388681:sp 0xdeadbaaf bp 0xdeadbeef}}}\n"
+		"{{{bt:0:0x12388680:sp 0xdeadbaaf bp 0xdeadbeef}}}\n"
 
 	// start sending InputLines to the demuxer
 	ctx := context.Background()
@@ -297,8 +297,8 @@ func ExampleNoHeaderBacktrace() {
 	msg := "{{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
 		"{{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}\n" +
 		"Backtrace:\n" +
-		"{{{bt:0:0x12388681}}}\n" +
-		"{{{bt:1:0x123879c1}}}\n"
+		"{{{bt:0:0x12388680}}}\n" +
+		"{{{bt:1:0x123879c0}}}\n"
 
 	// start sending InputLines to the demuxer
 	ctx := context.Background()
@@ -343,10 +343,10 @@ func ExampleNewBacktracePresenter() {
 		"[131.503] 1234.5678> {{{mmap:0x23456000:0x83c80:load:09:rx:0x80000}}}\n" +
 		"[131.503] 1234.5678> {{{mmap:0x34567000:0x1000:load:3:rx:0x0}}}\n" +
 		"[131.604] 1234.5678> Backtrace:\n" +
-		"[131.604] 1234.5678> {{{bt:0:0x12388681}}}\n" +
-		"[131.604] 1234.5678> {{{bt:1:0x23457001}}}\n" +
-		"[131.604] 1234.5678> {{{bt:2:0x123879c1}}}\n" +
-		"[131.705] 1234.5678> {{{bt:3:0x34567043}}}\n"
+		"[131.604] 1234.5678> {{{bt:0:0x12388680}}}\n" +
+		"[131.604] 1234.5678> {{{bt:1:0x23457000}}}\n" +
+		"[131.604] 1234.5678> {{{bt:2:0x123879c0}}}\n" +
+		"[131.705] 1234.5678> {{{bt:3:0x34567042}}}\n"
 
 	// start sending InputLines to the demuxer
 	ctx := context.Background()
