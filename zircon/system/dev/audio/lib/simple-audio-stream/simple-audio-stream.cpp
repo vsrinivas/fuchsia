@@ -169,7 +169,6 @@ zx_status_t SimpleAudioStream::DdkSuspend(uint32_t flags) {
     // TODO(voydanoff) do different things based on the flags.
     // for now we shutdown the driver in preparation for mexec
     Shutdown();
-    DdkRemove();
     return ZX_OK;
 }
 
