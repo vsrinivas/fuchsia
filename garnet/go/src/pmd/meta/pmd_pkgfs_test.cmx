@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/pmd_pkgfs_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}
