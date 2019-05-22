@@ -68,7 +68,7 @@ void vfs_exit(const zx::event& fshost_event) {
         printf("devcoordinator: Failed to signal VFS exit\n");
         return;
     }
-    if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::deadline_after(zx::sec(5)),
+    if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::deadline_after(zx::sec(60)),
                                         nullptr)) != ZX_OK) {
         printf("devcoordinator: Failed to wait for VFS exit completion\n");
         return;
