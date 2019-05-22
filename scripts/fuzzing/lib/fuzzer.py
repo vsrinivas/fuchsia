@@ -63,6 +63,8 @@ class Fuzzer(object):
     if not name or name == '':
       return fuzzers
     names = name.split('/')
+    if len(names) == 2 and (names[0], names[1]) in fuzzers:
+      return [(names[0], names[1])]
     if len(names) == 1:
       return list(
           set(Fuzzer.filter(fuzzers, '/' + name))

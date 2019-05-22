@@ -25,7 +25,10 @@ class TestFuzzer(unittest.TestCase):
     self.assertEqual(len(Fuzzer.filter(fuzzers, '/')), 5)
     self.assertEqual(len(Fuzzer.filter(fuzzers, 'mock')), 5)
     self.assertEqual(len(Fuzzer.filter(fuzzers, 'package1')), 3)
-    self.assertEqual(len(Fuzzer.filter(fuzzers, 'target1')), 2)
+    self.assertEqual(len(Fuzzer.filter(fuzzers, 'target1')), 3)
+    self.assertEqual(len(Fuzzer.filter(fuzzers, 'package2/target1')), 2)
+    self.assertEqual(
+        len(Fuzzer.filter(fuzzers, 'mock-package2/mock-target1')), 1)
     self.assertEqual(len(Fuzzer.filter(fuzzers, '1/2')), 1)
     self.assertEqual(len(Fuzzer.filter(fuzzers, 'target4')), 0)
     with self.assertRaises(Fuzzer.NameError):

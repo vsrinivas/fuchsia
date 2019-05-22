@@ -270,6 +270,7 @@ template("fuzzers_package") {
     # Dummy package for non-fuzzed builds
     group(target_name) {
     }
+    not_needed([ "fuzz_host" ])
     not_needed(invoker, "*")
     not_needed([
                  "package_name",
