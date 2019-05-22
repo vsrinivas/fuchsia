@@ -9,7 +9,7 @@
 
 namespace devmgr {
 
-struct DeviceControllerConnection;
+class DeviceControllerConnection;
 struct ProxyIostate;
 
 // Handles destroying Connection objects in the single-threaded DevhostAsyncLoop().

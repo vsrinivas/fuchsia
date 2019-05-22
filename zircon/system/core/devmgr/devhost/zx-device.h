@@ -20,7 +20,7 @@
 namespace devmgr {
 
 class CompositeDevice;
-struct DeviceControllerConnection;
+class DeviceControllerConnection;
 struct ProxyIostate;
 
 } // namespace devmgr

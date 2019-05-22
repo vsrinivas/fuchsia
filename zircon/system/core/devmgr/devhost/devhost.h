@@ -169,17 +169,6 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev,
                                          size_t components_count,
                                          uint32_t coresident_device_index) REQ_DM_LOCK;
 
-struct DeviceControllerConnection : AsyncLoopOwnedRpcHandler<DeviceControllerConnection> {
-    DeviceControllerConnection() = default;
-
-    static void HandleRpc(fbl::unique_ptr<DeviceControllerConnection> conn,
-                          async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
-    zx_status_t HandleRead();
-
-    fbl::RefPtr<zx_device_t> dev;
-};
-
 struct DevhostControllerConnection : AsyncLoopOwnedRpcHandler<DevhostControllerConnection> {
     DevhostControllerConnection() = default;
 
@@ -222,5 +211,16 @@ void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev);
 void devhost_finalize() REQ_DM_LOCK;
 extern fbl::DoublyLinkedList<zx_device*, zx_device::DeferNode> defer_device_list USE_DM_LOCK;
 extern int devhost_enumerators USE_DM_LOCK;
+
+// Lookup the a driver by name, and if it's not found, install the given vmo as
+// that driver.
+zx_status_t dh_find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out);
+
+// Construct a string describing the path of |dev| relative to its most
+// distant ancestor in this devhost.
+const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max);
+
+// Retrieve the singleton async loop
+async::Loop* DevhostAsyncLoop();
 
 } // namespace devmgr

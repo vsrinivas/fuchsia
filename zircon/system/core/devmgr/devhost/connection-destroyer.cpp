@@ -6,8 +6,9 @@
 
 #include <inttypes.h>
 #include "../shared/log.h"
-#include "devhost.h"
+#include "device-controller-connection.h"
 #include "proxy-iostate.h"
+#include "zx-device.h"
 
 namespace devmgr {
 

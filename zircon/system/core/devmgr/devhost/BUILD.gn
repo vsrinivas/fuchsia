@@ -20,6 +20,7 @@ source_set("common") {
     "connection-destroyer.cpp",
     "core.cpp",
     "devhost.cpp",
+    "device-controller-connection.cpp",
     "proxy-iostate.cpp",
     "rpc-server.cpp",
     "scheduler_profile.cpp",
