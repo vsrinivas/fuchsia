@@ -15,6 +15,7 @@ test("fdio") {
     "fdio_root.c",
     "fdio_socket.c",
     "fdio_socketpair.c",
+    "fdio_unsafe.cpp",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
