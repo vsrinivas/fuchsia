@@ -124,7 +124,7 @@ class Sl4f {
   /// It can optionally send input via [stdin].
   Future<bool> ssh(String cmd, {String stdin}) async {
     _log.fine('Running over ssh: $cmd');
-    final process = await _sshWithCommand(cmd);
+    final process = await sshProcess(cmd);
     if (stdin != null) {
       process.stdin.write(stdin);
       await process.stdin.flush();
@@ -159,7 +159,7 @@ class Sl4f {
   /// Retrieves the inpect node(s) of [hubEntries], recursively, as a json object.
   Future<dynamic> inspectRecursively(String hubEntries) async {
     final process =
-        await _sshWithCommand('iquery --format=json --recursive $hubEntries');
+        await sshProcess('iquery --format=json --recursive $hubEntries');
     if (await process.exitCode != 0) {
       _log
         ..warning(await process.stdout.transform(utf8.decoder).join())
@@ -176,7 +176,7 @@ class Sl4f {
   ///
   /// If [filter] is set, only those entries containing [filter] are returned.
   Future<List<String>> retrieveHubEntries({String filter}) async {
-    final process = await _sshWithCommand('iquery --find /hub');
+    final process = await sshProcess('iquery --find /hub');
     if (await process.exitCode != 0) {
       _log
         ..warning(await process.stdout.transform(utf8.decoder).join())
@@ -202,7 +202,8 @@ class Sl4f {
     return hubEntries;
   }
 
-  Future<Process> _sshWithCommand(String cmd) {
+  /// Starts an ssh process, sending [cmd] to the target using ssh.
+  Future<Process> sshProcess(String cmd) {
     return Process.start(
         'ssh',
         [
