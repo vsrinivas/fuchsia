@@ -9,60 +9,105 @@ use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_logger::{self, LogMessage};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{future, stream, TryFutureExt, TryStreamExt};
+use futures::stream;
+use futures::stream::Stream;
 
-pub fn add_listener<F>(callback: F) -> Result<(), zx::Status>
-where
-    F: 'static + Send + Fn(LogMessage, usize) + Sync,
-{
-    let debuglog = zx::DebugLog::create(zx::DebugLogOpts::READABLE)?;
+pub struct KernelLogger {
+    debuglogger: zx::DebugLog,
+    buf: Vec<u8>,
+}
 
-    let f = stream::repeat(Ok(()))
-        .try_fold((callback, debuglog), |(callback, debuglog), ()| {
-            // TODO: change OnSignals to wrap this so that is is not created again and again.
-            fasync::OnSignals::new(&debuglog, zx::Signals::LOG_READABLE).and_then(|_| {
-                let mut buf = Vec::with_capacity(zx::sys::ZX_LOG_RECORD_MAX);
-                loop {
-                    match debuglog.read(&mut buf) {
-                        Err(status) if status == zx::Status::SHOULD_WAIT => {
-                            return future::ready(Ok((callback, debuglog)));
+pub struct KernelLogsIterator<'a> {
+    klogger: &'a mut KernelLogger,
+}
+
+impl KernelLogger {
+    pub fn create() -> Result<KernelLogger, zx::Status> {
+        Ok(KernelLogger {
+            debuglogger: zx::DebugLog::create(zx::DebugLogOpts::READABLE)?,
+            buf: Vec::with_capacity(zx::sys::ZX_LOG_RECORD_MAX),
+        })
+    }
+
+    fn read_log(&mut self) -> Result<(LogMessage, usize), zx::Status> {
+        loop {
+            match self.debuglogger.read(&mut self.buf) {
+                Err(status) => {
+                    return Err(status);
+                }
+                Ok(()) => {
+                    let mut l = LogMessage {
+                        time: LittleEndian::read_i64(&self.buf[8..16]),
+                        pid: LittleEndian::read_u64(&self.buf[16..24]),
+                        tid: LittleEndian::read_u64(&self.buf[24..32]),
+                        severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
+                        dropped_logs: 0,
+                        tags: vec!["klog".to_string()],
+                        msg: String::new(),
+                    };
+                    let data_len = LittleEndian::read_u16(&self.buf[4..6]) as usize;
+                    l.msg = match String::from_utf8(self.buf[32..(32 + data_len)].to_vec()) {
+                        Err(e) => {
+                            eprintln!("logger: invalid log record: {:?}", e);
+                            continue;
                         }
-                        Err(status) => {
-                            return future::ready(Err(status));
-                        }
-                        Ok(()) => {
-                            let mut l = LogMessage {
-                                time: LittleEndian::read_i64(&buf[8..16]),
-                                pid: LittleEndian::read_u64(&buf[16..24]),
-                                tid: LittleEndian::read_u64(&buf[24..32]),
-                                severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
-                                dropped_logs: 0,
-                                tags: vec!["klog".to_string()],
-                                msg: String::new(),
-                            };
-                            let data_len = LittleEndian::read_u16(&buf[4..6]) as usize;
-                            l.msg = match String::from_utf8(buf[32..(32 + data_len)].to_vec()) {
-                                Err(e) => {
-                                    eprintln!("logger: invalid log record: {:?}", e);
-                                    continue;
-                                }
-                                Ok(s) => s,
-                            };
-                            if let Some(b'\n') = l.msg.bytes().last() {
-                                l.msg.pop();
-                            }
-                            let size = logger::METADATA_SIZE + 5/*tag*/ + l.msg.len() + 1;
-                            callback(l, size);
-                        }
+                        Ok(s) => s,
+                    };
+                    if let Some(b'\n') = l.msg.bytes().last() {
+                        l.msg.pop();
+                    }
+                    let size = logger::METADATA_SIZE + 5/*tag*/ + l.msg.len() + 1;
+                    return Ok((l, size));
+                }
+            }
+        }
+    }
+
+    pub fn log_stream<'a>(&'a mut self) -> KernelLogsIterator<'a> {
+        KernelLogsIterator { klogger: self }
+    }
+}
+
+impl<'a> Iterator for KernelLogsIterator<'a> {
+    type Item = Result<(LogMessage, usize), zx::Status>;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.klogger.read_log() {
+            Err(zx::Status::SHOULD_WAIT) => {
+                return None;
+            }
+            Err(status) => {
+                return Some(Err(status));
+            }
+            Ok(n) => {
+                return Some(Ok(n));
+            }
+        }
+    }
+}
+
+pub fn listen(
+    klogger: KernelLogger,
+) -> impl Stream<Item = Result<(LogMessage, usize), zx::Status>> {
+    stream::unfold((true, klogger), move |(mut is_readable, mut klogger)| {
+        async move {
+            loop {
+                if !is_readable {
+                    if let Err(e) = await!(fasync::OnSignals::new(
+                        &klogger.debuglogger,
+                        zx::Signals::LOG_READABLE
+                    )) {
+                        break Some((Err(e), (is_readable, klogger)));
                     }
                 }
-            })
-        })
-        .map_ok(|_| ());
-
-    fasync::spawn(f.unwrap_or_else(|e| {
-        eprintln!("logger: not able to apply listener to kernel logs, failed: {:?}", e)
-    }));
-
-    Ok(())
+                is_readable = true;
+                match klogger.read_log() {
+                    Err(zx::Status::SHOULD_WAIT) => {
+                        is_readable = false;
+                        continue;
+                    }
+                    x => break Some((x, (is_readable, klogger))),
+                }
+            }
+        }
+    })
 }

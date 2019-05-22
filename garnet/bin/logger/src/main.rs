@@ -1,6 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#![feature(async_await, await_macro)]
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::ClientEnd;
@@ -305,13 +306,34 @@ fn main_wrapper() -> Result<(), Error> {
         listeners: Vec::new(),
         log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
     }));
+
+    let mut kernel_logger =
+        klogger::KernelLogger::create().context("failed to read kernel logs")?;
+
+    let mut itr = kernel_logger.log_stream();
+    while let Some(res) = itr.next() {
+        match res {
+            Ok((log_msg, size)) => process_log(shared_members.clone(), log_msg, size),
+            Err(e) => {
+                println!("encountered an error from the kernel log iterator: {}", e);
+                break;
+            }
+        }
+    }
+
     let shared_members_clone = shared_members.clone();
-    let shared_members_clone2 = shared_members.clone();
-    klogger::add_listener(move |log_msg, size| {
-        process_log(shared_members_clone2.clone(), log_msg, size);
-    })
-    .context("failed to read kernel logs")?;
+    let klog_stream = klogger::listen(kernel_logger);
+    fasync::spawn(
+        klog_stream
+            .map_ok(move |(log_msg, size)| {
+                process_log(shared_members_clone.clone(), log_msg, size);
+            })
+            .try_collect::<()>()
+            .unwrap_or_else(|e| eprintln!("failed to read kernel logs: {:?}", e)),
+    );
+
     let mut fs = ServiceFs::new();
+    let shared_members_clone = shared_members.clone();
     fs.dir("public")
         .add_fidl_service(move |stream| {
             let ls = LogManager { shared_members: shared_members.clone() };

@@ -6,12 +6,14 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <vector>
 
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -21,6 +23,7 @@ namespace {
 
 class StubLogListener : public fuchsia::logger::LogListener {
  public:
+  using DoneCallback = fit::function<void()>;
   StubLogListener();
   ~StubLogListener() override;
 
@@ -31,13 +34,17 @@ class StubLogListener : public fuchsia::logger::LogListener {
   const std::vector<fuchsia::logger::LogMessage>& GetLogs() {
     return log_messages_;
   }
-  bool ListenFiltered(sys::ComponentContext* component_context, zx_koid_t pid,
-                      const std::string& tag);
+  bool ListenFiltered(const std::shared_ptr<sys::ServiceDirectory>& svc,
+                      zx_koid_t pid, const std::string& tag);
+
+  bool DumpLogs(fuchsia::logger::LogPtr log_service,
+                DoneCallback done_callback);
 
  private:
   ::fidl::Binding<fuchsia::logger::LogListener> binding_;
   fuchsia::logger::LogListenerPtr log_listener_;
   std::vector<fuchsia::logger::LogMessage> log_messages_;
+  DoneCallback done_callback_;
 };
 
 StubLogListener::StubLogListener() : binding_(this) {
@@ -54,19 +61,35 @@ void StubLogListener::Log(fuchsia::logger::LogMessage log) {
   log_messages_.push_back(std::move(log));
 }
 
-void StubLogListener::Done() {}
+void StubLogListener::Done() {
+  if (done_callback_) {
+    done_callback_();
+  }
+}
 
-bool StubLogListener::ListenFiltered(sys::ComponentContext* component_context,
-                                     zx_koid_t pid, const std::string& tag) {
+bool StubLogListener::ListenFiltered(
+    const std::shared_ptr<sys::ServiceDirectory>& svc, zx_koid_t pid,
+    const std::string& tag) {
   if (!log_listener_) {
     return false;
   }
-  auto log_service = component_context->svc()->Connect<fuchsia::logger::Log>();
+  auto log_service = svc->Connect<fuchsia::logger::Log>();
   auto options = fuchsia::logger::LogFilterOptions::New();
   options->filter_by_pid = true;
   options->pid = pid;
   options->tags = {tag};
   log_service->Listen(std::move(log_listener_), std::move(options));
+  return true;
+}
+
+bool StubLogListener::DumpLogs(fuchsia::logger::LogPtr log_service,
+                               DoneCallback done_callback) {
+  if (!log_listener_) {
+    return false;
+  }
+  auto options = fuchsia::logger::LogFilterOptions::New();
+  log_service->DumpLogs(std::move(log_listener_), std::move(options));
+  done_callback_ = std::move(done_callback);
   return true;
 }
 
@@ -101,7 +124,7 @@ TEST(CAbi, LogRecordAbi) {
   static_assert(offsetof(zx_log_record_t, data) == 32, "");
 }
 
-using LoggerIntegrationTest = gtest::RealLoopFixture;
+using LoggerIntegrationTest = sys::testing::TestWithEnvironment;
 
 TEST_F(LoggerIntegrationTest, ListenFiltered) {
   // Make sure there is one syslog message coming from that pid and with a tag
@@ -115,8 +138,8 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
   // Start the log listener and the logger, and wait for the log message to
   // arrive.
   StubLogListener log_listener;
-  ASSERT_TRUE(log_listener.ListenFiltered(sys::ComponentContext::Create().get(),
-                                          pid, tag));
+  ASSERT_TRUE(log_listener.ListenFiltered(
+      sys::ServiceDirectory::CreateFromNamespace(), pid, tag));
   auto& logs = log_listener.GetLogs();
   RunLoopUntil([&logs] { return logs.size() >= 1u; });
 
@@ -126,6 +149,26 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
   EXPECT_EQ(logs[0].severity, FX_LOG_INFO);
   EXPECT_EQ(logs[0].pid, pid);
   EXPECT_THAT(logs[0].msg, testing::EndsWith(message));
+}
+
+TEST_F(LoggerIntegrationTest, DumpLogs) {
+  auto svcs = CreateServices();
+  fuchsia::sys::LaunchInfo linfo;
+  linfo.url = "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
+  svcs->AddServiceWithLaunchInfo(std::move(linfo), fuchsia::logger::Log::Name_);
+  auto env = CreateNewEnclosingEnvironment("dump_logs", std::move(svcs));
+
+  auto logger_service = env->ConnectToService<fuchsia::logger::Log>();
+
+  StubLogListener log_listener;
+  bool done = false;
+  ASSERT_TRUE(log_listener.DumpLogs(std::move(logger_service),
+                                    [&done]() { done = true; }));
+
+  RunLoopUntil([&done] { return done; });
+  auto& logs = log_listener.GetLogs();
+  ASSERT_GE(logs.size(), 1u);
+  EXPECT_EQ(logs[0].tags[0], "klog");
 }
 
 }  // namespace
