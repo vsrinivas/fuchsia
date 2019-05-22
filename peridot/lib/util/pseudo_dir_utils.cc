@@ -28,16 +28,17 @@ std::unique_ptr<vfs::PseudoDir> MakeFilePathWithContents(
 
   // 2. The last component of |file_path_split| is the file -- have it hang off
   // of the last directory.
-  last_subdir->AddEntry(file_path_split.back(),
-                        std::make_unique<vfs::PseudoFile>(
-                            [file_contents](std::vector<uint8_t>* out) {
-                              std::copy(file_contents.begin(),
-                                        file_contents.end(),
-                                        std::back_inserter(*out));
-                              return ZX_OK;
-                            },
-                            vfs::PseudoFile::WriteHandler() /* not used */,
-                            file_contents.size()));
+  last_subdir->AddEntry(
+      file_path_split.back(),
+      std::make_unique<vfs::PseudoFile>(
+          file_contents.size(),
+          [file_contents](std::vector<uint8_t>* out, size_t /*unused*/) {
+            std::copy(file_contents.begin(), file_contents.end(),
+                      std::back_inserter(*out));
+            return ZX_OK;
+          },
+          vfs::PseudoFile::WriteHandler() /* not used */
+          ));
 
   return config_dir;
 }
