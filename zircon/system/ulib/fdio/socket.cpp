@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/io.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxs/protocol.h>
 #include <poll.h>
@@ -17,8 +17,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "private.h"
 #include "private-socket.h"
+#include "private.h"
 #include "unistd.h"
 
 static inline zxio_socket_t* fdio_get_zxio_socket(fdio_t* io) {
@@ -315,7 +315,7 @@ static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
     return zx_socket_shutdown(sio->socket.socket, options);
 }
 
-static zx_duration_t fdio_socket_get_rcvtimeo(fdio_t * io) {
+static zx_duration_t fdio_socket_get_rcvtimeo(fdio_t* io) {
     return fdio_get_zxio_socket(io)->socket.rcvtimeo;
 }
 
@@ -412,8 +412,7 @@ fdio_t* fd_to_socket(int fd, const zxs_socket_t** out_socket) {
         return NULL;
     }
 
-    if (fdio_get_ops(io) == &fdio_socket_stream_ops
-        || fdio_get_ops(io) == &fdio_socket_dgram_ops) {
+    if (fdio_get_ops(io) == &fdio_socket_stream_ops || fdio_get_ops(io) == &fdio_socket_dgram_ops) {
         zxio_socket_t* sio = fdio_get_zxio_socket(io);
         *out_socket = &sio->socket;
         return io;

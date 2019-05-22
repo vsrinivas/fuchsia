@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_
+#define ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_
 
 #include <lib/zxs/zxs.h>
 #include <zircon/compiler.h>
@@ -10,10 +11,10 @@
 #include "private.h"
 
 // SIO signals
-#define ZXSIO_SIGNAL_INCOMING  ZX_USER_SIGNAL_0
-#define ZXSIO_SIGNAL_OUTGOING  ZX_USER_SIGNAL_1
+#define ZXSIO_SIGNAL_INCOMING ZX_USER_SIGNAL_0
+#define ZXSIO_SIGNAL_OUTGOING ZX_USER_SIGNAL_1
 // TODO(tamird): ERROR seems to be unused.
-#define ZXSIO_SIGNAL_ERROR     ZX_USER_SIGNAL_2
+#define ZXSIO_SIGNAL_ERROR ZX_USER_SIGNAL_2
 #define ZXSIO_SIGNAL_CONNECTED ZX_USER_SIGNAL_3
 
 __BEGIN_CDECLS
@@ -28,3 +29,5 @@ __BEGIN_CDECLS
 fdio_t* fd_to_socket(int fd, const zxs_socket_t** out_socket);
 
 __END_CDECLS
+
+#endif // ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_
