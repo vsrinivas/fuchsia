@@ -60,6 +60,7 @@ template("dart_test") {
                            ])
     source_dir = _source_dir
     infer_package_name = true
+    sources_required = false
   }
 
   # Create a single, grouped test file, as snapshot files correspond to a single
@@ -140,12 +141,15 @@ template("dart_test") {
     name = _main_target_name
     location = _invocation
 
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "environments",
-                           ])
-    deps += [ ":$_snapshot_target_name" ]
+    forward_variables_from(invoker, [ "environments" ])
+
+    deps = [
+      ":$_snapshot_target_name",
+    ]
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
     if (defined(invoker.non_dart_deps)) {
       deps += invoker.non_dart_deps
     }
