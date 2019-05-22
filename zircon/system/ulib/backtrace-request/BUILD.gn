@@ -2,8 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# SDK library to request a backtrace.
 library("backtrace-request") {
   sdk = "source"
   sdk_headers = [ "lib/backtrace-request/backtrace-request.h" ]
   sources = []
+}
+
+# Internal library to request, detect, and clean up backtrace requests.
+# This is a superset of the SDK backtrace-request library.
+library("utils") {
+  sources = [
+    "backtrace-request-utils.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/zircon",
+  ]
 }

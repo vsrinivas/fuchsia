@@ -7,7 +7,7 @@
 #include <inttypes.h>
 #include <string.h>
 
-#include <lib/backtrace-request/backtrace-request.h>
+#include <lib/backtrace-request/backtrace-request-utils.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
@@ -16,45 +16,6 @@
 #include "utils-impl.h"
 
 namespace inspector {
-
-// If true then s/w breakpoint instructions do not kill the process.
-// After the backtrace is printed the thread quietly resumes.
-// TODO: The default is on for now for development purposes.
-// Ultimately will want to switch this to off.
-static bool swbreak_backtrace_enabled = true;
-
-// Return true if the thread is to be resumed "successfully" (meaning the o/s
-// won't kill it, and thus the kill process).
-static bool is_resumable_swbreak(const zx_excp_type_t excp_type) {
-    if (excp_type == ZX_EXCP_SW_BREAKPOINT && swbreak_backtrace_enabled)
-        return true;
-    return false;
-}
-
-#if defined(__x86_64__)
-
-static int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
-    return regs->rax == BACKTRACE_REQUEST_MAGIC;
-}
-
-#elif defined(__aarch64__)
-
-static int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
-    return regs->r[0] == BACKTRACE_REQUEST_MAGIC;
-}
-
-#else
-
-static int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
-    return 0;
-}
-
-#endif
-
-static bool is_backtrace_request(const zx_excp_type_t excp_type,
-                                 const zx_thread_state_general_regs_t* regs) {
-    return is_resumable_swbreak(excp_type) && regs != nullptr && have_swbreak_magic(regs);
-}
 
 static const char* excp_type_to_str(const zx_excp_type_t type) {
     switch (type) {
@@ -83,19 +44,6 @@ static const char* excp_type_to_str(const zx_excp_type_t type) {
 // How much memory to dump, in bytes.
 static constexpr size_t kMemoryDumpSize = 256;
 
-#if defined(__aarch64__)
-static bool write_general_regs(zx_handle_t thread, void* buf, size_t buf_size) {
-    // The syscall takes a uint32_t.
-    auto to_xfer = static_cast<uint32_t>(buf_size);
-    auto status = zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, buf, to_xfer);
-    if (status != ZX_OK) {
-        print_zx_error("unable to access general regs", status);
-        return false;
-    }
-    return true;
-}
-#endif
-
 static void resume_thread(zx_handle_t thread, zx_handle_t exception_port, bool handled) {
     uint32_t options = 0;
     if (!handled)
@@ -113,25 +61,13 @@ static void resume_thread_from_exception(zx_handle_t thread, zx_handle_t excepti
                                          zx_excp_type_t excp_type,
                                          const zx_thread_state_general_regs_t* gregs) {
     if (is_backtrace_request(excp_type, gregs)) {
-#if defined(__x86_64__)
-// On x86, the pc is left at one past the s/w break insn,
-// so there's nothing more we need to do.
-#elif defined(__aarch64__)
         zx_thread_state_general_regs_t regs = *gregs;
-        // Skip past the brk instruction.
-        regs.pc += 4;
-        if (!write_general_regs(thread, &regs, sizeof(regs)))
-            goto Fail;
-#else
-        goto Fail;
-#endif
-        resume_thread(thread, exception_port, true);
-        return;
+        if (cleanup_backtrace_request(thread, &regs) == ZX_OK) {
+            resume_thread(thread, exception_port, true);
+            return;
+        }
     }
 
-#if !defined(__x86_64__)
-Fail:
-#endif
     // Tell the o/s to "resume" the thread by killing the process, the
     // exception has not been handled.
     resume_thread(thread, exception_port, false);
