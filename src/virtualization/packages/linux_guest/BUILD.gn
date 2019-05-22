@@ -7,71 +7,33 @@ import("//src/virtualization/packages/guest_package.gni")
 disk_image = "$target_out_dir/linux/disk.img"
 tests_image = "$target_out_dir/linux/tests.img"
 linux_image = "$target_out_dir/linux/Image"
-extras_image = "$target_out_dir/linux/extras.img"
 
 declare_args() {
   linux_guest_extras_path = ""
 }
 
-action("block") {
-  visibility = [ ":*" ]
-  script = "check_image.sh"
-  depfile = "$target_out_dir/block.d"
-  args = [
-    rebase_path("//prebuilt/virtualization/packages/linux_guest/images/" +
-                "${target_cpu}/disk.img", root_build_dir),
-    rebase_path(disk_image, root_build_dir),
-    rebase_path(depfile, root_build_dir),
-  ]
-  outputs = [
-    disk_image,
-  ]
+guest_prebuilt("block") {
+  source = "//prebuilt/virtualization/packages/linux_guest/images/${target_cpu}/disk.img"
+  output = disk_image
 }
 
-action("tests") {
-  visibility = [ ":*" ]
-  script = "check_image.sh"
-  depfile = "$target_out_dir/tests.d"
-  args = [
-    rebase_path("//prebuilt/virtualization/packages/linux_guest/images/" +
-                "${target_cpu}/tests.img", root_build_dir),
-    rebase_path(tests_image, root_build_dir),
-    rebase_path(depfile, root_build_dir),
-  ]
-  outputs = [
-    tests_image,
-  ]
+guest_prebuilt("tests") {
+  source = "//prebuilt/virtualization/packages/linux_guest/images/${target_cpu}/tests.img"
+  output = tests_image
 }
 
-action("kernel") {
-  visibility = [ ":*" ]
-  script = "check_image.sh"
-  depfile = "$target_out_dir/kernel.d"
-  args = [
-    rebase_path("//prebuilt/virtualization/packages/linux_guest/images/" +
-                "${target_cpu}/Image", root_build_dir),
-    rebase_path(linux_image, root_build_dir),
-    rebase_path(depfile, root_build_dir),
-  ]
-  outputs = [
-    linux_image,
-  ]
+guest_prebuilt("kernel") {
+  source = "//prebuilt/virtualization/packages/linux_guest/images/${target_cpu}/Image"
+  output = linux_image
 }
 
-action("extras") {
-  visibility = [ ":*" ]
-  script = "mkextras.sh"
-  depfile = "$target_out_dir/extras.d"
-  if ("${linux_guest_extras_path}" != "") {
-    args = [
-      rebase_path(linux_guest_extras_path, root_build_dir),
-      rebase_path(extras_image, root_build_dir),
-      rebase_path(depfile, root_build_dir),
-    ]
+if (linux_guest_extras_path != "") {
+  extras_image = "$target_out_dir/linux/extras.img"
+
+  guest_prebuilt("extras") {
+    source = "${linux_guest_extras_path}"
+    output = extras_image
   }
-  outputs = [
-    extras_image,
-  ]
 }
 
 guest_package("linux_guest") {

@@ -166,3 +166,27 @@ template("guest_package") {
     }
   }
 }
+
+# Defines a guest prebuilt.
+#
+# Parameters
+#   source (string, required)
+#   output (string, required)
+template("guest_prebuilt") {
+  assert(defined(invoker.source), "")
+  assert(defined(invoker.output), "")
+  action(target_name) {
+    visibility = [ ":*" ]
+    script = "//src/virtualization/packages/check_image.sh"
+
+    depfile = "${invoker.output}.d"
+    args = [
+      rebase_path("${invoker.source}"),
+      rebase_path("${invoker.output}"),
+      rebase_path(depfile),
+    ]
+    outputs = [
+      "${invoker.output}",
+    ]
+  }
+}
