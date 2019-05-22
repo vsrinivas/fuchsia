@@ -79,6 +79,7 @@ library("driver") {
 test("devhost-test") {
   test_group = "ddk"
   sources = [
+    "device-controller-connection-test.cpp",
     "proxy-iostate-test.cpp",
   ]
   deps = [
