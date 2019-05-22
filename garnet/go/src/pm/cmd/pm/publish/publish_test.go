@@ -157,8 +157,17 @@ func assertHasTestPackage(t *testing.T, repoDir string) {
 	if err != nil {
 		panic(err)
 	}
-	_, ok := dataFiles["/testpackage/0"]
-	if !ok {
+	// FIXME(PKG-753) G1 -> G2 migration of TUF metadata.
+	path := "testpackage/0"
+	found := false
+	for _, p := range []string{path, "/" + path} {
+		_, ok := dataFiles[p]
+		if ok {
+			found = true
+			break
+		}
+	}
+	if !found {
 		t.Fatalf("package not found: %q in %#v", "testpackage", dataFiles)
 	}
 }
