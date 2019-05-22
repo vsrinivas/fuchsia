@@ -77,6 +77,31 @@ executable("intents_test") {
   ]
 }
 
+executable("story_shell_factory_test") {
+  testonly = true
+
+  output_name = "story_shell_factory_test"
+
+  sources = [
+    "story_shell_factory_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/testing:session_shell_impl",
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest_main",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
 test_package("modular_integration_tests") {
   tests = [
     {
@@ -91,12 +116,17 @@ test_package("modular_integration_tests") {
       name = "intents_test"
       environments = basic_envs
     },
+    {
+      name = "story_shell_factory_test"
+      environments = basic_envs
+    },
   ]
 
   deps = [
     ":intents_test",
     ":last_focus_time_test",
     ":session_shell_test",
+    ":story_shell_factory_test",
     "//garnet/public/lib/callback",
     "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",
