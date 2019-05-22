@@ -501,7 +501,8 @@ struct Circle {
 
 *   Record type consisting of a sequence of typed fields with ordinals.
 *   Declaration is intended for forward and backward compatibility in the face of schema changes.
-*   Reference may be nullable.
+*   Tables cannot be nullable. The semantics of "missing value" is expressed by an empty table
+    i.e. where all members are absent, to avoid dealing with double nullability.
 *   Tables contain zero or more members.
 
 #### Declaration
@@ -516,10 +517,9 @@ table Profile {
 
 #### Use
 
-Tables are denoted by their declared name (eg. **Profile**) and nullability:
+Tables are denoted by their declared name (eg. **Profile**):
 
 *   **`Profile`** : non-nullable Profile
-*   **`Profile?`** : nullable Profile
 
 Here, we show how `Profile` evolves to also carry temperature units.
 A client aware of the previous definition of `Profile` (without temperature units)
