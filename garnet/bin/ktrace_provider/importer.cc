@@ -19,6 +19,14 @@ constexpr uint64_t ToUInt64(uint32_t lo, uint32_t hi) {
   return (static_cast<uint64_t>(hi) << 32) | lo;
 }
 
+// Note: Even through priority inheritance chain events are instantaneous, we
+// need to make them into durations in order to have them link-able with flow.
+// We fudge this for now by making them very short duration events.
+//
+// TODO(PT-152): Use the appropriate async event when ready.
+constexpr trace_ticks_t kInheritPriorityDurationWidth = 50;
+constexpr trace_ticks_t kInheritPriorityFlowOffset = 10;
+
 // The kernel reports different thread state values through ktrace.
 // These values must line up with those in "kernel/include/kernel/thread.h".
 constexpr trace_thread_state_t ToTraceThreadState(int value) {
@@ -74,6 +82,12 @@ Importer::Importer(trace_context_t* context)
       exit_address_name_ref_(MAKE_STRING("exit_address")),
       arg0_name_ref_(MAKE_STRING("arg0")),
       arg1_name_ref_(MAKE_STRING("arg1")),
+      // Priority inheritance related strings.
+      inherit_prio_name_ref_(MAKE_STRING("inherit_prio")),
+      inherit_prio_old_ip_name_ref_(MAKE_STRING("old_inherited_prio")),
+      inherit_prio_new_ip_name_ref_(MAKE_STRING("new_inherited_prio")),
+      inherit_prio_old_ep_name_ref_(MAKE_STRING("old_effective_prio")),
+      inherit_prio_new_ep_name_ref_(MAKE_STRING("new_effective_prio")),
       kUnknownThreadRef(trace_make_unknown_thread_ref()) {}
 
 #undef MAKE_STRING
@@ -211,6 +225,23 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
                                  incoming_thread_priority, record->tid,
                                  record->c, record->a, record->d);
     }
+
+    case KTRACE_EVENT(TAG_INHERIT_PRIORITY_START):
+      return HandleInheritPriorityStart(
+          record->ts, record->a,
+          static_cast<trace_cpu_number_t>(record->d & 0xFF));
+
+    case KTRACE_EVENT(TAG_INHERIT_PRIORITY): {
+      int old_effective_prio = static_cast<int8_t>(record->c & 0xFF);
+      int new_effective_prio = static_cast<int8_t>((record->c >> 8) & 0xFF);
+      int old_inherited_prio = static_cast<int8_t>((record->c >> 16) & 0xFF);
+      int new_inherited_prio = static_cast<int8_t>((record->c >> 24) & 0xFF);
+
+      return HandleInheritPriority(record->ts, record->a, record->b, record->d,
+                                   old_inherited_prio, new_inherited_prio,
+                                   old_effective_prio, new_effective_prio);
+    }
+
     case KTRACE_EVENT(TAG_OBJECT_DELETE):
       return HandleObjectDelete(record->ts, record->tid, record->a);
     case KTRACE_EVENT(TAG_THREAD_CREATE):
@@ -565,6 +596,65 @@ bool Importer::HandleContextSwitch(
         &outgoing_thread_ref, &incoming_thread_ref, outgoing_thread_priority,
         incoming_thread_priority);
   }
+  return true;
+}
+
+bool Importer::HandleInheritPriorityStart(trace_ticks_t event_time, uint32_t id,
+                                          trace_cpu_number_t cpu_number) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+
+  const trace_ticks_t start_time = event_time - kInheritPriorityDurationWidth;
+  const trace_ticks_t end_time = event_time;
+  const trace_ticks_t flow_time = event_time - kInheritPriorityFlowOffset;
+
+  trace_context_write_duration_event_record(
+      context_, start_time, end_time, &thread_ref, &sched_category_ref_,
+      &inherit_prio_name_ref_, nullptr, 0);
+
+  trace_context_write_flow_begin_event_record(
+      context_, flow_time, &thread_ref, &sched_category_ref_,
+      &inherit_prio_name_ref_, id, nullptr, 0);
+
+  return true;
+}
+
+bool Importer::HandleInheritPriority(trace_ticks_t event_time, uint32_t id,
+                                     uint32_t tid, uint32_t flags,
+                                     int old_inherited_prio,
+                                     int new_inherited_prio,
+                                     int old_effective_prio,
+                                     int new_effective_prio) {
+  trace_thread_ref_t thread_ref =
+      ((flags & KTRACE_FLAGS_INHERIT_PRIORITY_KERNEL_TID) != 0)
+          ? GetKernelThreadRef(tid)
+          : GetThreadRef(tid);
+
+  trace_arg_t args[] = {
+      trace_make_arg(inherit_prio_old_ip_name_ref_,
+                     trace_make_int32_arg_value(old_inherited_prio)),
+      trace_make_arg(inherit_prio_new_ip_name_ref_,
+                     trace_make_int32_arg_value(new_inherited_prio)),
+      trace_make_arg(inherit_prio_old_ep_name_ref_,
+                     trace_make_int32_arg_value(old_effective_prio)),
+      trace_make_arg(inherit_prio_new_ep_name_ref_,
+                     trace_make_int32_arg_value(new_effective_prio)),
+  };
+
+  const trace_ticks_t start_time = event_time;
+  const trace_ticks_t end_time = event_time + kInheritPriorityDurationWidth;
+  const trace_ticks_t flow_time = event_time + kInheritPriorityFlowOffset;
+
+  trace_context_write_duration_event_record(
+      context_, start_time, end_time, &thread_ref, &sched_category_ref_,
+      &inherit_prio_name_ref_, args, fbl::count_of(args));
+
+  auto trace_thunk = ((flags & KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT) != 0)
+                         ? trace_context_write_flow_end_event_record
+                         : trace_context_write_flow_step_event_record;
+
+  trace_thunk(context_, flow_time, &thread_ref, &sched_category_ref_,
+              &inherit_prio_name_ref_, id, nullptr, 0);
+
   return true;
 }
 

@@ -84,6 +84,12 @@ class Importer {
                            KernelThread outgoing_kernel_thread,
                            zx_koid_t incoming_thread,
                            KernelThread incoming_kernel_thread);
+  bool HandleInheritPriorityStart(trace_ticks_t event_time, uint32_t id,
+                                  trace_cpu_number_t cpu_number);
+  bool HandleInheritPriority(trace_ticks_t event_time, uint32_t id,
+                             uint32_t tid, uint32_t flags,
+                             int old_inherited_prio, int new_inherited_prio,
+                             int old_effective_prio, int new_effective_prio);
   bool HandleObjectDelete(trace_ticks_t event_time, zx_koid_t thread,
                           zx_koid_t object);
   bool HandleThreadCreate(trace_ticks_t event_time, zx_koid_t thread,
@@ -201,6 +207,11 @@ class Importer {
   trace_string_ref_t const exit_address_name_ref_;
   trace_string_ref_t const arg0_name_ref_;
   trace_string_ref_t const arg1_name_ref_;
+  trace_string_ref_t const inherit_prio_name_ref_;
+  trace_string_ref_t const inherit_prio_old_ip_name_ref_;
+  trace_string_ref_t const inherit_prio_new_ip_name_ref_;
+  trace_string_ref_t const inherit_prio_old_ep_name_ref_;
+  trace_string_ref_t const inherit_prio_new_ep_name_ref_;
 
   uint32_t version_ = 0u;
 
