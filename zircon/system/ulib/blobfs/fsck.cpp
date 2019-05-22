@@ -132,7 +132,7 @@ zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
         return status;
     }
 
-    status = CheckFvmConsistency(&blobfs_->Info(), blobfs_->BlockDevice());
+    status = CheckFvmConsistency(&blobfs_->Info(), blobfs_->Device());
     if (status != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Inconsistent metadata does not match FVM: %d\n", status);
         return status;
@@ -157,18 +157,13 @@ zx_status_t Fsck(fbl::unique_ptr<Blobfs> blob, bool apply_journal) {
 }
 
 #ifdef __Fuchsia__
-zx_status_t CheckFvmConsistency(const Superblock* info, const zx::unowned_channel channel) {
+zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device) {
     if ((info->flags & kBlobFlagFVM) == 0) {
         return ZX_OK;
     }
 
     fuchsia_hardware_block_volume_VolumeInfo fvm_info;
-    zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeQuery(channel->get(), &status,
-                                                                      &fvm_info);
-    if (io_status != ZX_OK) {
-        status = io_status;
-    }
+    zx_status_t status = device->VolumeQuery(&fvm_info);
     if (status != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Unable to query FVM, status: %s\n", zx_status_get_string(status));
         return status;
@@ -195,12 +190,8 @@ zx_status_t CheckFvmConsistency(const Superblock* info, const zx::unowned_channe
     fuchsia_hardware_block_volume_VsliceRange
             ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
     size_t actual_ranges_count;
-    io_status = fuchsia_hardware_block_volume_VolumeQuerySlices(
-        channel->get(), start_slices, fbl::count_of(start_slices), &status, ranges,
-        &actual_ranges_count);
-    if (io_status != ZX_OK) {
-        status = io_status;
-    }
+    status = device->VolumeQuerySlices(start_slices, fbl::count_of(start_slices), ranges,
+                                       &actual_ranges_count);
     if (status != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Cannot query slices, status: %s\n", zx_status_get_string(status));
         return status;
@@ -228,11 +219,7 @@ zx_status_t CheckFvmConsistency(const Superblock* info, const zx::unowned_channe
             // If FVM reports more slices than we expect, try to free remainder.
             uint64_t offset = start_slices[i] + blobfs_count;
             uint64_t length = fvm_count - blobfs_count;
-            io_status = fuchsia_hardware_block_volume_VolumeShrink(channel->get(), offset, length,
-                                                                   &status);
-            if (io_status != ZX_OK) {
-                status = io_status;
-            }
+            zx_status_t status = device->VolumeShrink(offset, length);
             if (status != ZX_OK) {
                 FS_TRACE_ERROR("blobfs: Unable to shrink to expected size: %s\n",
                                zx_status_get_string(status));

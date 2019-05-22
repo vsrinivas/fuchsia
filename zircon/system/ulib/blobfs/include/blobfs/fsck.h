@@ -40,7 +40,7 @@ zx_status_t Fsck(fbl::unique_ptr<Blobfs> vnode, bool apply_jouranl);
 // volume manager.
 //
 // If the results are inconsistent, update the FVM's allocation accordingly.
-zx_status_t CheckFvmConsistency(const Superblock* info, const zx::unowned_channel channel);
+zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device);
 #endif // __Fuchsia__
 
 } // namespace blobfs

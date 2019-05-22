@@ -61,6 +61,7 @@ library("blobfs") {
       "journal.cpp",
       "metrics.cpp",
       "operation.cpp",
+      "remote-block-device.cpp",
       "ring-buffer.cpp",
       "unbuffered-operations-builder.cpp",
       "vmo-buffer.cpp",
@@ -74,12 +75,14 @@ library("blobfs") {
 
       # <blobfs/writeback.h> has #include <lib/sync/completion.h>.
       "$zx/system/ulib/sync:headers",
-    ]
-    deps += [
-      "$zx/system/fidl/fuchsia-blobfs:c",
+
+      # <blobfs/blobfs.h> has #include <.../fidl.h>
       "$zx/system/fidl/fuchsia-device:c",
       "$zx/system/fidl/fuchsia-hardware-block:c",
       "$zx/system/fidl/fuchsia-hardware-block-volume:c",
+    ]
+    deps += [
+      "$zx/system/fidl/fuchsia-blobfs:c",
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",
       "$zx/system/ulib/async:async-default",

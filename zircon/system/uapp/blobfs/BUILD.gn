@@ -7,9 +7,7 @@ executable("blobfs") {
     "main.cpp",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-blobfs:c",
     "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/blobfs",

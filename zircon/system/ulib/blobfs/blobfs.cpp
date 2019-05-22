@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include <blobfs/blobfs.h>
+#include <blobfs/block-device.h>
 #include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/fsck.h>
@@ -330,12 +331,9 @@ zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
     if (status != ZX_OK) {
         return status;
     }
+
     fuchsia_hardware_block_VmoID vmoid;
-    zx_status_t io_status = fuchsia_hardware_block_BlockAttachVmo(
-        BlockDevice()->get(), xfer_vmo.release(), &status, &vmoid);
-    if (io_status != ZX_OK) {
-        return io_status;
-    }
+    status = Device()->BlockAttachVmo(std::move(xfer_vmo), &vmoid);
     if (status != ZX_OK) {
         return status;
     }
@@ -362,12 +360,7 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
     const size_t kBlocksPerSlice = info_.slice_size / kBlobfsBlockSize;
     uint64_t offset = (kFVMNodeMapStart / kBlocksPerSlice) + info_.ino_slices;
     uint64_t length = 1;
-    zx_status_t status;
-    zx_status_t io_status =
-        fuchsia_hardware_block_volume_VolumeExtend(BlockDevice()->get(), offset, length, &status);
-    if (io_status != ZX_OK) {
-        status = io_status;
-    }
+    zx_status_t status = Device()->VolumeExtend(offset, length);
     if (status != ZX_OK) {
         FS_TRACE_ERROR("Blobfs::AddInodes fvm_extend failure: %s", zx_status_get_string(status));
         return status;
@@ -432,12 +425,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
         return ZX_ERR_NO_SPACE;
     }
 
-    zx_status_t status;
-    zx_status_t io_status =
-        fuchsia_hardware_block_volume_VolumeExtend(BlockDevice()->get(), offset, length, &status);
-    if (io_status != ZX_OK) {
-        status = io_status;
-    }
+    zx_status_t status = Device()->VolumeExtend(offset, length);
     if (status != ZX_OK) {
         FS_TRACE_ERROR("Blobfs::AddBlocks FVM Extend failure: %s\n", zx_status_get_string(status));
         return status;
@@ -487,8 +475,8 @@ void Blobfs::Sync(SyncCallback closure) {
     status = EnqueueWork(std::move(wb), EnqueueType::kJournal);
 }
 
-Blobfs::Blobfs(fbl::unique_fd fd, const Superblock* info)
-    : block_device_(std::move(fd)), metrics_(),
+Blobfs::Blobfs(std::unique_ptr<BlockDevice> device, const Superblock* info)
+    : block_device_(std::move(device)), metrics_(),
       cobalt_metrics_(MakeCollectorOptions(), false, "blobfs") {
     memcpy(&info_, info, sizeof(Superblock));
 }
@@ -500,11 +488,7 @@ Blobfs::~Blobfs() {
     writeback_.reset();
 
     Cache().Reset();
-
-    if (block_device_) {
-        zx_status_t status;
-        fuchsia_hardware_block_BlockCloseFifo(block_device_.borrow_channel(), &status);
-    }
+    Device()->BlockCloseFifo();
 }
 
 void Blobfs::ScheduleMetricFlush() {
@@ -513,15 +497,15 @@ void Blobfs::ScheduleMetricFlush() {
         flush_loop_.dispatcher(), [this]() { ScheduleMetricFlush(); }, kCobaltFlushTimer);
 }
 
-zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const Superblock* info,
-                           fbl::unique_ptr<Blobfs>* out) {
+zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, const MountOptions& options,
+                           const Superblock* info, std::unique_ptr<Blobfs>* out) {
     TRACE_DURATION("blobfs", "Blobfs::Create");
     zx_status_t status = CheckSuperblock(info, TotalBlocks(*info));
     if (status != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Check info failure\n");
         return status;
     }
-    auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(std::move(fd), info));
+    auto fs = std::unique_ptr<Blobfs>(new Blobfs(std::move(device), info));
     fs->SetReadonly(options.writability != blobfs::Writability::Writable);
     fs->Cache().SetCachePolicy(options.cache_policy);
     if (options.metrics) {
@@ -536,11 +520,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
             kCobaltFlushTimer);
     }
 
-    zx_status_t io_status =
-        fuchsia_hardware_block_BlockGetInfo(fs->BlockDevice()->get(), &status, &fs->block_info_);
-    if (io_status != ZX_OK) {
-        return io_status;
-    }
+    status = fs->Device()->BlockGetInfo(&fs->block_info_);
     if (status != ZX_OK) {
         return status;
     }
@@ -550,13 +530,10 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
     }
 
     zx::fifo fifo;
-    io_status = fuchsia_hardware_block_BlockGetFifo(fs->BlockDevice()->get(), &status,
-                                                    fifo.reset_and_get_address());
-    if (io_status != ZX_OK) {
-        return io_status;
-    }
+    status = fs->Device()->BlockGetFifo(&fifo);
     if (status != ZX_OK) {
-        FS_TRACE_ERROR("Failed to mount blobfs: Someone else is using the block device\n");
+        FS_TRACE_ERROR("Failed to mount blobfs (%d). Is someone else using the block device?\n",
+                       status);
         return status;
     }
 
@@ -662,9 +639,9 @@ zx_status_t Blobfs::Reload() {
     TRACE_DURATION("blobfs", "Blobfs::Reload");
 
     // Re-read the info block from disk.
-    zx_status_t status;
     char block[kBlobfsBlockSize];
-    if ((status = readblk(BlockDeviceFd().get(), 0, block)) != ZX_OK) {
+    zx_status_t status = Device()->ReadBlock(0, block);
+    if (status != ZX_OK) {
         FS_TRACE_ERROR("blobfs: could not read info block\n");
         return status;
     }
@@ -739,7 +716,9 @@ zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
         return status;
     }
 
-    if ((status = Blobfs::Create(std::move(blockfd), options, info, out)) != ZX_OK) {
+    auto device = std::make_unique<RemoteBlockDevice>(std::move(blockfd));
+
+    if ((status = Blobfs::Create(std::move(device), options, info, out)) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: mount failed; could not create blobfs\n");
         return status;
     }
@@ -762,7 +741,7 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
         return status;
     }
 
-    if ((status = CheckFvmConsistency(&fs->Info(), fs->BlockDevice())) != ZX_OK) {
+    if ((status = CheckFvmConsistency(&fs->Info(), fs->Device())) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: FVM info check failed\n");
         return status;
     }

@@ -46,6 +46,7 @@
 #include <blobfs/allocator.h>
 #include <blobfs/blob-cache.h>
 #include <blobfs/blob.h>
+#include <blobfs/block-device.h>
 #include <blobfs/common.h>
 #include <blobfs/directory.h>
 #include <blobfs/extent-reserver.h>
@@ -160,7 +161,7 @@ public:
         return allocator_->ReserveNodes(num_nodes, out_node);
     }
 
-    static zx_status_t Create(fbl::unique_fd blockfd, const MountOptions& options,
+    static zx_status_t Create(std::unique_ptr<BlockDevice> device, const MountOptions& options,
                               const Superblock* info, fbl::unique_ptr<Blobfs>* out);
 
     void CollectMetrics() {
@@ -200,11 +201,8 @@ public:
 
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
 
-    const zx::unowned_channel BlockDevice() const {
-        return zx::unowned_channel(block_device_.borrow_channel());
-    }
-    const fbl::unique_fd& BlockDeviceFd() const {
-        return block_device_.fd();
+    BlockDevice* Device() const {
+        return block_device_.get();
     }
 
     // Returns an unique identifier for this instance.
@@ -241,7 +239,7 @@ public:
 private:
     friend class BlobfsChecker;
 
-    Blobfs(fbl::unique_fd fd, const Superblock* info);
+    Blobfs(std::unique_ptr<BlockDevice> device, const Superblock* info);
 
     // Reloads metadata from disk. Useful when metadata on disk
     // may have changed due to journal playback.
@@ -283,7 +281,7 @@ private:
 
     BlobCache blob_cache_;
 
-    fzl::FdioCaller block_device_;
+    std::unique_ptr<BlockDevice> block_device_;
     fuchsia_hardware_block_BlockInfo block_info_ = {};
     std::atomic<groupid_t> next_group_ = {};
     block_client::Client fifo_client_;
