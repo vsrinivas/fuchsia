@@ -177,7 +177,7 @@ bool Hardcoded::ParseAmbientLightDescriptor(const hid::ReportField* fields,
   return false;
 }
 
-void Hardcoded::ParseKeyboardReport(
+bool Hardcoded::ParseKeyboardReport(
     uint8_t* report, size_t len,
     fuchsia::ui::input::InputReport* keyboard_report) {
   hid_keys_t key_state;
@@ -186,10 +186,18 @@ void Hardcoded::ParseKeyboardReport(
   keyboard_report->event_time = InputEventTimestampNow();
   keyboard_report->trace_id = TRACE_NONCE();
 
-  auto& pressed_keys = keyboard_report->keyboard->pressed_keys;
-  pressed_keys.resize(0);
-  hid_for_every_key(&key_state, keycode) { pressed_keys.push_back(keycode); }
+  std::vector<uint32_t> pressed_keys;
+  hid_for_every_key(&key_state, keycode) {
+    if (keycode == HID_USAGE_KEY_ERROR_ROLLOVER) {
+      FXL_VLOG(2) << name() << " rollover error";
+      return false;
+    }
+    pressed_keys.push_back(keycode);
+  }
+  pressed_keys.swap(keyboard_report->keyboard->pressed_keys);
   FXL_VLOG(2) << name() << " parsed: " << *keyboard_report;
+
+  return true;
 }
 
 void Hardcoded::ParseMouseReport(
@@ -1121,8 +1129,8 @@ void Hardcoded::NotifyRegistry(
 void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
                      bool discard) {
   if (has_keyboard_) {
-    ParseKeyboardReport(report.data(), report_len, keyboard_report_.get());
-    if (!discard) {
+    bool parsed = ParseKeyboardReport(report.data(), report_len, keyboard_report_.get());
+    if (!discard && parsed) {
       TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
                        keyboard_report_->trace_id);
       input_device_->DispatchReport(CloneReport(*keyboard_report_));

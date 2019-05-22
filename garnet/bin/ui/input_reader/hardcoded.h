@@ -55,7 +55,7 @@ class Hardcoded {
     int16_t illuminance;
   };
 
-  void ParseKeyboardReport(uint8_t* report, size_t len,
+  bool ParseKeyboardReport(uint8_t* report, size_t len,
                            fuchsia::ui::input::InputReport* keyboard_report);
   void ParseMouseReport(uint8_t* report, size_t len,
                         fuchsia::ui::input::InputReport* mouse_report);

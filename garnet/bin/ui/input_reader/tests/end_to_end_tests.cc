@@ -130,6 +130,21 @@ TEST_F(ReaderInterpreterInputTest, BootKeyboard) {
   RunLoopUntilIdle();
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_Z},
             last_report_.keyboard->pressed_keys);
+
+  // expect that if the keyboard sends a rollover error, we keep the previous pressed keys
+  device->SetHidDecoderRead({
+    HID_USAGE_KEY_ERROR_ROLLOVER,
+    0,
+    HID_USAGE_KEY_ERROR_ROLLOVER,
+    HID_USAGE_KEY_ERROR_ROLLOVER,
+    HID_USAGE_KEY_ERROR_ROLLOVER,
+    HID_USAGE_KEY_ERROR_ROLLOVER,
+    HID_USAGE_KEY_ERROR_ROLLOVER,
+    HID_USAGE_KEY_ERROR_ROLLOVER
+  }, 8);
+  RunLoopUntilIdle();
+  EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_Z},
+            last_report_.keyboard->pressed_keys);
 }
 
 TEST_F(ReaderInterpreterInputTest, EgalaxTouchScreen) {

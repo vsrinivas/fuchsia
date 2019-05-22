@@ -41,6 +41,9 @@ void expect_keypress(uint8_t expected_keycode, int expected_modifiers,
         EXPECT_EQ(output[0], expected_char, "");
     }
 }
+void expect_no_keypress() {
+    EXPECT_EQ(g_got_keypress, false, "");
+}
 
 class KeyboardInputHelper {
 public:
@@ -59,6 +62,19 @@ public:
     void set_modifiers_byte(uint8_t value) { report_buf_[0] = value; }
     // Bytes 2+ contain USB HID key codes.
     void set_first_keycode(uint8_t value) { report_buf_[2] = value; }
+    // Rollover errors are equal to all values being set to ROLLOVER_ERROR.
+    void set_rollover_error() {
+        report_buf_[0] = HID_USAGE_KEY_ERROR_ROLLOVER;
+        report_buf_[1] = 0;
+        for (auto i = 2; i < 8; i++) {
+            report_buf_[i] = HID_USAGE_KEY_ERROR_ROLLOVER;
+        }
+    }
+    void unset_rollover_error() {
+        for (auto i = 0; i < 8; i++) {
+            report_buf_[i] = 0;
+        }
+    }
 
 private:
     // USB HID key state buffer.
@@ -80,6 +96,18 @@ bool test_keyboard_input_thread() {
     helper.set_first_keycode(HID_USAGE_KEY_6);
     helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_6, 0, '6');
+
+    // Simulate a rollover event appearing and disappearing — no keypress should be registered
+    helper.set_rollover_error();
+    helper.WriteReportBuf();
+    expect_no_keypress();
+
+    // Send the keycode that was pressed in the previous test before the
+    // rollover happened. No new keypress should register.
+    helper.unset_rollover_error();
+    helper.set_first_keycode(HID_USAGE_KEY_6);
+    helper.WriteReportBuf();
+    expect_no_keypress();
 
     // Press a modifier (but no other keys).
     helper.set_first_keycode(0); // Unset the earlier key

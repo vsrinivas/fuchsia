@@ -95,6 +95,9 @@ bool vc_input_process(vc_input_t* vi, uint8_t report[8]) {
 
     hid_kbd_pressed_keys(&vi->state[vi->prev_idx], &vi->state[vi->cur_idx], &keys);
     hid_for_every_key(&keys, keycode) {
+        if (keycode == HID_USAGE_KEY_ERROR_ROLLOVER) {
+            return false;
+        }
         vi->modifiers |= modifiers_from_keycode(keycode);
         if (keycode == HID_USAGE_KEY_CAPSLOCK) {
             vi->modifiers ^= MOD_CAPSLOCK;
