@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::vmo::{block::Block, block_type::BlockType, constants, heap::Heap, utils},
+    crate::vmo::{
+        block::{Block, PropertyFormat},
+        block_type::BlockType,
+        constants,
+        heap::Heap,
+        utils,
+    },
     failure::{format_err, Error},
     mapped_vmo::Mapping,
-    num_derive::{FromPrimitive, ToPrimitive},
     num_traits::ToPrimitive,
     std::sync::Arc,
 };
@@ -15,13 +20,6 @@ use {
 pub struct State {
     pub(in crate::vmo) heap: Heap,
     header: Block<Arc<Mapping>>,
-}
-
-/// Format in which the property will be read.
-#[derive(FromPrimitive, ToPrimitive)]
-pub enum PropertyFormat {
-    String = 0,
-    ByteVector = 1,
 }
 
 /// Locks the VMO Header blcok, executes the given codeblock and unblocks it.
@@ -124,7 +122,7 @@ impl State {
     ) -> Result<Block<Arc<Mapping>>, Error> {
         with_header_lock!(self, {
             let (block, name_block) = self.allocate_reserved_value(name, parent_index)?;
-            block.become_property(name_block.index(), parent_index, format.to_u8().unwrap())?;
+            block.become_property(name_block.index(), parent_index, format)?;
             if let Err(err) = self.inner_set_property_value(&block, &value) {
                 self.heap.free_block(block).expect("Failed to free block");
                 self.heap.free_block(name_block).expect("Failed to free name block");
@@ -273,14 +271,14 @@ impl State {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::vmo::reader::BlockIterator;
+    use {super::*, crate::vmo::reader::snapshot::Snapshot, std::convert::TryFrom};
 
     #[test]
     fn test_create() {
         let state = get_state(4096);
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
@@ -306,7 +304,8 @@ mod tests {
 
         // Verify blocks.
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::NodeValue);
@@ -340,7 +339,8 @@ mod tests {
         // Free node.
         assert!(state.free_value(block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -362,7 +362,8 @@ mod tests {
         assert_eq!(name_block.name_contents().unwrap(), "test");
 
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::IntValue);
@@ -381,7 +382,8 @@ mod tests {
         // Free metric.
         assert!(state.free_value(block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -403,7 +405,8 @@ mod tests {
         assert_eq!(name_block.name_contents().unwrap(), "test");
 
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::UintValue);
@@ -422,7 +425,8 @@ mod tests {
         // Free metric.
         assert!(state.free_value(block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -444,7 +448,8 @@ mod tests {
         assert_eq!(name_block.name_contents().unwrap(), "test");
 
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::DoubleValue);
@@ -463,7 +468,8 @@ mod tests {
         // Free metric.
         assert!(state.free_value(block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -479,7 +485,7 @@ mod tests {
         assert_eq!(block.parent_index().unwrap(), 0);
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.property_total_length().unwrap(), 13);
-        assert_eq!(block.property_flags().unwrap(), 0);
+        assert_eq!(block.property_format().unwrap(), PropertyFormat::String);
 
         let name_block = state.heap.get_block(2).unwrap();
         assert_eq!(name_block.block_type(), BlockType::Name);
@@ -495,7 +501,8 @@ mod tests {
         );
 
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 11);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::PropertyValue);
@@ -507,7 +514,8 @@ mod tests {
         // Free property.
         assert!(state.free_property(block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -517,14 +525,14 @@ mod tests {
 
         // Creates with value
         let block =
-            state.create_property("test", b"test-property", PropertyFormat::ByteVector, 0).unwrap();
+            state.create_property("test", b"test-property", PropertyFormat::Bytes, 0).unwrap();
         assert_eq!(block.block_type(), BlockType::PropertyValue);
         assert_eq!(block.index(), 1);
         assert_eq!(block.parent_index().unwrap(), 0);
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.property_total_length().unwrap(), 13);
         assert_eq!(block.property_extent_index().unwrap(), 4);
-        assert_eq!(block.property_flags().unwrap(), 1);
+        assert_eq!(block.property_format().unwrap(), PropertyFormat::Bytes);
 
         let name_block = state.heap.get_block(2).unwrap();
         assert_eq!(name_block.block_type(), BlockType::Name);
@@ -540,7 +548,8 @@ mod tests {
         );
 
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 11);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::PropertyValue);
@@ -552,7 +561,8 @@ mod tests {
         // Free property.
         assert!(state.free_property(block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -570,7 +580,7 @@ mod tests {
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.property_total_length().unwrap(), 6000);
         assert_eq!(block.property_extent_index().unwrap(), 128);
-        assert_eq!(block.property_flags().unwrap(), 0);
+        assert_eq!(block.property_format().unwrap(), PropertyFormat::String);
 
         let name_block = state.heap.get_block(2).unwrap();
         assert_eq!(name_block.block_type(), BlockType::Name);
@@ -606,7 +616,8 @@ mod tests {
         assert_eq!(extent_block.extent_contents().unwrap()[1920..], [0u8; 120][..]);
 
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 12);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::PropertyValue);
@@ -619,7 +630,8 @@ mod tests {
         // Free property.
         assert!(state.free_property(block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -635,7 +647,8 @@ mod tests {
         assert!(state.free_value(block.index()).is_ok());
 
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[0].block_type() == BlockType::Header);
         assert!(blocks[1].block_type() == BlockType::Tombstone);
         assert!(blocks[2].block_type() == BlockType::Free);
@@ -647,7 +660,8 @@ mod tests {
         // Freeing the child, causes all blocks to be freed.
         assert!(state.free_value(child_block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
-        let blocks: Vec<Block<&[u8]>> = BlockIterator::new(&bytes).collect();
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 

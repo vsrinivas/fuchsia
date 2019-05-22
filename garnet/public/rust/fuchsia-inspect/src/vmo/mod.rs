@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::vmo::{
-        heap::Heap,
-        state::{PropertyFormat, State},
-    },
+    crate::vmo::{block::PropertyFormat, heap::Heap, state::State},
     failure::{format_err, Error},
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_zircon::{self as zx, HandleBased},
@@ -21,7 +18,7 @@ mod block;
 mod block_type;
 mod constants;
 mod heap;
-mod reader;
+pub mod reader;
 mod state;
 mod utils;
 
@@ -171,14 +168,14 @@ impl Node {
         &self,
         name: &str,
         value: &[u8],
-    ) -> Result<ByteVectorProperty, Error> {
+    ) -> Result<BytesProperty, Error> {
         let block = self.state.lock().create_property(
             name,
             value,
-            PropertyFormat::ByteVector,
+            PropertyFormat::Bytes,
             self.block_index,
         )?;
-        Ok(ByteVectorProperty { state: self.state.clone(), block_index: block.index() })
+        Ok(BytesProperty { state: self.state.clone(), block_index: block.index() })
     }
 }
 
@@ -276,7 +273,7 @@ metric!(uint, Uint, u64);
 metric!(double, Double, f64);
 
 property!(String, str, value.as_bytes());
-property!(ByteVector, [u8], value);
+property!(Bytes, [u8], value);
 
 #[cfg(test)]
 mod tests {
@@ -284,7 +281,6 @@ mod tests {
         super::*,
         crate::vmo::{block_type::BlockType, constants, heap::Heap},
         mapped_vmo::Mapping,
-        num_traits::ToPrimitive,
     };
 
     #[test]
@@ -416,10 +412,7 @@ mod tests {
             let property_block = node.state.lock().heap.get_block(property.block_index).unwrap();
             assert_eq!(property_block.block_type(), BlockType::PropertyValue);
             assert_eq!(property_block.property_total_length().unwrap(), 4);
-            assert_eq!(
-                property_block.property_flags().unwrap(),
-                PropertyFormat::String.to_u8().unwrap()
-            );
+            assert_eq!(property_block.property_format().unwrap(), PropertyFormat::String);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
             assert!(property.set("test-set").is_ok());
@@ -439,10 +432,7 @@ mod tests {
             let property_block = node.state.lock().heap.get_block(property.block_index).unwrap();
             assert_eq!(property_block.block_type(), BlockType::PropertyValue);
             assert_eq!(property_block.property_total_length().unwrap(), 4);
-            assert_eq!(
-                property_block.property_flags().unwrap(),
-                PropertyFormat::ByteVector.to_u8().unwrap(),
-            );
+            assert_eq!(property_block.property_format().unwrap(), PropertyFormat::Bytes);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
             assert!(property.set(b"test-set").is_ok());

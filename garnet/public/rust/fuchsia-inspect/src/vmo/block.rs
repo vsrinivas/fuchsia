@@ -11,6 +11,7 @@ use {
     byteorder::{ByteOrder, LittleEndian},
     failure::{format_err, Error},
     mapped_vmo::Mapping,
+    num_derive::{FromPrimitive, ToPrimitive},
     num_traits::{FromPrimitive, ToPrimitive},
     std::{
         cmp::min,
@@ -19,6 +20,13 @@ use {
         sync::Arc,
     },
 };
+
+/// Format in which the property will be read.
+#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+pub enum PropertyFormat {
+    String = 0,
+    Bytes = 1,
+}
 
 pub struct Block<T> {
     index: u32,
@@ -90,17 +98,28 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Returns the magic number in a HEADER block.
-    #[cfg(test)]
     pub fn header_magic(&self) -> Result<u32, Error> {
         self.check_type(BlockType::Header)?;
         Ok(self.read_header().header_magic())
     }
 
     /// Returns the version of a HEADER block.
-    #[cfg(test)]
     pub fn header_version(&self) -> Result<u32, Error> {
         self.check_type(BlockType::Header)?;
         Ok(self.read_header().header_version())
+    }
+
+    /// Returns the generation count of a HEADER block.
+    pub fn header_generation_count(&self) -> Result<u64, Error> {
+        self.check_type(BlockType::Header)?;
+        Ok(self.read_payload().header_generation_count())
+    }
+
+    /// True if the header is locked, false otherwise.
+    pub fn header_is_locked(&self) -> Result<bool, Error> {
+        self.check_type(BlockType::Header)?;
+        let payload = self.read_payload();
+        Ok(payload.header_generation_count() & 1 == 1)
     }
 
     /// Get the double value of a DOUBLE_VALUE block.
@@ -128,17 +147,15 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Get the total length of the PROPERTY block.
-    #[cfg(test)]
-    pub fn property_total_length(&self) -> Result<u32, Error> {
+    pub fn property_total_length(&self) -> Result<usize, Error> {
         self.check_type(BlockType::PropertyValue)?;
-        Ok(self.read_payload().property_total_length())
+        Ok(self.read_payload().property_total_length().to_usize().unwrap())
     }
 
     /// Get the flags of a PROPERTY block.
-    #[cfg(test)]
-    pub fn property_flags(&self) -> Result<u8, Error> {
+    pub fn property_format(&self) -> Result<PropertyFormat, Error> {
         self.check_type(BlockType::PropertyValue)?;
-        Ok(self.read_payload().property_flags())
+        Ok(PropertyFormat::from_u8(self.read_payload().property_flags()).unwrap())
     }
 
     /// Returns the next EXTENT in an EXTENT chain.
@@ -148,7 +165,6 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Returns the payload bytes value of an EXTENT block.
-    #[cfg(test)]
     pub fn extent_contents(&self) -> Result<Vec<u8>, Error> {
         self.check_type(BlockType::Extent)?;
         let length = utils::payload_size_for_order(self.order());
@@ -182,14 +198,12 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Get the length of the name of a NAME block
-    #[cfg(test)]
     pub fn name_length(&self) -> Result<usize, Error> {
         self.check_type(BlockType::Name)?;
         Ok(self.read_header().name_length().to_usize().unwrap())
     }
 
     /// Returns the contents of a NAME block.
-    #[cfg(test)]
     pub fn name_contents(&self) -> Result<String, Error> {
         self.check_type(BlockType::Name)?;
         let length = self.name_length()?;
@@ -311,6 +325,15 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         header.set_header_magic(constants::HEADER_MAGIC_NUMBER);
         header.set_header_version(constants::HEADER_VERSION_NUMBER);
         self.write(header, Payload(0));
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(super) fn set_header_magic(&self, value: u32) -> Result<(), Error> {
+        self.check_type(BlockType::Header)?;
+        let mut header = self.read_header();
+        header.set_header_magic(value);
+        self.write_header(header);
         Ok(())
     }
 
@@ -459,11 +482,11 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         &self,
         name_index: u32,
         parent_index: u32,
-        flags: u8,
+        format: PropertyFormat,
     ) -> Result<(), Error> {
         self.write_value_header(BlockType::PropertyValue, name_index, parent_index)?;
         let mut payload = Payload(0);
-        payload.set_property_flags(flags);
+        payload.set_property_flags(format.to_u8().unwrap());
         self.write_payload(payload);
         Ok(())
     }
@@ -726,11 +749,15 @@ mod tests {
         // Can't unlock unlocked header.
         assert!(block.unlock_header().is_err());
         assert!(block.lock_header().is_ok());
+        assert!(block.header_is_locked().unwrap());
+        assert_eq!(block.header_generation_count().unwrap(), 1);
         assert_eq!(container[..8], header_bytes[..]);
         assert_eq!(container[8..], [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         // Can't lock locked header.
         assert!(block.lock_header().is_err());
         assert!(block.unlock_header().is_ok());
+        assert!(!block.header_is_locked().unwrap());
+        assert_eq!(block.header_generation_count().unwrap(), 2);
         assert_eq!(container[..8], header_bytes[..]);
         assert_eq!(container[8..], [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
@@ -739,10 +766,12 @@ mod tests {
         (&container[..]).write_bytes(8, &u64::max_value().to_le_bytes());
         assert!(block.lock_header().is_err());
         assert!(block.unlock_header().is_ok());
+        assert_eq!(block.header_generation_count().unwrap(), 0);
         assert_eq!(container[..8], header_bytes[..]);
         assert_eq!(container[8..], [0, 0, 0, 0, 0, 0, 0, 0]);
         test_ok_types(
             move |b| {
+                b.header_generation_count()?;
                 b.lock_header()?;
                 b.unlock_header()
             },
@@ -945,11 +974,11 @@ mod tests {
     fn test_property() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);
-        assert!(block.become_property(2, 3, 1).is_ok());
+        assert!(block.become_property(2, 3, PropertyFormat::Bytes).is_ok());
         assert_eq!(block.block_type(), BlockType::PropertyValue);
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.parent_index().unwrap(), 3);
-        assert_eq!(block.property_flags().unwrap(), 1);
+        assert_eq!(block.property_format().unwrap(), PropertyFormat::Bytes);
         assert_eq!(container[..8], [0x71, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10]);
 
@@ -967,9 +996,9 @@ mod tests {
         test_ok_types(move |b| b.set_property_extent_index(4), &types);
         test_ok_types(move |b| b.set_property_total_length(4), &types);
         test_ok_types(move |b| b.property_extent_index(), &types);
-        test_ok_types(move |b| b.property_flags(), &types);
+        test_ok_types(move |b| b.property_format(), &types);
         test_ok_types(
-            move |b| b.become_property(2, 3, 1),
+            move |b| b.become_property(2, 3, PropertyFormat::Bytes),
             &BTreeSet::from_iter(vec![BlockType::Reserved]),
         );
     }

@@ -186,9 +186,13 @@ impl Heap {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::vmo::bitfields::{BlockHeader, Payload};
-    use crate::vmo::reader::BlockIterator;
+    use {
+        super::*,
+        crate::vmo::{
+            bitfields::{BlockHeader, Payload},
+            reader::snapshot::BlockIterator,
+        },
+    };
 
     struct BlockDebug {
         index: u32,
@@ -197,7 +201,7 @@ mod tests {
     }
 
     fn validate(expected: &[BlockDebug], heap: &Heap) {
-        let actual: Vec<BlockDebug> = BlockIterator::new(&heap.bytes()[..])
+        let actual: Vec<BlockDebug> = BlockIterator::from(&heap.bytes()[..])
             .map(|block| BlockDebug {
                 order: block.order(),
                 index: block.index(),
@@ -273,7 +277,7 @@ mod tests {
         ];
         validate(&expected, &heap);
         assert!(heap.free_head_per_order.iter().enumerate().skip(2).all(|(i, &j)| (1 << i) == j));
-        assert!(BlockIterator::new(&heap.bytes()[..])
+        assert!(BlockIterator::from(&heap.bytes()[..])
             .skip(2)
             .all(|b| b.free_next_index().unwrap() == 0));
 
@@ -355,7 +359,7 @@ mod tests {
         ];
         validate(&expected, &heap);
         assert!(heap.free_head_per_order.iter().enumerate().skip(3).all(|(i, &j)| (1 << i) == j));
-        assert!(BlockIterator::new(&heap.bytes()[..])
+        assert!(BlockIterator::from(&heap.bytes()[..])
             .skip(3)
             .all(|b| b.free_next_index().unwrap() == 0));
         assert_eq!(heap.free_head_per_order[1], 0);
