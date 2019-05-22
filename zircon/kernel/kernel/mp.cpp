@@ -287,7 +287,7 @@ zx_status_t mp_hotplug_cpu_mask(cpu_mask_t cpu_mask) {
 }
 
 // Unplug a single CPU.  Must be called while holding the hotplug lock
-static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
+static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, thread_t** leaked_thread) {
     // Wait for |cpu_id| to complete any in-progress DPCs and terminate its DPC thread.  Later, once
     // nothing is running on it, we'll migrate its queued DPCs to another CPU.
     dpc_shutdown(cpu_id);
@@ -359,7 +359,11 @@ cleanup_thread:
     // the system currently, it's not a big problem leaking the thread structure
     // and stack.
     // thread_forget(t);
-    TRACEF("WARNING: leaking thread for cpu %u\n", cpu_id);
+    if (leaked_thread) {
+        *leaked_thread = t;
+    } else {
+        TRACEF("WARNING: leaking thread for cpu %u\n", cpu_id);
+    }
 
     return status;
 }
@@ -368,7 +372,12 @@ cleanup_thread:
 // failure may occur (in which some CPUs are removed but not others).
 //
 // This should be called in a thread context
-zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask) {
+//
+// |leaked_threads| is an optional array of pointers to threads with length
+// |SMP_MAX_CPUS|. If null, the threads used to "cleanup" each CPU will be
+// leaked. If non-null, they will be returned to the caller so that the caller
+// can |thread_forget| them.
+zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask, thread_t** leaked_threads) {
     DEBUG_ASSERT(!arch_ints_disabled());
     Guard<Mutex>(&mp.hotplug_lock);
 
@@ -381,7 +390,8 @@ zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask) {
         cpu_num_t cpu_id = highest_cpu_set(cpu_mask);
         cpu_mask &= ~cpu_num_to_mask(cpu_id);
 
-        zx_status_t status = mp_unplug_cpu_mask_single_locked(cpu_id);
+        zx_status_t status = mp_unplug_cpu_mask_single_locked(
+                cpu_id, leaked_threads ? &leaked_threads[cpu_id] : nullptr);
         if (status != ZX_OK) {
             return status;
         }

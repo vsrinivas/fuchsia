@@ -22,9 +22,9 @@ static int resume_cpu_test_thread(void* arg) {
 }
 
 // "Unplug" online secondary (non-BOOT) cores
-static zx_status_t unplug_all_cores() {
+static zx_status_t unplug_all_cores(thread_t** leaked_threads) {
     cpu_mask_t cpumask = mp_get_online_mask() & ~cpu_num_to_mask(BOOT_CPU_ID);
-    return mp_unplug_cpu_mask(cpumask);
+    return mp_unplug_cpu_mask(cpumask, leaked_threads);
 }
 
 static zx_status_t hotplug_core(uint i) {
@@ -60,7 +60,8 @@ static bool mp_hotplug_test() {
     }
     thread_migrate_to_cpu(BOOT_CPU_ID);
     // "Unplug" online secondary (non-BOOT) cores
-    ASSERT_EQ(unplug_all_cores(), ZX_OK, "unplugging all cores failed");
+    thread_t* leaked_threads[SMP_MAX_CPUS] = {};
+    ASSERT_EQ(unplug_all_cores(leaked_threads), ZX_OK, "unplugging all cores failed");
     for (uint i = 0; i < num_cores; i++) {
         if (i == BOOT_CPU_ID) {
             continue;
@@ -80,6 +81,13 @@ static bool mp_hotplug_test() {
                   "thread join failed");
         ASSERT_EQ(i, running_core, "Thread not running on hotplugged core");
     }
+
+    for (unsigned i = 0; i < fbl::count_of(leaked_threads); i++) {
+        if (leaked_threads[i]) {
+            thread_forget(leaked_threads[i]);
+        }
+    }
+
     END_TEST;
 }
 
