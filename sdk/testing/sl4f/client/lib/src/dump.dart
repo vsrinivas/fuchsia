@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io' show Directory, File, FileSystemException, Platform;
+import 'dart:io' show Directory, File, FileSystemException, Platform, IOSink;
 
 /// Supports dumping a trace of data received in various facades as
 /// timestamped files into a directory in the filesystem.
@@ -56,14 +56,27 @@ class Dump {
   /// no dump directory is configured.
   ///
   /// Returns the [File] object of the newly created file.
-  Future<File> writeAsBytes(String name, String suffix, List<int> bytes) {
-    if (_hasDumpDirectory) {
-      final filename = '${DateTime.now().toIso8601String()}-$name.$suffix';
+  Future<File> writeAsBytes(String name, String suffix, List<int> bytes) =>
+      createFile(name, suffix)?.writeAsBytes(bytes);
 
-      // Writes to the file asynchronously so the test can continue.
-      return File([_dumpDirectory, filename].join('/')).writeAsBytes(bytes);
+  /// Opens the appropriate file for writing.
+  ///
+  /// Returns the [IOSink] object of the newly created file for writing.
+  IOSink openForWrite(String name, String suffix) =>
+      createFile(name, suffix)?.openWrite();
+
+  /// Creates a file in the dump directory.
+  ///
+  /// Returns null if dump directory is invalid.
+  File createFile(String name, String suffix) {
+    if (!_hasDumpDirectory) {
+      return null;
     }
-    return null;
+
+    final filename = '${DateTime.now().toIso8601String()}-$name.$suffix';
+
+    // Writes to the file asynchronously so the test can continue.
+    return File([_dumpDirectory, filename].join('/'));
   }
 
   bool get _hasDumpDirectory => _notEmptyString(_dumpDirectory);
