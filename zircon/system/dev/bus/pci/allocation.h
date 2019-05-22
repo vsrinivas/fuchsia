@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 //
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_ALLOCATION_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_ALLOCATION_H_
 
 #include "allocation.h"
 #include "ref_counted.h"
@@ -82,15 +83,18 @@ protected:
     const zx::resource resource_;
 
 private:
-    // Allow PciRegionAllocator to duplicate the resource for use further
+    // Allow PciRegionAllocator / Device to duplicate the resource for use further
     // down the bridge chain. The security implications of this are not a
     // concern because:
     // 1. The allocation object strictly bounds the VMO to the specified base & size
     // 2. The resource is already in the driver process's address space, so we're not
     //    leaking it anywhere out of band.
+    // 3. Device needs to be able to pass a resource to DeviceProxy for setting
+    //    IO permission bits.
     // This is only needed for PciRegionAllocators because PciRootAllocators do not
     // hold a backing PciAllocation object.
     friend class PciRegionAllocator;
+    friend class Device;
     const zx::resource& resource() const { return resource_; }
 };
 
@@ -195,3 +199,5 @@ private:
 };
 
 } // namespace pci
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_ALLOCATION_H_

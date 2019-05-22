@@ -39,6 +39,7 @@ enum PciCapId : uint8 {
     ENHANCED_ALLOCATION = 0x14;
 };
 
+/// ZX-3927: Remove the zx_pcie types and implement them here
 [Layout = "ddk-protocol"]
 protocol Pci {
     GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);
@@ -47,7 +48,7 @@ protocol Pci {
     MapInterrupt(int32 which_irq) -> (zx.status s, handle<interrupt> @handle);
     QueryIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode) -> (zx.status s, uint32 max_irqs);
     SetIrqMode(zircon.syscalls.pci.ZxPciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
-    GetDeviceInfo() -> (zx.status s, zircon.syscalls.pci.ZxPcieDeviceInfo into);
+    GetDeviceInfo() -> (zx.status s, zircon.syscalls.pci.ZxPcieDeviceInfo info);
     ConfigRead8(uint16 offset) -> (zx.status s, uint8 value);
     ConfigRead16(uint16 offset) -> (zx.status s, uint16 value);
     ConfigRead32(uint16 offset) -> (zx.status s, uint32 value);

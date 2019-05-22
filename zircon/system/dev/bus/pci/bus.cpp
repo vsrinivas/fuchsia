@@ -14,6 +14,7 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <list>
 
@@ -28,16 +29,10 @@ zx_status_t Bus::Create(zx_device_t* parent) {
         return status;
     }
 
-    fbl::AllocChecker ac;
-    Bus* bus = new (&ac) Bus(parent, &pciroot);
-    if (!ac.check()) {
+    Bus* bus = new Bus(parent, &pciroot);
+    if (!bus) {
         pci_errorf("failed to allocate bus object.\n");
         return ZX_ERR_NO_MEMORY;
-    }
-
-    if ((status = bus->Initialize()) != ZX_OK) {
-        pci_errorf("failed to initialize bus driver: %d!\n", status);
-        return status;
     }
 
     // Grab the info beforehand so we can get segment/bus information from it
@@ -54,8 +49,18 @@ zx_status_t Bus::Create(zx_device_t* parent) {
     char name[32];
     snprintf(name, sizeof(name), "pci[%u][%u:%u]", info.segment_group, info.start_bus_num,
              info.end_bus_num);
+    if ((status = bus->DdkAdd(name)) != ZX_OK) {
+        pci_errorf("failed to add bus driver: %d\n", status);
+        return status;
+    }
 
-    return bus->DdkAdd(name);
+    if ((status = bus->Initialize()) != ZX_OK) {
+        pci_errorf("failed to initialize bus driver: %d!\n", status);
+        bus->DdkRemove();
+        return status;
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t Bus::Initialize() {
@@ -145,7 +150,7 @@ zx_status_t Bus::MakeConfig(pci_bdf_t bdf, fbl::RefPtr<Config>* out_config) {
 zx_status_t Bus::ScanDownstream(void) {
     std::list<BusScanEntry> scan_list;
     // First scan the bus id associated with our root.
-    BusScanEntry entry = {{ static_cast<uint8_t>(root_->managed_bus_id()), 0, 0 }, root_.get() };
+    BusScanEntry entry = {{static_cast<uint8_t>(root_->managed_bus_id()), 0, 0}, root_.get()};
     entry.upstream = root_.get();
     scan_list.push_back(entry);
 
@@ -198,7 +203,7 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
             if (is_bridge) {
                 fbl::RefPtr<Bridge> bridge;
                 uint8_t mbus_id = config->Read(Config::kSecondaryBusId);
-                status = Bridge::Create(parent(), std::move(config), upstream, this, mbus_id,
+                status = Bridge::Create(zxdev(), std::move(config), upstream, this, mbus_id,
                                         &bridge);
                 if (status != ZX_OK) {
                     continue;
@@ -213,21 +218,21 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
                 // device_id loop will iterate and we'll be in a good state
                 // again.
                 BusScanEntry resume_entry{};
-                resume_entry.bdf.bus_id = static_cast<uint8_t>(bus_id),
-                resume_entry.bdf.device_id = dev_id,
-                resume_entry.bdf.function_id = static_cast<uint8_t>(func_id + 1),
-                resume_entry.upstream = upstream, // Same upstream as this scan
+                resume_entry.bdf.bus_id = static_cast<uint8_t>(bus_id);
+                resume_entry.bdf.device_id = dev_id;
+                resume_entry.bdf.function_id = static_cast<uint8_t>(func_id + 1);
+                resume_entry.upstream = upstream; // Same upstream as this scan
                 scan_list->push_back(resume_entry);
 
                 BusScanEntry bridge_entry{};
-                bridge_entry.bdf.bus_id = static_cast<uint8_t>(bridge->managed_bus_id()),
-                bridge_entry.upstream = bridge.get(), // the new bridge will be this scan's upstream
+                bridge_entry.bdf.bus_id = static_cast<uint8_t>(bridge->managed_bus_id());
+                bridge_entry.upstream = bridge.get(); // the new bridge will be this scan's upstream
                 scan_list->push_back(bridge_entry);
                 // Quit this scan and pick up again based on the scan entries found.
                 return;
             } else {
                 // Create a device
-                pci::Device::Create(parent(), std::move(config), upstream, this);
+                pci::Device::Create(zxdev(), std::move(config), upstream, this);
             }
         }
 

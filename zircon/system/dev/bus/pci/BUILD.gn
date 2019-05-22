@@ -7,10 +7,8 @@ import("$zx/kernel/params.gni")
 group("pci") {
   deps = [
     ":bus-pci",
+    ":bus-pci.proxy",
   ]
-  if (!enable_user_pci) {
-    deps += [ ":bus-pci.proxy" ]
-  }
 }
 
 # The userspace PCI bus driver uses this set, as well as the
@@ -24,7 +22,7 @@ source_set("user_pci") {
     "capabilities.cpp",
     "config.cpp",
     "device.cpp",
-    "protocol.cpp",
+    "device_protocol.cpp",
     "upstream_node.cpp",
   ]
   public_deps = [
@@ -44,16 +42,30 @@ source_set("user_pci") {
   ]
 }
 
-driver("bus-pci") {
-  if (enable_user_pci) {
+if (enable_user_pci) {
+  driver("bus-pci") {
     sources = [
-      # The driver needs bind glue
+      # The driver needs bind glue, unlike tests.
       "bind.cpp",
     ]
     deps = [
       ":user_pci",
     ]
-  } else {
+  }
+
+  driver("bus-pci.proxy") {
+    sources = [
+      "device_proxy.cpp",
+    ]
+    deps = [
+      "$zx/system/banjo/ddk.protocol.pci",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/ddktl",
+      "$zx/system/ulib/pretty",
+    ]
+  }
+} else {
+  driver("bus-pci") {
     sources = [
       "kpci/kpci.c",
     ]
@@ -66,20 +78,20 @@ driver("bus-pci") {
       "$zx/system/ulib/zircon",
     ]
   }
-}
 
-driver("bus-pci.proxy") {
-  sources = [
-    "kpci/proxy.c",
-  ]
-  deps = [
-    "$zx/system/banjo/ddk.protocol.pci",
-    "$zx/system/banjo/ddk.protocol.pciroot",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.sysmem",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/zircon",
-  ]
+  driver("bus-pci.proxy") {
+    sources = [
+      "kpci/proxy.c",
+    ]
+    deps = [
+      "$zx/system/banjo/ddk.protocol.pci",
+      "$zx/system/banjo/ddk.protocol.pciroot",
+      "$zx/system/banjo/ddk.protocol.platform.device",
+      "$zx/system/banjo/ddk.protocol.sysmem",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/zircon",
+    ]
+  }
 }
 
 test("pci_tests") {
