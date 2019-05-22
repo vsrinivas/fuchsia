@@ -749,37 +749,6 @@ void __libc_extensions_fini(void) __TA_ACQUIRE(&fdio_lock) {
 }
 
 __EXPORT
-zx_status_t fdio_ns_install(fdio_ns_t* ns) {
-    fdio_t* io = fdio_ns_open_root(ns);
-    if (io == NULL) {
-        return ZX_ERR_IO;
-    }
-
-    fdio_t* old_root = NULL;
-    zx_status_t status;
-
-    mtx_lock(&fdio_lock);
-    if (fdio_root_ns != NULL) {
-        //TODO: support replacing an active namespace
-        status = ZX_ERR_ALREADY_EXISTS;
-    } else {
-        fdio_root_ns = ns;
-        if (fdio_root_handle) {
-            old_root = fdio_root_handle;
-        }
-        fdio_root_handle = io;
-        status = ZX_OK;
-    }
-    mtx_unlock(&fdio_lock);
-
-    if (old_root) {
-        fdio_close(old_root);
-        fdio_release(old_root);
-    }
-    return status;
-}
-
-__EXPORT
 zx_status_t fdio_ns_get_installed(fdio_ns_t** ns) {
     zx_status_t status = ZX_OK;
     mtx_lock(&fdio_lock);
