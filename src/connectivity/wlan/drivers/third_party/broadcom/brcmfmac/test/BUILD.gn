@@ -20,8 +20,6 @@ group("test") {
   testonly = true
   deps = [
     ":brcmfmac_test",
-    ":netbuf_test",
-    ":workqueue_test",
   ]
 }
 
@@ -37,14 +35,8 @@ executable("workqueue_test") {
 
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
-    "//third_party/googletest:gtest_main",
-    "//third_party/googletest:gtest_main",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fbl",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
   ]
 }
 
@@ -61,14 +53,8 @@ executable("netbuf_test") {
   deps = [
     "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
-    "//third_party/googletest:gtest_main",
-    "//third_party/googletest:gtest_main",
-    "//zircon/public/lib/async-loop",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
   ]
 }
 
