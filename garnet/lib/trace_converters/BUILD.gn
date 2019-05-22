@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
 group("trace_converters") {
   deps = [
     ":chromium",
@@ -16,11 +20,38 @@ source_set("chromium") {
 
   deps = [
     "//src/lib/fxl",
-    "//third_party/rapidjson",
   ]
 
   public_deps = [
     "//garnet/lib/perfmon",
+    "//third_party/rapidjson",
     "//zircon/public/lib/trace-reader",
+  ]
+}
+
+test("chromium_unittests") {
+  output_name = "chromium_exporter_unittests"
+
+  sources = [
+    "chromium_exporter_unittest.cc",
+  ]
+
+  deps = [
+    ":chromium",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+test_package("trace_converter_tests") {
+  deps = [
+    ":chromium_unittests",
+  ]
+
+  tests = [
+    {
+      name = "chromium_exporter_unittests"
+      environments = basic_envs
+    },
   ]
 }

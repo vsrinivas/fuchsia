@@ -5,13 +5,13 @@
 #ifndef GARNET_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 #define GARNET_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 
+#include <trace-reader/reader.h>
+
 #include <memory>
 #include <ostream>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
-
-#include <trace-reader/reader.h>
 
 #include "garnet/lib/perfmon/writer.h"
 #include "rapidjson/ostreamwrapper.h"

@@ -5,21 +5,23 @@
 #include "garnet/lib/trace_converters/chromium_exporter.h"
 
 #include <inttypes.h>
-#include <utility>
-
 #include <trace-engine/types.h>
 #include <trace-reader/reader.h>
+
+#include <utility>
 
 #include "garnet/lib/perfmon/writer.h"
 #include "rapidjson/writer.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/utf_codecs.h"
 
 namespace tracing {
 namespace {
 
 constexpr char kProcessArgKey[] = "process";
 constexpr zx_koid_t kNoProcess = 0u;
+constexpr uint32_t kUnicodeReplacementCharacter = 0xFFFD;
 
 bool IsEventTypeSupported(trace::EventType type) {
   switch (type) {
@@ -49,6 +51,33 @@ const trace::ArgumentValue* GetArgumentValue(
       return &arg.value();
   }
   return nullptr;
+}
+
+// The JSON specification requires that the JSON is valid unicode. This function
+// replaces any invalid unicode sequences with the replacement character, so
+// that the output will be valid UTF-8, even if a trace provider gives us
+// invalid UTF-8 in a string.
+std::string CleanString(fbl::String str) {
+  std::string result;
+  const char* data = str.data();
+  const size_t len = str.length();
+  size_t char_index = 0;
+
+  while (char_index < len) {
+    uint32_t code_point;
+    if (!fxl::ReadUnicodeCharacter(data, len, &char_index, &code_point)) {
+      static bool logged_once = false;
+      if (!logged_once) {
+        FXL_LOG(WARNING) << "Invalid unicode present in trace";
+        logged_once = true;
+      }
+      code_point = kUnicodeReplacementCharacter;
+    }
+    fxl::WriteUnicodeCharacter(code_point, &result);
+    char_index++;
+  }
+
+  return result;
 }
 
 }  // namespace
@@ -94,7 +123,7 @@ void ChromiumExporter::Stop() {
     writer_.Key("pid");
     writer_.Uint64(process_koid);
     writer_.Key("name");
-    writer_.String(name.data(), name.size());
+    writer_.String(CleanString(name));
 
     if (process_koid == kNoProcess) {
       writer_.Key("sort_index");
@@ -116,7 +145,7 @@ void ChromiumExporter::Stop() {
       writer_.Key("tid");
       writer_.Uint64(thread_koid);
       writer_.Key("name");
-      writer_.String(name.data(), name.size());
+      writer_.String(CleanString(name));
       writer_.EndObject();
     }
   }
@@ -192,9 +221,9 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
   writer_.StartObject();
 
   writer_.Key("cat");
-  writer_.String(event.category.data(), event.category.size());
+  writer_.String(CleanString(event.category));
   writer_.Key("name");
-  writer_.String(event.name.data(), event.name.size());
+  writer_.String(CleanString(event.name));
   writer_.Key("ts");
   writer_.Double(event.timestamp * tick_scale_);
   writer_.Key("pid");
@@ -294,42 +323,41 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
     for (const auto& arg : event.arguments) {
       switch (arg.value().type()) {
         case trace::ArgumentType::kBool:
-          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Key(CleanString(arg.name()));
           writer_.Bool(arg.value().GetBool());
           break;
         case trace::ArgumentType::kInt32:
-          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Key(CleanString(arg.name()));
           writer_.Int(arg.value().GetInt32());
           break;
         case trace::ArgumentType::kUint32:
-          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Key(CleanString(arg.name()));
           writer_.Uint(arg.value().GetUint32());
           break;
         case trace::ArgumentType::kInt64:
-          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Key(CleanString(arg.name()));
           writer_.Int64(arg.value().GetInt64());
           break;
         case trace::ArgumentType::kUint64:
-          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Key(CleanString(arg.name()));
           writer_.Uint64(arg.value().GetUint64());
           break;
         case trace::ArgumentType::kDouble:
-          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Key(CleanString(arg.name()));
           writer_.Double(arg.value().GetDouble());
           break;
         case trace::ArgumentType::kString:
-          writer_.Key(arg.name().data(), arg.name().size());
-          writer_.String(arg.value().GetString().data(),
-                         arg.value().GetString().size());
+          writer_.Key(CleanString(arg.name()));
+          writer_.String(CleanString(arg.value().GetString()));
           break;
         case trace::ArgumentType::kPointer:
-          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Key(CleanString(arg.name()));
           writer_.String(
               fxl::StringPrintf("0x%" PRIx64, arg.value().GetPointer())
                   .c_str());
           break;
         case trace::ArgumentType::kKoid:
-          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Key(CleanString(arg.name()));
           writer_.String(
               fxl::StringPrintf("#%" PRIu64, arg.value().GetKoid()).c_str());
           break;
@@ -425,7 +453,7 @@ void ChromiumExporter::ExportLog(const trace::Record::Log& log) {
   writer_.Key("args");
   writer_.StartObject();
   writer_.Key("message");
-  writer_.String(log.message.c_str(), log.message.size());
+  writer_.String(CleanString(log.message));
   writer_.EndObject();
   writer_.EndObject();
 }
