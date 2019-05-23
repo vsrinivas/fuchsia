@@ -14,6 +14,7 @@
 #include <blobfs/iterator/extent-iterator.h>
 #include <blobfs/node-reserver.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <fs/trace.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -28,14 +29,7 @@ Allocator::Allocator(SpaceManager* space_manager, RawBitmap block_map,
     : space_manager_(space_manager), block_map_(std::move(block_map)),
       node_map_(std::move(node_map)), node_bitmap_(std::move(nodes_bitmap)) {}
 
-Allocator::~Allocator() {
-    if (block_map_vmoid_ != VMOID_INVALID) {
-        space_manager_->DetachVmo(block_map_vmoid_);
-    }
-    if (node_map_vmoid_ != VMOID_INVALID) {
-        space_manager_->DetachVmo(node_map_vmoid_);
-    }
-}
+Allocator::~Allocator() = default;
 
 Inode* Allocator::GetNode(uint32_t node_index) {
     ZX_DEBUG_ASSERT(node_index < node_map_.size() / kBlobfsInodeSize);
@@ -52,71 +46,45 @@ bool Allocator::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
     return allocated;
 }
 
-zx_status_t Allocator::ResetBlockMapSize() {
-    ZX_DEBUG_ASSERT(ReservedBlockCount() == 0);
-    const auto info = space_manager_->Info();
-    uint64_t new_size = info.data_block_count;
-    if (new_size != block_map_.size()) {
-        uint64_t rounded_size = BlockMapBlocks(info) * kBlobfsBlockBits;
-        zx_status_t status = block_map_.Reset(rounded_size);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        if (new_size < rounded_size) {
-            // In the event that the requested block count is not a multiple
-            // of the nearest block size, shrink down to the actual block
-            // count.
-            status = block_map_.Shrink(new_size);
-            if (status != ZX_OK) {
-                return status;
-            }
-        }
-    }
-    return ZX_OK;
-}
-
-zx_status_t Allocator::ResetNodeMapSize() {
-    ZX_DEBUG_ASSERT(ReservedNodeCount() == 0);
-    const auto info = space_manager_->Info();
-    uint64_t nodemap_size = kBlobfsInodeSize * info.inode_count;
-    zx_status_t status = ZX_OK;
-    if (fbl::round_up(nodemap_size, kBlobfsBlockSize) != nodemap_size) {
-        return ZX_ERR_BAD_STATE;
-    }
-    ZX_DEBUG_ASSERT(nodemap_size / kBlobfsBlockSize == NodeMapBlocks(info));
-
-    if (nodemap_size > node_map_.size()) {
-        status = node_map_.Grow(nodemap_size);
-    } else if (nodemap_size < node_map_.size()) {
-        status = node_map_.Shrink(nodemap_size);
-    }
-    if (status != ZX_OK) {
-        return status;
-    }
-    return node_bitmap_->Reset(info.inode_count);
-}
-
 zx_status_t Allocator::ResetFromStorage(fs::ReadTxn txn) {
     ZX_DEBUG_ASSERT(ReservedBlockCount() == 0);
     ZX_DEBUG_ASSERT(ReservedNodeCount() == 0);
+
+    // Ensure the block and node maps are up-to-date with changes in size that
+    // might have happened.
     zx_status_t status;
-    if (block_map_vmoid_ == VMOID_INVALID) {
-        status = space_manager_->AttachVmo(block_map_.StorageUnsafe()->GetVmo(),
-                                           &block_map_vmoid_);
-        if (status != ZX_OK) {
-            return status;
-        }
+    if ((status = ResetBlockMapSize()) != ZX_OK) {
+        return status;
     }
-    if (node_map_vmoid_ == VMOID_INVALID) {
-        status = space_manager_->AttachVmo(node_map_.vmo(), &node_map_vmoid_);
-        if (status != ZX_OK) {
-            return status;
-        }
+
+    if ((status = ResetNodeMapSize()) != ZX_OK) {
+        return status;
     }
+
+    vmoid_t block_map_vmoid = VMOID_INVALID;
+    vmoid_t node_map_vmoid = VMOID_INVALID;
+
+    // Always attempt to detach vmoids before returning. Even if one or both vmoids are invalid,
+    // this is okay since the return status is ignored.
+    auto detach_vmoids = fbl::MakeAutoCall([this, &block_map_vmoid, &node_map_vmoid]() {
+        space_manager_->DetachVmo(block_map_vmoid);
+        space_manager_->DetachVmo(node_map_vmoid);
+    });
+
+    status = space_manager_->AttachVmo(block_map_.StorageUnsafe()->GetVmo(), &block_map_vmoid);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = space_manager_->AttachVmo(node_map_.vmo(), &node_map_vmoid);
+    if (status != ZX_OK) {
+        return status;
+    }
+
     const auto info = space_manager_->Info();
-    txn.Enqueue(block_map_vmoid_, 0, BlockMapStartBlock(info), BlockMapBlocks(info));
-    txn.Enqueue(node_map_vmoid_, 0, NodeMapStartBlock(info), NodeMapBlocks(info));
+    txn.Enqueue(block_map_vmoid, 0, BlockMapStartBlock(info), BlockMapBlocks(info));
+    txn.Enqueue(node_map_vmoid, 0, NodeMapStartBlock(info), NodeMapBlocks(info));
+
     return txn.Transact();
 }
 
@@ -254,6 +222,51 @@ void Allocator::MarkContainerNodeAllocated(const ReservedNode& node, uint32_t pr
 void Allocator::FreeNode(uint32_t node_index) {
     GetNode(node_index)->header.flags = 0;
     ZX_ASSERT(node_bitmap_->Free(node_index) == ZX_OK);
+}
+
+zx_status_t Allocator::ResetBlockMapSize() {
+    ZX_DEBUG_ASSERT(ReservedBlockCount() == 0);
+    const auto info = space_manager_->Info();
+    uint64_t new_size = info.data_block_count;
+    if (new_size != block_map_.size()) {
+        uint64_t rounded_size = BlockMapBlocks(info) * kBlobfsBlockBits;
+        zx_status_t status = block_map_.Reset(rounded_size);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        if (new_size < rounded_size) {
+            // In the event that the requested block count is not a multiple
+            // of the nearest block size, shrink down to the actual block
+            // count.
+            status = block_map_.Shrink(new_size);
+            if (status != ZX_OK) {
+                return status;
+            }
+        }
+    }
+    return ZX_OK;
+}
+
+zx_status_t Allocator::ResetNodeMapSize() {
+    ZX_DEBUG_ASSERT(ReservedNodeCount() == 0);
+    const auto info = space_manager_->Info();
+    uint64_t nodemap_size = kBlobfsInodeSize * info.inode_count;
+    zx_status_t status = ZX_OK;
+    if (fbl::round_up(nodemap_size, kBlobfsBlockSize) != nodemap_size) {
+        return ZX_ERR_BAD_STATE;
+    }
+    ZX_DEBUG_ASSERT(nodemap_size / kBlobfsBlockSize == NodeMapBlocks(info));
+
+    if (nodemap_size > node_map_.size()) {
+        status = node_map_.Grow(nodemap_size);
+    } else if (nodemap_size < node_map_.size()) {
+        status = node_map_.Shrink(nodemap_size);
+    }
+    if (status != ZX_OK) {
+        return status;
+    }
+    return node_bitmap_->Reset(info.inode_count);
 }
 
 bool Allocator::CheckBlocksUnallocated(uint64_t start_block, uint64_t end_block) const {

@@ -655,17 +655,6 @@ zx_status_t Blobfs::Reload() {
     // Once it has been verified, overwrite the current info.
     memcpy(&info_, info, sizeof(Superblock));
 
-    // Ensure the block and node maps are up-to-date with changes in size that
-    // might have happened.
-    status = allocator_->ResetBlockMapSize();
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = allocator_->ResetNodeMapSize();
-    if (status != ZX_OK) {
-        return status;
-    }
-
     // Load the bitmaps from disk.
     if ((status = allocator_->ResetFromStorage(fs::ReadTxn(this))) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Failed to load bitmaps: %d\n", status);

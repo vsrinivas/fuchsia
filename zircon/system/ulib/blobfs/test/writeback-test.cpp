@@ -109,8 +109,6 @@ TEST(FlushRequestsTest, FlushNoRequests) {
     EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
 }
 
-constexpr uint32_t kDiskBlockRatio = kBlockSize / kDeviceBlockSize;
-
 TEST(FlushRequestsTest, FlushOneRequest) {
     static constexpr vmoid_t kVmoid = 4;
     class TestTransactionManager : public MockTransactionManager {

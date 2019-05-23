@@ -15,10 +15,11 @@
 
 namespace blobfs {
 
-constexpr uint32_t kBlockSize = 8192;
+constexpr uint32_t kBlockSize = kBlobfsBlockSize;
 constexpr groupid_t kGroupID = 2;
-constexpr uint32_t kDeviceBlockSize = 1024;
 constexpr size_t kWritebackCapacity = 8;
+constexpr uint32_t kDeviceBlockSize = 1024;
+constexpr uint32_t kDiskBlockRatio = kBlockSize / kDeviceBlockSize;
 
 // Callback for MockTransactionManager to invoke on calls to Transaction(). |request| is performed
 // on the provided |vmo|.
@@ -58,6 +59,10 @@ public:
     zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override;
 
     const Superblock& Info() const final {
+        return superblock_;
+    }
+
+    Superblock& MutableInfo() {
         return superblock_;
     }
 

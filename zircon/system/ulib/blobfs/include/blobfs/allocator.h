@@ -80,16 +80,6 @@ public:
     bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
                               uint64_t* out_first_unset = nullptr) const;
 
-    // Resets the size of the block map based on |Info().data_block_count|.
-    //
-    // It is unsafe to call this method while any blocks are reserved.
-    zx_status_t ResetBlockMapSize();
-
-    // Resets the size of the node map based on |Info().inode_count|.
-    //
-    // It is unsafe to call this method while any nodes are reserved.
-    zx_status_t ResetNodeMapSize();
-
     // Reads the block map and node map from underlying storage, using a
     // blocking read transaction.
     //
@@ -143,7 +133,18 @@ public:
 
     // Record the location and size of all non-free block regions.
     fbl::Vector<BlockRegion> GetAllocatedRegions() const;
+
 private:
+    // Resets the size of the block map based on |Info().data_block_count|.
+    //
+    // It is unsafe to call this method while any blocks are reserved.
+    zx_status_t ResetBlockMapSize();
+
+    // Resets the size of the node map based on |Info().inode_count|.
+    //
+    // It is unsafe to call this method while any nodes are reserved.
+    zx_status_t ResetNodeMapSize();
+
     // Returns true if [start_block, end_block) are unallocated.
     bool CheckBlocksUnallocated(uint64_t start_block, uint64_t end_block) const;
 
@@ -198,9 +199,6 @@ private:
     RawBitmap block_map_ = {};
     fzl::ResizeableVmoMapper node_map_;
     std::unique_ptr<id_allocator::IdAllocator> node_bitmap_;
-
-    vmoid_t block_map_vmoid_ = VMOID_INVALID;
-    vmoid_t node_map_vmoid_ = VMOID_INVALID;
 
     bool log_allocation_failure_ = true;
 };

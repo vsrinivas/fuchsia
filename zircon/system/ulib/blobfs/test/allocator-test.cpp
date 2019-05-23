@@ -352,27 +352,28 @@ void CheckBlockMapSize(Allocator* allocator, uint64_t size) {
 void ResetSizeHelper(uint64_t before_blocks, uint64_t before_nodes,
                      uint64_t after_blocks, uint64_t after_nodes) {
     // Initialize the allocator with a given size.
-    MockSpaceManager space_manager;
+    MockTransactionManager transaction_manager;
     RawBitmap block_map;
     ASSERT_EQ(ZX_OK, block_map.Reset(before_blocks));
     fzl::ResizeableVmoMapper node_map;
     size_t map_size = fbl::round_up(before_nodes * kBlobfsInodeSize, kBlobfsBlockSize);
     ASSERT_EQ(ZX_OK, node_map.CreateAndMap(map_size, "node map"));
-    space_manager.MutableInfo().inode_count = before_nodes;
-    space_manager.MutableInfo().data_block_count = before_blocks;
+    transaction_manager.MutableInfo().inode_count = before_nodes;
+    transaction_manager.MutableInfo().data_block_count = before_blocks;
     std::unique_ptr<IdAllocator> nodes_bitmap = {};
     ASSERT_EQ(ZX_OK, IdAllocator::Create(before_nodes, &nodes_bitmap), "nodes bitmap");
-    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
+    Allocator allocator(&transaction_manager, std::move(block_map), std::move(node_map),
                         std::move(nodes_bitmap));
     allocator.SetLogging(false);
     ASSERT_NO_FAILURES(CheckNodeMapSize(&allocator, before_nodes));
     ASSERT_NO_FAILURES(CheckBlockMapSize(&allocator, before_blocks));
 
     // Update the superblock and reset the sizes.
-    space_manager.MutableInfo().inode_count = after_nodes;
-    space_manager.MutableInfo().data_block_count = after_blocks;
-    ASSERT_EQ(ZX_OK, allocator.ResetBlockMapSize());
-    ASSERT_EQ(ZX_OK, allocator.ResetNodeMapSize());
+    transaction_manager.MutableInfo().inode_count = after_nodes;
+    transaction_manager.MutableInfo().data_block_count = after_blocks;
+
+    // ResetFromStorage invokes resizing of node and block maps.
+    ASSERT_EQ(ZX_OK, allocator.ResetFromStorage(fs::ReadTxn(&transaction_manager)));
 
     ASSERT_NO_FAILURES(CheckNodeMapSize(&allocator, after_nodes));
     ASSERT_NO_FAILURES(CheckBlockMapSize(&allocator, after_blocks));
@@ -398,6 +399,96 @@ TEST(AllocatorTest, ResetSize) {
     ASSERT_NO_FAILURES(ResetSizeHelper(8, kNodesPerBlock * 8, 1, kNodesPerBlock));
     // Test 2048x shrinking.
     ASSERT_NO_FAILURES(ResetSizeHelper(2048, kNodesPerBlock * 2048, 1, kNodesPerBlock));
+}
+
+void CompareData(const uint8_t* data, const zx::vmo& vmo, size_t bytes) {
+    uint64_t vmo_size;
+    ASSERT_OK(vmo.get_size(&vmo_size));
+    ASSERT_GE(vmo_size, bytes);
+
+    uint8_t vmo_buffer[bytes];
+    ASSERT_OK(vmo.read(vmo_buffer, 0, bytes));
+    ASSERT_EQ(0, memcmp(vmo_buffer, data, bytes));
+}
+
+void RandomizeData(uint8_t* data, size_t bytes) {
+    static unsigned int seed = 0;
+    for (size_t i = 0; i < bytes; i++) {
+        data[i] = static_cast<uint8_t>(rand_r(&seed));
+    }
+}
+
+TEST(AllocatorTest, ResetFromStorageTest) {
+    MockTransactionManager transaction_manager;
+
+    transaction_manager.MutableInfo().inode_count = 32768;
+    transaction_manager.MutableInfo().data_block_count = kBlobfsBlockBits / 2;
+
+    RawBitmap block_map;
+    // Keep the block_map aligned to a block multiple
+    ASSERT_OK(block_map.Reset(BlockMapBlocks(transaction_manager.Info()) * kBlobfsBlockBits));
+    ASSERT_OK(block_map.Shrink(transaction_manager.Info().data_block_count));
+
+    fzl::ResizeableVmoMapper node_map;
+    size_t nodemap_size = fbl::round_up(kBlobfsInodeSize * transaction_manager.Info().inode_count,
+                                        kBlobfsBlockSize);
+    ASSERT_OK(node_map.CreateAndMap(nodemap_size, "nodemap"));
+
+    std::unique_ptr<IdAllocator> nodes_bitmap = {};
+    ASSERT_OK(IdAllocator::Create(transaction_manager.Info().inode_count, &nodes_bitmap));
+
+    Allocator allocator(&transaction_manager, std::move(block_map), std::move(node_map),
+                        std::move(nodes_bitmap));
+
+    allocator.SetLogging(false);
+
+    uint8_t bitmap_data[kDeviceBlockSize];
+    RandomizeData(&bitmap_data[0], kDeviceBlockSize);
+
+    // Set callback which reads |bitmap_data| into each vmo block.
+    transaction_manager.SetTransactionCallback([&bitmap_data](const block_fifo_request_t& request,
+                                                              const zx::vmo& vmo){
+        if (request.opcode == BLOCKIO_READ) {
+            uint64_t vmo_size;
+            zx_status_t status = vmo.get_size(&vmo_size);
+            if (status != ZX_OK) {
+                return status;
+            }
+
+            if (vmo_size < kDeviceBlockSize) {
+                return ZX_ERR_BUFFER_TOO_SMALL;
+            }
+
+            // |request| may specify a greater length, but for this test its enough to verify that
+            // the first |kDeviceBlockSize| bytes were set.
+            status = vmo.write(&bitmap_data[0], request.vmo_offset * kBlobfsBlockSize,
+                               kDeviceBlockSize);
+            if (status != ZX_OK) {
+                return status;
+            }
+        }
+
+        return ZX_OK;
+    });
+
+    ASSERT_OK(allocator.ResetFromStorage(fs::ReadTxn(&transaction_manager)));
+
+    ASSERT_NO_FATAL_FAILURES(
+        CompareData(&bitmap_data[0], allocator.GetBlockMapVmo(), kDeviceBlockSize));
+    ASSERT_NO_FATAL_FAILURES(
+        CompareData(&bitmap_data[0], allocator.GetNodeMapVmo(), kDeviceBlockSize));
+
+    // Increase block and inode counts to force maps to resize.
+    transaction_manager.MutableInfo().data_block_count *= 2;
+    transaction_manager.MutableInfo().inode_count *= 2;
+
+    RandomizeData(&bitmap_data[0], kDeviceBlockSize);
+    ASSERT_OK(allocator.ResetFromStorage(fs::ReadTxn(&transaction_manager)));
+
+    ASSERT_NO_FATAL_FAILURES(
+        CompareData(&bitmap_data[0], allocator.GetBlockMapVmo(), kDeviceBlockSize));
+    ASSERT_NO_FATAL_FAILURES(
+        CompareData(&bitmap_data[0], allocator.GetNodeMapVmo(), kDeviceBlockSize));
 }
 
 } // namespace

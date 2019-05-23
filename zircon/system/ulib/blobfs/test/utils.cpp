@@ -25,12 +25,19 @@ zx_status_t MockTransactionManager::Transaction(block_fifo_request_t* requests, 
                 return ZX_ERR_BAD_STATE;
             }
 
-            zx_status_t status = transaction_callback_(requests[i], optional_vmo->value());
+            const zx::vmo& dest_vmo = optional_vmo->value();
+
+            if (dest_vmo.get() == ZX_HANDLE_INVALID) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+
+            zx_status_t status = transaction_callback_(requests[i], dest_vmo);
             if (status != ZX_OK) {
                 return status;
             }
         }
     }
+
     return ZX_OK;
 }
 
