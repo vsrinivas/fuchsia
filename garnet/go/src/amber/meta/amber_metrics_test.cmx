@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/amber_metrics_test"
+    }
+}

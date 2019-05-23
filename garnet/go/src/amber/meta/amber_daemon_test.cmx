@@ -1,0 +1,23 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.net.Connectivity",
+                "fuchsia.net.SocketProvider",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/amber_daemon_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.net.SocketProvider"
+        ]
+    }
+}

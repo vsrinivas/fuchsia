@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/amber_source_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}
