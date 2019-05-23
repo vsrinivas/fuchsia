@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include "garnet/bin/iquery/modes.h"
+#include "lib/inspect/query/discover.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -33,7 +34,16 @@ int main(int argc, const char** argv) {
     }
   }
 
-  if (command_line.HasOption("help") || options.paths.size() == 0) {
+  if (options.report) {
+    for (const auto& path : inspect::SyncFindPaths("/hub")) {
+      auto file_path = path.AbsoluteFilePath();
+      if (file_path.find("/system_objects/") == std::string::npos) {
+        options.paths.emplace_back(file_path);
+      }
+    }
+  }
+
+  if (command_line.HasOption("help") || options.paths.empty()) {
     options.Usage(command_line.argv0());
     return 0;
   }

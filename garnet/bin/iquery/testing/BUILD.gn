@@ -79,6 +79,14 @@ test_package("iquery_golden_test") {
 
   resources = [
     {
+      path = rebase_path("goldens/report.txt")
+      dest = "iquery_goldens/report.txt"
+    },
+    {
+      path = rebase_path("goldens/report-json.txt")
+      dest = "iquery_goldens/report-json.txt"
+    },
+    {
       path = rebase_path("goldens/find.txt")
       dest = "iquery_goldens/find.txt"
     },

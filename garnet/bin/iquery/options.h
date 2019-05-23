@@ -44,6 +44,10 @@ class Options {
   // If true, sort all children, metrics, and properties within each object.
   bool sort = false;
 
+  // If true, override all other options and report all hub data with full
+  // paths. This mode can still be affected by --format.
+  bool report = false;
+
   // List of paths specified on the command line.
   std::vector<std::string> paths;
 

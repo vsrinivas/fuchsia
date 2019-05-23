@@ -23,7 +23,7 @@ namespace {
 std::set<std::string> kKnownOptions = {
     "cat",  "absolute_paths", "find",    "format", "full_paths", "help",
     "ls",   "recursive",      "verbose", "quiet",  "log-file",   "dir",
-    "sort",
+    "sort", "report",
 };
 
 // Validate whether the option is within the defined ones.
@@ -76,37 +76,47 @@ Options::Options(const fxl::CommandLine& command_line) {
 
   command_line.GetOptionValue("dir", &chdir);
 
-  if (command_line.HasOption("cat") && !SetMode(command_line, Mode::CAT))
-    return;
-  else if (command_line.HasOption("find") && !SetMode(command_line, Mode::FIND))
-    return;
-  else if (command_line.HasOption("ls") && !SetMode(command_line, Mode::LS))
-    return;
-  else if (mode == Mode::UNSET)
-    SetMode(command_line, Mode::CAT);
-
-  // Path formatting options.
-  path_format = inspect::Formatter::PathFormat::NONE;
-  if (command_line.HasOption("full_paths")) {
-    path_format = inspect::Formatter::PathFormat::FULL;
-  }
-  if (command_line.HasOption("absolute_paths")) {
+  if (command_line.HasOption("report")) {
+    report = true;
     path_format = inspect::Formatter::PathFormat::ABSOLUTE;
-  }
+    recursive = true;
+    sort = true;
+    mode = iquery::Options::Mode::CAT;
+    paths = {};
+  } else {
+    if (command_line.HasOption("cat") && !SetMode(command_line, Mode::CAT))
+      return;
+    else if (command_line.HasOption("find") &&
+             !SetMode(command_line, Mode::FIND))
+      return;
+    else if (command_line.HasOption("ls") && !SetMode(command_line, Mode::LS))
+      return;
+    else if (mode == Mode::UNSET)
+      SetMode(command_line, Mode::CAT);
 
-  // Find has a special case, where none path formatting is not really useful.
-  if (path_format == inspect::Formatter::PathFormat::NONE &&
-      mode == Mode::FIND) {
-    path_format = inspect::Formatter::PathFormat::FULL;
+    // Path formatting options.
+    path_format = inspect::Formatter::PathFormat::NONE;
+    if (command_line.HasOption("full_paths")) {
+      path_format = inspect::Formatter::PathFormat::FULL;
+    }
+    if (command_line.HasOption("absolute_paths")) {
+      path_format = inspect::Formatter::PathFormat::ABSOLUTE;
+    }
+
+    // Find has a special case, where none path formatting is not really useful.
+    if (path_format == inspect::Formatter::PathFormat::NONE &&
+        mode == Mode::FIND) {
+      path_format = inspect::Formatter::PathFormat::FULL;
+    }
+
+    recursive = command_line.HasOption("recursive");
+    sort = command_line.HasOption("sort");
   }
 
   formatter_type = GetFormatterType(command_line);
   formatter = CreateFormatter(formatter_type, path_format);
   if (!formatter)
     return;
-
-  recursive = command_line.HasOption("recursive");
-  sort = command_line.HasOption("sort");
 
   std::copy(command_line.positional_args().begin(),
             command_line.positional_args().end(), std::back_inserter(paths));
@@ -127,12 +137,14 @@ void Options::Usage(const std::string& argv0) {
   --dir:     Change directory to the given PATH before executing commands.
 
   Mode options:
-  --cat:  [DEFAULT] Print the data for the object(s) given by each PATH.
-          Specifying --recursive will also output the children for that object.
-  --find: find all objects under PATH. For each sub-path, will stop at finding
-          the first object. Specifying --recursive will search the whole tree.
-  --ls:   List the children of the object(s) given by PATH. Specifying
-          --recursive has no effect.
+  --cat:    [DEFAULT] Print the data for the object(s) given by each PATH.
+            Specifying --recursive will also output the children for that object.
+  --find:   find all objects under PATH. For each sub-path, will stop at finding
+            the first object. Specifying --recursive will search the whole tree.
+  --ls:     List the children of the object(s) given by PATH. Specifying
+            --recursive has no effect.
+  --report: Output a default report for all components on the system. Ignores all
+            settings other than --format.
 
   --recursive: Whether iquery should continue inside an object. See each mode's
                description to see how it modifies their behaviors.

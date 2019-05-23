@@ -23,7 +23,7 @@ they are processed depends on the `MODE` setting and options.
 
 # MODES
 
-`MODE=(--cat|--ls|--find)`
+`MODE=(--cat|--ls|--find|--report)`
 
 ## `--cat`
 > DEFAULT. Treat each `PATH` as a node directory to open, and print
@@ -35,6 +35,10 @@ they are processed depends on the `MODE` setting and options.
 ## `--find`
 > Recursively find all node directories under the filesystem paths
 > passed in, and output the relative path one per line.
+
+## `--report`
+> Outputs a default system-wide report. Ignores all options other than
+> --format.
 
 # OPTIONS
 
