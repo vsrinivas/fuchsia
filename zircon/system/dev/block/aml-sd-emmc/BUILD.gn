@@ -16,6 +16,7 @@ driver("aml-sd-emmc") {
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
