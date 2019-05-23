@@ -4,33 +4,39 @@
 
 #pragma once
 
+#include <threads.h>
 #include <ddk/phys-iter.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/sdmmc.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/sdmmc.h>
-#include <fbl/auto_lock.h>
-#include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
-#include <soc/aml-common/aml-sd-emmc.h>
-#include <threads.h>
 #include <zircon/thread_annotations.h>
+#include <soc/aml-common/aml-sd-emmc.h>
+#include <fbl/auto_lock.h>
 
 namespace sdmmc {
 
 class AmlSdEmmc;
 using AmlSdEmmcType = ddk::Device<AmlSdEmmc, ddk::Unbindable>;
 
-class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk::base_protocol> {
+class AmlSdEmmc : public AmlSdEmmcType,
+                  public ddk::SdmmcProtocol<AmlSdEmmc, ddk::base_protocol> {
 public:
-    explicit AmlSdEmmc(zx_device_t* parent, const ddk::PDev& pdev, zx::bti bti,
-                       ddk::MmioBuffer mmio, ddk::MmioPinnedBuffer pinned_mmio,
-                       aml_sd_emmc_config_t config, zx::interrupt irq,
+    explicit AmlSdEmmc(zx_device_t* parent,
+                       const ddk::PDev& pdev,
+                       zx::bti bti,
+                       ddk::MmioBuffer mmio,
+                       ddk::MmioPinnedBuffer pinned_mmio,
+                       aml_sd_emmc_config_t config,
+                       zx::interrupt irq,
                        const ddk::GpioProtocolClient& gpio)
-        : AmlSdEmmcType(parent), pdev_(pdev), bti_(std::move(bti)), mmio_(std::move(mmio)),
-          pinned_mmio_(std::move(pinned_mmio)), reset_gpio_(gpio), irq_(std::move(irq)),
-          board_config_(config) {}
+        : AmlSdEmmcType(parent), pdev_(pdev), bti_(std::move(bti)),
+          mmio_(std::move(mmio)), pinned_mmio_(std::move(pinned_mmio)),
+          reset_gpio_(gpio), irq_(std::move(irq)), board_config_(config){}
 
     ~AmlSdEmmc();
     static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -51,7 +57,7 @@ public:
     zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
 
 private:
-    void DumpRegs();
+    void DumpRegs() const;
     void DumpSdmmcStatus(uint32_t status) const;
     void DumpSdmmcCfg(uint32_t config) const;
     void DumpSdmmcClock(uint32_t clock) const;
@@ -59,12 +65,15 @@ private:
     uint32_t GetClkFreq(uint32_t clk_src) const;
     zx_status_t TuningDoTransfer(uint8_t* tuning_res, uint16_t blk_pattern_size,
                                  uint32_t tuning_cmd_idx);
-    bool TuningTestDelay(const uint8_t* blk_pattern, uint16_t blk_pattern_size, uint32_t adj_delay,
+    bool TuningTestDelay(const uint8_t* blk_pattern,
+                         uint16_t blk_pattern_size, uint32_t adj_delay,
                          uint32_t tuning_cmd_idx);
     // Calculates the best window size for tuning
-    zx_status_t TuningCalculateBestWindow(const uint8_t* tuning_blk, uint16_t tuning_blk_size,
+    zx_status_t TuningCalculateBestWindow(const uint8_t* tuning_blk,
+                                          uint16_t tuning_blk_size,
                                           uint32_t cur_clk_div, int* best_start,
-                                          uint32_t* best_size, uint32_t tuning_cmd_idx);
+                                          uint32_t* best_size,
+                                          uint32_t tuning_cmd_idx);
     void ConfigureDefaultRegs();
     void SetupCmdDesc(sdmmc_req_t* req, aml_sd_emmc_desc_t** out_desc);
     // Prepares the VMO and sets up the data descriptors
@@ -99,4 +108,4 @@ private:
     uint32_t max_freq_, min_freq_;
 };
 
-} // namespace sdmmc
+} //namespace sdmmc
