@@ -8,14 +8,15 @@
 #include <arch.h>
 #include <arch/arm64.h>
 #include <arch/arm64/feature.h>
-#include <arch/arm64/registers.h>
 #include <arch/arm64/mmu.h>
+#include <arch/arm64/registers.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
 #include <assert.h>
 #include <bits.h>
 #include <debug.h>
 #include <inttypes.h>
+#include <kernel/atomic.h>
 #include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <lk/init.h>
@@ -81,8 +82,9 @@ static_assert(TP_OFFSET(stack_guard) == ZX_TLS_STACK_GUARD_OFFSET, "");
 static_assert(TP_OFFSET(unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET, "");
 #undef TP_OFFSET
 
-// SMP boot lock.
-static spin_lock_t arm_boot_cpu_lock = (spin_lock_t){1};
+// Used to hold up the boot sequence on secondary CPUs until signaled by the primary.
+static int secondaries_released = 0;
+
 static volatile int secondaries_to_init = 0;
 
 // one for each secondary CPU, indexed by (cpu_num - 1).
@@ -211,12 +213,10 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
     lk_init_secondary_cpus(secondaries_to_init);
 
     LTRACEF("releasing %d secondary cpus\n", secondaries_to_init);
+    atomic_store(&secondaries_released, 1);
 
-    // Release the secondary cpus.
-    spin_unlock(&arm_boot_cpu_lock);
-
-    // Flush the release of the lock, since the secondary cpus are running without cache on.
-    arch_clean_cache_range((addr_t)&arm_boot_cpu_lock, sizeof(arm_boot_cpu_lock));
+    // Flush the signaling variable since the secondary cpus may have not yet enabled their caches.
+    arch_clean_cache_range((addr_t)&secondaries_released, sizeof(secondaries_released));
 }
 
 __NO_RETURN int arch_idle_thread_routine(void*) {
@@ -266,8 +266,10 @@ void arch_enter_uspace(iframe_t* iframe) {
 extern "C" void arm64_secondary_entry() {
     arm64_cpu_early_init();
 
-    spin_lock(&arm_boot_cpu_lock);
-    spin_unlock(&arm_boot_cpu_lock);
+    // Wait until the primary has finished setting things up.
+    while (!atomic_load(&secondaries_released)) {
+        arch_spinloop_pause();
+    }
 
     uint cpu = arch_curr_cpu_num();
     thread_secondary_cpu_init_early(&_init_thread[cpu - 1]);
