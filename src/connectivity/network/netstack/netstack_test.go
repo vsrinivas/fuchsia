@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall/zx"
 	"testing"
+	"time"
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
@@ -16,9 +17,13 @@ import (
 	"fidl/fuchsia/netstack"
 	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
+	"netstack/dhcp"
 	"netstack/fidlconv"
 	"netstack/link/eth"
+	"netstack/routes"
 	"netstack/util"
+
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
@@ -31,7 +36,8 @@ import (
 const (
 	testDeviceName string        = "testdevice"
 	testTopoPath   string        = "/fake/ethernet/device"
-	testIpAddress  tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10")
+	testV4Address  tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10")
+	testV6Address  tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10")
 )
 
 func TestNicName(t *testing.T) {
@@ -44,7 +50,7 @@ func TestNicName(t *testing.T) {
 	}
 	ifs.mu.Lock()
 	if ifs.mu.name != testDeviceName {
-		t.Errorf("ifs.mu.name = %v, want %v", ifs.mu.name, testDeviceName)
+		t.Errorf("ifs.mu.name = %v, want = %v", ifs.mu.name, testDeviceName)
 	}
 	ifs.mu.Unlock()
 }
@@ -173,7 +179,7 @@ func TestUniqueFallbackNICNames(t *testing.T) {
 func TestStaticIPConfiguration(t *testing.T) {
 	ns := newNetstack(t)
 
-	addr := fidlconv.ToNetIpAddress(testIpAddress)
+	addr := fidlconv.ToNetIpAddress(testV4Address)
 	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
 	d := deviceForAddEth(ethernet.Info{}, t)
 	d.StopImpl = func() error { return nil }
@@ -189,8 +195,8 @@ func TestStaticIPConfiguration(t *testing.T) {
 	ifs.mu.Lock()
 	if info, err := ifs.toNetInterface2Locked(); err != nil {
 		t.Errorf("couldn't get interface info: %s", err)
-	} else if got := fidlconv.ToTCPIPAddress(info.Addr); got != testIpAddress {
-		t.Errorf("got ifs.toNetInterface2Locked().Addr = %+v, want %+v", got, testIpAddress)
+	} else if got := fidlconv.ToTCPIPAddress(info.Addr); got != testV4Address {
+		t.Errorf("got ifs.toNetInterface2Locked().Addr = %+v, want = %+v", got, testV4Address)
 	}
 
 	if ifs.mu.dhcp.enabled {
@@ -243,7 +249,7 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 		}, nil, tcpipstack.Options{})
 
 	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
-	addr := fidlconv.ToNetIpAddress(testIpAddress)
+	addr := fidlconv.ToNetIpAddress(testV4Address)
 	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
 	d := deviceForAddEth(ethernet.Info{Features: ethernet.InfoFeatureWlan}, t)
 	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &d)
@@ -257,8 +263,8 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 
 	if info, err := ifs.toNetInterface2Locked(); err != nil {
 		t.Errorf("couldn't get interface info: %s", err)
-	} else if got := fidlconv.ToTCPIPAddress(info.Addr); got != testIpAddress {
-		t.Errorf("got ifs.toNetInterface2Locked().Addr = %+v, want %+v", got, testIpAddress)
+	} else if got := fidlconv.ToTCPIPAddress(info.Addr); got != testV4Address {
+		t.Errorf("got ifs.toNetInterface2Locked().Addr = %+v, want = %+v", got, testV4Address)
 	}
 }
 
@@ -335,7 +341,7 @@ func TestAddRemoveListInterfaceAddresses(t *testing.T) {
 					}
 
 					if err := ns.addInterfaceAddr(uint64(ifState.nicid), addr); err != nil {
-						t.Fatalf("got ns.addInterfaceAddr(_) = %s want nil", err)
+						t.Fatalf("got ns.addInterfaceAddr(_) = %s want = nil", err)
 					}
 
 					t.Run(netstack.NetstackName, func(t *testing.T) {
@@ -355,10 +361,10 @@ func TestAddRemoveListInterfaceAddresses(t *testing.T) {
 						switch test.protocol {
 						case ipv4.ProtocolNumber:
 							if got, want := info.Addr, addr.IpAddress; got != want {
-								t.Errorf("got Addr = %+v, want %+v", got, want)
+								t.Errorf("got Addr = %+v, want = %+v", got, want)
 							}
 							if got, want := info.Netmask, getNetmask(prefixLenToAdd, 8*header.IPv4AddressSize); got != want {
-								t.Errorf("got Netmask = %+v, want %+v", got, want)
+								t.Errorf("got Netmask = %+v, want = %+v", got, want)
 							}
 						case ipv6.ProtocolNumber:
 							found := false
@@ -404,7 +410,7 @@ func TestAddRemoveListInterfaceAddresses(t *testing.T) {
 						PrefixLen: prefixLenToRemove,
 					}
 					if err := ns.removeInterfaceAddress(ifState.nicid, test.protocol, fidlconv.ToTCPIPAddress(addr.IpAddress), addr.PrefixLen); err != nil {
-						t.Fatalf("got ns.removeInterfaceAddress(_) = %s want nil", err)
+						t.Fatalf("got ns.removeInterfaceAddress(_) = %s want = nil", err)
 					}
 
 					t.Run(stack.StackName, func(t *testing.T) {
@@ -467,6 +473,253 @@ func TestAddRemoveListInterfaceAddresses(t *testing.T) {
 						}
 					})
 				})
+			}
+		})
+	}
+}
+
+func TestAddRouteParameterValidation(t *testing.T) {
+	ns := newNetstack(t)
+	d := deviceForAddEth(ethernet.Info{}, t)
+	interfaceAddress, prefix := tcpip.Address("\xf0\xf0\xf0\xf0"), uint8(24)
+	subnetLocalAddress := tcpip.Address("\xf0\xf0\xf0\xf1")
+	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
+	if err != nil {
+		t.Fatalf("got ns.addEth(_) = _, %s want = _, nil", err)
+	}
+
+	if err := ns.addInterfaceAddress(ifState.nicid, ipv4.ProtocolNumber, interfaceAddress, prefix); err != nil {
+		t.Fatalf("ns.addInterfaceAddress(%d, %d, %s, %d) = %s", ifState.nicid, ipv4.ProtocolNumber, interfaceAddress, prefix, err)
+	}
+
+	tests := []struct {
+		name        string
+		route       tcpip.Route
+		metric      routes.Metric
+		dynamic     bool
+		shouldPanic bool
+		shouldError bool
+	}{
+		{
+			// TODO(NET-2244): don't panic when given invalid route destinations
+			name: "zero-length destination",
+			route: tcpip.Route{
+				Destination: tcpip.Address(""),
+				Mask:        tcpip.AddressMask(header.IPv4Broadcast),
+				Gateway:     testV4Address,
+				NIC:         ifState.nicid,
+			},
+			metric:      routes.Metric(0),
+			shouldPanic: true,
+		},
+		{
+			// TODO(NET-2244): don't panic when given invalid route destinations
+			name: "invalid destination",
+			route: tcpip.Route{
+				Destination: tcpip.Address("\xff"),
+				Mask:        tcpip.AddressMask(header.IPv4Broadcast),
+				Gateway:     testV4Address,
+				NIC:         ifState.nicid,
+			},
+			metric:      routes.Metric(0),
+			shouldPanic: true,
+		},
+		{
+			name: "IPv4 destination no NIC invalid gateway",
+			route: tcpip.Route{
+				Destination: testV4Address,
+				Mask:        tcpip.AddressMask(header.IPv4Broadcast),
+				Gateway:     testV4Address,
+				NIC:         0,
+			},
+			metric:      routes.Metric(0),
+			shouldError: true,
+		},
+		{
+			name: "IPv6 destination no NIC invalid gateway",
+			route: tcpip.Route{
+				Destination: testV6Address,
+				Mask:        tcpip.AddressMask(strings.Repeat("\xff", 16)),
+				Gateway:     testV6Address,
+				NIC:         0,
+			},
+			metric:      routes.Metric(0),
+			shouldError: true,
+		},
+		{
+			name: "IPv4 destination no NIC valid gateway",
+			route: tcpip.Route{
+				Destination: testV4Address,
+				Mask:        tcpip.AddressMask(header.IPv4Broadcast),
+				Gateway:     subnetLocalAddress,
+				NIC:         0,
+			},
+		},
+		{
+			name: "zero length gateway",
+			route: tcpip.Route{
+				Destination: testV4Address,
+				Mask:        tcpip.AddressMask(header.IPv4Broadcast),
+				Gateway:     tcpip.Address(""),
+				NIC:         ifState.nicid,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defer func() {
+				r := recover()
+				if got := r != nil; got != test.shouldPanic {
+					t.Logf("recover() = %v", r)
+					t.Errorf("got (recover() != nil) = %t; want = %t", got, test.shouldPanic)
+				}
+			}()
+
+			err := ns.AddRoute(test.route, test.metric, test.dynamic)
+			if got := err != nil; got != test.shouldError {
+				t.Logf("err = %v", err)
+				t.Errorf("got (ns.AddRoute(_) != nil) = %t, want = %t", got, test.shouldError)
+			}
+		})
+	}
+}
+
+func TestDHCPAcquired(t *testing.T) {
+	ns := newNetstack(t)
+	d := deviceForAddEth(ethernet.Info{}, t)
+	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	serverAddress := []byte(testV4Address)
+	serverAddress[len(serverAddress)-1]++
+	gatewayAddress := serverAddress
+	gatewayAddress[len(gatewayAddress)-1]++
+	const defaultLeaseLength time.Duration = 60 * time.Second
+
+	tests := []struct {
+		name               string
+		old                tcpip.Address
+		new                tcpip.Address
+		config             dhcp.Config
+		expectedRouteTable []routes.ExtendedRoute
+	}{
+		{
+			name: "no subnet mask provided",
+			old:  "",
+			new:  testV4Address,
+			config: dhcp.Config{
+				ServerAddress: tcpip.Address(serverAddress),
+				Gateway:       tcpip.Address(serverAddress),
+				DNS:           []tcpip.Address{tcpip.Address(gatewayAddress)},
+				LeaseLength:   defaultLeaseLength,
+			},
+			expectedRouteTable: []routes.ExtendedRoute{
+				{
+					Route: tcpip.Route{
+						Destination: util.Parse("192.168.42.0"),
+						Mask:        tcpip.AddressMask(util.Parse("255.255.255.0")),
+						NIC:         1,
+					},
+					MetricTracksInterface: true,
+					Dynamic:               true,
+				},
+				{
+					Route: tcpip.Route{
+						Destination: util.Parse("0.0.0.0"),
+						Mask:        tcpip.AddressMask(util.Parse("0.0.0.0")),
+						Gateway:     util.Parse("192.168.42.18"),
+						NIC:         1,
+					},
+					Metric:                0,
+					MetricTracksInterface: true,
+					Dynamic:               true,
+					Enabled:               false,
+				},
+				{
+					Route: tcpip.Route{
+						Destination: util.Parse("::"),
+						Mask:        tcpip.AddressMask(util.Parse("::")),
+						NIC:         1,
+					},
+					Metric:                0,
+					MetricTracksInterface: true,
+					Dynamic:               true,
+					Enabled:               false,
+				},
+			},
+		},
+		{
+			name: "subnet mask provided",
+			old:  "",
+			new:  testV4Address,
+			config: dhcp.Config{
+				ServerAddress: tcpip.Address(serverAddress),
+				Gateway:       tcpip.Address(serverAddress),
+				SubnetMask:    tcpip.AddressMask("\xff\xff\xff\x00"),
+				DNS:           []tcpip.Address{tcpip.Address(gatewayAddress)},
+				LeaseLength:   defaultLeaseLength,
+			},
+			expectedRouteTable: []routes.ExtendedRoute{
+				{
+					Route: tcpip.Route{
+						Destination: util.Parse("192.168.42.0"),
+						Mask:        tcpip.AddressMask(util.Parse("255.255.255.0")),
+						NIC:         1,
+					},
+					Metric:                0,
+					MetricTracksInterface: true,
+					Dynamic:               true,
+					Enabled:               false,
+				},
+				{
+					Route: tcpip.Route{
+						Destination: util.Parse("0.0.0.0"),
+						Mask:        tcpip.AddressMask(util.Parse("0.0.0.0")),
+						Gateway:     util.Parse("192.168.42.18"),
+						NIC:         1,
+					},
+					Metric:                0,
+					MetricTracksInterface: true,
+					Dynamic:               true,
+					Enabled:               false,
+				},
+				{
+					Route: tcpip.Route{
+						Destination: util.Parse("::"),
+						Mask:        tcpip.AddressMask(util.Parse("::")),
+						NIC:         1,
+					},
+					Metric:                0,
+					MetricTracksInterface: true,
+					Dynamic:               true,
+					Enabled:               false,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ifState.dhcpAcquired(test.old, test.new, test.config)
+			ifState.mu.Lock()
+			hasDynamicAddr := ifState.mu.hasDynamicAddr
+			dnsServers := ifState.mu.dnsServers
+			ifState.mu.Unlock()
+
+			if got, want := hasDynamicAddr, true; got != want {
+				t.Errorf("got ifState.mu.hasDynamicAddr = %t, want = %t", got, want)
+			}
+
+			if diff := cmp.Diff(dnsServers, test.config.DNS); diff != "" {
+				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)
+			}
+
+			got := ifState.ns.GetExtendedRouteTable()
+			if diff := cmp.Diff(got, test.expectedRouteTable); diff != "" {
+				t.Errorf("GetExtendedRouteTable() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

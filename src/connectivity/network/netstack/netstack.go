@@ -164,6 +164,14 @@ func (ns *Netstack) AddRoutesLocked(rs []tcpip.Route, metric routes.Metric, dyna
 	}
 
 	for _, r := range rs {
+		switch len(r.Destination) {
+		case header.IPv4AddressSize, header.IPv6AddressSize:
+		default:
+			// TODO(NET-2244): update this to return an error; panicing here enables syzkaller to find
+			// the given state management bug more quickly.
+			panic(fmt.Sprintf("invalid destination for route: %+v\nroute table: %+v", r, ns.mu.routeTable.GetExtendedRouteTable()))
+		}
+
 		// If we don't have an interface set, find it using the gateway address.
 		if r.NIC == 0 {
 			nic, err := ns.mu.routeTable.FindNIC(r.Gateway)
@@ -380,6 +388,9 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 
 	// Add a default route and a route for the local subnet.
 	rs := defaultRoutes(ifs.nicid, config.Gateway)
+	if config.SubnetMask == "" {
+		config.SubnetMask = util.DefaultMask(newAddr)
+	}
 	rs = append(rs, subnetRoute(newAddr, config.SubnetMask, ifs.nicid))
 	syslog.Infof("adding routes %+v with metric=<not-set> dynamic=true", rs)
 

@@ -6,6 +6,7 @@
 package util
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/google/netstack/tcpip"
@@ -25,7 +26,19 @@ func IsAny(a tcpip.Address) bool {
 }
 
 func ApplyMask(addr tcpip.Address, mask tcpip.AddressMask) tcpip.Address {
-	return tcpip.Address(net.IP(addr).Mask(net.IPMask(mask)))
+	result := net.IP(addr).Mask(net.IPMask(mask))
+	if result == nil {
+		panic(fmt.Sprintf("net.IP(%s).Mask(%s) = nil", addr, mask))
+	}
+	return tcpip.Address(result)
+}
+
+func DefaultMask(addr tcpip.Address) tcpip.AddressMask {
+	result := net.IP(addr).DefaultMask()
+	if result == nil {
+		panic(fmt.Sprintf("net.IP(%s).DefaultMask() = nil", addr))
+	}
+	return tcpip.AddressMask(result)
 }
 
 func CIDRMask(ones, bits int) tcpip.AddressMask {

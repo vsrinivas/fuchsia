@@ -9,6 +9,56 @@ import (
 	"github.com/google/netstack/tcpip"
 )
 
+func TestApplyMask(t *testing.T) {
+	tests := []struct {
+		name        string
+		addr        tcpip.Address
+		mask        tcpip.AddressMask
+		want        tcpip.Address
+		shouldPanic bool
+	}{
+		{
+			name: "fullMask",
+			addr: "\x01\x01\x01\x01",
+			mask: "\xff\xff\xff\xff",
+			want: "\x01\x01\x01\x01",
+		},
+		{
+			name: "partialMask",
+			addr: "\x01\x01\x01\x01",
+			mask: "\xff\xff\xff\x00",
+			want: "\x01\x01\x01\x00",
+		},
+		{
+			name:        "mismatchedLengths",
+			addr:        "\x01\x01\x01\x01",
+			mask:        "\xff\xff\xff",
+			shouldPanic: true,
+		},
+		{
+			name:        "zeroLengthMask",
+			addr:        "\x01\x01\x01\x01",
+			mask:        "",
+			shouldPanic: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defer func() {
+				r := recover()
+				if got := r != nil; got != test.shouldPanic {
+					t.Logf("recover() = %s", r)
+					t.Errorf("got (recover() != nil) = %t; want = %t", got, test.shouldPanic)
+				}
+			}()
+			if got := util.ApplyMask(test.addr, test.mask); got != test.want {
+				t.Errorf("got util.ApplyMask(%s, %s) = %s, want = %s", test.addr, test.mask, got, test.want)
+			}
+		})
+	}
+}
+
 func TestParse(t *testing.T) {
 	tests := []struct {
 		txt  string
@@ -37,6 +87,36 @@ func TestParse(t *testing.T) {
 		if got != test.addr {
 			t.Errorf("got util.Parse(%q) = %q, want %q", test.txt, got, test.addr)
 		}
+	}
+}
+
+func TestDefaultMask(t *testing.T) {
+	tests := []struct {
+		addr        tcpip.Address
+		mask        tcpip.AddressMask
+		shouldPanic bool
+	}{
+		{addr: util.Parse("192.168.42.10"), mask: "\xff\xff\xff\x00"},
+		{addr: util.Parse("10.0.1.1"), mask: "\xff\x00\x00\x00"},
+		{addr: util.Parse("10.0.1"), shouldPanic: true},
+		{addr: util.Parse("2001:0db8:85a3:0000:0000:8a2e:0370:7334"), shouldPanic: true},
+		{addr: util.Parse(""), shouldPanic: true},
+	}
+
+	for _, test := range tests {
+		func() {
+			defer func() {
+				r := recover()
+				if got := r != nil; got != test.shouldPanic {
+					t.Logf("recover() = %s", r)
+					t.Errorf("got (recover() != nil) = %t; want = %t", got, test.shouldPanic)
+				}
+			}()
+			got := util.DefaultMask(test.addr)
+			if got != test.mask {
+				t.Errorf("got util.DefaultMask(%q) = %q, want %q", test.addr, got, test.mask)
+			}
+		}()
 	}
 }
 
