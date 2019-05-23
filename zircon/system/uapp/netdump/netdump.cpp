@@ -3,10 +3,17 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/ethernet/c/fidl.h>
+
+extern "C" {
 #include <inet6/inet6.h>
+}
+
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/vmo.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
@@ -18,16 +25,17 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <netinet/if_ether.h>
+#include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
-#include <netinet/ip.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#define BUFSIZE 2048
-#define ROUNDUP(a, b)   (((a) + ((b)-1)) & ~((b)-1))
+#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
+
+constexpr size_t BUFSIZE = 2048;
 
 typedef struct {
     const char* device;
@@ -75,45 +83,74 @@ static void print_mac(const uint8_t mac[ETH_ALEN]) {
 
 static const char* ethtype_to_string(uint16_t ethtype) {
     switch (ethtype) {
-    case ETH_P_IP: return "IPv4";
-    case ETH_P_ARP: return "ARP";
-    case ETH_P_IPV6: return "IPV6";
-    case ETH_P_8021Q: return "802.1Q";
-    default: return "Unknown";
+    case ETH_P_IP:
+        return "IPv4";
+    case ETH_P_ARP:
+        return "ARP";
+    case ETH_P_IPV6:
+        return "IPV6";
+    case ETH_P_8021Q:
+        return "802.1Q";
+    default:
+        return "Unknown";
     }
 }
 
 static const char* protocol_to_string(uint8_t protocol) {
     switch (protocol) {
-    case IPPROTO_HOPOPTS: return "HOPOPTS";
-    case IPPROTO_TCP: return "TCP";
-    case IPPROTO_UDP: return "UDP";
-    case IPPROTO_ICMP: return "ICMP";
-    case IPPROTO_ROUTING: return "ROUTING";
-    case IPPROTO_FRAGMENT: return "FRAGMENT";
-    case IPPROTO_ICMPV6: return "ICMPV6";
-    case IPPROTO_NONE: return "NONE";
-    default: return "Transport Unknown";
+    case IPPROTO_HOPOPTS:
+        return "HOPOPTS";
+    case IPPROTO_TCP:
+        return "TCP";
+    case IPPROTO_UDP:
+        return "UDP";
+    case IPPROTO_ICMP:
+        return "ICMP";
+    case IPPROTO_ROUTING:
+        return "ROUTING";
+    case IPPROTO_FRAGMENT:
+        return "FRAGMENT";
+    case IPPROTO_ICMPV6:
+        return "ICMPV6";
+    case IPPROTO_NONE:
+        return "NONE";
+    default:
+        return "Transport Unknown";
     }
 }
 
 static const char* port_to_string(uint16_t port) {
     switch (port) {
-    case 7: return "Echo";
-    case 20: return "FTP xfer";
-    case 21: return "FTP ctl";
-    case 22: return "SSH";
-    case 23: return "Telnet";
-    case 53: return "DNS";
-    case 69: return "TFTP";
-    case 80: return "HTTP";
-    case 115: return "SFTP";
-    case 123: return "NTP";
-    case 194: return "IRC";
-    case 443: return "HTTPS";
-    case DEBUGLOG_PORT: return "Netboot Debug";
-    case DEBUGLOG_ACK_PORT: return "Netboot Debug ack";
-    default: return "";
+    case 7:
+        return "Echo";
+    case 20:
+        return "FTP xfer";
+    case 21:
+        return "FTP ctl";
+    case 22:
+        return "SSH";
+    case 23:
+        return "Telnet";
+    case 53:
+        return "DNS";
+    case 69:
+        return "TFTP";
+    case 80:
+        return "HTTP";
+    case 115:
+        return "SFTP";
+    case 123:
+        return "NTP";
+    case 194:
+        return "IRC";
+    case 443:
+        return "HTTPS";
+    case DEBUGLOG_PORT:
+        return "Netboot Debug";
+    case DEBUGLOG_ACK_PORT:
+        return "Netboot Debug ack";
+    default:
+        return "";
     }
 }
 
@@ -126,25 +163,25 @@ static void print_port(uint16_t port, size_t verbosity) {
     }
 }
 
-void parse_packet(void* packet, size_t length, netdump_options_t* options) {
-    struct ethhdr* frame = (struct ethhdr*)(packet);
+void parse_packet(void* packet, size_t length, const netdump_options_t& options) {
+    struct ethhdr* frame = static_cast<struct ethhdr*>(packet);
     if (length < ETH_ZLEN) {
         printf("Packet size (%lu) too small for ethernet frame\n", length);
-        if (options->verbose_level == 2) {
+        if (options.verbose_level == 2) {
             hexdump8_ex(packet, length, 0);
         }
         return;
     }
     uint16_t ethtype = htons(frame->h_proto);
 
-    if (options->link_level) {
+    if (options.link_level) {
         print_mac(frame->h_source);
         printf(" > ");
         print_mac(frame->h_dest);
         printf(", ethertype %s (0x%x), ", ethtype_to_string(ethtype), ethtype);
     }
 
-    struct iphdr* ipv4 = (struct iphdr*)(packet + sizeof(struct ethhdr));
+    struct iphdr* ipv4 = reinterpret_cast<struct iphdr*>(frame + 1);
     char buf[256];
 
     void* transport_packet = NULL;
@@ -156,17 +193,17 @@ void parse_packet(void* packet, size_t length, netdump_options_t* options) {
         printf("%s: ", inet_ntop(AF_INET, &ipv4->daddr, buf, sizeof(buf)));
         printf("%s, ", protocol_to_string(ipv4->protocol));
         printf("length %u, ", ntohs(ipv4->tot_len));
-        transport_packet = (void*)((uintptr_t) ipv4 + sizeof(struct iphdr) +
-                                   (ipv4->ihl > 5 ? ipv4->ihl * 4 : 0));
+        uintptr_t transport = reinterpret_cast<uintptr_t>(ipv4 + 1);
+        transport_packet = reinterpret_cast<void*>(transport + (ipv4->ihl > 5 ? ipv4->ihl * 4 : 0));
         transport_protocol = ipv4->protocol;
     } else if (ipv4->version == 6) {
-        ip6_hdr_t* ipv6 = (ip6_hdr_t*) ipv4;
+        ip6_hdr_t* ipv6 = reinterpret_cast<ip6_hdr_t*>(ipv4);
         printf("IP6 ");
         printf("%s > ", inet_ntop(AF_INET6, &ipv6->src.u8, buf, sizeof(buf)));
         printf("%s: ", inet_ntop(AF_INET6, &ipv6->dst.u8, buf, sizeof(buf)));
         printf("%s, ", protocol_to_string(ipv6->next_header));
         printf("length %u, ", ntohs(ipv6->length));
-        transport_packet = (void*)((uintptr_t) ipv6 + sizeof(ip6_hdr_t));
+        transport_packet = reinterpret_cast<void*>(ipv6 + 1);
         transport_protocol = ipv6->next_header;
     } else {
         printf("IP Version Unknown (or unhandled)");
@@ -174,17 +211,17 @@ void parse_packet(void* packet, size_t length, netdump_options_t* options) {
 
     if (transport_packet != NULL) {
         if (transport_protocol == IPPROTO_TCP) {
-            struct tcphdr* tcp = (struct tcphdr*) transport_packet;
+            struct tcphdr* tcp = static_cast<struct tcphdr*>(transport_packet);
             printf("Ports ");
-            print_port(ntohs(tcp->source), options->verbose_level);
+            print_port(ntohs(tcp->source), options.verbose_level);
             printf("> ");
-            print_port(ntohs(tcp->dest), options->verbose_level);
+            print_port(ntohs(tcp->dest), options.verbose_level);
         } else if (transport_protocol == IPPROTO_UDP) {
-            struct udphdr* udp = (struct udphdr*) transport_packet;
+            struct udphdr* udp = static_cast<struct udphdr*>(transport_packet);
             printf("Ports ");
-            print_port(ntohs(udp->uh_sport), options->verbose_level);
+            print_port(ntohs(udp->uh_sport), options.verbose_level);
             printf("> ");
-            print_port(ntohs(udp->uh_dport), options->verbose_level);
+            print_port(ntohs(udp->uh_dport), options.verbose_level);
         } else {
             printf("Transport Version Unknown (or unhandled)");
         }
@@ -245,8 +282,8 @@ int write_packet(int fd, void* data, size_t len) {
     size_t padded_len = ROUNDUP(len, 4);
     simple_pkt_t pkt = {
         .type = 0x00000003,
-        .blk_tot_len = SIMPLE_PKT_MIN_SIZE + padded_len,
-        .pkt_len = len,
+        .blk_tot_len = static_cast<uint32_t>(SIMPLE_PKT_MIN_SIZE + padded_len),
+        .pkt_len = static_cast<uint32_t>(len),
     };
 
     // TODO(tkilbourn): rewrite this to offload writing to another thread, and also deal with
@@ -255,7 +292,7 @@ int write_packet(int fd, void* data, size_t len) {
         fprintf(stderr, "Couldn't write packet header\n");
         return -1;
     }
-    if (write(fd, data, len) != (ssize_t) len) {
+    if (write(fd, data, len) != static_cast<ssize_t>(len)) {
         fprintf(stderr, "Couldn't write packet\n");
         return -1;
     }
@@ -263,7 +300,7 @@ int write_packet(int fd, void* data, size_t len) {
         size_t padding = padded_len - len;
         ZX_DEBUG_ASSERT(padding <= 3);
         static const uint32_t zero = 0;
-        if (write(fd, &zero, padding) != (ssize_t) padding) {
+        if (write(fd, &zero, padding) != static_cast<ssize_t>(padding)) {
             fprintf(stderr, "Couldn't write padding\n");
             return -1;
         }
@@ -276,22 +313,22 @@ int write_packet(int fd, void* data, size_t len) {
     return 0;
 }
 
-void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options_t* options) {
+void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count, const netdump_options_t& options) {
     eth_fifo_entry_t entries[count];
 
-    if (write_shb(options->dumpfile)) {
+    if (write_shb(options.dumpfile)) {
         return;
     }
-    if (write_idb(options->dumpfile)) {
+    if (write_idb(options.dumpfile)) {
         return;
     }
 
     for (;;) {
         size_t n;
         zx_status_t status;
-        if ((status = zx_fifo_read(rx_fifo, sizeof(entries[0]), entries, countof(entries), &n)) < 0) {
+        if ((status = rx_fifo.read(sizeof(entries[0]), entries, countof(entries), &n)) < 0) {
             if (status == ZX_ERR_SHOULD_WAIT) {
-                zx_object_wait_one(rx_fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+                rx_fifo.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), nullptr);
                 continue;
             }
             fprintf(stderr, "netdump: failed to read rx packets: %d\n", status);
@@ -299,28 +336,29 @@ void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options
         }
 
         eth_fifo_entry_t* e = entries;
+        size_t packet_count = options.packet_count;
         for (size_t i = 0; i < n; i++, e++) {
             if (e->flags & ETH_FIFO_RX_OK) {
-                if (options->raw) {
+                if (options.raw) {
                     printf("---\n");
                     hexdump8_ex(iobuf + e->offset, e->length, 0);
                 } else {
                     parse_packet(iobuf + e->offset, e->length, options);
                 }
 
-                if (write_packet(options->dumpfile, iobuf + e->offset, e->length)) {
+                if (write_packet(options.dumpfile, iobuf + e->offset, e->length)) {
                     return;
                 }
 
-                options->packet_count--;
-                if (options->packet_count == 0) {
+                packet_count--;
+                if (packet_count == 0) {
                     return;
                 }
             }
 
             e->length = BUFSIZE;
             e->flags = 0;
-            if ((status = zx_fifo_write(rx_fifo, sizeof(*e), e, 1, NULL)) < 0) {
+            if ((status = rx_fifo.write(sizeof(*e), e, 1, NULL)) < 0) {
                 fprintf(stderr, "netdump: failed to queue rx packet: %d\n", status);
                 break;
             }
@@ -328,7 +366,7 @@ void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options
     }
 }
 
-int usage(void) {
+int usage() {
     fprintf(stderr, "usage: netdump [ <option>* ] <network-device>\n");
     fprintf(stderr, " -w file : Write packet output to file in pcapng format\n");
     fprintf(stderr, " -c count: Exit after receiving count packets\n");
@@ -341,7 +379,7 @@ int usage(void) {
     return -1;
 }
 
-int parse_args(int argc, const char** argv, netdump_options_t* options) {
+int parse_args(int argc, const char** argv, netdump_options_t& options) {
     while (argc > 1) {
         if (!strncmp(argv[0], "-c", strlen("-c"))) {
             argv++;
@@ -350,7 +388,7 @@ int parse_args(int argc, const char** argv, netdump_options_t* options) {
                 return usage();
             }
             char* endptr;
-            options->packet_count = strtol(argv[0], &endptr, 10);
+            options.packet_count = strtol(argv[0], &endptr, 10);
             if (*endptr != '\0') {
                 return usage();
             }
@@ -359,19 +397,19 @@ int parse_args(int argc, const char** argv, netdump_options_t* options) {
         } else if (!strcmp(argv[0], "-e")) {
             argv++;
             argc--;
-            options->link_level = true;
+            options.link_level = true;
         } else if (!strcmp(argv[0], "-p")) {
             argv++;
             argc--;
-            options->promisc = true;
+            options.promisc = true;
         } else if (!strcmp(argv[0], "-w")) {
             argv++;
             argc--;
-            if (argc < 1 || options->dumpfile != -1) {
+            if (argc < 1 || options.dumpfile != -1) {
                 return usage();
             }
-            options->dumpfile = open(argv[0], O_WRONLY | O_CREAT);
-            if (options->dumpfile < 0) {
+            options.dumpfile = open(argv[0], O_WRONLY | O_CREAT);
+            if (options.dumpfile < 0) {
                 fprintf(stderr, "Error: Could not output to file: %s\n", argv[0]);
                 return usage();
             }
@@ -380,16 +418,16 @@ int parse_args(int argc, const char** argv, netdump_options_t* options) {
         } else if (!strcmp(argv[0], "-v")) {
             argv++;
             argc--;
-            options->verbose_level = 1;
+            options.verbose_level = 1;
         } else if (!strncmp(argv[0], "-vv", sizeof("-vv"))) {
             // Since this is the max verbosity, adding extra 'v's does nothing.
             argv++;
             argc--;
-            options->verbose_level = 2;
+            options.verbose_level = 2;
         } else if (!strcmp(argv[0], "--raw")) {
             argv++;
             argc--;
-            options->raw = true;
+            options.raw = true;
         } else {
             return usage();
         }
@@ -401,7 +439,7 @@ int parse_args(int argc, const char** argv, netdump_options_t* options) {
         return usage();
     }
 
-    options->device = argv[0];
+    options.device = argv[0];
     return 0;
 }
 
@@ -409,7 +447,7 @@ int main(int argc, const char** argv) {
     netdump_options_t options;
     memset(&options, 0, sizeof(options));
     options.dumpfile = -1;
-    if (parse_args(argc - 1, argv + 1, &options)) {
+    if (parse_args(argc - 1, argv + 1, options)) {
         return -1;
     }
 
@@ -419,8 +457,8 @@ int main(int argc, const char** argv) {
         return -1;
     }
 
-    zx_handle_t svc;
-    zx_status_t status = fdio_get_service_handle(fd, &svc);
+    zx::channel svc;
+    zx_status_t status = fdio_get_service_handle(fd, svc.reset_and_get_address());
     if (status != ZX_OK) {
         fprintf(stderr, "netdump: failed to get service handle\n");
         return -1;
@@ -428,39 +466,40 @@ int main(int argc, const char** argv) {
 
     fuchsia_hardware_ethernet_Fifos fifos;
     zx_status_t call_status = ZX_OK;
-    status = fuchsia_hardware_ethernet_DeviceGetFifos(svc, &call_status, &fifos);
+    status = fuchsia_hardware_ethernet_DeviceGetFifos(svc.get(), &call_status, &fifos);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "netdump: failed to get fifos: %d, %d\n", status, call_status);
         return -1;
     }
+    zx::fifo rx_fifo = zx::fifo(fifos.rx);
 
     unsigned count = fifos.rx_depth / 2;
-    zx_handle_t iovmo;
+    zx::vmo iovmo;
     // allocate shareable ethernet buffer data heap
-    if ((status = zx_vmo_create(count * BUFSIZE, ZX_VMO_NON_RESIZABLE, &iovmo)) < 0) {
+    if ((status = zx::vmo::create(count * BUFSIZE, ZX_VMO_NON_RESIZABLE, &iovmo)) < 0) {
         return -1;
     }
 
     char* iobuf;
     if ((status = zx_vmar_map(zx_vmar_root_self(),
                               ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                              0, iovmo, 0, count * BUFSIZE, (uintptr_t*)&iobuf)) < 0) {
+                              0, iovmo.get(), 0, count * BUFSIZE, reinterpret_cast<uintptr_t*>(&iobuf))) < 0) {
         return -1;
     }
 
-    status = fuchsia_hardware_ethernet_DeviceSetIOBuffer(svc, iovmo, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceSetIOBuffer(svc.get(), iovmo.get(), &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "netdump: failed to set iobuf: %d, %d\n", status, call_status);
         return -1;
     }
 
-    status = fuchsia_hardware_ethernet_DeviceSetClientName(svc, "netdump", 7, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceSetClientName(svc.get(), "netdump", 7, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "netdump: failed to set client name %d, %d\n", status, call_status);
     }
 
     if (options.promisc) {
-        status = fuchsia_hardware_ethernet_DeviceSetPromiscuousMode(svc, true, &call_status);
+        status = fuchsia_hardware_ethernet_DeviceSetPromiscuousMode(svc.get(), true, &call_status);
         if (status != ZX_OK || call_status != ZX_OK) {
             fprintf(stderr, "netdump: failed to set promisc mode: %d, %d\n", status, call_status);
         }
@@ -469,7 +508,7 @@ int main(int argc, const char** argv) {
     // assign data chunks to ethbufs
     for (unsigned n = 0; n < count; n++) {
         eth_fifo_entry_t entry = {
-            .offset = n * BUFSIZE,
+            .offset = static_cast<uint32_t>(n * BUFSIZE),
             .length = BUFSIZE,
             .flags = 0,
             .cookie = 0,
@@ -480,21 +519,21 @@ int main(int argc, const char** argv) {
         }
     }
 
-    status = fuchsia_hardware_ethernet_DeviceStart(svc, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceStart(svc.get(), &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "netdump: failed to start network interface\n");
         return -1;
     }
 
-    status = fuchsia_hardware_ethernet_DeviceListenStart(svc, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceListenStart(svc.get(), &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         fprintf(stderr, "netdump: failed to start listening\n");
         return -1;
     }
 
-    handle_rx(fifos.rx, iobuf, count, &options);
+    handle_rx(rx_fifo, iobuf, count, options);
 
-    zx_handle_close(fifos.rx);
+    zx_handle_close(rx_fifo.get());
     if (options.dumpfile != -1) {
         close(options.dumpfile);
     }

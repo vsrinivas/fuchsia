@@ -4,7 +4,7 @@
 
 executable("netdump") {
   sources = [
-    "netdump.c",
+    "netdump.cpp",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-ethernet:c",
@@ -12,5 +12,6 @@ executable("netdump") {
     "$zx/system/ulib/inet6",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
   ]
 }
