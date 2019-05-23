@@ -3,21 +3,32 @@
 ## Status
 
 We are currently migrating to this source code layout. Some aspects of this
-document refect the current reality, but some aspects are still aspirational.
+document reflect the current reality, but some aspects are still aspirational.
 
 ## Overview
 
-Most first-party, open-source code is in the
-["fuchsia.git" repository](https://fuchsia.googlesource.com/fuchsia).  Most code in
-this repository is organized into a recursive tree of areas, which have a
-regular directory and dependency structure.
+Most first-party, open-source code is in the ["fuchsia.git"
+repository](https://fuchsia.googlesource.com/fuchsia). Most code in this
+repository is organized into a recursive tree of *areas*.
 
-Source repositories (whether open- or closed-source) also follow the
-conventions for areas and are mapped into subdirectories of `src` in
-fuchsia.git. Currently, we have small number of petal repositories but will
-"promote" areas into separate petal repositories as the system stabilizes.
+Areas have a regular internal and dependency structure. The `fuchsia.git`
+repository itself follows the structure of an area, but also has additional
+structure unique to the top level.
 
-The products directory contains a list of products that you can build. Some
+Specifically, the `src` top level directory of `fuchsia.git` can be considered
+the root area. It follows the structure required of an area, and is the place
+where sub areas are located. However, some directories required of an area also
+exist next to `src` rather than inside it, e.g. `third_party`. These can be
+thought of global ones for all areas to depend on. There are also other places
+outside `src` that hold further top-level areas, e.g. in `vendor/*`.
+
+Source repositories, whether open- or closed-source, also follow the conventions
+for areas and are mapped into subdirectories of `src` in fuchsia.git. Currently,
+we have small number of such "petal" repositories, but we will "promote" areas
+currently in the `fuchsia.git` repository into separate repositories as the
+system stabilizes.
+
+The `products` directory contains a list of products that you can build. Some
 products are quite small and build quickly (e.g., the [core](/products/core.gni)
 product), whereas others are more elaborate (e.g., the
 [workstation](/products/workstation.gni) product).
@@ -36,7 +47,7 @@ the following source tree configurations:
 ## Areas
 
 Most code is organized into a recursive tree of areas. Each area has a regular
-directory and dependency structure, which helps people understand code structure
+internal and dependency structure, which helps people understand code structure
 across the whole project.
 
 ### Directory Structure
@@ -56,7 +67,7 @@ pattern:
     * This directory should contain docs for people working in this area
     * Docs for end-developers (or people working in other areas of Fuchsia)
       should be in the top-level docs or sdk repository
-* `bundles/`
+ * `bundles/`
     * This directory contains bundles of package targets in this area. Each area
       should contain at least a `tests` bundle with unit tests for the area, but
       may include other bundles.
@@ -87,9 +98,16 @@ pattern:
     * Do not create deeply nested area structures (e.g., three should be enough)
 
 Areas may use additional directories for internal organization in addition to
-enumerated directories. A directory that contains an `OWNERS` file is considered
-a subarea and must adhere to the contract for areas and subareas.  A directory
-lacking an `OWNERS` file is considered part of the same area.
+the enumerated directories.
+
+### OWNERS
+
+A directory inside an area that contains an `OWNERS` file is considered a
+subarea and must adhere to the contract for areas. A directory lacking an
+`OWNERS` file is considered part of the same area.
+
+At the top of the `fuchsia.git` repository, there exist directories with
+`OWNERS` that are not considered areas, e.g. the `products` directory.
 
 ### Dependency Structure
 
@@ -105,7 +123,8 @@ In addition to depending on itself, an area can depend only on the top-level
 
 ### Canonical targets
 
-Each area and subarea must define the following canonical targets in their top-level BUILD.gn file:
+Each area and subarea must define the following canonical targets in their
+top-level BUILD.gn file:
 
 * `tests`
   * All of the tests within this area
