@@ -397,15 +397,15 @@ func (ios *iostate) loopControl() error {
 
 		msg := respb[:nb]
 		var header fidl.MessageHeader
-		if err := fidl.UnmarshalHeader(msg, &header); err != nil {
+		if _, _, err := fidl.UnmarshalNew(msg, nil, &header); err != nil {
 			return err
 		}
 
-		p, err := stub.Dispatch(header.Ordinal, msg[fidl.MessageHeaderSize:], nil)
+		p, err := stub.DispatchNew(header.Ordinal, msg[fidl.MessageHeaderSize:], nil)
 		if err != nil {
 			return err
 		}
-		cnb, _, err := fidl.MarshalMessage(&header, p, respb[:], nil)
+		cnb, _, err := fidl.MarshalHeaderThenMessage(&header, p, respb[:], nil)
 		if err != nil {
 			return err
 		}

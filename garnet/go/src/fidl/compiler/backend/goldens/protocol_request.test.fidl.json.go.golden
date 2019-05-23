@@ -35,10 +35,6 @@ type ChildStub struct {
 	Impl Child
 }
 
-func (s *ChildStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
-	return s.DispatchNew(ord, b_, h_)
-}
-
 func (s *ChildStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	}
@@ -169,10 +165,6 @@ func NewParentInterfaceRequest() (ParentInterfaceRequest, *ParentInterface, erro
 
 type ParentStub struct {
 	Impl Parent
-}
-
-func (s *ParentStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
-	return s.DispatchNew(ord, b_, h_)
 }
 
 func (s *ParentStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {

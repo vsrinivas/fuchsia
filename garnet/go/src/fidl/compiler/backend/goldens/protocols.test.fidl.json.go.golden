@@ -270,10 +270,6 @@ type WithAndWithoutRequestResponseStub struct {
 	Impl WithAndWithoutRequestResponse
 }
 
-func (s *WithAndWithoutRequestResponseStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
-	return s.DispatchNew(ord, b_, h_)
-}
-
 func (s *WithAndWithoutRequestResponseStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal:
@@ -404,10 +400,6 @@ func NewWithErrorSyntaxInterfaceRequest() (WithErrorSyntaxInterfaceRequest, *Wit
 
 type WithErrorSyntaxStub struct {
 	Impl WithErrorSyntax
-}
-
-func (s *WithErrorSyntaxStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
-	return s.DispatchNew(ord, b_, h_)
 }
 
 func (s *WithErrorSyntaxStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
@@ -578,10 +570,6 @@ func NewOvernetInternalProtocolInterfaceRequest() (OvernetInternalProtocolInterf
 
 type OvernetInternalProtocolStub struct {
 	Impl OvernetInternalProtocol
-}
-
-func (s *OvernetInternalProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
-	return s.DispatchNew(ord, b_, h_)
 }
 
 func (s *OvernetInternalProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
@@ -770,10 +758,6 @@ type SocketControlProtocolStub struct {
 	Impl SocketControlProtocol
 }
 
-func (s *SocketControlProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
-	return s.DispatchNew(ord, b_, h_)
-}
-
 func (s *SocketControlProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case SocketControlProtocolMethodAOrdinal:
@@ -952,10 +936,6 @@ func NewChannelProtocolInterfaceRequest() (ChannelProtocolInterfaceRequest, *Cha
 
 type ChannelProtocolStub struct {
 	Impl ChannelProtocol
-}
-
-func (s *ChannelProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
-	return s.DispatchNew(ord, b_, h_)
 }
 
 func (s *ChannelProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
@@ -1148,10 +1128,6 @@ func NewKitchenSinkInterfaceRequest() (KitchenSinkInterfaceRequest, *KitchenSink
 
 type KitchenSinkStub struct {
 	Impl KitchenSink
-}
-
-func (s *KitchenSinkStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
-	return s.DispatchNew(ord, b_, h_)
 }
 
 func (s *KitchenSinkStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
