@@ -62,74 +62,72 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 FUZZING_DIR=${FUCHSIA_DIR}/scripts/fuzzing
 
 cmd=
-while [[ -n "$1" ]] ; do
-  case "$1" in
-    -h|--help)
+add=0
+for arg in "$@"; do
+  shift
+  case "$arg" in
+    -h)
       cmd="help"
       ;;
     -d|--device|-o|--output|-s|--staging)
-      if [[ -z "$2" ]] ; then
-        echo "Missing argument to $1"
-        cmd="help"
-      else
-        opts="$opts $1 $2"
-      fi
-      shift
+      add=2
       ;;
     -f|--foreground|-n|--no-cipd)
-      opts="$opts $1"
+      add=1
       ;;
     -*)
       echo "Unknown option: $1"
       cmd="help"
       ;;
     *)
-      if [[ -z "$cmd" ]] ; then
-        cmd="$1"
+      if [[ -z "$cmd" ]] && [[ $add -eq 0 ]]; then
+        cmd="$arg"
       else
-        args="$args $1"
+        add=1
       fi
       ;;
   esac
-  shift
+  [[ "$cmd" = "help" ]] && break
+  [[ $add -eq 0 ]] && continue
+  set -- "$@" "$arg"
+  add=$(($add - 1))
 done
 
-
-case "${cmd}" in
+case "$cmd" in
   help)
     fx-command-help
     ;;
   list)
-    python ${FUZZING_DIR}/list_fuzzers.py "$opts $args"
+    python ${FUZZING_DIR}/list_fuzzers.py "$@"
     ;;
   corpus)
-    python ${FUZZING_DIR}/list_corpora.py "$opts $args"
+    python ${FUZZING_DIR}/list_corpora.py "$@"
     ;;
   fetch)
-    python ${FUZZING_DIR}/fetch_corpus.py "$opts $args"
+    python ${FUZZING_DIR}/fetch_corpus.py "$@"
     ;;
   start)
-    python ${FUZZING_DIR}/start_fuzzer.py "$opts $args" &
+    python ${FUZZING_DIR}/start_fuzzer.py "$@" &
     ;;
   check)
-    python ${FUZZING_DIR}/check_fuzzer.py "$opts $args"
+    python ${FUZZING_DIR}/check_fuzzer.py "$@"
     ;;
   stop)
-    python ${FUZZING_DIR}/stop_fuzzer.py "$opts $args"
+    python ${FUZZING_DIR}/stop_fuzzer.py "$@"
     ;;
   repro)
-    python ${FUZZING_DIR}/repro_units.py "$opts $args"
+    python ${FUZZING_DIR}/repro_units.py "$@"
     ;;
   merge)
-    python ${FUZZING_DIR}/merge_corpus.py "$opts $args"
+    python ${FUZZING_DIR}/merge_corpus.py "$@"
     ;;
   store)
-    python ${FUZZING_DIR}/store_corpus.py "$opts $args"
+    python ${FUZZING_DIR}/store_corpus.py "$@"
     ;;
   *)
     name="$cmd"
-    if python ${FUZZING_DIR}/list_fuzzers.py "$opts $name" ; then
-      python ${FUZZING_DIR}/start_fuzzer.py "$opts $name $args" &
+    if python ${FUZZING_DIR}/list_fuzzers.py "$name" ; then
+      python ${FUZZING_DIR}/start_fuzzer.py "$name" "$@" &
     else
       fx-command-help
     fi
