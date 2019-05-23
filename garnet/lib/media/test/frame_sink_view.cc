@@ -32,7 +32,7 @@ class Frame {
     zx_status_t status =
         release_eventpair.duplicate(ZX_RIGHT_SAME_RIGHTS, &release_eventpair_);
     if (status != ZX_OK) {
-      FXL_LOG(FATAL) << "::zx::event::duplicate() failed - status: " << status;
+      FXL_PLOG(FATAL, status) << "::zx::event::duplicate() failed";
       FXL_NOTREACHED();
     }
     wait_.set_object(release_eventpair_.get());
@@ -49,7 +49,7 @@ class Frame {
     wait_.set_trigger(ZX_EVENTPAIR_PEER_CLOSED);
     status = wait_.Begin(dispatcher);
     if (status != ZX_OK) {
-      FXL_LOG(FATAL) << "Begin() failed - status: " << status;
+      FXL_PLOG(FATAL, status) << "Begin() failed";
       FXL_NOTREACHED();
     }
   }
@@ -72,7 +72,7 @@ class Frame {
         FXL_LOG(INFO)
             << "WaitHandler() sees ZX_ERR_CANCELED (normal if shutting down)";
       } else {
-        FXL_LOG(INFO) << "WaitHandler() sees failure status: " << status;
+        FXL_PLOG(INFO, status) << "WaitHandler() sees failure";
       }
     }
 
@@ -145,14 +145,14 @@ void FrameSinkView::PutFrame(
   ::zx::vmo image_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_vmo);
   if (status != ZX_OK) {
-    FXL_LOG(FATAL) << "vmo.duplicate() failed - status: " << status;
+    FXL_PLOG(FATAL, status) << "vmo.duplicate() failed";
     FXL_NOTREACHED();
   }
 
   size_t image_vmo_size;
   status = image_vmo.get_size(&image_vmo_size);
   if (status != ZX_OK) {
-    FXL_LOG(FATAL) << "vmo.get_size() failed - status: " << status;
+    FXL_PLOG(FATAL, status) << "vmo.get_size() failed";
     FXL_NOTREACHED();
   }
 
@@ -165,7 +165,7 @@ void FrameSinkView::PutFrame(
   status =
       ::zx::eventpair::create(0, &release_frame_client, &release_frame_server);
   if (status != ZX_OK) {
-    FXL_LOG(FATAL) << "::zx::eventpair::create() failed";
+    FXL_PLOG(FATAL, status) << "::zx::eventpair::create() failed";
     FXL_NOTREACHED();
   }
 

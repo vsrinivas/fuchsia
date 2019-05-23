@@ -70,8 +70,8 @@ CodecBuffer::~CodecBuffer() {
     zx_status_t res = zx::vmar::root_self()->unmap(
         reinterpret_cast<uintptr_t>(base_), size_bytes_);
     if (res != ZX_OK) {
-      FXL_LOG(FATAL) << "Failed to unmap " << size_bytes_
-                     << " byte buffer vmo (res " << res << ") - exiting";
+      FXL_PLOG(FATAL, res) << "Failed to unmap " << size_bytes_
+                           << " byte buffer vmo";
     }
     base_ = nullptr;
   }
@@ -118,7 +118,7 @@ bool CodecBuffer::CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start, 
   uintptr_t tmp;
   zx_status_t status = zx::vmar::root_self()->map(0, vmo, vmo_usable_start, vmo_usable_size, options, &tmp);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "CodecBuffer::CreateFromVmoInternal failed to map VMO - status: " << status;
+    FXL_PLOG(WARNING, status) << "CodecBuffer::CreateFromVmoInternal failed to map VMO";
     return false;
   }
   base_ = reinterpret_cast<uint8_t*>(tmp);

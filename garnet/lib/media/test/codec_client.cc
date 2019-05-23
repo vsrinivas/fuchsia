@@ -41,7 +41,7 @@ CodecClient::CodecClient(
     // way.
     //
     // TODO(dustingreen): get and print epitaph once that's possible.
-    FXL_LOG(FATAL) << "codec_ failed - exiting";
+    FXL_PLOG(FATAL, status) << "codec_ failed - exiting";
   });
 
   // Only one request is ever created, so we create it in the constructor to
@@ -221,8 +221,7 @@ bool CodecClient::CreateAndSyncBufferCollection(
   // a different sysmem channel.
   zx_status_t sync_status = buffer_collection->Sync();
   if (sync_status != ZX_OK) {
-    FXL_LOG(FATAL) << "buffer_collection->Sync() failed - status: "
-                   << sync_status;
+    FXL_PLOG(FATAL, sync_status) << "buffer_collection->Sync() failed";
   }
 
   *out_buffer_collection = std::move(buffer_collection);
@@ -248,13 +247,12 @@ bool CodecClient::WaitForSysmemBuffersAllocated(
   zx_status_t call_status = buffer_collection->WaitForBuffersAllocated(
       &allocate_status, &result_buffer_collection_info);
   if (call_status != ZX_OK) {
-    FXL_LOG(ERROR) << "WaitForBuffersAllocated returned failure - status: "
-                   << call_status;
+    FXL_PLOG(ERROR, call_status) << "WaitForBuffersAllocated returned failure";
     return false;
   }
   if (allocate_status != ZX_OK) {
-    FXL_LOG(ERROR) << "WaitForBuffersAllocated allocation failed - status: "
-                   << allocate_status;
+    FXL_PLOG(ERROR, allocate_status)
+        << "WaitForBuffersAllocated allocation failed";
     return false;
   }
 
@@ -784,9 +782,8 @@ bool CodecClient::ConfigurePortBufferCollection(
   // the Bind() here.  This does mean we need to set the error handler before
   // the Bind() however.
   buffer_collection_ptr.set_error_handler([is_output](zx_status_t status) {
-    FXL_LOG(FATAL) << "BufferCollection failed - "
-                      "status: "
-                   << status << " is_output: " << is_output;
+    FXL_PLOG(FATAL, status)
+        << "BufferCollection failed is_output: " << is_output;
   });
 
   // This implicitly converts buffer_collection from
@@ -796,9 +793,8 @@ bool CodecClient::ConfigurePortBufferCollection(
   zx_status_t bind_status =
       buffer_collection_ptr.Bind(std::move(buffer_collection), dispatcher_);
   if (bind_status != ZX_OK) {
-    FXL_LOG(FATAL) << "buffer_collection_ptr.Bind() "
-                      "failed - status: "
-                   << bind_status << " is_output: " << is_output;
+    FXL_PLOG(FATAL, bind_status)
+        << "buffer_collection_ptr.Bind() failed is_output: " << is_output;
     return false;
   }
 
