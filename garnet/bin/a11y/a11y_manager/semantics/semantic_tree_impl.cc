@@ -6,9 +6,9 @@
 
 #include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
-#include <src/lib/fxl/logging.h>
 
-#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace a11y_manager {
 // Max file size of semantic tree log file is 1MB.
@@ -116,11 +116,12 @@ void SemanticTreeImpl::LogSemanticTreeHelper(
   tree_log->append(kIndentSize * current_level, ' ');
 
   // Add logs for the current node.
-  absl::StrAppend(
-      tree_log, "Node_id: ", std::to_string(root_node->node_id()), ", Label:",
+  *tree_log = fxl::Concatenate({
+      *tree_log, "Node_id: ", std::to_string(root_node->node_id()), ", Label:",
       root_node->attributes().has_label() ? root_node->attributes().label()
                                           : "_empty",
-      kNewLine);
+      kNewLine
+  });
 
   // Iterate through all the children of the current node.
   if (!root_node->has_child_ids()) {
