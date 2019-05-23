@@ -88,22 +88,26 @@ class TestHarnessBuilder {
   // |options| and stores |on_create| for use in the router function created
   // through BuildOnNewComponentHandler().
   TestHarnessBuilder& InterceptComponent(
-      OnNewComponentHandler on_new_component, InterceptOptions options);
+      OnNewComponentHandler on_new_component,
+      InterceptOptions options = InterceptOptions());
 
   // Convenience variant of InterceptComponent() which sets the base shell URL
   // in the ModularConfig to |options.url|.
   TestHarnessBuilder& InterceptBaseShell(
-      OnNewComponentHandler on_new_component, InterceptOptions options);
+      OnNewComponentHandler on_new_component,
+      InterceptOptions options = InterceptOptions());
 
   // Convenience variant of InterceptComponent() which adds a session shell URL
   // to the ModularConfig for |options.url|.
   TestHarnessBuilder& InterceptSessionShell(
-      OnNewComponentHandler on_new_component, InterceptOptions options);
+      OnNewComponentHandler on_new_component,
+      InterceptOptions options = InterceptOptions());
 
   // Convenience variant of InterceptComponent() which sets the story shell URL
   // in the ModularConfig to |options.url|.
   TestHarnessBuilder& InterceptStoryShell(
-      OnNewComponentHandler on_new_component, InterceptOptions options);
+      OnNewComponentHandler on_new_component,
+      InterceptOptions options = InterceptOptions());
 
   // Returns a generated fake URL. Subsequent calls to this method will generate
   // a different URL.
