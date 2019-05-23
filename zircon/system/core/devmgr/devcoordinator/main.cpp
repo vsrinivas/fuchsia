@@ -405,61 +405,33 @@ zx_status_t fuchsia_create_job() {
     return ZX_OK;
 }
 
-zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
-                          zx::channel fshost_client) {
-    const auto& root_resource = coordinator->root_resource();
+zx_status_t StartSvchost(bool require_system, devmgr::Coordinator* coordinator,
+                         zx::channel fshost_client) {
     zx::channel dir_request, svchost_local;
-    zx::debuglog logger;
-    zx::channel appmgr_svc_req;
-    zx::channel appmgr_svc;
-    zx::channel miscsvc_svc_req;
-    zx::channel miscsvc_svc;
-
     zx_status_t status = zx::channel::create(0, &dir_request, &svchost_local);
     if (status != ZX_OK) {
         return status;
     }
 
+    zx::debuglog logger;
     status = zx::debuglog::create(zx::resource(), 0, &logger);
     if (status != ZX_OK) {
         return status;
     }
 
-    status = zx::channel::create(0, &appmgr_svc_req, &appmgr_svc);
-    if (status != ZX_OK) {
-        return status;
-    }
+    zx::channel appmgr_svc;
+    {
+        zx::channel appmgr_svc_req;
+        status = zx::channel::create(0, &appmgr_svc_req, &appmgr_svc);
+        if (status != ZX_OK) {
+            return status;
+        }
 
-    status =
-        fdio_service_connect_at(g_handles.appmgr_client.get(), "svc", appmgr_svc_req.release());
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = zx::channel::create(0, &miscsvc_svc_req, &miscsvc_svc);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status =
-        fdio_service_connect_at(g_handles.miscsvc_client.get(), "public",
-                                miscsvc_svc_req.release());
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    const char* name = "svchost";
-    const char* argv[2] = {
-        "/boot/bin/svchost",
-        require_system ? "--require-system" : nullptr,
-    };
-    int argc = require_system ? 2 : 1;
-
-    zx::job svc_job_copy;
-    status = g_handles.svc_job.duplicate(
-        ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS, &svc_job_copy);
-    if (status != ZX_OK) {
-        return status;
+        status =
+            fdio_service_connect_at(g_handles.appmgr_client.get(), "svc", appmgr_svc_req.release());
+        if (status != ZX_OK) {
+            return status;
+        }
     }
 
     zx::job root_job_copy;
@@ -468,6 +440,16 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
                                            &root_job_copy);
     if (status != ZX_OK) {
         return status;
+    }
+
+    // svchost needs to hold this to talk to zx_kerneldebug but doesn't need any rights.
+    // TODO(ZX-971): when zx_debug_send_command syscall is descoped, update this too.
+    zx::resource root_resource_copy;
+    if (coordinator->root_resource().is_valid()) {
+        status = coordinator->root_resource().duplicate(ZX_RIGHT_TRANSFER, &root_resource_copy);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
 
     zx::channel fidl_client;
@@ -492,15 +474,49 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
         return status;
     }
 
-    // svchost needs to hold this to talk to zx_kerneldebug but doesn't need any rights.
-    // TODO(ZX-971): when zx_debug_send_command syscall is descoped, update this too.
-    zx::resource root_resource_copy;
-    if (root_resource.is_valid()) {
-        status = root_resource.duplicate(ZX_RIGHT_TRANSFER, &root_resource_copy);
+    zx::channel miscsvc_svc;
+    {
+        zx::channel miscsvc_svc_req;
+        status = zx::channel::create(0, &miscsvc_svc_req, &miscsvc_svc);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status =
+            fdio_service_connect_at(g_handles.miscsvc_client.get(), "public",
+                                    miscsvc_svc_req.release());
         if (status != ZX_OK) {
             return status;
         }
     }
+
+    zx::channel bootsvc_svc;
+    {
+        zx::channel bootsvc_svc_req;
+        status = zx::channel::create(0, &bootsvc_svc_req, &bootsvc_svc);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status = fdio_open("/bootsvc", FS_DIR_FLAGS, bootsvc_svc_req.release());
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    zx::job svc_job_copy;
+    status = g_handles.svc_job.duplicate(
+        ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS, &svc_job_copy);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    const char* name = "svchost";
+    const char* argv[2] = {
+        "/boot/bin/svchost",
+        require_system ? "--require-system" : nullptr,
+    };
+    int argc = require_system ? 2 : 1;
 
     launchpad_t* lp = nullptr;
     launchpad_create(svc_job_copy.get(), name, &lp);
@@ -541,6 +557,9 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
     // Add handle to channel to allow svchost to talk to miscsvc.
     launchpad_add_handle(lp, miscsvc_svc.release(), PA_HND(PA_USER0, 6));
 
+    // Add handle to channel to allow svchost to talk to bootsvc.
+    launchpad_add_handle(lp, bootsvc_svc.release(), PA_HND(PA_USER0, 7));
+
     // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
     // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
     const char* nametable[1] = {};
@@ -558,7 +577,7 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
 
     const char* errmsg = nullptr;
     if ((status = launchpad_go(lp, nullptr, &errmsg)) != ZX_OK) {
-        printf("devcoordinator: launchpad %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
+        printf("devcoordinator: launch %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
         return status;
     } else {
         printf("devcoordinator: launch %s (%s) OK\n", argv[0], name);
@@ -1028,7 +1047,7 @@ int main(int argc, char** argv) {
             return 1;
         }
     } else {
-        status = svchost_start(require_system, &coordinator, std::move(fshost_client));
+        status = StartSvchost(require_system, &coordinator, std::move(fshost_client));
         if (status != ZX_OK) {
             fprintf(stderr, "devcoordinator: failed to start svchost: %d", status);
             return 1;

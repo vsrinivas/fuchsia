@@ -162,6 +162,7 @@ int output_thread(void* arg) {
 
 int main(int argc, char** argv) {
     auto args = IsolatedDevmgr::DefaultArgs();
+    args.use_system_svchost = true;
 
     IsolatedDevmgr devmgr;
     zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);

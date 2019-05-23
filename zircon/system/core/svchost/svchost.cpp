@@ -8,6 +8,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
 #include <fs/remote-dir.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/fshost/c/fidl.h>
 #include <fuchsia/paver/c/fidl.h>
@@ -158,6 +159,12 @@ static constexpr const char* miscsvc_services[] = {
     nullptr,
 };
 
+// List of services which are re-routed to the bootsvc service provider.
+static constexpr const char* bootsvc_services[] = {
+    fuchsia_boot_Items_Name,
+    nullptr,
+};
+
 // The ServiceProxy is a Vnode which, if opened, connects to a service.
 // However, if treated like a directory, the service proxy will attempt to
 // relay the underlying request to the connected service channel.
@@ -247,6 +254,7 @@ int main(int argc, char** argv) {
     zx::channel fshost_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 4)));
     zx::channel virtcon_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 5)));
     zx::channel miscsvc_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 6)));
+    zx::channel bootsvc_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 7)));
 
     zx_status_t status = outgoing.ServeFromStartupInfo();
     if (status != ZX_OK) {
@@ -303,6 +311,7 @@ int main(int argc, char** argv) {
     publish_services(outgoing.public_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));
     publish_services(outgoing.public_dir(), fshost_services, zx::unowned_channel(fshost_svc));
     publish_services(outgoing.public_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
+    publish_services(outgoing.public_dir(), bootsvc_services, zx::unowned_channel(bootsvc_svc));
 
     publish_remote_service(outgoing.public_dir(),
                           fuchsia_device_manager_DebugDumper_Name,

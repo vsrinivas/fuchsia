@@ -10,7 +10,7 @@ extern zx_device_t* ddk_test_dev;
 
 static const char* TEST_STRING = "testing 1 2 3";
 
-static bool add_metadata_test(void) {
+static bool test_add_metadata(void) {
     char buffer[32] = {};
     zx_status_t status;
     size_t actual;
@@ -36,7 +36,7 @@ static bool add_metadata_test(void) {
     END_TEST;
 }
 
-static bool publish_metadata_test(void) {
+static bool test_publish_metadata(void) {
     char buffer[32] = {};
     zx_status_t status;
     size_t actual;
@@ -66,8 +66,8 @@ static bool publish_metadata_test(void) {
 }
 
 BEGIN_TEST_CASE(metadata_tests)
-RUN_TEST(add_metadata_test)
-RUN_TEST(publish_metadata_test)
+RUN_TEST(test_add_metadata)
+RUN_TEST(test_publish_metadata)
 END_TEST_CASE(metadata_tests)
 
 struct test_case_element* test_case_ddk_metadata = TEST_CASE_ELEMENT(metadata_tests);

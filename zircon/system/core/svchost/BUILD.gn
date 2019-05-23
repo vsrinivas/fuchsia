@@ -24,6 +24,7 @@ executable("svchost") {
   ]
   deps = [
     ":crashsvc",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-fshost:c",
     "$zx/system/fidl/fuchsia-io:c",
