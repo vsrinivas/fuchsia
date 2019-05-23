@@ -339,33 +339,37 @@ enum Key : uint32 {
     /// Corresponds to USB HID page 0x0007 usage 0x0064
     NON_US_BACKSLASH = 0x00000050;
 
+    /// Keyboard Left Control
+    /// Corresponds to USB HID page 0x0007 usage 0x00e0
+    LEFT_CTRL = 0x00000051;
+
     /// Keyboard Left Shift
     /// Corresponds to USB HID page 0x0007 usage 0x00e1
-    LEFT_SHIFT = 0x00000051;
+    LEFT_SHIFT = 0x00000052;
 
     /// Keyboard Left Alt
     /// Corresponds to USB HID page 0x0007 usage 0x00e2
-    LEFT_ALT = 0x00000052;
+    LEFT_ALT = 0x00000053;
 
     /// Keyboard Left GUI (Meta, Windows)
     /// Corresponds to USB HID page 0x0007 usage 0x00e3
-    LEFT_META = 0x00000053;
+    LEFT_META = 0x00000054;
 
     /// Keyboard Right Control
     /// Corresponds to USB HID page 0x0007 usage 0x00e4
-    RIGHT_CTRL = 0x00000054;
+    RIGHT_CTRL = 0x00000055;
 
     /// Keyboard Right Shift
     /// Corresponds to USB HID page 0x0007 usage 0x00e5
-    RIGHT_SHIFT = 0x00000055;
+    RIGHT_SHIFT = 0x00000056;
 
     /// Keyboard Right Alt
     /// Corresponds to USB HID page 0x0007 usage 0x00e6
-    RIGHT_ALT = 0x00000056;
+    RIGHT_ALT = 0x00000057;
 
     /// Keyboard Right GUI (Meta, Windows)
     /// Corresponds to USB HID page 0x0007 usage 0x00e7
-    RIGHT_META = 0x00000057;
+    RIGHT_META = 0x00000058;
 
 
     // Keypad keys
