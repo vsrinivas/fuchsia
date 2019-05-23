@@ -181,6 +181,7 @@ struct LocalOptions {
     ignore_tags: HashSet<String>,
     clock: Clock,
     time_format: String,
+    since_time: Option<i64>,
     is_pretty: bool,
     begin: Vec<String>,
     end: Vec<String>,
@@ -198,6 +199,7 @@ impl Default for LocalOptions {
             ignore_tags: HashSet::new(),
             clock: Clock::Monotonic,
             time_format: "%Y-%m-%d %H:%M:%S".to_string(),
+            since_time: None,
             is_pretty: false,
             begin: vec![],
             end: vec![],
@@ -228,9 +230,8 @@ impl LocalOptions {
         // Note that when printing old messages from memory buffer then
         // this may offset them from UTC time as set when logged in
         // case of UTC time adjustments since.
-        let monotonic_zero_as_utc =
-            zx::Time::get(zx::ClockId::UTC).into_nanos() -
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+        let monotonic_zero_as_utc = zx::Time::get(zx::ClockId::UTC).into_nanos()
+            - zx::Time::get(zx::ClockId::Monotonic).into_nanos();
         let shifted_timestamp = monotonic_zero_as_utc + timestamp;
         let seconds = (shifted_timestamp / 1000000000) as i64;
         let nanos = (shifted_timestamp % 1000000000) as u32;
@@ -372,6 +373,9 @@ fn help(name: &str) -> String {
             See chrono::format::strftime for format specifiers.
             Defaults to "%Y-%m-%d %H:%M:%S".
 
+        --since_now yes:
+            Ignore all logs from before this command is invoked.
+
         --dump_logs yes:
             Dump current logs in buffer and exit.
 
@@ -432,6 +436,15 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 let ans = &args[i + 1];
                 if ans.to_lowercase() == "yes" {
                     options.local.is_pretty = true;
+                }
+            }
+            "--since_now" => {
+                let ans = &args[i + 1];
+                if ans.to_lowercase() == "yes" {
+                    options.local.since_time =
+                        Some(zx::Time::get(zx::ClockId::Monotonic).into_nanos());
+                } else {
+                    return Err(format!("The argument to --since_now must be 'yes'"));
                 }
             }
             "--suppress" => {
@@ -631,6 +644,11 @@ where
     fn log(&mut self, message: LogMessage) {
         if message.tags.iter().any(|tag| self.local_options.ignore_tags.contains(tag)) {
             return;
+        }
+        if let Some(time) = self.local_options.since_time {
+            if time > message.time {
+                return;
+            }
         }
         let tags = message.tags.join(", ");
         let line = format!(
@@ -966,6 +984,51 @@ mod tests {
         expected.push_str("[00000.000000][0][0][] INFO: second\n");
         expected.push_str("[00000.000000][0][0][] INFO: third\n");
         expected.push_str("[00000.000000][0][0][] INFO: fifth\n");
+
+        // Compare the log output with the expectation.
+        let mut tmp_file = File::open(&file_path).expect("should have opened the file");
+        let mut content = String::new();
+        tmp_file.read_to_string(&mut content).expect("something went wrong reading the file");
+
+        assert_eq!(content, expected);
+    }
+
+    #[test]
+    fn test_since_now() {
+        let _executor = fasync::Executor::new().expect("unable to create executor");
+        let tmp_dir = TempDir::new().expect("should have created tempdir");
+        let file_path = tmp_dir.path().join("tmp_file");
+        let tmp_file = File::create(&file_path).expect("should have created file");
+        let mut expected = "".to_string();
+
+        // since_now message filter test
+        let mut filter_options = LocalOptions::default();
+
+        // All log messages with a timestamp lower than `1000000000` (aka 1 second) should be
+        // ignored
+        filter_options.since_time = Some(1000000000);
+
+        let mut l = Listener::new(tmp_file, filter_options, Decorator::new());
+        let mut msg = LogMessage {
+            pid: 0,
+            tid: 0,
+            severity: 0,
+            time: 0,
+            msg: String::default(),
+            dropped_logs: 0,
+            tags: vec![],
+        };
+
+        // First message has time set to 0, this should be ignored
+        msg.msg = "foobar".to_string();
+        l.log(copy_log_message(&msg));
+
+        // Second message has time set to 2000000000, this should be printed
+        msg.msg = "foobar".to_string();
+        msg.time = 2000000000;
+        l.log(copy_log_message(&msg));
+
+        expected.push_str("[00002.000000][0][0][] INFO: foobar\n");
 
         // Compare the log output with the expectation.
         let mut tmp_file = File::open(&file_path).expect("should have opened the file");
