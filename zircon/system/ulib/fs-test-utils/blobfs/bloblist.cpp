@@ -64,8 +64,14 @@ bool BlobList::ConfigBlob() {
     if (state == nullptr) {
         return true;
     } else if (state->state == TestState::kEmpty) {
-        ASSERT_EQ(ftruncate(state->fd.get(), state->info->size_data), 0);
-        state->state = TestState::kConfigured;
+        // if we are going to run out of space on the underlying blobfs partition, the
+        // ZX_ERR_NO_SPACE is going to come up here. if we run out of space, put the kEmpty blob
+        // back onto the blob list.
+        if (ftruncate(state->fd.get(), state->info->size_data) == 0) {
+            state->state = TestState::kConfigured;
+        } else {
+            ASSERT_EQ(errno, ENOSPC, "ftruncate returned an unrecoverable error");
+        }
     }
     {
         fbl::AutoLock al(&list_lock_);
