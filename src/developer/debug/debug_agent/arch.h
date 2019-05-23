@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_DEBUG_AGENT_ARCH_H_
-#define GARNET_BIN_DEBUG_AGENT_ARCH_H_
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_H_
 
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
@@ -67,11 +67,7 @@ class ArchProvider {
   bool IsBreakpointInstruction(zx::process& process, uint64_t address);
 
   // Converts the given register structure to a vector of debug_ipc registers.
-  // The frame vector omits the IP and SP, so there is a flag to control
-  // whether these are included or not.
-  enum class SaveGeneralWhat { kAll, kNoIPSP };
   static void SaveGeneralRegs(const zx_thread_state_general_regs& input,
-                              SaveGeneralWhat what,
                               std::vector<debug_ipc::Register>* out);
 
   virtual zx_status_t ReadRegisters(
@@ -111,4 +107,4 @@ class ArchProvider {
 }  // namespace arch
 }  // namespace debug_agent
 
-#endif  // GARNET_BIN_DEBUG_AGENT_ARCH_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_H_

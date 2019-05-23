@@ -17,6 +17,8 @@
 
 namespace zxdb {
 
+using debug_ipc::RegisterID;
+
 class FrameImplTest : public RemoteAPITest {
  public:
   std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() {
@@ -24,6 +26,8 @@ class FrameImplTest : public RemoteAPITest {
     mock_remote_api_ = remote_api.get();
     return remote_api;
   }
+
+  MockRemoteAPI* mock_remote_api() const { return mock_remote_api_; }
 
  private:
   MockRemoteAPI* mock_remote_api_ = nullptr;  // Owned by System.
@@ -101,12 +105,26 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   constexpr uint64_t kProcessKoid = 1234;
   Process* process = InjectProcess(kProcessKoid);
 
-  const debug_ipc::StackFrame stack(0x12345678, 0x7890);
+  // Provide a value for rax (DWARF reg 0) which will be used below.
+  constexpr uint64_t kAddress = 0x86124309723;
+  std::vector<debug_ipc::Register> frame_regs;
+  frame_regs.emplace_back(RegisterID::kX64_rax, kAddress);
+
+  const debug_ipc::StackFrame stack(0x12345678, 0x7890, frame_regs);
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
-  // This describes the frame base location for the function.
-  const uint8_t kSelectReg0[1] = {llvm::dwarf::DW_OP_reg0};
-  VariableLocation frame_base(kSelectReg0, 1);
+  // Set the memory pointed to by the register.
+  constexpr uint64_t kMemoryValue = 0x78362419047;
+  std::vector<uint8_t> mem_value;
+  mem_value.resize(sizeof(kMemoryValue));
+  memcpy(&mem_value[0], &kMemoryValue, sizeof(kMemoryValue));
+  mock_remote_api()->AddMemory(kAddress, mem_value);
+
+  // This describes the frame base location for the function. This encodes
+  // the memory pointed to by register 0.
+  const uint8_t kSelectRegRef[2] = {llvm::dwarf::DW_OP_reg0,
+                                    llvm::dwarf::DW_OP_deref};
+  VariableLocation frame_base(kSelectRegRef, 2);
 
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_frame_base(frame_base);
@@ -122,47 +140,21 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   Frame* frame = frames[0].get();
   thread.GetStack().SetFramesForTest(std::move(frames), true);
 
-  // This should not be able to complete synchronously because reg0 isn't
+  // This should not be able to complete synchronously because the memory isn't
   // available synchronously.
   auto optional_base = frame->GetBasePointer();
   EXPECT_FALSE(optional_base);
 
-  uint64_t sync_base = 0;
-  frame->GetBasePointerAsync([&sync_base](uint64_t value) {
-    sync_base = value;
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
-
-  // We didn't provide a "register 0" in the register reply which means the
-  // DWARF expression evaluation will fail.
-  debug_ipc::MessageLoop::Current()->Run();
-  EXPECT_EQ(0u, sync_base);
-
-  // Now set the registers. Need a new frame because the old computed base
-  // pointer will be cached.
-  frames.clear();
-  frames.push_back(std::make_unique<FrameImpl>(&thread, stack, location));
-  Frame* frame2 = frames[0].get();
-  thread.GetStack().SetFramesForTest(std::move(frames), true);
-  auto& general_regs =
-      thread.register_contents()
-          .category_map()[debug_ipc::RegisterCategory::Type::kGeneral];
-
-  // Set a value for "rax" which is register 0 on x64.
-  uint64_t kReg0Value = 0x86124309723;
-  general_regs.emplace_back(
-      debug_ipc::Register(debug_ipc::RegisterID::kX64_rax, kReg0Value));
-
-  sync_base = 0;
-  frame2->GetBasePointerAsync([&sync_base](uint64_t value) {
-    sync_base = value;
+  uint64_t result_base = 0;
+  frame->GetBasePointerAsync([&result_base](uint64_t value) {
+    result_base = value;
     debug_ipc::MessageLoop::Current()->QuitNow();
   });
 
   // The base pointer should have picked up our register0 value for the base
   // pointer.
   debug_ipc::MessageLoop::Current()->Run();
-  EXPECT_EQ(kReg0Value, sync_base);
+  EXPECT_EQ(kMemoryValue, result_base);
 }
 
 }  // namespace zxdb

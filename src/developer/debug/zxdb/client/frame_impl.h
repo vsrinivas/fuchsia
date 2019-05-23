@@ -33,6 +33,7 @@ class FrameImpl final : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
+  const std::vector<debug_ipc::Register>& GetGeneralRegisters() override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
@@ -52,8 +53,6 @@ class FrameImpl final : public Frame {
 
   Thread* thread_;
 
-  // This stack frame contains the base pointer computed by the backend which
-  // is not necessarily the frame base (see GetBasePointer() declaration).
   debug_ipc::StackFrame stack_frame_;
 
   mutable Location location_;  // Lazily symbolized.

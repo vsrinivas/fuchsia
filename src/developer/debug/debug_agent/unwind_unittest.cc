@@ -116,11 +116,13 @@ void DoUnwindTest(bool expect_registers) {
 
   // Validate the stack. It's really hard to say what these values will be
   // without symbols given the few guarantees C++ can provide. But we should
-  // have "several" entries and the first one should have "a bunch" of
-  // registers.
+  // have "several" entries, the first one should have "a bunch" of registers.
   ASSERT_TRUE(stack.size() >= 2) << "Only got " << stack.size();
   EXPECT_TRUE(stack[0].ip != 0);
   EXPECT_TRUE(stack[0].regs.size() >= 8);
+
+  // Non-topmost stack frames should always have at least two registers (IP/SP).
+  EXPECT_TRUE(stack[1].regs.size() >= 2);
 
   if (expect_registers) {
     EXPECT_TRUE(stack[1].regs.size() >= 8);

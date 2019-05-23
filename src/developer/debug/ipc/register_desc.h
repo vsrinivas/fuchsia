@@ -37,7 +37,13 @@ RegisterID DWARFToRegisterID(Arch, uint32_t dwarf_reg_id);
 std::optional<uint32_t> RegisterIDToDWARF(RegisterID);
 
 // Find out what arch a register ID belongs to
-Arch GetArchForRegisterID(debug_ipc::RegisterID);
+Arch GetArchForRegisterID(RegisterID);
+
+// Returns true if the given register is a "general" register. General
+// registers are sent as part of the unwind frame data. Other registers must
+// be requested specially from the target.
+bool IsGeneralRegister(RegisterID);
+
 // These ranges permit to make transformation from registerID to category and
 // make some formal verifications.
 constexpr uint32_t kARMv8GeneralBegin = 1000;

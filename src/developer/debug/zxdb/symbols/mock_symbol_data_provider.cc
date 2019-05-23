@@ -25,7 +25,7 @@ void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id,
 
 void MockSymbolDataProvider::AddMemory(uint64_t address,
                                        std::vector<uint8_t> data) {
-  mem_[address] = std::move(data);
+  memory_.AddMemory(address, std::move(data));
 }
 
 debug_ipc::Arch MockSymbolDataProvider::GetArch() {
@@ -83,25 +83,9 @@ void MockSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback callback) {
 
 void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                             GetMemoryCallback callback) {
-  auto found = FindBlockForAddress(address);
-  if (found == mem_.end()) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback]() {
-      // The API states that invalid memory is not an error, it just does a
-      // short read.
-      callback(Err(), std::vector<uint8_t>());
-    });
-  } else {
-    size_t offset = address - found->first;
-
-    uint32_t size_to_return =
-        std::min(size, static_cast<uint32_t>(found->second.size() - offset));
-
-    std::vector<uint8_t> subset;
-    subset.resize(size_to_return);
-    memcpy(&subset[0], &found->second[offset], size_to_return);
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [callback, subset]() { callback(Err(), subset); });
-  }
+  std::vector<uint8_t> result = memory_.ReadMemory(address, size);
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [callback, result]() { callback(Err(), result); });
 }
 
 void MockSymbolDataProvider::WriteMemory(uint64_t address,
@@ -111,25 +95,6 @@ void MockSymbolDataProvider::WriteMemory(uint64_t address,
 
   // Declare success.
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(Err()); });
-}
-
-MockSymbolDataProvider::RegisteredMemory::const_iterator
-MockSymbolDataProvider::FindBlockForAddress(uint64_t address) const {
-  // Finds the first block >= address.
-  auto found = mem_.lower_bound(address);
-
-  // We need the first block <= address.
-  if (found != mem_.end() && found->first == address)
-    return found;  // Got exact match.
-
-  // Now find the first block < address.
-  if (found == mem_.begin())
-    return mem_.end();  // Nothing before the address.
-
-  --found;
-  if (address >= found->first + found->second.size())
-    return mem_.end();  // Address is after this range.
-  return found;
 }
 
 }  // namespace zxdb

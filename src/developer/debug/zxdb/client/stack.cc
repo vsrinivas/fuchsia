@@ -39,6 +39,9 @@ class InlineFrame final : public Frame {
   const Frame* GetPhysicalFrame() const override { return physical_frame_; }
   const Location& GetLocation() const override { return location_; }
   uint64_t GetAddress() const override { return location_.address(); }
+  const std::vector<debug_ipc::Register>& GetGeneralRegisters() override {
+    return physical_frame_->GetGeneralRegisters();
+  }
   std::optional<uint64_t> GetBasePointer() const override {
     return physical_frame_->GetBasePointer();
   }

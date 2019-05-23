@@ -48,6 +48,19 @@ class Frame : public ClientObject {
   // GetLocation().address() since it doesn't need to be symbolized.
   virtual uint64_t GetAddress() const = 0;
 
+  // Returns the general registers that were saved with this stack frame. The
+  // order is not guaranteed. The top stack frame should contain all general
+  // registers which should be the current state of the CPU.
+  //
+  // Lower stack frames should at least contain the IP and probably SP, and if
+  // any registers were found saved on the stack they will be here too.
+  // Non-general registers are not saved per-frame and must be requested from
+  // the thread separately.
+  //
+  // Inline frames will report the registers from the physical frame they're
+  // associated with.
+  virtual const std::vector<debug_ipc::Register>& GetGeneralRegisters() = 0;
+
   // The frame base pointer.
   //
   // This is not necessarily the "BP" register. The symbols can specify

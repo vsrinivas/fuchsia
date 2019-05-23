@@ -46,6 +46,9 @@ const Frame* MockFrame::GetPhysicalFrame() const {
 
 const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return stack_frame_.ip; }
+const std::vector<debug_ipc::Register>& MockFrame::GetGeneralRegisters() {
+  return stack_frame_.regs;
+}
 std::optional<uint64_t> MockFrame::GetBasePointer() const {
   return frame_base_;
 }

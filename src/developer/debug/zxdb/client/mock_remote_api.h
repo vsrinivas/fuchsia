@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_REMOTE_API_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_REMOTE_API_H_
 
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
+#include "src/developer/debug/zxdb/common/mock_memory.h"
 
 namespace zxdb {
 
@@ -46,6 +48,9 @@ class MockRemoteAPI : public RemoteAPI {
     return last_breakpoint_add_.breakpoint.locations[0].address;
   }
 
+  // Sets a memory value that will be returned when requested.
+  void AddMemory(uint64_t address, std::vector<uint8_t> data);
+
   const debug_ipc::WriteRegistersRequest& last_write_registers() const {
     return last_write_registers_;
   }
@@ -69,6 +74,9 @@ class MockRemoteAPI : public RemoteAPI {
   void Resume(
       const debug_ipc::ResumeRequest& request,
       std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override;
+  void ReadMemory(
+      const debug_ipc::ReadMemoryRequest& request,
+      std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb) override;
   void WriteRegisters(
       const debug_ipc::WriteRegistersRequest& request,
       std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb)
@@ -83,6 +91,9 @@ class MockRemoteAPI : public RemoteAPI {
   int breakpoint_remove_count_ = 0;
   debug_ipc::AddOrChangeBreakpointRequest last_breakpoint_add_;
   debug_ipc::WriteRegistersRequest last_write_registers_;
+  MockMemory memory_;
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_REMOTE_API_H_

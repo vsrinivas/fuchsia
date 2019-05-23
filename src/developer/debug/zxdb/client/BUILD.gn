@@ -165,6 +165,7 @@ source_set("test_support") {
 
   public_deps = [
     ":client",
+    "//src/developer/debug/zxdb/common:test_support",
     "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
   ]
@@ -173,8 +174,8 @@ source_set("test_support") {
 copy("copy_test_data") {
   sources = [
     "test_example_minidump.dmp",
-    "test_example_minidump_with_aspace.dmp",
     "test_example_minidump_new_cvrecord.dmp",
+    "test_example_minidump_with_aspace.dmp",
   ]
 
   outputs = [

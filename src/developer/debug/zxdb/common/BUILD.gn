@@ -31,6 +31,8 @@ static_library("common") {
 
 source_set("test_support") {
   sources = [
+    "mock_memory.cc",
+    "mock_memory.h",
     "test_with_loop.h",
   ]
   public_deps = [

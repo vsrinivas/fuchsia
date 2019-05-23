@@ -149,6 +149,7 @@ static_library("test_support") {
   deps = [
     ":symbols",
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
+    "//src/developer/debug/zxdb/common:test_support",
   ]
 }
 

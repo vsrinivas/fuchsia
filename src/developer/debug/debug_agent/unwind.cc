@@ -89,8 +89,7 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
   }
 
   // Add all registers to the top stack frame.
-  arch::ArchProvider::Get().SaveGeneralRegs(
-      regs, arch::ArchProvider::SaveGeneralWhat::kNoIPSP, &(*stack)[0].regs);
+  arch::ArchProvider::Get().SaveGeneralRegs(regs, &(*stack)[0].regs);
 
   return 0;
 }
@@ -146,14 +145,20 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process,
   if (unw_init_remote(&cursor, remote_aspace, fuchsia) < 0)
     return ZX_ERR_INTERNAL;
 
+  // Compute the register IDs for this platform's IP/SP.
+  debug_ipc::Arch arch = arch::ArchProvider::Get().GetArch();
+  debug_ipc::RegisterID ip_reg_id =
+      GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kIP);
+  debug_ipc::RegisterID sp_reg_id =
+      GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kSP);
+
   // Top stack frame.
   debug_ipc::StackFrame frame;
   frame.ip = *arch::ArchProvider::Get().IPInRegs(
       const_cast<zx_thread_state_general_regs*>(&regs));
   frame.sp = *arch::ArchProvider::Get().SPInRegs(
       const_cast<zx_thread_state_general_regs*>(&regs));
-  arch::ArchProvider::Get().SaveGeneralRegs(
-      regs, arch::ArchProvider::SaveGeneralWhat::kNoIPSP, &frame.regs);
+  arch::ArchProvider::Get().SaveGeneralRegs(regs, &frame.regs);
   stack->push_back(std::move(frame));
 
   while (frame.sp >= 0x1000000 && stack->size() < max_depth) {
@@ -166,9 +171,11 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process,
     if (val == 0)
       break;  // Null code address means we're done.
     frame.ip = val;
+    frame.regs.emplace_back(ip_reg_id, val);
 
     unw_get_reg(&cursor, UNW_REG_SP, &val);
     frame.sp = val;
+    frame.regs.emplace_back(sp_reg_id, val);
 
     // Note that libunwind may theoretically be able to give us all
     // callee-saved register values for a given frame. Currently asking for any

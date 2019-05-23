@@ -328,6 +328,13 @@ RegisterID DWARFToRegisterIDX64(uint32_t dwarf_reg_id) {
 
   // https://software.intel.com/sites/default/files/article/402129/mpx-linux64-abi.pdf
   // Page 62
+
+  // xmm0-15 register range.
+  if (dwarf_reg_id >= 17 && dwarf_reg_id <= 32) {
+    return static_cast<RegisterID>(
+        static_cast<uint32_t>(RegisterID::kX64_xmm0) + (dwarf_reg_id - 17));
+  }
+
   switch (dwarf_reg_id) {
     case 0:
       return RegisterID::kX64_rax;
@@ -357,8 +364,7 @@ RegisterID DWARFToRegisterIDX64(uint32_t dwarf_reg_id) {
       auto base = static_cast<uint32_t>(RegisterID::kX64_r8);
       return static_cast<RegisterID>(base - 8 + dwarf_reg_id);
     }
-    // TODO(donosoc): 17-24 -> %xmm0 - %xmm7
-    // TODO(donosoc): 25-32 -> %xmm8 - %xmm15
+    // 17-32 -> %xmm0 - %xmm15 handled above.
     // TODO(donosoc): 33-40 -> %st0 - %st7
     // TODO(donosoc): 41-48 -> %mm0 - %mm7
     case 49:
@@ -506,6 +512,16 @@ RegisterID DWARFToRegisterID(Arch arch, uint32_t dwarf_reg_id) {
       FXL_NOTREACHED() << "Architecture should be known for DWARF mapping.";
       return RegisterID::kUnknown;
   }
+}
+
+bool IsGeneralRegister(RegisterID id) {
+  return (static_cast<uint32_t>(id) >=
+              static_cast<uint32_t>(kARMv8GeneralBegin) &&
+          static_cast<uint32_t>(id) <=
+              static_cast<uint32_t>(kARMv8GeneralEnd)) ||
+         (static_cast<uint32_t>(id) >=
+              static_cast<uint32_t>(kX64GeneralBegin) &&
+          static_cast<uint32_t>(id) <= static_cast<uint32_t>(kX64GeneralEnd));
 }
 
 }  // namespace debug_ipc

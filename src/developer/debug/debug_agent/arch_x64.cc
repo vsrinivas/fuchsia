@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/arch.h"
-
 #include <zircon/syscalls/exception.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/arch_x64_helpers.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 namespace arch {
@@ -38,7 +37,7 @@ zx_status_t ReadGeneralRegs(const zx::thread& thread,
   if (status != ZX_OK)
     return status;
 
-  ArchProvider::SaveGeneralRegs(gen_regs, ArchProvider::SaveGeneralWhat::kAll, out);
+  ArchProvider::SaveGeneralRegs(gen_regs, out);
   return ZX_OK;
 }
 
@@ -114,7 +113,6 @@ inline zx_status_t ReadDebugRegs(const zx::thread& thread,
 
 }  // namespace
 
-
 const BreakInstructionType kBreakInstruction = 0xCC;
 
 uint64_t ArchProvider::BreakpointInstructionForSoftwareExceptionAddress(
@@ -149,7 +147,6 @@ bool ArchProvider::IsBreakpointInstruction(zx::process& process,
 }
 
 void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
-                                   SaveGeneralWhat what,
                                    std::vector<debug_ipc::Register>* out) {
   out->push_back(CreateRegister(RegisterID::kX64_rax, 8u, &input.rax));
   out->push_back(CreateRegister(RegisterID::kX64_rbx, 8u, &input.rbx));
@@ -158,8 +155,7 @@ void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
   out->push_back(CreateRegister(RegisterID::kX64_rsi, 8u, &input.rsi));
   out->push_back(CreateRegister(RegisterID::kX64_rdi, 8u, &input.rdi));
   out->push_back(CreateRegister(RegisterID::kX64_rbp, 8u, &input.rbp));
-  if (what == SaveGeneralWhat::kAll)
-    out->push_back(CreateRegister(RegisterID::kX64_rsp, 8u, &input.rsp));
+  out->push_back(CreateRegister(RegisterID::kX64_rsp, 8u, &input.rsp));
   out->push_back(CreateRegister(RegisterID::kX64_r8, 8u, &input.r8));
   out->push_back(CreateRegister(RegisterID::kX64_r9, 8u, &input.r9));
   out->push_back(CreateRegister(RegisterID::kX64_r10, 8u, &input.r10));
@@ -168,8 +164,7 @@ void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
   out->push_back(CreateRegister(RegisterID::kX64_r13, 8u, &input.r13));
   out->push_back(CreateRegister(RegisterID::kX64_r14, 8u, &input.r14));
   out->push_back(CreateRegister(RegisterID::kX64_r15, 8u, &input.r15));
-  if (what == SaveGeneralWhat::kAll)
-    out->push_back(CreateRegister(RegisterID::kX64_rip, 8u, &input.rip));
+  out->push_back(CreateRegister(RegisterID::kX64_rip, 8u, &input.rip));
   out->push_back(CreateRegister(RegisterID::kX64_rflags, 8u, &input.rflags));
 }
 
@@ -266,7 +261,6 @@ namespace {
 debug_ipc::NotifyException::Type DetermineHWException(
     const DebuggedThread& thread,
     const zx_thread_state_debug_regs_t& debug_regs) {
-
   // TODO(DX-1445): This permits only one trigger per exception, when overlaps
   //                could occur. For a first pass this is acceptable.
   uint64_t exception_address = 0;

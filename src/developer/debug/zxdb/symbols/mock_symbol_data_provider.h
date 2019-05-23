@@ -7,6 +7,7 @@
 
 #include <map>
 
+#include "src/developer/debug/zxdb/common/mock_memory.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -60,18 +61,11 @@ class MockSymbolDataProvider : public SymbolDataProvider {
     uint64_t value = 0;
   };
 
-  // Registered memory blocks indexed by address.
-  using RegisteredMemory = std::map<uint64_t, std::vector<uint8_t>>;
-
-  // Returns the memory block that contains the given address, or mem_.end()
-  // if not found.
-  RegisteredMemory::const_iterator FindBlockForAddress(uint64_t address) const;
-
   uint64_t ip_ = 0;
   uint64_t bp_ = 0;
   std::map<debug_ipc::RegisterID, RegData> regs_;
 
-  RegisteredMemory mem_;
+  MockMemory memory_;
 
   MemoryWrites memory_writes_;  // Logs calls to WriteMemory().
 

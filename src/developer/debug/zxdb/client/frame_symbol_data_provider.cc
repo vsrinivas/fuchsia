@@ -23,6 +23,11 @@ namespace {
 
 Err CallFrameDestroyedErr() { return Err("Call frame destroyed."); }
 
+Err RegisterUnavailableErr(debug_ipc::RegisterID id) {
+  return Err(fxl::StringPrintf("Register %s unavailable.",
+                               debug_ipc::RegisterIDToString(id)));
+}
+
 }  // namespace
 
 FrameSymbolDataProvider::FrameSymbolDataProvider(Frame* frame)
@@ -44,59 +49,66 @@ bool FrameSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
   if (!frame_)
     return true;  // Synchronously know we don't have the value.
 
-  // Some common registers are known without having to do a register request.
-  switch (debug_ipc::GetSpecialRegisterType(id)) {
-    case debug_ipc::SpecialRegisterType::kIP:
-      *value = frame_->GetAddress();
+  if (!debug_ipc::IsGeneralRegister(id))
+    return false;  // Don't have non-general register synchronously.
+
+  for (const auto& r : frame_->GetGeneralRegisters()) {
+    if (r.id == id) {
+      // Currently we expect all general registers to be <= 64 bits and we're
+      // returning the value in 64 bits.
+      if (r.data.size() > 0 && r.data.size() <= sizeof(uint64_t)) {
+        uint64_t result_value = 0;
+        memcpy(&result_value, &r.data[0], r.data.size());
+        *value = result_value;
+      }
       return true;
-    case debug_ipc::SpecialRegisterType::kSP:
-      *value = frame_->GetStackPointer();
-      return true;
-    case debug_ipc::SpecialRegisterType::kNone:
-      break;
+    }
   }
 
-  // TODO(brettw) enable synchronous access if the registers are cached.
-  // See GetRegisterAsync().
-  return false;
+  // Getting here means a general register we don't have was requsted and this
+  // can never be provided. Return "synchronously complete" (true) and leave
+  // *value as nullopt to indicate this state.
+  return true;
 }
 
 void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
                                                GetRegisterCallback callback) {
-  // TODO(brettw) registers are not available except when this frame is the
-  // top stack frame. Currently, there is no management of this and the frame
-  // doesn't get notifications when it's topmost or not, and whether the thread
-  // has been resumed (both things would invalidate cached registers). As
-  // a result, currently we do not cache register values and always do a
-  // full async request for each one.
-  //
-  // Additionally, some registers can be made available in non-top stack
-  // frames. Libunwind should be able to tell us the saved registers for older
-  // stack frames.
-  if (!frame_ || !IsInTopPhysicalFrame()) {
+  if (!frame_) {
+    // Frame deleted out from under us.
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [id, cb = std::move(callback)]() {
-          cb(Err(fxl::StringPrintf("Register %s unavailable.",
-                                   debug_ipc::RegisterIDToString(id))),
-             0);
+          cb(RegisterUnavailableErr(id), 0);
         });
     return;
   }
 
-  // We only need the general registers.
-  // TODO: Other categories will need to be supported here (eg. floating point).
-  frame_->GetThread()->ReadRegisters(
-      {debug_ipc::RegisterCategory::Type::kGeneral},
-      [id, cb = std::move(callback)](const Err& err, const RegisterSet& regs) {
-        if (err.has_error()) {
-          cb(err, 0);
-        } else if (auto reg = regs[id]) {
-          cb(Err(), reg->GetValue());  // Success.
-        } else {
-          cb(Err(fxl::StringPrintf("Register %s unavailable.",
-                                   debug_ipc::RegisterIDToString(id))),
-             0);
-        }
+  // General registers are stored on the frame and are synchronously available.
+  // Return them (or error if not available) if somebody requests them
+  // asynchronously.
+  if (debug_ipc::IsGeneralRegister(id)) {
+    std::optional<uint64_t> value;
+    GetRegister(id, &value);
+
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [id, value, cb = std::move(callback)]() {
+          if (value)
+            cb(Err(), *value);
+          else
+            cb(RegisterUnavailableErr(id), 0);
+        });
+    return;
+  }
+
+  // if (IsInTopPhysicalFrame()) {
+  //  TODO Support for dynamically fetching other registers like floating point
+  //  and vector registers here.
+  //}
+
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [id, cb = std::move(callback)]() {
+        cb(Err(fxl::StringPrintf("Register %s unavailable.",
+                                 debug_ipc::RegisterIDToString(id))),
+           0);
       });
 }
 

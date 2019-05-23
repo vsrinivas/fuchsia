@@ -43,6 +43,10 @@ const Location& FrameImpl::GetLocation() const {
 
 uint64_t FrameImpl::GetAddress() const { return location_.address(); }
 
+const std::vector<debug_ipc::Register>& FrameImpl::GetGeneralRegisters() {
+  return stack_frame_.regs;
+}
+
 std::optional<uint64_t> FrameImpl::GetBasePointer() const {
   // This function is logically const even though EnsureBasePointer does some
   // potentially mutating things underneath (calling callbacks and such).

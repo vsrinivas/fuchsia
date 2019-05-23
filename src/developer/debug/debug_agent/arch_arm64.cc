@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/debug_agent/arch_arm64.h"
 
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 
-#include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/logging.h"
-#include "src/developer/debug/debug_agent/arch_arm64.h"
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/arch_arm64_helpers.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 namespace arch {
@@ -40,7 +40,7 @@ zx_status_t ReadGeneralRegs(const zx::thread& thread,
   if (status != ZX_OK)
     return status;
 
-  ArchProvider::SaveGeneralRegs(gen_regs, ArchProvider::SaveGeneralWhat::kAll, out);
+  ArchProvider::SaveGeneralRegs(gen_regs, out);
   return ZX_OK;
 }
 
@@ -165,7 +165,6 @@ uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t) {
   return 0;
 }
 
-
 uint64_t ArchProvider::InstructionForWatchpointHit(const DebuggedThread&) {
   FXL_NOTREACHED() << "Not implemented.";
   return 0;
@@ -188,7 +187,6 @@ bool ArchProvider::IsBreakpointInstruction(zx::process& process,
 }
 
 void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
-                                   SaveGeneralWhat what,
                                    std::vector<debug_ipc::Register>* out) {
   // Add the X0-X29 registers.
   uint32_t base = static_cast<uint32_t>(RegisterID::kARMv8_x0);
@@ -199,10 +197,8 @@ void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
 
   // Add the named ones.
   out->push_back(CreateRegister(RegisterID::kARMv8_lr, 8u, &input.lr));
-  if (what == SaveGeneralWhat::kAll) {
-    out->push_back(CreateRegister(RegisterID::kARMv8_sp, 8u, &input.sp));
-    out->push_back(CreateRegister(RegisterID::kARMv8_pc, 8u, &input.pc));
-  }
+  out->push_back(CreateRegister(RegisterID::kARMv8_sp, 8u, &input.sp));
+  out->push_back(CreateRegister(RegisterID::kARMv8_pc, 8u, &input.pc));
   out->push_back(CreateRegister(RegisterID::kARMv8_cpsr, 8u, &input.cpsr));
 }
 
@@ -247,7 +243,6 @@ debug_ipc::NotifyException::Type HardwareNotificationType(const zx::thread&) {
   // TODO: For now zxdb only supports single step.
   return debug_ipc::NotifyException::Type::kSingleStep;
 }
-
 
 debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(
     const DebuggedThread& thread, uint32_t exception_type) {
@@ -310,7 +305,7 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread,
   zx_status_t status;
   zx_thread_state_debug_regs_t debug_regs;
   status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                             sizeof(zx_thread_state_debug_regs_t));
+                              sizeof(zx_thread_state_debug_regs_t));
   if (status != ZX_OK)
     return status;
 
@@ -325,7 +320,7 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread,
                        << DebugRegistersToString(debug_regs);
 
   return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                            sizeof(zx_thread_state_debug_regs_t));
+                             sizeof(zx_thread_state_debug_regs_t));
 }
 
 zx_status_t ArchProvider::InstallWatchpoint(zx::thread*,

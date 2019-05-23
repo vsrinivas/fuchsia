@@ -70,9 +70,11 @@ struct StackFrame {
   // Stack pointer.
   uint64_t sp = 0;
 
-  // Known general registers for this stack frame other than IP/SP.
-  // CURRENTLY UNUSED.
-  // TODO(brettw) finish hooking this up.
+  // Known general registers for this stack frame. See IsGeneralRegister() for
+  // which registers are counted as "general".
+  //
+  // Every frame should contain the register for the IP and SP for the current
+  // architecture (duplicating the above two fields).
   std::vector<Register> regs;
 };
 

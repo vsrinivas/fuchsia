@@ -18,6 +18,10 @@ int MockRemoteAPI::GetAndResetResumeCount() {
   return result;
 }
 
+void MockRemoteAPI::AddMemory(uint64_t address, std::vector<uint8_t> data) {
+  memory_.AddMemory(address, std::move(data));
+}
+
 void MockRemoteAPI::Attach(
     const debug_ipc::AttachRequest& request,
     std::function<void(const Err&, debug_ipc::AttachReply)> cb) {
@@ -67,6 +71,31 @@ void MockRemoteAPI::Resume(
         cb(Err(), debug_ipc::ResumeReply());
         if (resume_quits_loop)
           debug_ipc::MessageLoop::Current()->QuitNow();
+      });
+}
+
+void MockRemoteAPI::ReadMemory(
+    const debug_ipc::ReadMemoryRequest& request,
+    std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb) {
+  std::vector<uint8_t> result =
+      memory_.ReadMemory(request.address, request.size);
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [request, result, cb]() {
+        debug_ipc::ReadMemoryReply reply;
+
+        // For now this is very simple and returns the result as one block. A
+        // more complete implementation would convert short reads into multiple
+        // blocks.
+        reply.blocks.resize(1);
+        auto& block = reply.blocks[0];
+
+        block.address = request.address;
+        block.valid = request.size == result.size();
+        block.size = request.size;
+        if (block.valid)
+          block.data = std::move(result);
+
+        cb(Err(), std::move(reply));
       });
 }
 

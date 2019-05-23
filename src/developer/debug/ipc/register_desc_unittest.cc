@@ -25,14 +25,18 @@ TEST(RegisterDesc, DWARFToRegisterID_Arm) {
 }
 
 TEST(RegisterDesc, DWARFToRegisterID_x64) {
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_rax,
-            DWARFToRegisterID(Arch::kX64, 0));
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_rsp,
-            DWARFToRegisterID(Arch::kX64, 7));
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_r8,
-            DWARFToRegisterID(Arch::kX64, 8));
+  // General registers.
+  EXPECT_EQ(debug_ipc::RegisterID::kX64_rax, DWARFToRegisterID(Arch::kX64, 0));
+  EXPECT_EQ(debug_ipc::RegisterID::kX64_rsp, DWARFToRegisterID(Arch::kX64, 7));
+  EXPECT_EQ(debug_ipc::RegisterID::kX64_r8, DWARFToRegisterID(Arch::kX64, 8));
   EXPECT_EQ(debug_ipc::RegisterID::kX64_rflags,
             DWARFToRegisterID(Arch::kX64, 49));
+
+  // xmm registers.
+  EXPECT_EQ(debug_ipc::RegisterID::kX64_xmm0,
+            DWARFToRegisterID(Arch::kX64, 17));
+  EXPECT_EQ(debug_ipc::RegisterID::kX64_xmm15,
+            DWARFToRegisterID(Arch::kX64, 32));
 }
 
 }  // namespace debug_ipc
