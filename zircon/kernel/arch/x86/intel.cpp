@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/x86.h>
+#include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>
 #include <bits.h>
 
@@ -32,10 +33,10 @@ uint32_t x86_intel_get_patch_level(void) {
     return patch_level;
 }
 
-bool x86_intel_cpu_has_meltdown(void) {
+bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid) {
     // IA32_ARCH_CAPABILITIES MSR enumerates fixes for Meltdown and other speculation-related side
     // channels, where available.
-    if (x86_feature_test(X86_FEATURE_ARCH_CAPABILITIES)) {
+    if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
       uint64_t arch_capabilities = read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
       if (BIT(arch_capabilities, X86_ARCH_CAPABILITIES_RDCL_NO)) {
         return false;
@@ -45,14 +46,14 @@ bool x86_intel_cpu_has_meltdown(void) {
     return true;
 }
 
-bool x86_intel_cpu_has_l1tf(void) {
+bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid) {
     // Silvermont/Airmont/Goldmont are not affected by L1TF.
-    auto* const info = x86_get_model();
-    if (info->family == 6 && info->model == 0x4C) {
+    auto info = cpuid->ReadProcessorId();
+    if (info.family() == 6 && info.model() == 0x4C) {
         return false;
     }
 
-    if (x86_feature_test(X86_FEATURE_ARCH_CAPABILITIES)) {
+    if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
         uint64_t arch_capabilities = read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
         if (BIT(arch_capabilities, X86_ARCH_CAPABILITIES_RDCL_NO)) {
             return false;

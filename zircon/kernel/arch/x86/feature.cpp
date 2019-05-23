@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>
 
 #include <assert.h>
@@ -147,8 +148,9 @@ void x86_feature_init(void) {
     x86_hypervisor = get_hypervisor();
 
     if (x86_vendor == X86_VENDOR_INTEL) {
-        g_has_meltdown = x86_intel_cpu_has_meltdown();
-        g_has_l1tf = x86_intel_cpu_has_l1tf();
+        cpu_id::CpuId cpuid;
+        g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid);
+        g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid);
     }
 }
 

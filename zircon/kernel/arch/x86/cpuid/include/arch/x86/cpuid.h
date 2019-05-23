@@ -229,6 +229,7 @@ public:
     static constexpr Feature CLFLUSH = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 19};
     static constexpr Feature SPEC_CTRL = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 26};
     static constexpr Feature STIBP = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 27};
+    static constexpr Feature ARCH_CAPABILITIES = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 29};
 
     static constexpr Feature LAHF = {.leaf = LEAF8_01, .reg = Registers::ECX, .bit = 0};
     static constexpr Feature IA64 = {.leaf = LEAF8_01, .reg = Registers::EDX, .bit = 29};

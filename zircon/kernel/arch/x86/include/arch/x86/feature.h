@@ -11,6 +11,14 @@
 #include <stdint.h>
 #include <arch/x86.h>
 
+#ifdef __cplusplus
+
+namespace cpu_id {
+class CpuId;
+}  // cpu_id
+
+#endif  // __cplusplus
+
 __BEGIN_CDECLS
 
 #define MAX_SUPPORTED_CPUID     (0x17)
@@ -316,8 +324,10 @@ static inline const x86_microarch_config_t* x86_get_microarch_config(void) {
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);
-bool x86_intel_cpu_has_meltdown(void);
-bool x86_intel_cpu_has_l1tf(void);
+#ifdef __cplusplus
+bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid);
+bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid);
+#endif
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);
 
