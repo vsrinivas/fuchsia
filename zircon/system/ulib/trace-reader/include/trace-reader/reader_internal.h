@@ -30,11 +30,9 @@ public:
         fbl::unique_ptr<BufferHeaderReader>* out_reader);
 
     static int GetBufferNumber(uint32_t wrapped_count) {
-        static_assert(fbl::count_of(
-                          static_cast<trace_buffer_header*>(
-                              nullptr)
-                              ->rolling_data_end) == 2,
-                      "");
+        static_assert(
+            fbl::count_of(trace_buffer_header{}.rolling_data_end) == 2,
+            "");
         return wrapped_count & 1;
     }
 
