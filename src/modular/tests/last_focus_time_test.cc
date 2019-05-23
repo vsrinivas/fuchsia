@@ -11,7 +11,11 @@
 #include <sdk/lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/logging.h>
 
+#include "gmock/gmock.h"
 #include "peridot/lib/testing/session_shell_impl.h"
+
+using testing::ElementsAre;
+using testing::Gt;
 
 namespace {
 
@@ -211,7 +215,5 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
                   [&] { return last_focus_timestamps.size() == 3; },
               kTimeout));
-  EXPECT_EQ(0, last_focus_timestamps[0]);
-  EXPECT_EQ(0, last_focus_timestamps[1]);
-  EXPECT_LT(0, last_focus_timestamps[2]);
+  EXPECT_THAT(last_focus_timestamps, ElementsAre(0, 0, Gt(0)));
 }
