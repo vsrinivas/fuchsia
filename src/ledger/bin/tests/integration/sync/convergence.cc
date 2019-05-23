@@ -448,9 +448,7 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(
         ::testing::Values(MergeType::LAST_ONE_WINS,
                           MergeType::NON_ASSOCIATIVE_CUSTOM),
-        // Temporarily reduced the number of simulated Ledgers to reduce flaky
-        // failures on bots, see LE-752. TODO(ppi): revert back to (2, 6).
-        ::testing::Range(2, 3),
+        ::testing::Range(2, 6),
         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders())));
 
 }  // namespace
