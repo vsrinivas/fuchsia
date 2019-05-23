@@ -105,6 +105,11 @@ zx_status_t InterruptDispatcher::Trigger(zx_time_t timestamp) {
 }
 
 void InterruptDispatcher::InterruptHandler() {
+    // Using AutoReschedDisable is not necessary for correctness, since we should
+    // be in an interrupt context with preemption disabled, but we re-disable anyway
+    // for clarity and robustness.
+    AutoReschedDisable resched_disable;
+    resched_disable.Disable();
     Guard<SpinLock, IrqSave> guard{&spinlock_};
 
     // only record timestamp if this is the first IRQ since we started waiting

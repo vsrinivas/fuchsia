@@ -282,6 +282,10 @@ bool PortDispatcher::RemoveInterruptPacket(PortInterruptPacket* port_packet) {
 }
 
 bool PortDispatcher::QueueInterruptPacket(PortInterruptPacket* port_packet, zx_time_t timestamp) {
+    // Using AutoReschedDisable is necessary for correctness to prevent
+    // context-switching to the woken thread while holding spinlock_.
+    AutoReschedDisable resched_disable;
+    resched_disable.Disable();
     Guard<SpinLock, IrqSave> guard{&spinlock_};
     if (port_packet->InContainer()) {
         return false;
