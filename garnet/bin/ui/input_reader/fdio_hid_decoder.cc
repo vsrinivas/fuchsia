@@ -166,6 +166,49 @@ zx_status_t FdioHidDecoder::Send(ReportType type, uint8_t report_id,
   } else if (call_status != ZX_OK) {
     return call_status;
   }
+  return ZX_OK;
+}
+
+zx_status_t FdioHidDecoder::GetReport(ReportType type, uint8_t report_id,
+                                      std::vector<uint8_t>* report) {
+  zx_status_t res, call_status;
+  uint16_t size;
+
+  fuchsia_hardware_input_ReportType real_type;
+  switch (type) {
+    case ReportType::INPUT:
+      real_type = fuchsia_hardware_input_ReportType_INPUT;
+      break;
+    case ReportType::OUTPUT:
+      real_type = fuchsia_hardware_input_ReportType_OUTPUT;
+      break;
+    case ReportType::FEATURE:
+      real_type = fuchsia_hardware_input_ReportType_FEATURE;
+      break;
+  }
+
+  res = fuchsia_hardware_input_DeviceGetReportSize(
+      caller_.borrow_channel(), real_type, report_id, &call_status, &size);
+  if (res != ZX_OK || call_status != ZX_OK) {
+    FXL_LOG(ERROR) << "hid: could not get report (id " << report_id << " type "
+                   << real_type
+                   << ") size (status=" << zx_status_get_string(res) << ", "
+                   << zx_status_get_string(call_status) << ")";
+    return call_status;
+  }
+
+  report->resize(size);
+
+  size_t actual;
+  res = fuchsia_hardware_input_DeviceGetReport(
+      caller_.borrow_channel(), real_type, report_id, &call_status,
+      report->data(), report->size(), &actual);
+  if (res != ZX_OK || call_status != ZX_OK) {
+    FXL_LOG(ERROR) << "hid: could not get report: " << zx_status_get_string(res)
+                   << " " << zx_status_get_string(call_status);
+    return call_status;
+  }
+  report->resize(actual);
 
   return ZX_OK;
 }

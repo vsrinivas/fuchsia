@@ -69,6 +69,11 @@ class HidDecoder {
   // OUTPUT or FEATURE.
   virtual zx_status_t Send(ReportType type, uint8_t report_id,
                            const std::vector<uint8_t>& report) = 0;
+  // Requests a given report with a given report ID from the device. GetReport
+  // is an active request to the device, where Read passively waits for the
+  // device to send a report.
+  virtual zx_status_t GetReport(ReportType type, uint8_t report_id,
+                                std::vector<uint8_t>* report) = 0;
 };
 
 }  // namespace ui_input

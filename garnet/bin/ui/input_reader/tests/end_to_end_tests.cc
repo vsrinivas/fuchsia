@@ -311,10 +311,6 @@ TEST_F(ReaderInterpreterInputTest, MediaButtonsTest) {
 
   std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
 
-  // Create the MockHidDecoder with our report descriptor.
-  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor);
-  RunLoopUntilIdle();
-
   // Create a single buttons report.
   buttons_input_rpt_t report_data = {};
   report_data.rpt_id = BUTTONS_RPT_ID_INPUT;
@@ -326,17 +322,36 @@ TEST_F(ReaderInterpreterInputTest, MediaButtonsTest) {
   std::vector<uint8_t> report(report_data_ptr,
                               report_data_ptr + sizeof(report_data));
 
-  // Send the touch report.
+  // Create the MockHidDecoder with our report descriptor and initial report
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor, report);
+  RunLoopUntilIdle();
+
+  // Check that the initial report has already been sent. This is to query
+  // the inital button state.
+  ASSERT_EQ(1, report_count_);
+  ASSERT_TRUE(last_report_.media_buttons);
+  EXPECT_TRUE(last_report_.media_buttons->volume_up);
+  EXPECT_FALSE(last_report_.media_buttons->volume_down);
+  EXPECT_TRUE(last_report_.media_buttons->reset);
+  EXPECT_TRUE(last_report_.media_buttons->mic_mute);
+
+  // Send another touch report
+  report_data.volume_up = false;
+  report_data.volume_down = true;
+  report_data.reset = false;
+  report_data.mute = false;
+  report = std::vector<uint8_t>(report_data_ptr,
+                                report_data_ptr + sizeof(report_data));
   device->SetHidDecoderRead(report, sizeof(report_data));
   RunLoopUntilIdle();
 
   // Check that the report matches.
-  ASSERT_EQ(1, report_count_);
+  ASSERT_EQ(2, report_count_);
   ASSERT_TRUE(last_report_.media_buttons);
-  EXPECT_EQ(true, last_report_.media_buttons->volume_up);
-  EXPECT_EQ(false, last_report_.media_buttons->volume_down);
-  EXPECT_EQ(true, last_report_.media_buttons->reset);
-  EXPECT_EQ(true, last_report_.media_buttons->mic_mute);
+  EXPECT_FALSE(last_report_.media_buttons->volume_up);
+  EXPECT_TRUE(last_report_.media_buttons->volume_down);
+  EXPECT_FALSE(last_report_.media_buttons->reset);
+  EXPECT_FALSE(last_report_.media_buttons->mic_mute);
 }
 
 }  // namespace ui_input

@@ -23,6 +23,14 @@ class MockHidDecoder : public HidDecoder {
     report_descriptor_.data = report_descriptor;
     report_descriptor_.length = report_descriptor.size();
   }
+  MockHidDecoder(std::vector<uint8_t> report_descriptor,
+                 std::vector<uint8_t> initial_report)
+      : weak_ptr_factory_(this) {
+    report_descriptor_.data = report_descriptor;
+    report_descriptor_.length = report_descriptor.size();
+    report_.data = initial_report;
+    report_.length = initial_report.size();
+  }
   MockHidDecoder(BootMode boot_mode) : weak_ptr_factory_(this) {
     boot_mode_ = boot_mode;
   }
@@ -47,6 +55,9 @@ class MockHidDecoder : public HidDecoder {
   // |HidDecoder|
   zx_status_t Send(ReportType type, uint8_t report_id,
                    const std::vector<uint8_t>& report) override;
+  // |HidDecoder|
+  zx_status_t GetReport(ReportType type, uint8_t report_id,
+                        std::vector<uint8_t>* report) override;
 
   // Emulates the Device sending a report, which will be read by |Read|.
   // There must not be a pending report that has not been |Read|.

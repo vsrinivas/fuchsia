@@ -63,6 +63,29 @@ bool InputInterpreter::Initialize() {
     return false;
 
   NotifyRegistry();
+
+  for (size_t i = 0; i < devices_.size(); i++) {
+    InputDevice& device = devices_[i];
+    // If we are a media button then query for an initial report.
+    if (device.descriptor.protocol == Protocol::MediaButtons) {
+      std::vector<uint8_t> initial_input;
+      zx_status_t status =
+          hid_decoder_->GetReport(HidDecoder::ReportType::INPUT,
+                                  device.device->ReportId(), &initial_input);
+      if (status != ZX_OK) {
+        return false;
+      }
+      if (device.device->ParseReport(initial_input.data(), initial_input.size(),
+                                     device.report.get())) {
+        device.report->event_time = InputEventTimestampNow();
+        device.report->trace_id = TRACE_NONCE();
+        TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                         device.report->trace_id);
+        device.input_device->DispatchReport(CloneReport(*device.report));
+      }
+    }
+  }
+
   return true;
 }
 
