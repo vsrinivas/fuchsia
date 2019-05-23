@@ -38,6 +38,7 @@ cat >> /etc/initramfs-tools/modules << EOF
 virtio_console
 virtio_blk
 virtio_gpu
+virtio_input
 EOF
 
 update-initramfs -u
