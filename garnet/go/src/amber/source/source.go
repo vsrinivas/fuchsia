@@ -520,20 +520,19 @@ func (f *Source) MerkleFor(name, version string) (string, int64, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	m, err := f.tufClient.Targets()
-
-	if err != nil {
-		return "", 0, fmt.Errorf("tuf_source: error reading TUF targets: %s", err)
-	}
-
 	if version == "" {
 		version = "0"
 	}
 
-	target := fmt.Sprintf("/%s/%s", name, version)
-	meta, ok := m[target]
-	if !ok {
-		return "", 0, ErrUnknownPkg
+	target := fmt.Sprintf("%s/%s", name, version)
+	meta, err := f.tufClient.Target(target)
+
+	if err != nil {
+		if _, ok := err.(tuf.ErrNotFound); ok {
+			return "", 0, ErrUnknownPkg
+		} else {
+			return "", 0, fmt.Errorf("tuf_source: error reading TUF targets: %s", err)
+		}
 	}
 
 	if meta.Custom == nil {
