@@ -26,6 +26,7 @@ if (current_cpu != "") {
       "$zx/system/core/netsvc:netsvc-test",
       "$zx/system/core/svchost:crashsvc-test",
       "$zx/system/core/virtcon:virtual-console-test",
+      "$zx/system/dev/audio/lib/simple-audio-stream:sa-unittest",
       "$zx/system/dev/backlight/sg-micro:sgm37603a-test",
       "$zx/system/dev/block/ahci:ahci-unittest",
       "$zx/system/dev/block/ftl/test",
