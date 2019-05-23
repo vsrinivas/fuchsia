@@ -4,91 +4,79 @@
 
 // This test is intended to be run manually from within biscotti_guest.
 
+#include "gtest/gtest.h"
+
 #include "magma.h"
 
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <vulkan/vulkan.h>
 
-#define CHECK(x)                                                                                   \
-    do {                                                                                           \
-        if (!(x)) {                                                                                \
-            printf("Check Failed (%s): \"%s\"\n", #x, strerror(errno));                            \
-            exit(EXIT_FAILURE);                                                                    \
-        }                                                                                          \
-    } while (0)
+class VirtMagmaTest : public ::testing::Test {
+protected:
+    VirtMagmaTest() {}
+    ~VirtMagmaTest() override {}
+    int device_file_descriptor_;
+    magma_connection_t connection_;
+    void* driver_handle_;
+    PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr_;
+    PFN_vkCreateInstance vkCreateInstance_;
+    PFN_vkDestroyInstance vkDestroyInstance_;
+    VkInstance instance_;
+};
 
-// TODO(MA-520): this should be part of vm initialization, not a magma API
-extern bool magma_write_driver_to_filesystem(int32_t file_descriptor);
-
-PFN_vkVoidFunction get_vkCreateInstance(void* driver)
+TEST_F(VirtMagmaTest, OpenDevice)
 {
-    // This method emulates a small part of the initialization logic in the Vulkan loader.
-
-    static const char* vulkan_main_entrypoint = "vk_icdGetInstanceProcAddr";
-    printf("dlsym for Address of Symbol %s\n", vulkan_main_entrypoint);
-    PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr =
-        (PFN_vkGetInstanceProcAddr)dlsym(driver, vulkan_main_entrypoint);
-    CHECK(vkGetInstanceProcAddr != nullptr);
-    printf("Address Acquired\n");
-
-    static const char* vulkan_instance_entrypoint = "vkCreateInstance";
-    printf("vkGetInstanceProcAddr for Address of Entrypoint %s\n", vulkan_instance_entrypoint);
-    PFN_vkVoidFunction addr_vkCreateInstance =
-        vkGetInstanceProcAddr(nullptr, vulkan_instance_entrypoint);
-    CHECK(addr_vkCreateInstance != nullptr);
-    printf("Address Acquired\n");
-
-    return addr_vkCreateInstance;
+    static constexpr const char* kDevicePath = "/dev/wl0";
+    device_file_descriptor_ = open(kDevicePath, O_NONBLOCK);
+    ASSERT_GE(device_file_descriptor_, 0)
+        << "Failed to open device " << kDevicePath << " (" << errno << ")";
 }
 
-int main(int argc, char* argv[])
+TEST_F(VirtMagmaTest, MagmaQuery)
 {
-    static const char* device_path = "/dev/wl0";
-    printf("Open Device %s\n", device_path);
-    int fd = open(device_path, O_NONBLOCK);
-    CHECK(fd != -1);
-    printf("Device Opened\n");
-
     uint64_t device_id = 0;
-    printf("Query Device ID 0x%08X\n", MAGMA_QUERY_DEVICE_ID);
-    magma_status_t status = magma_query(fd, MAGMA_QUERY_DEVICE_ID, &device_id);
-    CHECK(status == MAGMA_STATUS_OK);
-    printf("Device ID: 0x%016lX\n", device_id);
+    magma_status_t status = magma_query(device_file_descriptor_, MAGMA_QUERY_DEVICE_ID, &device_id);
+    EXPECT_EQ(status, MAGMA_STATUS_OK);
+    EXPECT_NE(device_id, 0u);
+}
 
-    magma_connection_t connection{};
-    printf("Create Connection\n");
-    status = magma_create_connection(fd, &connection);
-    CHECK(status == MAGMA_STATUS_OK);
-    CHECK(connection != nullptr);
-    printf("Connection Created\n");
+TEST_F(VirtMagmaTest, MagmaCreateConnection)
+{
+    magma_status_t status = magma_create_connection(device_file_descriptor_, &connection_);
+    EXPECT_EQ(status, MAGMA_STATUS_OK);
+    EXPECT_NE(connection_, nullptr);
+    magma_release_connection(connection_);
+}
 
-    printf("Release Connection\n");
-    magma_release_connection(connection);
-    printf("Connection Released\n");
+TEST_F(VirtMagmaTest, OpenDriver)
+{
+    static constexpr const char* kDriverPath = "/usr/lib64/libvulkan_magma.so";
+    driver_handle_ = dlopen(kDriverPath, RTLD_NOW);
+    ASSERT_NE(driver_handle_, nullptr)
+        << "Failed to open driver " << kDriverPath << " (" << errno << ")";
+}
 
-    printf("Write Driver to FS\n");
-    bool ok = magma_write_driver_to_filesystem(fd);
-    CHECK(ok);
-    printf("Driver Written to FS\n");
+TEST_F(VirtMagmaTest, GetVkGetInstanceProcAddress)
+{
+    static constexpr const char* kEntrypoint = "vk_icdGetInstanceProcAddr";
+    vkGetInstanceProcAddr_ = (__typeof(vkGetInstanceProcAddr_))dlsym(driver_handle_, kEntrypoint);
+    ASSERT_NE(vkGetInstanceProcAddr_, nullptr) << "Failed to get entrypoint " << kEntrypoint;
+}
 
-    static const char* driver_path = "/libvulkan_magma.so";
-    printf("Load Driver %s\n", driver_path);
-    void* driver = dlopen(driver_path, RTLD_NOW);
-    CHECK(driver != nullptr);
-    printf("Driver Loaded\n");
+TEST_F(VirtMagmaTest, GetVkCreateInstance)
+{
+    static constexpr const char* kEntrypoint = "vkCreateInstance";
+    vkCreateInstance_ = (__typeof(vkCreateInstance_))vkGetInstanceProcAddr_(nullptr, kEntrypoint);
+    ASSERT_NE(vkCreateInstance_, nullptr) << "Failed to get entrypoint " << kEntrypoint;
+}
 
-    PFN_vkCreateInstance vkCreateInstance = (PFN_vkCreateInstance)get_vkCreateInstance(driver);
-
-    printf("Creating Vulkan Instance\n");
+TEST_F(VirtMagmaTest, CallVkCreateInstance)
+{
     VkApplicationInfo application_info{};
     application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    application_info.pApplicationName = "magma_test";
+    application_info.pApplicationName = "VirtMagmaTest";
     application_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     application_info.pEngineName = "no-engine";
     application_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -96,10 +84,19 @@ int main(int argc, char* argv[])
     VkInstanceCreateInfo instance_create_info{};
     instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_create_info.pApplicationInfo = &application_info;
-    VkInstance instance{};
-    VkResult result = vkCreateInstance(&instance_create_info, nullptr, &instance);
-    CHECK(result == VK_SUCCESS);
-    printf("Vulkan Instance Created\n");
+    VkResult result = vkCreateInstance_(&instance_create_info, nullptr, &instance_);
+    EXPECT_EQ(result, VK_SUCCESS);
+    ASSERT_NE(instance_, nullptr);
+}
 
-    return 0;
+TEST_F(VirtMagmaTest, GetVkDestroyInstance)
+{
+    static constexpr const char* kEntrypoint = "vkDestroyInstance";
+    vkDestroyInstance_ = (__typeof(vkDestroyInstance_))vkGetInstanceProcAddr_(instance_, kEntrypoint);
+    ASSERT_NE(vkDestroyInstance_, nullptr) << "Failed to get entrypoint " << kEntrypoint;
+}
+
+TEST_F(VirtMagmaTest, CallVkDestroyInstance)
+{
+    vkDestroyInstance_(instance_, nullptr);
 }
