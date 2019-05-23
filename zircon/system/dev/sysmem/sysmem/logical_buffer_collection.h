@@ -23,6 +23,7 @@ extern const fidl_type_t fuchsia_sysmem_BufferCollectionInfo_2Table;
 
 class BufferCollectionToken;
 class BufferCollection;
+class MemoryAllocator;
 class LogicalBufferCollection
     : public fbl::RefCounted<LogicalBufferCollection> {
 public:
@@ -120,6 +121,11 @@ private:
         fuchsia_sysmem_BufferCollectionConstraints* acc,
         const fuchsia_sysmem_BufferCollectionConstraints* c);
 
+    bool AccumulateConstraintHeapPermitted(uint32_t* acc_count,
+                                           fuchsia_sysmem_HeapType acc[],
+                                           uint32_t c_count,
+                                           const fuchsia_sysmem_HeapType c[]);
+
     bool AccumulateConstraintBufferMemory(
         fuchsia_sysmem_BufferMemoryConstraints* acc,
         const fuchsia_sysmem_BufferMemoryConstraints* c);
@@ -142,7 +148,8 @@ private:
 
     BufferCollectionInfo Allocate(zx_status_t* allocation_result);
 
-    zx_status_t AllocateVmo(const fuchsia_sysmem_SingleBufferSettings* settings,
+    zx_status_t AllocateVmo(MemoryAllocator* allocator,
+                            const fuchsia_sysmem_SingleBufferSettings* settings,
                             zx::vmo* vmo);
 
     int32_t CompareImageFormatConstraintsTieBreaker(
@@ -175,6 +182,8 @@ private:
     bool has_allocation_result_ = false;
     zx_status_t allocation_result_status_ = ZX_OK;
     BufferCollectionInfo allocation_result_info_{BufferCollectionInfo::Null};
+
+    MemoryAllocator* memory_allocator_ = nullptr;
 };
 
 #endif // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_

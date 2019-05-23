@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/acpi.h>
 #include <ddk/protocol/pciroot.h>
+#include <ddk/protocol/sysmem.h>
 
 #include <inttypes.h>
 #include <limits.h>
@@ -353,11 +354,46 @@ static zx_status_t acpi_op_get_bti(void* ctx, uint32_t bdf, uint32_t index, zx_h
     return zx_bti_create(iommu_handle, 0, bdf, bti);
 }
 
+static zx_status_t acpi_op_connect_sysmem(void* ctx, zx_handle_t handle) {
+    acpi_device_t* dev = (acpi_device_t*)ctx;
+    mtx_lock(&dev->lock);
+
+    sysmem_protocol_t sysmem;
+    zx_status_t st = device_get_protocol(dev->platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
+    if (st != ZX_OK) {
+        zx_handle_close(handle);
+        goto unlock;
+    }
+    st = sysmem_connect(&sysmem, handle);
+unlock:
+    mtx_unlock(&dev->lock);
+    return st;
+}
+
+static zx_status_t acpi_op_register_sysmem_heap(void* ctx, uint64_t heap, zx_handle_t handle) {
+    acpi_device_t* dev = (acpi_device_t*)ctx;
+    mtx_lock(&dev->lock);
+
+    sysmem_protocol_t sysmem;
+    zx_status_t st = device_get_protocol(dev->platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
+    if (st != ZX_OK) {
+        zx_handle_close(handle);
+        goto unlock;
+    }
+
+    st = sysmem_register_heap(&sysmem, heap, handle);
+unlock:
+    mtx_unlock(&dev->lock);
+    return st;
+}
+
 // TODO marking unused until we publish some devices
 static __attribute__ ((unused)) acpi_protocol_ops_t acpi_proto = {
     .get_mmio = acpi_op_get_mmio,
     .map_interrupt = acpi_op_map_interrupt,
     .get_bti = acpi_op_get_bti,
+    .connect_sysmem = acpi_op_connect_sysmem,
+    .register_sysmem_heap = acpi_op_register_sysmem_heap,
 };
 
 static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {

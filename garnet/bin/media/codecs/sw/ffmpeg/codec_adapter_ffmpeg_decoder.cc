@@ -317,7 +317,6 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
   // These are all false because SW decode.
   result.buffer_memory_constraints.physically_contiguous_required = false;
   result.buffer_memory_constraints.secure_required = false;
-  result.buffer_memory_constraints.secure_permitted = false;
 
   if (port == kOutputPort) {
     ZX_ASSERT(decoded_output_info_.has_value());

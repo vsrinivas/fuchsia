@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("goldfish-control") {
+  sources = [
+    "control-device.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.goldfish.control",
+    "$zx/system/banjo/ddk.protocol.goldfish.pipe",
+    "$zx/system/fidl/fuchsia-hardware-goldfish-control:c",
+    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async-2",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/trace:headers",
+    "$zx/system/ulib/trace:trace-driver",
+    "$zx/system/ulib/zx",
+  ]
+}

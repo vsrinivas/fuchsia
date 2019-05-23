@@ -134,14 +134,27 @@ zx_status_t ProxyClock::ClockDisable() {
 }
 
 zx_status_t ProxySysmem::SysmemConnect(zx::channel allocator_request) {
-    platform_proxy_req_t req = {};
+    rpc_sysmem_req_t req = {};
     platform_proxy_rsp_t resp = {};
-    req.proto_id = ZX_PROTOCOL_SYSMEM;
-    req.op = SYSMEM_CONNECT;
+    req.header.proto_id = ZX_PROTOCOL_SYSMEM;
+    req.header.op = SYSMEM_CONNECT;
     zx_handle_t handle = allocator_request.release();
 
-    return proxy_->Rpc(&req, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0,
-                       nullptr);
+    return proxy_->Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle,
+                       1, nullptr, 0, nullptr);
+}
+
+zx_status_t ProxySysmem::SysmemRegisterHeap(uint64_t heap,
+                                            zx::channel heap_connection) {
+    rpc_sysmem_req_t req = {};
+    platform_proxy_rsp_t resp = {};
+    req.header.proto_id = ZX_PROTOCOL_SYSMEM;
+    req.header.op = SYSMEM_REGISTER_HEAP;
+    req.heap = heap;
+    zx_handle_t handle = heap_connection.release();
+
+    return proxy_->Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle,
+                       1, nullptr, 0, nullptr);
 }
 
 zx_status_t ProxyAmlogicCanvas::AmlogicCanvasConfig(zx::vmo vmo, size_t offset,

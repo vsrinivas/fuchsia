@@ -12,4 +12,8 @@ protocol Sysmem {
     /// fuchsia.sysmem.Allocator.  If the connection fails, the channel will
     /// close.
     Connect(handle<channel> allocator_request) -> (zx.status s);
+
+    /// Takes the client end of a FIDL connection that'll serve
+    /// fuchsia.sysmem.Heap.
+    RegisterHeap(uint64 heap, handle<channel> heap_connection) -> (zx.status s);
 };

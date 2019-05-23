@@ -253,6 +253,11 @@ LogicalBufferCollection::~LogicalBufferCollection() {
     // empty.
     ZX_DEBUG_ASSERT(token_views_.empty());
     ZX_DEBUG_ASSERT(collection_views_.empty());
+
+    if (memory_allocator_) {
+        memory_allocator_->RemoveDestroyCallback(
+            reinterpret_cast<intptr_t>(this));
+    }
 }
 
 void LogicalBufferCollection::Fail(const char* format, ...) {
@@ -551,6 +556,11 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
         return false;
     }
     if (constraints->has_buffer_memory_constraints) {
+        if (IsCpuUsage(constraints->usage) &&
+            constraints->buffer_memory_constraints.inaccessible_domain_supported) {
+            LogError("IsCpuUsage && inaccessible_domain_supported doesn't make sense.");
+            return false;
+        }
         if (!CheckSanitizeBufferMemoryConstraints(
                 &constraints->buffer_memory_constraints)) {
             return false;
@@ -565,19 +575,28 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
     return true;
 }
 
+static bool
+IsHeapPermitted(const fuchsia_sysmem_BufferMemoryConstraints* constraints,
+                fuchsia_sysmem_HeapType heap) {
+    if (constraints->heap_permitted_count) {
+        auto begin = constraints->heap_permitted;
+        auto end =
+            constraints->heap_permitted + constraints->heap_permitted_count;
+        return std::find(begin, end, heap) != end;
+    }
+    return true;
+}
+
 bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
     fuchsia_sysmem_BufferMemoryConstraints* constraints) {
-    if (!constraints->ram_domain_supported &&
-        !constraints->cpu_domain_supported) {
-        LogError("Neither RAM nor CPU coherency domains supported");
-        return false;
-    }
     if (constraints->min_size_bytes > constraints->max_size_bytes) {
         LogError("min_size_bytes > max_size_bytes");
         return false;
     }
-    if (constraints->secure_required && !constraints->secure_permitted) {
-        LogError("secure_required && !secure_permitted");
+    bool secure_permitted =
+        IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE);
+    if (constraints->secure_required && !secure_permitted) {
+        LogError("secure memory required but not permitted");
         return false;
     }
     return true;
@@ -834,6 +853,42 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
     return true;
 }
 
+bool LogicalBufferCollection::AccumulateConstraintHeapPermitted(
+    uint32_t* acc_count, fuchsia_sysmem_HeapType acc[],
+    uint32_t c_count, const fuchsia_sysmem_HeapType c[]) {
+    // Remove any heap in acc that's not in c.  If zero heaps
+    // remain in acc, return false.
+    ZX_DEBUG_ASSERT(*acc_count > 0);
+
+    for (uint32_t ai = 0; ai < *acc_count; ++ai) {
+        uint32_t ci;
+        for (ci = 0; ci < c_count; ++ci) {
+            if (acc[ai] == c[ci]) {
+                // We found heap in c.  Break so we can move on to
+                // the next heap.
+                break;
+            }
+        }
+        if (ci == c_count) {
+            // remove from acc because not found in c
+            --(*acc_count);
+            // copy of formerly last item on top of the item being
+            // removed
+            acc[ai] = acc[*acc_count];
+            // adjust ai to force current index to be processed again as it's
+            // now a different item
+            --ai;
+        }
+    }
+
+    if (!*acc_count) {
+        LogError("Zero heap permitted overlap");
+        return false;
+    }
+
+    return true;
+}
+
 bool LogicalBufferCollection::AccumulateConstraintBufferMemory(
     fuchsia_sysmem_BufferMemoryConstraints* acc,
     const fuchsia_sysmem_BufferMemoryConstraints* c) {
@@ -852,11 +907,26 @@ bool LogicalBufferCollection::AccumulateConstraintBufferMemory(
                                           c->physically_contiguous_required;
 
     acc->secure_required = acc->secure_required || c->secure_required;
-    acc->secure_permitted = acc->secure_permitted && c->secure_permitted;
 
     acc->ram_domain_supported = acc->ram_domain_supported && c->ram_domain_supported;
     acc->cpu_domain_supported = acc->cpu_domain_supported && c->cpu_domain_supported;
+    acc->inaccessible_domain_supported =
+        acc->inaccessible_domain_supported && c->inaccessible_domain_supported;
 
+    if (!acc->heap_permitted_count) {
+        std::copy(c->heap_permitted,
+                  c->heap_permitted + c->heap_permitted_count,
+                  acc->heap_permitted);
+        acc->heap_permitted_count = c->heap_permitted_count;
+    } else {
+        if (c->heap_permitted_count) {
+            if (!AccumulateConstraintHeapPermitted(
+                    &acc->heap_permitted_count, acc->heap_permitted,
+                    c->heap_permitted_count, c->heap_permitted)) {
+                return false;
+            }
+        }
+    }
     return true;
 }
 
@@ -1049,20 +1119,77 @@ bool LogicalBufferCollection::IsColorSpaceEqual(
     return a.type == b.type;
 }
 
-static fuchsia_sysmem_CoherencyDomain
-GetCoherencyDomain(const fuchsia_sysmem_BufferCollectionConstraints* constraints) {
-    if (!constraints->has_buffer_memory_constraints)
-        return fuchsia_sysmem_CoherencyDomain_Cpu;
+static uint64_t
+GetHeap(const fuchsia_sysmem_BufferMemoryConstraints* constraints) {
+    if (constraints->secure_required) {
+        // checked previously
+        ZX_DEBUG_ASSERT(
+            !(constraints->secure_required &&
+              !IsHeapPermitted(constraints,
+                               fuchsia_sysmem_HeapType_AMLOGIC_SECURE)));
+        return fuchsia_sysmem_HeapType_AMLOGIC_SECURE;
+    }
+    if (IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_SYSTEM_RAM)) {
+        return fuchsia_sysmem_HeapType_SYSTEM_RAM;
+    }
+    ZX_DEBUG_ASSERT(constraints->heap_permitted_count);
+    return constraints->heap_permitted[0];
+}
 
-    if (!constraints->buffer_memory_constraints.ram_domain_supported)
-        return fuchsia_sysmem_CoherencyDomain_Cpu;
-    if (!constraints->buffer_memory_constraints.cpu_domain_supported)
-        return fuchsia_sysmem_CoherencyDomain_Ram;
+static bool GetCoherencyDomain(
+    const fuchsia_sysmem_BufferCollectionConstraints* constraints,
+    MemoryAllocator* memory_allocator,
+    fuchsia_sysmem_CoherencyDomain* domain_out) {
+    if (!constraints->has_buffer_memory_constraints) {
+        // CPU domain by default.
+        *domain_out = fuchsia_sysmem_CoherencyDomain_Cpu;
+        return true;
+    }
 
-    // Display controllers generally aren't cache coherent.
-    // TODO - base on the system in use.
-    return constraints->usage.display != 0 ? fuchsia_sysmem_CoherencyDomain_Ram
-                                           : fuchsia_sysmem_CoherencyDomain_Cpu;
+    // The heap not being accessible from the CPU can force Inaccessible as the only
+    // potential option.
+    if (memory_allocator->CoherencyDomainIsInaccessible()) {
+        if (!constraints->buffer_memory_constraints.inaccessible_domain_supported) {
+            return false;
+        }
+        *domain_out = fuchsia_sysmem_CoherencyDomain_Inaccessible;
+        return true;
+    }
+
+    // Display prefers RAM coherency domain for now.
+    if (constraints->usage.display != 0) {
+        if (constraints->buffer_memory_constraints.ram_domain_supported) {
+            // Display controllers generally aren't cache coherent, so prefer
+            // RAM coherency domain.
+            //
+            // TODO - base on the system in use.
+            *domain_out = fuchsia_sysmem_CoherencyDomain_Ram;
+            return true;
+        }
+    }
+
+    // If none of the above cases apply, then prefer CPU, RAM, Inaccessible
+    // in that order.
+
+    if (constraints->buffer_memory_constraints.cpu_domain_supported) {
+        *domain_out = fuchsia_sysmem_CoherencyDomain_Cpu;
+        return true;
+    }
+
+    if (constraints->buffer_memory_constraints.ram_domain_supported) {
+        *domain_out = fuchsia_sysmem_CoherencyDomain_Ram;
+        return true;
+    }
+
+    if (constraints->buffer_memory_constraints.inaccessible_domain_supported) {
+        // Intentionally permit treating as Inaccessible if we reach here, even
+        // if the heap permits CPU access.  Only domain in common among
+        // participants is Inaccessible.
+        *domain_out = fuchsia_sysmem_CoherencyDomain_Inaccessible;
+        return true;
+    }
+
+    return false;
 }
 
 BufferCollection::BufferCollectionInfo
@@ -1123,17 +1250,35 @@ LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
             buffer_constraints->physically_contiguous_required;
         // checked previously
         ZX_DEBUG_ASSERT(!(buffer_constraints->secure_required &&
-                          !buffer_constraints->secure_permitted));
-        // checked previously
-        ZX_DEBUG_ASSERT(!(buffer_constraints->secure_required &&
                           IsCpuUsage(constraints_->usage)));
         buffer_settings->is_secure = buffer_constraints->secure_required;
+        buffer_settings->heap = GetHeap(buffer_constraints);
         // We can't fill out buffer_settings yet because that also depends on
         // ImageFormatConstraints.  We do need the min and max from here though.
         min_size_bytes = buffer_constraints->min_size_bytes;
         max_size_bytes = buffer_constraints->max_size_bytes;
     }
-    buffer_settings->coherency_domain = GetCoherencyDomain(constraints_.get());
+
+    // Get memory allocator for settings.
+    MemoryAllocator* allocator = parent_device_->GetAllocator(buffer_settings);
+    if (!allocator) {
+        LogError("No memory allocator for buffer settings");
+        *allocation_result = ZX_ERR_NO_MEMORY;
+        return BufferCollection::BufferCollectionInfo(
+            BufferCollection::BufferCollectionInfo::Null);
+    }
+
+    if (!GetCoherencyDomain(constraints_.get(), allocator,
+                            &buffer_settings->coherency_domain)) {
+        LogError("No coherency domain found for buffer constraints");
+        *allocation_result = ZX_ERR_NOT_SUPPORTED;
+        return BufferCollection::BufferCollectionInfo(
+            BufferCollection::BufferCollectionInfo::Null);
+    }
+
+    ZX_DEBUG_ASSERT(
+        constraints_->usage.cpu == 0 || buffer_settings->coherency_domain !=
+        fuchsia_sysmem_CoherencyDomain_Inaccessible);
 
     // It's allowed for zero participants to have any ImageFormatConstraint(s),
     // in which case the combined constraints_ will have zero (and that's fine,
@@ -1280,7 +1425,7 @@ LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
         // Assign directly into result to benefit from FidlStruct<> management
         // of handle lifetime.
         zx::vmo vmo;
-        zx_status_t allocate_result = AllocateVmo(settings, &vmo);
+        zx_status_t allocate_result = AllocateVmo(allocator, settings, &vmo);
         if (allocate_result != ZX_OK) {
             ZX_DEBUG_ASSERT(allocate_result == ZX_ERR_NO_MEMORY);
             LogError("AllocateVmo() failed - status: %d", allocate_result);
@@ -1294,79 +1439,37 @@ LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
         result->buffers[i].vmo = vmo.release();
     }
 
+    // Register failure handler with memory allocator.
+    allocator->AddDestroyCallback(reinterpret_cast<intptr_t>(this), [this](){
+        Fail("LogicalBufferCollection memory allocator gone - now auto-failing self.");
+    });
+    memory_allocator_ = allocator;
+
     ZX_DEBUG_ASSERT(*allocation_result == ZX_OK);
     return result;
 }
 
 zx_status_t LogicalBufferCollection::AllocateVmo(
-    const fuchsia_sysmem_SingleBufferSettings* settings, zx::vmo* vmo) {
-    if (settings->buffer_settings.is_secure) {
-        ProtectedMemoryAllocator* allocator = parent_device_->protected_allocator();
-        if (!allocator) {
-            LogError("No protected memory allocator");
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-
-        zx::vmo raw_vmo;
-        zx_status_t status = allocator->Allocate(
-            settings->buffer_settings.size_bytes, &raw_vmo);
-        if (status != ZX_OK) {
-            LogError("Protected allocate failed - size_bytes: %u "
-                     "status: %d",
-                     settings->buffer_settings.size_bytes, status);
-            // sanitize to ZX_ERR_NO_MEMORY regardless of why.
-            status = ZX_ERR_NO_MEMORY;
-            return status;
-        }
-        status = raw_vmo.duplicate(kSysmemVmoRights, vmo);
-        if (status != ZX_OK) {
-            LogError("zx::object::duplicate() failed - status: %d", status);
-            return status;
-        }
-    } else if (settings->buffer_settings.is_physically_contiguous) {
-        // TODO(dustingreen): Optionally (per board) pre-allocate a
-        // physically-contiguous VMO with board-specific size, have a page heap,
-        // dole out portions of that VMO or non-copy-on-write child VMOs of that
-        // VMO.  For now, we just attempt to allocate contiguous when buffers
-        // are allocated, which is unlikely to work after the system has been
-        // running for a while and physical memory is more fragmented than early
-        // during boot.
-        zx::vmo raw_vmo;
-        zx_status_t status = zx::vmo::create_contiguous(
-            parent_device_->bti(), settings->buffer_settings.size_bytes, 0,
-            &raw_vmo);
-        if (status != ZX_OK) {
-            LogError("zx::vmo::create_contiguous() failed - size_bytes: %u "
-                     "status: %d",
-                     settings->buffer_settings.size_bytes, status);
-            // sanitize to ZX_ERR_NO_MEMORY regardless of why.
-            status = ZX_ERR_NO_MEMORY;
-            return status;
-        }
-        status = raw_vmo.duplicate(kSysmemVmoRights, vmo);
-        if (status != ZX_OK) {
-            LogError("zx::object::duplicate() failed - status: %d", status);
-            return status;
-        }
-        // ~raw_vmo - *vmo is a duplicate with slightly-reduced rights.
-    } else {
-        zx::vmo raw_vmo;
-        zx_status_t status =
-            zx::vmo::create(settings->buffer_settings.size_bytes, 0, &raw_vmo);
-        if (status != ZX_OK) {
-            LogError("zx::vmo::create() failed - size_bytes: %u status: %d",
-                     settings->buffer_settings.size_bytes, status);
-            // sanitize to ZX_ERR_NO_MEMORY regardless of why.
-            status = ZX_ERR_NO_MEMORY;
-            return status;
-        }
-        status = raw_vmo.duplicate(kSysmemVmoRights, vmo);
-        if (status != ZX_OK) {
-            LogError("zx::object::duplicate() failed - status: %d", status);
-            return status;
-        }
-        // ~raw_vmo - *vmo is a duplicate with slightly-reduced rights.
+    MemoryAllocator* allocator,
+    const fuchsia_sysmem_SingleBufferSettings* settings,
+    zx::vmo* vmo) {
+    zx::vmo raw_vmo;
+    zx_status_t status =
+        allocator->Allocate(settings->buffer_settings.size_bytes, &raw_vmo);
+    if (status != ZX_OK) {
+        LogError("Allocate failed - size_bytes: %u "
+                 "status: %d",
+                 settings->buffer_settings.size_bytes, status);
+        // sanitize to ZX_ERR_NO_MEMORY regardless of why.
+        status = ZX_ERR_NO_MEMORY;
+        return status;
     }
+    status = raw_vmo.duplicate(kSysmemVmoRights, vmo);
+    if (status != ZX_OK) {
+        LogError("zx::object::duplicate() failed - status: %d", status);
+        return status;
+    }
+    // ~raw_vmo - *vmo is a duplicate with slightly-reduced rights.
     return ZX_OK;
 }
 

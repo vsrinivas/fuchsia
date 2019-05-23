@@ -1,0 +1,14 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.goldfish.control;
+
+using zx;
+
+[Layout = "ddk-protocol"]
+protocol GoldfishControl {
+    /// Get color buffer for VMO. Fails if VMO is not associated with a color
+    /// buffer.
+    GetColorBuffer(handle<vmo> vmo) -> (zx.status ret, uint32 cb);
+};

@@ -17,6 +17,7 @@ public:
     zx_status_t Init(uint64_t size);
 
     zx_status_t Allocate(uint64_t size, zx::vmo* vmo) override;
+    bool CoherencyDomainIsInaccessible() override;
     zx_status_t GetProtectedMemoryInfo(uint64_t* base, uint64_t* size) override;
 
 private:

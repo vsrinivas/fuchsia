@@ -357,10 +357,10 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
     *out_resp_size = sizeof(ProxyResponse);
 
     switch (req->op) {
-    case SysmemOp::CONNECT: {
-
+    case SysmemOp::CONNECT:
         return sysmem_.Connect(zx::channel(req_handles[0]));
-    }
+    case SysmemOp::REGISTER_HEAP:
+        return sysmem_.RegisterHeap(req->heap, zx::channel(req_handles[0]));
     default:
         zxlogf(ERROR, "%s: unknown sysmem op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;

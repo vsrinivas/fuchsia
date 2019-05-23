@@ -80,6 +80,10 @@ zx_status_t AmlogicMemoryAllocator::Allocate(size_t size, zx::vmo* vmo) {
     return ZX_OK;
 }
 
+bool AmlogicMemoryAllocator::CoherencyDomainIsInaccessible() {
+    return false;
+}
+
 zx_status_t AmlogicMemoryAllocator::GetProtectedMemoryInfo(uint64_t* base, uint64_t* size) {
     *base = start_;
     *size = size_;

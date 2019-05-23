@@ -72,6 +72,7 @@ public:
 
     // Sysmem protocol implementation.
     zx_status_t SysmemConnect(zx::channel allocator2_request);
+    zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
 
     void GetProtocol(sysmem_protocol_t* proto) {
         proto->ops = &sysmem_protocol_ops_;

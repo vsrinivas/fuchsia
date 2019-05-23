@@ -106,6 +106,12 @@ struct rpc_clk_req_t {
 // ZX_PROTOCOL_SYSMEM proxy support.
 enum {
     SYSMEM_CONNECT,
+    SYSMEM_REGISTER_HEAP,
+};
+
+struct rpc_sysmem_req_t {
+    platform_proxy_req_t header;
+    uint64_t heap;
 };
 
 // ZX_PROTOCOL_AMLOGIC_CANVAS proxy support.

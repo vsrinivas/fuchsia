@@ -20,6 +20,149 @@
 
 namespace {
 
+class SystemRamMemoryAllocator : public MemoryAllocator {
+public:
+    zx_status_t Allocate(uint64_t size, zx::vmo* vmo) override {
+        return zx::vmo::create(size, 0, vmo);
+    }
+    bool CoherencyDomainIsInaccessible() override { return false; }
+};
+
+class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
+public:
+    explicit ContiguousSystemRamMemoryAllocator(Device* parent_device)
+        : parent_device_(parent_device) {}
+
+    zx_status_t Allocate(uint64_t size, zx::vmo* vmo) override {
+        // TODO(dustingreen): Optionally (per board) pre-allocate a
+        // physically-contiguous VMO with board-specific size, have a page heap,
+        // dole out portions of that VMO or non-copy-on-write child VMOs of that
+        // VMO.  For now, we just attempt to allocate contiguous when buffers
+        // are allocated, which is unlikely to work after the system has been
+        // running for a while and physical memory is more fragmented than early
+        // during boot.
+        zx_status_t status =
+            zx::vmo::create_contiguous(parent_device_->bti(), size, 0, vmo);
+        if (status != ZX_OK) {
+            DRIVER_ERROR(
+                "zx::vmo::create_contiguous() failed - size_bytes: %lu "
+                "status: %d",
+                size, status);
+            // sanitize to ZX_ERR_NO_MEMORY regardless of why.
+            status = ZX_ERR_NO_MEMORY;
+            return status;
+        }
+        return ZX_OK;
+    }
+    bool CoherencyDomainIsInaccessible() override { return false; }
+
+private:
+    Device* const parent_device_;
+};
+
+class ExternalMemoryAllocator : public MemoryAllocator {
+public:
+    ExternalMemoryAllocator(zx::channel connection,
+                            fbl::unique_ptr<async::Wait> wait_for_close)
+        : connection_(std::move(connection)),
+          wait_for_close_(std::move(wait_for_close)) {}
+
+    zx_status_t Allocate(uint64_t size, zx::vmo* vmo) override {
+        zx::vmo parent_vmo;
+        zx_status_t status2 = ZX_OK;
+        zx_status_t status =
+            fuchsia_sysmem_HeapAllocateVmo(connection_.get(), size, &status2,
+                                           parent_vmo.reset_and_get_address());
+        if (status != ZX_OK || status2 != ZX_OK) {
+            DRIVER_ERROR("HeapAllocate() failed - status: %d status2: %d",
+                         status, status2);
+            // sanitize to ZX_ERR_NO_MEMORY regardless of why.
+            status = ZX_ERR_NO_MEMORY;
+            return status;
+        }
+
+        // Create child VMO. This makes it possible to detect when all
+        // references to the VMO are gone by waiting for VMO_ZERO_CHILDREN
+        // signal on parent VMO.
+        //
+        // Note: Always a 1:1 relationship between parent and child VMOs.
+        //
+        // TODO(reveman): Don't assume that copy-on-write VMO is OK.
+        zx::vmo child_vmo;
+        status =
+            parent_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &child_vmo);
+        if (status != ZX_OK) {
+            DRIVER_ERROR("zx::vmo::create_child() failed - status: %d\n",
+                         status);
+            // sanitize to ZX_ERR_NO_MEMORY regardless of why.
+            status = ZX_ERR_NO_MEMORY;
+            return status;
+        }
+
+        zx::vmo vmo_copy;
+        status = child_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy);
+        if (status != ZX_OK) {
+            DRIVER_ERROR("duplicate() failed - status: %d", status);
+            // sanitize to ZX_ERR_NO_MEMORY regardless of why.
+            status = ZX_ERR_NO_MEMORY;
+            return status;
+        }
+
+        uint64_t id;
+        status = fuchsia_sysmem_HeapCreateResource(
+            connection_.get(), vmo_copy.release(), &status2, &id);
+        if (status != ZX_OK || status2 != ZX_OK) {
+            DRIVER_ERROR("HeapCreateResource() failed - status: %d status2: %d",
+                         status, status2);
+            // sanitize to ZX_ERR_NO_MEMORY regardless of why.
+            status = ZX_ERR_NO_MEMORY;
+            return status;
+        }
+
+        auto vmo_handle = parent_vmo.get();
+
+        // Free resource when parent VMO has zero references.
+        auto wait = std::make_unique<async::Wait>(
+            vmo_handle, ZX_VMO_ZERO_CHILDREN,
+            async::Wait::Handler([this, id, vmo = std::move(parent_vmo)](
+                                     async_dispatcher_t* dispatcher,
+                                     async::Wait* wait, zx_status_t status,
+                                     const zx_packet_signal_t* signal) mutable {
+                auto it = allocations_.find(vmo.get());
+                if (it == allocations_.end()) {
+                    DRIVER_ERROR("Invalid allocation - vmo_handle: %d",
+                                 vmo.get());
+                    return;
+                }
+                status =
+                    fuchsia_sysmem_HeapDestroyResource(connection_.get(), id);
+                if (status != ZX_OK) {
+                    DRIVER_ERROR("HeapDestroyResource() failed - status: %d",
+                                 status);
+                    // fall-through - this can only fail because resource has
+                    // already been destroyed.
+                }
+                allocations_.erase(it);
+            }));
+        // It is safe to call Begin() here before adding entry to the map as
+        // handler will run on current thread.
+        wait->Begin(async_get_default_dispatcher());
+
+        allocations_[vmo_handle] = std::move(wait);
+        *vmo = std::move(child_vmo);
+        return ZX_OK;
+    }
+    bool CoherencyDomainIsInaccessible() override {
+        // TODO(reveman): Add support for CPU/RAM domains to external heaps.
+        return true;
+    }
+
+private:
+    zx::channel connection_;
+    fbl::unique_ptr<async::Wait> wait_for_close_;
+    std::map<zx_handle_t, std::unique_ptr<async::Wait>> allocations_;
+};
+
 fuchsia_sysmem_DriverConnector_ops_t driver_connector_ops = {
     .Connect = fidl::Binder<Device>::BindMember<&Device::Connect>,
     .GetProtectedMemoryInfo = fidl::Binder<Device>::BindMember<&Device::GetProtectedMemoryInfo>,
@@ -44,10 +187,17 @@ zx_status_t in_proc_sysmem_Connect(void* ctx,
     return self->Connect(allocator_request_param);
 }
 
+zx_status_t in_proc_sysmem_RegisterHeap(void* ctx, uint64_t heap,
+                                        zx_handle_t heap_connection_param) {
+    Device* self = static_cast<Device*>(ctx);
+    return self->RegisterHeap(heap, heap_connection_param);
+}
+
 // In-proc sysmem interface.  Essentially an in-proc version of
 // fuchsia.sysmem.DriverConnector.
 sysmem_protocol_ops_t in_proc_sysmem_protocol_ops = {
     .connect = in_proc_sysmem_Connect,
+    .register_heap = in_proc_sysmem_RegisterHeap,
 };
 
 } // namespace
@@ -83,6 +233,11 @@ zx_status_t Device::Bind() {
         protected_memory_size = metadata.protected_memory_size;
     }
 
+    allocators_[fuchsia_sysmem_HeapType_SYSTEM_RAM] =
+        std::make_unique<SystemRamMemoryAllocator>();
+    contiguous_system_ram_allocator_ =
+        std::make_unique<ContiguousSystemRamMemoryAllocator>(this);
+
     status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
     if (status != ZX_OK) {
         DRIVER_ERROR("Failed pdev_get_bti() - status: %d", status);
@@ -104,7 +259,8 @@ zx_status_t Device::Bind() {
             DRIVER_ERROR("Failed to init allocator for amlogic protected memory: %d", status);
             return status;
         }
-        protected_allocator_ = std::move(amlogic_allocator);
+        protected_allocator_ = amlogic_allocator.get();
+        allocators_[fuchsia_sysmem_HeapType_AMLOGIC_SECURE] = std::move(amlogic_allocator);
     }
 
     pbus_protocol_t pbus;
@@ -168,6 +324,35 @@ zx_status_t Device::Connect(zx_handle_t allocator_request) {
     return ZX_OK;
 }
 
+zx_status_t Device::RegisterHeap(uint64_t heap, zx_handle_t heap_connection) {
+    zx::channel local_heap_connection(heap_connection);
+
+    // External heaps should not have bit 63 set but bit 60 must be set.
+    if ((heap & 0x8000000000000000) || !(heap & 0x1000000000000000)) {
+        DRIVER_ERROR("Invalid external heap");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Clean up heap allocator after peer closed channel.
+    auto wait_for_close = std::make_unique<async::Wait>(
+        local_heap_connection.get(), ZX_CHANNEL_PEER_CLOSED,
+        async::Wait::Handler([this, heap](async_dispatcher_t* dispatcher,
+                                          async::Wait* wait, zx_status_t status,
+                                          const zx_packet_signal_t* signal) {
+            allocators_.erase(heap);
+        }));
+    // It is safe to call Begin() here before adding entry to the map as
+    // handler will run on current thread.
+    wait_for_close->Begin(async_get_default_dispatcher());
+
+    // This replaces any previously registered allocator for heap. This
+    // behavior is preferred as it avoids a potential race-condition during
+    // heap restart.
+    allocators_[heap] = std::make_unique<ExternalMemoryAllocator>(
+        std::move(local_heap_connection), std::move(wait_for_close));
+    return ZX_OK;
+}
+
 zx_status_t Device::GetProtectedMemoryInfo(fidl_txn* txn) {
     if (!protected_allocator_) {
         return fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, 0u, 0u);
@@ -221,4 +406,18 @@ BufferCollectionToken* Device::FindTokenByServerChannelKoid(
         return nullptr;
     }
     return iter->second;
+}
+
+MemoryAllocator* Device::GetAllocator(
+    const fuchsia_sysmem_BufferMemorySettings* settings) {
+    if (settings->heap == fuchsia_sysmem_HeapType_SYSTEM_RAM &&
+        settings->is_physically_contiguous) {
+        return contiguous_system_ram_allocator_.get();
+    }
+
+    auto iter = allocators_.find(settings->heap);
+    if (iter == allocators_.end()) {
+        return nullptr;
+    }
+    return iter->second.get();
 }

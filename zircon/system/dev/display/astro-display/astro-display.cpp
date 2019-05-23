@@ -570,9 +570,11 @@ zx_status_t AstroDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     buffer_constraints.max_size_bytes = 0xffffffff;
     buffer_constraints.physically_contiguous_required = true;
     buffer_constraints.secure_required = false;
-    buffer_constraints.secure_permitted = true;
     buffer_constraints.ram_domain_supported = true;
     buffer_constraints.cpu_domain_supported = true;
+    buffer_constraints.heap_permitted_count = 2;
+    buffer_constraints.heap_permitted[0] = fuchsia_sysmem_HeapType_SYSTEM_RAM;
+    buffer_constraints.heap_permitted[1] = fuchsia_sysmem_HeapType_AMLOGIC_SECURE;
     constraints.image_format_constraints_count = 1;
     fuchsia_sysmem_ImageFormatConstraints& image_constraints =
         constraints.image_format_constraints[0];

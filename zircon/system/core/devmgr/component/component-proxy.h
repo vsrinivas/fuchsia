@@ -94,6 +94,7 @@ public:
     zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
     zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
     zx_status_t SysmemConnect(zx::channel allocator2_request);
+    zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
     zx_status_t MipiCsiInit(const mipi_info_t* mipi_info,
                             const mipi_adap_info_t* adap_info);
     zx_status_t MipiCsiDeInit();

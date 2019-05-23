@@ -49,6 +49,9 @@ public:
     void GoldfishPipeOpen(int32_t id);
     void GoldfishPipeExec(int32_t id);
     zx_status_t GoldfishPipeGetBti(zx::bti* out_bti);
+    zx_status_t GoldfishPipeConnectSysmem(zx::channel connection);
+    zx_status_t GoldfishPipeRegisterSysmemHeap(uint64_t heap,
+                                               zx::channel connection);
 
     int IrqHandler();
 

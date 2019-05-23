@@ -1,0 +1,54 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem;
+
+using zx;
+
+/// Manages resources on a specific sysmem heap.
+///
+/// Needs Layout = "Simple" because used with "FIDL Simple C Bindings".
+[Layout = "Simple"]
+protocol Heap {
+    /// Request a new memory allocation of |size| on heap.
+    /// For heaps which don't permit CPU access to the buffer data, this
+    /// will create a VMO with an official size, but which never has any
+    /// physical pages.  For such heaps, the VMO is effectively used as
+    /// an opaque buffer identifier.
+    ///
+    /// Heaps should defer allocation of any associated resources until
+    /// CreateResource(), because the caller of AllocateVmo() may simply
+    /// delete the returned VMO with no further notification to the heap.
+    /// In contrast, after CreateResource(), the caller guarantees that
+    /// DestroyResource() or heap channel closure will occur.
+    ///
+    /// The caller guarantees that CreateResource() will be called prior
+    /// to the returned VMO or any associated child VMO being used.
+    AllocateVmo(uint64 size) -> (zx.status s, handle<vmo>? vmo);
+
+    /// Create resources and associate heap-specific resources with the
+    /// passed-in VMO. Resources can be hardware specific and their
+    /// lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
+    /// (or a direct or indirect child of a VMO) acquired through a call
+    /// to AllocateVmo method above.  If the passed-in vmo is a child VMO,
+    /// it's size must match the size of the parent VMO created by
+    /// AllocateVmo().  For heaps that permit CPU access, the passed-in
+    /// VMO must not have a copy-on-write relationship with the parent
+    /// VMO, but rather a pass-through relationship. Successful return
+    /// status indicate that Heap has established a mapping between
+    /// VMO and hardware specific resources.
+    ///
+    /// The returned id must be passed to DestroyResource() later when
+    /// resources associated with VMO are no longer needed, unless the
+    /// heap channel closes first.
+    ///
+    /// The heap must not own/keep a handle to VMO, or any derived child
+    /// VMO, or any VMAR mapping to VMO, as any of those would keep VMO
+    /// alive beyond all sysmem participant usages of the vmo; instead
+    /// the heap can get the vmo's koid for the heap's mapping.
+    CreateResource(handle<vmo> vmo) -> (zx.status s, uint64 id);
+
+    /// Destroy previously created resources.
+    DestroyResource(uint64 id) -> ();
+};

@@ -172,6 +172,19 @@ struct SingleBufferSettings {
     ImageFormatConstraints image_format_constraints;
 };
 
+/// Known heap types.
+/// Device specific types should have bit 60 set. Top order bit is reserved
+/// and should not be set.
+enum HeapType : uint64 {
+    SYSTEM_RAM = 0x0000000000000000;
+
+    /// Heap used for amlogic protected memory.
+    AMLOGIC_SECURE = 0x1000000000010000;
+
+    /// Heap used by goldfish vulkan for device-local memory.
+    GOLDFISH_DEVICE_LOCAL = 0x1000000000020000;
+};
+
 struct BufferMemoryConstraints {
     uint32 min_size_bytes = 0;
     uint32 max_size_bytes = 0xFFFFFFFF;
@@ -183,12 +196,6 @@ struct BufferMemoryConstraints {
     /// When aggregating BufferCollectionConstraints, these values boolean-OR.
     bool secure_required = false;
 
-    /// If false, at least one participant can't handle secure memory.  All
-    /// participants that can handle secure memory must specify true here.
-    ///
-    /// When aggregating BufferCollectionConstraints, these values boolean-AND.
-    bool secure_permitted = false;
-
     /// By default, participants must ensure the CPU can read or write data to
     /// the buffer without cache operations. If they support using the RAM
     /// domain, data must be available in RAM (with CPU cache state such that
@@ -198,11 +205,26 @@ struct BufferMemoryConstraints {
     /// zero stale "clean" cache lines)
     bool ram_domain_supported = false;
     bool cpu_domain_supported = true;
+    bool inaccessible_domain_supported = false;
+
+    /// Optional heap constraints. Participants that don't care which heap
+    /// memory is allocated on should leave this field 0.
+    uint32 heap_permitted_count;
+    array<HeapType>:32 heap_permitted;
 };
 
+/// Inaccessible is only for cases where there is no CPU-based access to the
+/// buffers.  A secure_required buffer can still have CoherencyDomain Cpu or
+/// Ram even if the secure_required buffer can only be accessed by the CPU when
+/// the CPU is running in secure mode (or similar).  In contrast, device-local
+/// memory that isn't reachable from the CPU is CoherencyDomain Inaccessible,
+/// even if it's possible to cause a device (physical or virtual) to copy the
+/// data from the Inaccessible buffers to buffers that are visible to the CPU.
+/// TODO: Use upper snake case for these enum members.
 enum CoherencyDomain {
     Cpu = 0;
     Ram = 1;
+    Inaccessible = 2;
 };
 
 struct BufferMemorySettings {
@@ -210,6 +232,9 @@ struct BufferMemorySettings {
     bool is_physically_contiguous;
     bool is_secure;
     CoherencyDomain coherency_domain;
+    /// The specific heap from which buffers are allocated.
+    /// See above in this file for heap identifier values.
+    HeapType heap;
 };
 
 /// Describes constraints on layout of image data in buffers.

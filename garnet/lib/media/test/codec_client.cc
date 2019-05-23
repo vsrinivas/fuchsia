@@ -745,9 +745,6 @@ bool CodecClient::ConfigurePortBufferCollection(
       std::numeric_limits<uint32_t>::max();
   constraints.buffer_memory_constraints.physically_contiguous_required = false;
   constraints.buffer_memory_constraints.secure_required = false;
-  // This test client code has no way to produce or consume output data in
-  // protected memory.
-  constraints.buffer_memory_constraints.secure_permitted = false;
 
   // Despite being a consumer of output uncompressed video frames (when decoding
   // video and is_output), for now we intentionally don't constrain to the

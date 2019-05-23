@@ -137,11 +137,13 @@ struct PowerProxyResponse {
 // ZX_PROTOCOL_SYSMEM proxy support.
 enum class SysmemOp {
     CONNECT,
+    REGISTER_HEAP,
 };
 
 struct SysmemProxyRequest {
     ProxyRequest header;
     SysmemOp op;
+    uint64_t heap;
 };
 
 // ZX_PROTOCOL_AMLOGIC_CANVAS proxy support.

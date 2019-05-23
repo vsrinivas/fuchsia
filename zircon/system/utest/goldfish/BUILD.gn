@@ -8,9 +8,12 @@ test("goldfish") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-goldfish-address-space:c",
+    "$zx/system/fidl/fuchsia-hardware-goldfish-control:c",
     "$zx/system/fidl/fuchsia-hardware-goldfish-pipe:c",
+    "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async-2",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

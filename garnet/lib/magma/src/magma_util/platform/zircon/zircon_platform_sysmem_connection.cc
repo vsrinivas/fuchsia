@@ -40,8 +40,7 @@ public:
         // No buffer constraints, except those passed directly through from the client. These two
         // are for whether this memory should be protected (e.g. usable for DRM content, the precise
         // definition depending on the system).
-        constraints_.buffer_memory_constraints.secure_required = constraints->secure_permitted;
-        constraints_.buffer_memory_constraints.secure_permitted = constraints->secure_required;
+        constraints_.buffer_memory_constraints.secure_required = constraints->secure_required;
         constraints_.buffer_memory_constraints.ram_domain_supported =
             constraints->ram_domain_supported;
         constraints_.buffer_memory_constraints.cpu_domain_supported =
@@ -253,7 +252,6 @@ public:
         constraints.buffer_memory_constraints.min_size_bytes = size;
         if (flags & MAGMA_SYSMEM_FLAG_PROTECTED) {
             constraints.buffer_memory_constraints.secure_required = true;
-            constraints.buffer_memory_constraints.secure_permitted = true;
         }
         constraints.image_format_constraints_count = 0;
 

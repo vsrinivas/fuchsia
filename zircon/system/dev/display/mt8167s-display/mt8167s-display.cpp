@@ -355,9 +355,10 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     buffer_constraints.max_size_bytes = 0xffffffff;
     buffer_constraints.physically_contiguous_required = true;
     buffer_constraints.secure_required = false;
-    buffer_constraints.secure_permitted = false;
     buffer_constraints.ram_domain_supported = true;
     buffer_constraints.cpu_domain_supported = true;
+    buffer_constraints.heap_permitted_count = 1;
+    buffer_constraints.heap_permitted[0] = fuchsia_sysmem_HeapType_SYSTEM_RAM;
     constraints.image_format_constraints_count = 1;
     fuchsia_sysmem_ImageFormatConstraints& image_constraints =
         constraints.image_format_constraints[0];

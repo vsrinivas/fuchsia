@@ -160,9 +160,11 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
         .max_size_bytes = 128 * 1024,
         .physically_contiguous_required = false,
         .secure_required = false,
-        .secure_permitted = false,
         .ram_domain_supported = false,
         .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
     };
     ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
     status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
@@ -240,9 +242,11 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
         .max_size_bytes = 128 * 1024,
         .physically_contiguous_required = false,
         .secure_required = false,
-        .secure_permitted = false,
         .ram_domain_supported = false,
         .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
     };
     constraints->image_format_constraints_count = 1;
     fuchsia_sysmem_ImageFormatConstraints& image_constraints =
@@ -352,9 +356,11 @@ extern "C" bool test_sysmem_min_buffer_count(void) {
         .max_size_bytes = 128 * 1024,
         .physically_contiguous_required = false,
         .secure_required = false,
-        .secure_permitted = false,
         .ram_domain_supported = false,
         .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
     };
     ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
     status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
@@ -403,9 +409,11 @@ extern "C" bool test_sysmem_no_token(void) {
         .max_size_bytes = 128 * 1024,
         .physically_contiguous_required = false,
         .secure_required = false,
-        .secure_permitted = false,
         .ram_domain_supported = true,
         .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
     };
     ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
     status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
@@ -511,9 +519,11 @@ extern "C" bool test_sysmem_multiple_participants(void) {
         .max_size_bytes = (512 * 512) * 3 / 2,
         .physically_contiguous_required = false,
         .secure_required = false,
-        .secure_permitted = false,
         .ram_domain_supported = false,
         .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
     };
     constraints_1->image_format_constraints_count = 1;
     fuchsia_sysmem_ImageFormatConstraints& image_constraints_1 =
@@ -797,9 +807,11 @@ extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
         .max_size_bytes = 64 * 1024,
         .physically_contiguous_required = false,
         .secure_required = false,
-        .secure_permitted = false,
         .ram_domain_supported = false,
         .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
     };
 
     // constraints_2 is just a copy of constraints_1 - since both participants
@@ -885,6 +897,139 @@ extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
     END_TEST;
 }
 
+extern "C" bool test_sysmem_heap_constraints(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::channel allocator_client;
+    status = connect_to_sysmem_driver(&allocator_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client;
+    zx::channel token_server;
+    status = zx::channel::create(0, &token_client, &token_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(
+        allocator_client.get(), token_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client;
+    zx::channel collection_server;
+    status = zx::channel::create(0, &collection_client, &collection_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator_client.get(), token_client.release(),
+        collection_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints(
+        BufferCollectionConstraints::Default);
+    constraints->usage.vulkan = fuchsia_sysmem_vulkanUsageTransferDst;
+    constraints->min_buffer_count_for_camping = 1;
+    constraints->has_buffer_memory_constraints = true;
+    constraints->buffer_memory_constraints =
+        fuchsia_sysmem_BufferMemoryConstraints{
+            .min_size_bytes = 4 * 1024,
+            .max_size_bytes = 4 * 1024,
+            .physically_contiguous_required = true,
+            .secure_required = false,
+            .ram_domain_supported = false,
+            .cpu_domain_supported = false,
+            .inaccessible_domain_supported = true,
+            .heap_permitted_count = 1,
+            .heap_permitted = {fuchsia_sysmem_HeapType_SYSTEM_RAM}};
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(
+        collection_client.get(), true, constraints.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status,
+        buffer_collection_info.get());
+    // This is the first round-trip to/from sysmem.  A failure here can be due
+    // to any step above failing async.
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(allocation_status, ZX_OK, "");
+    ASSERT_EQ(buffer_collection_info->buffer_count, 1, "");
+    ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+              fuchsia_sysmem_CoherencyDomain_Inaccessible, "");
+    ASSERT_EQ(buffer_collection_info->settings.buffer_settings.heap,
+              fuchsia_sysmem_HeapType_SYSTEM_RAM, "");
+    ASSERT_EQ(buffer_collection_info->settings.buffer_settings
+                  .is_physically_contiguous,
+               true, "");
+
+    END_TEST;
+}
+
+extern "C" bool test_sysmem_cpu_usage_and_inaccessible_domain_fails(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::channel allocator_client;
+    status = connect_to_sysmem_driver(&allocator_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client;
+    zx::channel token_server;
+    status = zx::channel::create(0, &token_client, &token_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(
+        allocator_client.get(), token_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client;
+    zx::channel collection_server;
+    status = zx::channel::create(0, &collection_client, &collection_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator_client.get(), token_client.release(),
+        collection_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints(
+        BufferCollectionConstraints::Default);
+    constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+    constraints->min_buffer_count_for_camping = 1;
+    constraints->has_buffer_memory_constraints = true;
+    constraints->buffer_memory_constraints =
+        fuchsia_sysmem_BufferMemoryConstraints{
+            .min_size_bytes = 4 * 1024,
+            .max_size_bytes = 4 * 1024,
+            .physically_contiguous_required = true,
+            .secure_required = false,
+            .ram_domain_supported = false,
+            .cpu_domain_supported = false,
+            .inaccessible_domain_supported = true,
+            .heap_permitted_count = 1,
+            .heap_permitted = {fuchsia_sysmem_HeapType_SYSTEM_RAM}};
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(
+        collection_client.get(), true, constraints.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status,
+        buffer_collection_info.get());
+    // usage.cpu != 0 && inaccessible_domain_supported is expected to result in failure to
+    // allocate.
+    ASSERT_NE(status, ZX_OK, "");
+
+    END_TEST;
+}
+
+// TODO(dustingreen): Add tests to cover more failure cases.
+
 // clang-format off
 BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_driver_connection)
@@ -895,5 +1040,7 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_no_token)
     RUN_TEST(test_sysmem_multiple_participants)
     RUN_TEST(test_sysmem_constraints_retained_beyond_clean_close)
+    RUN_TEST(test_sysmem_heap_constraints)
+    RUN_TEST(test_sysmem_cpu_usage_and_inaccessible_domain_fails)
 END_TEST_CASE(sysmem_tests)
 // clang-format on

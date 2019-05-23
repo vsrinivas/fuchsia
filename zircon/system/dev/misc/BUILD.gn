@@ -9,6 +9,7 @@ group("misc") {
     "cpu-trace",
     "goldfish",
     "goldfish-address-space",
+    "goldfish-control",
     "ktrace",
     "pty",
     "sysinfo",

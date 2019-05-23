@@ -2864,7 +2864,7 @@ bool CodecImpl::FixupBufferCollectionConstraints(
   ZX_DEBUG_ASSERT(!usage.display);
   if (IsCoreCodecHwBased()) {
     // Let's see if we can deprecate videoUsageHwProtected, since it's redundant
-    // with secure_required and secure_permitted.
+    // with secure_required.
     if (usage.video & fuchsia::sysmem::videoUsageHwProtected) {
       Fail("Core codec set deprecated videoUsageHwProtected - disallow");
       return false;

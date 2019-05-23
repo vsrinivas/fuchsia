@@ -600,9 +600,6 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
   // amlogic requires physically contiguous on both input and output
   result.buffer_memory_constraints.physically_contiguous_required = true;
   result.buffer_memory_constraints.secure_required = false;
-  // This isn't expected to fully work at first, but allow getting as far as we
-  // can.
-  result.buffer_memory_constraints.secure_permitted = true;
 
   if (port == kOutputPort) {
     result.image_format_constraints_count = 1;

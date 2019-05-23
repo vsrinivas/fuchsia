@@ -253,6 +253,19 @@ zx_status_t PipeDevice::GoldfishPipeGetBti(zx::bti* out_bti) {
     return bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_bti);
 }
 
+zx_status_t PipeDevice::GoldfishPipeConnectSysmem(zx::channel connection) {
+    TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeConnectSysmem");
+
+    return acpi_.ConnectSysmem(std::move(connection));
+}
+
+zx_status_t PipeDevice::GoldfishPipeRegisterSysmemHeap(uint64_t heap,
+                                                       zx::channel connection) {
+    TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeRegisterSysmemHeap");
+
+    return acpi_.RegisterSysmemHeap(heap, std::move(connection));
+}
+
 int PipeDevice::IrqHandler() {
     while (1) {
         zx_status_t status = irq_.wait(nullptr);
