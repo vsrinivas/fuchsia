@@ -15,7 +15,6 @@
 #include "src/developer/feedback_agent/attachments.h"
 #include "src/developer/feedback_agent/config.h"
 #include "src/developer/feedback_agent/image_conversion.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -32,9 +31,8 @@ std::unique_ptr<DataProviderImpl> DataProviderImpl::TryCreate(
 
   const zx_status_t parse_status = ParseConfig(kDefaultConfigPath, &config);
   if (parse_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to read default config file at "
-                   << kDefaultConfigPath << ": " << parse_status << " ("
-                   << zx_status_get_string(parse_status) << ")";
+    FX_PLOGS(ERROR, parse_status)
+        << "Failed to read default config file at " << kDefaultConfigPath;
     FX_LOGS(FATAL) << "Failed to set up data provider";
     return nullptr;
   }
@@ -98,9 +96,7 @@ void DataProviderImpl::GetScreenshot(ImageEncoding encoding,
       [this, id, shared_callback](zx_status_t status) {
         CloseScenic(id);
 
-        FX_LOGS(ERROR) << fxl::StringPrintf(
-            "Lost connection to Scenic service: %d (%s)", status,
-            zx_status_get_string(status));
+        FX_PLOGS(ERROR, status) << "Lost connection to Scenic service";
         (*shared_callback)(/*screenshot=*/nullptr);
       });
   scenics_[id]->TakeScreenshot(

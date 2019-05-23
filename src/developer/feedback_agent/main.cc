@@ -13,8 +13,6 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include "src/lib/fxl/strings/string_printf.h"
-
 fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider>
 SpawnNewDataProvider() {
   return [](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
@@ -36,10 +34,9 @@ SpawnNewDataProvider() {
         fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, args[0], args,
                        nullptr, 1, &actions, nullptr, err_msg);
     if (spawn_status != ZX_OK) {
-      FX_LOGS(ERROR) << fxl::StringPrintf(
-          "Failed to spawn data provider to handle incoming request: %d "
-          "(%s): %s",
-          spawn_status, zx_status_get_string(spawn_status), err_msg);
+      FX_PLOGS(ERROR, spawn_status)
+          << "Failed to spawn data provider to handle incoming request: "
+          << err_msg;
     }
   };
 }

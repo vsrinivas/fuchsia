@@ -69,10 +69,9 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
       return CrashpadAgent::TryCreate(dispatcher, std::move(services),
                                       std::move(config));
     }
-    FX_LOGS(ERROR) << "failed to read override config file at "
-                   << kOverrideConfigPath << ": " << status << " ("
-                   << zx_status_get_string(status)
-                   << "); falling back to default config file";
+    FX_PLOGS(ERROR, status)
+        << "Failed to read override config file at " << kOverrideConfigPath
+        << " - falling back to default config file";
   }
 
   // We try to load the default config included in the package if no override
@@ -82,10 +81,10 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     return CrashpadAgent::TryCreate(dispatcher, std::move(services),
                                     std::move(config));
   }
-  FX_PLOGS(ERROR, status) << "failed to read default config file at "
+  FX_PLOGS(ERROR, status) << "Failed to read default config file at "
                           << kDefaultConfigPath;
 
-  FX_LOGS(FATAL) << "failed to set up crash analyzer";
+  FX_LOGS(FATAL) << "Failed to set up crash analyzer";
   return nullptr;
 }
 
@@ -248,9 +247,8 @@ fit::promise<Data> CrashpadAgent::GetFeedbackData() {
         CloseFeedbackDataProvider(id);
 
         if (out_result.is_err()) {
-          FX_LOGS(WARNING) << "Failed to fetch feedback data: "
-                           << out_result.err() << " ("
-                           << zx_status_get_string(out_result.err()) << ")";
+          FX_PLOGS(WARNING, out_result.err())
+              << "Failed to fetch feedback data";
           get_data_done->completer.complete_error();
           return;
         }

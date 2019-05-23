@@ -17,7 +17,6 @@
 #include <memory>
 
 #include "src/developer/feedback_agent/data_provider.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback"});
@@ -50,8 +49,7 @@ int main(int argc, const char** argv) {
     if (status == ZX_ERR_PEER_CLOSED) {
       exit(0);
     } else {
-      FX_LOGS(ERROR) << fxl::StringPrintf("Received channel error: %d (%s)",
-                                          status, zx_status_get_string(status));
+      FX_PLOGS(ERROR, status) << "Received channel error";
       exit(1);
     }
   });
