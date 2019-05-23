@@ -21,6 +21,7 @@
 #define I2C_HID_CID_STRING         "PNP0C50"
 #define GPE_CID_STRING             "ACPI0006"
 #define GOLDFISH_PIPE_HID_STRING   "GFSH0003"
+#define SERIAL_HID_STRING          "PNP0501"
 
 #define HID_LENGTH 8
 #define CID_LENGTH 8

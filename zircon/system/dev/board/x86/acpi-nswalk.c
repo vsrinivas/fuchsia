@@ -540,7 +540,11 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
                (cid && !memcmp(cid, RTC_HID_STRING, HID_LENGTH))) {
         publish_device(acpi_root, platform_bus, object, info, "rtc", ZX_PROTOCOL_ACPI, &acpi_proto);
     } else if (!memcmp(hid, GOLDFISH_PIPE_HID_STRING, HID_LENGTH)) {
-        publish_device(acpi_root, platform_bus, object, info, "goldfish", ZX_PROTOCOL_ACPI, &acpi_proto);
+        publish_device(acpi_root, platform_bus, object, info, "goldfish", ZX_PROTOCOL_ACPI,
+                       &acpi_proto);
+    } else if (!memcmp(hid, SERIAL_HID_STRING, HID_LENGTH)) {
+        publish_device(acpi_root, platform_bus, object, info, "serial", ZX_PROTOCOL_ACPI,
+                       &acpi_proto);
     }
 
 out:
