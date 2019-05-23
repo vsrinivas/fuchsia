@@ -12,6 +12,7 @@ group("input") {
     "hidctl",
     "i2c-hid",
     "usb-hid",
+    "usb-hid:usb-hid-fake-usb",
   ]
   if (current_cpu == "x64") {
     deps += [ "pc-ps2" ]

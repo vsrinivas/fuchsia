@@ -26,6 +26,8 @@
 
 #define to_usb_hid(d) containerof(d, usb_hid_device_t, hiddev)
 
+// This driver binds on any USB device that exposes HID reports. It passes the
+// reports to the HID driver by implementing the HidBus protocol.
 typedef struct usb_hid_device {
     zx_device_t* zxdev;
     zx_device_t* usbdev;

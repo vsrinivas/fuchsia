@@ -7,7 +7,7 @@
 
 // clang-format off
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 /* HID Request Values */
 #define USB_HID_GET_REPORT                  0x01
@@ -31,6 +31,6 @@ typedef struct {
     usb_hid_descriptor_entry_t descriptors[];
 } __attribute__((packed)) usb_hid_descriptor_t;
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif  // SYSROOT_ZIRCON_HW_USB_HID_H_

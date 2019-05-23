@@ -12,9 +12,11 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/block/c/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/c/fidl.h>
 #include <fuchsia/usb/virtualbus/c/fidl.h>
+#include <hid/boot.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/driver-integration-test/fixture.h>
@@ -25,6 +27,7 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl-async/bind.h>
+#include <lib/fzl/fdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/hw/usb.h>
@@ -53,7 +56,8 @@ zx_status_t dispatch_wrapper(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const 
         ctx, txn, msg, reinterpret_cast<const fuchsia_hardware_usb_peripheral_Events_ops_t*>(ops));
 }
 
-template <typename F, typename... Args> zx_status_t FidlCall(const F& function, Args... args) {
+template <typename F, typename... Args>
+zx_status_t FidlCall(const F& function, Args... args) {
     zx_status_t status;
     zx_status_t status1;
     status = function(args..., &status1);
@@ -156,6 +160,49 @@ public:
                ZX_ERR_STOP) {
         }
         *devpath = fbl::String::Concat({fbl::String("class/block/"), *devpath});
+    }
+
+    // Initialize a Usb HID device. Asserts on failure.
+    void InitUsbHid(fbl::String* devpath) {
+        fuchsia_hardware_usb_peripheral_DeviceDescriptor device_desc = {};
+        device_desc.bcdUSB = htole16(0x0200);
+        device_desc.bMaxPacketSize0 = 64;
+        device_desc.bcdDevice = htole16(0x0100);
+        device_desc.bNumConfigurations = 1;
+        ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_peripheral_DeviceSetDeviceDescriptor,
+                                  peripheral_.get(), &device_desc));
+
+        fuchsia_hardware_usb_peripheral_FunctionDescriptor usb_hid_function_desc = {
+            .interface_class = USB_CLASS_HID,
+            .interface_subclass = 0,
+            .interface_protocol = 0,
+        };
+
+        ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_peripheral_DeviceAddFunction,
+                                  peripheral_.get(), &usb_hid_function_desc));
+        zx::channel handles[2];
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, handles, handles + 1));
+        ASSERT_EQ(ZX_OK, fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListener(
+                             peripheral_.get(), handles[1].get()));
+        ASSERT_EQ(ZX_OK,
+                  FidlCall(fuchsia_hardware_usb_peripheral_DeviceBindFunctions, peripheral_.get()));
+        async_loop_config_t config = {};
+        async::Loop loop(&config);
+        DispatchContext context = {};
+        context.loop = &loop;
+        fuchsia_hardware_usb_peripheral_Events_ops ops;
+        ops.FunctionRegistered = DispatchStateChange;
+        async_dispatcher_t* dispatcher = loop.dispatcher();
+        fidl_bind(dispatcher, handles[0].get(), dispatch_wrapper, &context, &ops);
+        loop.Run();
+
+        ASSERT_TRUE(context.state_changed);
+        ASSERT_EQ(ZX_OK, FidlCall(fuchsia_usb_virtualbus_BusConnect, virtual_bus_handle_.get()));
+        fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/input", O_RDONLY));
+        while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) !=
+               ZX_ERR_STOP) {
+        }
+        *devpath = fbl::String::Concat({fbl::String("class/input/"), *devpath});
     }
 
     USBVirtualBus() {
@@ -474,6 +521,54 @@ TEST_F(UmsTest, BlkdevTest) {
     EXPECT_OK(zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr,
                                  nullptr));
     EXPECT_EQ(proc_info.return_code, 0);
+}
+
+class UsbHidTest : public zxtest::Test {
+public:
+    void SetUp() override {
+        ASSERT_NO_FATAL_FAILURES(bus_.InitUsbHid(&devpath_));
+        bus_.GetHandles(&peripheral_, &virtual_bus_handle_);
+    }
+    void TearDown() override {
+        ASSERT_EQ(ZX_OK,
+                  FidlCall(fuchsia_hardware_usb_peripheral_DeviceClearFunctions, peripheral_->get()));
+        ASSERT_EQ(ZX_OK, FidlCall(fuchsia_usb_virtualbus_BusDisable, virtual_bus_handle_->get()));
+    }
+
+protected:
+    USBVirtualBus bus_;
+    fbl::String devpath_;
+    zx::unowned_channel peripheral_;
+    zx::unowned_channel virtual_bus_handle_;
+};
+
+TEST_F(UsbHidTest, SetAndGetReport) {
+    fbl::unique_fd fd_input(openat(bus_.GetRootFd(), devpath_.c_str(), O_RDWR));
+    ASSERT_GT(fd_input.get(), 0);
+
+    fzl::FdioCaller input_fdio_caller_;
+    input_fdio_caller_.reset(std::move(fd_input));
+
+    uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
+    zx_status_t out_stat;
+    size_t out_report_count;
+
+    zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
+        input_fdio_caller_.borrow_channel(), fuchsia_hardware_input_ReportType_INPUT, 0,
+        buf, sizeof(buf), &out_stat);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(out_stat, ZX_OK);
+
+    status = fuchsia_hardware_input_DeviceGetReport(
+        input_fdio_caller_.borrow_channel(), fuchsia_hardware_input_ReportType_INPUT, 0, &out_stat,
+        buf, sizeof(buf), &out_report_count);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(out_stat, ZX_OK);
+
+    ASSERT_EQ(out_report_count, sizeof(hid_boot_mouse_report_t));
+    ASSERT_EQ(0xab, buf[0]);
+    ASSERT_EQ(0xbc, buf[1]);
+    ASSERT_EQ(0xde, buf[2]);
 }
 
 } // namespace
