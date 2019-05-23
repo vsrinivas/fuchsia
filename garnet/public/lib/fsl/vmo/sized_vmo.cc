@@ -30,7 +30,7 @@ bool SizedVmo::IsSizeValid(const zx::vmo& vmo, uint64_t size) {
   size_t vmo_size;
   zx_status_t zx_status = vmo.get_size(&vmo_size);
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to get VMO size. Error: " << zx_status;
+    FXL_PLOG(ERROR, zx_status) << "Unable to get VMO size";
     return false;
   }
   return vmo_size >= size;
