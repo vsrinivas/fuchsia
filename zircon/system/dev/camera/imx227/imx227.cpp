@@ -4,6 +4,7 @@
 
 #include "imx227.h"
 #include "imx227-seq.h"
+#include "imx227-test.h"
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -302,7 +303,7 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
 }
 
 zx_status_t Imx227Device::CameraSensorStartStreaming() {
-    if (!IsSensorInitialized()) {
+    if (!IsSensorInitialized() || ctx_.streaming_flag) {
         return ZX_ERR_BAD_STATE;
     }
     zxlogf(INFO, "%s Camera Sensor Start Streaming\n", __func__);
@@ -312,7 +313,7 @@ zx_status_t Imx227Device::CameraSensorStartStreaming() {
 }
 
 zx_status_t Imx227Device::CameraSensorStopStreaming() {
-    if (!IsSensorInitialized()) {
+    if (!IsSensorInitialized() || !ctx_.streaming_flag) {
         return ZX_ERR_BAD_STATE;
     }
     ctx_.streaming_flag = 0;
@@ -337,7 +338,10 @@ zx_status_t Imx227Device::CameraSensorUpdate() {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Imx227Device::Create(void* ctx, zx_device_t* parent) {
+// static
+zx_status_t Imx227Device::Setup(void* ctx,
+                                zx_device_t* parent,
+                                std::unique_ptr<Imx227Device>* out) {
     ddk::CompositeProtocolClient composite(parent);
     if (!composite.is_valid()) {
         zxlogf(ERROR, "%s could not get composite protocoln", __func__);
@@ -371,24 +375,8 @@ zx_status_t Imx227Device::Create(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "%s InitPdev failed\n", __func__);
         return status;
     }
-
-    zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SONY},
-        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SONY_IMX227},
-        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_SENSOR},
-    };
-
-    status = sensor_device->DdkAdd("imx227", 0, props, countof(props));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "imx227: Could not create imx227 sensor device: %d\n", status);
-        return status;
-    } else {
-        zxlogf(INFO, "imx227 driver added\n");
-    }
-
-    // sensor_device intentionally leaked as it is now held by DevMgr.
-    __UNUSED auto* dev = sensor_device.release();
-    return ZX_OK;
+    *out = std::move(sensor_device);
+    return status;
 }
 
 void Imx227Device::ShutDown() {
@@ -404,7 +392,39 @@ void Imx227Device::DdkRelease() {
 }
 
 zx_status_t imx227_bind(void* ctx, zx_device_t* device) {
-    return camera::Imx227Device::Create(ctx, device);
+    std::unique_ptr<Imx227Device> sensor_device;
+    zx_status_t status = camera::Imx227Device::Setup(ctx, device, &sensor_device);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "imx227: Could not setup imx227 sensor device: %d\n", status);
+        return status;
+    }
+    zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SONY},
+        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SONY_IMX227},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_SENSOR},
+    };
+
+    // Run the unit tests for this device
+    // TODO(braval): CAM-44 (Run only when build flag enabled)
+    // This needs to be replaced with run unittests hooks when
+    // the framework is available.
+    status = camera::Imx227DeviceTester::RunTests(sensor_device.get());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Device Unit Tests Failed \n", __func__);
+        return status;
+    }
+
+    status = sensor_device->DdkAdd("imx227", 0, props, countof(props));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "imx227: Could not add imx227 sensor device: %d\n", status);
+        return status;
+    } else {
+        zxlogf(INFO, "imx227 driver added\n");
+    }
+
+    // sensor_device intentionally leaked as it is now held by DevMgr.
+    __UNUSED auto* dev = sensor_device.release();
+    return ZX_OK;
 }
 
 static zx_driver_ops_t driver_ops = []() {

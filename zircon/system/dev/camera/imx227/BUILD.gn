@@ -4,6 +4,7 @@
 
 driver("imx227") {
   sources = [
+    "imx227-test.cpp",
     "imx227.cpp",
   ]
   deps = [
@@ -22,5 +23,6 @@ driver("imx227") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

@@ -72,7 +72,9 @@ public:
         : DeviceType(device), i2c_(i2c), gpio_vana_enable_(gpio_vana),
           gpio_vdig_enable_(gpio_vdig), gpio_cam_rst_(gpio_cam_rst),
           clk24_(clk24), mipi_(mipicsi) {}
-
+    static zx_status_t Setup(void* ctx,
+                             zx_device_t* parent,
+                             std::unique_ptr<Imx227Device>* device);
     // Methods required by the ddk mixins.
     void DdkUnbind();
     void DdkRelease();
@@ -97,6 +99,7 @@ public:
                                               size_t* out_modes_actual);
 
 private:
+    friend class Imx227DeviceTester;
     // Sensor Context
     sensor_context_t ctx_;
 
