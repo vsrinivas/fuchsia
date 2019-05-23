@@ -77,6 +77,14 @@ macro_rules! metric_fns {
                     Ok(())
                 })
             }
+
+            pub fn [<get_ $name _metric>](&self, block_index: u32) -> Result<$type, Error> {
+                with_header_lock!(self, {
+                    let block = self.heap.get_block(block_index)?;
+                    let current_value = block.[<$name _value>]()?;
+                    Ok(current_value)
+                })
+            }
         }
     };
 }
@@ -378,6 +386,7 @@ mod tests {
 
         assert!(state.set_int_metric(block.index(), -6).is_ok());
         assert_eq!(block.int_value().unwrap(), -6);
+        assert_eq!(state.get_int_metric(block.index()).unwrap(), -6);
 
         // Free metric.
         assert!(state.free_value(block.index()).is_ok());
@@ -421,6 +430,7 @@ mod tests {
 
         assert!(state.set_uint_metric(block.index(), 6).is_ok());
         assert_eq!(block.uint_value().unwrap(), 6);
+        assert_eq!(state.get_uint_metric(block.index()).unwrap(), 6);
 
         // Free metric.
         assert!(state.free_value(block.index()).is_ok());
@@ -464,6 +474,7 @@ mod tests {
 
         assert!(state.set_double_metric(block.index(), -6.0).is_ok());
         assert_eq!(block.double_value().unwrap(), -6.0);
+        assert_eq!(state.get_double_metric(block.index()).unwrap(), -6.0);
 
         // Free metric.
         assert!(state.free_value(block.index()).is_ok());

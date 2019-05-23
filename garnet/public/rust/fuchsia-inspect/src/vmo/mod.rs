@@ -35,6 +35,7 @@ pub struct Inspector {
 pub trait Property<'t> {
     type Type;
 
+    /// Set the property value to |value|.
     fn set(&'t self, value: Self::Type) -> Result<(), Error>;
 }
 
@@ -51,6 +52,11 @@ pub trait Metric {
 
     /// Subtract the given |value| from the metric current value.
     fn subtract(&self, value: Self::Type) -> Result<(), Error>;
+
+    /// Return the current value of the metric for testing.
+    /// NOTE: This is a temporary feature to aid unit test of Inspect clients.
+    /// It will be replaced by a more comprehensive Read API implementation.
+    fn get(&self) -> Result<Self::Type, Error>;
 }
 
 /// Inspect API Node data type.
@@ -188,7 +194,7 @@ impl Drop for Node {
     }
 }
 
-/// Utility for generating metric functions (example: set, add, subtract)
+/// Utility for generating metric mutation functions (example: set, add, subtract)
 ///   `fn_name`: the name of the function to generate (example: set)
 ///   `type`: the type of the argument of the function to generate (example: f64)
 ///   `name`: the readble name of the type of the function (example: double)
@@ -222,6 +228,10 @@ macro_rules! metric {
                 metric_fn!(set, $type, $name);
                 metric_fn!(add, $type, $name);
                 metric_fn!(subtract, $type, $name);
+
+                fn get(&self) -> Result<$type, Error> {
+                    self.state.lock().[<get_ $name _metric>](self.block_index)
+                }
             }
 
             impl Drop for [<$name_cap Metric>] {
@@ -341,6 +351,7 @@ mod tests {
 
             assert!(metric.set(2.0).is_ok());
             assert_eq!(metric_block.double_value().unwrap(), 2.0);
+            assert_eq!(metric.get().unwrap(), 2.0);
 
             assert!(metric.subtract(5.5).is_ok());
             assert_eq!(metric_block.double_value().unwrap(), -3.5);
@@ -366,6 +377,7 @@ mod tests {
 
             assert!(metric.set(2).is_ok());
             assert_eq!(metric_block.int_value().unwrap(), 2);
+            assert_eq!(metric.get().unwrap(), 2);
 
             assert!(metric.subtract(5).is_ok());
             assert_eq!(metric_block.int_value().unwrap(), -3);
@@ -391,6 +403,7 @@ mod tests {
 
             assert!(metric.set(5).is_ok());
             assert_eq!(metric_block.uint_value().unwrap(), 5);
+            assert_eq!(metric.get().unwrap(), 5);
 
             assert!(metric.subtract(3).is_ok());
             assert_eq!(metric_block.uint_value().unwrap(), 2);
