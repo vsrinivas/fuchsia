@@ -558,7 +558,10 @@ impl NativeIntoFidl<Option<fsys::ExposeSource>> for ExposeSource {
         Some(match self {
             ExposeSource::Myself => fsys::ExposeSource::Myself(fsys::SelfRef {}),
             ExposeSource::Child(child_name) => {
-                fsys::ExposeSource::Child(fsys::ChildRef { name: Some(child_name) })
+                fsys::ExposeSource::Child(fsys::ChildRef {
+                    name: Some(child_name),
+                    collection: None,
+                })
             }
         })
     }
@@ -588,7 +591,10 @@ impl NativeIntoFidl<Option<fsys::OfferSource>> for OfferSource {
             OfferSource::Realm => fsys::OfferSource::Realm(fsys::RealmRef {}),
             OfferSource::Myself => fsys::OfferSource::Myself(fsys::SelfRef {}),
             OfferSource::Child(child_name) => {
-                fsys::OfferSource::Child(fsys::ChildRef { name: Some(child_name) })
+                fsys::OfferSource::Child(fsys::ChildRef {
+                    name: Some(child_name),
+                    collection: None,
+                })
             }
         })
     }
@@ -614,7 +620,10 @@ impl NativeIntoFidl<Option<fsys::OfferDest>> for OfferDest {
     fn native_into_fidl(self) -> Option<fsys::OfferDest> {
         Some(match self {
             OfferDest::Child(child_name) => {
-                fsys::OfferDest::Child(fsys::ChildRef { name: Some(child_name) })
+                fsys::OfferDest::Child(fsys::ChildRef {
+                    name: Some(child_name),
+                    collection: None,
+                })
             }
             OfferDest::Collection(collection_name) => {
                 fsys::OfferDest::Collection(fsys::CollectionRef { name: Some(collection_name) })
@@ -834,6 +843,7 @@ mod tests {
                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                        source: Some(fsys::ExposeSource::Child(fsys::ChildRef {
                            name: Some("netstack".to_string()),
+                           collection: None,
                        })),
                        source_path: Some("/svc/netstack".to_string()),
                        target_path: Some("/svc/mynetstack".to_string()),
@@ -841,6 +851,7 @@ mod tests {
                    fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                        source: Some(fsys::ExposeSource::Child(fsys::ChildRef {
                            name: Some("netstack".to_string()),
+                           collection: None,
                        })),
                        source_path: Some("/data/dir".to_string()),
                        target_path: Some("/data".to_string()),
@@ -854,7 +865,10 @@ mod tests {
                            fsys::OfferTarget{
                                target_path: Some("/svc/mynetstack".to_string()),
                                dest: Some(fsys::OfferDest::Child(
-                                  fsys::ChildRef { name: Some("echo".to_string()) }
+                                  fsys::ChildRef {
+                                      name: Some("echo".to_string()),
+                                      collection: None,
+                                  }
                                )),
                            },
                        ]),
@@ -1098,6 +1112,7 @@ mod tests {
                 Some(fsys::ExposeSource::Myself(fsys::SelfRef {})),
                 Some(fsys::ExposeSource::Child(fsys::ChildRef {
                     name: Some("foo".to_string()),
+                    collection: None,
                 })),
             ],
             result = vec![
@@ -1111,6 +1126,7 @@ mod tests {
                 Some(fsys::OfferSource::Myself(fsys::SelfRef {})),
                 Some(fsys::OfferSource::Child(fsys::ChildRef {
                     name: Some("foo".to_string()),
+                    collection: None,
                 })),
             ],
             result = vec![

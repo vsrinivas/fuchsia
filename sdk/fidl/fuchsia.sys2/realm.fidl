@@ -6,64 +6,81 @@ library fuchsia.sys2;
 
 using fuchsia.io;
 
-// An interface used by a component instance to manage its own realm,
-// such as for binding to its children.
-//
-// Note: The component manager exposes this interface to components
-// that import the "fuchsia.sys2.Realm" service.
+/// A protocol used by a component instance to manage its own realm, such as for
+/// binding to its children.
+///
+/// The component manager provides this service to components that use
+/// `/svc/fuchsia.sys2.Realm`.
 [Discoverable]
 protocol Realm {
-    // Binds to a child component instance, causing it to start running if
-    // it is not already running.
-    //
-    // |child_name| must be the name of an already declared child in the realm.
-    // |binding| is bound to the child.
-    BindChild(string child_name, request<ComponentBinding> binding);
+    /// Binds to a child component instance, causing it to start running if it
+    /// is not already. When this function successfully returns, |child| is
+    /// running and |exposed_capabilities| is bound to a directory that contains
+    /// the capabilities which the child exposed to its realm via
+    /// |ComponentDecl.exposes| (specified via "expose" declarations in the
+    /// component’s manifest).
+    ///
+    /// |exposed_capabilities| is a valid channel as long as |child| is running.
+    /// |child| will remain running until it either stops on its own, or
+    /// |DestroyChild| causes the child instance to be destroyed.
+    ///
+    /// For example, if the child exposes a service `/svc/example.Echo` then
+    /// |exposed_capabilities| will contain that service at that path.
+    ///
+    /// NOTE: |BindChild| does not support pipelining with |CreateChild|. If
+    /// |BindChild| is called on an instance before |CreateChild| successfully
+    /// returns, it may return |INSTANCE_NOT_FOUND|.
+    ///
+    /// Errors:
+    /// - INVALID_ARGUMENTS: |child| is not a valid child reference.  -
+    /// - INSTANCE_NOT_FOUND: |child| does not exist.
+    /// - INSTANCE_CANNOT_START: Instance was not running and there was an error
+    ///   starting it.
+    BindChild(ChildRef child, request<fuchsia.io.Directory>
+              exposed_capabilities) -> () error Error;
 
-    // TODO(CP-154): Dynamically add/remove children in collections.
-    // Perhaps have a way to control their durability.
-    //2: AddChild(string collection_name, ChildDecl decl);
-    //3: RemoveChild(string collection_name, string child_name);
+    /// Creates a child component instance dynamically. When this function
+    /// returns successfully, the instance exists, but it may not be running.
+    ///
+    /// Errors:
+    /// - INVALID_ARGUMENTS: |collection| is not a valid reference or |child|
+    ///   is not a valid declaration.
+    /// - COLLECTION_NOT_FOUND: |collection| does not exist.
+    /// - INSTANCE_ALREADY_EXISTS: |decl.name| already exists in |collection|.
+    /// - NO_SPACE: Could not allocate storage for the new instance.
+    CreateChild(CollectionRef collection, ChildDecl decl) -> () error Error;
 
-    // TODO(CP-154): Add methods for resolving packages and components
-    // within the realm.
+    /// Destroys a dynamically-created component instance. When this function
+    /// returns, the client should assume the instance no longer exists.
+    /// However, some cleanup (such as stopping the component instance or
+    /// freeing its storage) may be performed in the background after the
+    /// function returns.
+    ///
+    /// Errors:
+    /// - INVALID_ARGUMENTS: |child| is not a valid reference or does not refer
+    ///   to a dynamic instance.
+    /// - INSTANCE_NOT_FOUND: |child| does not exist.
+    /// - COLLECTION_NOT_FOUND: |collection| does not exist.
+    DestroyChild(ChildRef child) -> () error Error;
+
+    /// Returns an iterator that lists all instances in a collection.
+    ///
+    /// NOTE: The results are not guaranteed to be consistent. Instances may be
+    /// created or destroyed while the iterator is live, but those changes
+    /// won't be observed by the iterator after this method returns.
+    ///
+    /// Errors:
+    /// - INVALID_ARGUMENTS: |collection| is not a valid reference.
+    /// - COLLECTION_NOT_FOUND: |collection| does not exist.
+    ListChildren(CollectionRef collection, request<ChildIterator> iter) -> ()
+        error Error;
 };
 
-// An interface that retains a connection to a component instance.
-//
-// Holding a binding is an indication to the component manager that the
-// bound component instance is providing a useful service on behalf of
-// the component instance that requested the binding.
-//
-// A component instance may retained by multiple bindings simultaneously.
-// Typically this means that the component instance will continue to run
-// until one of the following occurs:
-//
-// - All of the bindings retaining the component have been released.
-// - The component instance terminates (or crashes).
-// - The component instance is removed from its parent.
-// - The component instance is killed due to component management policies
-//   such as software updates or reallocation of system resources.
-//
-// EPITAPH
-//
-// This interface uses a FIDL epitaph to indicate that the bound component
-// instance has terminated and to describe its final disposition.
-//
-// The following epitaph status codes have particular significance:
-//
-// - |ZX_ERR_NOT_FOUND|: The component instance named in the call to
-//   |Realm.BindChild()| does not exist.
-// - |ZX_ERR_UNAVAILABLE|: The component instance could not be started.
-// - |ERR_COMPONENT_DIED|: The component instance was started but
-//   subsequently terminated unexpectedly.
-//
-// Other status codes (e.g. |ZX_ERR_PEER_CLOSED|) may indicate a failure
-// of the component manager itself.
-protocol ComponentBinding {
-    // Gets a directory containing objects exported by the child.
-    GetExports(request<fuchsia.io.Directory> exports);
-
-    // TODO(CP-154): Provide a mechanism to apply hints to a binding to
-    // modulate its retention and resource allocation characteristics.
+/// A protocol to iterate over the list of children in a realm.
+protocol ChildIterator {
+    /// Advance the iterator and return the next batch of children.
+    ///
+    /// Returns a vector of |ChildRef|. Returns an empty vector when there are
+    /// no more children.
+    Next() -> (vector<ChildRef> children);
 };

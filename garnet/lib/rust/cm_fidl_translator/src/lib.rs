@@ -222,7 +222,7 @@ impl CmInto<fsys::SelfRef> for cm::SelfRef {
 
 impl CmInto<fsys::ChildRef> for cm::ChildRef {
     fn cm_into(self) -> Result<fsys::ChildRef, Error> {
-        Ok(fsys::ChildRef { name: Some(self.name) })
+        Ok(fsys::ChildRef { name: Some(self.name), collection: None })
     }
 }
 
@@ -550,6 +550,7 @@ mod tests {
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         source: Some(fsys::ExposeSource::Child(fsys::ChildRef {
                             name: Some("logger".to_string()),
+                            collection: None,
                         })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
@@ -668,7 +669,10 @@ mod tests {
                             fsys::OfferTarget {
                                 target_path: Some("/data/realm_assets".to_string()),
                                 dest: Some(fsys::OfferDest::Child(
-                                   fsys::ChildRef { name: Some("logger".to_string()) }
+                                   fsys::ChildRef {
+                                       name: Some("logger".to_string()),
+                                       collection: None,
+                                   }
                                 )),
                             },
                             fsys::OfferTarget {
@@ -686,7 +690,10 @@ mod tests {
                             fsys::OfferTarget{
                                 target_path: Some("/data/config".to_string()),
                                 dest: Some(fsys::OfferDest::Child(
-                                   fsys::ChildRef { name: Some("netstack".to_string()) }
+                                   fsys::ChildRef {
+                                       name: Some("netstack".to_string()),
+                                       collection: None,
+                                   }
                                 )),
                             },
                         ]),
@@ -695,6 +702,7 @@ mod tests {
                         source_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         source: Some(fsys::OfferSource::Child(fsys::ChildRef {
                             name: Some("logger".to_string()),
+                            collection: None,
                         })),
                         targets: Some(vec![
                             fsys::OfferTarget{
@@ -929,13 +937,17 @@ mod tests {
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::OfferSource::Child(fsys::ChildRef {
                             name: Some("logger".to_string()),
+                            collection: None,
                         })),
                         source_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                                 dest: Some(fsys::OfferDest::Child(
-                                   fsys::ChildRef { name: Some("netstack".to_string()) }
+                                   fsys::ChildRef {
+                                       name: Some("netstack".to_string()),
+                                       collection: None,
+                                   }
                                 )),
                             },
                             fsys::OfferTarget{

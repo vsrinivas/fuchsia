@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+/// Standard error codes for component framework protocols.
+enum Error {
+    /// At least one argument had an invalid format.
+    INVALID_ARGUMENTS = 1;
+    /// The component instance was not found.
+    INSTANCE_NOT_FOUND = 2;
+    /// The component instance already exists.
+    INSTANCE_ALREADY_EXISTS = 3;
+    /// The component instance could not be started.
+    INSTANCE_CANNOT_START = 4;
+    /// The component collection was not found.
+    COLLECTION_NOT_FOUND = 5;
+    /// There was insufficient space to perform the operation.
+    NO_SPACE = 6;
+};

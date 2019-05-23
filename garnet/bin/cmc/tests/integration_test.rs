@@ -33,7 +33,10 @@ fn main() {
             target_path: Some("/volumes/blobfs".to_string()),
         })];
         let offers = vec![OfferDecl::Service(OfferServiceDecl {
-            source: Some(OfferSource::Child(ChildRef { name: Some("logger".to_string()) })),
+            source: Some(OfferSource::Child(ChildRef {
+                name: Some("logger".to_string()),
+                collection: None,
+            })),
             source_path: Some("/svc/fuchsia.logger.Log".to_string()),
             targets: Some(vec![OfferTarget {
                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
