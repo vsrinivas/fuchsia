@@ -285,7 +285,7 @@ mod test {
             .expect("Expected Replace");
         assert_eq!(new_text, "meow!");
 
-        await!(stream.try_next())
+        let _responder = await!(stream.try_next())
             .expect("Waiting for message failed")
             .expect("Should have sent message")
             .into_commit_edit()

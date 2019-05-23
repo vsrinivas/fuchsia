@@ -287,8 +287,9 @@ impl {{ $interface.Name }}Event {
 	{{- if not $method.HasRequest }}
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_{{ $method.Name }}(self) -> Option<(
-		{{- range $param := $method.Response }}
-		{{ $param.Type }},
+		{{- range $index, $param := $method.Response }}
+		{{- if (eq $index 0) -}} {{ $param.Type }}
+		{{- else -}}, {{ $param.Type }} {{- end -}}
 		{{ end }}
 	)> {
 		if let {{ $interface.Name }}Event::{{ $method.CamelName }} {
@@ -297,9 +298,10 @@ impl {{ $interface.Name }}Event {
 			{{ end }}
 		} = self {
 			Some((
-				{{- range $param := $method.Response }}
-				{{ $param.Name }},
-				{{ end }}
+				{{- range $index, $param := $method.Response -}}
+				{{- if (eq $index 0) -}} {{ $param.Name -}}
+				{{- else -}}, {{ $param.Name }} {{- end -}}
+				{{- end -}}
 			))
 		} else {
 			None
@@ -493,9 +495,9 @@ impl {{ $interface.Name }}Request {
 		{{ $param.Type }},
 		{{ end }}
 		{{- if $method.HasResponse -}}
-		{{ $interface.Name }}{{ $method.CamelName }}Responder,
+		{{ $interface.Name }}{{ $method.CamelName }}Responder
 		{{- else -}}
-		{{ $interface.Name }}ControlHandle,
+		{{ $interface.Name }}ControlHandle
 		{{- end }}
 	)> {
 		if let {{ $interface.Name }}Request::{{ $method.CamelName }} {
@@ -509,14 +511,14 @@ impl {{ $interface.Name }}Request {
 			{{- end }}
 		} = self {
 			Some((
-				{{- range $param := $method.Request }}
-				{{ $param.Name }},
-				{{ end }}
+				{{- range $param := $method.Request -}}
+				{{- $param.Name -}},
+				{{- end -}}
 				{{- if $method.HasResponse -}}
-				responder,
+				responder
 				{{- else -}}
-				control_handle,
-				{{- end }}
+				control_handle
+				{{- end -}}
 			))
 		} else {
 			None

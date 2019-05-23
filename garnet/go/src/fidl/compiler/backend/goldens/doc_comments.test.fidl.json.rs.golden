@@ -238,8 +238,7 @@ impl InterfaceEvent {
 	)> {
 		if let InterfaceEvent::OnEvent {
 		} = self {
-			Some((
-			))
+			Some(())
 		} else {
 			None
 		}
@@ -373,12 +372,11 @@ pub enum InterfaceRequest {
 
 impl InterfaceRequest {
 	#[allow(irrefutable_let_patterns)]
-	pub fn into_method(self) -> Option<(InterfaceControlHandle,
+	pub fn into_method(self) -> Option<(InterfaceControlHandle
 	)> {
 		if let InterfaceRequest::Method {control_handle,
 		} = self {
-			Some((control_handle,
-			))
+			Some((control_handle))
 		} else {
 			None
 		}

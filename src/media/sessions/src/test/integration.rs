@@ -164,54 +164,48 @@ impl TestService {
     /// expectation.
     async fn expect_active_session(&mut self, expected: Option<zx::Koid>) {
         assert!(!self.registry_events.is_terminated());
-        let event = await!(self.registry_events.try_next())
+        let actual = await!(self.registry_events.try_next())
             .expect("taking registry event")
-            .expect("unwrapping registry event");
-        match event {
-            RegistryEvent::OnActiveSessionChanged { active_session: actual } => {
-                let actual = actual.session_id.map(|session_id| {
-                    session_id.as_handle_ref().get_koid().expect("taking handle KOID")
-                });
-                assert_eq!(actual, expected);
-            }
-            other => panic!("Expected active session event; got {:?}", other),
-        }
+            .expect("unwrapping registry event")
+            .into_on_active_session_changed()
+            .expect("Expected active session event");
+        let actual = actual.session_id.map(|session_id| {
+            session_id.as_handle_ref().get_koid().expect("taking handle KOID")
+        });
+        assert_eq!(actual, expected);
     }
 
     async fn expect_sessions_change(&mut self, expected_change: SessionsChange) {
         assert!(!self.registry_events.is_terminated());
-        let event = await!(self.registry_events.try_next())
+        let sessions_change = await!(self.registry_events.try_next())
             .expect("taking registry event")
-            .expect("unwrapping registry event");
-        match event {
-            RegistryEvent::OnSessionsChanged { sessions_change } => {
-                match (&sessions_change, &expected_change) {
-                    (
-                        SessionsChange { session: ref actual, delta: SessionDelta::Added },
-                        SessionsChange { session: ref expected, delta: SessionDelta::Added },
-                    ) => {
-                        assert!(
-                            are_session_entries_equal(actual, expected),
-                            "Actual: {:?}\nExpected: {:?}",
-                            sessions_change,
-                            expected_change
-                        );
-                    }
-                    (
-                        SessionsChange { session: ref actual, delta: SessionDelta::Removed },
-                        SessionsChange { session: ref expected, delta: SessionDelta::Removed },
-                    ) => {
-                        assert!(
-                            are_session_entries_equal(actual, expected),
-                            "Actual: {:?}\nExpected: {:?}",
-                            sessions_change,
-                            expected_change
-                        );
-                    }
-                    _ => panic!("Expected {:?}; got {:?}", expected_change, sessions_change),
-                }
+            .expect("unwrapping registry event")
+            .into_on_sessions_changed()
+            .expect("Expected session list");
+        match (&sessions_change, &expected_change) {
+            (
+                SessionsChange { session: ref actual, delta: SessionDelta::Added },
+                SessionsChange { session: ref expected, delta: SessionDelta::Added },
+            ) => {
+                assert!(
+                    are_session_entries_equal(actual, expected),
+                    "Actual: {:?}\nExpected: {:?}",
+                    sessions_change,
+                    expected_change
+                );
             }
-            other => panic!("Expected session list; got {:?}", other),
+            (
+                SessionsChange { session: ref actual, delta: SessionDelta::Removed },
+                SessionsChange { session: ref expected, delta: SessionDelta::Removed },
+            ) => {
+                assert!(
+                    are_session_entries_equal(actual, expected),
+                    "Actual: {:?}\nExpected: {:?}",
+                    sessions_change,
+                    expected_change
+                );
+            }
+            _ => panic!("Expected {:?}; got {:?}", expected_change, sessions_change),
         }
     }
 
@@ -280,15 +274,12 @@ impl TestService {
             let event = await!(new_client_events.try_next())
                 .expect("taking registry event")
                 .expect("unwrapping registry event");
-            match event {
-                RegistryEvent::OnSessionsChanged { sessions_change } => {
-                    if let SessionsChange { session, delta: SessionDelta::Added } = sessions_change
-                    {
-                        sessions.push(session);
-                    }
-                }
-                _ => {}
-            };
+
+            if let Some(SessionsChange { session, delta: SessionDelta::Added })
+                = event.into_on_sessions_changed()
+            {
+                sessions.push(session);
+            }
             new_client.notify_sessions_change_handled().expect("acking events");
         }
 
@@ -436,15 +427,13 @@ async fn service_routes_controls() {
     let a_event = await!(request_stream_a.try_next()).expect("taking next request from session a");
     let b_event = await!(request_stream_b.try_next()).expect("taking next request from session b");
 
-    assert!(match a_event {
-        Some(SessionRequest::Play { .. }) => true,
-        _ => false,
-    },);
+    a_event.expect("missing play event")
+        .into_play()
+        .expect("wasn't a play event");
 
-    assert!(match b_event {
-        Some(SessionRequest::Pause { .. }) => true,
-        _ => false,
-    },);
+    b_event.expect("missing pause event")
+        .into_pause()
+        .expect("wasn't a pause event");
 
     // Ensure the behaviour continues.
 
@@ -452,10 +441,9 @@ async fn service_routes_controls() {
 
     let b_event = await!(request_stream_b.try_next()).expect("taking next request from session b");
 
-    assert!(match b_event {
-        Some(SessionRequest::Play { .. }) => true,
-        _ => false,
-    },);
+    b_event.expect("missing play event on session b")
+        .into_play()
+        .expect("wasn't a play event on session b");
 }
 
 #[fasync::run_singlethreaded]

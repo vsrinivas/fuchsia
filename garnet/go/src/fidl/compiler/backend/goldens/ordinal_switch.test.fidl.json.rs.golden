@@ -198,8 +198,7 @@ impl SwitchingOrdinalsEvent {
 	)> {
 		if let SwitchingOrdinalsEvent::EventOrdinalFifteen {
 		} = self {
-			Some((
-			))
+			Some(())
 		} else {
 			None
 		}
@@ -210,8 +209,7 @@ impl SwitchingOrdinalsEvent {
 	)> {
 		if let SwitchingOrdinalsEvent::EventOnlyGeneratedOrdinal {
 		} = self {
-			Some((
-			))
+			Some(())
 		} else {
 			None
 		}
@@ -359,24 +357,22 @@ pub enum SwitchingOrdinalsRequest {
 
 impl SwitchingOrdinalsRequest {
 	#[allow(irrefutable_let_patterns)]
-	pub fn into_ordinal_five(self) -> Option<(SwitchingOrdinalsControlHandle,
+	pub fn into_ordinal_five(self) -> Option<(SwitchingOrdinalsControlHandle
 	)> {
 		if let SwitchingOrdinalsRequest::OrdinalFive {control_handle,
 		} = self {
-			Some((control_handle,
-			))
+			Some((control_handle))
 		} else {
 			None
 		}
 	}
 	
 	#[allow(irrefutable_let_patterns)]
-	pub fn into_only_generated_ordinal(self) -> Option<(SwitchingOrdinalsControlHandle,
+	pub fn into_only_generated_ordinal(self) -> Option<(SwitchingOrdinalsControlHandle
 	)> {
 		if let SwitchingOrdinalsRequest::OnlyGeneratedOrdinal {control_handle,
 		} = self {
-			Some((control_handle,
-			))
+			Some((control_handle))
 		} else {
 			None
 		}

@@ -613,24 +613,22 @@ pub enum ParentRequest {
 
 impl ParentRequest {
 	#[allow(irrefutable_let_patterns)]
-	pub fn into_get_child(self) -> Option<(ParentGetChildResponder,
+	pub fn into_get_child(self) -> Option<(ParentGetChildResponder
 	)> {
 		if let ParentRequest::GetChild {responder,
 		} = self {
-			Some((responder,
-			))
+			Some((responder))
 		} else {
 			None
 		}
 	}
 	
 	#[allow(irrefutable_let_patterns)]
-	pub fn into_get_child_request(self) -> Option<(ParentGetChildRequestResponder,
+	pub fn into_get_child_request(self) -> Option<(ParentGetChildRequestResponder
 	)> {
 		if let ParentRequest::GetChildRequest {responder,
 		} = self {
-			Some((responder,
-			))
+			Some((responder))
 		} else {
 			None
 		}
@@ -639,16 +637,13 @@ impl ParentRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_take_child(self) -> Option<(
 		fidl::endpoints::ClientEnd<ChildMarker>,
-		ParentControlHandle,
+		ParentControlHandle
 	)> {
 		if let ParentRequest::TakeChild {
 			c,
 			control_handle,
 		} = self {
-			Some((
-				c,
-				control_handle,
-			))
+			Some((c,control_handle))
 		} else {
 			None
 		}
@@ -657,16 +652,13 @@ impl ParentRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_take_child_request(self) -> Option<(
 		fidl::endpoints::ServerEnd<ChildMarker>,
-		ParentControlHandle,
+		ParentControlHandle
 	)> {
 		if let ParentRequest::TakeChildRequest {
 			r,
 			control_handle,
 		} = self {
-			Some((
-				r,
-				control_handle,
-			))
+			Some((r,control_handle))
 		} else {
 			None
 		}
