@@ -67,7 +67,6 @@ void File::AllocateData() {
                 inode_.size = allocation_state_.GetNodeSize();
                 ValidateVmoTail(inode_.size);
                 InodeSync(transaction->GetWork(), kMxFsSyncMtime);
-                __UNUSED zx_status_t status = fs_->CommitTransaction(std::move(transaction));
             }
 
             // Since we may have pending reservations from an expected update, reset the allocation
@@ -78,6 +77,7 @@ void File::AllocateData() {
             ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
 
             // Stop processing if we have not found any data blocks to update.
+            __UNUSED zx_status_t status = fs_->CommitTransaction(std::move(transaction));
             break;
         }
 
