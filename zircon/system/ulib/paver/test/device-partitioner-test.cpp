@@ -216,7 +216,8 @@ TEST(FixedDevicePartitionerTests, FindPartitionTest) {
     AsyncLoop loop;
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     auto partitioner = paver::DevicePartitioner::Create(std::move(devfs),
-                                                        std::move(loop.fake_sysinfo().svc_chan()));
+                                                        std::move(loop.fake_sysinfo().svc_chan()),
+                                                        paver::Arch::kArm64);
     ASSERT_NE(partitioner.get(), nullptr);
 
     fbl::unique_fd fd;
@@ -241,7 +242,8 @@ TEST(FixedDevicePartitionerTests, GetBlockSizeTest) {
     AsyncLoop loop;
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     auto partitioner = paver::DevicePartitioner::Create(std::move(devfs),
-                                                        std::move(loop.fake_sysinfo().svc_chan()));
+                                                        std::move(loop.fake_sysinfo().svc_chan()),
+                                                        paver::Arch::kArm64);
     ASSERT_NE(partitioner.get(), nullptr);
 
     fbl::unique_fd fd;
@@ -286,7 +288,8 @@ TEST(SkipBlockDevicePartitionerTests, ChooseSkipBlockPartitioner) {
 
     AsyncLoop loop;
     auto partitioner = paver::DevicePartitioner::Create(device->devfs_root(),
-                                                        std::move(loop.fake_sysinfo().svc_chan()));
+                                                        std::move(loop.fake_sysinfo().svc_chan()),
+                                                        paver::Arch::kArm64);
     ASSERT_NE(partitioner.get(), nullptr);
     ASSERT_TRUE(partitioner->UseSkipBlockInterface());
 }

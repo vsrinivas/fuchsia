@@ -1066,7 +1066,15 @@ bool Paver::InitializePartitioner() {
             }
             sysinfo_ = std::move(client);
         }
-        partitioner_ = DevicePartitioner::Create(devfs_root_.duplicate(), std::move(sysinfo_));
+#if defined(__x86_64__)
+        Arch arch = Arch::kX64;
+#elif defined(__aarch64__)
+        Arch arch = Arch::kArm64;
+#else
+#error "Unknown arch"
+#endif
+        partitioner_ = DevicePartitioner::Create(devfs_root_.duplicate(), std::move(sysinfo_),
+                                                 arch);
         if (!partitioner_) {
             ERROR("Unable to initialize a partitioner.\n");
             return false;

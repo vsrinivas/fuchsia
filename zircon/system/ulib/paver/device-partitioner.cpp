@@ -267,16 +267,16 @@ const char* PartitionName(Partition type) {
 }
 
 fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root,
-                                                             zx::channel sysinfo) {
+                                                             zx::channel sysinfo, Arch arch) {
     // TODO(surajmalhotra): Only use injected devfs_root for skip-block until
     // ramdisks spawn in isolated devmgr.
     fbl::unique_fd block_devfs_root((open("/dev", O_RDONLY)));
     fbl::unique_ptr<DevicePartitioner> device_partitioner;
     if ((SkipBlockDevicePartitioner::Initialize(std::move(devfs_root),
                                                 &device_partitioner) == ZX_OK) ||
-        (CrosDevicePartitioner::Initialize(block_devfs_root.duplicate(), sysinfo,
+        (CrosDevicePartitioner::Initialize(block_devfs_root.duplicate(), sysinfo, arch,
                                            &device_partitioner) == ZX_OK) ||
-        (EfiDevicePartitioner::Initialize(block_devfs_root.duplicate(), sysinfo,
+        (EfiDevicePartitioner::Initialize(block_devfs_root.duplicate(), sysinfo, arch,
                                           &device_partitioner) == ZX_OK) ||
         (FixedDevicePartitioner::Initialize(std::move(block_devfs_root),
                                             &device_partitioner) == ZX_OK)) {
@@ -347,25 +347,14 @@ bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, f
     return false;
 }
 
-bool GptDevicePartitioner::CheckValidBoard(const zx::channel& sysinfo) {
-    char real_board_name[ZX_MAX_NAME_LEN] = {};
-    zx_status_t status;
-    size_t actual_size;
-    zx_status_t io_status = fuchsia_sysinfo_DeviceGetBoardName(
-        sysinfo.get(), &status, real_board_name, sizeof(real_board_name), &actual_size);
-    if (io_status != ZX_OK || status != ZX_OK) {
-        return false;
-    }
-
-    return strcmp(real_board_name, "pc") == 0;
-}
-
 zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
                                                 const zx::channel& sysinfo,
+                                                Arch arch,
                                                 fbl::unique_ptr<GptDevicePartitioner>* gpt_out) {
-    if (!CheckValidBoard(sysinfo)) {
+    if (arch != Arch::kX64) {
         return ZX_ERR_NOT_FOUND;
     }
+
     fbl::String gpt_path;
     if (!FindTargetGptPath(devfs_root, &gpt_path)) {
         ERROR("Failed to find GPT\n");
@@ -662,9 +651,11 @@ zx_status_t GptDevicePartitioner::WipeFvm() const {
  *====================================================*/
 
 zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
+                                             Arch arch,
                                              fbl::unique_ptr<DevicePartitioner>* partitioner) {
     fbl::unique_ptr<GptDevicePartitioner> gpt;
-    zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), sysinfo, &gpt);
+    zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), sysinfo, arch,
+                                                             &gpt);
     if (status != ZX_OK) {
         return status;
     }
@@ -785,9 +776,10 @@ zx_status_t EfiDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
  *====================================================*/
 
 zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
+                                              Arch arch,
                                               fbl::unique_ptr<DevicePartitioner>* partitioner) {
     fbl::unique_ptr<GptDevicePartitioner> gpt_partitioner;
-    zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), sysinfo,
+    zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), sysinfo, arch,
                                                              &gpt_partitioner);
     if (status != ZX_OK) {
         return status;

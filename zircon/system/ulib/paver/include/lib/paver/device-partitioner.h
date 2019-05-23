@@ -42,14 +42,19 @@ const char* PartitionName(Partition type);
 // API should return true if device passed in should be filtered out.
 extern bool (*TestBlockFilter)(const fbl::unique_fd&);
 
+enum class Arch {
+    kX64,
+    kArm64,
+};
+
 // Abstract device partitioner definition.
 // This class defines common APIs for interacting with a device partitioner.
 class DevicePartitioner {
 public:
     // Factory method which automatically returns the correct DevicePartitioner
     // implementation. Returns nullptr on failure.
-    static fbl::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root,
-                                                     zx::channel sysinfo);
+    static fbl::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, zx::channel sysinfo,
+                                                     Arch arch);
 
     virtual ~DevicePartitioner() = default;
 
@@ -84,7 +89,7 @@ public:
 
     // Find and initialize a GPT based device.
     static zx_status_t InitializeGpt(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
-                                     fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
+                                     Arch arch, fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
 
     // Returns block info for a specified block device.
     zx_status_t GetBlockInfo(fuchsia_hardware_block_BlockInfo* block_info) const {
@@ -118,9 +123,6 @@ public:
     zx_status_t WipeFvm() const;
 
 private:
-    // Validates that the board type can have a valid GPT.
-    static bool CheckValidBoard(const zx::channel& sysinfo);
-
     // Find and return the topological path of the GPT which we will pave.
     static bool FindTargetGptPath(const fbl::unique_fd& devfs_root, fbl::String* out);
 
@@ -143,7 +145,7 @@ private:
 class EfiDevicePartitioner : public DevicePartitioner {
 public:
     static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
-                                  fbl::unique_ptr<DevicePartitioner>* partitioner);
+                                  Arch arch, fbl::unique_ptr<DevicePartitioner>* partitioner);
 
     bool UseSkipBlockInterface() const override { return false; }
 
@@ -168,7 +170,7 @@ private:
 class CrosDevicePartitioner : public DevicePartitioner {
 public:
     static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
-                                  fbl::unique_ptr<DevicePartitioner>* partitioner);
+                                  Arch arch, fbl::unique_ptr<DevicePartitioner>* partitioner);
 
     bool UseSkipBlockInterface() const override { return false; }
 
