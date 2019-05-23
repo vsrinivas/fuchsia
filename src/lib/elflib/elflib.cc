@@ -656,19 +656,65 @@ bool ElfLib::LoadDynamicSymbols() {
   return false;
 }
 
-std::map<std::string, uint64_t> ElfLib::GetPLTOffsets() {
-  // We assume Fuchsia's defaults for each architecture. We could perhaps check
-  // ELF_OSABI to firm up those assumptions. Fuchsia sets it to NONE.
-  switch (header_.e_machine) {
-    case EM_X86_64:
-      return GetPLTOffsetsX64();
-    default:
-      Warn("Architecture doesn't support GetPLTOffsets.");
-      return {};
+// A PltEntryBuffer is a PLT region - a sequence of PLT entries - with a mark
+// somewhere in it.  The mark indicates the position of the next element to be
+// read or written.
+class ElfLib::PltEntryBuffer {
+ public:
+  PltEntryBuffer(ElfLib* lib)
+      : ptr_(nullptr), end_(nullptr), start_(nullptr), size_(0), lib_(lib) {}
+  virtual void SetRegion(const uint8_t* ptr, size_t size) {
+    size_ = size;
+    end_ = ptr + size;
+    start_ = ptr + (IgnoredEntryCount() * EntrySize());
+    ptr_ = start_;
   }
-}
 
-std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
+  // The number of bogus PLT entries at the beginning of the buffer.
+  virtual int IgnoredEntryCount() const = 0;
+
+  // The number of the element at this position.
+  virtual uint32_t MarkIndex() const = 0;
+
+  // Ensures that the PLT entry at the current mark is valid.
+  virtual bool VerifyAtMark() const = 0;
+
+  // Returns a value indicating whether the mark is currently in the region.
+  bool MarkInBound() const {
+    return ptr_ >= start_ && ptr_ + EntrySize() <= end_;
+  }
+
+  // Move the mark to the next position.  Also increments the index by one.
+  void IncrementMark() { ptr_ += EntrySize(); }
+
+  // The size of a PLT entry in this buffer.
+  virtual size_t EntrySize() const = 0;
+
+ protected:
+  const uint8_t* ptr_;
+  const uint8_t* end_;
+  const uint8_t* start_;
+  size_t size_;
+  ElfLib* lib_;
+};
+
+class PltEntryBufferX86 : public ElfLib::PltEntryBuffer {
+ public:
+  explicit PltEntryBufferX86(ElfLib* lib) : PltEntryBuffer(lib) {}
+  virtual uint32_t MarkIndex() const override { return GetPltPtr()->index; }
+  virtual bool VerifyAtMark() const override {
+    if (GetPltPtr()->push_opcode != 0x68) {
+      lib_->Warn("Push OpCode not found where expected in PLT.");
+      return false;
+    }
+    return true;
+  }
+
+  virtual size_t EntrySize() const override { return sizeof(PltEntryX86); }
+
+  virtual int IgnoredEntryCount() const override { return 1; }
+
+ private:
   // A PLT entry consists of 3 x86 instructions: a jump using a 6-byte
   // encoding, a push of one 32 bit value on to the stack, and another jump,
   // this one using a 5-byte encoding.
@@ -676,15 +722,123 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
   // We don't care about either of the jumps, but we want the value that is
   // pushed as it is the index into the relocation table which will tell us
   // what symbol this entry is for.
-  struct PltEntry {
+  struct PltEntryX86 {
     char first_jump[6];
     char push_opcode;
     uint32_t index;
     char second_jump[5];
   } __attribute__((packed, aligned(1)));
 
-  static_assert(sizeof(PltEntry) == 16);
+  static_assert(sizeof(PltEntryX86) == 16);
 
+  const PltEntryX86* GetPltPtr() const {
+    return reinterpret_cast<const PltEntryX86*>(ptr_);
+  }
+};
+
+class PltEntryBufferArm : public ElfLib::PltEntryBuffer {
+ public:
+  explicit PltEntryBufferArm(ElfLib* lib) : PltEntryBuffer(lib) {}
+  virtual uint32_t MarkIndex() const override {
+    return (RawOffset() - rela_base_) / sizeof(uint64_t);
+  }
+  virtual bool VerifyAtMark() const override {
+    // Prefix for adrp is 1??10000.
+    if ((GetPltPtr()->adrp & 0x9F000000) != 0x90000000) {
+      lib_->Warn("adrp OpCode not found where expected in PLT.");
+      return false;
+    }
+    // Prefix for ldr immediate is 1?11100101
+    if ((GetPltPtr()->ldr & 0xBFC00000) != 0xB9400000) {
+      lib_->Warn("ldr OpCode not found where expected in PLT.");
+      return false;
+    }
+    // Prefix for 64-bit add immediate is 10010001
+    if ((GetPltPtr()->add & 0xFF800000) != 0x91000000) {
+      lib_->Warn("add OpCode not found where expected in PLT.");
+      return false;
+    }
+    // Prefix for br is 1101_0110_0001_1111_0000_00??_???0_0000
+    if ((GetPltPtr()->br & 0xFFFFFC1F) != 0xD61F0000) {
+      lib_->Warn("br OpCode not found where expected in PLT.");
+      return false;
+    }
+    return true;
+  }
+
+  virtual size_t EntrySize() const override { return sizeof(PltEntryArm); }
+
+  virtual int IgnoredEntryCount() const override { return 2; }
+
+  virtual void SetRegion(const uint8_t* start, size_t size) override {
+    // The offset of the first entry in the rela table.  There is really only
+    // one PLT entry in the first 8 quadwords - the default / lookup entry. It
+    // is not associated with a symbol, starts at offset 1, and points to the
+    // base of the rela table. So, to find the base of the rela table, we set
+    // ptr_ to be 1 offset from the start, read the base of the rela table out
+    // of that PLT entry, and then immediately call SetRegion to set ptr_ to the
+    // first PLT entry that is associated with a symbol.
+    ptr_ = start + sizeof(uint32_t);
+    rela_base_ = RawOffset() + sizeof(uint32_t);
+
+    PltEntryBuffer::SetRegion(start, size);
+  }
+
+ private:
+  // A PLT entry consists of 4 ARM instructions: an adrp that gives the page
+  // containing the real location of the link target, a ldr giving the offset on
+  // the page, an add to add the two, and a br that takes you to the loaded
+  // target.
+  //
+  // We need the target at the offset of the LDR as it is the index into the
+  // relocation table which will tell us what symbol this entry is for.
+  struct PltEntryArm {
+    uint32_t adrp;
+    uint32_t ldr;
+    uint32_t add;
+    uint32_t br;
+  } __attribute__((packed, aligned(1)));
+
+  static_assert(sizeof(PltEntryArm) == 16);
+
+  uint64_t RawOffset() const {
+    // LDR with unsigned offset is encoded:
+    // [size2 1 1 1 0 0 1 0 1 imm12 reg reg ]
+    // The destination of the LDR is imm12 << size2
+    uint32_t size = (0xC0000000 & GetPltPtr()->ldr) >> 30;
+    uint32_t immediate_ldr = (0x3FFC00 & GetPltPtr()->ldr) >> 10;
+    uint32_t offset = immediate_ldr << size;
+
+    return offset;
+  }
+
+  const PltEntryArm* GetPltPtr() const {
+    return reinterpret_cast<const PltEntryArm*>(ptr_);
+  }
+
+  uint64_t rela_base_;
+};
+
+std::map<std::string, uint64_t> ElfLib::GetPLTOffsets() {
+  // We assume Fuchsia's defaults for each architecture. We could perhaps check
+  // ELF_OSABI to firm up those assumptions. Fuchsia sets it to NONE.
+  switch (header_.e_machine) {
+    case EM_X86_64: {
+      PltEntryBufferX86 pos(this);
+      return GetPLTOffsetsCommon(pos);
+    }
+    case EM_AARCH64: {
+      PltEntryBufferArm pos(this);
+      return GetPLTOffsetsCommon(pos);
+    }
+    default:
+      Warn("Architecture doesn't support GetPLTOffsets.");
+      return {};
+  }
+}
+
+std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsCommon(
+    PltEntryBuffer& buffer) {
   // We'd prefer if this works but we can get by without it, so we're not
   // checking the return value.
   LoadDynamicSymbols();
@@ -717,8 +871,7 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
 
   auto plt_load_addr = plt_shdr->sh_addr;
 
-  auto plt = reinterpret_cast<const PltEntry*>(plt_memory.ptr);
-  auto plt_end = plt + plt_memory.size / sizeof(PltEntry);
+  buffer.SetRegion(plt_memory.ptr, plt_memory.size);
 
   auto reloc_memory = GetSectionData(".rela.plt");
 
@@ -744,23 +897,22 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
     return {};
   }
 
-  auto pos = plt + 1;  // First PLT entry is special. Ignore it.
-  uint64_t idx = 1;
+  uint64_t idx = buffer.IgnoredEntryCount();
 
   std::map<std::string, uint64_t> ret;
 
-  for (; pos != plt_end; pos++, idx++) {
-    if (pos->push_opcode != 0x68) {
-      Warn("Push OpCode not found where expected in PLT.");
+  for (; buffer.MarkInBound(); buffer.IncrementMark(), idx++) {
+    if (!buffer.VerifyAtMark()) {
       continue;
     }
 
-    if (pos->index >= reloc_count) {
+    uint32_t index = buffer.MarkIndex();
+    if (index >= reloc_count) {
       Warn("PLT referenced reloc outside reloc table.");
       continue;
     }
 
-    auto sym_idx = reloc[pos->index].getSymbol();
+    auto sym_idx = reloc[index].getSymbol();
 
     if (sym_idx >= sym_count) {
       Warn("PLT reloc referenced symbol outside symbol table.");
@@ -775,7 +927,7 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
       continue;
     }
 
-    ret[name] = idx * sizeof(PltEntry) + plt_load_addr;
+    ret[name] = idx * buffer.EntrySize() + plt_load_addr;
   }
 
   return ret;

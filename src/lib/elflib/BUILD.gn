@@ -20,11 +20,21 @@ static_library("elflib") {
   ]
 }
 
-# An example stripped binary. Originally copied from out/x64/cowsay
+# An example stripped binary. Originally copied from out/x64/cowsay.
+# ARM64 binary generated with:
+# fx set core.arm64 --with //examples/cowsay
+# fx build
+# cp out/default/exe.unstripped/cowsay \
+#   src/lib/elflib/test_data/unstripped_example.arm64.elf
+# ./buildtools/linux-x64/clang/bin/llvm-objcopy \
+#     --strip-sections out/default/exe.unstripped/cowsay \
+#     src/lib/elflib/test_data/unstripped_example_stripped.arm64.elf
 copy("copy_example_elf") {
   sources = [
     "test_data/stripped_example.elf",
+    "test_data/unstripped_example.arm64.elf",
     "test_data/unstripped_example.elf",
+    "test_data/unstripped_example_stripped.arm64.elf",
     "test_data/unstripped_example_stripped.elf",
   ]
 
@@ -37,6 +47,8 @@ copy("copy_example_elf") {
       "$root_out_dir/test_data/elflib/stripped_example.elf",
       "$root_out_dir/test_data/elflib/unstripped_example.elf",
       "$root_out_dir/test_data/elflib/unstripped_example_stripped.elf",
+      "$root_out_dir/test_data/elflib/unstripped_example.arm64.elf",
+      "$root_out_dir/test_data/elflib/unstripped_example_stripped.arm64.elf",
     ]
   }
 }
