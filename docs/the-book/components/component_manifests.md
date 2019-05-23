@@ -83,7 +83,8 @@ language of capability routing consists of the following three keywords:
   been `offered` to it by a parent, or has been `exposed` to it by a child.
 - `expose`: When a component `exposes` a capability to its containing realm
   (i.e., its parent), the parent may `offer` the capability to one of its other
-  children. A component may `expose` any capability that it provides, or that a
+  children. A component may `expose` any capability that it provides, or that
+  one of its children exposes.
 
 When you use these keywords together, they express how a capability is routed
 from a component instance's [outgoing
