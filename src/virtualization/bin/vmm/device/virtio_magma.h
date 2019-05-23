@@ -32,13 +32,11 @@ class VirtioMagma {
   void OnQueueReady();
 
  private:
-  void GetDriver(const virtio_magma_get_driver_t* request,
-                 virtio_magma_get_driver_resp_t* response);
-  void Query(const virtio_magma_query_t* request,
+  void Query(const virtio_magma_query_ctrl_t* request,
              virtio_magma_query_resp_t* response);
-  void CreateConnection(const virtio_magma_create_connection_t* request,
+  void CreateConnection(const virtio_magma_create_connection_ctrl_t* request,
                         virtio_magma_create_connection_resp_t* response);
-  void ReleaseConnection(const virtio_magma_release_connection_t* request,
+  void ReleaseConnection(const virtio_magma_release_connection_ctrl_t* request,
                          virtio_magma_release_connection_resp_t* response);
 
   std::string device_path_;
@@ -46,7 +44,7 @@ class VirtioMagma {
   fbl::unique_fd device_fd_;
   fbl::unique_fd driver_fd_;
   zx::vmo driver_vmo_;
-  zx::vmar* vmar_;
+  __UNUSED zx::vmar* vmar_;
   __UNUSED VirtioQueue* in_queue_;
   VirtioQueue* out_queue_;
   VirtioChain out_chain_;

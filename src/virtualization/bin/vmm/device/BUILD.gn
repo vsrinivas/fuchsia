@@ -263,6 +263,7 @@ executable("virtio_wl_bin") {
   ]
   deps = [
     ":virtio",
+    "//garnet/lib/magma/include/virtio",
     "//garnet/lib/magma/src/libmagma",
     "//garnet/lib/magma/src/magma_util",
   ]
