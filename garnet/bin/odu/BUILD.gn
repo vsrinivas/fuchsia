@@ -49,8 +49,7 @@ package("odu") {
   ]
 }
 
-package("odu_tests") {
-  testonly = true
+test_package("odu_tests") {
   deps = [
     ":bin",
   ]

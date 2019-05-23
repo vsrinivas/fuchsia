@@ -44,9 +44,7 @@ package("discovermgr") {
   ]
 }
 
-package("discovermgr_tests") {
-  testonly = true
-
+test_package("discovermgr_tests") {
   deps = [
     ":bin",
   ]

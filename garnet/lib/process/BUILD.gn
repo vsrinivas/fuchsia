@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("process") {
@@ -37,9 +38,7 @@ executable("unittests") {
   ]
 }
 
-package("process_unittests") {
-  testonly = true
-
+test_package("process_unittests") {
   deps = [
     ":unittests",
   ]

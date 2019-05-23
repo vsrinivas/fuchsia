@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/json_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

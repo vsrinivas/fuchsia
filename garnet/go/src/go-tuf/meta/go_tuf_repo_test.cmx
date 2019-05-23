@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/go_tuf_repo_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/go_tuf_encrypted_test"
+    }
+}

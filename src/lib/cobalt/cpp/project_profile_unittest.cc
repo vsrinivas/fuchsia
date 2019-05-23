@@ -1,3 +1,6 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include "src/lib/cobalt/cpp/project_profile.h"
 
@@ -13,8 +16,7 @@ TEST(ProjectProfile, FromBase64String) {
 }
 
 TEST(ProjectProfile, FromFile) {
-  ProjectProfileFromFile(
-      "/pkgfs/packages/cobalt_lib_tests/0/data/test_metrics_registry.pb");
+  ProjectProfileFromFile("/pkg/data/test_metrics_registry.pb");
 }
 
 }  // namespace cobalt

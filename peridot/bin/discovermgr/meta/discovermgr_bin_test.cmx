@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/discovermgr_bin_test"
+    },
+    "sandbox": {
+        "features": [],
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

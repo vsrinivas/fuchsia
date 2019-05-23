@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/process_unittests"
+    },
+    "sandbox": {
+        "boot": [
+            "bin"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}
