@@ -120,10 +120,12 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     // We expect as attachments the ones returned by the feedback::DataProvider
     // and the extra ones specific to the crash analysis flow under test.
     std::vector<std::string> expected_attachments = expected_extra_attachments;
-    expected_attachments.insert(
-        expected_attachments.begin(),
-        stub_feedback_data_provider_->attachment_keys().begin(),
-        stub_feedback_data_provider_->attachment_keys().end());
+    if (stub_feedback_data_provider_) {
+      expected_attachments.insert(
+          expected_attachments.begin(),
+          stub_feedback_data_provider_->attachment_keys().begin(),
+          stub_feedback_data_provider_->attachment_keys().end());
+    }
 
     std::vector<std::string> attachments;
     const std::string report_attachments_dir =
@@ -185,9 +187,15 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
   }
 
   uint64_t total_num_feedback_data_provider_bindings() {
+    if (!stub_feedback_data_provider_) {
+      return 0u;
+    }
     return stub_feedback_data_provider_->total_num_bindings();
   }
   size_t current_num_feedback_data_provider_bindings() {
+    if (!stub_feedback_data_provider_) {
+      return 0u;
+    }
     return stub_feedback_data_provider_->current_num_bindings();
   }
 
@@ -445,6 +453,8 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackAttachments) {
   ResetFeedbackDataProvider(
       std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  // The only attachment should be the one from the crash analysis as no
+  // feedback data attachments will be retrieved.
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
@@ -458,6 +468,18 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackData) {
   ResetFeedbackDataProvider(
       std::make_unique<StubFeedbackDataProviderReturnsNoData>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  // The only attachment should be the one from the crash analysis as no
+  // feedback data will be retrieved.
+  CheckAttachments({"kernel_panic_crash_log"});
+}
+
+TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackDataProvider) {
+  // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider
+  // service to connect to.
+  ResetFeedbackDataProvider(nullptr);
+  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  // The only attachment should be the one from the crash analysis as no
+  // feedback data will be retrieved.
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
@@ -483,7 +505,7 @@ TEST_F(CrashpadAgentTest, OneFeedbackDataProviderConnectionPerAnalysis) {
 
   EXPECT_EQ(total_num_feedback_data_provider_bindings(), num_calls);
   // The unbinding is asynchronous so we need to run the loop until all the
-  // outstanding connections are actually close in the stub.
+  // outstanding connections are actually closed in the stub.
   RunLoopUntil(
       [this] { return current_num_feedback_data_provider_bindings() == 0u; });
 }

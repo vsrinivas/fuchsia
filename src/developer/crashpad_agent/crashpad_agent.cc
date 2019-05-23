@@ -237,10 +237,16 @@ fit::promise<Data> CrashpadAgent::GetFeedbackData() {
 
   const uint64_t id = next_feedback_data_provider_id_++;
 
-  // TODO(DX-1469): set up set_error_handler() and call complete_error() on
-  // the pending fit::bridge.
   feedback_data_providers_[id] =
       services_->Connect<fuchsia::feedback::DataProvider>();
+  feedback_data_providers_[id].set_error_handler(
+      [get_data_done](zx_status_t status) {
+        FX_PLOGS(ERROR, status)
+            << "Lost connection to fuchsia.feedback.DataProvider";
+        if (get_data_done->completer) {
+          get_data_done->completer.complete_error();
+        }
+      });
   feedback_data_providers_[id]->GetData(
       [this, id, get_data_done](
           fuchsia::feedback::DataProvider_GetData_Result out_result) {
