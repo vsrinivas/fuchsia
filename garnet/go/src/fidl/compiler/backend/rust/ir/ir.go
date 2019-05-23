@@ -301,6 +301,7 @@ var reservedWords = map[string]bool{
 	//"union":	true,
 
 	// Things that are not keywords, but for which collisions would be very unpleasant
+	"Result":  true,
 	"Ok":      true,
 	"Err":     true,
 	"Vec":     true,

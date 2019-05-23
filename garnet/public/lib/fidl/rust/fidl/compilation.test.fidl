@@ -19,3 +19,7 @@ union HasStructWithBigArray {
   HasBigArray variant;
   uint8 variant2;
 };
+
+struct Result {
+  string ensure_that_type_named_result_compiles;
+};
