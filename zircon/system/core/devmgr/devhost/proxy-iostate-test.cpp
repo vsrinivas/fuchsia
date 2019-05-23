@@ -8,6 +8,8 @@
 #include "proxy-iostate.h"
 #include "zx-device.h"
 
+namespace {
+
 TEST(ProxyIostateTestCase, Creation) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
@@ -57,7 +59,4 @@ TEST(ProxyIostateTestCase, ChannelCloseThenCancel) {
     ASSERT_OK(loop.RunUntilIdle());
 }
 
-int main(int argc, char** argv) {
-    return RUN_ALL_TESTS(argc, argv);
-}
-
+} // namespace
