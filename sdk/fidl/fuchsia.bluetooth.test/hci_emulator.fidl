@@ -1,0 +1,163 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.test;
+
+using fuchsia.bluetooth as bt;
+
+const uint8 MAX_LEGACY_ADVERTISING_DATA_LENGTH = 31;
+const uint8 MAX_EXTENDED_ADVERTISING_DATA_LENGTH = 251;
+
+/// Error codes that can be generated for emulator-wide configurations.
+enum EmulatorError {
+    FAILED = 1;
+    HCI_ALREADY_PUBLISHED = 2;
+};
+
+/// Error codes that are generated for functions that manipulate fake peers.
+enum EmulatorPeerError {
+    ADDRESS_REPEATED = 1;
+    PARAMETERS_INVALID = 2;
+    NOT_FOUND = 3;
+};
+
+/// The Bluetooth device address type used with link layer procedures.
+enum LeAddressType {
+    PUBLIC = 1;
+    RANDOM = 2;
+};
+
+/// Represents a peer that a FakeController can be configured to emulate.
+table FakePeer {
+    /// The LE identity address and/or BD_ADDR of the peer. This field is mandatory.
+    1: bt.Address address;
+
+    /// Parameters used by this peer on the Low Energy transport. This field is optional. The peer
+    /// will not be active on the LE transport if this field is not present. However, the peer must
+    /// support at least one transport.
+    2: LeParameters le;
+
+    /// Parameters used by this peer on the BR/EDR transport. This field is optional. The peer
+    /// will not be active on the BR/EDR transport if this field is not present. However, the peer
+    /// must support at least one transport.
+    3: BrEdrParameters bredr;
+};
+
+xunion AdvertisingData {
+    bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH legacy_data;
+    bytes:MAX_EXTENDED_ADVERTISING_DATA_LENGTH extended_data;
+};
+
+/// Parameters used to emulate a peer's behavior over the Low Energy transport.
+table LeParameters {
+    /// If true, the peer will send connectable advertisements and accept connection requests. The
+    /// peer will ignore connection requests if not connectable.
+    1: bool connectable;
+
+    /// The advertising data contents. If not present, the advertising data sent by this peer will
+    /// be empty.
+    2: AdvertisingData advertisement;
+
+    /// The scan response data contents. When present, the fake controller will generate scannable
+    /// advertising packets and scan response events.
+    3: AdvertisingData scan_response;
+
+    // TODO(armansito): Add SMP parameters
+};
+
+/// Parameters used to emulate a peer's behavior over the BR/EDR transport.
+table BrEdrParameters {
+    // TODO(armansito): add inquiry response data and other parameters
+};
+
+/// Represents the LE scan state. The fields are present if scan parameters have been
+/// configured.
+table LeScanState {
+    /// True if a scan is enabled.
+    1: bool enabled;
+
+    /// True if an active scan is enabled. Otherwise the scan is passive.
+    2: bool active;
+
+    /// The scan interval and window parameters. These are defined in Bluetotoh controller
+    /// "timeslices" where 1 slice = 0.625 ms. Valid values range from 0x4 (2.5 ms) to 0x4000 (10.24
+    /// ms).
+    3: uint16 interval;
+    4: uint16 window;
+
+    /// True if duplicate filtering has been enabled.
+    5: bool filter_duplicates;
+
+    /// The type of local device address used.
+    6: LeAddressType own_address_type;
+};
+
+// TODO(BT-229): Add state structures for other LE and BR/EDR operations.
+// TODO(armansito): Add ability to publish GATT services
+// TODO(armansito): Add ability to publish SDP records
+// TODO(armansito): Add ability to specify Bluetooth HCI version.
+
+/// Pre-set HCI configurations.
+enum HciConfig {
+    /// Support both BR/EDR and LE in LMP features.
+    DUAL_MODE = 1;
+
+    /// Limits supported features and HCI commands to those that are required for LE only.
+    LE_ONLY = 2;
+};
+
+/// The HCI ACL data flow-control parameters.
+struct AclBufferSettings {
+    /// ACL frame MTU in bytes.
+    uint16 data_packet_length;
+
+    /// The maximum number of ACL frames that the controller can buffer.
+    uint8 total_num_data_packets;
+};
+
+/// Controller settings used by the emulator.
+table EmulatorSettings {
+    /// The BD_ADDR (BR/EDR) or LE Public Device Address. Defaults to "00:00:00:00:00:00".
+    1: bt.Address address;
+
+    /// Supported HCI command configuration. Defaults to "DUAL_MODE".
+    2: HciConfig hci_config;
+
+    /// True if the 5.0 extended advertising features are supported. Defaults to "false".
+    3: bool extended_advertising;
+
+    /// The ACL-U data buffer settings. Defaults to
+    ///    data_packet_length: 1024
+    ///    total_num_data_packets: 5
+    /// IF `hci_config` is set to DUAL_MODE. Defaults to null otherwise.
+    4: AclBufferSettings acl_buffer_settings;
+
+    /// The LE-U ACL data buffer settings. Defaults to
+    ///    data_packet_length: 251
+    ///    total_num_data_packets: 5
+    5: AclBufferSettings le_acl_buffer_settings;
+};
+
+/// Protocol used to emulate a Bluetooth controller that supports the standard Bluetooth HCI.
+[Discoverable]
+protocol HciEmulator {
+    /// Publish a bt-hci device using the provided `settings`. Each HciEmulator instance can only
+    /// manage a single bt-hci device. Returns Emulator.HCI_ALREADY_PUBLISHED if the device has
+    /// already been published.
+    Publish(EmulatorSettings settings) -> () error EmulatorError;
+
+    /// Inserts a new peer device to be emulated by this controller. Returns an error if `peer` is
+    /// improperly configured (e.g. does not contain an address). On success, returns an `id` that
+    /// can be used to refer to the created peer.
+    AddPeer(FakePeer peer) -> (bt.PeerId id) error EmulatorPeerError;
+
+    /// Remove a previously inserted peer. Returns EmulatorPeerError.NOT_FOUND if `id` is not
+    /// recognized.
+    RemovePeer(bt.PeerId id) -> () error EmulatorPeerError;
+
+    /// Returns the latest state of the link layer LE scan procedure. This method returns when there
+    /// is a state change since the last invocation of this method by this client (see [hanging get
+    /// pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
+    WatchLeScanState() -> (LeScanState state);
+};

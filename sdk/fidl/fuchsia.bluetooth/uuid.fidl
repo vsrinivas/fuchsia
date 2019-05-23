@@ -9,5 +9,6 @@ library fuchsia.bluetooth;
 /// be represented in their canonical 128-bit form.
 [MaxHandles = "0"]
 struct Uuid {
+    /// The UUID bytes in little-endian order.
     array<uint8>:16 value;
 };

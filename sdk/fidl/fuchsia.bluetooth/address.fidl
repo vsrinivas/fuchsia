@@ -7,5 +7,6 @@ library fuchsia.bluetooth;
 /// Represents a 48-bit Bluetooth Device Address.
 [MaxHandles = "0"]
 struct Address {
+    /// The device address bytes in little-endian order.
     array<uint8>:6 bytes;
 };
