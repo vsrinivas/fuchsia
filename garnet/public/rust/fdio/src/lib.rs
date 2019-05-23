@@ -30,6 +30,7 @@ use {
             },
         },
         path::Path,
+        ptr,
     },
 };
 
@@ -561,5 +562,114 @@ pub fn get_vmo_copy_from_file(file: &File) -> Result<zx::Vmo, zx::Status> {
             0 => Ok(zx::Vmo::from(zx::Handle::from_raw(vmo_handle))),
             error_code => Err(zx::Status::from_raw(error_code)),
         }
+    }
+}
+
+pub struct Namespace {
+    ns: *mut fdio_sys::fdio_ns_t,
+}
+
+impl Namespace {
+    /// Get the currently installed namespace.
+    pub fn installed() -> Result<Self, zx::Status> {
+        let mut ns_ptr: *mut fdio_sys::fdio_ns_t = ptr::null_mut();
+        let status = unsafe { fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
+        zx::Status::ok(status)?;
+        Ok(Namespace { ns: ns_ptr })
+    }
+
+    /// Create a channel that is connected to a service bound in this namespace at path. The path
+    /// must be an absolute path, like "/x/y/z", containing no "." nor ".." entries. It is relative
+    /// to the root of the namespace.
+    ///
+    /// This corresponds with fdio_ns_connect in C.
+    pub fn connect(&self, path: &str, flags: u32, channel: zx::Channel) -> Result<(), zx::Status> {
+        let cstr = CString::new(path)?;
+        let status =
+            unsafe { fdio_sys::fdio_ns_connect(self.ns, cstr.as_ptr(), flags, channel.into_raw()) };
+        zx::Status::ok(status)?;
+        Ok(())
+    }
+
+    /// Create a new directory within the namespace, bound to the provided
+    /// directory-protocol-compatible channel. The path must be an absolute path, like "/x/y/z",
+    /// containing no "." nor ".." entries. It is relative to the root of the namespace.
+    ///
+    /// This corresponds with fdio_ns_bind in C.
+    pub fn bind(&self, path: &str, channel: zx::Channel) -> Result<(), zx::Status> {
+        let cstr = CString::new(path)?;
+        let status = unsafe { fdio_sys::fdio_ns_bind(self.ns, cstr.as_ptr(), channel.into_raw()) };
+        zx::Status::ok(status)
+    }
+
+    /// Unbind the channel at path, closing the associated handle when all references to the node go
+    /// out of scope. The path must be an absolute path, like "/x/y/z", containing no "." nor ".."
+    /// entries. It is relative to the root of the namespace.
+    ///
+    /// This corresponds with fdio_ns_unbind in C.
+    pub fn unbind(&self, path: &str) -> Result<(), zx::Status> {
+        let cstr = CString::new(path)?;
+        let status = unsafe { fdio_sys::fdio_ns_unbind(self.ns, cstr.as_ptr()) };
+        zx::Status::ok(status)
+    }
+
+    pub fn into_raw(self) -> *mut fdio_sys::fdio_ns_t {
+        self.ns
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::Namespace, fuchsia_zircon as zx};
+
+    #[test]
+    fn namespace_get_installed() {
+        let namespace = Namespace::installed().expect("failed to get installed namespace");
+        assert!(!namespace.into_raw().is_null());
+    }
+
+    #[test]
+    fn namespace_bind_connect_unbind() {
+        let namespace = Namespace::installed().unwrap();
+        // client => ns_server => ns_client => server
+        //        ^            ^            ^-- zx channel connection
+        //        |            |-- connected through namespace bind/connect
+        //        |-- zx channel connection
+        let (ns_client, _server) = zx::Channel::create().unwrap();
+        let (_client, ns_server) = zx::Channel::create().unwrap();
+        let path = "/test_path1";
+
+        assert_eq!(namespace.bind(path, ns_client), Ok(()));
+        assert_eq!(namespace.connect(path, 0, ns_server), Ok(()));
+        assert_eq!(namespace.unbind(path), Ok(()));
+    }
+
+    #[test]
+    fn namespace_double_bind_fail() {
+        let namespace = Namespace::installed().unwrap();
+        let (ns_client1, _server1) = zx::Channel::create().unwrap();
+        let (ns_client2, _server2) = zx::Channel::create().unwrap();
+        let path = "/test_path2";
+
+        assert_eq!(namespace.bind(path, ns_client1), Ok(()));
+        assert_eq!(namespace.bind(path, ns_client2), Err(zx::Status::ALREADY_EXISTS));
+        assert_eq!(namespace.unbind(path), Ok(()));
+    }
+
+    #[test]
+    fn namespace_connect_fail() {
+        let namespace = Namespace::installed().unwrap();
+        let (_client, ns_server) = zx::Channel::create().unwrap();
+        let path = "/test_path3";
+
+        assert_eq!(namespace.connect(path, 0, ns_server), Err(zx::Status::NOT_FOUND));
+    }
+
+    #[test]
+    fn namespace_unbind_fail() {
+        let namespace = Namespace::installed().unwrap();
+        let path = "/test_path4";
+
+        assert_eq!(namespace.unbind(path), Err(zx::Status::NOT_FOUND));
     }
 }
