@@ -11,6 +11,7 @@
 
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -45,6 +46,8 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver,
 
   virtual void Register(int64_t koid,
                         std::function<void(zxdb::Thread*)>&& cb) override;
+
+  virtual void CreateNewBreakpoint(zxdb::BreakpointSettings& settings) override;
 
  private:
   InterceptionWorkflow* workflow_;

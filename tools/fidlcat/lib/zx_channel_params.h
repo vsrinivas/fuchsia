@@ -10,6 +10,7 @@
 
 #include <memory>
 
+#include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -28,6 +29,8 @@ class BreakpointRegisterer {
  public:
   virtual void Register(int64_t koid,
                         std::function<void(zxdb::Thread*)>&& cb) = 0;
+
+  virtual void CreateNewBreakpoint(zxdb::BreakpointSettings& settings) = 0;
 };
 
 // Generic superclass for the parameters to a zx_channel read/write/call
@@ -133,6 +136,10 @@ class ZxChannelParamsBuilder {
                                    const std::vector<zxdb::Register>& regs,
                                    BreakpointRegisterer& registerer) = 0;
 
+  virtual void BuildArmAndContinue(fxl::WeakPtr<zxdb::Thread> thread,
+                                   const std::vector<zxdb::Register>& regs,
+                                   BreakpointRegisterer& registerer) = 0;
+
   void Cancel(const zxdb::Err& e);
   void Finalize();
 
@@ -157,13 +164,21 @@ class ZxChannelWriteParamsBuilder : public ZxChannelParamsBuilder {
   virtual void BuildX86AndContinue(fxl::WeakPtr<zxdb::Thread> thread,
                                    const std::vector<zxdb::Register>& regs,
                                    BreakpointRegisterer& registerer) override;
+  virtual void BuildArmAndContinue(fxl::WeakPtr<zxdb::Thread> thread,
+                                   const std::vector<zxdb::Register>& regs,
+                                   BreakpointRegisterer& registerer) override;
+
+ private:
+  void BuildCommonAndContinue(fxl::WeakPtr<zxdb::Thread> thread,
+                              zx_handle_t handle, uint32_t options,
+                              uint64_t bytes_address, uint64_t handles_address,
+                              uint32_t num_bytes, uint32_t num_handles);
 };
 
 class ZxChannelReadParamsBuilder : public ZxChannelParamsBuilder {
  public:
   ZxChannelReadParamsBuilder()
       : thread_koid_(0),
-        last_sp_(0),
         first_sp_(0),
         bytes_address_(0),
         handles_address_(0),
@@ -178,10 +193,20 @@ class ZxChannelReadParamsBuilder : public ZxChannelParamsBuilder {
                                    const std::vector<zxdb::Register>& regs,
                                    BreakpointRegisterer& registerer) override;
 
+  virtual void BuildArmAndContinue(fxl::WeakPtr<zxdb::Thread> thread,
+                                   const std::vector<zxdb::Register>& regs,
+                                   BreakpointRegisterer& registerer) override;
+
  private:
   // This method steps the object through the state machine described by
-  // PerThreadState.
-  void Advance();
+  // PerThreadState, other than the stepping, which is controlled by
+  // FinishChannelReadX86 and FinishChannelReadArm.
+  void GetResultAndContinue(fxl::WeakPtr<zxdb::Thread> thread);
+
+  void FinishChannelReadX86(fxl::WeakPtr<zxdb::Thread> thread);
+
+  void FinishChannelReadArm(fxl::WeakPtr<zxdb::Thread> thread,
+                            uint64_t link_register_contents);
 
   // This describes the possible states you can be in when you try to see the
   // effects of a zx_channel_read.  You start by executing in a breakpoint for
@@ -207,9 +232,6 @@ class ZxChannelReadParamsBuilder : public ZxChannelParamsBuilder {
   // The koid of the stopped thread.
   uint64_t thread_koid_;
 
-  // The last stack pointer, used while stepping (and not elsewhere).
-  uint64_t last_sp_;
-
   // The stack pointer as of the invocation.
   uint64_t first_sp_;
 
@@ -224,9 +246,6 @@ class ZxChannelReadParamsBuilder : public ZxChannelParamsBuilder {
 
   // The memory location of the actual handles value
   uint64_t actual_handles_ptr_;
-
-  // Current thread
-  fxl::WeakPtr<zxdb::Thread> thread_;
 
   BreakpointRegisterer* registerer_;
 };

@@ -77,6 +77,18 @@ void InterceptingThreadObserver::Register(
   breakpoint_map_[koid] = std::move(cb);
 }
 
+void InterceptingThreadObserver::CreateNewBreakpoint(
+    zxdb::BreakpointSettings& settings) {
+  zxdb::Breakpoint* breakpoint =
+      workflow_->session_->system().CreateNewBreakpoint();
+
+  breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
+    if (!err.ok()) {
+      FXL_LOG(INFO) << "Error in setting breakpoint: " << err.msg();
+    }
+  });
+}
+
 void InterceptingTargetObserver::DidCreateProcess(
     zxdb::Target* target, zxdb::Process* process,
     bool autoattached_to_new_process) {

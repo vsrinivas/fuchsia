@@ -151,17 +151,18 @@ void ZxChannelParamsBuilder::BuildZxChannelParamsAndContinue(
       Cancel(zxdb::Err(err.type(), "Error reading registers" + err.msg()));
     }
 
+    auto regs_it = in_regs.category_map().find(
+        debug_ipc::RegisterCategory::Type::kGeneral);
+    if (regs_it == in_regs.category_map().end()) {
+      Cancel(zxdb::Err(zxdb::ErrType::kInput,
+                       "zx_channel function params not found?"));
+      return;
+    }
+
     if (in_regs.arch() == debug_ipc::Arch::kX64) {
-      auto regs_it = in_regs.category_map().find(
-          debug_ipc::RegisterCategory::Type::kGeneral);
-      if (regs_it == in_regs.category_map().end()) {
-        Cancel(zxdb::Err(zxdb::ErrType::kInput,
-                         "zx_channel function params not found?"));
-        return;
-      }
       BuildX86AndContinue(thread, regs_it->second, registerer);
     } else if (in_regs.arch() == debug_ipc::Arch::kArm64) {
-      Cancel(zxdb::Err(zxdb::ErrType::kCanceled, "ARM64 not supported yet"));
+      BuildArmAndContinue(thread, regs_it->second, registerer);
     } else {
       Cancel(zxdb::Err(zxdb::ErrType::kCanceled, "Unknown arch"));
     }
@@ -170,7 +171,8 @@ void ZxChannelParamsBuilder::BuildZxChannelParamsAndContinue(
 
 // Assuming that |thread| is stopped in a zx_channel_write, and that |regs| is
 // the set of registers for that thread, and that both are on a connected x64
-// device, do what is necessary to populate |params| and pass them to |fn|.
+// device, do what is necessary to populate |params| and pass them to the
+// callback.
 //
 // This remains pretty brittle WRT the order of parameters to zx_channel_write
 // and the x86 calling conventions.  The zx_channel_write parameters may change;
@@ -198,6 +200,49 @@ void ZxChannelWriteParamsBuilder::BuildX86AndContinue(
   num_bytes_ = num_bytes;
   num_handles_ = num_handles;
 
+  BuildCommonAndContinue(thread, handle, options, bytes_address,
+                         handles_address, num_bytes, num_handles);
+}
+
+// Assuming that |thread| is stopped in a zx_channel_write, and that |regs| is
+// the set of registers for that thread, and that both are on a connected ARM
+// device, do what is necessary to populate |params| and pass them to the
+// callback.
+//
+// This remains pretty brittle WRT the order of parameters to zx_channel_write
+// and the ARM calling conventions.  The zx_channel_write parameters may change;
+// we'll update as appropriate.
+void ZxChannelWriteParamsBuilder::BuildArmAndContinue(
+    fxl::WeakPtr<zxdb::Thread> thread, const std::vector<zxdb::Register>& regs,
+    BreakpointRegisterer& registerer) {
+  // The order of parameters in the System V AMD64 ABI we use, according to
+  // Wikipedia:
+  zx_handle_t handle =
+      GetRegisterValue<zx_handle_t>(regs, debug_ipc::RegisterID::kARMv8_x0);
+  uint32_t options =
+      GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kARMv8_x1);
+  uint64_t bytes_address =
+      GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kARMv8_x2);
+  uint32_t num_bytes =
+      GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kARMv8_x3);
+  uint64_t handles_address =
+      GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kARMv8_x4);
+  uint32_t num_handles =
+      GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kARMv8_x5);
+
+  handle_ = handle;
+  options_ = options;
+  num_bytes_ = num_bytes;
+  num_handles_ = num_handles;
+
+  BuildCommonAndContinue(thread, handle, options, bytes_address,
+                         handles_address, num_bytes, num_handles);
+}
+
+void ZxChannelWriteParamsBuilder::BuildCommonAndContinue(
+    fxl::WeakPtr<zxdb::Thread> thread, zx_handle_t handle, uint32_t options,
+    uint64_t bytes_address, uint64_t handles_address, uint32_t num_bytes,
+    uint32_t num_handles) {
   // Note that the lambdas capture |this|.  In typical use, |this| will be
   // deleted by Finalize().  See the docs on
   // ZxChannelParamsBuilder::BuildZxChannelParamsAndContinue for more detail.
@@ -234,46 +279,41 @@ ZxChannelReadParamsBuilder::~ZxChannelReadParamsBuilder() {
   GetPerThreadState().erase(thread_koid_);
 }
 
-// This method encapsulates a state machine that describes the steps needed to
-// read the values returned from a zx_channel_read call.  The states are
-// described in ZxChannelReadParamsBuilder::PerThreadState.
-void ZxChannelReadParamsBuilder::Advance() {
+// Advance until the stack pointer increases (i.e., the stack frame has popped)
+void ZxChannelReadParamsBuilder::FinishChannelReadX86(
+    fxl::WeakPtr<zxdb::Thread> thread) {
   PerThreadState state = GetPerThreadState()[thread_koid_];
 
-  // Move through the state machine.  Note that the lambdas for each state in
-  // the state machine all capture |this|.  In typical use, |this| will be
-  // deleted by Finalize(), which will be called exactly once when the state
-  // machine is done executing.  See the docs on
-  // ZxChannelParamsBuilder::BuildZxChannelParamsAndContinue for more detail on
-  // ZXChannelParamsBuilder's lifetime.
   if (state == PerThreadState::STEPPING) {
     // Then we step...
     auto controller = std::make_unique<zxdb::StepThreadController>(
         zxdb::StepMode::kSourceLine);
     controller->set_stop_on_no_symbols(false);
     GetPerThreadState()[thread_koid_] = PerThreadState::CHECKING_STEP;
-    thread_->ContinueWith(std::move(controller), [this](const zxdb::Err& err) {
-      if (!thread_ || !err.ok()) {
-        Cancel(err);
-        return;
-      }
-      if (thread_) {
-        registerer_->Register(thread_->GetKoid(), [this](zxdb::Thread* thread) {
-          // TODO: I think the post-stepping stack pointer
-          // may be in *thread somewhere.
-          Advance();
+    thread->ContinueWith(
+        std::move(controller), [this, thread](const zxdb::Err& err) {
+          if (!thread || !err.ok()) {
+            Cancel(err);
+            return;
+          }
+          if (thread) {
+            registerer_->Register(thread->GetKoid(),
+                                  [this, thread](zxdb::Thread* t) {
+                                    // TODO: I think the post-stepping stack
+                                    // pointer may be in *thread somewhere.
+                                    FinishChannelReadX86(thread);
+                                  });
+          }
         });
-      }
-    });
   } else if (state == PerThreadState::CHECKING_STEP) {
     // ... and we continue to step until the stack pointer increases, indicating
     // that we've exited the method.
     std::vector<debug_ipc::RegisterCategory::Type> register_types = {
         debug_ipc::RegisterCategory::Type::kGeneral};
-    thread_->ReadRegisters(
+    thread->ReadRegisters(
         register_types,
-        [this](const zxdb::Err& err, const zxdb::RegisterSet& in_regs) {
-          if (!thread_ || !err.ok()) {
+        [this, thread](const zxdb::Err& err, const zxdb::RegisterSet& in_regs) {
+          if (!thread || !err.ok()) {
             Cancel(err);
             return;
           }
@@ -289,19 +329,53 @@ void ZxChannelReadParamsBuilder::Advance() {
           uint64_t stack_pointer =
               GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kX64_rsp);
           if (stack_pointer > first_sp_) {
-            GetPerThreadState()[thread_->GetKoid()] =
+            GetPerThreadState()[thread->GetKoid()] =
                 PerThreadState::READING_ACTUAL_BYTES;
+            GetResultAndContinue(thread);
           } else {
-            GetPerThreadState()[thread_->GetKoid()] = PerThreadState::STEPPING;
+            GetPerThreadState()[thread->GetKoid()] = PerThreadState::STEPPING;
+            FinishChannelReadX86(thread);
           }
-          Advance();
         });
-  } else if (state == PerThreadState::READING_ACTUAL_BYTES) {
-    // After this, we just read the filled in values.
+  }
+}
+
+// Advance to wherever the link register says the return location of the
+// zx_channel_read is.
+void ZxChannelReadParamsBuilder::FinishChannelReadArm(
+    fxl::WeakPtr<zxdb::Thread> thread, uint64_t link_register_contents) {
+  PerThreadState state = GetPerThreadState()[thread_koid_];
+  if (state == PerThreadState::STEPPING) {
+    zxdb::BreakpointSettings settings;
+    settings.enabled = true;
+    settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
+    settings.type = debug_ipc::BreakpointType::kSoftware;
+    settings.location.address = link_register_contents;
+    settings.location.type = zxdb::InputLocation::Type::kAddress;
+    settings.scope = zxdb::BreakpointSettings::Scope::kThread;
+    settings.scope_thread = &(*thread);
+    settings.scope_target = thread->GetProcess()->GetTarget();
+    settings.one_shot = true;
+    registerer_->CreateNewBreakpoint(settings);
+    registerer_->Register(thread->GetKoid(), [this, thread](zxdb::Thread* t) {
+      GetPerThreadState()[thread_koid_] = PerThreadState::READING_ACTUAL_BYTES;
+      GetResultAndContinue(thread);
+    });
+    thread->Continue();
+  }
+}
+
+void ZxChannelReadParamsBuilder::GetResultAndContinue(
+    fxl::WeakPtr<zxdb::Thread> thread) {
+  PerThreadState state = GetPerThreadState()[thread_koid_];
+
+  // Read the filled in values for actual_bytes and actual_handles, then read
+  // the memory at those locations, and then finish.
+  if (state == PerThreadState::READING_ACTUAL_BYTES) {
     GetMemoryAtAndThen<uint32_t>(
-        thread_, actual_bytes_ptr_, sizeof(uint32_t),
-        [this](const zxdb::Err& err, std::unique_ptr<uint32_t> data) {
-          if (!thread_ || !err.ok()) {
+        thread, actual_bytes_ptr_, sizeof(uint32_t),
+        [this, thread](const zxdb::Err& err, std::unique_ptr<uint32_t> data) {
+          if (!thread || !err.ok()) {
             Cancel(err);
             return;
           }
@@ -313,31 +387,32 @@ void ZxChannelReadParamsBuilder::Advance() {
             zxdb::Err e = zxdb::Err(zxdb::ErrType::kGeneral,
                                     "Malformed zx_channel_read call");
             Cancel(err);
+            return;
           }
-          Advance();
+          GetResultAndContinue(thread);
         });
   } else if (state == PerThreadState::READING_ACTUAL_HANDLES) {
     GetMemoryAtAndThen<uint32_t>(
-        thread_, actual_handles_ptr_, sizeof(uint32_t),
-        [this](const zxdb::Err& err, std::unique_ptr<uint32_t> data) {
-          if (!thread_ || !err.ok()) {
+        thread, actual_handles_ptr_, sizeof(uint32_t),
+        [this, thread](const zxdb::Err& err, std::unique_ptr<uint32_t> data) {
+          if (!thread || !err.ok()) {
             Cancel(err);
             return;
           }
           num_handles_ = *data;
           GetPerThreadState()[thread_koid_] = PerThreadState::FILLING_IN_BYTES;
-          Advance();
+          GetResultAndContinue(thread);
         });
   } else if (state == PerThreadState::FILLING_IN_BYTES) {
     if (num_bytes_ == 0) {
       GetPerThreadState()[thread_koid_] = PerThreadState::FILLING_IN_HANDLES;
-      Advance();
+      GetResultAndContinue(thread);
       return;
     }
     GetMemoryAtAndThen<uint8_t[]>(
-        thread_, bytes_address_, num_bytes_,
-        [this](const zxdb::Err& err, std::unique_ptr<uint8_t[]> data) {
-          if (!thread_ || !err.ok()) {
+        thread, bytes_address_, num_bytes_,
+        [this, thread](const zxdb::Err& err, std::unique_ptr<uint8_t[]> data) {
+          if (!thread || !err.ok()) {
             Cancel(err);
             return;
           }
@@ -347,19 +422,19 @@ void ZxChannelReadParamsBuilder::Advance() {
           } else {
             GetPerThreadState()[thread_koid_] =
                 PerThreadState::FILLING_IN_HANDLES;
-            Advance();
+            GetResultAndContinue(thread);
           }
         });
   } else if (state == PerThreadState::FILLING_IN_HANDLES) {
     if (num_handles_ == 0) {
-      GetPerThreadState()[thread_koid_] = PerThreadState::FILLING_IN_HANDLES;
       Finalize();
       return;
     }
     GetMemoryAtAndThen<zx_handle_t[]>(
-        thread_, handles_address_, num_handles_ * sizeof(zx_handle_t),
-        [this](const zxdb::Err& err, std::unique_ptr<zx_handle_t[]> data) {
-          if (!thread_ || !err.ok()) {
+        thread, handles_address_, num_handles_ * sizeof(zx_handle_t),
+        [this, thread](const zxdb::Err& err,
+                       std::unique_ptr<zx_handle_t[]> data) {
+          if (!thread || !err.ok()) {
             Cancel(err);
             return;
           }
@@ -371,7 +446,8 @@ void ZxChannelReadParamsBuilder::Advance() {
 
 // Assuming that |thread| is stopped in a zx_channel_read, and that |regs| is
 // the set of registers for that thread, and that both are on a connected x64
-// device, do what is necessary to populate |params| and pass them to |fn|.
+// device, do what is necessary to populate |params| and pass them to the
+// callback.
 //
 // This remains pretty brittle WRT the order of parameters to zx_channel_read
 // and the x86 calling conventions.  Those things aren't likely to change, but
@@ -381,46 +457,39 @@ void ZxChannelReadParamsBuilder::BuildX86AndContinue(
     BreakpointRegisterer& registerer) {
   // The order of parameters in the System V AMD64 ABI we use, according to
   // Wikipedia:
-  zx_handle_t handle =
+  handle_ =
       GetRegisterValue<zx_handle_t>(regs, debug_ipc::RegisterID::kX64_rdi);
-  uint32_t options =
-      GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kX64_rsi);
-  uint64_t bytes_address =
+  options_ = GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kX64_rsi);
+  bytes_address_ =
       GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kX64_rdx);
-  uint64_t handles_address =
+  handles_address_ =
       GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kX64_rcx);
-  uint32_t num_bytes =
-      GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kX64_r8);
-  uint32_t num_handles =
-      GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kX64_r9);
-  // The remaining args are on the stack.  rsp + 8 is actual_bytes, and rsp +
-  // 16 is actual_handles
+  // The num_bytes and num_handles values are not useful, and are only included
+  // here for documentation purposes.
+  // num_bytes =
+  //     GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kX64_r8);
+  // num_handles =
+  //     GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kX64_r9);
+
+  // The remaining args are on the stack.  rsp + 8 is actual_bytes, and rsp
+  // + 16 is actual_handles
   uint64_t stack_pointer =
       GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kX64_rsp);
 
-  // The num_bytes and num_handles values are not useful, and are only included
-  // above for documentation purposes.
-  (void)num_bytes;
-  (void)num_handles;
-
-  handle_ = handle;
-  options_ = options;
-  once_ = false;
-  last_sp_ = first_sp_ = stack_pointer;
-  bytes_address_ = bytes_address;
-  handles_address_ = handles_address;
   thread_koid_ = thread->GetKoid();
-  thread_ = thread;
   registerer_ = &registerer;
+
+  once_ = false;
+  first_sp_ = stack_pointer;
 
   // Read the stack pointer and the appropriate offsets for &actual_bytes and
   // &actual_handles.
   // See the comment on ZxChannelParamsBuilder::BuildZxChannelParamsAndContinue
   // for detail on capturing |this|.
   GetMemoryAtAndThen<uint64_t[]>(
-      thread_, stack_pointer, 3 * sizeof(uint32_t*),
-      [this](const zxdb::Err& err, std::unique_ptr<uint64_t[]> data) {
-        if (!thread_ || !err.ok()) {
+      thread, stack_pointer, 3 * sizeof(uint32_t*),
+      [this, thread](const zxdb::Err& err, std::unique_ptr<uint64_t[]> data) {
+        if (!thread || !err.ok()) {
           Cancel(err);
           return;
         }
@@ -434,8 +503,54 @@ void ZxChannelReadParamsBuilder::BuildX86AndContinue(
         actual_bytes_ptr_ = *(reinterpret_cast<uint64_t*>(data.get() + 1));
         actual_handles_ptr_ = *(reinterpret_cast<uint64_t*>(data.get() + 2));
         GetPerThreadState()[thread_koid_] = PerThreadState::STEPPING;
-        Advance();
+        FinishChannelReadX86(thread);
       });
+}
+
+// Assuming that |thread| is stopped in a zx_channel_read, and that |regs| is
+// the set of registers for that thread, and that both are on a connected ARM
+// device, do what is necessary to populate |params| and pass them to the
+// callback.
+//
+// This remains pretty brittle WRT the order of parameters to zx_channel_read
+// and the ARM calling conventions.  Those things aren't likely to change, but
+// if they did, we'd have to update this.
+void ZxChannelReadParamsBuilder::BuildArmAndContinue(
+    fxl::WeakPtr<zxdb::Thread> thread, const std::vector<zxdb::Register>& regs,
+    BreakpointRegisterer& registerer) {
+  // The order of parameters in the System V AMD64 ABI we use, according to
+  // Wikipedia:
+  handle_ =
+      GetRegisterValue<zx_handle_t>(regs, debug_ipc::RegisterID::kARMv8_x0);
+  options_ = GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kARMv8_x1);
+  bytes_address_ =
+      GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kARMv8_x2);
+  handles_address_ =
+      GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kARMv8_x3);
+  // The num_bytes and num_handles values are not useful, and are only
+  // included here for documentation purposes.
+  // num_bytes =
+  //     GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kARMv8_x4);
+  // num_handles =
+  //     GetRegisterValue<uint32_t>(regs, debug_ipc::RegisterID::kARMv8_x5);
+  actual_bytes_ptr_ =
+      GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kARMv8_x6);
+  actual_handles_ptr_ =
+      GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kARMv8_x7);
+
+  uint64_t link_register =
+      GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kARMv8_lr);
+
+  first_sp_ =
+      GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kARMv8_sp);
+
+  thread_koid_ = thread->GetKoid();
+  registerer_ = &registerer;
+
+  once_ = false;
+  GetPerThreadState()[thread_koid_] = PerThreadState::STEPPING;
+
+  FinishChannelReadArm(thread, link_register);
 }
 
 }  // namespace fidlcat

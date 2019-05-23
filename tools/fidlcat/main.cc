@@ -73,6 +73,10 @@ void OnZxChannelAction(LibraryLoader* loader, const CommandLineOptions& options,
   fidl::HandlePart handles(params.GetHandles().get(), params.GetNumHandles(),
                            params.GetNumHandles());
   fidl::Message message(std::move(bytes), std::move(handles));
+  if (message.payload().data() == nullptr) {
+    FXL_LOG(WARNING) << "Message to be decoded contains no data.";
+    return;
+  }
   fidl_message_header_t header = message.header();
   const fidlcat::InterfaceMethod* method;
   if (!loader->GetByOrdinal(header.ordinal, &method)) {

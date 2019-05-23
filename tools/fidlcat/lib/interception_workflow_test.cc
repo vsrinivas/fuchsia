@@ -21,7 +21,7 @@ namespace fidlcat {
 // TODO: This is obviously not extensible to more than one test.
 class DataForZxChannelTest {
  public:
-  DataForZxChannelTest() {
+  DataForZxChannelTest(debug_ipc::Arch arch) : arch_(arch) {
     header_.txid = kTxId;
     header_.reserved0 = kReserved;
     header_.flags = kFlags;
@@ -140,59 +140,129 @@ class DataForZxChannelTest {
     const uint8_t* stack_pointer_as_bytes =
         reinterpret_cast<const uint8_t*>(&current_stack_ptr_);
 
+    const uint8_t* actual_bytes_ptr_as_bytes =
+        reinterpret_cast<const uint8_t*>(&kActualBytesPtr);
+
+    const uint8_t* actual_handles_ptr_as_bytes =
+        reinterpret_cast<const uint8_t*>(&kActualHandlesPtr);
+
     std::map<debug_ipc::RegisterID, std::vector<uint8_t>> values;
     if (current_symbol_address_ == kWriteElfSymbolAddress) {
-      values = {
-          // zx_handle_t handle
-          {debug_ipc::RegisterID::kX64_rdi, {0xb0, 0x1d, 0xfa, 0xce}},
-          // uint32_t options
-          {debug_ipc::RegisterID::kX64_rsi, {0x00, 0x00, 0x00, 0x00}},
-          // bytes_address
-          {debug_ipc::RegisterID::kX64_rdx,
-           std::vector<uint8_t>(address_as_bytes,
-                                address_as_bytes + num_bytes())},
-          // num_bytes
-          {debug_ipc::RegisterID::kX64_rcx,
-           {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
-          // handles_address
-          {debug_ipc::RegisterID::kX64_r8,
-           std::vector<uint8_t>(handles_address_as_bytes,
-                                handles_address_as_bytes +
-                                    (sizeof(zx_handle_t) * num_handles()))},
-          // num_handles
-          {debug_ipc::RegisterID::kX64_r9,
-           {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}},
-          // stack pointer
-          {debug_ipc::RegisterID::kX64_rsp,
-           std::vector<uint8_t>(
-               stack_pointer_as_bytes,
-               stack_pointer_as_bytes + sizeof(current_stack_ptr_))}};
+      if (arch_ == debug_ipc::Arch::kArm64) {
+        values = {
+            // zx_handle_t handle
+            {debug_ipc::RegisterID::kARMv8_x0, {0xb0, 0x1d, 0xfa, 0xce}},
+            // uint32_t options
+            {debug_ipc::RegisterID::kARMv8_x1, {0x00, 0x00, 0x00, 0x00}},
+            // bytes_address
+            {debug_ipc::RegisterID::kARMv8_x2,
+             std::vector<uint8_t>(address_as_bytes,
+                                  address_as_bytes + num_bytes())},
+            // num_bytes
+            {debug_ipc::RegisterID::kARMv8_x3,
+             {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
+            // handles_address
+            {debug_ipc::RegisterID::kARMv8_x4,
+             std::vector<uint8_t>(handles_address_as_bytes,
+                                  handles_address_as_bytes +
+                                      (sizeof(zx_handle_t) * num_handles()))},
+            // num_handles
+            {debug_ipc::RegisterID::kARMv8_x5,
+             {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}},
+            // stack pointer
+            {debug_ipc::RegisterID::kARMv8_sp,
+             std::vector<uint8_t>(
+                 stack_pointer_as_bytes,
+                 stack_pointer_as_bytes + sizeof(current_stack_ptr_))}};
+      } else if (arch_ == debug_ipc::Arch::kX64) {
+        values = {
+            // zx_handle_t handle
+            {debug_ipc::RegisterID::kX64_rdi, {0xb0, 0x1d, 0xfa, 0xce}},
+            // uint32_t options
+            {debug_ipc::RegisterID::kX64_rsi, {0x00, 0x00, 0x00, 0x00}},
+            // bytes_address
+            {debug_ipc::RegisterID::kX64_rdx,
+             std::vector<uint8_t>(address_as_bytes,
+                                  address_as_bytes + num_bytes())},
+            // num_bytes
+            {debug_ipc::RegisterID::kX64_rcx,
+             {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
+            // handles_address
+            {debug_ipc::RegisterID::kX64_r8,
+             std::vector<uint8_t>(handles_address_as_bytes,
+                                  handles_address_as_bytes +
+                                      (sizeof(zx_handle_t) * num_handles()))},
+            // num_handles
+            {debug_ipc::RegisterID::kX64_r9,
+             {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}},
+            // stack pointer
+            {debug_ipc::RegisterID::kX64_rsp,
+             std::vector<uint8_t>(
+                 stack_pointer_as_bytes,
+                 stack_pointer_as_bytes + sizeof(current_stack_ptr_))}};
+      }
     } else if (current_symbol_address_ == kReadElfSymbolAddress) {
-      values = {
-          // zx_handle_t handle
-          {debug_ipc::RegisterID::kX64_rdi, {0xb0, 0x1d, 0xfa, 0xce}},
-          // uint32_t options
-          {debug_ipc::RegisterID::kX64_rsi, {0x00, 0x00, 0x00, 0x00}},
-          // bytes_address
-          {debug_ipc::RegisterID::kX64_rdx,
-           std::vector<uint8_t>(address_as_bytes,
-                                address_as_bytes + num_bytes())},
-          // handles_address
-          {debug_ipc::RegisterID::kX64_rcx,
-           std::vector<uint8_t>(handles_address_as_bytes,
-                                handles_address_as_bytes +
-                                    (sizeof(zx_handle_t) * num_handles()))},
-          // num_bytes
-          {debug_ipc::RegisterID::kX64_r8,
-           {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
-          // num_handles
-          {debug_ipc::RegisterID::kX64_r9,
-           {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}},
-          // stack pointer
-          {debug_ipc::RegisterID::kX64_rsp,
-           std::vector<uint8_t>(
-               stack_pointer_as_bytes,
-               stack_pointer_as_bytes + sizeof(current_stack_ptr_))}};
+      if (arch_ == debug_ipc::Arch::kArm64) {
+        values = {
+            // zx_handle_t handle
+            {debug_ipc::RegisterID::kARMv8_x0, {0xb0, 0x1d, 0xfa, 0xce}},
+            // uint32_t options
+            {debug_ipc::RegisterID::kARMv8_x1, {0x00, 0x00, 0x00, 0x00}},
+            // bytes_address
+            {debug_ipc::RegisterID::kARMv8_x2,
+             std::vector<uint8_t>(address_as_bytes,
+                                  address_as_bytes + num_bytes())},
+            // handles_address
+            {debug_ipc::RegisterID::kARMv8_x3,
+             std::vector<uint8_t>(handles_address_as_bytes,
+                                  handles_address_as_bytes +
+                                      (sizeof(zx_handle_t) * num_handles()))},
+            // num_bytes
+            {debug_ipc::RegisterID::kARMv8_x4,
+             {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
+            // num_handles
+            {debug_ipc::RegisterID::kARMv8_x5,
+             {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}},
+            {debug_ipc::RegisterID::kARMv8_x6,
+             std::vector<uint8_t>(
+                 actual_bytes_ptr_as_bytes,
+                 actual_bytes_ptr_as_bytes + sizeof(kActualBytesPtr))},
+            {debug_ipc::RegisterID::kARMv8_x7,
+             std::vector<uint8_t>(
+                 actual_handles_ptr_as_bytes,
+                 actual_handles_ptr_as_bytes + sizeof(kActualHandlesPtr))},
+            // stack pointer
+            {debug_ipc::RegisterID::kARMv8_sp,
+             std::vector<uint8_t>(
+                 stack_pointer_as_bytes,
+                 stack_pointer_as_bytes + sizeof(current_stack_ptr_))}};
+      } else if (arch_ == debug_ipc::Arch::kX64) {
+        values = {
+            // zx_handle_t handle
+            {debug_ipc::RegisterID::kX64_rdi, {0xb0, 0x1d, 0xfa, 0xce}},
+            // uint32_t options
+            {debug_ipc::RegisterID::kX64_rsi, {0x00, 0x00, 0x00, 0x00}},
+            // bytes_address
+            {debug_ipc::RegisterID::kX64_rdx,
+             std::vector<uint8_t>(address_as_bytes,
+                                  address_as_bytes + num_bytes())},
+            // handles_address
+            {debug_ipc::RegisterID::kX64_rcx,
+             std::vector<uint8_t>(handles_address_as_bytes,
+                                  handles_address_as_bytes +
+                                      (sizeof(zx_handle_t) * num_handles()))},
+            // num_bytes
+            {debug_ipc::RegisterID::kX64_r8,
+             {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
+            // num_handles
+            {debug_ipc::RegisterID::kX64_r9,
+             {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}},
+            // stack pointer
+            {debug_ipc::RegisterID::kX64_rsp,
+             std::vector<uint8_t>(
+                 stack_pointer_as_bytes,
+                 stack_pointer_as_bytes + sizeof(current_stack_ptr_))}};
+      }
     } else {
       FXL_NOTREACHED() << "do not know what the registers should be at this IP";
     }
@@ -233,6 +303,7 @@ class DataForZxChannelTest {
   fidl_message_header_t header_;
   zx_handle_t handles_[2] = {0x01234567, 0x89abcdef};
   uint8_t stack_[3 * sizeof(uint64_t)];
+  debug_ipc::Arch arch_;
 };
 
 const char* DataForZxChannelTest::zx_channel_write_name_ =
@@ -337,7 +408,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
 
 class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
  public:
-  InterceptionWorkflowTest() = default;
+  explicit InterceptionWorkflowTest(debug_ipc::Arch arch) : data_(arch) {}
   ~InterceptionWorkflowTest() override = default;
 
   InterceptionRemoteAPI& mock_remote_api() { return *mock_remote_api_; }
@@ -350,11 +421,35 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 
   DataForZxChannelTest& data() { return data_; }
 
+  void WriteTest();
+
+  void ReadTest();
+
  protected:
   DataForZxChannelTest data_;
 
  private:
   InterceptionRemoteAPI* mock_remote_api_;  // Owned by the session.
+};
+
+class InterceptionWorkflowTestX64 : public InterceptionWorkflowTest {
+ public:
+  InterceptionWorkflowTestX64() : InterceptionWorkflowTest(GetArch()) {}
+  ~InterceptionWorkflowTestX64() override = default;
+
+  virtual debug_ipc::Arch GetArch() const override {
+    return debug_ipc::Arch::kX64;
+  }
+};
+
+class InterceptionWorkflowTestArm : public InterceptionWorkflowTest {
+ public:
+  InterceptionWorkflowTestArm() : InterceptionWorkflowTest(GetArch()) {}
+  ~InterceptionWorkflowTestArm() override = default;
+
+  virtual debug_ipc::Arch GetArch() const override {
+    return debug_ipc::Arch::kArm64;
+  }
 };
 
 // This does process setup for the test.  It creates a fake process, injects
@@ -454,7 +549,7 @@ ProcessController::~ProcessController() {
   target_->RemoveObserver(&workflow_.observer_);
 }
 
-TEST_F(InterceptionWorkflowTest, ZxChannelWrite) {
+void InterceptionWorkflowTest::WriteTest() {
   ProcessController controller(this, session(), loop());
   bool hit_breakpoint = false;
   // This will be executed when the zx_channel_write breakpoint is triggered.
@@ -505,7 +600,11 @@ TEST_F(InterceptionWorkflowTest, ZxChannelWrite) {
   ASSERT_TRUE(hit_breakpoint);
 }
 
-TEST_F(InterceptionWorkflowTest, ZxChannelRead) {
+TEST_F(InterceptionWorkflowTestX64, ZxChannelWrite) { WriteTest(); }
+
+TEST_F(InterceptionWorkflowTestArm, ZxChannelWrite) { WriteTest(); }
+
+void InterceptionWorkflowTest::ReadTest() {
   ProcessController controller(this, session(), loop());
   bool hit_breakpoint = false;
   // This will be executed when the zx_channel_write breakpoint is triggered.
@@ -573,5 +672,9 @@ TEST_F(InterceptionWorkflowTest, ZxChannelRead) {
   // At this point, the ZxChannelWrite callback should have been executed.
   ASSERT_TRUE(hit_breakpoint);
 }
+
+TEST_F(InterceptionWorkflowTestX64, ZxChannelRead) { ReadTest(); }
+
+TEST_F(InterceptionWorkflowTestArm, ZxChannelRead) { ReadTest(); }
 
 }  // namespace fidlcat
