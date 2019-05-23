@@ -13,7 +13,7 @@
 #include <zxtest/zxtest.h>
 
 constexpr uint64_t kBlockSize = 0x1000;
-constexpr uint64_t kBlockCount = 0x10;
+constexpr uint64_t kBlockCount = 0x100;
 
 constexpr uint32_t kOobSize = 8;
 constexpr uint32_t kPageSize = 1024;
@@ -32,6 +32,9 @@ public:
     ~BlockDevice() {
         ramdisk_destroy(client_);
     }
+
+    // Does not transfer ownership of the file descriptor.
+    int fd() { return ramdisk_get_block_fd(client_); }
 
 private:
     BlockDevice(ramdisk_client_t* client)

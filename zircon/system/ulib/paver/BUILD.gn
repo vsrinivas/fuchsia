@@ -55,6 +55,7 @@ test("paver-test") {
   output_name = "paver-test"
   sources = [
     "test/device-partitioner-test.cpp",
+    "test/fvm-test.cpp",
     "test/paversvc-test.cpp",
     "test/stream-reader-test.cpp",
     "test/test-utils.cpp",

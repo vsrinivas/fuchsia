@@ -13,6 +13,18 @@
 
 namespace paver {
 
+// Options for locating an FVM within a partition.
+enum class BindOption {
+    // Bind to the FVM, if it exists already.
+    TryBind,
+    // Reformat the partition, regardless of if it already exists as an FVM.
+    Reformat,
+};
+
+// Public for testing.
+fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size,
+                                  BindOption option);
+
 class Paver {
 public:
     // Writes a kernel or verified boot metadata payload to the appropriate

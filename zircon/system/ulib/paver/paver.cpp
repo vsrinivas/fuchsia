@@ -393,6 +393,16 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd, zx::durati
         return fbl::unique_fd();
     }
 
+    // We assume the FVM will either have completed binding, or is not bound at all. This is ensured
+    // by the paver always waiting for the FVM to bind after invoking ControllerBind.
+    char fvm_path[PATH_MAX];
+    snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", path);
+
+    fbl::unique_fd fvm(open(fvm_path, O_RDWR));
+    if (fvm) {
+        return fvm;
+    }
+
     fdio_t* io = fdio_unsafe_fd_to_io(partition_fd.get());
     if (io == nullptr) {
         ERROR("Failed to convert to io\n");
@@ -411,8 +421,6 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd, zx::durati
         return fbl::unique_fd();
     }
 
-    char fvm_path[PATH_MAX];
-    snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", path);
     if (wait_for_device(fvm_path, timeout.get()) != ZX_OK) {
         ERROR("Error waiting for fvm driver to bind\n");
         return fbl::unique_fd();
@@ -420,13 +428,7 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd, zx::durati
     return fbl::unique_fd(open(fvm_path, O_RDWR));
 }
 
-// Options for locating an FVM within a partition.
-enum class BindOption {
-    // Bind to the FVM, if it exists already.
-    TryBind,
-    // Reformat the partition, regardless of if it already exists as an FVM.
-    Reformat,
-};
+} // namespace
 
 // Formats the FVM within the provided partition if it is not already formatted.
 //
@@ -486,6 +488,8 @@ fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size
 
     return TryBindToFvmDriver(partition_fd, zx::sec(3));
 }
+
+namespace {
 
 // Formats a block device as a zxcrypt volume.
 //
@@ -1018,8 +1022,8 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner,
         memset(buffer.get(), 0, remaining_bytes);
         status = payload_vmo.write(buffer.get(), payload_size, remaining_bytes);
         if (status != ZX_OK) {
-          ERROR("Failed to write padding to vmo\n");
-          return status;
+            ERROR("Failed to write padding to vmo\n");
+            return status;
         }
         payload_size += remaining_bytes;
     }
@@ -1084,7 +1088,7 @@ bool Paver::InitializePartitioner() {
 }
 
 zx_status_t Paver::WriteAsset(fuchsia_paver_Configuration configuration, fuchsia_paver_Asset asset,
-                       const fuchsia_mem_Buffer& payload) {
+                              const fuchsia_mem_Buffer& payload) {
     if (!InitializePartitioner()) {
         return ZX_ERR_BAD_STATE;
     }
