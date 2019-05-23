@@ -1350,9 +1350,7 @@ bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library,
             message.append(" but does not use it. Either use ");
             message.append(NameLibrary(ref->library_->name()));
             message.append(", or remove import.");
-            // TODO(FIDL-600): Turn this into an error in a few weeks, likely
-            // on 5/15/2019.
-            error_reporter->ReportWarning(ref->location_, message);
+            error_reporter->ReportError(ref->location_, message);
         }
     }
     return checkpoint.NoNewErrors();

@@ -228,11 +228,11 @@ struct Foo {
 
 )FIDL", &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-    ASSERT_TRUE(library.Compile());
+    ASSERT_FALSE(library.Compile());
 
-    const auto& warnings = library.warnings();
-    ASSERT_EQ(1, warnings.size());
-    ASSERT_STR_STR(warnings[0].c_str(),
+    const auto& errors = library.errors();
+    ASSERT_EQ(1, errors.size());
+    ASSERT_STR_STR(errors[0].c_str(),
         "Library example imports dependent but does not use it. Either use dependent, or remove import.");
 
     END_TEST;

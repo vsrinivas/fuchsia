@@ -402,11 +402,8 @@ int compile(fidl::ErrorReporter* error_reporter,
             }
             message.append(fidl::NameLibrary(name));
         }
-        error_reporter->ReportWarning(nullptr /* location */, message);
-        // TODO(FIDL-600): Turn this into an actual failure, once all builds
-        // have been cleaned up.
-        // message.append("\n");
-        // Fail(message.data());
+        message.append("\n");
+        Fail(message.data());
     }
 
     // Verify that the produced library's name matches the expected name.
