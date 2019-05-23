@@ -121,6 +121,7 @@ mod test {
     static TEST_SHORTCUT_ID: u32 = 123;
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[ignore]
     async fn test_as_client() -> Result<(), Error> {
         fuchsia_syslog::init_with_tags(&["shortcut"])
             .expect("shortcut syslog init should not fail");
