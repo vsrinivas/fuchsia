@@ -26,6 +26,7 @@ use futures::prelude::*;
 use log::{error, info, warn};
 use serde_derive::{Deserialize, Serialize};
 use std::fs::{self, File};
+use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -301,10 +302,10 @@ impl StoredAccount {
             warn!("Failed to locate account doc: {:?}", path);
             return Err(AccountManagerError::new(Status::NotFound));
         };
-        let file = File::open(path).map_err(|err| {
+        let file = BufReader::new(File::open(path).map_err(|err| {
             warn!("Failed to read account doc: {:?}", err);
             AccountManagerError::new(Status::IoError).with_cause(err)
-        })?;
+        })?);
         serde_json::from_reader(file).map_err(|err| {
             warn!("Failed to parse account doc: {:?}", err);
             AccountManagerError::new(Status::InternalError).with_cause(err)
@@ -327,12 +328,16 @@ impl StoredAccount {
         let path = Self::path(account_dir);
         let tmp_path = Self::tmp_path(account_dir);
         {
-            let tmp_file = File::create(&tmp_path).map_err(|err| {
+            let mut tmp_file = BufWriter::new(File::create(&tmp_path).map_err(|err| {
                 warn!("Failed to create account tmp doc: {:?}", err);
                 AccountManagerError::new(Status::IoError).with_cause(err)
+            })?);
+            serde_json::to_writer(&mut tmp_file, self).map_err(|err| {
+                warn!("Failed to serialize account doc: {:?}", err);
+                AccountManagerError::new(Status::IoError).with_cause(err)
             })?;
-            serde_json::to_writer(tmp_file, self).map_err(|err| {
-                warn!("Failed to write account doc: {:?}", err);
+            tmp_file.flush().map_err(|err| {
+                warn!("Failed to flush serialized account doc: {:?}", err);
                 AccountManagerError::new(Status::IoError).with_cause(err)
             })?;
         }
