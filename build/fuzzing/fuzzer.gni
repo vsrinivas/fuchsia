@@ -4,6 +4,7 @@
 
 import("//build/host.gni")
 import("//build/package.gni")
+import("//build/test.gni")
 
 # TODO(aarongreen): SEC-224.  Add tests to catch fuzzer building/packaging
 # regressions.
@@ -63,6 +64,41 @@ template("fuzzer") {
     }
   }
 
+  # Generate a unit test for the fuzzer.
+  test("${fuzzer_name}_test") {
+    deps = []
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "dictionary",
+                             "options",
+                             "target_name",
+                             "visibility",
+                           ])
+
+    # Explicitly forward visibility for nested scopes.
+    forward_variables_from(invoker, [ "visibility" ])
+    deps += [
+      "//src/fuzzing/cpp:fuzzer_test",
+      "//third_party/googletest:gtest_main",
+    ]
+  }
+
+  # Generate the fuzzer test component manifest
+  action("${fuzzer_name}_test_cmx") {
+    script = "//build/fuzzing/gen_fuzzer_manifest.py"
+    outputs = [
+      "${target_gen_dir}/${fuzzer_name}_test.cmx",
+    ]
+    args = [
+      "--test",
+      "--out",
+      rebase_path(outputs[0]),
+      "--bin",
+      "${fuzzer_name}_test",
+    ]
+  }
+
   # Generate data files needed at runtime
   output_dictionary = "${target_gen_dir}/${fuzzer_name}/dictionary"
   if (defined(invoker.dictionary)) {
@@ -117,6 +153,9 @@ set_defaults("fuzzer") {
 #     [boolean] Indicates whether to also build fuzzer binaries on host.
 #     Defaults to false.
 #
+#   generated_test_package (optional)
+#     [string] The name of a package of fuzzer tests to create.
+#
 #   meta (optional)
 #   binaries (optional)
 #   components (optional)
@@ -156,9 +195,12 @@ template("fuzzers_package") {
     binaries = []
     resources = []
     deps = []
+    fuzzers = []
     host_deps = []
     host_outputs = []
-    fuzzers = []
+    tests = []
+    test_meta = []
+    test_deps = []
   }
 
   # Collect the selected fuzzers listed in this package based on the variants
@@ -166,6 +208,9 @@ template("fuzzers_package") {
   # sanitizers.
   foreach(fuzzer, invoker.fuzzers) {
     selected = false
+    fuzzer_name = get_label_info(fuzzer, "name")
+    fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
+    fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
     foreach(sanitizer, sanitizers) {
       foreach(selector, select_variant_canonical) {
         if (!selected && selector.variant == "${sanitizer}-fuzzer" &&
@@ -175,9 +220,8 @@ template("fuzzers_package") {
              (defined(selector.output_name) &&
               selector.output_name == [ fuzzer ]))) {
           selected = true
-          fuzzer_name = get_label_info(fuzzer, "name")
-          fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
-          fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
+
+          # Package details.
           pkg.meta += [
             {
               path = "${fuzzer_path}/${fuzzer_name}.cmx"
@@ -205,15 +249,34 @@ template("fuzzers_package") {
             "${fuzzer_label}_dictionary",
             "${fuzzer_label}_options",
           ]
+          pkg.fuzzers += [ fuzzer_name ]
+
+          # Host fuzzers
           if (fuzz_host) {
             pkg.deps += [ ":host_${target_name}" ]
             pkg.host_deps += [ fuzzer_label ]
             pkg.host_outputs += [ fuzzer_name ]
           }
-          pkg.fuzzers += [ fuzzer_name ]
         }
       }
     }
+
+    # Fuzzer tests
+    pkg.tests += [
+      {
+        name = "${fuzzer_name}_test"
+      },
+    ]
+    pkg.test_meta += [
+      {
+        path = "${fuzzer_path}/${fuzzer_name}_test.cmx"
+        dest = "${fuzzer_name}_test.cmx"
+      },
+    ]
+    pkg.test_deps += [
+      "${fuzzer_label}_test",
+      "${fuzzer_label}_test_cmx",
+    ]
     not_needed([ "selected" ])
   }
 
@@ -228,6 +291,7 @@ template("fuzzers_package") {
                              "*",
                              [
                                "fuzzers",
+                               "generated_test_package",
                                "metadata",
                                "sanitizers",
                                "visibility",
@@ -276,6 +340,19 @@ template("fuzzers_package") {
                  "package_name",
                  "fuzz_host",
                ])
+  }
+
+  # Assemble the Fuchsia test package. This uses `package` instead of
+  # `test_package`, as the latter only provides an inconvenient constraint on
+  # where the cmx file must come from.
+  if (defined(invoker.generated_test_package)) {
+    package(invoker.generated_test_package) {
+      forward_variables_from(invoker, [ "visibility" ])
+      testonly = true
+      meta = pkg.test_meta
+      tests = pkg.tests
+      deps = pkg.test_deps
+    }
   }
 }
 

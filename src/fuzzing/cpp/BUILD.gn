@@ -2,12 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
-
-group("tests") {
+source_set("fuzzer_test") {
   testonly = true
-  public_deps = [
-    "host:tests",
+  sources = [
+    "fuzzer_test.cc",
+  ]
+  deps = [
+    "//src/lib/files",
+    "//third_party/googletest:gtest",
   ]
 }

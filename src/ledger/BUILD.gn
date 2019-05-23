@@ -22,9 +22,9 @@ group("ledger") {
 
 group("tests") {
   testonly = true
-
-  data_deps = [
+  deps = [
     ":ledger_tests",
+    "bin:ledger_fuzzer_tests",
   ]
 }
 

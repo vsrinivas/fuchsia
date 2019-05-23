@@ -18,6 +18,7 @@ group("tests") {
 
   data_deps = [
     "//src/connectivity/bluetooth/core/bt-gap:tests",
+    "//src/connectivity/bluetooth/core/bt-host:bluetooth_fuzzers_test",
     "//src/connectivity/bluetooth/lib/bt-avdtp:tests",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth:tests",
     "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
@@ -27,6 +28,7 @@ group("tests") {
     "//src/connectivity/network/testing/netemul:tests",
     "//src/connectivity/overnet/examples:tests",
     "//src/connectivity/overnet/lib:overnet_tests",
+    "//src/connectivity/overnet/lib:overnet_fuzzer_tests",
     "//src/connectivity/overnet/overnetstack:overnetstack_tests",
     "//src/connectivity/telephony/lib/qmi-protocol:tests",
     "//src/connectivity/wlan:tests",

@@ -71,4 +71,5 @@ fuzzers_package("overnet_fuzzers") {
   ]
   sanitizers = [ "asan" ]
   fuzz_host = true
+  generated_test_package = "overnet_fuzzer_tests"
 }

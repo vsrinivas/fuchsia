@@ -59,4 +59,5 @@ fuzzers_package("ledger_fuzzers") {
     "//src/ledger/bin/p2p_sync/impl:p2p_sync_fuzzer",
     "//src/ledger/bin/storage/impl/btree:encoding_fuzzer",
   ]
+  generated_test_package = "ledger_fuzzer_tests"
 }
