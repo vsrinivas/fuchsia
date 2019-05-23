@@ -1,0 +1,91 @@
+commands:
+
+  make: !Command
+    description: Build the library
+    container: ubuntu
+    run: [cargo, build]
+
+  build-musl: !Command
+    description: Build the library with musl libc
+    container: ubuntu
+    run: [cargo, build, --target=x86_64-unknown-linux-musl]
+
+  cargo: !Command
+    description: Run arbitrary cargo command
+    container: ubuntu
+    run: [cargo]
+
+  test: !Command
+    description: Run tests
+    container: ubuntu
+    run: [cargo, test]
+
+  bench: !Command
+    description: Run benchmarks
+    container: nightly
+    run: [cargo, bench]
+
+  _bulk: !Command
+    description: Run `bulk` command (for version bookkeeping)
+    container: ubuntu
+    run: [bulk]
+
+containers:
+
+  ubuntu:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuUniverse
+    - !Install [ca-certificates, git, build-essential, vim, musl-tools]
+
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-1.28.0-x86_64-unknown-linux-gnu.tar.gz"
+      script: "./install.sh --prefix=/usr \
+                --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-std-1.28.0-x86_64-unknown-linux-musl.tar.gz"
+      script: "./install.sh --prefix=/musl \
+               --components=rust-std-x86_64-unknown-linux-musl"
+    - !Sh 'ln -s /musl/lib/rustlib/x86_64-unknown-linux-musl /usr/lib/rustlib/x86_64-unknown-linux-musl'
+    - &bulk !Tar
+      url: "https://github.com/tailhook/bulk/releases/download/v0.4.9/bulk-v0.4.9.tar.gz"
+      sha256: 23471a9986274bb4b7098c03e2eb7e1204171869b72c45385fcee1c64db2d111
+      path: /
+
+    environ:
+      HOME: /work/target
+      LD_LIBRARY_PATH: /musl/lib/rustlib/x86_64-unknown-linux-musl/lib
+      PATH: /musl/bin:/usr/local/bin:/usr/bin:/bin
+      RUST_BACKTRACE: 1
+
+  nightly:
+    setup:
+    - !Ubuntu xenial
+    - !Install [ca-certificates, git, build-essential]
+
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-nightly-x86_64-unknown-linux-gnu.tar.gz"
+      script: "./install.sh --prefix=/usr \
+                --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
+
+    environ:
+      HOME: /work/target
+      RUST_BACKTRACE: 1
+
+  aarch64:
+    setup:
+    - !Ubuntu xenial
+    - !Install [ca-certificates, git, build-essential]
+
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-1.31.0-x86_64-unknown-linux-gnu.tar.gz"
+      script: "./install.sh --prefix=/usr \
+                --components=rustc,cargo"
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-std-1.31.0-aarch64-linux-android.tar.gz"
+      script: "./install.sh --prefix=/usr \
+                --components=rust-std-aarch64-linux-android"
+
+    environ:
+      HOME: /work/target
+      RUST_BACKTRACE: 1

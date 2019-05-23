@@ -115,6 +115,7 @@ xml-rs = "0.8"
 [target.'cfg(target_os = "fuchsia")'.dependencies]
 # -- FIXME(cramertj) separate out the dependencies above that will only be
 # needed target-side.
+openat = "0.1.17"
 
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
