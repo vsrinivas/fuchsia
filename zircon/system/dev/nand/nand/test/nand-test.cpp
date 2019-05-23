@@ -4,6 +4,7 @@
 
 #include "nand.h"
 
+#include <atomic>
 #include <memory>
 #include <utility>
 
@@ -303,7 +304,7 @@ public:
 
 private:
     sync_completion_t event_;
-    int num_completed_ = 0;
+    std::atomic<int> num_completed_ = 0;
     NandTester tester_;
     std::unique_ptr<nand::NandDevice> device_;
     size_t op_size_;

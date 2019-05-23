@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <atomic>
 #include <utility>
 
 #include <ddk/metadata/nand.h>
@@ -378,7 +379,7 @@ class NandTest : public zxtest::Test {
 
   private:
     sync_completion_t event_;
-    int num_completed_ = 0;
+    std::atomic<int> num_completed_ = 0;
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandTest);
 };
 

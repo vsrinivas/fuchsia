@@ -4,6 +4,7 @@
 
 #include "block_device.h"
 
+#include <atomic>
 #include <memory>
 #include <utility>
 
@@ -303,7 +304,7 @@ class BlockDeviceTest : public zxtest::Test {
 
   private:
     sync_completion_t event_;
-    int num_completed_ = 0;
+    std::atomic<int> num_completed_ = 0;
     std::unique_ptr<ftl::BlockDevice> device_;
     size_t op_size_;
     FakeNand nand_;
