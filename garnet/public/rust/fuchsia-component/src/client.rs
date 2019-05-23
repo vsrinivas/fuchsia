@@ -5,7 +5,7 @@
 //! Tools for starting or connecting to existing Fuchsia applications and services.
 
 use {
-    failure::{Error, ResultExt},
+    failure::{Error, Fail, ResultExt},
     fidl::endpoints::{Proxy, ServiceMarker},
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerProxy, FileDescriptor, FlatNamespace,
@@ -19,7 +19,7 @@ use {
         stream::{StreamExt, TryStreamExt},
         Future,
     },
-    std::{fs::File, sync::Arc},
+    std::{fmt, fs::File, sync::Arc},
 };
 
 /// Connect to a FIDL service using the provided channel and namespace prefix.
@@ -434,7 +434,7 @@ impl Stdio {
 }
 
 /// Describes the result of a component after it has terminated.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Fail)]
 pub struct ExitStatus {
     return_code: i64,
     termination_reason: TerminationReason,
@@ -447,21 +447,45 @@ impl ExitStatus {
     pub fn success(&self) -> bool {
         self.exited() && self.return_code == 0
     }
+
     /// Returns true if the component exited, as opposed to not starting at all due to some
     /// error or terminating with any reason other than `EXITED`.
     #[inline]
     pub fn exited(&self) -> bool {
         self.termination_reason == TerminationReason::Exited
     }
+
     /// The reason the component was terminated.
     #[inline]
     pub fn reason(&self) -> TerminationReason {
         self.termination_reason
     }
+
     /// The return code from the component. Guaranteed to be non-zero if termination reason is
     /// not `EXITED`.
+    #[inline]
     pub fn code(&self) -> i64 {
         self.return_code
+    }
+
+    /// Converts the `ExitStatus` to a `Result<(), ExitStatus>`, mapping to `Ok(())` if the
+    /// component exited with status code 0, or to `Err(ExitStatus)` otherwise.
+    pub fn ok(&self) -> Result<(), Self> {
+        if self.success() {
+            Ok(())
+        } else {
+            Err(self.clone())
+        }
+    }
+}
+
+impl fmt::Display for ExitStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.exited() {
+            write!(f, "Exited with {}", self.code())
+        } else {
+            write!(f, "Terminated with reason {:?}", self.reason())
+        }
     }
 }
 
@@ -473,4 +497,52 @@ pub struct Output {
     pub stdout: Vec<u8>,
     /// The data that the component wrote to stderr.
     pub stderr: Vec<u8>,
+}
+
+/// The output of a component that terminated with a failure.
+#[derive(Clone, Fail)]
+#[fail(display = "{}", exit_status)]
+pub struct OutputError {
+    #[cause]
+    exit_status: ExitStatus,
+    stdout: String,
+    stderr: String,
+}
+
+impl Output {
+    /// Converts the `Output` to a `Result<(), OutputError>`, mapping to `Ok(())` if the component
+    /// exited with status code 0, or to `Err(OutputError)` otherwise.
+    pub fn ok(&self) -> Result<(), OutputError> {
+        if self.exit_status.success() {
+            Ok(())
+        } else {
+            let stdout = String::from_utf8_lossy(&self.stdout).into_owned();
+            let stderr = String::from_utf8_lossy(&self.stderr).into_owned();
+            Err(OutputError { exit_status: self.exit_status.clone(), stdout, stderr })
+        }
+    }
+}
+
+impl fmt::Debug for OutputError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        struct RawMultilineString<'a>(&'a str);
+
+        impl<'a> fmt::Debug for RawMultilineString<'a> {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                if self.0.is_empty() {
+                    f.write_str(r#""""#)
+                } else {
+                    f.write_str("r#\"")?;
+                    f.write_str(self.0)?;
+                    f.write_str("\"#")
+                }
+            }
+        }
+
+        f.debug_struct("OutputError")
+            .field("exit_status", &self.exit_status)
+            .field("stdout", &RawMultilineString(&self.stdout))
+            .field("stderr", &RawMultilineString(&self.stderr))
+            .finish()
+    }
 }

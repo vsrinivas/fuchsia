@@ -15,10 +15,9 @@ use {
     fidl_fuchsia_pkg_rewrite::{
         EngineMarker as RewriteEngineMarker, EngineProxy as RewriteEngineProxy,
     },
-    fidl_fuchsia_sys::TerminationReason,
     fuchsia_async as fasync,
     fuchsia_component::{
-        client::{App, AppBuilder, Stdio},
+        client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_uri::pkg_uri::RepoUri,
@@ -128,35 +127,13 @@ impl TestEnv {
     }
 
     async fn _run_amberctl(&self, builder: AppBuilder) {
-        let fut =
-            builder.stderr(Stdio::Inherit).output(self.env.launcher()).expect("amberctl to launch");
+        let fut = builder.output(self.env.launcher()).expect("amberctl to launch");
         let output = await!(fut).expect("amberctl to run");
-
-        assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
-        assert!(
-            output.exit_status.success(),
-            "amberctl exited with {}\nSTDOUT\n{}\nSTDOUT",
-            output.exit_status.code(),
-            String::from_utf8_lossy(&output.stdout),
-        );
+        output.ok().expect("amberctl to succeed");
     }
 
     async fn run_amberctl<'a>(&'a self, args: &'a [impl std::fmt::Debug + AsRef<str>]) {
-        let fut = amberctl()
-            .args(args.into_iter().map(|s| s.as_ref()))
-            .stderr(Stdio::Inherit)
-            .output(self.env.launcher())
-            .expect("amberctl to launch");
-        let output = await!(fut).expect("amberctl to run");
-
-        assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
-        assert!(
-            output.exit_status.success(),
-            "amberctl {:?} exited with {}\nSTDOUT\n{}\nSTDOUT",
-            args,
-            output.exit_status.code(),
-            String::from_utf8_lossy(&output.stdout),
-        );
+        await!(self._run_amberctl(amberctl().args(args.into_iter().map(|s| s.as_ref()))));
     }
 
     async fn run_amberctl_add_static_src(&self, name: &'static str) {
@@ -167,8 +144,8 @@ impl TestEnv {
                     File::open("/pkg/data/sources").expect("/pkg/data/sources to exist"),
                 )
                 .expect("static /configs to mount")
-                .args(["add_src", "-f"].into_iter().cloned())
-                .arg(format!("/configs/{}", name))
+                .arg("add_src")
+                .arg(format!("-f=/configs/{}", name))
         ));
     }
 
@@ -180,8 +157,10 @@ impl TestEnv {
             amberctl()
                 .add_dir_to_namespace("/configs/test.json".to_string(), config_file)
                 .expect("static /configs to mount")
+                .arg("add_src")
                 // Run amberctl in non-exclusive mode so it doesn't disable existing source configs
-                .args(["add_src", "-x", "-f", "/configs/test.json"].iter().map(|s| *s))
+                .arg("-x")
+                .arg("-f=/configs/test.json")
         ));
     }
 
