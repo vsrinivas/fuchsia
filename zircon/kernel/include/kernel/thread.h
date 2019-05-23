@@ -471,7 +471,6 @@ static inline void thread_preempt_disable(void) {
 // thread_preempt_reenable() decrements the preempt_disable counter.  See
 // thread_preempt_disable().
 static inline void thread_preempt_reenable(void) {
-    DEBUG_ASSERT(!arch_blocking_disallowed());
     DEBUG_ASSERT(thread_preempt_disable_count() > 0);
 
     thread_t* current_thread = get_current_thread();
@@ -480,6 +479,7 @@ static inline void thread_preempt_reenable(void) {
     atomic_signal_fence();
 
     if (new_count == 0) {
+        DEBUG_ASSERT(!arch_blocking_disallowed());
         thread_check_preempt_pending();
     }
 }
@@ -521,7 +521,6 @@ static inline void thread_resched_disable(void) {
 // thread_resched_reenable() decrements the preempt_disable counter.  See
 // thread_resched_disable().
 static inline void thread_resched_reenable(void) {
-    DEBUG_ASSERT(!arch_blocking_disallowed());
     DEBUG_ASSERT(thread_resched_disable_count() > 0);
 
     thread_t* current_thread = get_current_thread();
@@ -531,6 +530,7 @@ static inline void thread_resched_reenable(void) {
     atomic_signal_fence();
 
     if (new_count == 0) {
+        DEBUG_ASSERT(!arch_blocking_disallowed());
         thread_check_preempt_pending();
     }
 }
