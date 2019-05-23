@@ -20,6 +20,7 @@ group("tests") {
 
   data_deps = [
     "//src/developer/bugreport/tests:bugreport_tests",
+    "//src/developer/bugreport/tests:bugreport_client_tests($host_toolchain)",
     "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
     "//src/developer/feedback_agent/tests:feedback_agent_tests",
     "//src/developer/tracing:tests",

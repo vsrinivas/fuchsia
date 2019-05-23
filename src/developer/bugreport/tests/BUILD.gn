@@ -63,3 +63,31 @@ executable("bugreport_integration_test") {
     "//third_party/rapidjson",
   ]
 }
+
+if (current_toolchain == host_toolchain) {
+  test_package("bugreport_client_tests") {
+    tests = [
+      {
+        name = "bugreport_client_unittests"
+      },
+    ]
+
+    deps = [
+      ":bugreport_client_unittests",
+    ]
+  }
+
+  executable("bugreport_client_unittests") {
+    testonly = true
+
+    sources = [
+      "bug_report_client_unittest.cc",
+    ]
+
+    deps = [
+      "//src/developer/bugreport:bug_report_client_lib",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+    ]
+  }
+}

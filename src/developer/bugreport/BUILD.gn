@@ -61,3 +61,19 @@ source_set("bug_report_schema") {
     "bug_report_schema.h",
   ]
 }
+
+# Host side client -------------------------------------------------------------
+
+if (current_toolchain == host_toolchain) {
+  source_set("bug_report_client_lib") {
+    sources = [
+      "bug_report_client.cc",
+      "bug_report_client.h",
+    ]
+
+    deps = [
+      "//src/lib/fxl",
+      "//third_party/rapidjson",
+    ]
+  }
+}
