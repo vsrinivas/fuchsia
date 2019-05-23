@@ -660,20 +660,19 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   params->filter_duplicates = filter_duplicates;
 
   // Event handler to log when we receive advertising reports
-  auto le_adv_report_cb = [name_filter, addr_type_filter](
-                              const ::bt::hci::EventPacket& event) {
-    FXL_DCHECK(event.event_code() == ::bt::hci::kLEMetaEventCode);
-    FXL_DCHECK(
-        event.view().payload<::bt::hci::LEMetaEventParams>().subevent_code ==
-        ::bt::hci::kLEAdvertisingReportSubeventCode);
+  auto le_adv_report_cb =
+      [name_filter, addr_type_filter](const ::bt::hci::EventPacket& event) {
+        FXL_DCHECK(event.event_code() == ::bt::hci::kLEMetaEventCode);
+        FXL_DCHECK(event.params<::bt::hci::LEMetaEventParams>().subevent_code ==
+                   ::bt::hci::kLEAdvertisingReportSubeventCode);
 
-    ::bt::hci::AdvertisingReportParser parser(event);
-    const ::bt::hci::LEAdvertisingReportData* data;
-    int8_t rssi;
-    while (parser.GetNextReport(&data, &rssi)) {
-      DisplayAdvertisingReport(*data, rssi, name_filter, addr_type_filter);
-    }
-  };
+        ::bt::hci::AdvertisingReportParser parser(event);
+        const ::bt::hci::LEAdvertisingReportData* data;
+        int8_t rssi;
+        while (parser.GetNextReport(&data, &rssi)) {
+          DisplayAdvertisingReport(*data, rssi, name_filter, addr_type_filter);
+        }
+      };
   auto event_handler_id = cmd_data->cmd_channel()->AddLEMetaEventHandler(
       ::bt::hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb,
       cmd_data->dispatcher());
@@ -822,8 +821,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   auto inquiry_result_cb = [filter](const ::bt::hci::EventPacket& event) {
     FXL_DCHECK(event.event_code() == ::bt::hci::kInquiryResultEventCode);
 
-    const auto& result =
-        event.view().payload<::bt::hci::InquiryResultEventParams>();
+    const auto& result = event.params<::bt::hci::InquiryResultEventParams>();
 
     for (int i = 0; i < result.num_responses; i++) {
       if (!filter.empty() &&
@@ -842,7 +840,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   // The callback invoked for an Inquiry Complete response.
   auto inquiry_complete_cb = [cleanup_cb = cleanup_cb.share()](
                                  const ::bt::hci::EventPacket& event) mutable {
-    auto params = event.view().payload<::bt::hci::InquiryCompleteEventParams>();
+    auto params = event.params<::bt::hci::InquiryCompleteEventParams>();
     std::cout << fxl::StringPrintf("  Inquiry Complete - status: 0x%02x\n",
                                    params.status);
     cleanup_cb();
@@ -866,8 +864,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
              dispatcher = cmd_data->dispatcher()](
                 ::bt::hci::CommandChannel::TransactionId id,
                 const ::bt::hci::EventPacket& event) mutable {
-    auto return_params =
-        event.view().payload<::bt::hci::CommandStatusEventParams>();
+    auto return_params = event.params<::bt::hci::CommandStatusEventParams>();
     LogCommandResult(return_params.status, id, "Command Status");
     if (return_params.status != ::bt::hci::StatusCode::kSuccess) {
       cleanup_cb();
