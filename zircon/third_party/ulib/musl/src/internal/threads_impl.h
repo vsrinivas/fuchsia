@@ -12,7 +12,6 @@
 #include <sys/uio.h>
 #include <threads.h>
 
-#include <lib/zircon-internal/default_stack_size.h>
 #include <runtime/thread.h>
 #include <runtime/tls.h>
 #include <zircon/assert.h>
@@ -214,7 +213,7 @@ void __thread_tsd_run_dtors(void) ATTR_LIBC_VISIBILITY;
 
 #define DEFAULT_PTHREAD_ATTR                                                  \
     ((pthread_attr_t){                                                        \
-        ._a_stacksize = ZIRCON_DEFAULT_STACK_SIZE,                           \
+        ._a_stacksize = libc.stack_size,                                      \
         ._a_guardsize = PAGE_SIZE,                                            \
     })
 

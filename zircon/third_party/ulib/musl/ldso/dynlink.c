@@ -6,18 +6,20 @@
 #include "zircon_impl.h"
 #include "threads_impl.h"
 #include "stdio_impl.h"
+
 #include <ctype.h>
 #include <dlfcn.h>
 #include <elf.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <ldmsg/ldmsg.h>
+#include <lib/processargs/processargs.h>
+#include <lib/zircon-internal/default_stack_size.h>
 #include <limits.h>
 #include <link.h>
-#include <zircon/dlfcn.h>
-#include <zircon/process.h>
-#include <zircon/status.h>
-#include <zircon/syscalls/log.h>
 #include <pthread.h>
+#include <runtime/thread.h>
 #include <setjmp.h>
 #include <stdalign.h>
 #include <stdarg.h>
@@ -31,12 +33,10 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <unistd.h>
-
-#include <inttypes.h>
-
-#include <ldmsg/ldmsg.h>
-#include <lib/processargs/processargs.h>
-#include <runtime/thread.h>
+#include <zircon/dlfcn.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
+#include <zircon/syscalls/log.h>
 
 
 static void early_init(void);
@@ -1647,7 +1647,6 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
 
 __NO_SAFESTACK struct pthread* __init_main_thread(zx_handle_t thread_self) {
     pthread_attr_t attr = DEFAULT_PTHREAD_ATTR;
-    attr._a_stacksize = libc.stack_size;
 
     char thread_self_name[ZX_MAX_NAME_LEN];
     if (_zx_object_get_property(thread_self, ZX_PROP_NAME, thread_self_name,
@@ -1951,7 +1950,7 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo,
     app.l_map.l_name = (char*)"";
 
     // Check for a PT_GNU_STACK header requesting a main thread stack size.
-    libc.stack_size = DEFAULT_PTHREAD_ATTR._a_stacksize;
+    libc.stack_size = ZIRCON_DEFAULT_STACK_SIZE;
     for (size_t i = 0; i < app.phnum; i++) {
         if (app.phdr[i].p_type == PT_GNU_STACK) {
             size_t size = app.phdr[i].p_memsz;

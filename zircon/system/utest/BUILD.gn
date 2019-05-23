@@ -72,7 +72,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/bitmap/test",
       "$zx/system/ulib/blobfs/test",
       "$zx/system/ulib/bootfs:bootfs-test",
-      "$zx/system/ulib/c:tests",
+      "$zx/system/ulib/c/test",
       "$zx/system/ulib/cobalt-client/test",
       "$zx/system/ulib/crypto/test",
       "$zx/system/ulib/ddk:ddk-unittest",
