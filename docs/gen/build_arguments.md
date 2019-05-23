@@ -53,7 +53,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/recovery/factory_reset", "//topaz/bundles:buildbot"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -61,7 +61,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:14
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/recovery/factory_reset", "//topaz/bundles:buildbot"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -225,7 +225,7 @@ Whether to build SDK tarballs.
 
 **Current value (from the default):** `false`
 
-From //build/sdk/sdk.gni:13
+From //build/sdk/config.gni:7
 
 ### cache_package_labels
 If you add package labels to this variable, the packages will be included
@@ -850,7 +850,7 @@ From //build/go/go_build.gni:20
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/host_x64/.gocache"`
 
 From //build/go/go_build.gni:16
 
@@ -1968,7 +1968,7 @@ From //build/config/sysroot.gni:7
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"linux_x64/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -2203,7 +2203,7 @@ If false, any unacknowledged SDK change will cause a build failure.
 
 **Current value (from the default):** `false`
 
-From //build/sdk/config.gni:8
+From //build/sdk/config.gni:11
 
 ### wlancfg_config_type
 Selects the wlan configuration type to use. Choices:
