@@ -35,7 +35,7 @@ void launch(fuchsia::sys::LauncherSyncPtr launcher,
             bool daemonize) {
   if (daemonize) {
     launcher->CreateComponent(std::move(launch_info), {});
-    return;
+    zx_process_exit(0);
   }
 
   std::string url = launch_info.url;

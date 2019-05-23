@@ -19,7 +19,7 @@ static constexpr char kStdout[] =
     "Found fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter.cmx, "
     "executing.\n";
 
-void test_case(const char* url, const char* value) {
+void test_case(const char* url, const char* value, bool daemonize) {
   std::FILE* outf = std::tmpfile();
   int out_fd = fileno(outf);
   fdio_spawn_action_t actions[] = {
@@ -33,7 +33,12 @@ void test_case(const char* url, const char* value) {
 
   // Spawn "run run_test_exiter <value>"
   uint32_t flags = FDIO_SPAWN_CLONE_ALL;
-  const char* argv[] = {kRunPath, url, value, NULL};
+  const char** argv;
+  if (daemonize) {
+    argv = new const char* [] { kRunPath, "-d", url, value, NULL };
+  } else {
+    argv = new const char* [] { kRunPath, url, value, NULL };
+  }
   zx_handle_t process = ZX_HANDLE_INVALID;
   zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, kRunPath, argv,
                                       NULL, 2, actions, &process, nullptr);
@@ -55,22 +60,33 @@ void test_case(const char* url, const char* value) {
   status = zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info,
                               sizeof(proc_info), NULL, NULL);
   ASSERT_EQ(ZX_OK, status);
-  ASSERT_EQ(strtoll(value, NULL, 0), proc_info.return_code);
+  if (daemonize) {
+    // If we run daemonize, the return code for run is going to be 0.
+    ASSERT_EQ(ZX_OK, proc_info.return_code);
+  } else {
+    ASSERT_EQ(strtoll(value, NULL, 0), proc_info.return_code);
+  }
 }
 
-TEST(RunReturnValueTest, Zero) { test_case(kExiter, "0"); }
-TEST(RunReturnValueTest, OneTwoThree) { test_case(kExiter, "123"); }
-TEST(RunReturnValueTest, Negative) { test_case(kExiter, "-99999"); }
+TEST(RunReturnValueTest, Zero) { test_case(kExiter, "0", false); }
+TEST(RunReturnValueTest, OneTwoThree) { test_case(kExiter, "123", false); }
+TEST(RunReturnValueTest, Negative) { test_case(kExiter, "-99999", false); }
 TEST(RunReturnValueTest, LongValue) {
-  test_case(kExiter, "1152921504606846976");
+  test_case(kExiter, "1152921504606846976", false);
 }
-TEST(RunReturnValueTest, FuzzySearchZero) { test_case(kExiterShort, "0"); }
+TEST(RunReturnValueTest, FuzzySearchZero) {
+  test_case(kExiterShort, "0", false);
+}
 TEST(RunReturnValueTest, FuzzySearchOneTwoThree) {
-  test_case(kExiterShort, "123");
+  test_case(kExiterShort, "123", false);
 }
 TEST(RunReturnValueTest, FuzzySearchNegative) {
-  test_case(kExiterShort, "-99999");
+  test_case(kExiterShort, "-99999", false);
 }
 TEST(RunReturnValueTest, FuzzySearchLongValue) {
-  test_case(kExiterShort, "1152921504606846976");
+  test_case(kExiterShort, "1152921504606846976", false);
+}
+TEST(RunReturnValueTest, ZeroD) { test_case(kExiter, "0", true); }
+TEST(RunReturnValueTest, FuzzySearchZeroD) {
+  test_case(kExiterShort, "0", true);
 }
