@@ -389,6 +389,7 @@ void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden
     // is set after adding the hidden parent into the tree since that's not really
     // a 'real' child.
     hidden_parent->user_id_ = user_id_;
+    hidden_parent->page_attribution_user_id_ = user_id_;
 
     // The hidden parent should have the same view as we had into
     // its parent, and this vmo has a full view into the hidden vmo
@@ -617,6 +618,39 @@ void VmObjectPaged::OnChildRemoved(Guard<fbl::Mutex>&& adopt) {
     // to us, in addition to child.parent_ which we are about to clear.
     DEBUG_ASSERT(ref_count_debug() >= 2);
 
+    if (child.page_attribution_user_id_ != page_attribution_user_id_) {
+        // If the attribution user id of this vmo doesn't match that of its remaining child,
+        // then the vmo with the matching attribution user id  was just closed. In that case, we
+        // need to reattribute the pages of any ancestor hidden vmos to vmos that still exist.
+        //
+        // The syscall API doesn't specify how pages are to be attributed among a group of COW
+        // clones. One option is to pick a remaining vmo 'arbitrarily' and attribute everything to
+        // that vmo. However, it seems fairer to reattribute each remaining hidden vmo with
+        // its child whose user id doesn't match the vmo that was just closed. So walk up the
+        // clone chain and attribute each hidden vmo to the vmo we didn't just walk through.
+        auto cur = this;
+        uint64_t user_id_to_skip = page_attribution_user_id_;
+        while (cur->parent_ != nullptr) {
+            DEBUG_ASSERT(cur->parent_->is_hidden());
+            auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+
+            if (parent->page_attribution_user_id_ == page_attribution_user_id_) {
+                uint64_t new_user_id = parent->left_child_locked().page_attribution_user_id_;
+                if (new_user_id == user_id_to_skip) {
+                    new_user_id = parent->right_child_locked().page_attribution_user_id_;
+                }
+                DEBUG_ASSERT(new_user_id != page_attribution_user_id_
+                             && new_user_id != user_id_to_skip);
+                parent->page_attribution_user_id_ = new_user_id;
+                user_id_to_skip = new_user_id;
+
+                cur = parent;
+            } else {
+                break;
+            }
+        }
+    }
+
     // Drop the child from our list, but don't recurse back into this function. Then
     // remove ourselves from the clone tree.
     DropChildLocked(&child);
@@ -665,28 +699,115 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
     }
 }
 
-size_t VmObjectPaged::AllocatedPagesInRange(uint64_t offset, uint64_t len) const {
+size_t VmObjectPaged::AttributedPagesInRange(uint64_t offset, uint64_t len) const {
     canary_.Assert();
     Guard<fbl::Mutex> guard{&lock_};
-    return AllocatedPagesInRangeLocked(offset, len);
+    return AttributedPagesInRangeLocked(offset, len);
 }
 
-size_t VmObjectPaged::AllocatedPagesInRangeLocked(uint64_t offset, uint64_t len) const {
+size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const {
+    if (is_hidden()) {
+        return 0;
+    }
+
     uint64_t new_len;
     if (!TrimRange(offset, len, size_, &new_len)) {
         return 0;
     }
     size_t count = 0;
-    // TODO: Figure out what to do with our parent's pages. If we're a clone,
-    // page_list_ only contains pages that we've made copies of.
-    page_list_.ForEveryPage(
-        [&count, offset, new_len](const auto p, uint64_t off) {
-            if (off >= offset && off < offset + new_len) {
-                count++;
+    // TODO: Decide who pages should actually be attribtued to.
+    page_list_.ForEveryPageAndGapInRange(
+        [&count](const auto p, uint64_t off) {
+            count++;
+            return ZX_ERR_NEXT;
+        },
+        [this, &count](uint64_t gap_start, uint64_t gap_end) TA_NO_THREAD_SAFETY_ANALYSIS {
+            // If there's no parent, there's no pages to care about. If there is a non-hidden
+            // parent, then that owns any pages in the gap, not us.
+            if (!parent_ || !parent_->is_hidden()) {
+                return ZX_ERR_NEXT;
+            }
+
+            for (uint64_t off = gap_start; off < gap_end; off += PAGE_SIZE) {
+                if (HasAttributedAncestorPageLocked(off)) {
+                    count++;
+                }
             }
             return ZX_ERR_NEXT;
-        });
+        }, offset, offset + new_len);
+
     return count;
+}
+
+bool VmObjectPaged::HasAttributedAncestorPageLocked(uint64_t offset) const {
+    // For each offset, walk up the ancestor chain to see if there is a page at that offset
+    // that should be attributed to this vmo.
+    //
+    // Note that we cannot stop just because the page_attribution_user_id_ changes. This is because
+    // there might still be a forked page at the offset in question which should be attributed to
+    // this vmo. Whenever the attribution user id changes while walking up the ancestors, we need
+    // to determine if there is a 'closer' vmo in the sibling subtree to which the offset in
+    // question can be attributed, or if it should still be attributed to the current vmo.
+    const VmObjectPaged* cur = this;
+    uint64_t cur_offset = offset;
+    vm_page_t* page = nullptr;
+    while (cur_offset < cur->parent_limit_) {
+        // For cur->parent_limit_ to be non-zero, it must have a parent.
+        DEBUG_ASSERT(cur->parent_);
+        DEBUG_ASSERT(cur->parent_->is_paged());
+
+        auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+        uint64_t parent_offset;
+        bool overflowed = add_overflow(cur->parent_offset_, cur_offset, &parent_offset);
+        DEBUG_ASSERT(!overflowed); // vmo creation should have failed
+        DEBUG_ASSERT(parent_offset <= parent->size_); // parent_limit_ prevents this
+
+        page = parent->page_list_.GetPage(parent_offset);
+        if (parent->page_attribution_user_id_ != cur->page_attribution_user_id_) {
+            bool left = cur == &parent->left_child_locked();
+
+            if (page && (page->object.cow_left_split || page->object.cow_right_split)) {
+                // If page has already been split and we can see it, then we know
+                // the sibling subtree can't see the page and thus it should be
+                // attributed to this vmo.
+                return true;
+            } else {
+                auto& sib = left ?  parent->right_child_locked() : parent->left_child_locked();
+                DEBUG_ASSERT(sib.page_attribution_user_id_ == parent->page_attribution_user_id_);
+                if (sib.parent_offset_ <= parent_offset
+                        && parent_offset < sib.parent_offset_ + sib.parent_limit_) {
+                    // The offset is visible to the current vmo, so there can't be any migrated
+                    // pages in the sibling subtree corresponding to the offset. And since the page
+                    // is visible to the sibling, there must be a leaf vmo in its subtree which
+                    // can actually see the offset.
+                    //
+                    // Therefore we know that there is a vmo in the sibling subtree which is
+                    // 'closer' to this offset and thus to which this offset can be attributed.
+                    return false;
+                } else {
+                    if (page) {
+                        // If there is a page and it's not accessible by the sibling,
+                        // then it is attributed to |this|.
+                        return true;
+                    } else {
+                        // |sib| can't see the offset, but there might be a sibling further up
+                        // the ancestor tree that can, so we have to keep looking.
+                    }
+                }
+            }
+        } else {
+            // If there's a page, it is attributed to |this|. Otherwise keep looking.
+            if (page) {
+                return true;
+            }
+        }
+
+        cur = parent;
+        cur_offset = parent_offset;
+    }
+
+    // We didn't find a page at all, so nothing to attribute.
+    return false;
 }
 
 zx_status_t VmObjectPaged::AddPage(vm_page_t* p, uint64_t offset) {
@@ -1723,7 +1844,7 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
     // then this restriction might need to be lifted.
     // TODO: Check that the region is locked once locking is implemented
     if (mapping_list_len_ || children_list_len_
-            || AllocatedPagesInRangeLocked(offset , len) != (len / PAGE_SIZE)) {
+            || AttributedPagesInRangeLocked(offset , len) != (len / PAGE_SIZE)) {
         return ZX_ERR_BAD_STATE;
     }
 

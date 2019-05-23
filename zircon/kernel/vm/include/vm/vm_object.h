@@ -79,15 +79,15 @@ public:
     // Returns true if the vmo is a hidden paged vmo.
     virtual bool is_hidden() const { return false; }
 
-    // Returns the number of physical pages currently allocated to the
+    // Returns the number of physical pages currently attributed to the
     // object where (offset <= page_offset < offset+len).
     // |offset| and |len| are in bytes.
-    virtual size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const {
+    virtual size_t AttributedPagesInRange(uint64_t offset, uint64_t len) const {
         return 0;
     }
-    // Returns the number of physical pages currently allocated to the object.
-    size_t AllocatedPages() const {
-        return AllocatedPagesInRange(0, size());
+    // Returns the number of physical pages currently attributed to the object.
+    size_t AttributedPages() const {
+        return AttributedPagesInRange(0, size());
     }
 
     // find physical pages to back the range of the object
@@ -170,7 +170,9 @@ public:
     virtual uint64_t parent_user_id() const = 0;
 
     // Sets the value returned by |user_id()|. May only be called once.
-    void set_user_id(uint64_t user_id);
+    //
+    // Derived types overriding this method are expected to call it from their override.
+    virtual void set_user_id(uint64_t user_id);
 
     virtual void Dump(uint depth, bool verbose) = 0;
 

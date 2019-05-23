@@ -141,7 +141,7 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
         (vmo->is_resizable() ? ZX_INFO_VMO_RESIZABLE : 0) |
         (vmo->is_pager_backed() ? ZX_INFO_VMO_PAGER_BACKED : 0) |
         (vmo->is_contiguous() ? ZX_INFO_VMO_CONTIGUOUS : 0);
-    entry.committed_bytes = vmo->AllocatedPages() * PAGE_SIZE;
+    entry.committed_bytes = vmo->AttributedPages() * PAGE_SIZE;
     entry.cache_policy = vmo->GetMappingCachePolicy();
     if (is_handle) {
         entry.flags |= ZX_INFO_VMO_VIA_HANDLE;

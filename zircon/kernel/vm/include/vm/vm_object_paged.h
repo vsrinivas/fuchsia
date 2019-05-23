@@ -90,8 +90,13 @@ public:
         Guard<fbl::Mutex> guard{&lock_};
         return original_parent_user_id_;
     }
+    void set_user_id(uint64_t user_id) override {
+        VmObject::set_user_id(user_id);
+        Guard<fbl::Mutex> guard{&lock_};
+        page_attribution_user_id_ = user_id;
+    }
 
-    size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
+    size_t AttributedPagesInRange(uint64_t offset, uint64_t len) const override;
 
     zx_status_t CommitRange(uint64_t offset, uint64_t len) override;
     zx_status_t DecommitRange(uint64_t offset, uint64_t len) override;
@@ -200,8 +205,13 @@ private:
     // internal check if any pages in a range are pinned
     bool AnyPagesPinnedLocked(uint64_t offset, size_t len) TA_REQ(lock_);
 
-    // see AllocatedPagesInRange
-    size_t AllocatedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
+    // see AttributedPagesInRange
+    size_t AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
+    // Helper function for ::AllocatedPagesInRangeLocked. Returns true if there is a page
+    // in an ancestor vmo at |offset| which should be attributed to this vmo.
+    bool HasAttributedAncestorPageLocked(uint64_t offset) const
+        // Walks the parent chain, which analysis can't handle.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // internal read/write routine that takes a templated copy function to help share some code
     template <typename T>
@@ -320,6 +330,15 @@ private:
         Left, Right,
     };
     StackDir page_stack_flag_ TA_GUARDED(lock_);
+
+    // This value is used when determining against which user-visible vmo a hidden vmo's
+    // pages should be attributed. It serves as a tie-breaker for pages that are accessible by
+    // multiple user-visible vmos. See ::HasAttributedAncestorPageLocked for more details.
+    //
+    // For non-hidden vmobjects, this always equals user_id_. For hidden vmobjects, this
+    // is the page_attribution_user_id_ of one of their children (i.e. the user_id_ of one
+    // of their non-hidden descendants).
+    uint64_t page_attribution_user_id_ TA_GUARDED(lock_) = 0;
 
     // The page source, if any.
     const fbl::RefPtr<PageSource> page_source_;

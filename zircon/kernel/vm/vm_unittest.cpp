@@ -370,7 +370,7 @@ static bool vmo_commit_test() {
     auto ret = vmo->CommitRange(0, alloc_size);
     ASSERT_EQ(ZX_OK, ret, "committing vm object\n");
     EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size),
-              PAGE_SIZE * vmo->AllocatedPages(),
+              PAGE_SIZE * vmo->AttributedPages(),
               "committing vm object\n");
     END_TEST;
 }
@@ -499,7 +499,7 @@ static bool vmo_odd_size_commit_test() {
     auto ret = vmo->CommitRange(0, alloc_size);
     EXPECT_EQ(ZX_OK, ret, "committing vm object\n");
     EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size),
-              PAGE_SIZE * vmo->AllocatedPages(),
+              PAGE_SIZE * vmo->AttributedPages(),
               "committing vm object\n");
     END_TEST;
 }
@@ -940,7 +940,7 @@ static bool vmo_lookup_test() {
 
     status = vmo->CommitRange(PAGE_SIZE, PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "committing vm object\n");
-    EXPECT_EQ(static_cast<size_t>(1), vmo->AllocatedPages(),
+    EXPECT_EQ(static_cast<size_t>(1), vmo->AttributedPages(),
                "committing vm object\n");
 
     // Should fail, since first page isn't mapped
@@ -964,7 +964,7 @@ static bool vmo_lookup_test() {
     // Commit the rest
     status = vmo->CommitRange(0, alloc_size);
     EXPECT_EQ(ZX_OK, status, "committing vm object\n");
-    EXPECT_EQ(alloc_size, PAGE_SIZE * vmo->AllocatedPages(), "committing vm object\n");
+    EXPECT_EQ(alloc_size, PAGE_SIZE * vmo->AttributedPages(), "committing vm object\n");
 
     status = vmo->Lookup(0, alloc_size, lookup_fn, &pages_seen);
     EXPECT_EQ(ZX_OK, status, "lookup on partially committed pages\n");

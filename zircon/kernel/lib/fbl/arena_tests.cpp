@@ -182,7 +182,7 @@ static bool count_committed_pages(
     // Ask the VMO how many pages it's allocated within the range.
     auto start_off = ROUNDDOWN(start, PAGE_SIZE) - mapping->base();
     auto end_off = ROUNDUP(end, PAGE_SIZE) - mapping->base();
-    *committed = mapping->vmo()->AllocatedPagesInRange(
+    *committed = mapping->vmo()->AttributedPagesInRange(
         start_off + mapping->object_offset(), end_off - start_off);
     *uncommitted = (end_off - start_off) / PAGE_SIZE - *committed;
     END_TEST;

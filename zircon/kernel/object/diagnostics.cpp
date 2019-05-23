@@ -358,7 +358,7 @@ static void DumpVmObject(
     char alloc_str[MAX_FORMAT_SIZE_LEN];
     if (vmo.is_paged()) {
         format_size_fixed(alloc_str, sizeof(alloc_str),
-                          vmo.AllocatedPages() * PAGE_SIZE, format_unit);
+                          vmo.AttributedPages() * PAGE_SIZE, format_unit);
     } else {
         strlcpy(alloc_str, "phys", sizeof(alloc_str));
     }
@@ -483,7 +483,7 @@ static void DumpProcessVmObjects(zx_koid_t id, char format_unit) {
         total_size += vmo->size();
         // TODO: Doing this twice (here and in DumpVmObject) is a waste of
         // work, and can get out of sync.
-        total_alloc += vmo->AllocatedPages() * PAGE_SIZE;
+        total_alloc += vmo->AttributedPages() * PAGE_SIZE;
         return ZX_OK;
     });
     char size_str[MAX_FORMAT_SIZE_LEN];
@@ -523,7 +523,7 @@ public:
                      uint depth) override {
         usage.mapped_pages += map->size() / PAGE_SIZE;
 
-        size_t committed_pages = map->vmo()->AllocatedPagesInRange(
+        size_t committed_pages = map->vmo()->AttributedPagesInRange(
             map->object_offset(), map->size());
         uint32_t share_count = map->vmo()->share_count();
         if (share_count == 1) {
@@ -608,7 +608,7 @@ public:
             u->mmu_flags =
                 arch_mmu_flags_to_vm_flags(map->arch_mmu_flags());
             u->vmo_koid = vmo->user_id();
-            u->committed_pages = vmo->AllocatedPagesInRange(
+            u->committed_pages = vmo->AttributedPagesInRange(
                 map->object_offset(), map->size());
             u->vmo_offset = map->object_offset();
             if (maps_.copy_array_to_user(&entry, 1, nelem_) != ZX_OK) {
