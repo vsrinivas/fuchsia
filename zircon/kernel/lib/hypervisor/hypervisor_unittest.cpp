@@ -429,13 +429,13 @@ static bool guest_physical_address_space_map_interrupt_controller() {
     status = create_mapping(gpas->RootVmar(), vmo, 0);
     EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
 
-    // Allocate a page to use as the APIC page.
+    // Allocate a page to use as the interrupt controller.
     paddr_t paddr = 0;
     vm_page* vm_page;
     status = pmm_alloc_page(0, &vm_page, &paddr);
     EXPECT_EQ(ZX_OK, status, "Unable to allocate a page\n");
 
-    // Map APIC page in an arbitrary location.
+    // Map interrupt controller page in an arbitrary location.
     const vaddr_t APIC_ADDRESS = 0xffff0000;
     status = gpas->MapInterruptController(APIC_ADDRESS, paddr, PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "Failed to map APIC page\n");

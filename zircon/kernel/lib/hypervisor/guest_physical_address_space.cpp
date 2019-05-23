@@ -64,7 +64,7 @@ zx_status_t GuestPhysicalAddressSpace::MapInterruptController(zx_gpaddr_t guest_
         return status;
     }
 
-    status = vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_CACHED);
+    status = vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         return status;
     }
