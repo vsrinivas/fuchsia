@@ -26,7 +26,7 @@ extern "C" {
 
 namespace {
 
-class DummyTest : public testing::Test {
+class DummyTest : public ::testing::Test {
  public:
   DummyTest() {}
   ~DummyTest() {}
