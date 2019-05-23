@@ -10,9 +10,6 @@
 #include "guest_test.h"
 
 template <class T>
-T* GuestTest<T>::enclosed_guest_ = nullptr;
-
-template <class T>
 class VsockGuestTest : public GuestTest<T>,
                        public fuchsia::virtualization::HostVsockAcceptor {
  public:

@@ -19,9 +19,6 @@ static constexpr char kVirtioRngUtil[] = "virtio_rng_test_util";
 static constexpr size_t kVirtioConsoleMessageCount = 100;
 static constexpr size_t kVirtioBalloonPageCount = 256;
 
-template <class T>
-T* GuestTest<T>::enclosed_guest_ = nullptr;
-
 class SingleCpuZirconEnclosedGuest : public ZirconEnclosedGuest {
   zx_status_t LaunchInfo(
       fuchsia::virtualization::LaunchInfo* launch_info) override {

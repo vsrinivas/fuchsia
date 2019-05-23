@@ -68,7 +68,7 @@ class GuestTest : public ::testing::Test {
   const T* GetEnclosedGuest() const { return enclosed_guest_; }
 
  private:
-  static T* enclosed_guest_;
+  static inline T* enclosed_guest_ = nullptr;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_

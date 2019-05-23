@@ -26,9 +26,6 @@ static constexpr size_t kTestPacketSize = 1000;
 // Includes ethernet + IPv4 + UDP headers.
 static constexpr size_t kHeadersSize = 42;
 
-template <class T>
-T* GuestTest<T>::enclosed_guest_ = nullptr;
-
 class VirtioNetZirconGuest : public ZirconEnclosedGuest {
  public:
   zx_status_t LaunchInfo(

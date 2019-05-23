@@ -28,9 +28,6 @@ static constexpr uint32_t kVirtioBlockCount = 32;
 static constexpr uint32_t kVirtioQcowBlockCount = 4 * 1024 * 1024 * 2;
 static constexpr uint32_t kVirtioTestStep = 8;
 
-template <class T>
-T* GuestTest<T>::enclosed_guest_ = nullptr;
-
 static fidl::VectorPtr<fuchsia::virtualization::BlockDevice> block_device(
     fuchsia::virtualization::BlockMode mode,
     fuchsia::virtualization::BlockFormat format, int fd) {
