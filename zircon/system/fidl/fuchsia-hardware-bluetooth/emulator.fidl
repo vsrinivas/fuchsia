@@ -1,0 +1,15 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.bluetooth;
+
+/// Represents the bt-emulator device protocol. A bt-emulator device is used for configuring and
+/// publishing fake bt-hci devices.
+[Layout = "Simple"]
+protocol Emulator {
+    /// Opens a fake controller management channel that speaks the
+    /// "//sdk/fidl/fuchsia.bluetooth.test.HciEmulator" protocol.
+    /// Only one channel to this protocol can be open on a given bt-hci-fake device.
+    Open(handle<channel> channel);
+};
