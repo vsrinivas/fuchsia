@@ -514,7 +514,7 @@ int main(int argc, const char* argv[]) {
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-
+        layer1->SetLayerFlipping(true);
         layers.push_back(std::move(layer1));
     } else if (platform == SIMPLE) {
         // Simple display test
