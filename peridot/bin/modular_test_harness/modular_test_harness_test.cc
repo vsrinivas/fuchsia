@@ -7,10 +7,10 @@
 #include <sdk/lib/sys/cpp/service_directory.h>
 #include <sdk/lib/sys/cpp/testing/test_with_environment.h>
 
-class TestHarnessFixtureTest : public modular::testing::TestHarnessFixture {};
+class ModularTestHarnessTest : public modular::testing::TestHarnessFixture {};
 
 // Ensure that the TestHarnessFixture is able to launch the modular runtime.
-TEST_F(TestHarnessFixtureTest, SimpleSuccess) {
+TEST_F(ModularTestHarnessTest, SimpleSuccess) {
   constexpr char kFakeBaseShellUrl[] =
       "fuchsia-pkg://example.com/FAKE_BASE_SHELL_PKG/fake_base_shell.cmx";
 

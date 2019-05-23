@@ -23,6 +23,8 @@ using fuchsia.sys;
 /// * ZX_ERR_INVALID_ARGS: Run() failed to execute succesfully.
 /// * ZX_ERR_BAD_STATE: Other methods are called before Run() is called.
 /// * ZX_ERR_ALREADY_BOUND: Run() was already called.
+/// * ZX_ERR_ALREADY_EXISTS: The same environment service is being provided
+///   twice.
 [Discoverable]
 protocol TestHarness {
     /// Initializes an instance of the modular runtime in an enclosed
@@ -32,6 +34,8 @@ protocol TestHarness {
     /// This protocol connection is closed if Run() fails, with the following
     /// epitaphs:
     ///  * ZX_ERR_INVALID_ARGS: |spec| is mal-formed.
+    ///  * ZX_ERR_ALREADY_EXISTS: The same environment service is being provided
+    ///    twice in |spec.env_services|
     ///  * ZX_ERR_ALREADY_BOUND: Run() was already called.
     Run(TestHarnessSpec spec);
 
@@ -60,7 +64,7 @@ protocol TestHarness {
     /// environment.
     ConnectToEnvironmentService(string service_name, handle<channel> request);
 
-    /// DEPRECATED. Use |ConnectToModularService()| instead, they are the same.
+    /// DEPRECATED. Use |ConnectToModularService()| instead.
     GetService(TestHarnessService service);
 };
 
@@ -126,35 +130,51 @@ table TestHarnessSpec {
     /// defaults.
     2: fuchsia.modular.session.SessionmgrConfig sessionmgr_config;
 
-    /// The test harness starts the modular runtime in a hermetic environment
-    /// which does not allow accessing services outside of the environment,
-    /// unless the service names are specified in this list.
-    ///
-    /// For example, adding "fuchsia.net.SocketProvider" here allows the
-    /// hermetic environment to inherit the test process' environment's instance
-    /// of the socket provider. This lets the test code, and the code under
-    /// test, to share the same SocketProvider.
-    3: vector<string> env_services_to_inherit;
-
-    /// A list of services and their providers to inject into this environment,
-    /// along with components which provide them. Multiple services may be
-    /// provided by the same component, but only one instance of the component
-    /// is launched to serve its services. Components are started when one of
-    /// their services is requested, and are kept alive for the duration of the
-    /// test harness environment's life.
-    5: vector<InjectedService> env_services_to_inject;
-
     /// List of component URLs (and additional .cmx contents) to intercept.
     4: vector<InterceptSpec> components_to_intercept;
+
+    /// Options to configure the test harness environment. Use this to inject
+    /// services into the environment.
+    ///
+    /// Optional.
+    6: EnvironmentServicesSpec env_services;
+
+    /// DEPRECATED. Use |env_services.service_dir| to pass through services from
+    /// parent environment.
+    3: vector<string> env_services_to_inherit;
+
+    /// DEPRECATED. Use |env_services.services_from_components| instead.
+    5: vector<InjectedService> env_services_to_inject;
 };
 
-/// Describes a single injected service.
-struct InjectedService {
+/// Options for configuring the test harness environment with services.
+///
+/// If the same service is provided in more than one place, |TestHarness|
+/// connection is closed with a ZX_ERR_ALREADY_EXISTS epitaph.
+table EnvironmentServicesSpec {
+    /// A directory of services to be provided to the test harness environment.
+    ///
+    /// Optional.
+    1: handle<channel> service_dir;
+
+    /// A list of services provided by components to inject into the test
+    /// harness environment. Multiple services may be provided by the same
+    /// component, but only one instance of the component is launched to serve
+    /// its services. Components are started when one of their services is
+    /// requested, and are kept alive for the duration of the test harness
+    /// environment's life.
+    ///
+    /// Optional.
+    2: vector<ComponentService> services_from_components;
+};
+
+/// Describes a service to be provided by a component instance.
+struct ComponentService {
     /// Name of the service.
     string name;
 
-    /// URL of the component which will provide the service (denoted by |name|).
-    /// The service is retrieved from the component's /out/svc namespace.
+    /// URL of the component which will provide the service.
+    /// The service is retrieved from this component's /out/svc namespace.
     fuchsia.sys.component_url url;
 };
 
@@ -188,3 +208,14 @@ xunion TestHarnessService {
     request<fuchsia.modular.ComponentContext> component_context;
     request<fuchsia.modular.AgentContext> agent_context;
 };
+
+/// DEPRECATED. Renamed to ComponentService.
+struct InjectedService {
+    /// Name of the service.
+    string name;
+
+    /// URL of the component which will provide the service.
+    /// The service is retrieved from this component's /out/svc namespace.
+    fuchsia.sys.component_url url;
+};
+

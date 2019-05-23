@@ -36,8 +36,12 @@ class PseudoDirServer final {
   // This destructor blocks the current thread until the child thread exits.
   ~PseudoDirServer();
 
-  // Opens a read-only FD at |path|.  Path must not begin with '/'.
+  // Opens a read-only FD at |path|.  |path| must not lead with a '/'.
   fxl::UniqueFD OpenAt(std::string path);
+
+  // Returns a directory connection for this pseudo dir. This directory is
+  // served on a different thread than the caller's thread.
+  fuchsia::io::DirectoryPtr Serve();
 
  private:
   // This method is the handler for a new thread. It lets the owning thread
@@ -46,8 +50,9 @@ class PseudoDirServer final {
   void StartThread(fidl::InterfaceRequest<fuchsia::io::Directory> request);
 
   std::unique_ptr<vfs::PseudoDir> pseudo_dir_;
-  // The directory connection we that |pseudo_dir| serves over in a differnt
-  // thread.
+
+  // The directory connection which |OpenAt()| uses. This directory connection
+  // is served on |serving_thread_|'s thread.
   fuchsia::io::DirectoryPtr dir_;
 
   // The mutex & condition variable are used by the new thread (owned by

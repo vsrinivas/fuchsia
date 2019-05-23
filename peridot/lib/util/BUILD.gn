@@ -58,13 +58,13 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "pseudo_dir_server_unittest.cc",
     "pseudo_dir_utils_unittest.cc",
     "string_escape_unittest.cc",
   ]
 
   public_deps = [
     ":util",
-    "//peridot/lib/testing:test_with_ledger",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]

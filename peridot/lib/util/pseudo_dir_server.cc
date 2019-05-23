@@ -4,6 +4,8 @@
 
 #include "peridot/lib/util/pseudo_dir_server.h"
 
+#include <lib/async/cpp/task.h>
+
 namespace modular {
 
 PseudoDirServer::PseudoDirServer(std::unique_ptr<vfs::PseudoDir> pseudo_dir)
@@ -35,6 +37,18 @@ fxl::UniqueFD PseudoDirServer::OpenAt(std::string path) {
              path, node.NewRequest());
 
   return fsl::OpenChannelAsFileDescriptor(node.Unbind().TakeChannel());
+}
+
+fuchsia::io::DirectoryPtr PseudoDirServer::Serve() {
+  fuchsia::io::DirectoryPtr directory;
+  auto req = directory.NewRequest().TakeChannel();
+  async::PostTask(
+      thread_loop_->dispatcher(), [this, req = std::move(req)]() mutable {
+        pseudo_dir_->Serve(
+            fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+            std::move(req));
+      });
+  return directory;
 }
 
 // This method is the handler for a new thread. It lets the owning thread know

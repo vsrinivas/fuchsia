@@ -4,6 +4,9 @@
 
 #include "lib/modular_test_harness/cpp/test_harness_impl.h"
 
+#include <dirent.h>
+#include <lib/fdio/directory.h>
+#include <lib/fsl/io/fd.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
@@ -11,10 +14,12 @@
 #include <peridot/lib/modular_config/modular_config_xdr.h>
 #include <peridot/lib/util/pseudo_dir_utils.h>
 #include <src/lib/files/path.h>
+#include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/substitute.h>
+#include <zircon/status.h>
 
 namespace modular::testing {
 namespace {
@@ -171,6 +176,8 @@ void TestHarnessImpl::ConnectToEnvironmentService(std::string service_name,
 
 bool TestHarnessImpl::CloseBindingIfError(zx_status_t status) {
   if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Destroying TestHarness because of error: "
+                   << zx_status_get_string(status);
     binding_.Close(status);
     // destory |enclosing_env_| should kill all processes.
     enclosing_env_.reset();
@@ -180,30 +187,6 @@ bool TestHarnessImpl::CloseBindingIfError(zx_status_t status) {
   return false;
 }
 
-void TestHarnessImpl::InjectServicesIntoEnvironment(
-    sys::testing::EnvironmentServices* env_services,
-    std::map<std::string, std::string>* default_injected_svcs) {
-  // Wire up client-specified injected services, and remove them from the
-  // default injected services.
-  if (spec_.has_env_services_to_inject()) {
-    for (const auto& injected_svc : spec_.env_services_to_inject()) {
-      default_injected_svcs->erase(injected_svc.name);
-
-      fuchsia::sys::LaunchInfo info;
-      info.url = injected_svc.url;
-      env_services->AddServiceWithLaunchInfo(std::move(info),
-                                             injected_svc.name);
-    }
-  }
-
-  // Wire up the remaining default injected services.
-  for (const auto& injected_svc : *default_injected_svcs) {
-    fuchsia::sys::LaunchInfo info;
-    info.url = injected_svc.second;
-    env_services->AddServiceWithLaunchInfo(std::move(info), injected_svc.first);
-  }
-}
-
 std::string MakeTestHarnessEnvironmentName() {
   // Apply a random suffix to the environment name so that multiple hermetic
   // test harness environments may coexist under the same parent env.
@@ -211,6 +194,150 @@ std::string MakeTestHarnessEnvironmentName() {
   zx_cprng_draw(&random_env_suffix, sizeof random_env_suffix);
   return fxl::Substitute("modular_test_harness_$0",
                          std::to_string(random_env_suffix));
+}
+
+zx_status_t TestHarnessImpl::PopulateEnvServices(
+    sys::testing::EnvironmentServices* env_services) {
+  // The default set of component-provided services are all basemgr's hard
+  // dependencies. A map of service name => component URL providing the service.
+  std::map<std::string, std::string> default_svcs = {
+      {fuchsia::auth::account::AccountManager::Name_,
+       "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx"},
+      {fuchsia::devicesettings::DeviceSettingsManager::Name_,
+       "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
+       "device_settings_manager.cmx"}};
+
+  std::set<std::string> added_svcs;
+
+  // 1. Allow services to be inherited from parent environment.
+  if (spec_.has_env_services_to_inherit()) {
+    for (auto& svc_name : spec_.env_services_to_inherit()) {
+      added_svcs.insert(svc_name);
+      env_services->AllowParentService(svc_name);
+    }
+  }
+
+  // 2. Inject component-provided services.
+  if (auto retval = PopulateEnvServicesWithComponents(env_services,
+                                                      &added_svcs) != ZX_OK) {
+    return retval;
+  }
+
+  // 3. Inject service_dir services.
+  if (auto retval = PopulateEnvServicesWithServiceDir(env_services,
+                                                      &added_svcs) != ZX_OK) {
+    return retval;
+  }
+
+  // 4. Inject the remaining default component-provided services.
+  for (const auto& svc_component : default_svcs) {
+    if (added_svcs.find(svc_component.first) != added_svcs.end()) {
+      continue;
+    }
+    fuchsia::sys::LaunchInfo info;
+    info.url = svc_component.second;
+    env_services->AddServiceWithLaunchInfo(std::move(info),
+                                           svc_component.first);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t TestHarnessImpl::PopulateEnvServicesWithComponents(
+    sys::testing::EnvironmentServices* env_services,
+    std::set<std::string>* added_svcs) {
+  // Wire up client-specified injected services, and remove them from the
+  // default injected services.
+  if (spec_.has_env_services_to_inject()) {
+    for (const auto& svc : spec_.env_services_to_inject()) {
+      if (added_svcs->find(svc.name) != added_svcs->end()) {
+        FXL_LOG(ERROR) << svc.name
+                       << " has already been injected into the environment, "
+                          "cannot add twice.";
+        return ZX_ERR_ALREADY_EXISTS;
+      }
+      added_svcs->insert(svc.name);
+
+      fuchsia::sys::LaunchInfo info;
+      info.url = svc.url;
+      env_services->AddServiceWithLaunchInfo(std::move(info), svc.name);
+    }
+  }
+
+  if (!spec_.has_env_services() ||
+      !spec_.env_services().has_services_from_components()) {
+    return ZX_OK;
+  }
+  for (const auto& svc : spec_.env_services().services_from_components()) {
+    if (added_svcs->find(svc.name) != added_svcs->end()) {
+      FXL_LOG(ERROR) << svc.name
+                     << " has already been injected into the environment, "
+                        "cannot add twice.";
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+    added_svcs->insert(svc.name);
+
+    fuchsia::sys::LaunchInfo info;
+    info.url = svc.url;
+    env_services->AddServiceWithLaunchInfo(std::move(info), svc.name);
+  }
+  return ZX_OK;
+}  // namespace modular::testing
+
+std::vector<std::string> GetDirListing(fuchsia::io::Directory* dir) {
+  // Make a clone of |dir| since translating to a POSIX fd is destructive.
+  fuchsia::io::NodePtr dir_copy;
+  dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE, dir_copy.NewRequest());
+
+  std::vector<std::string> svcs;
+  DIR* fd = fdopendir(
+      fsl::OpenChannelAsFileDescriptor(dir_copy.Unbind().TakeChannel())
+          .release());
+  FXL_CHECK(fd != nullptr);
+
+  struct dirent* dp = nullptr;
+  while ((dp = readdir(fd)) != nullptr) {
+    if (dp->d_name[0] != '.') {
+      svcs.push_back(dp->d_name);
+    }
+  }
+
+  closedir(fd);
+  return svcs;
+}
+
+zx_status_t TestHarnessImpl::PopulateEnvServicesWithServiceDir(
+    sys::testing::EnvironmentServices* env_services,
+    std::set<std::string>* added_svcs) {
+  if (!spec_.has_env_services() || !spec_.env_services().has_service_dir() ||
+      !spec_.env_services().service_dir()) {
+    return ZX_OK;
+  }
+
+  fuchsia::io::DirectoryPtr dir;
+  dir.Bind(std::move(*spec_.mutable_env_services()->mutable_service_dir()));
+  for (auto& svc_name : GetDirListing(dir.get())) {
+    if (added_svcs->find(svc_name) != added_svcs->end()) {
+      FXL_LOG(ERROR)
+          << svc_name
+          << " is already injected into the environment, cannot add twice.";
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+    env_services->AddService(
+        std::make_unique<vfs::Service>([this, svc_name](
+                                           zx::channel request,
+                                           async_dispatcher_t* dispatcher) {
+          FXL_CHECK(env_service_dir_->Connect(svc_name, std::move(request)) ==
+                    ZX_OK);
+        }),
+        svc_name);
+    added_svcs->insert(svc_name);
+  }
+
+  env_service_dir_ =
+      std::make_unique<sys::ServiceDirectory>(dir.Unbind().TakeChannel());
+
+  return ZX_OK;
 }
 
 void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
@@ -232,24 +359,9 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   std::unique_ptr<sys::testing::EnvironmentServices> env_services =
       interceptor_.MakeEnvironmentServices(parent_env_);
 
-  // The default injected services are all basemgr's hard dependencies.
-  // A map of service name => component URL serving it.
-  std::map<std::string, std::string> default_injected_svcs = {
-      {fuchsia::auth::account::AccountManager::Name_,
-       "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx"},
-      {fuchsia::devicesettings::DeviceSettingsManager::Name_,
-       "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
-       "device_settings_manager.cmx"}};
-
-  // Allow services to be inherited from outside the test harness environment.
-  if (spec_.has_env_services_to_inherit()) {
-    for (auto& svc_name : spec_.env_services_to_inherit()) {
-      default_injected_svcs.erase(svc_name);
-      env_services->AllowParentService(svc_name);
-    }
+  if (CloseBindingIfError(PopulateEnvServices(env_services.get()))) {
+    return;
   }
-
-  InjectServicesIntoEnvironment(env_services.get(), &default_injected_svcs);
 
   // Ledger configuration for tests by default:
   // * use a memory-backed FS for ledger.
