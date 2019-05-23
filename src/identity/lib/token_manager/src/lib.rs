@@ -23,6 +23,7 @@ mod auth_provider_connection;
 mod error;
 mod token_manager;
 mod tokens;
+mod fake_auth_provider_supplier;
 
 pub use crate::auth_provider_connection::AuthProviderConnection;
 pub use crate::error::{ResultExt, TokenManagerError};
