@@ -4,14 +4,44 @@
 
 executable("thermal-cli") {
   sources = [
+    "main.cpp",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/fidl/fuchsia-hardware-thermal:c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+source_set("common") {
+  sources = [
     "thermal-cli.cpp",
+    "thermal-cli.h",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+  ]
+}
+
+test("thermal-cli-test") {
+  output_name = "thermal-cli-test"
+  sources = [
+    "test/thermal-cli-test.cpp",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    ":common",
+    "$zx/system/fidl/fuchsia-hardware-thermal:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/zxtest",
   ]
 }
