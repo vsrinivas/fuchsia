@@ -92,6 +92,7 @@ if (!defined(toolchain_variant.name)) {
 }
 
 is_android = false
+is_chromeos = false
 is_fuchsia = false
 is_fuchsia_host = false
 is_ios = false
