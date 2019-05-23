@@ -89,42 +89,28 @@ std::vector<uint8_t> rotate_img_vec(const std::vector<uint8_t>& imgvec,
   return result;
 }
 
+constexpr vk::Format kImageFormat = vk::Format::eB8G8R8A8Unorm;
+
+constexpr uint32_t kBytesPerPixel = 4u;
+
 };  // namespace
 
 // static
 void Screenshotter::OnCommandBufferDone(
-    const escher::ImagePtr& image, uint32_t width, uint32_t height,
-    uint32_t rotation, vk::Device device,
+    const escher::BufferPtr& buffer, uint32_t width, uint32_t height,
+    uint32_t rotation,
     fuchsia::ui::scenic::Scenic::TakeScreenshotCallback done_callback) {
   TRACE_DURATION("gfx", "Screenshotter::OnCommandBufferDone");
-  // Map the final image so CPU can read it.
-  const vk::ImageSubresource sr(vk::ImageAspectFlagBits::eColor, 0, 0);
-  vk::SubresourceLayout sr_layout;
-  device.getImageSubresourceLayout(image->vk(), &sr, &sr_layout);
 
-  constexpr uint32_t kBytesPerPixel = 4u;
   std::vector<uint8_t> imgvec;
   const size_t kImgVecElementSize = sizeof(decltype(imgvec)::value_type);
   imgvec.resize(kBytesPerPixel * width * height);
 
-  const uint8_t* row = image->host_ptr();
+  const uint8_t* row = buffer->host_ptr();
   FXL_CHECK(row != nullptr);
-  row += sr_layout.offset;
-  if (width == sr_layout.rowPitch) {
-    uint32_t num_bytes = width * height * kBytesPerPixel;
-    FXL_DCHECK(num_bytes <= kImgVecElementSize * imgvec.size());
-    memcpy(imgvec.data(), row, num_bytes);
-  } else {
-    uint8_t* imgvec_ptr = imgvec.data();
-    for (uint32_t y = 0; y < height; y++) {
-      uint32_t num_bytes = width * kBytesPerPixel;
-      FXL_DCHECK(num_bytes <=
-                 kImgVecElementSize * (1 + &imgvec.back() - imgvec_ptr));
-      memcpy(imgvec_ptr, row, num_bytes);
-      row += sr_layout.rowPitch;
-      imgvec_ptr += num_bytes;
-    }
-  }
+  uint32_t num_bytes = width * height * kBytesPerPixel;
+  FXL_DCHECK(num_bytes <= kImgVecElementSize * imgvec.size());
+  memcpy(imgvec.data(), row, num_bytes);
 
   // Apply rotation of 90, 180 or 270 degrees counterclockwise.
   if (rotation > 0) {
@@ -163,13 +149,11 @@ void Screenshotter::TakeScreenshot(
 
   uint32_t rotation = compositor->layout_rotation();
   escher::ImageInfo image_info;
-  image_info.format = vk::Format::eB8G8R8A8Unorm;
+  image_info.format = kImageFormat;
   image_info.width = width;
   image_info.height = height;
   image_info.usage = vk::ImageUsageFlagBits::eColorAttachment |
-                     vk::ImageUsageFlagBits::eSampled;
-  image_info.memory_flags = vk::MemoryPropertyFlagBits::eHostVisible;
-  image_info.tiling = vk::ImageTiling::eLinear;
+                     vk::ImageUsageFlagBits::eTransferSrc;
 
   // TODO(ES-7): cache is never trimmed.
   escher::ImagePtr image = escher->image_cache()->NewImage(image_info);
@@ -190,10 +174,32 @@ void Screenshotter::TakeScreenshot(
   vk::Queue queue = escher->command_buffer_pool()->queue();
   auto* command_buffer = escher->command_buffer_pool()->GetCommandBuffer();
 
+  escher::BufferPtr buffer = escher->buffer_cache()->NewHostBuffer(
+      width * height * kBytesPerPixel);
+
+  vk::BufferImageCopy region;
+  region.bufferRowLength = width;
+  region.bufferImageHeight = height;
+  region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+  region.imageSubresource.layerCount = 1;
+  region.imageExtent.width = width;
+  region.imageExtent.height = height;
+  region.imageExtent.depth = 1;
+  command_buffer->TransitionImageLayout(
+      image, vk::ImageLayout::eColorAttachmentOptimal,
+      vk::ImageLayout::eTransferSrcOptimal);
+  command_buffer->vk().copyImageToBuffer(image->vk(),
+                                         vk::ImageLayout::eTransferSrcOptimal,
+                                         buffer->vk(), 1, &region);
+  command_buffer->TransitionImageLayout(
+      image, vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eColorAttachmentOptimal);
+  command_buffer->KeepAlive(image);
+
   command_buffer->Submit(
-      queue, [image, width, height, rotation, device = escher->vk_device(),
+      queue, [buffer, width, height, rotation,
               done_callback = std::move(done_callback)]() mutable {
-        OnCommandBufferDone(image, width, height, rotation, device,
+        OnCommandBufferDone(buffer, width, height, rotation,
                             std::move(done_callback));
       });
 
