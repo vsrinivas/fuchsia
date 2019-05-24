@@ -114,7 +114,7 @@ class VirtualAudioUtil {
   static constexpr uint8_t kDefaultPlugPropsOption = 0;
   static constexpr uint32_t kDefaultNotificationFrequency = 4;
 
-  static ::async::Loop* loop_;
+  static async::Loop* loop_;
   static bool received_callback_;
 
   void QuitLoop();
@@ -1137,7 +1137,7 @@ int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  ::virtual_audio::VirtualAudioUtil util(&loop);
+  virtual_audio::VirtualAudioUtil util(&loop);
   util.Run(&command_line);
 
   return 0;

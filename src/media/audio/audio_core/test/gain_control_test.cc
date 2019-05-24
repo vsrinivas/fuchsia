@@ -15,7 +15,7 @@ namespace media::audio::test {
 // GainControlTestBase
 //
 void GainControlTestBase::SetUp() {
-  ::gtest::RealLoopFixture::SetUp();
+  gtest::RealLoopFixture::SetUp();
 
   auto err_handler = [this](zx_status_t error) {
     error_occurred_ = true;

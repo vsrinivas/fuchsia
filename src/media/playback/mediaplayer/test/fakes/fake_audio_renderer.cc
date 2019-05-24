@@ -36,7 +36,7 @@ void FakeAudioRenderer::SetStreamType(fuchsia::media::StreamType format) {
 }
 
 void FakeAudioRenderer::AddPayloadBuffer(uint32_t id,
-                                         ::zx::vmo payload_buffer) {
+                                         zx::vmo payload_buffer) {
   FXL_DCHECK(id == 0) << "Only ID 0 is currently supported.";
   vmo_mapper_.Map(std::move(payload_buffer), 0, 0, ZX_VM_PERM_READ);
 }
@@ -55,7 +55,7 @@ void FakeAudioRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
   threshold_seconds_ = threshold_seconds;
 }
 
-void FakeAudioRenderer::SetReferenceClock(::zx::handle ref_clock) {
+void FakeAudioRenderer::SetReferenceClock(zx::handle ref_clock) {
   FXL_NOTIMPLEMENTED();
 }
 
@@ -159,7 +159,7 @@ void FakeAudioRenderer::PauseNoReply() {
 }
 
 void FakeAudioRenderer::BindGainControl(
-    ::fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
+    fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
   FXL_NOTIMPLEMENTED();
 }
 

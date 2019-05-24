@@ -89,7 +89,7 @@ class SilenceMaker<
  public:
   static inline void Fill(void* dest, size_t samples) {
     // This works even if DType is float/double: per IEEE-754, all 0s == +0.0.
-    ::memset(dest, 0, samples * sizeof(DType));
+    memset(dest, 0, samples * sizeof(DType));
   }
 };
 
@@ -98,7 +98,7 @@ class SilenceMaker<
     DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
-    ::memset(dest, kOffsetInt8ToUint8, samples * sizeof(DType));
+    memset(dest, kOffsetInt8ToUint8, samples * sizeof(DType));
   }
 };
 

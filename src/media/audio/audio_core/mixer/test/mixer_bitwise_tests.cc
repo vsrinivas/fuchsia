@@ -156,7 +156,7 @@ TEST(PassThru, Source_16) {
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
-  ::memset(accum, 0, sizeof(accum));
+  memset(accum, 0, sizeof(accum));
   // Now try in 4-channel mode
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 4, 48000, 4,
                       48000, Resampler::SampleAndHold);
@@ -182,7 +182,7 @@ TEST(PassThru, Source_24) {
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
-  ::memset(accum, 0, sizeof(accum));
+  memset(accum, 0, sizeof(accum));
   // Now try in 8-channel mode
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 8,
                       48000, 8, 48000, Resampler::SampleAndHold);
@@ -208,7 +208,7 @@ TEST(PassThru, Source_Float) {
   DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
-  ::memset(accum, 0, sizeof(accum));
+  memset(accum, 0, sizeof(accum));
   // Now try in 4-channel mode
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 4, 48000, 4,
                       48000, Resampler::SampleAndHold);

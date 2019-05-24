@@ -143,7 +143,7 @@ class ElementarySourceImpl : public SourceImpl,
   void AddStream(fuchsia::media::StreamType type,
                  uint32_t tick_per_second_numerator,
                  uint32_t tick_per_second_denominator,
-                 ::fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink>
+                 fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink>
                      simple_stream_sink_request) override;
 
   void AddBinding(

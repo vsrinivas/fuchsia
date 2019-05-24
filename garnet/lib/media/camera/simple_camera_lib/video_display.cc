@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/lib/media/camera/simple_camera_lib/video_display.h>
+#include "garnet/lib/media/camera/simple_camera_lib/video_display.h"
 
 #include <fcntl.h>
-#include "src/lib/files/unique_fd.h"
+#include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/log_level.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
@@ -142,7 +142,7 @@ zx_status_t VideoDisplay::SetupBuffers(
 // TODO(CAM-9): Clean up this function after major changes land.
 zx_status_t VideoDisplay::ConnectToCamera(
     component::StartupContext* context, uint32_t camera_id,
-    ::fidl::InterfaceHandle<::fuchsia::images::ImagePipe> image_pipe,
+    fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe,
     OnShutdownCallback callback) {
   if (!callback) {
     return ZX_ERR_INVALID_ARGS;

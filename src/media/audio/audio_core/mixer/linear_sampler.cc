@@ -23,7 +23,7 @@ class LinearSamplerImpl : public LinearSampler {
            bool accumulate, Bookkeeping* info) override;
 
   // If/when Bookkeeping is included in this class, clear src_pos_modulo here.
-  void Reset() override { ::memset(filter_data_, 0, sizeof(filter_data_)); }
+  void Reset() override { memset(filter_data_, 0, sizeof(filter_data_)); }
 
  private:
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
@@ -42,7 +42,7 @@ class NxNLinearSamplerImpl : public LinearSampler {
       : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1), chan_count_(channelCount) {
     filter_data_u_ = std::make_unique<float[]>(chan_count_);
 
-    ::memset(filter_data_u_.get(), 0, chan_count_ * sizeof(filter_data_u_[0]));
+    memset(filter_data_u_.get(), 0, chan_count_ * sizeof(filter_data_u_[0]));
   }
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
@@ -51,7 +51,7 @@ class NxNLinearSamplerImpl : public LinearSampler {
 
   // If/when Bookkeeping is included in this class, clear src_pos_modulo here.
   void Reset() override {
-    ::memset(filter_data_u_.get(), 0, chan_count_ * sizeof(filter_data_u_[0]));
+    memset(filter_data_u_.get(), 0, chan_count_ * sizeof(filter_data_u_[0]));
   }
 
  private:

@@ -12,13 +12,14 @@
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
+
 #include <deque>
 
 namespace virtual_audio {
 
 class VirtualAudioDeviceImpl;
 
-class VirtualAudioStream : public ::audio::SimpleAudioStream {
+class VirtualAudioStream : public audio::SimpleAudioStream {
  public:
   void EnqueuePlugChange(bool plugged) __TA_EXCLUDES(wakeup_queue_lock_);
   void EnqueueGainRequest(
@@ -43,23 +44,23 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
   bool shutdown_by_parent_ = false;
 
  protected:
-  friend class ::audio::SimpleAudioStream;
+  friend class audio::SimpleAudioStream;
   friend class fbl::RefPtr<VirtualAudioStream>;
 
   VirtualAudioStream(VirtualAudioDeviceImpl* parent, zx_device_t* dev_node,
                      bool is_input)
-      : ::audio::SimpleAudioStream(dev_node, is_input), parent_(parent) {}
+      : audio::SimpleAudioStream(dev_node, is_input), parent_(parent) {}
   ~VirtualAudioStream() override;
 
   zx_status_t Init() __TA_REQUIRES(domain_->token()) override;
   zx_status_t InitPost() override;
 
-  zx_status_t ChangeFormat(const ::audio::audio_proto::StreamSetFmtReq& req)
+  zx_status_t ChangeFormat(const audio::audio_proto::StreamSetFmtReq& req)
       __TA_REQUIRES(domain_->token()) override;
-  zx_status_t SetGain(const ::audio::audio_proto::SetGainReq& req)
+  zx_status_t SetGain(const audio::audio_proto::SetGainReq& req)
       __TA_REQUIRES(domain_->token()) override;
 
-  zx_status_t GetBuffer(const ::audio::audio_proto::RingBufGetBufferReq& req,
+  zx_status_t GetBuffer(const audio::audio_proto::RingBufGetBufferReq& req,
                         uint32_t* out_num_rb_frames, zx::vmo* out_buffer)
       __TA_REQUIRES(domain_->token()) override;
 
@@ -126,26 +127,26 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
   fbl::Mutex wakeup_queue_lock_ __TA_ACQUIRED_AFTER(domain_->token());
 
   // TODO(mpuryear): Refactor to a single queue of lambdas to dedupe this code.
-  fbl::RefPtr<::dispatcher::WakeupEvent> plug_change_wakeup_;
+  fbl::RefPtr<dispatcher::WakeupEvent> plug_change_wakeup_;
   std::deque<PlugType> plug_queue_ __TA_GUARDED(wakeup_queue_lock_);
 
-  fbl::RefPtr<::dispatcher::WakeupEvent> gain_request_wakeup_;
+  fbl::RefPtr<dispatcher::WakeupEvent> gain_request_wakeup_;
   std::deque<fuchsia::virtualaudio::Device::GetGainCallback> gain_queue_
       __TA_GUARDED(wakeup_queue_lock_);
 
-  fbl::RefPtr<::dispatcher::WakeupEvent> format_request_wakeup_;
+  fbl::RefPtr<dispatcher::WakeupEvent> format_request_wakeup_;
   std::deque<fuchsia::virtualaudio::Device::GetFormatCallback> format_queue_
       __TA_GUARDED(wakeup_queue_lock_);
 
-  fbl::RefPtr<::dispatcher::WakeupEvent> buffer_request_wakeup_;
+  fbl::RefPtr<dispatcher::WakeupEvent> buffer_request_wakeup_;
   std::deque<fuchsia::virtualaudio::Device::GetBufferCallback> buffer_queue_
       __TA_GUARDED(wakeup_queue_lock_);
 
-  fbl::RefPtr<::dispatcher::WakeupEvent> position_request_wakeup_;
+  fbl::RefPtr<dispatcher::WakeupEvent> position_request_wakeup_;
   std::deque<fuchsia::virtualaudio::Device::GetPositionCallback> position_queue_
       __TA_GUARDED(wakeup_queue_lock_);
 
-  fbl::RefPtr<::dispatcher::WakeupEvent> set_notifications_wakeup_;
+  fbl::RefPtr<dispatcher::WakeupEvent> set_notifications_wakeup_;
   std::deque<uint32_t> notifs_queue_ __TA_GUARDED(wakeup_queue_lock_);
 };
 

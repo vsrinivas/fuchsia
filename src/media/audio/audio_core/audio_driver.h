@@ -139,7 +139,7 @@ class AudioDriver {
       kDriverInfoHasGainState | kDriverInfoHasFormats;
 
   // Dispatchers for messages received over stream and ring buffer channels.
-  zx_status_t ReadMessage(::dispatcher::Channel* channel, void* buf,
+  zx_status_t ReadMessage(dispatcher::Channel* channel, void* buf,
                           uint32_t buf_size, uint32_t* bytes_read_out,
                           zx::handle* handle_out)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
@@ -233,9 +233,9 @@ class AudioDriver {
   AudioDevice* const owner_;
 
   State state_ = State::Uninitialized;
-  fbl::RefPtr<::dispatcher::Channel> stream_channel_;
-  fbl::RefPtr<::dispatcher::Channel> rb_channel_;
-  fbl::RefPtr<::dispatcher::Timer> cmd_timeout_;
+  fbl::RefPtr<dispatcher::Channel> stream_channel_;
+  fbl::RefPtr<dispatcher::Channel> rb_channel_;
+  fbl::RefPtr<dispatcher::Timer> cmd_timeout_;
   zx_time_t last_set_timeout_ = ZX_TIME_INFINITE;
   zx_koid_t stream_channel_koid_ = ZX_KOID_INVALID;
   zx_time_t fetch_driver_info_timeout_ = ZX_TIME_INFINITE;

@@ -15,7 +15,7 @@ namespace media::audio::test {
 
 // The AudioLoopbackEnvironment class allows us to make configuration changes
 // before any test case begins, and after all test cases complete.
-class AudioLoopbackEnvironment : public ::testing::Environment {
+class AudioLoopbackEnvironment : public testing::Environment {
  public:
   // Before any test cases in this program, synchronously connect to the service
   // to ensure that the audio and audio_core components are present and loaded,
@@ -196,8 +196,7 @@ void AudioLoopbackTest::CleanUpRenderer(unsigned int index) {
   bool flushed = false;
 
   // Flush the audio
-  audio_renderer_[index]->DiscardAllPackets(
-      [&flushed]() { flushed = true; });
+  audio_renderer_[index]->DiscardAllPackets([&flushed]() { flushed = true; });
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, &flushed]() { return error_occurred_ || flushed; },
       kDurationResponseExpected, kDurationGranularity))
@@ -260,7 +259,7 @@ void AudioLoopbackTest::CleanUpCapturer(unsigned int index) {
 // AudioLoopbackTest implementation
 //
 void AudioLoopbackTest::SetUp() {
-  ::gtest::RealLoopFixture::SetUp();
+  gtest::RealLoopFixture::SetUp();
 
   environment_services_ = component::GetEnvironmentServices();
   environment_services_->ConnectToService(audio_.NewRequest());
@@ -275,7 +274,7 @@ void AudioLoopbackTest::TearDown() {
   EXPECT_FALSE(error_occurred_);
   EXPECT_TRUE(audio_.is_bound());
 
-  ::gtest::RealLoopFixture::TearDown();
+  gtest::RealLoopFixture::TearDown();
 }
 
 // SingleStream
@@ -481,11 +480,11 @@ TEST_F(AudioLoopbackTest, DualStream) {
 }  // namespace media::audio::test
 
 int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleTest(&argc, argv);
 
   // gtest takes ownership of registered environments: *do not delete them*
-  ::testing::AddGlobalTestEnvironment(
-      new ::media::audio::test::AudioLoopbackEnvironment);
+  testing::AddGlobalTestEnvironment(
+      new media::audio::test::AudioLoopbackEnvironment);
 
   int result = RUN_ALL_TESTS();
 

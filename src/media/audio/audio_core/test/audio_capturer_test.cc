@@ -38,7 +38,7 @@ class AudioCapturerTest : public gtest::RealLoopFixture {
 // AudioCapturerTest implementation
 //
 void AudioCapturerTest::SetUp() {
-  ::gtest::RealLoopFixture::SetUp();
+  gtest::RealLoopFixture::SetUp();
 
   auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
 
@@ -60,7 +60,7 @@ void AudioCapturerTest::TearDown() {
   EXPECT_EQ(expect_error_, error_occurred_);
   EXPECT_EQ(expect_capturer_, audio_capturer_.is_bound());
 
-  ::gtest::RealLoopFixture::TearDown();
+  gtest::RealLoopFixture::TearDown();
 }
 
 bool AudioCapturerTest::ExpectCallback() {

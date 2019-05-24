@@ -40,7 +40,7 @@ class AudioInput : public AudioDevice {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // AudioDevice impl
-  void ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
+  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                        uint32_t set_flags) override;
 
  private:

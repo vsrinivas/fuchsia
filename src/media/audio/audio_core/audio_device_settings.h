@@ -80,13 +80,13 @@ class AudioDeviceSettings
   // and return true if there was a meaningful change to the internal gain
   // state which would warrant waking up the AudioDevice.  Otherwise, return
   // false.
-  bool SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
+  bool SetGainInfo(const fuchsia::media::AudioGainInfo& info,
                    uint32_t set_flags) FXL_LOCKS_EXCLUDED(settings_lock_);
 
   // GetGainInfo
   // Fetch a copy of the current gain state packed into a FIDL structure
   // suitable for reporting gain state.
-  void GetGainInfo(::fuchsia::media::AudioGainInfo* out_info) const
+  void GetGainInfo(fuchsia::media::AudioGainInfo* out_info) const
       FXL_LOCKS_EXCLUDED(settings_lock_);
 
   //////////////////////////////////////////////////////////////////////////////

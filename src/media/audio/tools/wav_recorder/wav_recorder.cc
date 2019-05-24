@@ -256,7 +256,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   std::string opt;
   if (cmd_line_.GetOptionValue(kFrameRateOption, &opt)) {
     uint32_t rate;
-    if (::sscanf(opt.c_str(), "%u", &rate) != 1) {
+    if (sscanf(opt.c_str(), "%u", &rate) != 1) {
       Usage();
       return;
     }
@@ -278,7 +278,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   if (cmd_line_.HasOption(kGainOption)) {
     stream_gain_db_ = 0.0f;
     if (cmd_line_.GetOptionValue(kGainOption, &opt)) {
-      if (::sscanf(opt.c_str(), "%f", &stream_gain_db_) != 1) {
+      if (sscanf(opt.c_str(), "%f", &stream_gain_db_) != 1) {
         Usage();
         return;
       }
@@ -298,7 +298,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     stream_mute_ = true;
     if (cmd_line_.GetOptionValue(kMuteOption, &opt)) {
       uint32_t mute_val;
-      if (::sscanf(opt.c_str(), "%u", &mute_val) != 1) {
+      if (sscanf(opt.c_str(), "%u", &mute_val) != 1) {
         Usage();
         return;
       }
@@ -309,7 +309,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
 
   if (cmd_line_.GetOptionValue(kChannelsOption, &opt)) {
     uint32_t count;
-    if (::sscanf(opt.c_str(), "%u", &count) != 1) {
+    if (sscanf(opt.c_str(), "%u", &count) != 1) {
       Usage();
       return;
     }

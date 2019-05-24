@@ -21,7 +21,7 @@ namespace media::audio::test {
 //
 // AudioDeviceTest static variables
 //
-std::shared_ptr<const ::component::Services>
+std::shared_ptr<const component::Services>
     AudioDeviceTest::environment_services_;
 fuchsia::virtualaudio::ControlSyncPtr AudioDeviceTest::control_sync_;
 
@@ -40,7 +40,7 @@ uint32_t AudioDeviceTest::initial_output_gain_flags_ = 0;
 
 // static
 void AudioDeviceTest::SetEnvironmentServices(
-    std::shared_ptr<const ::component::Services> environment_services) {
+    std::shared_ptr<const component::Services> environment_services) {
   environment_services_ = environment_services;
 }
 
@@ -77,7 +77,7 @@ void AudioDeviceTest::DisableVirtualDevices() {
 void AudioDeviceTest::TearDownTestSuite() { DisableVirtualDevices(); }
 
 void AudioDeviceTest::SetUp() {
-  ::gtest::RealLoopFixture::SetUp();
+  gtest::RealLoopFixture::SetUp();
 
   auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
 
@@ -89,7 +89,7 @@ void AudioDeviceTest::TearDown() {
   EXPECT_FALSE(error_occurred_);
   EXPECT_TRUE(audio_dev_enum_.is_bound());
 
-  ::gtest::RealLoopFixture::TearDown();
+  gtest::RealLoopFixture::TearDown();
 }
 
 bool AudioDeviceTest::ExpectCallback() {

@@ -18,11 +18,11 @@ namespace virtual_audio {
 fbl::RefPtr<VirtualAudioStream> VirtualAudioStream::CreateStream(
     VirtualAudioDeviceImpl* owner, zx_device_t* devnode, bool is_input) {
   if (is_input) {
-    return ::audio::SimpleAudioStream::Create<VirtualAudioStreamIn>(owner,
-                                                                    devnode);
+    return audio::SimpleAudioStream::Create<VirtualAudioStreamIn>(owner,
+                                                                  devnode);
   } else {
-    return ::audio::SimpleAudioStream::Create<VirtualAudioStreamOut>(owner,
-                                                                     devnode);
+    return audio::SimpleAudioStream::Create<VirtualAudioStreamOut>(owner,
+                                                                   devnode);
   }
 }
 
@@ -480,7 +480,7 @@ void VirtualAudioStream::HandleSetNotifications() {
 // Format must already be set: a ring buffer channel (over which this command
 // arrived) is provided as the return value from a successful SetFormat call.
 zx_status_t VirtualAudioStream::GetBuffer(
-    const ::audio::audio_proto::RingBufGetBufferReq& req,
+    const audio::audio_proto::RingBufGetBufferReq& req,
     uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
   if (req.notifications_per_ring > req.min_ring_buffer_frames) {
     zxlogf(ERROR, "req.notifications_per_ring too big");
@@ -560,7 +560,7 @@ zx_status_t VirtualAudioStream::GetBuffer(
 }
 
 zx_status_t VirtualAudioStream::ChangeFormat(
-    const ::audio::audio_proto::StreamSetFmtReq& req) {
+    const audio::audio_proto::StreamSetFmtReq& req) {
   // frame_size_ is already set, automatically
   ZX_DEBUG_ASSERT(frame_size_);
 
@@ -581,7 +581,7 @@ zx_status_t VirtualAudioStream::ChangeFormat(
 }
 
 zx_status_t VirtualAudioStream::SetGain(
-    const ::audio::audio_proto::SetGainReq& req) {
+    const audio::audio_proto::SetGainReq& req) {
   if (req.flags & AUDIO_SGF_GAIN_VALID) {
     cur_gain_state_.cur_gain =
         trunc(req.gain / cur_gain_state_.gain_step) * cur_gain_state_.gain_step;
@@ -637,7 +637,7 @@ zx_status_t VirtualAudioStream::ProcessRingNotification() {
   uint32_t ring_buffer_position =
       (frames % num_ring_buffer_frames_) * frame_size_;
 
-  ::audio::audio_proto::RingBufPositionNotify resp = {};
+  audio::audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
   resp.ring_buffer_pos = ring_buffer_position;
 

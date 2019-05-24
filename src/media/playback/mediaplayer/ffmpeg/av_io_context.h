@@ -22,7 +22,7 @@ struct AVIOContextDeleter {
   void operator()(AVIOContext* context) const;
 };
 
-using AvIoContextPtr = std::unique_ptr<AVIOContext, AVIOContextDeleter>;
+using AvIoContextPtr = ::std::unique_ptr<AVIOContext, AVIOContextDeleter>;
 
 class AvIoContext {
  public:

@@ -25,7 +25,7 @@ namespace media::audio {
 
 class AudioCapturerImpl;
 
-class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
+class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
  public:
   explicit AudioDeviceManager(AudioCoreImpl* service);
   ~AudioDeviceManager();
@@ -124,7 +124,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   void GetDevices(GetDevicesCallback cbk) final;
   void GetDeviceGain(uint64_t device_token, GetDeviceGainCallback cbk) final;
   void SetDeviceGain(uint64_t device_token,
-                     ::fuchsia::media::AudioGainInfo gain_info,
+                     fuchsia::media::AudioGainInfo gain_info,
                      uint32_t set_flags) final;
   void GetDefaultInputDevice(GetDefaultInputDeviceCallback cbk) final;
   void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) final;
@@ -144,19 +144,19 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
                          const AudioDeviceSettings* k2) {
       return (k1->is_input() && !k2->is_input()) ||
              ((k1->is_input() == k2->is_input()) &&
-              (::memcmp(&k1->uid(), &k2->uid(), sizeof(k1->uid())) < 0));
+              (memcmp(&k1->uid(), &k2->uid(), sizeof(k1->uid())) < 0));
     }
 
     static bool EqualTo(const AudioDeviceSettings* k1,
                         const AudioDeviceSettings* k2) {
       return (k1->is_input() == k2->is_input()) &&
-             (::memcmp(&k1->uid(), &k2->uid(), sizeof(k1->uid())) == 0);
+             (memcmp(&k1->uid(), &k2->uid(), sizeof(k1->uid())) == 0);
     }
   };
 
-  using DeviceSettingsSet = fbl::WAVLTree<const AudioDeviceSettings*,
-                                          fbl::RefPtr<AudioDeviceSettings>,
-                                          AudioDeviceSettingsKeyTraits>;
+  using DeviceSettingsSet = ::fbl::WAVLTree<const AudioDeviceSettings*,
+                                            fbl::RefPtr<AudioDeviceSettings>,
+                                            AudioDeviceSettingsKeyTraits>;
 
   // Find the most-recently plugged device (per type: input or output) excluding
   // throttle_output. If allow_unplugged, return the most-recently UNplugged
@@ -212,7 +212,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   AudioCoreImpl* service_;
 
   // The set of AudioDeviceEnumerator clients we are currently tending to.
-  fidl::BindingSet<::fuchsia::media::AudioDeviceEnumerator> bindings_;
+  fidl::BindingSet<fuchsia::media::AudioDeviceEnumerator> bindings_;
 
   // Our sets of currently active audio devices, AudioCapturers, and
   // AudioRenderers.

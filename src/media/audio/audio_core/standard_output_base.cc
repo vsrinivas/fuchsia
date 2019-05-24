@@ -35,14 +35,14 @@ zx_status_t StandardOutputBase::Init() {
     return res;
   }
 
-  mix_timer_ = ::dispatcher::Timer::Create();
+  mix_timer_ = dispatcher::Timer::Create();
   if (mix_timer_ == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  ::dispatcher::Timer::ProcessHandler process_handler(
+  dispatcher::Timer::ProcessHandler process_handler(
       [output =
-           fbl::WrapRefPtr(this)](::dispatcher::Timer* timer) -> zx_status_t {
+           fbl::WrapRefPtr(this)](dispatcher::Timer* timer) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
         output->Process();
         return ZX_OK;
@@ -75,7 +75,7 @@ void StandardOutputBase::Process() {
     // As long as our implementation wants to mix more and has not run into a
     // problem trying to finish the mix job, mix some more.
     do {
-      ::memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
+      memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
       if (!StartMixJob(&cur_mix_job_, now)) {
         break;

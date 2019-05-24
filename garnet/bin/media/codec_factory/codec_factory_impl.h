@@ -5,12 +5,11 @@
 #ifndef GARNET_BIN_MEDIA_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
 #define GARNET_BIN_MEDIA_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
 
-#include "codec_factory_app.h"
-
 #include <fuchsia/mediacodec/cpp/fidl.h>
-
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+
+#include "codec_factory_app.h"
 
 namespace codec_factory {
 
@@ -23,13 +22,13 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
                               zx::channel request);
 
   // See .fidl file comments.
-  void CreateDecoder(fuchsia::mediacodec::CreateDecoder_Params params,
-                     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor>
-                         decoder) override;
+  void CreateDecoder(
+      fuchsia::mediacodec::CreateDecoder_Params params,
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder) override;
 
   virtual void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request)
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request)
       override;
 
  private:

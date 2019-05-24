@@ -245,14 +245,14 @@ void MediaPlayerTestUtilView::OnInputEvent(
 
 void MediaPlayerTestUtilView::OnScenicEvent(fuchsia::ui::scenic::Event event) {
   switch (event.Which()) {
-    case ::fuchsia::ui::scenic::Event::Tag::kGfx:
+    case fuchsia::ui::scenic::Event::Tag::kGfx:
       switch (event.gfx().Which()) {
-        case ::fuchsia::ui::gfx::Event::Tag::kViewConnected: {
+        case fuchsia::ui::gfx::Event::Tag::kViewConnected: {
           auto& evt = event.gfx().view_connected();
           OnChildAttached(evt.view_holder_id);
           break;
         }
-        case ::fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
+        case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
           auto& evt = event.gfx().view_disconnected();
           OnChildUnavailable(evt.view_holder_id);
           break;

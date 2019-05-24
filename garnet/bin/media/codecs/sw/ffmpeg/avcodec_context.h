@@ -25,11 +25,11 @@ class AvCodecContext {
     size_t buffer_bytes_needed;
   };
 
-  using GetBufferCallback = fit::function<int(
+  using GetBufferCallback = ::fit::function<int(
       const FrameBufferRequest& frame_buffer_request,
       AVCodecContext* avcodec_context, AVFrame* frame, int flags)>;
 
-  using AVFramePtr = std::unique_ptr<AVFrame, fit::function<void(AVFrame*)>>;
+  using AVFramePtr = ::std::unique_ptr<AVFrame, fit::function<void(AVFrame*)>>;
 
   // Creates a decoder context. The decoder context can be used to decode an
   // elementary stream with successive calls to SendPacket() and

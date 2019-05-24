@@ -43,7 +43,7 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
 
   virtual void CreateDecoder(
       fuchsia::mediacodec::CreateDecoder_Params decoder_params,
-      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder_request)
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder_request)
       override {
     VendCodecAdapter<DecoderAdapter>(std::move(decoder_params),
                                      std::move(decoder_request));
@@ -51,7 +51,7 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
 
   virtual void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request)
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request)
       override {
     VendCodecAdapter<EncoderAdapter>(std::move(encoder_params),
                                      std::move(encoder_request));
@@ -61,7 +61,7 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
   template <typename Adapter, typename Params>
   void VendCodecAdapter(
       Params params,
-      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
     codec_admission_control_->TryAddCodec(
         /*multi_instance=*/true,
         [this, params = std::move(params),
@@ -97,7 +97,7 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
   template <>
   void VendCodecAdapter<NoAdapter, fuchsia::mediacodec::CreateDecoder_Params>(
       fuchsia::mediacodec::CreateDecoder_Params params,
-      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
     // No adapter.
     // ~codec_request.
   }
@@ -105,7 +105,7 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
   template <>
   void VendCodecAdapter<NoAdapter, fuchsia::mediacodec::CreateEncoder_Params>(
       fuchsia::mediacodec::CreateEncoder_Params params,
-      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
     // No adapter.
     // ~codec_request.
   }

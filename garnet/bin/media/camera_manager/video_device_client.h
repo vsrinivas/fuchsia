@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_MEDIA_CAMERA_MANAGER_VIDEO_DEVICE_CLIENT_H_
 #define GARNET_BIN_MEDIA_CAMERA_MANAGER_VIDEO_DEVICE_CLIENT_H_
 
-#include <list>
-
 #include <fuchsia/camera/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+
+#include <list>
 
 namespace camera {
 
@@ -21,7 +21,7 @@ class VideoDeviceClient : public fbl::RefCounted<VideoDeviceClient> {
   class VideoStream;
 
  public:
-  using StartupCallback = fbl::Function<void(zx_status_t status)>;
+  using StartupCallback = ::fbl::Function<void(zx_status_t status)>;
 
   // The destructor signals all the connected drivers to close their
   // connections.

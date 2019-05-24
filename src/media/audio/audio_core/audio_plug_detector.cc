@@ -89,7 +89,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
     return;
 
   // Open the device node.
-  fbl::unique_fd dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));
+  fbl::unique_fd dev_node(openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
     FXL_LOG(WARNING) << "AudioPlugDetector failed to open device node at \""
                      << name << "\". (" << strerror(errno) << " : " << errno
@@ -111,7 +111,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
 
   // Obtain the stream channel
   zx::channel channel;
-  ::fuchsia::hardware::audio::Device_SyncProxy dev(std::move(dev_channel));
+  fuchsia::hardware::audio::Device_SyncProxy dev(std::move(dev_channel));
 
   res = dev.GetChannel(&channel);
   if (res != ZX_OK) {

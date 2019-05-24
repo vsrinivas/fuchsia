@@ -240,7 +240,7 @@ void ElementarySourceImpl::SendStatusUpdates() {
 void ElementarySourceImpl::AddStream(
     fuchsia::media::StreamType type, uint32_t tick_per_second_numerator,
     uint32_t tick_per_second_denominator,
-    ::fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink>
+    fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink>
         simple_stream_sink_request) {
   FXL_DCHECK(simple_stream_sink_request);
   FXL_DCHECK(elementary_source_segment_raw_ptr_);

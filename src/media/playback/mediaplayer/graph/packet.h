@@ -46,7 +46,7 @@ class Packet {
   static PacketPtr CreateEndOfStream(int64_t pts, media::TimelineRate pts_rate);
 
   // Function type used for |AfterRecycling|.
-  using Action = fit::function<void(Packet*)>;
+  using Action = ::fit::function<void(Packet*)>;
 
   Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
          bool discontinuity, bool end_of_stream, size_t size,

@@ -16,7 +16,7 @@ struct AVFrameDeleter {
   inline void operator()(AVFrame* ptr) const { av_frame_free(&ptr); }
 };
 
-using AvFramePtr = std::unique_ptr<AVFrame, AVFrameDeleter>;
+using AvFramePtr = ::std::unique_ptr<AVFrame, AVFrameDeleter>;
 
 struct AvFrame {
   static AvFramePtr Create() { return AvFramePtr(av_frame_alloc()); }

@@ -111,9 +111,10 @@ class AudioCapturerImpl
   struct PendingCaptureBuffer;
 
   using PcbAllocatorTraits =
-      fbl::StaticSlabAllocatorTraits<std::unique_ptr<PendingCaptureBuffer>>;
-  using PcbAllocator = fbl::SlabAllocator<PcbAllocatorTraits>;
-  using PcbList = fbl::DoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
+      ::fbl::StaticSlabAllocatorTraits<std::unique_ptr<PendingCaptureBuffer>>;
+  using PcbAllocator = ::fbl::SlabAllocator<PcbAllocatorTraits>;
+  using PcbList =
+      ::fbl::DoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
 
   struct PendingCaptureBuffer : public fbl::SlabAllocated<PcbAllocatorTraits>,
                                 public fbl::DoublyLinkedListable<
@@ -217,9 +218,9 @@ class AudioCapturerImpl
   uint32_t payload_buf_frames_ = 0;
 
   // Execution domain/dispatcher stuff for mixing.
-  fbl::RefPtr<::dispatcher::ExecutionDomain> mix_domain_;
-  fbl::RefPtr<::dispatcher::WakeupEvent> mix_wakeup_;
-  fbl::RefPtr<::dispatcher::Timer> mix_timer_;
+  fbl::RefPtr<dispatcher::ExecutionDomain> mix_domain_;
+  fbl::RefPtr<dispatcher::WakeupEvent> mix_wakeup_;
+  fbl::RefPtr<dispatcher::Timer> mix_timer_;
 
   // Queues of capture buffers supplied by the client and waiting to be filled,
   // or waiting to be returned.
@@ -251,6 +252,6 @@ class AudioCapturerImpl
 }  // namespace media::audio
 
 FWD_DECL_STATIC_SLAB_ALLOCATOR(
-    ::media::audio::AudioCapturerImpl::PcbAllocatorTraits);
+    media::audio::AudioCapturerImpl::PcbAllocatorTraits);
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_

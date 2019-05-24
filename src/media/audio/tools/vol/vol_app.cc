@@ -359,7 +359,7 @@ class VolApp {
     }
 
     audio_->SetDeviceGain(control_token_, cmd,
-                          ::fuchsia::media::SetAudioGainFlag_GainValid);
+                          fuchsia::media::SetAudioGainFlag_GainValid);
   }
 
   void SetDeviceMute(BoolAction action) {
@@ -376,7 +376,7 @@ class VolApp {
     const auto& dev_state = devices_[control_token_];
     AudioGainInfo cmd = dev_state.gain_info;
 
-    constexpr uint32_t flag = ::fuchsia::media::AudioGainInfoFlag_Mute;
+    constexpr uint32_t flag = fuchsia::media::AudioGainInfoFlag_Mute;
     // clang-format off
     switch (action) {
       case BoolAction::kTrue: cmd.flags |= flag; break;
@@ -392,7 +392,7 @@ class VolApp {
     }
 
     audio_->SetDeviceGain(control_token_, cmd,
-                          ::fuchsia::media::SetAudioGainFlag_MuteValid);
+                          fuchsia::media::SetAudioGainFlag_MuteValid);
   }
 
   void SetDeviceAgc(BoolAction action) {
@@ -408,7 +408,7 @@ class VolApp {
     const auto& dev_state = devices_[control_token_];
     AudioGainInfo cmd = dev_state.gain_info;
 
-    if (!(cmd.flags & ::fuchsia::media::AudioGainInfoFlag_AgcSupported)) {
+    if (!(cmd.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported)) {
       if (!interactive()) {
         std::cout << "Audio " << (dev_state.is_input ? "input" : "output")
                   << " \"" << dev_state.name << "\" does not support AGC."
@@ -417,7 +417,7 @@ class VolApp {
       return;
     }
 
-    constexpr uint32_t flag = ::fuchsia::media::AudioGainInfoFlag_AgcEnabled;
+    constexpr uint32_t flag = fuchsia::media::AudioGainInfoFlag_AgcEnabled;
     // clang-format off
     switch (action) {
       case BoolAction::kTrue: cmd.flags |= flag; break;
@@ -433,7 +433,7 @@ class VolApp {
     }
 
     audio_->SetDeviceGain(control_token_, cmd,
-                          ::fuchsia::media::SetAudioGainFlag_AgcValid);
+                          fuchsia::media::SetAudioGainFlag_AgcValid);
   }
 
   void ShowSelectedDevice() {

@@ -4,5 +4,5 @@
 
 #[macro_export]
 macro_rules! vlog {
-    ($v:expr, $($arg:tt)+) => (::fuchsia_syslog::fx_vlog!(tag: "codec_stress_tests", $v, $($arg)+))
+    ($v:expr, $($arg:tt)+) => (fuchsia_syslog::fx_vlog!(tag: "codec_stress_tests", $v, $($arg)+))
 }

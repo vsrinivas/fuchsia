@@ -33,7 +33,7 @@ class AudioRendererSyncTest : public gtest::RealLoopFixture {
   static void TearDownTestSuite() { audio_sync_.Unbind(); }
 
   void SetUp() override {
-    ::gtest::RealLoopFixture::SetUp();
+    gtest::RealLoopFixture::SetUp();
 
     ASSERT_EQ(ZX_OK, audio_sync_->CreateAudioRenderer(
                          audio_renderer_sync_.NewRequest()));
@@ -41,7 +41,7 @@ class AudioRendererSyncTest : public gtest::RealLoopFixture {
 
   void TearDown() override {
     audio_renderer_sync_.Unbind();
-    ::gtest::RealLoopFixture::TearDown();
+    gtest::RealLoopFixture::TearDown();
   }
 
   // Declare singleton resource shared by all test cases.

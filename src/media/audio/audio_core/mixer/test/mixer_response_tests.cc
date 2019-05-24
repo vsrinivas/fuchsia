@@ -11,7 +11,7 @@
 namespace media::audio::test {
 
 // Convenience abbreviation within this source file to shorten names
-using Resampler = media::audio::Mixer::Resampler;
+using Resampler = ::media::audio::Mixer::Resampler;
 
 //
 // Baseline Noise-Floor tests

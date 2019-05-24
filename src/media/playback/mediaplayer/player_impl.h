@@ -68,7 +68,7 @@ class PlayerImpl : public fuchsia::media::playback::Player {
       fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request)
       override;
 
-  void CreateFileSource(::zx::channel file_channel,
+  void CreateFileSource(zx::channel file_channel,
                         fidl::InterfaceRequest<fuchsia::media::playback::Source>
                             source_request) override;
 
@@ -81,7 +81,7 @@ class PlayerImpl : public fuchsia::media::playback::Player {
   void CreateElementarySource(
       int64_t duration_ns, bool can_pause, bool can_seek,
       std::unique_ptr<fuchsia::media::Metadata> metadata,
-      ::fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
+      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
           source_request) override;
 
   void SetSource(

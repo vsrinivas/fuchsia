@@ -70,7 +70,7 @@ void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
 
 void CodecFactoryImpl::CreateDecoder(
     fuchsia::mediacodec::CreateDecoder_Params params,
-    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder) {
+    fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder) {
   if (!params.has_input_details()) {
     FXL_LOG(WARNING) << "missing input_details";
     return;
@@ -170,7 +170,7 @@ void CodecFactoryImpl::CreateDecoder(
 
 void CodecFactoryImpl::CreateEncoder(
     fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) {
+    fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) {
   // We have no encoders to provide.
   // ~encoder_request
 }

@@ -263,7 +263,7 @@ bool DriverOutput::FinishMixJob(const MixJob& job) {
   return true;
 }
 
-void DriverOutput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
+void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                                    uint32_t set_flags) {
   // See the comment at the start of StartMixJob.  The actual limits we set here
   // are going to eventually depend on what our HW gain control capabilities
@@ -276,7 +276,7 @@ void DriverOutput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
   }
 
   // Audio outputs should never support AGC
-  in_out_info->flags &= ~(::fuchsia::media::AudioGainInfoFlag_AgcEnabled);
+  in_out_info->flags &= ~(fuchsia::media::AudioGainInfoFlag_AgcEnabled);
 }
 
 void DriverOutput::ScheduleNextLowWaterWakeup() {

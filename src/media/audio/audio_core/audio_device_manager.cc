@@ -197,11 +197,10 @@ void AudioDeviceManager::ActivateDevice(
   // hand, we would really like the settings to be completely independent from
   // the devices, but on the other hand, there are limits for various settings
   // which may be need imposed by the device's capabilities.
-  constexpr uint32_t kAllSetFlags =
-      ::fuchsia::media::SetAudioGainFlag_GainValid |
-      ::fuchsia::media::SetAudioGainFlag_MuteValid |
-      ::fuchsia::media::SetAudioGainFlag_AgcValid;
-  ::fuchsia::media::AudioGainInfo gain_info;
+  constexpr uint32_t kAllSetFlags = fuchsia::media::SetAudioGainFlag_GainValid |
+                                    fuchsia::media::SetAudioGainFlag_MuteValid |
+                                    fuchsia::media::SetAudioGainFlag_AgcValid;
+  fuchsia::media::AudioGainInfo gain_info;
   settings->GetGainInfo(&gain_info);
   device->SetGainInfo(gain_info, kAllSetFlags);
 
@@ -210,7 +209,7 @@ void AudioDeviceManager::ActivateDevice(
   // Notify interested users of this new device. Check whether this will become
   // the new default device, so we can set 'is_default' in the notification
   // properly. Right now, "default" device is defined simply as last-plugged.
-  ::fuchsia::media::AudioDeviceInfo info;
+  fuchsia::media::AudioDeviceInfo info;
   device->GetDeviceInfo(&info);
 
   auto last_plugged = FindLastPlugged(device->type());
@@ -305,11 +304,11 @@ void AudioDeviceManager::OnSystemGain(bool changed) {
 }
 
 void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
-  std::vector<::fuchsia::media::AudioDeviceInfo> ret;
+  std::vector<fuchsia::media::AudioDeviceInfo> ret;
 
   for (const auto& dev : devices_) {
     if (dev.token() != ZX_KOID_INVALID) {
-      ::fuchsia::media::AudioDeviceInfo info;
+      fuchsia::media::AudioDeviceInfo info;
       dev.GetDeviceInfo(&info);
       info.is_default =
           (dev.token() ==
@@ -318,14 +317,14 @@ void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
     }
   }
 
-  cbk(fidl::VectorPtr<::fuchsia::media::AudioDeviceInfo>(std::move(ret)));
+  cbk(fidl::VectorPtr<fuchsia::media::AudioDeviceInfo>(std::move(ret)));
 }
 
 void AudioDeviceManager::GetDeviceGain(uint64_t device_token,
                                        GetDeviceGainCallback cbk) {
   auto dev = devices_.find(device_token);
 
-  ::fuchsia::media::AudioGainInfo info = {0};
+  fuchsia::media::AudioGainInfo info = {0};
   if (dev.IsValid()) {
     FXL_DCHECK(dev->device_settings() != nullptr);
     dev->device_settings()->GetGainInfo(&info);
@@ -335,9 +334,9 @@ void AudioDeviceManager::GetDeviceGain(uint64_t device_token,
   }
 }
 
-void AudioDeviceManager::SetDeviceGain(
-    uint64_t device_token, ::fuchsia::media::AudioGainInfo gain_info,
-    uint32_t set_flags) {
+void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
+                                       fuchsia::media::AudioGainInfo gain_info,
+                                       uint32_t set_flags) {
   auto dev = devices_.find(device_token);
 
   if (!dev.IsValid()) {
@@ -345,7 +344,7 @@ void AudioDeviceManager::SetDeviceGain(
   }
   // SetGainInfo clamps out-of-range values (e.g. +infinity) into the device-
   // allowed gain range. NAN is undefined (signless); handle it here and exit.
-  if ((set_flags & ::fuchsia::media::SetAudioGainFlag_GainValid) &&
+  if ((set_flags & fuchsia::media::SetAudioGainFlag_GainValid) &&
       isnan(gain_info.gain_db)) {
     FXL_DLOG(WARNING) << "Invalid device gain " << gain_info.gain_db
                       << " dB -- making no change";
@@ -719,7 +718,7 @@ void AudioDeviceManager::FinalizeDeviceSettings(const AudioDevice& device) {
 }
 
 void AudioDeviceManager::NotifyDeviceGainChanged(const AudioDevice& device) {
-  ::fuchsia::media::AudioGainInfo info;
+  fuchsia::media::AudioGainInfo info;
   FXL_DCHECK(device.device_settings() != nullptr);
   device.device_settings()->GetGainInfo(&info);
 
@@ -744,11 +743,11 @@ void AudioDeviceManager::UpdateDefaultDevice(bool input) {
 
 void AudioDeviceManager::UpdateDeviceToSystemGain(
     const fbl::RefPtr<AudioDevice>& device) {
-  constexpr uint32_t set_flags = ::fuchsia::media::SetAudioGainFlag_GainValid |
-                                 ::fuchsia::media::SetAudioGainFlag_MuteValid;
-  ::fuchsia::media::AudioGainInfo set_cmd = {
+  constexpr uint32_t set_flags = fuchsia::media::SetAudioGainFlag_GainValid |
+                                 fuchsia::media::SetAudioGainFlag_MuteValid;
+  fuchsia::media::AudioGainInfo set_cmd = {
       service_->system_gain_db(),
-      service_->system_muted() ? ::fuchsia::media::AudioGainInfoFlag_Mute : 0u};
+      service_->system_muted() ? fuchsia::media::AudioGainInfoFlag_Mute : 0u};
 
   FXL_DCHECK(device != nullptr);
   device->SetGainInfo(set_cmd, set_flags);

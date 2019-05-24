@@ -123,7 +123,7 @@ void AudioInput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
   });
 }
 
-void AudioInput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
+void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                                  uint32_t set_flags) {
   // By the time anyone is calling "ApplyGainLimits", we need to have our basic
   // audio gain control capabilities established.
@@ -138,12 +138,12 @@ void AudioInput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
   // TODO(johngro): It should always be possible to mute.  We should maintain a
   // SW flag for implementing mute in case the hardware cannot.
   if (!caps.can_mute) {
-    in_out_info->flags &= ~(::fuchsia::media::AudioGainInfoFlag_Mute);
+    in_out_info->flags &= ~(fuchsia::media::AudioGainInfoFlag_Mute);
   }
 
   // Don't allow AGC unless HW supports it.
   if (!caps.can_agc) {
-    in_out_info->flags &= ~(::fuchsia::media::AudioGainInfoFlag_AgcEnabled);
+    in_out_info->flags &= ~(fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   }
 
   // If the user is attempting to set gain, enforce the gain limits.

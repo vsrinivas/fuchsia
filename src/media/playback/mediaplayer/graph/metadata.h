@@ -10,7 +10,7 @@
 
 namespace media_player {
 
-using Metadata = std::unordered_map<std::string, std::string>;
+using Metadata = ::std::unordered_map<std::string, std::string>;
 
 }  // namespace media_player
 

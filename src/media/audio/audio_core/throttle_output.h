@@ -26,7 +26,7 @@ class ThrottleOutput : public StandardOutputBase {
 
   // AudioDevice implementation.
   // No one should ever be trying to apply gain limits for a throttle output.
-  void ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
+  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                        uint32_t set_flags) override {
     FXL_DCHECK(false);
   }

@@ -31,7 +31,7 @@ class VideoDisplay {
   // which may be done on an arbitrary thread.
   zx_status_t ConnectToCamera(
       component::StartupContext* context, uint32_t camera_id,
-      ::fidl::InterfaceHandle<::fuchsia::images::ImagePipe> image_pipe,
+      fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe,
       OnShutdownCallback callback);
 
   void DisconnectFromCamera();

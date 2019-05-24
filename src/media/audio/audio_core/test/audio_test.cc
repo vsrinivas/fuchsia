@@ -64,7 +64,7 @@ class SystemGainMuteTest : public AudioBase {
 //
 // Connect to Audio interface and set an error handler
 void AudioBase::SetUp() {
-  ::gtest::RealLoopFixture::SetUp();
+  gtest::RealLoopFixture::SetUp();
 
   environment_services_ = component::GetEnvironmentServices();
   environment_services_->ConnectToService(audio_.NewRequest());
@@ -75,7 +75,7 @@ void AudioBase::SetUp() {
 void AudioBase::TearDown() {
   ASSERT_FALSE(error_occurred_);
 
-  ::gtest::RealLoopFixture::TearDown();
+  gtest::RealLoopFixture::TearDown();
 }
 
 // Expecting NOT to receive a disconnect. Wait, then check for errors.

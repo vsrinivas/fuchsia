@@ -10,7 +10,7 @@
 namespace media::audio::test {
 
 // Convenience abbreviation within this source file to shorten names
-using Resampler = media::audio::Mixer::Resampler;
+using Resampler = ::media::audio::Mixer::Resampler;
 
 //
 // Gain tests - how does the Gain object respond when given values close to its
@@ -20,10 +20,10 @@ using Resampler = media::audio::Mixer::Resampler;
 //
 // Gain tests using AScale and the Gain object only
 //
-class GainTest : public ::testing::Test {
+class GainTest : public testing::Test {
  protected:
   void SetUp() override {
-    ::testing::Test::SetUp();
+    testing::Test::SetUp();
 
     rate_1khz_output_ = TimelineRate(1000, ZX_SEC(1));
   }

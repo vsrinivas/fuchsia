@@ -8,9 +8,9 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fzl/fdio.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <lib/fzl/fdio.h>
 
 namespace camera {
 using fuchsia::camera::VideoFormat;
@@ -35,7 +35,7 @@ VideoDeviceClient::~VideoDeviceClient() {
 std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
     int dir_fd, const std::string& name) {
   // Open the device node.
-  fbl::unique_fd dev_node{::openat(dir_fd, name.c_str(), O_RDONLY)};
+  fbl::unique_fd dev_node{openat(dir_fd, name.c_str(), O_RDONLY)};
   if (!dev_node.is_valid()) {
     FXL_LOG(WARNING) << "VideoDeviceClient failed to open device node at \""
                      << name << "\". (" << strerror(errno) << " : " << errno

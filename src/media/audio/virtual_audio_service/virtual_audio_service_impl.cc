@@ -44,7 +44,7 @@ VirtualAudioServiceImpl::VirtualAudioServiceImpl(
 
 VirtualAudioServiceImpl::~VirtualAudioServiceImpl() {
   if (driver_open_) {
-    FXL_LOG(INFO) << "Closing '" << ::virtual_audio::kCtlNodeName << "'";
+    FXL_LOG(INFO) << "Closing '" << virtual_audio::kCtlNodeName << "'";
     zx_handle_close(channel_handle_);
   }
 }
@@ -57,15 +57,15 @@ zx_status_t VirtualAudioServiceImpl::Init() {
 // Return a bool representing whether control driver was successfully opened.
 bool VirtualAudioServiceImpl::OpenControlDriver() {
   if (driver_open_) {
-    FXL_LOG(WARNING) << "Already connected to '"
-                     << ::virtual_audio::kCtlNodeName << "'";
+    FXL_LOG(WARNING) << "Already connected to '" << virtual_audio::kCtlNodeName
+                     << "'";
     return true;
   }
 
-  int ctl_node_file_desc = ::open(::virtual_audio::kCtlNodeName, O_RDONLY);
+  int ctl_node_file_desc = open(virtual_audio::kCtlNodeName, O_RDONLY);
 
   if (ctl_node_file_desc <= 0) {
-    FXL_LOG(WARNING) << "Failed to open '" << ::virtual_audio::kCtlNodeName
+    FXL_LOG(WARNING) << "Failed to open '" << virtual_audio::kCtlNodeName
                      << "' - result " << ctl_node_file_desc;
     return false;
   }

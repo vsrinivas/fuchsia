@@ -15,7 +15,7 @@
 // means we will deny allocations after 4MB. If we ever need more than 4MB of
 // pending capture buffer bookkeeping, something has gone seriously wrong.
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
-    ::media::audio::AudioCapturerImpl::PcbAllocatorTraits, 0x100);
+    media::audio::AudioCapturerImpl::PcbAllocatorTraits, 0x100);
 
 namespace media::audio {
 
@@ -52,9 +52,9 @@ AudioCapturerImpl::AudioCapturerImpl(
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Could not acquire profile!";
   }
-  mix_domain_ = ::dispatcher::ExecutionDomain::Create(std::move(profile));
-  mix_wakeup_ = ::dispatcher::WakeupEvent::Create();
-  mix_timer_ = ::dispatcher::Timer::Create();
+  mix_domain_ = dispatcher::ExecutionDomain::Create(std::move(profile));
+  mix_wakeup_ = dispatcher::WakeupEvent::Create();
+  mix_timer_ = dispatcher::Timer::Create();
 
   binding_.set_error_handler([this](zx_status_t status) { Shutdown(); });
   source_link_refs_.reserve(16u);
@@ -284,7 +284,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
   // Activate the dispatcher primitives we will use to drive the mixing process.
   res = mix_wakeup_->Activate(
-      mix_domain_, [this](::dispatcher::WakeupEvent* event) -> zx_status_t {
+      mix_domain_, [this](dispatcher::WakeupEvent* event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
         FXL_DCHECK(event == mix_wakeup_.get());
         return Process();
@@ -296,7 +296,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   }
 
   res = mix_timer_->Activate(
-      mix_domain_, [this](::dispatcher::Timer* timer) -> zx_status_t {
+      mix_domain_, [this](dispatcher::Timer* timer) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
         FXL_DCHECK(timer == mix_timer_.get());
         return Process();

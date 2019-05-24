@@ -22,7 +22,7 @@ namespace media_player {
 // notify of changes to the value returned by end_of_stream().
 class SinkSegment : public Segment {
  public:
-  using ConnectCallback = fit::function<void(Result)>;
+  using ConnectCallback = ::fit::function<void(Result)>;
 
   SinkSegment();
 

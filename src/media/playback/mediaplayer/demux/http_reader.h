@@ -49,7 +49,7 @@ class HttpReader : public Reader {
 
   std::string url_;
   fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers_;
-  ::fuchsia::net::oldhttp::URLLoaderPtr url_loader_;
+  fuchsia::net::oldhttp::URLLoaderPtr url_loader_;
   zx_status_t status_ = ZX_OK;
   uint64_t size_ = kUnknownSize;
   bool can_seek_ = false;

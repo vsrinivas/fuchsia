@@ -49,10 +49,10 @@ uint64_t AudioDevice::token() const {
 }
 
 // Change a device's gain, propagating the change to the affected links.
-void AudioDevice::SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
+void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info,
                               uint32_t set_flags) {
   // Limit the request to what the hardware can support
-  ::fuchsia::media::AudioGainInfo limited = info;
+  fuchsia::media::AudioGainInfo limited = info;
   ApplyGainLimits(&limited, set_flags);
 
   // For outputs, change the gain of all links where it is the destination.
@@ -94,16 +94,16 @@ zx_status_t AudioDevice::Init() {
     return res;
   }
 
-  mix_domain_ = ::dispatcher::ExecutionDomain::Create(std::move(profile));
-  mix_wakeup_ = ::dispatcher::WakeupEvent::Create();
+  mix_domain_ = dispatcher::ExecutionDomain::Create(std::move(profile));
+  mix_wakeup_ = dispatcher::WakeupEvent::Create();
 
   if ((mix_domain_ == nullptr) || (mix_wakeup_ == nullptr)) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  ::dispatcher::WakeupEvent::ProcessHandler process_handler(
+  dispatcher::WakeupEvent::ProcessHandler process_handler(
       [output = fbl::WrapRefPtr(this)](
-          ::dispatcher::WakeupEvent* event) -> zx_status_t {
+          dispatcher::WakeupEvent* event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
         output->OnWakeup();
         return ZX_OK;
@@ -224,7 +224,7 @@ const TimelineFunction& AudioDevice::driver_clock_mono_to_ring_pos_bytes()
 };
 
 void AudioDevice::GetDeviceInfo(
-    ::fuchsia::media::AudioDeviceInfo* out_info) const {
+    fuchsia::media::AudioDeviceInfo* out_info) const {
   const auto& drv = *driver();
   out_info->name = drv.manufacturer_name() + ' ' + drv.product_name();
   out_info->unique_id = AudioDeviceUniqueIdToString(drv.persistent_unique_id());

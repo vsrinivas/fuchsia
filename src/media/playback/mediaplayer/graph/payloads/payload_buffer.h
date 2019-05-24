@@ -111,10 +111,10 @@ class PayloadBuffer final : public fbl::RefCounted<PayloadBuffer>,
 
   // Function type used to recycle a |PayloadBuffer|. The |PayloadBuffer|
   // deletes itself, so the recycler should not attempt to delete it.
-  using Recycler = fit::function<void(PayloadBuffer*)>;
+  using Recycler = ::fit::function<void(PayloadBuffer*)>;
 
   // Function type used for |AfterRecycling|.
-  using Action = fit::function<void(PayloadBuffer*)>;
+  using Action = ::fit::function<void(PayloadBuffer*)>;
 
   // Creates a new |PayloadBuffer|. |size| may not be 0, and |data| may not be
   // nullptr.

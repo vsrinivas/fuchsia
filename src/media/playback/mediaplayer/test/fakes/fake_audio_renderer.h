@@ -61,7 +61,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   void SetStreamType(fuchsia::media::StreamType format) override;
 
-  void AddPayloadBuffer(uint32_t id, ::zx::vmo payload_buffer) override;
+  void AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) override;
 
   void RemovePayloadBuffer(uint32_t id) override;
 
@@ -70,7 +70,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   void SetPtsContinuityThreshold(float threshold_seconds) override;
 
-  void SetReferenceClock(::zx::handle ref_clock) override;
+  void SetReferenceClock(zx::handle ref_clock) override;
 
   void SendPacket(fuchsia::media::StreamPacket packet,
                   SendPacketCallback callback) override;
@@ -93,7 +93,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   void PauseNoReply() override;
 
   void BindGainControl(
-      ::fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request)
+      fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request)
       override;
 
   void EnableMinLeadTimeEvents(bool enabled) override;

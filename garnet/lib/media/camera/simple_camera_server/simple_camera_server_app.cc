@@ -15,7 +15,7 @@ SimpleCameraApp::SimpleCameraApp()
 
 void SimpleCameraApp::ConnectToCamera(
     uint32_t camera_id,
-    ::fidl::InterfaceHandle<::fuchsia::images::ImagePipe> image_pipe) {
+    fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
   // If we fail to connect, disconnect from the client.  We only have one
   // client, so we just call CloseAll.
   zx_status_t status = video_display_.ConnectToCamera(

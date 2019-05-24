@@ -12,7 +12,7 @@
 
 namespace media::audio::test {
 
-class AudioFidlEnvironment : public ::testing::Environment {
+class AudioFidlEnvironment : public testing::Environment {
  public:
   // Before any test cases in this test program, synchronously connect to Audio,
   // to ensure that the audio and audio_core components are present and loaded.
@@ -55,11 +55,11 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  ::testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleTest(&argc, argv);
 
   // gtest takes ownership of registered environments: **do not delete them**!
-  ::testing::AddGlobalTestEnvironment(
-      new ::media::audio::test::AudioFidlEnvironment);
+  testing::AddGlobalTestEnvironment(
+      new media::audio::test::AudioFidlEnvironment);
 
   // TODO(mpuryear): create and use a '--stress' switch here, to execute a set
   // of longhaul resource-exhaustion-focused tests on these interfaces.

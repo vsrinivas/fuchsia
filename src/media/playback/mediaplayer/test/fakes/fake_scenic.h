@@ -36,8 +36,8 @@ class FakeScenic : public fuchsia::ui::scenic::Scenic {
 
   // Scenic implementation.
   void CreateSession(
-      ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
+      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
+      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
       override;
 
   void GetDisplayInfo(GetDisplayInfoCallback callback) override;

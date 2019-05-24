@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
-
 #include <lib/gtest/real_loop_fixture.h>
 
 #include "lib/component/cpp/environment_services_helper.h"
@@ -22,7 +21,7 @@ namespace media::audio::test {
 class AudioSyncTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    ::gtest::RealLoopFixture::SetUp();
+    gtest::RealLoopFixture::SetUp();
 
     environment_services_ = component::GetEnvironmentServices();
     environment_services_->ConnectToService(audio_sync_.NewRequest());

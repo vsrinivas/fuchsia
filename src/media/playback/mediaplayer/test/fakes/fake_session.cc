@@ -38,8 +38,8 @@ FakeSession::FakeSession()
 FakeSession::~FakeSession() {}
 
 void FakeSession::Bind(
-    fidl::InterfaceRequest<::fuchsia::ui::scenic::Session> request,
-    ::fuchsia::ui::scenic::SessionListenerPtr listener) {
+    fidl::InterfaceRequest<fuchsia::ui::scenic::Session> request,
+    fuchsia::ui::scenic::SessionListenerPtr listener) {
   binding_.Bind(std::move(request));
   listener_ = std::move(listener);
 
@@ -72,7 +72,7 @@ void FakeSession::SetExpectations(
   }
 }
 
-void FakeSession::Enqueue(std::vector<::fuchsia::ui::scenic::Command> cmds) {
+void FakeSession::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
   for (auto& command : cmds) {
     switch (command.Which()) {
       case fuchsia::ui::scenic::Command::Tag::kGfx:
@@ -141,8 +141,8 @@ void FakeSession::Enqueue(std::vector<::fuchsia::ui::scenic::Command> cmds) {
 }
 
 void FakeSession::Present(uint64_t presentation_time,
-                          std::vector<::zx::event> acquire_fences,
-                          std::vector<::zx::event> release_fences,
+                          std::vector<zx::event> acquire_fences,
+                          std::vector<zx::event> release_fences,
                           PresentCallback callback) {
   // The video renderer doesn't use these fences, so we don't support them in
   // the fake.

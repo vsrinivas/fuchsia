@@ -546,7 +546,7 @@ void PlayerImpl::CreateHttpSource(
 }
 
 void PlayerImpl::CreateFileSource(
-    ::zx::channel file_channel,
+    zx::channel file_channel,
     fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) {
   FXL_DCHECK(file_channel);
   FXL_DCHECK(source_request);
@@ -577,7 +577,7 @@ void PlayerImpl::CreateReaderSource(
 void PlayerImpl::CreateElementarySource(
     int64_t duration_ns, bool can_pause, bool can_seek,
     std::unique_ptr<fuchsia::media::Metadata> metadata,
-    ::fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
+    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
         source_request) {
   FXL_DCHECK(source_request);
 

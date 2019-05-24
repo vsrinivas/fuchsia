@@ -136,12 +136,12 @@ zx_status_t WriteNewHeader(int file_desc,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  ::lseek(file_desc, 0, SEEK_SET);
+  lseek(file_desc, 0, SEEK_SET);
   RiffChunkHeader riff_header;
   riff_header.four_cc = RIFF_FOUR_CC;
   riff_header.length = kWavHeaderOverhead;
   riff_header.FixupEndian();
-  if (::write(file_desc, &riff_header, sizeof(riff_header)) < 0) {
+  if (write(file_desc, &riff_header, sizeof(riff_header)) < 0) {
     return ZX_ERR_IO;
   }
 
@@ -164,17 +164,17 @@ zx_status_t WriteNewHeader(int file_desc,
   wave_header.bits_per_sample = bits_per_sample;
 
   wave_header.FixupEndian();
-  if (::write(file_desc, &wave_header, sizeof(wave_header)) < 0) {
+  if (write(file_desc, &wave_header, sizeof(wave_header)) < 0) {
     return ZX_ERR_IO;
   }
 
   riff_header.four_cc = DATA_FOUR_CC;
   riff_header.FixupEndian();
-  if (::write(file_desc, &riff_header, sizeof(riff_header)) < 0) {
+  if (write(file_desc, &riff_header, sizeof(riff_header)) < 0) {
     return ZX_ERR_IO;
   }
 
-  ::lseek(file_desc, kWavHeaderOverhead, SEEK_SET);
+  lseek(file_desc, kWavHeaderOverhead, SEEK_SET);
   return ZX_OK;
 }
 
@@ -193,21 +193,21 @@ zx_status_t UpdateHeaderLengths(int file_desc, size_t payload_len) {
   }
 
   uint32_t file_offset = offsetof(RiffChunkHeader, length);
-  ::lseek(file_desc, file_offset, SEEK_SET);
+  lseek(file_desc, file_offset, SEEK_SET);
   auto new_length =
       htole32(static_cast<uint32_t>(kWavHeaderOverhead + payload_len));
-  if (::write(file_desc, &new_length, sizeof(new_length)) < 0) {
+  if (write(file_desc, &new_length, sizeof(new_length)) < 0) {
     return ZX_ERR_IO;
   }
 
   file_offset += sizeof(RiffChunkHeader) + sizeof(WavHeader);
-  ::lseek(file_desc, file_offset, SEEK_SET);
+  lseek(file_desc, file_offset, SEEK_SET);
   new_length = htole32(static_cast<uint32_t>(payload_len));
-  if (::write(file_desc, &new_length, sizeof(new_length)) < 0) {
+  if (write(file_desc, &new_length, sizeof(new_length)) < 0) {
     return ZX_ERR_IO;
   }
 
-  ::lseek(file_desc, kWavHeaderOverhead + payload_len, SEEK_SET);
+  lseek(file_desc, kWavHeaderOverhead + payload_len, SEEK_SET);
   return ZX_OK;
 }
 
@@ -215,7 +215,7 @@ zx_status_t UpdateHeaderLengths(int file_desc, size_t payload_len) {
 // write cursor is correctly placed after any previously written audio data.
 // This private function assumes the given file_desc is valid.
 ssize_t WriteData(int file_desc, const void* const buffer, size_t num_bytes) {
-  return ::write(file_desc, buffer, num_bytes);
+  return write(file_desc, buffer, num_bytes);
 }
 
 }  // namespace
@@ -248,10 +248,10 @@ bool WavWriter<enabled>::Initialize(
     file_name_ = file_name;
   }
 
-  int file_desc = ::open(file_name_.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
+  int file_desc = open(file_name_.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
   file_.reset(file_desc);
   if (!file_.is_valid()) {
-    FXL_LOG(WARNING) << "::open failed for " << std::quoted(file_name_)
+    FXL_LOG(WARNING) << "open failed for " << std::quoted(file_name_)
                      << ", returned " << file_desc << ", errno " << errno;
     return false;
   }
@@ -339,7 +339,7 @@ bool WavWriter<enabled>::Reset() {
     return false;
   }
 
-  if (::ftruncate(file_.get(), kWavHeaderOverhead) < 0) {
+  if (ftruncate(file_.get(), kWavHeaderOverhead) < 0) {
     FXL_LOG(WARNING) << "Failed to truncate " << std::quoted(file_name_)
                      << ", in WavWriter::Reset().";
     Close();
@@ -379,7 +379,7 @@ bool WavWriter<enabled>::Delete() {
     return true;
   }
 
-  if (::unlink(file_name_.c_str()) < 0) {
+  if (unlink(file_name_.c_str()) < 0) {
     FXL_LOG(WARNING) << "Could not delete " << std::quoted(file_name_);
     return false;
   }

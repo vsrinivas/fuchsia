@@ -67,7 +67,7 @@ class VirtualAudioBus {
 static zx_driver_ops_t virtual_audio_bus_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .init = nullptr,
-    .bind = &::virtual_audio::VirtualAudioBus::DdkBind,
+    .bind = &virtual_audio::VirtualAudioBus::DdkBind,
     .create = nullptr,
     .release = nullptr,
 };

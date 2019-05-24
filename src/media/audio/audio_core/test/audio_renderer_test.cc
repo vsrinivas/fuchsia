@@ -35,7 +35,7 @@ class AudioRendererTest : public gtest::RealLoopFixture {
 // AudioRendererTest implementation
 //
 void AudioRendererTest::SetUp() {
-  ::gtest::RealLoopFixture::SetUp();
+  gtest::RealLoopFixture::SetUp();
 
   auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
 
@@ -57,7 +57,7 @@ void AudioRendererTest::TearDown() {
   EXPECT_EQ(expect_error_, error_occurred_);
   EXPECT_EQ(expect_renderer_, audio_renderer_.is_bound());
 
-  ::gtest::RealLoopFixture::TearDown();
+  gtest::RealLoopFixture::TearDown();
 }
 
 void AudioRendererTest::ExpectDisconnect() {

@@ -39,7 +39,7 @@ lazy_static! {
     // This can be removed in the future if we get a static way to specify environment variables
     // for a component, so we can set `RUST_TEST_THREADS=1` for this component.
     static ref TEST_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
-    static ref LOGGER: () = ::fuchsia_syslog::init().expect("Initializing syslog");
+    static ref LOGGER: () = fuchsia_syslog::init().expect("Initializing syslog");
 }
 
 #[derive(Debug)]

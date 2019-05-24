@@ -75,7 +75,7 @@ class FxProcessor {
   // Used internally, this removes an already-created instance from the chain.
   zx_status_t RemoveFx(fx_token_t fx_token);
 
-  ::media::audio::FxLoader* fx_loader_;
+  media::audio::FxLoader* fx_loader_;
   uint32_t frame_rate_;
 
   std::vector<fx_token_t> fx_chain_;

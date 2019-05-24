@@ -9,8 +9,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  ::virtual_audio::VirtualAudioServiceImpl impl(
-      sys::ComponentContext::Create());
+  virtual_audio::VirtualAudioServiceImpl impl(sys::ComponentContext::Create());
 
   if (impl.Init() != ZX_OK) {
     return -1;
