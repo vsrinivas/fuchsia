@@ -7,23 +7,22 @@ import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":memory_monitor_tests",
-    ":memory_monitor_unittests",
-  ]
+  deps = [":memory_monitor_tests"]
 }
 
 executable("memory_monitor_unittests") {
   testonly = true
-
   output_name = "memory_monitor_unittests"
-
   sources = [
     "monitor_unittest.cc",
+    "printer_unittest.cc",
+    "summary_unittest.cc",
+    "test_utils.cc",
+    "test_utils.h",
   ]
 
   deps = [
-    "//garnet/bin/memory_monitor:lib",
+    "//garnet/bin/memory_monitor:mon_lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
@@ -31,9 +30,7 @@ executable("memory_monitor_unittests") {
 }
 
 test_package("memory_monitor_tests") {
-  deps = [
-    ":memory_monitor_unittests",
-  ]
+  deps = [":memory_monitor_unittests"]
 
   tests = [
     {

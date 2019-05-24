@@ -1,13 +1,12 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "garnet/bin/memory_monitor/monitor.h"
 
+#include <gtest/gtest.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-
-#include "gtest/gtest.h"
 
 namespace memory {
 namespace test {

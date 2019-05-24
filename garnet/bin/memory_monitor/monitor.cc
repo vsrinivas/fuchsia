@@ -7,58 +7,26 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
+#include <iostream>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <string.h>
 #include <trace/event.h>
 #include <zircon/status.h>
 
-#include <iostream>
-
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace memory {
 
 namespace {
 
 constexpr char kKstatsPathComponent[] = "kstats";
-
-zx_status_t get_root_resource(zx_handle_t* root_resource) {
-  const char* sysinfo = "/dev/misc/sysinfo";
-  int fd = open(sysinfo, O_RDWR);
-  if (fd < 0) {
-    FXL_LOG(ERROR) << "Cannot open sysinfo: " << strerror(errno);
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  zx::channel channel;
-  zx_status_t status =
-      fdio_get_service_handle(fd, channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Cannot obtain sysinfo channel: "
-                   << zx_status_get_string(status);
-    return status;
-  }
-
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
-      channel.get(), &status, root_resource);
-  if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Cannot obtain root resource: "
-                   << zx_status_get_string(fidl_status);
-    return fidl_status;
-  } else if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Cannot obtain root resource: "
-                   << zx_status_get_string(status);
-    return status;
-  }
-  return ZX_OK;
-}
 
 }  // namespace
 
@@ -74,6 +42,13 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       dispatcher_(dispatcher),
       component_context_(std::move(context)),
       root_object_(component::ObjectDir::Make("root")) {
+  auto s = Capture::GetCaptureState(capture_state_);
+  if (s != ZX_OK) {
+    FXL_LOG(ERROR) << "Error getting capture state: "
+                   << zx_status_get_string(s);
+    exit(EXIT_FAILURE);
+  }
+
   component_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   root_object_.set_children_callback(
       {kKstatsPathComponent},
@@ -85,11 +60,6 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       std::make_unique<vfs::Service>(
           inspect_bindings_.GetHandler(root_object_.object().get())));
 
-  auto status = get_root_resource(&root_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error getting root_resource: " << status;
-    exit(-1);
-  }
   if (command_line.HasOption("help")) {
     PrintHelp();
     exit(EXIT_SUCCESS);
@@ -102,7 +72,6 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       FXL_LOG(ERROR) << "Invalid value for delay: " << delay_as_string;
       exit(-1);
     }
-    printf("setting delay to %d\n", delay_as_int);
     delay_ = zx::msec(delay_as_int);
   }
   std::string prealloc_as_string;
@@ -141,17 +110,16 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
 
   trace_observer_.Start(dispatcher_, [this] { UpdateState(); });
   if (logging_) {
-    zx_info_kmem_stats_t stats;
-    zx_status_t err = zx_object_get_info(root_, ZX_INFO_KMEM_STATS, &stats,
-                                         sizeof(stats), NULL, NULL);
-    if (err != ZX_OK) {
-      FXL_LOG(ERROR) << "ZX_INFO_KMEM_STATS returns "
-                     << zx_status_get_string(err);
-      exit(-1);
+    Capture capture;
+    auto s = Capture::GetCapture(capture, capture_state_, KMEM);
+    if (s != ZX_OK) {
+      FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
+      exit(EXIT_FAILURE);
     }
-    FXL_LOG(INFO) << "Total: " << stats.total_bytes
-                  << " Wired: " << stats.wired_bytes
-                  << " Total Heap: " << stats.total_heap_bytes;
+    auto const& kmem = capture.kmem();
+    FXL_LOG(INFO) << "Total: " << kmem.total_bytes
+                  << " Wired: " << kmem.wired_bytes
+                  << " Total Heap: " << kmem.total_heap_bytes;
   }
   SampleAndPost();
 }
@@ -179,7 +147,7 @@ void Monitor::ReleaseWatcher(fuchsia::memory::Watcher* watcher) {
       std::remove_if(watchers_.begin(), watchers_.end(), predicate));
 }
 
-void Monitor::NotifyWatchers(zx_info_kmem_stats_t kmem_stats) {
+void Monitor::NotifyWatchers(const zx_info_kmem_stats_t& kmem_stats) {
   fuchsia::memory::Stats stats{
       .total_bytes = kmem_stats.total_bytes,
       .free_bytes = kmem_stats.free_bytes,
@@ -207,52 +175,50 @@ void Monitor::PrintHelp() {
 
 void Monitor::Inspect(component::Object::ObjectVector* out_children) {
   auto kstats = component::ObjectDir::Make(kKstatsPathComponent);
-  zx_info_kmem_stats_t stats;
-  zx_status_t err = zx_object_get_info(root_, ZX_INFO_KMEM_STATS, &stats,
-                                       sizeof(stats), NULL, NULL);
-  if (err != ZX_OK) {
-    FXL_LOG(ERROR) << "ZX_INFO_KMEM_STATS returns "
-                   << zx_status_get_string(err);
-    return;
+  Capture capture;
+  auto s = Capture::GetCapture(capture, capture_state_, KMEM);
+  if (s != ZX_OK) {
+    FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
   }
-  kstats.set_metric("total_bytes", component::UIntMetric(stats.total_bytes));
-  kstats.set_metric("free_bytes", component::UIntMetric(stats.free_bytes));
-  kstats.set_metric("wired_bytes", component::UIntMetric(stats.wired_bytes));
-  kstats.set_metric("total_heap_bytes",
-                    component::UIntMetric(stats.total_heap_bytes));
-  kstats.set_metric("vmo_bytes", component::UIntMetric(stats.vmo_bytes));
-  kstats.set_metric("mmu_overhead_bytes",
-                    component::UIntMetric(stats.mmu_overhead_bytes));
-  kstats.set_metric("ipc_bytes", component::UIntMetric(stats.ipc_bytes));
-  kstats.set_metric("other_bytes", component::UIntMetric(stats.other_bytes));
+  auto const& kmem = capture.kmem();
+
+  kstats.set_metric("total_bytes", component::UIntMetric(kmem.total_bytes));
+  kstats.set_metric("free_bytes", component::UIntMetric(kmem.free_bytes));
+  kstats.set_metric("wired_bytes", component::UIntMetric(kmem.wired_bytes));
+  kstats.set_metric(
+      "total_heap_bytes",component::UIntMetric(kmem.total_heap_bytes));
+  kstats.set_metric("vmo_bytes", component::UIntMetric(kmem.vmo_bytes));
+  kstats.set_metric(
+      "mmu_overhead_bytes", component::UIntMetric(kmem.mmu_overhead_bytes));
+  kstats.set_metric("ipc_bytes", component::UIntMetric(kmem.ipc_bytes));
+  kstats.set_metric("other_bytes", component::UIntMetric(kmem.other_bytes));
   out_children->push_back(kstats.object());
 }
 
 void Monitor::SampleAndPost() {
   if (logging_ || tracing_ || watchers_.size() > 0) {
-    zx_info_kmem_stats_t stats;
-    zx_status_t err = zx_object_get_info(root_, ZX_INFO_KMEM_STATS, &stats,
-                                         sizeof(stats), NULL, NULL);
-    if (err != ZX_OK) {
-      FXL_LOG(ERROR) << "ZX_INFO_KMEM_STATS returns "
-                     << zx_status_get_string(err);
+    Capture capture;
+    auto s = Capture::GetCapture(capture, capture_state_, KMEM);
+    if (s != ZX_OK) {
+      FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
       return;
     }
+    auto const& kmem = capture.kmem();
     if (logging_) {
-      FXL_LOG(INFO) << "Free: " << stats.free_bytes
-                    << " Free Heap: " << stats.free_heap_bytes
-                    << " VMO: " << stats.vmo_bytes
-                    << " MMU: " << stats.mmu_overhead_bytes
-                    << " IPC: " << stats.ipc_bytes;
+      FXL_LOG(INFO) << "Free: " << kmem.free_bytes
+                    << " Free Heap: " << kmem.free_heap_bytes
+                    << " VMO: " << kmem.vmo_bytes
+                    << " MMU: " << kmem.mmu_overhead_bytes
+                    << " IPC: " << kmem.ipc_bytes;
     }
     if (tracing_) {
-      TRACE_COUNTER(kTraceName, "allocated", 0, "vmo", stats.vmo_bytes,
-                    "mmu_overhead", stats.mmu_overhead_bytes, "ipc",
-                    stats.ipc_bytes);
-      TRACE_COUNTER(kTraceName, "free", 0, "free", stats.free_bytes,
-                    "free_heap", stats.free_heap_bytes);
+      TRACE_COUNTER(kTraceName, "allocated", 0, "vmo", kmem.vmo_bytes,
+                    "mmu_overhead", kmem.mmu_overhead_bytes, "ipc",
+                    kmem.ipc_bytes);
+      TRACE_COUNTER(kTraceName, "free", 0, "free", kmem.free_bytes,
+                    "free_heap", kmem.free_heap_bytes);
     }
-    NotifyWatchers(stats);
+    NotifyWatchers(kmem);
     async::PostDelayedTask(
         dispatcher_, [this] { SampleAndPost(); }, delay_);
   }
@@ -263,17 +229,19 @@ void Monitor::UpdateState() {
     if (trace_is_category_enabled(kTraceName)) {
       FXL_LOG(INFO) << "Tracing started";
       if (!tracing_) {
-        zx_info_kmem_stats_t stats;
-        zx_status_t err = zx_object_get_info(root_, ZX_INFO_KMEM_STATS, &stats,
-                                             sizeof(stats), NULL, NULL);
-        if (err != ZX_OK) {
-          FXL_LOG(ERROR) << "ZX_INFO_KMEM_STATS returns "
-                         << zx_status_get_string(err);
+        Capture capture;
+        auto s = Capture::GetCapture(capture, capture_state_, KMEM);
+        if (s != ZX_OK) {
+          FXL_LOG(ERROR) << "Error getting capture: "
+                         << zx_status_get_string(s);
           return;
         }
-        TRACE_COUNTER(kTraceName, "fixed", 0, "total", stats.total_bytes,
-                      "wired", stats.wired_bytes, "total_heap",
-                      stats.total_heap_bytes);
+        auto const& kmem = capture.kmem();
+        TRACE_COUNTER(kTraceName,
+                      "fixed", 0,
+                      "total", kmem.total_bytes,
+                      "wired", kmem.wired_bytes,
+                      "total_heap", kmem.total_heap_bytes);
         tracing_ = true;
         if (!logging_) {
           SampleAndPost();

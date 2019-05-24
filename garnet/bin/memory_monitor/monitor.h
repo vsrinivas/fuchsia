@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -11,13 +11,12 @@
 #include <lib/inspect/deprecated/object_dir.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/vmo.h>
+#include <memory>
+#include <src/lib/fxl/command_line.h>
 #include <trace/observer.h>
 #include <zircon/types.h>
 
-#include <memory>
-
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/macros.h"
+#include "garnet/bin/memory_monitor/capture.h"
 
 namespace memory {
 
@@ -43,8 +42,9 @@ class Monitor : public fuchsia::memory::Monitor {
   // Destroys a watcher proxy (called upon a connection error).
   void ReleaseWatcher(fuchsia::memory::Watcher* watcher);
   // Alerts all watchers when an update has occurred.
-  void NotifyWatchers(zx_info_kmem_stats_t stats);
+  void NotifyWatchers(const zx_info_kmem_stats_t& stats);
 
+  CaptureState capture_state_;
   uint64_t prealloc_size_;
   zx::vmo prealloc_vmo_;
   bool logging_;
