@@ -52,6 +52,8 @@
 
 namespace modular {
 
+using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
+
 namespace {
 
 constexpr char kAppId[] = "modular_sessionmgr";
@@ -221,7 +223,8 @@ void SessionmgrImpl::Initialize(
           TerminateSessionShell(std::move(cont));
         });
         InitializeClipboard();
-        ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
+        ReportEvent(
+            ModularLifetimeEventsMetricDimensionEventType::BootedToSessionMgr);
       };
 
   session_context_ = session_context.Bind();
