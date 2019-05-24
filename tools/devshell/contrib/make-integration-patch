@@ -6,7 +6,7 @@
 ### Creates a CL in an integration repository suitable for testing other CLs
 ### using the global integration commit queue.
 
-## usage: fx make-integration-cl
+## usage: fx make-integration-patch
 ##
 ## The command prints instructions and prompts the user for input. Once
 ## all input has been collected, it creates a patches.json file in
@@ -28,6 +28,14 @@ function print-instructions {
   echo
   echo "... GO!"
   echo
+}
+
+function print-help {
+  echo "usage: fx make-integration-patch [OPTIONS]"
+  echo "  -h, --help      this help message"
+  echo "  -m, --message   commit message"
+  echo
+  print-instructions
 }
 
 function print-after-instructions {
@@ -62,9 +70,14 @@ function prompt-or-exit {
 
 function create-git-commit-and-upload {
   local dir="$1"
+  local message="$2"
   git -C "$dir" add -A
-  git -C "$dir" commit -m "DO NOT SUBMIT - testing unsubmitted changes in GI"
-  git -C "$dir" push origin HEAD:refs/for/master
+  if [[ "$message" = "" ]]; then
+    git -C "$dir" commit -m "DO NOT SUBMIT - testing unsubmitted changes in GI"
+  else
+    git -C "$dir" commit -m "$message"
+  fi
+  git -C "$dir" push origin "HEAD:refs/for/master%wip"
   return $?
 }
 
@@ -99,6 +112,26 @@ function read-patches-from-stdin {
 function main {
   local integration_dir="${FUCHSIA_DIR}/integration"
 
+  local message=
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help)
+        print-help
+        exit 0
+        ;;
+      -m|--message)
+        shift
+        message="$1"
+        ;;
+      *)
+        echo "Invalid flag $1"
+        print-help
+        exit 1
+    esac
+    shift
+  done
+
   abort-if-unclean "$integration_dir"
   print-instructions
 
@@ -121,7 +154,7 @@ function main {
 
   prompt-or-exit "Do you want to continue?"
   write-patches-json "$integration_dir" "$patch_file_contents"
-  if create-git-commit-and-upload "$integration_dir"; then
+  if create-git-commit-and-upload "$integration_dir" "$message"; then
     print-after-instructions
   else
     echo
