@@ -177,6 +177,19 @@ class FidlDecoder final : public fidl::Visitor<fidl::MutatingVisitorTrait,
     return Status::kSuccess;
   }
 
+  Status VisitInternalPadding(Position padding_position,
+                              uint32_t padding_length) {
+    auto padding_ptr = padding_position.template Get<const uint8_t>(
+        StartingPoint{bytes_->data()});
+    for (uint32_t i = 0; i < padding_length; i++) {
+      if (padding_ptr[i] != 0) {
+        SetError("non-zero padding bytes detected");
+        return Status::kConstraintViolationError;
+      }
+    }
+    return Status::kSuccess;
+  }
+
   void OnError(const char* error) { SetError(error); }
 
   zx_status_t status() const { return status_; }
