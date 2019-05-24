@@ -271,8 +271,9 @@ void MediaPlayerTestUtilView::OnPropertiesChanged(
 }
 
 void MediaPlayerTestUtilView::Layout() {
-  if (!has_logical_size())
+  if (!has_logical_size() || !video_view_holder_) {
     return;
+  }
 
   if (!scenic_ready_) {
     scenic_ready_ = true;
@@ -384,13 +385,13 @@ void MediaPlayerTestUtilView::OnChildAttached(uint32_t view_holder_id) {
 
 void MediaPlayerTestUtilView::OnChildUnavailable(uint32_t view_holder_id) {
   FXL_DCHECK(view_holder_id == video_view_holder_->id());
-  FXL_LOG(ERROR) << "Video view died unexpectedly";
+  FXL_LOG(ERROR) << "Video view died unexpectedly, quitting.";
 
   video_host_node_->Detach();
   video_host_node_.reset();
   video_view_holder_.reset();
 
-  Layout();
+  quit_callback_(0);
 }
 
 void MediaPlayerTestUtilView::HandleStatusChanged(
