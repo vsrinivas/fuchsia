@@ -59,7 +59,7 @@ infra/ninja/${os}-${arch=amd64} version:1.8.2
 # Banjo compiler
 @Subdir banjo
 # TODO(BLD-341): replace ${os}-${arch=amd64} with ${platform}
-fuchsia/tools/banjo_bin/${os}-${arch=amd64} git_revision:74d433b8ae7709785b80159b39cfcef831edf19f
+fuchsia/tools/banjo_bin/${os}-${arch=amd64} git_revision:94f2f30368242960dd4e6ef5c384b840bbe20248
 
 # AEMU
 @Subdir aemu
