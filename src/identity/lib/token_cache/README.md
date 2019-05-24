@@ -16,23 +16,18 @@ None
 
 ## Design
 
-The `TokenCache` struct defines the cache as a map from `CacheKey` to
-`TokenSet`. `CacheKey` uniquely identifies a Service Provider account and
-the Auth Provider used to communicate with it, being composed of
-auth_provider_type and credential_id (aka user_profile_id). `TokenSet` contains
-a map for each of the possible short-lived token types.
+The `TokenCache` struct stores tokens as a mapping from `CacheKey` to
+`CacheToken` implementors.  `CacheKey` and `CacheToken` are traits that define
+the requirements for keys and tokens stored in the cache.  A `CacheToken`
+implementation must provide an expiration time used for cache eviction.  A
+`CacheKey` must provide the Service Provider account (user_profile_id) and the
+Auth Provider used to communicate with it (auth_provider_type), as well as some
+unique identifier.  A `CacheKey` is also statically tied to a specific
+`CacheToken` type to enforce type safety.  `CacheKey` and `CacheToken`
+implementations are provided by the user.
 
 
 ## Future Work
-
-The current nested cache structure is more complex and less flexible than
-necessary. We plan to migrate to a simpler design where each cache entry defines
-a single token.
-
-Currently the cache does not handle expiry correctly if the maximum size is
-reached. Given the number of accounts, auth providers, and token types within
-the current products these limits are not being reached, but future work will
-correctly handle the size constraint.
 
 The cache is a simple crate that is unlikely to ever be used outside of Token
 Manager. Potentially it will be merged into Token Manager at some point.
