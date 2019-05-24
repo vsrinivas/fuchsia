@@ -1,12 +1,17 @@
 #!/bin/bash
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### run the debug agent on target and connect to it with zxdb
+### run fidlcat on given target.
 
-## Starts the debug agent on the proposed target and automatically connect zxdb
-## to it. Will close the debug agent on exit.
+## Runs fidlcat in the given configuration; currently, fidlcat logs all FIDL
+## chatter from the given target executable.  Starts the debug agent on the
+## proposed target, and closes the debug agent on exit.
+##
+## CAUTION: This support is experimental, and invocation strategy is likely to
+## change.  The component launching configuration is *especially* likely to go
+## away over time.
 ##
 ## TROUBLESHOOTING TIPS:
 ##
@@ -17,26 +22,28 @@
 ## - This scripts uses the tool "nc" for testing TCP connections. Check that it
 ##   is in $PATH and that it works.
 ##
-## Usage: fx debug [(--port|-p) <PORT>] [(--verbose-agent|-va)]
+## Usage: fx fidlcat [(--port|-p) <PORT>] [--remote-pid <pid>|run <component URL>]
 ##
 ##    --port            Port the debug agent will be listening on. Will use 2345
 ##                      by default.
 ##    --verbose-agent   Whether the debug agent's stdout/stderr should be shown.
-##                      Useful for debugging the debugger. Yo' dawg.
+##    --remote-pid      The koid of the remote process to trace
+##    run               a token indicating that you want to invoke and trace the
+##                      following component URL.
 ##
-## Flags after -- are parsed by zxdb.  See zxdb's documentation for more
-## details.
+## Flags after -- are parsed by fidlcat.  Example usage:
+##
+## # Attaches to the process with the given pid on the target:
+## fx fidlcat --remote-pid 4755
+##
+## # Launches the echo client, and monitors its FIDL chatter:
+## fx fidlcat run fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contrib/lib/debug.sh || exit $?
 
-# Defaults.
-port=
-core=
-unwind_flag=
 agent_out="/dev/null"
 
-# Flag parsing.
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h)
@@ -50,28 +57,15 @@ while [[ $# -gt 0 ]]; do
     --verbose-agent|-va)
       agent_out="/dev/stdout"
       ;;
-    --core|-c)
-      arg=$1
-      shift
-      core="$1"
-      if [[ -z "${core}" ]]; then
-        echo "${arg} takes an argument"
-        exit 1
-      fi
+    --remote-pid)
+      break # Remaining flags are passed to fidlcat
       ;;
-    --core=*)
-      core="${1:7}"
-      ;;
-    --unwind)
-      shift
-      unwind_flag="--unwind=$1"
-      ;;
-    --unwind=*)
-      unwind_flag="--unwind=${1:9}"
+    run)
+      break # Remaining flags are passed to fidlcat
       ;;
     --)
       shift
-      break # Remaining flags are passed to zxdb
+      break # Remaining flags are passed to fidlcat
       ;;
     *)
       echo "Invalid flag $1"
@@ -80,38 +74,20 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-if [[ -n "${port}" && -n "${core}" ]]; then
-  echo "Specifying both a port and a core doesn't make sense"
-  exit 1
-fi
-
-if [[ -n "${core}" && ! -f "${core}" ]]; then
-  echo "Cannot find file ${core}"
-  exit 1
-fi
+target=$(get-fuchsia-device-addr)
 
 if [[ -z "${port}" ]]; then
   port=2345
 fi
 
-connect_ops=
-
-if [[ -z "${core}" ]]; then
-  launch_debug_agent
-
-  target=$(get-fuchsia-device-addr)
-  connect_ops="--connect [${target}]:${port}"
-else
-  connect_ops="--core ${core}"
-fi
+launch_debug_agent
 
 # We start the client with the flag that tells it to quit the agent when zxdb quits.
-"${FUCHSIA_BUILD_DIR}/host_x64/zxdb" \
-  ${connect_ops} \
-  "--quit-agent-on-exit" \
+"${FUCHSIA_BUILD_DIR}/host_x64/fidlcat" \
+  "--connect" "[${target}]:${port}" \
+  "--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt \
   "-s" "${FUCHSIA_BUILD_DIR}" \
   "-s" "${ZIRCON_BUILDROOT}" \
   "-s" "${BUILDTOOLS_CLANG_DIR}/lib/debug" \
-  "--symbol-cache" ~ \
-  "--symbol-server" "gs://fuchsia-infra-debug-symbols" \
+  --pretty-print \
   $@
