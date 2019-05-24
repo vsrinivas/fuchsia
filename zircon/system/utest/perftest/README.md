@@ -15,7 +15,7 @@ When using a standalone Zircon build the tests can be run with
 When using a Fuchsia build you must first ensure the right package is
 included. Try building with
 
-`fx set x64 --monolith garnet/packages/buildbot && fx full-build`
+`fx set core.x64 --with-base //bundles/buildbot:core && fx full-build`
 
 You can then run the tests with
 

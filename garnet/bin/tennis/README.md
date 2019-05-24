@@ -38,7 +38,7 @@ other, or use the `manual_player` script to play against an AI by yourself.
 Set your packages to include Tennis:
 
 ```
-fx set x64 --monolith garnet/packages/all,garnet/packages/experimental/disabled/tennis
+fx set core.x64 --with //garnet/bin/tennis
 fx build
 ```
 

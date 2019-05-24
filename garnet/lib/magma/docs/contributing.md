@@ -71,8 +71,8 @@ then present the device as usual for general applications.  Inspect the syslog f
 
 If you have an attached display, execute the spinning [vkcube](../../../lib/vulkan/tests/vkcube).
 This test uses an imagepipe swapchain to pass frames to the system compositor.  
-Build with --monolith garnet/packages/examples/vkcube_on_scenic.  
-Run the test with 'run fuchsia-pkg://fuchsia.com/present_view#meta/present_view.cmx fuchsia-pkg://fuchsia.com/vkcube_on_scenic#meta/vkcube_on_scenic.cmx'.
+Build with `--with garnet/packages/examples/vkcube_on_scenic`.
+Run the test with `run fuchsia-pkg://fuchsia.com/present_view#meta/present_view.cmx fuchsia-pkg://fuchsia.com/vkcube_on_scenic#meta/vkcube_on_scenic.cmx`.
 
 #### L2
 

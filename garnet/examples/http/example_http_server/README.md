@@ -6,8 +6,8 @@ a single public directory.
 ## Build
 
 ```
-$ fx set x64 --monolith garnet/packages/examples/http
-$ fx full-build
+$ fx set core.x64 --with //garnet/examples/http/example_http_server
+$ fx build
 ```
 
 ## Usage

@@ -27,7 +27,7 @@ For the helper programs, you first need to add the package wrapping the config
 telling Crashpad to upload to a crash server and which server to upload to.
 
 ```sh
-(host)$ fx set --monolith garnet/packages/config/crashpad_upload_to_prod_server --product ...
+(host)$ fx set core.x64 --with garnet/packages/config:crashpad_upload_to_prod_server
 ```
 
 Then, after running each one of the helper programs (see commands in sections

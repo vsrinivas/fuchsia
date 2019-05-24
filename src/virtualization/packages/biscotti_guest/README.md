@@ -36,9 +36,9 @@ can proceed:
 
 ```
  (host) $ cd $FUCHSIA_DIR
- (host) $ fx set x64 --product "garnet/products/default" \
-                     --monolith "garnet/packages/experimental/disabled/biscotti"
- (host) $ fx full-build
+ (host) $ fx set core.x64 
+                     --with-base //src/virtualization,//src/virtualization/packages/biscotti_guest
+ (host) $ fx build
 ```
 
 ## Boot to Termina

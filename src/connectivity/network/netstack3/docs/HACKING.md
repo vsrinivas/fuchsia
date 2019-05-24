@@ -63,7 +63,7 @@ with the `--no-skip-worktree` flag.
 **NOTE:** At the time of this writing, Netstack3 is not complete enough to allow
 for dynamic package download and install. So make sure that every package that
 you'll need is included in your `fx set` line using the `--with-base` argument,
-which will have those packages be part of the monolith system image.
+which will have those packages be part of the base system.
 
 ## Running
 

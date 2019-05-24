@@ -6,7 +6,7 @@ To configure the modular framework, you will need to create a JSON file defining
 the required configurations for `basemgr` and `sessionmgr` as detailed below.
 The configuration file should be packaged via the build rule `modular_config`,
 which will validate your file against a schema. You must then include the
-modular_config() target in the product's monolith packages.
+modular_config() target in the product's base packages.
 
 ## Example
 

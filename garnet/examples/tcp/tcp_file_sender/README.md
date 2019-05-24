@@ -5,8 +5,8 @@ This TCP file sender accepts inbound TCP connections and sends a single file to 
 ## Build
 
 ```
-$ fx set x64 --monolith garnet/packages/examples/tcp
-$ fx full-build
+$ fx set core.x64 --with //garnet/examples/tcp/tcp_file_sender
+$ fx build
 ```
 
 ## Usage
