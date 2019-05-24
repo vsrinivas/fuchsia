@@ -51,7 +51,10 @@ class SessionCtlTest : public sys::testing::TestWithEnvironment {
                                     controller.NewRequest());
     component_ptrs_.push_back(std::move(controller));
 
-    RunLoopWithTimeout(zx::sec(10));
+    RunLoopWithTimeoutOrUntil([]{
+      files::Glob glob(modular::kSessionCtlServiceGlobPath);
+      return glob.size() == 1;
+    }, zx::sec(10));
   }
 
   std::vector<fuchsia::sys::ComponentControllerPtr> component_ptrs_;
