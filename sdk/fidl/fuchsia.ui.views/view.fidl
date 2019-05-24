@@ -104,26 +104,45 @@ protocol View {
     SetConfig(ViewConfig config);
 };
 
-/// A ViewRef is a kernel object that identifies a unique View
-/// across the system. When two ViewRefs refer to the same View,
-/// they have identical KOIDs.
+/// A ViewRef is a handle to a kernel object which identifies a unique View
+/// across the system. Two ViewRefs to the same View have the same KOID.
 ///
-/// We use a ViewRef to identify a View, to validate a View, and to
-/// signal invalidation.
+/// Clients use a ViewRef to identify a View, to validate a View, and to
+/// receive a View invalidation signal.
 ///
-/// For example, accessibility accepts a ViewRef to validate that
-/// a client has a valid View, and subsequently uses that ViewRef
-/// to group the semantic nodes associated with that View.
+/// As part of View creation, the client creates a linked
+/// ViewRef/ViewRefControl pair and hands the pair to Scenic (ViewRefControl is
+/// described below).  The client must remove the ViewRef's signal
+/// capabilities; otherwise the View is not created.
 ///
-/// Another example: We use ViewRefs to create a FocusChain
-/// (TBD), which identifies Views considered as "in-focus" down
-/// the View hierarchy. When a View is destroyed, Scenic signals
-/// to all ViewRef holders that the ViewRef is now invalid.
+/// The client may freely clone its ViewRef and share it, even before sending
+/// it to Scenic.
 ///
-/// Scenic creates and associates a ViewRef for each View. Scenic
-/// creates a copy of a ViewRef upon request by that View. The
-/// clone is transferrable, cloneable, and waitable, but not
-/// signalable (latter is reserved for Scenic).
+/// Example 1. Accessibility accepts a ViewRef from a client to group the
+/// semantic nodes, and semantic operations, associated with a client's View.
+/// It must validate a client's ViewRef with Scenic.
+///
+/// Example 2. We use ViewRefs to create a FocusChain, which identifies Views
+/// considered as "in-focus" down the View hierarchy. When a View is destroyed,
+/// Scenic signals to all FocusChain holders that the ViewRef is now invalid.
 struct ViewRef {
-    handle<event> reference;
+    handle<eventpair> reference;
+};
+
+/// A ViewRefControl is the peer to a ViewRef. Their |reference|s are linked.
+///
+/// Like ViewRef, a ViewRefControl is a typed handle to an eventpair.  Unlike
+/// ViewRef, a ViewRefControl's handle is unique. Scenic uses this property
+/// when it ties a ViewRefControl to a View, arranged to share fate.  When a
+/// View is destroyed, the associated destruction of its ViewRefControl
+/// triggers an automatic ZX_ERR_PEER_CLOSED signal sent to all ViewRef
+/// holders; hence ViewRef holders may track View lifetime.
+///
+/// As part of View creation, the client creates a linked
+/// ViewRef/ViewRefControl pair and hands the pair to Scenic (ViewRef is
+/// described above).  The client must not clone the ViewRefControl. It must
+/// not remove or modify the ViewRefControl's capabilities; otherwise the View
+/// is not created.
+struct ViewRefControl {
+    handle<eventpair> reference;
 };

@@ -142,8 +142,8 @@ mod test {
             fidl::endpoints::create_request_stream::<ui_shortcut::ListenerMarker>()?;
 
         // Set listener and view ref.
-        let view_ref =
-            &mut ui_views::ViewRef { reference: zx::Event::create().expect("reference created") };
+        let (raw_event_pair, _) = zx::EventPair::create()?;
+        let view_ref = &mut ui_views::ViewRef { reference: raw_event_pair };
         registry.set_view(view_ref, listener_client_end).expect("set_view");
 
         // Set the shortcut.
