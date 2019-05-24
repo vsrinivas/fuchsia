@@ -27,7 +27,7 @@ dart_test("screen_is_not_black_test") {
       env.tags = []
     }
     # This test is in production for x64 builds alone.
-    if (current_cpu != "x64") {
+    if (target_cpu != "x64") {
       env.tags += ["e2e-terminal"]
     }
     environments += [env]
