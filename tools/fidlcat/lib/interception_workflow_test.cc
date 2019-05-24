@@ -461,6 +461,8 @@ class ProcessController {
                     debug_ipc::PlatformMessageLoop& loop);
   ~ProcessController();
 
+  void Detach();
+
   InterceptionWorkflow& workflow() { return workflow_; }
 
   static constexpr uint64_t kProcessKoid = 1234;
@@ -488,8 +490,13 @@ void AppendElements(std::string& result, size_t num, const T* a, const T* b) {
   result.append(os.str());
 }
 
-struct AlwaysQuit {
-  ~AlwaysQuit() { debug_ipc::MessageLoop::Current()->QuitNow(); }
+class AlwaysQuit {
+ public:
+  AlwaysQuit(ProcessController* controller) : controller_(controller) {}
+  ~AlwaysQuit() { controller_->Detach(); }
+
+ private:
+  ProcessController* controller_;
 };
 
 }  // namespace
@@ -512,7 +519,7 @@ ProcessController::ProcessController(InterceptionWorkflowTest* remote_api,
   // half-works (the half that registers the target with the workflow). We have
   // to register the observer manually.
   target_ = session.system().GetTargets()[0];
-  target_->AddObserver(&workflow_.observer_);
+  workflow_.AddObserver(target_);
   workflow_.observer_.DidCreateProcess(target_, process_, false);
   workflow_.observer_.process_observer().DidCreateThread(process_, the_thread);
 
@@ -549,14 +556,16 @@ ProcessController::~ProcessController() {
   target_->RemoveObserver(&workflow_.observer_);
 }
 
+void ProcessController::Detach() { workflow_.Detach(); }
+
 void InterceptionWorkflowTest::WriteTest() {
   ProcessController controller(this, session(), loop());
   bool hit_breakpoint = false;
   // This will be executed when the zx_channel_write breakpoint is triggered.
   controller.workflow().SetZxChannelWriteCallback(
-      [this, &hit_breakpoint](const zxdb::Err& err,
-                              const ZxChannelParams& params) {
-        AlwaysQuit aq;
+      [this, &controller, &hit_breakpoint](const zxdb::Err& err,
+                                           const ZxChannelParams& params) {
+        AlwaysQuit aq(&controller);
         hit_breakpoint = true;
         ASSERT_EQ(zxdb::ErrType::kNone, err.type()) << err.msg();
 
@@ -598,6 +607,9 @@ void InterceptionWorkflowTest::WriteTest() {
 
   // At this point, the ZxChannelWrite callback should have been executed.
   ASSERT_TRUE(hit_breakpoint);
+
+  // Making sure shutdown works.
+  debug_ipc::MessageLoop::Current()->Run();
 }
 
 TEST_F(InterceptionWorkflowTestX64, ZxChannelWrite) { WriteTest(); }
@@ -609,9 +621,9 @@ void InterceptionWorkflowTest::ReadTest() {
   bool hit_breakpoint = false;
   // This will be executed when the zx_channel_write breakpoint is triggered.
   controller.workflow().SetZxChannelReadCallback(
-      [this, &hit_breakpoint](const zxdb::Err& err,
-                              const ZxChannelParams& params) {
-        AlwaysQuit aq;
+      [this, &controller, &hit_breakpoint](const zxdb::Err& err,
+                                           const ZxChannelParams& params) {
+        AlwaysQuit aq(&controller);
         hit_breakpoint = true;
         ASSERT_EQ(zxdb::ErrType::kNone, err.type()) << err.msg();
 
@@ -671,6 +683,9 @@ void InterceptionWorkflowTest::ReadTest() {
 
   // At this point, the ZxChannelWrite callback should have been executed.
   ASSERT_TRUE(hit_breakpoint);
+
+  // Making sure shutdown works.
+  debug_ipc::MessageLoop::Current()->Run();
 }
 
 TEST_F(InterceptionWorkflowTestX64, ZxChannelRead) { ReadTest(); }

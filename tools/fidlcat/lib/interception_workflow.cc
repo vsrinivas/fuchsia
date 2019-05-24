@@ -96,6 +96,13 @@ void InterceptingTargetObserver::DidCreateProcess(
   workflow_->SetBreakpoints(target);
 }
 
+void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* target,
+                                                    zxdb::Process* process,
+                                                    DestroyReason reason,
+                                                    int exit_code) {
+  workflow_->Detach();
+}
+
 }  // namespace internal
 
 InterceptionWorkflow::InterceptionWorkflow()
@@ -103,6 +110,7 @@ InterceptionWorkflow::InterceptionWorkflow()
       delete_session_(true),
       loop_(new debug_ipc::PlatformMessageLoop()),
       delete_loop_(true),
+      target_count_(0),
       observer_(this),
       zx_channel_write_callback_([](const zxdb::Err&, const ZxChannelParams&) {
         FXL_DCHECK(false) << "Did not specify zx_channel_write callback";
@@ -117,6 +125,7 @@ InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
       delete_session_(false),
       loop_(loop),
       delete_loop_(false),
+      target_count_(0),
       observer_(this) {}
 
 InterceptionWorkflow::~InterceptionWorkflow() {
@@ -191,6 +200,12 @@ zxdb::Target* InterceptionWorkflow::GetTarget(uint64_t process_koid) {
   return session_->system().CreateNewTarget(nullptr);
 }
 
+// Gets the workflow to observe the given target.
+void InterceptionWorkflow::AddObserver(zxdb::Target* target) {
+  target->AddObserver(&observer_);
+  target_count_++;
+}
+
 void InterceptionWorkflow::Attach(uint64_t process_koid,
                                   SimpleErrorFunction and_then) {
   zxdb::Target* target = GetTarget(process_koid);
@@ -199,7 +214,7 @@ void InterceptionWorkflow::Attach(uint64_t process_koid,
   }
 
   // TODO: Remove observer when appropriate.
-  target->AddObserver(&observer_);
+  AddObserver(target);
   target->Attach(
       process_koid, [process_koid, and_then = std::move(and_then)](
                         fxl::WeakPtr<zxdb::Target>, const zxdb::Err& err) {
@@ -214,10 +229,20 @@ void InterceptionWorkflow::Attach(uint64_t process_koid,
       });
 }
 
+void InterceptionWorkflow::Detach() {
+  if (target_count_ > 0) {
+    target_count_--;
+    if (target_count_ == 0) {
+      target_count_ = -1;  // don't execute this again.
+      Shutdown();
+    }
+  }
+}
+
 void InterceptionWorkflow::Launch(const std::vector<std::string>& command,
                                   SimpleErrorFunction and_then) {
   zxdb::Target* target = GetTarget();
-  target->AddObserver(&observer_);
+  AddObserver(target);
 
   auto on_err = [command](const zxdb::Err& err) {
     std::string cmd;

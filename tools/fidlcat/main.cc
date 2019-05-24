@@ -42,7 +42,7 @@ static void OnExit(int signum, siginfo_t* info, void* ptr) {
     _exit(1);
 #endif
   } else {
-    // Maybe detach here.
+    // Maybe detach cleanly here, if we can.
     FXL_LOG(INFO) << "Shutting down...";
     called_onexit_once_ = true;
     workflow_.load()->Shutdown();

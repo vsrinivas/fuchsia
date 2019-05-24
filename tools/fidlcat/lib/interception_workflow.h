@@ -88,6 +88,9 @@ class InterceptingTargetObserver : public zxdb::TargetObserver {
   virtual void DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
                                 bool autoattached_to_new_process) override;
 
+  virtual void WillDestroyProcess(zxdb::Target* target, zxdb::Process* process,
+                                  DestroyReason reason, int exit_code) override;
+
   virtual ~InterceptingTargetObserver() {}
 
   InterceptingProcessObserver& process_observer() { return dispatcher_; }
@@ -136,6 +139,11 @@ class InterceptionWorkflow {
   // posted to the loop on completion.
   void Attach(uint64_t process_koid, SimpleErrorFunction and_then);
 
+  // Detach from one target.  session() keeps track of details about the Target
+  // object; this just reduces the number of targets to which we are attached by
+  // one, and shuts down if we hit 0.
+  void Detach();
+
   // Run the given |command| and attach to it.  Must be connected.  |and_then|
   // is posted to the loop on completion.
   void Launch(const std::vector<std::string>& command,
@@ -163,7 +171,9 @@ class InterceptionWorkflow {
   void Go();
 
   void Shutdown() {
-    loop_->PostTask(FROM_HERE, [this]() { loop_->QuitNow(); });
+    session()->Disconnect([this](const zxdb::Err& err) {
+      loop_->PostTask(FROM_HERE, [this]() { loop_->QuitNow(); });
+    });
   }
 
   zxdb::Session* session() const { return session_; }
@@ -177,11 +187,15 @@ class InterceptionWorkflow {
   template <class T>
   void OnZxChannelAction(zxdb::Thread* thread);
 
+  void AddObserver(zxdb::Target* target);
+
   debug_ipc::BufferedFD buffer_;
   zxdb::Session* session_;
   bool delete_session_;
   debug_ipc::PlatformMessageLoop* loop_;
   bool delete_loop_;
+  // -1 means "we already shut down".
+  int target_count_;
 
   internal::InterceptingTargetObserver observer_;
   ZxChannelCallback zx_channel_write_callback_;
