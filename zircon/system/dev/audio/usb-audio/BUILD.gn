@@ -22,6 +22,7 @@ driver("usb-audio") {
     "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/usb",
     "$zx/system/fidl/fuchsia-hardware-audio:c",
+    "$zx/system/fidl/fuchsia-hardware-midi:c",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/ddk",

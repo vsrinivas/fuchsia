@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/device/midi.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/midi/c/fidl.h>
+#include <lib/fdio/unsafe.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,20 +36,23 @@ static bool open_devices(int* out_src_fd, int* out_dest_fd) {
             continue;
         }
 
-        int device_type;
-        int ret = ioctl_midi_get_device_type(fd, &device_type);
-        if (ret != sizeof(device_type)) {
-            printf("ioctl_midi_get_device_type failed for %s\n", devname);
+        fuchsia_hardware_midi_Info device_info;
+        fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
+        zx_status_t status = fuchsia_hardware_midi_DeviceGetInfo(
+                fdio_unsafe_borrow_channel(fdio), &device_info);
+        fdio_unsafe_release(fdio);
+        if (status != ZX_OK) {
+            printf("fuchsia.hardware.midi.Device/GetInfo failed for %s\n", devname);
             close(fd);
             continue;
         }
-        if (device_type == MIDI_TYPE_SOURCE) {
+        if (device_info.is_source) {
             if (src_fd == -1) {
                 src_fd = fd;
             } else {
                 close(fd);
             }
-        } else if (device_type == MIDI_TYPE_SINK) {
+        } else if (device_info.is_sink) {
             if (dest_fd == -1) {
                 dest_fd = fd;
             } else {

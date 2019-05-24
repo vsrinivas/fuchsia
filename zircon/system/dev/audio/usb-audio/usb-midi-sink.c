@@ -5,9 +5,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
+#include <fuchsia/hardware/midi/c/fidl.h>
 #include <usb/usb.h>
 #include <usb/usb-request.h>
-#include <zircon/device/midi.h>
 #include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -179,20 +179,17 @@ out:
     return status;
 }
 
-static zx_status_t usb_midi_sink_ioctl(void* ctx, uint32_t op, const void* in_buf,
-                                       size_t in_len, void* out_buf, size_t out_len,
-                                       size_t* out_actual) {
-    switch (op) {
-    case IOCTL_MIDI_GET_DEVICE_TYPE: {
-        int* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ZX_ERR_BUFFER_TOO_SMALL;
-        *reply = MIDI_TYPE_SINK;
-        *out_actual = sizeof(*reply);
-        return ZX_OK;
-    }
-    }
+static zx_status_t fidl_GetInfo(void* ctx, fidl_txn_t* txn) {
+    fuchsia_hardware_midi_Info info = {};
+    info.is_sink = true;
+    return fuchsia_hardware_midi_DeviceGetInfo_reply(txn, &info);
+}
 
-    return ZX_ERR_NOT_SUPPORTED;
+static zx_status_t usb_midi_sink_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    static const fuchsia_hardware_midi_Device_ops_t ops = {
+        .GetInfo = fidl_GetInfo,
+    };
+    return fuchsia_hardware_midi_Device_dispatch(ctx, txn, msg, &ops);
 }
 
 static zx_protocol_device_t usb_midi_sink_device_proto = {
@@ -202,7 +199,7 @@ static zx_protocol_device_t usb_midi_sink_device_proto = {
     .open = usb_midi_sink_open,
     .close = usb_midi_sink_close,
     .write = usb_midi_sink_write,
-    .ioctl = usb_midi_sink_ioctl,
+    .message = usb_midi_sink_message,
 };
 
 zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int index,
