@@ -22,6 +22,11 @@ group("test") {
   ]
 }
 
+testing_deps = [
+  "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi_sim_trans_ss",
+  "//src/lib/fxl/test:gtest_main",
+]
+
 executable("dummy_test") {
   output_name = "dummy_test"
   testonly = true
@@ -30,10 +35,7 @@ executable("dummy_test") {
     "dummy_test.cc",
   ]
 
-  deps = [
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi_sim_trans_ss",
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = testing_deps
 }
 
 executable("utils_test") {
@@ -44,10 +46,7 @@ executable("utils_test") {
     "utils_test.cc",
   ]
 
-  deps = [
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi_sim_trans_ss",
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = testing_deps
 }
 
 package("iwlwifi_test") {
