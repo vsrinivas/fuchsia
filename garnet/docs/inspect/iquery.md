@@ -49,22 +49,21 @@ cat: If false, will print the top level node only. True will output the complete
 Example:
 $ find .
 a/
-a/.channel
-a/b/
-a/b/.channel
+a/fuchsia.inspect.Inspect
+b/c
 
-$ iquery --cat a
-a:
-  a_key = a_value
-  a_key2 = 3.4
+$ iquery --ls a
+a_key
+a_key2
+
+$ iquery --cat a_key
+a_key:
+  a_value
 
 $ iquery --cat --recursive a
 a:
   a_key = a_value
   a_key2 = 3.4
-  b:
-    b_key = b_value
-    b_key2 = 44.2
 
 find: If false, it will descend into each branch until it finds a valid node.
       True will output the complete tree, including nested nodes.
@@ -72,18 +71,22 @@ find: If false, it will descend into each branch until it finds a valid node.
 Example:
 $ find .
 a/
-a/.channel
-a/b/
-a/b/.channel
+a/fuchsia.inspect.Inspect
+b/c
+b/c/fuchsia.inspect.Inspect
 
 $ iquery --find .
 a/
+b/c
 
 $ iquery --find --recursive .
-a/
-a/b/
+a
+a#a_key
+a#a_key2
+b/c
+b/c#c_val
+b/c#c_val2
 
-ls: Currently ignored.
 ```
 
 ## `--format=<FORMAT>`
