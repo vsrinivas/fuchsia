@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/affinity_ranking_feature_unittest"
+    }
+}

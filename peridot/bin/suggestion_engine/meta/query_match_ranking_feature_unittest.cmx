@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/query_match_ranking_feature_unittest"
+    }
+}

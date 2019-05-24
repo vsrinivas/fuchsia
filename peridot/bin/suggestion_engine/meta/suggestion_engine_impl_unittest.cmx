@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/suggestion_engine_impl_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

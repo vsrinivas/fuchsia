@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/rank_over_threshold_decision_policy_unittest"
+    }
+}

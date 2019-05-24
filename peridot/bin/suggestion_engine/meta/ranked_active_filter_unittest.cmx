@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/ranked_active_filter_unittest"
+    }
+}

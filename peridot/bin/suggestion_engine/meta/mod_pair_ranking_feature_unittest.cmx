@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/mod_pair_ranking_feature_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/dead_story_ranking_feature_unittest"
+    }
+}

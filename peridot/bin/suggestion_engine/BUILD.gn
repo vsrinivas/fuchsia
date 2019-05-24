@@ -79,7 +79,7 @@ source_set("suggestion_engine_impl") {
   ]
 }
 
-tests_package("suggestion_engine_unittests") {
+hermetic_tests_package("suggestion_engine_unittests") {
   deps = [
     ":suggestion_engine_impl_unittest",
     "//peridot/bin/suggestion_engine/decision_policies:rank_over_threshold_decision_policy_unittest",
