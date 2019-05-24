@@ -35,8 +35,28 @@ void ModuleSymbolIndexNode::Dump(std::ostream& out, int indent_level) const {
 void ModuleSymbolIndexNode::Dump(const std::string& name, std::ostream& out,
                                  int indent_level) const {
   out << std::string(indent_level * 2, ' ') << name;
-  if (!dies_.empty())
-    out << " (" << dies_.size() << ")";
+  if (!dies_.empty()) {
+    out << " (" << dies_.size() << ") ";
+    for (auto& die : dies_) {
+      switch (die.type()) {
+        case RefType::kNamespace:
+          out << "n";
+          break;
+        case RefType::kFunction:
+          out << "f";
+          break;
+        case RefType::kVariable:
+          out << "v";
+          break;
+        case RefType::kTypeDecl:
+          out << "d";
+          break;
+        case RefType::kType:
+          out << "t";
+          break;
+      }
+    }
+  }
   out << std::endl;
   for (const auto& cur : sub_)
     cur.second.Dump(cur.first, out, indent_level + 1);
@@ -86,8 +106,7 @@ ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(std::string name) {
 }
 
 ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(const char* name) {
-  return &sub_.emplace(std::piecewise_construct,
-                       std::forward_as_tuple(name),
+  return &sub_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
                        std::forward_as_tuple())
               .first->second;
 }
@@ -96,8 +115,7 @@ void ModuleSymbolIndexNode::AddChild(const std::string& name,
                                      ModuleSymbolIndexNode&& child) {
   auto existing = sub_.find(name);
   if (existing == sub_.end()) {
-    sub_.emplace(std::piecewise_construct,
-                 std::forward_as_tuple(name),
+    sub_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
                  std::forward_as_tuple(std::move(child)));
   } else {
     existing->second.Merge(std::move(child));

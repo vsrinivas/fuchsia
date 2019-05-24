@@ -320,7 +320,8 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
 
         // The thing we just made is either a type or a name, look it up.
         if (name_lookup_callback_) {
-          FoundName lookup = name_lookup_callback_(result.ident);
+          FoundName lookup = name_lookup_callback_(
+              result.ident, FindNameOptions(FindNameOptions::kAllKinds));
           switch (lookup.kind()) {
             case FoundName::kType:
               mode = kType;
@@ -367,7 +368,8 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
 
         // Decode what adding the name just generated.
         if (name_lookup_callback_) {
-          FoundName lookup = name_lookup_callback_(result.ident);
+          FoundName lookup = name_lookup_callback_(
+              result.ident, FindNameOptions(FindNameOptions::kAllKinds));
           switch (lookup.kind()) {
             case FoundName::kNamespace:
               mode = kNamespace;

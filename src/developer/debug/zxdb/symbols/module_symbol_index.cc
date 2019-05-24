@@ -162,6 +162,7 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
   for (unsigned i = 0; i < die_count; i++) {
     // All optional variables need to be reset so we know which ones are set
     // by the current DIE.
+    is_declaration.reset();
     decl_unit_offset.reset();
     decl_global_offset.reset();
 

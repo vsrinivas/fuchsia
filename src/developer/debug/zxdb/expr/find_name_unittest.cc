@@ -120,14 +120,16 @@ TEST(FindName, FindLocalVariable) {
 
   // ACTUAL TEST CODE ----------------------------------------------------------
 
+  FindNameOptions all_kinds(FindNameOptions::kAllKinds);
+
   // Find "value" in the nested block should give the block's one.
   ParsedIdentifier value_ident(var_value->GetAssignedName());
-  FoundName found = FindName(block_context, value_ident);
+  FoundName found = FindName(block_context, all_kinds, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_value.get(), found.variable());
 
   // Find "value" in the function block should give the function's one.
-  found = FindName(function_context, value_ident);
+  found = FindName(function_context, all_kinds, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(var_value.get(), found.variable());
   EXPECT_EQ(var_value->GetAssignedName(), found.GetName());
@@ -136,7 +138,7 @@ TEST(FindName, FindLocalVariable) {
   ParsedIdentifier value_global_ident(
       IdentifierQualification::kGlobal,
       ParsedIdentifierComponent(var_value->GetAssignedName()));
-  found = FindName(function_context, value_global_ident);
+  found = FindName(function_context, all_kinds, value_global_ident);
   EXPECT_FALSE(found);
 
   // Prefix search for "va" should find all three "values".
@@ -157,16 +159,16 @@ TEST(FindName, FindLocalVariable) {
   // Find "block_local" in the block should be found, but in the function it
   // should not be.
   ParsedIdentifier block_local_ident(block_other->GetAssignedName());
-  found = FindName(block_context, block_local_ident);
+  found = FindName(block_context, all_kinds, block_local_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_other.get(), found.variable());
   EXPECT_EQ(block_other->GetAssignedName(), found.GetName());
-  found = FindName(function_context, block_local_ident);
+  found = FindName(function_context, all_kinds, block_local_ident);
   EXPECT_FALSE(found);
 
   // Finding the other function parameter in the block should work.
   ParsedIdentifier other_param_ident(param_other->GetAssignedName());
-  found = FindName(block_context, other_param_ident);
+  found = FindName(block_context, all_kinds, other_param_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(param_other.get(), found.variable());
 
@@ -174,7 +176,7 @@ TEST(FindName, FindLocalVariable) {
   // namespace) from within the context of the "ns::function()" function.
   // The namespace of the function should be implicitly picked up.
   ParsedIdentifier ns_value_ident(kNsVarName);
-  found = FindName(block_context, ns_value_ident);
+  found = FindName(block_context, all_kinds, ns_value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(ns_value.var.get(), found.variable());
   EXPECT_EQ(kNsVarName, found.GetName());
@@ -183,7 +185,7 @@ TEST(FindName, FindLocalVariable) {
   // should fail and not crash.
   FindNameContext block_no_modules_context;
   block_no_modules_context.block = block.get();
-  found = FindName(block_no_modules_context, ns_value_ident);
+  found = FindName(block_no_modules_context, all_kinds, ns_value_ident);
   EXPECT_FALSE(found);
 
   // Break reference cycle for test teardown.
@@ -410,8 +412,10 @@ TEST(FindName, FindTypeName) {
 
   // ACTUAL TEST CODE ----------------------------------------------------------
 
+  FindNameOptions all_kinds(FindNameOptions::kAllKinds);
+
   // Look up from the global function.
-  FoundName found = FindName(function_context, global_type_name);
+  FoundName found = FindName(function_context, all_kinds, global_type_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kType, found.kind());
   EXPECT_EQ(global_type.get(), found.type().get());
@@ -428,7 +432,7 @@ TEST(FindName, FindTypeName) {
   EXPECT_EQ(global_type.get(), found_vect[0].type().get());
 
   // Look up the child function by full name.
-  found = FindName(function_context, full_child_type_name);
+  found = FindName(function_context, all_kinds, full_child_type_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kType, found.kind());
   EXPECT_EQ(child_type.get(), found.type().get());
@@ -436,7 +440,7 @@ TEST(FindName, FindTypeName) {
   // Look up the child function by just the child name. Since the function is
   // a member of GlobalType, ChildType is a member of "this" so it should be
   // found.
-  found = FindName(function_context, child_type_name);
+  found = FindName(function_context, all_kinds, child_type_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kType, found.kind());
   EXPECT_EQ(child_type.get(), found.type().get());
@@ -474,15 +478,16 @@ TEST(FindName, FindTemplateName) {
   SymbolContext symbol_context(kLoadAddress);
   setup.InjectModule("mod", "1234", kLoadAddress, std::move(mod));
 
+  FindNameOptions all_types(FindNameOptions::kAllKinds);
+
   // The string "Template" should be identified as one.
   ParsedIdentifier template_name("Template");
-  auto found = FindName(context, template_name);
+  auto found = FindName(context, all_types, template_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kTemplate, found.kind());
   EXPECT_EQ("Template", found.GetName());
 
   // The string "TemplateNot" is a type, it should be found as such.
-  FindNameOptions all_types(FindNameOptions::kAllKinds);
   std::vector<FoundName> found_vect;
   FindName(context, all_types, template_not_name, &found_vect);
   ASSERT_EQ(1u, found_vect.size());

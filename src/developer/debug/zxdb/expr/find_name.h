@@ -103,7 +103,11 @@ struct FindNameOptions {
 // and global scopes for one or more things with a matching name. The first
 // version finds the first exact match of any type, the second uses the
 // options to customize what and how many results are returned.
+//
+// The variant that returns a single value ignores the max_results of the
+// options and always returns the first thing.
 FoundName FindName(const FindNameContext& context,
+                   const FindNameOptions& options,
                    const ParsedIdentifier& identifier);
 void FindName(const FindNameContext& context, const FindNameOptions& options,
               const ParsedIdentifier& looking_for,

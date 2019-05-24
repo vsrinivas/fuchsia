@@ -86,6 +86,8 @@ class SymbolEvalContext : public ExprEvalContext {
   // Implements type name lookup on the target's symbol index.
   FoundName DoTargetSymbolsNameLookup(const ParsedIdentifier& ident);
 
+  FindNameContext GetFindNameContext();
+
   fxl::WeakPtr<const ProcessSymbols> process_symbols_;  // Possibly null.
   SymbolContext symbol_context_;
   fxl::RefPtr<SymbolDataProvider> data_provider_;  // Possibly null.

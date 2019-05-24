@@ -71,9 +71,9 @@ SymbolEvalContext::~SymbolEvalContext() = default;
 
 void SymbolEvalContext::GetNamedValue(const ParsedIdentifier& identifier,
                                       ValueCallback cb) {
-  if (FoundName found = FindName(FindNameContext(process_symbols_.get(),
-                                                 symbol_context_, block_.get()),
-                                 identifier)) {
+  if (FoundName found =
+          FindName(GetFindNameContext(),
+                   FindNameOptions(FindNameOptions::kAllKinds), identifier)) {
     switch (found.kind()) {
       case FoundName::kVariable:
       case FoundName::kMemberVariable:
@@ -123,12 +123,13 @@ fxl::RefPtr<SymbolDataProvider> SymbolEvalContext::GetDataProvider() {
 NameLookupCallback SymbolEvalContext::GetSymbolNameLookupCallback() {
   // The contract for this function is that the callback must not be stored
   // so the callback can reference |this|.
-  return [this](const ParsedIdentifier& ident) -> FoundName {
+  return [this](const ParsedIdentifier& ident,
+                const FindNameOptions& opts) -> FoundName {
     // Look up the symbols in the symbol table if possible.
-    FoundName result = DoTargetSymbolsNameLookup(ident);
+    FoundName result = FindName(GetFindNameContext(), opts, ident);
 
     // Fall back on builtin types.
-    if (result.kind() == FoundName::kNone) {
+    if (result.kind() == FoundName::kNone && opts.find_types) {
       if (auto type = GetBuiltinType(ident.GetFullName()))
         return FoundName(std::move(type));
     }
@@ -179,9 +180,12 @@ void SymbolEvalContext::DoResolve(FoundName found, ValueCallback cb) const {
 
 FoundName SymbolEvalContext::DoTargetSymbolsNameLookup(
     const ParsedIdentifier& ident) {
-  return FindName(
-      FindNameContext(process_symbols_.get(), symbol_context_, block_.get()),
-      ident);
+  return FindName(GetFindNameContext(),
+                  FindNameOptions(FindNameOptions::kAllKinds), ident);
+}
+
+FindNameContext SymbolEvalContext::GetFindNameContext() {
+  return FindNameContext(process_symbols_.get(), symbol_context_, block_.get());
 }
 
 }  // namespace zxdb

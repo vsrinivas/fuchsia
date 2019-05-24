@@ -220,10 +220,13 @@ FindNameContext::FindNameContext(const TargetSymbols* ts)
     : target_symbols(ts) {}
 
 FoundName FindName(const FindNameContext& context,
+                   const FindNameOptions& options,
                    const ParsedIdentifier& identifier) {
+  FindNameOptions new_opts(options);
+  new_opts.max_results = 1;
+
   std::vector<FoundName> results;
-  FindName(context, FindNameOptions(FindNameOptions::kAllKinds), identifier,
-           &results);
+  FindName(context, new_opts, identifier, &results);
   if (!results.empty())
     return std::move(results[0]);
   return FoundName();

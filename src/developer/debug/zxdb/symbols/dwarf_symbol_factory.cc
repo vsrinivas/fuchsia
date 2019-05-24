@@ -569,6 +569,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
   llvm::Optional<uint64_t> byte_size;
   main_decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_byte_size, &byte_size);
 
+  llvm::Optional<bool> is_declaration;
+  main_decoder.AddBool(llvm::dwarf::DW_AT_declaration, &is_declaration);
+
   // The type is optional for an enumeration.
   llvm::DWARFDie type;
   main_decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
@@ -602,7 +605,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
         }
       });
 
-  if (!main_decoder.Decode(die) || !byte_size)
+  if (!main_decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
   Enumeration::Map map;
@@ -627,6 +630,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
                                        *byte_size, is_signed, std::move(map));
   if (parent)
     result->set_parent(MakeLazy(parent));
+  if (is_declaration)
+    result->set_is_declaration(*is_declaration);
   return result;
 }
 

@@ -7,6 +7,7 @@
 
 #include <functional>
 
+#include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
@@ -24,7 +25,8 @@ namespace zxdb {
 // either a type name or a variable. This happens with "sizeof(X)". The first
 // thing (type or variable) matching "X" is used. With this API, we'll see if
 // it could possibly be a type and always give the result for the type.
-using NameLookupCallback = std::function<FoundName(const ParsedIdentifier&)>;
+using NameLookupCallback =
+    std::function<FoundName(const ParsedIdentifier&, const FindNameOptions&)>;
 
 }  // namespace zxdb
 

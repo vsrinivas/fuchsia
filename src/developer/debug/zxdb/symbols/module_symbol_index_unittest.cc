@@ -24,13 +24,6 @@ TEST(ModuleSymbolIndex, FindExactFunction) {
   ModuleSymbolIndex index;
   index.CreateIndex(module.object_file());
 
-#if 0
-  // Enable to dump the found index for debugging purposes.
-  std::cout << "Index dump:\n";
-  index.root().Dump(std::cout, 1);
-  index.DumpFileIndex(std::cout);
-#endif
-
   // Standalone function search.
   auto result = index.FindExact(
       TestSymbolModule::SplitName(TestSymbolModule::kMyFunctionName));
@@ -192,6 +185,23 @@ TEST(ModuleSymbolIndex, FindTypeAndNamespace) {
   EXPECT_EQ(1u, result.size()) << "int not found.";
 }
 
+// Enable and substitute a path on your system to dump the index for a
+// DWARF file.
+#if 0
+TEST(ModuleSymbolIndex, DumpFileIndex) {
+  TestSymbolModule module;
+  std::string err;
+  ASSERT_TRUE(module.LoadSpecific("chrome", &err)) << err;
+
+  ModuleSymbolIndex index;
+  index.CreateIndex(module.object_file());
+
+  std::cout << "Index dump:\n";
+  index.root().Dump(std::cout, 1);
+  index.DumpFileIndex(std::cout);
+}
+#endif
+
 // Enable and substitute a path on your system for kFilename to run the
 // indexing benchmark.
 #if 0
@@ -208,8 +218,7 @@ static int64_t GetTickMicroseconds() {
 }
 
 TEST(ModuleSymbolIndex, BenchmarkIndexing) {
-  const char kFilename[] =
-      "/usr/local/google/home/brettw/prj/src/out/release/chrome";
+  const char kFilename[] = "chrome";
   int64_t begin_us = GetTickMicroseconds();
 
   TestSymbolModule module;

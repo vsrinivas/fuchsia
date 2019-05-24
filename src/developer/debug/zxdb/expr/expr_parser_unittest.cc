@@ -18,13 +18,14 @@ namespace {
 // This name looker-upper declares anything beginning with "Namespace" is a
 // namespace, anything beginning with "Template" is a template, and anything
 // beginning with "Type" is a type.
-FoundName TestLookupName(const ParsedIdentifier& ident) {
+FoundName TestLookupName(const ParsedIdentifier& ident,
+                         const FindNameOptions& opts) {
   const ParsedIdentifierComponent& comp = ident.components().back();
   const std::string& name = comp.name();
 
-  if (StringBeginsWith(name, "Namespace"))
+  if (opts.find_namespaces && StringBeginsWith(name, "Namespace"))
     return FoundName(FoundName::kNamespace, ident.GetFullName());
-  if (StringBeginsWith(name, "Type")) {
+  if (opts.find_types && StringBeginsWith(name, "Type")) {
     // Make up a random class to go with the type.
     auto type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
     type->set_assigned_name("Type");
@@ -34,7 +35,7 @@ FoundName TestLookupName(const ParsedIdentifier& ident) {
     // to strings properly. This could be added if necessary.
     return FoundName(std::move(type));
   }
-  if (StringBeginsWith(name, "Template")) {
+  if (opts.find_templates && StringBeginsWith(name, "Template")) {
     if (comp.has_template()) {
       // Assume templates with arguments are types.
       return FoundName(fxl::MakeRefCounted<Collection>(DwarfTag::kClassType));
