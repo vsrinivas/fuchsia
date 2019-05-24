@@ -1,9 +1,13 @@
 # Build system
 
+Most users control the build through [fx](/docs/development/workflows/fx.md).
+The following documents provide details of build configuration and internal
+structure.
+
 - [Overview](overview.md)
-- [Packages](packages.md)
+- [Boards and Products](boards_and_products.md)
+- [Bundles](bundles.md)
 - [Runtime Build Information](build_information.md)
-- [Layout of "packages" directories](package_layout.md)
 - [Variants](variants.md)
 - [Toolchain](toolchain.md)
 - [Tools & dashboards](tools-dashboards.md)
