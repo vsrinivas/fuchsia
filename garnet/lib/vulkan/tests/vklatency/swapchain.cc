@@ -106,8 +106,13 @@ Swapchain::~Swapchain() {
   swapchain_image_resources_.clear();
   gr_context_.reset();
 
+  for (auto& resource : swapchain_image_resources_) {
+    vk_device_.freeCommandBuffers(command_pool_, 1,
+                                  &resource.post_raster_command_buffer);
+  }
   vk_device_.destroySwapchainKHR(swapchain_);
   vk_instance_.destroySurfaceKHR(surface_);
+  vk_device_.destroyCommandPool(command_pool_);
   vk_device_.destroy();
   vk_instance_.destroy();
 }
@@ -210,6 +215,17 @@ bool Swapchain::GetPhysicalDevice() {
     return false;
   }
   vk_physical_device_ = physical_devices.value[0];
+
+  auto physical_device_memory_features =
+      vk::PhysicalDeviceProtectedMemoryFeatures();
+  auto physical_device_features =
+      vk::PhysicalDeviceFeatures2().setPNext(&physical_device_memory_features);
+  vk_physical_device_.getFeatures2(&physical_device_features);
+  if (protected_output_ && !physical_device_memory_features.protectedMemory) {
+    FXL_LOG(WARNING) << "Protected memoy is not supported.";
+    return false;
+  }
+
   return true;
 }
 
@@ -314,16 +330,26 @@ bool Swapchain::CreateDeviceAndQueue() {
   vk_device_ = create_device.value;
 
   // Get device queue.
-  graphics_queue_ = vk_device_.getQueue(graphics_queue_family_index_, 0);
+  if (protected_output_) {
+    auto queue_info2 = vk::DeviceQueueInfo2()
+                           .setFlags(vk::DeviceQueueCreateFlagBits::eProtected)
+                           .setQueueFamilyIndex(graphics_queue_family_index_)
+                           .setQueueIndex(0);
+    graphics_queue_ = vk_device_.getQueue2(queue_info2);
+  } else {
+    graphics_queue_ = vk_device_.getQueue(graphics_queue_family_index_, 0);
+  }
 
   // Create command pool.
+  vk::CommandPoolCreateFlags cmd_pool_flags =
+      vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+  cmd_pool_flags |= protected_output_
+                        ? vk::CommandPoolCreateFlagBits::eProtected
+                        : vk::CommandPoolCreateFlags();
   auto cmd_pool_info =
       vk::CommandPoolCreateInfo()
-          .setFlags(protected_output_
-                        ? vk::CommandPoolCreateFlagBits::eProtected
-                        : vk::CommandPoolCreateFlags())
-          .setQueueFamilyIndex(graphics_queue_family_index_)
-          .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+          .setFlags(cmd_pool_flags)
+          .setQueueFamilyIndex(graphics_queue_family_index_);
   auto create_command_pool = vk_device_.createCommandPool(cmd_pool_info);
   if (create_command_pool.result != vk::Result::eSuccess) {
     FXL_LOG(ERROR) << "failed to create command pool";
@@ -414,23 +440,17 @@ bool Swapchain::PrepareBuffers() {
     image_resource.present_semaphore = semaphores[1];
 
     // Allocate command buffers.
-    std::vector<vk::CommandBuffer> command_buffers;
     auto cmd_ai = vk::CommandBufferAllocateInfo()
                       .setCommandPool(command_pool_)
                       .setLevel(vk::CommandBufferLevel::ePrimary)
                       .setCommandBufferCount(1);
-    auto cmd_bi = vk::CommandBufferBeginInfo();
-    for (uint64_t c = 0; c < 2; ++c) {
-      auto allocate_command_buffer = vk_device_.allocateCommandBuffers(cmd_ai);
-      if (allocate_command_buffer.result != vk::Result::eSuccess) {
-        FXL_LOG(ERROR) << "failed to allocate command buffers";
-        return false;
-      }
-      allocate_command_buffer.value[0].begin(&cmd_bi);
-      command_buffers.push_back(allocate_command_buffer.value[0]);
+    auto allocate_command_buffer = vk_device_.allocateCommandBuffers(cmd_ai);
+    if (allocate_command_buffer.result != vk::Result::eSuccess) {
+      FXL_LOG(ERROR) << "failed to allocate command buffers";
+      return false;
     }
-    image_resource.pre_raster_command_buffer = command_buffers[0];
-    image_resource.post_raster_command_buffer = command_buffers[1];
+    image_resource.post_raster_command_buffer =
+        allocate_command_buffer.value[0];
   }
   return true;
 }
@@ -449,11 +469,12 @@ void Swapchain::AcquireNextImage() {
 
 void Swapchain::SwapImages() {
   auto& current_image_resources = swapchain_image_resources_[current_image_];
-  auto cmd_bi = vk::CommandBufferBeginInfo();
 
   // Set Current image for present.
   current_image_resources.post_raster_command_buffer.reset(
-      vk::CommandBufferResetFlagBits::eReleaseResources);
+      vk::CommandBufferResetFlags());
+  auto cmd_bi = vk::CommandBufferBeginInfo().setFlags(
+      vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
   current_image_resources.post_raster_command_buffer.begin(&cmd_bi);
   auto present_layout = vk::ImageLayout::ePresentSrcKHR;
   SetImageLayoutOnCommandBuffer(
@@ -498,32 +519,10 @@ void Swapchain::SwapImages() {
   }
 
   // Acquire then next image.
+  // We do not need to change ImageLayout from ePresentSrcKHR to
+  // eColorAttachmentOptimal here because Skia already handles it before
+  // drawing.
   AcquireNextImage();
-  auto next_image_resources = swapchain_image_resources_[current_image_];
-  next_image_resources.pre_raster_command_buffer.reset(
-      vk::CommandBufferResetFlagBits::eReleaseResources);
-  next_image_resources.pre_raster_command_buffer.begin(&cmd_bi);
-  auto color_layout = vk::ImageLayout::eColorAttachmentOptimal;
-  SetImageLayoutOnCommandBuffer(next_image_resources.pre_raster_command_buffer,
-                                next_image_resources.image, color_layout,
-                                next_image_resources.layout);
-  next_image_resources.layout = color_layout;
-  next_image_resources.pre_raster_command_buffer.end();
-
-  auto pre_raster_submit_info =
-      vk::SubmitInfo()
-          .setCommandBufferCount(1)
-          .setPNext(protected_output_ ? &protected_submit_info : nullptr)
-          .setPCommandBuffers(&next_image_resources.pre_raster_command_buffer)
-          .setPWaitDstStageMask(&pipe_stage_flags)
-          .setWaitSemaphoreCount(1)
-          .setPWaitSemaphores(&next_image_resources.present_semaphore);
-  auto pre_raster_queue_submit =
-      graphics_queue_.submit(1, &pre_raster_submit_info, vk::Fence());
-  if (pre_raster_queue_submit != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "failed to queue submit";
-    return;
-  }
 }
 
 }  // namespace examples

@@ -30,7 +30,6 @@ class Swapchain {
     vk::ImageLayout layout;
     vk::Semaphore render_semaphore;
     vk::Semaphore present_semaphore;
-    vk::CommandBuffer pre_raster_command_buffer;
     vk::CommandBuffer post_raster_command_buffer;
   } SwapchainImageResources;
 
@@ -41,6 +40,7 @@ class Swapchain {
   GrContext* GetGrContext();
   SwapchainImageResources* GetCurrentImageResources();
   void SwapImages();
+  bool protected_output() const { return protected_output_; }
 
  private:
   bool GetPhysicalDevice();
