@@ -1,5 +1,24 @@
 ---
-Checks:          'bugprone-*,clang-diagnostic-*,-clang-diagnostic-unused-command-line-argument,clang-analyzer-*,-clang-analyzer-core.NullDereference,-clang-analyzer-unix.Malloc,google-*,misc-*,-misc-noexcept*,modernize-*,-modernize-deprecated-headers,-modernize-raw-string-literal,-modernize-return-braced-init-list,-modernize-use-auto,-modernize-use-equals-delete,-modernize-use-equals-default,performance-*,-performance-unnecessary-value-param,readability-*,-readability-implicit-bool-conversion'
+Checks: >
+  -*,
+  bugprone-*,
+  clang-diagnostic-*,
+  -clang-diagnostic-unused-command-line-argument,
+  google-*,
+  misc-*,
+  -misc-noexcept*,
+  modernize-*,
+  -modernize-deprecated-headers,
+  -modernize-raw-string-literal,
+  -modernize-return-braced-init-list,
+  -modernize-use-equals-delete,
+  -modernize-use-equals-default,
+  performance-*,
+  -performance-unnecessary-value-param,
+  readability-*,
+  -readability-implicit-bool-conversion,
+  -readability-isolate-declaration,
+  -readability-uppercase-literal-suffix
 WarningsAsErrors: false
 HeaderFilterRegex: '\.\./.*/([^t].*|t[^h].*|th[^i].*)'
 AnalyzeTemporaryDtors: false

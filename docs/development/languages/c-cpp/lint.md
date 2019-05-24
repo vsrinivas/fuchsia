@@ -40,7 +40,6 @@ is as follows:
 
  - `bugprone-*`
  - `clang-diagnostic-*`
- - `clang-analyzer-*`
  - `google-*`
  - `misc-*`
  - `modernize-`
@@ -49,10 +48,6 @@ is as follows:
 
 This list tracks the reasons for which we disabled in particular [checks]:
 
- - `clang-analyzer-core.NullDereference`, `clang-analyzer-unix.Malloc` - these
-    checks are triggering memory access warnings at rapidjson callsites (despite
-    the header filter regex) and we didn't find a more granular way to disable
-    them
  - `clang-diagnostic-unused-command-line-argument` - ninja-generated compilation
     database contains the linker argument which ends up unused and triggers this
     warning for every file
@@ -63,8 +58,6 @@ This list tracks the reasons for which we disabled in particular [checks]:
  - `modernize-return-braced-init-list` - concerns about readability of returning
     braced initialization list for constructor arguments, prefer to use a
     constructor explicitly
- - `modernize-use-auto` - not all flagged callsites seemed worth converting to
-    `auto`
  - `modernize-use-equals-delete` - flagging all gtest TEST_F
  - `modernize-use-equals-default` - Fuchsia chose not to impose a preference for
    "= default"
@@ -72,5 +65,8 @@ This list tracks the reasons for which we disabled in particular [checks]:
    which we prefer to pass by value
  - `readability-implicit-bool-conversion` - Fuchsia C++ code commonly uses implicit
    bool cast of pointers and numbers
+ - `readability-isolate-declaration` - Zircon code commonly uses paired declarations.
+ - `readability-uppercase-literal-suffix` - Fuchsia C++ code chooses not to impose
+   a style on this.
 
 [checks]: https://clang.llvm.org/extra/clang-tidy/checks/list.html
