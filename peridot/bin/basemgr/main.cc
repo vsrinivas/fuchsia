@@ -9,7 +9,6 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
 #include <trace-provider/provider.h>
@@ -43,11 +42,11 @@ constexpr char kSingleUserBaseShellUrl[] =
 
 fit::deferred_action<fit::closure> SetupCobalt(
     bool enable_cobalt, async_dispatcher_t* dispatcher,
-    sys::ComponentContext* component_context) {
+    component::StartupContext* context) {
   if (!enable_cobalt) {
     return fit::defer<fit::closure>([] {});
   }
-  return modular::InitializeCobalt(dispatcher, component_context);
+  return modular::InitializeCobalt(dispatcher, context);
 };
 
 fuchsia::modular::session::BasemgrConfig CreateBasemgrConfigFromCommandLine(
@@ -151,10 +150,9 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
 // Configures Basemgr by passing in connected services.
 std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
     fuchsia::modular::session::BasemgrConfig& config,
-    std::shared_ptr<component::StartupContext> context,
-    sys::ComponentContext* component_context, async::Loop* loop) {
-  fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
-      config.enable_cobalt(), loop->dispatcher(), component_context);
+    std::shared_ptr<component::StartupContext> context, async::Loop* loop) {
+  fit::deferred_action<fit::closure> cobalt_cleanup =
+      SetupCobalt(config.enable_cobalt(), loop->dispatcher(), context.get());
 
   fuchsia::ui::policy::PresenterPtr presenter;
   context->ConnectToEnvironmentService(presenter.NewRequest());
@@ -203,13 +201,11 @@ int main(int argc, const char** argv) {
   trace::TraceProvider trace_provider(loop.dispatcher());
   auto context = std::shared_ptr<component::StartupContext>(
       component::StartupContext::CreateFromStartupInfo());
-  std::unique_ptr<sys::ComponentContext> component_context(
-      sys::ComponentContext::Create());
 
   fuchsia::setui::SetUiServicePtr setui;
   std::unique_ptr<modular::BasemgrImpl> basemgr_impl;
   auto initialize_basemgr =
-      [&config, &loop, &context, &component_context, &basemgr_impl, &setui,
+      [&config, &loop, &context, &basemgr_impl, &setui,
        ran = false](fuchsia::setui::SettingsObject settings_obj) mutable {
         if (ran) {
           return;
@@ -220,7 +216,7 @@ int main(int argc, const char** argv) {
         ConfigureLoginOverride(config, settings_obj, setui.get());
 
         std::unique_ptr<modular::BasemgrImpl> basemgr =
-            ConfigureBasemgr(config, context, component_context.get(), &loop);
+            ConfigureBasemgr(config, context, &loop);
 
         basemgr_impl = std::move(basemgr);
 

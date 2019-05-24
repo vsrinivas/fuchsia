@@ -43,8 +43,6 @@ struct TypeConverter<fuchsia::modular::AppConfig,
 
 namespace modular {
 
-using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
-
 namespace {
 
 // TODO(MF-134): This key is duplicated in
@@ -207,7 +205,7 @@ void BasemgrImpl::Start() {
 
   InitializeUserProvider();
 
-  ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToBaseMgr);
+  ReportEvent(ModularEvent::BOOTED_TO_BASEMGR);
 }
 
 void BasemgrImpl::InitializeUserProvider() {

@@ -16,8 +16,6 @@
 
 namespace modular {
 
-using cobalt_registry::SessionAgentEventsMetricDimensionEventType;
-
 namespace {
 
 constexpr char kKronkUrl[] = "kronk";
@@ -206,8 +204,7 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
     auto& agent_data = it->second;
     agent_data.services.Unbind();
     agent_data.controller.Unbind();
-    ReportSessionAgentEvent(url,
-                            SessionAgentEventsMetricDimensionEventType::Crash);
+    ReportSessionAgentEvent(url, SessionAgentEvent::CRASH);
 
     if (agent_data.restart.ShouldRetry()) {
       FXL_LOG(INFO) << "Restarting " << url << "...";
@@ -217,8 +214,7 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
                        << kSessionAgentRetryLimit.count << " times in "
                        << kSessionAgentRetryLimit.period.to_secs()
                        << " seconds.";
-      ReportSessionAgentEvent(
-          url, SessionAgentEventsMetricDimensionEventType::CrashLimitExceeded);
+      ReportSessionAgentEvent(url, SessionAgentEvent::CRASH_LIMIT);
       // Erase so that incoming connection requests fail fast rather than
       // enqueue forever.
       session_agents_.erase(it);

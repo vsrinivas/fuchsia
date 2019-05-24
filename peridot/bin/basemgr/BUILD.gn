@@ -64,6 +64,20 @@ executable_package("basemgr") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
+
+  public_deps = [
+    "//peridot/bin/basemgr/cobalt:basemgr_metrics_registry",
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info(
+                  "//peridot/bin/basemgr/cobalt:basemgr_metrics_registry",
+                  "target_gen_dir") + "/basemgr_metrics_registry.pb")
+      dest = "basemgr_metrics_registry.pb"
+    },
+  ]
 }
 
 tests_package("basemgr_unittests") {

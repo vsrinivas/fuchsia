@@ -8,7 +8,6 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/split_string.h>
@@ -23,11 +22,11 @@
 
 fit::deferred_action<fit::closure> SetupCobalt(
     const bool enable_cobalt, async_dispatcher_t* dispatcher,
-    sys::ComponentContext* component_context) {
+    component::StartupContext* const startup_context) {
   if (!enable_cobalt) {
     return fit::defer<fit::closure>([] {});
   }
-  return modular::InitializeCobalt(dispatcher, component_context);
+  return modular::InitializeCobalt(dispatcher, startup_context);
 }
 
 void OverrideConfigFromCommandLine(
@@ -101,12 +100,9 @@ int main(int argc, const char** argv) {
   trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();
-  std::unique_ptr<sys::ComponentContext> component_context(
-      sys::ComponentContext::Create());
 
-  auto cobalt_cleanup =
-      SetupCobalt((config.enable_cobalt()), std::move(loop.dispatcher()),
-                  component_context.get());
+  auto cobalt_cleanup = SetupCobalt(
+      (config.enable_cobalt()), std::move(loop.dispatcher()), context.get());
 
   modular::AppDriver<modular::SessionmgrImpl> driver(
       context->outgoing().deprecated_services(),

@@ -10,12 +10,7 @@ visibility = [
 ]
 
 metrics_registry("basemgr_metrics_registry") {
-  # This must match the name of our Cobalt project as specified in:
-  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
-  project_name = "modular"
-  generate_cc = true
-  namespace = "cobalt_registry"
-  generate_binarypb = false
+  project_id = 101
 }
 
 source_set("cobalt") {

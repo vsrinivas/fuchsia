@@ -6,23 +6,48 @@
 #define PERIDOT_BIN_BASEMGR_COBALT_COBALT_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 
-#include "peridot/bin/basemgr/cobalt/basemgr_metrics_registry.cb.h"
-
 namespace modular {
+
+// Metric IDs that Cobalt requires to identify the data we are logging.
+// These are not events (events are tracked through ModularEvents index metric).
+// For information on datatypes and structure of each of these metrics, see
+// https://cobalt-analytics.googlesource.com/config/+/master/fuchsia/module_usage_tracking/config.yaml
+// Next enum value: 6
+enum class CobaltMetric : uint32_t {
+  MODULE_LAUNCHED = 1,
+  MODULE_PAIRS_IN_STORY = 2,
+  MODULAR_EVENTS = 3,
+  MODULE_LAUNCH_LATENCY = 4,
+  STORY_LAUNCH_LATENCY = 5,
+  SESSION_AGENT_EVENT = 6,
+};
+
+// The events to report.
+// Next enum value: 2
+enum class ModularEvent : uint32_t {
+  BOOTED_TO_BASEMGR = 0,
+  BOOTED_TO_SESSIONMGR = 1,
+};
+
+// The sesssion agent events to report.
+// Next enum value: 2
+enum class SessionAgentEvent : uint32_t {
+  CRASH = 0,
+  CRASH_LIMIT = 1,
+};
 
 // Cobalt initialization. When cobalt is not needed, the returned object must be
 // deleted. This method must not be called again until then.
 fit::deferred_action<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context);
+    async_dispatcher_t* dispatcher, component::StartupContext* context);
 
 // Report a modular event to Cobalt.
-void ReportEvent(
-    cobalt_registry::ModularLifetimeEventsMetricDimensionEventType event);
+void ReportEvent(ModularEvent event);
 
 // Report a module launch time duration to Cobalt.
 void ReportModuleLaunchTime(std::string module_url, zx::duration time);
@@ -30,9 +55,7 @@ void ReportModuleLaunchTime(std::string module_url, zx::duration time);
 // Report a story launch time duration to Cobalt.
 void ReportStoryLaunchTime(zx::duration time);
 
-void ReportSessionAgentEvent(
-    const std::string& url,
-    cobalt_registry::SessionAgentEventsMetricDimensionEventType event);
+void ReportSessionAgentEvent(const std::string& url, SessionAgentEvent event);
 
 }  // namespace modular
 
