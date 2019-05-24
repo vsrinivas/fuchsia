@@ -165,5 +165,14 @@ const LoggerOptions& Environment::logger_options() const {
   return logger_options_;
 }
 
+void Environment::DisableLogging(bool recursive) {
+  logger_options_.set_enabled(false);
+  if (recursive) {
+    for (auto& child : children_) {
+      child.DisableLogging(recursive);
+    }
+  }
+}
+
 }  // namespace config
 }  // namespace netemul

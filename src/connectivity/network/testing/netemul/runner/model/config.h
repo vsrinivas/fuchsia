@@ -30,6 +30,7 @@ class Config {
 
   const std::vector<Network>& networks() const;
   const Environment& environment() const;
+  Environment& environment();
   const std::string& default_url() const;
   bool disabled() const;
   zx::duration timeout() const;

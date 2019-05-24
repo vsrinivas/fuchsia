@@ -116,6 +116,8 @@ const std::vector<Network>& Config::networks() const { return networks_; }
 
 const Environment& Config::environment() const { return environment_; }
 
+Environment& Config::environment() { return environment_; }
+
 const std::string& Config::default_url() const { return default_url_; }
 
 bool Config::disabled() const { return disabled_; }

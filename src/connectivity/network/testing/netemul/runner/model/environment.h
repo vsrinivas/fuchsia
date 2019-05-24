@@ -20,6 +20,8 @@ class Environment {
   Environment() = default;
   Environment(Environment&& other) = default;
 
+  void DisableLogging(bool recursive);
+
   bool ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser);
 
   const std::string& name() const;

@@ -21,6 +21,7 @@ class LoggerOptions {
   bool ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser);
   void SetDefaults();
 
+  void set_enabled(bool enabled);
   bool enabled() const;
   bool klogs_enabled() const;
   const LoggerFilterOptions& filters() const;

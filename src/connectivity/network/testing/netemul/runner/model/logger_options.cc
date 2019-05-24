@@ -72,6 +72,8 @@ void LoggerOptions::SetDefaults() {
   filters_.SetDefaults();
 }
 
+void LoggerOptions::set_enabled(bool enabled) { enabled_ = enabled; }
+
 bool LoggerOptions::enabled() const { return enabled_; }
 
 bool LoggerOptions::klogs_enabled() const { return klogs_enabled_; }

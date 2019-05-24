@@ -81,6 +81,8 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
   void SetCmx(const std::string& cmx) {
     ASSERT_TRUE(sandbox_args_.ParseFromString(cmx));
+    // disable all syslog logging for unit tests.
+    sandbox_args_.config.environment().DisableLogging(true);
   }
 
   void EnableEventCollection() { collect_events_ = true; }
