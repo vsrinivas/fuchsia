@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/clipboard_impl_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

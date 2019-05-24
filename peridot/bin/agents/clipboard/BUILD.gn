@@ -69,7 +69,7 @@ executable("clipboard_impl_unittest") {
   ]
 }
 
-tests_package("clipboard_unittests") {
+hermetic_tests_package("clipboard_unittests") {
   deps = [
     ":clipboard_impl_unittest",
   ]
