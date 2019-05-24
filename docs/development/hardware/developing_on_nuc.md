@@ -44,20 +44,21 @@ This table shows what I bought from Amazon.
 
 ## 2. Prepare the NUC <a name="nuc"/>
 NUCs don’t come with RAM or an SSD so you need to install them.
-<br/><center><img width="50%" src="images/developing_on_nuc/parts.jpg"/></center><br/>
+<br/><center><img width="50%" src="/docs/images/developing_on_nuc/parts.jpg"/></center><br/>
 
 1. Remove the phillips screws in the bottom feet of the NUC.
-<br/><center><img width="50%" src="images/developing_on_nuc/nuc_bottom.jpg"/></center>
-<br/><center><img width="50%" src="images/developing_on_nuc/nuc_inside.jpg"/></center><br/><br/>
+<br/><center><img width="50%" src="/docs/images/developing_on_nuc/nuc_bottom.jpg"/></center>
+<br/><center><img width="50%" src="/docs/images/developing_on_nuc/nuc_inside.jpg"/></center><br/><br/>
 1. Install the RAM.
 1. Remove the phillips screw that will hold the SSD in place (phillips screwdriver with magnetic tip is useful here).
 1. Install the SSD.
 1. Screw the SSD in place using screw from 3.
-<br/><center><img width="50%" src="images/developing_on_nuc/parts_installed.jpg"/></center><br/><br/>
+<br/><center><img width="50%" src="/docs/images/developing_on_nuc/parts_installed.jpg"/></center><br/><br/>
 1. Replace bottom and screw feet back in.
 1.(Optional) Apply fuchsia logo.
-<br/><center><img width="50%" src="images/developing_on_nuc/nuc_fuchsia.jpg"/></center><br/><br/>
+<br/><center><img width="50%" src="/docs/images/developing_on_nuc/nuc_fuchsia.jpg"/></center><br/><br/>
 1. Plug power, ethernet, HDMI, keyboard, and mouse into NUC.
+
 
 -----
 
@@ -67,7 +68,7 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 1. Press F2 while booting to enter BIOS.
 1. In the Boot Order window on the left click the Legacy tab.
 1. Uncheck ‘Legacy Boot’.
-<br/><center><img width="50%" src="images/developing_on_nuc/bios.jpg"/></center><br/><br/>
+<br/><center><img width="50%" src="/docs/images/developing_on_nuc/bios.jpg"/></center><br/><br/>
 1. Press the X in the top right to leave the BIOS.  Ensure you save before exiting.
 
 -----
