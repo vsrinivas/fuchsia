@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/local_module_resolver_unittest"
+    }
+}

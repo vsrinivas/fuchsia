@@ -33,7 +33,7 @@ executable_package("module_resolver") {
   ]
 }
 
-tests_package("module_resolver_unittests") {
+hermetic_tests_package("module_resolver_unittests") {
   deps = [
     ":local_module_resolver_unittest",
   ]
