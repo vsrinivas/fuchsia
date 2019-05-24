@@ -460,6 +460,37 @@ static bool guest_set_trap_with_bell() {
     END_TEST;
 }
 
+// Test for ZX-4206.
+static bool guest_set_trap_with_bell_drop() {
+    BEGIN_TEST;
+
+    // Build the port before test so test is destructed first.
+    zx::port port;
+    ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    // Trap on access of TRAP_ADDR.
+    ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+
+    ASSERT_TRUE(teardown(&test));
+
+    // The guest in test is destructed with one packet still queued on the
+    // port. This should work correctly.
+
+    END_TEST;
+}
+
 #ifdef __aarch64__
 
 static bool vcpu_wfi() {
@@ -905,6 +936,7 @@ RUN_TEST(vcpu_read_write_state)
 RUN_TEST(vcpu_interrupt)
 RUN_TEST(guest_set_trap_with_mem)
 RUN_TEST(guest_set_trap_with_bell)
+RUN_TEST(guest_set_trap_with_bell_drop)
 #if __aarch64__
 RUN_TEST(vcpu_wfi)
 RUN_TEST(vcpu_wfi_pending_interrupt)

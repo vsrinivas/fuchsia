@@ -483,7 +483,9 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
     for (auto it = packets_.begin(); it != packets_.end();) {
         if ((it->handle == handle) && (it->key() == key)) {
             auto to_remove = it++;
-            DEBUG_ASSERT(!to_remove->is_ephemeral());
+            if (to_remove->is_ephemeral()) {
+                --num_ephemeral_packets_;
+            }
             // Destroyed as we go around the loop.
             ktl::unique_ptr<const PortObserver> observer =
                 ktl::move(packets_.erase(to_remove)->observer);
