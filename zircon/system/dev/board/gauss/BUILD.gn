@@ -22,6 +22,7 @@ driver("gauss") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/pci/designware",
+    "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

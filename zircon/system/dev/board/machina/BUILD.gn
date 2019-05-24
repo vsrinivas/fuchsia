@@ -10,6 +10,7 @@ driver("machina") {
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]

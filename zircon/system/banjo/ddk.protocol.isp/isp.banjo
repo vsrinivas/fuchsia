@@ -1,0 +1,37 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.isp;
+using zx;
+using zircon.device.camera;
+using zircon.device.sysmem;
+
+[Layout = "ddk-callback"]
+protocol InputStreamCallback {
+    // This is called by the ISP driver, everytime a frame is ready to be
+    // consumed.
+    FrameReady(uint32 buffer_id);
+};
+
+[Layout = "ddk-protocol"]
+protocol InputStream {
+    // Starts the streaming of frames.
+    Start();
+
+    // Stops the streaming of frames.
+    Stop();
+
+    // Unlocks the specified frame, allowing the driver to reuse the memory.
+    ReleaseFrame(uint32 buffer_id);
+};
+
+[Layout = "ddk-protocol"]
+protocol Isp {
+
+    // Sent by the client to indicate desired stream characteristics.
+    // The driver returns the Stream protocol for this particular stream.
+    CreateInputStream(zircon.device.sysmem.BufferCollectionInfo buffer_collection,
+                      zircon.device.camera.FrameRate rate,
+                      InputStreamCallback stream) -> (zx.status s, InputStream st);
+};

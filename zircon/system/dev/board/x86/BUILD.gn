@@ -70,6 +70,7 @@ driver("platform-bus-x86") {
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/fidl/fuchsia-hardware-power:c",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
+    "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

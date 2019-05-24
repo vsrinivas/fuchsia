@@ -22,6 +22,7 @@ driver("hikey960") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.usb.modeswitch",
     "$zx/system/dev/lib/hi3660",
+    "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

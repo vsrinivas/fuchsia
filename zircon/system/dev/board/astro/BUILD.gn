@@ -37,6 +37,7 @@ driver("astro") {
     "$zx/system/fidl/fuchsia-hardware-light:c",
     "$zx/system/fidl/fuchsia-hardware-serial:c",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
+    "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
