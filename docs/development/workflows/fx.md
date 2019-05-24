@@ -78,7 +78,7 @@ Armed with our above choices (if you didn't read above, do so now), you are
 ready to configure your build:
 
 ```shell
-$ fx set workstation.x64 --with //bundles:tools,//bundles:tests
+$ fx set workstation.x64 --with //bundles:tests
 ```
 
 This command stores the configuration in an `args.gn` file in the build
@@ -92,8 +92,6 @@ directory (which is `out/default` by default). You can edit this file using the
   other product configurations)
 * We selected the board `x64` (on arm64 boards, the board choice is very
   important! Run `fx list-boards` for a list of board configurations)
-* We selected to "preinstall" various developer tools, this includes many basic
-  tools like `cat` and `ls`, as well as more advanced tools, such as `trace`.
 * We selected to build "tests", but not have them included in our
   [Paving](#what-is-paving) images.
 
@@ -163,8 +161,9 @@ important to be familiar with:
 
 * `tools` contains a broad array of the most common developer tools. This
   includes tools for spawning components from command-line shells, tools for
-  reconfiguring and testing networks, making http requests, debugging programs,
-  changing audio volume, and so on.
+  reconfiguring and testing networks, making http requests, debugging
+  programs, changing audio volume, and so on. The core product includes
+  `bundles:tools` in the universe package set by default.
 * `tests` causes all test programs to be built. Most test programs can be
   invoked using `run-test-component` on the device, or via `fx run-test`.
 * `kitchen_sink` is a target that causes all other build targets to be
