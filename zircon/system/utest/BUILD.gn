@@ -202,7 +202,6 @@ if (current_cpu != "") {
       "timers",
       "trace",
       "usb",
-      "usb-virtual-bus",
       "util",
       "vdso",
       "vdso-base",
@@ -214,6 +213,7 @@ if (current_cpu != "") {
 
       # disabled for now:
       #"bad-kernel-access",
+      #"usb-virtual-bus",
 
       # TODO(fuzztest): "edid"
     ]
