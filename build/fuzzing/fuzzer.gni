@@ -16,14 +16,18 @@ import("//build/test.gni")
 #
 # Parameters are precisely those of an `executable`, along with:
 #
-#   options (optional)
-#     [list of strings] Each option is of the form "key=value" and indicates
-#     command line options that the fuzzer should be invoked with. Valid keys
-#     are libFuzzer options (https://llvm.org/docs/LibFuzzer.html#options).
+#   cmx (optional)
+#     [file] If specified, a file containing a component manifest to start from
+#       when generating manifests for fuzzers.
 #
 #   dictionary (optional)
 #     [file] If specified, a file containing quoted inputs, one per line, that
 #     the fuzzer will use to generate new mutations.
+#
+#   options (optional)
+#     [list of strings] Each option is of the form "key=value" and indicates
+#     command line options that the fuzzer should be invoked with. Valid keys
+#     are libFuzzer options (https://llvm.org/docs/LibFuzzer.html#options).
 #
 template("fuzzer") {
   fuzzer_name = target_name
@@ -33,6 +37,7 @@ template("fuzzer") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "cmx",
                              "dictionary",
                              "options",
                              "visibility",
@@ -45,23 +50,40 @@ template("fuzzer") {
   }
 
   # Generate the fuzzer component manifest
-  action("${fuzzer_name}_cmx") {
-    script = "//build/fuzzing/gen_fuzzer_manifest.py"
-    outputs = [
-      "${target_gen_dir}/${fuzzer_name}.cmx",
-    ]
-    args = [
-      "--out",
-      rebase_path(outputs[0]),
-      "--bin",
-      fuzzer_name,
-    ]
+  generated_file("$target_name.cmx") {
     if (defined(invoker.cmx)) {
-      args += [
-        "--cmx",
-        rebase_path(invoker.cmx),
-      ]
+      cmx = read_file(invoker.cmx, "json")
+    } else {
+      cmx = {
+        program = {
+        }
+        sandbox = {
+        }
+      }
     }
+    contents = {
+      program = {
+        forward_variables_from(cmx.program, "*")
+        binary = "bin/${fuzzer_name}"
+      }
+      sandbox = {
+        services = []
+        features = []
+        forward_variables_from(cmx.sandbox, "*")
+        services += [ "fuchsia.process.Launcher" ]
+        features += [ "isolated-persistent-storage" ]
+      }
+      forward_variables_from(cmx,
+                             [
+                               "dev",
+                               "runner",
+                               "facets",
+                             ])
+    }
+    outputs = [
+      "$target_gen_dir/$target_name",
+    ]
+    output_conversion = "json"
   }
 
   # Generate a unit test for the fuzzer.
@@ -85,18 +107,20 @@ template("fuzzer") {
   }
 
   # Generate the fuzzer test component manifest
-  action("${fuzzer_name}_test_cmx") {
-    script = "//build/fuzzing/gen_fuzzer_manifest.py"
+  generated_file("${fuzzer_name}_test.cmx") {
+    contents = {
+      program = {
+        binary = "test/${fuzzer_name}_test"
+      }
+      sandbox = {
+        services = [ "fuchsia.process.Launcher" ]
+        features = [ "isolated-persistent-storage" ]
+      }
+    }
     outputs = [
-      "${target_gen_dir}/${fuzzer_name}_test.cmx",
+      "$target_gen_dir/$target_name",
     ]
-    args = [
-      "--test",
-      "--out",
-      rebase_path(outputs[0]),
-      "--bin",
-      "${fuzzer_name}_test",
-    ]
+    output_conversion = "json"
   }
 
   # Generate data files needed at runtime
@@ -245,7 +269,7 @@ template("fuzzers_package") {
           ]
           pkg.deps += [
             "${fuzzer_label}",
-            "${fuzzer_label}_cmx",
+            "${fuzzer_label}.cmx",
             "${fuzzer_label}_dictionary",
             "${fuzzer_label}_options",
           ]
@@ -275,7 +299,7 @@ template("fuzzers_package") {
     ]
     pkg.test_deps += [
       "${fuzzer_label}_test",
-      "${fuzzer_label}_test_cmx",
+      "${fuzzer_label}_test.cmx",
     ]
     not_needed([ "selected" ])
   }
