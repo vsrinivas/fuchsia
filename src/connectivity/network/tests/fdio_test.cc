@@ -5,19 +5,17 @@
 // These tests ensure the zircon libc can talk to netstack.
 // No network connection is required, only a running netstack binary.
 
-#include "util.h"
-
-#include <thread>
-
 #include <fuchsia/net/c/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
-
 #include <zircon/syscalls.h>
 
+#include <thread>
+
 #include "gtest/gtest.h"
+#include "util.h"
 
 zx_handle_t GetHandle(int fd) {
   fdio_t* io;
@@ -44,12 +42,14 @@ TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
     addr.sin_addr.s_addr = INADDR_ANY;
 
     int ret = 0;
-    for (int retry = 0; retry < 2; retry++) {
+    int backoff_msec = 10;
+    for (;;) {
       ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
       if (j > 0 && ret < 0 && errno == EADDRINUSE) {
         // Wait until netstack detects the peer handle is closed and
         // tears down the port.
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(backoff_msec)));
+        backoff_msec *= 2;
       } else {
         break;
       }
