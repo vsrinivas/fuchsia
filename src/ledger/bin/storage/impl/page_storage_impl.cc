@@ -810,7 +810,7 @@ void PageStorageImpl::GetIndexObject(
   zx::vmo raw_vmo;
   zx_status_t zx_status = zx::vmo::create(length, 0, &raw_vmo);
   if (zx_status != ZX_OK) {
-    FXL_LOG(WARNING) << "Unable to create VMO of size: " << length;
+    FXL_PLOG(WARNING, zx_status) << "Unable to create VMO of size: " << length;
     callback(Status::INTERNAL_ERROR, nullptr);
     return;
   }
@@ -819,7 +819,7 @@ void PageStorageImpl::GetIndexObject(
   fsl::SizedVmo vmo_copy;
   zx_status = vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << zx_status;
+    FXL_PLOG(ERROR, zx_status) << "Unable to duplicate vmo";
     callback(Status::INTERNAL_ERROR, nullptr);
     return;
   }
@@ -915,7 +915,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
     zx_status_t zx_status =
         vmo.vmo().write(read_substr.data(), write_offset, read_write_size);
     if (zx_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unable to write to vmo. Status: " << zx_status;
+      FXL_PLOG(ERROR, zx_status) << "Unable to write to vmo";
       callback(Status::INTERNAL_ERROR);
       return;
     }
@@ -959,7 +959,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
     zx_status_t zx_status =
         vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
     if (zx_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << zx_status;
+      FXL_PLOG(ERROR, zx_status) << "Unable to duplicate vmo";
       callback(Status::INTERNAL_ERROR);
       return;
     }

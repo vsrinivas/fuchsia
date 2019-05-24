@@ -140,7 +140,7 @@ Status VmoObject::GetVmo(fsl::SizedVmo* vmo) const {
   zx_status_t zx_status =
       vmo_.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, vmo);
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to duplicate a vmo. Status: " << zx_status;
+    FXL_PLOG(ERROR, zx_status) << "Unable to duplicate a vmo";
     return Status::INTERNAL_ERROR;
   }
   return Status::OK;
@@ -157,7 +157,7 @@ Status VmoObject::Initialize() const {
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, &vmar_,
       &allocate_address);
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to allocate VMAR. Error: " << zx_status;
+    FXL_PLOG(ERROR, zx_status) << "Unable to allocate VMAR";
     return Status::INTERNAL_ERROR;
   }
 
@@ -166,7 +166,7 @@ Status VmoObject::Initialize() const {
                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                         reinterpret_cast<uintptr_t*>(&mapped_address));
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to map VMO. Error: " << zx_status;
+    FXL_PLOG(ERROR, zx_status) << "Unable to map VMO";
     vmar_.reset();
     return Status::INTERNAL_ERROR;
   }
