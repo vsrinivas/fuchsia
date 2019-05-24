@@ -321,9 +321,9 @@ impl Executor {
     ///
     ///     let deadline = 5.seconds().after_now();
     ///     let mut future = Timer::<Never>::new(deadline);
-    ///     assert_eq!(Ok(Poll::Pending), exec.run_until_stalled(&mut future));
+    ///     assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
     ///     assert_eq!(Some(deadline), exec.wake_next_timer());
-    ///     assert_eq!(Ok(Poll::Ready(())), exec.run_until_stalled(&mut future));
+    ///     assert_eq!(Poll::Ready(()), exec.run_until_stalled(&mut future));
     pub fn wake_next_timer(&mut self) -> Option<zx::Time> {
         with_local_timer_heap(|timer_heap| {
             let deadline = next_deadline(timer_heap).map(|waker| {
