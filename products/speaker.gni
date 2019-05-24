@@ -11,4 +11,6 @@ base_package_labels += [
 
 cache_package_labels += []
 
-universe_package_labels += []
+universe_package_labels += [
+  "//src/modular/bundles:tools",
+]
