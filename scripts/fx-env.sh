@@ -143,10 +143,14 @@ if [[ -z "${ZSH_VERSION}" ]]; then
   }
 
   function __fx {
+    local fuchsia_tools_dir="$(fx-config-read 2>/dev/null; echo "${FUCHSIA_BUILD_DIR}/tools")"
     COMPREPLY=()
     if [[ ${COMP_CWORD} -eq 1 ]]; then
-      COMPREPLY=($(/bin/ls -dp1 ${FUCHSIA_DIR}/tools/devshell/${COMP_WORDS[1]}* 2>/dev/null | \
-        sed -n "s|^${FUCHSIA_DIR}/tools/devshell/\([^/]*\)\$|\1|p" | xargs echo))
+      for dir in "${FUCHSIA_DIR}/tools/devshell" "${FUCHSIA_DIR}/tools/devshell/contrib" "${fuchsia_tools_dir}"
+      do
+        COMPREPLY=(${COMPREPLY} $(/bin/ls -dp1 ${dir}/${COMP_WORDS[1]}* 2>/dev/null | \
+          sed -n "s|^${dir}/\([^/]*\)\$|\1|p" | xargs echo))
+      done
     else
       __fx_complete_cmd
     fi
