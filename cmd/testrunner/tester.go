@@ -134,8 +134,10 @@ func NewFuchsiaTester(nodename string, sshKey []byte) (*FuchsiaTester, error) {
 }
 
 func (t *FuchsiaTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
-	name := path.Base(test.Path)
-	test.Command = []string{"runtests", "-t", name, "-o", t.remoteOutputDir + "runtests"}
+	if len(test.Command) == 0 {
+		name := path.Base(test.Path)
+		test.Command = []string{"runtests", "-t", name, "-o", t.remoteOutputDir + "runtests"}
+	}
 	return t.delegate.Test(ctx, test, stdout, stderr)
 }
 
