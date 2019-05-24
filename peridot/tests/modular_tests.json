@@ -69,7 +69,8 @@
         "--session_shell=fuchsia-pkg://fuchsia.com/story_shell_test_session_shell#meta/story_shell_test_session_shell.cmx",
         "--story_shell=fuchsia-pkg://fuchsia.com/story_shell_test_story_shell#meta/story_shell_test_story_shell.cmx",
         "--sessionmgr_args=--use_memfs_for_ledger,--no_cloud_provider_for_ledger"
-      ]
+      ],
+      "disabled": true
     },
     {
       "name": "story_shell_factory",
