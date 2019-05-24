@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 static_library("fsl") {
@@ -46,11 +46,7 @@ executable("fsl_unittests") {
   ]
 }
 
-package("package") {
-  testonly = true
-
-  package_name = "fsl"
-
+test_package("fsl_tests") {
   deps = [
     ":fsl_unittests",
   ]

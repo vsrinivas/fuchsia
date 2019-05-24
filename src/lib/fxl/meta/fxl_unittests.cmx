@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/fxl_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

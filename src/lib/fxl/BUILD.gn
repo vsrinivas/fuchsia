@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+
 source_set("common") {
   visibility = [ ":*" ]
 
@@ -242,11 +244,9 @@ executable("fxl_unittests") {
 }
 
 if (is_fuchsia) {
-  import("//build/package.gni")
+  import("//build/test/test_package.gni")
 
-  package("fxl_tests") {
-    testonly = true
-
+  test_package("fxl_tests") {
     deps = [
       ":fxl_unittests",
     ]
