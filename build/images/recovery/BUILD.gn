@@ -21,7 +21,7 @@ recovery_packages = [
   "//garnet/lib/root_ssl_certificates",
   "//src/connectivity/network/netstack",
   "//src/connectivity/wlan/wlancfg",
-  "//src/connectivity/wlan/wlanstack:wlanstack2",
+  "//src/connectivity/wlan/wlanstack",
   "//src/recovery/system",
   pkgfs_package_label,
 ]

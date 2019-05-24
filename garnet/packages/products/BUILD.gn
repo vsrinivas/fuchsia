@@ -54,8 +54,7 @@ group("network_wifi") {
     "//garnet/packages/config:wlan",
     "//garnet/packages/prod:netstack",
     "//garnet/packages/prod:runtime",
-    "//garnet/packages/prod:wlancfg",
-    "//garnet/packages/prod:wlanstack",
+    "//src/connectivity/wlan:bin",
   ]
 }
 
@@ -93,8 +92,7 @@ group("base") {
     "//garnet/packages/prod:stash",
     "//garnet/packages/prod:thermd",
     "//garnet/packages/prod:timezone",
-    "//garnet/packages/prod:wlancfg",
-    "//garnet/packages/prod:wlanstack",
+    "//src/connectivity/wlan:bin",
   ]
 }
 

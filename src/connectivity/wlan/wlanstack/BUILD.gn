@@ -7,13 +7,6 @@ import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 
-group("wlanstack") {
-  deps = [
-    ":wlan_metrics_registry",
-    ":wlanstack2",
-  ]
-}
-
 metrics_registry("wlan_metrics_registry") {
   # This must match the directory name /third_party/cobalt_config/fuchsia/connectivity_wlan
   project_name = "connectivity_wlan"
@@ -25,7 +18,7 @@ metrics_registry("wlan_metrics_registry") {
 }
 
 rustc_binary("bin") {
-  name = "wlanstack2"
+  name = "wlanstack"
   with_unit_tests = true
   edition = "2018"
 
@@ -68,23 +61,23 @@ rustc_binary("bin") {
   ]
 }
 
-package("wlanstack2") {
+package("wlanstack") {
   deps = [
     ":bin",
     ":wlan_metrics_registry",
   ]
 
-  binary = "wlanstack2"
+  binary = "wlanstack"
 
   meta = [
     {
-      path = rebase_path("meta/wlanstack2.cmx")
-      dest = "wlanstack2.cmx"
+      path = rebase_path("meta/wlanstack.cmx")
+      dest = "wlanstack.cmx"
     },
   ]
 }
 
-package("wlanstack2-tests") {
+package("wlanstack-tests") {
   testonly = true
 
   deps = [
@@ -93,8 +86,8 @@ package("wlanstack2-tests") {
 
   tests = [
     {
-      name = "wlanstack2_bin_test"
-      dest = "wlanstack2_bin_test"
+      name = "wlanstack_bin_test"
+      dest = "wlanstack_bin_test"
       environments = basic_envs
     },
   ]
