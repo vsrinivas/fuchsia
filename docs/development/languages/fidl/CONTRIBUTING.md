@@ -32,7 +32,7 @@ C         | [//zircon/system/host/fidl/lib/c_generator.cpp][be-c]  | [//zircon/s
 C++       | [//garnet/go/src/fidl/compiler/backend/cpp/][be-cpp]   | [//zircon/system/ulib/fidl/][rtl-c] & [//garnet/public/lib/fidl/cpp/][rtl-cpp]
 Go        | [//garnet/go/src/fidl/compiler/backend/golang/][be-go] | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
 Rust      | [//garnet/go/src/fidl/compiler/backend/rust/][be-rust] | [//garnet/public/lib/fidl/rust/fidl/][rtl-rust]
-Dart      | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]
+Dart      | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]<br>[//topaz/bin/fidl_bindings_test/][bindings_test-dart]
 JavaScipt | [chromium:build/fuchsia/fidlgen_fs][be-js]             | [chromium:build/fuchsia/fidlgen_js/runtime][rtl-js]
 
 ### Other Tools
@@ -144,7 +144,7 @@ Tab 3> fx run-test go_fidl_tests-- -test.v -test.run 'TestAllSuccessCases/.*xuni
 
 ### Dart runtime
 
-The Dart FIDL bindings test is in [//topaz/bin/fidl_bindings_test][bindings_test].
+The Dart FIDL bindings tests are in [//topaz/bin/fidl_bindings_test/][bindings_test-dart].
 
 You first need to have Fuchsia running in an emulator. Here are the steps:
 
@@ -243,7 +243,7 @@ fidl fmt --library my_library.fidl -i
 [be-go]: /garnet/go/src/fidl/compiler/backend/golang/
 [be-rust]: /garnet/go/src/fidl/compiler/backend/rust/
 [be-js]: https://chromium.googlesource.com/chromium/src/+/master/build/fuchsia/fidlgen_js/
-[bindings_test]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_bindings_test
+[bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_bindings_test
 [compatibility_test]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_compatibility_test
 [fidlc-source]: /zircon/system/host/fidl/
 [fidlc-tests]: /zircon//system/utest/fidl/
