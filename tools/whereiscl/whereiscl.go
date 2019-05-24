@@ -9,12 +9,10 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"regexp"
 
 	"fuchsia.googlesource.com/fuchsia/tools/whereiscl/lib"
 )
@@ -24,38 +22,21 @@ func init() {
 		fmt.Fprintf(flag.CommandLine.Output(), `Usage: whereiscl <review URL>
 
 Answers whether a CL is merged (or abandoned) and whether it passed Global Integration.
+Review URL can be various review URL forms as below. It can also be a raw CL number or a Change-Id.
 
 Examples:
   $ whereiscl https://fuchsia-review.googlesource.com/c/fuchsia/+/123456789
   $ whereiscl fuchsia-review.googlesource.com/c/fuchsia/+/123456789/some/file
+  $ whereiscl https://fuchsia-review.googlesource.com/c/fuchsia/+/Ie8dddbce1eeb01a561f3b36e1685f4136fb61378
   $ whereiscl http://fxr/123456789
+  $ whereiscl http://fxr/Ie8dddbce1eeb01a561f3b36e1685f4136fb61378
   $ whereiscl fxr/123456789/some/file
+  $ whereiscl 123456789
+  $ whereiscl Ie8dddbce1eeb01a561f3b36e1685f4136fb61378
 
 `)
 		flag.PrintDefaults()
 	}
-}
-
-const fuchsiaReviewURL = "https://fuchsia-review.googlesource.com"
-
-// fuchsiaRE is a regexp for matching CL review URLs and extracting the CL numbers.
-// Supports various forms. E.g.,
-//   - https://fuchsia-review.googlesource.com/c/fuchsia/+/123456789
-//   - fuchsia-review.googlesource.com/c/fuchsia/+/123456789/some/file
-//   - http://fxr/123456789
-//   - fxr/123456789/some/file
-var fuchsiaRE = regexp.MustCompile(`^(?:https?://)?(?:fxr|fuchsia-review.googlesource.com/c/.+/\+)/(\d+).*`)
-
-func parseReviewURL(str string) (lib.QueryInfo, error) {
-	match := fuchsiaRE.FindStringSubmatch(str)
-	if match != nil {
-		return lib.QueryInfo{
-			APIEndpoint: fuchsiaReviewURL,
-			CL:          match[1],
-		}, nil
-	}
-
-	return lib.QueryInfo{}, errors.New("not a valid review URL")
 }
 
 func main() {
@@ -69,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	queryInfo, err := parseReviewURL(flag.Arg(0))
+	queryInfo, err := lib.ParseReviewURL(flag.Arg(0))
 	if err != nil {
 		log.Fatalf("Error parsing the review URL: %v", err)
 	}

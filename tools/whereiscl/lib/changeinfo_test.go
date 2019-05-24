@@ -12,6 +12,68 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func TestParseReviewURL(t *testing.T) {
+	for _, url := range []string{
+		"https://fxr/123456789",
+		"https://fxr/123456789/some/file/path/foo.cc",
+		"http://fxr/123456789",
+		"http://fxr/123456789/some/file/path/foo.cc",
+		"fxr/123456789",
+		"fxr/123456789/some/file/path/foo.cc",
+		"https://fuchsia-review.googlesource.com/c/fuchsia/+/123456789",
+		"https://fuchsia-review.googlesource.com/c/fuchsia/+/123456789/some/file/path/foo.cc",
+		"http://fuchsia-review.googlesource.com/c/fuchsia/+/123456789",
+		"http://fuchsia-review.googlesource.com/c/fuchsia/+/123456789/some/file/path/foo.cc",
+		"fuchsia-review.googlesource.com/c/fuchsia/+/123456789",
+		"fuchsia-review.googlesource.com/c/fuchsia/+/123456789/some/file/path/foo.cc",
+		"123456789",
+	} {
+		got, err := ParseReviewURL(url)
+		if err != nil {
+			t.Fatalf("ParseReviewURL(%q): %v", url, err)
+		}
+		want := QueryInfo{
+			APIEndpoint: "https://fuchsia-review.googlesource.com",
+			CL:          "123456789",
+		}
+		if d := cmp.Diff(want, got, cmp.AllowUnexported(want)); d != "" {
+			t.Errorf("ParseReviewURL(%q): mismatch (-want +got):\n%s", url, d)
+		}
+	}
+}
+
+func TestParseReviewURL_ChangeId(t *testing.T) {
+	for _, url := range []string{
+		"https://fxr/Ie8dddbce1eeb01a561f3b36e1685f4136fb61378",
+		"fxr/Ie8dddbce1eeb01a561f3b36e1685f4136fb61378",
+		"Ie8dddbce1eeb01a561f3b36e1685f4136fb61378",
+	} {
+		got, err := ParseReviewURL(url)
+		if err != nil {
+			t.Fatalf("ParseReviewURL(%q): %v", url, err)
+		}
+		want := QueryInfo{
+			APIEndpoint: "https://fuchsia-review.googlesource.com",
+			CL:          "Ie8dddbce1eeb01a561f3b36e1685f4136fb61378",
+		}
+		if d := cmp.Diff(want, got, cmp.AllowUnexported(want)); d != "" {
+			t.Errorf("ParseReviewURL(%q): mismatch (-want +got):\n%s", url, d)
+		}
+	}
+}
+
+func TestParseReviewURL_invalidURL(t *testing.T) {
+	for _, url := range []string{
+		"https://fxr/non_digits/foo/bar",
+		"https://random-url.com/foo/bar",
+	} {
+		qi, err := ParseReviewURL(url)
+		if err == nil {
+			t.Errorf("ParseReviewURL(%q): error expected; got nil with result %+v", url, qi)
+		}
+	}
+}
+
 func TestGetChangeInfo(t *testing.T) {
 	transport := th.MockTransport{}
 	transport.AddResponse(

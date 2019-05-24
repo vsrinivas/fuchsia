@@ -12,8 +12,19 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
 
 	"fuchsia.googlesource.com/fuchsia/tools/whereiscl/netutil"
+)
+
+const fuchsiaReviewURL = "https://fuchsia-review.googlesource.com"
+
+// Regexp's for matching CL review URLs and extracting the CL numbers or Change-Id.
+// Supports various forms. See the usage examples in the whereiscl.go file.
+var (
+	fuchsiaCLNumRE    = regexp.MustCompile(`^(?:https?://)?(?:fxr|fuchsia-review.googlesource.com/c/.+/\+)/(\d+).*$`)
+	fuchsiaChangeIdRE = regexp.MustCompile(`^(?:https?://)?(?:fxr|fuchsia-review.googlesource.com/c/.+/\+)/([^/]+)$`)
+	rawCLOrChangeIdRE = regexp.MustCompile(`^([^/]+)$`)
 )
 
 // CLStatus represents the status of a CL in Gerrit.
@@ -36,6 +47,21 @@ type ChangeInfo struct {
 
 // QueryInfo stores information for querying the Gerrit server.
 type QueryInfo struct{ APIEndpoint, CL string }
+
+// ParseReviewURL parses the given string and returns QueryInfo.
+func ParseReviewURL(str string) (QueryInfo, error) {
+	for _, re := range []*regexp.Regexp{fuchsiaCLNumRE, fuchsiaChangeIdRE, rawCLOrChangeIdRE} {
+		match := re.FindStringSubmatch(str)
+		if match != nil {
+			return QueryInfo{
+				APIEndpoint: fuchsiaReviewURL,
+				CL:          match[1],
+			}, nil
+		}
+	}
+
+	return QueryInfo{}, errors.New("not a valid review URL")
+}
 
 func makeQueryURL(qi QueryInfo) (*url.URL, error) {
 	u, err := url.Parse(qi.APIEndpoint)
