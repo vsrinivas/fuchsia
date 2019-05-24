@@ -303,20 +303,27 @@ mod tests {
         };
 
         let request_fut = async move {
+            assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 0);
             assert!(await!(account_event_emitter.add_listener(
                 listener_1,
                 options_1,
                 &AUTH_STATES
             ))
             .is_ok());
+            assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 1);
             assert!(await!(account_event_emitter.add_listener(
                 listener_2,
                 options_2,
                 &AUTH_STATES
             ))
             .is_ok());
+            assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 2);
+
+            assert_eq!(account_event_emitter.inspect.events.get().unwrap(), 0);
             await!(account_event_emitter.publish(&EVENT_ADDED));
+            assert_eq!(account_event_emitter.inspect.events.get().unwrap(), 1);
             await!(account_event_emitter.publish(&EVENT_REMOVED));
+            assert_eq!(account_event_emitter.inspect.events.get().unwrap(), 2);
         };
         await!(join3(serve_fut_1, serve_fut_2, request_fut));
     }
@@ -344,6 +351,7 @@ mod tests {
                 panic!("Unexpected message received");
             };
         };
+
         let request_fut = async move {
             await!(account_event_emitter.publish(&EVENT_ADDED)); // Normal event
             {

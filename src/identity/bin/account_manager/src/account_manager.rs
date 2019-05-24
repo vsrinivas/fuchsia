@@ -467,9 +467,9 @@ mod tests {
         static ref AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {vec![]};
     }
 
-    fn request_stream_test<TestFn, Fut>(test_object: AccountManager, test_fn: TestFn)
+    fn request_stream_test<TestFn, Fut>(account_manager: AccountManager, test_fn: TestFn)
     where
-        TestFn: FnOnce(AccountManagerProxy) -> Fut,
+        TestFn: FnOnce(AccountManagerProxy, Arc<AccountManager>) -> Fut,
         Fut: Future<Output = Result<(), Error>>,
     {
         let mut executor = fasync::Executor::new().expect("Failed to create executor");
@@ -479,12 +479,16 @@ mod tests {
             fasync::Channel::from_channel(server_chan).unwrap(),
         );
 
+        let account_manager_arc = Arc::new(account_manager);
+        let account_manager_clone = Arc::clone(&account_manager_arc);
         fasync::spawn(async move {
-            await!(test_object.handle_requests_from_stream(request_stream))
+            await!(account_manager_clone.handle_requests_from_stream(request_stream))
                 .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
         });
 
-        executor.run_singlethreaded(test_fn(proxy)).expect("Executor run failed.")
+        executor
+            .run_singlethreaded(test_fn(proxy, account_manager_arc))
+            .expect("Executor run failed.")
     }
 
     // Manually contructs an account manager initialized with the supplied set of accounts.
@@ -529,10 +533,9 @@ mod tests {
     fn test_new() {
         let inspector = Inspector::new().unwrap();
         let data_dir = TempDir::new().unwrap();
-
         request_stream_test(
             AccountManager::new(data_dir.path().into(), &AUTH_PROVIDER_CONFIG, &inspector).unwrap(),
-            async move |proxy| {
+            async move |proxy, _| {
                 assert_eq!(await!(proxy.get_account_ids())?, vec![]);
                 assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
                 Ok(())
@@ -543,24 +546,32 @@ mod tests {
     #[test]
     fn test_initially_empty() {
         let data_dir = TempDir::new().unwrap();
-        request_stream_test(create_accounts(vec![], data_dir.path()), async move |proxy| {
-            assert_eq!(await!(proxy.get_account_ids())?, vec![]);
-            assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
-            Ok(())
-        });
+        request_stream_test(
+            create_accounts(vec![], data_dir.path()),
+            async move |proxy, test_object| {
+                assert_eq!(await!(proxy.get_account_ids())?, vec![]);
+                assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
+                assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 0);
+                assert_eq!(test_object.accounts_inspect.active.get().unwrap(), 0);
+                Ok(())
+            },
+        );
     }
 
     #[test]
     fn test_remove_missing_account() {
         // Manually create an account manager with one account.
         let data_dir = TempDir::new().unwrap();
-        let test_object = create_accounts(vec![1], data_dir.path());
-        request_stream_test(test_object, async move |proxy| {
+        let stored_account_list =
+            StoredAccountList::new(vec![StoredAccountMetadata::new(LocalAccountId::new(1))]);
+        stored_account_list.save(data_dir.path()).unwrap();
+        request_stream_test(read_accounts(data_dir.path()), async move |proxy, test_object| {
             // Try to delete a very different account from the one we added.
             assert_eq!(
                 await!(proxy.remove_account(LocalAccountId::new(42).as_mut()))?,
                 Status::NotFound
             );
+            assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 1);
             Ok(())
         });
     }
@@ -574,10 +585,11 @@ mod tests {
         ]);
         stored_account_list.save(data_dir.path()).unwrap();
         // Manually create an account manager from an account_list_dir with two pre-populated dirs.
-        let account_manager = read_accounts(data_dir.path());
-        request_stream_test(account_manager, async move |proxy| {
+        request_stream_test(read_accounts(data_dir.path()), async move |proxy, test_object| {
             // Try to remove the first account.
+            assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 2);
             assert_eq!(await!(proxy.remove_account(LocalAccountId::new(1).as_mut()))?, Status::Ok);
+            assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 1);
 
             // Verify that the second account is present.
             assert_eq!(await!(proxy.get_account_ids())?, fidl_local_id_vec(vec![2]));
@@ -585,9 +597,9 @@ mod tests {
         });
         // Now create another account manager using the same directory, which should pick up the new
         // state from the operations of the first account manager.
-        let account_manager = read_accounts(data_dir.path());
-        request_stream_test(account_manager, async move |proxy| {
+        request_stream_test(read_accounts(data_dir.path()), async move |proxy, test_object| {
             // Verify the only the second account is present.
+            assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 1);
             assert_eq!(await!(proxy.get_account_ids())?, fidl_local_id_vec(vec![2]));
             Ok(())
         });
@@ -604,9 +616,8 @@ mod tests {
         };
 
         let data_dir = TempDir::new().unwrap();
-        let test_object = create_accounts(vec![1, 2], data_dir.path());
         // TODO(dnordstrom): Use run_until_stalled macro instead.
-        request_stream_test(test_object, async move |proxy| {
+        request_stream_test(create_accounts(vec![1, 2], data_dir.path()), async move |proxy, _| {
             let (client_end, mut stream) =
                 create_request_stream::<AccountListenerMarker>().unwrap();
             let serve_fut = async move {
@@ -664,5 +675,4 @@ mod tests {
             Ok(())
         });
     }
-
 }
