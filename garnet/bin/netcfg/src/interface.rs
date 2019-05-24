@@ -242,17 +242,16 @@ mod tests {
     use super::*;
     use std::io::Write;
 
-    #[test]
-    #[ignore] // FIXME(CONN-121)
-    fn test_get_stable_name() {
-        struct TestCase {
-            topological_path: String,
-            mac: [u8; 6],
-            wlan: bool,
-            want_name: &'static str,
-            want_len: usize,
-        }
+    #[derive(Clone)]
+    struct TestCase {
+        topological_path: String,
+        mac: [u8; 6],
+        wlan: bool,
+        want_name: &'static str,
+    }
 
+    #[test]
+    fn test_generate_name() {
         let test_cases = vec![
             // usb interfaces
             TestCase {
@@ -262,7 +261,6 @@ mod tests {
                 mac: [0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
                 wlan: true,
                 want_name: "wlanx1",
-                want_len: 1,
             },
             TestCase {
                 topological_path: String::from(
@@ -271,62 +269,6 @@ mod tests {
                 mac: [0x02, 0x02, 0x02, 0x02, 0x02, 0x02],
                 wlan: false,
                 want_name: "ethx2",
-                want_len: 2,
-            },
-            TestCase {
-                topological_path: String::from(
-                    "@/dev/sys/pci/00:15.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
-                ),
-                mac: [0x02, 0x02, 0x02, 0x02, 0x03, 0x01],
-                wlan: false,
-                want_name: "ethx1",
-                want_len: 3,
-            },
-            TestCase {
-                topological_path: String::from(
-                    "@/dev/sys/pci/00:15.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
-                ),
-                mac: [0x02, 0x02, 0x02, 0x02, 0x04, 0x01],
-                wlan: false,
-                want_name: "ethx3",
-                want_len: 4,
-            },
-            // use interfaces' names are rounded up
-            TestCase {
-                topological_path: String::from(
-                    "@/dev/sys/pci/00:15.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
-                ),
-                mac: [0x02, 0x02, 0x02, 0x02, 0x04, 0xfe],
-                wlan: false,
-                want_name: "ethxfe",
-                want_len: 5,
-            },
-            TestCase {
-                topological_path: String::from(
-                    "@/dev/sys/pci/00:16.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
-                ),
-                mac: [0x02, 0x02, 0x02, 0x04, 0x04, 0xfe],
-                wlan: false,
-                want_name: "ethxff",
-                want_len: 6,
-            },
-            TestCase {
-                topological_path: String::from(
-                    "@/dev/sys/pci/00:15.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
-                ),
-                mac: [0x02, 0x02, 0x04, 0x04, 0x04, 0xfe],
-                wlan: false,
-                want_name: "ethx0",
-                want_len: 7,
-            },
-            TestCase {
-                topological_path: String::from(
-                    "@/dev/sys/pci/00:15.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
-                ),
-                mac: [0x02, 0x04, 0x04, 0x04, 0x04, 0xfe],
-                wlan: false,
-                want_name: "ethx4",
-                want_len: 8,
             },
             // pci intefaces
             TestCase {
@@ -334,21 +276,12 @@ mod tests {
                 mac: [0x03, 0x03, 0x03, 0x03, 0x03, 0x03],
                 wlan: true,
                 want_name: "wlanp0014",
-                want_len: 9,
             },
             TestCase {
                 topological_path: String::from("@/dev/sys/pci/00:15.0/ethernet"),
                 mac: [0x04, 0x04, 0x04, 0x04, 0x04, 0x04],
                 wlan: false,
                 want_name: "ethp0015",
-                want_len: 10,
-            },
-            TestCase {
-                topological_path: String::from("@/dev/sys/pci/00:14.0/ethernet"),
-                mac: [0x03, 0x03, 0x03, 0x03, 0x03, 0x03],
-                wlan: true,
-                want_name: "wlanp0014",
-                want_len: 10,
             },
             // platform interfaces (ethernet jack and sdio devices)
             TestCase {
@@ -358,17 +291,7 @@ mod tests {
                 mac: [0x05, 0x05, 0x05, 0x05, 0x05, 0x05],
                 wlan: true,
                 want_name: "wlans05006",
-                want_len: 11,
             },
-            TestCase {
-                topological_path: String::from(
-                    "@/dev/sys/platform/05:00:6/aml-sd-emmc/sdio/broadcom-wlanphy/wlanphy",
-                ),
-                mac: [0x06, 0x06, 0x06, 0x06, 0x06, 0x06],
-                wlan: true,
-                want_name: "wlans05006",
-                want_len: 11,
-            }, // existing interface
             TestCase {
                 topological_path: String::from(
                     "@/dev/sys/platform/04:02:7/aml-ethernet/Designware MAC/ethernet",
@@ -376,7 +299,6 @@ mod tests {
                 mac: [0x07, 0x07, 0x07, 0x07, 0x07, 0x07],
                 wlan: false,
                 want_name: "eths04027",
-                want_len: 12,
             },
             // unknown interfaces
             TestCase {
@@ -384,36 +306,51 @@ mod tests {
                 mac: [0x08, 0x08, 0x08, 0x08, 0x08, 0x08],
                 wlan: true,
                 want_name: "wlanx8",
-                want_len: 13,
             },
             TestCase {
                 topological_path: String::from("unknown"),
                 mac: [0x09, 0x09, 0x09, 0x09, 0x09, 0x09],
                 wlan: true,
                 want_name: "wlanx9",
-                want_len: 14,
-            },
-            // existing interface
-            TestCase {
-                topological_path: String::from("@/dev/sys/unknown/"),
-                mac: [0x08, 0x08, 0x08, 0x08, 0x08, 0x08],
-                wlan: true,
-                want_name: "wlanx8",
-                want_len: 14,
             },
         ];
-        // expect empty cur_config
+        let config = Config { names: vec![] };
+        for test in test_cases.into_iter() {
+            let persistent_id =
+                config.generate_identifier(test.topological_path, MacAddress { octets: test.mac });
+            let name = config
+                .generate_name(&persistent_id, test.wlan)
+                .expect("failed to generate the name");
+            assert_eq!(name, test.want_name);
+        }
+    }
+
+    #[test]
+    fn test_get_stable_name() {
+        let test1 = TestCase {
+            topological_path: String::from("@/dev/sys/pci/00:14.0/ethernet"),
+            mac: [0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
+            wlan: true,
+            want_name: "wlanp0014",
+        };
+        let mut test2 = test1.clone();
+        test2.mac[0] ^= 0xff;
+        let test_cases = vec![test1, test2];
+
         let temp_dir = tempfile::tempdir_in("/data").expect("failed to create the temp dir");
         let path = temp_dir.path().join("net.config.json");
-        let mut interface_config =
-            FileBackedConfig::load(&path).expect("failed to load the interface config");
-        assert_eq!(0, interface_config.config.names.len());
-        for test in test_cases.into_iter() {
+
+        // query an existing interface with the same topo path and a different mac address
+        for (i, test) in test_cases.into_iter().enumerate() {
+            let mut interface_config =
+                FileBackedConfig::load(&path).expect("failed to load the interface config");
+            assert_eq!(interface_config.config.names.len(), i);
+
             let name = interface_config
                 .get_stable_name(test.topological_path, MacAddress { octets: test.mac }, test.wlan)
-                .expect("failed to get the interface config");
-            assert_eq!(test.want_name, name);
-            assert_eq!(test.want_len, interface_config.config.names.len());
+                .expect("failed to get the interface name");
+            assert_eq!(name, test.want_name);
+            assert_eq!(interface_config.config.names.len(), 1);
         }
     }
 
@@ -430,12 +367,12 @@ mod tests {
             let persistent_id = config.generate_identifier(topo_usb.clone(), MacAddress { octets });
 
             if let Some(index) = config.lookup_by_identifier(&persistent_id) {
-                assert_eq!(format!("{}{:x}", "wlanx", n), config.names[index].1);
+                assert_eq!(config.names[index].1, format!("{}{:x}", "wlanx", n));
             } else {
                 let name = config
                     .generate_name(&persistent_id, true)
                     .expect("failed to generate the name");
-                assert_eq!(format!("{}{:x}", "wlanx", n), name);
+                assert_eq!(name, format!("{}{:x}", "wlanx", n));
                 config.names.push((persistent_id, name));
             }
         }
