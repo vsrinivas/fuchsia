@@ -36,8 +36,20 @@ public:
     inline const std::string& id() const {
         return id_;
     }
+
     inline const TemplateString& message_template() const {
         return message_template_;
+    }
+
+    // A |std::set| of |CheckDef| will sort by |id|.
+    inline bool operator<(const CheckDef& rhs) const {
+        return id_ < rhs.id_;
+    }
+
+    // A |std::set| of |CheckDef| will not insert a CheckDef if it does not
+    // have a unique |id|.
+    inline bool operator==(const CheckDef& rhs) {
+        return id_ == rhs.id_;
     }
 
 private:
@@ -48,4 +60,4 @@ private:
 } // namespace linter
 } // namespace fidl
 
-#endif  // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_CHECK_DEF_H_
+#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_CHECK_DEF_H_

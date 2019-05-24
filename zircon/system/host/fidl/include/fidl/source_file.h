@@ -21,7 +21,7 @@ public:
     std::string_view data() const { return data_; }
 
     // This is in the coordinates that most editors use. Lines start
-    // at 1 but columns start at 0.
+    // at 1 and columns start at 1.
     struct Position {
         int line;
         int column;

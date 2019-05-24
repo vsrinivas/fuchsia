@@ -200,6 +200,14 @@ public:
         return *all_sources_.at(0);
     }
 
+    fidl::SourceLocation SourceLocation(size_t start, size_t size) const {
+        assert(all_sources_.size() == 1 && "convenience method only possible with single source");
+        std::string_view data = all_sources_.at(0)->data();
+        data.remove_prefix(start);
+        data.remove_suffix(data.size() - size);
+        return fidl::SourceLocation(data, *all_sources_.at(0));
+    }
+
     const std::vector<std::string>& errors() const {
         return error_reporter_->errors();
     }

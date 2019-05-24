@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
 
-#include <list>
+#include <deque>
 #include <set>
 
 #include <fidl/check_def.h>
@@ -36,13 +36,24 @@ public:
               Findings* findings);
 
 private:
+    // Holds function pointers for an identify case type. For example,
+    // for "UpperCamelCase" type, |matches| points to is_upper_camel_case()
+    // and |convert| points to to_upper_camel_case().
     struct CaseType {
         fit::function<bool(std::string)> matches;
         fit::function<std::string(std::string)> convert;
     };
 
+    // Holds information about a nesting context in a FIDL file, for checks
+    // that must compare information about the context with information about
+    // a nested entity. The outer-most context is the FIDL file itself
+    // (including the file's declared library name). Contexts nested in a
+    // file's context include type definitions with nested entities, such as
+    // enum, bits, struct, table, union, and xunion.
     class Context {
     public:
+        struct RepeatsContextNames;
+
         Context(std::string type, std::string id, CheckDef context_check)
             : type_(type), id_(id), context_check_(context_check) {}
 
@@ -54,9 +65,16 @@ private:
         Context(const Context&) = delete;
         Context& operator=(const Context&) = delete;
 
-        std::string type() { return type_; }
+        std::string type() const { return type_; }
 
-        std::string id() { return id_; }
+        std::string id() const { return id_; }
+
+        // A |vector| of information about potential violations of the FIDL rubric
+        // rule that prohibits repeating names from the outer type or library.
+        // Exceptions to this rule cannot be determined until all nested identifiers
+        // are reviewed, so this vector saves the required information until that
+        // time.
+        std::vector<RepeatsContextNames>& name_repeaters() { return name_repeaters_; }
 
         const std::set<std::string>& words() {
             if (words_.empty()) {
@@ -66,13 +84,35 @@ private:
             return words_;
         }
 
-        const CheckDef& context_check() { return context_check_; }
+        const CheckDef& context_check() const { return context_check_; }
+
+        template <typename... Args>
+        void AddRepeatsContextNames(Args&&... args) {
+            name_repeaters_.emplace_back(args...);
+        }
+
+        // Stores minimum information needed to construct a |Finding| if a
+        // nested identifier repeats names from one of its contexts.
+        // Determination is deferred until all nested identifiers are evaluated
+        // because some cases of repeated names are allowed if the repeated
+        // names help differentiate two identifiers that represent different
+        // parts of the concept represented by the context identifier.
+        struct RepeatsContextNames {
+            RepeatsContextNames(std::string a_type, SourceLocation a_location,
+                                std::set<std::string> a_repeats)
+                : type(a_type), location(a_location), repeats(a_repeats) {}
+
+            const std::string type;
+            const SourceLocation location;
+            const std::set<std::string> repeats;
+        };
 
     private:
         std::string type_;
         std::string id_;
         std::set<std::string> words_;
         CheckDef context_check_;
+        std::vector<RepeatsContextNames> name_repeaters_;
     };
 
     const std::set<std::string>& permitted_library_prefixes() const;
@@ -84,6 +124,13 @@ private:
     template <typename... Args>
     Finding& AddFinding(Args&&... args) const;
 
+    const Finding& AddFinding(
+        SourceLocation location,
+        const CheckDef& check,
+        Substitutions substitutions = {},
+        std::string suggestion_template = "",
+        std::string replacement_template = "") const;
+
     template <typename SourceElementSubtypeRefOrPtr>
     const Finding& AddFinding(
         const SourceElementSubtypeRefOrPtr& element,
@@ -92,31 +139,44 @@ private:
         std::string suggestion_template = "",
         std::string replacement_template = "") const;
 
-    std::set<std::string> permitted_library_prefixes_ = {
-        "fuchsia",
-        "fidl",
-        "test",
-    };
+    const Finding& AddRepeatedNameFinding(
+        const Context& context,
+        const Context::RepeatsContextNames& name_repeater) const;
 
+    // If a finding was added, return a pointer to that finding.
     const Finding* CheckCase(std::string type,
                              const std::unique_ptr<raw::Identifier>& identifier,
                              const CheckDef& check_def, const CaseType& case_type);
-    const Finding* CheckRepeatedName(std::string type,
-                                     const std::unique_ptr<raw::Identifier>& id);
+
+    // CheckRepeatedName() does not add Finding objects immediately. It checks for
+    // potential violations, but must wait until ExitContext() so the potential
+    // violation can be compared to its peers.
+    void CheckRepeatedName(std::string type,
+                           const std::unique_ptr<raw::Identifier>& id);
 
     template <typename... Args>
     void EnterContext(Args&&... args) {
         context_stack_.emplace_front(args...);
     }
 
-    void ExitContext() {
-        context_stack_.pop_front();
-    }
+    // Pops the context stack. If any contained types repeat names from the
+    // context, this function compares the nested identifiers with each other.
+    // If two nested identifiers repeat different names from the context,
+    // assume the repeated names were necessary in order to disambiguate the
+    // concepts represented by each of the nested entities. If not, add Finding
+    // objects for violating the repeated name rule.
+    void ExitContext();
 
-    std::list<Context> context_stack_;
+    std::deque<Context> context_stack_;
 
-    std::vector<CheckDef> checks_;
     LintingTreeCallbacks callbacks_;
+    std::set<std::string> permitted_library_prefixes_;
+    std::set<std::string> stop_words_;
+
+    // All check types created in during |Linter| construction. The |std::set|
+    // ensures each CheckDef has a unique |id|, and an iterator will traverse
+    // the set in lexicographical order.
+    std::set<CheckDef> checks_;
 
     CaseType lower_snake_{utils::is_lower_snake_case,
                           utils::to_lower_snake_case};

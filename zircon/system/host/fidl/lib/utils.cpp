@@ -46,7 +46,10 @@ bool is_upper_snake_case(const std::string& str) {
 }
 
 bool is_lower_camel_case(const std::string& str) {
-    static std::regex re{"^[a-z]+([A-Z][a-z0-9]+)*$"};
+    if (has_konstant_k(str)) {
+        return false;
+    }
+    static std::regex re{"^[a-z][a-z0-9]*([A-Z][a-z0-9]+)*$"};
     return str.size() > 0 && std::regex_match(str, re);
 }
 
@@ -63,7 +66,18 @@ bool is_konstant_case(const std::string& astr) {
     return is_upper_camel_case(str);
 }
 
+static void add_word(std::string word, std::vector<std::string>& words,
+                     const std::set<std::string>& stop_words) {
+    if (stop_words.find(word) == stop_words.end()) {
+        words.push_back(word);
+    }
+}
+
 std::vector<std::string> id_to_words(const std::string& astr) {
+    return id_to_words(astr, {});
+}
+
+std::vector<std::string> id_to_words(const std::string& astr, std::set<std::string> stop_words) {
     // TODO(fxb/FIDL-573): Add support for mixed case with underscores, as in
     // the example:  const int kAndroid8_0_0 = 24; // Android 8.0.0
     std::string str = strip_konstant_k(astr);
@@ -74,18 +88,17 @@ std::vector<std::string> id_to_words(const std::string& astr) {
         char ch = str[i];
         if (ch == '_' || ch == '-' || ch == '.') {
             if (word.size() > 0) {
-                words.push_back(word);
+                add_word(word, words, stop_words);
                 word.clear();
             }
             last_char_was_upper_or_begin = true;
         } else {
-            bool next_char_is_upper_or_end =
-                ((i + 1) >= str.size()) ||
-                isupper(str[i + 1]);
+            bool next_char_is_lower = ((i + 1) < str.size()) &&
+                                      islower(str[i + 1]);
             if (isupper(ch) &&
-                !(last_char_was_upper_or_begin && next_char_is_upper_or_end)) {
+                (!last_char_was_upper_or_begin || next_char_is_lower)) {
                 if (word.size() > 0) {
-                    words.push_back(word);
+                    add_word(word, words, stop_words);
                     word.clear();
                 }
             }
@@ -94,7 +107,7 @@ std::vector<std::string> id_to_words(const std::string& astr) {
         }
     }
     if (word.size() > 0) {
-        words.push_back(word);
+        add_word(word, words, stop_words);
     }
     return words;
 }
@@ -155,19 +168,23 @@ std::string to_konstant_case(const std::string& str) {
     return "k" + to_upper_camel_case(str);
 }
 
+void PrintFinding(std::ostream& os, const Finding& finding) {
+    os << finding.message();
+    if (finding.suggestion().has_value()) {
+        auto& suggestion = finding.suggestion();
+        os << "; " << suggestion->description();
+        if (suggestion->replacement().has_value()) {
+            os << "\nDid you mean:\n    "
+               << *suggestion->replacement();
+        }
+    }
+}
+
 void WriteFindingsToErrorReporter(const Findings& findings,
                                   ErrorReporter* error_reporter) {
     for (auto& finding : findings) {
         std::stringstream ss;
-        ss << finding.message();
-        if (finding.suggestion().has_value()) {
-            auto& suggestion = finding.suggestion();
-            ss << "; " << suggestion->description();
-            if (suggestion->replacement().has_value()) {
-                ss << "\nDid you mean:\n    "
-                   << *suggestion->replacement();
-            }
-        }
+        PrintFinding(ss, finding);
         error_reporter->ReportWarningWithSquiggle(finding.source_location(),
                                                   ss.str());
     }

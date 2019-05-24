@@ -8,6 +8,7 @@
 #include <errno.h>
 
 #include <clocale>
+#include <set>
 #include <string>
 
 #include <fidl/error_reporter.h>
@@ -78,6 +79,10 @@ bool has_adjacent_underscores(const std::string& str);
 
 std::vector<std::string> id_to_words(const std::string& str);
 
+// Split the identifier into words, excluding words in the |stop_words| set.
+std::vector<std::string> id_to_words(const std::string& str,
+                                     const std::set<std::string> stop_words);
+
 bool is_konstant_case(const std::string& str);
 bool is_lower_no_separator_case(const std::string& str);
 bool is_lower_snake_case(const std::string& str);
@@ -93,8 +98,13 @@ std::string to_upper_snake_case(const std::string& str);
 std::string to_lower_camel_case(const std::string& str);
 std::string to_upper_camel_case(const std::string& str);
 
+// Used by fidl-lint WriteFindingsToErrorReporter, and for testing,
+// this generates the linter error message string in the format
+// required for the fidl::ErrorReporter.
+void PrintFinding(std::ostream& os, const Finding& finding);
+
 // Used by fidl-lint main() and for testing, this generates the linter error
-// messages in the format required for the fidl::ErrorReporter.
+// messages for a list of findings.
 void WriteFindingsToErrorReporter(
     const Findings& findings, ErrorReporter* error_reporter);
 

@@ -15,10 +15,10 @@
 // findings from other developer tools, such as fidlc.
 ///////////////////////////////////////////////////////////////
 
+#include <list>
 #include <optional>
 #include <sstream>
 #include <string>
-#include <vector>
 
 #include <fidl/source_location.h>
 
@@ -108,7 +108,12 @@ private:
     std::optional<Suggestion> suggestion_;
 };
 
-using Findings = std::vector<Finding>;
+// Some checks may require referencing past findings. |std::list| is
+// required, to allow references to |Finding| objects, held while the
+// |Findings| container is still being filled. A |std::vector| will
+// not work because it will move items around, invalidating the
+// references.
+using Findings = std::list<Finding>;
 
 } // namespace fidl
 

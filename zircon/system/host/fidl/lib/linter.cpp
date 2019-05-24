@@ -112,15 +112,14 @@ Finding& Linter::AddFinding(Args&&... args) const {
 }
 
 // Add a finding with optional suggestion and replacement
-template <typename SourceElementSubtypeRefOrPtr>
 const Finding& Linter::AddFinding(
-    const SourceElementSubtypeRefOrPtr& element,
+    SourceLocation location,
     const CheckDef& check,
     Substitutions substitutions,
     std::string suggestion_template,
     std::string replacement_template) const {
     auto& finding = AddFinding(
-        GetElementAsRef(element).location(),
+        location,
         check.id(), check.message_template().Substitute(substitutions));
     if (suggestion_template.size() > 0) {
         if (replacement_template.size() == 0) {
@@ -135,10 +134,24 @@ const Finding& Linter::AddFinding(
     return finding;
 }
 
+// Add a finding from a SourceElement
+template <typename SourceElementSubtypeRefOrPtr>
+const Finding& Linter::AddFinding(
+    const SourceElementSubtypeRefOrPtr& element,
+    const CheckDef& check,
+    Substitutions substitutions,
+    std::string suggestion_template,
+    std::string replacement_template) const {
+    auto& finding = AddFinding(
+        GetElementAsRef(element).location(),
+        check, substitutions,
+        suggestion_template, replacement_template);
+    return finding;
+}
+
 CheckDef Linter::DefineCheck(std::string check_id,
                              std::string message_template) {
-    checks_.emplace_back(check_id, TemplateString(message_template));
-    return checks_.back();
+    return *checks_.emplace(check_id, TemplateString(message_template)).first;
 }
 
 // Returns true if no new findings were generated
@@ -154,12 +167,12 @@ bool Linter::Lint(std::unique_ptr<raw::File> const& parsed_source,
     return false;
 }
 
-const Finding* Linter::CheckCase(std::string type,
-                                 const std::unique_ptr<raw::Identifier>& identifier,
-                                 const CheckDef& check_def, const CaseType& case_type) {
+const Finding* Linter::CheckCase(
+    std::string type, const std::unique_ptr<raw::Identifier>& identifier,
+    const CheckDef& check_def, const CaseType& case_type) {
     std::string id = to_string(identifier);
     if (!case_type.matches(id)) {
-        return &(AddFinding(
+        return &AddFinding(
             identifier, check_def,
             {
                 {"TYPE", type},
@@ -167,42 +180,84 @@ const Finding* Linter::CheckCase(std::string type,
                 {"REPLACEMENT", case_type.convert(id)},
             },
             "change '${IDENTIFIER}' to '${REPLACEMENT}'",
-            "${REPLACEMENT}"));
+            "${REPLACEMENT}");
     }
     return nullptr;
 }
 
-const Finding* Linter::CheckRepeatedName(std::string type,
-                                         const std::unique_ptr<raw::Identifier>& identifier) {
+void Linter::CheckRepeatedName(
+    std::string type, const std::unique_ptr<raw::Identifier>& identifier) {
     std::string id = to_string(identifier);
-    auto split_id = utils::id_to_words(id);
+    auto split_id = utils::id_to_words(id, stop_words_);
     std::set<std::string> words;
     words.insert(split_id.begin(), split_id.end());
-    std::set<std::string> repeats;
     for (auto& context : context_stack_) {
+        std::set<std::string> repeats;
         std::set_intersection(words.begin(), words.end(),
                               context.words().begin(), context.words().end(),
                               std::inserter(repeats, repeats.begin()));
         if (!repeats.empty()) {
-            // TODO(fxb/FIDL-628): Modify check to allow repeated names if otherwise ambiguous.
-            std::string repeated_names;
-            for (const auto& repeat : repeats) {
-                if (!repeated_names.empty()) {
-                    repeated_names.append(", ");
-                }
-                repeated_names.append(repeat);
-            }
-            return &(AddFinding(
-                identifier, context.context_check(),
-                {
-                    {"TYPE", type},
-                    {"REPEATED_NAMES", repeated_names},
-                    {"CONTEXT_TYPE", context.type()},
-                    {"CONTEXT_ID", context.id()},
-                }));
+            context.AddRepeatsContextNames(type, identifier->location(), repeats);
         }
     }
-    return nullptr;
+}
+
+const Finding& Linter::AddRepeatedNameFinding(
+    const Context& context,
+    const Context::RepeatsContextNames& name_repeater) const {
+    std::string repeated_names;
+    for (const auto& repeat : name_repeater.repeats) {
+        if (!repeated_names.empty()) {
+            repeated_names.append(", ");
+        }
+        repeated_names.append(repeat);
+    }
+    return AddFinding(
+        name_repeater.location, context.context_check(),
+        {
+            {"TYPE", name_repeater.type},
+            {"REPEATED_NAMES", repeated_names},
+            {"CONTEXT_TYPE", context.type()},
+            {"CONTEXT_ID", context.id()},
+        });
+}
+
+void Linter::ExitContext() {
+    Context context = std::move(context_stack_.front());
+    context_stack_.pop_front();
+
+    // Check the |RepeatsContextNames| objects in context.name_repeaters(), and
+    // produce Finding objects for any identifier that is not allowed to repeat
+    // a name from this |Context|.
+    //
+    // This check addresses the FIDL Rubric rule:
+    //
+    //     Member names must not repeat names from the enclosing type (or
+    //     library) unless the member name is ambiguous without a name from
+    //     the enclosing type...
+    //
+    //     ...a type DeviceToRoom--that associates a smart device with the room
+    //     it's located in--may need to have members device_id and room_name,
+    //     because id and name are ambiguous; they could refer to either the
+    //     device or the room.
+    auto& repeaters = context.name_repeaters();
+    for (size_t i = 1; i < repeaters.size(); i++) {
+        std::set<std::string> diffs;
+        std::set_difference(repeaters[i - 1].repeats.begin(), repeaters[i - 1].repeats.end(),
+                            repeaters[i].repeats.begin(), repeaters[i].repeats.end(),
+                            std::inserter(diffs, diffs.begin()));
+        if (!diffs.empty()) {
+            // If there are any differences, we have to assume they may be
+            // disambiguating, which is allowed.
+            return;
+        }
+    }
+    // If multiple name repeaters in a given context all repeat the same thing,
+    // then it's obvious they don't disambiguate anything, so add Findings for
+    // each violator.
+    for (auto& repeater : repeaters) {
+        AddRepeatedNameFinding(context, repeater);
+    }
 }
 
 static std::string to_library_id(const std::vector<std::unique_ptr<raw::Identifier>>& components) {
@@ -217,7 +272,108 @@ static std::string to_library_id(const std::vector<std::unique_ptr<raw::Identifi
 }
 
 Linter::Linter()
-    : callbacks_(LintingTreeCallbacks()) {
+    : callbacks_(LintingTreeCallbacks()),
+      permitted_library_prefixes_({
+          "fuchsia",
+          "fidl",
+          "test",
+      }),
+      stop_words_({
+          "a",
+          "about",
+          "above",
+          "after",
+          "against",
+          "all",
+          "an",
+          "and",
+          "any",
+          "are",
+          "as",
+          "at",
+          "be",
+          "because",
+          "been",
+          "before",
+          "being",
+          "below",
+          "between",
+          "both",
+          "but",
+          "by",
+          "can",
+          "did",
+          "do",
+          "does",
+          "doing",
+          "down",
+          "during",
+          "each",
+          "few",
+          "for",
+          "from",
+          "further",
+          "had",
+          "has",
+          "have",
+          "having",
+          "here",
+          "how",
+          "if",
+          "in",
+          "into",
+          "is",
+          "it",
+          "its",
+          "itself",
+          "just",
+          "more",
+          "most",
+          "no",
+          "nor",
+          "not",
+          "now",
+          "of",
+          "off",
+          "on",
+          "once",
+          "only",
+          "or",
+          "other",
+          "out",
+          "over",
+          "own",
+          "same",
+          "should",
+          "so",
+          "some",
+          "such",
+          "than",
+          "that",
+          "the",
+          "then",
+          "there",
+          "these",
+          "this",
+          "those",
+          "through",
+          "to",
+          "too",
+          "under",
+          "until",
+          "up",
+          "very",
+          "was",
+          "were",
+          "what",
+          "when",
+          "where",
+          "which",
+          "while",
+          "why",
+          "will",
+          "with",
+      }) {
 
     callbacks_.OnUsing(
         [& linter = *this,
@@ -322,8 +478,11 @@ Linter::Linter()
             std::string id = to_string(element.identifier);
             auto finding = linter.CheckCase("events", element.identifier,
                                             case_check, case_type);
-            if (finding) {
-                id = *finding->suggestion()->replacement();
+            if (finding && finding->suggestion().has_value()) {
+                auto& suggestion = finding->suggestion().value();
+                if (suggestion.replacement().has_value()) {
+                    id = suggestion.replacement().value();
+                }
             }
             if ((id.compare(0, 2, "On") != 0) || !isupper(id[2])) {
                 std::string replacement = "On" + id;
@@ -572,7 +731,7 @@ Linter::Linter()
                              case_check, case_type);
             linter.CheckRepeatedName("xunion member", element.identifier);
         });
-} // namespace linter
+}
 
 } // namespace linter
 } // namespace fidl

@@ -15,26 +15,72 @@ namespace fidl {
 
 namespace {
 
+#define ASSERT_FINDINGS(TEST) \
+    ASSERT_TRUE(test.ExpectFindings(), "Failed")
+
+#define ASSERT_NO_FINDINGS(TEST) \
+    ASSERT_TRUE(test.ExpectNoFindings(), "Failed")
+
 class LintTest {
 
 public:
+    LintTest() {}
+
+    // Creates a single Finding, clearing any existing Findings first.
+    LintTest& ClearFindings() {
+        expected_findings_.clear();
+        return *this;
+    }
+
+    // Adds a Finding to the back of the list of Findings.
+    LintTest& AddFinding(std::string check_id, std::string message,
+                         std::string violation_string = "${TEST}") {
+        assert(!source_template_.str().empty() &&
+               "source_template() must be called before AddFinding()");
+        std::string template_string = source_template_.str();
+        size_t start = template_string.find(violation_string);
+        // Note, if there are any substitution variables in the template that
+        // preceed the violation_string, the test will probably fail because the
+        // string location will probably be different after substitution.
+        assert(start != std::string::npos &&
+               "Bad test! violation_string not found in template");
+        std::string expanded_violation_string =
+            TemplateString(violation_string).Substitute(substitutions_);
+        auto source_location = library().SourceLocation(
+            start, expanded_violation_string.size());
+        expected_findings_.emplace_back(
+            source_location, check_id, message);
+        return *this;
+    }
+
+    Finding& GetLastExpectedFinding() {
+        if (expected_findings_.empty()) {
+            AddFinding(default_check_id_, default_message_);
+        }
+        return expected_findings_.back();
+    }
+
     LintTest& check_id(std::string check_id) {
-        check_id_ = check_id;
+        default_check_id_ = check_id;
         return *this;
     }
 
     LintTest& message(std::string message) {
-        message_ = message;
+        default_message_ = message;
         return *this;
     }
 
     LintTest& suggestion(std::string suggestion) {
-        suggestion_ = suggestion;
+        GetLastExpectedFinding().SetSuggestion(suggestion);
         return *this;
     }
 
     LintTest& replacement(std::string replacement) {
-        replacement_ = replacement;
+        Finding& finding = GetLastExpectedFinding();
+        assert(finding.suggestion().has_value() &&
+               "|suggestion| must be added before |replacement|");
+        auto description = finding.suggestion()->description();
+        finding.SetSuggestion(description, replacement);
         return *this;
     }
 
@@ -53,74 +99,140 @@ public:
         return substitute({{var_name, value}});
     }
 
-    bool ExpectNoFinding() {
-        ASSERT_TRUE(ValidTest(/*expect_finding=*/false), "Bad test!");
-        auto source = source_template_.Substitute(substitutions_);
-        TestLibrary library(source);
-        Findings findings;
-        bool passed = library.Lint(&findings);
-        if (!passed) {
-            auto& finding = findings.front();
-            std::string context = source;
-            context.append("\n");
-            context.append(finding.subcategory());
-            context.append("\n");
-            if (finding.source_location().data().size() > 0) {
-                // Note: Parser error (pre-lint) includes its own position
-                context.append(finding.source_location().position());
-                context.append("\n");
-            }
-            context.append(finding.message());
-            ASSERT_TRUE(passed, context.c_str());
-        }
-        return true;
+    bool ExpectNoFindings() {
+        return execute(/*expect_findings=*/false);
     }
 
-    bool ExpectOneFinding() {
-        ASSERT_TRUE(ValidTest(/*expect_finding=*/true), "Bad test!");
-        auto source = source_template_.Substitute(substitutions_);
-        auto context = source.c_str();
-
-        TestLibrary library(source);
-        Findings findings;
-        ASSERT_FALSE(library.Lint(&findings), context);
-
-        ASSERT_EQ(findings.size(), 1, context);
-        auto& finding = findings.front();
-        ASSERT_STRING_EQ(finding.subcategory(), check_id_, context);
-        ASSERT_STRING_EQ(
-            finding.source_location().position(),
-            FileLocation(source_template_.str(), "${TEST}"), context);
-        ASSERT_STRING_EQ(finding.message(), message_, context);
-        if (!suggestion_.has_value()) {
-            ASSERT_FALSE(finding.suggestion().has_value(), context);
-        } else {
-            ASSERT_TRUE(finding.suggestion().has_value(), context);
-            auto& suggestion = finding.suggestion();
-            ASSERT_STRING_EQ(suggestion->description(),
-                             suggestion_.value(), context);
-            if (!replacement_.has_value()) {
-                ASSERT_FALSE(suggestion->replacement().has_value(), context);
-            } else {
-                ASSERT_TRUE(suggestion->replacement().has_value(), context);
-                ASSERT_STRING_EQ(*suggestion->replacement(),
-                                 replacement_.value(), context);
-            }
-        }
-
-        return true;
+    bool ExpectFindings() {
+        return execute(/*expect_findings=*/true);
     }
 
 private:
-    bool ValidTest(bool expect_finding) {
-        ASSERT_FALSE(check_id_.size() == 0, "Missing check_id");
-        if (expect_finding) {
-            ASSERT_FALSE(message_.size() == 0, "Missing message");
-            ASSERT_FALSE(source_template_.str().size() == 0,
-                         "Missing source template");
+    bool execute(bool expect_findings) {
+        std::ostringstream ss;
+        ss << std::endl
+           << default_check_id_ << std::endl;
+        auto context = (ss.str() + "Bad test!");
+
+        if (expect_findings && expected_findings_.empty()) {
+            ASSERT_FALSE(default_message_.empty(), context.c_str());
+            AddFinding(default_check_id_, default_message_);
+        }
+
+        ASSERT_FALSE((!expect_findings) && (!expected_findings_.empty()),
+                     context.c_str());
+
+        ASSERT_TRUE(ValidTest(), context.c_str());
+
+        Findings findings;
+        library().Lint(&findings);
+
+        ss << library().source_file().data();
+        context = ss.str();
+
+        auto finding = findings.begin();
+        auto expected_finding = expected_findings_.begin();
+
+        while (finding != findings.end() &&
+               expected_finding != expected_findings_.end()) {
+            ASSERT_TRUE(CompareExpectedToActualFinding(*expected_finding, *finding,
+                                                       ss.str()));
+            expected_finding++;
+            finding++;
+        }
+        if (finding != findings.end()) {
+            ss << "\n\n";
+            ss << "===================" << std::endl;
+            ss << "UNEXPECTED FINDINGS:" << std::endl;
+            ss << "===================" << std::endl;
+            while (finding != findings.end()) {
+                ss << finding->source_location().position() << ": ";
+                utils::PrintFinding(ss, *finding);
+                ss << std::endl;
+                finding++;
+            }
+            ss << "===================" << std::endl;
+            context = ss.str();
+            bool has_unexpected_findings = true;
+            ASSERT_FALSE(has_unexpected_findings, context.c_str());
+        }
+        if (expected_finding != expected_findings_.end()) {
+            ss << "\n\n";
+            ss << "===========================" << std::endl;
+            ss << "EXPECTED FINDINGS NOT FOUND:" << std::endl;
+            ss << "===========================" << std::endl;
+            while (expected_finding != expected_findings_.end()) {
+                ss << expected_finding->source_location().position() << ": ";
+                utils::PrintFinding(ss, *expected_finding);
+                ss << std::endl;
+                expected_finding++;
+            }
+            ss << "===========================" << std::endl;
+            context = ss.str();
+            bool expected_findings_not_found = true;
+            ASSERT_FALSE(expected_findings_not_found, context.c_str());
+        }
+        // Delete the library. The library owns the |SourceFile| referenced by
+        // the |expected_findings_|, so delete those as well.
+        library_.reset();
+        expected_findings_.clear();
+        return true;
+    }
+
+    bool ValidTest() const {
+        ASSERT_FALSE(source_template_.str().empty(),
+                     "Missing source template");
+        if (!substitutions_.empty()) {
             ASSERT_FALSE(source_template_.Substitute(substitutions_, false) !=
                              source_template_.Substitute(substitutions_, true),
                          "Missing template substitutions");
+        }
+        if (expected_findings_.empty()) {
+            ASSERT_FALSE(default_check_id_.size() == 0,
+                         "Missing check_id");
+        } else {
+            auto& expected_finding = expected_findings_.front();
+            ASSERT_FALSE(expected_finding.subcategory().empty(),
+                         "Missing check_id");
+            ASSERT_FALSE(expected_finding.message().empty(),
+                         "Missing message");
+            ASSERT_FALSE(!expected_finding.source_location().valid(),
+                         "Missing position");
+        }
+        return true;
+    }
+
+    bool CompareExpectedToActualFinding(const Finding& expectf, const Finding& finding,
+                                        std::string test_context) const {
+        std::ostringstream ss;
+        ss << finding.source_location().position() << ": ";
+        utils::PrintFinding(ss, finding);
+        auto context = (test_context + ss.str());
+        ASSERT_STRING_EQ(expectf.subcategory(),
+                         finding.subcategory(),
+                         context.c_str());
+        ASSERT_STRING_EQ(expectf.source_location().position(),
+                         finding.source_location().position(),
+                         context.c_str());
+        ASSERT_STRING_EQ(expectf.message(),
+                         finding.message(),
+                         context.c_str());
+        ASSERT_EQ(expectf.suggestion().has_value(),
+                  finding.suggestion().has_value(),
+                  context.c_str());
+        if (finding.suggestion().has_value()) {
+            ASSERT_STRING_EQ(expectf.suggestion()->description(),
+                             finding.suggestion()->description(),
+                             context.c_str());
+            ASSERT_EQ(expectf.suggestion()->replacement().has_value(),
+                      finding.suggestion()->replacement().has_value(),
+                      context.c_str());
+            if (finding.suggestion()->replacement().has_value()) {
+                ASSERT_STRING_EQ(
+                    *expectf.suggestion()->replacement(),
+                    *finding.suggestion()->replacement(),
+                    context.c_str());
+            }
         }
         return true;
     }
@@ -142,12 +254,23 @@ private:
         return "never reached";
     }
 
-    std::string check_id_;
-    std::string message_;
-    std::optional<std::string> suggestion_;
-    std::optional<std::string> replacement_;
+    TestLibrary& library() {
+        if (!library_) {
+            assert(!source_template_.str().empty() &&
+                   "source_template() must be set before library() is called");
+            library_ = std::make_unique<TestLibrary>(
+                source_template_.Substitute(substitutions_));
+        }
+        return *library_;
+    }
+
+    std::string default_check_id_;
+    std::string default_message_;
+    Findings expected_findings_;
     TemplateString source_template_;
     Substitutions substitutions_;
+
+    std::unique_ptr<TestLibrary> library_;
 };
 
 bool constant_repeats_enclosing_type_name() {
@@ -175,13 +298,13 @@ bits ConstantContainer : uint32 {
             .source_template(named_template.second);
 
         test.substitute("TEST", "SOME_VALUE");
-        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+        ASSERT_NO_FINDINGS(test);
 
         test.substitute("TEST", "SOME_CONSTANT")
             .message(named_template.first +
                      " member names (constant) must not repeat names from the enclosing " +
                      named_template.first + " 'ConstantContainer'");
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        ASSERT_FINDINGS(test);
     }
     END_TEST;
 }
@@ -217,12 +340,12 @@ bits Uint32Bitfield : uint32 {
             .source_template(named_template.second);
 
         test.substitute("TEST", "SOME_CONST");
-        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+        ASSERT_NO_FINDINGS(test);
 
         test.substitute("TEST", "LIBRARY_REPEATER")
             .message(named_template.first +
                      " names (repeater) must not repeat names from the library 'fidl.repeater'");
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        ASSERT_FINDINGS(test);
     }
 
     END_TEST;
@@ -248,67 +371,67 @@ const uint64 ${TEST} = 1234;
 )FIDL");
 
     test.substitute("TEST", "MIN_HEIGHT");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "MAX_HEIGHT");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "NAME_MIN_LEN");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "NAME_MAX_LEN");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     // Not yet determined if the standard should be LEN or LENGTH, or both
     // test.substitute("TEST", "BYTES_LEN");
-    // ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    // ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "THRESHOLD_MIN");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "THRESHOLD_MAX");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "MINIMUM_HEIGHT")
         .suggestion("change 'MINIMUM_HEIGHT' to 'MIN_HEIGHT'")
         .replacement("MIN_HEIGHT");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     test.substitute("TEST", "MAXIMUM_HEIGHT")
         .suggestion("change 'MAXIMUM_HEIGHT' to 'MAX_HEIGHT'")
         .replacement("MAX_HEIGHT");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     test.substitute("TEST", "NAME_MINIMUM_LEN")
         .suggestion("change 'NAME_MINIMUM_LEN' to 'NAME_MIN_LEN'")
         .replacement("NAME_MIN_LEN");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     test.substitute("TEST", "NAME_MAXIMUM_LEN")
         .suggestion("change 'NAME_MAXIMUM_LEN' to 'NAME_MAX_LEN'")
         .replacement("NAME_MAX_LEN");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     // Not yet determined if the standard should be LEN or LENGTH, or both
     // test.substitute("TEST", "BYTES_LENGTH")
     //     .suggestion("change 'BYTES_LENGTH' to 'BYTES_LEN'")
     //     .replacement("BYTES_LEN");
-    // ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    // ASSERT_FINDINGS(test);
 
     test.substitute("TEST", "THRESHOLD_MINIMUM")
         .suggestion("change 'THRESHOLD_MINIMUM' to 'THRESHOLD_MIN'")
         .replacement("THRESHOLD_MIN");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     test.substitute("TEST", "THRESHOLD_MAXIMUM")
         .suggestion("change 'THRESHOLD_MAXIMUM' to 'THRESHOLD_MAX'")
         .replacement("THRESHOLD_MAX");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     test.substitute("TEST", "THRESHOLD_CAP")
         .suggestion("change 'THRESHOLD_CAP' to 'THRESHOLD_MAX'")
         .replacement("THRESHOLD_MAX");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -330,12 +453,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -380,14 +503,176 @@ xunion DeclName {
             .source_template(named_template.second);
 
         test.substitute("TEST", "some_member");
-        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+        ASSERT_NO_FINDINGS(test);
 
         test.substitute("TEST", "decl_member")
             .message(named_template.first +
                      " member names (decl) must not repeat names from the enclosing " +
                      named_template.first + " 'DeclName'");
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        ASSERT_FINDINGS(test);
     }
+
+    END_TEST;
+}
+
+bool decl_member_repeats_enclosing_type_name_but_may_disambiguate() {
+    BEGIN_TEST;
+
+    LintTest test;
+    test.check_id("name-repeats-enclosing-type-name");
+
+    test.source_template(R"FIDL(
+library fidl.repeater;
+
+struct SeasonToShirtAndPantMapEntry {
+  string season;
+  string shirt_type;
+  string pant_type;
+};
+)FIDL");
+
+    ASSERT_NO_FINDINGS(test);
+
+    test.source_template(R"FIDL(
+library fidl.repeater;
+
+struct SeasonToShirtAndPantMapEntry {
+  string season;
+  string shirt_and_pant_type;
+  bool clashes;
+};
+)FIDL");
+
+    ASSERT_NO_FINDINGS(test);
+
+    test.source_template(R"FIDL(
+library fidl.repeater;
+
+struct SeasonToShirtAndPantMapEntry {
+  string season;
+  string shirt;
+  string shirt_for_season;
+  bool clashes;
+};
+)FIDL");
+
+    ASSERT_NO_FINDINGS(test);
+
+    test.source_template(R"FIDL(
+library fidl.repeater;
+
+struct SeasonToShirtAndPantMapEntry {
+  string shirt_color;
+  string pant_color;
+  bool clashes;
+};
+)FIDL");
+
+    ASSERT_NO_FINDINGS(test);
+
+    test.source_template(R"FIDL(
+library fidl.repeater;
+
+struct ShirtAndPantColor {
+  string shirt_color;
+  string pant_color;
+  bool clashes;
+};
+)FIDL");
+
+    ASSERT_NO_FINDINGS(test);
+
+    test.source_template(R"FIDL(
+library fidl.repeater;
+
+    struct NestedKeyValue {
+        string key_key;
+        string key_value;
+        string value_key;
+        string value_value;
+    };
+)FIDL");
+
+    ASSERT_NO_FINDINGS(test);
+
+    test.source_template(R"FIDL(
+library fidl.repeater;
+
+struct ShirtAndPantSupplies {
+  string shirt_color;
+  string material;
+  string tag;
+};
+)FIDL")
+        .ClearFindings()
+        .AddFinding(
+            "name-repeats-enclosing-type-name",
+            "struct member names (shirt) must not repeat names from the enclosing struct 'ShirtAndPantSupplies'",
+            "shirt_color");
+
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(
+    library fidl.repeater;
+
+    struct ShirtAndPantSupplies {
+      string shirt_color;
+      string shirt_material;
+      string tag;
+    };
+    )FIDL")
+        .ClearFindings()
+        .AddFinding(
+            "name-repeats-enclosing-type-name",
+            "struct member names (shirt) must not repeat names from the enclosing struct 'ShirtAndPantSupplies'",
+            "shirt_color")
+        .AddFinding(
+            "name-repeats-enclosing-type-name",
+            "struct member names (shirt) must not repeat names from the enclosing struct 'ShirtAndPantSupplies'",
+            "shirt_material");
+
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(
+    library fidl.repeater;
+
+    struct ShirtAndPantSupplies {
+      string shirt_and_pant_color;
+      string material;
+      string shirt_and_pant_tag;
+    };
+    )FIDL")
+        .ClearFindings()
+        .AddFinding(
+            "name-repeats-enclosing-type-name",
+            // repeated words are in lexicographical order; "and" is removed (a stop word)
+            "struct member names (pant, shirt) must not repeat names from the enclosing struct 'ShirtAndPantSupplies'",
+            "shirt_and_pant_color")
+        .AddFinding(
+            "name-repeats-enclosing-type-name",
+            // repeated words are in lexicographical order; "and" is removed (a stop word)
+            "struct member names (pant, shirt) must not repeat names from the enclosing struct 'ShirtAndPantSupplies'",
+            "shirt_and_pant_tag");
+
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(
+library fidl.repeater;
+
+struct ShirtAndPantSupplies {
+  string shirt_and_pant_color;
+  string material;
+  string tag;
+};
+)FIDL")
+        .ClearFindings()
+        .AddFinding(
+            "name-repeats-enclosing-type-name",
+            // repeated words are in lexicographical order; "and" is removed (a stop word)
+            "struct member names (pant, shirt) must not repeat names from the enclosing struct 'ShirtAndPantSupplies'",
+            "shirt_and_pant_color");
+
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -432,13 +717,13 @@ xunion DeclName {
             .source_template(named_template.second);
 
         test.substitute("TEST", "some_member");
-        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+        ASSERT_NO_FINDINGS(test);
 
         test.substitute("TEST", "library_repeater")
             .message(named_template.first +
                      " member names (repeater) must not repeat names from the library "
                      "'fidl.repeater'");
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        ASSERT_FINDINGS(test);
     }
 
     END_TEST;
@@ -510,11 +795,11 @@ xunion ${TEST} {
             .source_template(named_template.second);
 
         test.substitute("TEST", "UrlLoader");
-        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+        ASSERT_NO_FINDINGS(test);
 
         test.substitute("TEST", "LibraryRepeater")
             .message(named_template.first + " names (repeater) must not repeat names from the library 'fidl.repeater'");
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        ASSERT_FINDINGS(test);
     }
 
     END_TEST;
@@ -539,12 +824,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -561,22 +846,22 @@ library fidl.${TEST};
 )FIDL");
 
     test.substitute("TEST", "display");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     // Bad test: zx<word>
     test.substitute("TEST", "zxsocket");
     // no suggestion
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     // Bad test: f<letter>l
     test.substitute("TEST", "ful");
     // no suggestion
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     // Bad test: banned words like "common"
     test.substitute("TEST", "common");
     // no suggestion
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -601,12 +886,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -631,12 +916,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -659,12 +944,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -690,12 +975,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -715,17 +1000,17 @@ protocol TestProtocol {
 )FIDL");
 
     test.substitute("TEST", "OnPress");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "Press")
         .suggestion("change 'Press' to 'OnPress'")
         .replacement("OnPress");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     test.substitute("TEST", "OntologyUpdate")
         .suggestion("change 'OntologyUpdate' to 'OnOntologyUpdate'")
         .replacement("OnOntologyUpdate");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -756,12 +1041,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -790,12 +1075,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -817,12 +1102,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -844,12 +1129,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -874,12 +1159,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -904,12 +1189,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -946,17 +1231,17 @@ bits Uint32Bitfield : uint32 {
             .source_template(named_template.second);
 
         test.substitute("TEST", "SOME_CONST");
-        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+        ASSERT_NO_FINDINGS(test);
 
         test.substitute("TEST", "some_CONST")
             .suggestion("change 'some_CONST' to 'SOME_CONST'")
             .replacement("SOME_CONST");
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        ASSERT_FINDINGS(test);
 
         test.substitute("TEST", "kSomeConst")
             .suggestion("change 'kSomeConst' to 'SOME_CONST'")
             .replacement("SOME_CONST");
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        ASSERT_FINDINGS(test);
     }
 
     END_TEST;
@@ -1010,12 +1295,12 @@ xunion DeclName {
             .source_template(named_template.second);
 
         test.substitute("TEST", "agent_request_count");
-        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+        ASSERT_NO_FINDINGS(test);
 
         test.substitute("TEST", "agentRequestCount")
             .suggestion("change 'agentRequestCount' to 'agent_request_count'")
             .replacement("agent_request_count");
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        ASSERT_FINDINGS(test);
     }
 
     END_TEST;
@@ -1088,12 +1373,12 @@ xunion ${TEST} {
             .source_template(named_template.second);
 
         test.substitute("TEST", "UrlLoader");
-        ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+        ASSERT_NO_FINDINGS(test);
 
         test.substitute("TEST", "URLLoader")
             .suggestion("change 'URLLoader' to 'UrlLoader'")
             .replacement("UrlLoader");
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        ASSERT_FINDINGS(test);
     }
 
     END_TEST;
@@ -1114,12 +1399,12 @@ protocol TestProtocol {
 )FIDL");
 
     test.substitute("TEST", "OnUrlLoader");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "OnURLLoader")
         .suggestion("change 'OnURLLoader' to 'OnUrlLoader'")
         .replacement("OnUrlLoader");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1138,12 +1423,12 @@ using bar as baz;
 )FIDL");
 
     test.substitute("TEST", "what_if_someone_does_this");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "WhatIfSomeoneDoes_This")
         .suggestion("change 'WhatIfSomeoneDoes_This' to 'what_if_someone_does_this'")
         .replacement("what_if_someone_does_this");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1166,12 +1451,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1194,12 +1479,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1222,12 +1507,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1246,12 +1531,12 @@ protocol TestProtocol {
 )FIDL");
 
     test.substitute("TEST", "SomeMethod");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "ProtocolMethod")
         .message("method names (protocol) must not repeat names from the enclosing protocol "
                  "'TestProtocol'");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1286,12 +1571,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1317,12 +1602,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1349,12 +1634,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1552,7 +1837,7 @@ using foo as ${TEST};
 
     for (auto word : checked_words) {
         test.substitute("TEST", word);
-        ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+        ASSERT_FINDINGS(test);
     }
 
     END_TEST;
@@ -1577,12 +1862,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1599,12 +1884,12 @@ using uint64 as ${TEST};
 )FIDL");
 
     test.substitute("TEST", "some_alias");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "library_repeater")
         .message("primitive alias names (repeater) must not repeat names from the library "
                  "'fidl.repeater'");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1628,12 +1913,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1655,12 +1940,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1684,12 +1969,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1713,12 +1998,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1736,10 +2021,10 @@ library ${TEST};
 )FIDL");
 
     test.substitute("TEST", "fidl.a");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "fuchsia.foo.bar.baz");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1763,12 +2048,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1793,12 +2078,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1823,12 +2108,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1854,12 +2139,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1885,12 +2170,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1912,12 +2197,12 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
     test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "!BAD_VALUE!")
         .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
         .replacement("!GOOD_VALUE!");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1933,18 +2218,18 @@ library ${TEST}.subcomponent;
 )FIDL");
 
     test.substitute("TEST", "fuchsia");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "fidl");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "test");
-    ASSERT_TRUE(test.ExpectNoFinding(), "Failed");
+    ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "mylibs")
         .suggestion("change 'mylibs' to fuchsia, perhaps?")
         .replacement("fuchsia, perhaps?");
-    ASSERT_TRUE(test.ExpectOneFinding(), "Failed");
+    ASSERT_FINDINGS(test);
 
     END_TEST;
 }
@@ -1956,6 +2241,7 @@ RUN_TEST(constant_repeats_enclosing_type_name)
 RUN_TEST(constant_should_use_common_prefix_suffix_please_implement_me)
 RUN_TEST(copyright_notice_should_not_flow_through_please_implement_me)
 RUN_TEST(decl_member_repeats_enclosing_type_name)
+RUN_TEST(decl_member_repeats_enclosing_type_name_but_may_disambiguate)
 RUN_TEST(decl_member_repeats_library_name)
 RUN_TEST(decl_name_repeats_library_name)
 RUN_TEST(deprecation_comment_should_not_flow_through_please_implement_me)
