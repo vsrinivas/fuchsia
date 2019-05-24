@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_AV_FRAME_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_AV_FRAME_H_
 
+#include <memory>
+
 extern "C" {
 #include "libavutil/frame.h"
 }

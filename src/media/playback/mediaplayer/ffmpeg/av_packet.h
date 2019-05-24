@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_AV_PACKET_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_AV_PACKET_H_
 
+#include <memory>
+
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"

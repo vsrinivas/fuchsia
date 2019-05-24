@@ -6,6 +6,7 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DEMUX_READER_H_
 
 #include <lib/fit/function.h>
+#include <zircon/types.h>
 
 #include <limits>
 #include <memory>
