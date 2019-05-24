@@ -145,18 +145,18 @@ write_file("$root_build_dir/platforms.json", target_platforms, "json")
 # through GN args are interpreted as if they were absolute.
 group("additional_base_packages") {
   testonly = true
-  visibility = [ "//build/images:monolith_packages" ]
+  visibility = [ "//build/images:base_packages" ]
   public_deps = base_package_labels + board_package_labels
 }
 
 group("additional_cache_packages") {
   testonly = true
-  visibility = [ "//build/images:preinstall_packages" ]
+  visibility = [ "//build/images:cache_packages" ]
   public_deps = cache_package_labels
 }
 
 group("additional_universe_packages") {
   testonly = true
-  visibility = [ "//build/images:available_packages" ]
+  visibility = [ "//build/images:universe_packages" ]
   public_deps = universe_package_labels
 }

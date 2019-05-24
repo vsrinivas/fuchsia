@@ -31,7 +31,7 @@ function main {
     exit 0
   fi
 
-  local all_pkgs=($("${FUCHSIA_DIR}/scripts/list-available-packages.py" --build-dir "${FUCHSIA_BUILD_DIR}"))
+  local all_pkgs=($("${FUCHSIA_DIR}/tools/devshell/lib/list-universe-packages.py" --build-dir "${FUCHSIA_BUILD_DIR}"))
 
   # pkgs is the last argument
   local pkgs=()

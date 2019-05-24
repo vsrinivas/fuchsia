@@ -105,7 +105,7 @@ group("meta_packages") {
   public_deps = meta_package_labels
 }
 
-group("monolith_packages") {
+group("base_packages") {
   testonly = true
   visibility = [ ":*" ]
   public_deps = [
@@ -113,7 +113,7 @@ group("monolith_packages") {
   ]
 }
 
-group("preinstall_packages") {
+group("cache_packages") {
   testonly = true
   visibility = [ ":*" ]
   public_deps = [
@@ -121,12 +121,12 @@ group("preinstall_packages") {
   ]
 }
 
-group("available_packages") {
+group("universe_packages") {
   testonly = true
   visibility = [ ":*" ]
   public_deps = [
-    ":monolith_packages",
-    ":preinstall_packages",
+    ":base_packages",
+    ":cache_packages",
     "//:additional_universe_packages",
   ]
 }
@@ -134,7 +134,7 @@ group("available_packages") {
 group("packages") {
   testonly = true
   public_deps = [
-    ":available_packages",
+    ":universe_packages",
     ":meta_packages",
   ]
 
@@ -164,25 +164,25 @@ template("package_list") {
   }
 }
 
-package_list("monolith_packages.list") {
+package_list("base_packages.list") {
   visibility = [ ":*" ]
   deps = [
     ":meta_packages",
-    ":monolith_packages",
+    ":base_packages",
   ]
 }
 
-package_list("preinstall_packages.list") {
+package_list("cache_packages.list") {
   visibility = [ ":*" ]
   deps = [
-    ":preinstall_packages",
+    ":cache_packages",
   ]
 }
 
-package_list("available_packages.list") {
+package_list("universe_packages.list") {
   visibility = [ ":*" ]
   deps = [
-    ":available_packages",
+    ":universe_packages",
   ]
 }
 
@@ -191,9 +191,9 @@ group("package_lists") {
   visibility = [ ":*" ]
 
   deps = [
-    ":available_packages.list",
-    ":monolith_packages.list",
-    ":preinstall_packages.list",
+    ":universe_packages.list",
+    ":base_packages.list",
+    ":cache_packages.list",
     ":all_package_manifests.list",
   ]
 }
@@ -202,7 +202,7 @@ config_package("config-data") {
   testonly = true
   visibility = [ ":*" ]
   deps = [
-    ":available_packages",
+    ":universe_packages",
   ]
 }
 
@@ -210,7 +210,7 @@ shell_commands("shell-commands") {
   testonly = true
   visibility = [ ":*" ]
   deps = [
-    ":available_packages",
+    ":universe_packages",
   ]
 }
 
@@ -252,7 +252,7 @@ package_metadata_list("monolith_meta_far_merkle_index") {
   data_keys = [ "meta_far_merkle_index_entries" ]
   deps = [
     ":meta_packages",
-    ":monolith_packages",
+    ":base_packages",
   ]
 }
 
@@ -292,7 +292,7 @@ package_metadata_list("preinstall_meta_far_merkle_index") {
   ]
   data_keys = [ "meta_far_merkle_index_entries" ]
   deps = [
-    ":preinstall_packages",
+    ":cache_packages",
     ":update.meta",
   ]
 }
@@ -341,7 +341,7 @@ generated_file(system_image_manifest_args) {
   walk_keys = [ "package_barrier" ]
   deps = [
     ":meta_packages",
-    ":monolith_packages",
+    ":base_packages",
   ]
 }
 
@@ -411,8 +411,8 @@ collect_blob_manifest("blob.manifest") {
   ]
   deps = [
     ":meta_packages",
-    ":monolith_packages",
-    ":preinstall_packages",
+    ":base_packages",
+    ":cache_packages",
     ":system_image.meta",
     ":update.meta",
     pkgfs_package_label,
@@ -1311,7 +1311,7 @@ package_metadata_list("update_meta_far_merkle_index") {
   data_keys = [ "meta_far_merkle_index_entries" ]
   deps = [
     ":meta_packages",
-    ":monolith_packages",
+    ":base_packages",
     ":system_image.meta",
   ]
 }
@@ -1466,7 +1466,7 @@ package_metadata_list("all_package_manifests.list") {
   ]
 }
 
-# The component index is the index of components in all available packages.
+# The component index is the index of components in all universe packages.
 component_index_metadata = "$target_out_dir/component_index_metadata"
 component_index_metadata_list("component_index_metadata") {
   visibility = [ "//src/sys/component_index:*" ]
@@ -1478,13 +1478,13 @@ component_index_metadata_list("component_index_metadata") {
   ]
 
   deps = [
-    ":available_packages",
+    ":universe_packages",
   ]
 }
 
-# The system index is the index of all available packages, naming each blobs.json
-# file instead of its merkleroot, and including a tag of the package set the
-# package is a part of (monolith/preinstall/available). Additionally the
+# The system index is the index of all universe packages, naming each
+# blobs.json file instead of its merkleroot, and including a tag of the package
+# set the package is a part of (base/cache/universe). Additionally the
 # system_index has the system package itself, and the system update package.
 system_index = "$target_out_dir/system_index"
 
@@ -1493,7 +1493,7 @@ tagged_snapshot_manifests = [
     tag = "monolith"
     deps = [
       ":meta_packages",
-      ":monolith_packages",
+      ":base_packages",
       ":system_image.meta",
       ":update.meta",
     ]
@@ -1501,13 +1501,13 @@ tagged_snapshot_manifests = [
   {
     tag = "preinstall"
     deps = [
-      ":preinstall_packages",
+      ":cache_packages",
     ]
   },
   {
     tag = "available"
     deps = [
-      ":available_packages",
+      ":universe_packages",
     ]
   },
 ]
@@ -1629,7 +1629,7 @@ generated_file("package-build-id-files.list") {
   ]
 
   deps = [
-    ":available_packages",
+    ":universe_packages",
   ]
 }
 

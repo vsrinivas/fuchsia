@@ -26,7 +26,7 @@ function main {
 
   check-for-amber-server || return -1
 
-  for pkg in $(cat "${FUCHSIA_BUILD_DIR}/preinstall_packages.list"); do
+  for pkg in $(cat "${FUCHSIA_BUILD_DIR}/cache_packages.list"); do
     fx-command-run shell amberctl get_up -n "${pkg}" -v 0
   done
   fx-command-run ota

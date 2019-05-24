@@ -48,7 +48,7 @@ declare_args() {
 #
 #       meta_far_merkle_index_entries
 #         The metafar merkle index entries are aggregated in image builds to
-#         produce package server indices for monolith serving.
+#         produce package server indices for base serving.
 #
 #       package_output_manifests
 #         The path of each output manifest for each package.

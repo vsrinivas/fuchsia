@@ -9,23 +9,23 @@ import sys
 import json
 
 def main():
-    parser = argparse.ArgumentParser(description=("List all targets in the pushable available set"))
+    parser = argparse.ArgumentParser(description=("List all targets in the pushable universe set"))
     parser.add_argument('--build-dir', action='store', required=True)
 
     args = parser.parse_args()
-    with open(os.path.join(args.build_dir, "available_packages.list")) as f:
+    with open(os.path.join(args.build_dir, "universe_packages.list")) as f:
       data = f.read()
 
-    available_build_packages = set(data.split('\n'))
+    universe_build_packages = set(data.split('\n'))
 
     with open(os.path.join(args.build_dir, "amber-files", "repository", "targets.json")) as f:
       data = json.load(f)
 
     published_packages = set([s.split('/')[1] for s in data['signed']['targets'].keys()])
 
-    available_packages = published_packages & available_build_packages
+    universe_packages = published_packages & universe_build_packages
 
-    for tgt in available_packages:
+    for tgt in universe_packages:
       print(tgt)
 
 if __name__ == '__main__':

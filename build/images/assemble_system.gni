@@ -12,7 +12,7 @@ import("//garnet/build/pkgfs.gni")
 
 # Assembles a Fuchsia system.
 #
-# Given base, cache, and available packages, assembles a Fuchsia system
+# Given base, cache, and universe packages, assembles a Fuchsia system
 # containing those packages.
 #
 # This template can be instantiated at most one in a given BUILD.gn file.
