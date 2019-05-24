@@ -63,12 +63,10 @@ class Service {
       exit(1);
     }
 
-    FXL_CHECK(zx::job::create(*zx::unowned<zx::job>(zx::job::default_job()), 0,
-                              &job_) == ZX_OK);
     std::string job_name = fxl::StringPrintf("tcp:%d", port);
-    FXL_CHECK(job_.set_property(ZX_PROP_NAME, job_name.data(),
-                                job_name.size()) == ZX_OK);
-    FXL_CHECK(job_.replace(kChildJobRights, &job_) == ZX_OK);
+    if (ChildJob(*zx::job::default_job(), job_name, &job_) != ZX_OK) {
+      exit(1);
+    }
 
     Wait();
   }
@@ -76,12 +74,36 @@ class Service {
   ~Service() {
     for (auto iter = process_waiters_.begin(); iter != process_waiters_.end();
          iter++) {
-      FXL_CHECK(zx_task_kill(iter->get()->object()) == ZX_OK);
-      FXL_CHECK(zx_handle_close(iter->get()->object()) == ZX_OK);
+      zx_status_t s;
+      if ((s = zx_task_kill(iter->get()->object())) != ZX_OK) {
+        FXL_PLOG(ERROR, s) << "Failed kill child task";
+      }
+      if ((s = zx_handle_close(iter->get()->object())) != ZX_OK) {
+        FXL_PLOG(ERROR, s) << "Failed close child handle";
+      }
     }
   }
 
  private:
+  zx_status_t ChildJob(const zx::job& parent, std::string name, zx::job* job) {
+    zx_status_t s;
+    if ((s = zx::job::create(parent, 0, job)) != ZX_OK) {
+      FXL_PLOG(ERROR, s) << "Failed to create child job";
+      return s;
+    }
+
+    if ((s = job->set_property(ZX_PROP_NAME, name.data(), name.size())) != ZX_OK) {
+      FXL_PLOG(ERROR, s) << "Failed to set name of child job";
+      return s;
+    }
+    if ((s = job->replace(kChildJobRights, &job_)) != ZX_OK) {
+      FXL_PLOG(ERROR, s) << "Failed to set rights on child job";
+      return s;
+    }
+
+    return ZX_OK;
+  }
+
   void Wait() {
     waiter_.Wait(
         [this](zx_status_t success, uint32_t events) {
@@ -117,10 +139,13 @@ class Service {
   void Launch(int conn, const std::string& peer_name) {
     // Create a new job to run the child in.
     zx::job child_job;
-    FXL_CHECK(zx::job::create(job_, 0, &child_job) == ZX_OK);
-    FXL_CHECK(child_job.set_property(ZX_PROP_NAME, peer_name.data(),
-                                     peer_name.size()) == ZX_OK);
-    FXL_CHECK(child_job.replace(kChildJobRights, &child_job) == ZX_OK);
+
+    if (ChildJob(job_, peer_name, &child_job) != ZX_OK) {
+      shutdown(conn, SHUT_RDWR);
+      close(conn);
+      FXL_LOG(ERROR) << "Child job creation failed, connection closed";
+      return;
+    }
 
     // Launch process with chrealm so that it gets /svc of sys realm
     const std::vector<fdio_spawn_action_t> actions{
@@ -159,9 +184,15 @@ class Service {
   }
 
   void ProcessTerminated(zx::process process, zx::job job) {
+    zx_status_t s;
+
     // Kill the process and the job.
-    FXL_CHECK(process.kill() == ZX_OK);
-    FXL_CHECK(job.kill() == ZX_OK);
+    if ((s = process.kill()) != ZX_OK) {
+      FXL_PLOG(ERROR, s) << "Failed to kill child process";
+    }
+    if ((s = job.kill()) != ZX_OK) {
+      FXL_PLOG(ERROR, s) << "Failed to kill child job";
+    }
 
     // Find the waiter.
     auto i = std::find_if(process_waiters_.begin(), process_waiters_.end(),
