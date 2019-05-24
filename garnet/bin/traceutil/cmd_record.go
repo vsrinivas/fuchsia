@@ -201,6 +201,8 @@ func (cmd *cmdRecord) SetFlags(f *flag.FlagSet) {
 
 func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	_ ...interface{}) subcommands.ExitStatus {
+	checkBuildConfiguration()
+
 	// Flag errors in report type early.
 	reportGenerator := builtinReports[cmd.reportType]
 	generatorPath := ""
