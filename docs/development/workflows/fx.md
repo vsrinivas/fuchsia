@@ -96,43 +96,41 @@ directory (which is `out/default` by default). You can edit this file using the
   [Paving](#what-is-paving) images.
 
 So what are `base`, `cache` and `universe`? (new names)
-So what are `monolith`, `preinstall` and `available`? (deprecated names)
 
 Configurations ultimately specify dependencies (mostly packages) that
 contribute to output artifacts of the build (mostly images and package
 repositories). The build is parameterized to determine which dependencies
 (mostly packages) are added to which output artifacts (images or package
-repositories). The three axes are called "base", "cache", and "universe"
-(previously called "monolith", "preinstall", and "available"):
+repositories). The three axes are called "base", "cache", and "universe":
 
-* *Base* (*Monolith*): Packages that are added to the monolith are included in
-  [Paving](#what-is-paving) images produced by the build. They are included
-  in over-the-air updates, and are always updated as a single unit. Packages
-  in the monolith can not be evicted from a device at runtime - they encode
-  the minimum possible size of a configuration.
-* *Cache* (*Preinstall*): Packages in preinstall are included in
+* *Base*: Packages that are added to base are included in
+  [Paving](#what-is-paving) images produced by the build. They are included in
+  over-the-air updates, and are always updated as a single unit. Packages in
+  base can not be evicted from a device at runtime - they encode the
+  minimum possible size of a configuration.
+* *Cache*: Packages in cache are included in
   [Paving](#what-is-paving) images, but they are not included in over-the-air
-  system updates, and are allowed to be evicted from the system in response
-  to resource demands, such as disk-space pressure. Packages in preinstall
-  can be updated at any time that updates are available, and each of
-  these packages may be updated independently. This is software that is
-  "optional", but is good to have available instantly "out of the box".
-* *Universe* (*Available*): Packages in available are additional optional
-  packages that can be fetched and run on-demand, but are not pre-baked into
-  any [Paving](#what-is-paving) images.
+  system updates, and are allowed to be evicted from the system in response to
+  resource demands, such as disk-space pressure. Packages in cache can be
+  updated at any time that updates are available, and each of these packages
+  may be updated independently. This is software that is "optional", but is
+  good to have available instantly "out of the box".
+* *Universe*: Packages in universe are additional optional packages that can be
+  fetched and run on-demand, but are not pre-baked into any
+  [Paving](#what-is-paving) images.
 
 The "board" and "product" configurations pick a predefined set of members for
 each of these package sets. Most commonly the board configurations specify a
-set of boot-critical drivers to add to the monolith package set, and could
+set of boot-critical drivers to add to the base dependency set, and could
 for example include some optional but common peripheral drivers in the
-preinstall set. The board configuration may also include some board-specific
+cache set. The board configuration may also include some board-specific
 development tools (more commonly host tools, rather than target packages) for
-interacting with the board in "available". The product configurations make
-choices to add more or less software to the monolith, preinstall or available
+interacting with the board in "universe". The product configurations make
+choices to add more or less software to the base, cace or universe
 package sets based on the definition and feature set of the product they
 represent. A speaker product, for example, adds many audio-media-related
-packages to the monolith. A workstation product adds a wide range of GUI,
-media and many other packages to the monolith.
+packages to the base. A workstation product adds a wide range of GUI,
+media and many other packages to the base.
 
 ### Key product configurations
 
@@ -147,7 +145,7 @@ important configurations to be familiar with:
   and configurations. It lacks most network capabilities, and therefore is
   not able to add new software at runtime or upgrade itself.
 * `core` is a minimal feature set that can install additional software (such as
-  items added to the "available" build group). It is the starting point for
+  items added to the "universe" dependency set). It is the starting point for
   all higher-level product configurations. It has common network capabilities
   and can update a system over-the-air.
 * `workstation` is a basis for a general purpose development environment, good
@@ -293,15 +291,15 @@ repository server as a source of dynamic packages and system updates.
 As described in prior sections, there are different groups of software on a
 Fuchsia device:
 
-* Software that is part of the core system "monolith", that is updated in a
+* Software that is part of the core system "base", that is updated in a
   single transaction.
-* Software that is part of Zedboot images other than the monolith (preinstall)
+* Software that is part of Zedboot images other than base (cache)
   that can be updated ephemerally.
 * Software that is always ephemeral.
 
 For new user development workflows, the most general command to assist with
 updating a target device is `fx update`. The `fx update` command first
-updates all "preinstall" software, and then performs an `fx ota` or, a core
+updates all "cache" software, and then performs an `fx ota` or, a core
 system update. This command reboots the target device when it is complete.
 The end result of this process should be indistinguishable in terms of
 software versions from performing a fresh pave of a device.
@@ -316,8 +314,8 @@ automatic update features. The repository informs the target device of newly
 updated software every time the underlying repository is updated (which
 happens at the end of every successful `fx build`). For many software
 components, the easiest way to update them during development is to ensure
-that they are not included in the monolith set, but instead included in
-either "preinstall" or "available". In that case, simply restarting the
+that they are not included in the base set, but instead included in
+either "cache" or "universe". In that case, simply restarting the
 software on the target (e.g. by closing it completely, or by invoking
 `killall`) will result in the software being immediately updated when it is
 started again.
