@@ -6,7 +6,7 @@ use {
     failure::{err_msg, Error, ResultExt},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fuchsia_async as fasync,
-    fuchsia_bluetooth::{fake_hci::FakeHciDevice, hci, host},
+    fuchsia_bluetooth::{hci, hci_emulator::Emulator, host},
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
     futures::{Stream, StreamExt, TryStreamExt},
     pin_utils::pin_mut,
@@ -59,7 +59,7 @@ async fn watch_for_host(original_hosts: Vec<PathBuf>) -> Result<PathBuf, Error> 
 // Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
 pub async fn lifecycle_test(_: ()) -> Result<(), Error> {
     let original_hosts = host::list_host_devices();
-    let fake_hci = FakeHciDevice::new("bt-hci-integration-lifecycle")?;
+    let fake_hci = await!(Emulator::new("bt-hci-integration-lifecycle"))?;
     let bthost = await!(watch_for_host(original_hosts))?;
 
     // Check a device showed up within an acceptable timeout

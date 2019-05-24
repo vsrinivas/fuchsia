@@ -12,10 +12,10 @@ pub mod assigned_numbers;
 pub mod error;
 /// Tools for writing asynchronous expectations in tests
 pub mod expectation;
-/// Fake bt-hci device API
-pub mod fake_hci;
 /// Bluetooth HCI device utilities.
 pub mod hci;
+/// Utility for interacting with the bt-hci-emulator driver
+pub mod hci_emulator;
 /// Bluetooth host API
 pub mod host;
 /// Bluetooth LowEnergy types
