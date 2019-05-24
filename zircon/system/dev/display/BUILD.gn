@@ -10,6 +10,7 @@ group("display") {
     "dsi-dw",
     "dsi-mt",
     "dummy",
+    "goldfish-display",
     "hikey-display",
     "led2472g",
     "mt8167s-display",
