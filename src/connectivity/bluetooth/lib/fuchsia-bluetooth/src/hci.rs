@@ -21,9 +21,6 @@ use {
 pub const DEV_TEST: &str = CONTROL_DEVICE;
 pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bt-hci-fake.so";
 
-// TODO(BT-229): Remove this function and all of its helpers from this file once the bt-fake-hci
-// tool uses hci_emulator::Emulator from this library.
-
 // Returns the name of the fake device and a File representing the device on success.
 pub fn create_and_bind_device(name: &str) -> Result<(File, String), Error> {
     if name.len() > (MAX_DEVICE_NAME_LEN as usize) {
@@ -48,7 +45,7 @@ pub fn create_and_bind_device(name: &str) -> Result<(File, String), Error> {
     Ok((dev, name.to_string()))
 }
 
-fn create_fake_device(test_path: &str, dev_name: &str) -> Result<String, Error> {
+pub fn create_fake_device(test_path: &str, dev_name: &str) -> Result<String, Error> {
     let test_dev = open_rdwr(test_path)?;
     let channel = fdio::clone_channel(&test_dev)?;
     let mut interface = RootDeviceSynchronousProxy::new(channel);
@@ -58,7 +55,7 @@ fn create_fake_device(test_path: &str, dev_name: &str) -> Result<String, Error> 
     devpath.ok_or(format_err!("RootDevice.CreateDevice received no devpath?"))
 }
 
-fn bind_fake_device(device: &File) -> Result<(), Error> {
+pub fn bind_fake_device(device: &File) -> Result<(), Error> {
     let channel = fdio::clone_channel(device)?;
     let mut interface = ControllerSynchronousProxy::new(channel);
     let status = interface.bind(BTHCI_DRIVER_NAME, zx::Time::INFINITE)?;

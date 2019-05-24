@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_bluetooth::{
-        error::Error as BtError, expectation::Predicate, hci, hci_emulator::Emulator, host,
+        error::Error as BtError, expectation::Predicate, fake_hci::FakeHciDevice, hci, host,
         util::clone_host_state,
     },
     fuchsia_vfs_watcher::{WatchEvent as VfsWatchEvent, Watcher as VfsWatcher},
@@ -33,7 +33,7 @@ pub struct HostDriverHarness(Arc<RwLock<HostDriverHarnessInner>>);
 
 struct HostDriverHarnessInner {
     // Fake bt-hci device.
-    hci_emulator: Option<Emulator>,
+    fake_hci_dev: Option<FakeHciDevice>,
 
     // Access to the bt-host device under test.
     host_path: String,
@@ -90,13 +90,13 @@ impl HostDriverHarness {
 
 impl HostDriverHarnessInner {
     fn new(
-        hci: Emulator,
+        hci: FakeHciDevice,
         host_path: String,
         host: HostProxy,
         info: AdapterInfo,
     ) -> HostDriverHarness {
         HostDriverHarness(Arc::new(RwLock::new(HostDriverHarnessInner {
-            hci_emulator: Some(hci),
+            fake_hci_dev: Some(hci),
             host_path: host_path,
             host_proxy: host,
             host_info: info,
@@ -131,7 +131,7 @@ impl HostDriverHarnessInner {
     }
 
     fn close_fake_hci(&mut self) {
-        self.hci_emulator = None;
+        self.fake_hci_dev = None;
     }
 
     fn store_task(&mut self, task: task::Waker) -> usize {
@@ -387,7 +387,7 @@ async fn wait_for_host_removal(watcher: VfsWatcher, path: String) -> Result<(), 
 
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
 async fn setup_emulated_host_test() -> Result<HostDriverHarness, Error> {
-    let fake_hci = await!(Emulator::new("bt-hci-integration-test-0"))?;
+    let fake_hci = FakeHciDevice::new("bt-hci-integration-test-0")?;
     let fake_hci_topo_path = fdio::device_get_topo_path(fake_hci.file())?;
 
     let dir = File::open(&BT_HOST_DIR)?;

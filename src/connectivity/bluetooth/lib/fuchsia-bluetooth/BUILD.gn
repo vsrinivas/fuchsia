@@ -13,20 +13,15 @@ rustc_library("fuchsia-bluetooth") {
   edition = "2018"
   with_unit_tests = true
 
-  # TODO(armansito): Split out testing code into a separate library and move
-  # test-specific dependencies out.
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//sdk/fidl/fuchsia.bluetooth.host:fuchsia.bluetooth.host-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",
@@ -43,11 +38,6 @@ test_package("tests") {
 
   deps = [
     ":fuchsia-bluetooth",
-
-    # TODO(armansito): The bt-fake-hci driver is a runtime dependency of the test utilities
-    # contained within the crate. We should separate them out into a testing library have that
-    # depend on this driver.
-    "//src/connectivity/bluetooth/hci/fake",
   ]
 
   tests = [

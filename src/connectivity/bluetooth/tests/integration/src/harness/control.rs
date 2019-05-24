@@ -11,7 +11,7 @@ use {
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectableStateExt, ExpectationHarness},
         expectation::Predicate,
-        hci_emulator::Emulator,
+        fake_hci::FakeHciDevice,
         util::{clone_host_info, clone_remote_device},
     },
     fuchsia_zircon::{Duration, DurationNum},
@@ -153,7 +153,7 @@ pub mod control_expectation {
 pub struct ActivatedFakeHost {
     control: ControlHarness,
     host: String,
-    hci: Option<Emulator>,
+    hci: Option<FakeHciDevice>,
 }
 
 // All Fake HCI Devices have this address
@@ -165,7 +165,7 @@ impl ActivatedFakeHost {
         let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
         let initial_hosts_ = initial_hosts.clone();
 
-        let hci = await!(Emulator::new(name))?;
+        let hci = FakeHciDevice::new(name)?;
 
         let control_state = await!(control.when_satisfied(
             Predicate::<ControlState>::new(

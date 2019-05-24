@@ -9,7 +9,7 @@ use {
             asynchronous::{ExpectableState, ExpectableStateExt},
             Predicate,
         },
-        hci_emulator::Emulator,
+        fake_hci::FakeHciDevice,
     },
 };
 
@@ -21,8 +21,8 @@ pub async fn set_active_host(control: ControlHarness) -> Result<(), Error> {
     let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
     let initial_hosts_ = initial_hosts.clone();
 
-    let fake_hci_0 = await!(Emulator::new("bt-hci-integration-control-0"))?;
-    let fake_hci_1 = await!(Emulator::new("bt-hci-integration-control-1"))?;
+    let fake_hci_0 = FakeHciDevice::new("bt-hci-integration-control-0")?;
+    let fake_hci_1 = FakeHciDevice::new("bt-hci-integration-control-1")?;
 
     let state = await!(control.when_satisfied(
         Predicate::<ControlState>::new(
