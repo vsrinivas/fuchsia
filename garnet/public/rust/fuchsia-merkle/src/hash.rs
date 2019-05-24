@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use crate::util::HASH_SIZE;
-use failure::{format_err, Error};
-use hex::ToHex;
+use failure::Fail;
+use hex::{FromHex, FromHexError, ToHex};
 use std::fmt;
 use std::str;
 
 /// A SHA-256 hash.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Hash([u8; HASH_SIZE]);
 
 impl Hash {
@@ -20,16 +20,10 @@ impl Hash {
 }
 
 impl str::FromStr for Hash {
-    type Err = Error;
+    type Err = ParseHashError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let bytes = hex::decode(s)?;
-        if bytes.len() != HASH_SIZE {
-            return Err(format_err!("expected {} hex bytes, got {}", HASH_SIZE, bytes.len()));
-        }
-        let mut res: [u8; HASH_SIZE] = [0; HASH_SIZE];
-        res.copy_from_slice(&bytes[..]);
-        Ok(Hash(res))
+        Ok(Self(FromHex::from_hex(s)?))
     }
 }
 
@@ -45,19 +39,56 @@ impl fmt::Display for Hash {
     }
 }
 
+impl fmt::Debug for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("Hash").field(&self.to_string()).finish()
+    }
+}
+
+/// An error encountered while parsing a [`Hash`].
+#[derive(Copy, Clone, Debug, Fail, PartialEq)]
+pub struct ParseHashError(#[cause] FromHexError);
+
+impl fmt::Display for ParseHashError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.0 {
+            FromHexError::InvalidStringLength => {
+                write!(f, "{}, expected {} hex encoded bytes", self.0, HASH_SIZE)
+            }
+            _ => write!(f, "{}", self.0),
+        }
+    }
+}
+
+impl From<FromHexError> for ParseHashError {
+    fn from(e: FromHexError) -> Self {
+        ParseHashError(e)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proptest::{prop_assert, prop_assert_eq, proptest, proptest_helper};
+    use proptest::{prop_assert, prop_assert_eq, prop_assume, proptest, proptest_helper};
     use std::str::FromStr;
 
     proptest! {
         #[test]
-        fn test_from_str_display(
-            ref s in "[[:xdigit:]]{64}") {
+        fn test_from_str_display(ref s in "[[:xdigit:]]{64}") {
             let hash = Hash::from_str(s).unwrap();
             let display = format!("{}", hash);
             prop_assert_eq!(s.to_ascii_lowercase(), display);
+        }
+
+        #[test]
+        fn test_rejects_odd_length_strings(ref s in "[[:xdigit:]][[:xdigit:]]{2}{0,128}") {
+            prop_assert_eq!(Err(FromHexError::OddLength.into()), Hash::from_str(s));
+        }
+
+        #[test]
+        fn test_rejects_incorrect_byte_count(ref s in "[[:xdigit:]]{2}{0,128}") {
+            prop_assume!(s.len() != HASH_SIZE * 2);
+            prop_assert_eq!(Err(FromHexError::InvalidStringLength.into()), Hash::from_str(s));
         }
     }
 }
