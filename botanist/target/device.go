@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"time"
@@ -17,10 +16,8 @@ import (
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/botanist/power"
 	"fuchsia.googlesource.com/tools/build"
-	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/netutil"
-	"fuchsia.googlesource.com/tools/serial"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -74,7 +71,7 @@ type DeviceTarget struct {
 	config  DeviceConfig
 	opts    Options
 	signers []ssh.Signer
-	serial  io.ReadWriteCloser
+	serial  *botanist.SerialDevice
 }
 
 // NewDeviceTarget returns a new device target with a given configuration.
@@ -88,14 +85,11 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 	if err != nil {
 		return nil, fmt.Errorf("could not parse out signers from private keys: %v", err)
 	}
-	var s io.ReadWriteCloser
+	var s *botanist.SerialDevice
 	if config.Serial != "" {
-		s, err = serial.Open(config.Serial)
+		s, err = botanist.NewSerialDevice(ctx, config.Serial)
 		if err != nil {
-			// TODO(IN-????): This should be returned as an error, but we don't want to fail any
-			// test runs for misconfigured serial until it is actually required to complete certain
-			// tasks.
-			logger.Errorf(ctx, "unable to open %s: %v", config.Serial, err)
+			return nil, err
 		}
 	}
 	return &DeviceTarget{
@@ -121,7 +115,7 @@ func (t *DeviceTarget) IPv4Addr() (net.IP, error) {
 }
 
 // Serial returns the serial device associated with the target for serial i/o.
-func (t *DeviceTarget) Serial() io.ReadWriteCloser {
+func (t *DeviceTarget) Serial() *botanist.SerialDevice {
 	return t.serial
 }
 

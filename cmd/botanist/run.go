@@ -38,7 +38,7 @@ type Target interface {
 	IPv4Addr() (net.IP, error)
 
 	// Serial returns the serial device associated with the target for serial i/o.
-	Serial() io.ReadWriteCloser
+	Serial() *botanist.SerialDevice
 
 	// SSHKey returns the private key corresponding an authorized SSH key of the target.
 	SSHKey() string
@@ -200,8 +200,8 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 
 	opts := target.Options{
-		Netboot:  r.netboot,
-		SSHKey:   r.sshKey,
+		Netboot: r.netboot,
+		SSHKey:  r.sshKey,
 	}
 
 	data, err := ioutil.ReadFile(r.configFile)
@@ -253,8 +253,11 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 			go func() {
 				_, err := io.Copy(serialLog, t.Serial())
-				if err != nil {
+				if err != nil && err != context.Canceled {
 					logger.Errorf(ctx, "failed to write serial log: %v", err)
+				}
+				if err := serialLog.Sync(); err != nil {
+					logger.Errorf(ctx, "failed to fsync serial log: %v", err)
 				}
 			}()
 			r.zirconArgs = append(r.zirconArgs, "kernel.bypass-debuglog=true")
