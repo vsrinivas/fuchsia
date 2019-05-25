@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/embedded/udp_nub.h"
+
 #include <sys/socket.h>
 #include <unistd.h>
 
 namespace overnet {
 
-UdpNub::UdpNub(OvernetEmbedded* root)
-    : OvernetEmbedded::Actor(root),
-      UdpNubBase(root->timer(), root->node_id()),
+UdpNub::UdpNub(BasicOvernetEmbedded* root)
+    : BasicOvernetEmbedded::Actor(root),
+      UdpNubBase(root->endpoint()),
       endpoint_(root->endpoint()),
       timer_(root->timer()),
       reactor_(root->reactor()) {}
@@ -67,13 +68,7 @@ void UdpNub::InboundReady(const Status& status) {
   WaitForInbound();
 }
 
-Status UdpNub::CreateFD() {
-  socket_ = Socket(::socket(AF_INET6, SOCK_DGRAM, 0));
-  if (!socket_.IsValid()) {
-    return StatusFromErrno("Failed to create socket");
-  }
-  return Status::Ok();
-}
+Status UdpNub::CreateFD() { return socket_.Create(AF_INET6, SOCK_DGRAM, 0); }
 
 Status UdpNub::SetOptionSharePort() { return socket_.SetOptReusePort(true); }
 

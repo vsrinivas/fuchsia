@@ -29,8 +29,6 @@ source_set("aead_codec") {
   ]
   public_deps = [
     "//third_party/boringssl:crypto",
-  ]
-  deps = [
     ":packet_protocol",
     "//src/connectivity/overnet/lib/protocol:serialization_helpers",
   ]
@@ -87,7 +85,7 @@ source_set("packet_protocol") {
     "packet_protocol.cc",
     "packet_protocol.h",
   ]
-  deps = [
+  public_deps = [
     ":bbr",
     "//src/connectivity/overnet/lib/environment:timer",
     "//src/connectivity/overnet/lib/environment:trace",
@@ -100,6 +98,8 @@ source_set("packet_protocol") {
     "//src/connectivity/overnet/lib/vocabulary:optional",
     "//src/connectivity/overnet/lib/vocabulary:slice",
     "//src/connectivity/overnet/lib/vocabulary:status",
+    "//src/connectivity/overnet/lib/stats:link",
+    "//zircon/public/lib/fit",
   ]
 }
 

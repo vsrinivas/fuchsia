@@ -19,6 +19,8 @@ source_set("tests") {
   deps = [
     ":ack_frame_test",
     ":routable_message_test",
+    ":stream_framer_test",
+    ":unreliable_framer_test",
     ":varint_test",
   ]
 }
@@ -114,6 +116,20 @@ source_set("fidl_stream") {
   ]
 }
 
+# reliable_framer
+source_set("reliable_framer") {
+  sources = [
+    "reliable_framer.cc",
+    "reliable_framer.h",
+  ]
+  public_deps = [
+    ":stream_framer",
+  ]
+  deps = [
+    "//src/connectivity/overnet/lib/environment:trace",
+  ]
+}
+
 # routable_message
 source_set("routable_message") {
   sources = [
@@ -157,6 +173,60 @@ fuzzer("routable_message_fuzzer") {
 source_set("serialization_helpers") {
   sources = [
     "serialization_helpers.h",
+  ]
+}
+
+# stream_framer
+source_set("stream_framer") {
+  sources = [
+    "stream_framer.h",
+  ]
+  public_deps = [
+    "//src/connectivity/overnet/lib/vocabulary:optional",
+    "//src/connectivity/overnet/lib/vocabulary:slice",
+    "//src/connectivity/overnet/lib/vocabulary:status",
+    "//src/connectivity/overnet/lib/environment:trace",
+  ]
+}
+
+source_set("stream_framer_test") {
+  testonly = true
+  sources = [
+    "stream_framer_test.cc",
+  ]
+  public_deps = [
+    ":reliable_framer",
+    ":unreliable_framer",
+  ]
+  deps = [
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# unreliable_framer
+source_set("unreliable_framer") {
+  sources = [
+    "unreliable_framer.h",
+    "unreliable_framer.cc",
+  ]
+  public_deps = [
+    ":stream_framer",
+  ]
+  deps = [
+    "//third_party/zlib:zlib_static",
+  ]
+}
+
+source_set("unreliable_framer_test") {
+  testonly = true
+  sources = [
+    "unreliable_framer_test.cc",
+  ]
+  public_deps = [
+    ":unreliable_framer",
+  ]
+  deps = [
+    "//third_party/googletest:gtest",
   ]
 }
 

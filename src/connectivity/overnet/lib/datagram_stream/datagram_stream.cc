@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/datagram_stream/datagram_stream.h"
+
 #include <sstream>
 
 namespace overnet {
@@ -128,7 +129,7 @@ DatagramStream::DatagramStream(
       // TODO(ctiller): What should mss be? Hardcoding to 2048 for now.
       packet_protocol_(
           timer_, [router] { return (*router->rng())(); }, this,
-          PacketProtocol::NullCodec(), 2048) {}
+          PacketProtocol::NullCodec(), 2048, true) {}
 
 void DatagramStream::Register() {
   ScopedModule<DatagramStream> scoped_module(this);
@@ -574,6 +575,7 @@ void DatagramStream::SendOp::Push(Slice item, Callback<void> started) {
   }
   push_offset_ += chunk_length;
   Chunk chunk{chunk_start, end_byte == payload_length_, std::move(item)};
+  stream()->stream_stats_.send_chunk_push++;
   stream()->SendChunk(*this, std::move(chunk), std::move(started));
 }
 
@@ -742,6 +744,7 @@ void DatagramStream::SendNextChunk() {
                            << " message_id_length=" << (int)message_id_length;
       if (args->max_length <=
           message_id_length + varint::WireSizeFor(pending_send.chunk.offset)) {
+        stream->stream_stats_.send_chunk_cancel_packet_too_small++;
         stream->SendChunk(pending_send.state, std::move(pending_send.chunk),
                           std::move(cb));
         return ChunkAndOptState{Nothing, pending_send.state};
@@ -751,12 +754,16 @@ void DatagramStream::SendNextChunk() {
                  varint::WireSizeFor(pending_send.chunk.offset));
       uint64_t take_len =
           varint::MaximumLengthWithPrefix(args->max_length - message_id_length);
-      OVERNET_TRACE(DEBUG) << "TAKE " << take_len;
+      OVERNET_TRACE(DEBUG) << "TAKE " << take_len << " from "
+                           << pending_send.chunk.slice.length();
       if (take_len < pending_send.chunk.slice.length()) {
+        stream->stream_stats_.send_chunk_split_packet_too_small++;
         Chunk first = pending_send.chunk.TakeUntilSliceOffset(take_len);
         stream->SendChunk(pending_send.state, std::move(pending_send.chunk),
                           Callback<void>::Ignored());
         pending_send.chunk = std::move(first);
+      } else {
+        stream->stream_stats_.send_chunk_take_entire_chunk++;
       }
       return ChunkAndOptState{pending_send.chunk, pending_send.state};
     }
@@ -874,6 +881,7 @@ void DatagramStream::CompleteReliable(const Status& status, StateRef state,
   if (status.code() == StatusCode::UNAVAILABLE &&
       !state.stream()->IsClosedForSending()) {
     // Send failed, still open, and retryable: retry.
+    stream_stats_.send_chunk_nacked++;
     SendChunk(std::move(state), std::move(chunk), Callback<void>::Ignored());
   }
 }

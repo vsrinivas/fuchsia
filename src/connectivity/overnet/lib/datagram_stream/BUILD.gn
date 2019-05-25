@@ -27,13 +27,14 @@ source_set("datagram_stream") {
     "datagram_stream.cc",
     "datagram_stream.h",
   ]
-  deps = [
+  public_deps = [
     ":linearizer",
     ":receive_mode",
     "//sdk/fidl/fuchsia.overnet.protocol",
     "//src/connectivity/overnet/lib/environment:timer",
     "//src/connectivity/overnet/lib/environment:trace",
     "//src/connectivity/overnet/lib/labels:seq_num",
+    "//src/connectivity/overnet/lib/stats:stream",
     "//src/connectivity/overnet/lib/packet_protocol",
     "//src/connectivity/overnet/lib/routing:router",
     "//src/connectivity/overnet/lib/vocabulary:internal_list",
@@ -65,6 +66,7 @@ source_set("linearizer") {
   ]
   deps = [
     "//src/connectivity/overnet/lib/environment:trace",
+    "//src/connectivity/overnet/lib/stats:stream",
     "//src/connectivity/overnet/lib/vocabulary:callback",
     "//src/connectivity/overnet/lib/vocabulary:optional",
     "//src/connectivity/overnet/lib/vocabulary:slice",

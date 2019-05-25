@@ -5,7 +5,9 @@
 #pragma once
 
 #include <fuchsia/overnet/protocol/cpp/fidl.h>
+
 #include <queue>
+
 #include "garnet/public/lib/fostr/fidl/fuchsia/overnet/protocol/formatting.h"
 #include "src/connectivity/overnet/lib/datagram_stream/datagram_stream.h"
 #include "src/connectivity/overnet/lib/routing/router.h"
@@ -142,7 +144,7 @@ class RouterEndpoint : public Router {
   }
 
   void OnNodeDescriptionTableChange(uint64_t last_seen_version,
-                                    Callback<void> on_change);
+                                    StatusCallback on_change);
 
   template <class F>
   uint64_t ForEachNodeDescription(F f) {
@@ -254,7 +256,7 @@ class RouterEndpoint : public Router {
 
   std::unordered_map<NodeId, ConnectionStream> connection_streams_;
   uint64_t node_description_table_version_ = 1;
-  std::vector<Callback<void>> on_node_description_table_change_;
+  std::vector<StatusCallback> on_node_description_table_change_;
   Optional<Timeout> gossip_timer_;
   Optional<Timeout> description_timer_;
   TimeDelta gossip_interval_ = InitialGossipInterval();

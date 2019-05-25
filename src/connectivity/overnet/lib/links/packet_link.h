@@ -7,6 +7,7 @@
 #include <queue>
 
 #include "src/connectivity/overnet/lib/environment/trace.h"
+#include "src/connectivity/overnet/lib/links/packet_stuffer.h"
 #include "src/connectivity/overnet/lib/packet_protocol/packet_protocol.h"
 #include "src/connectivity/overnet/lib/routing/router.h"
 
@@ -24,13 +25,12 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
   fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override final;
   // Mark this link as inoperable
   virtual void Tombstone();
-  const LinkStats* GetStats() const override final { return &stats_; }
+  const LinkStats* GetStats() const override final { return protocol_.stats(); }
 
  private:
   void SchedulePacket();
   void SendPacket(SeqNum seq, LazySlice packet) override final;
   Status ProcessBody(TimeStamp received, Slice packet);
-  Slice BuildPacket(LazySliceArgs args);
 
   Router* const router_;
   Timer* const timer_;
@@ -38,9 +38,8 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
   const uint64_t label_;
   uint64_t metrics_version_ = 1;
   PacketProtocol protocol_;
-  Optional<MessageWithPayload> stashed_;
-  LinkStats stats_;
   bool sending_ = false;
+  bool closed_ = false;
 
   class LinkSendRequest final : public PacketProtocol::SendRequest {
    public:
@@ -56,14 +55,11 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
     bool blocking_sends_ = true;
   };
 
-  // data for a send
-  std::vector<Slice> send_slices_;
-
-  std::queue<Message> outgoing_;
-
   // Pointer to a queue that's being used to queue pending sends.
   // This queue is held on the stack within SendPacket().
   std::queue<LazySlice>* send_packet_queue_ = nullptr;
+
+  PacketStuffer packet_stuffer_;
 };
 
 }  // namespace overnet

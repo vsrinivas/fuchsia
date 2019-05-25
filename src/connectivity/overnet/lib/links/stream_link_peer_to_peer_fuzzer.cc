@@ -3,10 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/overnet/streamlinkfuzzer/cpp/fidl.h>
+
 #include <queue>
+
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/links/stream_link.h"
 #include "src/connectivity/overnet/lib/protocol/fidl.h"
+#include "src/connectivity/overnet/lib/protocol/reliable_framer.h"
+#include "src/connectivity/overnet/lib/protocol/unreliable_framer.h"
 #include "src/connectivity/overnet/lib/routing/router.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
 
@@ -14,10 +18,54 @@ using namespace overnet;
 
 namespace {
 
+const auto kDummyMutation = [](auto, auto) -> Slice { return Slice(); };
+
+class StreamMutator {
+ public:
+  StreamMutator(std::vector<fuchsia::overnet::streamlinkfuzzer::StreamMutation>
+                    mutations) {
+    for (const auto& mut : mutations) {
+      switch (mut.Which()) {
+        case fuchsia::overnet::streamlinkfuzzer::StreamMutation::Tag::kFlipBit:
+          mops_.emplace_back(
+              mut.flip_bit() / 8,
+              [bit = 1 << (mut.flip_bit() % 8)](uint8_t offset, Slice slice) {
+                return slice.MutateUnique(
+                    [offset, bit](uint8_t* p) { p[offset] ^= bit; });
+              });
+          break;
+        case fuchsia::overnet::streamlinkfuzzer::StreamMutation::Tag::Empty:
+          break;
+      }
+    }
+    std::stable_sort(mops_.begin(), mops_.end(), CompareMOpPos);
+  }
+
+  Slice Mutate(uint64_t offset, Slice incoming) {
+    for (auto it = std::lower_bound(mops_.begin(), mops_.end(),
+                                    MOp(offset, kDummyMutation), CompareMOpPos);
+         it != mops_.end() && it->first < offset + incoming.length(); ++it) {
+      incoming = it->second(it->first - offset, incoming);
+    }
+    return incoming;
+  }
+
+ private:
+  using MOp = std::pair<uint64_t, std::function<Slice(uint64_t, Slice)>>;
+  std::vector<MOp> mops_;
+
+  static bool CompareMOpPos(const MOp& a, const MOp& b) {
+    return a.first < b.first;
+  }
+};
+
 class FuzzedStreamLink final : public StreamLink {
  public:
-  FuzzedStreamLink(Router* router, NodeId peer)
-      : StreamLink(router, peer, 64, 1), timer_(router->timer()) {}
+  FuzzedStreamLink(Router* router, NodeId peer,
+                   std::unique_ptr<StreamFramer> framer, StreamMutator mutator)
+      : StreamLink(router, peer, std::move(framer), 1),
+        timer_(router->timer()),
+        mutator_(std::move(mutator)) {}
 
   bool is_busy() const { return !done_.empty(); }
 
@@ -38,11 +86,13 @@ class FuzzedStreamLink final : public StreamLink {
   void Flush(uint64_t bytes) {
     auto pending_length = pending_.length();
     if (bytes == 0) {
-    } else if (bytes >= pending_length) {
-      partner_->Process(timer_->Now(), std::move(pending_));
-    } else {
-      partner_->Process(timer_->Now(), pending_.TakeUntilOffset(bytes));
+      return;
     }
+    Slice process = mutator_.Mutate(
+        offset_, bytes >= pending_length ? std::move(pending_)
+                                         : pending_.TakeUntilOffset(bytes));
+    offset_ += process.length();
+    partner_->Process(timer_->Now(), std::move(process));
   }
 
   void set_partner(FuzzedStreamLink* partner) { partner_ = partner; }
@@ -52,6 +102,8 @@ class FuzzedStreamLink final : public StreamLink {
   Slice pending_;
   Callback<Status> done_;
   FuzzedStreamLink* partner_ = nullptr;
+  uint64_t offset_ = 0;
+  StreamMutator mutator_;
 };
 
 class FuzzedHandler final : public Router::StreamHandler {
@@ -82,13 +134,16 @@ class FuzzedHandler final : public Router::StreamHandler {
 
 class StreamLinkFuzzer {
  public:
-  StreamLinkFuzzer(bool log_stuff)
+  StreamLinkFuzzer(bool log_stuff, std::unique_ptr<StreamFramer> framer,
+                   StreamMutator mut_1_to_2, StreamMutator mut_2_to_1)
       : logging_(log_stuff ? new Logging(&timer_) : nullptr) {
-    auto link = MakeLink<FuzzedStreamLink>(&router_1_, NodeId(2));
+    auto link = MakeLink<FuzzedStreamLink>(
+        &router_1_, NodeId(2), std::move(framer), std::move(mut_1_to_2));
     link_12_ = link.get();
     router_1_.RegisterLink(std::move(link));
 
-    link = MakeLink<FuzzedStreamLink>(&router_2_, NodeId(1));
+    link = MakeLink<FuzzedStreamLink>(&router_2_, NodeId(1), std::move(framer),
+                                      std::move(mut_2_to_1));
     link_21_ = link.get();
     router_2_.RegisterLink(std::move(link));
 
@@ -218,13 +273,43 @@ class StreamLinkFuzzer {
   FuzzedHandler handler_2_;
 };
 
+struct Helpers {
+  std::unique_ptr<StreamFramer> framer;
+  StreamMutator mut_1_to_2;
+  StreamMutator mut_2_to_1;
+};
+
+Helpers MakeHelpers(
+    fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription* desc) {
+  switch (desc->Which()) {
+    case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::
+        Empty:
+      return Helpers{nullptr, StreamMutator({}), StreamMutator({})};
+    case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::
+        kReliable:
+      return Helpers{std::make_unique<ReliableFramer>(), StreamMutator({}),
+                     StreamMutator({})};
+    case fuchsia::overnet::streamlinkfuzzer::PeerToPeerLinkDescription::Tag::
+        kUnreliable:
+      return Helpers{
+          std::make_unique<UnreliableFramer>(),
+          StreamMutator(std::move(desc->unreliable().mutation_plan_1_to_2)),
+          StreamMutator(std::move(desc->unreliable().mutation_plan_2_to_1))};
+  }
+}
+
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (auto buffer = Decode<fuchsia::overnet::streamlinkfuzzer::PeerToPeerPlan>(
           Slice::FromCopiedBuffer(data, size));
       buffer.is_ok()) {
-    StreamLinkFuzzer(false).Run(std::move(*buffer));
+    if (auto helpers = MakeHelpers(&buffer->link_description); helpers.framer) {
+      StreamLinkFuzzer(false, std::move(helpers.framer),
+                       std::move(helpers.mut_1_to_2),
+                       std::move(helpers.mut_2_to_1))
+          .Run(std::move(*buffer));
+    }
   }
   return 0;
 }

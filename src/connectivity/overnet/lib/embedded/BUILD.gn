@@ -2,6 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+}
+
+source_set("tests") {
+  testonly = true
+  deps = []
+
+  if (!is_fuchsia) {
+    deps += [
+      ":stream_socket_link_test",
+    ]
+  }
+}
+
+###############################################################################
+
 source_set("host_reactor") {
   sources = [
     "host_reactor.cc",
@@ -55,10 +74,10 @@ source_set("runtime") {
   ]
 }
 
-source_set("embedded") {
+source_set("basic_embedded") {
   sources = [
-    "overnet_embedded.cc",
-    "overnet_embedded.h",
+    "basic_overnet_embedded.cc",
+    "basic_overnet_embedded.h",
   ]
   public_deps = [
     ":host_reactor",
@@ -68,13 +87,24 @@ source_set("embedded") {
   ]
 }
 
+source_set("embedded") {
+  sources = [
+    "overnet_embedded.h",
+  ]
+  public_deps = [
+    ":basic_embedded",
+    ":stream_client",
+    "//src/connectivity/overnet/lib/protocol:reliable_framer",
+  ]
+}
+
 source_set("omdp_nub") {
   sources = [
     "omdp_nub.cc",
     "omdp_nub.h",
   ]
   public_deps = [
-    ":embedded",
+    ":basic_embedded",
     ":udp_nub",
     "//src/connectivity/overnet/lib/omdp",
     "//src/connectivity/overnet/lib/vocabulary:ip_addr",
@@ -89,9 +119,71 @@ source_set("udp_nub") {
     "udp_nub.h",
   ]
   public_deps = [
-    ":embedded",
+    ":basic_embedded",
     "//src/connectivity/overnet/lib/links:packet_nub",
     "//src/connectivity/overnet/lib/vocabulary:ip_addr",
     "//src/connectivity/overnet/lib/vocabulary:socket",
+  ]
+}
+
+source_set("stream_socket_link") {
+  sources = [
+    "stream_socket_link.cc",
+    "stream_socket_link.h",
+  ]
+  deps = [
+    ":basic_embedded",
+    "//src/connectivity/overnet/lib/links:stream_link",
+    "//src/connectivity/overnet/lib/labels:node_id",
+    "//src/connectivity/overnet/lib/protocol:fidl",
+    "//src/connectivity/overnet/lib/protocol:stream_framer",
+    "//src/connectivity/overnet/lib/protocol:varint",
+    "//src/connectivity/overnet/lib/vocabulary:socket",
+  ]
+}
+
+source_set("stream_socket_link_test") {
+  testonly = true
+  sources = [
+    "stream_socket_link_test.cc",
+  ]
+  deps = [
+    "//third_party/googletest:gtest",
+    ":stream_socket_link",
+    "//src/connectivity/overnet/lib/environment:trace",
+    "//src/connectivity/overnet/lib/embedded:basic_embedded",
+    "//src/connectivity/overnet/lib/protocol:fidl",
+    "//src/connectivity/overnet/lib/protocol:reliable_framer",
+    "//src/connectivity/overnet/lib/protocol:unreliable_framer",
+    "//src/connectivity/overnet/lib/vocabulary:socket",
+    "//src/connectivity/overnet/lib/testing:flags",
+  ]
+}
+
+source_set("stream_server") {
+  sources = [
+    "stream_server.cc",
+    "stream_server.h",
+  ]
+  deps = [
+    ":basic_embedded",
+    ":stream_socket_link",
+    "//src/connectivity/overnet/lib/vocabulary:ip_addr",
+    "//src/connectivity/overnet/lib/vocabulary:socket",
+    "//src/connectivity/overnet/lib/protocol:stream_framer",
+  ]
+}
+
+source_set("stream_client") {
+  sources = [
+    "stream_client.cc",
+    "stream_client.h",
+  ]
+  deps = [
+    ":basic_embedded",
+    ":stream_socket_link",
+    "//src/connectivity/overnet/lib/vocabulary:ip_addr",
+    "//src/connectivity/overnet/lib/vocabulary:socket",
+    "//src/connectivity/overnet/lib/protocol:stream_framer",
   ]
 }

@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/endpoint/router_endpoint.h"
+
 #include <iostream>
 #include <memory>
+
 #include "garnet/public/lib/fostr/fidl/fuchsia/overnet/protocol/formatting.h"
 #include "src/connectivity/overnet/lib/protocol/coding.h"
 #include "src/connectivity/overnet/lib/protocol/fidl.h"
@@ -43,15 +45,19 @@ void RouterEndpoint::StartGossipTimer() {
 }
 
 void RouterEndpoint::SendGossipTo(NodeId target) {
-  OVERNET_TRACE(DEBUG) << node_id() << " send gossip to " << target;
   // Are we still gossiping?
   if (!gossip_timer_.get()) {
+    OVERNET_TRACE(DEBUG) << node_id() << " send gossip to " << target
+                         << " [skipped: STOPPED GOSSIPING]";
     return;
   }
   auto con = connection_streams_.find(target);
   if (con == connection_streams_.end()) {
+    OVERNET_TRACE(DEBUG) << node_id() << " send gossip to " << target
+                         << " [skipped: NO CONNECTION]";
     return;
   }
+  OVERNET_TRACE(DEBUG) << node_id() << " send gossip to " << target;
   SendGossipUpdate(con->second.proxy(), target);
 }
 
@@ -406,7 +412,7 @@ void RouterEndpoint::ConnectionStream::Stub::UpdateNodeDescription(
 }
 
 void RouterEndpoint::OnNodeDescriptionTableChange(uint64_t last_seen_version,
-                                                  Callback<void> on_change) {
+                                                  StatusCallback on_change) {
   if (last_seen_version == node_description_table_version_) {
     on_node_description_table_change_.emplace_back(std::move(on_change));
   }
@@ -416,7 +422,9 @@ void RouterEndpoint::OnNodeDescriptionTableChange(uint64_t last_seen_version,
 
 void RouterEndpoint::NewNodeDescriptionTableVersion() {
   ++node_description_table_version_;
-  std::vector<Callback<void>>().swap(on_node_description_table_change_);
+  for (auto& cb : std::move(on_node_description_table_change_)) {
+    cb(Status::Ok());
+  }
 }
 
 }  // namespace overnet

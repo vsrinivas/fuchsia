@@ -33,14 +33,18 @@ inline bool operator==(const LocalStreamId& lhs, const LocalStreamId& rhs) {
 namespace std {
 template <>
 struct hash<overnet::router_impl::LocalStreamId> {
-  size_t operator()(const overnet::router_impl::LocalStreamId& id) const { return id.Hash(); }
+  size_t operator()(const overnet::router_impl::LocalStreamId& id) const {
+    return id.Hash();
+  }
 };
 }  // namespace std
 
 namespace overnet {
 
 inline auto ForwardingPayloadFactory(Slice payload) {
-  return [payload = std::move(payload)](auto args) mutable { return std::move(payload); };
+  return [payload = std::move(payload)](auto args) mutable {
+    return std::move(payload);
+  };
 }
 
 struct Message final {
@@ -49,7 +53,8 @@ struct Message final {
   TimeStamp received;
   uint32_t mss = std::numeric_limits<uint32_t>::max();
 
-  static Message SimpleForwarder(RoutableMessage msg, Slice payload, TimeStamp received) {
+  static Message SimpleForwarder(RoutableMessage msg, Slice payload,
+                                 TimeStamp received) {
     return Message{std::move(msg), ForwardingPayloadFactory(payload), received};
   }
 };
@@ -82,7 +87,6 @@ class Router {
   };
 
   Router(Timer* timer, NodeId node_id, bool allow_non_determinism);
-
   virtual ~Router();
 
   virtual void Close(Callback<void> quiesced);
@@ -90,8 +94,10 @@ class Router {
   // Forward a message to either ourselves or a link
   void Forward(Message message);
   // Register a (locally handled) stream into this Router
-  Status RegisterStream(NodeId peer, StreamId stream_id, StreamHandler* stream_handler);
-  Status UnregisterStream(NodeId peer, StreamId stream_id, StreamHandler* stream_handler);
+  Status RegisterStream(NodeId peer, StreamId stream_id,
+                        StreamHandler* stream_handler);
+  Status UnregisterStream(NodeId peer, StreamId stream_id,
+                          StreamHandler* stream_handler);
   // Register a link to another router (usually on a different machine)
   void RegisterLink(LinkPtr<> link);
 
@@ -101,7 +107,8 @@ class Router {
 
   void UpdateRoutingTable(
       std::initializer_list<fuchsia::overnet::protocol::NodeStatus> node_status,
-      std::initializer_list<fuchsia::overnet::protocol::LinkStatus> link_status) {
+      std::initializer_list<fuchsia::overnet::protocol::LinkStatus>
+          link_status) {
     UpdateRoutingTable(std::move(node_status), std::move(link_status), false);
   }
 
@@ -115,7 +122,8 @@ class Router {
   }
 
   Optional<NodeId> SelectGossipPeer();
-  void SendGossipUpdate(fuchsia::overnet::protocol::Peer_Proxy* peer, NodeId target);
+  void SendGossipUpdate(fuchsia::overnet::protocol::Peer_Proxy* peer,
+                        NodeId target);
 
   void ApplyGossipUpdate(fuchsia::overnet::protocol::NodeStatus node_status) {
     UpdateRoutingTable({std::move(node_status)}, {}, false);
@@ -143,13 +151,16 @@ class Router {
     }
   }
 
+  uint64_t GenerateLinkLabel() { return next_link_label_++; }
+
  private:
   Timer* const timer_;
   const NodeId node_id_;
 
-  void UpdateRoutingTable(std::initializer_list<fuchsia::overnet::protocol::NodeStatus> node_status,
-                          std::initializer_list<fuchsia::overnet::protocol::LinkStatus> link_status,
-                          bool flush_old_nodes);
+  void UpdateRoutingTable(
+      std::initializer_list<fuchsia::overnet::protocol::NodeStatus> node_status,
+      std::initializer_list<fuchsia::overnet::protocol::LinkStatus> link_status,
+      bool flush_old_nodes);
   virtual void OnUnknownStream(NodeId peer, StreamId stream_id) {}
 
   void MaybeStartPollingLinkChanges();
@@ -162,7 +173,8 @@ class Router {
    public:
     StreamHolder(NodeId peer, StreamId id) : peer_(peer), stream_(id) {}
     Status SetHandler(StreamHandler* handler);
-    [[nodiscard]] bool HandleMessage(SeqNum seq, TimeStamp received, Slice payload);
+    [[nodiscard]] bool HandleMessage(SeqNum seq, TimeStamp received,
+                                     Slice payload);
     Status ClearHandler(StreamHandler* handler);
     void Close(Callback<void> quiesced) {
       if (handler_ != nullptr)
@@ -209,7 +221,8 @@ class Router {
     if (it != links_.end())
       return &it->second;
     return &links_
-                .emplace(std::piecewise_construct, std::forward_as_tuple(node_id),
+                .emplace(std::piecewise_construct,
+                         std::forward_as_tuple(node_id),
                          std::forward_as_tuple(node_id))
                 .first->second;
   }
@@ -219,9 +232,10 @@ class Router {
     if (it != streams_.end())
       return &it->second;
     return &streams_
-                .emplace(std::piecewise_construct,
-                         std::forward_as_tuple(LocalStreamId{node_id, stream_id}),
-                         std::forward_as_tuple(node_id, stream_id))
+                .emplace(
+                    std::piecewise_construct,
+                    std::forward_as_tuple(LocalStreamId{node_id, stream_id}),
+                    std::forward_as_tuple(node_id, stream_id))
                 .first->second;
   }
 
@@ -232,7 +246,8 @@ class Router {
     uint64_t target_nodes_label;
 
     bool operator==(const OwnedLabel& other) const {
-      return target_node == other.target_node && target_nodes_label == other.target_nodes_label;
+      return target_node == other.target_node &&
+             target_nodes_label == other.target_nodes_label;
     }
   };
 
@@ -253,6 +268,8 @@ class Router {
   Optional<Timeout> poll_link_changes_timeout_;
   Optional<Timeout> flush_old_nodes_timeout_;
   fuchsia::overnet::protocol::NodeStatus own_node_status_;
+
+  uint64_t next_link_label_ = 1;
 };
 
 }  // namespace overnet

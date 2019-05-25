@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "src/connectivity/overnet/lib/embedded/overnet_embedded.h"
+#include "src/connectivity/overnet/lib/embedded/basic_overnet_embedded.h"
 #include "src/connectivity/overnet/lib/links/packet_nub.h"
 #include "src/connectivity/overnet/lib/vocabulary/ip_addr.h"
 #include "src/connectivity/overnet/lib/vocabulary/socket.h"
@@ -13,17 +13,16 @@ namespace overnet {
 
 using UdpNubBase = PacketNub<IpAddr, 1500, HashIpAddr, EqIpAddr>;
 
-class UdpNub final : public OvernetEmbedded::Actor, public UdpNubBase {
+class UdpNub final : public BasicOvernetEmbedded::Actor, public UdpNubBase {
  public:
-  explicit UdpNub(OvernetEmbedded* master);
+  explicit UdpNub(BasicOvernetEmbedded* app);
   ~UdpNub();
 
+  const char* Name() const override { return "UdpNub"; }
   Status Start() override;
   uint16_t port() { return port_; }
   NodeId node_id() { return endpoint_->node_id(); }
   void SendTo(IpAddr addr, Slice slice) override;
-
-  Router* GetRouter() override { return endpoint_; }
 
   void Publish(overnet::LinkPtr<> link) override {
     NodeId node = NodeId(link->GetLinkStatus().to);

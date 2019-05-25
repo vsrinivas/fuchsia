@@ -5,7 +5,9 @@
 #pragma once
 
 #include <map>
+
 #include "src/connectivity/overnet/lib/environment/trace.h"
+#include "src/connectivity/overnet/lib/stats/stream.h"
 #include "src/connectivity/overnet/lib/vocabulary/callback.h"
 #include "src/connectivity/overnet/lib/vocabulary/optional.h"
 #include "src/connectivity/overnet/lib/vocabulary/slice.h"
@@ -15,7 +17,7 @@ namespace overnet {
 
 class Linearizer final {
  public:
-  explicit Linearizer(uint64_t max_buffer);
+  explicit Linearizer(uint64_t max_buffer, StreamStats* stats);
   ~Linearizer();
 
   // Input interface.
@@ -23,6 +25,10 @@ class Linearizer final {
   // Add a new slice to the input queue.
   // Returns true if successful, false on failure.
   [[nodiscard]] bool Push(Chunk chunk);
+
+  void UpdateMaxBuffer(uint64_t new_max_buffer) {
+    max_buffer_ = std::max(max_buffer_, new_max_buffer);
+  }
 
   // Output interface.
   void Pull(StatusOrCallback<Optional<Slice>> ready);
@@ -82,7 +88,7 @@ class Linearizer final {
   };
 #endif
 
-  const uint64_t max_buffer_;
+  uint64_t max_buffer_;
   uint64_t offset_ = 0;
   Optional<uint64_t> length_;
   std::map<uint64_t, Slice> pending_push_;
@@ -128,6 +134,7 @@ class Linearizer final {
 
   ReadMode read_mode_ = ReadMode::Idle;
   ReadData read_data_;
+  StreamStats* const stats_;
 
   void IdleToClosed(const Status& status);
   void IdleToReadSlice(StatusOrCallback<Optional<Slice>> done);

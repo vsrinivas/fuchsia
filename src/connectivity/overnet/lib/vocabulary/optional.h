@@ -5,7 +5,9 @@
 #pragma once
 
 #include <assert.h>
+
 #include <ostream>
+
 #include "src/connectivity/overnet/lib/vocabulary/manual_constructor.h"
 
 namespace overnet {
@@ -107,7 +109,8 @@ class Optional {
     assert(set_);
     return *storage_.get();
   }
-  operator bool() const { return set_; }
+  typedef bool Optional::*FakeBool;
+  operator FakeBool() const { return set_ ? &Optional::set_ : nullptr; }
   bool has_value() const { return set_; }
   T& value() {
     assert(set_);
@@ -119,6 +122,14 @@ class Optional {
   }
   T* get() { return set_ ? storage_.get() : nullptr; }
   const T* get() const { return set_ ? storage_.get() : nullptr; }
+
+  T* Force() {
+    if (!set_) {
+      set_ = true;
+      storage_.Init();
+    }
+    return get();
+  }
 
   T Take() {
     assert(set_);

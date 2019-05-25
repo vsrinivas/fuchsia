@@ -18,7 +18,6 @@ source_set("lib") {
     "packet_protocol:lib",
     "protocol:lib",
     "routing:lib",
-    "stats:lib",
     "vocabulary:lib",
   ]
 }
@@ -26,6 +25,7 @@ source_set("lib") {
 test("overnet_unittests") {
   deps = [
     "datagram_stream:tests",
+    "embedded:tests",
     "endpoint:tests",
     "environment:tests",
     "labels:tests",

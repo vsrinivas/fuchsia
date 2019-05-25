@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <queue>  // TODO(ctiller): switch to a short queue (inlined 1-2 elems, linked list)
 #include "src/connectivity/overnet/lib/datagram_stream/linearizer.h"
 #include "src/connectivity/overnet/lib/datagram_stream/receive_mode.h"
 #include "src/connectivity/overnet/lib/environment/timer.h"
@@ -12,6 +11,7 @@
 #include "src/connectivity/overnet/lib/labels/seq_num.h"
 #include "src/connectivity/overnet/lib/packet_protocol/packet_protocol.h"
 #include "src/connectivity/overnet/lib/routing/router.h"
+#include "src/connectivity/overnet/lib/stats/stream.h"
 #include "src/connectivity/overnet/lib/vocabulary/internal_list.h"
 #include "src/connectivity/overnet/lib/vocabulary/slice.h"
 
@@ -137,7 +137,12 @@ class DatagramStream : private Router::StreamHandler,
         Module::DATAGRAM_STREAM_INCOMING_MESSAGE;
 
     IncomingMessage(DatagramStream* stream, uint64_t msg_id)
-        : linearizer_(2 * stream->packet_protocol_.maximum_send_size()),
+        : protocol_(&stream->packet_protocol_),
+          // TODO(ctiller): What should the bound be here? 4*mss is a guess,
+          // nothing more.
+          linearizer_(std::max(uint64_t(4 * protocol_->maximum_send_size()),
+                               protocol_->bdp_estimate()),
+                      &stream->stream_stats_),
           msg_id_(msg_id) {}
 
     void Pull(StatusOrCallback<Optional<Slice>>&& done) {
@@ -152,6 +157,7 @@ class DatagramStream : private Router::StreamHandler,
 
     [[nodiscard]] bool Push(Chunk&& chunk) {
       ScopedModule<IncomingMessage> in_im(this);
+      linearizer_.UpdateMaxBuffer(protocol_->bdp_estimate());
       return linearizer_.Push(std::forward<Chunk>(chunk));
     }
 
@@ -167,6 +173,7 @@ class DatagramStream : private Router::StreamHandler,
     InternalListNode<IncomingMessage> incoming_link;
 
    private:
+    PacketProtocol* const protocol_;
     Linearizer linearizer_;
     const uint64_t msg_id_;
   };
@@ -341,6 +348,9 @@ class DatagramStream : private Router::StreamHandler,
 
   NodeId peer() const { return peer_; }
 
+  const LinkStats* link_stats() const { return packet_protocol_.stats(); }
+  const StreamStats* stream_stats() const { return &stream_stats_; }
+
  protected:
   // Must be called by derived classes, after construction and before any other
   // methods.
@@ -376,6 +386,7 @@ class DatagramStream : private Router::StreamHandler,
   uint64_t largest_incoming_message_id_seen_ = 0;
   receive_mode::ParameterizedReceiveMode receive_mode_;
   PacketProtocol packet_protocol_;
+  StreamStats stream_stats_;
   StreamRef close_ref_{this};  // Keep stream alive until closed
 
   enum class CloseState : uint8_t {

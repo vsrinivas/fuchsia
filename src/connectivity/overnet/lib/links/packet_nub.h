@@ -14,6 +14,7 @@
 #include "src/connectivity/overnet/lib/environment/timer.h"
 #include "src/connectivity/overnet/lib/labels/node_id.h"
 #include "src/connectivity/overnet/lib/links/packet_link.h"
+#include "src/connectivity/overnet/lib/routing/router.h"
 #include "src/connectivity/overnet/lib/vocabulary/slice.h"
 
 namespace overnet {
@@ -89,9 +90,7 @@ class PacketNub {
   class NubLink final : public PacketLink {
    public:
     NubLink(PacketNub* nub, LinkDataPtr link, NodeId peer, uint64_t label)
-        : PacketLink(nub->GetRouter(), peer, kMSS, label),
-          nub_(nub),
-          link_(link) {}
+        : PacketLink(nub->router_, peer, kMSS, label), nub_(nub), link_(link) {}
 
     ~NubLink() { Delist(); }
 
@@ -179,11 +178,13 @@ class PacketNub {
   static constexpr size_t kHelloSize = 256;
   static constexpr uint64_t kAnnounceResendMillis = 1000;
 
-  PacketNub(Timer* timer, NodeId node) : timer_(timer), local_node_(node) {}
+  PacketNub(Router* router)
+      : timer_(router->timer()),
+        router_(router),
+        local_node_(router->node_id()) {}
   virtual ~PacketNub() {}
 
   virtual void SendTo(Address dest, Slice slice) = 0;
-  virtual Router* GetRouter() = 0;
   virtual void Publish(LinkPtr<> link) = 0;
 
   virtual void Process(TimeStamp received, Address src, Slice slice) {
@@ -540,15 +541,16 @@ class PacketNub {
   void BecomePublished(LinkDataPtr link) {
     assert(link->link == nullptr);
     assert(link->node_id);
-    link->link = new NubLink(this, link, *link->node_id, next_label_++);
+    link->link =
+        new NubLink(this, link, *link->node_id, router_->GenerateLinkLabel());
     Publish(LinkPtr<>(link->link));
   }
 
   Timer* const timer_;
+  Router* const router_;
   const NodeId local_node_;
   std::unordered_map<Address, LinkDataPtr, HashAddress, EqAddress> links_;
   std::mt19937_64 rng_;
-  uint64_t next_label_ = 1;
 };
 
 }  // namespace overnet

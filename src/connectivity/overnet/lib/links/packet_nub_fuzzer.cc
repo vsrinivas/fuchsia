@@ -35,7 +35,7 @@ void PacketNubFuzzer::Budget::ConsumeBudget(uint64_t address, uint64_t bytes) {
 }
 
 PacketNubFuzzer::Nub::Nub(Timer* timer)
-    : BaseNub(timer, NodeId(1)), router_(timer, NodeId(1), false) {}
+    : Router(timer, NodeId(1), false), BaseNub(this) {}
 
 void PacketNubFuzzer::Nub::Process(TimeStamp received, uint64_t src,
                                    Slice slice) {
@@ -50,8 +50,6 @@ void PacketNubFuzzer::Nub::SendTo(uint64_t dest, Slice slice) {
     budget_.ConsumeBudget(dest, slice.length());
   }
 }
-
-Router* PacketNubFuzzer::Nub::GetRouter() { return &router_; }
 
 void PacketNubFuzzer::Nub::Publish(LinkPtr<> link) {
   auto node = link->GetLinkStatus().from;

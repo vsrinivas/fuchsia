@@ -4,13 +4,16 @@
 
 #pragma once
 
+#include "src/connectivity/overnet/lib/links/packet_stuffer.h"
+#include "src/connectivity/overnet/lib/protocol/stream_framer.h"
 #include "src/connectivity/overnet/lib/routing/router.h"
 
 namespace overnet {
 
 class StreamLink : public Link {
  public:
-  StreamLink(Router* router, NodeId peer, uint32_t mss, uint64_t label);
+  StreamLink(Router* router, NodeId peer, std::unique_ptr<StreamFramer> framer,
+             uint64_t label);
 
   void Close(Callback<void> quiesced) override final;
   void Forward(Message message) override final;
@@ -20,17 +23,21 @@ class StreamLink : public Link {
   void Process(TimeStamp received, Slice bytes);
   virtual void Emit(Slice bytes, Callback<Status> done) = 0;
 
+  size_t maximum_segment_size() const { return framer_->maximum_segment_size; }
+
  private:
   void MaybeQuiesce();
+  void EmitOne();
+  void SetClosed();
 
-  const size_t mss_;
   Router* const router_;
+  std::unique_ptr<StreamFramer> framer_;
   const NodeId peer_;
   const uint64_t local_id_;
   bool emitting_ = false;
   bool closed_ = false;
-  Slice buffered_input_;
   Callback<void> on_quiesced_;
+  PacketStuffer packet_stuffer_;
   LinkStats stats_;
 };
 

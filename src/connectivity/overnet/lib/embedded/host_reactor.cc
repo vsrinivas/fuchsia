@@ -19,6 +19,15 @@ HostReactor::~HostReactor() {
   for (auto tmr : pending_timeouts_) {
     FireTimeout(tmr.second, overnet::Status::Cancelled());
   }
+  auto fds = std::move(fds_);
+  fds.clear();
+}
+
+void HostReactor::CancelIO(int fd) {
+  if (auto it = fds_.find(fd); it != fds_.end()) {
+    auto st = std::move(it->second);
+    fds_.erase(it);
+  }
 }
 
 void HostReactor::InitTimeout(overnet::Timeout* timeout,
@@ -124,11 +133,22 @@ void HostReactor::Execute(F exit_condition) {
         next = &next_store;
         next->tv_sec = dt.as_us() / 1000000;
         next->tv_nsec = 1000 * (dt.as_us() % 1000000);
+      } else {
+        next = &next_store;
+        next->tv_sec = 0;
+        next->tv_nsec = 0;
       }
     }
 
-    // Actually poll.
+// Actually poll.
+#if __linux__
+    // Use ppoll for higher timing resolution
     int r = ppoll(pollfds.data(), pollfds.size(), next, nullptr);
+#else
+    // Use poll for compatibility
+    int r = poll(pollfds.data(), pollfds.size(),
+                 next ? next->tv_sec * 1000 + next->tv_nsec / 1000000 : -1);
+#endif
     if (r < 0) {
       const int e = errno;
       if (e == EINTR) {

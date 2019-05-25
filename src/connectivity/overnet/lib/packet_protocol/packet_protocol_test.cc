@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/packet_protocol/packet_protocol.h"
+
 #include <memory>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"
@@ -101,7 +103,7 @@ TEST_P(PacketProtocolTest, NoOp) {
   StrictMock<MockPacketSender> ps;
   std::mt19937 rng{123};
   MakeClosedPtr<PacketProtocol>(
-      &timer, [&rng] { return rng(); }, &ps, GetParam(), kMSS);
+      &timer, [&rng] { return rng(); }, &ps, GetParam(), kMSS, true);
 }
 
 TEST_P(PacketProtocolTest, SendOnePacket) {
@@ -114,7 +116,7 @@ TEST_P(PacketProtocolTest, SendOnePacket) {
   StrictMock<MockPacketSender> ps;
   std::mt19937 rng{123};
   auto packet_protocol = MakeClosedPtr<PacketProtocol>(
-      &timer, [&rng] { return rng(); }, &ps, GetParam(), kMSS);
+      &timer, [&rng] { return rng(); }, &ps, GetParam(), kMSS, true);
 
   // Send some dummy data: we expect to see a packet emitted immediately
   Slice got_slice;

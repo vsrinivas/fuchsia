@@ -37,7 +37,7 @@ struct LinkStatus {
     /// An identifier (chosen by node `from`) to label this link.
     /// `from` must guarantee that the tuple (from, to, local_id) is unique
     /// for each of it's held links.
-    uint64 local_id;
+    LinkId local_id;
     /// A monotonically increasing version counter for this links status.
     uint64 version;
 

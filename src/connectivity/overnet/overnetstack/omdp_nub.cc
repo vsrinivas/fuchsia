@@ -29,9 +29,9 @@ void OmdpNub::EnsureIncoming() {
   if (incoming_.IsValid()) {
     return;
   }
-  incoming_ = overnet::Socket(socket(AF_INET6, SOCK_DGRAM, 0));
   auto status =
-      incoming_.SetOptReusePort(true)
+      incoming_.Create(AF_INET6, SOCK_DGRAM, 0)
+          .Then([&] { return incoming_.SetOptReusePort(true); })
           .Then([&] {
             return incoming_.Bind(*overnet::IpAddr::AnyIpv6().WithPort(
                 kMulticastGroupAddr.port()));

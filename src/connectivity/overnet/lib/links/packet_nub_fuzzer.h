@@ -42,18 +42,16 @@ class PacketNubFuzzer {
   Budget budget_;
 
   using BaseNub = PacketNub<uint64_t, 256>;
-  class Nub : public BaseNub {
+  class Nub : private Router, public BaseNub {
    public:
     Nub(Timer* timer);
 
     void Process(TimeStamp received, uint64_t src, Slice slice) override;
 
     void SendTo(uint64_t dest, Slice slice) override;
-    Router* GetRouter() override;
     void Publish(LinkPtr<> link) override;
 
    private:
-    Router router_;
     Budget budget_;
   };
   Nub nub_{&timer_};

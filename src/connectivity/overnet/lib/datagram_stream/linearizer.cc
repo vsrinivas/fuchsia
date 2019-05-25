@@ -13,7 +13,8 @@
 
 namespace overnet {
 
-Linearizer::Linearizer(uint64_t max_buffer) : max_buffer_(max_buffer) {}
+Linearizer::Linearizer(uint64_t max_buffer, StreamStats* stats)
+    : max_buffer_(max_buffer), stats_(stats) {}
 
 Linearizer::~Linearizer() {
   switch (read_mode_) {
@@ -140,6 +141,7 @@ bool Linearizer::Push(Chunk chunk) {
   if (chunk_start > offset_ && chunk_end > offset_ + max_buffer_) {
     OVERNET_TRACE(DEBUG) << "Push reject: past end of buffering window;"
                          << " max_buffer=" << max_buffer_;
+    stats_->linearizer_reject_past_end_of_buffering++;
     return false;
   }
 
@@ -180,6 +182,7 @@ bool Linearizer::Push(Chunk chunk) {
   }
 
   if (chunk_end == chunk_start) {
+    stats_->linearizer_empty_chunk++;
     return true;
   }
 
@@ -188,6 +191,7 @@ bool Linearizer::Push(Chunk chunk) {
   if (read_mode_ == ReadMode::ReadSlice && chunk_start == offset_ &&
       (pending_push_.empty() || pending_push_.begin()->first > chunk_end)) {
     OVERNET_TRACE(DEBUG) << "Push: fast-path";
+    stats_->linearizer_fast_path_taken++;
     offset_ += chunk.slice.length();
     auto push = std::move(ReadSliceToIdle().done);
     if (length_) {
@@ -206,10 +210,12 @@ bool Linearizer::Push(Chunk chunk) {
   if (chunk_start < offset_) {
     if (chunk_end > offset_) {
       OVERNET_TRACE(DEBUG) << "Push: trim begin";
+      stats_->linearizer_partial_ignore_begin++;
       chunk.TrimBegin(offset_ - chunk_start);
       chunk_start = chunk.offset;
     } else {
       OVERNET_TRACE(DEBUG) << "Push: all prior";
+      stats_->linearizer_ignore_all_prior++;
       return true;
     }
   }
@@ -220,8 +226,10 @@ bool Linearizer::Push(Chunk chunk) {
   // exit conditions, and we've got some common checks to do once it's finished.
   if (pending_push_.empty()) {
     OVERNET_TRACE(DEBUG) << "Push: first pending";
+    stats_->linearizer_new_pending_queue++;
     pending_push_.emplace(chunk.offset, std::move(chunk.slice));
   } else {
+    stats_->linearizer_integrations++;
     IntegratePush(std::move(chunk));
   }
 
@@ -256,15 +264,18 @@ void Linearizer::IntegratePush(Chunk chunk) {
     OVERNET_TRACE(DEBUG) << "coincident with existing; common_length="
                          << common_length;
     if (0 != memcmp(chunk.slice.begin(), lb->second.begin(), common_length)) {
+      stats_->linearizer_integration_errors++;
       Close(Status(StatusCode::DATA_LOSS,
                    "Linearizer received different bytes for the same span"))
           .Ignore();
     } else if (chunk.slice.length() <= lb->second.length()) {
       // New chunk is shorter than what's there (or the same length): We're
       // done.
+      stats_->linearizer_integration_coincident_shorter++;
     } else {
       // New chunk is bigger than what's there: we create a new (tail) chunk and
       // continue integration
+      stats_->linearizer_integration_coincident_longer++;
       chunk.TrimBegin(lb->second.length());
       IntegratePush(std::move(chunk));
     }
@@ -289,13 +300,16 @@ void Linearizer::IntegratePush(Chunk chunk) {
                            << common_length;
       if (0 != memcmp(before->second.begin() + (chunk.offset - before->first),
                       chunk.slice.begin(), common_length)) {
+        stats_->linearizer_integration_errors++;
         Close(Status(StatusCode::DATA_LOSS,
                      "Linearizer received different bytes for the same span"))
             .Ignore();
       } else if (before_end >= chunk.offset + chunk.slice.length()) {
         // New chunk is a subset of the one before: we're done.
+        stats_->linearizer_integration_prior_longer++;
       } else {
         // Trim the new chunk and continue integration.
+        stats_->linearizer_integration_prior_partial++;
         chunk.TrimBegin(before_end - chunk.offset);
         IntegratePush(std::move(chunk));
       }
@@ -320,6 +334,7 @@ void Linearizer::IntegratePush(Chunk chunk) {
       if (0 != memcmp(after->second.begin(),
                       chunk.slice.begin() + (after->first - chunk.offset),
                       common_length)) {
+        stats_->linearizer_integration_errors++;
         Close(Status(StatusCode::DATA_LOSS,
                      "Linearizer received different bytes for the same span"))
             .Ignore();
@@ -327,6 +342,7 @@ void Linearizer::IntegratePush(Chunk chunk) {
       } else if (after->first + after->second.length() <
                  chunk.offset + chunk.slice.length()) {
         OVERNET_TRACE(DEBUG) << "Split and integrate separately";
+        stats_->linearizer_integration_subsequent_splits++;
         // Split chunk into two and integrate each separately
         Chunk tail = chunk;
         chunk.TrimEnd(chunk.offset + chunk.slice.length() - after->first);
@@ -336,6 +352,7 @@ void Linearizer::IntegratePush(Chunk chunk) {
         return;
       } else {
         // Trim so the new chunk no longer overlaps.
+        stats_->linearizer_integration_subsequent_covers++;
         chunk.TrimEnd(chunk.offset + chunk.slice.length() - after->first);
       }
     }
@@ -344,6 +361,7 @@ void Linearizer::IntegratePush(Chunk chunk) {
   // We now have a non-overlapping chunk that we can insert.
   OVERNET_TRACE(DEBUG) << "add pending start=" << chunk.offset
                        << " end=" << (chunk.offset + chunk.slice.length());
+  stats_->linearizer_integration_inserts++;
   pending_push_.emplace_hint(lb, chunk.offset, std::move(chunk.slice));
 }
 

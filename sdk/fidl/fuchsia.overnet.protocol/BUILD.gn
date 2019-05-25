@@ -9,6 +9,7 @@ fidl("fuchsia.overnet.protocol") {
     "labels.fidl",
     "peer_protocol.fidl",
     "routing.fidl",
+    "stream_socket.fidl",
     "zircon_proxy.fidl",
   ]
 }

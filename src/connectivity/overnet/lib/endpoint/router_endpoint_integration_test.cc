@@ -4,11 +4,15 @@
 
 #include <array>
 #include <tuple>
+
 #include "gtest/gtest.h"
 #include "src/connectivity/overnet/lib/endpoint/router_endpoint.h"
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/links/packet_link.h"
+#include "src/connectivity/overnet/lib/links/stream_link.h"
 #include "src/connectivity/overnet/lib/protocol/fidl.h"
+#include "src/connectivity/overnet/lib/protocol/reliable_framer.h"
+#include "src/connectivity/overnet/lib/protocol/unreliable_framer.h"
 #include "src/connectivity/overnet/lib/testing/flags.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
 
@@ -23,40 +27,60 @@ struct LinkState {
   int outstanding_packets;
 };
 
-class DeliverySimulator {
+class Simulator {
  public:
-  virtual ~DeliverySimulator() {}
+  virtual ~Simulator() = default;
+  virtual void MakeLinks(RouterEndpoint* a, RouterEndpoint* b, uint64_t id1,
+                         uint64_t id2) const = 0;
+};
+
+struct NamedSimulator {
+  std::string name;
+  std::unique_ptr<Simulator> simulator;
+};
+
+class PacketPacer {
+ public:
+  virtual ~PacketPacer() {}
   // Returns Nothing if the slice should be dropped, or a delay if it should be
   // delivered.
   virtual Optional<TimeDelta> ChoosePacketDelivery(LinkState link_state,
                                                    size_t slice_size) const = 0;
-
-  virtual std::string name() = 0;
-
+  virtual std::string name() const = 0;
   virtual Bandwidth SimulatedBandwidth() const = 0;
+  virtual uint32_t MaximumSegmentSize() const = 0;
 };
 
 // Very fast reliable packet delivery: it's often easier to debug problems
 // with HappyDelivery than with packet loss enabled (assuming it shows up).
-class HappyDelivery : public DeliverySimulator {
+class HappyDelivery : public PacketPacer {
  public:
+  HappyDelivery(uint32_t mss) : mss_(mss) {}
+
   Optional<TimeDelta> ChoosePacketDelivery(LinkState link_state,
                                            size_t slice_size) const override {
     return TimeDelta::FromMicroseconds(1);
   }
 
-  std::string name() override { return "HappyDelivery"; }
+  std::string name() const override {
+    return "HappyDelivery(" + std::to_string(mss_) + ")";
+  }
 
   Bandwidth SimulatedBandwidth() const override {
     return Bandwidth::FromKilobitsPerSecond(1024 * 1024);
   }
+
+  virtual uint32_t MaximumSegmentSize() const override { return mss_; }
+
+ private:
+  const uint32_t mss_;
 };
 
 // Windowed number of outstanding packets
-class WindowedDelivery : public DeliverySimulator {
+class WindowedDelivery : public PacketPacer {
  public:
-  WindowedDelivery(int max_outstanding, TimeDelta window)
-      : max_outstanding_(max_outstanding), window_(window) {}
+  WindowedDelivery(int max_outstanding, TimeDelta window, uint32_t mss)
+      : max_outstanding_(max_outstanding), window_(window), mss_(mss) {}
 
   Optional<TimeDelta> ChoosePacketDelivery(LinkState link_state,
                                            size_t slice_size) const override {
@@ -65,29 +89,35 @@ class WindowedDelivery : public DeliverySimulator {
     return window_;
   }
 
-  std::string name() override {
+  std::string name() const override {
     std::ostringstream out;
-    out << "WindowedDelivery{max:" << max_outstanding_ << " over " << window_
-        << "}";
+    out << "WindowedDelivery(" << max_outstanding_
+        << ", TimeDelta::FromMicroseconds(" << window_.as_us() << "), " << mss_
+        << ")";
     return out.str();
   }
 
   Bandwidth SimulatedBandwidth() const override {
-    return Bandwidth::BytesPerTime(256 * max_outstanding_, window_);
+    return Bandwidth::BytesPerTime(MaximumSegmentSize() * max_outstanding_,
+                                   window_);
   }
+
+  virtual uint32_t MaximumSegmentSize() const override { return mss_; }
 
  private:
   const int max_outstanding_;
   const TimeDelta window_;
+  const uint32_t mss_;
 };
 
-class InProcessLinkImpl final
+class InProcessPacketLinkImpl final
     : public PacketLink,
-      public std::enable_shared_from_this<InProcessLinkImpl> {
+      public std::enable_shared_from_this<InProcessPacketLinkImpl> {
  public:
-  InProcessLinkImpl(RouterEndpoint* src, RouterEndpoint* dest, uint64_t link_id,
-                    const DeliverySimulator* simulator)
-      : PacketLink(src, dest->node_id(), 256, link_id),
+  InProcessPacketLinkImpl(RouterEndpoint* src, RouterEndpoint* dest,
+                          uint64_t link_id, const PacketPacer* simulator)
+      : PacketLink(src, dest->node_id(), simulator->MaximumSegmentSize(),
+                   link_id),
         timer_(dest->timer()),
         link_id_(link_id),
         simulator_(simulator),
@@ -95,14 +125,14 @@ class InProcessLinkImpl final
     src->RegisterPeer(dest->node_id());
   }
 
-  ~InProcessLinkImpl() {
+  ~InProcessPacketLinkImpl() {
     auto strong_partner = partner_.lock();
     if (strong_partner != nullptr) {
       strong_partner->partner_.reset();
     }
   }
 
-  void Partner(std::shared_ptr<InProcessLinkImpl> other) {
+  void Partner(std::shared_ptr<InProcessPacketLinkImpl> other) {
     partner_ = other;
     other->partner_ = shared_from_this();
   }
@@ -141,19 +171,95 @@ class InProcessLinkImpl final
  private:
   Timer* const timer_;
   const uint64_t link_id_;
-  const DeliverySimulator* const simulator_;
-  std::weak_ptr<InProcessLinkImpl> partner_;
+  const PacketPacer* const simulator_;
+  std::weak_ptr<InProcessPacketLinkImpl> partner_;
   const NodeId from_;
   int outstanding_packets_ = 0;
 };
 
+template <class Framer>
+class InProcessStreamLinkImpl final
+    : public StreamLink,
+      public std::enable_shared_from_this<InProcessStreamLinkImpl<Framer>> {
+ public:
+  InProcessStreamLinkImpl(RouterEndpoint* src, RouterEndpoint* dest,
+                          uint64_t link_id, Bandwidth bandwidth)
+      : StreamLink(src, dest->node_id(), std::make_unique<Framer>(), link_id),
+        timer_(src->timer()),
+        bandwidth_(bandwidth),
+        from_(src->node_id()) {
+    src->RegisterPeer(dest->node_id());
+  }
+
+  void Partner(std::shared_ptr<InProcessStreamLinkImpl> other) {
+    partner_ = other;
+    other->partner_ = this->shared_from_this();
+  }
+
+  void Emit(Slice slice, StatusCallback done) override {
+    OVERNET_TRACE(DEBUG) << "Emit: " << slice;
+
+    assert(!send_op_.has_value());
+    send_op_.Reset(SendOp{std::move(slice), std::move(done)});
+
+    SendNext();
+  }
+
+ private:
+  void SendNext() {
+    auto max_delivery =
+        std::max(uint64_t(1),
+                 bandwidth_.BytesSentForTime(TimeDelta::FromMicroseconds(100)));
+    Slice chunk;
+    StatusCallback cb;
+    if (max_delivery >= send_op_->slice.length()) {
+      chunk = std::move(send_op_->slice);
+      cb = std::move(send_op_->done);
+      send_op_.Reset();
+    } else {
+      chunk = send_op_->slice.TakeUntilOffset(max_delivery);
+    }
+
+    auto now = timer_->Now();
+    next_send_completes_ = std::max(now, next_send_completes_) +
+                           bandwidth_.SendTimeForBytes(chunk.length());
+    timer_->At(next_send_completes_, [chunk = std::move(chunk),
+                                      at = next_send_completes_,
+                                      self = this->shared_from_this()] {
+      auto strong_partner = self->partner_.lock();
+      OVERNET_TRACE(DEBUG) << (strong_partner == nullptr ? "DROP" : "EMIT")
+                           << " BYTES from " << self->from_ << " " << chunk;
+      if (strong_partner) {
+        strong_partner->Process(at, chunk);
+      }
+    });
+
+    if (!cb.empty()) {
+      cb(Status::Ok());
+    } else {
+      SendNext();
+    }
+  }
+
+  Timer* const timer_;
+  std::weak_ptr<InProcessStreamLinkImpl> partner_;
+  const Bandwidth bandwidth_;
+  const NodeId from_;
+  struct SendOp {
+    Slice slice;
+    Callback<Status> done;
+  };
+  Optional<SendOp> send_op_;
+  TimeStamp next_send_completes_ = TimeStamp::Epoch();
+};
+
+template <class Impl>
 class InProcessLink final : public Link {
  public:
-  InProcessLink(RouterEndpoint* src, RouterEndpoint* dest, uint64_t link_id,
-                const DeliverySimulator* simulator)
-      : impl_(new InProcessLinkImpl(src, dest, link_id, simulator)) {}
+  template <class... Arg>
+  InProcessLink(Arg&&... args) : impl_(new Impl(std::forward<Arg>(args)...)) {}
 
-  std::shared_ptr<InProcessLinkImpl> get() { return impl_; }
+  std::shared_ptr<Impl> get() { return impl_; }
 
   void Close(Callback<void> quiesced) override {
     impl_->Close(Callback<void>(
@@ -167,37 +273,64 @@ class InProcessLink final : public Link {
   const LinkStats* GetStats() const override { return impl_->GetStats(); }
 
  private:
-  std::shared_ptr<InProcessLinkImpl> impl_;
+  std::shared_ptr<Impl> impl_;
 };
 
 class StatsDumper final : public StatsVisitor {
  public:
+  StatsDumper(const char* indent) : indent_(indent) {}
   void Counter(const char* name, uint64_t value) override {
-    OVERNET_TRACE(INFO) << "    " << name << " = " << value;
+    OVERNET_TRACE(INFO) << indent_ << name << " = " << value;
   }
+
+ private:
+  const char* const indent_;
 };
+
+template <class T>
+void DumpStats(const char* indent, const T* stats) {
+  StatsDumper dumper(indent);
+  stats->Accept(&dumper);
+}
 
 void DumpStats(const char* label, RouterEndpoint* endpoint) {
   OVERNET_TRACE(INFO) << "STATS DUMP FOR: '" << label << "' -- "
                       << endpoint->node_id();
   endpoint->ForEachLink([endpoint](NodeId target, const Link* link) {
     OVERNET_TRACE(INFO) << "  LINK: " << endpoint->node_id() << "->" << target;
-    StatsDumper dumper;
-    link->GetStats()->Accept(&dumper);
+    DumpStats("    ", link->GetStats());
   });
+}
+
+LinkStats AccumulateLinkStats(RouterEndpoint* endpoint) {
+  LinkStats out;
+  endpoint->ForEachLink([&out](NodeId target, const Link* link) {
+    out.Merge(*link->GetStats());
+  });
+  return out;
 }
 
 class Env {
  public:
   virtual ~Env() {}
 
-  virtual TimeDelta AllowedTime(uint64_t length) const = 0;
-
   virtual RouterEndpoint* endpoint1() = 0;
   virtual RouterEndpoint* endpoint2() = 0;
 
+  virtual void DumpAllStats() = 0;
+
+  uint64_t OutgoingPacketsFromSource() {
+    return AccumulateLinkStats(endpoint1()).outgoing_packet_count;
+  }
+
+  uint64_t IncomingPacketsAtDestination() {
+    return AccumulateLinkStats(endpoint2()).incoming_packet_count;
+  }
+
   void AwaitConnected() {
-    OVERNET_TRACE(INFO) << "Test waiting for connection";
+    OVERNET_TRACE(INFO) << "Test waiting for connection between "
+                        << endpoint1()->node_id() << " and "
+                        << endpoint2()->node_id();
     while (!endpoint1()->HasRouteTo(endpoint2()->node_id()) ||
            !endpoint2()->HasRouteTo(endpoint1()->node_id())) {
       endpoint1()->BlockUntilNoBackgroundUpdatesProcessing();
@@ -237,25 +370,71 @@ class Env {
                                                : Severity::INFO};
 };
 
+class PacketLinkSimulator final : public Simulator {
+ public:
+  PacketLinkSimulator(std::unique_ptr<PacketPacer> pacer)
+      : pacer_(std::move(pacer)) {}
+
+  void MakeLinks(RouterEndpoint* ep1, RouterEndpoint* ep2, uint64_t id1,
+                 uint64_t id2) const override {
+    auto link1 = MakeLink<InProcessLink<InProcessPacketLinkImpl>>(ep1, ep2, id1,
+                                                                  pacer_.get());
+    auto link2 = MakeLink<InProcessLink<InProcessPacketLinkImpl>>(ep2, ep1, id2,
+                                                                  pacer_.get());
+    link1->get()->Partner(link2->get());
+    ep1->RegisterLink(std::move(link1));
+    ep2->RegisterLink(std::move(link2));
+  }
+
+ private:
+  std::unique_ptr<PacketPacer> pacer_;
+};
+
+const char* FramerName(const ReliableFramer& framer) {
+  return "ReliableFramer";
+};
+
+const char* FramerName(const UnreliableFramer& framer) {
+  return "UnreliableFramer";
+};
+
+template <class Framer>
+class StreamLinkSimulator final : public Simulator {
+ public:
+  StreamLinkSimulator(Bandwidth bandwidth) : bandwidth_(bandwidth) {}
+
+  void MakeLinks(RouterEndpoint* ep1, RouterEndpoint* ep2, uint64_t id1,
+                 uint64_t id2) const override {
+    auto link1 = MakeLink<InProcessLink<InProcessStreamLinkImpl<Framer>>>(
+        ep1, ep2, id1, bandwidth_);
+    auto link2 = MakeLink<InProcessLink<InProcessStreamLinkImpl<Framer>>>(
+        ep2, ep1, id2, bandwidth_);
+    link1->get()->Partner(link2->get());
+    ep1->RegisterLink(std::move(link1));
+    ep2->RegisterLink(std::move(link2));
+  }
+
+ private:
+  const Bandwidth bandwidth_;
+};
+
 class TwoNode final : public Env {
  public:
-  TwoNode(const DeliverySimulator* simulator, uint64_t node_id_1,
+  TwoNode(const NamedSimulator* simulator, uint64_t node_id_1,
           uint64_t node_id_2)
-      : simulator_(simulator) {
+      : simulator_(simulator->simulator.get()) {
     endpoint1_ = new RouterEndpoint(timer(), NodeId(node_id_1), false);
     endpoint2_ = new RouterEndpoint(timer(), NodeId(node_id_2), false);
-    auto link1 = MakeLink<InProcessLink>(endpoint1_, endpoint2_, 1, simulator);
-    auto link2 = MakeLink<InProcessLink>(endpoint2_, endpoint1_, 2, simulator);
-    link1->get()->Partner(link2->get());
-    endpoint1_->RegisterLink(std::move(link1));
-    endpoint2_->RegisterLink(std::move(link2));
+    simulator_->MakeLinks(endpoint1_, endpoint2_, 1, 2);
+  }
+
+  void DumpAllStats() override {
+    DumpStats("1", endpoint1_);
+    DumpStats("2", endpoint2_);
   }
 
   virtual ~TwoNode() {
     if (!testing::Test::HasFailure()) {
-      DumpStats("1", endpoint1_);
-      DumpStats("2", endpoint2_);
-
       bool done = false;
       endpoint1_->Close(Callback<void>(ALLOCATED_CALLBACK, [&done, this]() {
         endpoint2_->Close(Callback<void>(ALLOCATED_CALLBACK, [&done, this]() {
@@ -269,48 +448,37 @@ class TwoNode final : public Env {
     }
   }
 
-  TimeDelta AllowedTime(uint64_t data_length) const override {
-    // TODO(ctiller): make this just
-    // 'simulator_->SimulatedBandwidth().SendTimeForBytes(data_length)'
-    return TimeDelta::FromSeconds(1) +
-           simulator_->SimulatedBandwidth().SendTimeForBytes(3 * data_length);
-  }
-
   RouterEndpoint* endpoint1() override { return endpoint1_; }
   RouterEndpoint* endpoint2() override { return endpoint2_; }
 
  private:
-  const DeliverySimulator* const simulator_;
+  const Simulator* const simulator_;
   RouterEndpoint* endpoint1_;
   RouterEndpoint* endpoint2_;
 };
 
 class ThreeNode final : public Env {
  public:
-  ThreeNode(const DeliverySimulator* simulator, uint64_t node_id_1,
-            uint64_t node_id_2, uint64_t node_id_h)
-      : simulator_(simulator) {
+  ThreeNode(const NamedSimulator* simulator_1_h,
+            const NamedSimulator* simulator_h_2, uint64_t node_id_1,
+            uint64_t node_id_h, uint64_t node_id_2)
+      : simulator_1_h_(simulator_1_h->simulator.get()),
+        simulator_h_2_(simulator_h_2->simulator.get()) {
     endpoint1_ = new RouterEndpoint(timer(), NodeId(node_id_1), false);
     endpointH_ = new RouterEndpoint(timer(), NodeId(node_id_h), false);
     endpoint2_ = new RouterEndpoint(timer(), NodeId(node_id_2), false);
-    auto link1H = MakeLink<InProcessLink>(endpoint1_, endpointH_, 1, simulator);
-    auto linkH1 = MakeLink<InProcessLink>(endpointH_, endpoint1_, 2, simulator);
-    auto link2H = MakeLink<InProcessLink>(endpoint2_, endpointH_, 3, simulator);
-    auto linkH2 = MakeLink<InProcessLink>(endpointH_, endpoint2_, 4, simulator);
-    link1H->get()->Partner(linkH1->get());
-    link2H->get()->Partner(linkH2->get());
-    endpoint1_->RegisterLink(std::move(link1H));
-    endpoint2_->RegisterLink(std::move(link2H));
-    endpointH_->RegisterLink(std::move(linkH1));
-    endpointH_->RegisterLink(std::move(linkH2));
+    simulator_1_h_->MakeLinks(endpoint1_, endpointH_, 1, 2);
+    simulator_h_2_->MakeLinks(endpointH_, endpoint2_, 3, 4);
+  }
+
+  void DumpAllStats() override {
+    DumpStats("1", endpoint1_);
+    DumpStats("H", endpointH_);
+    DumpStats("2", endpoint2_);
   }
 
   virtual ~ThreeNode() {
     if (!testing::Test::HasFailure()) {
-      DumpStats("1", endpoint1_);
-      DumpStats("H", endpointH_);
-      DumpStats("2", endpoint2_);
-
       bool done = false;
       endpointH_->Close(Callback<void>(ALLOCATED_CALLBACK, [this, &done]() {
         endpoint1_->Close(Callback<void>(ALLOCATED_CALLBACK, [this, &done]() {
@@ -327,18 +495,12 @@ class ThreeNode final : public Env {
     }
   }
 
-  TimeDelta AllowedTime(uint64_t data_length) const override {
-    // TODO(ctiller): make this just
-    // 'simulator_->SimulatedBandwidth().SendTimeForBytes(data_length)'
-    return TimeDelta::FromSeconds(4) +
-           simulator_->SimulatedBandwidth().SendTimeForBytes(5 * data_length);
-  }
-
   RouterEndpoint* endpoint1() override { return endpoint1_; }
   RouterEndpoint* endpoint2() override { return endpoint2_; }
 
  private:
-  const DeliverySimulator* const simulator_;
+  const Simulator* const simulator_1_h_;
+  const Simulator* const simulator_h_2_;
   RouterEndpoint* endpoint1_;
   RouterEndpoint* endpointH_;
   RouterEndpoint* endpoint2_;
@@ -351,66 +513,6 @@ class MakeEnvInterface {
 };
 
 using MakeEnv = std::shared_ptr<MakeEnvInterface>;
-
-template <class T, class... Arg>
-MakeEnv MakeMakeEnv(const char* name, Arg&&... args) {
-  class Impl final : public MakeEnvInterface {
-   public:
-    Impl(const char* name, std::tuple<Arg...> args)
-        : name_(name), args_(args) {}
-    const char* name() const { return name_.c_str(); }
-    std::shared_ptr<Env> Make() const {
-      return std::apply(
-          [](Arg... args) { return std::make_shared<T>(args...); }, args_);
-    }
-
-   private:
-    const std::string name_;
-    const std::tuple<Arg...> args_;
-  };
-  return MakeEnv(
-      new Impl(name, std::tuple<Arg...>(std::forward<Arg>(args)...)));
-}
-
-static const auto kSimulators = [] {
-  std::vector<std::unique_ptr<DeliverySimulator>> out;
-  out.emplace_back(new HappyDelivery());
-  out.emplace_back(new WindowedDelivery(3, TimeDelta::FromMilliseconds(3)));
-  return out;
-}();
-
-template <class Env, int N>
-void AddVariations(const char* base_name, std::vector<MakeEnv>* envs) {
-  for (const auto& simulator : kSimulators) {
-    std::array<int, N> ary;
-    for (int i = 0; i < N; i++) {
-      ary[i] = i + 1;
-    }
-    do {
-      std::ostringstream name;
-      name << base_name;
-      for (auto i : ary)
-        name << i;
-      name << ":";
-      name << simulator->name();
-      envs->emplace_back(std::apply(
-          [&name, simulator = simulator.get()](auto... args) {
-            return MakeMakeEnv<Env>(
-                name.str().c_str(),
-                std::forward<DeliverySimulator* const>(simulator),
-                std::forward<int>(args)...);
-          },
-          ary));
-    } while (std::next_permutation(ary.begin(), ary.end()));
-  }
-}
-
-const auto kEnvVariations = [] {
-  std::vector<MakeEnv> envs;
-  AddVariations<TwoNode, 2>("TwoNode", &envs);
-  AddVariations<ThreeNode, 3>("ThreeNode", &envs);
-  return envs;
-}();
 
 class RouterEndpoint_IntegrationEnv : public ::testing::TestWithParam<MakeEnv> {
 };
@@ -469,18 +571,40 @@ TEST_P(RouterEndpoint_IntegrationEnv, NodeDescriptionPropagation) {
   EXPECT_TRUE(found);
 }
 
-INSTANTIATE_TEST_SUITE_P(RouterEndpoint_IntegrationEnv_Instance,
-                         RouterEndpoint_IntegrationEnv,
-                         ::testing::ValuesIn(kEnvVariations.begin(),
-                                             kEnvVariations.end()));
-
 struct OneMessageArgs {
   MakeEnv make_env;
   Slice body;
+  TimeDelta allowed_time;
+  uint64_t expected_packets;
 };
 
 std::ostream& operator<<(std::ostream& out, OneMessageArgs args) {
-  return out << "env=" << args.make_env->name() << " body=" << args.body;
+  return out << args.make_env->name();
+}
+
+template <class T>
+std::string ChangeArg(std::string input, int arg, T value) {
+  std::ostringstream out;
+  for (int i = 0; i < arg - 1; i++) {
+    auto cpos = input.find(',');
+    assert(cpos != std::string::npos);
+    out << input.substr(0, cpos + 1);
+    input = input.substr(cpos + 1);
+  }
+  out << ' ' << value;
+  out << input.substr(input.find(','));
+  return out.str();
+}
+
+std::string EscapeChars(std::string chars, std::string input) {
+  std::string output;
+  for (auto c : input) {
+    if (chars.find(c) != std::string::npos) {
+      output += '\\';
+    }
+    output += c;
+  }
+  return output;
 }
 
 class RouterEndpoint_OneMessageIntegration
@@ -492,8 +616,7 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
 
   const std::string kService = "abc";
 
-  const TimeDelta kAllowedTime =
-      env->AllowedTime(kService.length() + GetParam().body.length());
+  const TimeDelta kAllowedTime = GetParam().allowed_time;
   std::cout << "Allowed time for body: " << kAllowedTime << std::endl;
 
   env->AwaitConnected();
@@ -524,6 +647,9 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
               EXPECT_EQ(GetParam().body, pull_text) << pull_text.AsStdString();
               delete op;
               *got_pull_cb = true;
+              OVERNET_TRACE(INFO) << "STATS DUMP FOR RECEIVING DATAGRAM STREAM";
+              DumpStats("  ", stream->link_stats());
+              DumpStats("  ", stream->stream_stats());
             }));
       });
 
@@ -538,28 +664,298 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
   RouterEndpoint::SendOp(stream.get(), GetParam().body.length())
       .Push(GetParam().body, Callback<void>::Ignored());
 
+  auto start_flush = env->timer()->Now();
+
   env->FlushTodo([got_pull_cb]() { return *got_pull_cb; },
-                 env->timer()->Now() + kAllowedTime);
+                 start_flush + kAllowedTime);
+
+  auto taken_time = env->timer()->Now() - start_flush;
+  auto taken_seconds = (taken_time.as_us() + 999999) / 1000000;
+  auto allowed_seconds = kAllowedTime.as_us() / 1000000;
+  EXPECT_EQ(taken_seconds, allowed_seconds)
+      << "sed -i 's/" << GetParam().make_env->name() << "/"
+      << EscapeChars("&",
+                     ChangeArg(GetParam().make_env->name(), 2, taken_seconds))
+      << "/g' " << __FILE__;
 
   ASSERT_TRUE(*got_pull_cb);
+
+  OVERNET_TRACE(INFO) << "STATS DUMP FOR SENDING DATAGRAM STREAM";
+  DumpStats("  ", stream->link_stats());
+  DumpStats("  ", stream->stream_stats());
+
+  env->DumpAllStats();
+
+  EXPECT_EQ(env->IncomingPacketsAtDestination(), GetParam().expected_packets)
+      << "sed -i 's/" << GetParam().make_env->name() << "/"
+      << EscapeChars("&", ChangeArg(GetParam().make_env->name(), 3,
+                                    env->IncomingPacketsAtDestination()))
+      << "/g' " << __FILE__;
 }
 
-const std::vector<OneMessageArgs> kOneMessageArgTests = [] {
-  std::vector<OneMessageArgs> out;
-  const std::vector<size_t> kLengths = {1, 32, 1024, 32768, 1048576};
-  for (MakeEnv make_env : kEnvVariations) {
-    for (auto payload_length : kLengths) {
-      out.emplace_back(
-          OneMessageArgs{make_env, Slice::RepeatedChar(payload_length, 'a')});
+template <class T, class... Arg>
+MakeEnv MakeMakeEnv(const char* name, Arg&&... args) {
+  class Impl final : public MakeEnvInterface {
+   public:
+    Impl(const char* name, std::tuple<Arg...> args)
+        : name_(name), args_(args) {}
+    const char* name() const { return name_.c_str(); }
+    std::shared_ptr<Env> Make() const {
+      return std::apply(
+          [](Arg... args) { return std::make_shared<T>(args...); }, args_);
     }
-  }
-  return out;
-}();
 
-INSTANTIATE_TEST_SUITE_P(RouterEndpoint_OneMessageIntegration_Instance,
-                         RouterEndpoint_OneMessageIntegration,
-                         ::testing::ValuesIn(kOneMessageArgTests.begin(),
-                                             kOneMessageArgTests.end()));
+   private:
+    const std::string name_;
+    const std::tuple<Arg...> args_;
+  };
+  return MakeEnv(
+      new Impl(name, std::tuple<Arg...>(std::forward<Arg>(args)...)));
+}
+
+// Simulators get abbreviations here because otherwise the environment names get
+// too difficult to communicate.
+#define DECL_SIM(name, inst) \
+  const NamedSimulator name{#name, std::unique_ptr<Simulator>(inst)};
+
+DECL_SIM(Happy, new PacketLinkSimulator(std::make_unique<HappyDelivery>(1500)));
+DECL_SIM(Win_3_3, new PacketLinkSimulator(std::make_unique<WindowedDelivery>(
+                      3, TimeDelta::FromMilliseconds(3), 256)));
+DECL_SIM(ReliableStream, new StreamLinkSimulator<ReliableFramer>(
+                             Bandwidth::FromKilobitsPerSecond(1000)));
+DECL_SIM(UnreliableStream, new StreamLinkSimulator<UnreliableFramer>(
+                               Bandwidth::FromKilobitsPerSecond(115)));
+
+#define MAKE_MAKE_ENV(env, ...) \
+  MakeMakeEnv<env>("MAKE_MAKE_ENV(" #env ", " #__VA_ARGS__ ")", __VA_ARGS__)
+
+INSTANTIATE_TEST_SUITE_P(
+    RouterEndpoint_IntegrationEnv_Instance, RouterEndpoint_IntegrationEnv,
+    ::testing::Values(
+        MAKE_MAKE_ENV(TwoNode, &Happy, 1, 2),
+        MAKE_MAKE_ENV(TwoNode, &Happy, 2, 1),
+        MAKE_MAKE_ENV(TwoNode, &Win_3_3, 1, 2),
+        MAKE_MAKE_ENV(TwoNode, &Win_3_3, 2, 1),
+        MAKE_MAKE_ENV(TwoNode, &ReliableStream, 1, 2),
+        MAKE_MAKE_ENV(TwoNode, &ReliableStream, 2, 1),
+        MAKE_MAKE_ENV(TwoNode, &UnreliableStream, 1, 2),
+        MAKE_MAKE_ENV(TwoNode, &UnreliableStream, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Happy, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &Win_3_3, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &ReliableStream, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Happy, &UnreliableStream, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Happy, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &Win_3_3, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &ReliableStream, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &Win_3_3, &UnreliableStream, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Happy, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &Win_3_3, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &ReliableStream, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &ReliableStream, &UnreliableStream, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Happy, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &Win_3_3, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &ReliableStream, 3, 2, 1),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 1, 2, 3),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 1, 3, 2),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 2, 1, 3),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 2, 3, 1),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 3, 1, 2),
+        MAKE_MAKE_ENV(ThreeNode, &UnreliableStream, &UnreliableStream, 3, 2,
+                      1)));
+
+#define ONE_MESSAGE_TEST(length, allowed_time, expected_packets, env, ...)   \
+  OneMessageArgs {                                                           \
+    MakeMakeEnv<env>("ONE_MESSAGE_TEST(" #length ", " #allowed_time          \
+                     ", " #expected_packets ", " #env ", " #__VA_ARGS__ ")", \
+                     __VA_ARGS__),                                           \
+        Slice::RepeatedChar(length, 'a'),                                    \
+        TimeDelta::FromSeconds(allowed_time), expected_packets               \
+  }
+
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(
+    RouterEndpoint_OneMessageIntegration_Instance,
+    RouterEndpoint_OneMessageIntegration,
+    ::testing::Values(
+        ONE_MESSAGE_TEST(1, 1, 3, TwoNode, &Happy, 1, 2),
+        ONE_MESSAGE_TEST(32, 1, 3, TwoNode, &Happy, 1, 2),
+        ONE_MESSAGE_TEST(1024, 1, 3, TwoNode, &Happy, 1, 2),
+        ONE_MESSAGE_TEST(32768, 1, 26, TwoNode, &Happy, 1, 2),
+        ONE_MESSAGE_TEST(1048576, 1, 720, TwoNode, &Happy, 1, 2),
+        ONE_MESSAGE_TEST(1, 1, 3, TwoNode, &Happy, 2, 1),
+        ONE_MESSAGE_TEST(1048576, 1, 720, TwoNode, &Happy, 2, 1),
+        ONE_MESSAGE_TEST(1, 1, 3, TwoNode, &Win_3_3, 1, 2),
+        ONE_MESSAGE_TEST(32, 1, 3, TwoNode, &Win_3_3, 1, 2),
+        ONE_MESSAGE_TEST(1024, 1, 8, TwoNode, &Win_3_3, 1, 2),
+        ONE_MESSAGE_TEST(32768, 1, 155, TwoNode, &Win_3_3, 1, 2),
+        ONE_MESSAGE_TEST(1048576, 7, 4837, TwoNode, &Win_3_3, 1, 2),
+        ONE_MESSAGE_TEST(1, 1, 3, TwoNode, &Win_3_3, 2, 1),
+        ONE_MESSAGE_TEST(1048576, 7, 4837, TwoNode, &Win_3_3, 2, 1),
+        ONE_MESSAGE_TEST(1, 1, 3, TwoNode, &ReliableStream, 1, 2),
+        ONE_MESSAGE_TEST(32, 1, 3, TwoNode, &ReliableStream, 1, 2),
+        ONE_MESSAGE_TEST(1024, 1, 3, TwoNode, &ReliableStream, 1, 2),
+        ONE_MESSAGE_TEST(32768, 1, 26, TwoNode, &ReliableStream, 1, 2),
+        ONE_MESSAGE_TEST(1048576, 9, 534, TwoNode, &ReliableStream, 1, 2),
+        ONE_MESSAGE_TEST(1, 1, 3, TwoNode, &ReliableStream, 2, 1),
+        ONE_MESSAGE_TEST(1048576, 9, 534, TwoNode, &ReliableStream, 2, 1),
+        ONE_MESSAGE_TEST(1, 1, 3, TwoNode, &UnreliableStream, 1, 2),
+        ONE_MESSAGE_TEST(32, 1, 3, TwoNode, &UnreliableStream, 1, 2),
+        ONE_MESSAGE_TEST(1024, 1, 7, TwoNode, &UnreliableStream, 1, 2),
+        ONE_MESSAGE_TEST(32768, 3, 165, TwoNode, &UnreliableStream, 1, 2),
+        ONE_MESSAGE_TEST(1048576, 79, 4813, TwoNode, &UnreliableStream, 1, 2),
+        ONE_MESSAGE_TEST(1, 1, 3, TwoNode, &UnreliableStream, 2, 1),
+        ONE_MESSAGE_TEST(1048576, 79, 4813, TwoNode, &UnreliableStream, 2, 1),
+        ONE_MESSAGE_TEST(1, 1, 22, ThreeNode, &Happy, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 22, ThreeNode, &Happy, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 22, ThreeNode, &Happy, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 1, 71, ThreeNode, &Happy, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 2, 791, ThreeNode, &Happy, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 24, ThreeNode, &Happy, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 24, ThreeNode, &Happy, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 30, ThreeNode, &Happy, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 1, 189, ThreeNode, &Happy, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 6, 4977, ThreeNode, &Happy, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 18, ThreeNode, &Happy, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 18, ThreeNode, &Happy, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 18, ThreeNode, &Happy, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 1, 43, ThreeNode, &Happy, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 9, 748, ThreeNode, &Happy, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 22, ThreeNode, &Happy, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 22, ThreeNode, &Happy, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 28, ThreeNode, &Happy, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 3, 179, ThreeNode, &Happy, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 84, 4861, ThreeNode, &Happy, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 24, ThreeNode, &Win_3_3, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 24, ThreeNode, &Win_3_3, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 28, ThreeNode, &Win_3_3, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 1, 139, ThreeNode, &Win_3_3, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 6, 5082, ThreeNode, &Win_3_3, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 26, ThreeNode, &Win_3_3, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 26, ThreeNode, &Win_3_3, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 30, ThreeNode, &Win_3_3, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 1, 183, ThreeNode, &Win_3_3, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 6, 4880, ThreeNode, &Win_3_3, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 18, ThreeNode, &Win_3_3, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 18, ThreeNode, &Win_3_3, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 23, ThreeNode, &Win_3_3, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 1, 170, ThreeNode, &Win_3_3, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 10, 4805, ThreeNode, &Win_3_3, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 22, ThreeNode, &Win_3_3, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 22, ThreeNode, &Win_3_3, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 27, ThreeNode, &Win_3_3, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 3, 178, ThreeNode, &Win_3_3, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 84, 4859, ThreeNode, &Win_3_3, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 24, ThreeNode, &ReliableStream, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 24, ThreeNode, &ReliableStream, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 25, ThreeNode, &ReliableStream, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 1, 67, ThreeNode, &ReliableStream, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 9, 1361, ThreeNode, &ReliableStream, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 18, ThreeNode, &ReliableStream, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 18, ThreeNode, &ReliableStream, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 18, ThreeNode, &ReliableStream, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 1, 37, ThreeNode, &ReliableStream, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 9, 545, ThreeNode, &ReliableStream, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 25, ThreeNode, &ReliableStream, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 25, ThreeNode, &ReliableStream, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 29, ThreeNode, &ReliableStream, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 3, 179, ThreeNode, &ReliableStream, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 84, 4862, ThreeNode, &ReliableStream, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 25, ThreeNode, &UnreliableStream, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 26, ThreeNode, &UnreliableStream, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 38, ThreeNode, &UnreliableStream, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 3, 251, ThreeNode, &UnreliableStream, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 84, 6454, ThreeNode, &UnreliableStream, &Happy, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 35, ThreeNode, &UnreliableStream, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 35, ThreeNode, &UnreliableStream, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 44, ThreeNode, &UnreliableStream, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 3, 256, ThreeNode, &UnreliableStream, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 84, 6473, ThreeNode, &UnreliableStream, &Win_3_3, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 23, ThreeNode, &UnreliableStream, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 23, ThreeNode, &UnreliableStream, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 30, ThreeNode, &UnreliableStream, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 3, 182, ThreeNode, &UnreliableStream, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 84, 4886, ThreeNode, &UnreliableStream, &ReliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1, 1, 28, ThreeNode, &UnreliableStream, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32, 1, 28, ThreeNode, &UnreliableStream, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1024, 1, 32, ThreeNode, &UnreliableStream, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(32768, 3, 184, ThreeNode, &UnreliableStream, &UnreliableStream, 1, 2, 3),
+        ONE_MESSAGE_TEST(1048576, 84, 4884, ThreeNode, &UnreliableStream, &UnreliableStream, 1, 2, 3)));
+// clang-format on
 
 }  // namespace router_endpoint2node
 }  // namespace overnet

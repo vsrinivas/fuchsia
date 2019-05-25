@@ -21,8 +21,15 @@ void Service::ListPeers(uint64_t last_seen_version,
   using Peer = fuchsia::overnet::Peer;
   app_->endpoint()->OnNodeDescriptionTableChange(
       last_seen_version,
-      overnet::Callback<void>(
-          overnet::ALLOCATED_CALLBACK, [this, callback = std::move(callback)] {
+      overnet::StatusCallback(
+          overnet::ALLOCATED_CALLBACK, [this, callback = std::move(callback)](
+                                           const overnet::Status& status) {
+            if (status.is_error()) {
+              // Note: callback not called, but this case should imply that
+              // we're shutting down Overnet, so the associated channel should
+              // disappear also.
+              return;
+            }
             std::vector<Peer> response;
             auto new_version = app_->endpoint()->ForEachNodeDescription(
                 [&response, self_node = app_->endpoint()->node_id()](

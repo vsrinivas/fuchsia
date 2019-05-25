@@ -215,7 +215,8 @@ void Router::MaybeStartPollingLinkChanges() {
                 // Set routing information for other links.
                 for (const auto& sl : selected_links) {
                   OVERNET_TRACE(DEBUG)
-                      << "Select: " << sl.first << " " << sl.second.link_id
+                      << node_id() << " Select: dest=" << sl.first << " link"
+                      << sl.second.target_node << "#" << sl.second.link_id
                       << " (route_mss=" << sl.second.route_mss << ")";
                   auto it = owned_links_.find(
                       OwnedLabel{sl.second.target_node, sl.second.link_id});
@@ -312,6 +313,7 @@ std::vector<T> TakeVector(std::vector<T>* vec) {
 void Router::RegisterLink(LinkPtr<> link) {
   ScopedModule<Router> scoped_module(this);
   auto status = link->GetLinkStatus();
+  OVERNET_TRACE(DEBUG) << node_id() << " RegisterLink: " << status;
   assert(status.from == node_id());
   owned_links_.emplace(OwnedLabel{status.to, status.local_id}, std::move(link));
   auto target = status.to;

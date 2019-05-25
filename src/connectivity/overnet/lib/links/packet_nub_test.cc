@@ -21,10 +21,22 @@ namespace packet_nub_test {
 
 using FakeAddress = uint32_t;
 
-class MockPacketNub : public PacketNub<FakeAddress, 1024> {
+class MockPacketNubBase {
+ public:
+  MockPacketNubBase(Timer* timer, NodeId node) : router_(timer, node, true) {}
+
+  Router* GetRouter() { return &router_; }
+
+ protected:
+  Router router_;
+};
+
+class MockPacketNub : public MockPacketNubBase,
+                      public PacketNub<FakeAddress, 1024> {
  public:
   MockPacketNub(Timer* timer, NodeId node)
-      : PacketNub<FakeAddress, 1024>(timer, node), router_(timer, node, true) {}
+      : MockPacketNubBase(timer, node),
+        PacketNub<FakeAddress, 1024>(GetRouter()) {}
 
   MOCK_METHOD2(SendTo, void(FakeAddress, Slice));
   MOCK_METHOD1(PublishMock, void(std::shared_ptr<LinkPtr<>>));
@@ -32,11 +44,6 @@ class MockPacketNub : public PacketNub<FakeAddress, 1024> {
   void Publish(LinkPtr<> link) override final {
     PublishMock(std::make_shared<LinkPtr<>>(std::move(link)));
   }
-
-  Router* GetRouter() override final { return &router_; }
-
- private:
-  Router router_;
 };
 
 TEST(PacketNub, NoOp) {

@@ -133,9 +133,9 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
   }
   for (const auto& m : changes.links) {
     auto report_drop = [&m](const char* why) {
-      OVERNET_TRACE(INFO) << "Drop link info: from=" << m.from << " to=" << m.to
-                          << " label=" << m.local_id << " version=" << m.version
-                          << ": " << why;
+      OVERNET_TRACE(DEBUG) << "Drop link info: from=" << m.from
+                           << " to=" << m.to << " label=" << m.local_id
+                           << " version=" << m.version << ": " << why;
     };
     // Cannot add a link if the relevant nodes are unknown.
     auto from_node = nodes_.find(NodeId(m.from));
@@ -239,6 +239,13 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
     return SelectedLinks();  // Root node as yet unknown.
   }
 
+  for (const auto& n : nodes_) {
+    OVERNET_TRACE(DEBUG) << n.first << " metrics\n" << n.second.status.metrics;
+  }
+  for (const auto& l : links_) {
+    OVERNET_TRACE(DEBUG) << l.first << " metrics\n" << l.second.status.metrics;
+  }
+
   ++path_finding_run_;
   node_it->second.last_path_finding_run = path_finding_run_;
   node_it->second.best_rtt = TimeDelta::Zero();
@@ -252,6 +259,15 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
     todo.PushBack(node);
   };
 
+  auto node_id_of = [this](const Node* n) {
+    for (const auto& np : nodes_) {
+      if (&np.second == n) {
+        return np.first;
+      }
+    }
+    return NodeId(0);
+  };
+
   enqueue(&node_it->second);
 
   while (!todo.Empty()) {
@@ -261,17 +277,31 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
       if (link->status.version ==
           fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE)
         continue;
-      TimeDelta rtt =
+      TimeDelta rtt = std::min(
+          TimeDelta::FromHours(1),
           src->best_rtt +
-          (src->status.metrics.has_forwarding_time()
-               ? TimeDelta::FromMicroseconds(
-                     src->status.metrics.forwarding_time())
-               : TimeDelta::PositiveInf()) +
-          (link->status.metrics.has_rtt()
-               ? TimeDelta::FromMicroseconds(link->status.metrics.rtt())
-               : TimeDelta::PositiveInf());
+              (src->status.metrics.has_forwarding_time()
+                   ? TimeDelta::FromMicroseconds(
+                         src->status.metrics.forwarding_time())
+                   : TimeDelta::PositiveInf()) +
+              (link->status.metrics.has_rtt()
+                   ? TimeDelta::FromMicroseconds(link->status.metrics.rtt())
+                   : TimeDelta::PositiveInf()));
       Node* dst = link->to_node;
       // For now we order by RTT.
+      OVERNET_TRACE(DEBUG) << "RB[" << root_node_
+                           << "]: src=" << node_id_of(src)
+                           << " dst=" << node_id_of(dst)
+                           << " dst->last_path_finding_run="
+                           << dst->last_path_finding_run
+                           << " path_finding_run=" << path_finding_run_
+                           << " src->best_rtt=" << src->best_rtt
+                           << " dst->best_rtt=" << dst->best_rtt
+                           << " rtt=" << rtt << " src->mss=" << src->mss
+                           << " link->mss="
+                           << (link->status.metrics.has_mss()
+                                   ? link->status.metrics.mss()
+                                   : std::numeric_limits<uint32_t>::max());
       if (dst->last_path_finding_run != path_finding_run_ ||
           dst->best_rtt > rtt) {
         dst->last_path_finding_run = path_finding_run_;
@@ -290,11 +320,13 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
   SelectedLinks selected_links;
 
   for (node_it = nodes_.begin(); node_it != nodes_.end(); ++node_it) {
-    if (node_it->second.last_path_finding_run != path_finding_run_) {
-      continue;  // Unreachable
-    }
     if (node_it->first == root_node_) {
       continue;
+    }
+    if (node_it->second.last_path_finding_run != path_finding_run_) {
+      OVERNET_TRACE(DEBUG) << "RB[" << root_node_ << "]: " << node_it->first
+                           << " unreachable";
+      continue;  // Unreachable
     }
     Node* n = &node_it->second;
     while (n->best_from->status.id != root_node_) {
@@ -302,9 +334,9 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
     }
     Link* link = n->best_link;
     assert(link->status.from == root_node_);
-    selected_links.emplace(
-        node_it->first,
-        SelectedLink{link->status.to, link->status.local_id, n->mss});
+    selected_links.emplace(node_it->first,
+                           SelectedLink{link->status.to, link->status.local_id,
+                                        node_it->second.mss});
   }
 
   return selected_links;
@@ -312,12 +344,13 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
 
 uint64_t RoutingTable::SendUpdate(fuchsia::overnet::protocol::Peer_Proxy* peer,
                                   Optional<NodeId> exclude_node) const {
-  OVERNET_TRACE(DEBUG) << "SendUpdate";
+  OVERNET_TRACE(DEBUG) << root_node_ << " SendUpdate exclude=" << exclude_node;
 
   std::lock_guard<std::mutex> mutex(shared_table_mu_);
   std::unordered_set<NodeId> version_zero_nodes;
 
   for (const auto& m : shared_node_status_) {
+    OVERNET_TRACE(DEBUG) << "Consider node: " << m;
     if (m.version == 0) {
       version_zero_nodes.insert(NodeId(m.id));
       continue;
@@ -330,6 +363,7 @@ uint64_t RoutingTable::SendUpdate(fuchsia::overnet::protocol::Peer_Proxy* peer,
   }
 
   for (const auto& m : shared_link_status_) {
+    OVERNET_TRACE(DEBUG) << "Consider link: " << m;
     if (NodeId(m.from) == exclude_node ||
         version_zero_nodes.count(NodeId(m.from)) > 0 ||
         version_zero_nodes.count(NodeId(m.to)) > 0) {

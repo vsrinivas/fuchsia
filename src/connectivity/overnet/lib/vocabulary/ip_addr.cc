@@ -3,11 +3,26 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/vocabulary/ip_addr.h"
+
 #include <arpa/inet.h>
 #include <string.h>
+
 #include <ostream>
 
 namespace overnet {
+
+#ifndef __Fuchsia__
+Optional<IpAddr> IpAddr::Unix(const std::string& name) {
+  IpAddr out;
+  if (name.length() >= sizeof(out.unix.sun_path)) {
+    return Nothing;
+  }
+  memset(&out, 0, sizeof(out));
+  out.unix.sun_family = AF_UNIX;
+  memcpy(out.unix.sun_path, name.data(), name.length());
+  return out;
+}
+#endif
 
 IpAddr IpAddr::AnyIpv4() {
   IpAddr out;
@@ -21,6 +36,21 @@ IpAddr IpAddr::AnyIpv6() {
   memset(&out, 0, sizeof(out));
   out.ipv6.sin6_family = AF_INET6;
   return out;
+}
+
+socklen_t IpAddr::length() const {
+  switch (addr.sa_family) {
+    case AF_INET:
+      return sizeof(ipv4);
+    case AF_INET6:
+      return sizeof(ipv6);
+#ifndef __Fuchsia__
+    case AF_UNIX:
+      return SUN_LEN(&unix);
+#endif
+    default:
+      return sizeof(*this);
+  }
 }
 
 Optional<IpAddr> IpAddr::WithPort(uint16_t port) const {
@@ -64,6 +94,10 @@ std::ostream& operator<<(std::ostream& out, IpAddr addr) {
     case AF_INET6:
       inet_ntop(AF_INET6, &addr.ipv6.sin6_addr, dst, sizeof(dst));
       return out << dst << "." << ntohs(addr.ipv6.sin6_port);
+#ifndef __Fuchsia__
+    case AF_UNIX:
+      return out << addr.unix.sun_path;
+#endif
     default:
       return out << "<<unknown address family " << addr.addr.sa_family << ">>";
   }
@@ -87,6 +121,11 @@ size_t HashIpAddr::operator()(const IpAddr& addr) const {
       add_value(addr.ipv6.sin6_addr);
       add_value(addr.ipv6.sin6_port);
       break;
+#ifndef __Fuchsia__
+    case AF_UNIX:
+      add_value(addr.unix.sun_path);
+      break;
+#endif
   }
   return out;
 }
@@ -102,6 +141,10 @@ bool EqIpAddr::operator()(const IpAddr& a, const IpAddr& b) const {
         return a.ipv6.sin6_port == b.ipv6.sin6_port &&
                0 == memcmp(&a.ipv6.sin6_addr, &b.ipv6.sin6_addr,
                            sizeof(a.ipv6.sin6_addr));
+#ifndef __Fuchsia__
+      case AF_UNIX:
+        return 0 == strcmp(a.unix.sun_path, b.unix.sun_path);
+#endif
     }
   }
   if (auto a6 = a.AsIpv6(); a6.has_value()) {

@@ -31,12 +31,7 @@ template("stats") {
 }
 
 stats("link") {}
-
-group("lib") {
-    public_deps = [
-        ":link",
-    ]
-}
+stats("stream") {}
 
 source_set("visitor") {
     sources = [

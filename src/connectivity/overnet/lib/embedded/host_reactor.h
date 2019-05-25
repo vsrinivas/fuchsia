@@ -5,9 +5,11 @@
 #pragma once
 
 #include <time.h>
+
 #include <map>
 #include <mutex>
 #include <unordered_map>
+
 #include "src/connectivity/overnet/lib/environment/timer.h"
 
 namespace overnet {
@@ -47,10 +49,39 @@ class HostReactor final : public Timer {
   Status Run();
   void Step();
 
-  void OnRead(int fd, StatusCallback cb) { fds_[fd].on_read = std::move(cb); }
-  void OnWrite(int fd, StatusCallback cb) { fds_[fd].on_read = std::move(cb); }
+  void OnRead(int fd, StatusCallback cb) {
+    if (!shutting_down_) {
+      fds_[fd].on_read = std::move(cb);
+    }
+  }
+  void OnWrite(int fd, StatusCallback cb) {
+    if (!shutting_down_) {
+      fds_[fd].on_write = std::move(cb);
+    }
+  }
+  void CancelIO(int fd);
 
   void Exit(const Status& status) { exit_status_ = status; }
+
+  // Wait until either succeeds() returns true, or false if until is reached.
+  // Return true if succeeds(), otherwise false.
+  template <class F>
+  bool WaitUntil(F succeeds, TimeStamp until) {
+    if (succeeds()) {
+      return true;
+    }
+    bool timeout_hit = false;
+    Timeout timeout(this, until, [&timeout_hit](const Status& status) {
+      timeout_hit = true;
+    });
+    while (!timeout_hit) {
+      Step();
+      if (succeeds()) {
+        return true;
+      }
+    }
+    return false;
+  }
 
  private:
   void InitTimeout(Timeout* timeout, TimeStamp when) override;

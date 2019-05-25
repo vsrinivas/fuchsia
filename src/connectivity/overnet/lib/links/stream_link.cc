@@ -6,92 +6,97 @@
 
 namespace overnet {
 
-StreamLink::StreamLink(Router *router, NodeId peer, uint32_t mss,
-                       uint64_t label)
-    : mss_(mss), router_(router), peer_(peer), local_id_(label) {}
+StreamLink::StreamLink(Router *router, NodeId peer,
+                       std::unique_ptr<StreamFramer> framer, uint64_t label)
+    : router_(router),
+      framer_(std::move(framer)),
+      peer_(peer),
+      local_id_(label),
+      packet_stuffer_(router->node_id(), peer) {}
 
 void StreamLink::Forward(Message message) {
-  if (emitting_ || closed_) {
+  if (closed_) {
     return;
   }
-
-  // Ensure that we fit into the mss with the routing header
-  Optional<size_t> max_payload_length =
-      message.header.MaxPayloadLength(router_->node_id(), peer_, mss_);
-  if (!max_payload_length.has_value() || *max_payload_length <= 1) {
-    // Drop packet (higher layers can resend if needed).
-    return;
+  if (packet_stuffer_.Forward(std::move(message)) && !emitting_) {
+    EmitOne();
   }
+}
 
-  auto payload = message.make_payload(LazySliceArgs{
-      Border::Prefix(varint::WireSizeFor(mss_)), *max_payload_length, false});
+void StreamLink::SetClosed() {
+  closed_ = true;
+  packet_stuffer_.DropPendingMessages();
+}
 
-  auto packet =
-      message.header.Write(router_->node_id(), peer_, std::move(payload));
+void StreamLink::EmitOne() {
+  static uint64_t num_forwards = 0;
+  auto n = num_forwards++;
+  OVERNET_TRACE(TRACE) << "StreamLink::EmitOne[" << n
+                       << "]: forward with emitting=" << emitting_
+                       << " closed=" << closed_;
 
-  auto packet_length = packet.length();
-  auto prefix_length = varint::WireSizeFor(packet_length);
+  assert(!emitting_);
+  assert(!closed_);
+  assert(packet_stuffer_.HasPendingMessages());
+
+  auto packet = packet_stuffer_.BuildPacket(
+      LazySliceArgs{framer_->desired_border, framer_->maximum_segment_size});
+
+  OVERNET_TRACE(TRACE) << "StreamLink::EmitOne[" << n << "]: emit " << packet;
 
   emitting_ = true;
-  Emit(packet.WithPrefix(
-           prefix_length,
-           [=](uint8_t *p) { varint::Write(packet_length, prefix_length, p); }),
-       [this](const Status &status) {
+  stats_.outgoing_packet_count++;
+  Emit(framer_->Frame(std::move(packet)),
+       StatusCallback(ALLOCATED_CALLBACK, [this, n](const Status &status) {
          if (status.is_error()) {
-           closed_ = true;
+           OVERNET_TRACE(ERROR) << "Write failed: " << status;
+           SetClosed();
          }
          emitting_ = false;
-         MaybeQuiesce();
-       });
+         OVERNET_TRACE(TRACE) << "StreamLink::EmitOne[" << n << "]: emitted";
+         if (closed_) {
+           MaybeQuiesce();
+         } else if (packet_stuffer_.HasPendingMessages()) {
+           EmitOne();
+         }
+       }));
 }
 
 void StreamLink::Process(TimeStamp received, Slice bytes) {
+  OVERNET_TRACE(TRACE) << "StreamLink.Read: " << bytes;
+
   if (closed_) {
     return;
   }
 
-  buffered_input_.Append(std::move(bytes));
+  framer_->Push(std::move(bytes));
 
   for (;;) {
-    const uint8_t *begin = buffered_input_.begin();
-    const uint8_t *p = begin;
-    const uint8_t *end = buffered_input_.end();
-
-    uint64_t segment_length;
-    if (!varint::Read(&p, end, &segment_length)) {
-      if (end - p >= varint::WireSizeFor(mss_)) {
-        closed_ = true;
-      }
+    auto input = framer_->Pop();
+    if (input.is_error()) {
+      OVERNET_TRACE(ERROR) << input.AsStatus();
+      SetClosed();
+      return;
+    }
+    if (!input->has_value()) {
       return;
     }
 
-    if (segment_length > mss_) {
-      closed_ = true;
+    stats_.incoming_packet_count++;
+
+    if (auto status = packet_stuffer_.ParseAndForwardTo(
+            received, std::move(**input), router_);
+        status.is_error()) {
+      OVERNET_TRACE(ERROR) << input.AsStatus();
+      SetClosed();
       return;
     }
-
-    if (static_cast<uint64_t>(end - p) < segment_length) {
-      return;
-    }
-
-    buffered_input_.TrimBegin(p - begin);
-    auto message_with_payload =
-        RoutableMessage::Parse(buffered_input_.TakeUntilOffset(segment_length),
-                               router_->node_id(), peer_);
-
-    if (message_with_payload.is_error()) {
-      closed_ = true;
-      return;
-    }
-
-    router_->Forward(Message::SimpleForwarder(
-        std::move(message_with_payload->message),
-        std::move(message_with_payload->payload), received));
   }
 }
 
 void StreamLink::Close(Callback<void> quiesced) {
-  closed_ = true;
+  OVERNET_TRACE(DEBUG) << "Stream link closed by router";
+  SetClosed();
   on_quiesced_ = std::move(quiesced);
   MaybeQuiesce();
 }
@@ -104,9 +109,16 @@ void StreamLink::MaybeQuiesce() {
 }
 
 fuchsia::overnet::protocol::LinkStatus StreamLink::GetLinkStatus() {
-  return fuchsia::overnet::protocol::LinkStatus{
-      router_->node_id().as_fidl(), peer_.as_fidl(), local_id_, 1,
-      fuchsia::overnet::protocol::LinkMetrics{}};
+  // Advertise MSS as smaller than it is to account for some bugs that exist
+  // right now.
+  // TODO(ctiller): eliminate this - we should be precise.
+  constexpr size_t kUnderadvertiseMaximumSendSize = 32;
+  fuchsia::overnet::protocol::LinkMetrics m;
+  m.set_mss(std::max(kUnderadvertiseMaximumSendSize, maximum_segment_size()) -
+            kUnderadvertiseMaximumSendSize);
+  return fuchsia::overnet::protocol::LinkStatus{router_->node_id().as_fidl(),
+                                                peer_.as_fidl(), local_id_, 1,
+                                                std::move(m)};
 }
 
 }  // namespace overnet

@@ -5,7 +5,11 @@
 #pragma once
 
 #include <netinet/in.h>
+#ifndef __Fuchsia__
+#include <sys/un.h>
+#endif
 #include <iosfwd>
+
 #include "src/connectivity/overnet/lib/vocabulary/optional.h"
 
 namespace overnet {
@@ -14,11 +18,18 @@ union IpAddr {
   sockaddr_in ipv4;
   sockaddr_in6 ipv6;
   sockaddr addr;
+#ifndef __Fuchsia__
+  sockaddr_un unix;
+  static Optional<IpAddr> Unix(const std::string& name);
+#endif
 
   Optional<IpAddr> WithPort(uint16_t port) const;
 
   static IpAddr AnyIpv4();
   static IpAddr AnyIpv6();
+
+  const sockaddr* get() const { return &addr; }
+  socklen_t length() const;
 
   Optional<IpAddr> AsIpv6() const;
   uint16_t port() const {

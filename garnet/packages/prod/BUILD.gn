@@ -385,6 +385,7 @@ group("overnetstack") {
   testonly = true
   public_deps = [
     "//src/connectivity/overnet/overnetstack",
+    "//src/connectivity/overnet/tools/ascendd",
     "//src/connectivity/overnet/tools/onet",
   ]
 }

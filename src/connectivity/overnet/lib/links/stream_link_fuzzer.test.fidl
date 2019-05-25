@@ -7,12 +7,24 @@ library fuchsia.overnet.streamlinkfuzzer;
 /// A list of packets to process on a stream link
 /// For stream_link_untrusted_fuzzer
 struct UntrustedInputPlan {
+  UntrustedLinkDescription link_description;
   vector<vector<uint8>> input;
+};
+
+struct UntrustedReliableLink {};
+
+struct UntrustedUnreliableLink {};
+
+/// A description of a link between nodes
+xunion UntrustedLinkDescription {
+  UntrustedReliableLink reliable;
+  UntrustedUnreliableLink unreliable;
 };
 
 /// A list of actions to perform on a peer to peer fixture
 /// For stream_link_peer_to_peer_fuzzer
 struct PeerToPeerPlan {
+  PeerToPeerLinkDescription link_description;
   vector<PeerToPeerAction> actions;
 };
 
@@ -40,4 +52,31 @@ xunion PeerToPeerActionType {
     Void sent_packet;
     /// Allow this many bytes to flow from node --> the other node
     uint64 allow_bytes;
+};
+
+/// A reliable link: uses the ReliableFramer class
+struct PeerToPeerReliableLink {};
+
+/// An unreliable link: uses the UnreliableFramer class
+/// and additionally has a mutation plan to modify bytes on the wire
+struct PeerToPeerUnreliableLink {
+  vector<StreamMutation> mutation_plan_1_to_2;
+  vector<StreamMutation> mutation_plan_2_to_1;
+};
+
+/// A description of a link between nodes
+xunion PeerToPeerLinkDescription {
+  PeerToPeerReliableLink reliable;
+  PeerToPeerUnreliableLink unreliable;
+};
+
+/// Describes a mutation to apply to a data stream
+xunion StreamMutation {
+  /// bit[flip_bit] ^= 1
+  uint64 flip_bit;
+};
+
+struct InsertByte {
+  uint64 position;
+  uint8 byte;
 };

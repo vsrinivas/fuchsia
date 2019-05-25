@@ -16,18 +16,18 @@ namespace overnet {
 std::random_device rng_dev;
 static const size_t kMaximumPacketSize = 1400;
 
-OmdpNub::OmdpNub(OvernetEmbedded* root, UdpNub* udp_nub)
-    : OvernetEmbedded::Actor(root),
+OmdpNub::OmdpNub(BasicOvernetEmbedded* root, UdpNub* udp_nub)
+    : BasicOvernetEmbedded::Actor(root),
       Omdp(root->node_id().get(), root->timer(), []() { return rng_dev(); }),
       reactor_(root->reactor()),
       udp_nub_(udp_nub),
-      timer_(root->timer()),
-      incoming_(socket(AF_INET6, SOCK_DGRAM, 0)) {}
+      timer_(root->timer()) {}
 
 OmdpNub::~OmdpNub() = default;
 
 Status OmdpNub::Start() {
-  return incoming_.SetOptReusePort(true)
+  return incoming_.Create(AF_INET6, SOCK_DGRAM, 0)
+      .Then([&] { return incoming_.SetOptReusePort(true); })
       .Then([&] {
         auto addr = *IpAddr::AnyIpv6().WithPort(kMulticastGroupAddr.port());
         OVERNET_TRACE(DEBUG) << "Bind incoming OMDP socket to: " << addr;
@@ -53,6 +53,8 @@ void OmdpNub::Broadcast(Slice data) {
     return;
   }
   OVERNET_TRACE(DEBUG) << "BROADCAST " << data << " to " << kMulticastGroupAddr;
+  std::vector<Status> failures;
+  bool any_successes = false;
   for (size_t i = 0;
        interfaces[i].if_index != 0 || interfaces[i].if_name != nullptr; i++) {
     if (auto status =
@@ -65,7 +67,14 @@ void OmdpNub::Broadcast(Slice data) {
                   out << "On " << interfaces[i].if_name;
                   return out.str();
                 });
-        status.is_error()) {
+        status.is_ok()) {
+      any_successes = true;
+    } else {
+      failures.emplace_back(std::move(status));
+    }
+  }
+  if (!any_successes) {
+    for (const auto& status : failures) {
       OVERNET_TRACE(WARNING) << "Omdp broadcast failed: " << status;
     }
   }
@@ -73,7 +82,7 @@ void OmdpNub::Broadcast(Slice data) {
 }
 
 void OmdpNub::OnNewNode(uint64_t node_id, IpAddr addr) {
-  udp_nub_->Initiate(addr, NodeId(node_id));
+  udp_nub_->Initiate({addr}, NodeId(node_id));
 }
 
 void OmdpNub::WaitForInbound() {

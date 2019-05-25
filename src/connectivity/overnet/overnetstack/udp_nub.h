@@ -27,7 +27,7 @@ using UdpNubBase = overnet::PacketNub<overnet::IpAddr, kAssumedUDPPacketSize,
 class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
  public:
   explicit UdpNub(OvernetApp* app)
-      : UdpNubBase(app->timer(), app->node_id()),
+      : UdpNubBase(app->endpoint()),
         endpoint_(app->endpoint()),
         timer_(app->timer()) {}
 
@@ -53,8 +53,6 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
       OVERNET_TRACE(WARNING) << "sendto fails: " << status;
     }
   }
-
-  overnet::Router* GetRouter() override { return endpoint_; }
 
   void Publish(overnet::LinkPtr<> link) override {
     overnet::NodeId node = overnet::NodeId(link->GetLinkStatus().to);

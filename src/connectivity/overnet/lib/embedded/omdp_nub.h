@@ -5,16 +5,18 @@
 #pragma once
 
 #include <fbl/ref_ptr.h>
+
 #include "src/connectivity/overnet/lib/embedded/udp_nub.h"
 #include "src/connectivity/overnet/lib/omdp/omdp.h"
 
 namespace overnet {
 
-class OmdpNub final : public OvernetEmbedded::Actor, private Omdp {
+class OmdpNub final : public BasicOvernetEmbedded::Actor, private Omdp {
  public:
-  OmdpNub(OvernetEmbedded* root, UdpNub* udp_nub);
+  OmdpNub(BasicOvernetEmbedded* root, UdpNub* udp_nub);
   ~OmdpNub();
   Status Start() override;
+  const char* Name() const override { return "OmdpNub"; }
 
  private:
   void OnNewNode(uint64_t node_id, IpAddr addr) override;

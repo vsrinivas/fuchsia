@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
+#include <ostream>
 #include <thread>
 #include <tuple>
 #include <unordered_map>
@@ -35,6 +36,10 @@ struct FullLinkLabel {
 
 inline bool operator==(const FullLinkLabel& a, const FullLinkLabel& b) {
   return a.from == b.from && a.to == b.to && a.link_label == b.link_label;
+}
+
+inline std::ostream& operator<<(std::ostream& out, FullLinkLabel lbl) {
+  return out << lbl.from << "->" << lbl.to << "#" << lbl.link_label;
 }
 
 }  // namespace routing_table_impl

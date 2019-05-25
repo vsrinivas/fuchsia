@@ -14,6 +14,9 @@ struct NodeId {
     uint64 id;
 };
 
+/// Node-local link label
+using LinkId = uint64;
+
 /// Reliability and ordering constraints for a stream.
 enum ReliabilityAndOrdering {
     /// Datagrams are delivered reliably in an ordered fashion.

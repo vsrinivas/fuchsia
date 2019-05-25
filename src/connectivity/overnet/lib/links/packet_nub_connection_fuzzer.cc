@@ -16,20 +16,28 @@ using namespace overnet;
 
 class Fuzzer;
 
-class Nub final : public PacketNub<int, 256> {
+class NubStuff {
+ public:
+  NubStuff(Fuzzer* fuzzer, uint8_t index);
+
+  Router* router() { return &router_; }
+
+ private:
+  Router router_;
+};
+
+class Nub final : public NubStuff, public PacketNub<int, 256> {
  public:
   Nub(Fuzzer* fuzzer, uint8_t index);
 
   void SendTo(int dest, Slice slice) override;
-  Router* GetRouter() override;
   void Publish(LinkPtr<> link) override {
-    router_.RegisterLink(std::move(link));
+    router()->RegisterLink(std::move(link));
   }
 
  private:
   Fuzzer* const fuzzer_;
   const uint8_t index_;
-  Router router_;
 };
 
 class Fuzzer {
@@ -38,8 +46,8 @@ class Fuzzer {
 
   Timer* timer() { return &timer_; }
   bool IsDone() {
-    return nub1_.GetRouter()->HasRouteTo(NodeId(2)) &&
-           nub2_.GetRouter()->HasRouteTo(NodeId(1));
+    return nub1_.router()->HasRouteTo(NodeId(2)) &&
+           nub2_.router()->HasRouteTo(NodeId(1));
   }
   bool StepTime() { return timer_.StepUntilNextEvent(); }
   bool StepTime(uint64_t us) { return timer_.Step(us); }
@@ -49,6 +57,16 @@ class Fuzzer {
   void DropPacket(uint64_t packet);
   void Initiate1();
   void Initiate2();
+
+  ~Fuzzer() {
+    bool done1 = false;
+    bool done2 = false;
+    nub1_.router()->Close([&done1] { done1 = true; });
+    nub2_.router()->Close([&done2] { done2 = true; });
+    while (!done1 || !done2) {
+      StepTime();
+    }
+  }
 
  private:
   TestTimer timer_;
@@ -71,17 +89,18 @@ class Fuzzer {
   std::vector<Packet> packets_;
 };
 
+NubStuff::NubStuff(Fuzzer* fuzzer, uint8_t index)
+    : router_(fuzzer->timer(), NodeId(index), false) {}
+
 Nub::Nub(Fuzzer* fuzzer, uint8_t index)
-    : PacketNub(fuzzer->timer(), NodeId(index)),
+    : NubStuff(fuzzer, index),
+      PacketNub(router()),
       fuzzer_(fuzzer),
-      index_(index),
-      router_(fuzzer->timer(), NodeId(index), false) {}
+      index_(index) {}
 
 void Nub::SendTo(int dest, Slice slice) {
   fuzzer_->QueueSend(index_, dest, std::move(slice));
 }
-
-Router* Nub::GetRouter() { return &router_; }
 
 Fuzzer::Fuzzer() = default;
 

@@ -5,7 +5,9 @@
 #pragma once
 
 #include <cstring>
+#include <functional>
 #include <sstream>
+
 #include "src/connectivity/overnet/lib/vocabulary/ip_addr.h"
 #include "src/connectivity/overnet/lib/vocabulary/slice.h"
 #include "src/connectivity/overnet/lib/vocabulary/status.h"
@@ -32,7 +34,11 @@ class Socket {
   bool IsValid() const { return socket_ != -1; }
   int get() const { return socket_; }
 
+  Status Create(int family, int type, int option);
   Status SetOptReusePort(bool reuse);
+
+  Status MutateFlags(std::function<int(int)> mutator);
+  Status SetNonBlocking(bool non_blocking);
 
   template <class T>
   Status SetOpt(int level, int opt, T value) {
@@ -42,6 +48,12 @@ class Socket {
   Status SetOpt(int level, int opt, void* value, size_t value_size);
   Status Bind(IpAddr addr);
   Status SendTo(Slice data, int flags, IpAddr dest);
+  Status Listen();
+  Status Connect(IpAddr dest);
+  StatusOr<Socket> Accept();
+  // Returns the data that was not written, or error.
+  StatusOr<Slice> Write(Slice data);
+  StatusOr<Optional<Slice>> Read(size_t maximum_read_size);
 
   struct DataAndAddr {
     Slice data;

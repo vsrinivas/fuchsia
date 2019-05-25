@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <vector>
+
 #include "src/connectivity/overnet/lib/datagram_stream/linearizer.h"
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
@@ -62,7 +63,8 @@ class LinearizerFuzzer {
   StatusCode closed_status_;
   bool waiting_for_pull_ = false;
 
-  Linearizer linearizer_{kBuffer};
+  StreamStats stats_;
+  Linearizer linearizer_{kBuffer, &stats_};
 };
 
 }  // namespace linearizer_fuzzer

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/datagram_stream/linearizer.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/connectivity/overnet/lib/datagram_stream/linearizer_fuzzer.h"
@@ -20,6 +21,26 @@ namespace linearizer_test {
 template <class T>
 void Ignore(T x) {}
 
+class StatsDumper final : public StatsVisitor {
+ public:
+  void Counter(const char* name, uint64_t value) override {
+    std::cout << name << " = " << value << "\n";
+
+    // Maintainer note:
+    // uncomment this line to get easily copy/pasted EXPECT macros to update the
+    // expectations in tests.
+
+    // std::cout << "EXPECT_EQ(stats." << name << ", uint64_t(" << value
+    //           << "));\n";
+  }
+};
+
+template <class T>
+void DumpStats(const T* stats) {
+  StatsDumper dumper;
+  stats->Accept(&dumper);
+}
+
 class MockCallbacks {
  public:
   MOCK_METHOD1(PullDone, void(const StatusOr<Optional<Slice>>&));
@@ -32,11 +53,15 @@ class MockCallbacks {
   }
 };
 
-TEST(Linearizer, NoOp) { Linearizer(1024); }
+TEST(Linearizer, NoOp) {
+  StreamStats stats;
+  Linearizer(1024, &stats);
+}
 
 TEST(Linearizer, Push0_Pull0) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   // Push at offset 0 then a Pull should complete immediately
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}));
@@ -44,11 +69,35 @@ TEST(Linearizer, Push0_Pull0) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Pull0_Push0) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   // Push at offset 0 then a Pull should complete immediately
   linearizer.Pull(cb.NewPull());
@@ -56,11 +105,35 @@ TEST(Linearizer, Pull0_Push0) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}));
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push0_Push1_Pull0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}));
   Ignore(linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}));
@@ -75,11 +148,35 @@ TEST(Linearizer, Push0_Push1_Pull0_Pull1) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push1_Push0_Pull0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}));
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}));
@@ -94,11 +191,35 @@ TEST(Linearizer, Push1_Push0_Pull0_Pull1) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push0_Pull0_Push1_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}));
 
@@ -113,11 +234,35 @@ TEST(Linearizer, Push0_Pull0_Push1_Pull1) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(2));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push1_Pull0_Push0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}));
   linearizer.Pull(cb.NewPull());
@@ -132,11 +277,35 @@ TEST(Linearizer, Push1_Pull0_Push0_Pull1) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Pull0_Push1_Push0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   linearizer.Pull(cb.NewPull());
   Ignore(linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}));
@@ -151,11 +320,35 @@ TEST(Linearizer, Pull0_Push1_Push0_Pull1) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push0_Push0_Pull0) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}));
 
@@ -166,11 +359,35 @@ TEST(Linearizer, Push0_Push0_Pull0) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("a"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push0_PushBad0_Pull0) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}));
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("b")}));
@@ -178,11 +395,35 @@ TEST(Linearizer, Push0_PushBad0_Pull0) {
 
   EXPECT_CALL(cb, PullDone(Property(&StatusOr<Optional<Slice>>::is_ok, false)));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push1_Push01_Pull0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}));
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")}));
@@ -197,11 +438,35 @@ TEST(Linearizer, Push1_Push01_Pull0_Pull1) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("b"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(1));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push01_Push1_Pull0_Pull1) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")}));
 
@@ -212,11 +477,35 @@ TEST(Linearizer, Push01_Push1_Pull0_Pull1) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("ab"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push12_Push01_Pull0_Pull1_Pull2) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{1, false, Slice::FromStaticString("bc")}));
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")}));
@@ -231,11 +520,35 @@ TEST(Linearizer, Push12_Push01_Pull0_Pull1_Pull2) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("bc"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(1));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push01_Push12_Pull0_Pull1_Pull2) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("ab")}));
   Ignore(linearizer.Push(Chunk{1, false, Slice::FromStaticString("bc")}));
@@ -250,21 +563,69 @@ TEST(Linearizer, Push01_Push12_Pull0_Pull1_Pull2) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("c"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push_Close) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}));
 
   // Final status will be an error because the message is incomplete.
   EXPECT_TRUE(linearizer.Close(Status::Ok()).is_error());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push1_Push012_Pull0_Pull1_Pull2) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}));
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("abc")}));
@@ -285,11 +646,35 @@ TEST(Linearizer, Push1_Push012_Pull0_Pull1_Pull2) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("c"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(2));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 TEST(Linearizer, Push012_Push1_Pull0) {
   StrictMock<MockCallbacks> cb;
-  Linearizer linearizer(128);
+  StreamStats stats;
+  Linearizer linearizer(128, &stats);
 
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("abc")}));
   Ignore(linearizer.Push(Chunk{1, false, Slice::FromStaticString("b")}));
@@ -299,6 +684,29 @@ TEST(Linearizer, Push012_Push1_Pull0) {
       cb, PullDone(Property(&StatusOr<Optional<Slice>>::get,
                             Pointee(Pointee(Slice::FromStaticString("abc"))))));
   linearizer.Pull(cb.NewPull());
+
+  DumpStats(&stats);
+
+  EXPECT_EQ(stats.linearizer_reject_past_end_of_buffering, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_empty_chunk, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_fast_path_taken, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_ignore_all_prior, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_partial_ignore_begin, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_new_pending_queue, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integrations, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_inserts, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_errors, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_shorter, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_coincident_longer, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_prior_longer, uint64_t(1));
+  EXPECT_EQ(stats.linearizer_integration_prior_partial, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_splits, uint64_t(0));
+  EXPECT_EQ(stats.linearizer_integration_subsequent_covers, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_cancel_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_split_packet_too_small, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_take_entire_chunk, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_nacked, uint64_t(0));
+  EXPECT_EQ(stats.send_chunk_push, uint64_t(0));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
