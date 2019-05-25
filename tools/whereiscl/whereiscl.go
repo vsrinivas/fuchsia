@@ -10,6 +10,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -17,6 +18,23 @@ import (
 
 	"fuchsia.googlesource.com/fuchsia/tools/whereiscl/lib"
 )
+
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), `Usage: whereiscl <review URL>
+
+Answers whether a CL is merged (or abandoned) and whether it passed Global Integration.
+
+Examples:
+  $ whereiscl https://fuchsia-review.googlesource.com/c/fuchsia/+/123456789
+  $ whereiscl fuchsia-review.googlesource.com/c/fuchsia/+/123456789/some/file
+  $ whereiscl http://fxr/123456789
+  $ whereiscl fxr/123456789/some/file
+
+`)
+		flag.PrintDefaults()
+	}
+}
 
 const fuchsiaReviewURL = "https://fuchsia-review.googlesource.com"
 
@@ -41,14 +59,17 @@ func parseReviewURL(str string) (lib.QueryInfo, error) {
 }
 
 func main() {
-	if len(os.Args) < 2 {
+	flag.Parse()
+
+	if flag.NArg() == 0 {
 		// TODO: Consider alternatives. E.g., show all outstanding CLs
 		// of the current user, or show all CLs that are pending in
 		// Global Integration.
-		log.Fatal("Review URL must be provided")
+		flag.Usage()
+		os.Exit(1)
 	}
 
-	queryInfo, err := parseReviewURL(os.Args[1])
+	queryInfo, err := parseReviewURL(flag.Arg(0))
 	if err != nil {
 		log.Fatalf("Error parsing the review URL: %v", err)
 	}
