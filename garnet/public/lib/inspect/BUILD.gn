@@ -11,7 +11,7 @@ source_set("inspect") {
   ]
 
   public_deps = [
-    "deprecated",
+    "//garnet/public/lib/inspect/deprecated",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/inspect-vmo",
     "//zircon/public/lib/zx",
@@ -38,6 +38,7 @@ source_set("component") {
 
   public_deps = [
     ":inspect",
+    "//garnet/public/lib/inspect/health",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/vfs/cpp",
   ]

@@ -365,6 +365,7 @@ group("all") {
     ":guest",
     ":httpdate_hyper",
     ":image_pipe_swapchain",
+    ":inspect_health_unittests",
     ":inspect_query_unittests",
     ":inspect_unittests",
     ":iquery_golden_test",
@@ -501,6 +502,13 @@ group("inspect_unittests") {
   testonly = true
   public_deps = [
     "//garnet/public/lib/inspect/tests:inspect_unittests",
+  ]
+}
+
+group("inspect_health_unittests") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/inspect/health/tests:inspect_health_unittests",
   ]
 }
 

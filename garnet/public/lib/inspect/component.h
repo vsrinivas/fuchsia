@@ -5,6 +5,7 @@
 #ifndef LIB_INSPECT_COMPONENT_H_
 #define LIB_INSPECT_COMPONENT_H_
 
+#include <lib/inspect/health/health.h>
 #include <lib/inspect/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -28,12 +29,19 @@ class ComponentInspector {
   [[nodiscard]] static std::shared_ptr<ComponentInspector> Initialize(
       sys::ComponentContext* startup_context);
 
+  // Gets the singleton ComponentInspector for this process, if it exists.
   static std::shared_ptr<ComponentInspector> Get() { return singleton_.lock(); }
+
+  // Gets the NodeHealth for this process.
+  // This method is not thread safe.
+  NodeHealth& Health();
 
  private:
   ComponentInspector();
 
   static std::weak_ptr<ComponentInspector> singleton_;
+
+  std::unique_ptr<NodeHealth> component_health_;
 
   Inspector inspector_;
   Tree root_tree_;

@@ -36,4 +36,11 @@ std::shared_ptr<ComponentInspector> ComponentInspector::Initialize(
   return inspector;
 }
 
+NodeHealth& ComponentInspector::Health() {
+  if (!component_health_) {
+    component_health_ = std::make_unique<NodeHealth>(&root_tree()->GetRoot());
+  }
+  return *component_health_.get();
+}
+
 }  // namespace inspect

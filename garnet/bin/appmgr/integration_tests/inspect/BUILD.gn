@@ -81,6 +81,39 @@ executable("test-vmo") {
   ]
 }
 
+executable("bin-health") {
+  output_name = "inspect_health_test_app"
+
+  sources = [
+    "program-health.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/inspect:component",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("test-health") {
+  testonly = true
+  output_name = "inspect_health_integration_tests"
+
+  sources = [
+    "test-health.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/inspect:reader",
+    "//garnet/public/lib/inspect/testing",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
 test_package("inspect_integration_tests") {
   deps = [
     ":bin",
@@ -110,13 +143,18 @@ test_package("inspect_integration_tests") {
 
 test_package("inspect_vmo_integration_tests") {
   deps = [
+    ":bin-health",
     ":bin-vmo",
+    ":test-health",
     ":test-vmo",
   ]
 
   binaries = [
     {
       name = "inspect_vmo_test_app"
+    },
+    {
+      name = "inspect_health_test_app"
     },
   ]
 
@@ -125,11 +163,19 @@ test_package("inspect_vmo_integration_tests") {
       path = rebase_path("meta/inspect_vmo_test_app.cmx")
       dest = "inspect_vmo_test_app.cmx"
     },
+    {
+      path = rebase_path("meta/inspect_health_test_app.cmx")
+      dest = "inspect_health_test_app.cmx"
+    },
   ]
 
   tests = [
     {
       name = "inspect_vmo_integration_tests"
+      environments = basic_envs
+    },
+    {
+      name = "inspect_health_integration_tests"
       environments = basic_envs
     },
   ]

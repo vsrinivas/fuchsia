@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/inspect_health_integration_tests"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}
