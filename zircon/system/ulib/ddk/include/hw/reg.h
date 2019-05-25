@@ -20,36 +20,36 @@
 // ensure that only the non-writeback load/store instructions are used.
 
 static inline void writeb(uint8_t v, volatile void* a) {
-    __asm__("strb %w1, %0" : "=m" (*(volatile uint8_t*)a) : "r" (v));
+    __asm__ volatile("strb %w1, %0" : "=m" (*(volatile uint8_t*)a) : "r" (v));
 }
 static inline void writew(uint16_t v, volatile void* a) {
-    __asm__("strh %w1, %0" : "=m" (*(volatile uint16_t*)a) : "r" (v));
+    __asm__ volatile("strh %w1, %0" : "=m" (*(volatile uint16_t*)a) : "r" (v));
 }
 static inline void writel(uint32_t v, volatile void* a) {
-    __asm__("str %w1, %0" : "=m" (*(volatile uint32_t*)a) : "r" (v));
+    __asm__ volatile("str %w1, %0" : "=m" (*(volatile uint32_t*)a) : "r" (v));
 }
 static inline void writell(uint64_t v, volatile void* a) {
-    __asm__("str %1, %0" : "=m" (*(volatile uint64_t*)a) : "r" (v));
+    __asm__ volatile("str %1, %0" : "=m" (*(volatile uint64_t*)a) : "r" (v));
 }
 
 static inline uint8_t readb(const volatile void* a) {
     uint8_t v;
-    __asm__("ldrb %w0, %1" : "=r" (v) : "m" (*(volatile uint8_t*)a));
+    __asm__ volatile("ldrb %w0, %1" : "=r" (v) : "m" (*(volatile uint8_t*)a));
     return v;
 }
 static inline uint16_t readw(const volatile void* a) {
     uint16_t v;
-    __asm__("ldrh %w0, %1" : "=r" (v) : "m" (*(volatile uint16_t*)a));
+    __asm__ volatile("ldrh %w0, %1" : "=r" (v) : "m" (*(volatile uint16_t*)a));
     return v;
 }
 static inline uint32_t readl(const volatile void* a) {
     uint32_t v;
-    __asm__("ldr %w0, %1" : "=r" (v) : "m" (*(volatile uint32_t*)a));
+    __asm__ volatile("ldr %w0, %1" : "=r" (v) : "m" (*(volatile uint32_t*)a));
     return v;
 }
 static inline uint64_t readll(const volatile void* a) {
     uint64_t v;
-    __asm__("ldr %0, %1" : "=r" (v) : "m" (*(volatile uint64_t*)a));
+    __asm__ volatile("ldr %0, %1" : "=r" (v) : "m" (*(volatile uint64_t*)a));
     return v;
 }
 
@@ -60,36 +60,36 @@ static inline uint64_t readll(const volatile void* a) {
 // only the non-writeback move instructions are used.
 
 static inline void writeb(uint8_t v, volatile void* a) {
-    __asm__("movb %1, %0" : "=m" (*(volatile uint8_t*)a) : "r" (v));
+    __asm__ volatile("movb %1, %0" : "=m" (*(volatile uint8_t*)a) : "r" (v));
 }
 static inline void writew(uint16_t v, volatile void* a) {
-    __asm__("movw %1, %0" : "=m" (*(volatile uint16_t*)a) : "r" (v));
+    __asm__ volatile("movw %1, %0" : "=m" (*(volatile uint16_t*)a) : "r" (v));
 }
 static inline void writel(uint32_t v, volatile void* a) {
-    __asm__("movl %1, %0" : "=m" (*(volatile uint32_t*)a) : "r" (v));
+    __asm__ volatile("movl %1, %0" : "=m" (*(volatile uint32_t*)a) : "r" (v));
 }
 static inline void writell(uint64_t v, volatile void* a) {
-    __asm__("movq %1, %0" : "=m" (*(volatile uint64_t*)a) : "r" (v));
+    __asm__ volatile("movq %1, %0" : "=m" (*(volatile uint64_t*)a) : "r" (v));
 }
 
 static inline uint8_t readb(const volatile void* a) {
     uint8_t v;
-    __asm__("movb %1, %0" : "=r" (v) : "m" (*(volatile uint8_t*)a));
+    __asm__ volatile("movb %1, %0" : "=r" (v) : "m" (*(volatile uint8_t*)a));
     return v;
 }
 static inline uint16_t readw(const volatile void* a) {
     uint16_t v;
-    __asm__("movw %w1, %0" : "=r" (v) : "m" (*(volatile uint16_t*)a));
+    __asm__ volatile("movw %w1, %0" : "=r" (v) : "m" (*(volatile uint16_t*)a));
     return v;
 }
 static inline uint32_t readl(const volatile void* a) {
     uint32_t v;
-    __asm__("movl %1, %0" : "=r" (v) : "m" (*(volatile uint32_t*)a));
+    __asm__ volatile("movl %1, %0" : "=r" (v) : "m" (*(volatile uint32_t*)a));
     return v;
 }
 static inline uint64_t readll(const volatile void* a) {
     uint64_t v;
-    __asm__("movq %1, %0" : "=r" (v) : "m" (*(volatile uint64_t*)a));
+    __asm__ volatile("movq %1, %0" : "=r" (v) : "m" (*(volatile uint64_t*)a));
     return v;
 }
 
