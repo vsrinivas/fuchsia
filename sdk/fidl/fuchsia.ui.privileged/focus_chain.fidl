@@ -1,0 +1,40 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.privileged;
+
+using fuchsia.ui.views;
+
+/// A FocusChain tracks the status of the View hierarchy as View focus changes.
+///
+/// Description. The |focus_chain| is a vector of ViewRefs in order of
+/// dominance in the View hierarchy; each pair of elements represents a
+/// parent-child relationship.  The root View is always present and occupies
+/// slot 0.  The newly-focused View receives a fuchsia.ui.input.FocusEvent and
+/// occupies the final slot in the vector.  If a View gets destroyed, a
+/// FocusChain holder that listens will receive a ZX_EVENTPAIR_PEER_CLOSED
+/// signal on the corresponding ViewRef.
+///
+/// Invalidation. A FocusChain is invalid if one if its ViewRefs is invalid. If
+/// no View is destroyed, Scenic can still cause invalidation by raising a
+/// ZX_USER_SIGNAL_0 on the root ViewRef.
+///
+/// Reception. Only privileged components may receive a FocusChain, as it
+/// captures global information about the scene graph.
+table FocusChain {
+    1: vector<fuchsia.ui.views.ViewRef> focus_chain;
+};
+
+/// A FocusChainListener is a privileged interface that receives an updated
+/// FocusChain from Scenic.
+protocol FocusChainListener {
+    OnFocusChange(FocusChain focus_chain) -> ();
+};
+
+/// A FocusChainListenerRegistry is a privileged interface that allows
+/// listening to FocusChain updates. Scenic implements this protocol.
+[Discoverable]
+protocol FocusChainListenerRegistry {
+    Register(FocusChainListener listener);
+};
