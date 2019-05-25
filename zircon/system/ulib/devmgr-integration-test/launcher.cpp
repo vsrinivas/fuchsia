@@ -25,12 +25,12 @@
 namespace {
 
 struct BootsvcData {
-    zx::channel server;
+    zx::channel bootsvc_server;
     devmgr_launcher::GetBootItemFunction get_boot_item;
 };
 
 zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
-    auto& get_boot_item = *static_cast<devmgr_launcher::GetBootItemFunction*>(ctx);
+    auto& get_boot_item = static_cast<BootsvcData*>(ctx)->get_boot_item;
     zx::vmo vmo;
     uint32_t length = 0;
     if (get_boot_item) {
@@ -46,27 +46,47 @@ constexpr fuchsia_boot_Items_ops kItemsOps = {
     .Get = ItemsGet,
 };
 
+zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
+    zx::job root_job;
+    zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &root_job);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return fuchsia_boot_RootJobGet_reply(txn, root_job.release());
+}
+
+constexpr fuchsia_boot_RootJob_ops kRootJobOps = {
+    .Get = RootJobGet,
+};
+
+fbl::RefPtr<fs::Service> MakeNode(async_dispatcher_t* dispatcher, fidl_dispatch_t* dispatch,
+                                  void* ctx, const void* ops) {
+    return fbl::MakeRefCounted<fs::Service>([dispatcher, dispatch, ctx, ops](zx::channel channel) {
+        return fidl_bind(dispatcher, channel.release(), dispatch, ctx, ops);
+    });
+}
+
 int bootsvc_main(void* arg) {
     auto data = std::unique_ptr<BootsvcData>(static_cast<BootsvcData*>(arg));
     async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
 
     // Quit the loop when the channel is closed.
-    async::Wait wait(data->server.get(), ZX_CHANNEL_PEER_CLOSED, [&loop](...) {
+    async::Wait wait(data->bootsvc_server.get(), ZX_CHANNEL_PEER_CLOSED, [&loop](...) {
         loop.Quit();
     });
 
     // Setup VFS.
     fs::SynchronousVfs vfs(loop.dispatcher());
     auto root = fbl::MakeRefCounted<fs::PseudoDir>();
-    auto node = fbl::MakeRefCounted<fs::Service>([&loop, &data](zx::channel channel) {
-        auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
-        return fidl_bind(loop.dispatcher(), channel.release(), dispatch, &data->get_boot_item,
-                         &kItemsOps);
-    });
-    root->AddEntry(fuchsia_boot_Items_Name, node);
+    auto items_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
+    auto items_node = MakeNode(loop.dispatcher(), items_dispatch, data.get(), &kItemsOps);
+    root->AddEntry(fuchsia_boot_Items_Name, items_node);
+    auto root_job_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootJob_dispatch);
+    auto root_job_node = MakeNode(loop.dispatcher(), root_job_dispatch, data.get(), &kRootJobOps);
+    root->AddEntry(fuchsia_boot_RootJob_Name, root_job_node);
 
     // Serve VFS on channel.
-    auto conn = std::make_unique<fs::Connection>(&vfs, root, std::move(data->server),
+    auto conn = std::make_unique<fs::Connection>(&vfs, root, std::move(data->bootsvc_server),
                                                  ZX_FS_FLAG_DIRECTORY |
                                                  ZX_FS_RIGHT_READABLE |
                                                  ZX_FS_RIGHT_WRITABLE);
@@ -100,7 +120,7 @@ IsolatedDevmgr::~IsolatedDevmgr() {
 zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* out) {
     auto data = std::make_unique<BootsvcData>();
     zx::channel bootsvc_client;
-    zx_status_t status = zx::channel::create(0, &bootsvc_client, &data->server);
+    zx_status_t status = zx::channel::create(0, &bootsvc_client, &data->bootsvc_server);
     if (status != ZX_OK) {
         return status;
     }

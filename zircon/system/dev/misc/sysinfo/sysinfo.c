@@ -11,6 +11,7 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
+#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <zircon/boot/image.h>
 #include <zircon/syscalls/resource.h>
@@ -25,31 +26,27 @@
 
 typedef struct {
     zx_device_t* zxdev;
-    zx_handle_t job_root;
+    zx_handle_t root_job_svc;
     mtx_t lock;
     char board_name[ZBI_BOARD_NAME_LEN];
 } sysinfo_t;
 
-static zx_handle_t get_sysinfo_job_root(sysinfo_t* sysinfo) {
+static zx_handle_t get_sysinfo_root_job(sysinfo_t* sysinfo) {
     mtx_lock(&sysinfo->lock);
-    if (sysinfo->job_root == ZX_HANDLE_INVALID) {
-        sysinfo->job_root = zx_take_startup_handle(PA_HND(PA_USER0, ID_HJOBROOT));
+    if (sysinfo->root_job_svc == ZX_HANDLE_INVALID) {
+        sysinfo->root_job_svc = zx_take_startup_handle(PA_HND(PA_USER0, ID_HJOBROOT));
     }
     mtx_unlock(&sysinfo->lock);
 
-    zx_handle_t h;
-    if ((sysinfo->job_root != ZX_HANDLE_INVALID) &&
-        (zx_handle_duplicate(sysinfo->job_root, ZX_RIGHT_SAME_RIGHTS, &h) == ZX_OK)) {
-        return h;
-    }
-
-    return ZX_HANDLE_INVALID;
+    zx_handle_t h = ZX_HANDLE_INVALID;
+    fuchsia_boot_RootJobGet(sysinfo->root_job_svc, &h);
+    return h;
 }
 
 static zx_status_t fidl_get_root_job(void* ctx, fidl_txn_t* txn) {
     sysinfo_t* sysinfo = ctx;
 
-    zx_handle_t h = get_sysinfo_job_root(sysinfo);
+    zx_handle_t h = get_sysinfo_root_job(sysinfo);
     zx_status_t status = h == ZX_HANDLE_INVALID ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
 
     return fuchsia_sysinfo_DeviceGetRootJob_reply(txn, status, h);

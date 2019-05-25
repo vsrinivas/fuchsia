@@ -10,6 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/debuglog.h>
+#include <lib/zx/job.h>
 #include <sstream>
 #include <stdio.h>
 #include <thread>
@@ -238,6 +239,7 @@ int main(int argc, char** argv) {
     svcfs_svc->AddService(fuchsia_boot_Items_Name,
                           bootsvc::CreateItemsService(loop.dispatcher(), std::move(image_vmo),
                                                       std::move(item_map)));
+    zx::job::default_job()->set_property(ZX_PROP_NAME, "root", 4);
     svcfs_svc->AddService(fuchsia_boot_RootJob_Name,
                           bootsvc::CreateRootJobService(loop.dispatcher()));
     svcfs_svc->AddService(fuchsia_boot_RootResource_Name,

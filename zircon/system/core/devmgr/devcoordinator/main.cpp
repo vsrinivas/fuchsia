@@ -58,6 +58,7 @@ namespace {
 
 constexpr char kArgumentsPath[] = "/bootsvc/" fuchsia_boot_Arguments_Name;
 constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
+constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
 constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
 
 struct {
@@ -74,7 +75,6 @@ struct {
     // The handle used by miscsvc to serve incoming requests.
     zx::channel miscsvc_server;
 
-    zx::unowned_job root_job;
     zx::job svc_job;
     zx::job fuchsia_job;
     zx::channel svchost_outgoing;
@@ -158,13 +158,25 @@ zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
     }
     status = fdio_service_connect(kItemsPath, remote.release());
     if (status != ZX_OK) {
-        fprintf(stderr, "devcoordinator: get_arguments: fdio_service_connect returned %d\n",
-                status);
         return status;
     }
     uint32_t length;
     return fuchsia_boot_ItemsGet(local.get(), ZBI_TYPE_STORAGE_RAMDISK, 0,
                                  ramdisk_vmo->reset_and_get_address(), &length);
+}
+
+// Get the root job from the root job service.
+zx_status_t get_root_job(zx::job* root_job) {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = fdio_service_connect(kRootJobPath, remote.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+    return fuchsia_boot_RootJobGet(local.get(), root_job->reset_and_get_address());
 }
 
 // Get the root resource from the root resource service. Not receiving the
@@ -363,8 +375,8 @@ void start_console_shell(const devmgr::BootArgs& boot_args) {
     }
 }
 
-zx_status_t fuchsia_create_job() {
-    zx_status_t status = zx::job::create(*g_handles.root_job, 0u, &g_handles.fuchsia_job);
+zx_status_t CreateFuchsiaJob(const zx::job& root_job) {
+    zx_status_t status = zx::job::create(root_job, 0u, &g_handles.fuchsia_job);
     if (status != ZX_OK) {
         printf("devcoordinator: unable to create fuchsia job: %d (%s)\n", status,
                zx_status_get_string(status));
@@ -405,8 +417,8 @@ zx_status_t fuchsia_create_job() {
     return ZX_OK;
 }
 
-zx_status_t StartSvchost(bool require_system, devmgr::Coordinator* coordinator,
-                         zx::channel fshost_client) {
+zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
+                         devmgr::Coordinator* coordinator, zx::channel fshost_client) {
     zx::channel dir_request, svchost_local;
     zx_status_t status = zx::channel::create(0, &dir_request, &svchost_local);
     if (status != ZX_OK) {
@@ -435,15 +447,16 @@ zx_status_t StartSvchost(bool require_system, devmgr::Coordinator* coordinator,
     }
 
     zx::job root_job_copy;
-    status = g_handles.root_job->duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHTS_PROPERTY |
-                                               ZX_RIGHT_ENUMERATE | ZX_RIGHT_MANAGE_PROCESS,
-                                           &root_job_copy);
+    status = root_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHTS_PROPERTY |
+                                    ZX_RIGHT_ENUMERATE | ZX_RIGHT_MANAGE_PROCESS,
+                                &root_job_copy);
     if (status != ZX_OK) {
         return status;
     }
 
-    // svchost needs to hold this to talk to zx_kerneldebug but doesn't need any rights.
-    // TODO(ZX-971): when zx_debug_send_command syscall is descoped, update this too.
+    // TODO(ZX-3530): svchost needs the root resource to talk to
+    // zx_debug_send_command. Remove this once zx_debug_send_command no longer
+    // requires the root resource.
     zx::resource root_resource_copy;
     if (coordinator->root_resource().is_valid()) {
         status = coordinator->root_resource().duplicate(ZX_RIGHT_TRANSFER, &root_resource_copy);
@@ -945,8 +958,8 @@ int main(int argc, char** argv) {
             return 1;
         }
     } else {
-        fprintf(stderr, "devcoordinator: failed to get boot arguments (status: %d), assuming test "
-                        "environment and continuing\n", status);
+        fprintf(stderr, "devcoordinator: failed to get boot arguments, assuming test "
+                        "environment and continuing\n");
     }
 
     if (boot_args.GetBool("devmgr.verbose", false)) {
@@ -963,8 +976,6 @@ int main(int argc, char** argv) {
         devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
     }
 
-    g_handles.root_job = zx::job::default_job();
-    g_handles.root_job->set_property(ZX_PROP_NAME, "root", 4);
     bool require_system = boot_args.GetBool("devmgr.require-system", false);
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -977,17 +988,20 @@ int main(int argc, char** argv) {
     config.suspend_debug = boot_args.GetBool("devmgr.suspend-timeout-debug", false);
     config.disable_netsvc = devmgr_args.disable_netsvc;
 
+    // TODO(ZX-4178): Remove all uses of the root resource.
     status = get_root_resource(&config.root_resource);
     if (status != ZX_OK) {
         fprintf(stderr, "devcoordinator: failed to get root resource, assuming test "
                         "environment and continuing\n");
     }
-    // TODO: limit to enumerate rights
-    status = g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &config.sysinfo_job);
+    // TODO(ZX-4177): Remove all uses of the root job.
+    zx::job root_job;
+    status = get_root_job(&root_job);
     if (status != ZX_OK) {
-        fprintf(stderr, "devcoordinator: failed to duplicate root job for sysinfo: %d\n", status);
+        fprintf(stderr, "devcoordinator: failed to get root job: %d\n", status);
+        return 1;
     }
-    status = CreateDevhostJob(*g_handles.root_job, &config.devhost_job);
+    status = CreateDevhostJob(root_job, &config.devhost_job);
     if (status != ZX_OK) {
         fprintf(stderr, "devcoordinator: failed to create devhost job: %d\n", status);
         return 1;
@@ -1017,14 +1031,14 @@ int main(int argc, char** argv) {
         fdio_service_clone_to(devmgr::devfs_root_borrow()->get(), devfs_client.release());
     }
 
-    status = zx::job::create(*g_handles.root_job, 0u, &g_handles.svc_job);
+    status = zx::job::create(root_job, 0u, &g_handles.svc_job);
     if (status != ZX_OK) {
         fprintf(stderr, "devcoordinator: failed to create service job: %d\n", status);
         return 1;
     }
     g_handles.svc_job.set_property(ZX_PROP_NAME, "zircon-services", 16);
 
-    status = fuchsia_create_job();
+    status = CreateFuchsiaJob(root_job);
     if (status != ZX_OK) {
         return 1;
     }
@@ -1047,7 +1061,7 @@ int main(int argc, char** argv) {
             return 1;
         }
     } else {
-        status = StartSvchost(require_system, &coordinator, std::move(fshost_client));
+        status = StartSvchost(root_job, require_system, &coordinator, std::move(fshost_client));
         if (status != ZX_OK) {
             fprintf(stderr, "devcoordinator: failed to start svchost: %d", status);
             return 1;

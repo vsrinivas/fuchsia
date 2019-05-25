@@ -60,6 +60,7 @@ constexpr uint32_t kIdHJobRoot = 4;
 constexpr char kBootFirmwarePath[] = "/boot/lib/firmware";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
+constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
 
 // Tells VFS to exit by shutting down the fshost.
 void vfs_exit(const zx::event& fshost_event) {
@@ -356,7 +357,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
 static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader_service,
                                      const char* devhost_bin, const char* name,
                                      const char* const* env, zx_handle_t hrpc,
-                                     const zx::resource& root_resource, const zx::job& sysinfo_job,
+                                     const zx::resource& root_resource,
                                      zx::unowned_job devhost_job) {
     zx::channel loader_connection;
     if (loader_service != nullptr) {
@@ -378,44 +379,49 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
         }
     }
 
-    // TODO: limit sysinfo job access to root devhost only
-    zx::job sysinfo_job_duplicate;
-    zx_status_t status = sysinfo_job.duplicate(ZX_RIGHT_SAME_RIGHTS, &sysinfo_job_duplicate);
+    // Give devhosts access to fuchsia.boot.RootJob, in order to implement the
+    // sysinfo driver. This should eventually be removed once we have a better
+    // way of passing around the services within sysinfo.
+    zx::channel root_job_svc, root_job_remote;
+    zx_status_t status = zx::channel::create(0, &root_job_svc, &root_job_remote);
     if (status != ZX_OK) {
-        log(ERROR, "devcoordinator: failed to duplicate sysinfo job: %d\n", status);
+        return status;
+    }
+    status = fdio_service_connect(kRootJobPath, root_job_remote.release());
+    if (status != ZX_OK) {
+        log(ERROR, "devcoordinator: failed to connect to root job service: %d\n", status);
+        return status;
     }
 
-    constexpr size_t kMaxActions = 7;
+    constexpr size_t kMaxActions = 6;
     fdio_spawn_action_t actions[kMaxActions];
     size_t actions_count = 0;
-    actions[actions_count++] = (fdio_spawn_action_t){
+    actions[actions_count++] = fdio_spawn_action_t {
         .action = FDIO_SPAWN_ACTION_SET_NAME,
         .name = {.data = name}};
     // TODO: constrain to /svc/device
-    actions[actions_count++] = (fdio_spawn_action_t){
+    actions[actions_count++] = fdio_spawn_action_t {
         .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
         .ns = {.prefix = "/svc", .handle = fs_clone("svc").release()},
     };
-    actions[actions_count++] = (fdio_spawn_action_t){
+    actions[actions_count++] = fdio_spawn_action_t {
         .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
         .h = {.id = PA_HND(PA_USER0, 0), .handle = hrpc},
     };
+    actions[actions_count++] = fdio_spawn_action_t {
+        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+        .h = {.id = PA_HND(PA_USER0, kIdHJobRoot), .handle = root_job_svc.release()},
+    };
     if (resource.is_valid()) {
-        actions[actions_count++] = (fdio_spawn_action_t){
+        actions[actions_count++] = fdio_spawn_action_t {
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
             .h = {.id = PA_HND(PA_RESOURCE, 0), .handle = resource.release()},
-        };
-    }
-    if (sysinfo_job_duplicate.is_valid()) {
-        actions[actions_count++] = (fdio_spawn_action_t){
-            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-            .h = {.id = PA_HND(PA_USER0, kIdHJobRoot), .handle = sysinfo_job_duplicate.release()},
         };
     }
 
     uint32_t spawn_flags = FDIO_SPAWN_CLONE_ENVIRON;
     if (loader_connection.is_valid()) {
-        actions[actions_count++] = (fdio_spawn_action_t){
+        actions[actions_count++] = fdio_spawn_action_t {
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
             .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release()},
         };
@@ -468,7 +474,7 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     boot_args().Collect("driver.", &env);
     env.push_back(nullptr);
     status = dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(config_.asan_drivers),
-                               name, env.get(), hrpc, root_resource(), config_.sysinfo_job,
+                               name, env.get(), hrpc, root_resource(),
                                zx::unowned_job(config_.devhost_job));
     if (status != ZX_OK) {
         zx_handle_close(dh->hrpc());

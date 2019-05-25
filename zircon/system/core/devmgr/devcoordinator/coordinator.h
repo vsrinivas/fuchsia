@@ -100,8 +100,6 @@ struct DevmgrArgs {
 struct CoordinatorConfig {
     // Initial root resource from the kernel.
     zx::resource root_resource;
-    // Job for sysinfo.
-    zx::job sysinfo_job;
     // Job for all devhosts.
     zx::job devhost_job;
     // Event that controls the fshost.

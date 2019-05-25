@@ -72,15 +72,6 @@ constexpr fuchsia_boot_Items_ops kItemsOps = {
     .Get = ItemsGet,
 };
 
-zx_status_t RootResourceGet(void* ctx, fidl_txn_t* txn) {
-    zx::resource resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
-    if (!resource.is_valid()) {
-        printf("bootsvc: Invalid root resource\n");
-        return ZX_ERR_NOT_FOUND;
-    }
-    return fuchsia_boot_RootResourceGet_reply(txn, resource.release());
-}
-
 zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
     zx::job dup;
     zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
@@ -94,6 +85,15 @@ zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
 constexpr fuchsia_boot_RootJob_ops kRootJobOps = {
     .Get = RootJobGet,
 };
+
+zx_status_t RootResourceGet(void* ctx, fidl_txn_t* txn) {
+    zx::resource resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+    if (!resource.is_valid()) {
+        printf("bootsvc: Invalid root resource\n");
+        return ZX_ERR_NOT_FOUND;
+    }
+    return fuchsia_boot_RootResourceGet_reply(txn, resource.release());
+}
 
 constexpr fuchsia_boot_RootResource_ops kRootResourceOps = {
     .Get = RootResourceGet,
