@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# End to end (E2E) product test runtime dependencies. This bundle can be added
+# to a product build spec that also contains end to end product tests, so they
+# can be executed against an instance of the product.
+#
+# If the end to end product test is meant to run in an environment without a
+# package server - specifically, on a luci bot -, then the end_to_end_deps
+# bundle must be added to base_package_labels or cache_package_labels of the
+# product, but it cannot be, unlike the end to end tests themselves, in the
+# universe_package_labels.
+group("end_to_end_deps") {
+  testonly = true
+  public_deps = [
+    # Needed to send fake input.
+    "//garnet/bin/ui:input",
+
+    # Needed to start sl4f from ssh.
+    "//garnet/packages/prod:run",
+
+    # Needed to inject and capture audio.
+    "//garnet/packages/tests:virtual_audio_service",
+
+    # Needed for ifconfig.
+    "//garnet/packages/tools:netstack",
+
+    # SL4F to translate JSON-RPC to calls.
+    "//garnet/packages/tools:sl4f",
+  ]
+}
