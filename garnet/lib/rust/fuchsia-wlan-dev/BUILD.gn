@@ -11,8 +11,10 @@ rustc_library("fuchsia-wlan-dev") {
 
   deps = [
     "//garnet/lib/wlan/fidl:fidl-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
   ]
 }

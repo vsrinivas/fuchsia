@@ -13,6 +13,7 @@
 #include <wlan/protocol/ioctl.h>
 #include <zircon/status.h>
 
+#include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
@@ -44,21 +45,15 @@ static zx_protocol_device_t wlanphy_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                size_t out_len, size_t* out_actual) -> zx_status_t {
-        return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
+    .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+        return DEV(ctx)->Message(msg, txn);
     },
 };
 #undef DEV
 
-zx_status_t Device::Connect(const void* buf, size_t len) {
+zx_status_t Device::Connect(zx::channel request) {
     debugfn();
-    if (buf == nullptr || len < sizeof(zx_handle_t)) { return ZX_ERR_INVALID_ARGS; }
-
-    zx_handle_t hnd = *static_cast<const zx_handle_t*>(buf);
-    zx::channel chan(hnd);
-
-    return dispatcher_.AddBinding(std::move(chan), this);
+    return dispatcher_.AddBinding(std::move(request), this);
 }
 
 zx_status_t Device::Bind() {
@@ -79,16 +74,14 @@ zx_status_t Device::Bind() {
     return status;
 }
 
-zx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                          size_t out_len, size_t* out_actual) {
-    debugfn();
-    switch (op) {
-    case IOCTL_WLANPHY_CONNECT:
-        return Connect(in_buf, in_len);
-    default:
-        errorf("ioctl unknown: %0x\n", op);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+zx_status_t Device::Message(fidl_msg_t* msg, fidl_txn_t* txn) {
+    auto connect = [](void* ctx, zx_handle_t request) {
+        return static_cast<Device*>(ctx)->Connect(zx::channel(request));
+    };
+    static const fuchsia_wlan_device_Connector_ops_t ops = {
+        .Connect = connect,
+    };
+    return fuchsia_wlan_device_Connector_dispatch(this, txn, msg, &ops);
 }
 
 void Device::Release() {

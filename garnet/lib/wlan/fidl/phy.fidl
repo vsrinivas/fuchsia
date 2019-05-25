@@ -105,3 +105,11 @@ protocol Phy {
     CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
     DestroyIface(DestroyIfaceRequest req) -> (DestroyIfaceResponse resp);
 };
+
+// Temporary interface for bridging between the devhost-owned channel model and
+// the driver-owned channel model of connection management.
+/// This protocol is used to connect to the real Phy protocol underlying this device.
+[Layout = "Simple"]
+protocol Connector {
+    Connect(request<Phy> request);
+};

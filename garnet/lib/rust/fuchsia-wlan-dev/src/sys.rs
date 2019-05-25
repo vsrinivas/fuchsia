@@ -4,33 +4,24 @@
 
 #![deny(warnings)]
 
-use fdio::{fdio_sys, ioctl_raw, make_ioctl};
-use fuchsia_zircon::{self as zx, HandleBased};
+use failure;
+use fdio::{self, fdio_sys, ioctl_raw, make_ioctl};
+use fidl::endpoints::ServerEnd;
+use fidl_fuchsia_wlan_device as wlan;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use std::fs::File;
 use std::os::raw;
 use std::os::unix::io::AsRawFd;
 
-pub fn connect_wlanphy_device(device: &File) -> Result<zx::Channel, zx::Status> {
+pub fn connect_wlanphy_device(device: &File) -> Result<wlan::PhyProxy, failure::Error> {
     let (local, remote) = zx::Channel::create()?;
-    let hnd = remote.into_raw();
 
-    // This call is safe because the handle is never used after this call, and the output buffer is
-    // null.
-    unsafe {
-        match ioctl_raw(
-            device.as_raw_fd(),
-            IOCTL_WLANPHY_CONNECT,
-            &hnd as *const _ as *const raw::c_void,
-            ::std::mem::size_of::<zx::sys::zx_handle_t>(),
-            ::std::ptr::null_mut(),
-            0,
-        ) as i32
-        {
-            e if e < 0 => Err(zx::Status::from_raw(e)),
-            e => Ok(e),
-        }?;
-    }
-    Ok(local)
+    let connector_channel = fdio::clone_channel(device)?;
+    let connector = wlan::ConnectorProxy::new(fasync::Channel::from_channel(connector_channel)?);
+    connector.connect(ServerEnd::new(remote))?;
+
+    Ok(wlan::PhyProxy::new(fasync::Channel::from_channel(local)?))
 }
 
 pub fn connect_wlaniface_device(device: &File) -> Result<zx::Channel, zx::Status> {
@@ -54,9 +45,6 @@ pub fn connect_wlaniface_device(device: &File) -> Result<zx::Channel, zx::Status
         Ok(From::from(zx::Handle::from_raw(hnd)))
     }
 }
-
-const IOCTL_WLANPHY_CONNECT: raw::c_int =
-    make_ioctl(fdio_sys::IOCTL_KIND_SET_HANDLE, fdio_sys::IOCTL_FAMILY_WLANPHY, 0);
 
 const IOCTL_WLAN_GET_CHANNEL: raw::c_int =
     make_ioctl(fdio_sys::IOCTL_KIND_GET_HANDLE, fdio_sys::IOCTL_FAMILY_WLAN, 0);

@@ -22,6 +22,7 @@ driver_module("wlanphy-testdev") {
 
   deps = [
     "//garnet/lib/wlan/fidl",
+    "//garnet/lib/wlan/fidl:fidl_c",
     "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/banjo/ddk.protocol.sdio",

@@ -7,6 +7,7 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+use failure;
 use fidl_fuchsia_wlan_device as wlan;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -37,9 +38,8 @@ impl Device {
 }
 
 /// Connects to a `Device` that represents a wlan phy.
-pub fn connect_wlan_phy(dev: &Device) -> Result<wlan::PhyProxy, zx::Status> {
-    let chan = sys::connect_wlanphy_device(&dev.node)?;
-    Ok(wlan::PhyProxy::new(fasync::Channel::from_channel(chan)?))
+pub fn connect_wlan_phy(dev: &Device) -> Result<wlan::PhyProxy, failure::Error> {
+    sys::connect_wlanphy_device(&dev.node)
 }
 
 /// Connects to a `Device` that represents a wlan iface.

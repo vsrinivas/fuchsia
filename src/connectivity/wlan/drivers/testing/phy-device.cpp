@@ -12,6 +12,7 @@
 #include <wlan/protocol/ioctl.h>
 #include <wlan/protocol/phy.h>
 
+#include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <stdio.h>
@@ -29,9 +30,8 @@ static zx_protocol_device_t wlanphy_test_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                size_t out_len, size_t* out_actual) -> zx_status_t {
-        return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
+    .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+        return DEV(ctx)->Message(msg, txn);
     },
 };
 #undef DEV
@@ -73,17 +73,15 @@ void PhyDevice::Release() {
     delete this;
 }
 
-zx_status_t PhyDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                             size_t out_len, size_t* out_actual) {
-    zxlogf(INFO, "wlan::testing::phy::PhyDevice::Ioctl()\n");
-    switch (op) {
-    case IOCTL_WLANPHY_CONNECT:
+zx_status_t PhyDevice::Message(fidl_msg_t* msg, fidl_txn_t* txn) {
+    auto connect = [](void* ctx, zx_handle_t request) {
         zxlogf(INFO, "wlanphy ioctl: connect\n");
-        return Connect(in_buf, in_len);
-    default:
-        zxlogf(ERROR, "wlanphy ioctl: unknown (%u)\n", op);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+        return static_cast<PhyDevice*>(ctx)->Connect(zx::channel(request));
+    };
+    static const fuchsia_wlan_device_Connector_ops_t ops = {
+        .Connect = connect,
+    };
+    return fuchsia_wlan_device_Connector_dispatch(this, txn, msg, &ops);
 }
 
 namespace {
@@ -247,15 +245,8 @@ void PhyDevice::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceC
     callback(std::move(resp));
 }
 
-zx_status_t PhyDevice::Connect(const void* buf, size_t len) {
-    if (buf == nullptr || len < sizeof(zx_handle_t)) { return ZX_ERR_BUFFER_TOO_SMALL; }
-
-    zx_handle_t hnd = *reinterpret_cast<const zx_handle_t*>(buf);
-    zx::channel chan(hnd);
-
-    zx_status_t status = dispatcher_->AddBinding(std::move(chan), this);
-    if (status != ZX_OK) { return status; }
-    return ZX_OK;
+zx_status_t PhyDevice::Connect(zx::channel request) {
+    return dispatcher_->AddBinding(std::move(request), this);
 }
 
 }  // namespace testing

@@ -12,13 +12,6 @@
 
 __BEGIN_CDECLS
 
-// wlanphy ioctls
-
-// Gets a channel for communicating with a wlanphy device.
-#define IOCTL_WLANPHY_CONNECT IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_WLANPHY, 0)
-
-IOCTL_WRAPPER_IN(ioctl_wlanphy_connect, IOCTL_WLANPHY_CONNECT, zx_handle_t)
-
 // wlanif ioctls
 
 // Gets a channel for communicating with a wlanif device.
