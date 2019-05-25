@@ -8,6 +8,7 @@
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <trace/event.h>
+#include <zircon/status.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -21,12 +22,27 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
                         std::move(context.session_and_listener_request.second)),
       session_(std::move(context.session_and_listener_request.first)),
       view_(&session_, std::move(context.view_token), debug_name),
-      root_node_(&session_) {
+      root_node_(&session_),
+      ime_client_(this),
+      enable_ime_(context.enable_ime) {
   session_.SetDebugName(debug_name);
 
   // Listen for metrics events on our top node.
   root_node_.SetEventMask(fuchsia::ui::gfx::kMetricsEventMask);
   view_.AddChild(root_node_);
+
+  if (enable_ime_) {
+    startup_context_->ConnectToEnvironmentService(ime_manager_.NewRequest());
+
+    ime_.set_error_handler([](zx_status_t status) {
+      FXL_LOG(ERROR) << "Interface error on: Input Method Editor "
+                     << zx_status_get_string(status);
+    });
+    ime_manager_.set_error_handler([](zx_status_t status) {
+      FXL_LOG(ERROR) << "Interface error on: Text Sync Service "
+                     << zx_status_get_string(status);
+    });
+  }
 
   // We must immediately invalidate the scene, otherwise we wouldn't ever hook
   // the View up to the ViewHolder.  An alternative would be to require
@@ -101,6 +117,11 @@ void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
         }
         break;
       case ::fuchsia::ui::scenic::Event::Tag::kInput: {
+        if (event.input().Which() ==
+                fuchsia::ui::input::InputEvent::Tag::kFocus &&
+            enable_ime_) {
+          OnHandleFocusEvent(event.input().focus());
+        }
         OnInputEvent(std::move(event.input()));
         break;
       }
@@ -152,6 +173,52 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
         if (present_needed)
           PresentScene(next_presentation_time);
       });
+}
+
+// |fuchsia::ui::input::InputMethodEditorClient|
+void BaseView::DidUpdateState(
+    fuchsia::ui::input::TextInputState state,
+    std::unique_ptr<fuchsia::ui::input::InputEvent> input_event) {
+  if (input_event) {
+    const fuchsia::ui::input::InputEvent& input = *input_event;
+    fuchsia::ui::input::InputEvent input_event_copy;
+    fidl::Clone(input, &input_event_copy);
+    OnInputEvent(std::move(input_event_copy));
+  }
+}
+
+// |fuchsia::ui::input::InputMethodEditorClient|
+void BaseView::OnAction(fuchsia::ui::input::InputMethodAction action) {}
+
+bool BaseView::OnHandleFocusEvent(const fuchsia::ui::input::FocusEvent& focus) {
+  if (focus.focused) {
+    ActivateIme();
+    return true;
+  } else if (!focus.focused) {
+    DeactivateIme();
+    return true;
+  }
+  return false;
+}
+
+void BaseView::ActivateIme() {
+  ime_manager_->GetInputMethodEditor(
+      fuchsia::ui::input::KeyboardType::TEXT,       // keyboard type
+      fuchsia::ui::input::InputMethodAction::DONE,  // input method action
+      fuchsia::ui::input::TextInputState{},         // initial state
+      ime_client_.NewBinding(),                     // client
+      ime_.NewRequest()                             // editor
+  );
+}
+
+void BaseView::DeactivateIme() {
+  if (ime_) {
+    ime_manager_->HideKeyboard();
+    ime_ = nullptr;
+  }
+  if (ime_client_.is_bound()) {
+    ime_client_.Unbind();
+  }
 }
 
 }  // namespace scenic

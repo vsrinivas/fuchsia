@@ -23,6 +23,7 @@ struct ViewContext {
   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services;
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services;
   component::StartupContext* startup_context;
+  bool enable_ime = false;
 };
 
 // Abstract base implementation of a view for simple applications.
@@ -31,7 +32,8 @@ struct ViewContext {
 //
 // It is not necessary to use this class to implement all Views.
 // This class is merely intended to make the simple apps easier to write.
-class BaseView : private fuchsia::ui::scenic::SessionListener {
+class BaseView : private fuchsia::ui::scenic::SessionListener,
+                 private fuchsia::ui::input::InputMethodEditorClient {
  public:
   // Subclasses are typically created by ViewProviderService::CreateView(),
   // which provides the necessary args to pass down to this base class.
@@ -161,7 +163,26 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   // Subclasses should not override this.
   void OnScenicEvent(::std::vector<fuchsia::ui::scenic::Event> events) override;
 
+  // |fuchsia::ui::input::InputMethodEditorClient|
+  void DidUpdateState(
+      fuchsia::ui::input::TextInputState state,
+      std::unique_ptr<fuchsia::ui::input::InputEvent> event) override;
+
+  // |fuchsia::ui::input::InputMethodEditorClient|
+  void OnAction(fuchsia::ui::input::InputMethodAction action) override;
+
   void PresentScene(zx_time_t presentation_time);
+
+  // Handles focus event when IME is enabled. This event is used to activate
+  // or deactivate the IME client.
+  bool OnHandleFocusEvent(const fuchsia::ui::input::FocusEvent& focus);
+
+  // Gets a new input method editor from the IME manager.
+  void ActivateIme();
+
+  // Detaches the input method editor connection, ending the edit session and
+  // closing the onscreen keyboard.
+  void DeactivateIme();
 
   component::StartupContext* const startup_context_;
   fuchsia::sys::ServiceProviderPtr incoming_services_;
@@ -172,6 +193,10 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   scenic::View view_;
   scenic::EntityNode root_node_;
 
+  fidl::Binding<fuchsia::ui::input::InputMethodEditorClient> ime_client_;
+  fuchsia::ui::input::InputMethodEditorPtr ime_;
+  fuchsia::ui::input::ImeServicePtr ime_manager_;
+
   fuchsia::ui::gfx::vec3 logical_size_;
   fuchsia::ui::gfx::vec3 physical_size_;
   fuchsia::ui::gfx::ViewProperties view_properties_;
@@ -181,6 +206,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   size_t session_present_count_ = 0;
   bool invalidate_pending_ = false;
   bool present_pending_ = false;
+  bool enable_ime_ = false;
 };
 
 }  // namespace scenic

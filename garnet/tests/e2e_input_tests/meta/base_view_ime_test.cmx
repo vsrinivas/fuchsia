@@ -12,7 +12,7 @@
         }
     },
     "program": {
-        "binary": "test/minimal_input_test"
+        "binary": "test/base_view_ime_test"
     },
     "sandbox": {
         "features": [

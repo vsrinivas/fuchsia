@@ -10,11 +10,10 @@ base_package_labels += [
   "//src/modular/bundles:framework",
   "//topaz/packages/config:ermine",
   "//topaz/packages/prod:ermine",
+  "//topaz/packages/prod:term",
 ]
 
-cache_package_labels += [
-  "//topaz/packages/prod:simple_browser",
-]
+cache_package_labels += [ "//topaz/packages/prod:simple_browser" ]
 
 universe_package_labels += [
   "//garnet/packages/prod:media_audio",
