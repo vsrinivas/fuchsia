@@ -12,51 +12,33 @@ use fidl::encoding::OutOfLine;
 use fidl_fuchsia_fonts as fonts;
 use fidl_fuchsia_mem as mem;
 use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
-use fuchsia_zircon::HandleBased;
 use futures::prelude::*;
 use futures::{future, Future, FutureExt};
 use log::error;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use unicase::UniCase;
 
-fn clone_buffer(buf: &mem::Buffer) -> Result<mem::Buffer, Error> {
-    let vmo_rights = zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP;
-    let vmo = buf.vmo.duplicate_handle(vmo_rights).context("Failed to duplicate VMO handle.")?;
-    Ok(mem::Buffer { vmo, size: buf.size })
-}
-
-struct Asset {
-    path: PathBuf,
-    buffer: RwLock<Option<mem::Buffer>>,
-}
-
-/// Provides cached storage of [`Asset`]s. Should be initialized by [`FontService`].
+/// Stores the relationship between [`Asset`] paths and IDs.
+/// Should be initialized by [`FontService`].
 ///
-/// Each [`Asset`] is assigned an ID equal to its index in `assets`.
-///
-/// # Examples
+/// `path_to_id_map` and `id_to_path_map` form a bidirectional map, so this relation holds:
 /// ```
-/// let asset_collection = AssetCollection::new();
-/// // Load data into asset_collection, including "/path/to/font.ttf".
-/// let path: PathBuf = PathBuf::from("/path/to/font.ttf");
-/// let asset_id: u32 = asset_collection.assets_map.get(path).unwrap();
-/// let asset: &Asset = &asset_collection.assets[asset_id as usize];
+/// assert_eq!(self.path_to_id_map.get(&path), Some(&id));
+/// assert_eq!(self.id_to_path_map.get(&id), Some(&path));
 /// ```
 struct AssetCollection {
     /// Maps [`Asset`] path to ID.
-    assets_map: BTreeMap<PathBuf, u32>,
-
-    /// [`Asset`] cache. Indices correspond to values stored in `self.assets_map`.
-    ///
-    /// Currently, no cache eviction strategy is implemented (I18N-15).
-    assets: Vec<Asset>,
+    path_to_id_map: BTreeMap<PathBuf, u32>,
+    /// Inverse of `path_to_id_map`.
+    id_to_path_map: BTreeMap<u32, PathBuf>,
+    /// Next ID to assign, autoincremented from 0.
+    next_id: u32,
 }
 
-/// Load a `Vmo` from disk into a `Buffer`.
+/// Get `VMO` handle to the [`Asset`] at `path`.
 fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, Error> {
     let file = File::open(path)?;
     let vmo = fdio::get_vmo_copy_from_file(&file)?;
@@ -66,48 +48,38 @@ fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, Error> {
 
 impl AssetCollection {
     fn new() -> AssetCollection {
-        AssetCollection { assets_map: BTreeMap::new(), assets: vec![] }
+        AssetCollection {
+            path_to_id_map: BTreeMap::new(),
+            id_to_path_map: BTreeMap::new(),
+            next_id: 0,
+        }
     }
 
-    /// Lazily add the [`Asset`] found at `path` to the collection and return its ID.
-    /// If it already exists, just return the ID.
+    /// Add the [`Asset`] found at `path` to the collection and return its ID.
+    /// If `path` is already in the collection, return the existing ID.
     ///
-    /// The push onto `assets` is lazy in the sense that the pushed [`Asset`] has an empty `buffer`.
+    /// TODO(seancuff): Switch to updating ID of existing entries. This would allow assets to be
+    /// updated without restarting the service (e.g. installing a newer version of a file). Clients
+    /// would need to check the ID of their currently-held asset against the response.
     fn add_or_get_asset_id(&mut self, path: &Path) -> u32 {
-        if let Some(id) = self.assets_map.get(path) {
+        if let Some(id) = self.path_to_id_map.get(&path.to_path_buf()) {
             return *id;
         }
-
-        let id = self.assets.len() as u32;
-        self.assets.push(Asset { path: path.to_path_buf(), buffer: RwLock::new(None) });
-        self.assets_map.insert(path.to_path_buf(), id);
+        let id = self.next_id;
+        self.id_to_path_map.insert(id, path.to_path_buf());
+        self.path_to_id_map.insert(path.to_path_buf(), id);
+        self.next_id += 1;
         id
     }
 
-    /// Get a `Buffer` holding the `Vmo` for the [`Asset`] corresponding to `id`, using the
-    /// cache if possible. On a cache miss, the [`Asset`] is cached unconditionally.
+    /// Get a `Buffer` holding the `Vmo` for the [`Asset`] corresponding to `id`.
     fn get_asset(&self, id: u32) -> Result<mem::Buffer, Error> {
-        assert!(id < self.assets.len() as u32);
-
-        let asset = &self.assets[id as usize];
-
-        if let Some(cached) = asset.buffer.read().unwrap().as_ref() {
-            return clone_buffer(cached);
+        if let Some(path) = self.id_to_path_map.get(&id) {
+            let buf = load_asset_to_vmo(path)
+                .with_context(|_| format!("Failed to load {}", path.to_string_lossy()))?;
+            return Ok(buf);
         }
-
-        let buf = load_asset_to_vmo(&asset.path)
-            .with_context(|_| format!("Failed to load {}", asset.path.to_string_lossy()))?;
-        let buf_clone = clone_buffer(&buf)?;
-        *asset.buffer.write().unwrap() = Some(buf);
-        Ok(buf_clone)
-    }
-
-    /// Clear the cache by deallocating all [`Asset`]'s `buffer`s.
-    /// Does not reduce the size of `assets`.
-    fn reset_cache(&mut self) {
-        for asset in self.assets.iter_mut() {
-            *asset.buffer.write().unwrap() = None;
-        }
+        Err(format_err!("No asset found with id {}", id))
     }
 }
 
@@ -259,10 +231,6 @@ impl FontService {
                 }
             }
         }
-
-        // Flush the cache. Font files will be loaded again when they are needed.
-        self.assets.reset_cache();
-
         Ok(())
     }
 
