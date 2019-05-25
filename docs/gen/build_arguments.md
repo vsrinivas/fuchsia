@@ -53,7 +53,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/recovery/factory_reset", "//topaz/bundles:buildbot"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -61,7 +61,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:14
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/recovery/factory_reset", "//topaz/bundles:buildbot"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -1697,7 +1697,7 @@ From //third_party/skia/BUILD.gn:63
 
 From //.gn:26
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:63
 
@@ -1751,7 +1751,7 @@ From //third_party/skia/BUILD.gn:25
 
 From //.gn:28
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:25
 
@@ -1811,7 +1811,7 @@ From //third_party/skia/BUILD.gn:31
 
 From //.gn:29
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:31
 
@@ -1853,7 +1853,7 @@ From //third_party/skia/BUILD.gn:64
 
 From //.gn:30
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:64
 
@@ -1883,7 +1883,7 @@ From //third_party/skia/BUILD.gn:39
 
 From //.gn:31
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:39
 
@@ -1967,7 +1967,7 @@ From //build/config/sysroot.gni:7
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"host_x64/thinlto-cache"`
+**Current value (from the default):** `"linux_x64/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -1982,7 +1982,7 @@ From //build/config/lto/config.gni:13
 Manifest files describing target libraries from toolchains.
 Can be either // source paths or absolute system paths.
 
-**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]`
+**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/x86_64-linux-gnu.manifest"]`
 
 From //build/images/manifest.gni:11
 
