@@ -265,8 +265,7 @@ void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
           }
           FXL_DCHECK(idx != presentations_.size());
 
-          FXL_LOG(ERROR)
-              << "Root presenter: Content view terminated unexpectedly.";
+          FXL_LOG(INFO) << "Root presenter: Content view terminated.";
           ShutdownPresentation(idx);
           break;
         }
