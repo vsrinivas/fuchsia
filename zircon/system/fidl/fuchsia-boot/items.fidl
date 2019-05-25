@@ -8,6 +8,8 @@ library fuchsia.boot;
 [Discoverable, Layout = "Simple"]
 protocol Items {
     /// Get a |payload| for a boot item of |type| and |extra|.
+    /// NOTE: We return the |length| of the item, as VMOs must be page-aligned.
+    ///
     /// For a list of |type|s, refer to <zircon/boot/image.h>.
     /// For a list of |extra|s, refer to <zircon/boot/driver-config.h>.
     Get(uint32 type, uint32 extra) -> (handle<vmo>? payload, uint32 length);
