@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  # WARNING: Only tests that are NOT end to end (E2E) product tests must be
+  # added to this target.
+  #
+  # E2E tests, by contrast, must be added directly to the product they test, so
+  # that they get executed only against their product, and not others.
+  #
+  # Cf. //products/terminal.gni for an example of the screen_is_not_black test.
+  deps = []
+}
