@@ -396,7 +396,6 @@ group("all") {
     ":pkg_resolver",
     ":pkg_url",
     ":pmd",
-    ":power_manager",
     ":process",
     ":profiler",
     ":rapidjson_utils",
@@ -820,15 +819,6 @@ group("pkg_cache") {
   public_deps = [
     "//garnet/bin/pkg_cache:pkg_cache_tests",
     "//garnet/packages/prod:pkg_cache",
-  ]
-}
-
-group("power_manager") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/power_manager:power_manager_tests",
-    "//garnet/go/src/power_manager:power_manager_gotests",
-    "//garnet/packages/prod:power_manager",
   ]
 }
 

@@ -130,7 +130,6 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.netstack.Netstack",
     // New interface for netstack (WIP), defined in //zircon
     "fuchsia.net.stack.Stack",
-    "fuchsia.power.PowerManager",
     "fuchsia.sys.Environment",
     "fuchsia.sys.Launcher",
     "fuchsia.wlan.service.Wlan",

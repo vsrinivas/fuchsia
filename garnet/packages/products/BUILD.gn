@@ -8,8 +8,8 @@
 group("interactive_minimal") {
   testonly = true
   public_deps = [
-    "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:display_manager",
+    "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec",
@@ -84,11 +84,10 @@ group("base") {
     "//garnet/packages/prod:openssh",
     "//garnet/packages/prod:pkg_cache",
     "//garnet/packages/prod:pkg_resolver",
-    "//garnet/packages/prod:power_manager",
     "//garnet/packages/prod:root_ssl_certificates",
     "//garnet/packages/prod:runtime",
-    "//garnet/packages/prod:setui_service",
     "//garnet/packages/prod:scpi",
+    "//garnet/packages/prod:setui_service",
     "//garnet/packages/prod:stash",
     "//garnet/packages/prod:thermd",
     "//garnet/packages/prod:timezone",
