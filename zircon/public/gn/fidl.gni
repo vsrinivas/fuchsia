@@ -89,6 +89,7 @@ import("$zx/public/gn/fidl/fidlc.gni")
 fidl_support = [
   "$zx/public/gn/fidl/c.gni",
   "$zx/public/gn/fidl/llcpp.gni",
+  "$zx/public/gn/fidl/tables.gni",
 ]
 
 # Each support module defines $fidl_support_fidlc and

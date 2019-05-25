@@ -1,0 +1,62 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This is the $fidl_support module for the C/C++ FIDL tables, which are
+# required by C and C++ bindings (and maybe others).  See fidl_library() for
+# details.  This file should not normally be imported by other code.
+
+# This tells fidl_library() to invoke fidl_tables().
+fidl_support_templates = [
+  {
+    import = "$zx/public/gn/fidl/tables.gni"
+    target = "fidl_tables"
+    fidlc = "tables"
+  },
+]
+
+# This tells fidl_library() what fidlc outputs fidl_tables() requires.
+fidl_support_fidlc = [
+  {
+    name = "tables"
+    files = [
+      {
+        switch = "--tables"
+        path = "tables.cpp"
+      },
+    ]
+  },
+]
+
+# Provide C/C++ FIDL tables for fidl_library().  **Do not use directly!**
+#
+# This is never used directly, but only indirectly by fidl_library().
+# See there for details.
+#
+# This produces source_set("$target_name.tables").  Other bindings targets
+# depend on it.
+template("fidl_tables") {
+  not_needed([ "target_name" ])
+  not_needed(invoker, "*")
+  if (current_toolchain != default_toolchain) {
+    fidl_target = target_name
+    tables_target = "$fidl_target.tables"
+
+    source_set(tables_target) {
+      forward_variables_from(invoker,
+                             [
+                               "visibility",
+                               "testonly",
+                             ])
+
+      configs += [ "$zx/public/gn/config:visibility_hidden" ]
+
+      # Depend on the fidlc generation step and compile what it produces.
+      deps = invoker.fidlc_deps
+      sources = invoker.fidlc_outputs
+
+      # The generated code uses this.
+      deps += [ "$zx/system/ulib/fidl" ]
+    }
+  }
+}
