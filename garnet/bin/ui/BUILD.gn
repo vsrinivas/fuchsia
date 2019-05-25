@@ -47,6 +47,7 @@ test_package("scenic_tests") {
     "presentation_mode/tests",
     "root_presenter/tests",
     "//garnet/lib/ui/gfx/tests",
+    "//garnet/lib/ui/gfx/util/tests",
     "//garnet/lib/ui/input/tests",
     "//garnet/lib/ui/scenic/tests",
     "//garnet/public/lib/ui/geometry/cpp:tests",
@@ -67,6 +68,10 @@ test_package("scenic_tests") {
     },
     {
       name = "gfx_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "gfx_util_unittests"
       environments = basic_envs
     },
     {

@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_GFX_COMMAND_APPLIER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_GFX_COMMAND_APPLIER_H_
 
+#include <fuchsia/ui/views/cpp/fidl.h>
+
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
 #include "garnet/lib/ui/gfx/engine/session_context.h"
 #include "garnet/lib/ui/gfx/id.h"

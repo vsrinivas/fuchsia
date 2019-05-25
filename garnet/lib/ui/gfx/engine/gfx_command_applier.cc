@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+#include <lib/zx/eventpair.h>
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
@@ -1514,7 +1515,22 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
 
   // Create a View if the Link was successfully registered.
   if (link.valid()) {
-    return fxl::MakeRefCounted<View>(session, id, std::move(link));
+    // TODO(SCN-1410): ViewRefControl/ViewRef should come through the command.
+    fuchsia::ui::views::ViewRefControl control_ref;
+    fuchsia::ui::views::ViewRef view_ref;
+    {
+      // Safe and valid eventpair, by construction.
+      zx_status_t status = zx::eventpair::create(
+          /*flags*/ 0u, &control_ref.reference, &view_ref.reference);
+      FXL_DCHECK(status == ZX_OK);
+      // Remove signaling.
+      status = view_ref.reference.replace(ZX_RIGHTS_BASIC, &view_ref.reference);
+      FXL_DCHECK(status == ZX_OK);
+    }
+
+    return fxl::MakeRefCounted<View>(session, id, std::move(link),
+                                     std::move(control_ref),
+                                     std::move(view_ref));
   }
   return nullptr;
 }

@@ -192,6 +192,7 @@ source_set("gfx") {
     "//garnet/public/lib/vulkan",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -200,6 +201,7 @@ source_set("gfx") {
 
   deps = [
     ":object_linker",
+    "//garnet/lib/ui/gfx:validate_eventpair",
     "//garnet/lib/ui/scenic/util",
     "//garnet/public/lib/inspect",
     "//garnet/public/lib/ui/scenic/cpp",
@@ -254,13 +256,13 @@ source_set("display") {
 source_set("frame_scheduler") {
   sources = [
     # TODO(SCN-1398): Move files out of engine/.
-    "engine/duration_predictor.cc",
-    "engine/duration_predictor.h",
     "engine/default_frame_scheduler.cc",
     "engine/default_frame_scheduler.h",
-    "engine/frame_scheduler.h",
+    "engine/duration_predictor.cc",
+    "engine/duration_predictor.h",
     "engine/frame_predictor.cc",
     "engine/frame_predictor.h",
+    "engine/frame_scheduler.h",
     "engine/frame_timings.cc",
     "engine/frame_timings.h",
 
@@ -296,6 +298,18 @@ source_set("util") {
 
     # TODO(SCN-1398): Needed by EventTimestamper.  Move to separate source_set?
     "//zircon/public/fidl/fuchsia-scheduler",
+  ]
+}
+
+source_set("validate_eventpair") {
+  sources = [
+    "util/validate_eventpair.cc",
+    "util/validate_eventpair.h",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//zircon/public/lib/zx",
+    "//zircon/system/public",
   ]
 }
 

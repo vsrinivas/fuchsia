@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/gfx_util_unittests"
+    }
+}
