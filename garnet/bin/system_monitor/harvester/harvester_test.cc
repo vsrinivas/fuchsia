@@ -81,10 +81,25 @@ class SystemMonitorHarvesterTest : public ::testing::Test {
         ->CheckStringSent(path, value);
   }
 
+  bool CheckStringPrefix(const std::string& path, std::string* value) {
+    return static_cast<harvester::DockyardProxyFake*>(
+               test_harvester->dockyard_proxy_.get())
+        ->CheckStringPrefixSent(path, value);
+  }
+
   bool CheckValue(const std::string& path, dockyard::SampleValue* value) {
     return static_cast<harvester::DockyardProxyFake*>(
                test_harvester->dockyard_proxy_.get())
         ->CheckValueSent(path, value);
+  }
+
+  // Dump out the state of the fake dockyard proxy.
+  void DebugDump() {
+    std::cout << "DebugDump:" << std::endl;
+    std::cout << "  self_koid_: " << self_koid_ << std::endl;
+    std::cout << *static_cast<harvester::DockyardProxyFake*>(
+        test_harvester->dockyard_proxy_.get());
+    std::cout << std::endl << std::endl << std::flush;
   }
 
   // Get a dockyard path for our koid with the given |suffix| key.
@@ -102,7 +117,7 @@ class SystemMonitorHarvesterTest : public ::testing::Test {
   std::string self_koid_;
 };
 
-TEST_F(SystemMonitorHarvesterTest, True) {
+TEST_F(SystemMonitorHarvesterTest, GatherData) {
   // Perform a data gathering pass. This will send samples to the
   // dockyard_proxy.
   test_harvester->GatherData();
@@ -118,4 +133,12 @@ TEST_F(SystemMonitorHarvesterTest, True) {
   // changes this may need to be updated. The intent is to test for a process
   // that is running.
   EXPECT_EQ("system_monitor_harvester_test.c", test_string);
+}
+
+TEST_F(SystemMonitorHarvesterTest, Inspectable) {
+  test_harvester->GatherInspectableComponents();
+  std::string test_string;
+  EXPECT_TRUE(CheckStringPrefix(
+      "inspectable:/hub/c/system_monitor_harvester_test.cmx/", &test_string));
+  EXPECT_EQ("fuchsia.inspect.Inspect", test_string);
 }

@@ -69,4 +69,28 @@ bool DockyardProxyFake::CheckStringSent(const std::string& dockyard_path,
   return true;
 }
 
+bool DockyardProxyFake::CheckStringPrefixSent(
+    const std::string& dockyard_path_prefix, std::string* string) const {
+  for (const auto& iter : sent_strings_) {
+    if (iter.first.find(dockyard_path_prefix) == 0) {
+      *string = iter.second;
+      return true;
+    }
+  }
+  return false;
+}
+
+std::ostream& operator<<(std::ostream& out, const DockyardProxyFake& dockyard) {
+  out << "DockyardProxyFake:" << std::endl;
+  out << "  Strings:" << std::endl;
+  for (const auto& str : dockyard.sent_strings_) {
+    out << "    " << str.first << ": " << str.second << std::endl;
+  }
+  out << "  Values:" << std::endl;
+  for (const auto& value : dockyard.sent_values_) {
+    out << "    " << value.first << ": " << value.second << std::endl;
+  }
+  return out;
+}
+
 }  // namespace harvester

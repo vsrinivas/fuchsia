@@ -27,6 +27,12 @@ class Harvester {
 
   void GatherData();
 
+  // Inspect information for components.
+  void GatherComponentIntrospection();
+
+  // Collect a list of components that have inspect data.
+  void GatherInspectableComponents();
+
  private:
   zx::duration cycle_period_;
   zx_handle_t root_resource_;
@@ -39,8 +45,6 @@ class Harvester {
   void GatherCpuSamples();
   void GatherMemorySamples();
   void GatherThreadSamples();
-
-  void GatherComponentIntrospection();
 };
 
 }  // namespace harvester

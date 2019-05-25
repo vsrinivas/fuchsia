@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/inspect/query/discover.h>
 #include <lib/zx/time.h>
 #include <task-utils/walker.h>
 #include <zircon/status.h>
@@ -199,7 +200,8 @@ void Harvester::GatherData() {
   GatherCpuSamples();
   GatherMemorySamples();
   GatherThreadSamples();
-  // TODO(smbug.com/16): This should be enabled on demand.
+  // TODO(smbug.com/16): These should be enabled on demand.
+  // GatherInspectableComponents();
   // GatherComponentIntrospection();
   // TODO(smbug.com/18): make this actually run at rate (i.e. remove drift from
   // execution time).
@@ -306,6 +308,18 @@ void Harvester::GatherThreadSamples() {
   TaskHarvester task_harvester;
   task_harvester.WalkRootJobTree();
   task_harvester.UploadTaskInfo(dockyard_proxy_);
+}
+
+void Harvester::GatherInspectableComponents() {
+  // Gather a list of components that contain inspect data.
+  const std::string path = "/hub";
+  StringSampleList string_sample_list;
+  for (auto& location : inspect::SyncFindPaths(path)) {
+    std::ostringstream label;
+    label << "inspectable:" << location.AbsoluteFilePath();
+    string_sample_list.emplace_back(label.str(), location.file_name);
+  }
+  dockyard_proxy_->SendStringSampleList(string_sample_list);
 }
 
 void Harvester::GatherComponentIntrospection() {

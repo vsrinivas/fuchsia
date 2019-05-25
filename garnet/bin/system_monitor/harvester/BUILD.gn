@@ -32,6 +32,7 @@ executable("bin") {
   deps = [
     "//garnet/lib/system_monitor/dockyard:lib",
     "//garnet/lib/system_monitor/dockyard:protos",
+    "//garnet/public/lib/inspect/query",
     "//src/lib/fxl",
     "//third_party/grpc:grpc++",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
@@ -77,6 +78,7 @@ executable("system_monitor_harvester_test") {
     "//garnet/lib/system_monitor/dockyard:lib",
     "//garnet/lib/system_monitor/dockyard:protos",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/inspect/query",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
