@@ -17,6 +17,7 @@ use {
 };
 
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
+#[derive(Debug)]
 pub struct State {
     pub(in crate::vmo) heap: Heap,
     header: Block<Arc<Mapping>>,

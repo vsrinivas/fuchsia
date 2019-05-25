@@ -60,6 +60,9 @@ pub trait Metric {
 }
 
 /// Inspect API Node data type.
+/// NOTE: do not rely on PartialEq implementation for true comparison. Instead
+/// leverage the reader.
+#[derive(Debug)]
 pub struct Node {
     /// Index of the block in the VMO.
     block_index: u32,
@@ -170,11 +173,7 @@ impl Node {
     }
 
     /// Add a byte vector property to this node.
-    pub fn create_byte_vector_property(
-        &self,
-        name: &str,
-        value: &[u8],
-    ) -> Result<BytesProperty, Error> {
+    pub fn create_bytes_property(&self, name: &str, value: &[u8]) -> Result<BytesProperty, Error> {
         let block = self.state.lock().create_property(
             name,
             value,
@@ -194,7 +193,25 @@ impl Drop for Node {
     }
 }
 
-/// Utility for generating metric mutation functions (example: set, add, subtract)
+macro_rules! dummy_trait_impls {
+    ($type:ident) => {
+        /// Inspect API types implement Eq,PartialEq returning true all the time so that
+        /// structs embedding inspect types can derive these traits as well.
+        /// IMPORTANT: Do not rely on these traits implementations for real comparisons
+        /// or validation tests, instead leverage the reader.
+        impl PartialEq for $type {
+            fn eq(&self, _other: &$type) -> bool {
+                true
+            }
+        }
+
+        impl Eq for $type {}
+    };
+}
+
+dummy_trait_impls!(Node);
+
+/// Utility for generating metric functions (example: set, add, subtract)
 ///   `fn_name`: the name of the function to generate (example: set)
 ///   `type`: the type of the argument of the function to generate (example: f64)
 ///   `name`: the readble name of the type of the function (example: double)
@@ -215,6 +232,9 @@ macro_rules! metric {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
             /// Inspect API Metric data type.
+            /// NOTE: do not rely on PartialEq implementation for true comparison.
+            /// Instead leverage the reader.
+            #[derive(Debug)]
             pub struct [<$name_cap Metric>] {
                 /// Index of the block in the VMO.
                 block_index: u32,
@@ -234,6 +254,8 @@ macro_rules! metric {
                 }
             }
 
+            dummy_trait_impls!([<$name_cap Metric>]);
+
             impl Drop for [<$name_cap Metric>] {
                 fn drop(&mut self) {
                     self.state
@@ -250,6 +272,9 @@ macro_rules! property {
     ($name:ident, $type:expr, $bytes:expr) => {
         paste::item! {
             /// Inspect API Property data type.
+            /// NOTE: do not rely on PartialEq implementation for true comparison.
+            /// Instead leverage the reader.
+            #[derive(Debug)]
             pub struct [<$name Property>] {
                 /// Index of the block in the VMO.
                 block_index: u32,
@@ -265,6 +290,8 @@ macro_rules! property {
                     self.state.lock().set_property(self.block_index, $bytes)
                 }
             }
+
+            dummy_trait_impls!([<$name Property>]);
 
             impl Drop for [<$name Property>] {
                 fn drop(&mut self) {
@@ -435,13 +462,13 @@ mod tests {
     }
 
     #[test]
-    fn byte_vector_property() {
+    fn bytes_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
         let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
         {
-            let property = node.create_byte_vector_property("property", b"test").unwrap();
+            let property = node.create_bytes_property("property", b"test").unwrap();
             let property_block = node.state.lock().heap.get_block(property.block_index).unwrap();
             assert_eq!(property_block.block_type(), BlockType::PropertyValue);
             assert_eq!(property_block.property_total_length().unwrap(), 4);
@@ -454,8 +481,36 @@ mod tests {
         assert_eq!(node_block.child_count().unwrap(), 0);
     }
 
+    #[test]
+    fn dummy_partialeq() -> Result<(), Error> {
+        let inspector = Inspector::new()?;
+        let root = inspector.root();
+
+        // Types should all be equal to another type. This is to enable clients
+        // with inspect types in their structs be able to derive PartialEq and
+        // Eq smoothly.
+        assert_eq!(root, &root.create_child("child1")?);
+        assert_eq!(root.create_int_metric("metric1", 1)?, root.create_int_metric("metric2", 2)?);
+        assert_eq!(
+            root.create_double_metric("metric1", 1.0)?,
+            root.create_double_metric("metric2", 2.0)?
+        );
+        assert_eq!(root.create_uint_metric("metric1", 1)?, root.create_uint_metric("metric2", 2)?);
+        assert_eq!(
+            root.create_string_property("metric1", "value1")?,
+            root.create_string_property("metric2", "value2")?
+        );
+        assert_eq!(
+            root.create_bytes_property("metric1", b"value1")?,
+            root.create_bytes_property("metric2", b"value2")?
+        );
+
+        Ok(())
+    }
+
     fn get_state(mapping: Arc<Mapping>) -> Arc<Mutex<State>> {
         let heap = Heap::new(mapping).unwrap();
         Arc::new(Mutex::new(State::create(heap).unwrap()))
     }
+
 }

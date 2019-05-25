@@ -10,6 +10,7 @@ use {
     std::{cmp::min, sync::Arc},
 };
 
+#[derive(Debug)]
 pub struct Heap {
     mapping: Arc<Mapping>,
     current_size_bytes: usize,
