@@ -5,6 +5,7 @@
 import("//build/banjo/toolchain.gni")
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
+import("//build/images/boot.gni")
 import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
 import("config.gni")
@@ -157,7 +158,7 @@ sdk("images") {
   deps = [
     "//build/images:images_sdk",
   ]
-  if (export_x64_sdk_images) {
+  if (export_x64_sdk_images && !bootfs_only) {
     deps += [
       "//build/images:fvm.sparse.blk_sdk",
       "//build/images:local.esp.blk_sdk",

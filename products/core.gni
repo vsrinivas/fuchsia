@@ -4,7 +4,7 @@
 
 import("//products/bringup.gni")
 
-enable_netboot = false
+bootfs_only = false
 
 zircon_enable_kernel_debugging_features = false
 zircon_enable_netsvc_debugging_features = false

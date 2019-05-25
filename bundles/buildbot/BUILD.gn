@@ -10,6 +10,7 @@ group("bringup") {
   testonly = true
   public_deps = [
     "//garnet/packages/tests:zircon",
+    "//garnet/tests/zircon/bringup",
   ]
 }
 

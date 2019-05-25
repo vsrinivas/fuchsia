@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+group("bringup") {
+  testonly = true
+  deps = [
+    ":bringup_bootfs_test",
+  ]
+}
+
+executable("running_on_bootfs_test") {
+  testonly = true
+  sources = [
+    "running_on_bootfs_test.cpp",
+  ]
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+package("bringup_bootfs_test") {
+  testonly = true
+  deps = [
+    ":running_on_bootfs_test",
+  ]
+  tests = [
+    {
+      name = "running_on_bootfs_test"
+    },
+  ]
+}

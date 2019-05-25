@@ -113,6 +113,9 @@ template("generate_response_file") {
 #     [string] Comma-separated list of Zircon manifest groups to include
 #     in `bootfs_manifest`.
 #
+#   output_name (optional, default: target_name)
+#     [string] Root name of the output manifest file.
+#
 #   zircon_groups (optional, default: "")
 #     [string] Comma-separated list of Zircon manifest groups to include.
 #     If this is "", then the Zircon manifest only provides binaries
@@ -143,7 +146,11 @@ template("generate_manifest") {
     if (!defined(zircon_groups)) {
       zircon_groups = ""
     }
-    manifest_file = "$target_out_dir/$target_name"
+    if (defined(invoker.output_name)) {
+      manifest_file = "$target_out_dir/${invoker.output_name}"
+    } else {
+      manifest_file = "$target_out_dir/$target_name"
+    }
     depfile = "${manifest_file}.d"
     build_id_file = "${manifest_file}.ids.txt"
     stripped_dir = "${manifest_file}.stripped"

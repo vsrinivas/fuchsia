@@ -5,6 +5,7 @@
 import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
 import("//build/disabled_for_asan.gni")
+import("//build/images/boot.gni")
 import("//build/images/manifest.gni")
 import("//build/json/validate_json.gni")
 import("//build/package/component.gni")
@@ -682,13 +683,18 @@ template("package") {
       if (is_disabled) {
         dest = "disabled/${dest}"
       }
-      dest = "test/${dest}"
 
-      if (pkg.deprecated_system_image) {
-        path = "/system/$dest"
+      if (bootfs_only) {
+        dest = "test/sys/$dest"
+        path = "/boot/$dest"
       } else {
-        path =
-            "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
+        dest = "test/$dest"
+        if (pkg.deprecated_system_image) {
+          path = "/system/$dest"
+        } else {
+          path =
+              "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
+        }
       }
 
       # TODO(TC-359): Remove this block once no more tests remain in
@@ -827,7 +833,7 @@ template("package") {
       pkg.deprecated_system_image = true
     }
 
-    if (pkg.deprecated_system_image) {
+    if (pkg.deprecated_system_image || bootfs_only) {
       # System image packages just donate manifest arguments
       generate_response_file(pkg_target_name) {
         if (defined(pkg.visibility)) {
@@ -846,7 +852,7 @@ template("package") {
                                             root_build_dir) ]
         }
       }
-      not_needed(component_indices)
+      not_needed([ "component_indices" ])
     } else {
       # Fuchsia package aggregates a manifest from it's arguments and builds a
       # signed metadata archive.

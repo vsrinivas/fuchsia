@@ -113,6 +113,7 @@ template("zbi") {
           args += [ "--entry=$entry" ]
         } else {
           # It's a manifest entry in the style of a copy() target.
+          targets = []
           targets = entry.outputs
           assert(targets == [ targets[0] ],
                  "manifest entry outputs list must have exactly one element")

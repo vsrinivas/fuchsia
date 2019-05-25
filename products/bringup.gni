@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-enable_netboot = true
+bootfs_only = true
 
 zircon_enable_kernel_debugging_features = true
 zircon_enable_netsvc_debugging_features = true
