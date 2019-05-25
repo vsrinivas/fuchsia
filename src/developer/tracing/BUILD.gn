@@ -13,7 +13,7 @@ group("tracing") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "lib:tests",
   ]
 }

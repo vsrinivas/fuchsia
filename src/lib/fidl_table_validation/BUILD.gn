@@ -14,7 +14,7 @@ rustc_library("fidl_table_validation") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "fidl_table_validation_tests",
   ]
 }

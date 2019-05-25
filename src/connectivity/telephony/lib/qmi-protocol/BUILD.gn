@@ -41,7 +41,7 @@ rustc_library("qmi-protocol") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     ":qmigen_unittests($host_toolchain)",
   ]
 }

@@ -14,7 +14,7 @@ group("bin") {
 
 group("tests") {
   testonly = true
-  data_deps = [
+  deps = [
     ":identity_bin_unittests",
   ]
 }

@@ -16,5 +16,5 @@ group("tests") {
   deps = [
     "tests",  # tests/ directory
   ]
-  data_deps = []
+  deps = []
 }

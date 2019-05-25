@@ -14,7 +14,7 @@ group("lib") {
 
 group("tests") {
   testonly = true
-  data_deps = [
+  deps = [
     ":identity_lib_unittests",
   ]
 }

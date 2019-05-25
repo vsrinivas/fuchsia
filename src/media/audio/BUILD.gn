@@ -19,7 +19,7 @@ group("audio") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "audio_core:tests",
     "//sdk/lib/media/audio_dfx/cpp:audio_dfx_tests",
   ]

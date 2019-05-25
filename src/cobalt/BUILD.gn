@@ -13,7 +13,7 @@ group("cobalt") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "//src/cobalt/bin:cobalt_tests",
     "//third_party/cobalt:cobalt_core_tests",
   ]

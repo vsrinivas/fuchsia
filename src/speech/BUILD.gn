@@ -13,5 +13,5 @@ group("speech") {
 group("tests") {
   testonly = true
 
-  data_deps = []
+  deps = []
 }

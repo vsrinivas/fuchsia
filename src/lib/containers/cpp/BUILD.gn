@@ -49,7 +49,7 @@ test_package("containers_cpp_tests") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     ":containers_cpp_tests",
   ]
 }

@@ -18,7 +18,7 @@ group("developer") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "//src/developer/bugreport/tests:bugreport_tests",
     "//src/developer/bugreport/tests:bugreport_client_tests($host_toolchain)",
     "//src/developer/crashpad_agent/tests:crashpad_agent_tests",

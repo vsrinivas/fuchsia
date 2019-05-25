@@ -134,7 +134,7 @@ executable("audio_core_bin") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "mixer:audio_mixer_tests",
     "test",
     "//sdk/lib/media/audio_dfx/cpp:audio_dfx_tests"

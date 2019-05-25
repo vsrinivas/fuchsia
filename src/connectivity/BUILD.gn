@@ -16,7 +16,7 @@ group("connectivity") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "//src/connectivity/bluetooth/core/bt-gap:tests",
     "//src/connectivity/bluetooth/core/bt-host:bluetooth_fuzzers_test",
     "//src/connectivity/bluetooth/lib/bt-avdtp:tests",

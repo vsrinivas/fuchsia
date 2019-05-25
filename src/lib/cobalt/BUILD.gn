@@ -56,7 +56,7 @@ unittest_package("cobalt_lib_tests") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     ":cobalt_lib_tests",
   ]
 }

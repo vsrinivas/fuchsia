@@ -20,7 +20,7 @@ group("lib") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "cobalt:tests",
     "containers/cpp:tests",
     "fidl_table_validation:tests",

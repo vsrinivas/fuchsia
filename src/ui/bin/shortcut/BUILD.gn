@@ -10,7 +10,7 @@ import("//build/testing/environments.gni")
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     ":shortcut",
     ":shortcut_test",
   ]

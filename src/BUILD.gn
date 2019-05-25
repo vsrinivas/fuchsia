@@ -27,7 +27,7 @@ group("src") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "cobalt:tests",
     "connectivity:tests",
     "developer:tests",

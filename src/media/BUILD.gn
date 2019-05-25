@@ -17,7 +17,7 @@ group("media") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "audio:tests",
     "sessions:tests",
     "codecs:tests",

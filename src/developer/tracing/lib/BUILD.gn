@@ -15,7 +15,7 @@ group("lib") {
 
 group("tests") {
   testonly = true
-  data_deps = [
+  deps = [
     "test_utils:tracing_test_utils_tests",
   ]
 }

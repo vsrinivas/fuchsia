@@ -12,7 +12,7 @@ group("ui") {
 group("tests") {
   testonly = true
 
-  data_deps = [
+  deps = [
     "bin:tests",
   ]
 }
