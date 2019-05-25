@@ -133,15 +133,12 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   vertex_writer_.Submit();
 
   index_writer_.WriteBuffer(index_buffer, {0, 0, index_buffer->size()},
-                            SemaphorePtr());
+                            Semaphore::New(device));
   index_writer_.Submit();
 
-  auto mesh = fxl::MakeRefCounted<Mesh>(
+  return fxl::MakeRefCounted<Mesh>(
       manager_->resource_recycler(), spec_, ComputeBoundingBox(), vertex_count_,
       index_count_, vertex_buffer, std::move(index_buffer));
-
-  mesh->SetWaitSemaphore(vertex_buffer->TakeWaitSemaphore());
-  return mesh;
 }
 
 }  // namespace impl

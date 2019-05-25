@@ -161,9 +161,12 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(
   frame->command_buffer()->KeepAlive(mesh);
   frame->command_buffer()->KeepAlive(texture.get());
 
-  // TODO(ES-104): Replace TakeWaitSemaphore() with something better.
-  frame->command_buffer()->TakeWaitSemaphore(
-      mesh, vk::PipelineStageFlagBits::eVertexInput);
+  // TODO(ES-206): avoid checking every buffer of every mesh by obtaining a
+  // single wait semaphore from PaperRenderer's per-frame BatchGpuUploader.
+  // Once this is done, should probably DCHECK here that none of the buffers
+  // have wait semaphores.
+  mesh->TransferWaitSemaphores(frame->command_buffer(),
+                               vk::PipelineStageFlagBits::eVertexInput);
 
   auto* obj = frame->Allocate<MeshData>();
 

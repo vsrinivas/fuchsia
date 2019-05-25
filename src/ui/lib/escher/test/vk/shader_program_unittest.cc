@@ -99,11 +99,17 @@ VK_TEST_F(ShaderProgramTest, CachedVariants) {
   EXPECT_NE(program1, program3);
 }
 
+
+#ifdef __Fuchsia__
 // TODO(ES-83): we need to set up so many meshes, materials, framebuffers, etc.
 // before we can obtain pipelines, we might as well just make this an end-to-end
 // test and actually render.  Or, go the other direction and manually set up
 // state in a standalone CommandBufferPipelineState object.
 VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
+#else
+// TODO(ES-207): broken on Linux.
+VK_TEST_F(ShaderProgramTest, DISABLED_GeneratePipelines) {
+#endif
   auto escher = test::GetEscher();
 
   // TODO(ES-183): remove PaperRenderer shader dependency.

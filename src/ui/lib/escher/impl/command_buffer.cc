@@ -115,8 +115,7 @@ void CommandBuffer::KeepAlive(Resource* resource) {
 void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
   KeepAlive(mesh);
 
-  AddWaitSemaphore(mesh->TakeWaitSemaphore(),
-                   vk::PipelineStageFlagBits::eVertexInput);
+  mesh->TransferWaitSemaphores(this, vk::PipelineStageFlagBits::eVertexInput);
 
   const uint32_t vbo_binding =
       MeshShaderBinding::kTheOnlyCurrentlySupportedBinding;

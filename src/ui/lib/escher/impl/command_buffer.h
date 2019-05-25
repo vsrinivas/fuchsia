@@ -126,6 +126,9 @@ class CommandBuffer {
   // (per Escher instance), even across multiple CommandBufferPools.
   uint64_t sequence_number() const { return sequence_number_; }
 
+  size_t NumWaitSemaphores() const { return wait_semaphores_.size(); }
+  size_t NumSignalSemaphores() const { return signal_semaphores_.size(); }
+
  private:
   friend class CommandBufferPool;
 

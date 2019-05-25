@@ -9,14 +9,14 @@
 
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/geometry/bounding_box.h"
-#include "src/ui/lib/escher/resources/waitable_resource.h"
+#include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/shape/mesh_spec.h"
 
 namespace escher {
 
 // Immutable container for vertex indices and attribute data required to render
 // a triangle mesh.
-class Mesh : public WaitableResource {
+class Mesh : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
@@ -72,6 +72,10 @@ class Mesh : public WaitableResource {
   const AttributeBufferArray& attribute_buffers() const {
     return attribute_buffers_;
   }
+
+  // Transfer wait semaphores from all buffers to the specified CommandBuffer.
+  void TransferWaitSemaphores(impl::CommandBuffer* cb,
+                              vk::PipelineStageFlags stages);
 
  private:
   Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,

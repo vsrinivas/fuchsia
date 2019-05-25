@@ -258,6 +258,8 @@ void PaperRenderer::EndFrame() {
   TRACE_DURATION("gfx", "PaperRenderer::EndFrame");
   FXL_DCHECK(frame_data_);
 
+  // TODO(ES-206): obtain a semaphore here that will be signalled by the
+  // uploader and waited-upon by the "render command buffer".
   frame_data_->gpu_uploader->Submit();
 
   render_queue_.Sort();

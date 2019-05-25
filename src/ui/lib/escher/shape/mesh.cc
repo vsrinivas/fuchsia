@@ -4,13 +4,13 @@
 
 #include "src/ui/lib/escher/shape/mesh.h"
 
+#include "src/ui/lib/escher/impl/command_buffer.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 
 namespace escher {
 
 const ResourceTypeInfo Mesh::kTypeInfo("Mesh", ResourceType::kResource,
-                                       ResourceType::kWaitableResource,
                                        ResourceType::kMesh);
 
 Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
@@ -19,7 +19,7 @@ Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
            std::array<AttributeBuffer, VulkanLimits::kNumVertexBuffers>
                attribute_buffers,
            BufferPtr index_buffer, vk::DeviceSize index_buffer_offset)
-    : WaitableResource(resource_recycler),
+    : Resource(resource_recycler),
       spec_(std::move(spec)),
       bounding_box_(bounding_box),
       num_vertices_(num_vertices),
@@ -89,5 +89,16 @@ Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
            std::move(index_buffer), index_buffer_offset) {}
 
 Mesh::~Mesh() {}
+
+void Mesh::TransferWaitSemaphores(impl::CommandBuffer* cb,
+                                  vk::PipelineStageFlags stages) {
+  // TODO(ES-104): Replace TakeWaitSemaphore() with something better.
+  cb->TakeWaitSemaphore(index_buffer_, stages);
+  for (auto& attr : attribute_buffers_) {
+    if (attr.buffer) {
+      cb->TakeWaitSemaphore(attr.buffer, stages);
+    }
+  }
+}
 
 }  // namespace escher

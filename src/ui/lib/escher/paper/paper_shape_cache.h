@@ -74,6 +74,12 @@ class PaperShapeCache {
 
   size_t size() const { return cache_.size(); }
 
+  uint64_t cache_hit_count() const { return cache_hit_count_; }
+  uint64_t cache_hit_after_plane_culling_count() const {
+    return cache_hit_after_plane_culling_count_;
+  }
+  uint64_t cache_miss_count() const { return cache_miss_count_; }
+
  private:
   enum class ShapeType { kRect, kRoundedRect, kCircle };
 
