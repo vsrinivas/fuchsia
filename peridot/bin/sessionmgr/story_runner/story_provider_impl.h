@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 
+#include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
@@ -59,6 +60,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       const ComponentContextInfo& component_context_info,
       fuchsia::modular::FocusProviderPtr focus_provider,
       fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
+      fuchsia::app::discover::DiscoverRegistry* discover_registry,
       fuchsia::modular::ModuleResolver* module_resolver,
       EntityProviderRunner* entity_provider_runner,
       modular::ModuleFacetReader* module_facet_reader,
@@ -94,6 +96,11 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Called by StoryControllerImpl.
   fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider() {
     return user_intelligence_provider_;
+  }
+
+  // Called by StoryControllerImpl.
+  fuchsia::app::discover::DiscoverRegistry* discover_registry() {
+    return discover_registry_;
   }
 
   // Called by StoryControllerImpl.
@@ -310,7 +317,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   const ComponentContextInfo component_context_info_;
 
   fuchsia::modular::UserIntelligenceProvider* const
-      user_intelligence_provider_;                           // Not owned.
+      user_intelligence_provider_;  // Not owned.
+  fuchsia::app::discover::DiscoverRegistry* const
+      discover_registry_;                                    // Not owned.
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
   EntityProviderRunner* const entity_provider_runner_;       // Not owned.
   modular::ModuleFacetReader* const module_facet_reader_;    // Not owned.

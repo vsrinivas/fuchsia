@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/module_output_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.app.discover.ModuleOutput",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.modular.ModuleContext"
+        ]
+    }
+}

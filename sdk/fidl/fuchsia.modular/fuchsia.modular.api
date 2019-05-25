@@ -19,7 +19,7 @@
   "fidl/fuchsia.modular/entity/entity.fidl": "ca4659a784d2fd345a5348bcc0c78042",
   "fidl/fuchsia.modular/entity/entity_provider.fidl": "8e3026210f5ad83d3c357603094877f0",
   "fidl/fuchsia.modular/entity/entity_reference_factory.fidl": "5fc60e7fb24bd7878bd6203dc64bc915",
-  "fidl/fuchsia.modular/entity/entity_resolver.fidl": "ab460a5e575d789311e63a54085c5930",
+  "fidl/fuchsia.modular/entity/entity_resolver.fidl": "9c1094116d0ef67d16d720069e41071b",
   "fidl/fuchsia.modular/intent/intent.fidl": "de3880a06d64fa18dbbedcee7ac08053",
   "fidl/fuchsia.modular/intent/intent_handler.fidl": "476ec09d958d7ba9b4934d9e4c255c90",
   "fidl/fuchsia.modular/lifecycle/lifecycle.fidl": "1bc186061e6c737b060113bd203386b4",

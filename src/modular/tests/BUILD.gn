@@ -78,6 +78,22 @@ executable("intents_test") {
   ]
 }
 
+executable("module_output_test") {
+  testonly = true
+
+  sources = [
+    "module_output_test.cc",
+  ]
+
+  deps = [
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.app.discover",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
 executable("story_shell_factory_test") {
   testonly = true
 
@@ -117,6 +133,10 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
+      name = "module_output_test"
+      environments = basic_envs
+    },
+    {
       name = "story_shell_factory_test"
       environments = basic_envs
     },
@@ -125,6 +145,7 @@ test_package("modular_integration_tests") {
   deps = [
     ":intents_test",
     ":last_focus_time_test",
+    ":module_output_test",
     ":session_shell_test",
     ":story_shell_factory_test",
     "//garnet/public/lib/callback",

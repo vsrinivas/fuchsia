@@ -29,7 +29,8 @@ ModuleContextImpl::ModuleContextImpl(
                                   info.story_controller_impl->GetStoryId()),
                               EncodeModulePath(module_data_->module_path),
                               module_data_->module_url),
-      user_intelligence_provider_(info.user_intelligence_provider) {
+      user_intelligence_provider_(info.user_intelligence_provider),
+      discover_registry_(info.discover_registry) {
   service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
       [this](
           fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
@@ -51,6 +52,14 @@ ModuleContextImpl::ModuleContextImpl(
         scope->set_module_scope(std::move(*module_scope));
         user_intelligence_provider_->GetComponentIntelligenceServices(
             std::move(*scope), std::move(request));
+      });
+  service_provider_impl_.AddService<fuchsia::app::discover::ModuleOutputWriter>(
+      [this](auto request) {
+        fuchsia::app::discover::ModuleIdentifier module_scope;
+        module_scope.set_story_id(story_controller_impl_->GetStoryId());
+        module_scope.set_module_path(module_data_->module_path);
+        discover_registry_->RegisterModuleOutputWriter(std::move(module_scope),
+                                                       std::move(request));
       });
   service_provider_impl_.AddBinding(std::move(service_provider_request));
 }

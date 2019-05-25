@@ -4,6 +4,7 @@
 
 #include "peridot/bin/sessionmgr/story_runner/story_controller_impl.h"
 
+#include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
@@ -194,6 +195,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     service_list->names.push_back(fuchsia::modular::ModuleContext::Name_);
     service_list->names.push_back(
         fuchsia::modular::IntelligenceServices::Name_);
+    service_list->names.push_back(
+        fuchsia::app::discover::ModuleOutputWriter::Name_);
     service_list->provider = std::move(module_context_provider);
 
     RunningModInfo running_mod_info;
@@ -235,7 +238,9 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         story_controller_impl_,
         story_controller_impl_->story_visibility_system_,
         story_controller_impl_->story_provider_impl_
-            ->user_intelligence_provider()};
+            ->user_intelligence_provider(),
+        story_controller_impl_->story_provider_impl_->discover_registry(),
+    };
 
     running_mod_info.module_context_impl = std::make_unique<ModuleContextImpl>(
         module_context_info, running_mod_info.module_data.get(),

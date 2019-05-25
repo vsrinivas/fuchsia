@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_MODULE_CONTEXT_IMPL_H_
 #define PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_MODULE_CONTEXT_IMPL_H_
 
+#include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
@@ -30,6 +31,7 @@ struct ModuleContextInfo {
   StoryControllerImpl* const story_controller_impl;
   StoryVisibilitySystem* const story_visibility_system;
   fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider;
+  fuchsia::app::discover::DiscoverRegistry* const discover_registry;
 };
 
 // ModuleContextImpl keeps a single connection from a module instance in
@@ -130,6 +132,9 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
   fuchsia::modular::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned
+
+  fuchsia::app::discover::DiscoverRegistry* const
+      discover_registry_;  // Not owned
 
   fidl::BindingSet<fuchsia::modular::ModuleContext> bindings_;
 

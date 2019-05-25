@@ -66,6 +66,9 @@ constexpr char kContextEngineComponentNamespace[] = "context_engine";
 constexpr char kModuleResolverUrl[] =
     "fuchsia-pkg://fuchsia.com/module_resolver#meta/module_resolver.cmx";
 
+constexpr char kDiscovermgrUrl[] =
+    "fuchsia-pkg://fuchsia.com/discovermgr#meta/discovermgr.cmx";
+
 constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
 
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
@@ -213,6 +216,7 @@ void SessionmgrImpl::Initialize(
 
         InitializeLedger(std::move(ledger_token_manager));
         InitializeMessageQueueManager();
+        InitializeDiscovermgr();
         InitializeMaxwellAndModular(std::move(session_shell_url),
                                     std::move(story_shell_config),
                                     use_session_shell_for_story_shell_factory);
@@ -612,9 +616,9 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       session_storage_.get(), std::move(story_shell_config),
       std::move(story_shell_factory_ptr), component_context_info,
       std::move(focus_provider_story_provider),
-      user_intelligence_provider_impl_.get(), module_resolver_service_.get(),
-      entity_provider_runner_.get(), module_facet_reader_.get(),
-      presentation_provider_impl_.get(),
+      user_intelligence_provider_impl_.get(), discover_registry_service_.get(),
+      module_resolver_service_.get(), entity_provider_runner_.get(),
+      module_facet_reader_.get(), presentation_provider_impl_.get(),
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewSnapshot>(),
       (config_.enable_story_shell_preload())));
@@ -631,7 +635,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       story_provider_puppet_master.NewRequest();
 
   // Initialize the PuppetMaster.
-  // TODO(miguelfrde): there's no clean runtime interface we can inject to
+  // TODO: there's no clean runtime interface we can inject to
   // puppet master. Hence, for now we inject this function to be able to focus
   // mods. Eventually we want to have a StoryRuntime and SessionRuntime classes
   // similar to Story/SessionStorage but for runtime management.
@@ -676,6 +680,41 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   visible_stories_handler_ = std::make_unique<VisibleStoriesHandler>();
   AtEnd(Reset(&focus_handler_));
   AtEnd(Reset(&visible_stories_handler_));
+}
+
+// TODO(MI4-2416): pass additional configuration.
+void SessionmgrImpl::InitializeDiscovermgr() {
+  auto service_list = fuchsia::sys::ServiceList::New();
+  service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
+  service_list->names.push_back(fuchsia::modular::EntityResolver::Name_);
+  discovermgr_ns_services_.AddService<fuchsia::modular::PuppetMaster>(
+      [this](auto request) {
+        if (terminating_) {
+          return;
+        }
+        puppet_master_impl_->Connect(std::move(request));
+      });
+  discovermgr_ns_services_.AddService<fuchsia::modular::EntityResolver>(
+      [this](auto request) {
+        if (terminating_) {
+          return;
+        }
+        entity_provider_runner_->ConnectEntityResolver(std::move(request));
+      });
+
+  discovermgr_ns_services_.AddBinding(service_list->provider.NewRequest());
+
+  fuchsia::modular::AppConfig discovermgr_config;
+  discovermgr_config.url = kDiscovermgrUrl;
+
+  discovermgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+      session_environment_->GetLauncher(), std::move(discovermgr_config),
+      "" /* data_origin */, std::move(service_list));
+  discovermgr_app_->services().ConnectToService(
+      discover_registry_service_.NewRequest());
+  AtEnd(Reset(&discover_registry_service_));
+  AtEnd(Reset(&discovermgr_app_));
+  AtEnd(Teardown(kBasicTimeout, "Discovermgr", discovermgr_app_.get()));
 }
 
 void SessionmgrImpl::InitializeSessionShell(

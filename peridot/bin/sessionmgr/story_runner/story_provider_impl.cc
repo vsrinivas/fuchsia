@@ -298,6 +298,7 @@ StoryProviderImpl::StoryProviderImpl(
     fuchsia::modular::FocusProviderPtr focus_provider,
     fuchsia::modular::UserIntelligenceProvider* const
         user_intelligence_provider,
+    fuchsia::app::discover::DiscoverRegistry* const discover_registry,
     fuchsia::modular::ModuleResolver* const module_resolver,
     EntityProviderRunner* const entity_provider_runner,
     modular::ModuleFacetReader* const module_facet_reader,
@@ -312,6 +313,7 @@ StoryProviderImpl::StoryProviderImpl(
       enable_story_shell_preload_(enable_story_shell_preload),
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider),
+      discover_registry_(discover_registry),
       module_resolver_(module_resolver),
       entity_provider_runner_(entity_provider_runner),
       module_facet_reader_(module_facet_reader),
@@ -695,8 +697,7 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
     auto done = on_run->AsyncMap([this, story_id = info->focused_story_id] {
       zx_time_t now = 0;
       zx_clock_get_new(ZX_CLOCK_UTC, &now);
-      return session_storage_->UpdateLastFocusedTimestamp(
-          story_id, now);
+      return session_storage_->UpdateLastFocusedTimestamp(story_id, now);
     });
     fit::function<void()> callback = [] {};
     operation_queue_.Add(WrapFutureAsOperation(
