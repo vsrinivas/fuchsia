@@ -6,9 +6,11 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/test.h>
+#include <ddktl/device.h>
 #include <lib/zx/socket.h>
 
 #include <limits.h>
+#include <memory>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,11 +62,29 @@ zx_status_t ddktl_test_func(void* cookie, test_report_t* report) {
     return report->n_failed == 0 ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
+class ChildDevice;
+using ChildDeviceType = ddk::Device<ChildDevice, ddk::Unbindable>;
+
+class ChildDevice : public ChildDeviceType {
+public:
+    ChildDevice(zx_device_t* parent) : ChildDeviceType(parent) {}
+    void DdkUnbind() { DdkRemove(); }
+    void DdkRelease() { delete this; }
+};
+
 } // namespace
 
 extern "C" zx_status_t ddktl_test_bind(void* ctx, zx_device_t* parent) {
+    auto device = std::make_unique<ChildDevice>(parent);
+    zx_status_t status = device->DdkAdd("child", DEVICE_ADD_NON_BINDABLE);
+    if (status != ZX_OK) {
+        return status;
+    }
+    // devmgr now owns this
+    __UNUSED auto ptr = device.release();
+
     test_protocol_t proto;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_TEST, &proto);
+    status = device_get_protocol(parent, ZX_PROTOCOL_TEST, &proto);
     if (status != ZX_OK) {
         return status;
     }

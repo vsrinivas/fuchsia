@@ -15,6 +15,21 @@ zx_status_t zx_device::Create(fbl::RefPtr<zx_device>* out_dev) {
     return ZX_OK;
 }
 
+void zx_device::PushBindConn(const fs::FidlConnection& conn) {
+    fbl::AutoLock<fbl::Mutex> lock(&bind_conn_lock_);
+    bind_conn_.push_back(conn);
+}
+
+bool zx_device::PopBindConn(fs::FidlConnection* conn) {
+    fbl::AutoLock<fbl::Mutex> lock(&bind_conn_lock_);
+    if (bind_conn_.is_empty()) {
+        return false;
+    }
+    *conn = bind_conn_[0];
+    bind_conn_.erase(0);
+    return true;
+}
+
 // We must disable thread-safety analysis due to not being able to statically
 // guarantee the lock holding invariant.  Instead, we acquire the lock if
 // it's not already being held by the current thread.

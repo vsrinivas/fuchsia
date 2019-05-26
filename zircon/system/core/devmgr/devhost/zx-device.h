@@ -12,6 +12,8 @@
 #include <fbl/recycler.h>
 #include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/vector.h>
+#include <fs/handler.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/compiler.h>
@@ -80,6 +82,9 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) {
       return Dispatch(ops->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
     }
+
+    void PushBindConn(const fs::FidlConnection& conn);
+    bool PopBindConn(fs::FidlConnection* conn);
 
     // Check if this devhost has a device with the given ID, and if so returns a
     // reference to it.
@@ -188,6 +193,10 @@ private:
     // Identifier assigned by devmgr that can be used to assemble composite
     // devices.
     uint64_t local_id_ = 0;
+
+    // The connection associated with a fuchsia.device.Controller/Bind.
+    fbl::Mutex bind_conn_lock_;
+    fbl::Vector<fs::FidlConnection> bind_conn_ TA_GUARDED(bind_conn_lock_);
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

@@ -5,6 +5,8 @@
 #include "device-controller-connection.h"
 
 #include <fbl/auto_lock.h>
+#include <fuchsia/device/c/fidl.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
 #include "../shared/fidl_txn.h"
@@ -23,12 +25,29 @@ struct DevhostRpcReadContext {
     DeviceControllerConnection* conn;
 };
 
+// Handles outstanding calls to fuchsia.device.Controller/Bind.
+void BindReply(const fbl::RefPtr<zx_device_t>& dev) {
+    fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
+    if (dev->PopBindConn(&conn)) {
+        // TODO(ZX-3431): We ignore the status from device_bind() for
+        // bug-compatibility reasons.  Once this bug is resolved, we can
+        // return the actual status.
+        fuchsia_device_ControllerBind_reply(conn.Txn(), ZX_OK);
+    }
+}
+
 zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
                             size_t driver_path_size, zx_handle_t raw_driver_vmo,
                             fidl_txn_t* txn) {
     auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
     zx::vmo driver_vmo(raw_driver_vmo);
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
+
+    // We can now reply to calls to fuchsia.device.Controller/Bind, as we have
+    // completed the request to bind the driver.
+    auto defer = fit::defer([dev = ctx->conn->dev()] {
+        BindReply(dev);
+    });
 
     // TODO: api lock integration
     log(RPC_IN, "devhost[%s] bind driver '%.*s'\n", ctx->path, static_cast<int>(driver_path_size),

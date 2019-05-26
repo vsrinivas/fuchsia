@@ -27,6 +27,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <fbl/auto_lock.h>
 #include <fs/connection.h>
 #include <fs/handler.h>
 #include <fuchsia/device/c/fidl.h>
@@ -557,21 +558,26 @@ static const fuchsia_io_Node_ops_t kNodeOps = {
 static zx_status_t fidl_DeviceControllerBind(void* ctx, const char* driver_data,
                                              size_t driver_count, fidl_txn_t* txn) {
     auto conn = static_cast<DevfsConnection*>(ctx);
+
     char drv_libname[fuchsia_device_MAX_DRIVER_PATH_LEN + 1];
     memcpy(drv_libname, driver_data, driver_count);
     drv_libname[driver_count] = 0;
 
-    // TODO(DNO-492): additional logging for debugging what looks like a
-    // deadlock.  Remove once bug is resolved.
-    printf("DeviceControllerBind running: %s\n", drv_libname);
+    if (!strcmp(drv_libname, "/boot/driver/fvm.so")) {
+        // TODO(ZX-4198): Workaround for flaky tests involving FVM.
+        zx_status_t status = fuchsia_device_ControllerBind_reply(txn, ZX_OK);
+        if (status != ZX_OK) {
+            return status;
+        }
+    } else {
+        conn->dev->PushBindConn(fs::FidlConnection::CopyTxn(txn));
+    }
+
     // TODO(ZX-3431): We ignore the status from device_bind() for
     // bug-compatibility reasons.  Once this bug is resolved, we can return the
     // actual status.
     __UNUSED zx_status_t status = device_bind(conn->dev, drv_libname);
-    // TODO(DNO-492): additional logging for debugging what looks like a
-    // deadlock.  Remove once bug is resolved.
-    printf("DeviceControllerBind finished: %s %s\n", drv_libname, zx_status_get_string(status));
-    return fuchsia_device_ControllerBind_reply(txn, ZX_OK);
+    return ZX_OK;
 }
 
 static zx_status_t fidl_DeviceControllerUnbind(void* ctx, fidl_txn_t* txn) {
