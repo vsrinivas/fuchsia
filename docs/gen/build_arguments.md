@@ -387,10 +387,11 @@ module_suggester is not AOT compiled in debug builds
 From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/43274cb565d378916b5a37df7e14b7bca0708759/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
+Allow for deduping the VM between standalone, flutter_runner and dart_runner.
 
-**Current value (from the default):** `"static_library"`
+**Current value (from the default):** `"shared_library"`
 
-From //third_party/dart/runtime/runtime_args.gni:80
+From //third_party/dart/runtime/runtime_args.gni:78
 
 ### dart_core_snapshot_kind
 Controls the kind of core snapshot linked into the standalone VM. Using a
@@ -857,7 +858,7 @@ From //build/go/go_build.gni:20
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/host_x64/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/.gocache"`
 
 From //build/go/go_build.gni:16
 
@@ -1524,13 +1525,13 @@ From //third_party/skia/BUILD.gn:70
 
 ### skia_enable_fontmgr_custom
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //third_party/skia/BUILD.gn:68
 
 ### skia_enable_fontmgr_custom_empty
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //third_party/skia/BUILD.gn:69
 
@@ -1542,7 +1543,7 @@ From //third_party/skia/BUILD.gn:66
 
 ### skia_enable_fontmgr_fuchsia
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //third_party/skia/BUILD.gn:71
 
@@ -1697,7 +1698,7 @@ From //third_party/skia/BUILD.gn:21
 
 From //.gn:26
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:63
 
@@ -1705,7 +1706,7 @@ From //third_party/skia/BUILD.gn:63
 
 From //.gn:26
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:63
 
@@ -1751,7 +1752,7 @@ From //third_party/skia/BUILD.gn:28
 
 From //.gn:28
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:25
 
@@ -1759,7 +1760,7 @@ From //third_party/skia/BUILD.gn:25
 
 From //.gn:28
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:25
 
@@ -1783,7 +1784,7 @@ From //third_party/skia/gn/skia.gni:14
 
 ### skia_use_icu
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //third_party/skia/gn/skia.gni:13
 
@@ -1811,7 +1812,7 @@ From //third_party/skia/BUILD.gn:30
 
 From //.gn:29
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:31
 
@@ -1819,7 +1820,7 @@ From //third_party/skia/BUILD.gn:31
 
 From //.gn:29
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:31
 
@@ -1853,7 +1854,7 @@ From //third_party/skia/BUILD.gn:34
 
 From //.gn:30
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:64
 
@@ -1861,15 +1862,15 @@ From //third_party/skia/BUILD.gn:64
 
 From //.gn:30
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:64
 
 ### skia_use_vulkan
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
-From //third_party/skia/BUILD.gn:88
+From //third_party/skia/BUILD.gn:86
 
 ### skia_use_wuffs
 
@@ -1883,7 +1884,7 @@ From //third_party/skia/BUILD.gn:35
 
 From //.gn:31
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:39
 
@@ -1891,7 +1892,7 @@ From //third_party/skia/BUILD.gn:39
 
 From //.gn:31
 
-**Overridden from the default:** `true`
+**Overridden from the default:** `false`
 
 From //third_party/skia/BUILD.gn:39
 
@@ -1975,7 +1976,7 @@ From //build/config/sysroot.gni:7
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"host_x64/thinlto-cache"`
+**Current value (from the default):** `"linux_x64-shared/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
