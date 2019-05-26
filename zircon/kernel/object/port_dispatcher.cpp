@@ -58,6 +58,10 @@ constexpr size_t kMaxAllocatedPacketCount = 16 * 1024u;
 // TODO(maniscalco): Enforce this limit per process via the job policy.
 constexpr size_t kMaxAllocatedPacketCountPerPort = kMaxAllocatedPacketCount / 8;
 ArenaPortAllocator port_allocator;
+
+bool IsDefaultAllocatedEphemeral(const PortPacket& port_packet) {
+    return port_packet.allocator == &port_allocator && port_packet.is_ephemeral();
+}
 } // namespace.
 
 zx_status_t ArenaPortAllocator::Init() {
@@ -215,7 +219,7 @@ void PortDispatcher::on_zero_handles() {
 
         // If the packet is ephemeral, free it outside of the lock. Otherwise,
         // reset the observer if it is present.
-        if (packet->is_ephemeral()) {
+        if (IsDefaultAllocatedEphemeral(*packet)) {
             --num_ephemeral_packets_;
             guard.CallUnlocked([packet]() {
                     packet->Free();
@@ -300,7 +304,8 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
     if (zero_handles_)
         return ZX_ERR_BAD_STATE;
 
-    if (port_packet->is_ephemeral() && num_ephemeral_packets_ > kMaxAllocatedPacketCountPerPort) {
+    if (IsDefaultAllocatedEphemeral(*port_packet) &&
+        num_ephemeral_packets_ > kMaxAllocatedPacketCountPerPort) {
         kcounter_add(port_full_count, 1);
         return ZX_ERR_SHOULD_WAIT;
     }
@@ -315,7 +320,7 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
         port_packet->packet.signal.count = count;
     }
     packets_.push_back(port_packet);
-    if (port_packet->is_ephemeral()) {
+    if (IsDefaultAllocatedEphemeral(*port_packet)) {
         ++num_ephemeral_packets_;
     }
     // This Disable() call must come before Post() to be useful, but doing
@@ -347,7 +352,7 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline,
             Guard<fbl::Mutex> guard{get_lock()};
             PortPacket* port_packet = packets_.pop_front();
             if (port_packet != nullptr) {
-                if (port_packet->is_ephemeral()) {
+                if (IsDefaultAllocatedEphemeral(*port_packet)) {
                     --num_ephemeral_packets_;
                 }
                 *out_packet = port_packet->packet;
@@ -478,7 +483,7 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
     for (auto it = packets_.begin(); it != packets_.end();) {
         if ((it->handle == handle) && (it->key() == key)) {
             auto to_remove = it++;
-            if (to_remove->is_ephemeral()) {
+            if (IsDefaultAllocatedEphemeral(*to_remove)) {
                 --num_ephemeral_packets_;
             }
             // Destroyed as we go around the loop.
@@ -499,7 +504,7 @@ bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
     Guard<fbl::Mutex> guard{get_lock()};
 
     if (port_packet->InContainer()) {
-        if (port_packet->is_ephemeral()) {
+        if (IsDefaultAllocatedEphemeral(*port_packet)) {
             --num_ephemeral_packets_;
         }
         packets_.erase(*port_packet)->observer.reset();
