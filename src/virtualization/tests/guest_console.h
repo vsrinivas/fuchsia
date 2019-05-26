@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_TEST_SERIAL_H_
-#define SRC_VIRTUALIZATION_TESTS_TEST_SERIAL_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_GUEST_CONSOLE_H_
+#define SRC_VIRTUALIZATION_TESTS_GUEST_CONSOLE_H_
 
 #include <lib/zx/socket.h>
 
 #include <string>
 
-class TestSerial {
+class GuestConsole {
  public:
   zx_status_t Start(zx::socket socket);
 
@@ -52,4 +52,4 @@ class TestSerial {
   std::string buffer_;
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_TEST_SERIAL_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_GUEST_CONSOLE_H_

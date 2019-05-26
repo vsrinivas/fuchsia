@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/tests/test_serial.h"
+#include "src/virtualization/tests/guest_console.h"
 
 #include <lib/zx/time.h>
 #include <src/lib/fxl/logging.h>
@@ -26,7 +26,7 @@ static std::string command_hash(const std::string& command) {
   return fxl::StringPrintf("%zu", hash(command));
 }
 
-zx_status_t TestSerial::Start(zx::socket socket) {
+zx_status_t GuestConsole::Start(zx::socket socket) {
   socket_ = std::move(socket);
 
   // Wait for something to be sent over serial. Both Zircon and Debian will send
@@ -57,9 +57,9 @@ zx_status_t TestSerial::Start(zx::socket socket) {
 // header and footer before and after the command. Then we wait for the command
 // to be written back to the serial, then the header, then finally we capture
 // everything until the footer.
-zx_status_t TestSerial::ExecuteBlocking(const std::string& command,
-                                        const std::string& prompt,
-                                        std::string* result) {
+zx_status_t GuestConsole::ExecuteBlocking(const std::string& command,
+                                          const std::string& prompt,
+                                          std::string* result) {
   std::string header = command_hash(command);
   std::string footer = header;
   std::reverse(footer.begin(), footer.end());
@@ -104,7 +104,7 @@ zx_status_t TestSerial::ExecuteBlocking(const std::string& command,
   return ZX_OK;
 }
 
-zx_status_t TestSerial::SendBlocking(const std::string& message) {
+zx_status_t GuestConsole::SendBlocking(const std::string& message) {
   zx_status_t status;
   const char* data = message.data();
   size_t len = message.size();
@@ -134,8 +134,8 @@ zx_status_t TestSerial::SendBlocking(const std::string& message) {
   }
 }
 
-zx_status_t TestSerial::WaitForMarker(const std::string& marker,
-                                      std::string* result) {
+zx_status_t GuestConsole::WaitForMarker(const std::string& marker,
+                                        std::string* result) {
   std::string output = buffer_;
   buffer_.erase();
   zx_status_t status;
@@ -183,7 +183,7 @@ zx_status_t TestSerial::WaitForMarker(const std::string& marker,
   return status;
 }
 
-zx_status_t TestSerial::Drain() {
+zx_status_t GuestConsole::Drain() {
   while (true) {
     char buf[kSerialBufferSize];
     size_t actual;
@@ -199,7 +199,7 @@ zx_status_t TestSerial::Drain() {
 }
 
 // Waits for something to be written to the socket and drains it.
-zx_status_t TestSerial::WaitForAny() {
+zx_status_t GuestConsole::WaitForAny() {
   zx_status_t status;
   zx_signals_t pending = 0;
   status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,

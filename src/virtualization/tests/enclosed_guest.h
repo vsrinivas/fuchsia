@@ -11,8 +11,8 @@
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include "src/virtualization/tests/fake_input_only_scenic.h"
+#include "src/virtualization/tests/guest_console.h"
 #include "src/virtualization/tests/mock_netstack.h"
-#include "src/virtualization/tests/test_serial.h"
 
 static constexpr char kZirconGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx";
@@ -79,7 +79,7 @@ class EnclosedGuest {
 
   FakeInputOnlyScenic* GetScenic() { return &fake_scenic_; }
 
-  TestSerial* GetSerial() { return &serial_; }
+  GuestConsole* GetConsole() { return &console_; }
 
  protected:
   // Provides guest specific |launch_info|, called by Start.
@@ -89,7 +89,7 @@ class EnclosedGuest {
   // Waits until the guest is ready to run test utilities, called by Start.
   virtual zx_status_t WaitForSystemReady() = 0;
 
-  virtual std::string SerialPrompt() = 0;
+  virtual std::string ShellPrompt() = 0;
 
  private:
   async::Loop loop_;
@@ -101,7 +101,7 @@ class EnclosedGuest {
   fuchsia::virtualization::GuestPtr guest_;
   FakeInputOnlyScenic fake_scenic_;
   MockNetstack mock_netstack_;
-  TestSerial serial_;
+  GuestConsole console_;
   uint32_t guest_cid_;
   bool ready_ = false;
 };
@@ -117,7 +117,7 @@ class ZirconEnclosedGuest : public EnclosedGuest {
   zx_status_t LaunchInfo(
       fuchsia::virtualization::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
-  std::string SerialPrompt() override { return "$ "; }
+  std::string ShellPrompt() override { return "$ "; }
 };
 
 class DebianEnclosedGuest : public EnclosedGuest {
@@ -131,7 +131,7 @@ class DebianEnclosedGuest : public EnclosedGuest {
   zx_status_t LaunchInfo(
       fuchsia::virtualization::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
-  std::string SerialPrompt() override { return "$ "; }
+  std::string ShellPrompt() override { return "$ "; }
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_

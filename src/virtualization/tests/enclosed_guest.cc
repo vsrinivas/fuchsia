@@ -50,7 +50,7 @@ static std::string JoinArgVector(const std::vector<std::string>& argv) {
 zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
                                    std::string* result) {
   auto command = JoinArgVector(argv);
-  return serial_.ExecuteBlocking(command, SerialPrompt(), result);
+  return console_.ExecuteBlocking(command, ShellPrompt(), result);
 }
 
 zx_status_t EnclosedGuest::Start() {
@@ -115,7 +115,7 @@ zx_status_t EnclosedGuest::Start() {
   if (!socket_valid) {
     return ZX_ERR_BAD_STATE;
   }
-  status = serial_.Start(std::move(socket));
+  status = console_.Start(std::move(socket));
   if (status != ZX_OK) {
     return status;
   }

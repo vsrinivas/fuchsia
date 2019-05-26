@@ -24,15 +24,15 @@ using VirtioInputDebianGuestTest = GuestTest<DebianEnclosedGuest>;
 
 TEST_F(VirtioInputDebianGuestTest, Input) {
   // Start the test.
-  auto* guest_serial = this->GetEnclosedGuest()->GetSerial();
+  auto* guest_console = this->GetEnclosedGuest()->GetConsole();
   EXPECT_EQ(
-      guest_serial->SendBlocking(
+      guest_console->SendBlocking(
           "/test_utils/virtio_input_test_util keyboard /dev/input/event*\n"),
       ZX_OK);
 
   // Wait for the test utility to print its string ("type ..."), and then
   // send keystrokes.
-  EXPECT_EQ(guest_serial->WaitForMarker("Type 'abc<shift>'"), ZX_OK);
+  EXPECT_EQ(guest_console->WaitForMarker("Type 'abc<shift>'"), ZX_OK);
   for (const auto key : {
            KeyboardEventHidUsage::KEY_A,
            KeyboardEventHidUsage::KEY_B,
@@ -44,7 +44,7 @@ TEST_F(VirtioInputDebianGuestTest, Input) {
 
   // Ensure we passed.
   std::string result;
-  EXPECT_EQ(guest_serial->WaitForMarker("PASS", &result), ZX_OK);
+  EXPECT_EQ(guest_console->WaitForMarker("PASS", &result), ZX_OK);
 }
 
 }  // namespace
