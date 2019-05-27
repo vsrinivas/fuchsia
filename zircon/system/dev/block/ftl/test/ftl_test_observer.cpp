@@ -62,7 +62,7 @@ zx_status_t FtlTestObserver::WaitForBlockDevice() {
         return status;
     }
 
-    status = fdio_ns_bind_fd(name_space, kTestDevice, block_device.get());
+    status = fdio_ns_bind_fd(name_space, "/fake/dev", devfs_root().get());
     if (status != ZX_OK) {
         printf("Bind failed, %d\n", status);
         return status;
