@@ -34,4 +34,6 @@ rm -f "${TARGET_IMAGE}"
 cp "${SOURCE_IMAGE}" "${TARGET_IMAGE}"
 
 # Write a depfile to force the copy to happen when the image file changes.
+#
+# See comments in "guest_package.gni" as to why this is required.
 echo "${TARGET_IMAGE}: ${SOURCE_IMAGE}" > $DEPFILE

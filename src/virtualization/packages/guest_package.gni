@@ -181,14 +181,30 @@ template("guest_prebuilt") {
     visibility = [ ":*" ]
     script = "//src/virtualization/packages/check_image.sh"
 
+    # If the input file exists, we want to copy it to the output.
+    # Otherwise, we want to generate an empty file.
+    #
+    # GN has no way to specify an "optional input" -- we can either
+    # specify an input (causing GN to error out if the file doesn't
+    # exist); or not specify an input (meaning that GN will not rebuild
+    # when the input image changes).
+    #
+    # We work around this by not specifying the input file as
+    # a dependency explicitly, but having the "check_image.sh" script
+    # out a depfile the first time it is run. This gives the script
+    # a chance to run and generate a fake empty image file the first
+    # time it runs, and after that, GN will correctly rebuild when
+    # required.
     depfile = "${invoker.output}.d"
+
     args = [
-      rebase_path("${invoker.source}"),
-      rebase_path("${invoker.output}"),
-      rebase_path(depfile),
+      rebase_path(invoker.source, root_build_dir),
+      rebase_path(invoker.output, root_build_dir),
+      rebase_path(depfile, root_build_dir),
     ]
+
     outputs = [
-      "${invoker.output}",
+      invoker.output,
     ]
   }
 }
