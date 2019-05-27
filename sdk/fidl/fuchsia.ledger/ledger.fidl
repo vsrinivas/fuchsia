@@ -10,7 +10,7 @@ using zx;
 // This file contains definitions of interfaces and data structures to access
 // the Fuchsia Ledger.
 
-// Type of the keys in a ledger Page.
+/// Type of the keys in a ledger Page.
 using Key = bytes:256;
 
 /// Response code for ledger operations.
