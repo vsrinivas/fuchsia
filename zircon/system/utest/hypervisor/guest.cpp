@@ -77,20 +77,19 @@ enum {
 typedef struct test {
     bool supported = false;
     bool interrupts_enabled = false;
+    uintptr_t host_addr = 0;
 
     zx::vmo vmo;
-    uintptr_t host_addr;
     zx::guest guest;
     zx::vmar vmar;
     zx::vcpu vcpu;
-} test_t;
 
-static bool teardown(test_t* test) {
-    BEGIN_HELPER;
-    ASSERT_EQ(zx::vmar::root_self()->unmap(test->host_addr, VMO_SIZE), ZX_OK);
-    return true;
-    END_HELPER;
-}
+    ~test() {
+        if (host_addr != 0) {
+            zx::vmar::root_self()->unmap(host_addr, VMO_SIZE);
+        }
+    }
+} test_t;
 
 // TODO(MAC-246): Convert to C++ FIDL interface.
 static zx_status_t get_sysinfo(zx::channel* sysinfo) {
@@ -139,6 +138,8 @@ static zx_status_t get_interrupt_controller_info(fuchsia_sysinfo_InterruptContro
 #endif // __aarch64__
 
 static bool setup(test_t* test, const char* start, const char* end) {
+    BEGIN_HELPER;
+
     ASSERT_EQ(zx::vmo::create(VMO_SIZE, 0, &test->vmo), ZX_OK);
     ASSERT_EQ(
         zx::vmar::root_self()->map(0, test->vmo, 0, VMO_SIZE, kHostMapFlags, &test->host_addr),
@@ -154,7 +155,7 @@ static bool setup(test_t* test, const char* start, const char* end) {
     test->supported = status != ZX_ERR_NOT_SUPPORTED;
     if (!test->supported) {
         fprintf(stderr, "Guest creation not supported\n");
-        return teardown(test);
+        return true;
     }
     ASSERT_EQ(status, ZX_OK);
 
@@ -180,11 +181,11 @@ static bool setup(test_t* test, const char* start, const char* end) {
     test->supported = status != ZX_ERR_NOT_SUPPORTED;
     if (!test->supported) {
         fprintf(stderr, "VCPU creation not supported\n");
-        return teardown(test);
+        return true;
     }
     ASSERT_EQ(status, ZX_OK);
 
-    return true;
+    END_HELPER;
 }
 
 static bool setup_and_interrupt(test_t* test, const char* start, const char* end) {
@@ -261,7 +262,6 @@ static bool vcpu_resume() {
     }
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -369,7 +369,6 @@ static bool vcpu_read_write_state() {
     EXPECT_EQ(vcpu_state.rflags, (1u << 0) | (1u << 18));
 #endif // __x86_64__
 
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -399,8 +398,6 @@ static bool vcpu_interrupt() {
     EXPECT_EQ(vcpu_state.rax, kInterruptVector);
 #endif
 
-    ASSERT_TRUE(teardown(&test));
-
     END_TEST;
 }
 
@@ -424,7 +421,6 @@ static bool guest_set_trap_with_mem() {
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -455,8 +451,6 @@ static bool guest_set_trap_with_bell() {
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
     EXPECT_EQ(packet.guest_bell.addr, TRAP_ADDR);
 
-    ASSERT_TRUE(teardown(&test));
-
     END_TEST;
 }
 
@@ -483,10 +477,46 @@ static bool guest_set_trap_with_bell_drop() {
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
 
-    ASSERT_TRUE(teardown(&test));
-
     // The guest in test is destructed with one packet still queued on the
     // port. This should work correctly.
+
+    END_TEST;
+}
+
+// Test for ZX-4221.
+static bool guest_set_trap_with_bell_and_user() {
+    BEGIN_TEST;
+
+    zx::port port;
+    ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
+
+    // Queue a packet with the same key as the trap.
+    zx_port_packet packet = {};
+    packet.key = kTrapKey;
+    packet.type = ZX_PKT_TYPE_USER;
+    ASSERT_EQ(port.queue(&packet), ZX_OK);
+
+    // Force guest to be released and cancel all packets associated with traps.
+    {
+        test_t test;
+        ASSERT_TRUE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+        if (!test.supported) {
+            // The hypervisor isn't supported, so don't run the test.
+            return true;
+        }
+
+        // Trap on access of TRAP_ADDR.
+        ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey),
+                  ZX_OK);
+
+        ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+        EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+        EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    }
+
+    ASSERT_EQ(port.wait(zx::time::infinite(), &packet), ZX_OK);
+    EXPECT_EQ(packet.key, kTrapKey);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_USER);
 
     END_TEST;
 }
@@ -504,7 +534,6 @@ static bool vcpu_wfi() {
     }
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -538,7 +567,6 @@ static bool vcpu_wfi_pending_interrupt() {
     ASSERT_EQ(test.vcpu.interrupt(kInterruptVector + 1), ZX_OK);
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -560,8 +588,6 @@ static bool vcpu_wfi_aarch32() {
     EXPECT_EQ(packet.guest_mem.read, false);
     EXPECT_EQ(packet.guest_mem.data, 0);
 
-    ASSERT_TRUE(teardown(&test));
-
     END_TEST;
 }
 
@@ -576,7 +602,6 @@ static bool vcpu_fp() {
     }
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -597,8 +622,6 @@ static bool vcpu_fp_aarch32() {
     EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
     EXPECT_EQ(packet.guest_mem.read, false);
     EXPECT_EQ(packet.guest_mem.data, 0);
-
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -629,8 +652,6 @@ static bool vcpu_interrupt_priority() {
 
     // TODO(MAC-225): Check that the exception is cleared.
 
-    ASSERT_TRUE(teardown(&test));
-
     END_TEST;
 }
 
@@ -654,7 +675,6 @@ static bool vcpu_nmi() {
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     EXPECT_EQ(vcpu_state.rax, kNmiVector);
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -683,8 +703,6 @@ static bool vcpu_nmi_priority() {
 
     // TODO(MAC-225): Check that the interrupt is queued.
 
-    ASSERT_TRUE(teardown(&test));
-
     END_TEST;
 }
 
@@ -708,7 +726,6 @@ static bool vcpu_exception() {
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     EXPECT_EQ(vcpu_state.rax, kExceptionVector);
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -724,7 +741,6 @@ static bool vcpu_hlt() {
     }
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -740,7 +756,6 @@ static bool vcpu_pause() {
     }
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -761,8 +776,6 @@ static bool vcpu_write_cr0() {
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     // Check that cr0 has the NE bit set when read.
     EXPECT_TRUE(vcpu_state.rax & X86_CR0_NE);
-
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -786,8 +799,6 @@ static bool vcpu_compat_mode() {
     EXPECT_EQ(vcpu_state.rcx, 2u);
 #endif
 
-    ASSERT_TRUE(teardown(&test));
-
     END_TEST;
 }
 
@@ -802,7 +813,6 @@ static bool vcpu_syscall() {
     }
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -818,7 +828,6 @@ static bool vcpu_sysenter() {
     }
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -834,7 +843,6 @@ static bool vcpu_sysenter_compat() {
     }
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -856,8 +864,6 @@ static bool vcpu_vmcall() {
 
     const uint64_t kVmCallNoSys = -1000;
     EXPECT_EQ(vcpu_state.rax, kVmCallNoSys);
-
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -898,8 +904,6 @@ static bool vcpu_extended_registers() {
     // Guest successfully runs again
     ASSERT_TRUE(resume_and_clean_exit(&test));
 
-    ASSERT_TRUE(teardown(&test));
-
     END_TEST;
 }
 
@@ -923,7 +927,6 @@ static bool guest_set_trap_with_io() {
     EXPECT_EQ(packet.guest_io.port, TRAP_PORT);
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
@@ -937,6 +940,7 @@ RUN_TEST(vcpu_interrupt)
 RUN_TEST(guest_set_trap_with_mem)
 RUN_TEST(guest_set_trap_with_bell)
 RUN_TEST(guest_set_trap_with_bell_drop)
+RUN_TEST(guest_set_trap_with_bell_and_user)
 #if __aarch64__
 RUN_TEST(vcpu_wfi)
 RUN_TEST(vcpu_wfi_pending_interrupt)

@@ -34,7 +34,7 @@ PortPacket* BlockingPortAllocator::AllocBlocking() {
 }
 
 PortPacket* BlockingPortAllocator::Alloc() {
-    return arena_.New(nullptr, this);
+    return arena_.New(this /* handle */, this /* allocator */);
 }
 
 void BlockingPortAllocator::Free(PortPacket* port_packet) {
@@ -44,15 +44,13 @@ void BlockingPortAllocator::Free(PortPacket* port_packet) {
 
 Trap::Trap(uint32_t kind, zx_gpaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
                      uint64_t key)
-    : kind_(kind), addr_(addr), len_(len), port_(ktl::move(port)), key_(key) {
-    (void) key_;
-}
+    : kind_(kind), addr_(addr), len_(len), port_(ktl::move(port)), key_(key) {}
 
 Trap::~Trap() {
     if (port_ == nullptr) {
         return;
     }
-    port_->CancelQueued(nullptr /* handle */, key_);
+    port_->CancelQueued(&port_allocator_ /* handle */, key_);
 }
 
 zx_status_t Trap::Init() {
