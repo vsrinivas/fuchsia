@@ -1975,7 +1975,7 @@ From //build/config/sysroot.gni:7
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"linux_x64-shared/thinlto-cache"`
+**Current value (from the default):** `"host_x64/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -1990,7 +1990,7 @@ From //build/config/lto/config.gni:13
 Manifest files describing target libraries from toolchains.
 Can be either // source paths or absolute system paths.
 
-**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]`
+**Current value (from the default):** `["/b/s/w/ir/k/buildtools/linux-x64/clang/lib/x86_64-linux-gnu.manifest"]`
 
 From //build/images/manifest.gni:11
 
