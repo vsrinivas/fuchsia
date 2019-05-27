@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+import("//build/host.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+source_set("fuzzing") {
+    testonly = true
+    sources = [
+        "fuzz_input.cc",
+        "fuzz_input.h",
+    ]
+    public_configs = [ "//sdk/config" ]
+}
+
+test("fuzz_input_unittests") {
+  sources = [ "fuzz_input_unittest.cc" ]
+
+  deps = [
+    ":fuzzing",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+install_host_tools("host_tests") {
+  testonly = true
+  deps = [ ":fuzz_input_unittests" ]
+  outputs = [ "fuzz_input_unittests" ]
+}

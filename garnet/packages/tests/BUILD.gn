@@ -225,6 +225,13 @@ group("component_cpp") {
   ]
 }
 
+group("fuzzing") {
+  testonly = true
+  public_deps = [
+    "//sdk/lib/sys/cpp/fuzzing:fuzz_input_unittests($host_toolchain)",
+  ]
+}
+
 group("process") {
   testonly = true
   public_deps = [
@@ -354,6 +361,7 @@ group("all") {
     ":fostr",
     ":fsl",
     ":fuchsia_component_test",
+    ":fuzzing",
     ":fxl",
     ":gfxlatency",
     ":go_benchmarking_tests",
