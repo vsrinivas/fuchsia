@@ -251,13 +251,12 @@ zx_status_t pdm_audio_bind(void* ctx, zx_device_t* device) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t aml_pdm_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = pdm_audio_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static zx_driver_ops_t aml_pdm_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = pdm_audio_bind;
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(aml_pdm, aml_pdm_driver_ops, "aml-pdm-in", "0.1", 3)

@@ -2322,13 +2322,12 @@ zx_status_t intel_i915_bind(void* ctx, zx_device_t* parent) {
 
 #define INTEL_I915_VID (0x8086)
 
-static zx_driver_ops_t intel_i915_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = intel_i915_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static zx_driver_ops_t intel_i915_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = intel_i915_bind;
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(intel_i915, intel_i915_driver_ops, "zircon", "0.1", 27)

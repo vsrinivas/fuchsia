@@ -1056,12 +1056,11 @@ zx_status_t EthDev0::EthBind(void* ctx, zx_device_t* dev) {
 
 } // namespace eth
 
-static zx_driver_ops_t eth_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = &eth::EthDev0::EthBind,
-    .create = nullptr,
-    .release = [](void* ctx) {
+static zx_driver_ops_t eth_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = &eth::EthDev0::EthBind;
+    ops.release = [](void* ctx) {
         // We don't support unloading. Assert if this ever
         // happens. In order to properly support unloading,
         // we need a way to inform the DDK when all of our
@@ -1069,7 +1068,9 @@ static zx_driver_ops_t eth_driver_ops = {
         // unload the driver. This mechanism does not currently
         // exist.
         ZX_ASSERT(false);
-    }};
+    };
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(ethernet, eth_driver_ops, "zircon", "0.1", 1)

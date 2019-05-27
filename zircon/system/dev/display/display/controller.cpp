@@ -922,13 +922,12 @@ zx_status_t display_controller_bind(void* ctx, zx_device_t* parent) {
     return core->Bind(&core);
 }
 
-static zx_driver_ops_t display_controller_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = display_controller_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static zx_driver_ops_t display_controller_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = display_controller_bind;
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(display_controller, display_controller_ops, "zircon", "0.1", 1)

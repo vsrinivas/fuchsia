@@ -1196,13 +1196,12 @@ void vim2_display_disable_audio(const vim2_display_t* display) {
     hdmitx_writereg(display, HDMITX_DWC_FC_AUDICONF3, 0u);
 }
 
-static zx_driver_ops_t vim2_display_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = vim2_display_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static zx_driver_ops_t vim2_display_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = vim2_display_bind;
+    return ops;
+}();
 
 ZIRCON_DRIVER_BEGIN(vim2_display, vim2_display_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),

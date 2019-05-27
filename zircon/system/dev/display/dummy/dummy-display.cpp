@@ -303,13 +303,12 @@ extern "C" zx_status_t dummy_display_bind(void* ctx, zx_device_t* parent) {
     return status;
 }
 
-static zx_driver_ops_t dummy_display_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = dummy_display_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static zx_driver_ops_t dummy_display_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = dummy_display_bind;
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(dummy_display, dummy_display_ops, "zircon", "0.1", 3)

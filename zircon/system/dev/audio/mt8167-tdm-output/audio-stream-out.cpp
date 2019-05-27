@@ -343,13 +343,12 @@ zx_status_t mt_audio_out_bind(void* ctx, zx_device_t* device) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t mt_audio_out_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = mt_audio_out_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static zx_driver_ops_t mt_audio_out_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = mt_audio_out_bind;
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(mt8167_audio_out, mt_audio_out_driver_ops, "zircon", "0.1", 4)

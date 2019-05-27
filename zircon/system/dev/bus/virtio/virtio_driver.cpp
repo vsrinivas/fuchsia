@@ -127,13 +127,12 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
     return ZX_OK;
 }
 
-static const zx_driver_ops_t virtio_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = virtio_pci_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static const zx_driver_ops_t virtio_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = virtio_pci_bind;
+    return ops;
+}();
 
 ZIRCON_DRIVER_BEGIN(virtio, virtio_driver_ops, "zircon", "0.1", 16)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),

@@ -345,13 +345,12 @@ zx_status_t gt92xx_bind(void* ctx, zx_device_t* device) {
     return goodix::Gt92xxDevice::Create(device);
 }
 
-static zx_driver_ops_t gt92xx_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = gt92xx_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static zx_driver_ops_t gt92xx_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = gt92xx_bind;
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(gt92xx, gt92xx_driver_ops, "zircon", "0.1", 4)
