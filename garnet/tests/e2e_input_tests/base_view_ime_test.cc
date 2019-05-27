@@ -217,7 +217,7 @@ class ImeInputTest : public gtest::RealLoopFixture {
   bool test_was_run_ = false;
 };
 
-TEST_F(ImeInputTest, Keyboard) {
+TEST_F(ImeInputTest, DISABLED_Keyboard) {
   // Handle input. Fires for every input event received.
   view_->SetOnInputCallback([this](InputEvent event) {
     // Store inputs for checking later.
