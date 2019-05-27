@@ -345,6 +345,19 @@ template("library") {
       assert(static || shared,
              "Public library(\"$_library_name\") must be static or shared")
     }
+    if (sdk == "shared") {
+      assert(
+          shared,
+          "library(\"$_library_name\") must set shared=true to use sdk=\"shared\"")
+    } else if (sdk == "static") {
+      assert(
+          static,
+          "library(\"$_library_name\") cannot set static=false sdk=\"static\"")
+    } else if (sdk == "source") {
+      assert(
+          static,
+          "library(\"$_library_name\") cannot set static=false sdk=\"source\"")
+    }
   } else {
     sdk = false
     sdk_headers = []
