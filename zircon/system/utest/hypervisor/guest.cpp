@@ -441,11 +441,9 @@ static bool guest_set_trap_with_bell() {
     // Trap on access of TRAP_ADDR.
     ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    ASSERT_TRUE(resume_and_clean_exit(&test));
 
+    zx_port_packet_t packet = {};
     ASSERT_EQ(port.wait(zx::time::infinite(), &packet), ZX_OK);
     EXPECT_EQ(packet.key, kTrapKey);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
@@ -472,10 +470,7 @@ static bool guest_set_trap_with_bell_drop() {
     // Trap on access of TRAP_ADDR.
     ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    ASSERT_TRUE(resume_and_clean_exit(&test));
 
     // The guest in test is destructed with one packet still queued on the
     // port. This should work correctly.
@@ -509,9 +504,7 @@ static bool guest_set_trap_with_bell_and_user() {
         ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey),
                   ZX_OK);
 
-        ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
-        EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-        EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+        ASSERT_TRUE(resume_and_clean_exit(&test));
     }
 
     ASSERT_EQ(port.wait(zx::time::infinite(), &packet), ZX_OK);
@@ -545,9 +538,7 @@ static bool guest_set_trap_with_bell_and_max_user() {
     // Trap on access of TRAP_ADDR.
     ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
 
-    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    ASSERT_TRUE(resume_and_clean_exit(&test));
 
     END_TEST;
 }
@@ -676,7 +667,9 @@ static bool vcpu_interrupt_priority() {
     // Check that interrupts have higher priority than exceptions.
     ASSERT_EQ(test.vcpu.interrupt(kExceptionVector), ZX_OK);
     ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
+
     ASSERT_TRUE(resume_and_clean_exit(&test));
+
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     EXPECT_EQ(vcpu_state.rax, kInterruptVector);
@@ -702,7 +695,9 @@ static bool vcpu_nmi() {
 
     // Check that NMIs are handled.
     ASSERT_EQ(test.vcpu.interrupt(kNmiVector), ZX_OK);
+
     ASSERT_TRUE(resume_and_clean_exit(&test));
+
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     EXPECT_EQ(vcpu_state.rax, kNmiVector);
@@ -727,7 +722,9 @@ static bool vcpu_nmi_priority() {
     // Check that NMIs have higher priority than interrupts.
     ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
     ASSERT_EQ(test.vcpu.interrupt(kNmiVector), ZX_OK);
+
     ASSERT_TRUE(resume_and_clean_exit(&test));
+
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     EXPECT_EQ(vcpu_state.rax, kNmiVector);
@@ -753,7 +750,9 @@ static bool vcpu_exception() {
 
     // Check that exceptions are handled.
     ASSERT_EQ(test.vcpu.interrupt(kExceptionVector), ZX_OK);
+
     ASSERT_TRUE(resume_and_clean_exit(&test));
+
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     EXPECT_EQ(vcpu_state.rax, kExceptionVector);
