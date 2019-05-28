@@ -252,4 +252,9 @@ std::string JsonFormatter::FormatSourcesRecursive(
   return buffer.GetString();
 }
 
+std::string JsonFormatter::FormatHealth(
+    const std::vector<inspect::Source>& sources) const {
+  return "NOT IMPLEMENTED";
+}
+
 }  // namespace inspect

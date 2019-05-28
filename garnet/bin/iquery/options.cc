@@ -23,7 +23,7 @@ namespace {
 std::set<std::string> kKnownOptions = {
     "cat",  "absolute_paths", "find",    "format", "full_paths", "help",
     "ls",   "recursive",      "verbose", "quiet",  "log-file",   "dir",
-    "sort", "report",
+    "sort", "report",         "health",
 };
 
 // Validate whether the option is within the defined ones.
@@ -76,10 +76,16 @@ Options::Options(const fxl::CommandLine& command_line) {
 
   command_line.GetOptionValue("dir", &chdir);
 
-  if (command_line.HasOption("report")) {
+  bool is_recursive_set = command_line.HasOption("recursive");
+
+  if (command_line.HasOption("health")) {
+    health = true;
+    depth_ = is_recursive_set ? -1 : 1;
+    mode = iquery::Options::Mode::HEALTH;
+  } else if (command_line.HasOption("report")) {
     report = true;
     path_format = inspect::Formatter::PathFormat::ABSOLUTE;
-    recursive = true;
+    depth_ = -1;
     sort = true;
     mode = iquery::Options::Mode::CAT;
     paths = {};
@@ -109,7 +115,7 @@ Options::Options(const fxl::CommandLine& command_line) {
       path_format = inspect::Formatter::PathFormat::FULL;
     }
 
-    recursive = command_line.HasOption("recursive");
+    depth_ = is_recursive_set ? -1 : 0;
     sort = command_line.HasOption("sort");
   }
 
@@ -141,6 +147,8 @@ void Options::Usage(const std::string& argv0) {
             Specifying --recursive will also output the children for that object.
   --find:   find all objects under PATH. For each sub-path, will stop at finding
             the first object. Specifying --recursive will search the whole tree.
+  --health: Output a report that scans the system looking for health nodes and
+            showing the status of them.
   --ls:     List the children of the object(s) given by PATH. Specifying
             --recursive has no effect.
   --report: Output a default report for all components on the system. Ignores all

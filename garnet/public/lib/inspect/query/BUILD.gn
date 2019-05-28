@@ -34,6 +34,7 @@ source_set("formatter") {
 
   public_deps = [
     ":query",
+    "//garnet/public/lib/inspect/health",
     "//src/lib/files",
     "//src/lib/fxl",
   ]

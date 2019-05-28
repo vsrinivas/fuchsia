@@ -29,6 +29,9 @@ class TextFormatter : public Formatter {
   std::string FormatSourcesRecursive(
       const std::vector<inspect::Source>& sources) const override;
 
+  std::string FormatHealth(
+      const std::vector<inspect::Source>& sources) const override;
+
  private:
   Options options_;
 };

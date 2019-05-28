@@ -7,6 +7,7 @@
 #include <lib/inspect/query/json_formatter.h>
 #include <lib/inspect/query/text_formatter.h>
 
+#include "lib/inspect/health/health.h"
 #include "lib/inspect/hierarchy.h"
 #include "lib/inspect/query/source.h"
 #include "lib/inspect/testing/inspect.h"
@@ -15,6 +16,7 @@ using namespace inspect::testing;
 using namespace inspect::hierarchy;
 
 namespace {
+
 inspect::Source MakeSourceFromHierarchy(inspect::ObjectHierarchy hierarchy) {
   inspect::Location location = {
       .directory_path = "./hub/",
@@ -45,8 +47,28 @@ inspect::Source MakeTestSource() {
     Node child;
     child.name() = "node_child";
     child.metrics().emplace_back(Metric("child_int", IntMetric(-5)));
-    hierarchy.children().emplace_back(
+    auto& child_hierarchy = hierarchy.children().emplace_back(
         inspect::ObjectHierarchy(std::move(child), {}));
+
+    Node child_health;
+    child_health.name() = inspect::kHealthNodeName;
+    child_health.properties().emplace_back(
+        Property("status", StringProperty(inspect::kHealthUnhealthy)));
+    child_health.properties().emplace_back(
+        Property("message", StringProperty("Some health error")));
+
+    child_hierarchy.children().emplace_back(
+        inspect::ObjectHierarchy(std::move(child_health), {}));
+  }
+
+  {
+    Node health;
+    health.name() = inspect::kHealthNodeName;
+    health.properties().emplace_back(
+        Property("status", StringProperty(inspect::kHealthOk)));
+
+    hierarchy.children().emplace_back(
+        inspect::ObjectHierarchy(std::move(health), {}));
   }
 
   return MakeSourceFromHierarchy(std::move(hierarchy));
@@ -73,10 +95,8 @@ TEST(Formatter, PrintHierarchy) {
       json_format_no_indent.FormatSourcesRecursive(sources),
   };
 
-  EXPECT_THAT(
-      result,
-      ::testing::ElementsAre(
-          R"(node:
+  EXPECT_EQ(text_format.FormatSourcesRecursive(sources),
+            R"(node:
   string = value
   int = -2
   uint = 2
@@ -84,8 +104,15 @@ TEST(Formatter, PrintHierarchy) {
   int_array = [1, 2, 3]
   node_child:
     child_int = -5
-)",
-          R"([
+    fuchsia.inspect.Health:
+      status = UNHEALTHY
+      message = Some health error
+  fuchsia.inspect.Health:
+    status = OK
+)");
+
+  EXPECT_EQ(json_format.FormatSourcesRecursive(sources),
+            R"([
   {
     "path": "./hub/root.inspect#child/node",
     "contents": {
@@ -100,13 +127,23 @@ TEST(Formatter, PrintHierarchy) {
           3
         ],
         "node_child": {
-          "child_int": -5
+          "child_int": -5,
+          "fuchsia.inspect.Health": {
+            "status": "UNHEALTHY",
+            "message": "Some health error"
+          }
+        },
+        "fuchsia.inspect.Health": {
+          "status": "OK"
         }
       }
     }
   }
-])",
-          R"([{"path":"./hub/root.inspect#child/node","contents":{"node":{"string":"value","int":-2,"uint":2,"double":1.25,"int_array":[1,2,3],"node_child":{"child_int":-5}}}}])"));
+])");
+
+  EXPECT_EQ(
+      json_format_no_indent.FormatSourcesRecursive(sources),
+      R"([{"path":"./hub/root.inspect#child/node","contents":{"node":{"string":"value","int":-2,"uint":2,"double":1.25,"int_array":[1,2,3],"node_child":{"child_int":-5,"fuchsia.inspect.Health":{"status":"UNHEALTHY","message":"Some health error"}},"fuchsia.inspect.Health":{"status":"OK"}}}}])");
 }
 
 TEST(Formatter, PrintListing) {
@@ -119,10 +156,12 @@ TEST(Formatter, PrintListing) {
   sources.emplace_back(MakeTestSource());
 
   EXPECT_EQ(text_formatter.FormatChildListing(sources),
-            "./hub/root.inspect#child/node/node_child\n");
+            "./hub/root.inspect#child/node/node_child\n"
+            "./hub/root.inspect#child/node/fuchsia.inspect.Health\n");
   EXPECT_EQ(json_formatter.FormatChildListing(sources),
             R"([
-  "./hub/root.inspect#child/node/node_child"
+  "./hub/root.inspect#child/node/node_child",
+  "./hub/root.inspect#child/node/fuchsia.inspect.Health"
 ])");
 }
 
@@ -136,13 +175,29 @@ TEST(Formatter, PrintFind) {
   sources.emplace_back(MakeTestSource());
 
   EXPECT_EQ(text_formatter.FormatSourceLocations(sources),
-            "./hub/root.inspect#child/node\n./hub/root.inspect#child/node/"
-            "node_child\n");
+            "./hub/root.inspect#child/node\n"
+            "./hub/root.inspect#child/node/node_child\n"
+            "./hub/root.inspect#child/node/node_child/fuchsia.inspect.Health\n"
+            "./hub/root.inspect#child/node/fuchsia.inspect.Health\n");
   EXPECT_EQ(json_formatter.FormatSourceLocations(sources),
             R"([
   "./hub/root.inspect#child/node",
-  "./hub/root.inspect#child/node/node_child"
+  "./hub/root.inspect#child/node/node_child",
+  "./hub/root.inspect#child/node/node_child/fuchsia.inspect.Health",
+  "./hub/root.inspect#child/node/fuchsia.inspect.Health"
 ])");
+}
+
+TEST(Formatter, Health) {
+  // TODO(donosoc): Test json formatter.
+  inspect::TextFormatter text_formatter({.indent = 2},
+                                        inspect::Formatter::PathFormat::FULL);
+  std::vector<inspect::Source> sources;
+  sources.emplace_back(MakeTestSource());
+  EXPECT_EQ(text_formatter.FormatHealth(sources),
+            R"(./hub/root.inspect#child/node = OK
+./hub/root.inspect#child/node/node_child = UNHEALTHY (Some health error)
+)");
 }
 
 }  // namespace

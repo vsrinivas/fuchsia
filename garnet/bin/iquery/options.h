@@ -20,6 +20,7 @@ class Options {
     UNSET,
     CAT,
     FIND,
+    HEALTH,
     LS,
   };
   enum class FormatterType {
@@ -38,8 +39,9 @@ class Options {
   inspect::Formatter::PathFormat path_format =
       inspect::Formatter::PathFormat::NONE;
 
-  // If true, execute mode recursively.
-  bool recursive = false;
+  // Create a health search, which looks for specific nodes within the inspect
+  // hierarchy.
+  bool health = false;
 
   // If true, sort all children, metrics, and properties within each object.
   bool sort = false;
@@ -61,7 +63,9 @@ class Options {
   Options(const fxl::CommandLine& command_line);
 
   // Returns true if the command line was parsed correctly.
-  bool Valid() { return valid_; }
+  bool Valid() const { return valid_; }
+
+  int depth() const { return depth_; }
 
   // Print out usage string to stdout.
   void Usage(const std::string& argv0);
@@ -69,6 +73,9 @@ class Options {
  private:
   bool SetMode(const fxl::CommandLine& command_line, Mode m);
   void Invalid(const std::string& argv0, std::string reason);
+
+  // How far within the hierarchy iquery will search.
+  int depth_ = 0;
 
   bool valid_ = false;
 };

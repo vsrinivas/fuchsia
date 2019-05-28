@@ -50,7 +50,8 @@ int main(int argc, const char** argv) {
 
   fit::promise<std::vector<inspect::Source>> results;
   // Dispatch to the correct mode.
-  if (options.mode == iquery::Options::Mode::CAT) {
+  if (options.mode == iquery::Options::Mode::CAT ||
+      options.mode == iquery::Options::Mode::HEALTH) {
     results = iquery::RunCat(&options);
   } else if (options.mode == iquery::Options::Mode::FIND) {
     results = iquery::RunFind(&options);
@@ -75,6 +76,8 @@ int main(int argc, const char** argv) {
               std::cout << options.formatter->FormatSourcesRecursive(results);
             } else if (options.mode == iquery::Options::Mode::FIND) {
               std::cout << options.formatter->FormatSourceLocations(results);
+            } else if (options.mode == iquery::Options::Mode::HEALTH) {
+              std::cout << options.formatter->FormatHealth(results);
             } else if (options.mode == iquery::Options::Mode::LS) {
               std::cout << options.formatter->FormatChildListing(results);
             }

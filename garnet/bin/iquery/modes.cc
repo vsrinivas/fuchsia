@@ -47,7 +47,7 @@ fit::promise<std::vector<inspect::Source>> RunCat(const Options* options) {
     }
 
     promises.emplace_back(inspect::ReadLocation(location_result.take_value(),
-                                                options->recursive ? -1 : 0));
+                                                options->depth()));
   }
 
   return fit::join_promise_vector(std::move(promises))
@@ -78,7 +78,7 @@ fit::promise<std::vector<inspect::Source>> RunFind(const Options* options) {
                ((void)location);
                promises.emplace_back(inspect::ReadLocation(
                    std::move(location),
-                   /*depth=*/(options->recursive ? -1 : 0)));
+                   options->depth()));
              }
            }
            return fit::join_promise_vector(std::move(promises));

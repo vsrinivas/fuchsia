@@ -40,6 +40,9 @@ class Formatter {
   virtual std::string FormatSourcesRecursive(
       const std::vector<inspect::Source>& sources) const = 0;
 
+  virtual std::string FormatHealth(
+      const std::vector<inspect::Source>& sources) const = 0;
+
  protected:
   using Path = std::vector<std::string>;
 

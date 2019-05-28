@@ -8,6 +8,7 @@
 
 #include <sstream>
 
+#include "lib/inspect/health/health.h"
 #include "lib/inspect/hierarchy.h"
 
 namespace inspect {
@@ -101,6 +102,25 @@ void FormatMetricValue(std::ostream& ss,
   }
 }
 
+std::string FormatHealthForNode(const inspect::ObjectHierarchy& node) {
+  std::string status;
+  std::string message;
+  for (auto& property : node.node().properties()) {
+    if (property.name() == "status")
+      status = property.Get<inspect::hierarchy::StringProperty>().value();
+    if (property.name() == "message")
+      message = property.Get<inspect::hierarchy::StringProperty>().value();
+  }
+
+  std::ostringstream ss;
+  ss << status;
+  if (!message.empty())
+    ss << " (" << message << ")";
+  ss << std::endl;
+
+  return ss.str();
+}
+
 }  // namespace
 
 std::string TextFormatter::FormatSourcesRecursive(
@@ -173,6 +193,28 @@ std::string TextFormatter::FormatSourceLocations(
              << std::endl;
         });
   }
+  return ss.str();
+}
+
+std::string TextFormatter::FormatHealth(
+    const std::vector<inspect::Source>& sources) const {
+  std::ostringstream ss;
+  for (const auto& entry_point : sources) {
+    Path last_health_node = {};
+    entry_point.VisitObjectsInHierarchy(
+        [&](const Path path_to_node, const ObjectHierarchy& hierarchy) {
+          // GetByPath returns nullptr if not found.
+          const ObjectHierarchy* health_node =
+              hierarchy.GetByPath({inspect::kHealthNodeName});
+          if (!health_node)
+            return;
+
+          ss << FormatPathOrName(entry_point.GetLocation(), path_to_node,
+                                 hierarchy.node().name())
+             << " = " << FormatHealthForNode(*health_node);
+        });
+  }
+
   return ss.str();
 }
 
