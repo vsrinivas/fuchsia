@@ -1,0 +1,70 @@
+// Copyright 2019 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.web;
+
+using CookieName = string;
+
+/// Provides methods for monitoring and accessing browser cookie state.
+protocol CookieManager {
+    /// Observe changes to all cookies named |name| that would be sent in a
+    /// request to |url|.
+    /// |url| may be un-set to observe changes across all URLs,
+    /// Similarly, |name| may be un-set to observe changes across all cookie
+    /// names.
+    StartObservingChanges(
+        Url? url,
+        CookieName? name,
+        CookieChangeListener listener);
+
+    /// Returns a list of Cookies whose CookieIds match |ids|.
+    /// Entries in |cookies| will be omitted for any CookieIds which can't be
+    /// found.
+    GetCookies(vector<CookieId> ids) -> (vector<Cookie> cookies);
+};
+
+/// Receives notifications about changes in a context's cookie store.
+protocol CookieChangeListener {
+    /// Notifies the observer whenever cookies are added, changed, or removed
+    /// for observed URLs. |changes| is populated with information about the
+    /// cookies that were changed, and how they were changed.
+    /// Cookies' data can be accessed by calling GetCookie() with the CookieId.
+    /// Future cookie change events will be buffered until the acknowledgement
+    /// callback is invoked.
+    OnCookieChanged(vector<CookieChangeEvent> changes) -> ();
+};
+
+table CookieId {
+    /// The name of the cookie. An arbitrary string defined by the website.
+    1: CookieName name;
+
+    /// Specifies the host that is allowed to receive the cookie.
+    2: string domain;
+
+    /// Specifies the URL path prefix which is required to receive the cookie.
+    3: string path;
+};
+
+table Cookie {
+    /// A table with fields to identify a cookie.
+    1: CookieId id;
+
+    /// The cookie value.
+    2: string value;
+};
+
+enum CookieChangeType {
+    ADDED = 0;
+    MODIFIED = 1;
+    DELETED = 2;
+};
+
+table CookieChangeEvent {
+    /// The identity of the cookie which was changed.
+    1: CookieId id;
+
+    /// Describes what type of change caused the CookieChangeEvent to be
+    /// published.
+    2: CookieChangeType type;
+};

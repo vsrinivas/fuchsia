@@ -44,4 +44,8 @@ protocol Context {
     ///
     /// |frame|: An interface request that will be bound to the created Frame.
     CreateFrame(request<Frame> frame);
+
+    /// Used to observe cookies for sites hosted under this Context.
+    [Transitional]
+    GetCookieManager(request<CookieManager> manager);
 };

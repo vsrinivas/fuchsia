@@ -9,6 +9,7 @@ fidl("fuchsia.web") {
 
   sources = [
     "context.fidl",
+    "cookie.fidl",
     "debug.fidl",
     "frame.fidl",
     "navigation.fidl",
