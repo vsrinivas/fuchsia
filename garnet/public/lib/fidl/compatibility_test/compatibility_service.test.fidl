@@ -545,15 +545,11 @@ protocol Echo {
     EchoStructNoRetVal(Struct value, string forward_to_server);
     -> EchoEvent(Struct value);
 
-    [Transitional]
     EchoArrays(ArraysStruct value, string forward_to_server) -> (ArraysStruct value);
 
-    [Transitional]
     EchoVectors(VectorsStruct value, string forward_to_server) -> (VectorsStruct value);
 
-    [Transitional]
     EchoTable(AllTypesTable value, string forward_to_server) -> (AllTypesTable value);
 
-    [Transitional]
     EchoXunions(vector<AllTypesXunion> value, string forward_to_server) -> (vector<AllTypesXunion> value);
 };

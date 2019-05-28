@@ -1511,8 +1511,7 @@ TEST(Compatibility, EchoStructNoRetval) {
 }
 
 TEST(Compatibility, EchoArrays) {
-  ForSomeServers(
-      Exclude({"dart"}),
+  ForAllServers(
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url) {
         // Using randomness to avoid having to come up with varied values by
@@ -1542,8 +1541,7 @@ TEST(Compatibility, EchoArrays) {
 }
 
 TEST(Compatibility, EchoVectors) {
-  ForSomeServers(
-      Exclude({"dart"}),
+  ForAllServers(
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url) {
         // Using randomness to avoid having to come up with varied values by
@@ -1575,7 +1573,7 @@ TEST(Compatibility, EchoVectors) {
 TEST(Compatibility, EchoTable) {
   ForSomeServers(
       // See: FIDL-644, FIDL-645
-      Exclude({"dart", "llcpp", "rust"}),
+      Exclude({"llcpp", "rust"}),
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url) {
         // Using randomness to avoid having to come up with varied values by
@@ -1607,7 +1605,7 @@ TEST(Compatibility, EchoTable) {
 TEST(Compatibility, EchoXunions) {
   ForSomeServers(
       // See: FIDL-645
-      Exclude({"dart", "llcpp"}),
+      Exclude({"llcpp"}),
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url) {
         // Using randomness to avoid having to come up with varied values by
