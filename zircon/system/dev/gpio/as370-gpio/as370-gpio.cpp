@@ -190,8 +190,8 @@ zx_status_t As370Gpio::GpioImplSetPolarity(uint32_t index, gpio_polarity_t polar
 
 }  // namespace gpio
 
-static zx_driver_ops_t as370_gpio_driver_ops = []() -> zx_driver_ops_t {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t as370_gpio_driver_ops = []() -> zx_driver_ops_t {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = gpio::As370Gpio::Create;
     return ops;

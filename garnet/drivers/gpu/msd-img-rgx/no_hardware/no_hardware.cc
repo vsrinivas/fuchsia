@@ -168,13 +168,12 @@ extern "C" zx_status_t no_hardware_gpu_bind(void* ctx, zx_device_t* parent)
 }
 
 namespace {
-static zx_driver_ops_t no_hardware_gpu_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = no_hardware_gpu_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static constexpr zx_driver_ops_t no_hardware_gpu_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = no_hardware_gpu_bind;
+    return ops;
+}();
 } // namespace
 
 // clang-format off

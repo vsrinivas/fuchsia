@@ -57,8 +57,8 @@ int As370::Thread() {
 
 }  // namespace board_as370
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = board_as370::As370::Create;
     return ops;

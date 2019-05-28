@@ -205,10 +205,12 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
     return ZX_OK;
 }
 
-zx_driver_ops_t msd_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = sysdrv_bind,
-};
+static constexpr zx_driver_ops_t msd_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = sysdrv_bind;
+    return ops;
+}();
 
 static int magma_start(sysdrv_device_t* device)
 {

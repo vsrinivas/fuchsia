@@ -145,8 +145,8 @@ zx_status_t mt8167_bind(void* ctx, zx_device_t* parent) {
     return board_mt8167::Mt8167::Create(parent);
 }
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = mt8167_bind;
     return ops;

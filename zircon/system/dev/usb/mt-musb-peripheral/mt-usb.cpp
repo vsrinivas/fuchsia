@@ -908,8 +908,8 @@ size_t MtUsb::UsbDciGetRequestSize() {
     return Request::RequestSize(sizeof(usb_request_t));
 }
 
-static zx_driver_ops_t driver_ops = [](){
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = MtUsb::Create;
     return ops;

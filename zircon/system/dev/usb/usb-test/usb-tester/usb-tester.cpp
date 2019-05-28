@@ -636,8 +636,8 @@ extern "C" zx_status_t usb_tester_bind(void* ctx, zx_device_t* parent) {
     return usb::UsbTester::Create(parent);
 }
 
-static zx_driver_ops_t driver_ops = [](){
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = usb_tester_bind;
     return ops;

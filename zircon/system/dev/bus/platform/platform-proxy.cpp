@@ -530,7 +530,7 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
     return DdkAdd(name_);
 }
 
-static zx_driver_ops_t proxy_driver_ops = [](){
+static constexpr zx_driver_ops_t proxy_driver_ops = [](){
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.create = PlatformProxy::Create;

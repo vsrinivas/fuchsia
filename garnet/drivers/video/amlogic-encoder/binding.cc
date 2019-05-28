@@ -20,7 +20,7 @@ zx_status_t amlogic_video_encoder_init(void** out_ctx);
 zx_status_t amlogic_video_encoder_bind(void* ctx, zx_device_t* parent);
 }
 
-static zx_driver_ops_t amlogic_video_driver_ops = [] {
+static constexpr zx_driver_ops_t amlogic_video_driver_ops = [] {
   zx_driver_ops_t ops{};
   ops.version = DRIVER_OPS_VERSION;
   ops.init = amlogic_video_encoder_init;

@@ -904,8 +904,8 @@ zx_status_t MtkSdmmc::WaitForInterrupt(zx::time* timestamp) {
 
 }  // namespace sdmmc
 
-static zx_driver_ops_t mtk_sdmmc_driver_ops = []() -> zx_driver_ops_t {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t mtk_sdmmc_driver_ops = []() -> zx_driver_ops_t {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = sdmmc::MtkSdmmc::Create;
     return ops;

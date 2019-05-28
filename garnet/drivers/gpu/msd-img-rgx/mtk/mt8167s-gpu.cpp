@@ -488,13 +488,12 @@ extern "C" zx_status_t mt8167s_gpu_bind(void* ctx, zx_device_t* parent)
     return status;
 }
 
-static zx_driver_ops_t mt8167s_gpu_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = mt8167s_gpu_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static constexpr zx_driver_ops_t mt8167s_gpu_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = mt8167s_gpu_bind;
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(mt8167s_gpu, mt8167s_gpu_driver_ops, "zircon", "0.1", 3)

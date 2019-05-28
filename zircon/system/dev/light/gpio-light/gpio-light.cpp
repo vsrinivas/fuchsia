@@ -190,8 +190,8 @@ zx_status_t GpioLight::Init() {
     return DdkAdd("gpio-light", DEVICE_ADD_NON_BINDABLE);
 }
 
-static zx_driver_ops_t driver_ops = [](){
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = GpioLight::Create;
     return ops;

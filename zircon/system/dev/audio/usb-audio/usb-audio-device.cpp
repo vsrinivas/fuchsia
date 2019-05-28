@@ -509,7 +509,7 @@ static void usb_audio_driver_release(void*) {
     dispatcher::ThreadPool::ShutdownAll();
 }
 
-static zx_driver_ops_t driver_ops = [](){
+static constexpr zx_driver_ops_t driver_ops = [](){
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = usb_audio_device_bind;

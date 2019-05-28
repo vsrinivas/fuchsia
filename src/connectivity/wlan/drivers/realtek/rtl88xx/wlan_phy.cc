@@ -125,8 +125,8 @@ zx_status_t rtl88xx_bind_wlan_phy(void* ctx, zx_device_t* device) {
     return ::wlan::rtl88xx::WlanPhy::Create(device);
 }
 
-static zx_driver_ops_t rtl88xx_driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t rtl88xx_driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = &rtl88xx_bind_wlan_phy;
     return ops;

@@ -488,7 +488,7 @@ zx_status_t Msm8x53Clk::RegisterClockProtocol() {
 
 } // namespace clk
 
-static zx_driver_ops_t msm8x53_clk_driver_ops = []() {
+static constexpr zx_driver_ops_t msm8x53_clk_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = clk::Msm8x53Clk::Create;

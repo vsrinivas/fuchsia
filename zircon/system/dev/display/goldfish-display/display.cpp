@@ -709,8 +709,8 @@ int Display::FlushHandler() {
 
 } // namespace goldfish
 
-static zx_driver_ops_t goldfish_display_driver_ops = []() -> zx_driver_ops_t {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t goldfish_display_driver_ops = []() -> zx_driver_ops_t {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = goldfish::Display::Create;
     return ops;

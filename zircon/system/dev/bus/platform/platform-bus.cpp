@@ -537,8 +537,8 @@ zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name
     return platform_bus::PlatformBus::Create(parent, name, zx::channel(handle));
 }
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.create = platform_bus_create;
     return ops;

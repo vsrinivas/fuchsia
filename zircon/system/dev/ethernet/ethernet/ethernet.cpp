@@ -1056,8 +1056,8 @@ zx_status_t EthDev0::EthBind(void* ctx, zx_device_t* dev) {
 
 } // namespace eth
 
-static zx_driver_ops_t eth_driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t eth_driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = &eth::EthDev0::EthBind;
     ops.release = [](void* ctx) {

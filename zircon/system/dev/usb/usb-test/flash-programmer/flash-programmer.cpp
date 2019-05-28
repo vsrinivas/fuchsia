@@ -247,8 +247,8 @@ extern "C" zx_status_t flash_programmer_bind(void* ctx, zx_device_t* parent) {
     return usb::FlashProgrammer::Create(parent);
 }
 
-static zx_driver_ops_t flash_programmer_driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t flash_programmer_driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = flash_programmer_bind;
     return ops;

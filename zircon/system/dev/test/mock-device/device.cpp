@@ -472,7 +472,7 @@ zx_status_t MockDeviceBind(void* ctx, zx_device_t* parent) {
 }
 
 const zx_driver_ops_t kMockDeviceOps = []() {
-    zx_driver_ops_t ops;
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = MockDeviceBind;
     return ops;

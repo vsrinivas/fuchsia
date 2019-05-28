@@ -295,9 +295,9 @@ uint32_t AddressSpaceDevice::CommandMmioLocked(uint32_t cmd) {
 
 } // namespace goldfish
 
-static zx_driver_ops_t goldfish_address_space_driver_ops =
+static constexpr zx_driver_ops_t goldfish_address_space_driver_ops =
     []() -> zx_driver_ops_t {
-    zx_driver_ops_t ops;
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = goldfish::AddressSpaceDevice::Create;
     return ops;

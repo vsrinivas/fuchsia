@@ -143,8 +143,8 @@ zx_status_t GpioTest::Init() {
     return ZX_OK;
 }
 
-static zx_driver_ops_t driver_ops = [](){
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = GpioTest::Create;
     return ops;

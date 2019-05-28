@@ -64,13 +64,12 @@ class VirtualAudioBus {
 }  // namespace virtual_audio
 
 // Define a bus driver that binds to the everpresent /dev/test devnode.
-static zx_driver_ops_t virtual_audio_bus_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = &virtual_audio::VirtualAudioBus::DdkBind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static constexpr zx_driver_ops_t virtual_audio_bus_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = &virtual_audio::VirtualAudioBus::DdkBind;
+    return ops;
+}();
 
 __BEGIN_CDECLS
 

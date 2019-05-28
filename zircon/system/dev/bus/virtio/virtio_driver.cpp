@@ -128,7 +128,7 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
 }
 
 static const zx_driver_ops_t virtio_driver_ops = []() {
-    zx_driver_ops_t ops;
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = virtio_pci_bind;
     return ops;

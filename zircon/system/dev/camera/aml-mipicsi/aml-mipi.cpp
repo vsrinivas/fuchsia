@@ -253,8 +253,8 @@ zx_status_t aml_mipi_bind(void* ctx, zx_device_t* device) {
     return camera::AmlMipiDevice::Create(device);
 }
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = aml_mipi_bind;
     return ops;

@@ -203,7 +203,7 @@ zx_status_t Bma253::HidbusSetProtocol(hid_protocol_t protocol) {
 
 }  // namespace accel
 
-static zx_driver_ops_t bma253_driver_ops = []() {
+static constexpr zx_driver_ops_t bma253_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = accel::Bma253::Create;

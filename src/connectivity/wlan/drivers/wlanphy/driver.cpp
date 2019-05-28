@@ -58,8 +58,8 @@ async_dispatcher_t* wlanphy_async_t() {
     return loop->dispatcher();
 }
 
-static zx_driver_ops_t wlanphy_driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t wlanphy_driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.init = wlanphy_init;
     ops.bind = wlanphy_bind;

@@ -918,8 +918,8 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t ahci_driver_ops = []() {
-    zx_driver_ops_t driver;
+static constexpr zx_driver_ops_t ahci_driver_ops = []() {
+    zx_driver_ops_t driver = {};
     driver.version = DRIVER_OPS_VERSION;
     driver.bind = ahci_bind;
     return driver;

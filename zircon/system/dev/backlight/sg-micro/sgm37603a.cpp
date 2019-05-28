@@ -187,7 +187,7 @@ zx_status_t Sgm37603a::SetBacklightState(bool power, uint8_t brightness) {
 
 }  // namespace backlight
 
-static zx_driver_ops_t sgm37603a_driver_ops = []() {
+static constexpr zx_driver_ops_t sgm37603a_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = backlight::Sgm37603a::Create;

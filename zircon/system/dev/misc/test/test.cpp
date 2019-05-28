@@ -228,7 +228,7 @@ zx_status_t TestDriverBind(void* ctx, zx_device_t* dev) {
 }
 
 const zx_driver_ops_t kTestDriverOps = []() {
-    zx_driver_ops_t driver;
+    zx_driver_ops_t driver = {};
     driver.version = DRIVER_OPS_VERSION;
     driver.bind = TestDriverBind;
     return driver;

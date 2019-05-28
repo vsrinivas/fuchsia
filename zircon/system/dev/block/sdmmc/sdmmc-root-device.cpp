@@ -155,7 +155,7 @@ void SdmmcRootDevice::DdkRelease() {
 
 }  // namespace sdmmc
 
-static zx_driver_ops_t sdmmc_driver_ops = []() -> zx_driver_ops_t {
+static constexpr zx_driver_ops_t sdmmc_driver_ops = []() -> zx_driver_ops_t {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = sdmmc::SdmmcRootDevice::Bind;

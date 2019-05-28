@@ -110,7 +110,7 @@ static zx_status_t hi3660_clk_bind(void* ctx, zx_device_t* parent) {
 }
 
 static const zx_driver_ops_t hi3660_clk_driver_ops = [] {
-    zx_driver_ops_t result;
+    zx_driver_ops_t result = {};
 
     result.version = DRIVER_OPS_VERSION;
     result.bind = hi3660_clk_bind;

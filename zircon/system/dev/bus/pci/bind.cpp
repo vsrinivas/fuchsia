@@ -14,13 +14,12 @@ static zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) {
     return pci::Bus::Create(parent);
 }
 
-static zx_driver_ops_t pci_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = pci_bus_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static constexpr zx_driver_ops_t pci_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = pci_bus_bind;
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(pci, pci_driver_ops, "zircon", "0.1", 5)

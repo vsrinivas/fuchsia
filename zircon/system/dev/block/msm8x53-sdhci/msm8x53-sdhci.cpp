@@ -117,8 +117,8 @@ void Msm8x53Sdhci::SdhciHwReset() {}
 
 }  // namespace sdhci
 
-static zx_driver_ops_t msm8x53_sdhci_driver_ops = []() -> zx_driver_ops_t {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t msm8x53_sdhci_driver_ops = []() -> zx_driver_ops_t {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = sdhci::Msm8x53Sdhci::Create;
     return ops;

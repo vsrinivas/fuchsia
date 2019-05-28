@@ -160,13 +160,12 @@ static zx_status_t pci_device_proxy_create(void* ctx, zx_device_t* parent, const
     return pci::DeviceProxy::Create(parent, rpcch, name);
 }
 
-static zx_driver_ops_t pci_device_proxy_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = nullptr,
-    .create = pci_device_proxy_create,
-    .release = nullptr,
-};
+static constexpr zx_driver_ops_t pci_device_proxy_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.create = pci_device_proxy_create;
+    return ops;
+}();
 
 ZIRCON_DRIVER_BEGIN(pci_device_proxy, pci_device_proxy_driver_ops, "zircon", "0.1", 1)
     BI_ABORT_IF_AUTOBIND,

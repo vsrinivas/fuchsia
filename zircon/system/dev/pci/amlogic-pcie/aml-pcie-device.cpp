@@ -321,7 +321,7 @@ extern "C" zx_status_t aml_pcie_bind(void* ctx, zx_device_t* device) {
 }
 
 
-static zx_driver_ops_t aml_pcie_driver_ops = []() {
+static constexpr zx_driver_ops_t aml_pcie_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = aml_pcie_bind;

@@ -116,8 +116,8 @@ zx_status_t VirtualCameraDevice::GetDeviceInfo(fidl_txn_t* txn) {
     return fuchsia_hardware_camera_ControlGetDeviceInfo_reply(txn, &info);
 }
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = VirtualCameraDevice::Create;
     return ops;

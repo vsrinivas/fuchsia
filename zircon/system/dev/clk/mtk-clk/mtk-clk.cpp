@@ -354,7 +354,7 @@ zx_status_t mtk_clk_bind(void* ctx, zx_device_t* parent) {
     return clk::MtkClk::Create(parent);
 }
 
-static zx_driver_ops_t mtk_clk_driver_ops = []() {
+static constexpr zx_driver_ops_t mtk_clk_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = mtk_clk_bind;

@@ -284,8 +284,8 @@ zx_status_t mt_audio_in_bind(void* ctx, zx_device_t* device) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t mt_audio_in_driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t mt_audio_in_driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = mt_audio_in_bind;
     return ops;

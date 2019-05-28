@@ -177,8 +177,8 @@ zx_status_t wlantapctl_bind(void* ctx, zx_device_t* parent) {
 
 void wlantapctl_release(void* ctx) { delete static_cast<WlantapDriver*>(ctx); }
 
-static zx_driver_ops_t wlantapctl_driver_ops = []() {
-  zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t wlantapctl_driver_ops = []() {
+  zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.init = wlantapctl_init;
   ops.bind = wlantapctl_bind;

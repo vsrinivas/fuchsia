@@ -401,7 +401,7 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     return status;
 }
 
-static zx_driver_ops_t hid_buttons_driver_ops = []() {
+static constexpr zx_driver_ops_t hid_buttons_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = hid_buttons_bind;

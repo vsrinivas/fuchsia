@@ -1101,7 +1101,7 @@ int BtHciMediatek::Thread() {
 
 }  // namespace bluetooth
 
-static zx_driver_ops_t bt_hci_mediatek_driver_ops = []() {
+static constexpr zx_driver_ops_t bt_hci_mediatek_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = bluetooth::BtHciMediatek::Create;

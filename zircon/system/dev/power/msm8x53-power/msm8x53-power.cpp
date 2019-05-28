@@ -365,8 +365,8 @@ zx_status_t Msm8x53Power::Create(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t msm8x53_power_driver_ops = []() {
-    zx_driver_ops_t driver_ops;
+static constexpr zx_driver_ops_t msm8x53_power_driver_ops = []() {
+    zx_driver_ops_t driver_ops = {};
     driver_ops.version = DRIVER_OPS_VERSION;
     driver_ops.bind = Msm8x53Power::Create;
     return driver_ops;

@@ -1030,8 +1030,8 @@ void AmlSdEmmc::DdkRelease() {
     delete this;
 }
 
-static zx_driver_ops_t aml_sd_emmc_driver_ops = []() {
-    zx_driver_ops_t driver_ops;
+static constexpr zx_driver_ops_t aml_sd_emmc_driver_ops = []() {
+    zx_driver_ops_t driver_ops = {};
     driver_ops.version = DRIVER_OPS_VERSION;
     driver_ops.bind =  AmlSdEmmc::Create;
     return driver_ops;

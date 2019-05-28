@@ -581,8 +581,8 @@ zx_status_t MtkPower::Create(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t mtk_power_driver_ops = []() {
-    zx_driver_ops_t driver_ops;
+static constexpr zx_driver_ops_t mtk_power_driver_ops = []() {
+    zx_driver_ops_t driver_ops = {};
     driver_ops.version = DRIVER_OPS_VERSION;
     driver_ops.bind = MtkPower::Create;
     return driver_ops;

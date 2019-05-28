@@ -10,8 +10,8 @@ namespace qcom_pil {
 
 extern zx_status_t qcom_pil_bind(void* ctx, zx_device_t* parent);
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = qcom_pil_bind;
     return ops;

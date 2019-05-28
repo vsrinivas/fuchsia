@@ -33,10 +33,12 @@ zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
   return status;
 }
 
-static zx_driver_ops_t wlan_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = wlan_bind,
-};
+static constexpr zx_driver_ops_t wlan_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = wlan_bind;
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(wlan, wlan_driver_ops, "zircon", "0.1", 1)

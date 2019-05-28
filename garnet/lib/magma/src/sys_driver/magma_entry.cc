@@ -195,7 +195,9 @@ static zx_status_t driver_bind(void* context, zx_device_t* parent)
     return ZX_OK;
 }
 
-zx_driver_ops_t msd_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = driver_bind,
-};
+zx_driver_ops_t msd_driver_ops = []() constexpr {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = driver_bind;
+    return ops;
+}();

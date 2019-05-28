@@ -1196,8 +1196,8 @@ void vim2_display_disable_audio(const vim2_display_t* display) {
     hdmitx_writereg(display, HDMITX_DWC_FC_AUDICONF3, 0u);
 }
 
-static zx_driver_ops_t vim2_display_driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t vim2_display_driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = vim2_display_bind;
     return ops;

@@ -783,8 +783,8 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     return status;
 }
 
-static zx_driver_ops_t astro_display_ops = [](){
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t astro_display_ops = [](){
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = astro_display_bind;
     return ops;
