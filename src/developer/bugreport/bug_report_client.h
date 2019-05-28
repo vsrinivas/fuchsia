@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_BUGREPORT_BUG_REPORT_CLIENT_H_
 #define SRC_DEVELOPER_BUGREPORT_BUG_REPORT_CLIENT_H_
 
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
@@ -21,6 +22,13 @@ struct Target {
 // Complete stage of processing: parsing, validating and separating.
 std::optional<std::vector<Target>> HandleBugReport(
     const std::string& json_input);
+
+// |output_path| is the directory where the targets will be generated. It will
+// create it if it doesn't exist.
+// Returns false if the path is invalid (and could not be created) or if one or
+// more of the targets could not be exported.
+bool Export(const std::vector<Target>& targets,
+            const std::filesystem::path& output_path);
 
 }  // namespace bugreport
 

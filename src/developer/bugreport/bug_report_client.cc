@@ -4,6 +4,8 @@
 
 #include "src/developer/bugreport/bug_report_client.h"
 
+#include <fstream>
+
 #include <rapidjson/error/en.h>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/schema.h>
@@ -160,6 +162,35 @@ std::optional<std::vector<Target>> HandleBugReport(const std::string& input) {
   if (targets.empty())
     FXL_LOG(WARNING) << "No annotations or attachments are present.";
   return targets;
+}
+
+bool Export(const std::vector<Target>& targets,
+            const std::filesystem::path& output_path) {
+  std::error_code ec;
+  if (!std::filesystem::exists(output_path, ec)) {
+    if (!std::filesystem::create_directory(output_path, ec)) {
+      FXL_LOG(ERROR) << "Could not create directory: " << ec;
+      return false;
+    }
+  }
+
+  // Create targets.
+  bool no_errors = true;
+  for (const Target& target : targets) {
+    auto target_path = output_path / target.name;
+
+    std::ofstream ofs(target_path, std::ofstream::trunc);
+    if (!ofs.good()) {
+      FXL_LOG(ERROR) << "Could not open path for " << target_path;
+      no_errors = false;
+      continue;
+    }
+
+    ofs << target.contents;
+    ofs.close();
+  }
+
+  return no_errors;
 }
 
 }  // namespace bugreport
