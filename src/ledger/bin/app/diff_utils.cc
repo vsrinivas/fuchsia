@@ -290,8 +290,7 @@ void ComputeThreeWayDiff(
   auto on_done = [waiter = std::move(waiter), context = std::move(context),
                   callback = std::move(callback)](Status status) mutable {
     if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Unable to compute diff for PageChange: "
-                     << fidl::ToUnderlying(status);
+      FXL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
       callback(status, std::make_pair(std::vector<DiffEntry>(), ""));
       return;
     }

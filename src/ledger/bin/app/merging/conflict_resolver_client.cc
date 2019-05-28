@@ -178,8 +178,8 @@ void ConflictResolverClient::GetDiff(
               return;
             }
             if (status != Status::OK) {
-              FXL_LOG(ERROR) << "Unable to compute diff due to error "
-                             << fidl::ToUnderlying(status) << ", aborting.";
+              FXL_LOG(ERROR) << "Unable to compute diff due to error " << status
+                             << ", aborting.";
               callback(status, IterationStatus::OK, {}, nullptr);
               Finalize(status);
               return;
