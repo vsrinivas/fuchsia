@@ -129,7 +129,8 @@ DatagramStream::DatagramStream(
       // TODO(ctiller): What should mss be? Hardcoding to 2048 for now.
       packet_protocol_(
           timer_, [router] { return (*router->rng())(); }, this,
-          PacketProtocol::NullCodec(), 2048, true) {}
+          PacketProtocol::PlaintextCodec(), 2048, true),
+      stream_state_(this) {}
 
 void DatagramStream::Register() {
   ScopedModule<DatagramStream> scoped_module(this);
@@ -138,152 +139,43 @@ void DatagramStream::Register() {
   }
 }
 
-DatagramStream::~DatagramStream() {
-  ScopedModule<DatagramStream> scoped_module(this);
-  assert(close_state_ == CloseState::QUIESCED);
-  assert(stream_refs_ == 0);
-}
+DatagramStream::~DatagramStream() = default;
 
 void DatagramStream::Close(const Status& status, Callback<void> quiesced) {
   ScopedModule<DatagramStream> scoped_module(this);
-  OVERNET_TRACE(DEBUG) << "Close: state=" << close_state_
-                       << " status=" << status << " peer=" << peer_
-                       << " stream_id=" << stream_id_;
-
-  switch (close_state_) {
-    case CloseState::QUIESCED:
-      return;
-    case CloseState::CLOSED:
-      on_quiesced_.push_back(std::move(quiesced));
-      return;
-    case CloseState::LOCAL_CLOSE_REQUESTED_OK:
-      if (status.is_error()) {
-        close_state_ = CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR;
-        local_close_status_ = status;
-        CancelReceives();
-      }
-      [[fallthrough]];
-    case CloseState::CLOSING_PROTOCOL:
-    case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
-      on_quiesced_.emplace_back(std::move(quiesced));
-      return;
-    case CloseState::DRAINING_LOCAL_CLOSED_OK:
-      on_quiesced_.emplace_back(std::move(quiesced));
-      if (status.is_error()) {
-        close_state_ = CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR;
-        FinishClosing();
-      }
-      break;
-    case CloseState::REMOTE_CLOSED:
-      on_quiesced_.emplace_back(std::move(quiesced));
-      FinishClosing();
-      return;
-    case CloseState::OPEN:
-      close_state_ = status.is_error()
-                         ? CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR
-                         : CloseState::LOCAL_CLOSE_REQUESTED_OK;
-      if (status.is_error()) {
-        CancelReceives();
-      }
-      local_close_status_ = status;
-      on_quiesced_.emplace_back(std::move(quiesced));
-      receive_mode_.Close(status);
-      SendCloseAndFlushQuiesced(0);
-      return;
-  }
+  stream_state_.LocalClose(status, std::move(quiesced));
 }
 
-void DatagramStream::SendCloseAndFlushQuiesced(int retry_number) {
-  constexpr int kMaxCloseRetries = 3;
-  assert(close_state_ == CloseState::LOCAL_CLOSE_REQUESTED_OK ||
-         close_state_ == CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR);
-  OVERNET_TRACE(DEBUG) << "SendClose: status=" << *local_close_status_
-                       << " retry=" << retry_number
-                       << " state=" << close_state_;
+void DatagramStream::SendClose() {
   packet_protocol_.Send(
       [this](auto args) {
         ScopedModule<DatagramStream> scoped_module(this);
         OVERNET_TRACE(DEBUG)
             << "SendClose WRITE next_message_id=" << next_message_id_
-            << " local_close_status=" << local_close_status_;
-        return MessageFragment::EndOfStream(next_message_id_,
-                                            *local_close_status_)
+            << " stream_state=" << stream_state_.Description();
+        auto status = stream_state_.GetSendStatus();
+        OVERNET_TRACE(DEBUG) << "  status=" << status;
+        return MessageFragment::EndOfStream(next_message_id_, status)
             .Write(args.desired_border);
       },
-      [this, retry_number](const Status& send_status) mutable {
+      [this](const Status& send_status) {
         ScopedModule<DatagramStream> scoped_module(this);
-        OVERNET_TRACE(DEBUG)
-            << "SendClose ACK status=" << send_status
-            << " retry=" << retry_number << " close_state=" << close_state_;
-        switch (close_state_) {
-          case CloseState::OPEN:
-          case CloseState::REMOTE_CLOSED:
-          case CloseState::DRAINING_LOCAL_CLOSED_OK:
-            assert(false);
-            break;
-          case CloseState::QUIESCED:
-          case CloseState::CLOSED:
-          case CloseState::CLOSING_PROTOCOL:
-            break;
-          case CloseState::LOCAL_CLOSE_REQUESTED_OK:
-          case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
-            if (send_status.code() == StatusCode::UNAVAILABLE &&
-                retry_number != kMaxCloseRetries) {
-              SendCloseAndFlushQuiesced(retry_number + 1);
-            } else {
-              if (send_status.is_error()) {
-                close_state_ = CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR;
-              } else {
-                close_state_ = CloseState::DRAINING_LOCAL_CLOSED_OK;
-              }
-              MaybeFinishClosing();
-            }
-            break;
-        }
+        stream_state_.SendCloseAck(send_status);
       });
 }
 
-void DatagramStream::MaybeFinishClosing() {
-  OVERNET_TRACE(DEBUG) << "MaybeFinishClosing: state=" << close_state_
-                       << " message_state.size()==" << message_state_.size();
-  switch (close_state_) {
-    case CloseState::OPEN:
-    case CloseState::REMOTE_CLOSED:
-    case CloseState::CLOSED:
-    case CloseState::QUIESCED:
-    case CloseState::CLOSING_PROTOCOL:
-    case CloseState::LOCAL_CLOSE_REQUESTED_OK:
-      return;
-    case CloseState::DRAINING_LOCAL_CLOSED_OK:
-      if (message_state_.empty()) {
-        FinishClosing();
-      }
-      break;
-    case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
-      FinishClosing();
-      break;
-  }
-}
-
-void DatagramStream::CancelReceives() {
+void DatagramStream::StopReading(const Status& status) {
   while (!unclaimed_receives_.Empty()) {
     unclaimed_receives_.begin()->Close(Status::Cancelled());
   }
+  receive_mode_.Close(status);
 }
 
-void DatagramStream::FinishClosing() {
-  OVERNET_TRACE(DEBUG) << "FinishClosing: state=" << close_state_;
-  assert(close_state_ == CloseState::DRAINING_LOCAL_CLOSED_OK ||
-         close_state_ == CloseState::LOCAL_CLOSE_REQUESTED_OK ||
-         close_state_ == CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR ||
-         close_state_ == CloseState::REMOTE_CLOSED);
-  close_state_ = CloseState::CLOSING_PROTOCOL;
-  CancelReceives();
+void DatagramStream::StreamClosed() {
   packet_protocol_.Close([this]() {
+    ScopedModule<DatagramStream> in_dgs(this);
     OVERNET_TRACE(DEBUG) << "FinishClosing/ProtocolClosed: state="
-                         << close_state_;
-    close_state_ = CloseState::CLOSED;
-
+                         << stream_state_.Description();
     auto unregister_status = router_->UnregisterStream(peer_, stream_id_, this);
     assert(unregister_status.is_ok());
 
@@ -294,49 +186,20 @@ void DatagramStream::FinishClosing() {
     assert(message_state_.empty());
 
     close_ref_.Abandon();
+    stream_state_.QuiesceReady();
   });
 }
-
-void DatagramStream::Quiesce() {
-  assert(close_state_ == CloseState::CLOSED);
-  close_state_ = CloseState::QUIESCED;
-  std::vector<Callback<void>> on_quiesced;
-  on_quiesced.swap(on_quiesced_);
-  on_quiesced.clear();
-}
-
-template <typename F>
-struct NoDiscard {
-  F f;
-  NoDiscard(F const& f) : f(f) {}
-  template <typename... T>
-  [[nodiscard]] constexpr auto operator()(T&&... t) noexcept(
-      noexcept(f(std::forward<T>(t)...))) {
-    return f(std::forward<T>(t)...);
-  }
-};
 
 void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
   ScopedModule<DatagramStream> scoped_module(this);
 
   OVERNET_TRACE(DEBUG) << "DatagramStream.HandleMessage: data=" << data
-                       << " close_state=" << close_state_;
+                       << " state=" << stream_state_.Description();
 
   packet_protocol_.Process(
       received, seq, std::move(data), [this](auto status_or_message) {
-        switch (close_state_) {
-          // In these states we process messages:
-          case CloseState::OPEN:
-          case CloseState::LOCAL_CLOSE_REQUESTED_OK:
-          case CloseState::REMOTE_CLOSED:
-          case CloseState::DRAINING_LOCAL_CLOSED_OK:
-            break;
-          // In these states we do not:
-          case CloseState::CLOSING_PROTOCOL:
-          case CloseState::CLOSED:
-          case CloseState::QUIESCED:
-          case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
-            return;
+        if (stream_state_.IsClosedForReceiving()) {
+          return;
         }
         if (status_or_message.is_error()) {
           OVERNET_TRACE(WARNING)
@@ -359,15 +222,17 @@ void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
                              << " msg=" << msg.message();
         switch (msg.type()) {
           case MessageFragment::Type::Chunk: {
-            OVERNET_TRACE(DEBUG)
-                << "chunk offset=" << msg.chunk().offset
-                << " length=" << msg.chunk().slice.length()
-                << " end-of-message=" << msg.chunk().end_of_message;
             // Got a chunk of data: add it to the relevant incoming message.
             largest_incoming_message_id_seen_ =
                 std::max(largest_incoming_message_id_seen_, msg.message());
             const uint64_t msg_id = msg.message();
             auto it = messages_.find(msg_id);
+            OVERNET_TRACE(DEBUG)
+                << "chunk offset=" << msg.chunk().offset
+                << " length=" << msg.chunk().slice.length()
+                << " end-of-message=" << msg.chunk().end_of_message
+                << " largest_seen=" << largest_incoming_message_id_seen_
+                << " msg_id=" << msg_id << " found=" << (it != messages_.end());
             if (it == messages_.end()) {
               it = messages_
                        .emplace(std::piecewise_construct,
@@ -379,12 +244,13 @@ void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
               }
               receive_mode_.Begin(
                   msg_id, [this, msg_id](const Status& status) mutable {
-                    if (status.is_error()) {
-                      OVERNET_TRACE(WARNING) << "Receive failed: " << status;
-                      return;
-                    }
                     auto it = messages_.find(msg_id);
                     if (it == messages_.end()) {
+                      return;
+                    }
+                    if (status.is_error()) {
+                      OVERNET_TRACE(WARNING) << "Receive failed: " << status;
+                      messages_.erase(it);
                       return;
                     }
                     unclaimed_messages_.PushBack(&it->second);
@@ -411,44 +277,12 @@ void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
             it->second.Close(msg.status()).Ignore();
           } break;
           case MessageFragment::Type::StreamEnd:
-            // TODO(ctiller): handle case of ok termination with outstanding
-            // messages.
-            RequestedClose requested_close{msg.message(), msg.status()};
-            OVERNET_TRACE(DEBUG)
-                << "peer requests close with status " << msg.status();
-            if (requested_close_.has_value()) {
-              if (*requested_close_ != requested_close) {
-                OVERNET_TRACE(WARNING)
-                    << "Failed to parse message: " << msg_status.AsStatus();
-                return;
-              }
-              return;
-            }
-            requested_close_ = requested_close;
-            auto enact_remote_close = [this](const Status& status) {
-              switch (close_state_) {
-                case CloseState::OPEN:
-                  close_state_ = CloseState::REMOTE_CLOSED;
-                  receive_mode_.Close(status);
-                  break;
-                case CloseState::REMOTE_CLOSED:
-                  assert(false);
-                  break;
-                case CloseState::LOCAL_CLOSE_REQUESTED_OK:
-                case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
-                case CloseState::DRAINING_LOCAL_CLOSED_OK:
-                  FinishClosing();
-                  break;
-                case CloseState::CLOSED:
-                case CloseState::QUIESCED:
-                case CloseState::CLOSING_PROTOCOL:
-                  break;
-              }
-            };
-            if (requested_close_->status.is_error()) {
-              enact_remote_close(requested_close_->status);
+            if (msg.status().is_error()) {
+              stream_state_.RemoteClose(msg.status());
             } else {
-              receive_mode_.Begin(msg.message(), std::move(enact_remote_close));
+              receive_mode_.Begin(msg.message(), [this](const Status& status) {
+                stream_state_.RemoteClose(status);
+              });
             }
         }
       });
@@ -487,16 +321,21 @@ void DatagramStream::SendPacket(SeqNum seq, LazySlice data) {
               std::move(data), timer_->Now()});
 }
 
+void DatagramStream::NoConnectivity() {
+  stream_state_.ForceClose(Status(StatusCode::UNAVAILABLE, "No connectivity"));
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // SendOp
 
 DatagramStream::SendOp::SendOp(DatagramStream* stream, uint64_t payload_length)
-    : StateRef(stream,
-               stream->message_state_
-                   .emplace(std::piecewise_construct,
-                            std::forward_as_tuple(stream->next_message_id_++),
-                            std::forward_as_tuple())
-                   .first),
+    : SendStateRef(
+          stream,
+          stream->message_state_
+              .emplace(std::piecewise_construct,
+                       std::forward_as_tuple(stream->next_message_id_++),
+                       std::forward_as_tuple())
+              .first),
       payload_length_(payload_length) {
   ScopedModule<DatagramStream> in_dgs(stream);
   ScopedModule<SendOp> in_send_op(this);
@@ -509,9 +348,10 @@ DatagramStream::SendOp::~SendOp() {
   OVERNET_TRACE(DEBUG) << "SendOp destroyed";
 }
 
-void DatagramStream::SendError(StateRef state, const overnet::Status& status) {
+void DatagramStream::SendMessageError(SendStateRef state,
+                                      const overnet::Status& status) {
   ScopedModule<DatagramStream> in_dgs(this);
-  OVERNET_TRACE(DEBUG) << "SendError: " << status;
+  OVERNET_TRACE(DEBUG) << "SendMessageError: " << status;
   packet_protocol_.Send(
       [message_id = state.message_id(), status](auto arg) {
         return MessageFragment::Abort(message_id, status)
@@ -519,10 +359,10 @@ void DatagramStream::SendError(StateRef state, const overnet::Status& status) {
       },
       [state, status](const Status& send_status) {
         if (send_status.code() == StatusCode::UNAVAILABLE &&
-            state.stream()->close_state_ == CloseState::OPEN) {
-          state.stream()->SendError(state, status);
+            state.stream()->stream_state_.IsOpenForSending()) {
+          state.stream()->SendMessageError(state, status);
         }
-        OVERNET_TRACE(DEBUG) << "SendError: ACK " << status;
+        OVERNET_TRACE(DEBUG) << "SendMessageError: ACK " << status;
       });
 }
 
@@ -539,7 +379,7 @@ void DatagramStream::SendOp::Close(const Status& status) {
   }
 }
 
-void DatagramStream::StateRef::SetClosed(const Status& status) {
+void DatagramStream::SendStateRef::SetClosed(const Status& status) {
   if (state() != SendState::OPEN) {
     return;
   }
@@ -547,7 +387,7 @@ void DatagramStream::StateRef::SetClosed(const Status& status) {
     set_state(SendState::CLOSED_OK);
   } else {
     set_state(SendState::CLOSED_WITH_ERROR);
-    stream()->SendError(*this, status);
+    stream()->SendMessageError(*this, status);
   }
 }
 
@@ -555,9 +395,10 @@ void DatagramStream::SendOp::Push(Slice item, Callback<void> started) {
   ScopedModule<DatagramStream> in_dgs(stream());
   ScopedModule<SendOp> in_send_op(this);
   assert(state() == SendState::OPEN);
-  if (state() != SendState::OPEN || stream()->IsClosedForSending()) {
-    OVERNET_TRACE(DEBUG) << "Push: state=" << state()
-                         << " close_state=" << stream()->close_state_
+  if (state() != SendState::OPEN ||
+      stream()->stream_state_.IsClosedForSending()) {
+    OVERNET_TRACE(DEBUG) << "Push: state=" << state() << " stream_state="
+                         << stream()->stream_state_.Description()
                          << " => ignore send: " << item;
     return;
   }
@@ -579,7 +420,7 @@ void DatagramStream::SendOp::Push(Slice item, Callback<void> started) {
   stream()->SendChunk(*this, std::move(chunk), std::move(started));
 }
 
-void DatagramStream::SendChunk(StateRef state, Chunk chunk,
+void DatagramStream::SendChunk(SendStateRef state, Chunk chunk,
                                Callback<void> started) {
   ScopedModule<DatagramStream> in_dgs(this);
   OVERNET_TRACE(DEBUG) << "SchedOutChunk: msg=" << state.message_id()
@@ -660,9 +501,7 @@ std::string DatagramStream::PendingSendString() {
 
 void DatagramStream::SendNextChunk() {
   ScopedModule<DatagramStream> in_dgs(this);
-  assert(close_state_ == CloseState::OPEN ||
-         close_state_ == CloseState::LOCAL_CLOSE_REQUESTED_OK ||
-         close_state_ == CloseState::DRAINING_LOCAL_CLOSED_OK);
+  assert(stream_state_.IsOpenForSending());
   assert(!sending_);
 
   OVERNET_TRACE(DEBUG) << "SendNextChunk: pending=" << pending_send_.size();
@@ -691,7 +530,7 @@ void DatagramStream::SendNextChunk() {
       assert(this->stream() == stream);
     }
     ~PullChunk() {
-      if (!stream()->IsClosedForSending()) {
+      if (stream()->stream_state_.IsOpenForSending()) {
         stream()->sending_ = false;
         stream()->SendNextChunk();
       }
@@ -718,7 +557,7 @@ void DatagramStream::SendNextChunk() {
    private:
     struct ChunkAndOptState {
       Optional<Chunk> chunk;
-      StateRef state;
+      SendStateRef state;
     };
     ChunkAndOptState send_;
     const LazySliceArgs* const args_;
@@ -736,7 +575,11 @@ void DatagramStream::SendNextChunk() {
       assert(pending_send.chunk.slice.length() != 0);
       const auto message_id_length =
           varint::WireSizeFor(pending_send.state.message_id());
-      OVERNET_TRACE(DEBUG) << "Format: ofs=" << pending_send.chunk.offset
+      OVERNET_TRACE(DEBUG) << "Format:"
+                           << " message_id=" << pending_send.state.message_id()
+                           << " state="
+                           << static_cast<int>(pending_send.state.state())
+                           << " ofs=" << pending_send.chunk.offset
                            << " len=" << pending_send.chunk.slice.length()
                            << " eom=" << pending_send.chunk.end_of_message
                            << " desired_border=" << args->desired_border
@@ -771,19 +614,24 @@ void DatagramStream::SendNextChunk() {
 
   class ReliableChunkSend final : public PacketProtocol::SendRequest {
    public:
-    ReliableChunkSend(DatagramStream* stream) : stream_(stream) {}
+    ReliableChunkSend(DatagramStream* stream) : stream_(stream) {
+      OVERNET_TRACE(DEBUG) << "ReliableChunkSend@" << this << ": Create";
+    }
 
     Slice GenerateBytes(LazySliceArgs args) override {
+      OVERNET_TRACE(DEBUG) << "ReliableChunkSend@" << this << ": GenerateBytes";
       PullChunk pc(stream_, &args);
       sent_ = pc.chunk_and_state();
       return pc.Finish();
     }
 
     void Ack(const Status& status) override {
+      OVERNET_TRACE(DEBUG) << "ReliableChunkSend@" << this
+                           << ": Ack status=" << status;
       if (sent_) {
         stream_->CompleteReliable(status, std::move(sent_->state),
                                   std::move(sent_->chunk));
-      } else if (!stream_->IsClosedForSending()) {
+      } else if (stream_->stream_state_.IsOpenForSending()) {
         stream_->sending_ = false;
         stream_->SendNextChunk();
       }
@@ -797,18 +645,24 @@ void DatagramStream::SendNextChunk() {
 
   class UnreliableChunkSend final : public PacketProtocol::SendRequest {
    public:
-    UnreliableChunkSend(DatagramStream* stream) : stream_(stream) {}
+    UnreliableChunkSend(DatagramStream* stream) : stream_(stream) {
+      OVERNET_TRACE(DEBUG) << "UnreliableChunkSend@" << this << ": Create";
+    }
 
     Slice GenerateBytes(LazySliceArgs args) override {
+      OVERNET_TRACE(DEBUG) << "UnreliableChunkSend@" << this
+                           << ": GenerateBytes";
       PullChunk pc(stream_, &args);
       sent_ = pc.chunk_and_state().state;
       return pc.Finish();
     }
 
     void Ack(const Status& status) override {
+      OVERNET_TRACE(DEBUG) << "UnreliableChunkSend@" << this
+                           << ": Ack status=" << status;
       if (sent_) {
         stream_->CompleteUnreliable(status, std::move(*sent_));
-      } else if (!stream_->IsClosedForSending()) {
+      } else if (stream_->stream_state_.IsOpenForSending()) {
         stream_->sending_ = false;
         stream_->SendNextChunk();
       }
@@ -817,7 +671,7 @@ void DatagramStream::SendNextChunk() {
 
    private:
     DatagramStream* const stream_;
-    Optional<StateRef> sent_;
+    Optional<SendStateRef> sent_;
   };
 
   class TailReliableChunkSend final : public PacketProtocol::SendRequest {
@@ -838,7 +692,7 @@ void DatagramStream::SendNextChunk() {
         } else {
           stream_->CompleteUnreliable(status, std::move(sent_->state));
         }
-      } else if (!stream_->IsClosedForSending()) {
+      } else if (stream_->stream_state_.IsOpenForSending()) {
         stream_->sending_ = false;
         stream_->SendNextChunk();
       }
@@ -869,24 +723,26 @@ void DatagramStream::SendNextChunk() {
   }
 }
 
-void DatagramStream::CompleteReliable(const Status& status, StateRef state,
+void DatagramStream::CompleteReliable(const Status& status, SendStateRef state,
                                       Chunk chunk) {
   ScopedModule<DatagramStream> in_dgs(this);
   OVERNET_TRACE(DEBUG) << "CompleteReliable: status=" << status
                        << " state=" << static_cast<int>(state.state())
-                       << " stream_state=" << state.stream()->close_state_;
+                       << " stream_state="
+                       << state.stream()->stream_state_.Description();
   if (state.state() == SendState::CLOSED_WITH_ERROR) {
     return;
   }
   if (status.code() == StatusCode::UNAVAILABLE &&
-      !state.stream()->IsClosedForSending()) {
+      state.stream()->stream_state_.IsOpenForSending()) {
     // Send failed, still open, and retryable: retry.
     stream_stats_.send_chunk_nacked++;
     SendChunk(std::move(state), std::move(chunk), Callback<void>::Ignored());
   }
 }
 
-void DatagramStream::CompleteUnreliable(const Status& status, StateRef state) {
+void DatagramStream::CompleteUnreliable(const Status& status,
+                                        SendStateRef state) {
   ScopedModule<DatagramStream> in_dgs(this);
   OVERNET_TRACE(DEBUG) << "CompleteUnreliable: status=" << status
                        << " state=" << static_cast<int>(state.state());
@@ -948,6 +804,8 @@ void DatagramStream::ReceiveOp::Close(const Status& status) {
   ScopedModule<DatagramStream> in_dgs(stream_.get());
   ScopedModule<ReceiveOp> in_recv_op(this);
   OVERNET_TRACE(DEBUG) << "Close incoming_message=" << incoming_message_
+                       << " id="
+                       << (incoming_message_ ? incoming_message_->msg_id() : 0)
                        << " status=" << status;
   closed_ = true;
   if (incoming_message_ == nullptr) {

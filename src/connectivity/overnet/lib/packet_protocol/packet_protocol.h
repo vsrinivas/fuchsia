@@ -42,6 +42,7 @@ class PacketProtocol {
   class PacketSender {
    public:
     virtual void SendPacket(SeqNum seq, LazySlice send) = 0;
+    virtual void NoConnectivity() = 0;
   };
 
   // Codec describes the transformation to apply to *payload* bytes that are
@@ -223,11 +224,31 @@ class PacketProtocol {
       bbr_ack_.Force()->nacked_packets.push_back(packet);
     }
 
+    void SetTip(uint64_t seq_idx, TimeStamp received) {
+      if (!set_tip_) {
+        OVERNET_TRACE(DEBUG) << "Transaction.SetTip: seq_idx=" << seq_idx
+                             << " received=" << received;
+        set_tip_.Reset(SetTipArgs{seq_idx, received});
+      } else {
+        OVERNET_TRACE(DEBUG)
+            << "Transaction.SetTip: seq_idx=" << seq_idx
+            << " received=" << received << " atop seq_idx=" << set_tip_->seq_idx
+            << " received=" << set_tip_->received;
+        set_tip_->seq_idx = std::max(set_tip_->seq_idx, seq_idx);
+        set_tip_->received = std::max(set_tip_->received, received);
+      }
+    }
+
    private:
     PacketProtocol* const protocol_;
     bool quiesce_ = false;
     bool start_sending_ = false;
     bool increment_outstanding_tip_ = false;
+    struct SetTipArgs {
+      uint64_t seq_idx;
+      TimeStamp received;
+    };
+    Optional<SetTipArgs> set_tip_;
     Optional<BBR::Ack> bbr_ack_;
   };
 
@@ -263,7 +284,8 @@ class PacketProtocol {
     void NackAll(Transaction* transaction);
     void Send(BBR::TransmitRequest bbr_request, SendRequestHdl request);
 
-    void Ack(Transaction* transaction, uint64_t seq, TimeDelta queue_delay);
+    void Ack(Transaction* transaction, uint64_t seq, TimeDelta queue_delay,
+             TimeStamp received);
     void Nack(Transaction* transaction, uint64_t seq, TimeDelta queue_delay,
               const Status& status);
 
@@ -275,6 +297,8 @@ class PacketProtocol {
       };
 
       struct Sent {
+        uint64_t first_unknown_sequence_at_send;  // or 0 if the packet did not
+                                                  // carry an ack
         SendRequestHdl request;
         BBR::SentPacket bbr_sent_packet;
         BdpEstimator::PerPacketData bdp_packet;
@@ -286,8 +310,6 @@ class PacketProtocol {
       using State =
           std::variant<PendingTailProbe, Pending, Sent, Acked, Nacked>;
 
-      TimeStamp sent;
-      uint64_t max_seen_sequence_at_send;
       State state;
 
       bool has_request() const {
@@ -300,13 +322,19 @@ class PacketProtocol {
                std::holds_alternative<Nacked>(state);
       }
 
+      bool is_pending() const {
+        return std::holds_alternative<Pending>(state) ||
+               std::holds_alternative<PendingTailProbe>(state);
+      }
+
       friend std::ostream& operator<<(std::ostream& out, const State& state) {
         if (std::holds_alternative<PendingTailProbe>(state)) {
           return out << "PENDING_TAIL_PROBE";
         } else if (std::holds_alternative<Pending>(state)) {
           return out << "PENDING";
-        } else if (std::holds_alternative<Sent>(state)) {
-          return out << "SENT";
+        } else if (const auto* p = std::get_if<Sent>(&state)) {
+          return out << "SENT{" << p->bbr_sent_packet.send_time
+                     << "; unk:" << p->first_unknown_sequence_at_send << "}";
         } else if (std::holds_alternative<Acked>(state)) {
           return out << "ACKED";
         } else if (std::holds_alternative<Nacked>(state)) {
@@ -319,6 +347,7 @@ class PacketProtocol {
 
     void Schedule(Transaction* transaction,
                   OutstandingPacket::State outstanding_packet_state);
+    bool HasPendingPackets(Transaction* transaction) const;
 
     PacketProtocol* const protocol_;
     uint64_t send_tip_ = 1;
@@ -343,12 +372,19 @@ class PacketProtocol {
     Optional<BBR::TransmitRequest> transmit_request_;
   };
 
-  enum class AckUrgency { NOT_REQUIRED, SEND_SOON, SEND_IMMEDIATELY };
+  enum class AckUrgency {
+    NOT_REQUIRED,
+    SEND_BUNDLED,
+    SEND_SOON,
+    SEND_IMMEDIATELY
+  };
 
   friend std::ostream& operator<<(std::ostream& out, AckUrgency urgency) {
     switch (urgency) {
       case AckUrgency::NOT_REQUIRED:
         return out << "NOT_REQUIRED";
+      case AckUrgency::SEND_BUNDLED:
+        return out << "SEND_BUNDLED";
       case AckUrgency::SEND_SOON:
         return out << "SEND_SOON";
       case AckUrgency::SEND_IMMEDIATELY:
@@ -368,6 +404,8 @@ class PacketProtocol {
     void AckSent(Transaction* transaction, uint64_t seq_idx, bool partial);
     void OnNack(Transaction* transaction, uint64_t seq_idx, bool shutting_down);
     void OnAck(uint64_t seq_idx);
+
+    std::string Acksplanation() const;
 
    private:
     PacketProtocol* const protocol_;
@@ -391,11 +429,17 @@ class PacketProtocol {
     [[nodiscard]] AckUrgency Received(SeqNum seq_num, TimeStamp received,
                                       F logic);
 
-    uint64_t max_seen_sequence() const;
-    bool CanBuildAck() const { return max_seen_sequence() > 0; }
+    // Compute the largest sequence index that has ever been seen
+    uint64_t MaxSeenSequence() const;
+    // Compute the first sequence for which we don't know if it was received or
+    // not
+    uint64_t FirstUnknownSequence() const;
+    bool CanBuildAck() const { return MaxSeenSequence() > 0; }
     AckFrame BuildAck(Transaction* transaction, uint64_t seq_idx, TimeStamp now,
                       uint32_t max_length, AckSender* ack_sender);
     void SetTip(uint64_t seq_idx, TimeStamp received);
+
+    std::string ReceivedPacketSummary() const;
 
    private:
     [[nodiscard]] bool EnsureValidReceivedPacket(uint64_t seq_idx,
@@ -410,9 +454,8 @@ class PacketProtocol {
       }
       return true;
     }
-    std::string ReceivedPacketSummary() const;
 
-    uint64_t received_tip_ = 0;
+    uint64_t received_tip_ = 1;
     uint64_t optional_ack_run_length_ = 0;
 
     enum class ReceiveState {
@@ -459,6 +502,17 @@ class PacketProtocol {
    private:
     ProtocolRef protocol_;
     BBR::TransmitRequest bbr_request_;
+  };
+
+  class ConnectivityDetection {
+   public:
+    ConnectivityDetection(PacketProtocol* protocol) : protocol_(protocol) {}
+    void FailedDelivery();
+    void MessageReceived() { no_route_timeout_.Reset(); }
+
+   private:
+    PacketProtocol* const protocol_;
+    Optional<Timeout> no_route_timeout_;
   };
 
   /////////////////////////////////////////////////////////////////////////////
@@ -513,7 +567,7 @@ class PacketProtocol {
     return state_.has_value() ? state_->bdp_estimator.estimate() : 0;
   }
 
-  static Codec* NullCodec();
+  static Codec* PlaintextCodec();
 
   const LinkStats* stats() const { return &stats_; }
 
@@ -524,7 +578,7 @@ class PacketProtocol {
   TimeDelta RetransmitDelay() const;
   TimeDelta TailLossProbeDelay() const;
   Slice FormatPacket(Transaction* transaction, uint64_t seq_idx,
-                     SendRequest* request, LazySliceArgs args);
+                     SendRequest* request, LazySliceArgs args, bool* has_ack);
   ProcessMessageResult ProcessMessage(Transaction* transaction,
                                       uint64_t seq_idx, Slice slice,
                                       TimeStamp received,
@@ -560,12 +614,14 @@ class PacketProtocol {
           received_queue(&protocol->stats_),
           outstanding_messages(protocol),
           bbr(protocol->timer_, std::move(rand), protocol->maximum_send_size_,
-              Nothing) {}
+              Nothing),
+          connectivity_detection(protocol) {}
     AckSender ack_sender;
     ReceivedQueue received_queue;
     OutstandingMessages outstanding_messages;
     BBR bbr;
     BdpEstimator bdp_estimator;
+    ConnectivityDetection connectivity_detection;
   };
   Optional<OpenState> state_;
   LinkStats stats_;

@@ -182,10 +182,10 @@ source_set("stream_framer") {
     "stream_framer.h",
   ]
   public_deps = [
+    "//src/connectivity/overnet/lib/environment:trace",
     "//src/connectivity/overnet/lib/vocabulary:optional",
     "//src/connectivity/overnet/lib/vocabulary:slice",
     "//src/connectivity/overnet/lib/vocabulary:status",
-    "//src/connectivity/overnet/lib/environment:trace",
   ]
 }
 
@@ -206,8 +206,8 @@ source_set("stream_framer_test") {
 # unreliable_framer
 source_set("unreliable_framer") {
   sources = [
-    "unreliable_framer.h",
     "unreliable_framer.cc",
+    "unreliable_framer.h",
   ]
   public_deps = [
     ":stream_framer",

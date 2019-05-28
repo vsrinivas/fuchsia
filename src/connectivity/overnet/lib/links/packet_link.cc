@@ -18,7 +18,7 @@ PacketLink::PacketLink(Router* router, NodeId peer, uint32_t mss,
       protocol_{router_->timer(),
                 [router] { return (*router->rng())(); },
                 this,
-                PacketProtocol::NullCodec(),
+                PacketProtocol::PlaintextCodec(),
                 mss,
                 false},
       packet_stuffer_(router->node_id(), peer) {}
@@ -117,6 +117,9 @@ void PacketLink::LinkSendRequest::Ack(const Status& status) {
     assert(link_->sending_);
     link_->sending_ = false;
     blocking_sends_ = false;
+    if (link_->packet_stuffer_.HasPendingMessages()) {
+      link_->SchedulePacket();
+    }
   }
   delete this;
 }
@@ -152,6 +155,11 @@ void PacketLink::SendPacket(SeqNum seq, LazySlice data) {
   }
 
   send_packet_queue_ = nullptr;
+}
+
+void PacketLink::NoConnectivity() {
+  OVERNET_TRACE(WARNING) << "No route to link destination";
+  Tombstone();
 }
 
 void PacketLink::Process(TimeStamp received, Slice packet) {

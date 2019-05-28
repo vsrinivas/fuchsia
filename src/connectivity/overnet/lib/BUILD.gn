@@ -57,6 +57,8 @@ fuzzers_package("overnet_fuzzers") {
   fuzzers = [
     "datagram_stream:linearizer_fuzzer",
     "datagram_stream:receive_mode_fuzzer",
+    "datagram_stream:stream_state_fuzzer",
+    "endpoint/integration_tests:router_endpoint_integration_fuzzer",
     "links:packet_nub_connection_fuzzer",
     "links:packet_nub_fuzzer",
     "links:stream_link_untrusted_fuzzer",

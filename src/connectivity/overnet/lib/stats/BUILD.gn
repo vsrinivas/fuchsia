@@ -3,38 +3,45 @@
 # found in the LICENSE file.
 
 template("stats") {
-    not_needed(invoker, [])
+  not_needed(invoker, [])
 
-    rule_name = target_name
-    file_stem = "${target_gen_dir}/${target_name}"
+  rule_name = target_name
+  file_stem = "${target_gen_dir}/${target_name}"
 
-    action("${rule_name}_gen") {
-        script="${rule_name}.py"
-        inputs=["statsc.py"]
-        outputs=[
-            "${file_stem}.cc",
-            "${file_stem}.h",
-        ]
-        args=["--stem", rebase_path(file_stem, root_build_dir)]
-    }
+  action("${rule_name}_gen") {
+    script = "${rule_name}.py"
+    inputs = [
+      "statsc.py",
+    ]
+    outputs = [
+      "${file_stem}.cc",
+      "${file_stem}.h",
+    ]
+    args = [
+      "--stem",
+      rebase_path(file_stem, root_build_dir),
+    ]
+  }
 
-    source_set(rule_name) {
-        sources=[
-            "${file_stem}.cc",
-            "${file_stem}.h",
-        ]
-        public_deps=[
-            ":${rule_name}_gen",
-            ":visitor",
-        ]
-    }
+  source_set(rule_name) {
+    sources = [
+      "${file_stem}.cc",
+      "${file_stem}.h",
+    ]
+    public_deps = [
+      ":${rule_name}_gen",
+      ":visitor",
+    ]
+  }
 }
 
-stats("link") {}
-stats("stream") {}
+stats("link") {
+}
+stats("stream") {
+}
 
 source_set("visitor") {
-    sources = [
-        "visitor.h",
-    ]
+  sources = [
+    "visitor.h",
+  ]
 }

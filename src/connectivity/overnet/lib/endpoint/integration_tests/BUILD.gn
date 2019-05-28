@@ -2,24 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
+
 ###############################################################################
 # AGGREGATE LIBRARIES
 
 source_set("tests") {
   testonly = true
   deps = [
-    ":router_endpoint_integration_test",
+    ":driver",
   ]
 }
 
 ###############################################################################
 
-source_set("router_endpoint_integration_test") {
+source_set("base") {
   testonly = true
   sources = [
-    "router_endpoint_integration_test.cc",
+    "environment.cc",
+    "environment.h",
+    "tests.cc",
+    "tests.h",
   ]
-  deps = [
+  public_deps = [
     "//src/connectivity/overnet/lib/endpoint:router_endpoint",
     "//src/connectivity/overnet/lib/environment:trace_cout",
     "//src/connectivity/overnet/lib/links:packet_link",
@@ -29,6 +34,36 @@ source_set("router_endpoint_integration_test") {
     "//src/connectivity/overnet/lib/protocol:unreliable_framer",
     "//src/connectivity/overnet/lib/testing:flags",
     "//src/connectivity/overnet/lib/testing:test_timer",
+  ]
+}
+
+source_set("driver") {
+  testonly = true
+  sources = [
+    "driver.cc",
+  ]
+  deps = [
+    ":base",
     "//third_party/googletest:gtest",
   ]
+}
+
+fuzzer("router_endpoint_integration_fuzzer") {
+  sources = [
+    "fuzzer.cc",
+  ]
+  deps = [
+    ":base",
+  ]
+}
+
+executable("router_endpoint_integration_fuzzer_replay") {
+  testonly = true
+  sources = [
+    "fuzzer.cc",
+  ]
+  deps = [
+    ":base",
+  ]
+  defines = [ "FUZZER_REPLAY" ]
 }

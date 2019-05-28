@@ -13,9 +13,7 @@ source_set("tests") {
   deps = []
 
   if (!is_fuchsia) {
-    deps += [
-      ":stream_socket_link_test",
-    ]
+    deps += [ ":stream_socket_link_test" ]
   }
 }
 
@@ -133,8 +131,8 @@ source_set("stream_socket_link") {
   ]
   deps = [
     ":basic_embedded",
-    "//src/connectivity/overnet/lib/links:stream_link",
     "//src/connectivity/overnet/lib/labels:node_id",
+    "//src/connectivity/overnet/lib/links:stream_link",
     "//src/connectivity/overnet/lib/protocol:fidl",
     "//src/connectivity/overnet/lib/protocol:stream_framer",
     "//src/connectivity/overnet/lib/protocol:varint",
@@ -148,15 +146,15 @@ source_set("stream_socket_link_test") {
     "stream_socket_link_test.cc",
   ]
   deps = [
-    "//third_party/googletest:gtest",
     ":stream_socket_link",
-    "//src/connectivity/overnet/lib/environment:trace",
     "//src/connectivity/overnet/lib/embedded:basic_embedded",
+    "//src/connectivity/overnet/lib/environment:trace",
     "//src/connectivity/overnet/lib/protocol:fidl",
     "//src/connectivity/overnet/lib/protocol:reliable_framer",
     "//src/connectivity/overnet/lib/protocol:unreliable_framer",
-    "//src/connectivity/overnet/lib/vocabulary:socket",
     "//src/connectivity/overnet/lib/testing:flags",
+    "//src/connectivity/overnet/lib/vocabulary:socket",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -168,9 +166,9 @@ source_set("stream_server") {
   deps = [
     ":basic_embedded",
     ":stream_socket_link",
+    "//src/connectivity/overnet/lib/protocol:stream_framer",
     "//src/connectivity/overnet/lib/vocabulary:ip_addr",
     "//src/connectivity/overnet/lib/vocabulary:socket",
-    "//src/connectivity/overnet/lib/protocol:stream_framer",
   ]
 }
 
@@ -182,8 +180,8 @@ source_set("stream_client") {
   deps = [
     ":basic_embedded",
     ":stream_socket_link",
+    "//src/connectivity/overnet/lib/protocol:stream_framer",
     "//src/connectivity/overnet/lib/vocabulary:ip_addr",
     "//src/connectivity/overnet/lib/vocabulary:socket",
-    "//src/connectivity/overnet/lib/protocol:stream_framer",
   ]
 }

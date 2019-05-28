@@ -30,13 +30,14 @@ source_set("datagram_stream") {
   public_deps = [
     ":linearizer",
     ":receive_mode",
+    ":stream_state",
     "//sdk/fidl/fuchsia.overnet.protocol",
     "//src/connectivity/overnet/lib/environment:timer",
     "//src/connectivity/overnet/lib/environment:trace",
     "//src/connectivity/overnet/lib/labels:seq_num",
-    "//src/connectivity/overnet/lib/stats:stream",
     "//src/connectivity/overnet/lib/packet_protocol",
     "//src/connectivity/overnet/lib/routing:router",
+    "//src/connectivity/overnet/lib/stats:stream",
     "//src/connectivity/overnet/lib/vocabulary:internal_list",
     "//src/connectivity/overnet/lib/vocabulary:slice",
   ]
@@ -159,5 +160,28 @@ fuzzer("receive_mode_fuzzer") {
   deps = [
     ":receive_mode_fuzzer_helpers",
     "//src/connectivity/overnet/lib/protocol:varint",
+  ]
+}
+
+# stream_state
+
+source_set("stream_state") {
+  sources = [
+    "stream_state.cc",
+    "stream_state.h",
+  ]
+  deps = [
+    "//src/connectivity/overnet/lib/environment:trace",
+    "//src/connectivity/overnet/lib/vocabulary:callback",
+    "//src/connectivity/overnet/lib/vocabulary:status",
+  ]
+}
+
+fuzzer("stream_state_fuzzer") {
+  sources = [
+    "stream_state_fuzzer.cc",
+  ]
+  deps = [
+    ":stream_state",
   ]
 }

@@ -613,6 +613,7 @@ group("overnet") {
     "//src/connectivity/overnet/lib:overnet_fuzzers",
     "//src/connectivity/overnet/lib:overnet_tests",
     "//src/connectivity/overnet/lib:overnet_unittests($host_toolchain)",
+    "//src/connectivity/overnet/lib/endpoint/integration_tests:router_endpoint_integration_fuzzer_replay($host_toolchain)",
     "//src/connectivity/overnet/overnetstack:overnetstack_tests",
   ]
 }

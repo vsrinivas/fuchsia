@@ -44,7 +44,7 @@ class InputStream {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   InputStream input(data, size);
-  PacketProtocolFuzzer fuzzer(PacketProtocol::NullCodec(), false);
+  PacketProtocolFuzzer fuzzer(PacketProtocol::PlaintextCodec(), false);
   for (;;) {
     switch (input.NextByte()) {
       default:

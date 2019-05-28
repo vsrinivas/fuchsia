@@ -21,8 +21,8 @@ source_set("tests") {
   deps = [
     ":packet_link_test",
     ":packet_nub_test",
-    ":stream_link_test",
     ":packet_stuffer_test",
+    ":stream_link_test",
   ]
 }
 
@@ -67,8 +67,8 @@ source_set("stream_link") {
   ]
   public_deps = [
     ":packet_stuffer",
-    "//src/connectivity/overnet/lib/routing:router",
     "//src/connectivity/overnet/lib/protocol:stream_framer",
+    "//src/connectivity/overnet/lib/routing:router",
   ]
   deps = [
     "//src/connectivity/overnet/lib/environment:trace",
@@ -83,10 +83,10 @@ source_set("stream_link_test") {
   deps = [
     ":stream_link",
     "//src/connectivity/overnet/lib/environment:trace_cout",
-    "//src/connectivity/overnet/lib/testing:flags",
-    "//src/connectivity/overnet/lib/testing:test_timer",
     "//src/connectivity/overnet/lib/protocol:reliable_framer",
     "//src/connectivity/overnet/lib/protocol:unreliable_framer",
+    "//src/connectivity/overnet/lib/testing:flags",
+    "//src/connectivity/overnet/lib/testing:test_timer",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -107,10 +107,10 @@ fuzzer("stream_link_untrusted_fuzzer") {
     ":stream_link",
     "//src/connectivity/overnet/lib/environment:trace_cout",
     "//src/connectivity/overnet/lib/protocol:fidl",
-    "//src/connectivity/overnet/lib/protocol:varint",
-    "//src/connectivity/overnet/lib/testing:test_timer",
     "//src/connectivity/overnet/lib/protocol:reliable_framer",
     "//src/connectivity/overnet/lib/protocol:unreliable_framer",
+    "//src/connectivity/overnet/lib/protocol:varint",
+    "//src/connectivity/overnet/lib/testing:test_timer",
   ]
 }
 
@@ -123,10 +123,10 @@ fuzzer("stream_link_peer_to_peer_fuzzer") {
     ":stream_link",
     "//src/connectivity/overnet/lib/environment:trace_cout",
     "//src/connectivity/overnet/lib/protocol:fidl",
-    "//src/connectivity/overnet/lib/protocol:varint",
-    "//src/connectivity/overnet/lib/testing:test_timer",
     "//src/connectivity/overnet/lib/protocol:reliable_framer",
     "//src/connectivity/overnet/lib/protocol:unreliable_framer",
+    "//src/connectivity/overnet/lib/protocol:varint",
+    "//src/connectivity/overnet/lib/testing:test_timer",
   ]
 }
 
@@ -189,8 +189,8 @@ fuzzer("packet_nub_connection_fuzzer") {
   ]
   deps = [
     ":packet_nub",
-    "//src/connectivity/overnet/lib/testing:test_timer",
     "//src/connectivity/overnet/lib/environment:trace_cout",
+    "//src/connectivity/overnet/lib/testing:test_timer",
   ]
 }
 

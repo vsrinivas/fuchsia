@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"
+
 #include <iostream>
 
 namespace overnet {
@@ -60,7 +61,7 @@ void TraceCout::Render(TraceOutput output) {
   });
 
   std::cout << pfx << padded(-40, [=](auto& out) { out << file << ":"; })
-            << padded(3, [=](auto& out) { out << output.line; }) << ": "
+            << padded(4, [=](auto& out) { out << output.line; }) << ": "
             << output.message;
   bool opened_tags = false;
   auto maybe_open_tags = [&] {

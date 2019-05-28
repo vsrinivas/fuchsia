@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
+
 #include <mutex>
 
 namespace overnet {
@@ -57,6 +58,9 @@ bool TestTimer::StepUntilNextEvent(Optional<TimeDelta> max_step) {
     return false;
   int64_t step = (std::lock_guard<std::mutex>(mu),
                   pending_timeouts_.begin()->first - now_);
+  if (step < 0) {
+    step = 0;
+  }
   if (max_step.has_value() && step > max_step->as_us()) {
     step = max_step->as_us();
   }

@@ -4,8 +4,11 @@
 
 #include "src/connectivity/overnet/lib/packet_protocol/packet_protocol.h"
 
+#include <cstdint>
 #include <iostream>
 #include <sstream>
+
+#include "third_party/zlib/zlib.h"
 
 namespace overnet {
 
@@ -76,6 +79,11 @@ PacketProtocol::Transaction::~Transaction() {
       if (bbr_ack_.has_value()) {
         protocol->state_->bbr.OnAck(bbr_ack_.Take());
         continue;
+      } else if (set_tip_.has_value()) {
+        auto set_tip = set_tip_.Take();
+        protocol->state_->received_queue.SetTip(set_tip.seq_idx,
+                                                set_tip.received);
+        continue;
       } else if (start_sending_) {
         start_sending_ = false;
         protocol->state_->outstanding_messages.StartSending();
@@ -126,15 +134,27 @@ std::string PacketProtocol::OutstandingMessages::OutstandingString() const {
   std::ostringstream out;
   out << "{tip=" << send_tip_ << ":" << unsent_tip_ << "|";
   bool first = true;
+  uint64_t idx = send_tip_;
   for (const auto& pkt : outstanding_) {
     if (!first) {
       out << ",";
     }
     first = false;
-    out << pkt.state;
+    out << idx << ":" << pkt.state;
+    idx++;
   }
   out << "}";
   return out.str();
+}
+
+bool PacketProtocol::OutstandingMessages::HasPendingPackets(
+    Transaction* transaction) const {
+  for (auto i = unsent_tip_ - send_tip_; i != outstanding_.size(); i++) {
+    if (outstanding_[i].is_pending()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void PacketProtocol::OutstandingMessages::Schedule(
@@ -145,25 +165,19 @@ void PacketProtocol::OutstandingMessages::Schedule(
                        << " outstanding=" << OutstandingString();
   tail_probe_timeout_.Reset();
   auto make_packet = [&] {
-    return OutstandingPacket{
-        protocol_->timer_->Now(),
-        protocol_->state_->received_queue.max_seen_sequence(),
-        std::move(outstanding_packet_state)};
+    return OutstandingPacket{std::move(outstanding_packet_state)};
   };
   if (!outstanding_.empty() &&
       std::holds_alternative<OutstandingPacket::PendingTailProbe>(
           outstanding_.back().state)) {
-    if (!std::holds_alternative<OutstandingPacket::PendingTailProbe>(
-            outstanding_packet_state)) {
-      outstanding_.back() = make_packet();
-    }
+    outstanding_.back() = make_packet();
   } else {
-    if (unsent_tip_ - send_tip_ == outstanding_.size()) {
+    if (!HasPendingPackets(transaction)) {
       transaction->StartSendingOnCompletion();
     }
     outstanding_.emplace_back(make_packet());
+    assert(HasPendingPackets(transaction));
   }
-  ScheduleRetransmit();
   max_outstanding_size_ =
       std::max(outstanding_.size(), size_t(max_outstanding_size_));
 }
@@ -223,19 +237,26 @@ PacketProtocol::PacketSend::~PacketSend() {
 
 void PacketProtocol::OutstandingMessages::CancelledMessage(
     Transaction* transaction) {
+  protocol_->state_->connectivity_detection.FailedDelivery();
+  NackAll(transaction);
   SentMessage(transaction);
 }
 
 Slice PacketProtocol::OutstandingMessages::GeneratePacket(
     Transaction* transaction, BBR::TransmitRequest bbr_request,
     LazySliceArgs args) {
-  if (unsent_tip_ - send_tip_ == outstanding_.size()) {
+  uint64_t seq_idx;
+  for (seq_idx = unsent_tip_; seq_idx - send_tip_ != outstanding_.size() &&
+                              !outstanding_[seq_idx - send_tip_].is_pending();
+       seq_idx++) {
+  }
+
+  if (seq_idx - send_tip_ == outstanding_.size()) {
     // nack before send?
     OVERNET_TRACE(DEBUG) << "Seq " << unsent_tip_ << " nacked before sending";
     return Slice();
   }
 
-  const uint64_t seq_idx = unsent_tip_;
   auto* outstanding_packet = &outstanding_[seq_idx - send_tip_];
 
   OVERNET_TRACE(DEBUG) << "GeneratePacket: " << outstanding_packet->state;
@@ -257,9 +278,10 @@ Slice PacketProtocol::OutstandingMessages::GeneratePacket(
     abort();
   }
 
+  bool has_ack;
   auto send_status = protocol_->codec_->Encode(
-      seq_idx,
-      protocol_->FormatPacket(transaction, seq_idx, request.borrow(), args));
+      seq_idx, protocol_->FormatPacket(transaction, seq_idx, request.borrow(),
+                                       args, &has_ack));
   if (send_status.is_error()) {
     OVERNET_TRACE(ERROR) << "Failed to encode packet: "
                          << send_status.AsStatus();
@@ -268,9 +290,9 @@ Slice PacketProtocol::OutstandingMessages::GeneratePacket(
   }
 
   // outstanding_ should not have changed
-  assert(unsent_tip_ == seq_idx);
   assert(outstanding_packet == &outstanding_[seq_idx - send_tip_]);
   outstanding_packet->state = OutstandingPacket::Sent{
+      has_ack ? protocol_->state_->received_queue.FirstUnknownSequence() : 0,
       std::move(request),
       bbr_request.Sent(BBR::OutgoingPacket{seq_idx, send.length()}),
       protocol_->state_->bdp_estimator.SentPacket(seq_idx)};
@@ -280,7 +302,8 @@ Slice PacketProtocol::OutstandingMessages::GeneratePacket(
 }
 
 Slice PacketProtocol::FormatPacket(Transaction* transaction, uint64_t seq_idx,
-                                   SendRequest* request, LazySliceArgs args) {
+                                   SendRequest* request, LazySliceArgs args,
+                                   bool* has_ack) {
   assert(state_.has_value());
 
   const auto max_length = std::min(static_cast<uint64_t>(args.max_length),
@@ -299,7 +322,9 @@ Slice PacketProtocol::FormatPacket(Transaction* transaction, uint64_t seq_idx,
                        << state_->received_queue.CanBuildAck()
                        << " request.must_send_ack=" << request->must_send_ack()
                        << " should_send_ack="
-                       << state_->ack_sender.ShouldSendAck();
+                       << state_->ack_sender.ShouldSendAck()
+                       << " acksplanation="
+                       << state_->ack_sender.Acksplanation();
 
   if (state_->received_queue.CanBuildAck() &&
       (request->must_send_ack() || state_->ack_sender.ShouldSendAck())) {
@@ -313,24 +338,35 @@ Slice PacketProtocol::FormatPacket(Transaction* transaction, uint64_t seq_idx,
     const uint64_t prefix_length = ack_length_length + ack_writer.wire_length();
     auto payload = request->GenerateBytes(make_args(prefix_length, true));
     stats_.pure_acks_sent += payload.length() == 0;
+    *has_ack = true;
     return std::move(payload).WithPrefix(
         prefix_length, [&ack_writer, ack_length_length](uint8_t* p) {
           ack_writer.Write(
               varint::Write(ack_writer.wire_length(), ack_length_length, p));
         });
   } else {
+    *has_ack = false;
     return request->GenerateBytes(make_args(1, false))
         .WithPrefix(1, [](uint8_t* p) { *p = 0; });
   }
 }
 
-uint64_t PacketProtocol::ReceivedQueue::max_seen_sequence() const {
+uint64_t PacketProtocol::ReceivedQueue::MaxSeenSequence() const {
   if (received_packets_.empty()) {
-    return received_tip_;
+    return received_tip_ - 1;
   }
   size_t idx = received_packets_.size() - 1;
   while (idx > 0 && received_packets_[idx].state == ReceiveState::UNKNOWN) {
     idx--;
+  }
+  return received_tip_ + idx;
+}
+
+uint64_t PacketProtocol::ReceivedQueue::FirstUnknownSequence() const {
+  size_t idx;
+  for (idx = 0; idx < received_packets_.size() &&
+                received_packets_[idx].state != ReceiveState::UNKNOWN;
+       idx++) {
   }
   return received_tip_ + idx;
 }
@@ -349,11 +385,14 @@ AckFrame PacketProtocol::ReceivedQueue::BuildAck(Transaction* transaction,
     return (now - received_packet.when).as_us();
   };
 
-  const auto max_seen = max_seen_sequence();
+  const auto max_seen = MaxSeenSequence();
   assert(max_seen > 0);
 
+  OVERNET_TRACE(DEBUG) << "  max_seen=" << max_seen
+                       << " received_tip=" << received_tip_;
+
   AckFrame ack(max_seen, packet_delay(max_seen));
-  for (uint64_t seq_idx = max_seen; seq_idx > received_tip_; seq_idx--) {
+  for (uint64_t seq_idx = max_seen; seq_idx >= received_tip_; seq_idx--) {
     auto& received_packet = received_packets_[seq_idx - received_tip_];
     switch (received_packet.state) {
       case ReceiveState::UNKNOWN:
@@ -387,7 +426,7 @@ void PacketProtocol::OutstandingMessages::SentMessage(
   ScopedModule<PacketProtocol> in_pp(protocol_);
   OVERNET_TRACE(DEBUG) << "OutstandingMessages.SentMessage: "
                        << OutstandingString();
-  if (unsent_tip_ - send_tip_ != outstanding_.size()) {
+  if (HasPendingPackets(transaction)) {
     transaction->StartSendingOnCompletion();
   }
   if (protocol_->probe_tails_ && !last_send_was_tail_probe_) {
@@ -398,17 +437,23 @@ void PacketProtocol::OutstandingMessages::SentMessage(
 void PacketProtocol::OutstandingMessages::ScheduleAck() {
   ScopedModule<PacketProtocol> in_pp(protocol_);
   const auto when = protocol_->timer_->Now() + protocol_->TailLossProbeDelay();
-  OVERNET_TRACE(DEBUG) << "OutstandingMessages.ScheduleTailLossProbe";
   if (unsent_tip_ - send_tip_ != outstanding_.size()) {
     protocol_->stats_
         .tail_loss_probes_cancelled_because_requests_already_queued++;
+    OVERNET_TRACE(DEBUG)
+        << "OutstandingMessages.ScheduleTailLossProbe - already queued; "
+        << OutstandingString();
     return;
   }
   if (tail_probe_timeout_.has_value() && tail_probe_timeout_->when <= when) {
+    OVERNET_TRACE(DEBUG)
+        << "OutstandingMessages.ScheduleTailLossProbe - already scheduled";
     protocol_->stats_
         .tail_loss_probes_cancelled_because_probe_already_scheduled++;
     return;
   }
+  OVERNET_TRACE(DEBUG) << "OutstandingMessages.ScheduleTailLossProbe @ "
+                       << when;
   tail_probe_timeout_.Reset(
       protocol_->timer_, when, [this](const Status& status) {
         ScopedModule<PacketProtocol> in_pp(protocol_);
@@ -449,6 +494,7 @@ void PacketProtocol::Process(TimeStamp received, SeqNum seq_num, Slice slice,
     return;
   }
 
+  state_->connectivity_detection.MessageReceived();
   state_->bdp_estimator.ReceivedBytes(slice.length());
   state_->ack_sender.NeedAck(
       &transaction,
@@ -462,10 +508,11 @@ void PacketProtocol::Process(TimeStamp received, SeqNum seq_num, Slice slice,
 template <class F>
 PacketProtocol::AckUrgency PacketProtocol::ReceivedQueue::Received(
     SeqNum seq_num, TimeStamp received, F logic) {
-  const auto seq_idx =
-      seq_num.Reconstruct(received_tip_ + received_packets_.size());
+  const auto window_base = MaxSeenSequence();
+  const auto seq_idx = seq_num.Reconstruct(window_base);
 
-  OVERNET_TRACE(DEBUG) << "Process seq:" << seq_idx;
+  OVERNET_TRACE(DEBUG) << "Process seq:" << seq_idx
+                       << " (from window_base:" << window_base << ")";
 
   if (seq_idx < received_tip_) {
     stats_->ack_not_required_historic_sequence++;
@@ -485,9 +532,7 @@ PacketProtocol::AckUrgency PacketProtocol::ReceivedQueue::Received(
 
   auto pmr = logic(seq_idx);
   OVERNET_TRACE(DEBUG) << "Process seq:" << seq_idx
-                       << " process_message_result=" << pmr << " is_last="
-                       << (seq_idx ==
-                           received_tip_ + received_packets_.size() - 1)
+                       << " process_message_result=" << pmr
                        << " optional_ack_run_length="
                        << optional_ack_run_length_
                        << " received_packets=" << ReceivedPacketSummary();
@@ -519,24 +564,36 @@ PacketProtocol::AckUrgency PacketProtocol::ReceivedQueue::Received(
       }
       stats_->ack_required_soon_ack_received++;
       optional_ack_run_length_ = 0;
-      return AckUrgency::SEND_SOON;
+      return AckUrgency::SEND_BUNDLED;
     case ProcessMessageResult::ACK: {
       optional_ack_run_length_ = 0;
       *received_packet = ReceivedPacket{ReceiveState::RECEIVED, received};
       static const uint64_t kMaxIncomingBeforeForcedAck = 3;
       if (seq_idx - received_tip_ >= kMaxIncomingBeforeForcedAck) {
+        bool any_packets_received = false;
+        bool any_packets_unknown = false;
         for (auto idx = seq_idx - received_tip_ - kMaxIncomingBeforeForcedAck;
              idx < seq_idx - received_tip_; idx++) {
-          if (received_packets_[idx].state != ReceiveState::RECEIVED) {
-            goto dont_send_immediately;
+          switch (received_packets_[idx].state) {
+            case ReceiveState::RECEIVED:
+            case ReceiveState::RECEIVED_AND_ACKED_IMMEDIATELY:
+              any_packets_received = true;
+              break;
+            case ReceiveState::UNKNOWN:
+              any_packets_unknown = true;
+              break;
+            case ReceiveState::NOT_RECEIVED:
+            case ReceiveState::RECEIVED_PURE_ACK:
+              break;
           }
         }
-        *received_packet = ReceivedPacket{
-            ReceiveState::RECEIVED_AND_ACKED_IMMEDIATELY, received};
-        stats_->ack_required_immediately_due_to_multiple_receives++;
-        return AckUrgency::SEND_IMMEDIATELY;
+        if (any_packets_unknown || !any_packets_received) {
+          *received_packet = ReceivedPacket{
+              ReceiveState::RECEIVED_AND_ACKED_IMMEDIATELY, received};
+          stats_->ack_required_immediately_due_to_multiple_receives++;
+          return AckUrgency::SEND_IMMEDIATELY;
+        }
       }
-    dont_send_immediately:
       // Got some data, make sure there's an ack scheduled soon.
       stats_->ack_required_soon_data_received++;
       return AckUrgency::SEND_SOON;
@@ -691,14 +748,6 @@ void PacketProtocol::OutstandingMessages::ProcessValidAck(
   }
   assert(ack.ack_to_seq() < send_tip_ + outstanding_.size());
 
-  // Move receive window forward.
-  const auto max_seen_sequence_at_send =
-      outstanding_[ack.ack_to_seq() - send_tip_].max_seen_sequence_at_send;
-  if (max_seen_sequence_at_send > 0) {
-    protocol_->state_->received_queue.SetTip(max_seen_sequence_at_send,
-                                             received);
-  }
-
   const auto queue_delay = TimeDelta::FromMicroseconds(ack.ack_delay_us());
 
   // Fail any nacked packets.
@@ -715,21 +764,28 @@ void PacketProtocol::OutstandingMessages::ProcessValidAck(
   for (size_t i = send_tip_; i <= ack.ack_to_seq(); i++) {
     OutstandingPacket& pkt = outstanding_[i - send_tip_];
     if (std::holds_alternative<OutstandingPacket::Sent>(pkt.state)) {
-      Ack(transaction, i, queue_delay);
+      Ack(transaction, i, queue_delay, received);
     }
   }
 }
 
 void PacketProtocol::OutstandingMessages::Ack(Transaction* transaction,
                                               uint64_t ack_seq,
-                                              TimeDelta queue_delay) {
+                                              TimeDelta queue_delay,
+                                              TimeStamp received) {
   OutstandingPacket& pkt = outstanding_[ack_seq - send_tip_];
   auto& sent_packet = std::get<OutstandingPacket::Sent>(pkt.state);
   auto request = std::move(sent_packet.request);
   auto& bbr_sent_packet = sent_packet.bbr_sent_packet;
   bbr_sent_packet.send_time += queue_delay;
   transaction->QueueAck(bbr_sent_packet);
+  if (sent_packet.first_unknown_sequence_at_send > 1) {
+    // Move receive window forward.
+    transaction->SetTip(sent_packet.first_unknown_sequence_at_send - 1,
+                        received);
+  }
   protocol_->state_->bdp_estimator.AckPacket(sent_packet.bdp_packet);
+  protocol_->state_->ack_sender.OnAck(ack_seq);
   pkt.state = OutstandingPacket::Acked{};
   transaction->IncrementOutstandingTipOnCompletion();
   request.Ack(Status::Ok());
@@ -752,10 +808,16 @@ void PacketProtocol::OutstandingMessages::Nack(Transaction* transaction,
   OutstandingPacket& pkt = outstanding_[nack_seq - send_tip_];
   OVERNET_TRACE(DEBUG) << "AckProcessor.Nack: seq=" << nack_seq
                        << " state=" << pkt.state;
-  if (std::holds_alternative<OutstandingPacket::Pending>(pkt.state) ||
-      std::holds_alternative<OutstandingPacket::PendingTailProbe>(pkt.state)) {
+  if (std::holds_alternative<OutstandingPacket::Pending>(pkt.state)) {
     pkt.state = OutstandingPacket::Nacked{};
     transaction->IncrementOutstandingTipOnCompletion();
+  } else if (std::holds_alternative<OutstandingPacket::PendingTailProbe>(
+                 pkt.state)) {
+    pkt.state = OutstandingPacket::Nacked{};
+    transaction->IncrementOutstandingTipOnCompletion();
+    if (protocol_->state_.has_value()) {
+      protocol_->state_->outstanding_messages.ForceSendAck(transaction);
+    }
   } else if (auto* sent_packet =
                  std::get_if<OutstandingPacket::Sent>(&pkt.state)) {
     assert(sent_packet->bbr_sent_packet.outgoing.sequence == nack_seq);
@@ -786,6 +848,9 @@ void PacketProtocol::OutstandingMessages::IncrementTip() {
 
 void PacketProtocol::ReceivedQueue::SetTip(uint64_t seq_idx,
                                            TimeStamp received) {
+  OVERNET_TRACE(DEBUG) << "SetTip from " << received_tip_ << " to before seq "
+                       << seq_idx << " with received packets "
+                       << ReceivedPacketSummary();
   assert(seq_idx >= 1);
   uint64_t tip_idx = seq_idx - 1;
   if (tip_idx <= received_tip_) {
@@ -794,14 +859,27 @@ void PacketProtocol::ReceivedQueue::SetTip(uint64_t seq_idx,
   if (!EnsureValidReceivedPacket(tip_idx, received)) {
     abort();
   }
-  received_packets_.erase(
-      received_packets_.begin(),
-      received_packets_.begin() + (tip_idx - received_tip_));
+  auto remove_begin = received_packets_.begin();
+  auto remove_end = remove_begin + (tip_idx - received_tip_);
+  for (auto it = remove_begin; it != remove_end; ++it) {
+    assert(it->state != ReceiveState::UNKNOWN);
+  }
+  received_packets_.erase(remove_begin, remove_end);
   received_tip_ = tip_idx;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Ack scheduling
+
+std::string PacketProtocol::AckSender::Acksplanation() const {
+  std::ostringstream out;
+  out << "{sent_full_acks=" << SentFullAcksString()
+      << " all_acks_acked=" << all_acks_acknowledged_
+      << " suppress_need_acks=" << suppress_need_acks_
+      << " urgency=" << urgency_
+      << " send_ack_timer=" << send_ack_timer_.has_value() << "}";
+  return out.str();
+}
 
 std::string PacketProtocol::AckSender::SentFullAcksString() const {
   std::ostringstream out;
@@ -819,14 +897,13 @@ std::string PacketProtocol::AckSender::SentFullAcksString() const {
 void PacketProtocol::AckSender::NeedAck(Transaction* transaction,
                                         AckUrgency urgency) {
   OVERNET_TRACE(DEBUG) << "AckSender.NeedAck"
-                       << " urgency=" << urgency << " (from " << urgency_ << ")"
-                       << " all_acks_acknowledged=" << all_acks_acknowledged_
-                       << " sent_full_acks=" << SentFullAcksString();
+                       << " urgency=" << urgency << " " << Acksplanation();
 
   if (urgency <= urgency_) {
     return;
   }
 
+  const auto old_urgency = urgency_;
   urgency_ = urgency;
   assert(protocol_->state_.has_value());
   sent_full_acks_.clear();
@@ -834,13 +911,19 @@ void PacketProtocol::AckSender::NeedAck(Transaction* transaction,
   switch (urgency_) {
     case AckUrgency::NOT_REQUIRED:
       abort();
+    case AckUrgency::SEND_BUNDLED:
+      suppress_need_acks_ = false;
+      break;
     case AckUrgency::SEND_SOON: {
       const auto when =
           protocol_->timer_->Now() + protocol_->TailLossProbeDelay();
       OVERNET_TRACE(DEBUG) << "AckSender.NeedAck: schedule ack start for "
                            << when;
-      suppress_need_acks_ = true;
+      if (old_urgency != AckUrgency::SEND_BUNDLED) {
+        suppress_need_acks_ = true;
+      }
       send_ack_timer_.Reset(protocol_->timer_, when, [this](const Status& status) {
+        ScopedModule in_pp(protocol_);
         OVERNET_TRACE(DEBUG) << "AckSender.NeedAck: ack start --> " << status;
         if (status.is_error()) {
           return;
@@ -862,9 +945,7 @@ void PacketProtocol::AckSender::NeedAck(Transaction* transaction,
 void PacketProtocol::AckSender::AckSent(Transaction* transaction,
                                         uint64_t seq_idx, bool partial) {
   OVERNET_TRACE(DEBUG) << "AckSender.AckSent seq_idx=" << seq_idx
-                       << " partial=" << partial
-                       << " all_acks_acknowledged=" << all_acks_acknowledged_
-                       << " sent_full_acks=" << SentFullAcksString();
+                       << " partial=" << partial << " " << Acksplanation();
 
   send_ack_timer_.Reset();
   if (!sent_full_acks_.empty()) {
@@ -882,9 +963,7 @@ void PacketProtocol::AckSender::AckSent(Transaction* transaction,
 void PacketProtocol::AckSender::OnNack(Transaction* transaction, uint64_t seq,
                                        bool shutting_down) {
   OVERNET_TRACE(DEBUG) << "AckSender.OnNack"
-                       << " sent_full_acks=" << SentFullAcksString()
-                       << " seq=" << seq
-                       << " all_acks_acknowledged=" << all_acks_acknowledged_;
+                       << " seq=" << seq << " " << Acksplanation();
   auto it =
       std::lower_bound(sent_full_acks_.begin(), sent_full_acks_.end(), seq);
   if (it == sent_full_acks_.end() || *it != seq) {
@@ -893,15 +972,13 @@ void PacketProtocol::AckSender::OnNack(Transaction* transaction, uint64_t seq,
   sent_full_acks_.erase(it);
   if (sent_full_acks_.empty() && !shutting_down) {
     protocol_->stats_.ack_required_soon_all_acks_nacked++;
-    NeedAck(transaction, AckUrgency::SEND_SOON);
+    NeedAck(transaction, AckUrgency::SEND_BUNDLED);
   }
 }
 
 void PacketProtocol::AckSender::OnAck(uint64_t seq) {
   OVERNET_TRACE(DEBUG) << "AckSender.OnAck"
-                       << " sent_full_acks=" << SentFullAcksString()
-                       << " seq=" << seq
-                       << " all_acks_acknowledged=" << all_acks_acknowledged_;
+                       << " seq=" << seq << " " << Acksplanation();
   auto it =
       std::lower_bound(sent_full_acks_.begin(), sent_full_acks_.end(), seq);
   if (it == sent_full_acks_.end() || *it != seq) {
@@ -947,8 +1024,10 @@ Optional<TimeStamp> PacketProtocol::OutstandingMessages::RetransmitDeadline() {
   OVERNET_TRACE(DEBUG) << "OutstandingMessages.RetransmitDeadline: "
                        << OutstandingString();
   for (const auto& outstanding : outstanding_) {
-    if (!outstanding.is_finalized()) {
-      return outstanding.sent + protocol_->RetransmitDelay();
+    if (const auto* sent_packet =
+            std::get_if<OutstandingPacket::Sent>(&outstanding.state)) {
+      return sent_packet->bbr_sent_packet.send_time +
+             protocol_->RetransmitDelay();
     }
   }
   return Nothing;
@@ -964,23 +1043,30 @@ void PacketProtocol::OutstandingMessages::CheckRetransmit(
       protocol_->timer_->Now() - protocol_->RetransmitDelay();
   OVERNET_TRACE(DEBUG) << "OutstandingMessages.CheckRetransmit: nack_before="
                        << nack_before
-                       << " (current_rtt=" << protocol_->CurrentRTT() << ")";
+                       << " current_rtt=" << protocol_->CurrentRTT()
+                       << " outstanding=" << OutstandingString();
   for (size_t i = 0; i < outstanding_.size(); i++) {
     if (outstanding_[i].is_finalized()) {
       OVERNET_TRACE(DEBUG) << "OutstandingMessages.CheckRetransmit: seq "
                            << (send_tip_ + i) << " finalized: STOP";
       break;
     }
-    const auto sent = outstanding_[i].sent;
-    if (sent > nack_before) {
+    if (auto* p =
+            std::get_if<OutstandingPacket::Sent>(&outstanding_[i].state)) {
+      const auto sent = p->bbr_sent_packet.send_time;
+      if (sent > nack_before) {
+        OVERNET_TRACE(DEBUG)
+            << "OutstandingMessages.CheckRetransmit: seq " << (send_tip_ + i)
+            << " sent at " << sent << ": STOP";
+        break;
+      }
       OVERNET_TRACE(DEBUG) << "OutstandingMessages.CheckRetransmit: seq "
                            << (send_tip_ + i) << " sent at " << sent
-                           << ": STOP";
-      break;
+                           << ": NACK";
+      protocol_->state_->connectivity_detection.FailedDelivery();
+      Nack(transaction, send_tip_ + i, TimeDelta::Zero(),
+           Status::Unavailable());
     }
-    OVERNET_TRACE(DEBUG) << "OutstandingMessages.CheckRetransmit: seq "
-                         << (send_tip_ + i) << " sent at " << sent << ": NACK";
-    Nack(transaction, send_tip_ + i, TimeDelta::Zero(), Status::Unavailable());
   }
   ScheduleRetransmit();
 }
@@ -999,6 +1085,32 @@ void PacketProtocol::OutstandingMessages::NackAll(Transaction* transaction) {
     }
     Nack(transaction, i, TimeDelta::Zero(), Status::Cancelled());
   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Connectivity Detection
+
+void PacketProtocol::ConnectivityDetection::FailedDelivery() {
+  if (no_route_timeout_.has_value()) {
+    return;
+  }
+  OVERNET_TRACE(DEBUG) << "ConnectivityDetection: Failed Delivery";
+  no_route_timeout_.Reset(
+      protocol_->timer_, protocol_->timer_->Now() + TimeDelta::FromSeconds(120),
+      [this](const Status& status) {
+        ScopedModule<PacketProtocol> in_pp(protocol_);
+        if (status.is_error()) {
+          OVERNET_TRACE(DEBUG) << "ConnectivityDetection: Timeout " << status;
+          return;
+        }
+        OVERNET_TRACE(DEBUG)
+            << "ConnectivityDetection: Signal loss of connectivity";
+        if (protocol_->state_.has_value()) {
+          protocol_->InTransaction([this](Transaction* transaction) {
+            protocol_->packet_sender_->NoConnectivity();
+          });
+        }
+      });
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1030,19 +1142,42 @@ TimeDelta PacketProtocol::TailLossProbeDelay() const {
   return rtt / kRTTScaling;
 }
 
-PacketProtocol::Codec* PacketProtocol::NullCodec() {
-  class NullCodec final : public Codec {
+PacketProtocol::Codec* PacketProtocol::PlaintextCodec() {
+  class PlaintextCodec final : public Codec {
    public:
-    NullCodec() : Codec(Border::None()) {}
+    PlaintextCodec() : Codec(Border::Prefix(4)) {}
     StatusOr<Slice> Encode(uint64_t seq_idx, Slice src) const override {
-      return src;
+      uint32_t crc =
+          crc32(crc32(0, reinterpret_cast<uint8_t*>(&seq_idx), sizeof(seq_idx)),
+                src.begin(), src.length());
+      OVERNET_TRACE(DEBUG) << "PlaintextCodec Encode: crc=" << crc
+                           << " for seq=" << seq_idx << " slice=" << src;
+      return src.WithPrefix(
+          sizeof(crc), [crc](uint8_t* p) { memcpy(p, &crc, sizeof(crc)); });
     }
     StatusOr<Slice> Decode(uint64_t seq_idx, Slice src) const override {
+      if (src.length() < 4) {
+        return StatusOr<Slice>(StatusCode::INVALID_ARGUMENT,
+                               "Packet too short for crc32");
+      }
+      uint32_t crc_got;
+      memcpy(&crc_got, src.begin(), sizeof(crc_got));
+      src.TrimBegin(sizeof(crc_got));
+      uint32_t crc_want =
+          crc32(crc32(0, reinterpret_cast<uint8_t*>(&seq_idx), sizeof(seq_idx)),
+                src.begin(), src.length());
+      OVERNET_TRACE(DEBUG) << "PlaintextCodec Decode: got=" << crc_got
+                           << " want=" << crc_want << " for seq=" << seq_idx
+                           << " slice=" << src;
+      if (crc_got != crc_want) {
+        return StatusOr<Slice>(StatusCode::INVALID_ARGUMENT,
+                               "Packet CRC mismatch");
+      }
       return src;
     }
   };
-  static NullCodec null_codec;
-  return &null_codec;
+  static PlaintextCodec plaintext_codec;
+  return &plaintext_codec;
 }
 
 }  // namespace overnet

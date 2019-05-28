@@ -8,12 +8,14 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "ascendd"
 
-  sources = [ "ascendd.cc" ]
+  sources = [
+    "ascendd.cc",
+  ]
   deps = [
     "//src/connectivity/overnet/lib/embedded:basic_embedded",
+    "//src/connectivity/overnet/lib/embedded:omdp_nub",
     "//src/connectivity/overnet/lib/embedded:stream_server",
     "//src/connectivity/overnet/lib/embedded:udp_nub",
-    "//src/connectivity/overnet/lib/embedded:omdp_nub",
     "//src/connectivity/overnet/lib/protocol:reliable_framer",
     "//src/connectivity/overnet/lib/protocol:unreliable_framer",
     "//third_party/gflags",

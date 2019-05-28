@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/links/packet_link.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"
@@ -66,6 +67,9 @@ TEST(PacketLink, NoOp) {
   router.RegisterLink(mock_link.MakeLink(&router, NodeId(2), kTestMSS));
 }
 
+static const Slice kSerializedPacket = Slice::FromContainer(
+    {0, 1, 0x02, 0x85, 0x95, 0x10, 0, 6, 0, 1, 1, 7, 8, 9});
+
 TEST(PacketLink, SendOne) {
   TestTimer timer;
   StrictMock<MockPacketLink> mock_link;
@@ -95,7 +99,7 @@ TEST(PacketLink, SendOne) {
   });
   verify_all();
 
-  EXPECT_EQ(Slice::FromContainer({0, 1, 0, 6, 0, 1, 1, 7, 8, 9}), emitted);
+  EXPECT_EQ(kSerializedPacket, emitted);
 }
 
 TEST(PacketLink, RecvOne) {
@@ -120,8 +124,7 @@ TEST(PacketLink, RecvOne) {
           .is_ok());
 
   EXPECT_CALL(mock_stream_handler, HandleMessage(_, _, _));
-  link->Process(timer.Now(),
-                Slice::FromContainer({0, 1, 0, 6, 0, 1, 1, 7, 8, 9}));
+  link->Process(timer.Now(), kSerializedPacket);
 }
 
 }  // namespace packet_link_test

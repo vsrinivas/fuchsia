@@ -52,7 +52,7 @@ void RouterEndpoint::SendGossipTo(NodeId target) {
     return;
   }
   auto con = connection_streams_.find(target);
-  if (con == connection_streams_.end()) {
+  if (con == connection_streams_.end() || con->second.IsClosedForSending()) {
     OVERNET_TRACE(DEBUG) << node_id() << " send gossip to " << target
                          << " [skipped: NO CONNECTION]";
     return;
@@ -114,6 +114,11 @@ void RouterEndpoint::UpdatedDescription() {
         description_timer_.Reset();
         auto description = BuildDescription();
         for (auto& id_conn_pair : connection_streams_) {
+          if (id_conn_pair.second.IsClosedForSending()) {
+            OVERNET_TRACE(DEBUG) << node_id() << " skip sending description to "
+                                 << id_conn_pair.first << ": Closing";
+            continue;
+          }
           OVERNET_TRACE(DEBUG)
               << node_id() << " send description to " << id_conn_pair.first
               << ": " << BuildDescription();

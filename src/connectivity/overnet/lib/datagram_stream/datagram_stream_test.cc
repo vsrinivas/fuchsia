@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/datagram_stream/datagram_stream.h"
+
 #include <memory>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"
@@ -86,6 +88,9 @@ class DGStream : public DatagramStream {
 static const auto kDefaultSliceArgs =
     LazySliceArgs{Border::None(), std::numeric_limits<uint32_t>::max(), false};
 
+const Slice kTestPayload =
+    Slice::FromContainer({0x68, 0xbc, 0x05, 0xe7, 0, 0x80, 1, 0, 1, 2, 3});
+
 TEST(DatagramStream, UnreliableSend) {
   MockLink link;
   StrictMock<MockDoneCB> done_cb;
@@ -115,8 +120,7 @@ TEST(DatagramStream, UnreliableSend) {
       .Push(Slice::FromContainer({1, 2, 3}), Callback<void>::Ignored());
   Mock::VerifyAndClearExpectations(&link);
 
-  EXPECT_EQ(message->make_payload(kDefaultSliceArgs),
-            Slice::FromContainer({0, 0x80, 1, 0, 1, 2, 3}));
+  EXPECT_EQ(message->make_payload(kDefaultSliceArgs), kTestPayload);
   EXPECT_EQ(message->header.src(), NodeId(1));
   EXPECT_EQ(message->header.destinations().size(), size_t(1));
   EXPECT_EQ(message->header.destinations()[0].dst(), NodeId(2));
@@ -158,11 +162,11 @@ TEST(DatagramStream, ReadThenRecv) {
       fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered,
       StreamId(1));
 
-  router->Forward(Message{
-      std::move(RoutableMessage(NodeId(2)).AddDestination(
-          NodeId(1), StreamId(1), SeqNum(1, 1))),
-      ForwardingPayloadFactory(Slice::FromContainer({0, 0x80, 1, 0, 1, 2, 3})),
-      TimeStamp::AfterEpoch(TimeDelta::FromMilliseconds(123))});
+  router->Forward(
+      Message{std::move(RoutableMessage(NodeId(2)).AddDestination(
+                  NodeId(1), StreamId(1), SeqNum(1, 1))),
+              ForwardingPayloadFactory(kTestPayload),
+              TimeStamp::AfterEpoch(TimeDelta::FromMilliseconds(123))});
 
   DatagramStream::ReceiveOp recv_op(ds1.get());
 
@@ -214,11 +218,11 @@ TEST(DatagramStream, RecvThenRead) {
   EXPECT_CALL(pull_cb, Callback(Property(
                            &StatusOr<Optional<Slice>>::get,
                            Pointee(Pointee(Slice::FromContainer({1, 2, 3}))))));
-  router->Forward(Message{
-      std::move(RoutableMessage(NodeId(2)).AddDestination(
-          NodeId(1), StreamId(1), SeqNum(1, 1))),
-      ForwardingPayloadFactory(Slice::FromContainer({0, 0x80, 1, 0, 1, 2, 3})),
-      TimeStamp::AfterEpoch(TimeDelta::FromMilliseconds(123))});
+  router->Forward(
+      Message{std::move(RoutableMessage(NodeId(2)).AddDestination(
+                  NodeId(1), StreamId(1), SeqNum(1, 1))),
+              ForwardingPayloadFactory(kTestPayload),
+              TimeStamp::AfterEpoch(TimeDelta::FromMilliseconds(123))});
 
   expect_all_done();
 

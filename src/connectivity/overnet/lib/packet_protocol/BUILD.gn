@@ -28,9 +28,9 @@ source_set("aead_codec") {
     "aead_codec.h",
   ]
   public_deps = [
-    "//third_party/boringssl:crypto",
     ":packet_protocol",
     "//src/connectivity/overnet/lib/protocol:serialization_helpers",
+    "//third_party/boringssl:crypto",
   ]
 }
 
@@ -92,13 +92,14 @@ source_set("packet_protocol") {
     "//src/connectivity/overnet/lib/labels:seq_num",
     "//src/connectivity/overnet/lib/protocol:ack_frame",
     "//src/connectivity/overnet/lib/protocol:varint",
+    "//src/connectivity/overnet/lib/stats:link",
     "//src/connectivity/overnet/lib/vocabulary:callback",
     "//src/connectivity/overnet/lib/vocabulary:lazy_slice",
     "//src/connectivity/overnet/lib/vocabulary:once_fn",
     "//src/connectivity/overnet/lib/vocabulary:optional",
     "//src/connectivity/overnet/lib/vocabulary:slice",
     "//src/connectivity/overnet/lib/vocabulary:status",
-    "//src/connectivity/overnet/lib/stats:link",
+    "//third_party/zlib:zlib_static",
     "//zircon/public/lib/fit",
   ]
 }

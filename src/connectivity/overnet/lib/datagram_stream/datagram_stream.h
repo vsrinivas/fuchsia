@@ -6,6 +6,7 @@
 
 #include "src/connectivity/overnet/lib/datagram_stream/linearizer.h"
 #include "src/connectivity/overnet/lib/datagram_stream/receive_mode.h"
+#include "src/connectivity/overnet/lib/datagram_stream/stream_state.h"
 #include "src/connectivity/overnet/lib/environment/timer.h"
 #include "src/connectivity/overnet/lib/environment/trace.h"
 #include "src/connectivity/overnet/lib/labels/seq_num.h"
@@ -14,8 +15,6 @@
 #include "src/connectivity/overnet/lib/stats/stream.h"
 #include "src/connectivity/overnet/lib/vocabulary/internal_list.h"
 #include "src/connectivity/overnet/lib/vocabulary/slice.h"
-
-//#define OVERNET_TRACE_STATEREF_REFCOUNT
 
 namespace overnet {
 
@@ -130,6 +129,7 @@ class MessageFragment {
 };
 
 class DatagramStream : private Router::StreamHandler,
+                       private StreamStateListener,
                        private PacketProtocol::PacketSender {
   class IncomingMessage {
    public:
@@ -190,79 +190,34 @@ class DatagramStream : private Router::StreamHandler,
   using SendStateMap = std::unordered_map<uint64_t, SendState>;
   using SendStateIt = SendStateMap::iterator;
 
-  class StateRef {
-   public:
-    StateRef() = delete;
-    StateRef(DatagramStream* stream, SendStateIt op)
-        : stream_(stream), op_(op) {
-      ScopedModule<DatagramStream> in_dgs(stream_);
-#ifdef OVERNET_TRACE_STATEREF_REFCOUNT
-      OVERNET_TRACE(DEBUG) << "StateRef:" << op_->first << " ADD "
-                           << op_->second.refs << " -> "
-                           << (op_->second.refs + 1);
-#endif
-      op->second.refs++;
-    }
-    StateRef(const StateRef& other) : stream_(other.stream_), op_(other.op_) {
-      ScopedModule<DatagramStream> in_dgs(stream_);
-#ifdef OVERNET_TRACE_STATEREF_REFCOUNT
-      OVERNET_TRACE(DEBUG) << "StateRef:" << op_->first << " ADD "
-                           << op_->second.refs << " -> "
-                           << (op_->second.refs + 1);
-#endif
-      op_->second.refs++;
-    }
-    StateRef& operator=(StateRef other) {
-      other.Swap(this);
-      return *this;
-    }
-    void Swap(StateRef* other) {
-      std::swap(op_, other->op_);
-      std::swap(stream_, other->stream_);
-    }
-
-    ~StateRef() {
-      ScopedModule<DatagramStream> in_dgs(stream_);
-#ifdef OVERNET_TRACE_STATEREF_REFCOUNT
-      OVERNET_TRACE(DEBUG) << "StateRef:" << op_->first << " DEL "
-                           << op_->second.refs << " -> "
-                           << (op_->second.refs - 1);
-#endif
-      if (0 == --op_->second.refs) {
-        stream_->message_state_.erase(op_);
-        stream_->MaybeFinishClosing();
-      }
-    }
-
-    void SetClosed(const Status& status);
-
-    DatagramStream* stream() const { return stream_; }
-    SendState::State state() const { return op_->second.state; }
-    void set_state(SendState::State state) { op_->second.state = state; }
-    uint64_t message_id() const { return op_->first; }
-
-   private:
-    DatagramStream* stream_;
-    SendStateIt op_;
-  };
-
   // Keeps a stream from quiescing while the ref is not abandoned.
   class StreamRef {
    public:
     StreamRef(DatagramStream* stream) : stream_(stream) {
       assert(stream_);
-      stream_->stream_refs_++;
+      stream_->stream_state_.BeginOp();
     }
-    StreamRef(const StreamRef&) = delete;
-    StreamRef& operator=(const StreamRef&) = delete;
+    StreamRef(const StreamRef& other) : stream_(other.stream_) {
+      stream_->stream_state_.BeginOp();
+    }
+    StreamRef& operator=(const StreamRef& other) {
+      StreamRef copy(other);
+      Swap(&copy);
+      return *this;
+    }
+    StreamRef(StreamRef&& other) : stream_(other.stream_) {
+      other.stream_ = nullptr;
+    }
+    StreamRef& operator=(StreamRef&& other) {
+      std::swap(stream_, other.stream_);
+      return *this;
+    }
+    void Swap(StreamRef* other) { std::swap(stream_, other->stream_); }
     ~StreamRef() { Abandon(); }
     void Abandon() {
       if (auto* stream = stream_) {
         stream_ = nullptr;
-        stream->stream_refs_--;
-        if (stream->stream_refs_ == 0) {
-          stream->Quiesce();
-        }
+        stream->stream_state_.EndOp();
       }
     }
     DatagramStream* get() const {
@@ -273,9 +228,76 @@ class DatagramStream : private Router::StreamHandler,
       assert(stream_);
       return stream_;
     }
+    bool has_value() const { return stream_ != nullptr; }
 
    private:
     DatagramStream* stream_;
+  };
+
+  class SendStateRef {
+   public:
+    SendStateRef() = delete;
+    SendStateRef(DatagramStream* stream, SendStateIt op)
+        : stream_(stream), op_(op) {
+      stream_->stream_state_.BeginSend();
+      op_->second.refs++;
+    }
+    SendStateRef(const SendStateRef& other)
+        : stream_(other.stream_), op_(other.op_) {
+      stream_->stream_state_.BeginSend();
+      op_->second.refs++;
+    }
+    SendStateRef& operator=(const SendStateRef& other) {
+      SendStateRef copy(other);
+      Swap(&copy);
+      return *this;
+    }
+    SendStateRef(SendStateRef&& other)
+        : stream_(other.stream_), op_(other.op_) {
+      other.stream_ = nullptr;
+    }
+    SendStateRef& operator=(SendStateRef&& other) {
+      SendStateRef moved(std::move(other));
+      Swap(&moved);
+      return *this;
+    }
+
+    void Swap(SendStateRef* other) {
+      std::swap(op_, other->op_);
+      std::swap(stream_, other->stream_);
+    }
+
+    ~SendStateRef() {
+      if (stream_ != nullptr) {
+        if (0 == --op_->second.refs) {
+          stream_->message_state_.erase(op_);
+        }
+        stream_->stream_state_.EndSend();
+      }
+    }
+
+    void SetClosed(const Status& status);
+
+    DatagramStream* stream() const {
+      assert(stream_ != nullptr);
+      return stream_;
+    }
+    SendState::State state() const {
+      assert(stream_ != nullptr);
+      return op_->second.state;
+    }
+    void set_state(SendState::State state) {
+      assert(stream_ != nullptr);
+      op_->second.state = state;
+    }
+    uint64_t message_id() const {
+      assert(stream_ != nullptr);
+      return op_->first;
+    }
+
+   private:
+    DatagramStream* stream_;
+    SendStateIt op_;
   };
 
  public:
@@ -300,7 +322,7 @@ class DatagramStream : private Router::StreamHandler,
     Close(Status::Cancelled(), std::move(quiesced));
   }
 
-  class SendOp final : private StateRef {
+  class SendOp final : private SendStateRef {
    public:
     inline static constexpr auto kModule = Module::DATAGRAM_STREAM_SEND_OP;
 
@@ -351,6 +373,8 @@ class DatagramStream : private Router::StreamHandler,
   const LinkStats* link_stats() const { return packet_protocol_.stats(); }
   const StreamStats* stream_stats() const { return &stream_stats_; }
 
+  bool IsClosedForSending() const { return stream_state_.IsClosedForSending(); }
+
  protected:
   // Must be called by derived classes, after construction and before any other
   // methods.
@@ -359,20 +383,21 @@ class DatagramStream : private Router::StreamHandler,
  private:
   void HandleMessage(SeqNum seq, TimeStamp received, Slice data) override final;
   void SendPacket(SeqNum seq, LazySlice packet) override final;
-  void SendCloseAndFlushQuiesced(int retry_number);
-  void FinishClosing();
-  void MaybeFinishClosing();
+  void NoConnectivity() override final;
 
   void MaybeContinueReceive();
 
-  void SendChunk(StateRef state, Chunk chunk, Callback<void> started);
+  void SendChunk(SendStateRef state, Chunk chunk, Callback<void> started);
   void SendNextChunk();
-  void SendError(StateRef state, const Status& status);
-  void CompleteReliable(const Status& status, StateRef state, Chunk chunk);
-  void CompleteUnreliable(const Status& status, StateRef state);
-  void CancelReceives();
+  void SendMessageError(SendStateRef state, const Status& status);
+  void CompleteReliable(const Status& status, SendStateRef state, Chunk chunk);
+  void CompleteUnreliable(const Status& status, SendStateRef state);
   std::string PendingSendString();
-  void Quiesce();
+
+  // StreamStateListener
+  void SendClose() override final;
+  void StreamClosed() override final;
+  void StopReading(const Status& status) override final;
 
   Timer* const timer_;
   Router* const router_;
@@ -380,85 +405,17 @@ class DatagramStream : private Router::StreamHandler,
   const StreamId stream_id_;
   const fuchsia::overnet::protocol::ReliabilityAndOrdering
       reliability_and_ordering_;
-  // Number of StreamRef objects pointing at this stream.
-  int stream_refs_ = 0;
   uint64_t next_message_id_ = 1;
   uint64_t largest_incoming_message_id_seen_ = 0;
   receive_mode::ParameterizedReceiveMode receive_mode_;
   PacketProtocol packet_protocol_;
   StreamStats stream_stats_;
+  StreamState stream_state_;
   StreamRef close_ref_{this};  // Keep stream alive until closed
-
-  enum class CloseState : uint8_t {
-    OPEN,
-    LOCAL_CLOSE_REQUESTED_OK,
-    LOCAL_CLOSE_REQUESTED_WITH_ERROR,
-    REMOTE_CLOSED,
-    DRAINING_LOCAL_CLOSED_OK,
-    CLOSING_PROTOCOL,
-    CLOSED,
-    QUIESCED,
-  };
-
-  friend inline std::ostream& operator<<(std::ostream& out, CloseState state) {
-    switch (state) {
-      case CloseState::OPEN:
-        return out << "OPEN";
-      case CloseState::LOCAL_CLOSE_REQUESTED_OK:
-        return out << "LOCAL_CLOSE_REQUESTED_OK";
-      case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
-        return out << "LOCAL_CLOSE_REQUESTED_WITH_ERROR";
-      case CloseState::REMOTE_CLOSED:
-        return out << "REMOTE_CLOSED";
-      case CloseState::DRAINING_LOCAL_CLOSED_OK:
-        return out << "DRAINING_LOCAL_CLOSED_OK";
-      case CloseState::CLOSING_PROTOCOL:
-        return out << "CLOSING_PROTOCOL";
-      case CloseState::CLOSED:
-        return out << "CLOSED";
-      case CloseState::QUIESCED:
-        return out << "QUIESCED";
-    }
-    return out << "UNKNOWN";
-  }
-
-  bool IsClosedForSending() {
-    switch (close_state_) {
-      case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
-      case CloseState::REMOTE_CLOSED:
-      case CloseState::CLOSED:
-      case CloseState::QUIESCED:
-      case CloseState::CLOSING_PROTOCOL:
-        return true;
-      case CloseState::DRAINING_LOCAL_CLOSED_OK:
-      case CloseState::LOCAL_CLOSE_REQUESTED_OK:
-      case CloseState::OPEN:
-        return false;
-    }
-  }
-
-  CloseState close_state_ = CloseState::OPEN;
-  Optional<Status> local_close_status_;
-  struct RequestedClose {
-    uint64_t last_message_id;
-    Status status;
-    bool operator==(const RequestedClose& other) const {
-      return last_message_id == other.last_message_id &&
-             status.code() == other.status.code();
-    }
-    bool operator!=(const RequestedClose& other) const {
-      return !operator==(other);
-    }
-  };
-  friend std::ostream& operator<<(std::ostream& out, const RequestedClose& rc) {
-    return out << "{last_msg=" << rc.last_message_id << "; status=" << rc.status
-               << "}";
-  }
-  Optional<RequestedClose> requested_close_;
 
   struct ChunkAndState {
     Chunk chunk;
-    StateRef state;
+    SendStateRef state;
   };
 
   struct PendingSend {
@@ -476,8 +433,6 @@ class DatagramStream : private Router::StreamHandler,
   InternalList<IncomingMessage, &IncomingMessage::incoming_link>
       unclaimed_messages_;
   InternalList<ReceiveOp, &ReceiveOp::waiting_link_> unclaimed_receives_;
-
-  std::vector<Callback<void>> on_quiesced_;
 };
 
 }  // namespace overnet

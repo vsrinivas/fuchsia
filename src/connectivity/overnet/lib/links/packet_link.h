@@ -31,6 +31,7 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
   void SchedulePacket();
   void SendPacket(SeqNum seq, LazySlice packet) override final;
   Status ProcessBody(TimeStamp received, Slice packet);
+  void NoConnectivity() override final;
 
   Router* const router_;
   Timer* const timer_;
