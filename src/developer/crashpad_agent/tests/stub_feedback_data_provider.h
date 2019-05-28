@@ -90,5 +90,15 @@ class StubFeedbackDataProviderReturnsNoData : public StubFeedbackDataProvider {
   void GetData(GetDataCallback callback) override;
 };
 
+class StubFeedbackDataProviderNeverReturning : public StubFeedbackDataProvider {
+ public:
+  StubFeedbackDataProviderNeverReturning()
+      : StubFeedbackDataProvider(
+            /*annotation_keys=*/{},
+            /*attachment_keys=*/{}) {}
+
+  void GetData(GetDataCallback callback) override;
+};
+
 }  // namespace crash
 }  // namespace fuchsia

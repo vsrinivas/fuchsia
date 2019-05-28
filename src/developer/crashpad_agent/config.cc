@@ -31,12 +31,16 @@ const char kSchema[] = R"({
     },
     "crash_server_url": {
       "type": "string"
+    },
+    "feedback_data_collection_timeout_in_milliseconds": {
+      "type": "integer"
     }
   },
   "required": [
     "local_crashpad_database_path",
     "max_crashpad_database_size_in_kb",
-    "enable_upload_to_crash_server"
+    "enable_upload_to_crash_server",
+    "feedback_data_collection_timeout_in_milliseconds"
   ],
   "additionalProperties": false
 })";
@@ -45,6 +49,8 @@ const char kLocalCrashpadDatabasePathKey[] = "local_crashpad_database_path";
 const char kMaxDatabaseSizeInKbKey[] = "max_crashpad_database_size_in_kb";
 const char kEnableUploadToCrashServerKey[] = "enable_upload_to_crash_server";
 const char kCrashServerUrlKey[] = "crash_server_url";
+const char kFeedbackDataCollectionTimeoutInSecondsKey[] =
+    "feedback_data_collection_timeout_in_milliseconds";
 
 bool CheckAgainstSchema(rapidjson::Document& doc) {
   // Check that the schema is actually valid.
@@ -92,14 +98,16 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
 
   // We use a local config to only set the out argument after all the checks.
   Config local_config;
-  // It is safe to directly access these three fields as the keys are marked as
-  // required and we have checked the config against the schema.
+  // It is safe to directly access these fields for which the keys are marked as
+  // required as we have checked the config against the schema.
   local_config.local_crashpad_database_path =
       doc[kLocalCrashpadDatabasePathKey].GetString();
   local_config.max_crashpad_database_size_in_kb =
       doc[kMaxDatabaseSizeInKbKey].GetUint();
   local_config.enable_upload_to_crash_server =
       doc[kEnableUploadToCrashServerKey].GetBool();
+  local_config.feedback_data_collection_timeout_in_milliseconds =
+      doc[kFeedbackDataCollectionTimeoutInSecondsKey].GetUint();
 
   if (local_config.enable_upload_to_crash_server) {
     if (!doc.HasMember(kCrashServerUrlKey)) {

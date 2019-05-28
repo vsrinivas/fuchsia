@@ -88,5 +88,8 @@ void StubFeedbackDataProviderReturnsNoData::GetData(GetDataCallback callback) {
   callback(std::move(result));
 }
 
+void StubFeedbackDataProviderNeverReturning::GetData(GetDataCallback callback) {
+}
+
 }  // namespace crash
 }  // namespace fuchsia

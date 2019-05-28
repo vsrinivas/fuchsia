@@ -93,6 +93,7 @@ class CrashpadAgent : public Analyzer {
   // crashpad::CrashReportDatabase::Report::creation_time.
   void PruneDatabase();
 
+  async_dispatcher_t* dispatcher_;
   async::Executor executor_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   const Config config_;

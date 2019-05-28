@@ -31,6 +31,10 @@ struct Config {
   // We use a std::unique_ptr to set it only when relevant, i.e. when
   // |enable_upload_to_crash_server| is set.
   std::unique_ptr<std::string> crash_server_url;
+
+  // Maximum time (in milliseconds) spent collecting feedback data to attach to
+  // crash reports.
+  uint64_t feedback_data_collection_timeout_in_milliseconds;
 };
 
 // Parses the JSON config at |filepath| as |config|.

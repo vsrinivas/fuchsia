@@ -88,6 +88,7 @@ source_set("src") {
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
   ]

@@ -47,6 +47,10 @@ namespace {
 // For now, a single report should take up to 1MB.
 constexpr uint64_t kMaxTotalReportSizeInKb = 1024u;
 
+// A full second should be enough for the stub feedback data provider to return
+// its result.
+constexpr uint64_t kFeedbackDataCollectionTimeoutInMillisecondsKey = 1000u;
+
 constexpr bool alwaysReturnSuccess = true;
 constexpr bool alwaysReturnFailure = false;
 
@@ -64,7 +68,9 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
                       kMaxTotalReportSizeInKb,
                       /*enable_upload_to_crash_server=*/true,
                       /*crash_server_url=*/
-                      std::make_unique<std::string>(kStubCrashServerUrl)},
+                      std::make_unique<std::string>(kStubCrashServerUrl),
+                      /*feedback_data_collection_timeout_in_milliseconds=*/
+                      kFeedbackDataCollectionTimeoutInMillisecondsKey},
                std::make_unique<StubCrashServer>(alwaysReturnSuccess));
   }
 
@@ -370,7 +376,9 @@ TEST_F(CrashpadAgentTest, PruneDatabase_ZeroSize) {
   ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
                     /*max_crashpad_database_size_in_kb=*/0u,
                     /*enable_upload_to_crash_server=*/false,
-                    /*crash_server_url=*/nullptr});
+                    /*crash_server_url=*/nullptr,
+                    /*feedback_data_collection_timeout_in_milliseconds=*/
+                    kFeedbackDataCollectionTimeoutInMillisecondsKey});
 
   // We generate a crash report.
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
@@ -398,7 +406,9 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
              /*max_crashpad_database_size_in_kb=*/kMaxTotalReportSizeInKb +
                  crash_log_size_in_kb,
              /*enable_upload_to_crash_server=*/false,
-             /*crash_server_url=*/nullptr});
+             /*crash_server_url=*/nullptr,
+             /*feedback_data_collection_timeout_in_milliseconds=*/
+             kFeedbackDataCollectionTimeoutInMillisecondsKey});
 
   // We generate a first crash report.
   EXPECT_TRUE(RunOneCrashAnalysis(large_string).is_response());
@@ -432,7 +442,9 @@ TEST_F(CrashpadAgentTest, AnalysisFailOnFailedUpload) {
                     kMaxTotalReportSizeInKb,
                     /*enable_upload_to_crash_server=*/true,
                     /*crash_server_url=*/
-                    std::make_unique<std::string>(kStubCrashServerUrl)},
+                    std::make_unique<std::string>(kStubCrashServerUrl),
+                    /*feedback_data_collection_timeout_in_milliseconds=*/
+                    kFeedbackDataCollectionTimeoutInMillisecondsKey},
              std::make_unique<StubCrashServer>(alwaysReturnFailure));
 
   EXPECT_TRUE(RunOneCrashAnalysis().is_err());
@@ -444,7 +456,9 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoUpload) {
                     /*max_crashpad_database_size_in_kb=*/
                     kMaxTotalReportSizeInKb,
                     /*enable_upload_to_crash_server=*/false,
-                    /*crash_server_url=*/nullptr});
+                    /*crash_server_url=*/nullptr,
+                    /*feedback_data_collection_timeout_in_milliseconds=*/
+                    kFeedbackDataCollectionTimeoutInMillisecondsKey});
 
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
 }
@@ -477,6 +491,27 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackDataProvider) {
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider
   // service to connect to.
   ResetFeedbackDataProvider(nullptr);
+  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  // The only attachment should be the one from the crash analysis as no
+  // feedback data will be retrieved.
+  CheckAttachments({"kernel_panic_crash_log"});
+}
+
+TEST_F(CrashpadAgentTest, AnalysisSucceedOnFeedbackDataProviderTakingTooLong) {
+  ResetFeedbackDataProvider(
+      std::make_unique<StubFeedbackDataProviderNeverReturning>());
+  // We use a timeout of 1ms for the feedback data collection as the test will
+  // need to wait that long before skipping feedback data collection.
+  ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
+                    /*max_crashpad_database_size_in_kb=*/
+                    kMaxTotalReportSizeInKb,
+                    /*enable_upload_to_crash_server=*/true,
+                    /*crash_server_url=*/
+                    std::make_unique<std::string>(kStubCrashServerUrl),
+                    /*feedback_data_collection_timeout_in_milliseconds=*/
+                    1u},
+             std::make_unique<StubCrashServer>(alwaysReturnSuccess));
+
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
   // The only attachment should be the one from the crash analysis as no
   // feedback data will be retrieved.

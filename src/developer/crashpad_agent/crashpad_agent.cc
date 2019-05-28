@@ -9,6 +9,7 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <zircon/errors.h>
@@ -131,11 +132,13 @@ CrashpadAgent::CrashpadAgent(
     std::shared_ptr<::sys::ServiceDirectory> services, Config config,
     std::unique_ptr<crashpad::CrashReportDatabase> database,
     std::unique_ptr<CrashServer> crash_server)
-    : executor_(dispatcher),
+    : dispatcher_(dispatcher),
+      executor_(dispatcher),
       services_(services),
       config_(std::move(config)),
       database_(std::move(database)),
       crash_server_(std::move(crash_server)) {
+  FXL_DCHECK(dispatcher_);
   FXL_DCHECK(services_);
   FXL_DCHECK(database_);
   if (config.enable_upload_to_crash_server) {
@@ -227,9 +230,11 @@ void CrashpadAgent::OnKernelPanicCrashLog(
 fit::promise<Data> CrashpadAgent::GetFeedbackData() {
   const uint64_t id = next_feedback_data_provider_id_++;
   feedback_data_providers_[id] =
-      std::make_unique<FeedbackDataProvider>(services_);
-  return feedback_data_providers_[id]->GetData().then(
-      [this, id](fit::result<Data>& result) {
+      std::make_unique<FeedbackDataProvider>(dispatcher_, services_);
+  return feedback_data_providers_[id]
+      ->GetData(
+          zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
+      .then([this, id](fit::result<Data>& result) {
         // We close the connection to the feedback data provider and then
         // forward the result.
         if (feedback_data_providers_.erase(id) == 0) {
