@@ -466,7 +466,13 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
     isp_device->InitIsp();
     //isp_device->StartStreaming();
 
-    status = isp_device->DdkAdd("arm-isp");
+    zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_ARM},
+        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_ISP},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ARM_MALI_IV009},
+    };
+
+    status = isp_device->DdkAdd("arm-isp", 0, props, countof(props));
     if (status != ZX_OK) {
         zxlogf(ERROR, "arm-isp: Could not create arm-isp device: %d\n", status);
         return status;
@@ -478,15 +484,6 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
     __UNUSED auto ptr = isp_device.release();
 
     return status;
-}
-
-zx_status_t ArmIspDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    zx_status_t status = fuchsia_hardware_camera_Control_try_dispatch(this, txn, msg, &control_ops);
-    if (status != ZX_ERR_NOT_SUPPORTED) {
-        return status;
-    }
-
-    return fuchsia_hardware_camera_Stream_try_dispatch(this, txn, msg, &stream_ops);
 }
 
 zx_status_t ArmIspDevice::StartStreaming() {
@@ -517,22 +514,10 @@ zx_status_t ArmIspDevice::StopStreaming() {
     return SetPort(kSafeStop);
 }
 
-zx_status_t ArmIspDevice::ReleaseFrame(uint32_t buffer_id) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t ArmIspDevice::GetFormats(uint32_t index, fidl_txn_t* txn) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t ArmIspDevice::CreateStream(const fuchsia_sysmem_BufferCollectionInfo* buffer_collection,
-                                       const fuchsia_hardware_camera_FrameRate* rate,
-                                       zx_handle_t stream,
-                                       zx_handle_t stream_token) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t ArmIspDevice::GetDeviceInfo(fidl_txn_t* txn) {
+zx_status_t ArmIspDevice::IspCreateInputStream(const buffer_collection_info_t* buffer_collection,
+                                               const frame_rate_t* rate,
+                                               const input_stream_callback_t* stream,
+                                               input_stream_protocol_t* out_s) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
