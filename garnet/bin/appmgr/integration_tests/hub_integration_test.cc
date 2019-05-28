@@ -4,6 +4,10 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/async_promise/executor.h>
+#include <lib/inspect/query/discover.h>
+#include <lib/inspect/query/read.h>
+#include <lib/inspect/testing/inspect.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/strings/concatenate.h>
@@ -13,9 +17,12 @@
 #include "garnet/bin/sysmgr/config.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "lib/inspect/query/location.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
+
+using namespace inspect::testing;
 
 namespace component {
 namespace {
@@ -150,6 +157,52 @@ TEST_F(HubTest, SystemObjects) {
   // test that we can see system objects
   RunComponent(nested_env->launcher_ptr(), glob_url,
                {"/hub/c/glob.cmx/*/system_objects"}, 0);
+}
+
+TEST_F(HubTest, SystemObjectsThreads) {
+  std::string url =
+      "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/"
+      "appmgr_integration_tests_inspect_test_app.cmx";
+
+  // TODO(crjohns): Figure out how to retrieve the koid of a started
+  // environment.
+  auto env_name = fxl::StringPrintf("test-%lu", time(NULL));
+
+  auto nested_env = CreateNewEnclosingEnvironment(env_name, CreateServices());
+  WaitForEnclosingEnvToStart(nested_env.get());
+
+  fuchsia::sys::ComponentControllerPtr controller =
+      nested_env->CreateComponentFromUrl(url);
+  bool ready = false;
+  controller.events().OnDirectoryReady = [&] { ready = true; };
+  RunLoopUntil([&] { return ready; });
+
+  auto paths = inspect::SyncSearchGlobs({fxl::StringPrintf(
+      "/hub/r/%s/*/c/appmgr_integration_tests_inspect_test_app.cmx/*/"
+      "system_objects/*",
+      env_name.c_str())});
+
+  ASSERT_EQ(1U, paths.size());
+
+  auto read = inspect::ReadLocation(paths[0]);
+  async::Executor executor_(dispatcher());
+
+  fit::result<inspect::Source, std::string> result;
+  executor_.schedule_task(
+      read.then([&](fit::result<inspect::Source, std::string>& res) {
+        result = std::move(res);
+      }));
+
+  RunLoopUntil([&] { return !!result; });
+
+  ASSERT_TRUE(result.is_ok()) << result.take_error();
+
+  auto* stacks =
+      result.value().GetHierarchy().GetByPath({"threads", "all_thread_stacks"});
+  ASSERT_NE(nullptr, stacks);
+  EXPECT_THAT(*stacks,
+              NodeMatches(PropertyList(ElementsAre(StringPropertyIs(
+                  "stacks", "\nERROR (CF-812): Full thread dump disabled")))));
 }
 
 }  // namespace

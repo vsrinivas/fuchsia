@@ -65,6 +65,9 @@ executable("hub_tests") {
 
   deps = [
     "//garnet/bin/sysmgr:lib",
+    "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/inspect/query",
+    "//garnet/public/lib/inspect/testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
@@ -78,6 +81,20 @@ test_package("appmgr_integration_tests") {
   deps = [
     ":hub_tests",
     ":realm_tests",
+    "//garnet/bin/appmgr/integration_tests/inspect:bin-vmo",
+  ]
+
+  binaries = [
+    {
+      name = "inspect_vmo_test_app"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("inspect/meta/inspect_vmo_test_app.cmx")
+      dest = "appmgr_integration_tests_inspect_test_app.cmx"
+    },
   ]
 
   tests = [
