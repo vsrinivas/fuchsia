@@ -8,7 +8,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform, Process, SocketException;
+import 'dart:io' show Platform, Process, ProcessStartMode, SocketException;
 
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
@@ -27,14 +27,16 @@ class Sl4f {
   static const _sl4fComponentName = 'sl4f.cmx';
 
   /// Authority (IP, hostname, etc.) of the device under test.
-  String target;
+  final String target;
 
   /// Path to an SSH key file. For in-tree Fuchsia development, this can be
   /// the resolved path of `//.ssh/pkey`.
-  String sshKeyPath;
+  final String sshKeyPath;
 
-  Sl4f(this.target, this.sshKeyPath) {
-    _log.info('Target device: $target');
+  Sl4f(this.target, this.sshKeyPath)
+      : assert(target != null && target.isNotEmpty),
+        assert(sshKeyPath != null && sshKeyPath.isNotEmpty) {
+    _log..info('Target device: $target')..info('SSH key path: $sshKeyPath');
   }
 
   /// Constructs an SL4F client from the `FUCHSIA_IPV4_ADDR` and
@@ -51,6 +53,9 @@ class Sl4f {
   }
 
   /// Sends a JSON-RPC request to SL4F.
+  ///
+  /// Throws a [JsonRpcException] if the SL4F server replied with a non-null
+  /// error string.
   Future<dynamic> request(String method, [dynamic params]) async {
     // Although params is optional, this will pass a null params if it is
     // omitted. This is actually required by our SL4F server (although it is
@@ -74,7 +79,7 @@ class Sl4f {
   ///
   /// It will attempt to connect [tries] times, waiting at least [delay]
   /// between each attempt.
-  /// Throws a StateError if after this is ran SL4F has not started.
+  /// Throws a [Sl4fException] if after this SL4F failed to start.
   Future<void> startServer(
       {int tries = 150, Duration delay = const Duration(seconds: 1)}) async {
     if (tries <= 0) {
@@ -119,11 +124,33 @@ class Sl4f {
     }
   }
 
+  /// Starts an ssh [Process], sending [cmd] to the target using ssh.
+  Future<Process> sshProcess(String cmd,
+      {ProcessStartMode mode = ProcessStartMode.normal}) {
+    _log.fine('Running over ssh: $cmd');
+    return Process.start(
+        'ssh',
+        [
+          // Private key file path.
+          '-i', sshKeyPath,
+          // Don't check known_hosts.
+          '-o', 'UserKnownHostsFile=/dev/null',
+          // Auto add the fingerprint of remote host.
+          '-o', 'StrictHostKeyChecking=no',
+          // Timeout to connect, keeping it short makes the logs more sensical.
+          '-o', 'ConnectTimeout=2',
+          '$_sshUser@$target',
+          cmd
+        ],
+        // If not run in a shell it doesn't seem like the PATH is searched.
+        runInShell: true,
+        mode: mode);
+  }
+
   /// Runs the command given by [cmd] on the target using ssh.
   ///
   /// It can optionally send input via [stdin].
   Future<bool> ssh(String cmd, {String stdin}) async {
-    _log.fine('Running over ssh: $cmd');
     final process = await sshProcess(cmd);
     if (stdin != null) {
       process.stdin.write(stdin);
@@ -136,6 +163,14 @@ class Sl4f {
         ..warning(await process.stderr.transform(utf8.decoder).join());
       return false;
     }
+
+    // We must read all data otherwise the program might hang.
+    await Future.wait([
+      process.stdin.close(),
+      process.stdout.drain(),
+      process.stderr.drain()
+    ]);
+
     return true;
   }
 
@@ -200,24 +235,6 @@ class Sl4f {
       return null;
     }
     return hubEntries;
-  }
-
-  /// Starts an ssh process, sending [cmd] to the target using ssh.
-  Future<Process> sshProcess(String cmd) {
-    return Process.start(
-        'ssh',
-        [
-          '-i',
-          sshKeyPath,
-          '-o',
-          'UserKnownHostsFile=/dev/null',
-          '-o',
-          'StrictHostKeyChecking=no',
-          '$_sshUser@$target',
-          cmd
-        ],
-        // If not run in a shell it doesn't seem like the PATH is searched.
-        runInShell: true);
   }
 
   /// Restarts the device under test.
