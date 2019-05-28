@@ -7,7 +7,7 @@ This document describes the directory structure of this repository.
 ## Common parts
 
 Garnet follows the common aspects of layer repository structure defined in
-[Layer repository structure](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/source_code/layer_repository_structure.md).
+[Layer repository structure](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/source_code/layout.md).
 
 This file documents the Garnet-specific pieces.
 
