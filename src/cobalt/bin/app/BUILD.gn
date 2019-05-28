@@ -62,6 +62,8 @@ executable("app") {
 
   deps = [
     ":lib",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
   ]
 }
 

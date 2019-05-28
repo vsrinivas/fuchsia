@@ -1,5 +1,7 @@
 #include "src/cobalt/bin/app/logger_impl.h"
 
+#include <trace/event.h>
+
 #include "src/cobalt/bin/app/utils.h"
 
 namespace cobalt {
@@ -17,6 +19,7 @@ LoggerImpl::LoggerImpl(std::unique_ptr<logger::ProjectContext> project_context,
 void LoggerImpl::LogEvent(
     uint32_t metric_id, uint32_t event_code,
     fuchsia::cobalt::LoggerBase::LogEventCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogEvent");
   callback(ToCobaltStatus(logger_.LogEvent(metric_id, event_code)));
 }
 
@@ -24,6 +27,7 @@ void LoggerImpl::LogEventCount(
     uint32_t metric_id, uint32_t event_code, std::string component,
     int64_t period_duration_micros, int64_t count,
     fuchsia::cobalt::LoggerBase::LogEventCountCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogEventCount");
   callback(ToCobaltStatus(logger_.LogEventCount(
       metric_id, event_code, component, period_duration_micros, count)));
 }
@@ -32,6 +36,7 @@ void LoggerImpl::LogElapsedTime(
     uint32_t metric_id, uint32_t event_code, std::string component,
     int64_t elapsed_micros,
     fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogElapsedTime");
   callback(ToCobaltStatus(logger_.LogElapsedTime(metric_id, event_code,
                                                  component, elapsed_micros)));
 }
@@ -39,6 +44,7 @@ void LoggerImpl::LogElapsedTime(
 void LoggerImpl::LogFrameRate(
     uint32_t metric_id, uint32_t event_code, std::string component, float fps,
     fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogFrameRate");
   callback(ToCobaltStatus(
       logger_.LogFrameRate(metric_id, event_code, component, fps)));
 }
@@ -47,6 +53,7 @@ void LoggerImpl::LogMemoryUsage(
     uint32_t metric_id, uint32_t event_code, std::string component,
     int64_t bytes,
     fuchsia::cobalt::LoggerBase::LogMemoryUsageCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogMemoryUsage");
   callback(ToCobaltStatus(
       logger_.LogMemoryUsage(metric_id, event_code, component, bytes)));
 }
@@ -54,6 +61,7 @@ void LoggerImpl::LogMemoryUsage(
 void LoggerImpl::LogString(
     uint32_t metric_id, std::string s,
     fuchsia::cobalt::LoggerBase::LogStringCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogString");
   callback(ToCobaltStatus(logger_.LogString(metric_id, s)));
 }
 
@@ -61,6 +69,7 @@ void LoggerImpl::LogIntHistogram(
     uint32_t metric_id, uint32_t event_code, std::string component,
     std::vector<fuchsia::cobalt::HistogramBucket> histogram,
     fuchsia::cobalt::Logger::LogIntHistogramCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogIntHistogram");
   logger::HistogramPtr histogram_ptr(
       new google::protobuf::RepeatedPtrField<HistogramBucket>());
   for (auto it = histogram.begin(); histogram.end() != it; it++) {
@@ -76,6 +85,7 @@ void LoggerImpl::LogIntHistogram(
     uint32_t metric_id, uint32_t event_code, std::string component,
     std::vector<uint32_t> bucket_indices, std::vector<uint64_t> bucket_counts,
     fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogIntHistogram");
   if (bucket_indices.size() != bucket_counts.size()) {
     FXL_LOG(ERROR) << "[" << metric_id
                    << "]: bucket_indices.size() != bucket_counts.size().";
@@ -98,6 +108,7 @@ void LoggerImpl::LogCustomEvent(
     uint32_t metric_id,
     std::vector<fuchsia::cobalt::CustomEventValue> event_values,
     fuchsia::cobalt::Logger::LogCustomEventCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogCustomEvent");
   logger::EventValuesPtr inner_event_values(
       new google::protobuf::Map<std::string, CustomDimensionValue>());
   for (auto it = event_values.begin(); event_values.end() != it; it++) {
@@ -171,6 +182,8 @@ using fuchsia::cobalt::EventPayload;
 void LoggerImpl::LogCobaltEvent(
     fuchsia::cobalt::CobaltEvent event,
     fuchsia::cobalt::Logger::LogCobaltEventCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogCobaltEvent");
+
   switch (event.payload.Which()) {
     case EventPayload::Tag::kEvent:
       if (event.event_codes.size() != 1) {
@@ -235,6 +248,7 @@ void LoggerImpl::LogCobaltEvent(
 void LoggerImpl::LogCobaltEvents(
     std::vector<fuchsia::cobalt::CobaltEvent> events,
     fuchsia::cobalt::Logger::LogCobaltEventCallback callback) {
+  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogCobaltEvents");
   auto failures = 0;
 
   auto end = std::make_move_iterator(events.end());
