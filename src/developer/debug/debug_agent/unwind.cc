@@ -88,9 +88,6 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
     }
   }
 
-  // Add all registers to the top stack frame.
-  arch::ArchProvider::Get().SaveGeneralRegs(regs, &(*stack)[0].regs);
-
   return 0;
 }
 
