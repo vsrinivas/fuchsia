@@ -68,7 +68,6 @@ group("tests") {
     "session_shell",
     "sessionctl",
     "story_shell",
-    "story_shell_factory",
     "suggestion",
     "trigger",
   ]
