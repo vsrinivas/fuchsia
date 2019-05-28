@@ -24,21 +24,6 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
-namespace {
-auto TranslateCallback(
-    fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
-                       std::unique_ptr<Token>)>
-        callback) {
-  return [callback = std::move(callback)](Status status,
-                                          std::vector<DiffEntry> entries,
-                                          std::unique_ptr<Token> token) {
-    IterationStatus iteration_status =
-        token ? IterationStatus::PARTIAL_RESULT : IterationStatus::OK;
-    callback(status, iteration_status, std::move(entries), std::move(token));
-  };
-}
-}  // namespace
-
 ConflictResolverClient::ConflictResolverClient(
     storage::PageStorage* storage, PageManager* page_manager,
     ConflictResolver* conflict_resolver,
@@ -157,11 +142,9 @@ void ConflictResolverClient::Finalize(Status status) {
 
 void ConflictResolverClient::GetFullDiff(
     std::unique_ptr<Token> token,
-    fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
-                       std::unique_ptr<Token>)>
+    fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)>
         callback) {
-  GetDiff(diff_utils::DiffType::FULL, std::move(token),
-          TranslateCallback(std::move(callback)));
+  GetDiff(diff_utils::DiffType::FULL, std::move(token), std::move(callback));
 }
 
 void ConflictResolverClient::GetFullDiffNew(
@@ -173,11 +156,10 @@ void ConflictResolverClient::GetFullDiffNew(
 
 void ConflictResolverClient::GetConflictingDiff(
     std::unique_ptr<Token> token,
-    fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
-                       std::unique_ptr<Token>)>
+    fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)>
         callback) {
   GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token),
-          TranslateCallback(std::move(callback)));
+          std::move(callback));
 }
 
 void ConflictResolverClient::GetConflictingDiffNew(

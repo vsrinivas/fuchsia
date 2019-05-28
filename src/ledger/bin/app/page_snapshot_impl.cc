@@ -245,19 +245,6 @@ Result ToErrorResult(fuchsia::ledger::Error error) {
   result.set_err(error);
   return result;
 }
-
-template <typename... Args>
-auto TranslateCallback(fit::function<void(Status, IterationStatus, Args...,
-                                          std::unique_ptr<Token>)>
-                           callback) {
-  return [callback = std::move(callback)](Status status, Args... args,
-                                          std::unique_ptr<Token> token) {
-    IterationStatus iteration_status =
-        token ? IterationStatus::PARTIAL_RESULT : IterationStatus::OK;
-    callback(status, iteration_status, std::forward<Args>(args)...,
-             std::move(token));
-  };
-}
 }  // namespace
 
 PageSnapshotImpl::PageSnapshotImpl(
@@ -271,11 +258,9 @@ PageSnapshotImpl::~PageSnapshotImpl() {}
 
 void PageSnapshotImpl::GetEntries(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-    fit::function<void(Status, IterationStatus, std::vector<Entry>,
-                       std::unique_ptr<Token>)>
+    fit::function<void(Status, std::vector<Entry>, std::unique_ptr<Token>)>
         callback) {
-  GetEntriesNew(std::move(key_start), std::move(token),
-                TranslateCallback<std::vector<Entry>>(std::move(callback)));
+  GetEntriesNew(std::move(key_start), std::move(token), std::move(callback));
 }
 
 void PageSnapshotImpl::GetEntriesNew(
@@ -289,12 +274,11 @@ void PageSnapshotImpl::GetEntriesNew(
 
 void PageSnapshotImpl::GetEntriesInline(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-    fit::function<void(Status, IterationStatus, std::vector<InlinedEntry>,
+    fit::function<void(Status, std::vector<InlinedEntry>,
                        std::unique_ptr<Token>)>
         callback) {
-  GetEntriesInlineNew(
-      std::move(key_start), std::move(token),
-      TranslateCallback<std::vector<InlinedEntry>>(std::move(callback)));
+  GetEntriesInlineNew(std::move(key_start), std::move(token),
+                      std::move(callback));
 }
 
 void PageSnapshotImpl::GetEntriesInlineNew(
@@ -309,13 +293,10 @@ void PageSnapshotImpl::GetEntriesInlineNew(
 
 void PageSnapshotImpl::GetKeys(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-    fit::function<void(Status, IterationStatus,
-                       std::vector<std::vector<uint8_t>>,
+    fit::function<void(Status, std::vector<std::vector<uint8_t>>,
                        std::unique_ptr<Token>)>
         callback) {
-  GetKeysNew(std::move(key_start), std::move(token),
-             TranslateCallback<std::vector<std::vector<uint8_t>>>(
-                 std::move(callback)));
+  GetKeysNew(std::move(key_start), std::move(token), std::move(callback));
 }
 
 void PageSnapshotImpl::GetKeysNew(
