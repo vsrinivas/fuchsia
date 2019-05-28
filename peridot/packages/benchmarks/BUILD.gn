@@ -28,7 +28,6 @@ group("peridot") {
     "//garnet/packages/benchmarks:buildbot",
     "//peridot/packages/benchmarks:ledger",
     "//peridot/tests/benchmarks:fuchsia_benchmarks",
-    "//peridot/tests/benchmarks:peridot_benchmarks",
   ]
 }
 

@@ -7,4 +7,4 @@
 # This script launches the peridot benchmarks binary, which runs all benchmarks
 # for the peridot layer.
 
-/pkgfs/packages/peridot_benchmarks/0/bin/peridot_benchmarks "$@"
+/pkgfs/packages/fuchsia_benchmarks/0/bin/fuchsia_benchmarks "$@"

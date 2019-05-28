@@ -40,7 +40,7 @@ import("//build/package.gni")
 group("benchmarks") {
   testonly = true
   deps = [
-    ":peridot_benchmarks_bin",
+    ":fuchsia_benchmarks_bin",
     "story",
   ]
 }
@@ -63,18 +63,6 @@ package("modular_benchmarks") {
   ]
 }
 
-executable("peridot_benchmarks_bin") {
-  output_name = "peridot_benchmarks"
-
-  sources = [
-    "benchmarks.cc",
-  ]
-
-  deps = [
-    "//garnet/testing/benchmarking:benchmarking",
-  ]
-}
-
 executable("fuchsia_benchmarks_bin") {
   output_name = "fuchsia_benchmarks"
 
@@ -84,27 +72,6 @@ executable("fuchsia_benchmarks_bin") {
 
   deps = [
     "//garnet/testing/benchmarking:benchmarking",
-  ]
-}
-
-# TODO(PT-175): Remove peridot_benchmarks once the bots have switched
-# over to using fuchsia_benchmarks instead.
-package("peridot_benchmarks") {
-  testonly = true
-
-  binaries = [
-    {
-      name = rebase_path("benchmarks.sh")
-      dest = "benchmarks.sh"
-    },
-    {
-      shell = true
-      name = "peridot_benchmarks"
-    },
-  ]
-
-  deps = [
-    ":peridot_benchmarks_bin",
   ]
 }
 
