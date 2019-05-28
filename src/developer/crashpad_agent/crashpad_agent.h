@@ -25,6 +25,7 @@
 
 #include "src/developer/crashpad_agent/config.h"
 #include "src/developer/crashpad_agent/crash_server.h"
+#include "src/developer/crashpad_agent/feedback_data_provider.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
@@ -92,9 +93,6 @@ class CrashpadAgent : public Analyzer {
   // crashpad::CrashReportDatabase::Report::creation_time.
   void PruneDatabase();
 
-  // Closes the feedback data provider connection keyed by |id|.
-  void CloseFeedbackDataProvider(uint64_t id);
-
   async::Executor executor_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   const Config config_;
@@ -102,7 +100,7 @@ class CrashpadAgent : public Analyzer {
   const std::unique_ptr<CrashServer> crash_server_;
 
   uint64_t next_feedback_data_provider_id_ = 0;
-  std::map<uint64_t, fuchsia::feedback::DataProviderPtr>
+  std::map<uint64_t, std::unique_ptr<FeedbackDataProvider>>
       feedback_data_providers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);

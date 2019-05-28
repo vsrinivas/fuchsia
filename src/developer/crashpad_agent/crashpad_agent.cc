@@ -7,7 +7,6 @@
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/fit/bridge.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
 #include <stdio.h>
@@ -226,44 +225,20 @@ void CrashpadAgent::OnKernelPanicCrashLog(
 }
 
 fit::promise<Data> CrashpadAgent::GetFeedbackData() {
-  // We use a fit::bridge to turn GetData() callback into a fit::promise.
-  //
-  // We use a share_ptr to share the bridge between the return value owned by
-  // this and GetData() callback.
-  //
-  // TODO(DX-1469): add a timeout to the fit::bridge completion.
-  std::shared_ptr<fit::bridge<Data>> get_data_done =
-      std::make_shared<fit::bridge<Data>>();
-
   const uint64_t id = next_feedback_data_provider_id_++;
-
   feedback_data_providers_[id] =
-      services_->Connect<fuchsia::feedback::DataProvider>();
-  feedback_data_providers_[id].set_error_handler(
-      [get_data_done](zx_status_t status) {
-        FX_PLOGS(ERROR, status)
-            << "Lost connection to fuchsia.feedback.DataProvider";
-        if (get_data_done->completer) {
-          get_data_done->completer.complete_error();
+      std::make_unique<FeedbackDataProvider>(services_);
+  return feedback_data_providers_[id]->GetData().then(
+      [this, id](fit::result<Data>& result) {
+        // We close the connection to the feedback data provider and then
+        // forward the result.
+        if (feedback_data_providers_.erase(id) == 0) {
+          FX_LOGS(ERROR)
+              << "No fuchsia.feedback.DataProvider connection to close with id "
+              << id;
         }
+        return std::move(result);
       });
-  feedback_data_providers_[id]->GetData(
-      [this, id, get_data_done](
-          fuchsia::feedback::DataProvider_GetData_Result out_result) {
-        CloseFeedbackDataProvider(id);
-
-        if (out_result.is_err()) {
-          FX_PLOGS(WARNING, out_result.err())
-              << "Failed to fetch feedback data";
-          get_data_done->completer.complete_error();
-          return;
-        }
-
-        get_data_done->completer.complete_ok(
-            std::move(out_result.response().data));
-      });
-
-  return get_data_done->consumer.promise_or(fit::error());
 }
 
 namespace {
@@ -536,14 +511,6 @@ void CrashpadAgent::PruneDatabase() {
   crashpad::DatabaseSizePruneCondition pruning_condition(
       config_.max_crashpad_database_size_in_kb);
   crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
-}
-
-void CrashpadAgent::CloseFeedbackDataProvider(const uint64_t id) {
-  if (feedback_data_providers_.erase(id) == 0) {
-    FX_LOGS(ERROR)
-        << "No fuchsia.feedback.DataProvider connection to close with id "
-        << id;
-  }
 }
 
 }  // namespace crash

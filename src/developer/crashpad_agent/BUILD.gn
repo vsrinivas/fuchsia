@@ -55,6 +55,8 @@ source_set("src") {
     "crash_server.h",
     "crashpad_agent.cc",
     "crashpad_agent.h",
+    "feedback_data_provider.cc",
+    "feedback_data_provider.h",
     "report_annotations.cc",
     "report_annotations.h",
     "report_attachments.cc",
