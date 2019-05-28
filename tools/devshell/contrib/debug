@@ -17,10 +17,13 @@
 ## - This scripts uses the tool "nc" for testing TCP connections. Check that it
 ##   is in $PATH and that it works.
 ##
-## Usage: fx debug [(--port|-p) <PORT>] [(--verbose-agent|-va)]
+## Usage: fx debug [(--core|-c) <CORE>] [--no-agent] [(--port|-p) <PORT>]
+##                 [(--verbose-agent|-va)]
 ##
-##    --port            Port the debug agent will be listening on. Will use 2345
-##                      by default.
+##    --core            Load a minidump file into zxdb.
+##    --no-agent        Don't start a Debug Agent.
+##    --port            Port the debug agent will be listening on.
+##                      Will use 2345 by default.
 ##    --verbose-agent   Whether the debug agent's stdout/stderr should be shown.
 ##                      Useful for debugging the debugger. Yo' dawg.
 ##
@@ -35,6 +38,7 @@ port=
 core=
 unwind_flag=
 agent_out="/dev/null"
+no_agent=
 
 # Flag parsing.
 while [[ $# -gt 0 ]]; do
@@ -42,6 +46,9 @@ while [[ $# -gt 0 ]]; do
     --help|-h)
       fx-command-help
       exit 0
+      ;;
+    --no-agent)
+      no_agent=true
       ;;
     --port|-p)
       shift
@@ -58,9 +65,11 @@ while [[ $# -gt 0 ]]; do
         echo "${arg} takes an argument"
         exit 1
       fi
+      no_agent=true
       ;;
     --core=*)
       core="${1:7}"
+      no_agent=true
       ;;
     --unwind)
       shift
@@ -96,13 +105,15 @@ fi
 
 connect_ops=
 
-if [[ -z "${core}" ]]; then
+if [[ ! -z "${core}" ]]; then
+  connect_ops="--core ${core}"
+elif [[ ! -z "${no_agent}" ]]; then
+  echo "Not starting a debug agent."
+else
   launch_debug_agent
 
   target=$(get-fuchsia-device-addr)
   connect_ops="--connect [${target}]:${port}"
-else
-  connect_ops="--core ${core}"
 fi
 
 # We start the client with the flag that tells it to quit the agent when zxdb quits.
