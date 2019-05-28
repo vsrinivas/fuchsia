@@ -14,7 +14,7 @@ source_set("lib") {
 source_set("tests") {
   testonly = true
   deps = [
-    ":router_endpoint_integration_test",
+    "integration_tests:tests",
   ]
 }
 
@@ -38,24 +38,5 @@ source_set("router_endpoint") {
     "//src/connectivity/overnet/lib/vocabulary:manual_constructor",
     "//src/connectivity/overnet/lib/vocabulary:optional",
     "//src/connectivity/overnet/lib/vocabulary:slice",
-  ]
-}
-
-source_set("router_endpoint_integration_test") {
-  testonly = true
-  sources = [
-    "router_endpoint_integration_test.cc",
-  ]
-  deps = [
-    ":router_endpoint",
-    "//src/connectivity/overnet/lib/environment:trace_cout",
-    "//src/connectivity/overnet/lib/links:packet_link",
-    "//src/connectivity/overnet/lib/links:stream_link",
-    "//src/connectivity/overnet/lib/protocol:fidl",
-    "//src/connectivity/overnet/lib/protocol:reliable_framer",
-    "//src/connectivity/overnet/lib/protocol:unreliable_framer",
-    "//src/connectivity/overnet/lib/testing:flags",
-    "//src/connectivity/overnet/lib/testing:test_timer",
-    "//third_party/googletest:gtest",
   ]
 }
