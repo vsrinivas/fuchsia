@@ -94,16 +94,15 @@ void GetEntriesRecursive(fuchsia::ledger::PageSnapshot* const snapshot,
                          std::vector<fuchsia::ledger::Entry>* const entries,
                          std::unique_ptr<fuchsia::ledger::Token> next_token,
                          fit::function<void()> done) {
-  snapshot->GetEntries(
+  snapshot->GetEntriesNew(
       std::vector<uint8_t>{} /* key_start */, std::move(next_token),
-      [snapshot, entries, done = std::move(done)](
-          fuchsia::ledger::IterationStatus status, auto new_entries,
-          auto next_token) mutable {
+      [snapshot, entries, done = std::move(done)](auto new_entries,
+                                                  auto next_token) mutable {
         for (size_t i = 0; i < new_entries.size(); ++i) {
           entries->push_back(std::move(new_entries.at(i)));
         }
 
-        if (status == fuchsia::ledger::IterationStatus::OK) {
+        if (!next_token) {
           done();
           return;
         }

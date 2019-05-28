@@ -55,12 +55,11 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
       *num_queries = 0;
     }
     do {
-      IterationStatus status;
       std::vector<std::vector<uint8_t>> keys;
       auto waiter = NewWaiter();
-      (*snapshot)->GetKeys(
+      (*snapshot)->GetKeysNew(
           start, std::move(token),
-          callback::Capture(waiter->GetCallback(), &status, &keys, &token));
+          callback::Capture(waiter->GetCallback(), &keys, &token));
       if (!waiter->RunUntilCalled()) {
         ADD_FAILURE() << "|GetKeys| failed to call back.";
         return {};

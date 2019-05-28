@@ -60,14 +60,13 @@ void GetDiffRecursive(
     std::map<std::string, PageClient::Conflict>* conflicts, LedgerToken token,
     fit::closure callback) {
   auto cont = [result_provider, conflicts, callback = std::move(callback)](
-                  fuchsia::ledger::IterationStatus status,
                   std::vector<fuchsia::ledger::DiffEntry> change_delta,
                   LedgerToken token) mutable {
     for (auto& diff_entry : change_delta) {
       (*conflicts)[to_string(diff_entry.key)] = ToConflict(&diff_entry);
     }
 
-    if (status == fuchsia::ledger::IterationStatus::OK) {
+    if (!token) {
       callback();
       return;
     }
@@ -76,7 +75,7 @@ void GetDiffRecursive(
                      std::move(callback));
   };
 
-  result_provider->GetConflictingDiff(std::move(token), std::move(cont));
+  result_provider->GetConflictingDiffNew(std::move(token), std::move(cont));
 }
 
 void GetDiff(fuchsia::ledger::MergeResultProvider* const result_provider,

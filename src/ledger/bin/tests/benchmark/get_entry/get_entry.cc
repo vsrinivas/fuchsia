@@ -157,25 +157,24 @@ void GetEntryBenchmark::GetSnapshot() {
 }
 
 void GetEntryBenchmark::GetKeys(std::unique_ptr<Token> token) {
-  snapshot_->GetKeys(
-      fidl::VectorPtr<uint8_t>::New(0), std::move(token),
-      [this](IterationStatus status, auto keys, auto next_token) {
-        if (status == IterationStatus::OK) {
-          TRACE_ASYNC_END("benchmark", "get_keys", 0);
-        }
-        for (size_t i = 0; i < keys.size(); i++) {
-          keys_.push_back(std::move(keys[i]));
-        }
-        if (status == IterationStatus::PARTIAL_RESULT) {
-          GetKeys(std::move(next_token));
-          return;
-        }
-        if (get_inline_) {
-          GetNextEntryInline(0);
-        } else {
-          GetNextEntry(0);
-        }
-      });
+  snapshot_->GetKeysNew(fidl::VectorPtr<uint8_t>::New(0), std::move(token),
+                        [this](auto keys, auto next_token) {
+                          if (!next_token) {
+                            TRACE_ASYNC_END("benchmark", "get_keys", 0);
+                          }
+                          for (size_t i = 0; i < keys.size(); i++) {
+                            keys_.push_back(std::move(keys[i]));
+                          }
+                          if (next_token) {
+                            GetKeys(std::move(next_token));
+                            return;
+                          }
+                          if (get_inline_) {
+                            GetNextEntryInline(0);
+                          } else {
+                            GetNextEntry(0);
+                          }
+                        });
 }
 
 void GetEntryBenchmark::GetNextEntry(size_t i) {

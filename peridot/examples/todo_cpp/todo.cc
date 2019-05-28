@@ -61,16 +61,15 @@ void GetEntries(
     std::unique_ptr<fuchsia::ledger::Token> token,
     fit::function<void(std::vector<fuchsia::ledger::Entry>)> callback) {
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetEntries(
+  snapshot_ptr->GetEntriesNew(
       fidl::VectorPtr<uint8_t>::New(0), std::move(token),
       [snapshot = std::move(snapshot), entries = std::move(entries),
-       callback = std::move(callback)](fuchsia::ledger::IterationStatus status,
-                                       auto new_entries,
+       callback = std::move(callback)](auto new_entries,
                                        auto next_token) mutable {
         for (size_t i = 0; i < new_entries.size(); ++i) {
           entries.push_back(std::move(new_entries.at(i)));
         }
-        if (status == fuchsia::ledger::IterationStatus::OK) {
+        if (!next_token) {
           callback(std::move(entries));
           return;
         }
@@ -143,12 +142,10 @@ void TodoApp::GetKeys(fit::function<void(std::vector<Key>)> callback) {
   page_->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
 
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetKeys(
+  snapshot_ptr->GetKeysNew(
       {}, nullptr,
       [snapshot = std::move(snapshot), callback = std::move(callback)](
-          fuchsia::ledger::IterationStatus status, auto keys, auto next_token) {
-        callback(std::move(keys));
-      });
+          auto keys, auto next_token) { callback(std::move(keys)); });
 }
 
 void TodoApp::AddNew() {

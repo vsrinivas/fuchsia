@@ -110,10 +110,11 @@ class ConflictResolverImpl : public ConflictResolver {
                                            size_t min_queries = 0) {
       return GetDiff(
           [this](std::unique_ptr<Token> token,
-                 fit::function<void(IterationStatus, std::vector<DiffEntry>,
+                 fit::function<void(std::vector<DiffEntry>,
                                     std::unique_ptr<Token>)>
                      callback) mutable {
-            result_provider->GetFullDiff(std::move(token), std::move(callback));
+            result_provider->GetFullDiffNew(std::move(token),
+                                            std::move(callback));
           },
           entries, min_queries);
     }
@@ -122,11 +123,11 @@ class ConflictResolverImpl : public ConflictResolver {
         std::vector<DiffEntry>* entries, size_t min_queries = 0) {
       return GetDiff(
           [this](std::unique_ptr<Token> token,
-                 fit::function<void(IterationStatus, std::vector<DiffEntry>,
+                 fit::function<void(std::vector<DiffEntry>,
                                     std::unique_ptr<Token>)>
                      callback) mutable {
-            result_provider->GetConflictingDiff(std::move(token),
-                                                std::move(callback));
+            result_provider->GetConflictingDiffNew(std::move(token),
+                                                   std::move(callback));
           },
           entries, min_queries);
     }
@@ -201,10 +202,9 @@ class ConflictResolverImpl : public ConflictResolver {
     }
 
     ::testing::AssertionResult GetDiff(
-        fit::function<
-            void(std::unique_ptr<Token>,
-                 fit::function<void(IterationStatus, std::vector<DiffEntry>,
-                                    std::unique_ptr<Token>)>)>
+        fit::function<void(std::unique_ptr<Token>,
+                           fit::function<void(std::vector<DiffEntry>,
+                                              std::unique_ptr<Token>)>)>
             get_diff,
         std::vector<DiffEntry>* entries, size_t min_queries) {
       entries->resize(0);
@@ -212,23 +212,15 @@ class ConflictResolverImpl : public ConflictResolver {
       std::unique_ptr<Token> token;
       do {
         std::vector<DiffEntry> new_entries;
-        IterationStatus status;
         auto waiter = loop_controller_->NewWaiter();
         std::unique_ptr<Token> new_token;
-        get_diff(std::move(token),
-                 callback::Capture(waiter->GetCallback(), &status, &new_entries,
-                                   &new_token));
+        get_diff(std::move(token), callback::Capture(waiter->GetCallback(),
+                                                     &new_entries, &new_token));
         if (!waiter->RunUntilCalled()) {
           return ::testing::AssertionFailure()
                  << "|get_diff| failed to called back.";
         }
         token = std::move(new_token);
-        if (!token != (status == IterationStatus::OK)) {
-          return ::testing::AssertionFailure()
-                 << "token is "
-                 << (token ? convert::ToString(token->opaque_id) : "null")
-                 << ", but status is:" << fidl::ToUnderlying(status);
-        }
         entries->insert(entries->end(),
                         std::make_move_iterator(new_entries.begin()),
                         std::make_move_iterator(new_entries.end()));

@@ -60,8 +60,8 @@ class FakeSnapshotImpl : public PageSnapshot {
   FakeSnapshotImpl() {}
   ~FakeSnapshotImpl() override {}
 
-  GetEntriesInlineCallback get_entries_inline_callback;
-  GetEntriesCallback get_entries_callback;
+  GetEntriesInlineNewCallback get_entries_inline_callback;
+  GetEntriesNewCallback get_entries_callback;
   GetCallback get_callback;
   GetInlineCallback get_inline_callback;
 
@@ -71,25 +71,25 @@ class FakeSnapshotImpl : public PageSnapshot {
   void GetEntriesInline(std::vector<uint8_t> /*key_start*/,
                         std::unique_ptr<Token> /*token*/,
                         GetEntriesInlineCallback callback) override {
-    get_entries_inline_callback = std::move(callback);
+    FXL_NOTIMPLEMENTED();
   }
 
   void GetEntriesInlineNew(std::vector<uint8_t> /*key_start*/,
                            std::unique_ptr<Token> /*token*/,
                            GetEntriesInlineNewCallback callback) override {
-    FXL_NOTIMPLEMENTED();
+    get_entries_inline_callback = std::move(callback);
   }
 
   void GetEntries(std::vector<uint8_t> /*key_start*/,
                   std::unique_ptr<Token> /*token*/,
                   GetEntriesCallback callback) override {
-    get_entries_callback = std::move(callback);
+    FXL_NOTIMPLEMENTED();
   }
 
   void GetEntriesNew(std::vector<uint8_t> /*key_start*/,
                      std::unique_ptr<Token> /*token*/,
                      GetEntriesNewCallback callback) override {
-    FXL_NOTIMPLEMENTED();
+    get_entries_callback = std::move(callback);
   }
 
   void GetKeys(std::vector<uint8_t> /*key_start*/,
@@ -217,12 +217,11 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   fidl::Binding<PageSnapshot> binding(&snapshot_impl);
   binding.Bind(std::move(writer));
 
-  auto client_callback = [](IterationStatus /*status*/,
-                            std::vector<InlinedEntry> /*entries*/,
+  auto client_callback = [](std::vector<InlinedEntry> /*entries*/,
                             std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetEntriesInline(fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                                   std::move(client_callback));
+  snapshot_proxy->GetEntriesInlineNew(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                                      std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
@@ -252,17 +251,16 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   size_t kExpectedEmptyEntrySize = GetInlinedEntrySize(empty_entry);
 
   // Run the callback directly.
-  snapshot_impl.get_entries_inline_callback(
-      IterationStatus::OK, std::move(entries_to_send), std::move(token));
+  snapshot_impl.get_entries_inline_callback(std::move(entries_to_send),
+                                            std::move(token));
 
   const size_t expected_bytes =
       Align(kMessageHeaderSize +                         // Header.
             kVectorHeaderSize +                          // VectorPtr.
             n_entries * kExpectedEntrySize +             // Vector of entries.
             n_empty_entries * kExpectedEmptyEntrySize +  // Vector of entries.
-            kPointerSize +                 // Pointer to next_token.
-            GetByteVectorSize(key_size) +  // next_token.
-            kStatusEnumSize                // Status.
+            kPointerSize +               // Pointer to next_token.
+            GetByteVectorSize(key_size)  // next_token.
       );
   const size_t expected_handles = 0;
   EXPECT_TRUE(
@@ -279,12 +277,11 @@ TEST_F(SerializationSizeTest, GetEntries) {
   fidl::Binding<PageSnapshot> binding(&snapshot_impl);
   binding.Bind(std::move(writer));
 
-  auto client_callback = [](IterationStatus /*status*/,
-                            std::vector<Entry> /*entries*/,
+  auto client_callback = [](std::vector<Entry> /*entries*/,
                             std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                             std::move(client_callback));
+  snapshot_proxy->GetEntriesNew(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                                std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
@@ -309,16 +306,15 @@ TEST_F(SerializationSizeTest, GetEntries) {
   }
 
   // Run the callback directly.
-  snapshot_impl.get_entries_callback(
-      IterationStatus::OK, std::move(entries_to_send), std::move(token));
+  snapshot_impl.get_entries_callback(std::move(entries_to_send),
+                                     std::move(token));
 
   const size_t expected_bytes =
       Align(kMessageHeaderSize +                  // Header.
             kVectorHeaderSize +                   // VectorPtr.
             n_entries * GetEntrySize(key_size) +  // Vector of entries.
             kPointerSize +                        // Pointer to next_token.
-            GetByteVectorSize(key_size) +         // next_token.
-            kStatusEnumSize                       // Status.
+            GetByteVectorSize(key_size)           // next_token.
       );
   const size_t expected_handles = n_entries;
   EXPECT_TRUE(
