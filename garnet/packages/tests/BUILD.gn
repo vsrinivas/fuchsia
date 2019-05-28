@@ -1258,6 +1258,7 @@ group("httpdate_hyper") {
 group("setui_client") {
   testonly = true
   public_deps = [
+    "//garnet/bin/setui_client:setui_client_interface_test",
     "//garnet/bin/setui_client:setui_client_tests",
     "//garnet/packages/prod:setui_client",
   ]

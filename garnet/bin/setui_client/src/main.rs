@@ -2,12 +2,16 @@
 
 use {
     failure::{Error, ResultExt},
+    fidl_fuchsia_device_manager::*,
+    fidl_fuchsia_devicesettings::*,
     fidl_fuchsia_setui::*,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    fuchsia_syslog::{self as syslog, fx_log_info},
+    fuchsia_syslog as syslog,
     structopt::StructOpt,
 };
+
+mod client;
 
 /// SettingClient exercises the functionality found in SetUI service. Currently,
 /// action parameters are specified at as individual arguments, but the goal is
@@ -23,6 +27,15 @@ enum SettingClient {
 
         #[structopt(short = "v", long = "value")]
         value: String,
+
+        #[structopt(short = "r", long = "remove_users")]
+        remove_users: bool,
+    },
+    // Retrieves a setting value
+    #[structopt(name = "get")]
+    Get {
+        #[structopt(short = "t", long = "type")]
+        setting_type: String,
     },
 }
 
@@ -34,55 +47,55 @@ async fn main() -> Result<(), Error> {
         connect_to_service::<SetUiServiceMarker>().context("Failed to connect to setui service")?;
 
     match SettingClient::from_args() {
-        SettingClient::Mutate { setting_type, value } => {
-            let converted_type = extract_setting_type(&setting_type)?;
-            let mut mutation = generate_string_mutation(&value)?;
+        SettingClient::Mutate { setting_type, value, remove_users } => {
+            await!(client::mutate(setui, setting_type, value))?;
 
-            let res = await!(setui.mutate(converted_type, &mut mutation,))?;
-
-            fx_log_info!("Response:{:?}", res);
+            if remove_users {
+                let device_settings = connect_to_service::<DeviceSettingsManagerMarker>()
+                    .context("Failed to connect to devicesettings service")?;
+                await!(device_settings.set_integer("FactoryReset", 1))?;
+                let device_admin = connect_to_service::<AdministratorMarker>()
+                    .context("Failed to connect to deviceadmin service")?;
+                await!(device_admin.suspend(SUSPEND_FLAG_REBOOT))?;
+            }
+        }
+        SettingClient::Get { setting_type } => {
+            let description = describe_setting(await!(client::get(setui, setting_type.clone()))?)?;
+            println!("value for setting[{}]:{}", setting_type, description);
         }
     }
 
     Ok(())
 }
 
-/// Converts argument string into a known SettingType. Will return an error if
-/// no suitable type can be determined.
-fn extract_setting_type(s: &str) -> Result<SettingType, Error> {
-    match s {
-        "unknown" => Ok(SettingType::Unknown),
-        _ => Err(failure::format_err!("unknown type:{}", s)),
-    }
-}
-
-/// Generates the appropriate Mutation for a string change.
-fn generate_string_mutation(value: &str) -> Result<Mutation, Error> {
-    Ok(fidl_fuchsia_setui::Mutation::StringMutationValue(StringMutation {
-        operation: StringOperation::Update,
-        value: value.to_string(),
-    }))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_extract_setting_type() {
-        assert_eq!(extract_setting_type("unknown").unwrap(), SettingType::Unknown);
-        assert!(extract_setting_type("outside").is_err(), "outside isn't a valid type");
-    }
-
-    #[test]
-    fn test_generate_string_mutation() {
-        let test_string = "test_string";
-        match generate_string_mutation(test_string).unwrap() {
-            fidl_fuchsia_setui::Mutation::StringMutationValue(mutation) => {
-                assert_eq!(mutation.value, test_string);
-                assert_eq!(mutation.operation, StringOperation::Update);
+fn describe_setting(setting: SettingsObject) -> Result<String, Error> {
+    match setting.setting_type {
+        SettingType::Unknown => {
+            if let SettingData::StringValue(data) = setting.data {
+                Ok(data)
+            } else {
+                Err(failure::err_msg("malformed data for SettingType::Unknown"))
             }
-            _ => assert!(false, "generated unknown type"),
         }
+        SettingType::Account => {
+            if let SettingData::Account(data) = setting.data {
+                Ok(describe_login_override(data.mode)?)
+            } else {
+                Err(failure::err_msg("malformed data for SettingType::Account"))
+            }
+        }
+        _ => Err(failure::err_msg("unhandled type")),
+    }
+}
+
+fn describe_login_override(login_override_option: Option<LoginOverride>) -> Result<String, Error> {
+    if login_override_option == None {
+        return Ok("none".to_string());
+    }
+
+    match login_override_option.unwrap() {
+        LoginOverride::AutologinGuest => Ok("guest".to_string()),
+        LoginOverride::None => Ok("none".to_string()),
+        LoginOverride::AuthProvider => Ok("auth".to_string()),
     }
 }

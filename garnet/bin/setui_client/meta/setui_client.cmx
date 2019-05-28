@@ -4,6 +4,8 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.device.manager.Administrator",
+            "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.logger.LogSink",
             "fuchsia.net.Connectivity",
             "fuchsia.netstack.Netstack",
