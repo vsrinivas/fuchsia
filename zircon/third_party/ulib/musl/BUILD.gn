@@ -11,7 +11,11 @@ config("headers") {
     "./*",
     "$zx/system/ulib/c:*",
   ]
-  include_dirs = [ "include" ]
+  cflags = [
+    "-idirafter",
+    rebase_path("include", root_build_dir),
+  ]
+  asmflags = cflags
 }
 
 group("musl_internal") {

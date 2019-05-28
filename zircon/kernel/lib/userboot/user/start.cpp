@@ -9,13 +9,11 @@
 #include "userboot-elf.h"
 #include "util.h"
 
+#include <cstring>
 #include <lib/elf-psabi/sp.h>
 #include <lib/processargs/processargs.h>
-#include <stdalign.h>
-#include <stdnoreturn.h>
-#include <string.h>
-#include <sys/param.h>
 #include <lib/zircon-internal/default_stack_size.h>
+#include <sys/param.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/system.h>
