@@ -36,8 +36,8 @@ def main():
     parser.add_argument('--include-dir',
                         help='Path to the include directory',
                         required=True)
-    parser.add_argument('--dist-dir',
-                        help='Path to the base directory for prebuilt libraries',
+    parser.add_argument('--dist-path',
+                        help='Path to the library in Fuchsia packages',
                         required=True)
     parser.add_argument('--arch',
                         help='Name of the target architecture',
@@ -68,12 +68,12 @@ def main():
         'format': 'shared',
         'headers': args.headers,
         'include_dir': args.include_dir,
-        'dist_dir': args.dist_dir,
     }
     metadata['binaries'] = {
         args.arch: {
             'link': args.lib_link,
             'dist': args.lib_dist,
+            'dist_path': args.dist_path,
             'debug': debug_path,
         },
     }

@@ -48,15 +48,11 @@
           "description": "Path to the base directory for includes",
           "$ref": "common.json#/definitions/file"
         },
-        "dist_dir": {
-          "description": "Path to the base directory for prebuilt libraries.",
-          "$ref": "common.json#/definitions/file"
-        },
         "deps": {
           "description": "List of C/C++ libraries this library depends on",
           "type": "array",
           "items": {
-            "$ref": "#/definitions/package_name"
+            "$ref": "common.json#/definitions/cc_library_name"
           }
         },
         "binaries": {
@@ -80,7 +76,6 @@
       "required": [
         "binaries",
         "deps",
-        "dist_dir",
         "format",
         "headers",
         "include_dir",
@@ -103,6 +98,10 @@
         },
         "dist": {
           "description": "The version of the library to add to Fuchsia packages",
+          "$ref": "common.json#/definitions/file"
+        },
+        "dist_path": {
+          "description": "Path where the library should be installed in Fuchsia packages",
           "$ref": "common.json#/definitions/file"
         },
         "debug": {

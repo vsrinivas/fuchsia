@@ -159,12 +159,14 @@ template("zircon_library") {
         assert(_debug == [ _debug[0] ])
         debug = rebase_path(_debug[0], "", zircon_root_build_dir)
       }
-      foreach(file, invoker.install) {
-        if (get_path_info(file.dest, "dir") == "dist") {
-          dist = "arch/$target_cpu/${file.dest}"
-        } else if (get_path_info(file.dest, "dir") == "lib") {
-          link = "arch/$target_cpu/${file.dest}"
-        }
+    }
+    foreach(file, invoker.install) {
+      if (get_path_info(file.dest, "dir") == "dist") {
+        installed_binaries.dist = "arch/$target_cpu/${file.dest}"
+        file_name = get_path_info(file.dest, "file")
+        installed_binaries.dist_path = "lib/$file_name"
+      } else if (get_path_info(file.dest, "dir") == "lib") {
+        installed_binaries.link = "arch/$target_cpu/${file.dest}"
       }
     }
     is_shared = get_path_info(installed_binaries.link, "extension") == "so"
@@ -251,10 +253,6 @@ template("zircon_library") {
           x64 = installed_binaries
         }
       }
-    }
-
-    if (!defined(invoker.sources)) {
-      dist_dir = pkg
     }
   }
 
