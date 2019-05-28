@@ -34,7 +34,8 @@ static bool IsOpteeApi(const tee_smc::TrustedOsCallUidResult& returned_uid) {
 static bool IsOpteeApiRevisionSupported(const tee_smc::TrustedOsCallRevisionResult& returned_rev) {
     // The cast is unfortunately necessary to mute a compiler warning about an unsigned expression
     // always being greater than 0.
-    ZX_DEBUG_ASSERT(returned_rev.minor <= std::numeric_limits<int32_t>::max());
+    ZX_DEBUG_ASSERT(returned_rev.minor <= static_cast<uint32_t>(
+                                              std::numeric_limits<int32_t>::max()));
     return returned_rev.major == kOpteeApiRevisionMajor &&
            static_cast<int32_t>(returned_rev.minor) >= static_cast<int32_t>(kOpteeApiRevisionMinor);
 }

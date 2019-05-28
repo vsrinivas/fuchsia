@@ -392,8 +392,8 @@ static void x86_perfmon_init_mchbar() {
         // TODO(dje): The lower four bits contain useful data, but punt for now.
         // See PCI spec 6.2.5.1.
         perfmon_mchbar_bar = bar & ~15u;
-        perfmon_num_misc_events =
-            static_cast<uint32_t>(fbl::count_of(static_cast<ArchPmuConfig*>(nullptr)->misc_events));
+        perfmon_num_misc_events = static_cast<uint16_t>(
+            fbl::count_of(ArchPmuConfig{}.misc_events));
     } else {
         TRACEF("perfmon: error %d reading mchbar\n", status);
     }

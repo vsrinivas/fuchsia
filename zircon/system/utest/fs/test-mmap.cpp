@@ -13,9 +13,9 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
+#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
-#include <unittest/unittest.h>
 
 #include "filesystems.h"
 
@@ -527,9 +527,10 @@ bool mmap_crash(int prot, int flags, RW rw) {
             ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
         }
 
-        ASSERT_DEATH([](void* addr) {
-            __UNUSED volatile int i = *static_cast<int*>(addr);
-        }, addr, "");
+        ASSERT_DEATH([](void* addr) -> void {
+            (void)*static_cast<volatile int*>(addr);
+        },
+                     addr, "");
 
         if (rw == RW::Read) {
             ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
@@ -542,7 +543,8 @@ bool mmap_crash(int prot, int flags, RW rw) {
 
         ASSERT_DEATH([](void* addr) {
             *static_cast<int*>(addr) = 5;
-        }, addr, "");
+        },
+                     addr, "");
 
         if (rw == RW::Write) {
             ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
@@ -581,7 +583,7 @@ bool TestMmapDeath(void) {
     END_TEST;
 }
 
-}  // namespace
+} // namespace
 
 RUN_FOR_ALL_FILESYSTEMS(fs_mmap_tests,
     RUN_TEST_MEDIUM(TestMmapEmpty)

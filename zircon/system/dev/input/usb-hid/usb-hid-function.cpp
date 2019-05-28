@@ -140,7 +140,6 @@ zx_status_t FakeUsbHidFunction::Bind() {
         .bcdHID = 0,
         .bCountryCode = 0,
         .bNumDescriptors = 1,
-        .descriptors = {},
     };
     descriptor_->hid_descriptor.descriptors[0] = {
         .bDescriptorType = 0x22, // HID TYPE REPORT
