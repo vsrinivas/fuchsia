@@ -26,15 +26,16 @@ namespace {
 
 struct BootsvcData {
     zx::channel bootsvc_server;
+    zx::job* root_job;
     devmgr_launcher::GetBootItemFunction get_boot_item;
 };
 
 zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
-    auto& get_boot_item = static_cast<BootsvcData*>(ctx)->get_boot_item;
+    auto data = static_cast<BootsvcData*>(ctx);
     zx::vmo vmo;
     uint32_t length = 0;
-    if (get_boot_item) {
-        zx_status_t status = get_boot_item(type, extra, &vmo, &length);
+    if (data->get_boot_item) {
+        zx_status_t status = data->get_boot_item(type, extra, &vmo, &length);
         if (status != ZX_OK) {
             return status;
         }
@@ -47,8 +48,9 @@ constexpr fuchsia_boot_Items_ops kItemsOps = {
 };
 
 zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
+    auto* data = static_cast<BootsvcData*>(ctx);
     zx::job root_job;
-    zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &root_job);
+    zx_status_t status = data->root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &root_job);
     if (status != ZX_OK) {
         return status;
     }
@@ -118,12 +120,15 @@ IsolatedDevmgr::~IsolatedDevmgr() {
 }
 
 zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* out) {
+    IsolatedDevmgr devmgr;
+
     auto data = std::make_unique<BootsvcData>();
     zx::channel bootsvc_client;
     zx_status_t status = zx::channel::create(0, &bootsvc_client, &data->bootsvc_server);
     if (status != ZX_OK) {
         return status;
     }
+    data->root_job = &devmgr.job_;
     data->get_boot_item = std::move(args.get_boot_item);
 
     thrd_t t;
@@ -132,8 +137,6 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
         return ZX_ERR_INTERNAL;
     }
     thrd_detach(t);
-
-    IsolatedDevmgr devmgr;
 
     zx::channel devfs;
     status = devmgr_launcher::Launch(std::move(args), std::move(bootsvc_client), &devmgr.job_,
