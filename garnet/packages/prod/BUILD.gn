@@ -174,7 +174,10 @@ group("drivers") {
     public_deps += [ "//garnet/packages/prod:amlogic_video_decoder" ]
   }
   if (target_cpu == "x64") {
-    public_deps += [ "//garnet/packages/prod:magma-intel-gen" ]
+    public_deps += [
+      "//garnet/packages/prod:goldfish-vulkan",
+      "//garnet/packages/prod:magma-intel-gen",
+    ]
   }
 }
 
@@ -1082,5 +1085,12 @@ group("tee_manager") {
   public_deps = [
     "//garnet/bin/tee_manager",
     "//garnet/bin/tee_manager:config",
+  ]
+}
+
+group("goldfish-vulkan") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/goldfish-vulkan/gnbuild:goldfish-vulkan",
   ]
 }

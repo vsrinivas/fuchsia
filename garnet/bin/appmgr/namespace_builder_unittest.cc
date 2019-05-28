@@ -39,11 +39,11 @@ TEST(NamespaceBuilder, Control) {
   builder.AddSandbox(sandbox, [] { return zx::channel(); });
 
   fdio_flat_namespace_t* flat = builder.Build();
-  // We might have 3 or 4 namespace entries in different build configurations
+  // We might have 6 or 7 namespace entries in different build configurations
   // due to CP-104. For now, accept either.
-  // TODO(CP-104): Expect exactly 4 entries once we consistently create
+  // TODO(CP-104): Expect exactly 7 entries once we consistently create
   // namespace entries for empty source directories.
-  EXPECT_TRUE(flat->count == 3u || flat->count == 4u) << flat->count;
+  EXPECT_TRUE(flat->count == 6u || flat->count == 7u) << flat->count;
 
   std::vector<std::string> paths;
   for (size_t i = 0; i < flat->count; ++i)
@@ -55,6 +55,12 @@ TEST(NamespaceBuilder, Control) {
                         "/dev/class/display-controller") != paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/gpu") !=
               paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(),
+                        "/dev/class/goldfish-address-space") != paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(),
+                        "/dev/class/goldfish-control") != paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(),
+                        "/dev/class/goldfish-pipe") != paths.end());
 
   fxl::UniqueFD dir(open("/pkgfs/packages/config-data/0/data/vulkan-icd/icd.d",
                           O_DIRECTORY | O_RDONLY));

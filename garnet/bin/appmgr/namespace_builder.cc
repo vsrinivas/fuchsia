@@ -141,6 +141,9 @@ void NamespaceBuilder::AddSandbox(
     } else if (feature == "system-temp") {
       PushDirectoryFromPath("/tmp");
     } else if (feature == "vulkan") {
+      PushDirectoryFromPath("/dev/class/goldfish-address-space");
+      PushDirectoryFromPath("/dev/class/goldfish-control");
+      PushDirectoryFromPath("/dev/class/goldfish-pipe");
       PushDirectoryFromPath("/dev/class/gpu");
       PushDirectoryFromPathAs(
         "/pkgfs/packages/config-data/0/data/vulkan-icd/icd.d",

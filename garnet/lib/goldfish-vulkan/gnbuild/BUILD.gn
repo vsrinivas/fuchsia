@@ -1,0 +1,131 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+
+declare_args() {
+  prebuilt_libvulkan_goldfish_path =
+      "//prebuilt/third_party/libvulkan_goldfish/${target_cpu}"
+}
+
+declare_args() {
+  # This is a list of targets that will be built as goldfish vulkan ICDs.
+  build_libvulkan_goldfish = []
+}
+
+have_prebuilt_libvulkan = prebuilt_libvulkan_goldfish_path != ""
+have_libvulkan = build_libvulkan_goldfish != [] || have_prebuilt_libvulkan
+
+group("goldfish-vulkan") {
+  public_deps = [
+    ":goldfish",
+  ]
+  if (have_libvulkan) {
+    public_deps += [ ":goldfish-config" ]
+  }
+}
+
+if (have_prebuilt_libvulkan) {
+  libvulkan_gen_path = "$target_gen_dir/libvulkan"
+}
+
+if (have_libvulkan) {
+  icd_list = []
+  if (build_libvulkan_goldfish != []) {
+    foreach(entry, build_libvulkan_goldfish) {
+      icd_list += [
+        {
+          name = get_label_info(entry, "name")
+        },
+      ]
+    }
+  } else if (have_prebuilt_libvulkan) {
+    icd_list += [
+      {
+        name = "libvulkan_goldfish"
+        library_path = "$prebuilt_libvulkan_goldfish_path/libvulkan_goldfish.so"
+      },
+    ]
+  }
+}
+
+package("goldfish") {
+  deprecated_system_image = true
+
+  if (have_libvulkan) {
+    resources = []
+    libraries = []
+    deps = build_libvulkan_goldfish
+    if (build_libvulkan_goldfish == []) {
+      # Building libvulkan overrides using a prebuilt.
+      deps += [ ":prebuilt_libvulkan" ]
+    }
+
+    foreach(entry, icd_list) {
+      icd_name = entry.name
+      if (defined(entry.library_path)) {
+        libraries += [
+          {
+            source = entry.library_path
+            name = "$icd_name.so"
+          },
+        ]
+      } else {
+        libraries += [
+          {
+            name = "$icd_name.so"
+          },
+        ]
+      }
+    }
+  }
+}
+
+if (have_libvulkan) {
+  config_data("goldfish-config") {
+    sources = []
+    foreach(entry, icd_list) {
+      icd_name = entry.name
+
+      # api_version must be present but is unused
+      icd_data = [
+        "{",
+        "\"file_format_version\": \"1.0.0\",",
+        "\"ICD\": {",
+        "\"library_path\": \"$icd_name.so\",",
+        "\"api_version\": \"0.0.0\"",
+        "}",
+        "}",
+      ]
+      filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
+      write_file(filename, icd_data)
+      sources += [ rebase_path(filename) ]
+    }
+
+    for_pkg = "vulkan-icd"
+    outputs = [
+      "icd.d/{{source_file_part}}",
+    ]
+  }
+}
+
+if (have_prebuilt_libvulkan) {
+  config("libvulkan_config") {
+    libs = [ "vulkan_goldfish" ]
+    lib_dirs = [ libvulkan_gen_path ]
+  }
+  copy("prebuilt_libvulkan") {
+    public_configs = [ ":libvulkan_config" ]
+    sources = [
+      prebuilt_libvulkan_goldfish_path,
+    ]
+    outputs = [
+      "$libvulkan_gen_path/libvulkan_goldfish.so",
+    ]
+    deps = [
+      "//third_party/zlib",
+    ]
+  }
+}
