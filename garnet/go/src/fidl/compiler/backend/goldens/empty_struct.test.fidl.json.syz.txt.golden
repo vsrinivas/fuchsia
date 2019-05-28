@@ -5,6 +5,7 @@
 
 include <test/name/c/fidl.h>
 test_name_EmptyInLine {
+       padding int8
 } [packed]
 test_name_EmptyOutOfLine {
        void void

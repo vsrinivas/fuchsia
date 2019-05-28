@@ -20,20 +20,9 @@ func TestCompileStruct(t *testing.T) {
 		expected result
 	}{
 		{
-			input: types.Struct{},
+			input:    types.Struct{},
 			expected: result{
-				OutOfLine: []StructMember{
-					{
-						Name: "void",
-						Type: Type("void"),
-					},
-				},
-				Handles: []StructMember{
-					{
-						Name: "void",
-						Type: Type("void"),
-					},
-				},
+				/* no inline, no out-of-line, no handles */
 			},
 		},
 		{
@@ -52,24 +41,11 @@ func TestCompileStruct(t *testing.T) {
 						Type: Type("int8"),
 					},
 				},
-				OutOfLine: []StructMember{
-					{
-						Name: "void",
-						Type: Type("void"),
-					},
-				},
-				Handles: []StructMember{
-					{
-						Name: "void",
-						Type: Type("void"),
-					},
-				},
 			},
 		},
 	}
 	for _, ex := range cases {
-		i, o, h := c.compileStruct(ex.input)
-		actual := result{i, o, h}
+		actual := c.compileStruct(ex.input)
 		if diff := cmp.Diff(ex.expected, actual); diff != "" {
 			t.Errorf("expected != actual (-want +got)\n%s", diff)
 		}

@@ -6,6 +6,7 @@
 include <test/name/c/fidl.h>
 test_name_ErrorEnun = test_name_ErrorEnun_ERR_FOO, test_name_ErrorEnun_ERR_BAR
 test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseInLine {
+       padding int8
 } [packed]
 test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseOutOfLine {
        void void
@@ -14,6 +15,7 @@ test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseHandles {
        void void
 } [packed]
 test_name_WithErrorSyntax_ErrorAsEnum_ResponseInLine {
+       padding int8
 } [packed]
 test_name_WithErrorSyntax_ErrorAsEnum_ResponseOutOfLine {
        void void

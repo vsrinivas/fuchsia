@@ -442,31 +442,22 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 				}
 			}
 		case types.StructDeclType:
-			_, outOfLine, handles := c.compileStruct(c.structs[p.Type.Identifier])
-
-			// Constant-size, in-line data
-			t := c.compileCompoundIdentifier(p.Type.Identifier, InLineSuffix)
+			// Fixed-size, in-line data.
 			i = StructMember{
-				Type: Type(t),
+				Type: Type(c.compileCompoundIdentifier(p.Type.Identifier, InLineSuffix)),
 				Name: c.compileIdentifier(p.Name, InLineSuffix),
 			}
 
-			// Variable-size, out-of-line data
-			if outOfLine != nil {
-				t := c.compileCompoundIdentifier(p.Type.Identifier, OutOfLineSuffix)
-				o = &StructMember{
-					Type: Type(t),
-					Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
-				}
+			// Out-of-line data.
+			o = &StructMember{
+				Type: Type(c.compileCompoundIdentifier(p.Type.Identifier, OutOfLineSuffix)),
+				Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
 			}
 
-			// Out-of-line handles
-			if handles != nil {
-				t := c.compileCompoundIdentifier(p.Type.Identifier, HandlesSuffix)
-				h = &StructMember{
-					Type: Type(t),
-					Name: c.compileIdentifier(p.Name, ""),
-				}
+			// Handles.
+			h = &StructMember{
+				Type: Type(c.compileCompoundIdentifier(p.Type.Identifier, HandlesSuffix)),
+				Name: c.compileIdentifier(p.Name, ""),
 			}
 		}
 	}
@@ -474,49 +465,52 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 	return i, o, h
 }
 
-func (c *compiler) compileMessageHeader(Ordinal types.Ordinal) StructMember {
-	return StructMember{
-		Type: Type(fmt.Sprintf("fidl_message_header[%d]", Ordinal)),
-		Name: "hdr",
+func header(ordinal types.Ordinal) []StructMember {
+	return []StructMember{
+		{
+			Type: Type(fmt.Sprintf("fidl_message_header[%d]", ordinal)),
+			Name: "hdr",
+		},
 	}
+}
+
+type members []StructMember
+
+func (members members) voidIfEmpty() members {
+	if len(members) == 0 {
+		return []StructMember{
+			{Name: "void", Type: "void"},
+		}
+	}
+	return members
+}
+
+func (members members) uint8PaddingIfEmpty() members {
+	if len(members) == 0 {
+		return []StructMember{
+			{Name: "padding", Type: Type(primitiveTypes[types.Uint8])},
+		}
+	}
+	return members
 }
 
 type result struct {
-	Inline, OutOfLine, Handles []StructMember
+	Inline, OutOfLine, Handles members
 }
 
-func (c *compiler) compileStruct(p types.Struct) ([]StructMember, []StructMember, []StructMember) {
-	var i, o, h []StructMember
-
+func (c *compiler) compileStruct(p types.Struct) result {
+	var result result
 	for _, m := range p.Members {
 		inLine, outOfLine, handles := c.compileStructMember(m)
-
-		i = append(i, inLine)
-
+		result.Inline = append(result.Inline, inLine)
 		if outOfLine != nil {
-			o = append(o, *outOfLine)
+			result.OutOfLine = append(result.OutOfLine, *outOfLine)
 		}
-
 		if handles != nil {
-			h = append(h, *handles)
+			result.Handles = append(result.Handles, *handles)
 		}
 	}
-
-	if len(o) == 0 {
-		o = append(o, StructMember{
-			Name: "void",
-			Type: "void",
-		})
-	}
-
-	if len(h) == 0 {
-		h = append(h, StructMember{
-			Name: "void",
-			Type: "void",
-		})
-	}
-
-	return i, o, h
+	return result
 }
 
 func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, []StructMember) {
@@ -555,24 +549,14 @@ func (c *compiler) compileParameters(name string, ordinal types.Ordinal, params 
 			Offset: p.Offset,
 		})
 	}
-
-	i, o, h := c.compileStruct(args)
-
-	if len(o) == 1 && o[0].Type == "void" {
-		o = []StructMember{}
-	}
-
-	msg := Struct{
-		Name:    name,
-		Members: append(append([]StructMember{c.compileMessageHeader(ordinal)}, i...), o...),
-	}
-
-	handles := Struct{
-		Name:    name + HandlesSuffix,
-		Members: h,
-	}
-
-	return msg, handles
+	result := c.compileStruct(args)
+	return Struct{
+			Name:    name,
+			Members: append(append(header(ordinal), result.Inline...), result.OutOfLine...),
+		}, Struct{
+			Name:    name + HandlesSuffix,
+			Members: result.Handles.voidIfEmpty(),
+		}
 }
 
 func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
@@ -642,20 +626,20 @@ func Compile(fidlData types.Root) Root {
 	for _, v := range fidlData.Structs {
 		c.structs[v.Name] = v
 
-		i, o, h := c.compileStruct(v)
+		result := c.compileStruct(v)
 		root.Structs = append(root.Structs, Struct{
 			Name:    c.compileCompoundIdentifier(v.Name, InLineSuffix),
-			Members: i,
+			Members: result.Inline.uint8PaddingIfEmpty(),
 		})
 
 		root.Structs = append(root.Structs, Struct{
 			Name:    c.compileCompoundIdentifier(v.Name, OutOfLineSuffix),
-			Members: o,
+			Members: result.OutOfLine.voidIfEmpty(),
 		})
 
 		root.Structs = append(root.Structs, Struct{
 			Name:    c.compileCompoundIdentifier(v.Name, HandlesSuffix),
-			Members: h,
+			Members: result.Handles.voidIfEmpty(),
 		})
 	}
 
