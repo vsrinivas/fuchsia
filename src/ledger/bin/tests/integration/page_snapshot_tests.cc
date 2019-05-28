@@ -57,7 +57,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
     do {
       std::vector<std::vector<uint8_t>> keys;
       auto waiter = NewWaiter();
-      (*snapshot)->GetKeysNew(
+      (*snapshot)->GetKeys(
           start, std::move(token),
           callback::Capture(waiter->GetCallback(), &keys, &token));
       if (!waiter->RunUntilCalled()) {

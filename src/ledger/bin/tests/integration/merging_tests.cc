@@ -113,8 +113,7 @@ class ConflictResolverImpl : public ConflictResolver {
                  fit::function<void(std::vector<DiffEntry>,
                                     std::unique_ptr<Token>)>
                      callback) mutable {
-            result_provider->GetFullDiffNew(std::move(token),
-                                            std::move(callback));
+            result_provider->GetFullDiff(std::move(token), std::move(callback));
           },
           entries, min_queries);
     }
@@ -126,8 +125,8 @@ class ConflictResolverImpl : public ConflictResolver {
                  fit::function<void(std::vector<DiffEntry>,
                                     std::unique_ptr<Token>)>
                      callback) mutable {
-            result_provider->GetConflictingDiffNew(std::move(token),
-                                                   std::move(callback));
+            result_provider->GetConflictingDiff(std::move(token),
+                                                std::move(callback));
           },
           entries, min_queries);
     }

@@ -60,8 +60,8 @@ class FakeSnapshotImpl : public PageSnapshot {
   FakeSnapshotImpl() {}
   ~FakeSnapshotImpl() override {}
 
-  GetEntriesInlineNewCallback get_entries_inline_callback;
-  GetEntriesNewCallback get_entries_callback;
+  GetEntriesInlineCallback get_entries_inline_callback;
+  GetEntriesCallback get_entries_callback;
   GetCallback get_callback;
   GetInlineCallback get_inline_callback;
 
@@ -71,25 +71,25 @@ class FakeSnapshotImpl : public PageSnapshot {
   void GetEntriesInline(std::vector<uint8_t> /*key_start*/,
                         std::unique_ptr<Token> /*token*/,
                         GetEntriesInlineCallback callback) override {
-    FXL_NOTIMPLEMENTED();
+    get_entries_inline_callback = std::move(callback);
   }
 
   void GetEntriesInlineNew(std::vector<uint8_t> /*key_start*/,
                            std::unique_ptr<Token> /*token*/,
                            GetEntriesInlineNewCallback callback) override {
-    get_entries_inline_callback = std::move(callback);
+    FXL_NOTIMPLEMENTED();
   }
 
   void GetEntries(std::vector<uint8_t> /*key_start*/,
                   std::unique_ptr<Token> /*token*/,
                   GetEntriesCallback callback) override {
-    FXL_NOTIMPLEMENTED();
+    get_entries_callback = std::move(callback);
   }
 
   void GetEntriesNew(std::vector<uint8_t> /*key_start*/,
                      std::unique_ptr<Token> /*token*/,
                      GetEntriesNewCallback callback) override {
-    get_entries_callback = std::move(callback);
+    FXL_NOTIMPLEMENTED();
   }
 
   void GetKeys(std::vector<uint8_t> /*key_start*/,
@@ -220,8 +220,8 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   auto client_callback = [](std::vector<InlinedEntry> /*entries*/,
                             std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetEntriesInlineNew(fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                                      std::move(client_callback));
+  snapshot_proxy->GetEntriesInline(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                                   std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
@@ -280,8 +280,8 @@ TEST_F(SerializationSizeTest, GetEntries) {
   auto client_callback = [](std::vector<Entry> /*entries*/,
                             std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetEntriesNew(fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                                std::move(client_callback));
+  snapshot_proxy->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                             std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();

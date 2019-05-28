@@ -148,7 +148,7 @@ class NonAssociativeConflictResolverImpl : public ConflictResolver {
         [](zx_status_t status) { EXPECT_EQ(ZX_OK, status); });
     MergeResultProvider* merge_result_provider_ptr =
         merge_result_provider->get();
-    merge_result_provider_ptr->GetFullDiffNew(
+    merge_result_provider_ptr->GetFullDiff(
         nullptr, [merge_result_provider = std::move(merge_result_provider)](
                      std::vector<DiffEntry> changes,
                      std::unique_ptr<Token> next_token) mutable {

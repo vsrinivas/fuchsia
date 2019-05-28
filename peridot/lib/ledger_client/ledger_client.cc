@@ -75,7 +75,7 @@ void GetDiffRecursive(
                      std::move(callback));
   };
 
-  result_provider->GetConflictingDiffNew(std::move(token), std::move(cont));
+  result_provider->GetConflictingDiff(std::move(token), std::move(cont));
 }
 
 void GetDiff(fuchsia::ledger::MergeResultProvider* const result_provider,
