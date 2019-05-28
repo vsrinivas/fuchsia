@@ -7,7 +7,7 @@
 
 namespace camera {
 
-uint32_t DmaFormat::BytesPerPixel() {
+uint32_t DmaFormat::BytesPerPixel() const {
     switch (pixel_format_) {
     case PixelType::A2R10G10B10:
     case PixelType::RGB32:
@@ -31,7 +31,7 @@ uint32_t DmaFormat::BytesPerPixel() {
     return 0;
 }
 
-bool DmaFormat::HasSecondaryChannel() {
+bool DmaFormat::HasSecondaryChannel() const {
     return secondary_plane_select_ > 0;
 }
 
@@ -60,13 +60,13 @@ void DmaFormat::Set(uint32_t width, uint32_t height, PixelType pixel_format, boo
     }
 }
 
-uint8_t DmaFormat::GetPlaneSelectUv() {
+uint8_t DmaFormat::GetPlaneSelectUv() const {
     return secondary_plane_select_;
 }
 
 // Get the value that should be written into the line_offset register.
 // Note that the register expects a negative value if the frame is vertically flipped.
-uint32_t DmaFormat::GetLineOffset() {
+uint32_t DmaFormat::GetLineOffset() const {
     uint32_t line_offset = ALIGN(BytesPerPixel() * width_, 128);
     if (flip_vertical_) {
         return -line_offset;
@@ -75,7 +75,7 @@ uint32_t DmaFormat::GetLineOffset() {
 }
 
 // This is added to the address of the memory we are DMAing to.
-uint32_t DmaFormat::GetBank0Offset() {
+uint32_t DmaFormat::GetBank0Offset() const {
     if (flip_vertical_) {
         uint32_t line_offset = ALIGN(BytesPerPixel() * width_, 128);
         return (height_ - 1) * line_offset;
@@ -83,7 +83,7 @@ uint32_t DmaFormat::GetBank0Offset() {
     return 0;
 }
 
-uint32_t DmaFormat::GetBank0OffsetUv() {
+uint32_t DmaFormat::GetBank0OffsetUv() const {
     // TODO(garratt): Make this actually offset to the correct place in memory
     //                for a buffercollection.
     if (flip_vertical_) {

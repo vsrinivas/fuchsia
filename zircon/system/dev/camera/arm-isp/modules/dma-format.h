@@ -44,23 +44,23 @@ class DmaFormat {
 public:
     uint32_t width_, height_;
 
-    bool HasSecondaryChannel();
+    bool HasSecondaryChannel() const;
 
     void Set(uint32_t width, uint32_t height, PixelType pixel_format, bool vflip);
 
-    uint32_t BytesPerPixel();
+    uint32_t BytesPerPixel() const;
 
     // Get the value that should be written into the line_offset register.
     // Note that the register expects a negative value if the frame is vertically flipped.
-    uint32_t GetLineOffset();
+    uint32_t GetLineOffset() const;
 
     // This is added to the address of the memory we are DMAing to.
-    uint32_t GetBank0Offset();
-    uint32_t GetBank0OffsetUv();
+    uint32_t GetBank0Offset() const;
+    uint32_t GetBank0OffsetUv() const;
 
-    uint8_t GetPlaneSelect() { return 0; }
-    uint8_t GetPlaneSelectUv();
-    uint8_t GetBaseMode() { return pixel_format_; }
+    uint8_t GetPlaneSelect() const { return 0; }
+    uint8_t GetPlaneSelectUv() const;
+    uint8_t GetBaseMode() const { return pixel_format_; }
 };
 
 } // namespace camera
