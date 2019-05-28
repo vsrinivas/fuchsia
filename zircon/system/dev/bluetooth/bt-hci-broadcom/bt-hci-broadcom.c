@@ -306,34 +306,6 @@ static int bcm_hci_start_thread(void* arg) {
         goto fail;
     }
 
-    // set BDADDR to value in bootloader
-    uint8_t macaddr[MAC_ADDR_LEN];
-    status = bcm_get_bdaddr_from_bootloader(hci, macaddr);
-    if (status == ZX_OK) {
-        // send Set BDADDR command
-        status = bcm_hci_set_bdaddr(hci, macaddr);
-        if (status != ZX_OK) {
-            goto fail;
-        }
-    } else {
-        // log error and fallback mac address
-        hci_read_bdaddr_command_complete_t event;
-        memset(&event, 0, sizeof(event));
-        char fallback_addr[18] = "<unknown>";
-        zx_status_t read_cmd_status = bcm_hci_send_command(hci, &READ_BDADDR_CMD,
-                                                           sizeof(READ_BDADDR_CMD),
-                                                           (void *)(&event), sizeof(event));
-        if (read_cmd_status == ZX_OK) {
-            // HCI returns data as little endian. Swap bytes
-            snprintf(fallback_addr, 18, "%02x:%02x:%02x:%02x:%02x:%02x", event.bdaddr[5],
-                     event.bdaddr[4], event.bdaddr[3], event.bdaddr[2], event.bdaddr[1],
-                     event.bdaddr[0]);
-        }
-        zxlogf(ERROR, "bcm-hci: error getting mac address from bootloader: %s. "
-               "Fallback address: %s.\n",
-               zx_status_get_string(status), fallback_addr);
-    }
-
     if (hci->is_uart) {
         // switch baud rate to TARGET_BAUD_RATE
         status = bcm_hci_set_baud_rate(hci, TARGET_BAUD_RATE);
@@ -407,6 +379,34 @@ static int bcm_hci_start_thread(void* arg) {
         zxlogf(INFO, "bcm-hci: firmware loaded\n");
     } else {
         zxlogf(ERROR, "bcm-hci: no firmware file found\n");
+    }
+
+    // set BDADDR to value in bootloader
+    uint8_t macaddr[MAC_ADDR_LEN];
+    status = bcm_get_bdaddr_from_bootloader(hci, macaddr);
+    if (status == ZX_OK) {
+        // send Set BDADDR command
+        status = bcm_hci_set_bdaddr(hci, macaddr);
+        if (status != ZX_OK) {
+            goto fail;
+        }
+    } else {
+        // log error and fallback mac address
+        hci_read_bdaddr_command_complete_t event;
+        memset(&event, 0, sizeof(event));
+        char fallback_addr[18] = "<unknown>";
+        zx_status_t read_cmd_status = bcm_hci_send_command(hci, &READ_BDADDR_CMD,
+                                                           sizeof(READ_BDADDR_CMD),
+                                                           (void *)(&event), sizeof(event));
+        if (read_cmd_status == ZX_OK) {
+            // HCI returns data as little endian. Swap bytes
+            snprintf(fallback_addr, 18, "%02x:%02x:%02x:%02x:%02x:%02x", event.bdaddr[5],
+                     event.bdaddr[4], event.bdaddr[3], event.bdaddr[2], event.bdaddr[1],
+                     event.bdaddr[0]);
+        }
+        zxlogf(ERROR, "bcm-hci: error getting mac address from bootloader: %s. "
+               "Fallback address: %s.\n",
+               zx_status_get_string(status), fallback_addr);
     }
 
     // We're done with the command channel. Close it so that it can be opened by
