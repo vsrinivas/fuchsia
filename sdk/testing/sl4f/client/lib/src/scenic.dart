@@ -4,7 +4,7 @@
 
 import 'dart:convert' show base64Decode;
 
-import 'package:image/image.dart' show encodePng, Image;
+import 'package:image/image.dart';
 import 'package:pedantic/pedantic.dart';
 
 import 'dump.dart';
@@ -40,7 +40,8 @@ class Scenic {
     assert(info['pixel_format'], 'Bgra8');
 
     final image = Image.fromBytes(
-        info['width'], info['height'], base64Decode(response['data']));
+        info['width'], info['height'], base64Decode(response['data']),
+        format: Format.bgra);
 
     if (dumpName != null) {
       unawaited(_dump.writeAsBytes(dumpName, 'png', encodePng(image)));
