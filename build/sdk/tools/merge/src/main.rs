@@ -8,13 +8,17 @@ use std::iter::{FromIterator, Iterator};
 
 use structopt::StructOpt;
 
-use sdk_metadata::{ElementType, JsonObject, Manifest, Part};
+use sdk_metadata::{DartLibrary, ElementType, JsonObject, Manifest, Part};
 
 mod app;
+mod file_provider;
 mod flags;
+mod merge_dart_library;
 mod tarball;
 
 use crate::app::{Error, Result};
+use crate::file_provider::FileProvider;
+use crate::merge_dart_library::merge_dart_library;
 use crate::tarball::{OutputTarball, SourceTarball};
 
 const MANIFEST_PATH: &str = "meta/manifest.json";
@@ -97,26 +101,53 @@ fn merge_manifests(base: &Manifest, complement: &Manifest) -> Result<Manifest> {
     Ok(result)
 }
 
-fn merge_common_part(
-    part: &Part, _base: &SourceTarball, _complement: &SourceTarball, _output: &OutputTarball,
-) -> Result<()> {
-    // TODO(DX-1056): implement me.
-    println!(" - {}", part);
-    Ok(())
+/// This is a temporary method that allows unimplemented element types to be skipped over.
+// TODO(DX-1056): delete when all types are supported.
+fn is_kind_supported(kind: &ElementType) -> bool {
+    match kind {
+        ElementType::DartLibrary => true,
+        _ => false,
+    }
 }
 
-fn copy_part_as_is(part: &Part, _source: &SourceTarball, _output: &OutputTarball) -> Result<()> {
-    // TODO(DX-1056): implement me.
-    println!(" - {}", part);
+fn merge_common_part(
+    part: &Part, base: &SourceTarball, complement: &SourceTarball, output: &mut OutputTarball,
+) -> Result<()> {
+    if !is_kind_supported(&part.kind) {
+        println!("Skipping {}", part);
+        return Ok(());
+    }
+    match part.kind {
+        ElementType::DartLibrary => merge_dart_library(&part.meta, base, complement, output),
+        _ => unreachable!("Type should have been skipped over: {:?}", part.kind),
+    }
+}
+
+fn copy_part_as_is(part: &Part, source: &SourceTarball, output: &mut OutputTarball) -> Result<()> {
+    if !is_kind_supported(&part.kind) {
+        println!("Skipping {}", part);
+        return Ok(());
+    }
+    println!("Copying {}", part);
+    let provider: Box<dyn FileProvider> = Box::new(match part.kind {
+        ElementType::DartLibrary => source.get_metadata::<DartLibrary>(&part.meta)?,
+        _ => unreachable!("Type should have been skipped over: {:?}", part.kind),
+    });
+    let mut paths = provider.get_all_files();
+    paths.push(part.meta.clone());
+    for path in &paths {
+        source.get_file(path, |file| output.write_file(path, file))?;
+    }
+
     Ok(())
 }
 
 fn main() -> Result<()> {
     let flags = flags::Flags::from_args();
 
-    let mut base = SourceTarball::new(flags.base)?;
-    let mut complement = SourceTarball::new(flags.complement)?;
-    let mut output = OutputTarball::new();
+    let base = SourceTarball::new(&flags.base)?;
+    let complement = SourceTarball::new(&flags.complement)?;
+    let mut output = OutputTarball::new(&flags.output)?;
 
     let base_manifest: Manifest = base.get_metadata(MANIFEST_PATH)?;
     let complement_manifest: Manifest = complement.get_metadata(MANIFEST_PATH)?;
@@ -127,23 +158,23 @@ fn main() -> Result<()> {
 
     println!("Common parts");
     for part in base_parts.intersection(&complement_parts) {
-        merge_common_part(&part, &base, &complement, &output)?;
+        merge_common_part(&part, &base, &complement, &mut output)?;
     }
 
     println!("Unique base parts");
     for part in base_parts.difference(&complement_parts) {
-        copy_part_as_is(&part, &base, &output)?;
+        copy_part_as_is(&part, &base, &mut output)?;
     }
 
     println!("Unique complement parts");
     for part in complement_parts.difference(&base_parts) {
-        copy_part_as_is(&part, &complement, &output)?;
+        copy_part_as_is(&part, &complement, &mut output)?;
     }
 
     let merged_manifest = merge_manifests(&base_manifest, &complement_manifest)?;
 
-    output.write(MANIFEST_PATH.to_string(), merged_manifest.to_string()?)?;
-    output.export(flags.output)?;
+    output.write_json(&MANIFEST_PATH.to_string(), &merged_manifest)?;
+    output.export()?;
 
     Ok(())
 }

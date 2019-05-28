@@ -18,5 +18,6 @@ rustc_binary("merge_sdk") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:tar",
+    "//third_party/rust_crates:tempfile",
   ]
 }

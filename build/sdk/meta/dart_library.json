@@ -27,7 +27,7 @@
         },
         "root": {
           "description": "The root of the element in the SDK",
-          "type": "string"
+          "$ref": "common.json#/definitions/file"
         },
         "sources": {
           "description": "List of library sources",

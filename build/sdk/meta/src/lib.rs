@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 mod common;
+mod dart_library;
 mod json;
 mod manifest;
 
 pub use crate::common::*;
+pub use crate::dart_library::*;
 pub use crate::json::JsonObject;
 pub use crate::manifest::*;
