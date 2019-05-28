@@ -171,7 +171,7 @@ Loop:
 	for {
 	Attempt:
 		for attempt := 0; attempt < s.retry; attempt++ {
-			for i := uint16(0); uint16(i) <= s.opts.windowSize; i++ {
+			for i := uint16(0); uint16(i) < s.opts.windowSize; i++ {
 				block := uint16(seq + uint64(i+1))
 				// Fill the first byte of the command with an arbitrary value to
 				// work around the issue where certain ethernet adapters would
