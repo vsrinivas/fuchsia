@@ -20,6 +20,7 @@ mod configuration;
 mod http_request;
 mod install_plan;
 mod metrics;
+mod timer;
 
 async fn run_fidl_server(stream: IncomingServices) -> Result<(), Error> {
     match stream {

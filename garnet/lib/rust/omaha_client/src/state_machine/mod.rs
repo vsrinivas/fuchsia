@@ -20,6 +20,9 @@ use http::response::Parts;
 use log::{error, info, warn};
 use std::str::Utf8Error;
 
+mod timer;
+pub use timer::Timer;
+
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform a single update check process.
 pub struct StateMachine<PE, HR, IN>
