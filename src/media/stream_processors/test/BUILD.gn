@@ -8,7 +8,7 @@ import("//build/rust/rustc_macro.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-group("stress") {
+group("test") {
   testonly = true
   deps = [
     ":h264_decoder_test",
