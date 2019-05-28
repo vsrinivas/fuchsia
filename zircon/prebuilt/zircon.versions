@@ -14,12 +14,12 @@ fuchsia/clang/mac-amd64
 	Rs6hCPKMYay05GCppkRTedLl5PNWc1PZhF_I-nFhZBMC
 
 fuchsia/gcc/linux-amd64
-	git_revision:9fb89fa845c1b2e0a18d85ada0b077c84508ab78,9163eacc1840f8db0523e21d4e7bc4239608c564,1
-	2j2TiE1yj1j5rzEdjndDeohmwXep5wBWDDddkRcTKDMC
+	git_revision:9fb89fa845c1b2e0a18d85ada0b077c84508ab78,9163eacc1840f8db0523e21d4e7bc4239608c564,7
+	h7bBjIq6EXNEx9_yZp18dNPgOASMkoNBE7Ax1IlG5cYC
 
 fuchsia/gcc/mac-amd64
-	git_revision:9fb89fa845c1b2e0a18d85ada0b077c84508ab78,9163eacc1840f8db0523e21d4e7bc4239608c564,1
-	vqL1t708CUVXP7JR8z6aCuPxwQLTBlybhLvYQOimL8gC
+	git_revision:9fb89fa845c1b2e0a18d85ada0b077c84508ab78,9163eacc1840f8db0523e21d4e7bc4239608c564,7
+	qA9DtvDjE9D9kg3Qjo-VONDzyx_0TXsEFA8qmgpDEycC
 
 fuchsia/sysroot/linux-amd64
 	git_revision:a4aaacde9d37ccf91a0f8dc8267cb7ad5d9be283

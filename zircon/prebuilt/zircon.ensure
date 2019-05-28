@@ -28,7 +28,7 @@ fuchsia/clang/${platform} git_revision:1558731607cb2aef361d02be9973d4e374475254
 
 # GCC
 @Subdir gcc
-fuchsia/gcc/${os}-${arch=amd64} git_revision:9fb89fa845c1b2e0a18d85ada0b077c84508ab78,9163eacc1840f8db0523e21d4e7bc4239608c564,1
+fuchsia/gcc/${os}-${arch=amd64} git_revision:9fb89fa845c1b2e0a18d85ada0b077c84508ab78,9163eacc1840f8db0523e21d4e7bc4239608c564,7
 
 # sysroot/linux-arm64
 @Subdir sysroot/linux-arm64
