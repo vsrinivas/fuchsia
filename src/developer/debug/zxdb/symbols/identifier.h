@@ -13,73 +13,36 @@
 
 namespace zxdb {
 
+// A simple identifier component consisting only of an opaque string.
 class IdentifierComponent {
  public:
   IdentifierComponent();
-
-  // Constructor for names without templates.
-  explicit IdentifierComponent(std::string name)
-      : name_(std::move(name)), has_template_(false) {}
-
-  // Constructor for names with templates. The contents will be a
-  // vector of somewhat-normalized type string in between the <>. This always
-  // generates a template even if the contents are empty (meaning "name<>");
-  IdentifierComponent(std::string name,
-                      std::vector<std::string> template_contents)
-      : name_(std::move(name)),
-        has_template_(true),
-        template_contents_(std::move(template_contents)) {}
+  explicit IdentifierComponent(std::string name) : name_(std::move(name)) {}
 
   bool operator==(const IdentifierComponent& other) const {
-    return name_ == other.name_ && has_template_ == other.has_template_ &&
-           template_contents_ == other.template_contents_;
+    return name_ == other.name_;
   }
   bool operator!=(const IdentifierComponent& other) const {
     return !operator==(other);
   }
 
-  bool has_template() const { return has_template_; }
-
   const std::string& name() const { return name_; }
 
-  const std::vector<std::string>& template_contents() const {
-    return template_contents_;
-  }
-
-  // Returns this component, either as a string as it would be represented in
-  // C++, or in our debug format for unit test format checking (the name and
-  // each template parameter will be separately quoted so we can check the
-  // parsing).
   std::string GetName(bool include_debug) const;
 
  private:
   std::string name_;
-
-  bool has_template_;
-
-  std::vector<std::string> template_contents_;
 };
 
-// An identifier is a sequence of names. Currently this handles C++ and Rust,
-// but could be enhanced in the future for other languages.
+// An identifier consisting of a sequence of opaque names.
 //
-// This is used for variable names and function names. If you type a class
-// name or a typedef, the parser will also parse it as an identifier. What
-// the identifier actually means will depend on the context in which it's used.
+// Code in the symbols directory must use this identifier type since no
+// assumptions can be made about what the compiler has generated in the symbol
+// file. Some symbols like lambdas can have compiler-internally-generated names
+// which are not parseable in the language of the compilation unit.
 //
-// One component can consist of a name and a template part (note currently the
-// parser doesn't support the template part, but this class does in expectation
-// that parsing support will be added in the future).
-//
-//   Component := [ "::" ] <Name> [ "<" <Template-Goop> ">" ]
-//
-// An identifier consists of one or more components. In C++, if the first
-// component has a valid separator token, it's fully qualified ("::foo"), but
-// it could be omitted for non-fully-qualified names. Subsequent components
-// will always have separators.
-//
-// The identifier contains the token information for the original so that
-// it can be used for syntax highlighting.
+// See also "ParsedIdentifier" in the "expr" library which adds more parsing
+// when possible.
 using Identifier = IdentifierBase<IdentifierComponent>;
 
 }  // namespace zxdb

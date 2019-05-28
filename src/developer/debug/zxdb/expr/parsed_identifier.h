@@ -60,6 +60,10 @@ class ParsedIdentifierComponent {
   std::vector<std::string> template_contents_;
 };
 
+// An identifier that includes components with template types parsed out. This
+// is different then "Identifier" in the symbols directory because we attempt
+// to actually parse and canonicalize the input according to language-specific
+// rules.
 using ParsedIdentifier = IdentifierBase<ParsedIdentifierComponent>;
 
 // Converts a ParsedIdentifier to an Identifier and vice-versa. Conversion to

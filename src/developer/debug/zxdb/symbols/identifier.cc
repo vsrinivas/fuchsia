@@ -7,32 +7,13 @@
 namespace zxdb {
 
 std::string IdentifierComponent::GetName(bool include_debug) const {
+  if (!include_debug)
+    return name_;
+
   std::string result;
-
-  if (include_debug)
-    result.push_back('"');
-  result += name_;
-  if (include_debug)
-    result.push_back('"');
-
-  if (has_template()) {
-    if (include_debug)
-      result.push_back(',');
-    result.push_back('<');
-
-    for (size_t i = 0; i < template_contents().size(); i++) {
-      if (i > 0)
-        result += ", ";
-
-      // Template parameter string.
-      if (include_debug)
-        result.push_back('"');
-      result += template_contents()[i];
-      if (include_debug)
-        result.push_back('"');
-    }
-    result.push_back('>');
-  }
+  result.push_back('"');
+  result.append(name_);
+  result.push_back('"');
   return result;
 }
 

@@ -24,8 +24,8 @@ TEST(Identifier, GetName) {
                        IdentifierComponent("First"));
   EXPECT_EQ("::First", qualified.GetFullName());
 
-  // Append some template stuff.
-  qualified.AppendComponent(IdentifierComponent("Second", {"int", "Foo"}));
+  // Append some template stuff (not parsed in any way).
+  qualified.AppendComponent(IdentifierComponent("Second<int, Foo>"));
   EXPECT_EQ("::First::Second<int, Foo>", qualified.GetFullName());
   expected_index.push_back("Second<int, Foo>");
 }

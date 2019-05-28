@@ -21,8 +21,9 @@ enum class IdentifierQualification { kGlobal, kRelative };
 // identifier. This class encapsulates the core hierarchical part of an
 // identifier.
 //
-// Most code will want to use an "Identifier" which contains language-neutral
-// string components.
+// Code in the symbols directory must use "Identifier" which contains opaque
+// strings as components. The "expr" library adds a "ParsedIdentifier" which
+// has more C++-aware parsing of template types. See those classes for more.
 //
 // The ComponentType must be copyable and moveable and implement:
 //  - Construction from simple name:
