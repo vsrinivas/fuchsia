@@ -28,7 +28,6 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--dtb-overlay=[path]    Load a DTB overlay for a Linux kernel\n";
   std::cerr << "\t--host-memory           Directly map host memory into the guest\n";
   std::cerr << "\t--linux=[path]          Load a Linux kernel from 'path'\n";
-  std::cerr << "\t--legacy-net            Enable legacy virtio-net (uses host interface)\n";
   std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
   std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
   std::cerr << "\t--interrupt=[spec]      Adds a hardware interrupt mapping to the guest\n";
@@ -296,7 +295,6 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
           {"dtb-overlay", set_option(&cfg_->dtb_overlay_path_)},
           {"interrupt",
            add_option<InterruptSpec>(&cfg_->interrupts_, parse_interrupt_spec)},
-          {"legacy-net", set_flag(&cfg_->legacy_net_, true)},
           {"linux",
            set_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
           {"memory", add_option<MemorySpec>(&cfg_->memory_, parse_memory_spec)},

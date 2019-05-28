@@ -48,7 +48,6 @@
 #include "src/virtualization/bin/vmm/platform_device.h"
 #include "src/virtualization/bin/vmm/uart.h"
 #include "src/virtualization/bin/vmm/vcpu.h"
-#include "src/virtualization/bin/vmm/virtio_net_legacy.h"
 #include "src/virtualization/bin/vmm/virtio_vsock.h"
 #include "src/virtualization/bin/vmm/zircon.h"
 
@@ -309,30 +308,17 @@ int main(int argc, char** argv) {
   }
 
   // Setup net device.
-  VirtioNetLegacy legacy_net(guest.phys_mem(), device_loop.dispatcher());
   VirtioNet net(guest.phys_mem());
   if (cfg.virtio_net()) {
-    if (cfg.legacy_net()) {
-      status = bus.Connect(legacy_net.pci_device(), device_loop.dispatcher());
-      if (status != ZX_OK) {
-        return status;
-      }
-      status = legacy_net.Start("/dev/class/ethernet/000");
-      if (status != ZX_OK) {
-        FXL_LOG(INFO) << "Could not open Ethernet device";
-        return status;
-      }
-    } else {
-      status = bus.Connect(net.pci_device(), device_loop.dispatcher(), true);
-      if (status != ZX_OK) {
-        return status;
-      }
-      status =
-          net.Start(guest.object(), launcher.get(), device_loop.dispatcher());
-      if (status != ZX_OK) {
-        FXL_LOG(INFO) << "Could not open Ethernet device";
-        return status;
-      }
+    status = bus.Connect(net.pci_device(), device_loop.dispatcher(), true);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status =
+        net.Start(guest.object(), launcher.get(), device_loop.dispatcher());
+    if (status != ZX_OK) {
+      FXL_LOG(INFO) << "Could not open Ethernet device";
+      return status;
     }
   }
 

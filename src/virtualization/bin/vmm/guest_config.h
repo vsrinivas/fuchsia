@@ -60,7 +60,6 @@ class GuestConfig {
   const std::vector<MemorySpec>& memory() const { return memory_; }
   const std::vector<InterruptSpec>& interrupts() const { return interrupts_; }
   uint8_t cpus() const { return cpus_; }
-  bool legacy_net() const { return legacy_net_; }
   bool virtio_balloon() const { return virtio_balloon_; }
   bool virtio_console() const { return virtio_console_; }
   bool virtio_gpu() const { return virtio_gpu_; }
@@ -79,7 +78,6 @@ class GuestConfig {
   std::vector<MemorySpec> memory_;
   std::vector<InterruptSpec> interrupts_;
   uint8_t cpus_ = zx_system_get_num_cpus();
-  bool legacy_net_ = true;
   bool virtio_balloon_ = true;
   bool virtio_console_ = true;
   bool virtio_gpu_ = true;

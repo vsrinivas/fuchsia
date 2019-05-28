@@ -194,7 +194,6 @@ void Guest::StartGuest() {
   fuchsia::virtualization::LaunchInfo launch_info;
   launch_info.url = kLinuxGuestPackage;
   launch_info.args.push_back("--virtio-gpu=false");
-  launch_info.args.push_back("--legacy-net=false");
   launch_info.block_devices = GetBlockDevices(config_.stateful_image_size);
   launch_info.wayland_device = fuchsia::virtualization::WaylandDevice::New();
   launch_info.wayland_device->dispatcher = wayland_dispatcher_.NewBinding();
