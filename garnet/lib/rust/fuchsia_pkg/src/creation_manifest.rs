@@ -28,6 +28,59 @@ impl CreationManifest {
         &self.far_contents
     }
 
+    /// Creates a `CreationManifest` from external and far contents maps.
+    ///
+    /// `external_contents` is a map from package resource paths to their locations
+    /// on the host filesystem. These are the files that will be listed in
+    /// `meta/contents`. Resource paths in `external_contents` must *not* start with
+    /// `meta/`.
+    /// `far_contents` is a map from package resource paths to their locations
+    /// on the host filesystem. These are the files that will be included bodily in the
+    /// package `meta.far` archive. Resource paths in `far_contents` must start with
+    /// `meta/`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use fuchsia_pkg::CreationManifest;
+    /// # use maplit::btreemap;
+    /// let external_contents = btreemap! {
+    ///     "lib/mylib.so".to_string() => "build/system/path/mylib.so".to_string()
+    /// };
+    /// let far_contents = btreemap! {
+    ///     "meta/my_component_manifest.cmx".to_string() =>
+    ///         "other/build/system/path/my_component_manifest.cmx".to_string()
+    /// };
+    /// let creation_manifest =
+    ///     CreationManifest::from_external_and_far_contents(external_contents, far_contents)
+    ///         .unwrap();
+    /// ```
+    pub fn from_external_and_far_contents(
+        external_contents: BTreeMap<String, String>,
+        far_contents: BTreeMap<String, String>,
+    ) -> Result<Self, CreationManifestError> {
+        for (resource_path, _) in external_contents.iter().chain(far_contents.iter()) {
+            crate::path::check_resource_path(&resource_path).map_err(|e| {
+                CreationManifestError::ResourcePath { cause: e, path: resource_path.to_string() }
+            })?;
+        }
+        for (resource_path, _) in external_contents.iter() {
+            if resource_path.starts_with("meta/") {
+                return Err(CreationManifestError::ExternalContentInMetaDirectory {
+                    path: resource_path.to_string(),
+                });
+            }
+        }
+        for (resource_path, _) in far_contents.iter() {
+            if !resource_path.starts_with("meta/") {
+                return Err(CreationManifestError::FarContentNotInMetaDirectory {
+                    path: resource_path.to_string(),
+                });
+            }
+        }
+        Ok(CreationManifest { external_contents, far_contents })
+    }
+
     /// Deserializes a `CreationManifest` from versioned json.
     ///
     /// # Examples
@@ -48,16 +101,21 @@ impl CreationManifest {
     /// ```
     pub fn from_json<R: io::Read>(reader: R) -> Result<Self, CreationManifestError> {
         match serde_json::from_reader::<R, VersionedCreationManifest>(reader)? {
-            VersionedCreationManifest::Version1(v1) => Ok(CreationManifest::from_v1(v1.check()?)),
+            VersionedCreationManifest::Version1(v1) => CreationManifest::from_v1(v1),
         }
     }
 
-    fn from_v1(v1: CreationManifestV1) -> Self {
+    fn from_v1(v1: CreationManifestV1) -> Result<Self, CreationManifestError> {
         let mut far_contents = BTreeMap::new();
+        // Validate package resource paths in far contents before "meta/" is prepended
+        // for better error messages.
         for (resource_path, host_path) in v1.far_contents.into_iter() {
+            crate::path::check_resource_path(&resource_path).map_err(|e| {
+                CreationManifestError::ResourcePath { cause: e, path: resource_path.to_string() }
+            })?;
             far_contents.insert(format!("meta/{}", resource_path), host_path);
         }
-        CreationManifest { external_contents: v1.external_contents, far_contents }
+        CreationManifest::from_external_and_far_contents(v1.external_contents, far_contents)
     }
 }
 
@@ -76,31 +134,13 @@ struct CreationManifestV1 {
     far_contents: BTreeMap<String, String>,
 }
 
-impl CreationManifestV1 {
-    // Validate all package resource paths and make sure no external contents are in the
-    // "meta/" package directory.
-    fn check(self) -> Result<Self, CreationManifestError> {
-        for (resource_path, _) in self.external_contents.iter().chain(self.far_contents.iter()) {
-            crate::path::check_resource_path(&resource_path).map_err(|e| {
-                CreationManifestError::ResourcePath { cause: e, path: resource_path.clone() }
-            })?;
-        }
-        for (resource_path, _) in self.external_contents.iter() {
-            if resource_path.starts_with("meta/") {
-                return Err(CreationManifestError::ExternalContentInMetaDirectory {
-                    path: resource_path.to_string(),
-                });
-            }
-        }
-        Ok(self)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::errors::ResourcePathError::PathStartsWithSlash;
+    use crate::test::*;
     use maplit::btreemap;
+    use proptest::{prop_assert, prop_assert_eq, prop_assume, proptest, proptest_helper};
     use serde_json::json;
 
     fn from_json_value(
@@ -191,5 +231,31 @@ mod tests {
                 }
             }
         );
+    }
+
+    proptest! {
+        #[test]
+        fn test_from_external_and_far_contents_does_not_modify_valid_maps(
+            ref external_resource_path in random_resource_path(1, 3),
+            ref external_host_path in ".{0,30}",
+            ref far_resource_path in random_resource_path(1, 3),
+            ref far_host_path in ".{0,30}"
+        ) {
+            prop_assume!(!external_resource_path.starts_with("meta/"));
+            let external_contents = btreemap! {
+                external_resource_path.to_string() => external_host_path.to_string()
+            };
+            let far_resource_path = format!("meta/{}", far_resource_path);
+            let far_contents = btreemap! {
+                far_resource_path.to_string() => far_host_path.to_string()
+            };
+
+            let creation_manifest = CreationManifest::from_external_and_far_contents(
+                external_contents.clone(), far_contents.clone())
+                .unwrap();
+
+            prop_assert_eq!(creation_manifest.external_contents(), &external_contents);
+            prop_assert_eq!(creation_manifest.far_contents(), &far_contents);
+        }
     }
 }

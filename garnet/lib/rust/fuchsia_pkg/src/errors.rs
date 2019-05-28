@@ -78,6 +78,9 @@ pub enum CreationManifestError {
 
     #[fail(display = "package external content cannot be in 'meta/' directory: {}", path)]
     ExternalContentInMetaDirectory { path: String },
+
+    #[fail(display = "package far content must be in 'meta/' directory: {}", path)]
+    FarContentNotInMetaDirectory { path: String },
 }
 
 impl From<serde_json::Error> for CreationManifestError {
