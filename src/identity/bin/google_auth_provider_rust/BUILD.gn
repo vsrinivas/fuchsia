@@ -1,0 +1,39 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "google_auth_provider_rust"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
+  ]
+}
+
+package("google_auth_provider_rust") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/google_auth_provider_rust"
+
+  meta = [
+    {
+      path = rebase_path("meta/google_auth_provider_rust.cmx")
+      dest = "google_auth_provider_rust.cmx"
+    },
+  ]
+}
