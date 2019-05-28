@@ -4,6 +4,7 @@
 
 #include <ddk/platform-defs.h>
 #include <fuchsia/camera/common/c/fidl.h>
+#include <fuchsia/camera/common/llcpp/fidl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fd.h>

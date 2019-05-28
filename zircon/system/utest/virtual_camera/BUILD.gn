@@ -9,6 +9,7 @@ test("virtual_camera") {
   deps = [
     "$zx/system/dev/virtual_camera:virtual_camera",
     "$zx/system/fidl/fuchsia-hardware-camera:c",
+    "$zx/system/fidl/fuchsia-hardware-camera:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",
