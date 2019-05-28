@@ -14,9 +14,8 @@ namespace camera {
 
 class DmaManager {
 public:
-    DmaManager(bool is_ping, bool is_downscaled)
-        : downscaled_(is_downscaled),
-          ping_reg_block_(is_ping) {}
+    DmaManager(bool is_downscaled)
+        : downscaled_(is_downscaled){}
 
     // TODO(garratt): fill out this function.
     zx_status_t ConnectToStream(fuchsia_sysmem_BufferCollectionInfo buffer_collection);
@@ -35,7 +34,6 @@ private:
     uint32_t fps_;
     DmaFormat current_format_;
     bool downscaled_ = false;
-    bool ping_reg_block_ = true;
     fit::function<void(uint32_t buffer_index)> publish_buffer_callback_;
 
     // Get the Registers used by the DMA Writer.

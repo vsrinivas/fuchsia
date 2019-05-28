@@ -11,130 +11,66 @@
 namespace camera {
 
 auto DmaManager::GetPrimaryMisc() {
-    if (ping_reg_block_) {
-        if (downscaled_) {
-            return ping::DownScaled::Primary::DmaWriter_Misc::Get();
-        } else {
-            return ping::FullResolution::Primary::DmaWriter_Misc::Get();
-        }
+    if (downscaled_) {
+        return ping::DownScaled::Primary::DmaWriter_Misc::Get();
     } else {
-        if (downscaled_) {
-            return pong::DownScaled::Primary::DmaWriter_Misc::Get();
-        } else {
-            return pong::FullResolution::Primary::DmaWriter_Misc::Get();
-        }
+        return ping::FullResolution::Primary::DmaWriter_Misc::Get();
     }
 }
 
 auto DmaManager::GetUvMisc() {
-    if (ping_reg_block_) {
-        if (downscaled_) {
-            return ping::DownScaled::Uv::DmaWriter_Misc::Get();
-        } else {
-            return ping::FullResolution::Uv::DmaWriter_Misc::Get();
-        }
+    if (downscaled_) {
+        return ping::DownScaled::Uv::DmaWriter_Misc::Get();
     } else {
-        if (downscaled_) {
-            return pong::DownScaled::Uv::DmaWriter_Misc::Get();
-        } else {
-            return pong::FullResolution::Uv::DmaWriter_Misc::Get();
-        }
+        return ping::FullResolution::Uv::DmaWriter_Misc::Get();
     }
 }
 
 auto DmaManager::GetPrimaryBank0() {
-    if (ping_reg_block_) {
-        if (downscaled_) {
-            return ping::DownScaled::Primary::DmaWriter_Bank0Base::Get();
-        } else {
-            return ping::FullResolution::Primary::DmaWriter_Bank0Base::Get();
-        }
+    if (downscaled_) {
+        return ping::DownScaled::Primary::DmaWriter_Bank0Base::Get();
     } else {
-        if (downscaled_) {
-            return pong::DownScaled::Primary::DmaWriter_Bank0Base::Get();
-        } else {
-            return pong::FullResolution::Primary::DmaWriter_Bank0Base::Get();
-        }
+        return ping::FullResolution::Primary::DmaWriter_Bank0Base::Get();
     }
 }
 
 auto DmaManager::GetUvBank0() {
-    if (ping_reg_block_) {
-        if (downscaled_) {
-            return ping::DownScaled::Uv::DmaWriter_Bank0Base::Get();
-        } else {
-            return ping::FullResolution::Uv::DmaWriter_Bank0Base::Get();
-        }
+    if (downscaled_) {
+        return ping::DownScaled::Uv::DmaWriter_Bank0Base::Get();
     } else {
-        if (downscaled_) {
-            return pong::DownScaled::Uv::DmaWriter_Bank0Base::Get();
-        } else {
-            return pong::FullResolution::Uv::DmaWriter_Bank0Base::Get();
-        }
+        return ping::FullResolution::Uv::DmaWriter_Bank0Base::Get();
     }
 }
 
 auto DmaManager::GetPrimaryLineOffset() {
-    if (ping_reg_block_) {
-        if (downscaled_) {
-            return ping::DownScaled::Primary::DmaWriter_LineOffset::Get();
-        } else {
-            return ping::FullResolution::Primary::DmaWriter_LineOffset::Get();
-        }
+    if (downscaled_) {
+        return ping::DownScaled::Primary::DmaWriter_LineOffset::Get();
     } else {
-        if (downscaled_) {
-            return pong::DownScaled::Primary::DmaWriter_LineOffset::Get();
-        } else {
-            return pong::FullResolution::Primary::DmaWriter_LineOffset::Get();
-        }
+        return ping::FullResolution::Primary::DmaWriter_LineOffset::Get();
     }
 }
 
 auto DmaManager::GetUvLineOffset() {
-    if (ping_reg_block_) {
-        if (downscaled_) {
-            return ping::DownScaled::Uv::DmaWriter_LineOffset::Get();
-        } else {
-            return ping::FullResolution::Uv::DmaWriter_LineOffset::Get();
-        }
+    if (downscaled_) {
+        return ping::DownScaled::Uv::DmaWriter_LineOffset::Get();
     } else {
-        if (downscaled_) {
-            return pong::DownScaled::Uv::DmaWriter_LineOffset::Get();
-        } else {
-            return pong::FullResolution::Uv::DmaWriter_LineOffset::Get();
-        }
+        return ping::FullResolution::Uv::DmaWriter_LineOffset::Get();
     }
 }
 
 auto DmaManager::GetPrimaryActiveDim() {
-    if (ping_reg_block_) {
-        if (downscaled_) {
-            return ping::DownScaled::Primary::DmaWriter_ActiveDim::Get();
-        } else {
-            return ping::FullResolution::Primary::DmaWriter_ActiveDim::Get();
-        }
+    if (downscaled_) {
+        return ping::DownScaled::Primary::DmaWriter_ActiveDim::Get();
     } else {
-        if (downscaled_) {
-            return pong::DownScaled::Primary::DmaWriter_ActiveDim::Get();
-        } else {
-            return pong::FullResolution::Primary::DmaWriter_ActiveDim::Get();
-        }
+        return ping::FullResolution::Primary::DmaWriter_ActiveDim::Get();
     }
 }
 
 auto DmaManager::GetUvActiveDim() {
-    if (ping_reg_block_) {
-        if (downscaled_) {
-            return ping::DownScaled::Uv::DmaWriter_ActiveDim::Get();
-        } else {
-            return ping::FullResolution::Uv::DmaWriter_ActiveDim::Get();
-        }
+    if (downscaled_) {
+        return ping::DownScaled::Uv::DmaWriter_ActiveDim::Get();
     } else {
-        if (downscaled_) {
-            return pong::DownScaled::Uv::DmaWriter_ActiveDim::Get();
-        } else {
-            return pong::FullResolution::Uv::DmaWriter_ActiveDim::Get();
-        }
+        return ping::FullResolution::Uv::DmaWriter_ActiveDim::Get();
     }
 }
 
