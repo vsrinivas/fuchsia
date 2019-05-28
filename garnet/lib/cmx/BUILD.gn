@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -60,5 +61,22 @@ test_package("cmx_unittests") {
       name = "cmx_unittests"
       environments = basic_envs
     },
+  ]
+}
+
+fuzz_package("cmx_fuzzers") {
+  targets = [ ":cmx_fuzzer" ]
+}
+
+fuzz_target("cmx_fuzzer") {
+  sources = [ "cmx_fuzztest.cc" ]
+  deps = [
+    ":cmx",
+    "//src/lib/files",
+    "//third_party/rapidjson",
+  ]
+  public_deps = [
+    "//garnet/public/lib/json",
+    "//src/lib/fxl",
   ]
 }
