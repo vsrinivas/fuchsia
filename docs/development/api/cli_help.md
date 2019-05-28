@@ -21,6 +21,7 @@ Let's start with a full example before digging into the specifics.
 
 Each section of this example is described in detail later in this document.
 (Note that `blast` is not a real tool).
+
 ```
 Usage: blast [-f] [-s <scribble>] <command> [<args>]
 
