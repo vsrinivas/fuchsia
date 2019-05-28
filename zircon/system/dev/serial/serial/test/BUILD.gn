@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":serial-unittest",
+  ]
+}
+
+test("serial-unittest") {
+  sources = [
+    "serial-test.cpp",
+  ]
+  include_dirs = [ ".." ]
+  deps = [
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/unittest",
+    "..:common",
+  ]
+}

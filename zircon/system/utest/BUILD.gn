@@ -59,6 +59,7 @@ if (current_cpu != "") {
       "$zx/system/dev/nand/skip-block:skip-block-test",
       "$zx/system/dev/power/msm8x53-power:msm8x53-power-test",
       "$zx/system/dev/power/mtk-power:mtk-power-test",
+      "$zx/system/dev/serial/serial/test",
       "$zx/system/dev/sysmem/sysmem:sysmem-unittest",
       "$zx/system/dev/test",
       "$zx/system/dev/thermal/mtk-thermal:mtk-thermal-test",

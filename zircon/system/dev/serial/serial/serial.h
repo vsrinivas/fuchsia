@@ -30,7 +30,8 @@ class SerialDevice : public DeviceType,
 public:
     explicit SerialDevice(zx_device_t* parent)
         : DeviceType(parent),
-          serial_(parent) {}
+          serial_(parent),
+          open_(false) {}
 
     static zx_status_t Create(void* ctx, zx_device_t* dev);
     zx_status_t Bind();
