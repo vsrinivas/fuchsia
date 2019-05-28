@@ -29,7 +29,7 @@ constexpr char kStoryName[] = "story";
 constexpr char kIntentAction[] = "action";
 
 class IntentsTest : public modular::testing::TestHarnessFixture {
- public:
+ protected:
   void SetUp() override {
     intent_handled_ = false;
     test_module_ = std::make_unique<modular::testing::FakeModule>(
@@ -147,8 +147,8 @@ TEST_F(IntentsTest, ModuleUsesIntentHandler) {
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
   ExecutePuppetMasterAddMod(std::move(initial_module_intent));
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return intent_handled_; }, kTimeout));
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return intent_handled_; }, kTimeout));
 
   // Check that the intent handler received the intent
   EXPECT_TRUE(IntentMatchesExpectations(&latest_handled_intent_,
@@ -159,7 +159,7 @@ TEST_F(IntentsTest, ModuleUsesIntentHandler) {
 // Launches a module that exposes an intent handler service then tests that a
 // second intent sent to an already running module with the same parameters but
 // different data notifies the intent handler of the new intent.
-TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerSameParamName) {
+TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
@@ -189,7 +189,7 @@ TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerSameParamName) {
 // Launches a module that exposes an intent handler service then tests that a
 // second intent with different parameters is delivered to to the already
 // running intent handler.
-TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerDifferentParam) {
+TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
@@ -221,7 +221,7 @@ TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerDifferentParam) {
 // Launches a module that exposes an intent handler service then tests that a
 // second intent with different handler is not delivered to the running
 // intent handler.
-TEST_F(IntentsTest, DISABLED_DifferentHandler) {
+TEST_F(IntentsTest, DifferentHandler) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
