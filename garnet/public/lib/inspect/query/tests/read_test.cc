@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fit/defer.h>
 #include <lib/inspect/inspect.h>
 #include <lib/inspect/query/source.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
@@ -68,12 +69,7 @@ class ReadTest : public TestFixture {
     ZX_ASSERT(fdio_ns_get_installed(&ns_) == ZX_OK);
     ZX_ASSERT(fdio_ns_bind(ns_, "/test",
                            ptr.Unbind().TakeChannel().release()) == ZX_OK);
-  }
-
-  ~ReadTest() {
-    if (ns_) {
-      ZX_ASSERT(fdio_ns_unbind(ns_, "/test") == ZX_OK);
-    }
+    ns_cleanup_ = [this] { ZX_ASSERT(fdio_ns_unbind(ns_, "/test") == ZX_OK); };
   }
 
  protected:
@@ -82,8 +78,11 @@ class ReadTest : public TestFixture {
   component::ObjectDir fidl_dir_;
   TestDataWrapper fidl_test_data_, vmo_test_data_;
   fidl::BindingSet<fuchsia::inspect::Inspect> bindings_;
-  vfs::PseudoDir root_dir_;
   fdio_ns_t* ns_;
+  // Ensure ns is cleaned up after the root_dir is destroyed and no longer
+  // depending on it.
+  fit::deferred_action<fit::closure> ns_cleanup_;
+  vfs::PseudoDir root_dir_;
 };
 
 TEST_F(ReadTest, ReadLocations) {
