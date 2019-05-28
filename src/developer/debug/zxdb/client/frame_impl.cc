@@ -43,7 +43,7 @@ const Location& FrameImpl::GetLocation() const {
 
 uint64_t FrameImpl::GetAddress() const { return location_.address(); }
 
-const std::vector<debug_ipc::Register>& FrameImpl::GetGeneralRegisters() {
+const std::vector<debug_ipc::Register>& FrameImpl::GetGeneralRegisters() const {
   return stack_frame_.regs;
 }
 

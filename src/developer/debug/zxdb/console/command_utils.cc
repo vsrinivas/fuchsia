@@ -63,23 +63,35 @@ Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
   }
 
   if (!cmd.thread()) {
-    return Err(fxl::StringPrintf(
-        "\"%s\" requires a thread but there is no current thread.",
-        command_name));
+    return Err("\"%s\" requires a thread but there is no current thread.",
+               command_name);
   }
   if (cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kBlocked &&
       cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kCoreDump &&
       cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kSuspended) {
-    return Err(fxl::StringPrintf(
+    return Err(
         "\"%s\" requires a suspended thread but thread %d is %s.\n"
         "To view and sync thread state with the remote system, type "
         "\"thread\".",
         command_name, context->IdForThread(cmd.thread()),
         ThreadStateToString(cmd.thread()->GetState(),
                             cmd.thread()->GetBlockedReason())
-            .c_str()));
+            .c_str());
   }
   return Err();
+}
+
+Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context, const Command& cmd,
+                              const char* command_name) {
+  // Does most validation except noun checking.
+  Err err = AssertStoppedThreadCommand(context, cmd, false, command_name);
+  if (err.has_error())
+    return err;
+
+  // Stopped threads should always have a frame.
+  FXL_DCHECK(cmd.frame());
+
+  return cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
 }
 
 size_t CheckHexPrefix(const std::string& s) {
@@ -142,8 +154,8 @@ Err StringToUint32(const std::string& s, uint32_t* out) {
     return err;
 
   if (value64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
-    return Err(fxl::StringPrintf(
-        "Expected 32-bit unsigned value, but %s is too large.", s.c_str()));
+    return Err("Expected 32-bit unsigned value, but %s is too large.",
+               s.c_str());
   }
   *out = static_cast<uint32_t>(value64);
   return Err();

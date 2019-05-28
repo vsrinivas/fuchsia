@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REGISTER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REGISTER_H_
 
 #include <cstdint>
 #include <map>
@@ -22,7 +23,9 @@ class Register;  // Defined below
 class RegisterSet {
  public:
   // Currently accessing a register is iterating over the categories.
-  // If this gets slow, a map from ID -> Register might be needed.
+  // If this gets slow, a map from ID -> Register might be needed. Or we could
+  // eliminate the indirection of categories and keep all registers in a single
+  // map.
   using CategoryMap =
       std::map<debug_ipc::RegisterCategory::Type, std::vector<Register>>;
 
@@ -77,3 +80,5 @@ class Register {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REGISTER_H_

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/console/format_register_arm64.h"
+
 #include <inttypes.h>
 
 #include "src/developer/debug/shared/arch_arm64.h"
 #include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
-#include "src/developer/debug/zxdb/console/format_register_arm64.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_formatters.h"
@@ -91,7 +92,7 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
 
   // Output the tables.
   if (!rows.empty()) {
-    std::vector<ColSpec> colspecs({ColSpec(Align::kRight),
+    std::vector<ColSpec> colspecs({ColSpec(Align::kRight, 0, std::string(), 2),
                                    ColSpec(Align::kRight, 0, std::string(), 1),
                                    ColSpec()});
     FormatTable(colspecs, rows, out);
@@ -219,7 +220,7 @@ void FormatDebugRegisters(const FormatRegisterOptions& options,
 
   // Output the tables.
   if (!rows.empty()) {
-    std::vector<ColSpec> colspecs({ColSpec(Align::kRight),
+    std::vector<ColSpec> colspecs({ColSpec(Align::kRight, 0, std::string(), 2),
                                    ColSpec(Align::kRight, 0, std::string(), 1),
                                    ColSpec()});
     FormatTable(colspecs, rows, out);

@@ -39,17 +39,24 @@ class Thread;
 Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
                         Target* target);
 
-// Validates a command that applies to a stopped thread:
+// Validates a command that applies to a stopped thread.
 //
 // The thread on the command must exist and be stopped.
 //
 // If validate_nouns is set, only thread and process nouns may be specified
-// (these are most common for commands that operate on threads).
+// (these are most common for commands that operate on threads) for the
+// "Thread" variant.
+//
+// The "Frame" variant also allows a frame override ("frame 3 foo"), always
+// validates nouns, and requires that the thread have a currently frame.
 //
 // If not, generates an error of the form "<command_name> requires a stopped
-// target".
+// thread".
 Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
                                bool validate_nouns, const char* command_name);
+Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context,
+                                        const Command& cmd,
+                                        const char* command_name);
 
 // Checks if the given string starts with a hexadecimal prefix ("0x" or "0X").
 // If it does, returns the first index into the array of the string FOLLOWING

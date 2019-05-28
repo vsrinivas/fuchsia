@@ -33,7 +33,7 @@ class FrameImpl final : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  const std::vector<debug_ipc::Register>& GetGeneralRegisters() override;
+  const std::vector<debug_ipc::Register>& GetGeneralRegisters() const override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;

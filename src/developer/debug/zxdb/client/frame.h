@@ -59,7 +59,11 @@ class Frame : public ClientObject {
   //
   // Inline frames will report the registers from the physical frame they're
   // associated with.
-  virtual const std::vector<debug_ipc::Register>& GetGeneralRegisters() = 0;
+  //
+  // Note for future: If this is commonly used, we should convert the array to
+  // zxdb::Register when it comes down from the agent.
+  virtual const std::vector<debug_ipc::Register>& GetGeneralRegisters()
+      const = 0;
 
   // The frame base pointer.
   //

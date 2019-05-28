@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/console/format_register_x64.h"
+
 #include <inttypes.h>
 
 #include <set>
@@ -11,7 +13,6 @@
 #include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
-#include "src/developer/debug/zxdb/console/format_register_x64.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_formatters.h"
@@ -121,7 +122,7 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
 
   // Output the tables.
   if (!rows.empty()) {
-    std::vector<ColSpec> colspecs({ColSpec(Align::kRight),
+    std::vector<ColSpec> colspecs({ColSpec(Align::kRight, 0, std::string(), 2),
                                    ColSpec(Align::kRight, 0, std::string(), 1),
                                    ColSpec()});
     FormatTable(colspecs, rows, out);
@@ -224,9 +225,10 @@ Err FormatFPRegisters(const std::vector<Register>& registers,
     // right-hand digits don't correspond to each other, and usually this will
     // end up aligning the decimal point which is nice.
     OutputBuffer value_out;
-    auto colspecs = std::vector<ColSpec>(
-        {ColSpec(Align::kRight), ColSpec(Align::kLeft, 0, std::string(), 1),
-         ColSpec(Align::kLeft, 0, std::string(), 1)});
+    auto colspecs =
+        std::vector<ColSpec>({ColSpec(Align::kRight, 0, std::string(), 2),
+                              ColSpec(Align::kLeft, 0, std::string(), 1),
+                              ColSpec(Align::kLeft, 0, std::string(), 1)});
     FormatTable(std::move(colspecs), rows, &value_out);
     out->Append(std::move(value_out));
   }
@@ -319,8 +321,8 @@ void FormatDebugRegisters(const std::vector<Register>& registers,
 
   // Output each table if needed.
   auto colspecs = std::vector<ColSpec>(
-      {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, std::string(), 1),
-       ColSpec(Align::kLeft)});
+      {ColSpec(Align::kRight, 0, std::string(), 2),
+       ColSpec(Align::kRight, 0, std::string(), 1), ColSpec(Align::kLeft)});
   FormatTable(colspecs, rows, out);
 }
 

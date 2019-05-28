@@ -375,12 +375,7 @@ Examples
       recursive.
 )";
 Err DoFinish(ConsoleContext* context, const Command& cmd) {
-  // This command allows "frame" which AssertStoppedThreadCommand doesn't,
-  // so pass "false" to disabled noun checking and manually check ourselves.
-  Err err = AssertStoppedThreadCommand(context, cmd, false, "finish");
-  if (err.has_error())
-    return err;
-  err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
+  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "finish");
   if (err.has_error())
     return err;
 
@@ -419,7 +414,7 @@ Location arguments
 
 )" LOCATION_ARG_HELP("jump");
 Err DoJump(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, false, "jump");
+  Err err = AssertStoppedThreadCommand(context, cmd, true, "jump");
   if (err.has_error())
     return err;
 
@@ -488,16 +483,9 @@ Examples
       Prints locals with types.
 )";
 Err DoLocals(ConsoleContext* context, const Command& cmd) {
-  // Don't have AssertStoppedThreadCommand check nouns because we additionally
-  // allow "frame", which we manually validate below.
-  Err err = AssertStoppedThreadCommand(context, cmd, false, "locals");
+  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "locals");
   if (err.has_error())
     return err;
-  err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
-  if (err.has_error())
-    return err;
-  if (!cmd.frame())
-    return Err("There isn't a current frame to read locals from.");
 
   const Location& location = cmd.frame()->GetLocation();
   if (!location.symbol())
@@ -1057,13 +1045,14 @@ const char kRegsHelp[] =
 
   Alias: "rg"
 
-  Shows the current registers for a thread. The thread must be stopped.
+  Shows the current registers for a stack frame. The thread must be stopped.
   By default the general purpose registers will be shown, but more can be
   configures through switches.
 
-  NOTE: The values are displayed in the endianess of the target architecture.
-        The interpretation of which bits are the MSB will vary across different
-        endianess.
+  When the frame is not the topmost stack frame, the regsiters shown will be
+  only those saved on the stack. The values will reflect the value of the
+  registers at the time that stack frame was active. To get the current CPU
+  registers, run "regs" on frame 0.
 
 Arguments
 
@@ -1096,21 +1085,49 @@ Examples
   regs
   thread 4 regs --category=vector
   process 2 thread 1 regs -c all v*
+  frame 2 regs
 )";
 
 // Switches
 constexpr int kRegsCategoriesSwitch = 1;
 constexpr int kRegsExtendedSwitch = 2;
 
+// Converts the saved registers on a given stack frame to the right format for
+// printing.
+RegisterSet FrameRegistersToSet(const Frame* frame) {
+  RegisterSet result_set;
+  result_set.set_arch(frame->session()->arch());
+  auto& general =
+      result_set.category_map()[debug_ipc::RegisterCategory::Type::kGeneral];
+
+  for (const debug_ipc::Register& reg : frame->GetGeneralRegisters())
+    general.emplace_back(reg);
+
+  std::sort(general.begin(), general.end(), [](auto& a, auto& b) {
+    return static_cast<uint32_t>(a.id()) < static_cast<uint32_t>(b.id());
+  });
+  return result_set;
+}
+
 void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
-                    FormatRegisterOptions options) {
+                    const FormatRegisterOptions& options,
+                    bool show_non_topmost_warning) {
   Console* console = Console::get();
   if (cmd_err.has_error()) {
     console->Output(cmd_err);
     return;
   }
 
-  options.arch = register_set.arch();
+  // Always output warning first if needed. If the filtering fails it could be
+  // because the register wasn't saved.
+  if (show_non_topmost_warning) {
+    OutputBuffer warning_out;
+    warning_out.Append(Syntax::kWarning, "⚠️  ");
+    warning_out.Append(
+        "Stack frame is not topmost. Only saved registers will be "
+        "available.\n");
+    console->Output(warning_out);
+  }
 
   FilteredRegisterSet filtered_set;
   Err err = FilterRegisters(options, register_set, &filtered_set);
@@ -1129,11 +1146,11 @@ void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
 }
 
 Err DoRegs(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, true, "regs");
+  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "regs");
   if (err.has_error())
     return err;
 
-  // When empty, we print all the registers.
+  // When empty, print all the registers.
   std::string regex_filter;
   if (!cmd.args().empty()) {
     // We expect only one name.
@@ -1143,10 +1160,13 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
     regex_filter = cmd.args().front();
   }
 
-  // General purpose are the default.
+  bool top_stack_frame = (cmd.frame() == cmd.thread()->GetStack()[0]);
+
+  // General purpose are the default. Other categories can only be shown for
+  // the top stack frame since they require reading from the current CPU state.
   std::vector<RegisterCategory::Type> cats_to_show = {
       RegisterCategory::Type::kGeneral};
-  if (cmd.HasSwitch(kRegsCategoriesSwitch)) {
+  if (top_stack_frame && cmd.HasSwitch(kRegsCategoriesSwitch)) {
     auto option = cmd.GetSwitchValue(kRegsCategoriesSwitch);
     if (option == "all") {
       cats_to_show = {
@@ -1168,19 +1188,27 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
     }
   }
 
-  // Parse the switches
+  // Formatting options.
   FormatRegisterOptions options;
+  options.arch = cmd.thread()->session()->arch();
   options.categories = cats_to_show;
   options.extended = cmd.HasSwitch(kRegsExtendedSwitch);
   options.filter_regexp = std::move(regex_filter);
 
-  // We pass the given register name to the callback
-  auto regs_cb = [options = std::move(options)](const Err& err,
-                                                const RegisterSet& registers) {
-    OnRegsComplete(err, registers, std::move(options));
-  };
-
-  cmd.thread()->ReadRegisters(std::move(cats_to_show), regs_cb);
+  if (top_stack_frame) {
+    // Always request the current registers even if we're only printing the
+    // general ones (which will be cached on the top stack frame). The thread
+    // state could have changed out from under us.
+    cmd.thread()->ReadRegisters(
+        std::move(cats_to_show),
+        [options = std::move(options)](const Err& err,
+                                       const RegisterSet& registers) {
+          OnRegsComplete(err, registers, std::move(options), false);
+        });
+  } else {
+    // Non-topmost, read the available registers directly off the stack frame.
+    OnRegsComplete(Err(), FrameRegistersToSet(cmd.frame()), options, true);
+  }
   return Err();
 }
 
@@ -1291,11 +1319,7 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
     cmd.target()->GetProcess()->ContinueUntil(location, callback);
   } else {
     // Thread-specific.
-    err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
-    if (err.has_error())
-      return err;
-
-    err = AssertStoppedThreadCommand(context, cmd, false, "until");
+    err = AssertStoppedThreadWithFrameCommand(context, cmd, "until");
     if (err.has_error())
       return err;
 

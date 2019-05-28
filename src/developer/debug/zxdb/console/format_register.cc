@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/console/format_register.h"
+
 #include <inttypes.h>
 #include <stdlib.h>
 
@@ -12,7 +14,6 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/console.h"
-#include "src/developer/debug/zxdb/console/format_register.h"
 #include "src/developer/debug/zxdb/console/format_register_arm64.h"
 #include "src/developer/debug/zxdb/console/format_register_x64.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
@@ -37,8 +38,10 @@ void InternalFormatGeneric(const std::vector<Register>& registers,
     rows.push_back(DescribeRegister(reg, color));
   }
 
-  FormatTable({ColSpec(Align::kRight), ColSpec(Align::kRight), ColSpec()}, rows,
-              out);
+  // Pad left by two spaces so the headings make more sense.
+  FormatTable({ColSpec(Align::kRight, 0, std::string(), 2),
+               ColSpec(Align::kRight), ColSpec()},
+              rows, out);
 }
 
 Err FormatCategory(const FormatRegisterOptions& options,
@@ -151,8 +154,6 @@ Err FormatRegisters(const FormatRegisterOptions& options,
       return err;
     out_buffers.emplace_back(std::move(cat_out));
   }
-
-  out->Clear();
 
   // Each section is separated by a new line.
   for (const auto& buf : out_buffers) {
