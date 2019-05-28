@@ -10,7 +10,7 @@ Create an event.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_event_create(uint32_t options, zx_handle_t* out);

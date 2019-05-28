@@ -10,7 +10,7 @@ Bind to, or unbind from, the exception port corresponding to a given job, proces
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_task_bind_exception_port(zx_handle_t handle,

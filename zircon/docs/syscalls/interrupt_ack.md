@@ -10,7 +10,7 @@ Acknowledge an interrupt and re-arm it.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_interrupt_ack(zx_handle_t handle);

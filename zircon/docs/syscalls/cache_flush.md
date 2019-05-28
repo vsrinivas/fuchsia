@@ -10,7 +10,7 @@ Flush CPU data and/or instruction caches.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_cache_flush(const void* addr, size_t size, uint32_t options);

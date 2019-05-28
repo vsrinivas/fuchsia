@@ -10,7 +10,7 @@ Pin pages and grant devices access to them.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_bti_pin(zx_handle_t handle,

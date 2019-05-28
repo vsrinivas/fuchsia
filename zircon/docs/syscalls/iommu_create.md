@@ -10,7 +10,7 @@ Create a new IOMMU object in the kernel.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_iommu_create(zx_handle_t resource,

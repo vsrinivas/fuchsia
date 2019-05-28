@@ -10,7 +10,7 @@ Subscribe for signals on an object.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_object_wait_async(zx_handle_t handle,

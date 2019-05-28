@@ -10,7 +10,7 @@ TODO(ZX-3106)
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 uint32_t zx_system_get_dcache_line_size(void);

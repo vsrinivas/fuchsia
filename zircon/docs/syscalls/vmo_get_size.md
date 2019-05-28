@@ -10,7 +10,7 @@ Read the current size of a VMO object.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t* size);

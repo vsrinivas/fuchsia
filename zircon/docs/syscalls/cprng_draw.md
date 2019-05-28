@@ -10,7 +10,7 @@ Draw from the kernel's CPRNG.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 void zx_cprng_draw(void* buffer, size_t buffer_size);

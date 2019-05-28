@@ -10,7 +10,7 @@ Close a number of handles.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_handle_close_many(const zx_handle_t* handles,

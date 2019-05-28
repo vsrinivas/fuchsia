@@ -10,7 +10,7 @@ Signal an object's peer.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_object_signal_peer(zx_handle_t handle,

@@ -10,7 +10,7 @@ Sets a trap within a guest.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_guest_set_trap(zx_handle_t handle,

@@ -10,7 +10,7 @@ Make Secure Monitor Call (SMC) from user space.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/smc.h>
 

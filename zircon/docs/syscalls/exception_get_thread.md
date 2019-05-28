@@ -10,7 +10,7 @@ Create a handle for the exception's thread.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_exception_get_thread(zx_handle_t handle, zx_handle_t* out);

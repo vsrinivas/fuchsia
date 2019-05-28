@@ -10,7 +10,7 @@ Supply pages into a pager owned vmo.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_pager_supply_pages(zx_handle_t pager,

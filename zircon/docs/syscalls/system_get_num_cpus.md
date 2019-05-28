@@ -10,7 +10,7 @@ Get number of logical processors on the system.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 uint32_t zx_system_get_num_cpus(void);

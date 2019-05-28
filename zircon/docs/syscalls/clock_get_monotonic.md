@@ -10,7 +10,7 @@ Acquire the current monotonic time.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_time_t zx_clock_get_monotonic(void);

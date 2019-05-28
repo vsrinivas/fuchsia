@@ -10,7 +10,7 @@ Releases all quarantined PMTs.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_bti_release_quarantine(zx_handle_t handle);

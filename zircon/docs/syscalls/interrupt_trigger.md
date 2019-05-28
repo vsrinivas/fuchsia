@@ -10,7 +10,7 @@ Triggers a virtual interrupt object.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_interrupt_trigger(zx_handle_t handle,

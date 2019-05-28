@@ -10,7 +10,7 @@ TODO(ZX-3106)
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_syscall_test_wrapper(int32_t a, int32_t b, int32_t c);

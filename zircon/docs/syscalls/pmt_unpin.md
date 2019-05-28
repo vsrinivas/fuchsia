@@ -10,7 +10,7 @@ Unpin pages and revoke device access to them.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_pmt_unpin(zx_handle_t handle);

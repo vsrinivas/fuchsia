@@ -10,7 +10,7 @@ Ask for various properties of various kernel objects.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_object_get_property(zx_handle_t handle,

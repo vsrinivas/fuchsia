@@ -360,6 +360,13 @@ def update_name(lines, syscall_data, warn):
 
 
 def make_synopsis_block(syscall_data, warn):
+    # Construct a synopsis block of the form:
+    #
+    #   ```c
+    #   #include <zircon/syscalls.h>
+    #
+    #   zx_status_t zx_syscall_xxx(int32_t p1, int32_t p2);
+    #   ```
     headers = set([
         '#include <zircon/syscalls.h>',
     ])
@@ -370,7 +377,7 @@ def make_synopsis_block(syscall_data, warn):
         elif (arg['type'] == 'zx_smc_parameters_t' or
               arg['type'] == 'zx_smc_result_t'):
             headers.add('#include <zircon/syscalls/smc.h>')
-    header = ['```'] + sorted(list(headers)) + ['']
+    header = ['```c'] + sorted(list(headers)) + ['']
 
     def format_arg(x):
         ret = ''

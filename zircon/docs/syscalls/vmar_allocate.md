@@ -10,7 +10,7 @@ Allocate a new subregion.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar,

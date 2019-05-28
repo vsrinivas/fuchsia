@@ -10,7 +10,7 @@ Write data to a fifo.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_fifo_write(zx_handle_t handle,

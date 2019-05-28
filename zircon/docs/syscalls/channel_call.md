@@ -10,7 +10,7 @@ Send a message to a channel and await a reply.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_channel_call(zx_handle_t handle,

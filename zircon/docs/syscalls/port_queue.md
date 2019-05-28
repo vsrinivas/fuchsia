@@ -10,7 +10,7 @@ Queue a packet to a port.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 

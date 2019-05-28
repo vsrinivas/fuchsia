@@ -10,7 +10,7 @@ Start execution on a process.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_process_start(zx_handle_t handle,

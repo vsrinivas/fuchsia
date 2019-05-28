@@ -10,7 +10,7 @@ High resolution sleep.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_nanosleep(zx_time_t deadline);

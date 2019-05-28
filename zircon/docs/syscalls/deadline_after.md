@@ -10,7 +10,7 @@ Convert a time relative to now to an absolute deadline.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_time_t zx_deadline_after(zx_duration_t nanoseconds);

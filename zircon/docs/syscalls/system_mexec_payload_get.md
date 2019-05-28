@@ -10,7 +10,7 @@ Return a ZBI containing ZBI entries necessary to boot this system.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_system_mexec_payload_get(zx_handle_t resource,

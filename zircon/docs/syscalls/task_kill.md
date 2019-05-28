@@ -10,7 +10,7 @@ Kill the provided task (job, process, or thread).
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_task_kill(zx_handle_t handle);

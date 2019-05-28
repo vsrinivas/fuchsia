@@ -10,7 +10,7 @@ Create a VCPU.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_vcpu_create(zx_handle_t guest,

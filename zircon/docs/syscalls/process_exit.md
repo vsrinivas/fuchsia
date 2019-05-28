@@ -10,7 +10,7 @@ Exits the currently running process.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 [[noreturn]] void zx_process_exit(int64_t retcode);

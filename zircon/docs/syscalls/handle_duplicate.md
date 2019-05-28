@@ -10,7 +10,7 @@ Duplicate a handle.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_handle_duplicate(zx_handle_t handle,

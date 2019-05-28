@@ -10,7 +10,7 @@ Read the number of high-precision timer ticks since boot.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_ticks_t zx_ticks_get(void);

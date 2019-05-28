@@ -10,7 +10,7 @@ Get amount of physical memory on the system.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 uint64_t zx_system_get_physmem(void);

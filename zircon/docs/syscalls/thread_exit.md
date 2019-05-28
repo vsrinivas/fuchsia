@@ -10,7 +10,7 @@ Terminate the current running thread.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 [[noreturn]] void zx_thread_exit(void);

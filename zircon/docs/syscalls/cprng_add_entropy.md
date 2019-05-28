@@ -10,7 +10,7 @@ Add entropy to the kernel CPRNG.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_cprng_add_entropy(const void* buffer, size_t buffer_size);

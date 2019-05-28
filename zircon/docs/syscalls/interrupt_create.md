@@ -10,7 +10,7 @@ Create an interrupt object.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_interrupt_create(zx_handle_t src_obj,

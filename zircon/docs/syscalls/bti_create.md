@@ -10,7 +10,7 @@ Create a new bus transaction initiator.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_bti_create(zx_handle_t iommu,

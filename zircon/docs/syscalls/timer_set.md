@@ -10,7 +10,7 @@ Start a timer.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_timer_set(zx_handle_t handle,

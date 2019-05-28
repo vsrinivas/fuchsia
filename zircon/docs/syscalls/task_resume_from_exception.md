@@ -10,7 +10,7 @@ Resume the given task after an exception has been reported.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_task_resume_from_exception(zx_handle_t handle,

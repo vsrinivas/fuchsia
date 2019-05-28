@@ -10,7 +10,7 @@ TODO(ZX-3106)
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_pci_add_subtract_io_range(

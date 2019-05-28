@@ -10,7 +10,7 @@ Write to futex, wake futex, close handle, exit.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 [[noreturn]] void zx_futex_wake_handle_close_thread_exit(

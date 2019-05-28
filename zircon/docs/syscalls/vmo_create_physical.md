@@ -10,7 +10,7 @@ Create a VM object referring to a specific contiguous range of physical memory.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_vmo_create_physical(zx_handle_t resource,

@@ -10,7 +10,7 @@ Create a VM object.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out);

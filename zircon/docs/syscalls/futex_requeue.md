@@ -10,7 +10,7 @@ Wake some number of threads waiting on a futex, and move more waiters to another
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_futex_requeue(const zx_futex_t* value_ptr,

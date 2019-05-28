@@ -14,7 +14,7 @@ Suspend the given task. Currently only thread or process handles may be suspende
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_task_suspend_token(zx_handle_t handle, zx_handle_t* token);

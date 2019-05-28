@@ -10,7 +10,7 @@ Get version string for system.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_system_get_version(char* version, size_t version_size);

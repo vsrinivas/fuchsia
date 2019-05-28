@@ -10,7 +10,7 @@ Receive another socket object via a socket.
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-```
+```c
 #include <zircon/syscalls.h>
 
 zx_status_t zx_socket_accept(zx_handle_t handle, zx_handle_t* out_socket);
