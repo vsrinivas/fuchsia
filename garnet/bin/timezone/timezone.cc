@@ -6,10 +6,11 @@
 
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-#include <lib/sys/cpp/component_context.h>
 #include <zircon/syscalls.h>
+
 #include <fstream>
 
 #include "third_party/icu/source/common/unicode/errorcode.h"
@@ -28,6 +29,7 @@ TimezoneImpl::TimezoneImpl(std::unique_ptr<sys::ComponentContext> context,
       tz_id_path_(tz_id_path),
       valid_(Init()) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
+  context_->outgoing()->AddPublicService(deprecated_bindings_.GetHandler(this));
 }
 
 TimezoneImpl::~TimezoneImpl() = default;
@@ -91,6 +93,9 @@ void TimezoneImpl::GetTimezoneOffsetMinutes(
 
 void TimezoneImpl::NotifyWatchers(const fidl::StringPtr& new_timezone_id) {
   for (auto& watcher : watchers_) {
+    watcher->OnTimezoneOffsetChange(new_timezone_id);
+  }
+  for (auto& watcher : deprecated_watchers_) {
     watcher->OnTimezoneOffsetChange(new_timezone_id);
   }
 }
@@ -163,6 +168,15 @@ void TimezoneImpl::ReleaseWatcher(fuchsia::timezone::TimezoneWatcher* watcher) {
       std::remove_if(watchers_.begin(), watchers_.end(), predicate));
 }
 
+void TimezoneImpl::ReleaseWatcher(
+    fuchsia::deprecatedtimezone::TimezoneWatcher* watcher) {
+  auto predicate = [watcher](const auto& target) {
+    return target.get() == watcher;
+  };
+  deprecated_watchers_.erase(std::remove_if(
+      deprecated_watchers_.begin(), deprecated_watchers_.end(), predicate));
+}
+
 void TimezoneImpl::Watch(
     fidl::InterfaceHandle<fuchsia::timezone::TimezoneWatcher> watcher) {
   fuchsia::timezone::TimezoneWatcherPtr watcher_proxy = watcher.Bind();
@@ -171,6 +185,19 @@ void TimezoneImpl::Watch(
     ReleaseWatcher(proxy_raw_ptr);
   });
   watchers_.push_back(std::move(watcher_proxy));
+}
+
+void TimezoneImpl::Watch(
+    fidl::InterfaceHandle<fuchsia::deprecatedtimezone::TimezoneWatcher>
+        watcher) {
+  fuchsia::deprecatedtimezone::TimezoneWatcherPtr watcher_proxy =
+      watcher.Bind();
+  fuchsia::deprecatedtimezone::TimezoneWatcher* proxy_raw_ptr =
+      watcher_proxy.get();
+  watcher_proxy.set_error_handler([this, proxy_raw_ptr](zx_status_t status) {
+    ReleaseWatcher(proxy_raw_ptr);
+  });
+  deprecated_watchers_.push_back(std::move(watcher_proxy));
 }
 
 }  // namespace time_zone

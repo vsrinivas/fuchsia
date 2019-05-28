@@ -8,6 +8,7 @@ import("//build/testing/environments.gni")
 group("test") {
   testonly = true
   deps = [
+    ":deprecated_timezone_unit_tests",
     ":timezone_tests",
     ":timezone_unittests",
   ]
@@ -30,8 +31,26 @@ executable("timezone_unittests") {
   ]
 }
 
+executable("deprecated_timezone_unit_tests") {
+  testonly = true
+
+  output_name = "deprecated_timezone_unit_tests"
+
+  sources = [
+    "deprecated_timezone_unit_test.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/timezone:lib",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 test_package("timezone_tests") {
   deps = [
+    ":deprecated_timezone_unit_tests",
     ":timezone_unittests",
   ]
 
@@ -45,6 +64,10 @@ test_package("timezone_tests") {
   tests = [
     {
       name = "timezone_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "deprecated_timezone_unit_tests"
       environments = basic_envs
     },
   ]

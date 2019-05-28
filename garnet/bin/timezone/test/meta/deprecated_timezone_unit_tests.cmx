@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/deprecated_timezone_unit_tests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

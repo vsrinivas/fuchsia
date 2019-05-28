@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_NETWORK_TIME_SERVICE_SERVICE_H_
 #define GARNET_BIN_NETWORK_TIME_SERVICE_SERVICE_H_
 
+#include <fuchsia/deprecatedtimezone/cpp/fidl.h>
 #include <fuchsia/timezone/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -21,7 +22,11 @@ namespace network_time_service {
 //
 // For information on ICU ID's and timezone information see:
 // http://userguide.icu-project.org/formatparse/datetime
-class TimeServiceImpl : public fuchsia::timezone::TimeService {
+class TimeServiceImpl : public fuchsia::timezone::TimeService,
+                        public fuchsia::deprecatedtimezone::TimeService {
+  // The type of the callback is identical between the two namespaces.
+  using fuchsia::timezone::TimeService::UpdateCallback;
+
  public:
   // Constructs the time service with a caller-owned application context.
   TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
@@ -34,6 +39,8 @@ class TimeServiceImpl : public fuchsia::timezone::TimeService {
  private:
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::timezone::TimeService> bindings_;
+  fidl::BindingSet<fuchsia::deprecatedtimezone::TimeService>
+      deprecated_bindings_;
   time_server::Timezone time_server_;
 };
 

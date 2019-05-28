@@ -12,6 +12,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/fidl/fuchsia.timezone",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
