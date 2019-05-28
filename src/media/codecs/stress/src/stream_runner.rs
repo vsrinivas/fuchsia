@@ -6,10 +6,7 @@ use crate::{
     buffer_set::*, elementary_stream::*, input_packet_stream::*, output_validator::*, stream::*,
     Result,
 };
-use fidl::endpoints::*;
 use fidl_fuchsia_media::*;
-use fidl_fuchsia_mediacodec::*;
-use fuchsia_component::client;
 use futures::TryStreamExt;
 use std::rc::Rc;
 
@@ -21,11 +18,11 @@ pub struct StreamRunner {
     format_details_ordinals: OrdinalSequence,
     output_buffer_set: Option<BufferSet>,
     input_buffer_set: Option<BufferSet>,
-    current_codec: Option<StreamProcessorProxy>,
+    stream_processor: StreamProcessorProxy,
 }
 
 impl StreamRunner {
-    pub fn new() -> Self {
+    pub fn new(stream_processor: StreamProcessorProxy) -> Self {
         Self {
             input_buffer_ordinals: OrdinalPattern::Odd.into_iter(),
             output_buffer_ordinals: OrdinalPattern::Odd.into_iter(),
@@ -33,7 +30,7 @@ impl StreamRunner {
             format_details_ordinals: OrdinalPattern::All.into_iter(),
             input_buffer_set: None,
             output_buffer_set: None,
-            current_codec: None,
+            stream_processor,
         }
     }
 
@@ -52,14 +49,7 @@ impl StreamRunner {
             format_details_version_ordinal
         );
 
-        let mut codec = if let Some(codec) = self.current_codec.take() {
-            codec
-        } else {
-            // TODO(turnage): Accept parameters for using a decoder vs encoder,
-            // and their parameters.
-            await!(get_decoder(stream.as_ref(), format_details_version_ordinal))?
-        };
-        let mut events = codec.take_event_stream();
+        let mut events = self.stream_processor.take_event_stream();
 
         let output = {
             let mut stream = Stream {
@@ -72,7 +62,7 @@ impl StreamRunner {
                 output_buffer_ordinals: &mut self.output_buffer_ordinals,
                 output_buffer_set: self.output_buffer_set.take(),
                 current_output_format: None,
-                codec: &mut codec,
+                stream_processor: &mut self.stream_processor,
                 stream: stream.as_ref(),
                 options,
                 output: vec![],
@@ -106,8 +96,6 @@ impl StreamRunner {
             output
         };
 
-        self.current_codec = Some(codec);
-
         if options.release_input_buffers_at_end {
             self.input_buffer_set = None;
         }
@@ -118,28 +106,4 @@ impl StreamRunner {
 
         Ok(output)
     }
-}
-
-async fn get_decoder(
-    stream: &ElementaryStream,
-    format_details_version_ordinal: u64,
-) -> Result<StreamProcessorProxy> {
-    let factory = client::connect_to_service::<CodecFactoryMarker>()?;
-    let (decoder_client_end, decoder_request) = create_endpoints()?;
-    let decoder = decoder_client_end.into_proxy()?;
-    // TODO(turnage): Account for all error reporting methods in the runner options and output.
-    factory.create_decoder(
-        CreateDecoderParams {
-            input_details: Some(stream.format_details(format_details_version_ordinal)),
-            promise_separate_access_units_on_input: Some(stream.is_access_units()),
-            require_can_stream_bytes_input: Some(false),
-            require_can_find_start: Some(false),
-            require_can_re_sync: Some(false),
-            require_report_all_detected_errors: Some(false),
-            require_hw: Some(false),
-            permit_lack_of_split_header_handling: Some(true),
-        },
-        decoder_request,
-    )?;
-    Ok(decoder)
 }

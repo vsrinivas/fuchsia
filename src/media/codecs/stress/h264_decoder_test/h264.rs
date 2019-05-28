@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{elementary_stream::*, Result};
 use fidl_fuchsia_media::FormatDetails;
 use std::{fs, path::Path};
+use stream_processor_test::*;
 
 pub const BEAR_TEST_FILE: &str = "/pkg/data/bear.h264";
 

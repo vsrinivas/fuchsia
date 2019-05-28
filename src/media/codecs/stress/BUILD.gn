@@ -8,10 +8,16 @@ import("//build/rust/rustc_macro.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("lib") {
-  name = "codec_stress"
+group("stress") {
+  testonly = true
+  deps = [
+    ":h264_decoder_test",
+  ]
+}
+
+rustc_library("stream_processor_test_lib") {
+  name = "stream_processor_test"
   edition = "2018"
-  with_unit_tests = true
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
@@ -24,28 +30,62 @@ rustc_library("lib") {
     "//src/lib/fidl_table_validation",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:parking_lot",
     "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
 }
 
-test_package("codec_stress_tests") {
+rustc_library("stream_processor_decoder_factory_lib") {
+  name = "stream_processor_decoder_factory"
+  edition = "2018"
+  source_root = "stream_processor_factories/decoders.rs"
+
   deps = [
-    ":lib",
+    ":stream_processor_test_lib",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
+rustc_library("h264_decoder_test_lib") {
+  name = "h264_decoder_test"
+  edition = "2018"
+  with_unit_tests = true
+  source_root = "h264_decoder_test/lib.rs"
+
+  deps = [
+    ":stream_processor_decoder_factory_lib",
+    ":stream_processor_test_lib",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:parking_lot",
+  ]
+}
+
+test_package("h264_decoder_test") {
+  deps = [
+    ":h264_decoder_test_lib",
   ]
 
   meta = [
     {
-      path = rebase_path("meta/codec_stress_tests.cmx")
-      dest = "codec_stress_tests.cmx"
+      path = rebase_path("meta/h264_decoder_test.cmx")
+      dest = "h264_decoder_test.cmx"
     },
   ]
 
   tests = [
     {
-      name = "codec_stress_lib_test"
+      name = "h264_decoder_test_lib_test"
       environments = basic_envs
     },
   ]
@@ -56,12 +96,5 @@ test_package("codec_stress_tests") {
               "../../../../garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
       dest = "bear.h264"
     },
-  ]
-}
-
-group("stress") {
-  testonly = true
-  deps = [
-    ":codec_stress_tests",
   ]
 }

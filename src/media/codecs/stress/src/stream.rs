@@ -44,7 +44,7 @@ pub struct Stream<'a> {
     pub output_buffer_ordinals: &'a mut OrdinalSequence,
     pub output_buffer_set: Option<BufferSet>,
     pub current_output_format: Option<Rc<ValidStreamOutputFormat>>,
-    pub codec: &'a mut StreamProcessorProxy,
+    pub stream_processor: &'a mut StreamProcessorProxy,
     pub stream: &'a ElementaryStream,
     pub options: StreamOptions,
     pub output: Vec<Output>,
@@ -58,7 +58,7 @@ pub enum StreamControlFlow {
 impl<'a: 'b, 'b> Stream<'a> {
     pub async fn start(&'b mut self) -> Result<()> {
         if self.options.queue_format_details && self.input_packet_stream.is_some() {
-            self.codec.queue_input_format_details(
+            self.stream_processor.queue_input_format_details(
                 self.stream_lifetime_ordinal,
                 self.stream.format_details(self.format_details_version_ordinal),
             )?;
@@ -81,12 +81,12 @@ impl<'a: 'b, 'b> Stream<'a> {
                 let buffer_set = await!(BufferSetFactory::buffer_set(
                     get_ordinal(self.input_buffer_ordinals),
                     ValidStreamBufferConstraints::try_from(input_constraints)?,
-                    self.codec,
+                    self.stream_processor,
                     BufferSetType::Input,
                     self.options.input_buffer_collection_constraints,
                 ))?;
 
-                self.codec.queue_input_format_details(
+                self.stream_processor.queue_input_format_details(
                     self.stream_lifetime_ordinal,
                     self.stream.format_details(self.format_details_version_ordinal),
                 )?;
@@ -107,7 +107,7 @@ impl<'a: 'b, 'b> Stream<'a> {
                     self.output_buffer_set = Some(await!(BufferSetFactory::buffer_set(
                         get_ordinal(self.output_buffer_ordinals),
                         constraints.buffer_constraints,
-                        self.codec,
+                        self.stream_processor,
                         BufferSetType::Output,
                         self.options.output_buffer_collection_constraints,
                     ))?);
@@ -163,7 +163,7 @@ impl<'a: 'b, 'b> Stream<'a> {
                     packet: output_packet,
                 }));
 
-                self.codec.recycle_output_packet(PacketHeader {
+                self.stream_processor.recycle_output_packet(PacketHeader {
                     buffer_lifetime_ordinal: Some(output_packet.header.buffer_lifetime_ordinal),
                     packet_index: Some(output_packet.header.packet_index),
                 })?;
@@ -178,12 +178,12 @@ impl<'a: 'b, 'b> Stream<'a> {
 
                 // TODO(turnage): Enable the flush method of ending stream in options.
                 self.output.push(Output::Eos { stream_lifetime_ordinal });
-                self.codec.close_current_stream(
+                self.stream_processor.close_current_stream(
                     self.stream_lifetime_ordinal,
                     self.options.release_input_buffers_at_end,
                     self.options.release_output_buffers_at_end,
                 )?;
-                await!(self.codec.sync())?;
+                await!(self.stream_processor.sync())?;
 
                 // TODO(turnage): Some codecs return all input packets explicitly, not
                 //                implicitly. All codecs should return explicitly. For now
@@ -211,12 +211,12 @@ impl<'a: 'b, 'b> Stream<'a> {
             match input_packet_stream.next_packet()? {
                 PacketPoll::Ready(input_packet) => {
                     vlog!(2, "Sending input packet.");
-                    break Ok(self.codec.queue_input_packet(input_packet)?);
+                    break Ok(self.stream_processor.queue_input_packet(input_packet)?);
                 }
                 PacketPoll::Eos => {
                     vlog!(2, "Sending stream close");
                     break Ok(self
-                        .codec
+                        .stream_processor
                         .queue_input_end_of_stream(self.stream_lifetime_ordinal)?);
                 }
                 PacketPoll::NotReady => break Ok(()),

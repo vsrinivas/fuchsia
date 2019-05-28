@@ -2,16 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{elementary_stream::*, output_validator::*, stream::*, stream_runner::*};
-use failure::{Error, ResultExt};
-use futures::{stream::FuturesUnordered, TryStreamExt};
+use crate::{
+    elementary_stream::*, output_validator::*, stream::*, stream_runner::*, FatalError, Result,
+};
+use failure::ResultExt;
+use fidl_fuchsia_media::StreamProcessorProxy;
+use futures::{future::BoxFuture, stream::FuturesUnordered, TryStreamExt};
 use std::rc::Rc;
+
+const FIRST_FORMAT_DETAILS_VERSION_ORDINAL: u64 = 1;
+
+pub trait StreamProcessorFactory {
+    fn connect_to_stream_processor(
+        &self,
+        stream: &ElementaryStream,
+        format_details_version_ordinal: u64,
+    ) -> BoxFuture<Result<StreamProcessorProxy>>;
+}
 
 /// A test spec describes all the cases that will run and the circumstances in which
 /// they will run.
 pub struct TestSpec {
     pub cases: Vec<TestCase>,
     pub relation: CaseRelation,
+    pub stream_processor_factory: Rc<StreamProcessorFactory>,
 }
 
 /// A case relation describes the temporal relationship between two test cases.
@@ -34,16 +48,30 @@ pub struct TestCase {
 }
 
 impl TestSpec {
-    pub async fn run(self) -> Result<(), Error> {
+    pub async fn run(self) -> Result<()> {
         match self.relation {
-            CaseRelation::Serial => await!(run_cases_serially(self.cases)),
-            CaseRelation::Concurrent => await!(run_cases_concurrently(self.cases)),
+            CaseRelation::Serial => {
+                await!(run_cases_serially(self.stream_processor_factory.as_ref(), self.cases))
+            }
+            CaseRelation::Concurrent => {
+                await!(run_cases_concurrently(self.stream_processor_factory.as_ref(), self.cases))
+            }
         }
     }
 }
 
-async fn run_cases_serially(cases: Vec<TestCase>) -> Result<(), Error> {
-    let mut stream_runner = StreamRunner::new();
+async fn run_cases_serially(
+    stream_processor_factory: &StreamProcessorFactory,
+    cases: Vec<TestCase>,
+) -> Result<()> {
+    let stream_processor =
+        if let Some(stream) = cases.first().as_ref().map(|case| case.stream.as_ref()) {
+            await!(stream_processor_factory
+                .connect_to_stream_processor(stream, FIRST_FORMAT_DETAILS_VERSION_ORDINAL,))?
+        } else {
+            return Err(FatalError(String::from("No test cases provided.")).into());
+        };
+    let mut stream_runner = StreamRunner::new(stream_processor);
 
     for case in cases {
         let output =
@@ -57,10 +85,13 @@ async fn run_cases_serially(cases: Vec<TestCase>) -> Result<(), Error> {
     Ok(())
 }
 
-async fn run_cases_concurrently(cases: Vec<TestCase>) -> Result<(), Error> {
+async fn run_cases_concurrently(
+    stream_processor_factory: &StreamProcessorFactory,
+    cases: Vec<TestCase>,
+) -> Result<()> {
     let mut unordered = FuturesUnordered::new();
     for case in cases {
-        unordered.push(run_cases_serially(vec![case]))
+        unordered.push(run_cases_serially(stream_processor_factory, vec![case]))
     }
 
     while let Some(()) = await!(unordered.try_next())? {}
