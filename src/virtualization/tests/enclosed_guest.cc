@@ -5,6 +5,7 @@
 #include "src/virtualization/tests/enclosed_guest.h"
 
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
@@ -69,6 +70,15 @@ zx_status_t EnclosedGuest::Start() {
 
   status = services->AddService(mock_netstack_.GetHandler(),
                                 fuchsia::netstack::Netstack::Name_);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = services->AddService(fake_scenic_.GetHandler(),
+                                fuchsia::ui::scenic::Scenic::Name_);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   enclosing_environment_ = sys::testing::EnclosingEnvironment::Create(
       kRealm, real_env_, std::move(services));
@@ -119,10 +129,15 @@ zx_status_t EnclosedGuest::Start() {
   return ZX_OK;
 }
 
+zx_status_t EnclosedGuest::RunUtil(const std::string& util,
+                                   const std::vector<std::string>& argv,
+                                   std::string* result) {
+  return Execute(GetTestUtilCommand(util, argv), result);
+}
+
 zx_status_t ZirconEnclosedGuest::LaunchInfo(
     fuchsia::virtualization::LaunchInfo* launch_info) {
   launch_info->url = kZirconGuestUrl;
-  launch_info->args.push_back("--virtio-gpu=false");
   launch_info->args.push_back("--cmdline-add=kernel.serial=none");
   return ZX_OK;
 }
@@ -145,21 +160,18 @@ zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
   return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t ZirconEnclosedGuest::RunUtil(const std::string& util,
-                                         const std::vector<std::string>& argv,
-                                         std::string* result) {
+std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
+    const std::string& util, const std::vector<std::string>& argv) {
   std::string fuchsia_url =
       fxl::StringPrintf("%s#meta/%s.cmx", kFuchsiaTestUtilsUrl, util.c_str());
-
   std::vector<std::string> exec_argv = {"/bin/run", fuchsia_url};
   exec_argv.insert(exec_argv.end(), argv.begin(), argv.end());
-  return Execute(exec_argv, result);
+  return exec_argv;
 }
 
 zx_status_t DebianEnclosedGuest::LaunchInfo(
     fuchsia::virtualization::LaunchInfo* launch_info) {
   launch_info->url = kDebianGuestUrl;
-  launch_info->args.push_back("--virtio-gpu=false");
   return ZX_OK;
 }
 
@@ -181,13 +193,12 @@ zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
   return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t DebianEnclosedGuest::RunUtil(const std::string& util,
-                                         const std::vector<std::string>& argv,
-                                         std::string* result) {
+std::vector<std::string> DebianEnclosedGuest::GetTestUtilCommand(
+    const std::string& util, const std::vector<std::string>& argv) {
   std::string bin_path =
       fxl::StringPrintf("%s/%s", kDebianTestUtilDir, util.c_str());
 
   std::vector<std::string> exec_argv = {bin_path};
   exec_argv.insert(exec_argv.end(), argv.begin(), argv.end());
-  return Execute(exec_argv, result);
+  return exec_argv;
 }

@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
+#include "src/virtualization/tests/fake_input_only_scenic.h"
 #include "src/virtualization/tests/mock_netstack.h"
 #include "src/virtualization/tests/test_serial.h"
 
@@ -46,13 +47,17 @@ class EnclosedGuest {
   virtual zx_status_t Execute(const std::vector<std::string>& argv,
                               std::string* result = nullptr);
 
-  // Run a test util named |util| with |args| in the guest and wait for the
-  // |result|. |args| are specified as a single string with individual arguments
-  // separated by spaces, just as you would expect on the command line. The
-  // implementation is guest specific.
-  virtual zx_status_t RunUtil(const std::string& util,
-                              const std::vector<std::string>& args,
-                              std::string* result = nullptr) = 0;
+  // Run a test util named |util| with |argv| in the guest and wait for the
+  // |result|.
+  zx_status_t RunUtil(const std::string& util,
+                      const std::vector<std::string>& argv,
+                      std::string* result = nullptr);
+
+  // Return a shell command for a test utility named |util| with the given
+  // |argv| in the guest. The result may be passed directly to |Execute|
+  // to actually run the command.
+  virtual std::vector<std::string> GetTestUtilCommand(
+      const std::string& util, const std::vector<std::string>& argv) = 0;
 
   virtual GuestKernel GetGuestKernel() = 0;
 
@@ -72,6 +77,10 @@ class EnclosedGuest {
 
   MockNetstack* GetNetstack() { return &mock_netstack_; }
 
+  FakeInputOnlyScenic* GetScenic() { return &fake_scenic_; }
+
+  TestSerial* GetSerial() { return &serial_; }
+
  protected:
   // Provides guest specific |launch_info|, called by Start.
   virtual zx_status_t LaunchInfo(
@@ -90,6 +99,7 @@ class EnclosedGuest {
   fuchsia::virtualization::ManagerPtr manager_;
   fuchsia::virtualization::RealmPtr realm_;
   fuchsia::virtualization::GuestPtr guest_;
+  FakeInputOnlyScenic fake_scenic_;
   MockNetstack mock_netstack_;
   TestSerial serial_;
   uint32_t guest_cid_;
@@ -98,9 +108,8 @@ class EnclosedGuest {
 
 class ZirconEnclosedGuest : public EnclosedGuest {
  public:
-  zx_status_t RunUtil(const std::string& util,
-                      const std::vector<std::string>& args,
-                      std::string* result = nullptr) override;
+  std::vector<std::string> GetTestUtilCommand(
+      const std::string& util, const std::vector<std::string>& argv) override;
 
   GuestKernel GetGuestKernel() override { return GuestKernel::ZIRCON; }
 
@@ -113,9 +122,8 @@ class ZirconEnclosedGuest : public EnclosedGuest {
 
 class DebianEnclosedGuest : public EnclosedGuest {
  public:
-  zx_status_t RunUtil(const std::string& util,
-                      const std::vector<std::string>& args,
-                      std::string* result = nullptr) override;
+  std::vector<std::string> GetTestUtilCommand(
+      const std::string& util, const std::vector<std::string>& argv) override;
 
   GuestKernel GetGuestKernel() override { return GuestKernel::LINUX; }
 

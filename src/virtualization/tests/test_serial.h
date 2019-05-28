@@ -21,16 +21,29 @@ class TestSerial {
                               const std::string& prompt,
                               std::string* result = nullptr);
 
- private:
   // Sends a message to the guest's serial. Blocks until the entire message is
   // written to the socket but doesn't wait for a response.
   zx_status_t SendBlocking(const std::string& message);
 
-  // Waits for a marker string to be read from the guest's serial. Optionally
-  // fills |result| with everything read.
+  // Waits for a marker string to be read from the guest's serial, or until an
+  // internal timeout passes. Optionally fills |result| with everything read up
+  // to (but excluding) |marker|.
+  //
+  // Returns ZX_OK if the string was read before the timeout expired, and
+  // an error status in other cases.
+  //
+  // The class keeps an internal buffer of unread serial data. This function
+  // will consume all of the buffer up to the first occurance of |marker|.
+  // For example, if the underlying socket has the following data on it:
+  //
+  //   "xxxmarkeryyy"
+  //
+  // then a call `WaitForMarker("marker", &result)` will return `xxx` in
+  // |result|, and consume the buffer so that only `yyy` remains.
   zx_status_t WaitForMarker(const std::string& marker,
                             std::string* result = nullptr);
 
+ private:
   zx_status_t WaitForAny();
 
   zx_status_t Drain();

@@ -27,6 +27,8 @@ executable("bin") {
   sources = [
     "enclosed_guest.cc",
     "enclosed_guest.h",
+    "fake_input_only_scenic.cc",
+    "fake_input_only_scenic.h",
     "guest_test.h",
     "logger.cc",
     "logger.h",
@@ -36,6 +38,7 @@ executable("bin") {
     "test_serial.cc",
     "test_serial.h",
     "virtio_block_tests.cc",
+    "virtio_input_tests.cc",
     "virtio_net_tests.cc",
     "virtio_vsock_tests.cc",
   ]
@@ -43,7 +46,9 @@ executable("bin") {
   deps = [
     "//garnet/lib/inet",
     "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
