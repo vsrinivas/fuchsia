@@ -80,7 +80,7 @@ executable_package("basemgr") {
   ]
 }
 
-tests_package("basemgr_unittests") {
+hermetic_tests_package("basemgr_unittests") {
   deps = [
     ":session_context_impl_unittest",
   ]

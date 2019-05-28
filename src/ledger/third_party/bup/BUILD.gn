@@ -31,7 +31,7 @@ executable("bupsplit_unittest") {
   ]
 }
 
-tests_package("bup_tests") {
+hermetic_tests_package("bup_tests") {
   deps = [
     ":bupsplit_unittest",
   ]

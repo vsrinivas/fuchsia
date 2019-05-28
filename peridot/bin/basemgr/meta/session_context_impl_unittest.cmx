@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/session_context_impl_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ]
+    }
+}

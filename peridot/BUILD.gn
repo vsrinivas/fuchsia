@@ -29,7 +29,7 @@ config("internal") {
 
 # All peridot tests that can run as test binaries in a package, and are not
 # associated with the package of a binary already anyway.
-tests_package("peridot_tests") {
+hermetic_tests_package("peridot_tests") {
   deps = [
     "//peridot/lib:peridot_lib_unittests",
     "//peridot/public/lib:peridot_public_lib_unittests",

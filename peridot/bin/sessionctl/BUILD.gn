@@ -79,7 +79,7 @@ executable("sessionctl_unittest") {
   ]
 }
 
-tests_package("sessionctl_unittests") {
+hermetic_tests_package("sessionctl_unittests") {
   deps = [
     ":sessionctl_unittest",
   ]

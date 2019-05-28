@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/peridot_lib_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

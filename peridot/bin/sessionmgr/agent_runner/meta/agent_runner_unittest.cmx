@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/agent_runner_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
