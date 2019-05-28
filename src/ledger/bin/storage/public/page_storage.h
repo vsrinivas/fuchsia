@@ -157,6 +157,7 @@ class PageStorage : public PageSyncClient {
       ObjectType object_type, std::unique_ptr<DataSource> data_source,
       ObjectReferencesAndPriority tree_references,
       fit::function<void(Status, ObjectIdentifier)> callback) = 0;
+
   // Finds the Object associated with the given |object_identifier|. The result
   // or an an error will be returned through the given |callback|. If |location|
   // is LOCAL, only local storage will be checked. If |location| is NETWORK,
@@ -166,11 +167,12 @@ class PageStorage : public PageSyncClient {
       ObjectIdentifier object_identifier, Location location,
       fit::function<void(Status, std::unique_ptr<const Object>)> callback) = 0;
 
-  // Retrieve a part of an object starting at |offset| with a maximum size of
-  // |max_size| and map it to a VMO.
+  // Retrieves a part of an object of type BLOB, starting at |offset| with a
+  // maximum size of |max_size|, and maps it to a VMO.
   // If |offset| is less than 0, starts from |-offset| from the end of the
-  // value. If |max_size| is less than 0, retrieves everything untill the end of
+  // value. If |max_size| is less than 0, retrieves everything until the end of
   // an object.
+  // This method must not be called on TREE_NODE objects.
   virtual void GetObjectPart(
       ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
       Location location,

@@ -21,6 +21,7 @@
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -135,6 +136,16 @@ class PageStorageImpl : public PageStorage {
  private:
   friend class PageStorageImplAccessorForTest;
 
+  // A function that accepts a |piece|, an |object| and a |callback|. It
+  // attempts to extract references from the |piece| and the |object| (which
+  // must have the same object identifier) and to add the |piece| to storage
+  // with those references. On success, returns |object| to the |callback|. On
+  // failure, returns the error, and a nullptr as a second parameter (ie. drops
+  // the |object|). See |GetOrDownloadPiece| for details on usage.
+  using WritePieceCallback = fit::function<void(
+      std::unique_ptr<const Piece>, std::unique_ptr<const Object>,
+      fit::function<void(Status, std::unique_ptr<const Object>)>)>;
+
   // Marks all pieces needed for the given objects as local.
   FXL_WARN_UNUSED_RESULT Status
   MarkAllPiecesLocal(coroutine::CoroutineHandler* handler, PageDb::Batch* batch,
@@ -146,12 +157,30 @@ class PageStorageImpl : public PageStorage {
   bool IsFirstCommit(CommitIdView id);
 
   // Adds the given synced |piece| object.
-  // |references| must contain all references, both at the tree-level and at the
-  // piece-level (unlike |AddObjectFromLocal|'s tree-only references).
-  void AddPiece(std::unique_ptr<Piece> piece, ChangeSource source,
+  void AddPiece(std::unique_ptr<const Piece> piece, ChangeSource source,
                 IsObjectSynced is_object_synced,
                 ObjectReferencesAndPriority references,
                 fit::function<void(Status)> callback);
+
+  // Returns the piece identified by |object_identifier|. |location| is either
+  // LOCAL and NETWORK, and defines whether the piece should be looked up
+  // remotely if not available locally.
+  // When the piece has been retrieved remotely, attempts to add it to storage
+  // before returning it. If this is not possible, ie. when the piece is an
+  // index tree-node that requires the full object to compute its references,
+  // also returns a WritePieceCallback. It is the callers responsability to
+  // invoke this callback to add the piece to storage once they have gathered
+  // the full object.
+  // The WritePieceCallback is safe to call as long as this class is valid. It
+  // should not outlive the returned piece (since a reference to the piece must
+  // be passed to it when invoked), and in practice should be called as soon as
+  // the full object containing the piece has been constructed to ensure data is
+  // persisted to disk as early as possible.
+  void GetOrDownloadPiece(
+      ObjectIdentifier object_identifier, Location location,
+      fit::function<void(Status, std::unique_ptr<const Piece>,
+                         WritePieceCallback)>
+          callback);
 
   // Reads the content of a piece into a provided VMO. Takes into account the
   // global offset and size in order to be able to read only the requested part
@@ -162,44 +191,19 @@ class PageStorageImpl : public PageStorage {
   // |object_identifier|) in the full object. |object_size| is the size of the
   // currently read piece.
   // |location| is either LOCAL and NETWORK and defines the behavior in the case
-  // where the object is not found locally. If set to NETWORK,
-  // DownloadObjectPart will be called in order to download the missing piece
-  // and possibly some or all of its children.
-  void FillBufferWithObjectContent(ObjectIdentifier object_identifier,
-                                   fsl::SizedVmo vmo, int64_t global_offset,
-                                   int64_t global_size,
+  // where the object is not found locally.
+  void FillBufferWithObjectContent(const Piece& piece, fsl::SizedVmo vmo,
+                                   int64_t global_offset, int64_t global_size,
                                    int64_t current_position,
                                    int64_t object_size, Location location,
                                    fit::function<void(Status)> callback);
-  void FillBufferWithObjectContent(std::unique_ptr<const Piece> piece,
-                                   fsl::SizedVmo vmo, int64_t global_offset,
-                                   int64_t global_size,
-                                   int64_t current_position,
-                                   int64_t object_size, Location location,
-                                   fit::function<void(Status)> callback);
-
-  // Downloads the parts of the object needed to make a partial fetch.
-  // Global size and offset are denoting the start and size of the part the
-  // caller is interested in. They are expected to not go over the bounds of the
-  // object (offset >= 0, offset + size <= size of the object), except for the
-  // case of the root node, where offset and size have a special interpretation
-  // (see |FetchPartial| in ledger.fidl). |current_position| denotes the end of
-  // the part of an object already processed. It is independent of
-  // |global_offset| and |global_size| and meant to use in recursive calls to
-  // the child nodes. If called from the outside, the expected value is 0.
-  // |page_sync_| must be set prior to the calling this method as it is used for
-  // downloading.
-  void DownloadObjectPart(ObjectIdentifier object_identifier,
-                          int64_t global_offset, int64_t global_size,
-                          int64_t current_position,
-                          fit::function<void(Status)> callback);
 
   // Treating the |piece| as FileIndex, initializes a VMO of a needed size and
   // calls FillBufferWithObjectContent on it.
   // |offset| and |max_size| are used to denote partial mapping (see
   // GetObjectPart for details).
-  void GetIndexObject(std::unique_ptr<const Piece> piece, int64_t offset,
-                      int64_t max_size, Location location,
+  void GetIndexObject(const Piece& piece, int64_t offset, int64_t max_size,
+                      Location location,
                       fit::function<void(Status, fsl::SizedVmo)> callback);
 
   // Notifies the registered watchers of |new_commits|.

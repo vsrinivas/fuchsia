@@ -68,6 +68,7 @@ class PageStorageImplAccessorForTest {
 namespace {
 
 using ::coroutine::CoroutineHandler;
+using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAreArray;
@@ -1406,8 +1407,7 @@ TEST_F(PageStorageTest, GetLargeObjectPart) {
   size_t offset = 6144;
   size_t size = 49152;
 
-  ObjectData data(std::move(data_str), ObjectType::TREE_NODE,
-                  InlineBehavior::PREVENT);
+  ObjectData data(std::move(data_str), InlineBehavior::PREVENT);
 
   ASSERT_EQ(
       PieceType::INDEX,
@@ -1417,7 +1417,7 @@ TEST_F(PageStorageTest, GetLargeObjectPart) {
   Status status;
   ObjectIdentifier object_identifier;
   storage_->AddObjectFromLocal(
-      ObjectType::TREE_NODE, data.ToDataSource(), /*tree_references=*/{},
+      ObjectType::BLOB, data.ToDataSource(), /*tree_references=*/{},
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &object_identifier));
   RunLoopUntilIdle();
@@ -1462,13 +1462,17 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   int64_t size = 128;
 
   FakeSyncDelegate sync;
+  std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
   ObjectIdentifier object_identifier = ForEachPiece(
-      data_str, ObjectType::BLOB, [&sync](std::unique_ptr<const Piece> piece) {
+      data_str, ObjectType::BLOB,
+      [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
         ObjectIdentifier object_identifier = piece->GetIdentifier();
         if (GetObjectDigestInfo(object_identifier.object_digest())
                 .is_inlined()) {
           return;
         }
+        digest_to_identifier[object_identifier.object_digest()] =
+            object_identifier;
         sync.AddObject(std::move(object_identifier),
                        piece->GetData().ToString());
       });
@@ -1482,6 +1486,32 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(data_str.substr(offset, size), convert::ToString(object_part_data));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
+  EXPECT_THAT(sync.object_requests, Contains(object_identifier));
+  // Check that the requested pieces have been added to storage, and collect
+  // their outbound references into an inbound-references map. Note that we need
+  // to collect references only from piece actually added to storage, rather
+  // than all pieces from |ForEachPiece|, since pieces not present in storage do
+  // not contribute to reference counting.
+  std::map<ObjectIdentifier, ObjectReferencesAndPriority> inbound_references;
+  for (const ObjectIdentifier& piece_identifier : sync.object_requests) {
+    auto piece = TryGetPiece(piece_identifier);
+    ASSERT_NE(piece, nullptr);
+    ObjectReferencesAndPriority outbound_references;
+    ASSERT_EQ(piece->AppendReferences(&outbound_references), Status::OK);
+    for (const auto& [reference, priority] : outbound_references) {
+      auto reference_identifier = digest_to_identifier.find(reference);
+      ASSERT_NE(reference_identifier, digest_to_identifier.end());
+      inbound_references[reference_identifier->second].emplace(
+          piece_identifier.object_digest(), priority);
+    }
+  }
+  // Check that references have been stored correctly.
+  RunInCoroutine([this, inbound_references = std::move(inbound_references)](
+                     CoroutineHandler* handler) {
+    for (const auto& [identifier, references] : inbound_references) {
+      CheckInboundObjectReferences(handler, identifier, references);
+    }
+  });
 }
 
 TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
@@ -1511,6 +1541,8 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
   EXPECT_EQ(data_str.substr(data_str.size() + offset, size),
             convert::ToString(object_part_data));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
+  // Check that at least the root piece has been added to storage.
+  TryGetPiece(object_identifier);
 }
 
 TEST_F(PageStorageTest, GetObjectFromSync) {
@@ -1525,6 +1557,9 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
   fxl::StringView object_data;
   ASSERT_EQ(Status::OK, object->GetData(&object_data));
   EXPECT_EQ(data.value, convert::ToString(object_data));
+  // Check that the piece has been added to storage (it is small enough that
+  // there is only one piece).
+  TryGetPiece(data.object_identifier);
 
   storage_->SetSyncDelegate(nullptr);
   ObjectData other_data("Some other data", InlineBehavior::PREVENT);
@@ -1562,6 +1597,10 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
   TryGetObject(object_identifier, PageStorage::LOCAL,
                Status::INTERNAL_NOT_FOUND);
+  // Check that all requested pieces have been stored locally.
+  for (const auto& piece_identifier : sync.object_requests) {
+    TryGetPiece(piece_identifier);
+  }
 
   std::unique_ptr<const Object> object =
       TryGetObject(object_identifier, PageStorage::Location::NETWORK);
@@ -1570,6 +1609,10 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
   EXPECT_EQ(data_str, convert::ToString(object_data));
   EXPECT_EQ(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
   TryGetObject(object_identifier, PageStorage::LOCAL, Status::OK);
+  // Check that all pieces have been stored locally.
+  for (const auto& piece_identifier : sync.object_requests) {
+    TryGetPiece(piece_identifier);
+  }
 }
 
 TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
@@ -1628,6 +1671,7 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
   // Check that the index piece obtained at |object_identifier| is different
   // from the object itself, ie. that some splitting occurred.
   std::unique_ptr<const Piece> piece = TryGetPiece(object_identifier);
+  ASSERT_NE(piece, nullptr);
   EXPECT_NE(content, piece->GetData());
 
   RunInCoroutine([this, piece = std::move(piece), tree_reference,
@@ -1648,6 +1692,94 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
               return Status::OK;
             }));
   });
+}
+
+TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
+  // Build a random, valid tree node.
+  std::vector<Entry> entries;
+  std::map<size_t, ObjectIdentifier> children;
+  for (size_t i = 0; i < 1000; ++i) {
+    entries.push_back(Entry{RandomString(environment_.random(), 50),
+                            RandomObjectIdentifier(environment_.random()),
+                            i % 2 ? KeyPriority::EAGER : KeyPriority::LAZY});
+    children.emplace(i, RandomObjectIdentifier(environment_.random()));
+  }
+  std::sort(entries.begin(), entries.end(),
+            [](const Entry& e1, const Entry& e2) { return e1.key < e2.key; });
+  std::string data_str = btree::EncodeNode(0, entries, children);
+  ASSERT_TRUE(btree::CheckValidTreeNodeSerialization(data_str));
+
+  // Split the tree node content into pieces, add them to a SyncDelegate to be
+  // retrieved by GetObject, and store inbound piece references into a map to
+  // check them later.
+  FakeSyncDelegate sync;
+  std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
+  std::map<ObjectIdentifier, ObjectReferencesAndPriority> inbound_references;
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::TREE_NODE,
+      [&sync, &digest_to_identifier,
+       &inbound_references](std::unique_ptr<const Piece> piece) {
+        ObjectIdentifier piece_identifier = piece->GetIdentifier();
+        if (GetObjectDigestInfo(piece_identifier.object_digest())
+                .is_inlined()) {
+          return;
+        }
+        digest_to_identifier[piece_identifier.object_digest()] =
+            piece_identifier;
+        ObjectReferencesAndPriority outbound_references;
+        ASSERT_EQ(piece->AppendReferences(&outbound_references), Status::OK);
+        for (const auto& [reference, priority] : outbound_references) {
+          auto reference_identifier = digest_to_identifier.find(reference);
+          // ForEachPiece returns pieces in order, so we must have already seen
+          // pieces referenced by the current one.
+          ASSERT_NE(reference_identifier, digest_to_identifier.end());
+          inbound_references[reference_identifier->second].emplace(
+              piece_identifier.object_digest(), priority);
+        }
+        sync.AddObject(std::move(piece_identifier),
+                       piece->GetData().ToString());
+      });
+  ASSERT_EQ(PieceType::INDEX,
+            GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
+  storage_->SetSyncDelegate(&sync);
+
+  // Add object references to the inbound references map.
+  for (const Entry& entry : entries) {
+    inbound_references[entry.object_identifier].emplace(
+        object_identifier.object_digest(), entry.priority);
+  }
+  for (const auto& [size, child_identifier] : children) {
+    inbound_references[child_identifier].emplace(
+        object_identifier.object_digest(), KeyPriority::EAGER);
+  }
+
+  // Get the object from network and check that it is correct.
+  std::unique_ptr<const Object> object =
+      TryGetObject(object_identifier, PageStorage::Location::NETWORK);
+  fxl::StringView content;
+  ASSERT_EQ(Status::OK, object->GetData(&content));
+  EXPECT_EQ(data_str, content);
+
+  // Check that all pieces have been stored locally.
+  EXPECT_EQ(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
+  for (const auto& piece_identifier : sync.object_requests) {
+    TryGetPiece(piece_identifier);
+  }
+
+  // Check that references have been stored correctly.
+  RunInCoroutine([this, inbound_references = std::move(inbound_references)](
+                     CoroutineHandler* handler) {
+    for (const auto& [identifier, references] : inbound_references) {
+      CheckInboundObjectReferences(handler, identifier, references);
+    }
+  });
+
+  // Now that the object has been retrieved from network, we should be able to
+  // retrieve it again locally.
+  auto local_object =
+      TryGetObject(object_identifier, PageStorage::LOCAL, Status::OK);
+  ASSERT_EQ(Status::OK, object->GetData(&content));
+  EXPECT_EQ(data_str, content);
 }
 
 TEST_F(PageStorageTest, UnsyncedPieces) {

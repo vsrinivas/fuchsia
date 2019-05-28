@@ -208,6 +208,8 @@ TEST_F(ObjectImplTest, ChunkObject) {
 
   ChunkObject object(std::make_unique<InlinePiece>(identifier));
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));
+  auto piece = object.ReleasePiece();
+  EXPECT_TRUE(CheckPieceValue(*piece, identifier, data));
 }
 
 TEST_F(ObjectImplTest, VmoObject) {

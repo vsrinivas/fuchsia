@@ -107,6 +107,10 @@ ChunkObject::ChunkObject(std::unique_ptr<const Piece> piece)
       << " cannot be used as an object.";
 }
 
+std::unique_ptr<const Piece> ChunkObject::ReleasePiece() {
+  return std::move(piece_);
+}
+
 ObjectIdentifier ChunkObject::GetIdentifier() const {
   return piece_->GetIdentifier();
 }

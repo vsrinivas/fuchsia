@@ -82,6 +82,10 @@ class ChunkObject : public BaseObject {
   // automatically.
   explicit ChunkObject(std::unique_ptr<const Piece> piece);
 
+  // Returns the |piece| backing this object. This object must not be used
+  // anymore once this function has returned.
+  std::unique_ptr<const Piece> ReleasePiece();
+
   // Object:
   ObjectIdentifier GetIdentifier() const override;
   Status GetData(fxl::StringView* data) const override;
