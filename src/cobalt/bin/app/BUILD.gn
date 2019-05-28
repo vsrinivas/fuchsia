@@ -116,6 +116,7 @@ executable("cobalt_app_unittests") {
   testonly = true
 
   sources = [
+    "logger_impl_test.cc",
     "system_data_updater_impl_test.cc",
     "timer_manager_test.cc",
   ]
@@ -125,7 +126,9 @@ executable("cobalt_app_unittests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/cobalt/logger:logger_test_utils",
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }

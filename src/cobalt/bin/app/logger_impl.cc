@@ -249,6 +249,14 @@ void LoggerImpl::LogCobaltEvents(
     std::vector<fuchsia::cobalt::CobaltEvent> events,
     fuchsia::cobalt::Logger::LogCobaltEventCallback callback) {
   TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogCobaltEvents");
+  logger_.internal_metrics()->LoggerCalled(
+      logger::LoggerCallsMadeMetricDimensionLoggerMethod::LogCobaltEvents);
+
+  // tracking LoggerCalled events is expensive (~3.5ms/event). We want
+  // LogCobaltEvents to be a more performance concious alternative, so we pause
+  // this logging while we work through the batch.
+  logger_.PauseInternalLogging();
+
   auto failures = 0;
 
   auto end = std::make_move_iterator(events.end());
@@ -260,6 +268,8 @@ void LoggerImpl::LogCobaltEvents(
       }
     });
   }
+
+  logger_.ResumeInternalLogging();
 
   if (failures == 0) {
     callback(Status::OK);
