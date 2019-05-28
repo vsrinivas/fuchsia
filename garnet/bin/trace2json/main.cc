@@ -18,12 +18,32 @@ namespace {
 
 const char kInputFile[] = "input-file";
 const char kOutputFile[] = "output-file";
+const char kNoMagicCheck[] = "no-magic-check";
+const char kLittleEndianMagicRecord[8] = {0x10, 0x00, 0x04, 0x46, 0x78, 0x54, 0x16, 0x00};
+
+constexpr size_t kMagicSize = fbl::count_of(kLittleEndianMagicRecord);
+constexpr uint64_t kMagicRecord = 0x0016547846040010;
+
+bool CompareMagic(const char* magic1, const char* magic2) {
+  for (size_t i = 0; i < kMagicSize; i++) {
+    if (magic1[i] != magic2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
 
 }  // namespace
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
+    return 1;
+  }
+
+  const uint64_t host_magic = kMagicRecord;
+  if (!CompareMagic(reinterpret_cast<const char*>(&host_magic), kLittleEndianMagicRecord)) {
+    FXL_LOG(ERROR) << "Detected big endian host. Aborting.";
     return 1;
   }
 
@@ -41,6 +61,20 @@ int main(int argc, char** argv) {
     in_stream = static_cast<std::istream*>(input_file_stream.get());
   }
 
+  if (!command_line.HasOption(kNoMagicCheck)) {
+    // Look for the magic number record at the start of the trace file and bail
+    // before opening (and thus truncating) the output file if we don't find it.
+    char initial_bytes[kMagicSize];
+    if (in_stream->read(initial_bytes, kMagicSize).gcount() != kMagicSize) {
+      FXL_LOG(ERROR) << "Failed to read magic number.";
+      return 1;
+    }
+    if (!CompareMagic(initial_bytes, kLittleEndianMagicRecord)) {
+      FXL_LOG(ERROR) << "Input file does not start with Fuchsia Trace magic number. Aborting.";
+      return 1;
+    }
+  }
+
   if (command_line.HasOption(kOutputFile)) {
     std::string output_file_name;
     command_line.GetOptionValue(kOutputFile, &output_file_name);
@@ -50,7 +84,7 @@ int main(int argc, char** argv) {
   }
 
   tracing::FuchsiaTraceParser parser(out_stream);
-  if (!parser.Parse(in_stream)) {
+  if (!parser.ParseComplete(in_stream)) {
     return 1;
   }
 

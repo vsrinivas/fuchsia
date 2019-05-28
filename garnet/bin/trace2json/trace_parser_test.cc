@@ -14,6 +14,7 @@
 #endif
 
 #include <fstream>
+#include <sstream>
 
 namespace {
 
@@ -62,7 +63,7 @@ void ConvertAndCompare(std::string input_file,
   // destructor as the signal to write systemTraceEvents.
   {
     tracing::FuchsiaTraceParser parser(&json_out);
-    EXPECT_TRUE(parser.Parse(&fxt_in));
+    EXPECT_TRUE(parser.ParseComplete(&fxt_in));
   }
 
   std::string actual_out = json_out.str();
@@ -89,6 +90,16 @@ TEST(TraceParserTest, ExampleBenchmark) {
   // `fx traceutil record -binary -spawn /bin/run
   // fuchsia-pkg://fuchsia.com/benchmark#meta/benchmark.cmx`
   ConvertAndCompare("example_benchmark.fxt", "example_benchmark.json");
+}
+
+TEST(TraceParserTest, InvalidTrace) {
+  std::istringstream input("asdfasdfasdfasdfasdf");
+  std::ostringstream output;
+
+  {
+    tracing::FuchsiaTraceParser parser(&output);
+    EXPECT_FALSE(parser.ParseComplete(&input));
+  }
 }
 
 }  // namespace

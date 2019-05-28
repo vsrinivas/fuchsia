@@ -22,7 +22,7 @@ class FuchsiaTraceParser {
   explicit FuchsiaTraceParser(std::ostream* out);
   ~FuchsiaTraceParser();
 
-  bool Parse(std::istream*);
+  bool ParseComplete(std::istream*);
 
  private:
   static constexpr size_t kReadBufferSize =
