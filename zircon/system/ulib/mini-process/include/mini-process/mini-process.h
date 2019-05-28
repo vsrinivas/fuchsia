@@ -46,6 +46,9 @@ __BEGIN_CDECLS
 // The process attempts to create a physical vmo and send it back on |handle|.
 // This will always fail because we don't supply a mmio resource.
 #define MINIP_CMD_CREATE_VMO_PHYSICAL        (1 << 11)
+// The process writes a single byte 0 to |transferred_handle| with |zx_channel_write|.
+// The return value upon success is ZX_OK.
+#define MINIP_CMD_CHANNEL_WRITE              (1 << 12)
 
 // Create and run a minimal process with one thread that blocks forever.
 // Does not require a host binary.

@@ -9,8 +9,10 @@ source_set("channel") {
   ]
   deps = [
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/mini-process",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
     "$zx/system/utest/channel-fatal:vdso-code-header",
   ]
 }

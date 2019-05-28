@@ -33,11 +33,11 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
 
         uint32_t actual = 0u;
         uint32_t actual_handles = 0u;
-        zx_handle_t handle[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
+        zx_handle_t original_handle = ZX_HANDLE_INVALID;
         minip_ctx_t ctx = {0};
 
         zx_status_t status = (*read_fn)(
-                channel, 0u, &ctx, handle, sizeof(ctx), 1, &actual, &actual_handles);
+                channel, 0u, &ctx, &original_handle, sizeof(ctx), 1, &actual, &actual_handles);
         if ((status != ZX_OK) || (actual != sizeof(ctx)))
             __builtin_trap();
 
@@ -74,8 +74,7 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                 // makes it likely it will reference the data section which
                 // is outside the memory copied to the child.
 
-                handle[0] = ZX_HANDLE_INVALID;
-                handle[1] = ZX_HANDLE_INVALID;
+                zx_handle_t handle[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
 
                 if (what & MINIP_CMD_ECHO_MSG) {
                     what &= ~MINIP_CMD_ECHO_MSG;
@@ -179,6 +178,13 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                     // This call will fail because we don't have a mmio resource, but that's OK
                     // because we only care about *how* it fails.
                     cmd.status = ctx.vmo_physical_create(ZX_HANDLE_INVALID, 0u, 0u, &handle[0]);
+                    goto reply;
+                }
+                if (what & MINIP_CMD_CHANNEL_WRITE) {
+                    what &= ~MINIP_CMD_CHANNEL_WRITE;
+
+                    uint8_t val = 0;
+                    cmd.status = ctx.channel_write(original_handle, 0, &val, 1, NULL, 0u);
                     goto reply;
                 }
 

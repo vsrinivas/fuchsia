@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/channel.h>
+#include <lib/zx/job.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
+#include <mini-process/mini-process.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +18,7 @@
 #include <zircon/rights.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/threads.h>
 
 static zx_handle_t _channel[4];
 
@@ -1053,6 +1059,109 @@ static bool channel_write_takes_all_handles(void) {
     END_TEST;
 }
 
+// Test current behavior when transferring a channel with pending calls out of the current process.
+// TODO(ZX-4233): This test ensures that currently undefined behavior does not change
+// unexpectedly. Once the behavior is properly undefined, this test should be updated.
+static bool channel_call_transfer(void) {
+    BEGIN_TEST;
+
+    zx::channel cli, srv;
+    ASSERT_EQ(zx::channel::create(0, &cli, &srv), ZX_OK, "");
+
+    static constexpr uint32_t kExpectedCall = 0xc0ffee;
+    static constexpr uint32_t kExpectedRes = 0xdeadbeef;
+    auto test_fn = [](void* arg) -> int {
+        auto cli = static_cast<zx::channel*>(arg);
+
+        msg_t msg_wr = {};
+        msg_t msg_rd = {};
+        msg_wr.op = kExpectedCall;
+
+        zx_channel_call_args_t args = {
+            .wr_bytes = &msg_wr,
+            .wr_handles = nullptr,
+            .rd_bytes = &msg_rd,
+            .rd_handles = nullptr,
+            .wr_num_bytes = sizeof(msg_t),
+            .wr_num_handles = 0,
+            .rd_num_bytes = sizeof(msg_t),
+            .rd_num_handles = 0,
+        };
+        uint32_t bytes, handles;
+        zx_status_t status = cli->call(0, zx::time::infinite(), &args, &bytes, &handles);
+        if (status != ZX_OK) {
+            return -1;
+        }
+
+        if (bytes != sizeof(msg_t) || handles) {
+            return -2;
+        }
+
+        if (msg_rd.op != kExpectedRes) {
+            return -3;
+        }
+        return 0;
+    };
+
+    // Create the test thread and wait for it to write to the channel.
+    thrd_t thrd;
+    ASSERT_EQ(thrd_create(&thrd, test_fn, &cli), thrd_success);
+    ASSERT_EQ(srv.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr), ZX_OK);
+
+    // Read the message from the test thread.
+    msg_t msg;
+    uint32_t bc = 0, hc = 0;
+    ASSERT_EQ(srv.read(0, &msg, nullptr, sizeof(msg), 0, &bc, &hc), ZX_OK);
+    ASSERT_EQ(bc, sizeof(msg));
+    ASSERT_EQ(msg.op, kExpectedCall);
+
+    // Create another process and transfer the handle to that process.
+    zx::process proc;
+    zx::thread thread;
+    zx::vmar vmar;
+
+    ASSERT_EQ(zx::process::create(*zx::job::default_job(), "mini-p", 3u, 0, &proc, &vmar), ZX_OK);
+    ASSERT_EQ(zx::thread::create(proc, "mini-p", 2u, 0u, &thread), ZX_OK);
+
+    zx::channel cmd_channel;
+    EXPECT_EQ(start_mini_process_etc(proc.get(), thread.get(), vmar.get(), cli.release(),
+                                     cmd_channel.reset_and_get_address()), ZX_OK);
+
+    // Have the other process write to the channel we sent it and wait for the result,
+    // to ensure that the endpoint we sent it is actually transferred.
+    EXPECT_EQ(mini_process_cmd(cmd_channel.get(), MINIP_CMD_CHANNEL_WRITE, nullptr), ZX_OK);
+    ASSERT_EQ(srv.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr), ZX_OK);
+
+    uint8_t mini_process_res = 1;
+    ASSERT_EQ(srv.read(0, &mini_process_res, nullptr, 1, 0, &bc, &hc), ZX_OK);
+    ASSERT_EQ(bc, 1);
+    ASSERT_EQ(mini_process_res, 0);
+
+    // Make sure the original thread is still blocked.
+    zx_info_thread_t info;
+    uint64_t actual, actual2;
+    ASSERT_EQ(zx_object_get_info(thrd_get_zx_handle(thrd), ZX_INFO_THREAD,
+                                 &info, sizeof(info), &actual, &actual2), ZX_OK);
+    EXPECT_EQ(info.state, ZX_THREAD_STATE_BLOCKED_CHANNEL);
+
+    // Write a response to the original call after we know the endpoint has been
+    // transferred out of this process.
+    msg.op = kExpectedRes;
+    ASSERT_EQ(srv.write(0, &msg, sizeof(msg), nullptr, 0), ZX_OK);
+
+    // Wait for the test thread to finish executing and check that it successfully completed
+    // the channel call even though the handle was transferred to another process.
+    int r;
+    ASSERT_EQ(thrd_join(thrd, &r), thrd_success);
+    ASSERT_EQ(r, 0);
+
+    EXPECT_EQ(mini_process_cmd(cmd_channel.get(), MINIP_CMD_EXIT_NORMAL, nullptr),
+              ZX_ERR_PEER_CLOSED);
+
+    END_TEST;
+}
+
+
 BEGIN_TEST_CASE(channel_tests)
 RUN_TEST(channel_test)
 RUN_TEST(channel_read_error_test)
@@ -1071,4 +1180,5 @@ RUN_TEST(channel_disallow_write_to_self)
 RUN_TEST(channel_read_etc)
 RUN_TEST(channel_write_different_sizes)
 RUN_TEST(channel_write_takes_all_handles)
+RUN_TEST(channel_call_transfer)
 END_TEST_CASE(channel_tests)
