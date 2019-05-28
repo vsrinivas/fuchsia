@@ -24,6 +24,20 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
+namespace {
+auto TranslateCallback(
+    fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  return [callback = std::move(callback)](Status status,
+                                          std::vector<DiffEntry> entries,
+                                          std::unique_ptr<Token> token) {
+    IterationStatus iteration_status =
+        token ? IterationStatus::PARTIAL_RESULT : IterationStatus::OK;
+    callback(status, iteration_status, std::move(entries), std::move(token));
+  };
+}
+}  // namespace
 
 ConflictResolverClient::ConflictResolverClient(
     storage::PageStorage* storage, PageManager* page_manager,
@@ -146,6 +160,14 @@ void ConflictResolverClient::GetFullDiff(
     fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                        std::unique_ptr<Token>)>
         callback) {
+  GetDiff(diff_utils::DiffType::FULL, std::move(token),
+          TranslateCallback(std::move(callback)));
+}
+
+void ConflictResolverClient::GetFullDiffNew(
+    std::unique_ptr<Token> token,
+    fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)>
+        callback) {
   GetDiff(diff_utils::DiffType::FULL, std::move(token), std::move(callback));
 }
 
@@ -155,13 +177,20 @@ void ConflictResolverClient::GetConflictingDiff(
                        std::unique_ptr<Token>)>
         callback) {
   GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token),
+          TranslateCallback(std::move(callback)));
+}
+
+void ConflictResolverClient::GetConflictingDiffNew(
+    std::unique_ptr<Token> token,
+    fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)>
+        callback) {
+  GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token),
           std::move(callback));
 }
 
 void ConflictResolverClient::GetDiff(
     diff_utils::DiffType type, std::unique_ptr<Token> token,
-    fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
-                       std::unique_ptr<Token>)>
+    fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)>
         callback) {
   diff_utils::ComputeThreeWayDiff(
       storage_, *ancestor_, *left_, *right_, "",
@@ -172,29 +201,25 @@ void ConflictResolverClient::GetDiff(
               Status status,
               std::pair<std::vector<DiffEntry>, std::string> page_change) {
             if (cancelled_) {
-              callback(Status::INTERNAL_ERROR, IterationStatus::OK, {},
-                       nullptr);
+              callback(Status::INTERNAL_ERROR, {}, nullptr);
               Finalize(Status::INTERNAL_ERROR);
               return;
             }
             if (status != Status::OK) {
               FXL_LOG(ERROR) << "Unable to compute diff due to error " << status
                              << ", aborting.";
-              callback(status, IterationStatus::OK, {}, nullptr);
+              callback(status, {}, nullptr);
               Finalize(status);
               return;
             }
 
             const std::string& next_token = page_change.second;
-            IterationStatus diff_status = next_token.empty()
-                                              ? IterationStatus::OK
-                                              : IterationStatus::PARTIAL_RESULT;
             std::unique_ptr<Token> token;
             if (!next_token.empty()) {
               token = std::make_unique<Token>();
               token->opaque_id = convert::ToArray(next_token);
             }
-            callback(Status::OK, diff_status, std::move(page_change.first),
+            callback(Status::OK, std::move(page_change.first),
                      std::move(token));
           }));
 }

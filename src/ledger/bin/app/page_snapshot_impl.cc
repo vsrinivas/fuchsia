@@ -95,8 +95,7 @@ void FillEntries(
     storage::PageStorage* page_storage, const std::string& key_prefix,
     const storage::Commit* commit, std::vector<uint8_t> key_start,
     std::unique_ptr<Token> token,
-    fit::function<void(Status, IterationStatus, std::vector<EntryType>,
-                       std::unique_ptr<Token>)>
+    fit::function<void(Status, std::vector<EntryType>, std::unique_ptr<Token>)>
         callback) {
   // |token| represents the first key to be returned in the list of entries.
   // Initially, all entries starting from |token| are requested from storage.
@@ -166,8 +165,7 @@ void FillEntries(
                   callback = std::move(timed_callback)](Status status) mutable {
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "Error while reading: " << status;
-      callback(Status::IO_ERROR, IterationStatus::OK, std::vector<EntryType>(),
-               nullptr);
+      callback(Status::IO_ERROR, std::vector<EntryType>(), nullptr);
       return;
     }
     fit::function<void(Status,
@@ -179,8 +177,7 @@ void FillEntries(
                     results) mutable {
               if (status != Status::OK) {
                 FXL_LOG(ERROR) << "Error while reading: " << status;
-                callback(Status::IO_ERROR, IterationStatus::OK,
-                         std::vector<EntryType>(), nullptr);
+                callback(Status::IO_ERROR, std::vector<EntryType>(), nullptr);
                 return;
               }
               FXL_DCHECK(context->entries.size() == results.size());
@@ -210,8 +207,7 @@ void FillEntries(
 
                 Status read_status = FillSingleEntry(*results[i], &entry);
                 if (read_status != Status::OK) {
-                  callback(read_status, IterationStatus::OK,
-                           std::vector<EntryType>(), nullptr);
+                  callback(read_status, std::vector<EntryType>(), nullptr);
                   return;
                 }
                 size_t entry_size = ComputeEntrySize(entry);
@@ -223,8 +219,8 @@ void FillEntries(
               }
               if (i != results.size()) {
                 if (i == 0) {
-                  callback(Status::ILLEGAL_STATE, IterationStatus::OK,
-                           std::vector<EntryType>(), nullptr);
+                  callback(Status::ILLEGAL_STATE, std::vector<EntryType>(),
+                           nullptr);
                   return;
                 }
                 // We had to bail out early because the result would be too
@@ -234,14 +230,8 @@ void FillEntries(
                     std::move(context->entries.at(i).key);
                 context->entries.resize(i);
               }
-              if (context->next_token) {
-                callback(Status::OK, IterationStatus::PARTIAL_RESULT,
-                         std::move(context->entries),
-                         std::move(context->next_token));
-                return;
-              }
-              callback(Status::OK, IterationStatus::OK,
-                       std::move(context->entries), nullptr);
+              callback(Status::OK, std::move(context->entries),
+                       std::move(context->next_token));
             };
     waiter->Finalize(std::move(result_callback));
   };
@@ -254,6 +244,19 @@ Result ToErrorResult(fuchsia::ledger::Error error) {
   Result result;
   result.set_err(error);
   return result;
+}
+
+template <typename... Args>
+auto TranslateCallback(fit::function<void(Status, IterationStatus, Args...,
+                                          std::unique_ptr<Token>)>
+                           callback) {
+  return [callback = std::move(callback)](Status status, Args... args,
+                                          std::unique_ptr<Token> token) {
+    IterationStatus iteration_status =
+        token ? IterationStatus::PARTIAL_RESULT : IterationStatus::OK;
+    callback(status, iteration_status, std::forward<Args>(args)...,
+             std::move(token));
+  };
 }
 }  // namespace
 
@@ -271,6 +274,14 @@ void PageSnapshotImpl::GetEntries(
     fit::function<void(Status, IterationStatus, std::vector<Entry>,
                        std::unique_ptr<Token>)>
         callback) {
+  GetEntriesNew(std::move(key_start), std::move(token),
+                TranslateCallback<std::vector<Entry>>(std::move(callback)));
+}
+
+void PageSnapshotImpl::GetEntriesNew(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, std::vector<Entry>, std::unique_ptr<Token>)>
+        callback) {
   FillEntries<Entry>(page_storage_, key_prefix_, commit_.get(),
                      std::move(key_start), std::move(token),
                      std::move(callback));
@@ -279,6 +290,16 @@ void PageSnapshotImpl::GetEntries(
 void PageSnapshotImpl::GetEntriesInline(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
     fit::function<void(Status, IterationStatus, std::vector<InlinedEntry>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  GetEntriesInlineNew(
+      std::move(key_start), std::move(token),
+      TranslateCallback<std::vector<InlinedEntry>>(std::move(callback)));
+}
+
+void PageSnapshotImpl::GetEntriesInlineNew(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, std::vector<InlinedEntry>,
                        std::unique_ptr<Token>)>
         callback) {
   FillEntries<InlinedEntry>(page_storage_, key_prefix_, commit_.get(),
@@ -290,6 +311,16 @@ void PageSnapshotImpl::GetKeys(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
     fit::function<void(Status, IterationStatus,
                        std::vector<std::vector<uint8_t>>,
+                       std::unique_ptr<Token>)>
+        callback) {
+  GetKeysNew(std::move(key_start), std::move(token),
+             TranslateCallback<std::vector<std::vector<uint8_t>>>(
+                 std::move(callback)));
+}
+
+void PageSnapshotImpl::GetKeysNew(
+    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
+    fit::function<void(Status, std::vector<std::vector<uint8_t>>,
                        std::unique_ptr<Token>)>
         callback) {
   // Represents the information that needs to be shared between on_next and
@@ -326,17 +357,11 @@ void PageSnapshotImpl::GetKeys(
                   callback = std::move(timed_callback)](Status status) {
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "Error while reading: " << status;
-      callback(Status::IO_ERROR, IterationStatus::OK,
-               std::vector<std::vector<uint8_t>>(), nullptr);
+      callback(Status::IO_ERROR, std::vector<std::vector<uint8_t>>(), nullptr);
       return;
     }
-    if (context->next_token) {
-      callback(Status::OK, IterationStatus::PARTIAL_RESULT,
-               std::move(context->keys), std::move(context->next_token));
-    } else {
-      callback(Status::OK, IterationStatus::OK, std::move(context->keys),
-               nullptr);
-    }
+    callback(Status::OK, std::move(context->keys),
+             std::move(context->next_token));
   };
   if (token) {
     page_storage_->GetCommitContents(*commit_,

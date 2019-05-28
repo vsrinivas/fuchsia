@@ -239,6 +239,7 @@ struct InlinedEntry {
 };
 
 /// Status for methods that return a sequence of values.
+[Deprecated]
 enum IterationStatus : int8 {
     /// The iteration has finished.
     OK = 0;
@@ -273,14 +274,32 @@ protocol PageSnapshot {
     /// Only |EAGER| values are guaranteed to be returned inside |entries|.
     /// Missing |LAZY| values can be retrieved over the network using Fetch().
     /// The returned |entries| are sorted by |key|.
+    [Deprecated]
     GetEntries(Key key_start, Token? token)
         -> (IterationStatus status, vector<Entry> entries, Token? next_token);
 
+    /// Returns the entries in the page with keys greater or equal to |key_start|
+    /// using the lexicographic order. If |key_start| is empty, all entries are
+    /// returned. If the result fits in a single fidl message, |next_token| will
+    /// be equal to NULL. Otherwise, |next_token| will have a non-NULL value. To
+    /// retrieve the remaining results, another call to |GetEntries| should be
+    /// made, initializing the optional |token| argument with the value of
+    /// |next_token| returned in the previous call. |next_token| will not be
+    /// NULL as long as there are more results and NULL once finished.
+    /// Only |EAGER| values are guaranteed to be returned inside |entries|.
+    /// Missing |LAZY| values can be retrieved over the network using Fetch().
+    /// The returned |entries| are sorted by |key|.
+    GetEntriesNew(Key key_start, Token? token)
+        -> (vector<Entry> entries, Token? next_token);
+
     /// Same as |GetEntries()|. The connection will be closed with a
     /// ZX_ERR_BAD_STATE epitaph if a value does not fit in a FIDL message.
+    [Deprecated]
     GetEntriesInline(Key key_start, Token? token)
         -> (IterationStatus status, vector<InlinedEntry> entries,
             Token? next_token);
+    GetEntriesInlineNew(Key key_start, Token? token)
+        -> (vector<InlinedEntry> entries, Token? next_token);
 
     /// Returns the keys of all entries in the page which are greater or equal to
     /// |key_start| using the lexicographic order. If |key_start| is empty, all
@@ -292,9 +311,22 @@ protocol PageSnapshot {
     /// returned in the previous call.
     /// The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
     /// as there are more results and |OK| once finished.
+    [Deprecated]
     GetKeys(Key key_start, Token? token)
         -> (IterationStatus status, vector<Key> keys,
             Token? next_token);
+
+    /// Returns the keys of all entries in the page which are greater or equal to
+    /// |key_start| using the lexicographic order. If |key_start| is empty, all
+    /// keys are returned. The returned |keys| are sorted. If the result fits in
+    /// a single fidl message, |next_token| will be equal to NULL. Otherwise,
+    /// |next_token| will have a non-NULL value. To retrieve the remaining
+    /// results, another call to |GetKeys| should be made, initializing the
+    /// optional |token| argument with the value of |next_token| returned in the
+    /// previous call. |next_token| will not be NULL as long as there are more
+    /// results and NULL once finished.
+    GetKeysNew(Key key_start, Token? token)
+        -> (vector<Key> keys, Token? next_token);
 
     /// Returns the value of a given key.
     /// Only |EAGER| values are guaranteed to be returned. Calls when the value is
@@ -473,16 +505,38 @@ protocol MergeResultProvider {
     /// be |PARTIAL_RESULT| and |next_token| will have a non-NULL value, which can
     /// be used to retrieve the rest of the results by calling |GetFullDiff()|
     /// with that token.
+    [Deprecated]
     GetFullDiff(Token? token)
         -> (IterationStatus status, vector<DiffEntry> changes, Token? next_token);
+
+    /// |GetFullDiff| returns the set of all key/value pairs (entries) that
+    /// have been modified between the common ancestor (see
+    /// |ConflictResolver.Resolve()|) and the left and right branches.
+    ///
+    /// Values of |LAZY| keys may not be present on the device. In that case, the
+    /// corresponding Value objects within DiffEntry will have a NULL |value|
+    /// field. If needed, |left| and |right|, provided by the
+    /// |ConflictResolver.Resolve()| method can be used by clients to Fetch these
+    /// values. If a key is not present at all in one of the branches, its
+    /// corresponding Value object will be NULL.
+    ///
+    /// The first call to get the |DiffEntry|s should be done using a NULL
+    /// token. If the result does not fit in a single fidl message, |next_token|
+    /// will have a non-NULL value, which can be used to retrieve the rest of
+    /// the results by calling |GetFullDiff()| with that token.
+    GetFullDiffNew(Token? token)
+        -> (vector<DiffEntry> changes, Token? next_token);
 
     /// |GetConflictingDiff| returns the set of all key/value pairs that were
     /// modified on both sides to different values, or deleted on one side and
     /// modified on the other.
     ///
     /// It behaves like |GetFullDiff| otherwise.
+    [Deprecated]
     GetConflictingDiff(Token? token)
         -> (IterationStatus status, vector<DiffEntry> changes, Token? next_token);
+    GetConflictingDiffNew(Token? token)
+        -> (vector<DiffEntry> changes, Token? next_token);
 
     /// Once the result of the merge has been computed |Merge()| can be called with
     /// all changes that resolve this conflict. If the result does not fit in a

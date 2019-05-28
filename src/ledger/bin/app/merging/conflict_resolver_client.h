@@ -55,11 +55,10 @@ class ConflictResolverClient
   // Performs a diff of the given type on the conflict. Return a
   // |Status| different than OK if an error occured. If no error,
   // return an |IterationStatus|.
-  void GetDiff(
-      diff_utils::DiffType type, std::unique_ptr<Token> token,
-      fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
-                         std::unique_ptr<Token>)>
-          callback);
+  void GetDiff(diff_utils::DiffType type, std::unique_ptr<Token> token,
+               fit::function<void(Status, std::vector<DiffEntry>,
+                                  std::unique_ptr<Token>)>
+                   callback);
 
   // MergeResultProviderNotifierDelegate:
   void GetFullDiff(
@@ -67,11 +66,19 @@ class ConflictResolverClient
       fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                          std::unique_ptr<Token>)>
           callback) override;
+  void GetFullDiffNew(std::unique_ptr<Token> token,
+                      fit::function<void(Status, std::vector<DiffEntry>,
+                                         std::unique_ptr<Token>)>
+                          callback) override;
   void GetConflictingDiff(
       std::unique_ptr<Token> token,
       fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                          std::unique_ptr<Token>)>
           callback) override;
+  void GetConflictingDiffNew(std::unique_ptr<Token> token,
+                             fit::function<void(Status, std::vector<DiffEntry>,
+                                                std::unique_ptr<Token>)>
+                                 callback) override;
   void Merge(std::vector<MergedValue> merged_values,
              fit::function<void(Status)> callback) override;
   void MergeNonConflictingEntries(
