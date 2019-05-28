@@ -58,8 +58,8 @@ bytes written to *buffer* is undefined.
 
 ## SEE ALSO
 
- - [`zx_vmo_create_child()`]
  - [`zx_vmo_create()`]
+ - [`zx_vmo_create_child()`]
  - [`zx_vmo_get_size()`]
  - [`zx_vmo_op_range()`]
  - [`zx_vmo_set_cache_policy()`]
@@ -68,8 +68,8 @@ bytes written to *buffer* is undefined.
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
-[`zx_vmo_create_child()`]: vmo_create_child.md
 [`zx_vmo_create()`]: vmo_create.md
+[`zx_vmo_create_child()`]: vmo_create_child.md
 [`zx_vmo_get_size()`]: vmo_get_size.md
 [`zx_vmo_op_range()`]: vmo_op_range.md
 [`zx_vmo_set_cache_policy()`]: vmo_set_cache_policy.md
