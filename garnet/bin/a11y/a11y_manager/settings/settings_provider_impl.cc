@@ -7,8 +7,35 @@
 #include <lib/syslog/cpp/logger.h>
 #include <src/lib/fxl/logging.h>
 
+#include "garnet/bin/a11y/a11y_manager/util.h"
+
 namespace a11y_manager {
-const std::array<float, 9> kIdentityMatrix = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+
+// clang-format off
+const std::array<float, 9> kIdentityMatrix = {
+    1, 0, 0,
+    0, 1, 0,
+    0, 0, 1};
+
+// To read more information about following Matrix, please refer to Jira ticket
+// MI4-2420 to get a link to document which explains them in more detail.
+const std::array<float, 9> kColorInversionMatrix = {
+    0.402,  -0.598, -0.599,
+    -1.174, -0.174, -1.175,
+    -0.228, -0.228, 0.772};
+const std::array<float, 9> kCorrectProtanomaly = {
+    0.622774, 0.264275,  0.216821,
+    0.377226, 0.735725,  -0.216821,
+    0.000000, -0.000000, 1.000000};
+const std::array<float, 9> kCorrectDeuteranomaly = {
+    0.288299f, 0.052709f,  -0.257912f,
+    0.711701f, 0.947291f,  0.257912f,
+    0.000000f, -0.000000f, 1.000000f};
+const std::array<float, 9> kCorrectTritanomaly = {
+    1.000000f,  0.000000f, -0.000000f,
+    -0.805712f, 0.378838f, 0.104823f,
+    0.805712f,  0.621162f, 0.895177f};
+// clang-format on
 
 SettingsProviderImpl::SettingsProviderImpl() : binding_(this), settings_() {
   settings_.set_magnification_enabled(false);
@@ -101,6 +128,7 @@ void SettingsProviderImpl::SetScreenReaderEnabled(
 void SettingsProviderImpl::SetColorInversionEnabled(
     bool color_inversion_enabled, SetColorInversionEnabledCallback callback) {
   settings_.set_color_inversion_enabled(color_inversion_enabled);
+  settings_.set_color_adjustment_matrix(GetColorAdjustmentMatrix());
 
   NotifyWatchers(settings_);
 
@@ -114,6 +142,7 @@ void SettingsProviderImpl::SetColorCorrection(
     fuchsia::accessibility::ColorCorrection color_correction,
     SetColorCorrectionCallback callback) {
   settings_.set_color_correction(color_correction);
+  settings_.set_color_adjustment_matrix(GetColorAdjustmentMatrix());
 
   NotifyWatchers(settings_);
 
@@ -151,6 +180,33 @@ void SettingsProviderImpl::AddWatcher(
   auto setting = fidl::Clone(settings_);
   watcher_proxy->OnSettingsChange(std::move(setting));
   watchers_.push_back(std::move(watcher_proxy));
+}
+
+std::array<float, 9> SettingsProviderImpl::GetColorAdjustmentMatrix() {
+  std::array<float, 9> color_inversion_matrix = kIdentityMatrix;
+  std::array<float, 9> color_correction_matrix = kIdentityMatrix;
+
+  if (settings_.color_inversion_enabled()) {
+    color_inversion_matrix = kColorInversionMatrix;
+  }
+
+  switch (settings_.color_correction()) {
+    case fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY:
+      color_correction_matrix = kCorrectProtanomaly;
+      break;
+    case fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY:
+      color_correction_matrix = kCorrectDeuteranomaly;
+      break;
+    case fuchsia::accessibility::ColorCorrection::CORRECT_TRITANOMALY:
+      color_correction_matrix = kCorrectTritanomaly;
+      break;
+    case fuchsia::accessibility::ColorCorrection::DISABLED:
+      color_correction_matrix = kIdentityMatrix;
+      break;
+  }
+
+  return Multiply3x3MatrixRowMajor(color_inversion_matrix,
+                                   color_correction_matrix);
 }
 
 }  // namespace a11y_manager

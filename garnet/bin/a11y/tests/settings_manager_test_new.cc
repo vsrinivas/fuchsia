@@ -16,6 +16,38 @@
 namespace accessibility_test {
 using fuchsia::accessibility::SettingsManagerStatus;
 
+// clang-format off
+const std::array<float, 9> kIdentityMatrix = {
+    1, 0, 0,
+    0, 1, 0,
+    0, 0, 1};
+
+const std::array<float, 9> kColorInversionMatrix = {
+    0.402, -0.598, -0.599,
+    -1.174, -0.174, -1.175,
+    -0.228, -0.228, 0.772};
+
+const std::array<float, 9> kCorrectProtanomaly = {
+    0.622774, 0.264275,  0.216821,
+    0.377226, 0.735725,  -0.216821,
+    0.000000, -0.000000, 1.000000};
+
+const std::array<float, 9> kProtanomalyAndInversion = {
+    0.024774,  -0.333725, -0.382179,
+    -0.796774, -0.438275, -1.39182,
+    -0.228,    -0.228,    0.772};
+
+const std::array<float, 9> kTritanomalyAndInversion = {
+    0.401193092, -0.598621162, -0.598895177,
+    -1.98051806, -0.795783162, -1.070072177,
+    0.577711544, 0.393162,     0.667177};
+
+const std::array<float, 9> kDeuteranomalyAndInversion = {
+    -0.309701, -0.545291, -0.856911196,
+    -0.462299, -0.226709, -0.917090348,
+    -0.228,    -0.228,    0.771999544};
+// clang-format on
+
 class SettingsManagerTest : public gtest::TestLoopFixture {
  public:
   explicit SettingsManagerTest() = default;
@@ -50,7 +82,7 @@ class SettingsManagerTest : public gtest::TestLoopFixture {
     settings.set_color_inversion_enabled(false);
     settings.set_color_correction(
         fuchsia::accessibility::ColorCorrection::DISABLED);
-    std::array<float, 9> matrix = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+    std::array<float, 9> matrix = kIdentityMatrix;
     settings.set_color_adjustment_matrix(matrix);
     return settings;
   }
@@ -377,6 +409,7 @@ TEST_F(SettingsManagerTest, SetColorInversionEnabled) {
     auto expected_settings = fuchsia::accessibility::Settings::New();
     default_settings_.Clone(expected_settings.get());
     expected_settings->set_color_inversion_enabled(true);
+    expected_settings->set_color_adjustment_matrix(kColorInversionMatrix);
     ASSERT_TRUE(watcher.IsSame(std::move(expected_settings)));
   }
 }
@@ -402,6 +435,7 @@ TEST_F(SettingsManagerTest, SetColorInversionDisabled) {
     auto expected_settings = fuchsia::accessibility::Settings::New();
     default_settings_.Clone(expected_settings.get());
     expected_settings->set_color_inversion_enabled(true);
+    expected_settings->set_color_adjustment_matrix(kColorInversionMatrix);
     ASSERT_TRUE(watcher.IsSame(std::move(expected_settings)));
   }
 
@@ -443,6 +477,7 @@ TEST_F(SettingsManagerTest, SetColorCorrection) {
     default_settings_.Clone(expected_settings.get());
     expected_settings->set_color_correction(
         fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY);
+    expected_settings->set_color_adjustment_matrix(kCorrectProtanomaly);
     ASSERT_TRUE(watcher.IsSame(std::move(expected_settings)));
   }
 }
@@ -470,6 +505,7 @@ TEST_F(SettingsManagerTest, SetColorCorrection_Disabled) {
     default_settings_.Clone(expected_settings.get());
     expected_settings->set_color_correction(
         fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY);
+    expected_settings->set_color_adjustment_matrix(kCorrectProtanomaly);
     ASSERT_TRUE(watcher.IsSame(std::move(expected_settings)));
   }
 
@@ -638,6 +674,126 @@ TEST_F(SettingsManagerTest, MultipleSettingsService_UseLastOne) {
     auto expected_settings = fuchsia::accessibility::Settings::New();
     default_settings_.Clone(expected_settings.get());
     expected_settings->set_magnification_enabled(true);
+    ASSERT_TRUE(watcher.IsSame(std::move(expected_settings)));
+  }
+}
+
+TEST_F(SettingsManagerTest, ColorAdjustmentMatrix_ProtanomalyAndInversionOn) {
+  auto status = fuchsia::accessibility::SettingsManagerStatus::OK;
+
+  // Create Settings Service.
+  MockSettingsService settings_service(GetContextProvider());
+  RunLoopUntilIdle();
+
+  // Add a watcher.
+  MockSettingsWatcher watcher(GetContextProvider());
+  RunLoopUntilIdle();
+
+  // Enable Color Inversion from Settings Service.
+  settings_service.SetColorInversionEnabled(
+      true, [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
+        status = retval;
+      });
+  RunLoopUntilIdle();
+  ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
+
+  // Enable Color Correction - Protanomaly.
+  settings_service.SetColorCorrection(
+      fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY,
+      [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
+        status = retval;
+      });
+  RunLoopUntilIdle();
+  ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
+
+  // Check Settings in Watcher to make sure its updated.
+  {
+    auto expected_settings = fuchsia::accessibility::Settings::New();
+    default_settings_.Clone(expected_settings.get());
+    expected_settings->set_color_inversion_enabled(true);
+    expected_settings->set_color_correction(
+        fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY);
+    expected_settings->set_color_adjustment_matrix(kProtanomalyAndInversion);
+    ASSERT_TRUE(watcher.IsSame(std::move(expected_settings)));
+  }
+}
+
+TEST_F(SettingsManagerTest, ColorAdjustmentMatrix_DeuteranomalyAndInversionOn) {
+  auto status = fuchsia::accessibility::SettingsManagerStatus::OK;
+
+  // Create Settings Service.
+  MockSettingsService settings_service(GetContextProvider());
+  RunLoopUntilIdle();
+
+  // Add a watcher.
+  MockSettingsWatcher watcher(GetContextProvider());
+  RunLoopUntilIdle();
+
+  // Enable Color Inversion from Settings Service.
+  settings_service.SetColorInversionEnabled(
+      true, [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
+        status = retval;
+      });
+  RunLoopUntilIdle();
+  ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
+
+  // Enable Color Correction - Deuteranomaly.
+  settings_service.SetColorCorrection(
+      fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY,
+      [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
+        status = retval;
+      });
+  RunLoopUntilIdle();
+  ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
+
+  // Check Settings in Watcher to make sure its updated.
+  {
+    auto expected_settings = fuchsia::accessibility::Settings::New();
+    default_settings_.Clone(expected_settings.get());
+    expected_settings->set_color_inversion_enabled(true);
+    expected_settings->set_color_correction(
+        fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY);
+    expected_settings->set_color_adjustment_matrix(kDeuteranomalyAndInversion);
+    ASSERT_TRUE(watcher.IsSame(std::move(expected_settings)));
+  }
+}
+
+TEST_F(SettingsManagerTest, ColorAdjustmentMatrix_TritanomalyAndInversionOn) {
+  auto status = fuchsia::accessibility::SettingsManagerStatus::OK;
+
+  // Create Settings Service.
+  MockSettingsService settings_service(GetContextProvider());
+  RunLoopUntilIdle();
+
+  // Add a watcher.
+  MockSettingsWatcher watcher(GetContextProvider());
+  RunLoopUntilIdle();
+
+  // Enable Color Inversion from Settings Service.
+  settings_service.SetColorInversionEnabled(
+      true, [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
+        status = retval;
+      });
+  RunLoopUntilIdle();
+  ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
+
+  // Enable Color Correction - Tritanomaly.
+  settings_service.SetColorCorrection(
+      fuchsia::accessibility::ColorCorrection::CORRECT_TRITANOMALY,
+      [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
+        status = retval;
+      });
+  RunLoopUntilIdle();
+  ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
+
+  // Check Settings in Watcher to make sure its updated.
+  {
+    auto expected_settings = fuchsia::accessibility::Settings::New();
+    default_settings_.Clone(expected_settings.get());
+    expected_settings->set_color_inversion_enabled(true);
+    expected_settings->set_color_correction(
+        fuchsia::accessibility::ColorCorrection::CORRECT_TRITANOMALY);
+    expected_settings->set_color_adjustment_matrix(kTritanomalyAndInversion);
     ASSERT_TRUE(watcher.IsSame(std::move(expected_settings)));
   }
 }

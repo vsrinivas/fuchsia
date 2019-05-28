@@ -10,6 +10,8 @@
 #include <math.h>
 #include <src/lib/fxl/macros.h>
 
+#include <array>
+
 namespace a11y_manager {
 
 class SettingsProviderImpl : public fuchsia::accessibility::SettingsProvider {
@@ -47,6 +49,8 @@ class SettingsProviderImpl : public fuchsia::accessibility::SettingsProvider {
   void SetColorCorrection(
       fuchsia::accessibility::ColorCorrection color_correction,
       SetColorCorrectionCallback callback) override;
+
+  std::array<float, 9> GetColorAdjustmentMatrix();
 
   // Destroys a watcher proxy (called upon a connection error).
   void ReleaseWatcher(fuchsia::accessibility::SettingsWatcher* watcher);

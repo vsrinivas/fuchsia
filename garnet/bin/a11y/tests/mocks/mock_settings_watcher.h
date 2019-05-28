@@ -26,6 +26,8 @@ class MockSettingsWatcher : public fuchsia::accessibility::SettingsWatcher {
   bool IsSame(fuchsia::accessibility::SettingsPtr provided_settings);
 
  private:
+  bool CompareFloatArray(std::array<float, 9> first_array,
+                         std::array<float, 9> second_array) const;
   void SaveSettings(fuchsia::accessibility::Settings provided_settings);
 
   fidl::BindingSet<fuchsia::accessibility::SettingsWatcher> bindings_;

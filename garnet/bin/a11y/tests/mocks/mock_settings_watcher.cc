@@ -9,6 +9,8 @@
 #include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
+#include <cmath>
+
 namespace accessibility_test {
 
 MockSettingsWatcher::MockSettingsWatcher(
@@ -48,6 +50,18 @@ void MockSettingsWatcher::SaveSettings(
   }
 }
 
+bool MockSettingsWatcher::CompareFloatArray(
+    std::array<float, 9> first_array, std::array<float, 9> second_array) const {
+  const float float_comparison_epsilon = 0.00001;
+  for (int i = 0; i < 9; i++) {
+    if ((std::fabs(first_array[i] - second_array[i]) >
+         float_comparison_epsilon)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool MockSettingsWatcher::IsSame(
     fuchsia::accessibility::SettingsPtr provided_settings) {
   return settings_.magnification_enabled() ==
@@ -60,8 +74,12 @@ bool MockSettingsWatcher::IsSame(
              provided_settings->color_inversion_enabled() &&
          settings_.color_correction() ==
              provided_settings->color_correction() &&
-         settings_.color_adjustment_matrix() ==
-             provided_settings->color_adjustment_matrix();
+         settings_.has_color_adjustment_matrix() ==
+             provided_settings->has_color_adjustment_matrix() &&
+         (settings_.has_color_adjustment_matrix()
+              ? CompareFloatArray(settings_.color_adjustment_matrix(),
+                                  provided_settings->color_adjustment_matrix())
+              : true);
 }
 
 }  // namespace accessibility_test
