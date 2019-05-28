@@ -14,8 +14,8 @@ namespace camera {
 
 class DmaManager {
 public:
-    DmaManager(bool is_downscaled)
-        : downscaled_(is_downscaled){}
+    DmaManager(bool is_downscaled, ddk::MmioView isp_mmio_local)
+        : isp_mmio_local_(isp_mmio_local), downscaled_(is_downscaled) {}
 
     // TODO(garratt): fill out this function.
     zx_status_t ConnectToStream(fuchsia_sysmem_BufferCollectionInfo buffer_collection);
@@ -29,7 +29,7 @@ public:
     void ReleaseFrame(uint32_t buffer_index);
 
 private:
-    ddk::MmioBuffer* isp_mmio_;
+    ddk::MmioView isp_mmio_local_;
     fzl::VmoPool buffers_;
     uint32_t fps_;
     DmaFormat current_format_;
