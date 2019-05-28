@@ -4,14 +4,17 @@
 
 driver("serial") {
   sources = [
-    "serial.c",
+    "serial.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/banjo/ddk.protocol.serialimpl",
     "$zx/system/fidl/fuchsia-hardware-serial:c",
     "$zx/system/ulib/ddk",
-    "$zx/system/ulib/sync",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
   ]
 }
