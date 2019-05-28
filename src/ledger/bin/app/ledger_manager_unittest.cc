@@ -426,6 +426,52 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
   EXPECT_EQ(PagePredicateResult::YES, is_closed_and_synced);
 }
 
+// Check for a page that exists, is synced and open. PageIsClosedAndSynced
+// should be false.
+TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCallOnEmpty) {
+  storage_ptr->should_get_page_fail = false;
+  PagePtr page;
+  PageId id = RandomId();
+  storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
+
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
+  RunLoopUntilIdle();
+
+  bool is_empty;
+  ledger_manager_->set_on_empty(callback::SetWhenCalled(&is_empty));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(is_empty);
+
+  // Close the page and the ledger connection.
+  page.Unbind();
+  ledger_.Unbind();
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(is_empty);
+  is_empty = false;
+
+  storage_ptr->DelayIsSyncedCallback(storage_page_id, true);
+
+  bool called;
+  PagePredicateResult is_closed_and_synced;
+  storage::Status storage_status;
+
+  ledger_manager_->PageIsClosedAndSynced(
+      storage_page_id,
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
+                        &is_closed_and_synced));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+
+  storage_ptr->CallIsSyncedCallback(storage_page_id);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(storage::Status::OK, storage_status);
+  EXPECT_TRUE(is_empty);
+}
+
 // Check for a page that exists, is closed, but is not synced.
 // PageIsClosedAndSynced should be false.
 TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckSynced) {

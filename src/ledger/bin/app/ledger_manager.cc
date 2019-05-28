@@ -297,6 +297,8 @@ fit::function<bool()> LedgerManager::NewPageTracker(
       return false;
     }
     tracked_pages_--;
+    auto check_empty_on_return = fit::defer([this] { CheckEmpty(); });
+
     auto it = page_was_opened_map_.find(page_id);
     if (it == page_was_opened_map_.end()) {
       return false;
