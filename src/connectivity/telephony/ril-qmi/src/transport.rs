@@ -6,7 +6,10 @@ use crate::errors::QmuxError;
 use bytes::Buf;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{task::{Context, Waker}, Future, Poll};
+use futures::{
+    task::{Context, Waker},
+    Future, Poll,
+};
 use parking_lot::Mutex;
 use slab::Slab;
 use std::collections::HashMap;

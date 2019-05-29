@@ -41,7 +41,7 @@ struct NetworkSettings {
 
 /// The Standard Fuchsia RIL (FRIL)
 [Discoverable]
-protocol RadioInterfaceLayer {
+protocol Setup {
     /// Hand a transport |channel| to the RIL service connecting it to the modem. Most
     /// modems will require this to be the first method called, since they are dependent
     /// on this. If a connection is already active, it will return false. If the channel
@@ -52,7 +52,11 @@ protocol RadioInterfaceLayer {
     /// Implementation Detail: current services speak QMI but others will most likely speak other
     /// binary formats.
     ConnectTransport(handle<channel> channel) -> () error RilError;
+};
 
+/// The Standard Fuchsia RIL (FRIL)
+[Discoverable]
+protocol RadioInterfaceLayer {
     /// Retrieve the identity of the modem (currently |imei| only).
     GetDeviceIdentity() -> (string imei) error RilError;
 

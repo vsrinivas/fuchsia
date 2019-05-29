@@ -8,7 +8,7 @@
 use {
     failure::{Error, Fail, ResultExt},
     fidl_fuchsia_telephony_manager::{ManagerRequest, ManagerRequestStream},
-    fidl_fuchsia_telephony_ril::{RadioInterfaceLayerMarker, RadioInterfaceLayerProxy},
+    fidl_fuchsia_telephony_ril::{SetupMarker, RadioInterfaceLayerMarker, RadioInterfaceLayerProxy},
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{launch, launcher, App},
@@ -56,9 +56,10 @@ pub async fn start_modem(ty: ModemType, chan: zx::Channel) -> Result<Radio, Erro
     let launcher = launcher().context("Failed to open launcher service")?;
     let app = launch(&launcher, RIL_URI.to_string(), None)
         .context("Failed to launch qmi-modem service")?;
+    let setup_ril = app.connect_to_service::<SetupMarker>()?;
     let ril = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
     match ty {
-        ModemType::Qmi => match await!(ril.connect_transport(chan.into()))? {
+        ModemType::Qmi => match await!(setup_ril.connect_transport(chan.into()))? {
             Ok(_) => Ok(Radio::new(app, ril)),
             Err(e) => Err(TelError::RilError(e).into()),
         },

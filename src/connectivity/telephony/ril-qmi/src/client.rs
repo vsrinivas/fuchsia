@@ -10,6 +10,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_telephony_ril::NetworkConnectionMarker,
     fuchsia_syslog::macros::*,
+    futures::lock::Mutex,
     parking_lot::RwLock,
     qmi_protocol::{Decodable, Encodable, QmiResult},
     std::collections::HashMap,
@@ -49,14 +50,21 @@ pub struct Connection {
 pub struct QmiClient {
     inner: Arc<QmiTransport>,
     clients: ClientSvcMap,
-    pub data_conn: Option<Connection>,
+    data_conn: Mutex<Option<Connection>>,
 }
 
 impl Unpin for QmiClient {}
 
 impl QmiClient {
     pub fn new(inner: Arc<QmiTransport>) -> Self {
-        QmiClient { inner: inner, clients: ClientSvcMap::default(), data_conn: None }
+        QmiClient { inner: inner, clients: ClientSvcMap::default(), data_conn: Mutex::new(None) }
+    }
+
+    /// Connect a data bearer to a qmi client.
+    /// TODO(bwb): support multiple connections
+    pub async fn set_data_connection(&self, conn: Connection) {
+        let mut data_conn = await!(self.data_conn.lock());
+        *data_conn = Some(conn);
     }
 
     /// Send a QMI message and allocate the client IDs for the service
@@ -172,30 +180,72 @@ mod tests {
     use {
         fuchsia_async::{self as fasync, TimeoutExt},
         fuchsia_zircon::{self as zx, DurationNum},
-        futures::{future::join, TryFutureExt},
-        parking_lot::Mutex,
+        futures::lock::Mutex,
+        futures::{
+            future::{join, join3},
+            TryFutureExt,
+        },
         pretty_assertions::assert_eq,
         qmi_protocol::QmiError,
         std::io,
     };
 
-    #[test]
     #[should_panic]
-    fn no_client() {
+    #[fasync::run_until_stalled(test)]
+    async fn no_transport_channel() {
+        // should stall without completing.
+        let modem = Arc::new(Mutex::new(crate::QmiModem::new()));
+        let sender = async {
+            let modem_lock = await!(modem.lock());
+            let client = await!(modem_lock.create_client());
+            client
+        };
+        await!(sender);
+    }
+
+    #[test]
+    fn connect_transport_after_client_request() {
         use qmi_protocol::WDA;
         let mut executor = fasync::Executor::new().unwrap();
+
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let modem = Arc::new(Mutex::new(crate::QmiModem::new()));
-        let modem_lock = modem.lock();
+        let server = fasync::Channel::from_channel(server_end).unwrap();
+        let mut buffer = zx::MessageBuf::new();
+
+        const EXPECTED: &[u8] = &[1, 15, 0, 0, 0, 0, 0, 1, 34, 0, 4, 0, 1, 1, 0, 26];
+
         let sender = async {
-            let client = await!(modem_lock.create_client()).unwrap();
-            // Panic should occur here. No valid channel to send message on!
-            let _: Result<WDA::SetDataFormatResp, QmiError> =
-                await!(client.send_msg(WDA::SetDataFormatReq::new(None, Some(0x01))).map_err(
-                    |e| io::Error::new(io::ErrorKind::Other, &*format!("fidl error: {:?}", e))
-                ))
-                .unwrap();
+            // hacky way of getting around two step client/lock requirements
+            loop {
+                if let Some(modem_lock) = modem.try_lock() {
+                    let client = await!(modem_lock.create_client());
+                    // don't care about result, timeout
+                    let _: Result<WDA::SetDataFormatResp, QmiError> = await!(client
+                        .send_msg(WDA::SetDataFormatReq::new(None, Some(0x01)))
+                        .map_err(|e| io::Error::new(
+                            io::ErrorKind::Other,
+                            &*format!("fidl error: {:?}", e)
+                        ))
+                        .on_timeout(30.millis().after_now(), || Ok(Err(QmiError::Aborted))))
+                    .unwrap();
+                }
+                return;
+            }
         };
-        executor.run_singlethreaded(sender);
+
+        let receiver = async {
+            await!(server.recv_msg(&mut buffer)).expect("failed to recv msg");
+            assert_eq!(EXPECTED, buffer.bytes());
+        };
+
+        let late_connect = async {
+            let mut modem_lock = await!(modem.lock());
+            modem_lock.connect_transport(client_end.into());
+        };
+
+        executor.run_singlethreaded(join3(late_connect, sender, receiver));
     }
 
     #[test]
@@ -207,13 +257,12 @@ mod tests {
 
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = fasync::Channel::from_channel(client_end).unwrap();
-        let trans = Arc::new(QmiTransport::new(client_end));
-        let modem = Arc::new(Mutex::new(crate::QmiModem::new_with_transport(trans)));
+        let mut modem = crate::QmiModem::new();
+        modem.connect_transport(client_end.into());
+        let modem = Arc::new(Mutex::new(modem));
 
         let server = fasync::Channel::from_channel(server_end).unwrap();
         let mut buffer = zx::MessageBuf::new();
-
-        let modem_lock = modem.lock();
 
         let receiver = async {
             await!(server.recv_msg(&mut buffer)).expect("failed to recv msg");
@@ -227,7 +276,8 @@ mod tests {
             .on_timeout(1000.millis().after_now(), || panic!("did not receiver message in time!"));
 
         let sender = async {
-            let client = await!(modem_lock.create_client()).unwrap();
+            let modem_lock = await!(modem.lock());
+            let client = await!(modem_lock.create_client());
             let resp: QmiResult<CTL::GetClientIdResp> =
                 await!(client.send_msg_actual(CTL::GetClientIdReq::new(0x42))).unwrap();
             let msg = resp.unwrap();

@@ -25,7 +25,7 @@ use {
     fidl_fuchsia_netstack::NetstackMarker,
     fidl_fuchsia_telephony_manager::ManagerMarker,
     fidl_fuchsia_telephony_ril::{
-        RadioInterfaceLayerMarker, RadioInterfaceLayerProxy, RadioPowerState, *,
+        RadioInterfaceLayerMarker, RadioInterfaceLayerProxy, RadioPowerState, SetupMarker, *,
     },
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_component::{
@@ -132,9 +132,7 @@ async fn get_signal<'a>(
     ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<String, Error> {
     match await!(ril_modem.get_signal_strength())? {
-        Ok(strength) => {
-            Ok(format!("{} dBm", strength))
-        },
+        Ok(strength) => Ok(format!("{} dBm", strength)),
         Err(_e) => Err(format_err!("error")),
     }
 }
@@ -240,8 +238,9 @@ pub fn main() -> Result<(), Error> {
                 let chan = await!(qmi::connect_transport_device(&file))?;
                 app = launch(&launcher, RIL_URI.to_string(), None)
                     .context("Failed to launch ril-qmi service")?;
+                let ril_modem_setup = app.connect_to_service::<SetupMarker>()?;
+                let resp = await!(ril_modem_setup.connect_transport(chan))?;
                 let ril_modem = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
-                let resp = await!(ril_modem.connect_transport(chan))?;
                 if resp.is_err() {
                     return Err(format_err!(
                         "Failed to connect the driver to the RIL (check telephony svc is not running?)"

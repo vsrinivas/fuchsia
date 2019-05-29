@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
 #![feature(async_await, await_macro)]
 
 use {
@@ -17,9 +16,14 @@ use {
     fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    futures::{StreamExt, TryFutureExt, TryStreamExt},
+    futures::{
+        future::Future,
+        task::{AtomicWaker, Context, Poll},
+        StreamExt, TryFutureExt, TryStreamExt,
+    },
     qmi_protocol::QmiResult,
     qmi_protocol::*,
+    std::pin::Pin,
     std::sync::Arc,
 };
 
@@ -29,37 +33,54 @@ mod transport;
 
 type QmiModemPtr = Arc<Mutex<QmiModem>>;
 
+struct QmiTransportMgr {
+    transport: Option<Arc<QmiTransport>>,
+    waker: AtomicWaker,
+}
+
+impl QmiTransportMgr {
+    pub fn new() -> QmiTransportMgr {
+        QmiTransportMgr { transport: None, waker: AtomicWaker::new() }
+    }
+
+    pub fn set_transport(&mut self, transport: QmiTransport) {
+        self.transport = Some(Arc::new(transport));
+        self.waker.wake();
+    }
+}
+
+impl Future for &QmiTransportMgr {
+    type Output = Arc<QmiTransport>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match self.transport {
+            Some(ref transport) => Poll::Ready(transport.clone()),
+            None => {
+                self.waker.register(cx.waker());
+                Poll::Pending
+            }
+        }
+    }
+}
+
 pub struct QmiModem {
-    inner: Option<Arc<QmiTransport>>,
+    inner: QmiTransportMgr,
 }
 
 impl QmiModem {
     pub fn new() -> Self {
-        QmiModem { inner: None }
-    }
-
-    pub fn new_with_transport(transport: Arc<QmiTransport>) -> Self {
-        QmiModem { inner: Some(transport) }
-    }
-
-    pub fn connected(&self) -> bool {
-        // TODO add additional logic for checking transport_channel open
-        self.inner.is_some()
+        QmiModem { inner: QmiTransportMgr::new() }
     }
 
     pub fn connect_transport(&mut self, chan: zx::Channel) -> bool {
         fx_log_info!("Connecting the transport");
-        if self.connected() {
-            fx_log_err!("Attempted to connect more than one transport");
-            return false;
-        }
         match fasync::Channel::from_channel(chan) {
             Ok(chan) => {
                 if chan.is_closed() {
                     fx_log_err!("The transport channel is not open");
                     return false;
                 }
-                self.inner = Some(Arc::new(QmiTransport::new(chan)));
+                self.inner.set_transport(QmiTransport::new(chan));
                 true
             }
             Err(_) => {
@@ -69,60 +90,32 @@ impl QmiModem {
         }
     }
 
-    pub async fn create_client(&self) -> Result<QmiClient, Error> {
-        fx_log_info!("Client connecting...");
-        if let Some(ref inner) = self.inner {
-            let transport_inner = inner.clone();
-            let client = QmiClient::new(transport_inner);
-            Ok(client)
-        } else {
-            Err(QmuxError::NoTransport.into())
-        }
+    pub async fn create_client(&self) -> QmiClient {
+        let transport = await!(&self.inner);
+        let client = QmiClient::new(transport);
+        client
     }
-}
-
-type ClientPtr = Arc<Mutex<Option<QmiClient>>>;
-
-/// needs to be called before all requests that use a client
-async fn setup_client<'a>(modem: QmiModemPtr, client_ptr: ClientPtr) {
-    let mut client_lock = await!(client_ptr.lock());
-    if client_lock.is_none() {
-        let modem_lock = await!(modem.lock());
-        match await!(modem_lock.create_client()) {
-            Ok(alloced_client) => *client_lock = Some(alloced_client),
-            Err(e) => {
-                fx_log_err!("Failed to allocated a client: {}", e);
-            }
-        }
-    };
 }
 
 /// Craft a QMI Query given a handle and a client connection. Handles common error paths.
 /// For more specialized interactions with the modem, prefer to call `client.send_msg()` directly.
 macro_rules! qmi_query {
     ($responder:expr, $client:expr, $query:expr) => {{
-        match *await!($client.lock()) {
-            Some(ref mut client) => {
-                let resp: Result<QmiResult<_>, QmuxError> = await!(client.send_msg($query));
-                match resp {
-                    Ok(qmi_result) => {
-                        match qmi_result {
-                            Ok(qmi) => qmi,
-                            Err(e) => {
-                                fx_log_err!("Unknown Error: {:?}", e);
-                                // TODO(bwb): Define conversion trait between errors and RIL errors
-                                return $responder.send(&mut Err(RilError::UnknownError));
-                            }
-                        }
-                    }
+        let resp: Result<QmiResult<_>, QmuxError> = await!($client.send_msg($query));
+        match resp {
+            Ok(qmi_result) => {
+                match qmi_result {
+                    Ok(qmi) => qmi,
                     Err(e) => {
-                        fx_log_err!("Transport Error: {}", e);
-                        return $responder.send(&mut Err(RilError::TransportError));
+                        fx_log_err!("Unknown Error: {:?}", e);
+                        // TODO(bwb): Define conversion trait between errors and RIL errors
+                        return $responder.send(&mut Err(RilError::UnknownError));
                     }
                 }
             }
-            None => {
-                return $responder.send(&mut Err(RilError::NoRadio));
+            Err(e) => {
+                fx_log_err!("Transport Error: {}", e);
+                return $responder.send(&mut Err(RilError::TransportError));
             }
         }
     }};
@@ -131,35 +124,23 @@ macro_rules! qmi_query {
 struct FrilService;
 impl FrilService {
     pub fn spawn(modem: QmiModemPtr, stream: RadioInterfaceLayerRequestStream) {
-        let client = Arc::new(Mutex::new(None));
-        let server = stream
-            .try_for_each(move |req| Self::handle_request(modem.clone(), client.clone(), req))
-            .unwrap_or_else(|e| fx_log_err!("Error running {:?}", e));
+        let server = async move {
+            let client = {
+                let modem_lock = await!(modem.lock());
+                Arc::new(await!(modem_lock.create_client()))
+            };
+            await!(stream
+                .try_for_each(move |req| Self::handle_request(client.clone(), req))
+                .unwrap_or_else(|e| fx_log_err!("Error running {:?}", e)))
+        };
         fasync::spawn(server);
     }
 
     async fn handle_request(
-        modem: QmiModemPtr,
-        client: ClientPtr,
+        client: Arc<QmiClient>,
         request: RadioInterfaceLayerRequest,
     ) -> Result<(), fidl::Error> {
-        // TODO(bwb) after component model v2, switch to on channel setup and
-        // deprecated ConnectTransport method
         match request {
-            RadioInterfaceLayerRequest::ConnectTransport { .. } => (), // does not need a client setup
-            _ => await!(setup_client(modem.clone(), client.clone())),
-        }
-
-        match request {
-            RadioInterfaceLayerRequest::ConnectTransport { channel, responder } => {
-                let mut lock = await!(modem.lock());
-                let status = lock.connect_transport(channel);
-                fx_log_info!("Connecting the service to the transport driver: {}", status);
-                if status {
-                    return responder.send(&mut Ok(()));
-                }
-                responder.send(&mut Err(RilError::TransportError))?
-            }
             RadioInterfaceLayerRequest::GetSignalStrength { responder } => {
                 let resp: NAS::GetSignalStrengthResp =
                     qmi_query!(responder, client, NAS::GetSignalStrengthReq::new());
@@ -173,12 +154,12 @@ impl FrilService {
                 let packet: WDS::GetCurrentSettingsResp =
                     qmi_query!(responder, client, WDS::GetCurrentSettingsReq::new(58160));
                 responder.send(&mut Ok(NetworkSettings {
-                        ip_v4_addr: packet.ipv4_addr.unwrap(),
-                        ip_v4_dns: packet.ipv4_dns.unwrap(),
-                        ip_v4_subnet: packet.ipv4_subnet.unwrap(),
-                        ip_v4_gateway: packet.ipv4_gateway.unwrap(),
-                        mtu: packet.mtu.unwrap(),
-                    }))?
+                    ip_v4_addr: packet.ipv4_addr.unwrap(),
+                    ip_v4_dns: packet.ipv4_dns.unwrap(),
+                    ip_v4_subnet: packet.ipv4_subnet.unwrap(),
+                    ip_v4_gateway: packet.ipv4_gateway.unwrap(),
+                    mtu: packet.mtu.unwrap(),
+                }))?
             }
             RadioInterfaceLayerRequest::StartNetwork { apn, responder } => {
                 let packet: WDS::StartNetworkInterfaceResp = qmi_query!(
@@ -188,12 +169,10 @@ impl FrilService {
                 );
                 let (server_chan, client_chan) = zx::Channel::create().unwrap();
                 let server_end = ServerEnd::<NetworkConnectionMarker>::new(server_chan.into());
-                if let Some(ref mut client) = *await!(client.lock()) {
-                    client.data_conn = Some(client::Connection {
-                        pkt_handle: packet.packet_data_handle,
-                        conn: server_end,
-                    });
-                }
+                await!(client.set_data_connection(client::Connection {
+                    pkt_handle: packet.packet_data_handle,
+                    conn: server_end,
+                }));
                 let client_end = ClientEnd::<NetworkConnectionMarker>::new(client_chan.into());
                 responder.send(&mut Ok(client_end))?
             }
@@ -223,12 +202,31 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let modem = Arc::new(Mutex::new(QmiModem::new()));
+    let modem_setup = modem.clone();
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("public").add_fidl_service(move |stream| {
-        fx_log_info!("New client connecting to the Fuchsia RIL");
-        FrilService::spawn(modem.clone(), stream)
-    });
+    fs.dir("public")
+        .add_fidl_service(move |stream| {
+            fx_log_info!("New client connecting to the Fuchsia RIL");
+            FrilService::spawn(modem.clone(), stream)
+        })
+        .add_fidl_service(move |mut stream: SetupRequestStream| {
+            let modem = modem_setup.clone();
+            fasync::spawn(async move {
+                let res = await!(stream.next()).unwrap();
+                if let Ok(SetupRequest::ConnectTransport { channel, responder }) = res {
+                    let mut lock = await!(modem.lock());
+                    let status = lock.connect_transport(channel);
+                    fx_log_info!("Connecting the service to the transport driver: {}", status);
+                    if status {
+                        let _ = responder.send(&mut Ok(()));
+                    } else {
+                        let _ = responder.send(&mut Err(RilError::TransportError));
+                    }
+                }
+            });
+        });
+
     fs.take_and_serve_directory_handle()?;
 
     executor.run_singlethreaded(fs.collect::<()>());
