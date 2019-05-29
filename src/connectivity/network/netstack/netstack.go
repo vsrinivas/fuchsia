@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"syslog"
 
@@ -526,12 +527,17 @@ func (ns *Netstack) getdnsServers() []tcpip.Address {
 	return out
 }
 
+var deviceSettingsErrorLogged uint32 = 0
+
 func (ns *Netstack) getNodeName() string {
 	nodename, status, err := ns.deviceSettings.GetString(deviceSettingsManagerNodenameKey)
 	if err != nil {
-		syslog.Warnf("getNodeName: error accessing device settings: %s", err)
+		if atomic.CompareAndSwapUint32(&deviceSettingsErrorLogged, 0, 1) {
+			syslog.Warnf("getNodeName: error accessing device settings: %s", err)
+		}
 		return defaultNodename
 	}
+
 	if status != devicesettings.StatusOk {
 		var reportStatus string
 		switch status {
@@ -548,9 +554,13 @@ func (ns *Netstack) getNodeName() string {
 		default:
 			reportStatus = fmt.Sprintf("unknown status code: %d", status)
 		}
-		syslog.Warnf("getNodeName: device settings error: %s", reportStatus)
+		if atomic.CompareAndSwapUint32(&deviceSettingsErrorLogged, 0, 1) {
+			syslog.Warnf("getNodeName: device settings error: %s", reportStatus)
+		}
 		return defaultNodename
 	}
+
+	atomic.StoreUint32(&deviceSettingsErrorLogged, 0)
 	return nodename
 }
 
