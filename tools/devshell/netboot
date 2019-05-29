@@ -18,7 +18,4 @@ if [[ -n "$name" ]]; then
   name_args+=("-n" "${name}")
 fi
 
-"${ZIRCON_TOOLS_DIR}/zbi" -o "${FUCHSIA_BUILD_DIR}/netboot.zbi" "${FUCHSIA_BUILD_DIR}/netboot.zbi" \
-  --replace --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
-
 exec "${FUCHSIA_BUILD_DIR}/netboot.sh" "${name_args[@]}" "$@"
