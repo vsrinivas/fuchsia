@@ -447,6 +447,7 @@ group("all") {
     ":whereiscl",
     ":zircon",
     ":zxdb",
+    "//garnet/bin/sshd-host:sshd-host-tests",
     "//garnet/go/src/pm:host_tests",
     "//src/connectivity/dhcp:dhcp_tests",
     "//src/sys/component_index:component_index_tests",
