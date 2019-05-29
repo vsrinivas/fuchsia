@@ -24,6 +24,11 @@
 #define SPN_ALIGNED_ALLOC(alignment, size) _aligned_malloc(size, alignment)
 #define SPN_ALIGNED_FREE(p) _aligned_free(p)
 
+#elif defined(__ANDROID__)
+
+#define SPN_ALIGNED_ALLOC(alignment, size) memalign(alignment, size)
+#define SPN_ALIGNED_FREE(p) free(p)
+
 #else
 
 #define SPN_ALIGNED_ALLOC(alignment, size) aligned_alloc(alignment, size)
