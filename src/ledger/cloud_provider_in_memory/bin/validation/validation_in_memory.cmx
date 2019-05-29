@@ -1,5 +1,10 @@
 {
     "program": {
-        "binary": "test/disabled/launch_validation_tests_in_memory"
+        "binary": "test/launch_validation_tests_in_memory"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
     }
 }
