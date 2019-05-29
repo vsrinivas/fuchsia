@@ -7,8 +7,9 @@
 
 use failure::Fail;
 use fuchsia_async as fasync;
+use futures::select;
 use futures::channel::oneshot;
-use futures::future::{BoxFuture, RemoteHandle, Shared};
+use futures::future::{BoxFuture, FusedFuture, RemoteHandle, Shared};
 use futures::lock::Mutex;
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
@@ -152,6 +153,23 @@ impl Context {
                 Ok(child)
             }
         }
+    }
+}
+
+/// Returns a future which resolves either when cancel or fut is ready. If both are ready, cancel
+/// takes precedence. If the provided future wins, its output is returned. If cancel wins, None
+/// is returned.
+// TODO(dnordstrom): Consider removing once there is a well-ordered select function or macro in
+// futures-rs.
+pub async fn cancel_or<Fut, T>(cancel: &ContextCancel, mut fut: Fut) -> Option<T>
+    where Fut: Future<Output=T> + FusedFuture + std::marker::Unpin {
+    let mut cancel = cancel.clone();
+    if cancel.peek().is_some() {
+        return None;
+    }
+    select! {
+        _ = cancel => None,
+        value = fut => Some(value),
     }
 }
 
@@ -324,5 +342,33 @@ mod test {
         let cancel_fut = &mut ctx.cancel().boxed();
         assert!(executor.run_until_stalled(spawn_fut).is_ready());
         assert!(executor.run_until_stalled(cancel_fut).is_pending());
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn cancel_or_test() {
+        // Check that cancel_or function resolves the correct future for common cases
+        let (sender_1, receiver_1) = oneshot::channel();
+        let (sender_2, receiver_2) = oneshot::channel();
+        let a_task = |cancel: ContextCancel| {
+            async move {
+                // if fut is ready and cancel is pending, fut wins
+                assert_eq!(await!(cancel_or(&cancel, future::ready(9000))), Some(9000));
+
+                // this send triggers the cancellation
+                sender_1.send(10).expect("sending failed");
+
+                // if fut is pending, and cancel is (or soon becomes) ready, cancel wins
+                assert!(await!(cancel_or(&cancel, future::empty::<i64>())).is_none());
+
+                // if both fut and cancel is ready, cancel wins
+                assert!(await!(cancel_or(&cancel, future::ready(9001))).is_none());
+                sender_2.send(20).expect("sending failed");
+            }
+        };
+        let ctx = Context::new();
+        await!(ctx.spawn(a_task)).expect("spawning failed");
+        assert_eq!(await!(receiver_1), Ok(10));
+        await!(ctx.cancel()).expect("cancelling failed");
+        assert_eq!(await!(receiver_2), Ok(20));
     }
 }
