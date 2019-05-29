@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // !!! DEPRECATED !!!
-// New usages should reference garnet/public/lib/inpect/cpp...
+// New usages should reference garnet/public/lib/inspect...
 
 #ifndef LIB_INSPECT_DEPRECATED_EXPOSE_H_
 #define LIB_INSPECT_DEPRECATED_EXPOSE_H_
