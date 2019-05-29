@@ -8,6 +8,7 @@
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <src/lib/files/glob.h>
 
 #include "gmock/gmock.h"
 
@@ -217,4 +218,56 @@ TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledBySelf) {
   base_shell.Exit(0);
   RunLoopUntil([&] { return !base_shell.is_running(); });
   EXPECT_FALSE(running);
+}
+
+class TestFixtureForTestingCleanup
+    : public modular::testing::TestHarnessFixture {
+ public:
+  // Runs the test harness and calls |on_running| once the base shell starts
+  // running.
+  void RunUntilBaseShell(fit::function<void()> on_running) {
+    modular::testing::TestHarnessBuilder builder;
+    bool running = false;
+    TestComponent base_shell([&] { running = true; }, [&] { running = false; });
+    builder.InterceptBaseShell(base_shell.GetOnCreateHandler(),
+                               {.url = builder.GenerateFakeUrl()});
+
+    test_harness().events().OnNewComponent =
+        builder.BuildOnNewComponentHandler();
+    test_harness()->Run(builder.BuildSpec());
+
+    RunLoopUntil([&] { return running; });
+    on_running();
+  };
+
+  virtual ~TestFixtureForTestingCleanup() = default;
+
+ private:
+  // |TestBody()| is usually implemented by gtest's test fixture runner, but
+  // since this test is exercising TestHarnessFixture directly, this method is
+  // has a dummy implementation here.
+  void TestBody() override {}
+};
+
+// Test that TestHarnessFixture will destroy the modular_test_harness.cmx
+// component in its destructor.
+TEST(TestHarnessFixtureCleanupTest, CleanupInDestructor) {
+  // Test that modular_test_harness.cmx is not running.
+  constexpr char kTestHarnessHubGlob[] = "/hub/c/modular_test_harness.cmx";
+  bool exists = files::Glob(kTestHarnessHubGlob).size() == 1;
+  EXPECT_FALSE(exists);
+
+  // Test that TestHarnessFixture will run modular_test_harness.cmx
+  {
+    TestFixtureForTestingCleanup t;
+    t.RunUntilBaseShell([&] {
+      // check that modular_test_harness.cmx is running.
+      bool exists = files::Glob(kTestHarnessHubGlob).size() == 1;
+      EXPECT_TRUE(exists);
+    });
+  }
+  // Test that the modular_test_harness.cmx is no longer running after
+  // TestHarnessFixture is destroyed.
+  exists = files::Glob(kTestHarnessHubGlob).size() == 1;
+  EXPECT_FALSE(exists);
 }

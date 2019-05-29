@@ -3,6 +3,9 @@
         "binary": "test/test_harness_fixture_test_bin"
     },
     "sandbox": {
+        "features": [
+            "shell"
+        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher"

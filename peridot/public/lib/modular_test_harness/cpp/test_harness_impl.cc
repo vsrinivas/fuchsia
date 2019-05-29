@@ -376,8 +376,12 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
         fuchsia::modular::session::CloudProvider::NONE);
   }
 
+  fuchsia::sys::EnvironmentOptions env_options;
+  env_options.delete_storage_on_death = true;
+
   enclosing_env_ = sys::testing::EnclosingEnvironment::Create(
-      MakeTestHarnessEnvironmentName(), parent_env_, std::move(env_services));
+      MakeTestHarnessEnvironmentName(), parent_env_, std::move(env_services),
+      env_options);
 
   zx::channel client;
   zx::channel request;

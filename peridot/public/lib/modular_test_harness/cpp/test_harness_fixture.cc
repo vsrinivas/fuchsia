@@ -174,7 +174,21 @@ std::string TestHarnessBuilder::GenerateFakeUrl(std::string name) const {
   return url;
 }
 
-TestHarnessFixture::~TestHarnessFixture() = default;
+TestHarnessFixture::~TestHarnessFixture() {
+  if (!test_harness_ctrl_) {
+    return;
+  }
+
+  bool exited = false;
+  test_harness_ctrl_.events().OnTerminated =
+      [&](int64_t return_code, fuchsia::sys::TerminationReason reason) {
+        exited = true;
+      };
+  test_harness_ctrl_->Kill();
+
+  // Wait until the modular test harness binary has died.
+  RunLoopUntil([&] { return exited; });
+}
 
 std::string TestHarnessFixture::InterceptBaseShell(
     fuchsia::modular::testing::TestHarnessSpec* spec) const {
