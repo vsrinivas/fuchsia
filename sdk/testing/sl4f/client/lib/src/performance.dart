@@ -74,7 +74,7 @@ class Performance {
     _log.info('Performance: Downloading trace $traceName');
     final tracePath = _traceNameToTargetPath(traceName);
     final String response = await _sl4f
-        .request('Performance_facade.GetTraceFile', {'path': tracePath});
+        .request('traceutil_facade.GetTraceFile', {'path': tracePath});
     return _dump.writeAsBytes(
         '$traceName-trace', 'json', base64.decode(response));
   }

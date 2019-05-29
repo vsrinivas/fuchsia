@@ -33,21 +33,24 @@ class FakePerformanceTools extends Performance {
   }
 }
 
-const String sl4fTraceRequestMethod = 'Performance_facade.GetTraceFile';
+const String sl4fTraceRequestMethod = 'traceutil_facade.GetTraceFile';
 
 void main(List<String> args) {
+  Dump mockDump;
+  Sl4f mockSl4f;
+  setUp(() {
+    mockDump = MockDump();
+    mockSl4f = MockSl4f();
+  });
+
   // Verifies that [Performance.downloadTraceFile] requests a file from Sl4f and
   // writes its contents to a local file.
   test('download trace requests a file and writes it', () async {
+    final performance = Performance(mockSl4f, mockDump);
     final List<int> traceData =
         utf8.encode('{"traceEvents": [], "displayTimeUnit": "ns"}');
-    final mockDump = MockDump();
-    final mockSl4f = MockSl4f();
-
     when(mockSl4f.request(sl4fTraceRequestMethod, any))
         .thenAnswer((_) => Future.value(base64.encode(traceData)));
-
-    final performance = Performance(mockSl4f, mockDump);
 
     await performance.downloadTraceFile('test-trace');
 
@@ -66,6 +69,8 @@ void main(List<String> args) {
   });
 
   test('download trace handles non-utf8 data', () async {
+    final performance = Performance(mockSl4f, mockDump);
+
     final List<int> nonUtf8Data = [
       0x1f,
       0x8b,
@@ -79,13 +84,8 @@ void main(List<String> args) {
 
     expect(() => utf8.decode(nonUtf8Data), throwsException);
 
-    final mockDump = MockDump();
-    final mockSl4f = MockSl4f();
-
     when(mockSl4f.request(sl4fTraceRequestMethod, any))
         .thenAnswer((_) => Future.value(base64.encode(nonUtf8Data)));
-
-    final performance = Performance(mockSl4f, mockDump);
 
     await performance.downloadTraceFile('non-utf8');
 
@@ -102,8 +102,6 @@ void main(List<String> args) {
   });
 
   test('process trace', () async {
-    final mockDump = MockDump();
-    final mockSl4f = MockSl4f();
     final mockRunProcessorObserver = MockRunProcessorObserver();
     final performance =
         FakePerformanceTools(mockSl4f, mockDump, mockRunProcessorObserver);
