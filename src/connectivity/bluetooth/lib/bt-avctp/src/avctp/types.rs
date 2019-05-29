@@ -39,7 +39,7 @@ impl From<&TxLabel> for usize {
     }
 }
 
-/// An AVCTP Profile Identifer
+/// An AVCTP Profile Identifier
 /// The type indicates the how the command/request frame is encoded. It should be identical to the
 /// 16bit UUID of the service class for this profile.
 /// See Section 6.1.1
