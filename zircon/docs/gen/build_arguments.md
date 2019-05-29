@@ -155,15 +155,15 @@ From //public/gn/toolchain/goma.gni:12
 
 ### kernel_aspace_base
 
-**Current value (from the default):** `"0xffffff8000000000UL"`
+**Current value (from the default):** `"0xffff000000000000"`
 
-From //kernel/params.gni:28
+From //kernel/params.gni:26
 
 ### kernel_base
 
-**Current value (from the default):** `"0xffffffff80100000"`
+**Current value (from the default):** `"0xffffffff00000000"`
 
-From //kernel/params.gni:20
+From //kernel/params.gni:18
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -199,11 +199,10 @@ From //third_party/ulib/musl/BUILD.gn:6
 From //public/gn/config/levels.gni:15
 
 ### smp_max_cpus
-Maximum number of CPUs the kernel will run on (others will be ignored).
 
-**Current value (from the default):** `32`
+**Current value (from the default):** `16`
 
-From //kernel/params.gni:7
+From //kernel/params.gni:10
 
 ### symbol_level
 * 0 means no debugging information.
@@ -256,7 +255,7 @@ From //BUILD.gn:16
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"user-x64-thinlto/thinlto-cache"`
+**Current value (from the default):** `"host-arm64-linux-lto/thinlto-cache"`
 
 From //public/gn/config/lto/BUILD.gn:22
 
