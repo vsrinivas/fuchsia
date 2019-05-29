@@ -8,5 +8,8 @@ rustc_library("fuchsia-runtime") {
   edition = "2018"
   deps = [
     "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
   ]
 }

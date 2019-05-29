@@ -12,7 +12,7 @@ use {
     fdio::fdio_sys,
     fidl_fuchsia_data as fdata, fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_service,
-    fuchsia_runtime::{job_default, HandleId, HandleType},
+    fuchsia_runtime::{job_default, HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::future::FutureObj,
     std::path::PathBuf,
@@ -75,7 +75,7 @@ fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
         }
         Ok(Some(fproc::HandleInfo {
             handle: zx::Handle::from_raw(fd_handle),
-            id: HandleId::create(HandleType::FileDescriptor, fd as u16).into_raw(),
+            id: HandleInfo::new(HandleType::FileDescriptor, fd as u16).as_raw(),
         }))
     }
 }
@@ -87,7 +87,8 @@ async fn load_launch_info(
 ) -> Result<fproc::LaunchInfo, Error> {
     let bin_path =
         get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(url.as_ref(), e))?;
-    let bin_arg = &[String::from(PKG_PATH.join(&bin_path).to_str().ok_or(err_msg("invalid binary path"))?)];
+    let bin_arg =
+        &[String::from(PKG_PATH.join(&bin_path).to_str().ok_or(err_msg("invalid binary path"))?)];
     let args = get_program_args(&start_info)?;
 
     let name = PathBuf::from(url)
@@ -136,17 +137,17 @@ async fn load_launch_info(
     handle_infos.append(&mut vec![
         fproc::HandleInfo {
             handle: ll_client_chan.into_handle(),
-            id: HandleId::create(HandleType::LdsvcLoader, 0).into_raw(),
+            id: HandleInfo::new(HandleType::LdsvcLoader, 0).as_raw(),
         },
         fproc::HandleInfo {
             handle: child_job_dup.into_handle(),
-            id: HandleId::create(HandleType::JobDefault, 0).into_raw(),
+            id: HandleInfo::new(HandleType::DefaultJob, 0).as_raw(),
         },
     ]);
     if let Some(outgoing_dir) = start_info.outgoing_dir {
         handle_infos.push(fproc::HandleInfo {
             handle: outgoing_dir.into_handle(),
-            id: HandleId::create(HandleType::DirectoryRequest, 0).into_raw(),
+            id: HandleInfo::new(HandleType::DirectoryRequest, 0).as_raw(),
         });
     }
     launcher.add_handles(&mut handle_infos.iter_mut())?;
