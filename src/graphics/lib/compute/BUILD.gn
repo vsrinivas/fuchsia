@@ -14,6 +14,7 @@ group("compute") {
 group("tests") {
   testonly = true
   public_deps = [
+    "hotsort:tests",
     "tests/vk/vk_subgroup_info",
   ]
 }
