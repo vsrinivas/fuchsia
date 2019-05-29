@@ -4,6 +4,8 @@
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
 
+#include <climits>
+
 #include "garnet/lib/system_monitor/dockyard/test_sample_generator.h"
 #include "gtest/gtest.h"
 
@@ -68,7 +70,7 @@ class SystemMonitorDockyardTest : public ::testing::Test {
 
   void TestStreamSetsCallback(const StreamSetsResponse& response) {
     ++sets_call_count_;
-    response_ = response;
+    response_ = std::move(response);
   }
 
   int32_t name_call_count_;
@@ -580,6 +582,34 @@ TEST_F(SystemMonitorDockyardTest, NegativeSlope) {
   EXPECT_EQ(500000ULL, response_.data_sets[0][3]);
   EXPECT_EQ(100000ULL, response_.data_sets[0][4]);
   EXPECT_EQ(900000ULL, response_.data_sets[0][5]);
+}
+
+TEST_F(SystemMonitorDockyardTest, RecentDataSetsCpus12) {
+  constexpr uint64_t SAMPLE_COUNT = 1;
+  // Add pending request.
+  StreamSetsRequest request;
+  request.start_time_ns = 0;
+  request.end_time_ns = ULLONG_MAX;
+  request.sample_count = SAMPLE_COUNT;
+  request.render_style = StreamSetsRequest::RECENT;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
+  dockyard_.GetStreamSets(&request);
+
+  // Kick a process call.
+  dockyard_.ProcessRequests();
+  EXPECT_EQ(100, name_call_count_);
+  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(3ULL, response_.lowest_value);
+  EXPECT_EQ(100ULL, response_.highest_value);
+  ASSERT_EQ(2UL, response_.data_sets.size());
+  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
+  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[1].size());
+  // Check the samples themselves.
+  // CPU 1.
+  EXPECT_EQ(50ULL, response_.data_sets[0][0]);
+  // CPU 2.
+  EXPECT_EQ(50ULL, response_.data_sets[1][0]);
 }
 
 TEST_F(SystemMonitorDockyardTest, DockyardStringToId) {

@@ -39,8 +39,9 @@ class DockyardProxyGrpc : public DockyardProxy {
  private:
   // A local stub for the remote Dockyard instance.
   std::unique_ptr<dockyard_proto::Dockyard::Stub> stub_;
-  // For looking up the ID of a Dockyard path.
-  std::map<std::string, dockyard::DockyardId> dockyard_path_to_id_;
+
+  // Look up the ID of a Dockyard path.
+  std::map<std::string, dockyard::DockyardId> dockyard_path_to_id_ = {};
 
   // Actually send data to the Dockyard.
   // |time| is in nanoseconds.
@@ -64,7 +65,7 @@ class DockyardProxyGrpc : public DockyardProxy {
   // the cache.
   grpc::Status GetDockyardIdForPath(dockyard::DockyardId* dockyard_id,
                                     const std::string& dockyard_path);
-  // As above, but for a list of paths and IDs.
+  // As above, for a list of paths and IDs.
   grpc::Status GetDockyardIdsForPaths(
       std::vector<dockyard::DockyardId>* dockyard_id,
       const std::vector<const std::string*>& dockyard_path);

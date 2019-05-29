@@ -59,13 +59,13 @@ class TaskHarvester final : public TaskEnumerator {
 
   // Gather stats for a specific job.
   // |koid| must refer to the same job as the job handle.
-  void AddJobInfo(zx_handle_t job, zx_koid_t koid) {
+  void AddJobStats(zx_handle_t job, zx_koid_t koid) {
     zx_info_job_t info;
     zx_status_t status =
         zx_object_get_info(job, ZX_INFO_JOB, &info, sizeof(info),
                            /*actual=*/nullptr, /*available=*/nullptr);
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "AddJobInfo failed for koid " << koid << " ("
+      FXL_LOG(WARNING) << "AddJobStats failed for koid " << koid << " ("
                        << status << ")";
       return;
     }
@@ -113,7 +113,7 @@ class TaskHarvester final : public TaskEnumerator {
         zx_object_get_info(process, ZX_INFO_TASK_STATS, &info, sizeof(info),
                            /*actual=*/nullptr, /*available=*/nullptr);
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "AddKoidName failed for koid " << koid << " ("
+      FXL_LOG(WARNING) << "AddProcessStats failed for koid " << koid << " ("
                        << status << ")";
       return;
     }
@@ -127,16 +127,31 @@ class TaskHarvester final : public TaskEnumerator {
   // Gather stats for a specific thread.
   // |koid| must refer to the same thread as the thread handle.
   void AddThreadStats(zx_handle_t thread, zx_koid_t koid) {
-    zx_info_thread_t info;
-    zx_status_t status =
-        zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info),
-                           /*actual=*/nullptr, /*available=*/nullptr);
-    if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "AddThreadStats failed for koid " << koid << " ("
-                       << status << ")";
-      return;
+    {
+      zx_info_thread_t info;
+      zx_status_t status =
+          zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info),
+                             /*actual=*/nullptr, /*available=*/nullptr);
+      if (status != ZX_OK) {
+        FXL_LOG(WARNING) << "AddThreadStats failed for koid " << koid << " ("
+                         << status << ")";
+        return;
+      }
+      AddKoidValue(koid, "thread_state", info.state);
     }
-    AddKoidValue(koid, "thread_state", info.state);
+
+    {
+      zx_info_thread_stats_t stats;
+      zx_status_t status = zx_object_get_info(
+          thread, ZX_INFO_THREAD_STATS, &stats, sizeof(stats),
+          /*actual=*/nullptr, /*available=*/nullptr);
+      if (status != ZX_OK) {
+        FXL_LOG(WARNING) << "AddThreadStats failed for koid " << koid << " ("
+                         << status << ")";
+        return;
+      }
+      AddKoidValue(koid, "cpu_total", stats.total_runtime);
+    }
   }
 
   // |TaskEnumerator| Callback for a job.
@@ -145,7 +160,7 @@ class TaskHarvester final : public TaskEnumerator {
     AddKoidValue(koid, "type", dockyard::KoidType::JOB);
     AddKoidValue(koid, "parent_koid", parent_koid);
     AddKoidName(job, koid);
-    AddJobInfo(job, koid);
+    AddJobStats(job, koid);
     return ZX_OK;
   }
 

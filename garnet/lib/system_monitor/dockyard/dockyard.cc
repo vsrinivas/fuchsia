@@ -21,6 +21,13 @@ namespace {
 // This is an arbitrary default port.
 constexpr char DEFAULT_SERVER_ADDRESS[] = "0.0.0.0:50051";
 
+// Determine whether |haystack| ends with |needle|.
+inline bool StringEndsWith(const std::string& haystack,
+                           const std::string& needle) {
+  return std::mismatch(needle.rbegin(), needle.rend(), haystack.rbegin())
+             .first == needle.rend();
+}
+
 // To calculate the slope, a range of time is needed. |prior_time| and  |time|
 // define that range. The very first |prior_time| is one stride prior to the
 // requested start time.
@@ -121,7 +128,7 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
     for (int i = 0; i < request->path_size(); ++i) {
       DockyardId id = dockyard_->GetDockyardId(request->path(i));
       reply->add_id(id);
-      GT_LOG(DEBUG) << "Received DockyardIds "
+      GT_LOG(DEBUG) << "Allocated DockyardIds "
                     << ": " << request->path(i) << ", id " << id;
     }
     return grpc::Status::OK;
@@ -160,13 +167,15 @@ SampleTimeNs CalcTimeForStride(const StreamSetsRequest& request,
 
 }  // namespace
 
+uint64_t RequestId::next_request_id_;
+
 bool StreamSetsRequest::HasFlag(StreamSetsRequestFlags flag) const {
   return (flags & flag) != 0;
 }
 
 std::ostream& operator<<(std::ostream& out, const StreamSetsRequest& request) {
   out << "StreamSetsRequest {" << std::endl;
-  out << "  request_id: " << request.request_id << std::endl;
+  out << "  request_id: " << request.request_id() << std::endl;
   out << "  start_time_ns: " << request.start_time_ns << std::endl;
   out << "  end_time_ns:   " << request.end_time_ns << std::endl;
   out << "    delta time in seconds: "
@@ -180,9 +189,8 @@ std::ostream& operator<<(std::ostream& out, const StreamSetsRequest& request) {
   out << "  render_style: " << request.render_style;
   out << "  flags: " << request.flags << std::endl;
   out << "  ids (" << request.dockyard_ids.size() << "): [";
-  for (auto iter = request.dockyard_ids.begin();
-       iter != request.dockyard_ids.end(); ++iter) {
-    out << " " << *iter;
+  for (const auto& dockyard_id : request.dockyard_ids) {
+    out << " " << dockyard_id;
   }
   out << " ]" << std::endl;
   out << "}" << std::endl;
@@ -195,10 +203,10 @@ std::ostream& operator<<(std::ostream& out,
   out << "  request_id: " << response.request_id << std::endl;
   out << "  lowest_value: " << response.lowest_value << std::endl;
   out << "  highest_value: " << response.highest_value << std::endl;
-  out << "  data_sets (" << response.data_sets.size() << "): [";
+  out << "  data_sets (" << response.data_sets.size() << "): [" << std::endl;
   for (auto list = response.data_sets.begin(); list != response.data_sets.end();
        ++list) {
-    out << "  data_set: {";
+    out << "    data_set: {";
     for (auto data = list->begin(); data != list->end(); ++data) {
       if (*data == NO_DATA) {
         out << " NO_DATA";
@@ -208,7 +216,7 @@ std::ostream& operator<<(std::ostream& out,
     }
     out << " }, " << std::endl;
   }
-  out << "]" << std::endl;
+  out << "  ]" << std::endl;
   out << "}" << std::endl;
   return out;
 }
@@ -218,8 +226,7 @@ Dockyard::Dockyard()
       latest_sample_time_ns_(0ULL),
       on_connection_handler_(nullptr),
       on_paths_handler_(nullptr),
-      on_stream_sets_handler_(nullptr),
-      next_context_id_(0ULL) {}
+      on_stream_sets_handler_(nullptr) {}
 
 Dockyard::~Dockyard() {
   std::lock_guard<std::mutex> guard(mutex_);
@@ -318,10 +325,19 @@ DockyardId Dockyard::GetDockyardId(const std::string& dockyard_path) {
   DockyardId id = dockyard_path_to_id_.size();
   dockyard_path_to_id_.emplace(dockyard_path, id);
   dockyard_id_to_path_.emplace(id, dockyard_path);
-  GT_LOG(DEBUG) << "Path " << dockyard_path << ": ID " << id;
-  assert(dockyard_path_to_id_.find(dockyard_path) !=
-         dockyard_path_to_id_.end());
   return id;
+}
+
+bool Dockyard::HasDockyardPath(const std::string& dockyard_path,
+                               DockyardId* dockyard_id) const {
+  std::lock_guard<std::mutex> guard(mutex_);
+  auto search = dockyard_path_to_id_.find(dockyard_path);
+  if (search != dockyard_path_to_id_.end()) {
+    *dockyard_id = search->second;
+    return true;
+  }
+  *dockyard_id = INVALID_DOCKYARD_ID;
+  return false;
 }
 
 bool Dockyard::GetDockyardPath(DockyardId dockyard_id,
@@ -332,15 +348,69 @@ bool Dockyard::GetDockyardPath(DockyardId dockyard_id,
     *dockyard_path = search->second;
     return true;
   }
+  dockyard_path->clear();
   return false;
 }
 
-uint64_t Dockyard::GetStreamSets(StreamSetsRequest* request) {
+DockyardPathToIdMap Dockyard::MatchPaths(const std::string& starting,
+                                         const std::string& ending) const {
   std::lock_guard<std::mutex> guard(mutex_);
-  request->request_id = next_context_id_;
+  DockyardPathToIdMap result;
+  DockyardPathToIdMap::const_iterator lower;
+  DockyardPathToIdMap::const_iterator upper;
+  // Begin with all the paths that match |starting|.
+  if (starting.empty()) {
+    lower = dockyard_path_to_id_.begin();
+    upper = dockyard_path_to_id_.end();
+  } else {
+    lower = dockyard_path_to_id_.lower_bound(starting);
+    if (lower == dockyard_path_to_id_.end()) {
+      // Not found, return empty result.
+      return result;
+    }
+    std::string limit = starting;
+    limit.back() = limit.back() + 1;
+    upper = dockyard_path_to_id_.lower_bound(limit);
+  }
+  // Filter down to those paths that match |ending|.
+  if (ending.empty()) {
+    result.insert(lower, upper);
+  } else {
+    for (; lower != upper; ++lower) {
+      if (StringEndsWith(lower->first, ending)) {
+        result.insert(*lower);
+      }
+    }
+  }
+  return result;
+}
+
+void Dockyard::ResetHarvesterData() {
+  std::lock_guard<std::mutex> guard(mutex_);
+  device_time_delta_ns_ = 0;
+  latest_sample_time_ns_ = 0;
+
+  // Maybe send error responses.
+  pending_requests_.clear();
+
+  sample_streams_.clear();
+  sample_stream_low_high_.clear();
+
+  dockyard_path_to_id_.clear();
+  dockyard_id_to_path_.clear();
+
+  // The ID of the invalid value is zero because it's the first value created.
+  DockyardId dockyard_id = GetDockyardId("<INVALID>");
+  // The test below should never fail (unless there's a bug).
+  if (dockyard_id != INVALID_DOCKYARD_ID) {
+    GT_LOG(ERROR) << "INVALID_DOCKYARD_ID string allocation failed. Exiting.";
+    exit(1);
+  }
+}
+
+void Dockyard::GetStreamSets(StreamSetsRequest* request) {
+  std::lock_guard<std::mutex> guard(mutex_);
   pending_requests_.push_back(request);
-  ++next_context_id_;
-  return request->request_id;
 }
 
 void Dockyard::OnConnection() {
@@ -350,6 +420,7 @@ void Dockyard::OnConnection() {
 }
 
 void Dockyard::StartCollectingFrom(const std::string& device) {
+  ResetHarvesterData();
   Initialize();
   GT_LOG(INFO) << "Starting collecting from " << device;
   // TODO(smbug.com/39): Connect to the device and start the harvester.
@@ -395,7 +466,7 @@ OnStreamSetsCallback Dockyard::SetStreamSetsHandler(
 void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
                                     StreamSetsResponse* response) const {
   std::lock_guard<std::mutex> guard(mutex_);
-  response->request_id = request.request_id;
+  response->request_id = request.request_id();
   for (auto dockyard_id = request.dockyard_ids.begin();
        dockyard_id != request.dockyard_ids.end(); ++dockyard_id) {
     std::vector<SampleValue> samples;
@@ -422,6 +493,9 @@ void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
         case StreamSetsRequest::AVERAGE_PER_COLUMN:
           ComputeAveragePerColumn(*dockyard_id, sample_stream, request,
                                   &samples);
+          break;
+        case StreamSetsRequest::RECENT:
+          ComputeRecent(*dockyard_id, sample_stream, request, &samples);
           break;
         default:
           break;
@@ -560,6 +634,47 @@ void Dockyard::ComputeLowestPerColumn(DockyardId dockyard_id,
         result = calculate_slope(lowest, &prior_value, low_time, &prior_time);
       } else {
         result = lowest;
+      }
+    }
+    if (sample_n >= 0) {
+      samples->push_back(result);
+    }
+  }
+}
+
+void Dockyard::ComputeRecent(DockyardId dockyard_id,
+                             const SampleStream& sample_stream,
+                             const StreamSetsRequest& request,
+                             std::vector<SampleValue>* samples) const {
+  // To calculate the slope, a range of time is needed. |prior_time| and
+  // |start_time| define that range. The very first |prior_time| is one stride
+  // prior to the requested start time.
+  SampleTimeNs prior_time = CalcTimeForStride(request, -1);
+  SampleValue prior_value = 0ULL;
+  const int64_t limit = request.sample_count;
+  for (int64_t sample_n = -1; sample_n < limit; ++sample_n) {
+    SampleTimeNs start_time = CalcTimeForStride(request, sample_n);
+    SampleTimeNs end_time = CalcTimeForStride(request, sample_n + 1);
+
+    auto begin = sample_stream.lower_bound(start_time);
+    if (begin == sample_stream.end()) {
+      if (sample_n >= 0) {
+        samples->push_back(NO_DATA);
+      }
+      continue;
+    }
+    auto end = sample_stream.lower_bound(end_time);
+    SampleTimeNs recent_time = request.start_time_ns;
+    SampleValue result = NO_DATA;
+    if (begin != end) {
+      --end;
+      recent_time = end->first;
+      SampleValue recent_value = end->second;
+      if (request.HasFlag(StreamSetsRequest::SLOPE)) {
+        result = calculate_slope(recent_value, &prior_value, recent_time,
+                                 &prior_time);
+      } else {
+        result = recent_value;
       }
     }
     if (sample_n >= 0) {
@@ -723,8 +838,123 @@ void Dockyard::ProcessRequests() {
       ProcessSingleRequest(**i, &response);
       on_stream_sets_handler_(response);
     }
+  } else {
+    GT_LOG(ERROR) << "Please register a stream sets handler!";
   }
   pending_requests_.clear();
+}
+
+std::ostringstream Dockyard::DebugDump() const {
+  std::lock_guard<std::mutex> guard(mutex_);
+
+  // Local helper function to get Dockyard path strings.
+  auto get_dockyard_path = [this](DockyardId dockyard_id) {
+    auto search = dockyard_id_to_path_.find(dockyard_id);
+    if (search != dockyard_id_to_path_.end()) {
+      return search->second;
+    }
+    const std::string NOT_FOUND("<NotFound>");
+    return NOT_FOUND;
+  };
+
+  std::ostringstream out;
+  out << "Dockyard::DebugDump {" << std::endl;
+  out << "  paths strings (" << dockyard_id_to_path_.size() << "): ["
+      << std::endl;
+  if (dockyard_id_to_path_.size() != dockyard_path_to_id_.size()) {
+    out << "    Error: dockyard_id_to_path_.size() != "
+           "dockyard_path_to_id_.size()"
+        << std::endl;
+  } else {
+    for (const auto& item : dockyard_id_to_path_) {
+      out << "    " << item.first << "=" << item.second << "," << std::endl;
+    }
+  }
+  out << "  ]," << std::endl;
+  out << "  sample_streams (" << sample_streams_.size() << "): [" << std::endl;
+  for (const auto& stream : sample_streams_) {
+    const std::string stream_name = get_dockyard_path(stream.first);
+    const auto& sample_list = *stream.second;
+    out << "    stream: (" << stream.first << ") " << stream_name << ", "
+        << sample_list.size() << " entries {" << std::endl;
+    if (sample_list.size()) {
+      out << "     ";
+      // Print the last (most recent) entry.
+      auto sample = sample_list.end();
+      --sample;
+      out << " " << sample->first << ": " << sample->second;
+      if (StringEndsWith(stream_name, ":name")) {
+        out << "=" << get_dockyard_path(sample->second);
+      }
+      // Print how many times this entry repeats (in recent past).
+      int count = 1;
+      auto next = sample;
+      while (next != sample_list.begin()) {
+        --next;
+        if (sample->second != next->second) {
+          break;
+        }
+        --sample;
+        ++count;
+      }
+      out << "     (* " << count << "),";
+    }
+    out << std::endl << "    }," << std::endl;
+  }
+  out << "  ]" << std::endl;
+  out << "}" << std::endl;
+  return out;
+}
+
+std::ostringstream DebugPrintQuery(const Dockyard& dockyard,
+                                   const StreamSetsRequest& request,
+                                   const StreamSetsResponse& response) {
+  std::ostringstream out;
+  out << "StreamSets Query {" << std::endl;
+  if (request.request_id() != response.request_id) {
+    out << "  request_id mismatch: " << request.request_id() << " vs. "
+        << response.request_id << std::endl;
+    return out;
+  }
+  out << "  request_id: " << request.request_id() << std::endl;
+  out << "  start_time_ns: " << request.start_time_ns << std::endl;
+  out << "  end_time_ns:   " << request.end_time_ns << std::endl;
+  out << "    delta time in seconds: "
+      << double(request.end_time_ns - request.start_time_ns) /
+             kNanosecondsPerSecond
+      << std::endl;
+  out << "  sample_count: " << request.sample_count << std::endl;
+  out << "  min: " << request.min;
+  out << "  max: " << request.max;
+  out << "  reserved: " << request.reserved << std::endl;
+  out << "  render_style: " << request.render_style;
+  out << "  flags: " << request.flags << std::endl;
+  out << "  lowest_value: " << response.lowest_value << std::endl;
+  out << "  highest_value: " << response.highest_value << std::endl;
+  if (request.dockyard_ids.size() != response.data_sets.size()) {
+    out << "  data size mismatch: " << request.dockyard_ids.size() << " vs. "
+        << response.data_sets.size() << std::endl;
+    return out;
+  }
+  out << "  id:data (" << request.dockyard_ids.size() << "): [" << std::endl;
+  auto dockyard_id = request.dockyard_ids.begin();
+  auto data_set = response.data_sets.begin();
+  std::string path;
+  for (; data_set != response.data_sets.end(); ++data_set, ++dockyard_id) {
+    dockyard.GetDockyardPath(*dockyard_id, &path);
+    out << "    data_set " << *dockyard_id << "=" << path << " {";
+    for (const auto& data : *data_set) {
+      if (data == NO_DATA) {
+        out << " NO_DATA";
+      } else {
+        out << " " << data;
+      }
+    }
+    out << " }, " << std::endl;
+  }
+  out << "  ]" << std::endl;
+  out << "}" << std::endl;
+  return out;
 }
 
 }  // namespace dockyard
