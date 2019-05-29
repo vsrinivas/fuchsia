@@ -21,16 +21,6 @@ PseudoFile::PseudoFile(size_t max_file_size, ReadHandler read_handler,
   ZX_DEBUG_ASSERT(read_handler_ != nullptr);
 }
 
-PseudoFile::PseudoFile(DeprecatedReadHandler read_handler,
-                       WriteHandler write_handler, size_t max_file_size)
-    : PseudoFile(
-          max_file_size,
-          [read_handler = std::move(read_handler)](std::vector<uint8_t>* output,
-                                                   size_t max_bytes) {
-            return read_handler(output);
-          },
-          std::move(write_handler)) {}
-
 PseudoFile::~PseudoFile() = default;
 
 zx_status_t PseudoFile::CreateConnection(

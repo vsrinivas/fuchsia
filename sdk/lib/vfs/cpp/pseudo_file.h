@@ -38,20 +38,12 @@ namespace vfs {
 // prior to destroying the file.
 class PseudoFile final : public vfs::internal::File {
  public:
-  // Deprecated, please use |ReadHandler|
-  using DeprecatedReadHandler =
-      fit::function<zx_status_t(std::vector<uint8_t>* output)>;
-
   // Handler called to read from the pseudo-file.
   using ReadHandler = fit::function<zx_status_t(std::vector<uint8_t>* output,
                                                 size_t max_bytes)>;
 
   // Handler called to write into the pseudo-file.
   using WriteHandler = fit::function<zx_status_t(std::vector<uint8_t> input)>;
-
-  [[deprecated("Please use other constructor")]] PseudoFile(
-      DeprecatedReadHandler read_handler = DeprecatedReadHandler(),
-      WriteHandler write_handler = WriteHandler(), size_t max_file_size = 1024);
 
   // Creates a buffered pseudo-file.
   //
