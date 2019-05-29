@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/queue_persistence_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

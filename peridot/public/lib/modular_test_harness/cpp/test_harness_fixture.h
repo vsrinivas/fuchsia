@@ -139,6 +139,11 @@ class TestHarnessFixture : public sys::testing::TestWithEnvironment {
   std::string InterceptStoryShell(
       fuchsia::modular::testing::TestHarnessSpec* spec) const;
 
+  // Starts a new mod by the given |intent| and |mod_name| in a new story given
+  // by |story_name|.
+  void AddModToStory(fuchsia::modular::Intent intent, std::string mod_name,
+                     std::string story_name);
+
  private:
   std::shared_ptr<sys::ServiceDirectory> svc_;
   fuchsia::modular::testing::TestHarnessPtr test_harness_;

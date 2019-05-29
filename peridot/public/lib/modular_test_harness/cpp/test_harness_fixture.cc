@@ -224,6 +224,34 @@ std::string TestHarnessFixture::InterceptStoryShell(
   return url;
 }
 
+void TestHarnessFixture::AddModToStory(fuchsia::modular::Intent intent,
+                                          std::string mod_name,
+                                          std::string story_name) {
+  fuchsia::modular::AddMod add_mod;
+  add_mod.mod_name_transitional = {mod_name};
+  add_mod.intent = std::move(intent);
+
+  fuchsia::modular::StoryCommand cmd;
+  cmd.set_add_mod(std::move(add_mod));
+
+  std::vector<fuchsia::modular::StoryCommand> cmds;
+  cmds.push_back(std::move(cmd));
+
+  // Connect to PuppetMaster and ComponentContext.
+  fuchsia::modular::PuppetMasterPtr puppet_master;
+  fuchsia::modular::testing::ModularService svc;
+  svc.set_puppet_master(puppet_master.NewRequest());
+  test_harness()->ConnectToModularService(std::move(svc));
+
+  // Create a story
+  fuchsia::modular::StoryPuppetMasterPtr story_master;
+  puppet_master->ControlStory(story_name, story_master.NewRequest());
+
+  // Add the initial module to the story
+  story_master->Enqueue(std::move(cmds));
+  story_master->Execute([&](fuchsia::modular::ExecuteResult result) {});
+}
+
 TestHarnessFixture::TestHarnessFixture() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kTestHarnessUrl;

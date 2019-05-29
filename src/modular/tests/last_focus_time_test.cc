@@ -148,13 +148,7 @@ TEST_F(LastFocusTimeTest, DISABLED_LastFocusTimeIncreases) {
 
   // Wait for our session shell to start.
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-                  [&] { return test_session_shell.is_running(); },
-              kTimeout));
-
-  // Connect to extra services also provided to session shells.
-  fuchsia::modular::PuppetMasterPtr puppet_master;
-  test_session_shell.component_context()->svc()->Connect(
-      puppet_master.NewRequest());
+      [&] { return test_session_shell.is_running(); }, kTimeout));
 
   fuchsia::modular::FocusControllerPtr focus_controller;
   fuchsia::modular::FocusProviderPtr focus_provider;
@@ -176,23 +170,13 @@ TEST_F(LastFocusTimeTest, DISABLED_LastFocusTimeIncreases) {
   });
 
   // Create a story so that we can signal the framework to focus it.
-  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
-  puppet_master->ControlStory(kStoryName, story_puppet_master.NewRequest());
+  fuchsia::modular::Intent intent;
+  intent.handler = test_module_url;
+  intent.action = "action";
+  AddModToStory(std::move(intent), "modname", kStoryName);
 
-  fuchsia::modular::AddMod add_mod;
-  add_mod.mod_name_transitional = "modname";
-  add_mod.intent.handler = test_module_url;
-  add_mod.intent.action = "action";
-
-  std::vector<fuchsia::modular::StoryCommand> commands(1);
-  commands.at(0).set_add_mod(std::move(add_mod));
-
-  story_puppet_master->Enqueue(std::move(commands));
-  bool story_created{false};
-  story_puppet_master->Execute(
-      [&](fuchsia::modular::ExecuteResult result) { story_created = true; });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return story_created; },
-              kTimeout));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return test_module.is_running(); }, kTimeout));
 
   // Watch the story and then start it.
   TestStoryWatcher story_watcher;
@@ -213,7 +197,6 @@ TEST_F(LastFocusTimeTest, DISABLED_LastFocusTimeIncreases) {
   // 2) The story transitions to running.
   // 3) The story is focused.
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-                  [&] { return last_focus_timestamps.size() == 3; },
-              kTimeout));
+      [&] { return last_focus_timestamps.size() == 3; }, kTimeout));
   EXPECT_THAT(last_focus_timestamps, ElementsAre(0, 0, Gt(0)));
 }
