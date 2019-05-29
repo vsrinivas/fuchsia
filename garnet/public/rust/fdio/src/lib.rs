@@ -345,7 +345,7 @@ fn spawn_with_actions(
     job: &zx::Job,
     options: SpawnOptions,
     argv: &[&CStr],
-    environ: &[&CStr],
+    environ: Option<&[&CStr]>,
     actions: &mut [SpawnAction],
     spawn_fn: impl FnOnce(
         zx_handle_t,                                                          // job
@@ -361,7 +361,14 @@ fn spawn_with_actions(
     let job = job.raw_handle();
     let flags = options.bits();
     let argv = nul_term_from_slice(argv);
-    let environ = nul_term_from_slice(environ);
+    let environ_vec;
+    let environ_ptr = match environ {
+        Some(e) => {
+            environ_vec = nul_term_from_slice(e);
+            environ_vec.as_ptr()
+        }
+        None => std::ptr::null(),
+    };
 
     if actions.iter().any(|a| a.is_null()) {
         return Err((zx::Status::INVALID_ARGS, "null SpawnAction".to_string()));
@@ -378,7 +385,7 @@ fn spawn_with_actions(
         job,
         flags,
         argv.as_ptr(),
-        environ.as_ptr(),
+        environ_ptr,
         action_count,
         actions_ptr,
         &mut process_out,
@@ -403,7 +410,7 @@ pub fn spawn_etc(
     options: SpawnOptions,
     path: &CStr,
     argv: &[&CStr],
-    environ: &[&CStr],
+    environ: Option<&[&CStr]>,
     actions: &mut [SpawnAction],
 ) -> Result<zx::Process, (zx::Status, String)> {
     let path = path.as_ptr();
@@ -435,7 +442,7 @@ pub fn spawn_vmo(
     options: SpawnOptions,
     executable_vmo: zx::Vmo,
     argv: &[&CStr],
-    environ: &[&CStr],
+    environ: Option<&[&CStr]>,
     actions: &mut [SpawnAction],
 ) -> Result<zx::Process, (zx::Status, String)> {
     let executable_vmo = executable_vmo.into_raw();
@@ -620,7 +627,8 @@ impl Namespace {
 
 #[cfg(test)]
 mod tests {
-    use {super::Namespace, fuchsia_zircon as zx};
+    use super::*;
+    use fuchsia_zircon::{object_wait_many, Signals, Status, Time, WaitItem};
 
     #[test]
     fn namespace_get_installed() {
@@ -672,4 +680,77 @@ mod tests {
 
         assert_eq!(namespace.unbind(path), Err(zx::Status::NOT_FOUND));
     }
+
+    fn cstr(orig: &str) -> CString {
+        CString::new(orig).expect("CString::new failed")
+    }
+
+    #[test]
+    fn fdio_spawn_run_target_bin_no_env() {
+        let job = zx::Job::from(zx::Handle::invalid());
+        let cpath = cstr("/pkg/bin/spawn_test_target");
+        let (stdout_file, stdout_sock) = pipe_half().expect("Failed to make pipe");
+        let mut spawn_actions = [SpawnAction::clone_fd(&stdout_file, 1)];
+
+        let cstrags: Vec<CString> = vec![cstr("test_arg")];
+        let mut cargs: Vec<&CStr> = cstrags.iter().map(|x| x.as_c_str()).collect();
+        cargs.insert(0, cpath.as_c_str());
+        let process = spawn_etc(
+            &job,
+            SpawnOptions::CLONE_ALL,
+            cpath.as_c_str(),
+            cargs.as_slice(),
+            None,
+            &mut spawn_actions,
+        )
+        .expect("Unable to spawn process");
+
+        let mut output = vec![];
+        loop {
+            let mut items = vec![
+                WaitItem {
+                    handle: process.as_handle_ref(),
+                    waitfor: Signals::PROCESS_TERMINATED,
+                    pending: Signals::NONE,
+                },
+                WaitItem {
+                    handle: stdout_sock.as_handle_ref(),
+                    waitfor: Signals::SOCKET_READABLE | Signals::SOCKET_PEER_CLOSED,
+                    pending: Signals::NONE,
+                },
+            ];
+
+            let signals_result =
+                object_wait_many(&mut items, Time::INFINITE).expect("unable to wait");
+
+            if items[1].pending.contains(Signals::SOCKET_READABLE) {
+                let bytes_len = stdout_sock.outstanding_read_bytes().expect("Socket error");
+                let mut buf: Vec<u8> = vec![0; bytes_len];
+                let read_len = stdout_sock
+                    .read(&mut buf[..])
+                    .or_else(|status| match status {
+                        Status::SHOULD_WAIT => Ok(0),
+                        _ => Err(status),
+                    })
+                    .expect("Unable to read buff");
+                output.extend_from_slice(&buf[0..read_len]);
+            }
+
+            // read stdout buffer until test process dies or the socket is closed
+            if items[1].pending.contains(Signals::SOCKET_PEER_CLOSED) {
+                break;
+            }
+
+            if items[0].pending.contains(Signals::PROCESS_TERMINATED) {
+                break;
+            }
+
+            if signals_result {
+                break;
+            };
+        }
+
+        assert_eq!(String::from_utf8(output).expect("unable to decode stdout"), "hello world\n");
+    }
+
 }

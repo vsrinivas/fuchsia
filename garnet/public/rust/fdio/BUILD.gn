@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("fdio") {
   with_unit_tests = true
@@ -14,5 +17,37 @@ rustc_library("fdio") {
     "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
     "//third_party/rust_crates:bitflags",
     "//zircon/public/fidl/fuchsia-device:fuchsia-device-rustc",
+  ]
+}
+
+rustc_binary("spawn_test_target_bin") {
+  name = "spawn_test_target"
+  version = "0.2.0"
+  edition = "2018"
+
+  source_root = "spawn_test_target_bin/main.rs"
+}
+
+test_package("tests") {
+  package_name = "fdio_rust_tests"
+
+  deps = [
+    ":fdio",
+    ":spawn_test_target_bin",
+  ]
+
+  binaries = [
+    {
+      name = "spawn_test_target"
+      shell = true
+    },
+  ]
+
+  tests = [
+    {
+      name = "fdio_lib_test"
+      dest = "fdio_rust_tests"
+      environments = basic_envs
+    },
   ]
 }

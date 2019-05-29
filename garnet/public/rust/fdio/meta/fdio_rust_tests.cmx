@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fdio_rust_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}
