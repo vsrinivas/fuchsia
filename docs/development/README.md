@@ -65,6 +65,8 @@ This section covers Fuchsia development hardware targets.
  - [Test components](tests/test_component.md)
  - [Test environments](tests/environments.md)
  - [Testability rubrics](testability/rubric.md)
+ - [Test flake policy](/docs/best-practices/test_flake_policy.md)
+ - [Testing Isolated Cache Storage](tests/testing_isolated_cache_storage.md)
 
 ## Conventions
 

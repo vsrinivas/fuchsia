@@ -33,7 +33,7 @@ environments = [
 ```
 
 See
-[guest_integration_tests](/garnet/bin/guest/integration/BUILD.gn#45)
+[guest_integration_tests](/src/virtualization/tests)
 for an example - and below for definitions of 'dimension' and 'tags'
 
 ### Default Behavior

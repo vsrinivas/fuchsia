@@ -60,7 +60,7 @@ fx build
 
 The first command selects the build configuration you wish to build and
 generates the build system itself in an output directory (e.g., `out/x64`).
-Fuchsia can ephemerally download [packages](development/build/packages.md) over the network;
+Fuchsia can ephemerally download [packages](development/build/boards_and_products.md) over the network;
 here we use the `--available` flag to make the necessary packages covered in this guide
 available for download.
 

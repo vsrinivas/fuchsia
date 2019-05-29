@@ -2,7 +2,7 @@
 
 Bundles are GN group labels that provide common major groups of features.
 They can be included into one of the [dependency
-sets](products_and_boards.md#dependency-sets).
+sets](boards_and_products.md#dependency-sets).
 
 When using the `fx set` command, bundles are most commonly added to the
 `universe` dependency set by use of the `--with` flag. See [fx build

@@ -15,7 +15,7 @@ calling functions in the [vDSO](/zircon/docs/vdso.md),
 which is loaded into newly created processes by their creator.
 
 The public entry points for the vDSO are defined in
-[syscalls.abigen](/zircon/system/public/zircon/syscalls.abigen).
+[syscalls.banjo](/zircon/system/public/zircon/syscalls.banjo).
 This file is processed by the [abigen](/zircon/docs/vdso.md#abigen-tool)
 tool. When adding a new language, consider using the `-json` flag to dump
 [a JSON representation](/zircon/system/host/abigen/syscall_schema.json)

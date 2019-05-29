@@ -26,7 +26,7 @@ executable must meet the following criteria:
 ## Building your benchmark
 
 Your benchmark executable should be built into a Fuchsia package.  For more information
-please read the [Fuchsia package documentation].
+please read the [Fuchsia Build overview].
 
 ## Automating your benchmark
 
@@ -73,7 +73,7 @@ Please see the [Performance Dashboard User Guide]
 NOTE: We do not yet have a User guide for the [Performance Dashboard Version 2].
 
 [benchmark results schema]: results_schema.md
-[Fuchsia package documentation]: /docs/development/build/packages.md
+[Fuchsia Build overview]: /docs/development/build/overview.md
 [Performance Dashboard]: https://chromeperf.appspot.com/report
 [Performance Dashboard User Guide]: catapult_user_guide.md
 [Performance Dashboard Version 2]: https://v2spa-dot-chromeperf.appspot.com/
