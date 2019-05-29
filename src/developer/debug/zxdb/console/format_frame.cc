@@ -152,7 +152,7 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
 
         out->Append("\n      ");  // Indent.
         out->AppendVariable(location.symbol_context(),
-                            frame->GetSymbolDataProvider(), value, options);
+                            frame->GetExprEvalContext(), value, options);
       }
     }
   }

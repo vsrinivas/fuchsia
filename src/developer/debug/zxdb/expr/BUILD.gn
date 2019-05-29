@@ -59,6 +59,20 @@ static_library("expr") {
   ]
 }
 
+source_set("test_support") {
+  testonly = true
+
+  sources = [
+    "mock_expr_eval_context.cc",
+    "mock_expr_eval_context.h",
+  ]
+
+  public_deps = [
+    ":expr",
+    "//src/developer/debug/zxdb/symbols:test_support",
+  ]
+}
+
 source_set("tests") {
   testonly = true
 
@@ -73,8 +87,6 @@ source_set("tests") {
     "expr_tokenizer_unittest.cc",
     "find_name_unittest.cc",
     "index_walker_unittest.cc",
-    "mock_expr_eval_context.cc",
-    "mock_expr_eval_context.h",
     "mock_expr_node.cc",
     "mock_expr_node.h",
     "number_parser_unittest.cc",
@@ -89,6 +101,7 @@ source_set("tests") {
 
   deps = [
     ":expr",
+    ":test_support",
     "//garnet/third_party/llvm:LLVMBinaryFormat",
     "//src/developer/debug/zxdb/common:test_support",
     "//src/developer/debug/zxdb/symbols:test_support",

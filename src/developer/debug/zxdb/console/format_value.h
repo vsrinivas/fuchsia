@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_VALUE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_VALUE_H_
 
 #include <stdint.h>
 
@@ -26,7 +27,7 @@ class Location;
 class MemberPtr;
 class OutputBuffer;
 class SymbolContext;
-class SymbolDataProvider;
+class ExprEvalContext;
 class SymbolVariableResolver;
 class Type;
 class Value;
@@ -67,15 +68,15 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
 
   // Construct with fxl::MakeRefCounted<FormatValue>().
 
-  void AppendValue(fxl::RefPtr<SymbolDataProvider> data_provider,
+  void AppendValue(fxl::RefPtr<ExprEvalContext> eval_context,
                    const ExprValue& value,
                    const FormatExprValueOptions& options);
 
-  // The data provider normally comes from the frame where you want to evaluate
+  // The eval context normally comes from the frame where you want to evaluate
   // the variable in. This will prepend "<name> = " to the value of the
   // variable.
   void AppendVariable(const SymbolContext& symbol_context,
-                      fxl::RefPtr<SymbolDataProvider> data_provider,
+                      fxl::RefPtr<ExprEvalContext> eval_context,
                       const Variable* var,
                       const FormatExprValueOptions& options);
 
@@ -170,11 +171,11 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // options.always_show_types for this item only (but not nested items). This
   // is designed to be used when called recursively and the type has already
   // been printed.
-  void FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
+  void FormatExprValue(fxl::RefPtr<ExprEvalContext> eval_context,
                        const ExprValue& value,
                        const FormatExprValueOptions& options,
                        bool suppress_type_printing, OutputKey output_key);
-  void FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
+  void FormatExprValue(fxl::RefPtr<ExprEvalContext> eval_context,
                        const Err& err, const ExprValue& value,
                        const FormatExprValueOptions& options,
                        bool suppress_type_printing, OutputKey output_key);
@@ -182,7 +183,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // Asynchronously formats the given type.
   //
   // The known_elt_count can be -1 if the array size is not statically known.
-  void FormatCollection(fxl::RefPtr<SymbolDataProvider> data_provider,
+  void FormatCollection(fxl::RefPtr<ExprEvalContext> expr_eval_context,
                         const Collection* coll, const ExprValue& value,
                         const FormatExprValueOptions& options,
                         OutputKey output_key);
@@ -190,19 +191,19 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // Checks array and string types and formats the value accordingly. Returns
   // true if it was an array or string type that was handled, false if it
   // was anything else.
-  bool TryFormatArrayOrString(fxl::RefPtr<SymbolDataProvider> data_provider,
+  bool TryFormatArrayOrString(fxl::RefPtr<ExprEvalContext> eval_context,
                               const Type* type, const ExprValue& value,
                               const FormatExprValueOptions& options,
                               OutputKey output_key);
 
   // Array and string format helpers.
-  void FormatCharPointer(fxl::RefPtr<SymbolDataProvider> data_provider,
+  void FormatCharPointer(fxl::RefPtr<ExprEvalContext> eval_context,
                          const Type* type, const ExprValue& value,
                          const FormatExprValueOptions& options,
                          OutputKey output_key);
   void FormatCharArray(const uint8_t* data, size_t length, bool truncated,
                        OutputKey output_key);
-  void FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
+  void FormatArray(fxl::RefPtr<ExprEvalContext> eval_context,
                    const ExprValue& value, int elt_count,
                    const FormatExprValueOptions& options, OutputKey output_key);
 
@@ -222,7 +223,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   void FormatChar(const ExprValue& value, OutputBuffer* out);
   void FormatPointer(const ExprValue& value,
                      const FormatExprValueOptions& options, OutputBuffer* out);
-  void FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
+  void FormatReference(fxl::RefPtr<ExprEvalContext> eval_context,
                        const ExprValue& value,
                        const FormatExprValueOptions& options,
                        OutputKey output_key);
@@ -279,3 +280,5 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_VALUE_H_

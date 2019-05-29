@@ -537,7 +537,7 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
       std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
   for (const auto& pair : vars) {
     helper->AppendVariable(location.symbol_context(),
-                           cmd.frame()->GetSymbolDataProvider(), pair.second,
+                           cmd.frame()->GetExprEvalContext(), pair.second,
                            options);
     helper->Append(OutputBuffer("\n"));
   }
@@ -879,11 +879,11 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
   auto data_provider = eval_context->GetDataProvider();
   return EvalCommandExpression(
       cmd, "print", eval_context, false,
-      [formatter, options, data_provider](const Err& err, ExprValue value) {
+      [formatter, options, eval_context](const Err& err, ExprValue value) {
         if (err.has_error()) {
           Console::get()->Output(err);
         } else {
-          formatter->AppendValue(data_provider, value, options);
+          formatter->AppendValue(eval_context, value, options);
           // Bind the formatter to keep it in scope across this
           // async call.
           formatter->Complete(

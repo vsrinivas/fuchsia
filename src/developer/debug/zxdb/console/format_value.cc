@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
@@ -137,32 +138,32 @@ FormatValue::FormatValue(std::unique_ptr<ProcessContext> process_context)
     : process_context_(std::move(process_context)), weak_factory_(this) {}
 FormatValue::~FormatValue() = default;
 
-void FormatValue::AppendValue(fxl::RefPtr<SymbolDataProvider> data_provider,
+void FormatValue::AppendValue(fxl::RefPtr<ExprEvalContext> eval_context,
                               const ExprValue& value,
                               const FormatExprValueOptions& options) {
-  FormatExprValue(data_provider, value, options, false,
+  FormatExprValue(eval_context, value, options, false,
                   AsyncAppend(GetRootOutputKey()));
 }
 
 void FormatValue::AppendVariable(const SymbolContext& symbol_context,
-                                 fxl::RefPtr<SymbolDataProvider> data_provider,
+                                 fxl::RefPtr<ExprEvalContext> eval_context,
                                  const Variable* var,
                                  const FormatExprValueOptions& options) {
   OutputKey output_key = AsyncAppend(
       NodeType::kVariable, var->GetAssignedName(), GetRootOutputKey());
-  auto resolver = std::make_unique<SymbolVariableResolver>(data_provider);
+  auto resolver =
+      std::make_unique<SymbolVariableResolver>(eval_context->GetDataProvider());
 
   // We can capture "this" here since the callback will be scoped to the
   // lifetime of the resolver which this class owns.
-  resolver->ResolveVariable(symbol_context, var,
-                            [this, data_provider, options, output_key](
-                                const Err& err, ExprValue val) {
-                              // The variable has been resolved, now we need to
-                              // print it (which could in itself be
-                              // asynchronous).
-                              FormatExprValue(data_provider, err, val, options,
-                                              false, output_key);
-                            });
+  resolver->ResolveVariable(
+      symbol_context, var,
+      [this, eval_context, options, output_key](const Err& err, ExprValue val) {
+        // The variable has been resolved, now we need to
+        // print it (which could in itself be
+        // asynchronous).
+        FormatExprValue(eval_context, err, val, options, false, output_key);
+      });
 
   // Keep in our class scope so the callbacks will be run.
   resolvers_.push_back(std::move(resolver));
@@ -185,7 +186,7 @@ void FormatValue::Complete(Callback callback) {
   // WARNING: |this| may be deleted.
 }
 
-void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
+void FormatValue::FormatExprValue(fxl::RefPtr<ExprEvalContext> eval_context,
                                   const ExprValue& value,
                                   const FormatExprValueOptions& options,
                                   bool suppress_type_printing,
@@ -222,19 +223,19 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
 
   // Structs and classes.
   if (const Collection* coll = type->AsCollection()) {
-    FormatCollection(data_provider, coll, value, options, output_key);
+    FormatCollection(eval_context, coll, value, options, output_key);
     return;
   }
 
   // Arrays and strings.
-  if (TryFormatArrayOrString(data_provider, type, value, options, output_key))
+  if (TryFormatArrayOrString(eval_context, type, value, options, output_key))
     return;
 
   // References (these require asynchronous calls to format so can't be in the
   // "modified types" block below in the synchronous section).
   if (type->tag() == DwarfTag::kReferenceType ||
       type->tag() == DwarfTag::kRvalueReferenceType) {
-    FormatReference(data_provider, value, options, output_key);
+    FormatReference(eval_context, value, options, output_key);
     return;
   }
 
@@ -313,7 +314,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
   OutputKeyComplete(output_key, std::move(out));
 }
 
-void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
+void FormatValue::FormatExprValue(fxl::RefPtr<ExprEvalContext> eval_context,
                                   const Err& err, const ExprValue& value,
                                   const FormatExprValueOptions& options,
                                   bool suppress_type_printing,
@@ -328,7 +329,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
     //      out->Append(ErrStringToOutput("optimized out"));
     OutputKeyComplete(output_key, ErrToOutput(err));
   } else {
-    FormatExprValue(std::move(data_provider), value, options,
+    FormatExprValue(std::move(eval_context), value, options,
                     suppress_type_printing, output_key);
   }
 }
@@ -346,10 +347,11 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
 //       bar = 2
 //     }
 //   }
-void FormatValue::FormatCollection(
-    fxl::RefPtr<SymbolDataProvider> data_provider, const Collection* coll,
-    const ExprValue& value, const FormatExprValueOptions& options,
-    OutputKey output_key) {
+void FormatValue::FormatCollection(fxl::RefPtr<ExprEvalContext> eval_context,
+                                   const Collection* coll,
+                                   const ExprValue& value,
+                                   const FormatExprValueOptions& options,
+                                   OutputKey output_key) {
   AppendToOutputKey(output_key, OutputBuffer("{"));
 
   // True after printing the first item.
@@ -390,7 +392,7 @@ void FormatValue::FormatCollection(
     ExprValue from_value;
     Err err = ResolveInherited(value, inherited, &from_value);
     FormatExprValue(
-        data_provider, err, from_value, options, true,
+        eval_context, err, from_value, options, true,
         AsyncAppend(NodeType::kBaseClass, std::move(base_name), output_key));
   }
 
@@ -423,7 +425,7 @@ void FormatValue::FormatCollection(
     //   (int) b = 12
     // looks better than:
     //   b = (int) 12
-    FormatExprValue(data_provider, err, member_value, options, true,
+    FormatExprValue(eval_context, err, member_value, options, true,
                     AsyncAppend(NodeType::kVariable, member->GetAssignedName(),
                                 output_key));
   }
@@ -432,7 +434,7 @@ void FormatValue::FormatCollection(
 }
 
 bool FormatValue::TryFormatArrayOrString(
-    fxl::RefPtr<SymbolDataProvider> data_provider, const Type* type,
+    fxl::RefPtr<ExprEvalContext> eval_context, const Type* type,
     const ExprValue& value, const FormatExprValueOptions& options,
     OutputKey output_key) {
   FXL_DCHECK(type == type->GetConcreteType());
@@ -444,7 +446,7 @@ bool FormatValue::TryFormatArrayOrString(
       return false;
 
     if (IsCharacterType(modified->modified())) {
-      FormatCharPointer(data_provider, type, value, options, output_key);
+      FormatCharPointer(eval_context, type, value, options, output_key);
       return true;
     }
     return false;  // All other pointer types are unhandled.
@@ -463,17 +465,17 @@ bool FormatValue::TryFormatArrayOrString(
       }
       FormatCharArray(value.data().data(), length, truncated, output_key);
     } else {
-      FormatArray(data_provider, value, array->num_elts(), options, output_key);
+      FormatArray(eval_context, value, array->num_elts(), options, output_key);
     }
     return true;
   }
   return false;
 }
 
-void FormatValue::FormatCharPointer(
-    fxl::RefPtr<SymbolDataProvider> data_provider, const Type* type,
-    const ExprValue& value, const FormatExprValueOptions& options,
-    OutputKey output_key) {
+void FormatValue::FormatCharPointer(fxl::RefPtr<ExprEvalContext> eval_context,
+                                    const Type* type, const ExprValue& value,
+                                    const FormatExprValueOptions& options,
+                                    OutputKey output_key) {
   if (value.data().size() != kTargetPointerSize) {
     OutputKeyComplete(output_key, ErrStringToOutput("Bad pointer data."));
     return;
@@ -494,6 +496,8 @@ void FormatValue::FormatCharPointer(
     return;
   }
 
+  fxl::RefPtr<SymbolDataProvider> data_provider =
+      eval_context->GetDataProvider();
   data_provider->GetMemoryAsync(
       address, bytes_to_fetch,
       [address, bytes_to_fetch, weak_this = weak_factory_.GetWeakPtr(),
@@ -545,7 +549,7 @@ void FormatValue::FormatCharArray(const uint8_t* data, size_t length,
   OutputKeyComplete(output_key, OutputBuffer(result));
 }
 
-void FormatValue::FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
+void FormatValue::FormatArray(fxl::RefPtr<ExprEvalContext> eval_context,
                               const ExprValue& value, int elt_count,
                               const FormatExprValueOptions& options,
                               OutputKey output_key) {
@@ -569,7 +573,7 @@ void FormatValue::FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
 
     // Avoid forcing type info for every array value. This will be encoded in
     // the main array type.
-    FormatExprValue(data_provider, items[i], options, true,
+    FormatExprValue(eval_context, items[i], options, true,
                     AsyncAppend(output_key));
   }
 
@@ -758,13 +762,13 @@ void FormatValue::FormatPointer(const ExprValue& value,
     out->Append(fxl::StringPrintf("0x%" PRIx64, value.GetAs<TargetPointer>()));
 }
 
-void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
+void FormatValue::FormatReference(fxl::RefPtr<ExprEvalContext> eval_context,
                                   const ExprValue& value,
                                   const FormatExprValueOptions& options,
                                   OutputKey output_key) {
   EnsureResolveReference(
-      data_provider, value,
-      [weak_this = weak_factory_.GetWeakPtr(), data_provider,
+      eval_context->GetDataProvider(), value,
+      [weak_this = weak_factory_.GetWeakPtr(), eval_context,
        original_value = value, options,
        output_key](const Err& err, ExprValue resolved_value) {
         if (!weak_this)
@@ -805,7 +809,7 @@ void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
           // formatting. Pass true for suppress_type_printing since the type of
           // the reference was printed above.
           weak_this->AppendToOutputKey(output_key, std::move(out));
-          weak_this->FormatExprValue(data_provider, resolved_value, options,
+          weak_this->FormatExprValue(eval_context, resolved_value, options,
                                      true, output_key);
         }
       });
@@ -883,9 +887,8 @@ void FormatValue::FormatZxStatusT(const ExprValue& value,
 
   // Caller should have checked this is the right size.
   debug_ipc::zx_status_t int_val = value.GetAs<debug_ipc::zx_status_t>();
-  out.Append(
-      Syntax::kComment,
-      fxl::StringPrintf(" (%s)", debug_ipc::ZxStatusToString(int_val)));
+  out.Append(Syntax::kComment,
+             fxl::StringPrintf(" (%s)", debug_ipc::ZxStatusToString(int_val)));
   OutputKeyComplete(output_key, std::move(out));
 }
 

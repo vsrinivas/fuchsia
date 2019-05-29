@@ -121,6 +121,7 @@ source_set("tests") {
     ":console",
     "//src/developer/debug/zxdb/client:test_support",
     "//src/developer/debug/zxdb/common:test_support",
+    "//src/developer/debug/zxdb/expr:test_support",
     "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
   ]
