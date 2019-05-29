@@ -199,13 +199,13 @@ Example:
 ```
 "children": [
     {
-      "name": "logger",
-      "url": "fuchsia-pkg://fuchsia.com/logger#logger.cm",
+        "name": "logger",
+        "url": "fuchsia-pkg://fuchsia.com/logger#logger.cm",
     },
     {
-      "name": "pkg_cache",
-      "url": "fuchsia-pkg://fuchsia.com/pkg_cache#meta/pkg_cache.cm",
-      "startup": "eager",
+        "name": "pkg_cache",
+        "url": "fuchsia-pkg://fuchsia.com/pkg_cache#meta/pkg_cache.cm",
+        "startup": "eager",
     },
 ],
 ```
