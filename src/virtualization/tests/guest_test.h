@@ -11,10 +11,7 @@
 #include "src/virtualization/tests/enclosed_guest.h"
 
 // GuestTest creates a static EnclosedGuest to be shared across all tests in a
-// test fixture. Each translation unit that uses GuestTest must instantiate
-// enclosed_guest_ for each derivation of EnclosedGuest it uses. For example:
-//    template <class T>
-//    T* GuestTest<T>::enclosed_guest_ = nullptr;
+// test fixture.
 template <class T>
 class GuestTest : public ::testing::Test {
  public:
