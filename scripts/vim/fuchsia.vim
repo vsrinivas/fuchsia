@@ -46,7 +46,7 @@ if jiri_manifest != ""
     let extension = expand("%:e")
 
     " Only run if the buffer is inside the Fuchsia dir
-    if full_path !~ "^" . g:fuchsia_dir
+    if full_path !~ '^\V' . escape(g:fuchsia_dir, '\')
       return
     endif
 
