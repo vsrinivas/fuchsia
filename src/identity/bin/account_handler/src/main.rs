@@ -14,6 +14,7 @@ mod account;
 mod account_handler;
 mod auth_provider_supplier;
 mod persona;
+mod stored_account;
 
 #[cfg(test)]
 mod test_util;

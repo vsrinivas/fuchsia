@@ -7,6 +7,7 @@ extern crate serde_json;
 use crate::account_handler::AccountHandler;
 use crate::auth_provider_supplier::AuthProviderSupplier;
 use crate::persona::{Persona, PersonaContext};
+use crate::stored_account::StoredAccount;
 use crate::TokenManager;
 use account_common::{
     AccountManagerError, FidlLocalPersonaId, LocalAccountId, LocalPersonaId, ResultExt,
@@ -24,17 +25,9 @@ use fidl_fuchsia_auth_account_internal::AccountHandlerContextProxy;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::{error, info, warn};
-use serde_derive::{Deserialize, Serialize};
-use std::fs::{self, File};
-use std::io::{BufReader, BufWriter, Write};
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
-
-/// Name of account doc file (one per account), within the account's dir.
-const ACCOUNT_DOC: &str = "account.json";
-
-/// Name of temporary account doc file, within the account's dir.
-const ACCOUNT_DOC_TMP: &str = "account.json.tmp";
 
 /// The file name to use for a token manager database. The location is supplied
 /// by `AccountHandlerContext.GetAccountPath()`
@@ -121,7 +114,8 @@ impl Account {
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
         let stored_account = StoredAccount::load(&account_dir)?;
-        Self::new(account_id, stored_account.default_persona_id, account_dir, context_proxy)
+        let local_persona_id = stored_account.get_default_persona_id().clone();
+        Self::new(account_id, local_persona_id, account_dir, context_proxy)
     }
 
     /// Removes the account from disk.
@@ -278,73 +272,6 @@ impl Account {
         // TODO(jsankey): Implement this method.
         warn!("SetRecoveryAccount not yet implemented");
         Status::InternalError
-    }
-}
-
-/// Json-representation of Fuchsia account state, on disk. As this format evolves,
-/// cautiousness is encouraged to ensure backwards compatibility.
-#[derive(Serialize, Deserialize)]
-struct StoredAccount {
-    /// Default persona id for this account
-    default_persona_id: LocalPersonaId,
-}
-
-impl StoredAccount {
-    /// Create a new stored account. No side effects.
-    pub fn new(default_persona_id: LocalPersonaId) -> StoredAccount {
-        Self { default_persona_id }
-    }
-
-    /// Load StoredAccount from disk
-    pub fn load(account_dir: &Path) -> Result<StoredAccount, AccountManagerError> {
-        let path = Self::path(account_dir);
-        if !path.exists() {
-            warn!("Failed to locate account doc: {:?}", path);
-            return Err(AccountManagerError::new(Status::NotFound));
-        };
-        let file = BufReader::new(File::open(path).map_err(|err| {
-            warn!("Failed to read account doc: {:?}", err);
-            AccountManagerError::new(Status::IoError).with_cause(err)
-        })?);
-        serde_json::from_reader(file).map_err(|err| {
-            warn!("Failed to parse account doc: {:?}", err);
-            AccountManagerError::new(Status::InternalError).with_cause(err)
-        })
-    }
-
-    /// Convenience path to the doc file, given the account_dir
-    fn path(account_dir: &Path) -> PathBuf {
-        account_dir.join(ACCOUNT_DOC)
-    }
-
-    /// Convenience path to the doc temp file, given the account_dir; used for safe writing
-    fn tmp_path(account_dir: &Path) -> PathBuf {
-        account_dir.join(ACCOUNT_DOC_TMP)
-    }
-
-    /// Write StoredAccount to disk, ensuring the file is either written completely or not
-    /// modified.
-    pub fn save(&self, account_dir: &Path) -> Result<(), AccountManagerError> {
-        let path = Self::path(account_dir);
-        let tmp_path = Self::tmp_path(account_dir);
-        {
-            let mut tmp_file = BufWriter::new(File::create(&tmp_path).map_err(|err| {
-                warn!("Failed to create account tmp doc: {:?}", err);
-                AccountManagerError::new(Status::IoError).with_cause(err)
-            })?);
-            serde_json::to_writer(&mut tmp_file, self).map_err(|err| {
-                warn!("Failed to serialize account doc: {:?}", err);
-                AccountManagerError::new(Status::IoError).with_cause(err)
-            })?;
-            tmp_file.flush().map_err(|err| {
-                warn!("Failed to flush serialized account doc: {:?}", err);
-                AccountManagerError::new(Status::IoError).with_cause(err)
-            })?;
-        }
-        fs::rename(&tmp_path, &path).map_err(|err| {
-            warn!("Failed to rename account doc: {:?}", err);
-            AccountManagerError::new(Status::IoError).with_cause(err)
-        })
     }
 }
 
