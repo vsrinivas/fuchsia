@@ -1312,29 +1312,6 @@ static bool TestThreadLocalRegisterState() {
                                     &regs, sizeof(regs)),
               ZX_OK);
 
-    // TODO(tbodt): Remove once support for the old sizes is removed from the kernel.
-    // Test that writing using the old size for the struct does not write the new members.
-    // Do this by setting them to bogus values that will cause a page fault if used.
-#if defined(__x86_64__)
-    regs.fs_base = 0;
-    regs.gs_base = 0;
-#elif defined(__aarch64__)
-    regs.tpidr = 0;
-#endif
-    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS,
-                                    &regs, sizeof(__old_zx_thread_state_general_regs_t)),
-              ZX_OK);
-    // Test that reading using the old size for the struct does not read the new members.
-    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS,
-                                   &regs, sizeof(__old_zx_thread_state_general_regs_t)),
-              ZX_OK);
-#if defined(__x86_64__)
-    ASSERT_EQ(regs.fs_base, 0);
-    ASSERT_EQ(regs.gs_base, 0);
-#elif defined(__aarch64__)
-    ASSERT_EQ(regs.tpidr, 0);
-#endif
-
     struct thread_local_regs tls_regs;
     ASSERT_TRUE(setup.DoSave(&save_thread_local_regs_and_exit_thread, &tls_regs));
 
